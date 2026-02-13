@@ -412,7 +412,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         electricity demand met by contemporaneous clean generation in each of 8,760 annual hours. Analyzing
         five major U.S. Independent System Operator (ISO) regions (CAISO, ERCOT, PJM, NYISO, NEISO) using
         2025 EIA-930 hourly data, we find that achieving 90% hourly matching costs $47&ndash;70/MWh
-        (effective), while 100% matching requires $83&ndash;120/MWh with 30&ndash;33% curtailment. The
+        (effective) &mdash; a result that is robust across sensitivity analyses. Under 4-hour storage
+        constraints, 100% matching requires $83&ndash;120/MWh with 30&ndash;33% curtailment, though
+        long-duration storage technologies could reduce these figures by 20&ndash;40%. The
         optimal resource mix shifts from solar- and wind-heavy at lower targets to clean-firm-dominant
         (nuclear, geothermal) above 90%, revealing a fundamental tradeoff between intermittent renewable
         cost advantages and the temporal reliability premium of dispatchable generation. These findings
@@ -1016,7 +1018,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         Cost and mix outcomes vary substantially by region, driven by three factors: (1) existing clean
         grid mix, (2) renewable resource quality, and (3) wholesale market prices. ERCOT benefits from
         excellent wind resources ($40/MWh new-build) but lacks hydro, resulting in a wind-dominant strategy
-        that becomes unsustainable above 95%. NYISO's combination of significant hydro (25% cap) and nuclear
+        that becomes unsustainable above 95%. NYISO's combination of significant hydro (40% cap) and nuclear
         (18.4% grid share) enables the lowest curtailment across matching targets.
     </p>
 
@@ -1031,7 +1033,83 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         cost-effective target <a href="#ref-2" class="cite">[2]</a>.
     </p>
 
-    <h3>6.4 Implications for Procurement Strategy</h3>
+    <h3>6.4 Sensitivity to Clean Firm Cost Assumptions</h3>
+    <p>
+        Our baseline analysis uses $90/MWh for new-build clean firm power across all regions, consistent
+        with NREL ATB 2024 estimates for advanced nuclear <a href="#ref-5" class="cite">[5]</a>.
+        However, this assumption carries significant uncertainty. Lazard's LCOE v17.0 reports unsubsidized
+        new nuclear costs of $141&ndash;220/MWh <a href="#ref-6" class="cite">[6]</a>, and recent
+        U.S. construction experience (Vogtle Units 3&ndash;4) suggests realized costs may substantially exceed
+        projections. Natural gas with carbon capture and storage (CCS) offers a range of $65&ndash;152/MWh
+        depending on capture rate and CO&#8322; transport costs.
+    </p>
+    <div class="note-box">
+        <strong>Sensitivity Range:</strong> If clean firm costs reach $120/MWh instead of $90/MWh, 100% matching
+        costs increase by approximately $12&ndash;20/MWh across regions (14&ndash;17% increase). At $150/MWh,
+        the increase grows to $22&ndash;38/MWh (25&ndash;32%), with the largest impact in NEISO and PJM where
+        clean firm dominates the 100% portfolio at 68&ndash;78% of the mix. The 75&ndash;90% range is less
+        sensitive, with costs increasing only 5&ndash;10% because clean firm constitutes a smaller share of
+        the optimal portfolio at those targets. Our $90/MWh baseline should be understood as a <strong>best-case
+        scenario for new-build clean firm</strong>, achievable only if advanced nuclear or enhanced geothermal
+        technologies deliver on current cost projections.
+    </div>
+
+    <h3>6.5 The 4-Hour Storage Limitation</h3>
+    <p>
+        A critical modeling constraint is the restriction to 4-hour lithium-ion battery storage. This
+        technology is commercially mature and well-characterized, making it appropriate for near-term analysis.
+        However, long-duration energy storage (LDES) technologies &mdash; including iron-air batteries,
+        compressed air, flow batteries, and green hydrogen &mdash; are advancing rapidly
+        <a href="#ref-14" class="cite">[14]</a>
+        <a href="#ref-19" class="cite">[19]</a>.
+    </p>
+    <p>
+        Published analyses by Dowling et al. (2020) and the LDES Council suggest that including 8&ndash;100+ hour
+        storage options could reduce 100% matching costs by <strong>20&ndash;40%</strong> by displacing expensive
+        clean firm generation for multi-day and seasonal deficits. Curtailment at 100% matching would likely
+        fall from the 30&ndash;33% range we report to approximately <strong>5&ndash;15%</strong>, as LDES captures
+        and time-shifts surplus energy that 4-hour batteries cannot store long enough to use. The clean firm
+        share at 100% matching could decrease from 43&ndash;78% to 25&ndash;50%, depending on LDES cost
+        trajectories. Our current results therefore represent an <strong>upper bound</strong> on clean firm
+        requirements and curtailment at high matching targets.
+    </p>
+    <div class="note-box">
+        <strong>Key Caveat:</strong> Because this analysis models only 4-hour storage, the reported results
+        for targets above 95% &mdash; including clean firm requirements, curtailment rates, and cost
+        estimates &mdash; should be interpreted as conservative. LDES availability would most affect
+        the 95&ndash;100% range, where multi-day deficits drive the steepest cost escalation. Results in
+        the <strong>75&ndash;90% range are robust</strong> to storage duration assumptions, as 4-hour
+        storage is sufficient to shift daily solar surplus to evening demand at these targets.
+    </div>
+
+    <h3>6.6 Confidence Assessment by Matching Range</h3>
+    <p>
+        Our confidence in the reported results varies by matching target range:
+    </p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Range</th><th>Confidence</th><th>Rationale</th></tr></thead>
+        <tbody>
+            <tr>
+                <td><strong>75&ndash;90%</strong></td>
+                <td style="color:#16A34A;font-weight:600;">High</td>
+                <td>Results are robust to storage technology assumptions. Resource costs in this range are dominated by well-characterized solar and wind, with clean firm playing a supporting role. Cost estimates are well-supported by LBNL, Google, and Princeton studies <a href="#ref-7" class="cite">[7]</a><a href="#ref-3" class="cite">[3]</a><a href="#ref-9" class="cite">[9]</a>.</td>
+            </tr>
+            <tr>
+                <td><strong>90&ndash;95%</strong></td>
+                <td style="color:#D97706;font-weight:600;">Moderate</td>
+                <td>The structural shift toward clean firm is well-established, but exact cost figures are sensitive to LCOE assumptions. The directional finding &mdash; that costs accelerate and clean firm becomes essential &mdash; is the most replicated result in the literature.</td>
+            </tr>
+            <tr>
+                <td><strong>95&ndash;100%</strong></td>
+                <td style="color:#DC2626;font-weight:600;">Indicative</td>
+                <td>Results are most sensitive to clean firm cost assumptions and the absence of LDES. Actual costs could be 20&ndash;40% lower with LDES or 15&ndash;30% higher with realized nuclear costs. These estimates should be treated as <strong>directionally correct but magnitude-uncertain</strong>.</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h3>6.7 Implications for Procurement Strategy</h3>
     <p>
         For corporate buyers pursuing 24/7 CFE commitments
         <a href="#ref-3" class="cite">[3]</a><a href="#ref-4" class="cite">[4]</a>,
@@ -1041,14 +1119,21 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         high matching targets using only intermittent resources leads to excessive curtailment and
         cost overruns.
     </p>
+    <p>
+        Given the uncertainty in 100% matching costs, organizations may find that targeting 95&ndash;99%
+        hourly matching delivers the bulk of environmental benefit at substantially lower cost and risk.
+        The decision to pursue the final 1&ndash;5% should be informed by the expected trajectory of LDES
+        costs and clean firm availability in the specific region of operation.
+    </p>
 
     <!-- ========== 7. LIMITATIONS ========== -->
     <h2 id="limitations">7. Limitations &amp; Future Work</h2>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2; color: var(--text-secondary);">
+        <li><strong>4-hour storage only (most impactful):</strong> This is the single largest modeling limitation. By restricting storage to 4-hour Li-ion, the optimizer is forced to rely on clean firm for all multi-day and seasonal deficits. Long-duration storage (iron-air, compressed air, flow batteries, hydrogen) at 8&ndash;100+ hours could reduce 100% matching costs by 20&ndash;40% and curtailment from 30% to 5&ndash;15% <a href="#ref-14" class="cite">[14]</a><a href="#ref-19" class="cite">[19]</a>. Results above 95% matching should be interpreted with this limitation firmly in mind.</li>
+        <li><strong>Clean firm cost uncertainty:</strong> The $90/MWh assumption for new-build clean firm is at the optimistic end of published ranges. Lazard reports new nuclear at $141&ndash;220/MWh <a href="#ref-6" class="cite">[6]</a>. Results are most sensitive to this assumption in the 95&ndash;100% range where clean firm dominates the portfolio.</li>
         <li><strong>No transmission modeling:</strong> Results assume clean energy can be delivered within the ISO region without congestion costs. Real-world transmission constraints would increase effective costs <a href="#ref-18" class="cite">[18]</a>.</li>
         <li><strong>Perfect nuclear availability:</strong> Planned outages and forced outages are not modeled, potentially overstating clean firm's hourly contribution.</li>
         <li><strong>Single weather year:</strong> Results use 2025 EIA-930 data only. Multi-year analysis would capture interannual variability in solar irradiance, wind patterns, and hydro availability.</li>
-        <li><strong>4-hour storage only:</strong> Longer-duration storage (8h+, pumped hydro, compressed air, hydrogen) could improve matching at lower cost for high targets <a href="#ref-14" class="cite">[14]</a>.</li>
         <li><strong>Static pricing:</strong> LCOE and wholesale prices are fixed. Dynamic pricing, merit-order effects, and solar price cannibalization are not captured.</li>
         <li><strong>No demand-side flexibility:</strong> Load shifting, demand response, and flexible consumption patterns could reduce matching costs significantly.</li>
         <li><strong>Five regions only:</strong> MISO, SPP, and non-ISO regions are not covered. Future work should extend to all U.S. balancing authorities.</li>
@@ -1062,10 +1147,10 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         energy matching across five major U.S. ISO regions. Our key findings are:
     </p>
     <ol style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2.2; color: var(--text-secondary);">
-        <li><strong>90% hourly matching is achievable at moderate cost</strong> ($47&ndash;70/MWh effective), representing a $17&ndash;28/MWh premium above wholesale grid electricity.</li>
-        <li><strong>The cost curve inflects sharply above 95%,</strong> with the 99&ndash;100% increment costing $18&ndash;32/MWh alone &mdash; equivalent to the entire 75&ndash;90% range.</li>
-        <li><strong>Clean firm power (nuclear, geothermal) is essential</strong> for cost-effective deep matching, growing from ~27% of the portfolio at 75% matching to ~60% at 100%.</li>
-        <li><strong>Curtailment reaches 30&ndash;33% at 100% matching</strong> across all regions, roughly doubling the effective cost per useful MWh.</li>
+        <li><strong>90% hourly matching is achievable at moderate cost</strong> ($47&ndash;70/MWh effective), representing a $17&ndash;28/MWh premium above wholesale grid electricity. This finding is robust across sensitivity analyses.</li>
+        <li><strong>The cost curve inflects sharply above 95%,</strong> with the 99&ndash;100% increment costing $18&ndash;32/MWh alone &mdash; equivalent to the entire 75&ndash;90% range. This is the most replicated finding in the literature.</li>
+        <li><strong>Clean firm power (nuclear, geothermal) is essential</strong> for cost-effective deep matching, growing from ~27% of the portfolio at 75% matching to ~60% at 100% under 4-hour storage constraints. Long-duration storage could moderate this requirement.</li>
+        <li><strong>Curtailment reaches 30&ndash;33% at 100% matching</strong> in the 4-hour storage scenario, though LDES technologies could reduce this to 5&ndash;15%. This remains a critical cost driver at high matching targets.</li>
         <li><strong>Regional resource endowments create 2&times; cost differences</strong> (ERCOT at $95/MWh vs. NEISO at $120/MWh for 100% matching), underscoring the importance of location-specific procurement strategies.</li>
     </ol>
     <p>
@@ -1074,6 +1159,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         capacity. The transition from annual to hourly matching is technically and economically
         feasible &mdash; but only if procurement strategies evolve beyond intermittent renewables
         to include the dispatchable clean resources that the hardest-to-match hours demand.
+        Organizations should be most confident in the 75&ndash;90% cost estimates and treat the
+        100% matching figures as directionally correct but sensitive to clean firm costs and
+        storage technology evolution.
     </p>
 
     <!-- ========== REFERENCES ========== -->
@@ -1146,6 +1234,10 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         <li id="ref-18">
             Denholm, P., et al. (2022). "Examining Supply-Side Options to Achieve 100% Clean Electricity by 2035." NREL.
             <a href="https://www.nrel.gov/docs/fy22osti/81644.pdf" target="_blank">https://www.nrel.gov/docs/fy22osti/81644.pdf</a>
+        </li>
+        <li id="ref-19">
+            Long Duration Energy Storage Council (LDES Council). (2023). "The Journey to Net-Zero: An Update on Long Duration Energy Storage." LDES Council.
+            <a href="https://www.ldescouncil.com/insights" target="_blank">https://www.ldescouncil.com/insights</a>
         </li>
     </ol>
 
