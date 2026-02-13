@@ -1472,55 +1472,6 @@ body {
     letter-spacing: 0.04em;
 }
 
-/* Trilemma triangle */
-.trilemma-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 32px 0;
-}
-.trilemma-diagram {
-    position: relative;
-    width: 380px;
-    max-width: 100%;
-}
-.trilemma-node {
-    position: absolute;
-    text-align: center;
-    padding: 14px 18px;
-    border-radius: 14px;
-    font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.trilemma-node:hover {
-    transform: scale(1.05);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-}
-.trilemma-node.node-reliable {
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(14,165,233,0.12);
-    border: 2px solid rgba(14,165,233,0.3);
-    color: #0284C7;
-}
-.trilemma-node.node-affordable {
-    bottom: 0;
-    left: 0;
-    background: rgba(34,197,94,0.12);
-    border: 2px solid rgba(34,197,94,0.3);
-    color: #16A34A;
-}
-.trilemma-node.node-clean {
-    bottom: 0;
-    right: 0;
-    background: rgba(245,158,11,0.12);
-    border: 2px solid rgba(245,158,11,0.3);
-    color: #D97706;
-}
-
 /* Section illustration container */
 .section-illustration {
     display: flex;
@@ -1605,22 +1556,6 @@ body {
     .gauge-ring-label {
         font-size: 0.95rem;
     }
-    .trilemma-visual {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    .trilemma-diagram {
-        width: 300px;
-        max-width: 100%;
-    }
-    .trilemma-diagram svg {
-        width: 100%;
-        height: auto;
-    }
-    .trilemma-node {
-        font-size: 0.82rem;
-        padding: 10px 14px;
-    }
     .transition-fuel-row {
         flex-direction: column;
         gap: 14px;
@@ -1685,14 +1620,6 @@ body {
     }
     .gauge-name {
         font-size: 0.68rem;
-    }
-    .trilemma-diagram {
-        width: 250px;
-        max-width: 100%;
-    }
-    .trilemma-diagram svg {
-        width: 100%;
-        height: auto;
     }
     .transition-fuel-card {
         padding: 14px 12px;
@@ -2477,11 +2404,11 @@ body {
     </div>
     <p class="hero-takeaway-sub">
         Our analysis of 8,760 hours across five U.S. power markets reveals that
-        <strong>cheap renewables alone cannot achieve high hourly matching targets</strong>.
+        <strong>renewables alone cannot achieve high hourly matching targets</strong>.
         Beyond 90% matching, the cost curve inflects sharply and the resource mix pivots toward
-        firm, dispatchable clean generation. Organizations that invest only in wind and solar today
-        will face steep costs and stranded procurement when they pursue deeper decarbonization.
-        <strong>The time to secure clean firm power is now &mdash; before you need it.</strong>
+        firm, dispatchable clean generation. Organizations that rely exclusively on wind and solar
+        will face steep costs and stranded procurement as they pursue deeper decarbonization.
+        <strong>Early investment in clean firm power significantly reduces long-term costs.</strong>
     </p>
 </div>
 
@@ -2637,7 +2564,7 @@ body {
                             <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 22 L14 6 L23 22 Z" stroke="#22C55E" stroke-width="2" fill="rgba(34,197,94,0.2)"/><path d="M14 6 L14 14" stroke="#22C55E" stroke-width="2"/></svg>
                         </div>
                         <h4>75% Matching</h4>
-                        <p>Wind and solar dominate. Cheap renewables cover most hours cost-effectively. The easy path.</p>
+                        <p>Wind and solar dominate. Renewables cover most hours cost-effectively at modest premiums above wholesale.</p>
                     </div>
                     <div class="conclusion-pillar">
                         <div class="conclusion-pillar-icon" style="background:rgba(245,158,11,0.15);">
@@ -2683,11 +2610,10 @@ body {
                 </p>
 
                 <p>
-                    Organizations serious about deep decarbonization should <strong>secure and procure clean firm
+                    Organizations pursuing deep decarbonization should <strong>secure clean firm
                     power early</strong> &mdash; whether through nuclear PPAs, geothermal contracts, or investments
-                    in CCS-ready gas infrastructure. Waiting to address the firm power gap until you are already
-                    targeting 95%+ matching means competing for scarce resources in a seller&rsquo;s market,
-                    at significantly higher costs.
+                    in CCS-ready gas infrastructure. Deferring until 95%+ matching is already the target means
+                    competing for scarce resources in a constrained market, at significantly higher costs.
                 </p>
 
                 <div class="conclusion-bottom-line">
@@ -2703,9 +2629,8 @@ body {
             <span class="story-badge">The Challenge</span>
             <h2>From Annual Matching to Hourly: The Cost of Precision</h2>
             <p class="story-lead">
-                Traditional renewable energy procurement matches annual generation with annual consumption &mdash;
-                a simple volume check. But proposed GHG Protocol revisions demand something far more rigorous:
-                matching supply to demand <strong>every single hour</strong> of the year.
+                Proposed GHG Protocol revisions will require matching clean energy supply to demand
+                <strong>every single hour</strong> &mdash; not just annually. This fundamentally changes procurement economics.
             </p>
 
             <!-- Big number hero callout -->
@@ -2725,9 +2650,8 @@ body {
             </div>
 
             <p>
-                This shift fundamentally changes the economics of clean energy procurement. When every hour counts,
-                the intermittency of solar and wind becomes a critical cost driver, and the pathway from 75% to 100%
-                hourly matching reveals an exponential cost curve that energy buyers must understand.
+                When every hour counts, intermittency becomes a critical cost driver. The pathway from 75% to
+                100% hourly matching reveals an exponential cost curve that procurement teams need to plan for.
             </p>
 
             <div class="energy-spectrum-bar"></div>
@@ -2844,25 +2768,19 @@ body {
 
             <!-- Curtailment illustration -->
             <div class="section-illustration">
-                <svg width="420" height="110" viewBox="0 0 420 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Labels above bars -->
-                    <text x="140" y="16" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#0284C7">Matched to Demand</text>
-                    <text x="330" y="16" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#DC2626">Curtailed (Paid but Unused)</text>
-                    <!-- Bracket arrow above curtailed portion -->
-                    <path d="M255 28 L395 28" stroke="#EF4444" stroke-width="1.5"/>
-                    <path d="M255 24 L255 32" stroke="#EF4444" stroke-width="1.5"/>
-                    <path d="M395 24 L395 32" stroke="#EF4444" stroke-width="1.5"/>
-                    <path d="M325 28 L325 36" stroke="#EF4444" stroke-width="1.5" marker-end="url(#arrowRedCurt)"/>
+                <svg width="420" height="120" viewBox="0 0 420 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <!-- Supply bar -->
-                    <rect x="20" y="44" width="380" height="40" rx="6" fill="rgba(34,197,94,0.12)" stroke="#22C55E" stroke-width="1.5"/>
-                    <text x="200" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="600" fill="#16A34A">Total Procurement</text>
-                    <rect x="20" y="44" width="230" height="40" rx="6" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
-                    <text x="135" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="600" fill="#0284C7">Matched</text>
+                    <rect x="20" y="30" width="380" height="40" rx="6" fill="rgba(34,197,94,0.12)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="200" y="54" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#16A34A">Total Procurement</text>
+                    <rect x="20" y="30" width="230" height="40" rx="6" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
+                    <text x="135" y="54" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#0284C7">Matched</text>
                     <!-- Curtailed divider -->
-                    <line x1="250" y1="38" x2="250" y2="90" stroke="#EF4444" stroke-width="2" stroke-dasharray="4 3"/>
-                    <!-- Percent labels below -->
-                    <text x="135" y="100" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" fill="#0284C7">~60% of total</text>
-                    <text x="325" y="100" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" fill="#DC2626">~40% curtailed</text>
+                    <line x1="250" y1="24" x2="250" y2="76" stroke="#EF4444" stroke-width="2" stroke-dasharray="4 3"/>
+                    <!-- Labels below bars -->
+                    <text x="135" y="88" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#0284C7">Matched to Demand</text>
+                    <text x="135" y="102" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#0284C7">~60% of total</text>
+                    <text x="325" y="88" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#DC2626">Curtailed (Unused)</text>
+                    <text x="325" y="102" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#DC2626">~40% paid but wasted</text>
                     <defs><marker id="arrowRedCurt" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#EF4444"/></marker></defs>
                 </svg>
             </div>
@@ -2923,21 +2841,11 @@ body {
             </div>
 
             <p>
-                Curtailment order: <strong>solar first</strong>, then wind, hydro, then clean firm last.
-                Solar and wind produce excess during periods of oversupply, making them the most curtailed.
-                At 200% procurement with 95% matching, nearly half of all procured energy is curtailed,
-                roughly doubling the effective cost per useful MWh.
+                Solar is curtailed first, then wind, then hydro, with clean firm curtailed last.
+                At high matching targets, nearly half of all procured energy goes unused &mdash; roughly
+                doubling the effective cost per useful MWh. This curtailment penalty is the fundamental
+                constraint on achieving deep decarbonization with intermittent resources alone.
             </p>
-
-            <div class="story-insight-box">
-                <div class="insight-icon"></div>
-                <div>
-                    <strong>Cost Implication:</strong> The curtailment penalty is the fundamental economic
-                    constraint on achieving very high hourly match scores with intermittent resources.
-                    Surplus energy must be procured and paid for even when it cannot be used &mdash; making
-                    the effective cost per matched MWh considerably higher than the blended procurement cost.
-                </div>
-            </div>
         </div>
     </section>
 
@@ -3038,14 +2946,6 @@ body {
                 Clean coverage of peak demand at 99% hourly matching (higher = less backup needed)
             </p>
 
-            <div class="story-insight-box" style="border-left-color:#C75B4A;">
-                <div class="insight-icon"></div>
-                <div>
-                    <strong>Policy Implication:</strong> Hourly matching complements grid reliability planning
-                    but doesn&rsquo;t replace it. The residual backup metric quantifies firm capacity that remains
-                    essential even with aggressive clean energy procurement.
-                </div>
-            </div>
         </div>
     </section>
 
@@ -3055,99 +2955,16 @@ body {
             <span class="story-badge story-badge-orange">The Trilemma</span>
             <h2>From Two Dimensions to Three</h2>
 
-            <!-- Trilemma evolution illustration -->
-            <div class="section-illustration">
-                <svg width="520" height="170" viewBox="0 0 520 170" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Old: two-axis balance -->
-                    <rect x="10" y="24" width="190" height="120" rx="12" fill="rgba(243,244,248,0.8)" stroke="rgba(209,213,219,0.6)" stroke-width="1.5"/>
-                    <text x="105" y="18" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#6B7280">TRADITIONAL MODEL</text>
-                    <!-- Balance beam -->
-                    <line x1="50" y1="90" x2="160" y2="90" stroke="#1A2744" stroke-width="2.5"/>
-                    <polygon points="105,90 99,102 111,102" fill="#1A2744"/>
-                    <circle cx="50" cy="80" r="20" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
-                    <text x="50" y="78" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="700" fill="#0284C7">Reliable</text>
-                    <text x="50" y="90" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#0284C7">24/7 firm</text>
-                    <circle cx="160" cy="80" r="20" fill="rgba(34,197,94,0.2)" stroke="#22C55E" stroke-width="1.5"/>
-                    <text x="160" y="78" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="700" fill="#16A34A">Affordable</text>
-                    <text x="160" y="90" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#16A34A">Low cost</text>
-                    <text x="105" y="130" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280">Two priorities in tension</text>
-                    <!-- Arrow -->
-                    <path d="M215 84 L300 84" stroke="#1A2744" stroke-width="2.5" marker-end="url(#arrowEvo)"/>
-                    <text x="258" y="76" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#1A2744">NOW</text>
-                    <!-- New: triangle -->
-                    <rect x="315" y="24" width="195" height="120" rx="12" fill="rgba(243,244,248,0.8)" stroke="rgba(239,68,68,0.25)" stroke-width="1.5"/>
-                    <text x="412" y="18" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#DC2626">HOURLY MATCHING</text>
-                    <!-- Triangle -->
-                    <polygon points="412,42 345,120 480,120" fill="none" stroke="#1A2744" stroke-width="2"/>
-                    <circle cx="412" cy="42" r="18" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
-                    <text x="412" y="46" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="700" fill="#0284C7">Reliable</text>
-                    <circle cx="345" cy="120" r="18" fill="rgba(34,197,94,0.2)" stroke="#22C55E" stroke-width="1.5"/>
-                    <text x="345" y="124" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="700" fill="#16A34A">Affordable</text>
-                    <circle cx="480" cy="120" r="18" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" stroke-width="1.5"/>
-                    <text x="480" y="124" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="700" fill="#D97706">Clean</text>
-                    <text x="412" y="155" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280">Three priorities to balance</text>
-                    <defs><marker id="arrowEvo" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1A2744"/></marker></defs>
-                </svg>
-            </div>
-
             <p class="story-lead">
-                For decades, energy planning balanced two priorities: <strong>reliability</strong> and
-                <strong>affordability</strong>. Keep the lights on, and keep bills manageable.
-                Hourly clean energy matching introduces a third dimension: <strong>clean</strong>.
+                For decades, energy planning balanced <strong>reliability</strong> and
+                <strong>affordability</strong>. Hourly matching adds a third dimension: <strong>clean</strong>.
             </p>
             <p>
-                This three-sided optimization &mdash; the energy trilemma &mdash; creates new tensions.
-                Pursuing maximum cleanliness can strain both affordability (through exponential cost curves above 95%)
-                and reliability (by depending on weather-variable resources). The optimal strategy must navigate
-                all three corners simultaneously.
+                At 75% matching, affordability dominates &mdash; cheap renewables suffice. By 95%, reliability
+                forces the mix toward costlier firm generation. At 99%+, all three dimensions are stressed,
+                requiring the full toolkit: renewables, firm generation, and dispatchable low-carbon sources.
+                There is no single right threshold &mdash; each organization must find its own balance.
             </p>
-
-            <!-- Trilemma diagram -->
-            <div class="trilemma-visual">
-                <div class="trilemma-diagram">
-                    <svg viewBox="0 0 380 330" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <!-- Triangle connecting three nodes -->
-                        <polygon points="190,40 40,280 340,280" fill="rgba(26,39,68,0.03)" stroke="rgba(26,39,68,0.15)" stroke-width="2" stroke-dasharray="6 4"/>
-                        <!-- Center label -->
-                        <text x="190" y="195" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="14" font-weight="700" fill="#1A2744">Optimal</text>
-                        <text x="190" y="213" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="14" font-weight="700" fill="#1A2744">Portfolio</text>
-                        <!-- Dot in center -->
-                        <circle cx="190" cy="220" r="4" fill="#1A2744" opacity="0.3"/>
-                        <!-- Reliable node -->
-                        <circle cx="190" cy="40" r="36" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="2"/>
-                        <text x="190" y="36" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="14" font-weight="700" fill="#0284C7">Reliable</text>
-                        <text x="190" y="52" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" fill="#0284C7">24/7 firm power</text>
-                        <!-- Affordable node -->
-                        <circle cx="40" cy="280" r="36" fill="rgba(34,197,94,0.12)" stroke="#22C55E" stroke-width="2"/>
-                        <text x="40" y="276" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="14" font-weight="700" fill="#16A34A">Affordable</text>
-                        <text x="40" y="292" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" fill="#16A34A">Low $/MWh</text>
-                        <!-- Clean node -->
-                        <circle cx="340" cy="280" r="36" fill="rgba(245,158,11,0.12)" stroke="#F59E0B" stroke-width="2"/>
-                        <text x="340" y="276" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="14" font-weight="700" fill="#D97706">Clean</text>
-                        <text x="340" y="292" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" fill="#D97706">Zero-carbon</text>
-                        <!-- Edge labels -->
-                        <text x="100" y="152" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="11" fill="#6B7280" transform="rotate(-52, 100, 152)">Baseload cost</text>
-                        <text x="280" y="152" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="11" fill="#6B7280" transform="rotate(52, 280, 152)">Intermittency</text>
-                        <text x="190" y="322" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="11" fill="#6B7280">Curtailment penalty</text>
-                    </svg>
-                </div>
-            </div>
-
-            <p>
-                Our optimization results reveal this trilemma in action: at 75% matching, affordability dominates
-                (cheap wind and solar suffice). By 95%, reliability concerns force the mix toward costly clean firm power.
-                At 99%+, all three dimensions are stressed &mdash; clean, reliable energy at affordable cost requires
-                the full toolkit: renewables, firm generation, storage, and potentially dispatchable low-carbon sources.
-            </p>
-
-            <div class="story-insight-box">
-                <div class="insight-icon"></div>
-                <div>
-                    <strong>Strategic Takeaway:</strong> The energy trilemma means there is no single "right" threshold.
-                    Each buyer must determine their own balance between cleanliness, reliability, and cost based on
-                    their specific goals, budget, and timeline.
-                </div>
-            </div>
         </div>
     </section>
 
@@ -3159,40 +2976,41 @@ body {
 
             <!-- Transition fuel illustration -->
             <div class="section-illustration">
-                <svg width="460" height="130" viewBox="0 0 460 130" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Timeline arrow -->
-                    <line x1="30" y1="65" x2="430" y2="65" stroke="#1A2744" stroke-width="2"/>
-                    <polygon points="430,65 420,58 420,72" fill="#1A2744"/>
-                    <text x="230" y="20" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1A2744">TRANSITION PATHWAY</text>
+                <svg width="460" height="140" viewBox="0 0 460 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <text x="230" y="18" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1A2744">TRANSITION PATHWAY</text>
                     <!-- Phase 1: Today -->
-                    <rect x="40" y="40" width="100" height="50" rx="8" fill="rgba(239,68,68,0.1)" stroke="#EF4444" stroke-width="1.5"/>
-                    <text x="90" y="60" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">Unabated Gas</text>
-                    <text x="90" y="75" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#DC2626">Peaking + Base</text>
-                    <text x="90" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Today</text>
+                    <rect x="40" y="30" width="100" height="50" rx="8" fill="rgba(239,68,68,0.1)" stroke="#EF4444" stroke-width="1.5"/>
+                    <text x="90" y="50" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">Unabated Gas</text>
+                    <text x="90" y="65" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#DC2626">Peaking + Base</text>
+                    <text x="90" y="94" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Today</text>
                     <!-- Phase 2: Near-term -->
-                    <rect x="170" y="40" width="100" height="50" rx="8" fill="rgba(245,158,11,0.1)" stroke="#F59E0B" stroke-width="1.5"/>
-                    <text x="220" y="58" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#D97706">Efficient CCGT</text>
-                    <text x="220" y="72" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#D97706">Backup + Balance</text>
-                    <text x="220" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Near-term</text>
+                    <rect x="170" y="30" width="100" height="50" rx="8" fill="rgba(245,158,11,0.1)" stroke="#F59E0B" stroke-width="1.5"/>
+                    <text x="220" y="48" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#D97706">Efficient CCGT</text>
+                    <text x="220" y="62" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#D97706">Backup + Balance</text>
+                    <text x="220" y="94" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Near-term</text>
                     <!-- Phase 3: Mid-term -->
-                    <rect x="300" y="40" width="110" height="50" rx="8" fill="rgba(34,197,94,0.1)" stroke="#22C55E" stroke-width="1.5"/>
-                    <text x="355" y="58" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#16A34A">CCGT + CCS</text>
-                    <text x="355" y="72" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Dispatchable Low-C</text>
-                    <text x="355" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Mid-term</text>
+                    <rect x="300" y="30" width="110" height="50" rx="8" fill="rgba(34,197,94,0.1)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="355" y="48" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#16A34A">CCGT + CCS</text>
+                    <text x="355" y="62" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Dispatchable Low-C</text>
+                    <text x="355" y="94" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Mid-term</text>
+                    <!-- Timeline arrow below tiles -->
+                    <line x1="40" y1="118" x2="420" y2="118" stroke="#1A2744" stroke-width="2"/>
+                    <polygon points="420,118 410,112 410,124" fill="#1A2744"/>
+                    <!-- Connector lines from tiles to arrow -->
+                    <line x1="90" y1="94" x2="90" y2="118" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 2"/>
+                    <line x1="220" y1="94" x2="220" y2="118" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 2"/>
+                    <line x1="355" y1="94" x2="355" y2="118" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 2"/>
+                    <!-- Small dots on timeline -->
+                    <circle cx="90" cy="118" r="3" fill="#EF4444"/>
+                    <circle cx="220" cy="118" r="3" fill="#F59E0B"/>
+                    <circle cx="355" cy="118" r="3" fill="#22C55E"/>
                 </svg>
             </div>
 
             <p class="story-lead">
-                The exponential cost of the last few percent of hourly matching points to a practical
-                question: what fills the gap when renewables and nuclear can&rsquo;t? In many regions,
-                efficient natural gas combined-cycle gas turbines (CCGTs) serve as a critical
-                <strong>transition fuel</strong>.
-            </p>
-            <p>
-                Modern CCGTs achieve 60%+ thermal efficiency and can ramp quickly to complement variable
-                renewables. While they produce CO&#8322;, they emit roughly half the carbon per MWh of
-                older coal and simple-cycle gas plants. In a portfolio targeting 95%+ hourly matching,
-                CCGTs can efficiently serve the 5% of hours that clean resources cannot economically reach.
+                When renewable output falls short, efficient natural gas CCGTs fill the gap &mdash;
+                serving as a <strong>transition fuel</strong> today and a <strong>CCS-ready platform</strong>
+                for clean firm power tomorrow.
             </p>
 
             <div class="transition-fuel-row">
@@ -3205,7 +3023,7 @@ body {
                         </svg>
                     </div>
                     <div class="transition-fuel-title">Efficient CCGT</div>
-                    <div class="transition-fuel-desc">Modern combined-cycle turbines at 60%+ efficiency provide fast-ramping dispatchable power for peak and shoulder hours</div>
+                    <div class="transition-fuel-desc">60%+ efficiency, fast-ramping, ~350 kg CO&#8322;/MWh (half of coal). Covers the hours renewables cannot.</div>
                     <div class="transition-fuel-stat" style="color:#D97706;">~350 kg</div>
                     <div class="curtail-bar-sub">CO&#8322;/MWh (vs 900+ for coal)</div>
                 </div>
@@ -3221,118 +3039,18 @@ body {
                         </svg>
                     </div>
                     <div class="transition-fuel-title">CCGT + CCS</div>
-                    <div class="transition-fuel-desc">Carbon capture and storage can reduce CCGT emissions by 85-95%, creating dispatchable near-zero-carbon generation</div>
+                    <div class="transition-fuel-desc">Retrofit with 90%+ CO&#8322; capture. Same plant transitions from backup to dispatchable clean firm power.</div>
                     <div class="transition-fuel-stat" style="color:#16A34A;">85-95%</div>
                     <div class="curtail-bar-sub">CO&#8322; capture rate potential</div>
                 </div>
             </div>
 
             <p>
-                The analysis highlights why dispatchable low-carbon power matters: the hardest hours to match
-                are typically winter evenings when solar is absent, wind may be calm, and demand peaks from
-                heating loads. These are precisely the hours where dispatchable generation &mdash; whether nuclear,
-                geothermal, or gas with CCS &mdash; provides the greatest value.
+                Modern CCS-ready CCGTs avoid stranded assets: the backup infrastructure built for 95% matching today
+                delivers dispatchable clean power at 99%+ matching tomorrow. The hardest hours &mdash; winter
+                evenings with no sun and calm wind &mdash; are precisely where dispatchable generation provides
+                the greatest value.
             </p>
-
-            <h3 style="margin-top:32px;font-size:1.3rem;color:var(--navy);">From Transition Fuel to Clean Firm: The CCS Pathway</h3>
-            <p>
-                Investing in efficient CCGTs today is not just a near-term compromise &mdash; it is a
-                <strong>strategic foundation for future clean firm power</strong>. Modern CCGTs are designed
-                to be &ldquo;CCS-ready,&rdquo; meaning carbon capture equipment can be retrofitted onto existing
-                plants. By building efficient gas infrastructure now, organizations create assets that can
-                transition from backup generation to <strong>dispatchable low-carbon power</strong> as CCS
-                technology matures and carbon pricing strengthens the business case.
-            </p>
-            <p>
-                This transition path solves the most expensive part of the hourly matching challenge.
-                At a capture rate of 90%+, a CCGT with CCS delivers firm, flexible generation at roughly
-                35&ndash;50 kg CO&#8322;/MWh &mdash; comparable to lifecycle estimates for solar and wind
-                when accounting for manufacturing. The key advantage: unlike renewables, CCS-equipped CCGTs
-                dispatch on demand, covering the exact hours that drive the exponential cost increase above 95%.
-            </p>
-
-            <!-- CCS Process Illustration -->
-            <div class="section-illustration" style="margin:32px 0;">
-                <svg width="500" height="200" viewBox="0 0 500 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Step 1: Power Plant -->
-                    <rect x="10" y="40" width="100" height="80" rx="10" fill="rgba(245,158,11,0.1)" stroke="#F59E0B" stroke-width="1.5"/>
-                    <text x="60" y="65" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#D97706">CCGT</text>
-                    <text x="60" y="80" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#D97706">Power Plant</text>
-                    <!-- Smokestack -->
-                    <rect x="85" y="20" width="12" height="24" rx="2" fill="rgba(156,163,175,0.3)" stroke="#9CA3AF" stroke-width="1"/>
-                    <!-- CO2 cloud -->
-                    <circle cx="91" cy="14" r="6" fill="rgba(239,68,68,0.15)" stroke="#EF4444" stroke-width="1"/>
-                    <text x="91" y="17" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="5" font-weight="600" fill="#DC2626">CO2</text>
-                    <!-- Power output arrow (downward) -->
-                    <path d="M60 120 L60 150" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowCCSy)"/>
-                    <text x="60" y="168" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#D97706">Electricity</text>
-                    <text x="60" y="182" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">to grid</text>
-                    <!-- Arrow from plant to capture -->
-                    <path d="M110 80 L158 80" stroke="#6B7280" stroke-width="1.5" marker-end="url(#arrowCCSg)"/>
-                    <text x="134" y="73" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#6B7280">Flue gas</text>
-
-                    <!-- Step 2: Capture -->
-                    <rect x="160" y="40" width="100" height="80" rx="10" fill="rgba(14,165,233,0.1)" stroke="#0EA5E9" stroke-width="1.5"/>
-                    <text x="210" y="60" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#0284C7">CAPTURE</text>
-                    <text x="210" y="78" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#0284C7">Chemical solvent</text>
-                    <text x="210" y="90" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#0284C7">absorbs 90%+</text>
-                    <text x="210" y="102" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#0284C7">of CO&#8322;</text>
-                    <!-- Arrow from capture to compress -->
-                    <path d="M260 80 L298 80" stroke="#6B7280" stroke-width="1.5" marker-end="url(#arrowCCSg)"/>
-
-                    <!-- Step 3: Compress -->
-                    <rect x="300" y="40" width="80" height="80" rx="10" fill="rgba(138,129,120,0.1)" stroke="#8A8178" stroke-width="1.5"/>
-                    <text x="340" y="60" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#6B7280">COMPRESS</text>
-                    <text x="340" y="78" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">CO&#8322; compressed</text>
-                    <text x="340" y="90" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">to supercritical</text>
-                    <text x="340" y="102" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">fluid for transport</text>
-                    <!-- Arrow from compress to store -->
-                    <path d="M380 80 L408 80" stroke="#6B7280" stroke-width="1.5" marker-end="url(#arrowCCSg)"/>
-
-                    <!-- Step 4: Store -->
-                    <rect x="410" y="40" width="80" height="80" rx="10" fill="rgba(34,197,94,0.1)" stroke="#22C55E" stroke-width="1.5"/>
-                    <text x="450" y="60" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#16A34A">STORE</text>
-                    <text x="450" y="78" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Injected deep</text>
-                    <text x="450" y="90" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">underground in</text>
-                    <text x="450" y="102" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">geological formations</text>
-                    <!-- Underground layers -->
-                    <path d="M415 130 L485 130" stroke="#16A34A" stroke-width="1" stroke-dasharray="3 2"/>
-                    <path d="M420 145 L480 145" stroke="#16A34A" stroke-width="1" stroke-dasharray="3 2"/>
-                    <path d="M425 160 L475 160" stroke="#16A34A" stroke-width="1" stroke-dasharray="3 2"/>
-                    <path d="M450 120 L450 165" stroke="#16A34A" stroke-width="1.5" marker-end="url(#arrowCCSgr)"/>
-                    <text x="450" y="180" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Permanent</text>
-                    <text x="450" y="192" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">sequestration</text>
-
-                    <!-- Title -->
-                    <text x="250" y="16" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">HOW CARBON CAPTURE AND STORAGE (CCS) WORKS</text>
-
-                    <defs>
-                        <marker id="arrowCCSg" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/></marker>
-                        <marker id="arrowCCSy" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#F59E0B"/></marker>
-                        <marker id="arrowCCSgr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#16A34A"/></marker>
-                    </defs>
-                </svg>
-            </div>
-
-            <p>
-                The strategic logic is clear: <strong>build CCGTs today as transition backup, retrofit with CCS
-                tomorrow for clean firm power</strong>. This avoids stranded assets &mdash; instead of building gas
-                plants that become obsolete, you build gas plants that become clean. The same infrastructure that
-                provides dispatchable backup at 95% matching today can deliver dispatchable <em>clean</em> power
-                at 99%+ matching in the future, directly addressing the steep cost cliff this analysis reveals.
-            </p>
-
-            <div class="story-insight-box" style="border-left-color:#F59E0B;">
-                <div class="insight-icon"></div>
-                <div>
-                    <strong>Bridge to Full Decarbonization:</strong> Efficient CCGTs serve as a pragmatic bridge
-                    technology. In the near term, they provide the dispatchable backup that enables higher
-                    renewable penetration. With CCS retrofits, they transition to dispatchable low-carbon
-                    generation &mdash; addressing the cost cliff above 95% hourly matching without the
-                    full premium of 100% clean firm power. Building CCS-ready CCGTs today is an investment
-                    in tomorrow&rsquo;s clean firm capacity.
-                </div>
-            </div>
         </div>
     </section>
 
@@ -3383,18 +3101,10 @@ body {
             </p>
 
             <p>
-                Yet these assets face real economic threats. The wave of cheap natural gas and subsidized renewables
-                that drove several nuclear plant shutdowns in the 2010s has not fully abated. When wholesale power
-                prices fall below operating costs, even well-run plants face pressure to shut down permanently.
-                Once retired, a nuclear plant cannot economically restart &mdash; the clean firm capacity is
-                gone forever, and replacing it requires new-build at 2&ndash;3x the cost.
-            </p>
-
-            <h3 style="margin-top:28px;font-size:1.15rem;color:var(--navy);">What Losing Existing Clean Firm Would Cost</h3>
-            <p>
-                Our model quantifies this directly. If existing nuclear and geothermal capacity were unavailable
-                and had to be replaced with new-build clean firm generation at $90/MWh LCOE, the cost impact
-                is dramatic &mdash; especially in regions with large existing fleets:
+                Yet cheap natural gas and subsidized renewables continue to pressure these plants economically
+                &mdash; the same dynamic that drove several nuclear shutdowns in the 2010s. Once retired,
+                a plant cannot economically restart, and replacing it requires new-build at 2&ndash;3x the cost.
+                Our model quantifies this directly:
             </p>
 
             <div class="preservation-panel">
@@ -3454,20 +3164,10 @@ body {
             </div>
 
             <p>
-                The math is straightforward: existing plants provide clean firm power at <strong>wholesale market
-                rates ($27&ndash;42/MWh)</strong> because their capital costs are already paid. New-build clean firm
-                costs <strong>$90/MWh</strong> &mdash; a 2&ndash;3x premium. Every megawatt of existing clean firm
-                that retires prematurely is a megawatt that must eventually be replaced at far higher cost if
-                deep decarbonization goals are to be met. These assets should be valued not just by their wholesale
-                power price, but by the <strong>cost that would be incurred to replace them</strong>.
-            </p>
-
-            <h3 style="margin-top:32px;font-size:1.15rem;color:var(--navy);">CCS Retrofits: Adding New Clean Firm to the Stack</h3>
-            <p>
-                Where existing nuclear and geothermal provide the foundation, <strong>CCS-retrofitted gas plants
-                can build on it</strong>. Current estimates put CCS retrofit LCOE at <strong>$70&ndash;100/MWh</strong>
-                before incentives, driven by capture equipment CapEx, a 10&ndash;15% parasitic efficiency penalty,
-                and CO&#8322; transport/storage costs.
+                These assets should be valued not by today&rsquo;s wholesale price, but by the
+                <strong>cost of replacing them</strong>: $90/MWh new-build vs. $27&ndash;42/MWh wholesale.
+                Where existing plants provide the foundation, <strong>CCS-retrofitted gas plants can build
+                on it</strong>. Current estimates: $70&ndash;100/MWh LCOE before incentives.
             </p>
 
             <div class="ccs-economics-row">
@@ -3486,24 +3186,21 @@ body {
             </div>
 
             <p>
-                At $85/ton, the 45Q credit meaningfully narrows the gap. A CCGT capturing ~0.3 tons CO&#8322;/MWh at
-                90% capture rate receives ~$25/MWh in credits, pushing net LCOE toward <strong>$55&ndash;80/MWh</strong>
-                &mdash; competitive with new nuclear and well below the cost of the last percentage points of hourly
-                matching. To maximize captured tons and 45Q value, CCS plants would likely operate at high capacity
-                factors resembling <strong>baseload dispatch</strong>, conveniently filling the exact role the grid
-                needs: steady, dispatchable clean firm generation.
+                With 45Q credits, net LCOE falls to <strong>$55&ndash;80/MWh</strong> &mdash; competitive with
+                new nuclear. To maximize captured CO&#8322; and 45Q value, CCS plants would run at high capacity
+                factors resembling <strong>baseload dispatch</strong>: exactly the role the grid needs filled.
             </p>
 
             <div class="story-insight-box" style="border-left-color:var(--navy);">
                 <div class="insight-icon"></div>
                 <div>
-                    <strong>Protect What You Have, Build What You Need:</strong> Existing nuclear and
+                    <strong>Preserve Existing Assets, Expand Strategically:</strong> Existing nuclear and
                     geothermal provide irreplaceable clean firm generation at a fraction of new-build cost.
                     Losing these assets to economic pressure would increase decarbonization costs by
                     $5&ndash;18/MWh depending on region &mdash; a penalty that compounds at every matching
-                    target. Meanwhile, CCS retrofits on existing gas infrastructure offer the most viable
-                    near-term pathway to <em>add</em> new clean firm capacity at costs competitive with
-                    new nuclear, especially with 45Q incentives driving baseload-like operation.
+                    target. CCS retrofits on existing gas infrastructure offer the most viable
+                    near-term pathway to expand clean firm capacity at costs competitive with
+                    new nuclear, particularly with 45Q incentives driving baseload-like operation.
                 </div>
             </div>
         </div>
@@ -3585,33 +3282,20 @@ body {
                     </div>
                 </div>
 
-                <p style="margin-top:18px;font-size:0.95rem;color:var(--text-body);line-height:1.7;">
-                    <strong>For remote renewables</strong>, transmission adds significant cost. The best wind and solar
-                    resources are often far from load centers, requiring new high-voltage lines that can add
-                    $15&ndash;40/MWh or more to delivered cost. Interconnection queue backlogs often exceed 5 years,
-                    delaying projects regardless of resource quality. This hidden cost narrows the apparent LCOE
-                    advantage of renewables over firm resources located closer to demand.
+                <p style="margin-top:18px;font-size:0.95rem;color:var(--text-secondary);line-height:1.7;">
+                    <strong>Remote renewables</strong> face the largest T&amp;D burden: $15&ndash;40+/MWh for new
+                    transmission from resource-rich areas to load centers, plus 5+ year interconnection queue
+                    delays. This hidden cost narrows renewables&rsquo; apparent LCOE advantage over firm resources
+                    sited closer to demand.
                 </p>
 
-                <p style="font-size:0.95rem;color:var(--text-body);line-height:1.7;">
-                    <strong>For existing nuclear plants</strong>, the transmission advantage is significant. These
-                    facilities are already interconnected, often at high-voltage nodes near population centers. They
-                    require no new transmission investment and face no queue delays. This further strengthens the
-                    case for preserving existing clean firm assets.
-                </p>
-
-                <p style="font-size:0.95rem;color:var(--text-body);line-height:1.7;">
-                    <strong>For CCS retrofits on existing gas plants</strong>, the same advantage applies &mdash; the
-                    electrical interconnection exists. However, CCS adds a new infrastructure requirement:
-                    CO&#8322; transport pipelines to sequestration sites, which carry their own permitting,
-                    cost, and timeline challenges.
-                </p>
-
-                <p style="font-size:0.95rem;color:var(--text-body);line-height:1.7;">
-                    <strong>For longer-duration storage</strong>, siting flexibility could reduce transmission needs
-                    by locating storage near load centers, effectively substituting storage investment for
-                    transmission investment. This is an area where future analysis incorporating T&amp;D costs
-                    could meaningfully shift the optimal resource mix.
+                <p style="font-size:0.95rem;color:var(--text-secondary);line-height:1.7;">
+                    <strong>Existing nuclear and CCS-retrofit gas plants</strong> are already interconnected at
+                    high-voltage nodes near population centers &mdash; no new transmission investment or queue
+                    delays required. CCS does add CO&#8322; pipeline infrastructure, but avoids the electrical
+                    interconnection bottleneck. <strong>Longer-duration storage</strong> could reduce transmission
+                    needs by siting near load centers, an area where future T&amp;D-inclusive analysis may shift
+                    the optimal mix.
                 </p>
             </div>
 
@@ -5119,12 +4803,13 @@ function highlightCostStep(stepName) {
                 type: 'label',
                 xValue: getX(topIdx),
                 yValue: getY(topIdx),
-                content: 'PREMIUM ZONE',
-                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 600 },
-                color: 'rgba(239,68,68,0.6)',
+                content: 'PREMIUM',
+                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 9, weight: 600 },
+                color: 'rgba(239,68,68,0.55)',
                 backgroundColor: 'transparent',
-                xAdjust: -70,
-                yAdjust: 6,
+                position: 'end',
+                xAdjust: -90,
+                yAdjust: 8,
             };
             // Danger zone shading — 99 to 100 is proportionally narrow
             annotations['dangerZone'] = {
