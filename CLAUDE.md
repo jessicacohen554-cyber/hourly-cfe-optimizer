@@ -23,12 +23,27 @@
 - 2025 snapshot model (no forward projections)
 - All sensitivity toggles use Low/Medium/High naming (never "Base" or "Baseline")
 - All new features layered on top of existing — never remove existing visuals or controls
-- Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached mixes
+- **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
+- **5 paired toggle groups** replace 10 individual toggles (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission)
+- **7 thresholds** (75, 80, 85, 90, 95, 99, 100) — reduced from 18 to control compute while preserving key inflection points
+- **11,340 total scenarios** (7 thresholds × 5 regions × 324 paired toggle combos) — each with its own co-optimized resource mix and cost
 - Hydro is always existing-only, wholesale-priced, $0 transmission
 - H2 storage explicitly excluded
 - CCS-CCGT includes 45Q offset in LCOE
 - LDES = 100hr iron-air, 50% RT efficiency, new multi-day dispatch algorithm
 - Battery = 4hr Li-ion, 85% RT efficiency, existing daily-cycle dispatch preserved
+
+## Critical: Scientific Rigor vs. Compute
+
+**NEVER sacrifice scientific integrity to save compute.** Use as much compute as necessary to achieve academically rigorous results. The user expects this project to withstand academic scrutiny.
+
+When facing compute vs. rigor tradeoffs:
+1. **Always discuss the tradeoff with the user first** — don't unilaterally choose minimal compute
+2. **Find the best middle ground** that balances rigor with feasibility
+3. **Pairing variables** (e.g., 5 paired toggles vs. 10 individual) is an acceptable rigor-compute tradeoff because it reflects real-world cost correlations
+4. **Reducing thresholds** from 18 to 7 is acceptable because it preserves key inflection points
+5. **Never decouple cost from optimization** — the co-optimization of cost + resource mix is the whole point
+6. **Never re-rank cached results as a shortcut** when full optimization is needed — if costs change the cost function, the optimization must use that cost function
 
 ## User Preferences (Do Not Re-Ask These)
 
