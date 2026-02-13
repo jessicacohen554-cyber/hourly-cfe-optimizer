@@ -6,37 +6,38 @@
     <title>Methodology - Hourly Clean Energy Cost Optimizer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --c-navy: #0A2540;
-            --c-navy-dark: #061B2E;
-            --c-blue: #2372B9;
-            --c-blue-light: #60A5FA;
-            --c-blue-pale: #DBEAFE;
-            --c-white: #ffffff;
-            --c-gray-50: #F8FAFC;
-            --c-gray-100: #F1F5F9;
-            --c-gray-200: #E2E8F0;
-            --c-gray-400: #94A3B8;
-            --c-gray-500: #64748B;
-            --c-gray-600: #475569;
-            --c-gray-700: #334155;
-            --c-gray-800: #1E293B;
-            --font-body: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-            --font-heading: 'Plus Jakarta Sans', 'Inter', 'Segoe UI Semibold', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-            --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+            --navy: #1A2744;
+            --navy-light: #2D3A52;
+            --accent: #C75B4A;
+            --accent-dark: #9E4239;
+            --solar: #D4A84B;
+            --wind: #7A8B5C;
+            --hydro: #5B8A8A;
+            --storage: #C75B4A;
+            --bg: #F5F0E8;
+            --bg-card: #FAF6EF;
+            --border: #DDD0C0;
+            --border-light: #E8DFD2;
+            --text-primary: #111111;
+            --text-secondary: #1A1A1A;
+            --text-muted: #9A9083;
+            --font-body: 'Lora', 'Georgia', 'Times New Roman', serif;
+            --font-heading: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+            --font-mono: 'Consolas', 'Courier New', monospace;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { font-size: 16px; scroll-behavior: smooth; }
         body {
             font-family: var(--font-body);
-            color: var(--c-gray-700);
-            background: var(--c-gray-50);
+            color: var(--text-primary);
+            background: var(--bg);
             background-image:
-                radial-gradient(ellipse at 20% 0%, rgba(35,114,185,0.03) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 100%, rgba(35,114,185,0.02) 0%, transparent 50%);
+                radial-gradient(ellipse at 20% 0%, rgba(212,168,75,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(199,91,74,0.03) 0%, transparent 50%);
             background-attachment: fixed;
             line-height: 1.7;
             -webkit-font-smoothing: antialiased;
@@ -44,8 +45,8 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #1a5a9e 0%, #2372B9 35%, #1e68a8 65%, #165a96 100%);
-            color: var(--c-white);
+            background: var(--navy);
+            color: #ffffff;
             padding: 52px 24px 48px;
             text-align: center;
             position: relative;
@@ -55,13 +56,40 @@
             content: '';
             position: absolute;
             inset: 0;
-            background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
-            background-size: 24px 24px;
+            background:
+                linear-gradient(135deg,
+                    #1A2744 0%, #1A2744 28%,
+                    #6B8DB5 28%, #6B8DB5 42%,
+                    #C75B4A 42%, #C75B4A 56%,
+                    #D4A84B 56%, #D4A84B 70%,
+                    #1A2744 70%, #1A2744 100%
+                );
+            opacity: 0.88;
             pointer-events: none;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.04) 42%, transparent 42%),
+                linear-gradient(45deg, transparent 55%, rgba(255,255,255,0.03) 55%, rgba(255,255,255,0.03) 57%, transparent 57%),
+                linear-gradient(45deg, transparent 70%, rgba(26,39,68,0.4) 70%);
+            pointer-events: none;
+        }
+        .header-accent {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #1A2744 0%, #1A2744 25%, #6B8DB5 25%, #6B8DB5 50%, #C75B4A 50%, #C75B4A 75%, #D4A84B 75%, #D4A84B 100%);
+            z-index: 2;
         }
         .header-logo {
             position: relative;
             margin-bottom: 16px;
+            z-index: 1;
         }
         .header-logo img {
             height: 36px;
@@ -69,19 +97,26 @@
         }
         .header h1 {
             font-family: var(--font-heading);
-            font-size: 2rem;
-            font-weight: 700;
-            letter-spacing: -0.5px;
+            font-size: 2.2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: capitalize;
             margin-bottom: 8px;
             position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.25);
         }
         .header .subtitle {
-            font-size: 1rem;
-            font-weight: 300;
-            opacity: 0.75;
+            font-family: var(--font-body);
+            font-size: 1.05rem;
+            font-weight: 400;
+            font-style: italic;
+            opacity: 0.92;
             max-width: 640px;
             margin: 0 auto;
             position: relative;
+            z-index: 1;
+            text-shadow: 0 1px 6px rgba(0,0,0,0.2);
         }
 
         .content {
@@ -95,113 +130,143 @@
             align-items: center;
             gap: 6px;
             margin-bottom: 32px;
-            color: var(--c-blue);
+            color: var(--navy);
             font-family: var(--font-heading);
             font-weight: 600;
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             transition: all 0.2s ease;
-            padding: 6px 12px;
+            padding: 8px 14px;
             border-radius: 8px;
+            border-bottom: 1px solid rgba(199,91,74,0.3);
         }
         .back-link:hover {
-            color: #1a5a9e;
-            background: rgba(35,114,185,0.05);
+            color: var(--accent-dark);
+            background: rgba(199,91,74,0.05);
+            border-bottom-color: var(--accent-dark);
         }
 
         .toc {
-            background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.4);
-            border-radius: 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
             padding: 28px 36px;
             margin-bottom: 40px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
         }
         .toc h2 {
             font-family: var(--font-heading);
-            font-size: 1.1rem;
-            color: var(--c-gray-800);
-            margin-bottom: 12px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 14px;
+            text-transform: capitalize;
+            letter-spacing: 0.04em;
+            border-bottom: none;
+            margin-top: 0;
+            padding-bottom: 0;
         }
         .toc ol { padding-left: 20px; }
-        .toc li { margin-bottom: 6px; }
+        .toc li {
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+        }
         .toc a {
-            color: var(--c-blue);
+            color: var(--navy);
             text-decoration: none;
             font-size: 0.92rem;
+            border-bottom: 1px solid rgba(199,91,74,0.2);
+            transition: all 0.15s ease;
         }
-        .toc a:hover { text-decoration: underline; }
+        .toc a:hover {
+            color: var(--accent-dark);
+            border-bottom-color: var(--accent-dark);
+        }
 
         h2 {
             font-family: var(--font-heading);
             font-size: 1.6rem;
-            color: var(--c-blue);
+            color: var(--accent);
             margin-top: 52px;
             margin-bottom: 18px;
             padding-bottom: 10px;
-            border-bottom: 2px solid var(--c-blue-pale);
+            border-bottom: 2px solid var(--border);
             font-weight: 700;
-            letter-spacing: -0.3px;
+            letter-spacing: 0.02em;
+            text-transform: capitalize;
         }
         h3 {
             font-family: var(--font-heading);
             font-size: 1.15rem;
-            color: var(--c-gray-800);
+            font-weight: 600;
+            color: var(--navy);
             margin-top: 28px;
             margin-bottom: 10px;
         }
 
-        p { margin-bottom: 14px; font-size: 0.95rem; }
+        p {
+            margin-bottom: 14px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.75;
+        }
+        strong { color: var(--navy); }
 
         .formula-box {
-            background: #1E293B;
-            border: 1px solid #334155;
-            border-radius: 12px;
+            background: linear-gradient(145deg, #1F3158 0%, #1A2744 100%);
+            border: 1px solid var(--navy-light);
+            border-radius: 10px;
             padding: 22px 28px;
             margin: 20px 0 24px;
             font-family: var(--font-mono);
             font-size: 0.88rem;
             line-height: 1.9;
             overflow-x: auto;
-            color: #E2E8F0;
+            color: rgba(255,255,255,0.9);
         }
         .formula-box .label {
             font-family: var(--font-heading);
             font-weight: 700;
-            color: #60A5FA;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            color: var(--solar);
+            font-size: 0.78rem;
+            text-transform: capitalize;
+            letter-spacing: 0.06em;
             margin-bottom: 10px;
             display: block;
         }
 
         .note-box {
-            background: linear-gradient(135deg, rgba(219,234,254,0.5) 0%, rgba(224,231,255,0.3) 100%);
-            border: 1px solid rgba(35,114,185,0.1);
-            border-left: 4px solid var(--c-blue);
-            border-radius: 0 12px 12px 0;
+            background: linear-gradient(135deg, rgba(212,168,75,0.06) 0%, rgba(199,91,74,0.04) 100%);
+            border: 1px solid rgba(212,168,75,0.2);
+            border-left: 4px solid var(--accent);
+            border-radius: 0 10px 10px 0;
             padding: 18px 24px;
             margin: 20px 0 24px;
             font-size: 0.9rem;
-            color: var(--c-gray-600);
+            color: var(--text-secondary);
+        }
+        .note-box strong {
+            color: var(--accent);
         }
 
+        .table-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 16px 0 24px;
+        }
         table {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin: 16px 0 24px;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-            border: 1px solid rgba(126,128,131,0.15);
+            border-collapse: collapse;
+            margin: 0;
+            border-radius: 0;
+            overflow: visible;
+            box-shadow: none;
+            border: none;
+            font-size: 0.9rem;
         }
         thead {
-            background: rgba(35,114,185,0.9);
-            color: var(--c-white);
+            background: linear-gradient(145deg, #1F3158 0%, #1A2744 100%);
+            color: #ffffff;
         }
         th {
             font-family: var(--font-heading);
@@ -209,17 +274,19 @@
             font-size: 0.85rem;
             font-weight: 600;
             text-align: center;
-            letter-spacing: 0;
+            letter-spacing: 0.04em;
+            text-transform: capitalize;
         }
         th:first-child { text-align: left; }
         td {
             padding: 10px 16px;
-            border-bottom: 1px solid var(--c-gray-100);
+            border-bottom: 1px solid var(--border-light);
             font-size: 0.88rem;
+            color: var(--text-primary);
         }
-        tbody tr:nth-child(even) { background: var(--c-gray-50); }
+        tbody tr:nth-child(even) { background: rgba(250,246,239,0.5); }
         tbody tr:last-child td { border-bottom: none; }
-        td:not(:first-child) { text-align: center; }
+        td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
         .figure {
             margin: 24px 0;
@@ -232,7 +299,7 @@
         }
         .figure-caption {
             font-size: 0.82rem;
-            color: var(--c-gray-500);
+            color: var(--text-muted);
             font-style: italic;
             margin-top: 8px;
         }
@@ -242,7 +309,7 @@
             padding: 0;
         }
         .source-list li {
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             padding-left: 20px;
             position: relative;
             font-size: 0.9rem;
@@ -254,14 +321,19 @@
             top: 9px;
             width: 8px;
             height: 8px;
-            background: linear-gradient(135deg, var(--c-blue) 0%, var(--c-blue-light) 100%);
+            background: linear-gradient(135deg, var(--accent) 0%, var(--solar) 100%);
             border-radius: 50%;
         }
         .source-list a {
-            color: var(--c-blue);
+            color: var(--navy);
             text-decoration: none;
+            border-bottom: 1px solid rgba(199,91,74,0.3);
+            transition: all 0.15s ease;
         }
-        .source-list a:hover { text-decoration: underline; }
+        .source-list a:hover {
+            color: var(--accent-dark);
+            border-bottom-color: var(--accent-dark);
+        }
 
         .color-swatch {
             display: inline-block;
@@ -270,7 +342,7 @@
             border-radius: 3px;
             vertical-align: middle;
             margin-right: 6px;
-            border: 1px solid rgba(0,0,0,0.1);
+            border: 1.5px solid #4A4540;
         }
 
         .accent-bar {
@@ -279,13 +351,136 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #1a5a9e 0%, #2372B9 25%, #60A5FA 50%, #2372B9 75%, #1a5a9e 100%);
+            background: linear-gradient(90deg, #1A2744 0%, #1A2744 25%, #6B8DB5 25%, #6B8DB5 50%, #C75B4A 50%, #C75B4A 75%, #D4A84B 75%, #D4A84B 100%);
             z-index: 1000;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            html { font-size: 15px; }
+            .header {
+                padding: 32px 16px 28px;
+            }
+            .header h1 {
+                font-size: 1.5rem;
+                letter-spacing: 0.5px;
+            }
+            .header .subtitle {
+                font-size: 0.9rem;
+            }
+            .content {
+                padding: 28px 16px 60px;
+            }
+            .toc {
+                padding: 20px 18px;
+            }
+            h2 {
+                font-size: 1.35rem;
+                margin-top: 36px;
+            }
+            h3 {
+                font-size: 1.05rem;
+            }
+            p { font-size: 0.9rem; }
+            .formula-box {
+                padding: 16px 14px;
+                font-size: 0.78rem;
+                border-radius: 8px;
+            }
+            .note-box {
+                padding: 14px 16px;
+                font-size: 0.85rem;
+            }
+            th {
+                padding: 10px 10px;
+                font-size: 0.78rem;
+            }
+            td {
+                padding: 8px 10px;
+                font-size: 0.82rem;
+            }
+            .source-list li {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            html { font-size: 14px; }
+            .header {
+                padding: 24px 12px 20px;
+            }
+            .header h1 {
+                font-size: 1.3rem;
+                letter-spacing: 0;
+            }
+            .header .subtitle {
+                font-size: 0.85rem;
+            }
+            .content {
+                padding: 20px 10px 48px;
+            }
+            .toc {
+                padding: 16px 14px;
+            }
+            .toc a {
+                font-size: 0.85rem;
+            }
+            h2 {
+                font-size: 1.2rem;
+                margin-top: 28px;
+                margin-bottom: 12px;
+            }
+            h3 {
+                font-size: 1rem;
+                margin-top: 20px;
+            }
+            p { font-size: 0.85rem; }
+            .formula-box {
+                padding: 12px 10px;
+                font-size: 0.72rem;
+                line-height: 1.7;
+            }
+            .formula-box .label {
+                font-size: 0.7rem;
+            }
+            .note-box {
+                padding: 12px 12px;
+                font-size: 0.82rem;
+            }
+            th {
+                padding: 8px 6px;
+                font-size: 0.72rem;
+            }
+            td {
+                padding: 6px 6px;
+                font-size: 0.78rem;
+            }
+            .back-link {
+                font-size: 0.85rem;
+                padding: 6px 10px;
+            }
+            .source-list li {
+                font-size: 0.82rem;
+                word-break: break-word;
+            }
+        }
+
+        /* Touch-friendly */
+        @media (hover: none) and (pointer: coarse) {
+            .back-link {
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+            }
+            .toc a {
+                padding: 4px 0;
+                display: inline-block;
+            }
         }
 
         @media print {
             body { background: white; }
-            .header { background: var(--c-blue); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header { background: var(--navy); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             h2 { page-break-before: auto; }
             .formula-box { page-break-inside: avoid; }
             table { page-break-inside: avoid; }
@@ -295,13 +490,11 @@
 </head>
 <body>
 
-<div class="header">
-    <div class="header-logo">
-        <img src="img/constellation-logo.png" alt="Constellation">
-    </div>
+<header class="header">
     <h1>Hourly Clean Energy Cost Optimizer</h1>
     <p class="subtitle">Methodology &amp; Technical Reference</p>
-</div>
+    <div class="header-accent"></div>
+</header>
 
 <div class="content">
     <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
@@ -455,25 +648,25 @@
         </thead>
         <tbody>
             <tr>
-                <td><span class="color-swatch" style="background:#2372B9;"></span> Clean Firm</td>
+                <td><span class="color-swatch" style="background:#1A2744;"></span> Clean Firm</td>
                 <td>Nuclear + Geothermal</td>
                 <td>Flat baseload (1/8760 per hour)</td>
                 <td>Dispatchable 24/7, no hourly variation</td>
             </tr>
             <tr>
-                <td><span class="color-swatch" style="background:#FBB254;"></span> Solar</td>
+                <td><span class="color-swatch" style="background:#D4A84B;"></span> Solar</td>
                 <td>Utility-scale PV</td>
                 <td>EIA-930 hourly regional profile</td>
                 <td>Daytime only, seasonal variation</td>
             </tr>
             <tr>
-                <td><span class="color-swatch" style="background:#CADB2E;"></span> Wind</td>
+                <td><span class="color-swatch" style="background:#7A8B5C;"></span> Wind</td>
                 <td>Onshore wind</td>
                 <td>EIA-930 hourly regional profile</td>
                 <td>Variable, often stronger at night</td>
             </tr>
             <tr>
-                <td><span class="color-swatch" style="background:#007FA4;"></span> Hydro</td>
+                <td><span class="color-swatch" style="background:#5B8A8A;"></span> Hydro</td>
                 <td>Conventional hydro</td>
                 <td>EIA-930 hourly regional profile</td>
                 <td>Seasonal, constrained by regional caps</td>
@@ -879,11 +1072,11 @@
         Resources are matched to demand in a priority order that places baseload resources first:
     </p>
     <ol style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
-        <li><span class="color-swatch" style="background:#2372B9;"></span> Clean Firm (matched first)</li>
-        <li><span class="color-swatch" style="background:#007FA4;"></span> Hydro</li>
-        <li><span class="color-swatch" style="background:#CADB2E;"></span> Wind</li>
-        <li><span class="color-swatch" style="background:#FBB254;"></span> Solar</li>
-        <li><span class="color-swatch" style="background:#F47B27;"></span> Storage Dispatch (fills remaining gaps)</li>
+        <li><span class="color-swatch" style="background:#1A2744;"></span> Clean Firm (matched first)</li>
+        <li><span class="color-swatch" style="background:#5B8A8A;"></span> Hydro</li>
+        <li><span class="color-swatch" style="background:#7A8B5C;"></span> Wind</li>
+        <li><span class="color-swatch" style="background:#D4A84B;"></span> Solar</li>
+        <li><span class="color-swatch" style="background:#C75B4A;"></span> Storage Dispatch (fills remaining gaps)</li>
     </ol>
 
     <p>
