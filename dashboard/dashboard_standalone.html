@@ -1086,6 +1086,78 @@ body {
     margin-top: 2px;
 }
 
+/* Hero callout cards (narrative intro) */
+.hero-callout-row {
+    display: flex;
+    gap: 24px;
+    margin: 32px 0;
+    flex-wrap: wrap;
+}
+.hero-callout-card {
+    flex: 1;
+    min-width: 140px;
+    text-align: center;
+    padding: 28px 16px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(26,39,68,0.08) 100%);
+    border: 1px solid rgba(26,39,68,0.1);
+}
+.hero-callout-card.hero-callout-green {
+    background: linear-gradient(135deg, rgba(122,139,92,0.06) 0%, rgba(122,139,92,0.08) 100%);
+    border-color: rgba(122,139,92,0.12);
+}
+.hero-callout-card.hero-callout-red {
+    background: linear-gradient(135deg, rgba(199,91,74,0.06) 0%, rgba(212,168,75,0.08) 100%);
+    border-color: rgba(199,91,74,0.12);
+}
+.hero-callout-value {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1;
+    letter-spacing: -1px;
+}
+.hero-callout-label {
+    font-size: 0.8rem;
+    color: #9A9083;
+    margin-top: 6px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: capitalize;
+}
+@media (max-width: 768px) {
+    .hero-callout-row {
+        gap: 12px;
+    }
+    .hero-callout-card {
+        min-width: 100px;
+        padding: 20px 10px;
+    }
+    .hero-callout-value {
+        font-size: 2rem;
+    }
+    .hero-callout-label {
+        font-size: 0.7rem;
+    }
+}
+@media (max-width: 480px) {
+    .hero-callout-row {
+        gap: 8px;
+    }
+    .hero-callout-card {
+        min-width: 80px;
+        padding: 16px 8px;
+        border-radius: 12px;
+    }
+    .hero-callout-value {
+        font-size: 1.6rem;
+    }
+    .hero-callout-label {
+        font-size: 0.65rem;
+        letter-spacing: 0.5px;
+    }
+}
+
 /* Energy spectrum accent bar */
 .energy-spectrum-bar {
     height: 3px;
@@ -1212,6 +1284,35 @@ body {
     margin-bottom: 0;
 }
 
+.step-cost-callout {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #1A1A1A;
+}
+.step-cost-callout.step-cost-green {
+    background: rgba(122,139,92,0.08);
+    border: 1px solid rgba(122,139,92,0.15);
+}
+.step-cost-callout.step-cost-green strong {
+    color: #7A8B5C;
+}
+.step-cost-callout.step-cost-red {
+    background: rgba(199,91,74,0.08);
+    border: 1px solid rgba(199,91,74,0.15);
+}
+.step-cost-callout.step-cost-red strong {
+    color: #C75B4A;
+}
+@media (max-width: 480px) {
+    .step-cost-callout {
+        padding: 10px 12px;
+        font-size: 0.82rem;
+        border-radius: 8px;
+    }
+}
+
 /* Responsive scrollytelling */
 @media (max-width: 1024px) {
     .scrolly-container {
@@ -1230,6 +1331,15 @@ body {
     .scrolly-step {
         min-height: auto;
         padding: 48px 24px;
+    }
+}
+/* Mobile scrollytelling: re-enable sticky behavior in stacked layout */
+@media (max-width: 1024px) and (min-width: 481px) {
+    .scrolly-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        height: 45vh;
     }
 }
 
@@ -1253,14 +1363,25 @@ body {
 }
 
 @media (max-width: 768px) {
+    html {
+        font-size: 15px;
+    }
     .main-content {
-        padding: 20px 16px 40px;
+        padding: 20px 14px 40px;
     }
     .header {
-        padding: 36px 20px;
+        padding: 32px 16px 28px;
     }
     .header h1 {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
+        letter-spacing: 0.5px;
+    }
+    .header .subtitle {
+        font-size: 0.92rem;
+        line-height: 1.45;
+    }
+    .header .data-year-label {
+        font-size: 0.75rem;
     }
     .header-logo {
         height: 28px;
@@ -1269,16 +1390,331 @@ body {
     }
     .metrics-row {
         grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .metric-tile {
+        padding: 16px 12px;
+    }
+    .metric-tile .tile-value {
+        font-size: 1.8rem;
+    }
+    .metric-tile .tile-label {
+        font-size: 0.73rem;
+    }
+    .metric-tile .tile-sub {
+        font-size: 0.72rem;
+    }
+    .metric-tile:hover {
+        transform: none;
     }
     .controls-row {
         flex-direction: column;
         align-items: stretch;
+        gap: 14px;
     }
     .control-group select {
         min-width: 100%;
+        padding: 13px 38px 13px 16px;
+        font-size: 1rem;
     }
     .region-context {
         margin-left: 0;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .key-findings {
+        padding: 18px 16px;
+    }
+    .key-findings h4 {
+        font-size: 0.95rem;
+    }
+    .key-findings p {
+        font-size: 0.84rem;
+    }
+    .chart-panel {
+        padding: 18px 14px;
+    }
+    .chart-panel h3 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+    }
+    .donut-container {
+        max-width: 220px;
+    }
+    .donut-center-label .dcl-value {
+        font-size: 1.7rem;
+    }
+    .donut-legend {
+        gap: 6px 12px;
+        font-size: 0.78rem;
+    }
+    .compressed-day-container {
+        height: 280px;
+    }
+    .peak-tower-wrap {
+        height: 240px;
+        gap: 16px;
+        padding-top: 16px;
+    }
+    .peak-tower {
+        max-width: 80px;
+    }
+    .peak-tower-value {
+        font-size: 0.8rem;
+    }
+    .peak-tower-label {
+        font-size: 0.72rem;
+    }
+    .peak-capacity-panel,
+    .cost-panel {
+        padding: 18px 14px;
+    }
+    .peak-capacity-note {
+        font-size: 0.82rem;
+    }
+    .cost-table {
+        font-size: 0.82rem;
+    }
+    .cost-table th {
+        padding: 8px 8px;
+        font-size: 0.8rem;
+    }
+    .cost-table td {
+        padding: 8px 8px;
+    }
+    .methodology-panel {
+        padding: 18px 14px;
+    }
+    .methodology-panel p {
+        font-size: 0.85rem;
+    }
+    .scroll-transition-inner {
+        padding: 28px 20px;
+    }
+    .scroll-transition-text {
+        font-size: 1.15rem;
+    }
+    .footer {
+        padding: 16px 14px;
+        font-size: 0.75rem;
+    }
+    /* Narrative story sections on mobile */
+    .story-section {
+        padding: 48px 18px;
+    }
+    .story-section h2 {
+        font-size: 1.8rem;
+        letter-spacing: -0.3px;
+    }
+    .story-lead {
+        font-size: 0.95rem;
+    }
+    .story-section p {
+        font-size: 0.9rem;
+    }
+    .story-stat-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    .story-stat-card {
+        padding: 16px 12px;
+    }
+    .story-stat-value {
+        font-size: 1.5rem;
+    }
+    .story-stat-label {
+        font-size: 0.7rem;
+    }
+    .story-insight-box {
+        padding: 18px 16px;
+        font-size: 0.85rem;
+        gap: 12px;
+        flex-direction: column;
+    }
+    .step-card {
+        padding: 22px 18px;
+    }
+    .step-card h3 {
+        font-size: 1.4rem;
+    }
+    .step-card p {
+        font-size: 0.88rem;
+    }
+    .scrolly-chart-wrap {
+        padding: 18px 14px;
+        min-height: 280px;
+    }
+    .scrolly-chart-wrap canvas {
+        max-height: 300px;
+    }
+}
+
+/* Small phone (480px and below) */
+@media (max-width: 480px) {
+    html {
+        font-size: 14px;
+    }
+    .main-content {
+        padding: 14px 10px 32px;
+    }
+    .header {
+        padding: 24px 12px 20px;
+    }
+    .header h1 {
+        font-size: 1.3rem;
+        letter-spacing: 0;
+    }
+    .header .subtitle {
+        font-size: 0.85rem;
+    }
+    .metrics-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .metric-tile {
+        padding: 14px 10px;
+    }
+    .metric-tile .tile-value {
+        font-size: 1.55rem;
+    }
+    .metric-tile .tile-label {
+        font-size: 0.68rem;
+        margin-bottom: 5px;
+    }
+    .metric-tile .tile-sub {
+        font-size: 0.66rem;
+    }
+    .chart-panel {
+        padding: 14px 10px;
+    }
+    .chart-panel h3 {
+        font-size: 1rem;
+    }
+    .donut-container {
+        max-width: 190px;
+    }
+    .donut-center-label .dcl-value {
+        font-size: 1.45rem;
+    }
+    .compressed-day-container {
+        height: 220px;
+    }
+    .peak-tower-wrap {
+        height: 200px;
+        gap: 10px;
+    }
+    .peak-tower {
+        max-width: 65px;
+    }
+    .cost-table {
+        font-size: 0.75rem;
+    }
+    .cost-table th {
+        padding: 6px 5px;
+        font-size: 0.73rem;
+    }
+    .cost-table td {
+        padding: 6px 5px;
+    }
+    .cost-table .resource-dot {
+        width: 9px;
+        height: 9px;
+        margin-right: 4px;
+    }
+    .story-section {
+        padding: 36px 12px;
+    }
+    .story-section h2 {
+        font-size: 1.5rem;
+    }
+    .story-stat-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .story-stat-card {
+        padding: 12px 8px;
+    }
+    .story-stat-value {
+        font-size: 1.3rem;
+    }
+    .story-insight-box {
+        padding: 14px 12px;
+        font-size: 0.82rem;
+    }
+    /* Scrollytelling on small phones */
+    .scrolly-sticky {
+        height: 40vh;
+        padding: 14px 10px;
+    }
+    .scrolly-chart-wrap {
+        padding: 12px 8px;
+        min-height: 220px;
+        border-radius: 12px;
+    }
+    .scrolly-chart-wrap canvas {
+        max-height: 240px;
+    }
+    .scrolly-step {
+        padding: 28px 12px;
+    }
+    .step-card {
+        padding: 18px 14px;
+        border-radius: 12px;
+    }
+    .step-card h3 {
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+    }
+    .step-card p {
+        font-size: 0.84rem;
+        line-height: 1.65;
+    }
+    .scroll-transition {
+        padding: 40px 0 28px;
+    }
+    .scroll-transition-inner {
+        padding: 22px 16px;
+        border-radius: 12px;
+    }
+    .scroll-transition-text {
+        font-size: 1rem;
+    }
+    .footer {
+        font-size: 0.7rem;
+        padding: 12px 10px;
+    }
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+    .control-group select {
+        min-height: 48px;
+        font-size: 16px; /* prevent iOS zoom on focus */
+    }
+    .metric-tile:hover {
+        transform: none;
+        box-shadow: none;
+    }
+    .story-stat-card:hover {
+        transform: none;
+        box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+    }
+    .methodology-link {
+        padding: 4px 0;
+        display: inline-block;
+    }
+}
+
+/* Landscape phones */
+@media (max-height: 500px) and (orientation: landscape) {
+    .scrolly-sticky {
+        height: 70vh;
+    }
+    .scrolly-chart-wrap {
+        min-height: 200px;
+    }
+    .scrolly-chart-wrap canvas {
+        max-height: 200px;
     }
 }
 </style>
@@ -1439,18 +1875,18 @@ body {
             </p>
 
             <!-- Big number hero callout -->
-            <div style="display:flex; gap:24px; margin:32px 0; flex-wrap:wrap;">
-                <div style="flex:1; min-width:140px; text-align:center; padding:28px 16px; border-radius:16px; background:linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(26,39,68,0.08) 100%); border:1px solid rgba(26,39,68,0.1);">
-                    <div style="font-size:2.8rem; font-weight:800; color:var(--navy); line-height:1; letter-spacing:-1px;">8,760</div>
-                    <div style="font-size:0.8rem; color:#9A9083; margin-top:6px; font-weight:600; letter-spacing:1px; text-transform:capitalize;">Hours per year</div>
+            <div class="hero-callout-row">
+                <div class="hero-callout-card">
+                    <div class="hero-callout-value">8,760</div>
+                    <div class="hero-callout-label">Hours per year</div>
                 </div>
-                <div style="flex:1; min-width:140px; text-align:center; padding:28px 16px; border-radius:16px; background:linear-gradient(135deg, rgba(122,139,92,0.06) 0%, rgba(122,139,92,0.08) 100%); border:1px solid rgba(122,139,92,0.12);">
-                    <div style="font-size:2.8rem; font-weight:800; color:#7A8B5C; line-height:1; letter-spacing:-1px;">5</div>
-                    <div style="font-size:0.8rem; color:#9A9083; margin-top:6px; font-weight:600; letter-spacing:1px; text-transform:capitalize;">ISO regions</div>
+                <div class="hero-callout-card hero-callout-green">
+                    <div class="hero-callout-value" style="color:#7A8B5C;">5</div>
+                    <div class="hero-callout-label">ISO regions</div>
                 </div>
-                <div style="flex:1; min-width:140px; text-align:center; padding:28px 16px; border-radius:16px; background:linear-gradient(135deg, rgba(199,91,74,0.06) 0%, rgba(212,168,75,0.08) 100%); border:1px solid rgba(199,91,74,0.12);">
-                    <div style="font-size:2.8rem; font-weight:800; color:#C75B4A; line-height:1; letter-spacing:-1px;" id="introMultiplier">2x</div>
-                    <div style="font-size:0.8rem; color:#9A9083; margin-top:6px; font-weight:600; letter-spacing:1px; text-transform:capitalize;">Cost escalation at 100%</div>
+                <div class="hero-callout-card hero-callout-red">
+                    <div class="hero-callout-value" style="color:#C75B4A;" id="introMultiplier">2x</div>
+                    <div class="hero-callout-label">Cost escalation at 100%</div>
                 </div>
             </div>
 
@@ -1492,8 +1928,8 @@ body {
                         procurement and a wind/solar-heavy mix, buyers can match three-quarters of their
                         demand hourly for a modest premium above wholesale rates.
                     </p>
-                    <div style="margin-top:16px; padding:12px 16px; border-radius:12px; background:rgba(122,139,92,0.08); border:1px solid rgba(122,139,92,0.15); font-size:0.92rem; color:#1A1A1A;">
-                        <strong style="color:#7A8B5C;">Avg Cost:</strong> <span id="stepCost75">~$47/MWh</span> &mdash; within reach for most corporate buyers
+                    <div class="step-cost-callout step-cost-green">
+                        <strong>Avg Cost:</strong> <span id="stepCost75">~$47/MWh</span> &mdash; within reach for most corporate buyers
                     </div>
                 </div>
             </div>
@@ -1506,8 +1942,8 @@ body {
                         toward clean firm power, and procurement must rise to 110&ndash;135%. The easy hours
                         are all covered &mdash; now you&rsquo;re paying to cover the hardest ones.
                     </p>
-                    <div style="margin-top:16px; padding:12px 16px; border-radius:12px; background:rgba(199,91,74,0.08); border:1px solid rgba(199,91,74,0.15); font-size:0.92rem; color:#1A1A1A;">
-                        <strong style="color:#C75B4A;">Avg Cost:</strong> <span id="stepCost95">~$64/MWh</span> &mdash; clean firm power becomes essential
+                    <div class="step-cost-callout step-cost-red">
+                        <strong>Avg Cost:</strong> <span id="stepCost95">~$64/MWh</span> &mdash; clean firm power becomes essential
                     </div>
                 </div>
             </div>
@@ -1521,8 +1957,8 @@ body {
                         These last unmatched hours are extreme weather events and overnight wind droughts
                         that only firm generation can reliably cover.
                     </p>
-                    <div style="margin-top:16px; padding:12px 16px; border-radius:12px; background:rgba(199,91,74,0.08); border:1px solid rgba(199,91,74,0.15); font-size:0.92rem; color:#1A1A1A;">
-                        <strong style="color:#C75B4A;">Avg Cost:</strong> <span id="stepCost99">~$77/MWh</span> &mdash; extreme weather hours drive the final premium
+                    <div class="step-cost-callout step-cost-red">
+                        <strong>Avg Cost:</strong> <span id="stepCost99">~$77/MWh</span> &mdash; extreme weather hours drive the final premium
                     </div>
                 </div>
             </div>
