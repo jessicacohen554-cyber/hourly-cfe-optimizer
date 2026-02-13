@@ -154,9 +154,18 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 4px;
+    height: 6px;
     background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
     z-index: 1000;
+    overflow: hidden;
+}
+.bottom-banner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 6' preserveAspectRatio='none'%3E%3Cpath d='M0,3 L120,3 L135,0.5 L150,5.5 L165,1 L180,5 L195,3 L400,3 L415,0.5 L430,5.5 L445,1 L460,5 L475,3 L700,3 L715,0.5 L730,5.5 L745,1 L760,5 L775,3 L1000,3 L1015,0.5 L1030,5.5 L1045,1 L1060,5 L1075,3 L1200,3' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='1.2'/%3E%3C/svg%3E") no-repeat center center;
+    background-size: 100% 100%;
+    pointer-events: none;
 }
 
 /* ========== MAIN CONTENT ========== */
@@ -2785,15 +2794,19 @@ function updatePeakCapacity(entry, region) {
     const gapH = peakDemandMW > 0 ? Math.max(4, (gapMW / peakDemandMW) * maxBarH) : 4;
 
     container.innerHTML = `
+        <div class="peak-capacity-note">
+            At <strong style="color:#0EA5E9;">${procPct}%</strong> procurement, the worst single hour still needs
+            <strong style="color:#EF4444;">${formatPct(peakGapPct)}</strong> of peak demand from backup sources.
+        </div>
         <div class="peak-tower-wrap">
             <div class="peak-tower">
-                <div class="peak-tower-value">${formatCommas(peakDemandMW)} MW</div>
+                <div class="peak-tower-value" style="color:#F59E0B;">${formatCommas(peakDemandMW)} MW</div>
                 <div class="peak-tower-bar" style="height:${demandH}px; background: rgba(245,158,11,0.4); border: 2px solid #F59E0B;"></div>
                 <div class="peak-tower-label">Peak<br>Demand</div>
             </div>
             <div class="peak-tower">
-                <div class="peak-tower-value">${formatCommas(coveredMW)} MW</div>
-                <div class="peak-tower-bar" style="height:${coveredH}px; background: rgba(30,58,95,0.4); border: 2px solid #1E3A5F;"></div>
+                <div class="peak-tower-value" style="color:#0EA5E9;">${formatCommas(coveredMW)} MW</div>
+                <div class="peak-tower-bar" style="height:${coveredH}px; background: rgba(14,165,233,0.4); border: 2px solid #0EA5E9;"></div>
                 <div class="peak-tower-label">Clean<br>Coverage</div>
             </div>
             <div class="peak-tower">
@@ -2801,10 +2814,6 @@ function updatePeakCapacity(entry, region) {
                 <div class="peak-tower-bar" style="height:${gapH}px; background: rgba(239,68,68,0.4); border: 2px solid #EF4444;"></div>
                 <div class="peak-tower-label">Backup<br>Needed</div>
             </div>
-        </div>
-        <div class="peak-capacity-note">
-            At <strong>${procPct}%</strong> procurement, the worst single hour still needs
-            <strong>${formatPct(peakGapPct)}</strong> of peak demand from backup sources.
         </div>
     `;
 }
@@ -2845,9 +2854,9 @@ function updateCostPanel(entry) {
             rows += `
                 <tr>
                     <td><span class="resource-dot" style="background:${COLORS[r].alpha}"></span>${RESOURCE_LABELS[r]}</td>
-                    <td>${d.total_pct_of_demand != null ? d.total_pct_of_demand + '%' : '--'}</td>
-                    <td>${d.existing_pct != null ? d.existing_pct + '%' : '--'}</td>
-                    <td>${d.new_pct != null ? d.new_pct + '%' : '--'}</td>
+                    <td>${d.total_pct_of_demand != null ? Math.round(d.total_pct_of_demand) + '%' : '--'}</td>
+                    <td>${d.existing_pct != null ? Math.round(d.existing_pct) + '%' : '--'}</td>
+                    <td>${d.new_pct != null ? Math.round(d.new_pct) + '%' : '--'}</td>
                     <td>${d.cost_per_demand_mwh != null ? '$' + formatNum(d.cost_per_demand_mwh) : '--'}</td>
                 </tr>`;
         }
