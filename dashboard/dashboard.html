@@ -6,7 +6,7 @@
 <title>Hourly Clean Energy Cost Optimizer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
@@ -70,7 +70,7 @@ body {
 .header {
     background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
     color: #ffffff;
-    padding: 60px 24px 56px;
+    padding: 90px 24px 80px;
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -117,23 +117,23 @@ body {
     display: none;
 }
 .header h1 {
-    font-family: 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
     font-weight: 700;
-    font-size: 2.6rem;
-    letter-spacing: 1.5px;
-    text-transform: capitalize;
-    margin-bottom: 10px;
+    font-size: 3.2rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    margin-bottom: 14px;
     position: relative;
     z-index: 3;
-    text-shadow: 0 2px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+    text-shadow: 0 2px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
     line-height: 1.15;
 }
 .header .subtitle {
     font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 400;
     opacity: 0.92;
-    max-width: 620px;
+    max-width: 660px;
     margin: 0 auto;
     letter-spacing: 0.2px;
     position: relative;
@@ -1007,9 +1007,9 @@ body {
 }
 .story-stat-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 18px;
-    margin: 32px 0;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 20px;
+    margin: 36px 0;
 }
 .story-stat-card {
     background: rgba(255,255,255,0.92);
@@ -1017,7 +1017,7 @@ body {
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(221,208,192,0.5);
     border-radius: 16px;
-    padding: 24px 20px;
+    padding: 32px 24px;
     text-align: center;
     box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -1028,24 +1028,24 @@ body {
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
 }
 .story-stat-label {
-    font-size: 0.76rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: #6B7280;
     letter-spacing: 0.8px;
     text-transform: capitalize;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 .story-stat-value {
     font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 1.8rem;
+    font-size: 2.4rem;
     font-weight: 800;
     color: var(--navy);
     line-height: 1;
 }
 .story-stat-sub {
-    font-size: 0.8rem;
+    font-size: 0.88rem;
     color: #6B7280;
-    margin-top: 6px;
+    margin-top: 8px;
 }
 .story-insight-box {
     display: flex;
@@ -1358,6 +1358,226 @@ body {
     }
 }
 
+/* ========== INLINE VISUALIZATIONS ========== */
+.curtailment-visual {
+    display: flex;
+    gap: 12px;
+    margin: 28px 0;
+    flex-wrap: wrap;
+}
+.curtail-bar-group {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+}
+.curtail-bar-label {
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.curtail-bar-stack {
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: rgba(243,244,248,0.6);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+}
+.curtail-bar-fill {
+    transition: height 0.6s cubic-bezier(0.34,1.56,0.64,1);
+    border-radius: 0;
+}
+.curtail-bar-value {
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-top: 6px;
+}
+.curtail-bar-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.reliability-gauge-row {
+    display: flex;
+    gap: 16px;
+    margin: 28px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.reliability-gauge {
+    flex: 1;
+    min-width: 130px;
+    max-width: 180px;
+    text-align: center;
+    padding: 20px 12px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 14px;
+}
+.gauge-ring {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 10px;
+    position: relative;
+}
+.gauge-ring svg {
+    transform: rotate(-90deg);
+}
+.gauge-ring-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--navy);
+}
+.gauge-name {
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+}
+
+/* Trilemma triangle */
+.trilemma-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 32px 0;
+}
+.trilemma-diagram {
+    position: relative;
+    width: 320px;
+    height: 300px;
+}
+.trilemma-node {
+    position: absolute;
+    text-align: center;
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.trilemma-node:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+.trilemma-node.node-reliable {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(14,165,233,0.12);
+    border: 2px solid rgba(14,165,233,0.3);
+    color: #0284C7;
+}
+.trilemma-node.node-affordable {
+    bottom: 0;
+    left: 0;
+    background: rgba(34,197,94,0.12);
+    border: 2px solid rgba(34,197,94,0.3);
+    color: #16A34A;
+}
+.trilemma-node.node-clean {
+    bottom: 0;
+    right: 0;
+    background: rgba(245,158,11,0.12);
+    border: 2px solid rgba(245,158,11,0.3);
+    color: #D97706;
+}
+
+/* Section illustration container */
+.section-illustration {
+    display: flex;
+    justify-content: center;
+    margin: 24px 0;
+}
+.section-illustration svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Transition fuel visual */
+.transition-fuel-row {
+    display: flex;
+    gap: 20px;
+    margin: 28px 0;
+    flex-wrap: wrap;
+}
+.transition-fuel-card {
+    flex: 1;
+    min-width: 220px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 14px;
+    padding: 24px 20px;
+    text-align: center;
+}
+.transition-fuel-icon {
+    margin-bottom: 12px;
+}
+.transition-fuel-title {
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+}
+.transition-fuel-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+.transition-fuel-stat {
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-top: 10px;
+    line-height: 1;
+}
+
+@media (max-width: 768px) {
+    .curtailment-visual {
+        gap: 8px;
+    }
+    .curtail-bar-group {
+        min-width: 60px;
+    }
+    .reliability-gauge-row {
+        gap: 10px;
+    }
+    .reliability-gauge {
+        min-width: 100px;
+        padding: 14px 8px;
+    }
+    .gauge-ring {
+        width: 70px;
+        height: 70px;
+    }
+    .trilemma-diagram {
+        width: 260px;
+        height: 250px;
+    }
+    .trilemma-node {
+        font-size: 0.82rem;
+        padding: 10px 14px;
+    }
+    .transition-fuel-card {
+        min-width: 160px;
+        padding: 18px 14px;
+    }
+}
+
 /* ========== FOOTER ========== */
 .footer {
     text-align: center;
@@ -1385,14 +1605,14 @@ body {
         padding: 20px 14px 40px;
     }
     .header {
-        padding: 32px 16px 28px;
+        padding: 52px 16px 44px;
     }
     .header h1 {
-        font-size: 1.5rem;
-        letter-spacing: 0.5px;
+        font-size: 2.0rem;
+        letter-spacing: 0.3px;
     }
     .header .subtitle {
-        font-size: 0.92rem;
+        font-size: 1.0rem;
         line-height: 1.45;
     }
     .header .data-year-label {
@@ -1573,14 +1793,14 @@ body {
         padding: 14px 10px 32px;
     }
     .header {
-        padding: 24px 12px 20px;
+        padding: 36px 12px 28px;
     }
     .header h1 {
-        font-size: 1.3rem;
+        font-size: 1.6rem;
         letter-spacing: 0;
     }
     .header .subtitle {
-        font-size: 0.85rem;
+        font-size: 0.9rem;
     }
     .metrics-row {
         grid-template-columns: 1fr 1fr;
@@ -1860,7 +2080,6 @@ body {
     <!-- SCROLL TRANSITION -->
     <div class="scroll-transition">
         <div class="scroll-transition-inner">
-            <div class="scroll-transition-line"></div>
             <p class="scroll-transition-text">Scroll down to explore the full story of hourly matching &mdash; from the challenge of precision to the cost of that final 1%</p>
             <div class="scroll-transition-arrow">&#x2193;</div>
         </div>
@@ -2015,39 +2234,546 @@ body {
         </div>
     </section>
 
-    <!-- SECTION 5: CURTAILMENT -->
+    <!-- SECTION 5: CURTAILMENT with visualization -->
     <section class="story-section story-fade-in">
         <div class="story-content">
             <span class="story-badge">The Tradeoff</span>
             <h2>Surplus Procurement &amp; Curtailment</h2>
+
+            <!-- Curtailment illustration -->
+            <div class="section-illustration">
+                <svg width="400" height="120" viewBox="0 0 400 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Supply exceeding demand visualization -->
+                    <rect x="20" y="50" width="360" height="40" rx="6" fill="rgba(34,197,94,0.12)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="200" y="75" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="600" fill="#16A34A">Total Procurement</text>
+                    <rect x="20" y="50" width="230" height="40" rx="6" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
+                    <text x="135" y="75" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="600" fill="#0284C7">Matched to Demand</text>
+                    <!-- Curtailed portion -->
+                    <line x1="250" y1="45" x2="250" y2="95" stroke="#EF4444" stroke-width="2" stroke-dasharray="4 3"/>
+                    <text x="310" y="42" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#DC2626">Curtailed</text>
+                    <!-- Arrow showing excess -->
+                    <path d="M255 105 L375 105" stroke="#EF4444" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+                    <defs><marker id="arrowRed" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#EF4444"/></marker></defs>
+                    <text x="315" y="118" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#6B7280">Paid for but unused</text>
+                </svg>
+            </div>
+
             <p>
                 Every percentage point of additional hourly matching requires more procurement &mdash;
                 energy generated but never consumed. This curtailed energy has real cost: capacity built and
                 paid for, even though it serves no direct load.
             </p>
+
+            <!-- Curtailment bar visualization -->
+            <div class="curtailment-visual" id="curtailmentVisual">
+                <div class="curtail-bar-group">
+                    <div class="curtail-bar-label">75%</div>
+                    <div class="curtail-bar-stack">
+                        <div class="curtail-bar-fill" style="height:10%; background:rgba(239,68,68,0.4);"></div>
+                        <div class="curtail-bar-fill" style="height:65%; background:rgba(14,165,233,0.4);"></div>
+                    </div>
+                    <div class="curtail-bar-value">~5%</div>
+                    <div class="curtail-bar-sub">curtailed</div>
+                </div>
+                <div class="curtail-bar-group">
+                    <div class="curtail-bar-label">85%</div>
+                    <div class="curtail-bar-stack">
+                        <div class="curtail-bar-fill" style="height:18%; background:rgba(239,68,68,0.4);"></div>
+                        <div class="curtail-bar-fill" style="height:62%; background:rgba(14,165,233,0.4);"></div>
+                    </div>
+                    <div class="curtail-bar-value">~15%</div>
+                    <div class="curtail-bar-sub">curtailed</div>
+                </div>
+                <div class="curtail-bar-group">
+                    <div class="curtail-bar-label">95%</div>
+                    <div class="curtail-bar-stack">
+                        <div class="curtail-bar-fill" style="height:30%; background:rgba(239,68,68,0.4);"></div>
+                        <div class="curtail-bar-fill" style="height:60%; background:rgba(14,165,233,0.4);"></div>
+                    </div>
+                    <div class="curtail-bar-value">~25%</div>
+                    <div class="curtail-bar-sub">curtailed</div>
+                </div>
+                <div class="curtail-bar-group">
+                    <div class="curtail-bar-label">99%</div>
+                    <div class="curtail-bar-stack">
+                        <div class="curtail-bar-fill" style="height:42%; background:rgba(239,68,68,0.4);"></div>
+                        <div class="curtail-bar-fill" style="height:53%; background:rgba(14,165,233,0.4);"></div>
+                    </div>
+                    <div class="curtail-bar-value">~40%</div>
+                    <div class="curtail-bar-sub">curtailed</div>
+                </div>
+                <div class="curtail-bar-group">
+                    <div class="curtail-bar-label">100%</div>
+                    <div class="curtail-bar-stack">
+                        <div class="curtail-bar-fill" style="height:55%; background:rgba(239,68,68,0.4);"></div>
+                        <div class="curtail-bar-fill" style="height:42%; background:rgba(14,165,233,0.4);"></div>
+                    </div>
+                    <div class="curtail-bar-value">~55%</div>
+                    <div class="curtail-bar-sub">curtailed</div>
+                </div>
+            </div>
+
             <p>
                 Curtailment order: <strong>solar first</strong>, then wind, hydro, then clean firm last.
                 Solar and wind produce excess during periods of oversupply, making them the most curtailed.
+                At 200% procurement with 95% matching, nearly half of all procured energy is curtailed,
+                roughly doubling the effective cost per useful MWh.
             </p>
+
+            <div class="story-insight-box">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Cost Implication:</strong> The curtailment penalty is the fundamental economic
+                    constraint on achieving very high hourly match scores with intermittent resources.
+                    Surplus energy must be procured and paid for even when it cannot be used &mdash; making
+                    the effective cost per matched MWh considerably higher than the blended procurement cost.
+                </div>
+            </div>
         </div>
     </section>
 
-    <!-- SECTION 6: PEAK BACKUP -->
+    <!-- SECTION 6: PEAK BACKUP with gauge visualization -->
     <section class="story-section story-fade-in">
         <div class="story-content">
             <span class="story-badge">Reliability</span>
             <h2>Residual Backup Capacity</h2>
+
+            <!-- Reliability gauge illustration -->
+            <div class="section-illustration">
+                <svg width="360" height="100" viewBox="0 0 360 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Grid icon -->
+                    <rect x="30" y="20" width="60" height="60" rx="8" fill="rgba(26,39,68,0.08)" stroke="#1A2744" stroke-width="1.5"/>
+                    <line x1="50" y1="20" x2="50" y2="80" stroke="#1A2744" stroke-width="1" opacity="0.3"/>
+                    <line x1="70" y1="20" x2="70" y2="80" stroke="#1A2744" stroke-width="1" opacity="0.3"/>
+                    <line x1="30" y1="40" x2="90" y2="40" stroke="#1A2744" stroke-width="1" opacity="0.3"/>
+                    <line x1="30" y1="60" x2="90" y2="60" stroke="#1A2744" stroke-width="1" opacity="0.3"/>
+                    <text x="60" y="96" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#6B7280">Grid</text>
+                    <!-- Arrow -->
+                    <path d="M100 50 L140 50" stroke="#1A2744" stroke-width="1.5" marker-end="url(#arrowNav)"/>
+                    <!-- Clean energy covers most -->
+                    <rect x="150" y="20" width="60" height="60" rx="8" fill="rgba(34,197,94,0.15)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="180" y="46" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#16A34A">99%</text>
+                    <text x="180" y="60" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Clean</text>
+                    <text x="180" y="96" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#6B7280">Matched</text>
+                    <!-- Plus -->
+                    <text x="230" y="55" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="18" font-weight="700" fill="#6B7280">+</text>
+                    <!-- Backup still needed -->
+                    <rect x="250" y="30" width="60" height="40" rx="8" fill="rgba(239,68,68,0.12)" stroke="#EF4444" stroke-width="1.5"/>
+                    <text x="280" y="48" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#DC2626">20-60%</text>
+                    <text x="280" y="62" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#DC2626">Backup</text>
+                    <text x="280" y="96" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#6B7280">Peak Hour</text>
+                    <defs><marker id="arrowNav" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1A2744"/></marker></defs>
+                </svg>
+            </div>
+
             <p>
                 Even at 99% hourly matching, most regions still require 20&ndash;60% of peak demand in
                 backup capacity for the worst single hour. Traditional firm generation or demand response
                 must remain available for extreme events.
             </p>
+
+            <!-- Backup capacity gauge rings -->
+            <div class="reliability-gauge-row" id="reliabilityGauges">
+                <div class="reliability-gauge">
+                    <div class="gauge-ring">
+                        <svg width="90" height="90" viewBox="0 0 90 90">
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(209,213,219,0.4)" stroke-width="6"/>
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="#0EA5E9" stroke-width="6" stroke-dasharray="167" stroke-dashoffset="67" stroke-linecap="round"/>
+                        </svg>
+                        <div class="gauge-ring-label">72%</div>
+                    </div>
+                    <div class="gauge-name">CAISO</div>
+                </div>
+                <div class="reliability-gauge">
+                    <div class="gauge-ring">
+                        <svg width="90" height="90" viewBox="0 0 90 90">
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(209,213,219,0.4)" stroke-width="6"/>
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="#22C55E" stroke-width="6" stroke-dasharray="167" stroke-dashoffset="50" stroke-linecap="round"/>
+                        </svg>
+                        <div class="gauge-ring-label">80%</div>
+                    </div>
+                    <div class="gauge-name">ERCOT</div>
+                </div>
+                <div class="reliability-gauge">
+                    <div class="gauge-ring">
+                        <svg width="90" height="90" viewBox="0 0 90 90">
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(209,213,219,0.4)" stroke-width="6"/>
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="#F59E0B" stroke-width="6" stroke-dasharray="167" stroke-dashoffset="84" stroke-linecap="round"/>
+                        </svg>
+                        <div class="gauge-ring-label">60%</div>
+                    </div>
+                    <div class="gauge-name">PJM</div>
+                </div>
+                <div class="reliability-gauge">
+                    <div class="gauge-ring">
+                        <svg width="90" height="90" viewBox="0 0 90 90">
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(209,213,219,0.4)" stroke-width="6"/>
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="#EF4444" stroke-width="6" stroke-dasharray="167" stroke-dashoffset="100" stroke-linecap="round"/>
+                        </svg>
+                        <div class="gauge-ring-label">45%</div>
+                    </div>
+                    <div class="gauge-name">NYISO</div>
+                </div>
+                <div class="reliability-gauge">
+                    <div class="gauge-ring">
+                        <svg width="90" height="90" viewBox="0 0 90 90">
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(209,213,219,0.4)" stroke-width="6"/>
+                            <circle cx="45" cy="45" r="38" fill="none" stroke="#EF4444" stroke-width="6" stroke-dasharray="167" stroke-dashoffset="117" stroke-linecap="round"/>
+                        </svg>
+                        <div class="gauge-ring-label">38%</div>
+                    </div>
+                    <div class="gauge-name">NEISO</div>
+                </div>
+            </div>
+            <p style="text-align:center;font-size:0.82rem;color:#6B7280;margin-top:-8px;">
+                Clean coverage of peak demand at 99% hourly matching (higher = less backup needed)
+            </p>
+
             <div class="story-insight-box" style="border-left-color:#C75B4A;">
                 <div class="insight-icon"></div>
                 <div>
                     <strong>Policy Implication:</strong> Hourly matching complements grid reliability planning
                     but doesn&rsquo;t replace it. The residual backup metric quantifies firm capacity that remains
                     essential even with aggressive clean energy procurement.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 7: THE ENERGY TRILEMMA — reliability & affordability → clean, reliable, affordable -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-orange">The Trilemma</span>
+            <h2>From Two Dimensions to Three</h2>
+
+            <!-- Trilemma evolution illustration -->
+            <div class="section-illustration">
+                <svg width="480" height="140" viewBox="0 0 480 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Old: two-axis balance -->
+                    <rect x="10" y="20" width="170" height="100" rx="12" fill="rgba(243,244,248,0.8)" stroke="rgba(209,213,219,0.6)" stroke-width="1.5"/>
+                    <text x="95" y="15" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#6B7280">TRADITIONAL</text>
+                    <!-- Balance beam -->
+                    <line x1="55" y1="80" x2="135" y2="80" stroke="#1A2744" stroke-width="2.5"/>
+                    <polygon points="95,80 90,90 100,90" fill="#1A2744"/>
+                    <circle cx="55" cy="72" r="14" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
+                    <text x="55" y="76" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#0284C7">R</text>
+                    <circle cx="135" cy="72" r="14" fill="rgba(34,197,94,0.2)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="135" y="76" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#16A34A">A</text>
+                    <text x="55" y="110" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Reliable</text>
+                    <text x="135" y="110" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Affordable</text>
+                    <!-- Arrow -->
+                    <path d="M195 70 L270 70" stroke="#1A2744" stroke-width="2" marker-end="url(#arrowEvo)"/>
+                    <text x="232" y="62" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#1A2744">Now</text>
+                    <!-- New: triangle -->
+                    <rect x="285" y="20" width="185" height="100" rx="12" fill="rgba(243,244,248,0.8)" stroke="rgba(239,68,68,0.2)" stroke-width="1.5"/>
+                    <text x="377" y="15" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#DC2626">HOURLY MATCHING</text>
+                    <!-- Triangle -->
+                    <polygon points="377,38 320,104 434,104" fill="none" stroke="#1A2744" stroke-width="2"/>
+                    <circle cx="377" cy="38" r="12" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
+                    <text x="377" y="42" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#0284C7">R</text>
+                    <circle cx="320" cy="104" r="12" fill="rgba(34,197,94,0.2)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="320" y="108" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#16A34A">A</text>
+                    <circle cx="434" cy="104" r="12" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" stroke-width="1.5"/>
+                    <text x="434" y="108" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#D97706">C</text>
+                    <defs><marker id="arrowEvo" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1A2744"/></marker></defs>
+                </svg>
+            </div>
+
+            <p class="story-lead">
+                For decades, energy planning balanced two priorities: <strong>reliability</strong> and
+                <strong>affordability</strong>. Keep the lights on, and keep bills manageable.
+                Hourly clean energy matching introduces a third dimension: <strong>clean</strong>.
+            </p>
+            <p>
+                This three-sided optimization &mdash; the energy trilemma &mdash; creates new tensions.
+                Pursuing maximum cleanliness can strain both affordability (through exponential cost curves above 95%)
+                and reliability (by depending on weather-variable resources). The optimal strategy must navigate
+                all three corners simultaneously.
+            </p>
+
+            <!-- Trilemma diagram -->
+            <div class="trilemma-visual">
+                <div class="trilemma-diagram">
+                    <svg width="320" height="280" viewBox="0 0 320 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Triangle connecting three nodes -->
+                        <polygon points="160,20 30,250 290,250" fill="rgba(26,39,68,0.03)" stroke="rgba(26,39,68,0.15)" stroke-width="2" stroke-dasharray="6 4"/>
+                        <!-- Center label -->
+                        <text x="160" y="175" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#1A2744">Optimal</text>
+                        <text x="160" y="190" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#1A2744">Portfolio</text>
+                        <!-- Reliable node -->
+                        <circle cx="160" cy="20" r="30" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="2"/>
+                        <text x="160" y="16" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#0284C7">Reliable</text>
+                        <text x="160" y="30" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#0284C7">24/7 firm</text>
+                        <!-- Affordable node -->
+                        <circle cx="30" cy="250" r="30" fill="rgba(34,197,94,0.12)" stroke="#22C55E" stroke-width="2"/>
+                        <text x="30" y="246" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#16A34A">Affordable</text>
+                        <text x="30" y="260" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Low $/MWh</text>
+                        <!-- Clean node -->
+                        <circle cx="290" cy="250" r="30" fill="rgba(245,158,11,0.12)" stroke="#F59E0B" stroke-width="2"/>
+                        <text x="290" y="246" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#D97706">Clean</text>
+                        <text x="290" y="260" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#D97706">Zero-carbon</text>
+                        <!-- Edge labels -->
+                        <text x="80" y="125" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#6B7280" transform="rotate(-52, 80, 125)">Baseload cost</text>
+                        <text x="240" y="125" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#6B7280" transform="rotate(52, 240, 125)">Intermittency</text>
+                        <text x="160" y="270" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#6B7280">Curtailment penalty</text>
+                    </svg>
+                </div>
+            </div>
+
+            <p>
+                Our optimization results reveal this trilemma in action: at 75% matching, affordability dominates
+                (cheap wind and solar suffice). By 95%, reliability concerns force the mix toward costly clean firm power.
+                At 99%+, all three dimensions are stressed &mdash; clean, reliable energy at affordable cost requires
+                the full toolkit: renewables, firm generation, storage, and potentially dispatchable low-carbon sources.
+            </p>
+
+            <div class="story-insight-box">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Strategic Takeaway:</strong> The energy trilemma means there is no single "right" threshold.
+                    Each buyer must determine their own balance between cleanliness, reliability, and cost based on
+                    their specific goals, budget, and timeline.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 8: GAS CCGTs AS TRANSITION FUEL + CCS -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-red">Transition Pathway</span>
+            <h2>The Role of Efficient Gas &amp; Carbon Capture</h2>
+
+            <!-- Transition fuel illustration -->
+            <div class="section-illustration">
+                <svg width="460" height="130" viewBox="0 0 460 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Timeline arrow -->
+                    <line x1="30" y1="65" x2="430" y2="65" stroke="#1A2744" stroke-width="2"/>
+                    <polygon points="430,65 420,58 420,72" fill="#1A2744"/>
+                    <text x="230" y="20" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1A2744">TRANSITION PATHWAY</text>
+                    <!-- Phase 1: Today -->
+                    <rect x="40" y="40" width="100" height="50" rx="8" fill="rgba(239,68,68,0.1)" stroke="#EF4444" stroke-width="1.5"/>
+                    <text x="90" y="60" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">Unabated Gas</text>
+                    <text x="90" y="75" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#DC2626">Peaking + Base</text>
+                    <text x="90" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Today</text>
+                    <!-- Phase 2: Near-term -->
+                    <rect x="170" y="40" width="100" height="50" rx="8" fill="rgba(245,158,11,0.1)" stroke="#F59E0B" stroke-width="1.5"/>
+                    <text x="220" y="58" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#D97706">Efficient CCGT</text>
+                    <text x="220" y="72" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#D97706">Backup + Balance</text>
+                    <text x="220" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Near-term</text>
+                    <!-- Phase 3: Mid-term -->
+                    <rect x="300" y="40" width="110" height="50" rx="8" fill="rgba(34,197,94,0.1)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="355" y="58" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#16A34A">CCGT + CCS</text>
+                    <text x="355" y="72" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Dispatchable Low-C</text>
+                    <text x="355" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Mid-term</text>
+                </svg>
+            </div>
+
+            <p class="story-lead">
+                The exponential cost of the last few percent of hourly matching points to a practical
+                question: what fills the gap when renewables and nuclear can&rsquo;t? In many regions,
+                efficient natural gas combined-cycle gas turbines (CCGTs) serve as a critical
+                <strong>transition fuel</strong>.
+            </p>
+            <p>
+                Modern CCGTs achieve 60%+ thermal efficiency and can ramp quickly to complement variable
+                renewables. While they produce CO&#8322;, they emit roughly half the carbon per MWh of
+                older coal and simple-cycle gas plants. In a portfolio targeting 95%+ hourly matching,
+                CCGTs can efficiently serve the 5% of hours that clean resources cannot economically reach.
+            </p>
+
+            <div class="transition-fuel-row">
+                <div class="transition-fuel-card">
+                    <div class="transition-fuel-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="14" width="32" height="24" rx="4" fill="rgba(245,158,11,0.15)" stroke="#F59E0B" stroke-width="2"/>
+                            <path d="M16 26 L22 20 L28 28 L34 22" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="24" cy="8" r="4" fill="rgba(239,68,68,0.2)" stroke="#EF4444" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                    <div class="transition-fuel-title">Efficient CCGT</div>
+                    <div class="transition-fuel-desc">Modern combined-cycle turbines at 60%+ efficiency provide fast-ramping dispatchable power for peak and shoulder hours</div>
+                    <div class="transition-fuel-stat" style="color:#D97706;">~350 kg</div>
+                    <div class="curtail-bar-sub">CO&#8322;/MWh (vs 900+ for coal)</div>
+                </div>
+                <div class="transition-fuel-card">
+                    <div class="transition-fuel-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="14" width="32" height="24" rx="4" fill="rgba(34,197,94,0.15)" stroke="#22C55E" stroke-width="2"/>
+                            <path d="M14 30 L20 24 L26 28 L32 20" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M34 20 L34 14" stroke="#16A34A" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M28 20 L34 20" stroke="#16A34A" stroke-width="2" stroke-linecap="round"/>
+                            <circle cx="24" cy="8" r="4" fill="rgba(34,197,94,0.2)" stroke="#22C55E" stroke-width="1.5"/>
+                            <path d="M22 8 L26 8 M24 6 L24 10" stroke="#22C55E" stroke-width="1"/>
+                        </svg>
+                    </div>
+                    <div class="transition-fuel-title">CCGT + CCS</div>
+                    <div class="transition-fuel-desc">Carbon capture and storage can reduce CCGT emissions by 85-95%, creating dispatchable near-zero-carbon generation</div>
+                    <div class="transition-fuel-stat" style="color:#16A34A;">85-95%</div>
+                    <div class="curtail-bar-sub">CO&#8322; capture rate potential</div>
+                </div>
+            </div>
+
+            <p>
+                The analysis highlights why dispatchable low-carbon power matters: the hardest hours to match
+                are typically winter evenings when solar is absent, wind may be calm, and demand peaks from
+                heating loads. These are precisely the hours where dispatchable generation &mdash; whether nuclear,
+                geothermal, or gas with CCS &mdash; provides the greatest value.
+            </p>
+            <p>
+                Carbon capture and storage (CCS) represents a pathway to convert existing CCGT infrastructure
+                into dispatchable low-carbon assets. At a capture rate of 90%+, a CCGT with CCS can deliver
+                firm, flexible generation at roughly 35&ndash;50 kg CO&#8322;/MWh &mdash; comparable to some
+                lifecycle estimates for solar and wind when accounting for manufacturing.
+            </p>
+
+            <div class="story-insight-box" style="border-left-color:#F59E0B;">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Bridge to Full Decarbonization:</strong> Efficient CCGTs serve as a pragmatic bridge
+                    technology. In the near term, they provide the dispatchable backup that enables higher
+                    renewable penetration. With CCS retrofits, they can transition to dispatchable low-carbon
+                    generation &mdash; addressing the cost cliff above 95% hourly matching without the
+                    full premium of 100% clean firm power.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 9: METHODOLOGY INSIGHTS — pricing tiers and co-optimization -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge">Under the Hood</span>
+            <h2>Why Co-Optimization Matters</h2>
+
+            <!-- Co-optimization illustration -->
+            <div class="section-illustration">
+                <svg width="400" height="110" viewBox="0 0 400 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Sequential approach (wrong) -->
+                    <rect x="10" y="10" width="160" height="90" rx="10" fill="rgba(239,68,68,0.05)" stroke="rgba(239,68,68,0.2)" stroke-width="1.5"/>
+                    <text x="90" y="30" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="700" fill="#DC2626">Sequential</text>
+                    <rect x="25" y="40" width="55" height="22" rx="4" fill="rgba(14,165,233,0.15)" stroke="#0EA5E9" stroke-width="1"/>
+                    <text x="52" y="55" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#0284C7">Max Match</text>
+                    <path d="M85 51 L105 51" stroke="#6B7280" stroke-width="1" marker-end="url(#arrowSm)"/>
+                    <rect x="110" y="40" width="45" height="22" rx="4" fill="rgba(34,197,94,0.15)" stroke="#22C55E" stroke-width="1"/>
+                    <text x="132" y="55" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#16A34A">Cost?</text>
+                    <text x="90" y="82" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#DC2626">Misses cheaper paths</text>
+                    <!-- Co-optimization (right) -->
+                    <rect x="210" y="10" width="180" height="90" rx="10" fill="rgba(34,197,94,0.05)" stroke="rgba(34,197,94,0.2)" stroke-width="1.5"/>
+                    <text x="300" y="30" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="700" fill="#16A34A">Co-Optimized</text>
+                    <rect x="225" y="40" width="80" height="22" rx="4" fill="rgba(26,39,68,0.1)" stroke="#1A2744" stroke-width="1"/>
+                    <text x="265" y="55" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#1A2744">Match + Cost</text>
+                    <text x="325" y="48" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="14" fill="#16A34A">=</text>
+                    <rect x="340" y="40" width="40" height="22" rx="4" fill="rgba(34,197,94,0.2)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="360" y="55" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#16A34A">Best</text>
+                    <text x="300" y="82" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Finds cheapest feasible mix</text>
+                    <defs><marker id="arrowSm" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/></marker></defs>
+                </svg>
+            </div>
+
+            <p class="story-lead">
+                A naive approach to hourly matching would first maximize the match score, then calculate cost.
+                But this misses a critical insight: for any given matching target, there may be <strong>multiple
+                resource mixes</strong> that achieve it &mdash; at very different costs.
+            </p>
+            <p>
+                This model co-optimizes cost and matching simultaneously using a three-phase refinement
+                process. At 5% mix increments, it evaluates hundreds of resource combinations across dozens
+                of procurement levels, then narrows to 1% precision around the best candidates. This captures
+                counterintuitive results: a wind-heavy portfolio at 110% procurement in ERCOT (where wind is
+                $40/MWh) may cost less than a clean-firm-heavy portfolio at 80% procurement ($90/MWh), even
+                though it procures more total energy.
+            </p>
+
+            <div class="energy-spectrum-bar"></div>
+
+            <h2 style="font-size:2rem;">The Two-Tier Pricing Reality</h2>
+            <p>
+                Clean energy costs are not uniform. Existing clean generation on the grid (nuclear plants
+                already operating, solar farms already built) can be contracted at <strong>wholesale market
+                prices</strong> ($27&ndash;$46/MWh depending on region). But procurement above the existing
+                clean share requires <strong>new-build capacity</strong> at LCOE prices that can be 2&ndash;3x
+                higher.
+            </p>
+            <p>
+                This creates a step-change in cost: the first ~30&ndash;45% of clean procurement (depending on
+                region) comes at wholesale rates, but every megawatt-hour beyond that triggers new-build pricing.
+                Regions like PJM and NEISO, with large existing nuclear fleets (32% and 24% of generation
+                respectively), can achieve substantial hourly matching from cheap existing resources before
+                hitting the new-build threshold.
+            </p>
+
+            <div class="story-insight-box" style="border-left-color:#0EA5E9;">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Regional Advantage:</strong> PJM&rsquo;s 32% existing nuclear fleet means clean firm
+                    power is available at wholesale rates (~$36/MWh) for a large share of procurement. Compare
+                    ERCOT, where only 8.6% of generation is nuclear &mdash; beyond that, clean firm costs $90/MWh
+                    (new-build LCOE). This pricing difference is a key driver of regional cost variation.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 10: STORAGE ROLE — from methodology -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge">Storage</span>
+            <h2>Battery Storage: Time-Shifting Clean Energy</h2>
+
+            <!-- Storage illustration -->
+            <div class="section-illustration">
+                <svg width="400" height="100" viewBox="0 0 400 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Sun/surplus hours -->
+                    <circle cx="60" cy="35" r="18" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" stroke-width="1.5"/>
+                    <text x="60" y="39" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#D97706">Surplus</text>
+                    <text x="60" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Midday</text>
+                    <!-- Arrow to battery -->
+                    <path d="M82 35 L148 35" stroke="#F59E0B" stroke-width="1.5" marker-end="url(#arrowOrg)"/>
+                    <text x="115" y="28" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#6B7280">Charge</text>
+                    <!-- Battery -->
+                    <rect x="155" y="18" width="80" height="34" rx="6" fill="rgba(239,68,68,0.12)" stroke="#EF4444" stroke-width="2"/>
+                    <rect x="235" y="28" width="6" height="14" rx="2" fill="#EF4444"/>
+                    <rect x="162" y="25" width="50" height="20" rx="3" fill="rgba(239,68,68,0.3)"/>
+                    <text x="195" y="39" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">4h Li-ion</text>
+                    <text x="195" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">85% RTE</text>
+                    <!-- Arrow to evening -->
+                    <path d="M245 35 L310 35" stroke="#EF4444" stroke-width="1.5" marker-end="url(#arrowRed2)"/>
+                    <text x="278" y="28" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#6B7280">Discharge</text>
+                    <!-- Moon/deficit hours -->
+                    <circle cx="340" cy="35" r="18" fill="rgba(26,39,68,0.12)" stroke="#1A2744" stroke-width="1.5"/>
+                    <text x="340" y="39" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#1A2744">Gap</text>
+                    <text x="340" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Evening</text>
+                    <!-- Efficiency note -->
+                    <text x="200" y="92" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#6B7280">For every 1 MWh charged, 0.85 MWh dispatched</text>
+                    <defs>
+                        <marker id="arrowOrg" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#F59E0B"/></marker>
+                        <marker id="arrowRed2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#EF4444"/></marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <p>
+                Battery storage bridges the gap between when clean energy is generated and when it&rsquo;s
+                needed. The model simulates 4-hour lithium-ion batteries with 85% round-trip efficiency,
+                operating on a daily cycle: charging from surplus clean generation during midday oversupply,
+                discharging into evening and overnight deficit hours.
+            </p>
+            <p>
+                Storage is particularly valuable in solar-heavy regions like CAISO, where midday solar
+                surplus can be shifted to the evening demand peak. However, 4-hour duration limits
+                the amount of gap-filling possible &mdash; longer overnight deficits require firm generation
+                rather than storage alone. Storage dispatch is optimized alongside the resource mix, with
+                the model testing dispatch levels from 0% to 50% of annual demand.
+            </p>
+
+            <div class="story-insight-box" style="border-left-color:#EF4444;">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Storage Limitation:</strong> Only 4-hour Li-ion batteries are modeled. Longer-duration
+                    storage technologies (8h+, iron-air, pumped hydro, compressed air) could significantly improve
+                    matching at high thresholds by covering multi-hour overnight deficits at potentially lower cost
+                    than firm generation.
                 </div>
             </div>
         </div>
@@ -2164,6 +2890,8 @@ function initDashboard() {
     document.getElementById('footer').style.display = 'block';
     document.getElementById('narrativeSection').style.display = 'block';
     populateNarrativeStats();
+    populateCurtailmentVisual();
+    populateReliabilityGauges();
 
     // Config info
     const cfg = DATA.config;
@@ -2901,6 +3629,76 @@ function updateCostPanel(entry) {
 }
 
 // ---- Narrative Stats ----
+// ---- Curtailment Visualization (dynamic from data) ----
+function populateCurtailmentVisual() {
+    const container = document.getElementById('curtailmentVisual');
+    if (!container || !DATA) return;
+    const isos = Object.keys(DATA.results);
+    const thresholds = ['75', '85', '95', '99', '100'];
+    const thresholdLabels = ['75%', '85%', '95%', '99%', '100%'];
+    let html = '';
+    for (let ti = 0; ti < thresholds.length; ti++) {
+        const tk = thresholds[ti];
+        let curtSum = 0, matchSum = 0, count = 0;
+        for (const iso of isos) {
+            const t = DATA.results[iso]?.thresholds?.[tk];
+            if (t) {
+                const curt = t.costs?.curtailment_pct || Math.max(0, t.procurement_pct - 100);
+                const match = t.hourly_match_score || 0;
+                curtSum += curt;
+                matchSum += match;
+                count++;
+            }
+        }
+        if (count > 0) {
+            const avgCurt = Math.round(curtSum / count);
+            const avgMatch = Math.round(matchSum / count);
+            const matchH = Math.min(75, avgMatch * 0.75);
+            const curtH = Math.min(25, avgCurt * 0.5);
+            html += `<div class="curtail-bar-group">
+                <div class="curtail-bar-label">${thresholdLabels[ti]}</div>
+                <div class="curtail-bar-stack">
+                    <div class="curtail-bar-fill" style="height:${curtH}%; background:rgba(239,68,68,0.4);"></div>
+                    <div class="curtail-bar-fill" style="height:${matchH}%; background:rgba(14,165,233,0.4);"></div>
+                </div>
+                <div class="curtail-bar-value">~${avgCurt}%</div>
+                <div class="curtail-bar-sub">curtailed</div>
+            </div>`;
+        }
+    }
+    if (html) container.innerHTML = html;
+}
+
+// ---- Reliability Gauges (dynamic from data) ----
+function populateReliabilityGauges() {
+    const container = document.getElementById('reliabilityGauges');
+    if (!container || !DATA) return;
+    const isos = Object.keys(DATA.results);
+    const gaugeColors = ['#0EA5E9', '#22C55E', '#F59E0B', '#EF4444', '#1A2744'];
+    const circumference = 2 * Math.PI * 38; // ~238.76
+    let html = '';
+    for (let i = 0; i < isos.length; i++) {
+        const iso = isos[i];
+        const t99 = DATA.results[iso]?.thresholds?.['99'];
+        if (!t99) continue;
+        const peakGapPct = t99.peak_gap_pct || 0;
+        const coveragePct = Math.round(100 - peakGapPct);
+        const color = gaugeColors[i % gaugeColors.length];
+        const dashoffset = circumference * (1 - coveragePct / 100);
+        html += `<div class="reliability-gauge">
+            <div class="gauge-ring">
+                <svg width="90" height="90" viewBox="0 0 90 90">
+                    <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(209,213,219,0.4)" stroke-width="6"/>
+                    <circle cx="45" cy="45" r="38" fill="none" stroke="${color}" stroke-width="6" stroke-dasharray="${circumference.toFixed(0)}" stroke-dashoffset="${dashoffset.toFixed(0)}" stroke-linecap="round"/>
+                </svg>
+                <div class="gauge-ring-label">${coveragePct}%</div>
+            </div>
+            <div class="gauge-name">${iso}</div>
+        </div>`;
+    }
+    if (html) container.innerHTML = html;
+}
+
 function populateNarrativeStats() {
     const container = document.getElementById('narrativeCostStats');
     if (!container || !DATA) return;
@@ -3380,8 +4178,11 @@ function highlightCostStep(stepName) {
                 content: '$' + getY(idx) + '/MWh',
                 font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 700 },
                 color: '#22C55E',
+                backgroundColor: 'rgba(255,255,255,0.88)',
+                borderRadius: 4,
+                padding: { top: 4, bottom: 4, left: 6, right: 6 },
                 position: 'start',
-                yAdjust: -42,
+                yAdjust: -48,
             };
         }
     } else if (stepName === 'cost-95') {
@@ -3410,8 +4211,11 @@ function highlightCostStep(stepName) {
                 content: '$' + getY(idx95) + '/MWh',
                 font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 700 },
                 color: '#EF4444',
+                backgroundColor: 'rgba(255,255,255,0.88)',
+                borderRadius: 4,
+                padding: { top: 4, bottom: 4, left: 6, right: 6 },
                 position: 'start',
-                yAdjust: -42,
+                yAdjust: -48,
             };
             // Shade the region
             annotations['zone'] = {
@@ -3450,8 +4254,11 @@ function highlightCostStep(stepName) {
                 content: '$' + getY(topIdx) + '/MWh',
                 font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 700 },
                 color: '#EF4444',
+                backgroundColor: 'rgba(255,255,255,0.88)',
+                borderRadius: 4,
+                padding: { top: 4, bottom: 4, left: 6, right: 6 },
                 position: 'end',
-                yAdjust: -42,
+                yAdjust: -48,
             };
             // Danger zone shading — 99 to 100 is proportionally narrow
             annotations['dangerZone'] = {
@@ -3531,7 +4338,7 @@ function getStepAnnotations(stepName, avgCosts) {
         if (idx >= 0) {
             colors[idx] = '#22C55E'; radii[idx] = 8;
             annotations['highlight'] = { type: 'point', xValue: 75, yValue: getY(idx), backgroundColor: 'rgba(34,197,94,0.15)', borderColor: '#22C55E', borderWidth: 2, radius: 14 };
-            annotations['label75'] = { type: 'label', xValue: 75, yValue: getY(idx), content: '$' + getY(idx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#22C55E', position: 'start', yAdjust: -36 };
+            annotations['label75'] = { type: 'label', xValue: 75, yValue: getY(idx), content: '$' + getY(idx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#22C55E', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: 4, padding: { top: 3, bottom: 3, left: 5, right: 5 }, position: 'start', yAdjust: -42 };
         }
     } else if (stepName === 'cost-95') {
         const idx75 = findIdx(75), idx95 = findIdx(95);
@@ -3539,7 +4346,7 @@ function getStepAnnotations(stepName, avgCosts) {
             for (let i = idx75; i <= idx95; i++) { colors[i] = '#EF4444'; radii[i] = 5; }
             radii[idx95] = 8;
             annotations['highlight95'] = { type: 'point', xValue: 95, yValue: getY(idx95), backgroundColor: 'rgba(239,68,68,0.15)', borderColor: '#EF4444', borderWidth: 2, radius: 14 };
-            annotations['label95'] = { type: 'label', xValue: 95, yValue: getY(idx95), content: '$' + getY(idx95) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'start', yAdjust: -36 };
+            annotations['label95'] = { type: 'label', xValue: 95, yValue: getY(idx95), content: '$' + getY(idx95) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: 4, padding: { top: 3, bottom: 3, left: 5, right: 5 }, position: 'start', yAdjust: -42 };
             annotations['zone'] = { type: 'box', xMin: 74, xMax: 96, backgroundColor: 'rgba(239,68,68,0.04)', borderColor: 'transparent' };
         }
     } else if (stepName === 'cost-99') {
@@ -3549,7 +4356,7 @@ function getStepAnnotations(stepName, avgCosts) {
             colors[idx99] = '#EF4444'; radii[idx99] = 8;
             if (idx100 >= 0) { colors[idx100] = '#EF4444'; radii[idx100] = 8; }
             annotations['highlight99'] = { type: 'point', xValue: getX(topIdx), yValue: getY(topIdx), backgroundColor: 'rgba(239,68,68,0.15)', borderColor: '#EF4444', borderWidth: 2, radius: 14 };
-            annotations['label99'] = { type: 'label', xValue: getX(topIdx), yValue: getY(topIdx), content: '$' + getY(topIdx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'end', yAdjust: -36 };
+            annotations['label99'] = { type: 'label', xValue: getX(topIdx), yValue: getY(topIdx), content: '$' + getY(topIdx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: 4, padding: { top: 3, bottom: 3, left: 5, right: 5 }, position: 'end', yAdjust: -42 };
             annotations['dangerZone'] = { type: 'box', xMin: 98.5, xMax: 100.5, backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5 };
         }
     }
