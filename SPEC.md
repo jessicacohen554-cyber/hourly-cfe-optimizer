@@ -37,42 +37,50 @@
 
 ---
 
-## 3. Thresholds (18 total)
+## 3. Thresholds (7 total — reduced from 18)
 
 ```
-75, 80, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100
+75, 80, 85, 90, 95, 99, 100
 ```
 
-- 5% intervals: 75-85
-- 1% intervals: 85-100 (inflection zone where CCS/LDES enter optimal mix)
-- Critical for smooth abatement cost curves
+- 5% intervals from 75-95 (captures broad trend)
+- Jump to 99% and 100% (captures the steep cost inflection)
+- Reduced from 18 to 7 to cut optimizer runtime by ~60%
+- Dashboard interpolates smoothly between these anchor points for abatement curves
+- Key inflection behavior (CCS/LDES entering mix) still captured at 90-95-99 transitions
 
 ---
 
-## 4. Dashboard Controls (12 total)
+## 4. Dashboard Controls (7 total — paired toggles)
 
 ### Preserved (2):
 1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
-2. **Threshold select** (expanded from 7 to 18 values)
+2. **Threshold select** (7 values: 75, 80, 85, 90, 95, 99, 100)
 
-### New sensitivity toggles (10):
+### Paired sensitivity toggles (5 groups replacing 10 individual):
 
-| # | Toggle | Options | Affects |
-|---|---|---|---|
-| 3 | Solar Generation Cost | Low / Medium / High | Solar LCOE (regional) |
-| 4 | Wind Generation Cost | Low / Medium / High | Wind LCOE (regional) |
-| 5 | Clean Firm Generation Cost | Low / Medium / High | CF LCOE (regional — geothermal blend) |
-| 6 | CCS-CCGT Generation Cost | Low / Medium / High | CCS LCOE (regional — Class VI, 45Q, fuel) |
-| 7 | Battery Storage Cost | Low / Medium / High | Battery LCOS (regional) |
-| 8 | LDES Storage Cost | Low / Medium / High | LDES LCOS (regional) |
-| 9 | Transmission Cost | None / Low / Medium / High | Resource+region adders on new-build |
-| 10 | Natural Gas Price | Low / Medium / High | Wholesale price + CCS fuel cost + emission rate |
-| 11 | Coal Price | Low / Medium / High | Wholesale price + emission rate |
-| 12 | Oil Price | Low / Medium / High | Wholesale price + emission rate |
+The 10 individual cost toggles are **paired into 5 groups** where related variables move in lockstep (all Low, all Medium, or all High together). This reduces dashboard complexity and scenario count while preserving meaningful sensitivity analysis.
+
+| # | Paired Toggle | Options | Member Variables | Affects |
+|---|---|---|---|---|
+| 3 | **Renewable Generation Cost** | Low / Medium / High | Solar LCOE + Wind LCOE | Both solar and wind generation costs (regional) |
+| 4 | **Firm Generation Cost** | Low / Medium / High | Clean Firm LCOE + CCS-CCGT LCOE | Both firm dispatchable resource costs (regional) |
+| 5 | **Storage Cost** | Low / Medium / High | Battery LCOS + LDES LCOS | Both storage technology costs (regional) |
+| 6 | **Fossil Fuel Price** | Low / Medium / High | Gas + Coal + Oil prices | Wholesale electricity price + CCS fuel cost + emission rates |
+| 7 | **Transmission Cost** | None / Low / Medium / High | All resource transmission adders | Transmission adders on all new-build resources (regional) |
+
+**Pairing rationale**:
+- **Renewable Gen**: Solar and wind costs are driven by similar factors (manufacturing scale, supply chain, installation labor) — they tend to move together directionally
+- **Firm Gen**: Clean firm (nuclear/geothermal) and CCS-CCGT share capital-intensive, long-lead-time cost structures
+- **Storage**: Battery and LDES costs share manufacturing/materials cost drivers (lithium, iron, electrolyte supply chains)
+- **Fossil Fuel**: Gas, coal, and oil prices are correlated through energy commodity markets and macro conditions
+- **Transmission**: Infrastructure costs affect all new-build resources similarly within a region
+
+**Scenario count**: 3 × 3 × 3 × 3 × 4 = **324 cost scenarios** per region per threshold (vs 59,049 if all 10 toggles independent)
 
 **NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
 
-**Replaces**: Old single Clean Firm cost dropdown ($90/$120/$150)
+**Optimizer approach**: Resource mix optimized ONCE at Medium costs. Dashboard applies L/M/H cost overlays on cached mixes without re-optimizing.
 
 **Grid mix baseline**: Selectable as reference scenario (not a toggle — fixed 2025 actual at wholesale)
 
@@ -554,14 +562,15 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 | Item | Count |
 |---|---|
 | Resources | 7 |
-| Thresholds | 18 |
+| Thresholds | 7 (reduced from 18) |
 | Regions | 5 |
-| Dashboard controls | 12 (2 existing + 10 new) |
+| Dashboard controls | 7 (2 existing + 5 paired toggles) |
+| Paired toggle groups | 5 (from 10 individual toggles) |
+| Cost scenarios per region/threshold | 324 (3×3×3×3×4) |
 | New chart types | 2 (average + marginal abatement curves) |
 | New panels | 1 ("What You Need" panel) |
 | New metric tiles | 1 (CO2 abated) |
 | Cost tables in methodology | ~15 |
-| Sensitivity toggles | 10 (all Low/Medium/High except Transmission which adds None) |
 | Regional deep-dive pages | 5 (one per region) |
 | Research paper sections | 8 (including 5 regional deep-dives) |
 | QA checkpoints | 3 (optimizer, HTML, mobile) |
