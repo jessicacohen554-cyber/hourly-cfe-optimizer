@@ -1,0 +1,3075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hourly Clean Energy Cost Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: 'Lora', 'Georgia', 'Times New Roman', serif;
+    background: #F5F0E8;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(212,168,75,0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(199,91,74,0.03) 0%, transparent 50%);
+    background-attachment: fixed;
+    color: #111111;
+    line-height: 1.55;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========== VARIABLES ========== */
+:root {
+    --navy: #1A2744;
+    --navy-light: #2D3A52;
+    --bg-card: #FAF6EF;
+    --bg-card-hover: #F3EDE2;
+    --border: #DDD0C0;
+    --border-light: #E8DFD2;
+    --text-primary: #111111;
+    --text-secondary: #1A1A1A;
+    --text-muted: #9A9083;
+
+    --clean-firm: #1A2744;
+    --solar: #D4A84B;
+    --wind: #7A8B5C;
+    --hydro: #5B8A8A;
+    --storage: #C75B4A;
+    --gap: #DDD0C0;
+    --outline: #4A4540;
+    --primary-grey: #8A8178;
+    --secondary-grey: #7A7268;
+    --red: #C75B4A;
+    --red-light: rgba(199, 91, 74, 0.08);
+    --indigo: #1A2744;
+
+    --clean-firm-70: rgba(26, 39, 68, 0.55);
+    --solar-70: rgba(212, 168, 75, 0.55);
+    --wind-70: rgba(122, 139, 92, 0.55);
+    --hydro-70: rgba(91, 138, 138, 0.55);
+    --storage-70: rgba(199, 91, 74, 0.55);
+    --gap-70: rgba(221, 208, 192, 0.55);
+}
+
+/* ========== HEADER (matches hourly calculator) ========== */
+.header {
+    background: #1A2744;
+    color: #ffffff;
+    padding: 60px 24px 56px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+/* Angular color blocks */
+.header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(135deg,
+            #1A2744 0%, #1A2744 28%,
+            #6B8DB5 28%, #6B8DB5 42%,
+            #C75B4A 42%, #C75B4A 56%,
+            #D4A84B 56%, #D4A84B 70%,
+            #1A2744 70%, #1A2744 100%
+        );
+    opacity: 0.88;
+    pointer-events: none;
+}
+/* Geometric line overlay */
+.header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.04) 42%, transparent 42%),
+        linear-gradient(45deg, transparent 55%, rgba(255,255,255,0.03) 55%, rgba(255,255,255,0.03) 57%, transparent 57%),
+        linear-gradient(45deg, transparent 70%, rgba(26,39,68,0.4) 70%);
+    pointer-events: none;
+}
+/* Diagonal accent stripe */
+.header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #1A2744 25%, #6B8DB5 25%, #6B8DB5 50%, #C75B4A 50%, #C75B4A 75%, #D4A84B 75%, #D4A84B 100%);
+    z-index: 2;
+}
+/* Logo removed for rebrand */
+.header-logo {
+    display: none;
+}
+.header h1 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 400;
+    font-size: 2.6rem;
+    letter-spacing: 1.5px;
+    text-transform: capitalize;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    line-height: 1.15;
+}
+.header .subtitle {
+    font-family: 'Lora', 'Georgia', serif;
+    font-size: 1.1rem;
+    font-weight: 400;
+    font-style: italic;
+    opacity: 0.92;
+    max-width: 620px;
+    margin: 0 auto;
+    letter-spacing: 0.1px;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.2);
+    line-height: 1.55;
+}
+.header .data-year-label {
+    font-size: 0.88rem;
+    opacity: 0.6;
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
+}
+/* Bottom accent bar */
+.bottom-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #1A2744 25%, #6B8DB5 25%, #6B8DB5 50%, #C75B4A 50%, #C75B4A 75%, #D4A84B 75%, #D4A84B 100%);
+    z-index: 1000;
+}
+
+/* ========== MAIN CONTENT ========== */
+.main-content {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 32px 44px 64px;
+}
+
+/* ========== CONTROLS ROW ========== */
+.controls-row {
+    display: flex;
+    gap: 24px;
+    align-items: flex-end;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.control-group label {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: capitalize;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+}
+
+.control-group select {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 1.0rem;
+    padding: 11px 38px 11px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: #FAF6EF;
+    color: var(--text-primary);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6356' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    min-width: 220px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.control-group select:hover {
+    border-color: var(--navy);
+}
+
+.control-group select:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.12);
+}
+
+.region-context {
+    margin-left: auto;
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+}
+
+.region-context span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.region-context .ctx-label {
+    font-size: 0.76rem;
+    text-transform: capitalize;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.region-context .ctx-value {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.98rem;
+}
+
+/* ========== METRIC TILES ========== */
+.metrics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.metric-tile {
+    background: linear-gradient(145deg, #1F3158 0%, #1A2744 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 20px 18px;
+    text-align: center;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-tile::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.metric-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(26,39,68,0.3);
+}
+
+.metric-tile.tile-negative {
+    background: linear-gradient(145deg, #D4654F 0%, #C75B4A 100%);
+    border: none;
+}
+
+.metric-tile.tile-negative .tile-label,
+.metric-tile.tile-negative .tile-sub {
+    color: rgba(255,255,255,0.75);
+    opacity: 1;
+}
+
+.metric-tile.tile-negative .tile-value {
+    color: #FFFFFF;
+}
+
+.metric-tile.tile-negative:hover {
+    box-shadow: 0 8px 24px rgba(199,91,74,0.3);
+}
+
+.metric-tile .tile-label {
+    font-size: 0.8rem;
+    text-transform: capitalize;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.metric-tile .tile-value {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 2.3rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.1;
+}
+
+.metric-tile .tile-sub {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.6);
+    margin-top: 6px;
+}
+
+.metric-tile .tile-sub.accent {
+    color: #FFFFFF;
+    font-weight: 600;
+    opacity: 1;
+}
+
+/* ========== CHART PANELS ========== */
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+
+.chart-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 28px;
+}
+
+.chart-panel.donut-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.chart-panel h3 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: #C75B4A;
+    margin-bottom: 16px;
+    text-transform: capitalize;
+    letter-spacing: 0.04em;
+}
+
+.donut-container {
+    position: relative;
+    width: 90%;
+    max-width: 280px;
+    margin: 0 auto;
+    padding: 8px;
+    aspect-ratio: 1 / 1;
+}
+
+.donut-center-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.donut-center-label .dcl-value {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+}
+
+.donut-center-label .dcl-label {
+    font-size: 0.85rem;
+    text-transform: capitalize;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.donut-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 18px;
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.donut-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.donut-legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1.5px solid var(--outline);
+    flex-shrink: 0;
+}
+
+.compressed-day-container {
+    position: relative;
+    height: 370px;
+}
+
+/* ========== COST BREAKDOWN ========== */
+.cost-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 28px;
+    margin-bottom: 28px;
+}
+
+.cost-panel h3 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: #C75B4A;
+    margin-bottom: 16px;
+    text-transform: capitalize;
+    letter-spacing: 0.04em;
+}
+
+.cost-table-wrapper {
+    overflow-x: auto;
+}
+
+.cost-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.cost-table th {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    text-transform: capitalize;
+    letter-spacing: 0.04em;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+}
+
+.cost-table th:not(:first-child) {
+    text-align: right;
+}
+
+.cost-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+}
+
+.cost-table td:not(:first-child) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.cost-table tr:last-child td {
+    border-bottom: none;
+}
+
+.cost-table .row-total td {
+    font-weight: 700;
+    border-top: 2px solid var(--border);
+    color: var(--navy);
+}
+
+.cost-table .resource-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 8px;
+    border: 1.5px solid var(--outline);
+    vertical-align: middle;
+}
+
+.cost-note {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 14px;
+    font-style: italic;
+}
+
+.cost-unavailable {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* ========== METHODOLOGY ========== */
+.methodology-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 28px;
+    margin-bottom: 28px;
+}
+
+.methodology-panel h3 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: #C75B4A;
+    margin-bottom: 16px;
+    text-transform: capitalize;
+    letter-spacing: 0.04em;
+}
+
+.methodology-panel p {
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.65;
+    max-width: 960px;
+}
+
+.methodology-panel p:last-child {
+    margin-bottom: 0;
+}
+
+.methodology-panel strong {
+    color: var(--navy);
+    font-weight: 600;
+}
+
+.methodology-link {
+    color: #1A2744;
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(199,91,74,0.3);
+    transition: all 0.15s ease;
+}
+.methodology-link:hover {
+    color: #9E4239;
+    border-bottom-color: #9E4239;
+}
+
+/* ========== PEAK CAPACITY + COST ROW ========== */
+.peak-cost-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.peak-cost-row .peak-capacity-panel {
+    flex: 0.7;
+    margin-bottom: 0;
+}
+
+.peak-cost-row .cost-panel {
+    flex: 1.3;
+    margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+    .peak-cost-row {
+        flex-direction: column;
+    }
+}
+
+/* ========== PEAK CAPACITY VISUAL ========== */
+.peak-capacity-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 28px;
+}
+
+.peak-capacity-panel h3 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: #C75B4A;
+    margin-bottom: 16px;
+    text-transform: capitalize;
+    letter-spacing: 0.04em;
+}
+
+.peak-capacity-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.peak-tower-wrap {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 24px;
+    height: 340px;
+    width: 100%;
+    padding-top: 32px;
+}
+
+.peak-tower {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    max-width: 110px;
+}
+
+.peak-tower-value {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--navy);
+    white-space: nowrap;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.peak-tower-bar {
+    width: 100%;
+    border-radius: 8px 8px 2px 2px;
+    transition: height 0.6s cubic-bezier(0.34,1.56,0.64,1);
+    min-height: 4px;
+    box-sizing: border-box;
+}
+
+.peak-tower-label {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: capitalize;
+    letter-spacing: 0.06em;
+    text-align: center;
+    line-height: 1.25;
+    margin-top: 10px;
+}
+
+.peak-capacity-note {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.55;
+    max-width: 380px;
+    margin-top: 8px;
+}
+
+.peak-capacity-note strong {
+    color: var(--navy);
+    font-weight: 700;
+}
+
+/* ========== SCROLL TRANSITION ========== */
+.scroll-transition {
+    padding: 64px 0 48px;
+    text-align: center;
+}
+
+.scroll-transition-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 40px 32px;
+    background: linear-gradient(135deg, rgba(26,39,68,0.03) 0%, rgba(199,91,74,0.05) 50%, rgba(212,168,75,0.03) 100%);
+    border: 1px solid rgba(26,39,68,0.12);
+    border-radius: 16px;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.scroll-transition-line {
+    width: 2px;
+    height: 40px;
+    background: linear-gradient(to bottom, transparent, var(--clean-firm), transparent);
+    border-radius: 1px;
+}
+
+.scroll-transition-text {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 1.43rem;
+    font-weight: 600;
+    color: #C75B4A;
+    letter-spacing: 0.01em;
+    max-width: 440px;
+    line-height: 1.55;
+}
+
+.scroll-transition-arrow {
+    font-size: 2rem;
+    color: var(--clean-firm);
+    animation: bounceDown 1.8s ease-in-out infinite;
+    opacity: 0.85;
+    filter: drop-shadow(0 2px 6px rgba(26,39,68,0.25));
+}
+
+@keyframes bounceDown {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(10px); }
+}
+
+/* ========== KEY FINDINGS ========== */
+.key-findings {
+    background: linear-gradient(135deg, rgba(212,168,75,0.06) 0%, rgba(199,91,74,0.04) 100%);
+    border: 1px solid rgba(212,168,75,0.2);
+    border-left: 4px solid #C75B4A;
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin: 20px 0;
+}
+
+.key-findings h4 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.07rem;
+    text-transform: capitalize;
+    letter-spacing: 0.06em;
+    color: #C75B4A;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.key-findings h4::before {
+    content: '\2605';
+    font-size: 0.9rem;
+}
+
+.key-findings p {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-bottom: 6px;
+}
+
+.key-findings p:last-child {
+    margin-bottom: 0;
+}
+
+.key-findings .kf-value {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    color: var(--navy);
+}
+
+.key-findings .kf-accent {
+    color: var(--storage);
+    font-weight: 600;
+}
+
+/* ========== NARRATIVE EMPHASIS ========== */
+.narrative-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+}
+
+.narrative-panel p {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin-bottom: 10px;
+}
+
+.narrative-panel .em-blue {
+    color: var(--clean-firm);
+    font-weight: 600;
+}
+
+.narrative-panel .em-orange {
+    color: var(--storage);
+    font-weight: 600;
+}
+
+.narrative-panel .em-navy {
+    color: var(--navy);
+    font-weight: 700;
+}
+
+/* ========== LOADING / ERROR ========== */
+.loading-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    gap: 20px;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border);
+    border-top-color: var(--navy);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes countUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Apply animations to dashboard elements */
+.metrics-row .metric-tile {
+    animation: fadeInUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.metrics-row .metric-tile:nth-child(1) { animation-delay: 0.05s; }
+.metrics-row .metric-tile:nth-child(2) { animation-delay: 0.1s; }
+.metrics-row .metric-tile:nth-child(3) { animation-delay: 0.15s; }
+.metrics-row .metric-tile:nth-child(4) { animation-delay: 0.2s; }
+
+.key-findings {
+    animation: slideInLeft 0.5s ease both;
+    animation-delay: 0.3s;
+}
+
+.charts-row {
+    animation: fadeInUp 0.6s ease both;
+    animation-delay: 0.35s;
+}
+
+.peak-capacity-panel {
+    animation: fadeInUp 0.5s ease both;
+    animation-delay: 0.38s;
+}
+
+.cost-panel {
+    animation: fadeInUp 0.5s ease both;
+    animation-delay: 0.4s;
+}
+
+.methodology-panel {
+    animation: fadeIn 0.6s ease both;
+    animation-delay: 0.5s;
+}
+
+.scroll-transition {
+    animation: fadeIn 0.8s ease both;
+    animation-delay: 0.6s;
+}
+
+/* Smooth transitions when switching selections */
+.tile-value, .dcl-value {
+    transition: all 0.3s ease;
+}
+
+.loading-text {
+    font-size: 1.02rem;
+    color: var(--text-secondary);
+}
+
+.error-message {
+    background: #FAF0DC;
+    border: 1px solid #ffc107;
+    border-radius: 10px;
+    padding: 28px 32px;
+    text-align: center;
+    max-width: 600px;
+    margin: 80px auto;
+}
+
+.error-message h2 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    color: #856404;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.error-message p {
+    color: #856404;
+    font-size: 0.9rem;
+}
+
+.error-message code {
+    background: rgba(0,0,0,0.06);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* ========== NARRATIVE STORY SECTIONS (grid_story-inspired) ========== */
+.story-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 72px 48px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.story-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.story-content {
+    position: relative;
+}
+.story-badge {
+    display: inline-block;
+    padding: 5px 18px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: capitalize;
+    margin-bottom: 18px;
+    background: rgba(26,39,68,0.1);
+    color: #1A2744;
+}
+.story-badge-orange {
+    background: rgba(199,91,74,0.1);
+    color: #C75B4A;
+}
+.story-badge-green {
+    background: rgba(122,139,92,0.12);
+    color: #7A8B5C;
+}
+.story-badge-red {
+    background: rgba(199,91,74,0.12);
+    color: #C75B4A;
+}
+.story-section h2 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: #C75B4A;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+.story-lead {
+    font-size: 1.05rem;
+    color: #1A1A1A;
+    line-height: 1.75;
+    margin-bottom: 18px;
+}
+.story-section p {
+    font-size: 0.98rem;
+    color: #1A1A1A;
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+.story-stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 18px;
+    margin: 32px 0;
+}
+.story-stat-card {
+    background: rgba(250,246,239,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 16px;
+    padding: 24px 20px;
+    text-align: center;
+    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.story-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+}
+.story-stat-label {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #9A9083;
+    letter-spacing: 0.8px;
+    text-transform: capitalize;
+    margin-bottom: 8px;
+}
+.story-stat-value {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1;
+}
+.story-stat-sub {
+    font-size: 0.8rem;
+    color: #9A9083;
+    margin-top: 6px;
+}
+.story-insight-box {
+    display: flex;
+    gap: 16px;
+    background: rgba(250,246,239,0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-left: 4px solid #C75B4A;
+    border-radius: 0 16px 16px 0;
+    padding: 24px 28px;
+    margin: 28px 0;
+    font-size: 0.92rem;
+    color: #1A1A1A;
+    line-height: 1.7;
+    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+}
+.insight-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Energy spectrum accent bar */
+.energy-spectrum-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #5B8A8A 15%, #7A8B5C 35%, #D4A84B 55%, #C75B4A 80%, #9E4239 100%);
+    border-radius: 2px;
+    margin: 32px 0;
+    opacity: 0.6;
+}
+
+/* ========== SCROLLYTELLING (grid_story-inspired) ========== */
+.story-divider-wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+}
+.story-divider {
+    border: none;
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #5B8A8A 15%, #7A8B5C 35%, #D4A84B 55%, #C75B4A 80%, #9E4239 100%);
+    margin: 0;
+    opacity: 0.7;
+}
+
+.scrolly-container {
+    position: relative;
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.scrolly-sticky {
+    position: sticky;
+    top: 0;
+    width: 55%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+
+.scrolly-chart-wrap {
+    background: rgba(250,246,239,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 16px;
+    padding: 32px 28px;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+    min-height: 430px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scrolly-chart-wrap canvas {
+    width: 100% !important;
+    max-height: 420px;
+}
+
+.scrolly-steps {
+    width: 45%;
+    position: relative;
+    z-index: 2;
+}
+
+.scrolly-step {
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    padding: 80px 48px 80px 40px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scrolly-step:first-child {
+    padding-top: 120px;
+}
+
+.scrolly-step:last-child {
+    padding-bottom: 120px;
+}
+
+.scrolly-step.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scrolly-step.active .step-card {
+    border-color: rgba(199,91,74,0.35);
+    box-shadow: 0 10px 25px rgba(26,39,68,0.1), 0 4px 8px rgba(0,0,0,0.04);
+    transform: translateY(-2px);
+}
+
+.step-card {
+    background: rgba(250,246,239,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 16px;
+    padding: 32px 32px;
+    transition: border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-card h3 {
+    font-family: 'Franklin Gothic Medium', 'Franklin Gothic', 'Arial Narrow', sans-serif;
+    font-size: 1.82rem;
+    font-weight: 800;
+    color: #C75B4A;
+    margin-bottom: 14px;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+}
+
+.step-card p {
+    font-size: 0.95rem;
+    color: #1A1A1A;
+    line-height: 1.75;
+    margin-bottom: 0;
+}
+
+/* Responsive scrollytelling */
+@media (max-width: 1024px) {
+    .scrolly-container {
+        flex-direction: column;
+    }
+    .scrolly-sticky {
+        width: 100%;
+        height: 50vh;
+        position: relative;
+        top: auto;
+        padding: 24px 20px;
+    }
+    .scrolly-steps {
+        width: 100%;
+    }
+    .scrolly-step {
+        min-height: auto;
+        padding: 48px 24px;
+    }
+}
+
+/* ========== FOOTER ========== */
+.footer {
+    text-align: center;
+    padding: 20px 40px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border-light);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1100px) {
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+    .metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        padding: 20px 16px 40px;
+    }
+    .header {
+        padding: 36px 20px;
+    }
+    .header h1 {
+        font-size: 1.6rem;
+    }
+    .header-logo {
+        height: 28px;
+        top: 14px;
+        left: 16px;
+    }
+    .metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .control-group select {
+        min-width: 100%;
+    }
+    .region-context {
+        margin-left: 0;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <!-- Logo removed for rebrand -->
+    <h1>Hourly Clean Energy Cost Optimizer</h1>
+    <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
+    <div class="data-year-label" id="dataYearLabel">Loading...</div>
+    <div class="header-accent"></div>
+</header>
+<div class="bottom-banner"></div>
+
+<!-- LOADING STATE -->
+<div class="main-content" id="loadingState">
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading analysis results&hellip;</div>
+    </div>
+</div>
+
+<!-- ERROR STATE (hidden) -->
+<div class="main-content" id="errorState" style="display:none;"></div>
+
+<!-- DASHBOARD (hidden until data loads) -->
+<div class="main-content" id="dashboardContent" style="display:none;">
+
+    <!-- CONTROLS -->
+    <div class="controls-row">
+        <div class="control-group">
+            <label for="regionSelect">Region / ISO</label>
+            <select id="regionSelect"></select>
+        </div>
+        <div class="control-group">
+            <label for="thresholdSelect">Hourly Match Target</label>
+            <select id="thresholdSelect"></select>
+        </div>
+        <div class="region-context" id="regionContext"></div>
+    </div>
+
+    <!-- METRIC TILES -->
+    <div class="metrics-row">
+        <div class="metric-tile">
+            <div class="tile-label">Hourly Match Score</div>
+            <div class="tile-value" id="metricMatch">--</div>
+            <div class="tile-sub" id="metricMatchSub">of hours matched</div>
+        </div>
+        <div class="metric-tile">
+            <div class="tile-label">Procurement Level</div>
+            <div class="tile-value" id="metricProcure">--</div>
+            <div class="tile-sub" id="metricProcureSub">of annual demand</div>
+        </div>
+        <div class="metric-tile">
+            <div class="tile-label">Blended Cost</div>
+            <div class="tile-value" id="metricCost">--</div>
+            <div class="tile-sub" id="metricCostSub"></div>
+        </div>
+        <div class="metric-tile">
+            <div class="tile-label">Curtailment</div>
+            <div class="tile-value" id="metricCurtail">--</div>
+            <div class="tile-sub" id="metricCurtailSub">of procured energy</div>
+        </div>
+    </div>
+
+    <!-- KEY FINDING -->
+    <div class="key-findings" id="keyFinding" style="display:none;">
+        <h4>Key Finding</h4>
+        <p id="keyFindingText"></p>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="charts-row">
+        <!-- DONUT -->
+        <div class="chart-panel donut-panel">
+            <h3>Resource Procurement Mix</h3>
+            <div class="donut-container">
+                <canvas id="donutChart"></canvas>
+                <div class="donut-center-label">
+                    <div class="dcl-value" id="donutCenterValue">--</div>
+                    <div class="dcl-label">Hourly Match</div>
+                </div>
+            </div>
+            <div class="donut-legend" id="donutLegend"></div>
+        </div>
+        <!-- COMPRESSED DAY -->
+        <div class="chart-panel">
+            <h3>Compressed Day Profile &mdash; Average Hourly Pattern</h3>
+            <div class="compressed-day-container">
+                <canvas id="compressedDayChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- PEAK CAPACITY + COST ROW -->
+    <div class="peak-cost-row">
+        <!-- PEAK CAPACITY VISUAL -->
+        <div class="peak-capacity-panel" id="peakCapacityPanel">
+            <h3>Peak Hour Capacity Need</h3>
+            <div class="peak-capacity-visual" id="peakCapacityVisual">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- COST BREAKDOWN -->
+        <div class="cost-panel" id="costPanel">
+            <h3>Cost Breakdown</h3>
+            <div id="costContent"></div>
+        </div>
+    </div>
+
+    <!-- METHODOLOGY -->
+    <div class="methodology-panel">
+        <h3>Methodology &amp; Technical Reference</h3>
+        <p>
+            This analysis uses a co-optimization approach that simultaneously minimizes cost while achieving
+            target hourly matching thresholds. Resource mixes, procurement levels, and storage dispatch are
+            jointly optimized using a three-phase refinement process with numpy-accelerated scoring.
+        </p>
+        <p>
+            <a href="optimizer_methodology.html" class="methodology-link">
+                View Full Methodology &amp; Data Sources &rarr;
+            </a>
+        </p>
+    </div>
+
+    <!-- SCROLL TRANSITION -->
+    <div class="scroll-transition">
+        <div class="scroll-transition-inner">
+            <div class="scroll-transition-line"></div>
+            <p class="scroll-transition-text">Scroll down to explore the full story of hourly matching &mdash; from the challenge of precision to the cost of that final 1%</p>
+            <div class="scroll-transition-arrow">&#x2193;</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     NARRATIVE STORY SECTIONS — animated, scroll-triggered
+     ═════════════════════════════════════════════════════════════════ -->
+<div id="narrativeSection" style="display:none;">
+
+    <!-- Divider -->
+    <div class="story-divider-wrap">
+        <hr class="story-divider">
+    </div>
+
+    <!-- SECTION 1: INTRO — with big number callout -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge">The Challenge</span>
+            <h2>From Annual Matching to Hourly: The Cost of Precision</h2>
+            <p class="story-lead">
+                Traditional renewable energy procurement matches annual generation with annual consumption &mdash;
+                a simple volume check. But proposed GHG Protocol revisions demand something far more rigorous:
+                matching supply to demand <strong>every single hour</strong> of the year.
+            </p>
+
+            <!-- Big number hero callout -->
+            <div style="display:flex; gap:24px; margin:32px 0; flex-wrap:wrap;">
+                <div style="flex:1; min-width:140px; text-align:center; padding:28px 16px; border-radius:16px; background:linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(26,39,68,0.08) 100%); border:1px solid rgba(26,39,68,0.1);">
+                    <div style="font-size:2.8rem; font-weight:800; color:var(--navy); line-height:1; letter-spacing:-1px;">8,760</div>
+                    <div style="font-size:0.8rem; color:#9A9083; margin-top:6px; font-weight:600; letter-spacing:1px; text-transform:capitalize;">Hours per year</div>
+                </div>
+                <div style="flex:1; min-width:140px; text-align:center; padding:28px 16px; border-radius:16px; background:linear-gradient(135deg, rgba(122,139,92,0.06) 0%, rgba(122,139,92,0.08) 100%); border:1px solid rgba(122,139,92,0.12);">
+                    <div style="font-size:2.8rem; font-weight:800; color:#7A8B5C; line-height:1; letter-spacing:-1px;">5</div>
+                    <div style="font-size:0.8rem; color:#9A9083; margin-top:6px; font-weight:600; letter-spacing:1px; text-transform:capitalize;">ISO regions</div>
+                </div>
+                <div style="flex:1; min-width:140px; text-align:center; padding:28px 16px; border-radius:16px; background:linear-gradient(135deg, rgba(199,91,74,0.06) 0%, rgba(212,168,75,0.08) 100%); border:1px solid rgba(199,91,74,0.12);">
+                    <div style="font-size:2.8rem; font-weight:800; color:#C75B4A; line-height:1; letter-spacing:-1px;" id="introMultiplier">2x</div>
+                    <div style="font-size:0.8rem; color:#9A9083; margin-top:6px; font-weight:600; letter-spacing:1px; text-transform:capitalize;">Cost escalation at 100%</div>
+                </div>
+            </div>
+
+            <p>
+                This shift fundamentally changes the economics of clean energy procurement. When every hour counts,
+                the intermittency of solar and wind becomes a critical cost driver, and the pathway from 75% to 100%
+                hourly matching reveals an exponential cost curve that energy buyers must understand.
+            </p>
+
+            <div class="energy-spectrum-bar"></div>
+        </div>
+    </section>
+
+    <!-- SECTION 2: SCROLLYTELLING — sticky cost chart + narrative steps -->
+    <div class="scrolly-container">
+        <div class="scrolly-sticky">
+            <div class="scrolly-chart-wrap">
+                <canvas id="narrativeCostChart"></canvas>
+            </div>
+        </div>
+        <div class="scrolly-steps">
+            <div class="scrolly-step story-fade-in" data-step="cost-intro">
+                <div class="step-card">
+                    <span class="story-badge">Key Insight</span>
+                    <h3>The Exponential Cost of Perfection</h3>
+                    <p>
+                        This chart shows the blended cost per MWh for each hourly matching target, averaged
+                        across all five ISO regions. The relationship is <strong>non-linear</strong> &mdash;
+                        the last few percentage points of matching cost dramatically more than the first.
+                    </p>
+                </div>
+            </div>
+            <div class="scrolly-step story-fade-in" data-step="cost-75">
+                <div class="step-card">
+                    <span class="story-badge story-badge-green">Accessible</span>
+                    <h3>75% Matching: The Low-Hanging Fruit</h3>
+                    <p>
+                        Achieving 75% hourly matching is surprisingly affordable. With just 80&ndash;90%
+                        procurement and a wind/solar-heavy mix, buyers can match three-quarters of their
+                        demand hourly for a modest premium above wholesale rates.
+                    </p>
+                    <div style="margin-top:16px; padding:12px 16px; border-radius:12px; background:rgba(122,139,92,0.08); border:1px solid rgba(122,139,92,0.15); font-size:0.92rem; color:#1A1A1A;">
+                        <strong style="color:#7A8B5C;">Avg Cost:</strong> <span id="stepCost75">~$47/MWh</span> &mdash; within reach for most corporate buyers
+                    </div>
+                </div>
+            </div>
+            <div class="scrolly-step story-fade-in" data-step="cost-95">
+                <div class="step-card">
+                    <span class="story-badge story-badge-orange">Inflection</span>
+                    <h3>95% Matching: The Inflection Point</h3>
+                    <p>
+                        At 95%, costs accelerate sharply. The optimal mix shifts heavily
+                        toward clean firm power, and procurement must rise to 110&ndash;135%. The easy hours
+                        are all covered &mdash; now you&rsquo;re paying to cover the hardest ones.
+                    </p>
+                    <div style="margin-top:16px; padding:12px 16px; border-radius:12px; background:rgba(199,91,74,0.08); border:1px solid rgba(199,91,74,0.15); font-size:0.92rem; color:#1A1A1A;">
+                        <strong style="color:#C75B4A;">Avg Cost:</strong> <span id="stepCost95">~$64/MWh</span> &mdash; clean firm power becomes essential
+                    </div>
+                </div>
+            </div>
+            <div class="scrolly-step story-fade-in" data-step="cost-99">
+                <div class="step-card">
+                    <span class="story-badge story-badge-red">Premium</span>
+                    <h3>99&ndash;100%: The Steep Climb</h3>
+                    <p>
+                        The final percentage points are the most expensive. Costs can exceed
+                        <strong>$75&ndash;$90/MWh</strong> &mdash; 1.5&ndash;2x the cost of 75% matching.
+                        These last unmatched hours are extreme weather events and overnight wind droughts
+                        that only firm generation can reliably cover.
+                    </p>
+                    <div style="margin-top:16px; padding:12px 16px; border-radius:12px; background:rgba(199,91,74,0.08); border:1px solid rgba(199,91,74,0.15); font-size:0.92rem; color:#1A1A1A;">
+                        <strong style="color:#C75B4A;">Avg Cost:</strong> <span id="stepCost99">~$77/MWh</span> &mdash; extreme weather hours drive the final premium
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 3: COST STATS SUMMARY -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <div class="story-stat-row" id="narrativeCostStats">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4: RESOURCE MIX — with stacked bar chart -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge">Resource Strategy</span>
+            <h2>How the Optimal Mix Evolves</h2>
+            <p>
+                At lower matching targets, solar and wind dominate because they are the cheapest per MWh.
+                As matching targets rise, the mix shifts toward <strong>clean firm power</strong> (nuclear,
+                geothermal) &mdash; the only resources that generate reliably regardless of weather.
+            </p>
+            <div class="scrolly-chart-wrap" style="margin:24px 0; min-height:280px;">
+                <canvas id="narrativeMixChart"></canvas>
+            </div>
+            <div class="story-insight-box">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Regional Variation:</strong> Wind-rich ERCOT sustains wind-heavy mixes to 95%+,
+                    while PJM and NEISO require a pivot to nuclear/clean firm at lower thresholds.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 5: CURTAILMENT -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge">The Tradeoff</span>
+            <h2>Surplus Procurement &amp; Curtailment</h2>
+            <p>
+                Every percentage point of additional hourly matching requires more procurement &mdash;
+                energy generated but never consumed. This curtailed energy has real cost: capacity built and
+                paid for, even though it serves no direct load.
+            </p>
+            <p>
+                Curtailment order: <strong>solar first</strong>, then wind, hydro, then clean firm last.
+                Solar and wind produce excess during periods of oversupply, making them the most curtailed.
+            </p>
+        </div>
+    </section>
+
+    <!-- SECTION 6: PEAK BACKUP -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge">Reliability</span>
+            <h2>Residual Backup Capacity</h2>
+            <p>
+                Even at 99% hourly matching, most regions still require 20&ndash;60% of peak demand in
+                backup capacity for the worst single hour. Traditional firm generation or demand response
+                must remain available for extreme events.
+            </p>
+            <div class="story-insight-box" style="border-left-color:#C75B4A;">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Policy Implication:</strong> Hourly matching complements grid reliability planning
+                    but doesn&rsquo;t replace it. The residual backup metric quantifies firm capacity that remains
+                    essential even with aggressive clean energy procurement.
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="footer" id="footer" style="display:none;">
+    Analysis based on 8,760-hour dispatch modeling &bull; Storage: 4h duration, 85% round-trip efficiency &bull;
+    CO&#8322; accounting follows hourly matching protocol
+</footer>
+
+<script>
+/* ====================================================================
+   DASHBOARD CONTROLLER
+   ==================================================================== */
+
+// Resource color map
+const COLORS = {
+    clean_firm: { base: '#1A2744', alpha: 'rgba(26,39,68,0.55)' },
+    solar:      { base: '#D4A84B', alpha: 'rgba(212,168,75,0.55)' },
+    wind:       { base: '#7A8B5C', alpha: 'rgba(122,139,92,0.55)' },
+    hydro:      { base: '#5B8A8A', alpha: 'rgba(91,138,138,0.55)' },
+    storage:    { base: '#C75B4A', alpha: 'rgba(199,91,74,0.55)' },
+    gap:        { base: '#DDD0C0', alpha: 'rgba(221,208,192,0.55)' }
+};
+
+const RESOURCE_LABELS = {
+    clean_firm: 'Clean Firm',
+    solar: 'Solar',
+    wind: 'Wind',
+    hydro: 'Hydro',
+    storage: 'Storage'
+};
+
+const OUTLINE_COLOR = '#4A4540';
+const NAVY = '#1A2744';
+
+let DATA = null;
+let donutChart = null;
+let compressedDayChart = null;
+
+// ---- Helpers ----
+function formatNum(n, decimals = 0) {
+    if (n == null || isNaN(n)) return '--';
+    return Number(n).toFixed(decimals);
+}
+
+function formatPct(n, decimals = 0) {
+    return formatNum(n, decimals) + '%';
+}
+
+function formatCommas(n) {
+    if (n == null) return '--';
+    return Number(n).toLocaleString('en-US');
+}
+
+// Create a striped canvas pattern for surplus
+function createStripePattern(ctx, color, bgColor) {
+    const patternCanvas = document.createElement('canvas');
+    patternCanvas.width = 10;
+    patternCanvas.height = 10;
+    const pctx = patternCanvas.getContext('2d');
+    pctx.fillStyle = bgColor || 'rgba(255,255,255,0.3)';
+    pctx.fillRect(0, 0, 10, 10);
+    pctx.strokeStyle = color;
+    pctx.lineWidth = 2;
+    pctx.beginPath();
+    pctx.moveTo(0, 10);
+    pctx.lineTo(10, 0);
+    pctx.stroke();
+    pctx.beginPath();
+    pctx.moveTo(-2, 2);
+    pctx.lineTo(2, -2);
+    pctx.stroke();
+    pctx.beginPath();
+    pctx.moveTo(8, 12);
+    pctx.lineTo(12, 8);
+    pctx.stroke();
+    return ctx.createPattern(patternCanvas, 'repeat');
+}
+
+// ---- Data Loading ----
+async function loadData() {
+    try {
+        const resp = await fetch('overprocure_results.json');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        DATA = await resp.json();
+        initDashboard();
+    } catch (err) {
+        showError(err);
+    }
+}
+
+function showError(err) {
+    document.getElementById('loadingState').style.display = 'none';
+    const el = document.getElementById('errorState');
+    el.style.display = 'block';
+    el.innerHTML = `
+        <div class="error-message">
+            <h2>Results Not Yet Available</h2>
+            <p>Could not load <code>overprocure_results.json</code>.</p>
+            <p style="margin-top:8px;">Run <code>optimize_overprocure.py</code> first to generate the analysis results.</p>
+            <p style="margin-top:12px;font-size:0.8rem;color:#997a00;">${err.message || err}</p>
+        </div>
+    `;
+}
+
+// ---- Initialize ----
+function initDashboard() {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('dashboardContent').style.display = 'block';
+    document.getElementById('footer').style.display = 'block';
+    document.getElementById('narrativeSection').style.display = 'block';
+    populateNarrativeStats();
+
+    // Config info
+    const cfg = DATA.config;
+    document.getElementById('dataYearLabel').textContent =
+        `Data Year: ${cfg.data_year} \u2022 Storage: ${cfg.storage_duration} / ${(cfg.storage_efficiency * 100).toFixed(0)}% RTE \u2022 ${cfg.resource_types.map(r => RESOURCE_LABELS[r] || r).join(', ')}`;
+
+    // Populate region dropdown
+    const regionSel = document.getElementById('regionSelect');
+    const isos = Object.keys(DATA.results);
+    isos.forEach(iso => {
+        const opt = document.createElement('option');
+        opt.value = iso;
+        opt.textContent = DATA.results[iso].label;
+        regionSel.appendChild(opt);
+    });
+
+    // Populate threshold dropdown
+    const threshSel = document.getElementById('thresholdSelect');
+    cfg.thresholds.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = String(t);
+        opt.textContent = t === 100 ? '100%' : t === 99 ? '99%' : `${t}%`;
+        threshSel.appendChild(opt);
+    });
+    // Default to 99%
+    threshSel.value = '99';
+
+    // Bind events
+    regionSel.addEventListener('change', updateAll);
+    threshSel.addEventListener('change', updateAll);
+
+    updateAll();
+}
+
+// ---- Update everything ----
+function updateAll() {
+    const iso = document.getElementById('regionSelect').value;
+    const threshold = document.getElementById('thresholdSelect').value;
+    const region = DATA.results[iso];
+    const entry = region.thresholds[threshold];
+    if (!entry) return;
+
+    updateRegionContext(region);
+    updateMetrics(region, entry);
+    updateKeyFinding(iso, threshold, entry, region);
+    updateDonut(entry);
+    updateCompressedDay(entry, region);
+    updatePeakCapacity(entry, region);
+    updateCostPanel(entry);
+}
+
+// ---- Key Finding ----
+function updateKeyFinding(iso, threshold, entry, region) {
+    const kfDiv = document.getElementById('keyFinding');
+    const kfText = document.getElementById('keyFindingText');
+    kfDiv.style.display = 'block';
+
+    const match = Math.round(entry.hourly_match_score);
+    const proc = entry.procurement_pct;
+    const costs = entry.costs || {};
+    const incr = costs.incremental_above_baseline ? Math.round(costs.incremental_above_baseline) : null;
+    const curt = costs.curtailment_pct ? Math.round(costs.curtailment_pct) : 0;
+    const peak = Math.round(entry.peak_gap_pct || 0);
+    const mix = entry.resource_mix || {};
+    const dominant = Object.entries(mix).sort((a,b) => b[1] - a[1])[0];
+    const dominantName = dominant[0].replace('clean_firm', 'clean firm');
+    const dominantPct = dominant[1];
+    const isoLabel = region.label.split(' (')[0];
+
+    let text = '';
+    if (proc <= 100) {
+        text = `In <span class="kf-value">${isoLabel}</span>, achieving a ` +
+            `<span class="kf-value">${match}%</span> hourly match requires only ` +
+            `<span class="kf-value">${proc}%</span> annual procurement with a mix dominated by ` +
+            `<span class="kf-value">${dominantPct}% ${dominantName}</span>.`;
+    } else {
+        text = `In <span class="kf-value">${isoLabel}</span>, reaching a ` +
+            `<span class="kf-value">${match}%</span> hourly match requires ` +
+            `<span class="kf-value">${proc}%</span> procurement`;
+        if (incr !== null) {
+            text += ` at an incremental cost of <span class="kf-accent">+$${incr}/MWh</span> above wholesale`;
+        }
+        text += `.`;
+        if (curt > 0) {
+            text += ` About <span class="kf-accent">${curt}%</span> of procured energy is curtailed.`;
+        }
+    }
+    if (peak > 0) {
+        text += ` Even at this level, the worst single hour still has a ` +
+            `<span class="kf-value">${peak}%</span> backup capacity requirement.`;
+    }
+    kfText.innerHTML = text;
+}
+
+// ---- Region Context ----
+function updateRegionContext(region) {
+    const ctx = document.getElementById('regionContext');
+    const demandTWh = (region.annual_demand_mwh / 1e6).toFixed(0);
+    const peakGW = (region.peak_demand_mw / 1000).toFixed(0);
+    ctx.innerHTML = `
+        <span>
+            <span class="ctx-label">Annual Demand</span>
+            <span class="ctx-value">${demandTWh} TWh</span>
+        </span>
+        <span>
+            <span class="ctx-label">Peak Demand</span>
+            <span class="ctx-value">${formatCommas(region.peak_demand_mw)} MW (${peakGW} GW)</span>
+        </span>
+    `;
+}
+
+// ---- Metrics ----
+function updateMetrics(region, entry) {
+    document.getElementById('metricMatch').textContent = formatPct(entry.hourly_match_score);
+    document.getElementById('metricMatchSub').textContent = 'of hours matched';
+
+    document.getElementById('metricProcure').textContent = entry.procurement_pct + '%';
+    const overAmt = entry.procurement_pct - 100;
+    document.getElementById('metricProcureSub').textContent =
+        overAmt > 0 ? `+${overAmt}% above demand` : 'at demand level';
+
+    // Cost
+    const costs = entry.costs;
+    if (costs && costs.effective_cost_per_useful_mwh != null) {
+        document.getElementById('metricCost').textContent = '$' + formatNum(costs.effective_cost_per_useful_mwh);
+        if (costs.incremental_above_baseline != null) {
+            document.getElementById('metricCostSub').innerHTML =
+                `<span class="accent">+$${formatNum(costs.incremental_above_baseline)}</span> above baseline`;
+        } else {
+            document.getElementById('metricCostSub').textContent = 'per MWh (effective)';
+        }
+    } else {
+        document.getElementById('metricCost').textContent = '--';
+        document.getElementById('metricCostSub').textContent = 'cost data not available';
+    }
+
+    // Curtailment
+    const curtTile = document.getElementById('metricCurtail').closest('.metric-tile');
+    if (costs && costs.curtailment_pct != null) {
+        document.getElementById('metricCurtail').textContent = formatPct(costs.curtailment_pct);
+        document.getElementById('metricCurtailSub').textContent = 'of procured energy';
+        curtTile.classList.toggle('tile-negative', costs.curtailment_pct > 0);
+    } else {
+        // Estimate curtailment from procurement
+        const curtEst = entry.procurement_pct > 100 ? (entry.procurement_pct - 100) : 0;
+        const matchDelta = 100 - entry.hourly_match_score;
+        // rough estimate: surplus procurement minus the gap improvements
+        document.getElementById('metricCurtail').textContent =
+            curtEst > 0 ? ('~' + formatPct(curtEst, 0)) : '0%';
+        document.getElementById('metricCurtailSub').textContent =
+            curtEst > 0 ? 'estimated from surplus procurement' : 'no surplus procurement';
+        curtTile.classList.toggle('tile-negative', curtEst > 0);
+    }
+}
+
+// ---- Donut Chart ----
+function updateDonut(entry) {
+    const mix = entry.resource_mix;
+    const matchScore = entry.hourly_match_score || 0; // e.g. 75.0
+    const resources = ['clean_firm', 'solar', 'wind', 'hydro'];
+    const labels = [];
+    const values = [];
+    const bgColors = [];
+    const borderColors = [];
+
+    // Scale each resource by matching score so total matched = matchScore%
+    // Mix values sum to 100 (of procurement), scale to share of demand
+    const mixTotal = resources.reduce((s, r) => s + (mix[r] || 0), 0) || 100;
+    resources.forEach(r => {
+        const mixPct = mix[r] || 0;
+        const scaledVal = (mixPct / mixTotal) * matchScore;
+        if (scaledVal > 0.5) {
+            labels.push(RESOURCE_LABELS[r]);
+            values.push(Math.round(scaledVal * 10) / 10);
+            bgColors.push(COLORS[r].alpha);
+            borderColors.push(OUTLINE_COLOR);
+        }
+    });
+
+    // Add gap slice
+    const gapPct = Math.max(0, 100 - matchScore);
+    if (gapPct > 0.5) {
+        labels.push('Unmatched');
+        values.push(Math.round(gapPct * 10) / 10);
+        bgColors.push(COLORS.gap.alpha);
+        borderColors.push(OUTLINE_COLOR);
+    }
+
+    // Storage dispatch annotation
+    const storPct = entry.storage_dispatch_pct || 0;
+
+    // Center label
+    document.getElementById('donutCenterValue').textContent = formatPct(matchScore);
+
+    // Legend
+    const legendEl = document.getElementById('donutLegend');
+    let legendHTML = '';
+    resources.forEach(r => {
+        const mixPct = mix[r] || 0;
+        const scaledVal = (mixPct / mixTotal) * matchScore;
+        if (scaledVal > 0.5) {
+            legendHTML += `
+                <div class="donut-legend-item">
+                    <div class="donut-legend-swatch" style="background:${COLORS[r].alpha}"></div>
+                    <span>${RESOURCE_LABELS[r]}: ${Math.round(scaledVal)}%</span>
+                </div>`;
+        }
+    });
+    if (storPct > 0) {
+        legendHTML += `
+            <div class="donut-legend-item">
+                <div class="donut-legend-swatch" style="background:${COLORS.storage.alpha}"></div>
+                <span>Storage Dispatch: ${storPct}%</span>
+            </div>`;
+    }
+    if (gapPct > 0.5) {
+        legendHTML += `
+            <div class="donut-legend-item">
+                <div class="donut-legend-swatch" style="background:${COLORS.gap.alpha}"></div>
+                <span>Unmatched: ${Math.round(gapPct)}%</span>
+            </div>`;
+    }
+    legendEl.innerHTML = legendHTML;
+
+    const ctx = document.getElementById('donutChart').getContext('2d');
+
+    if (donutChart) {
+        donutChart.data.labels = labels;
+        donutChart.data.datasets[0].data = values;
+        donutChart.data.datasets[0].backgroundColor = bgColors;
+        donutChart.data.datasets[0].borderColor = borderColors;
+        donutChart.update('active');
+    } else {
+        donutChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: bgColors,
+                    borderColor: borderColors,
+                    borderWidth: 2,
+                    hoverBorderWidth: 2.5,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '62%',
+                layout: { padding: 6 },
+                animation: {
+                    animateRotate: true,
+                    duration: 600
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(26,39,68,0.92)',
+                        titleFont: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 13, weight: '600' },
+                        bodyFont: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.label}: ${context.parsed.toFixed(1)}% of demand`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ---- Compressed Day Chart ----
+function updateCompressedDay(entry, region) {
+    const cd = entry.compressed_day;
+    if (!cd) {
+        // No compressed day data
+        const ctx = document.getElementById('compressedDayChart').getContext('2d');
+        if (compressedDayChart) {
+            compressedDayChart.destroy();
+            compressedDayChart = null;
+        }
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = '#9A9083';
+        ctx.font = "14px 'Franklin Gothic Medium', 'Arial Narrow', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText('Compressed day profile not available for this selection.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        return;
+    }
+
+    const hours = Array.from({length: 24}, (_, i) => i);
+    const hourLabels = hours.map(h => {
+        if (h === 0) return '12am';
+        if (h < 12) return h + 'am';
+        if (h === 12) return '12pm';
+        return (h - 12) + 'pm';
+    });
+
+    // Convert normalized sums to MW (representative daily average)
+    // Each value is the sum of normalized hourly values across 365 days
+    // Divide by 365 and multiply by annual_demand to get average MW for that hour
+    const annualMWh = region.annual_demand_mwh || 1;
+    const toMW = (v) => (v / 365) * annualMWh;
+
+    // Calculate stacked matched values (in MW)
+    const matchedCleanFirm = cd.matched.clean_firm.map(v => Math.max(0, toMW(v)));
+    const matchedSolar = cd.matched.solar.map(v => Math.max(0, toMW(v)));
+    const matchedWind = cd.matched.wind.map(v => Math.max(0, toMW(v)));
+    const matchedHydro = cd.matched.hydro.map(v => Math.max(0, toMW(v)));
+    const matchedStorage = cd.matched.storage.map(v => Math.max(0, toMW(v)));
+
+    // Storage charging (negative, below x-axis) — in MW
+    const storageCharge = (cd.storage_charge || new Array(24).fill(0)).map(v => toMW(v));
+
+    // Per-resource surplus (curtailed) — in MW
+    const surplusSolar = (cd.surplus?.solar || new Array(24).fill(0)).map(v => toMW(v));
+    const surplusWind = (cd.surplus?.wind || new Array(24).fill(0)).map(v => toMW(v));
+    const surplusHydro = (cd.surplus?.hydro || new Array(24).fill(0)).map(v => toMW(v));
+    const surplusCleanFirm = (cd.surplus?.clean_firm || new Array(24).fill(0)).map(v => toMW(v));
+
+    // Gap (unmatched) — in MW
+    const gap = cd.gap.map(v => toMW(v));
+
+    // Build stacked bottom-up: clean_firm, hydro, wind, solar, storage
+    // Then per-resource surplus on top (color-coded cross-hatching)
+
+    const ctx = document.getElementById('compressedDayChart').getContext('2d');
+
+    // Create per-resource stripe patterns for surplus
+    const surplusPatterns = {
+        solar: createStripePattern(ctx, COLORS.solar.base, 'rgba(212,168,75,0.18)'),
+        wind: createStripePattern(ctx, COLORS.wind.base, 'rgba(122,139,92,0.18)'),
+        hydro: createStripePattern(ctx, COLORS.hydro.base, 'rgba(91,138,138,0.18)'),
+        clean_firm: createStripePattern(ctx, COLORS.clean_firm.base, 'rgba(26,39,68,0.18)')
+    };
+
+    // Running matched total for stacking
+    const matchedTotal = matchedStorage.map((v, i) => v + matchedSolar[i] + matchedWind[i] + matchedHydro[i] + matchedCleanFirm[i]);
+
+    const datasets = [
+        {
+            label: 'Clean Firm',
+            data: matchedCleanFirm,
+            backgroundColor: COLORS.clean_firm.alpha,
+            borderColor: OUTLINE_COLOR,
+            borderWidth: 1.5,
+            fill: 'origin',
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.3,
+            order: 9
+        },
+        {
+            label: 'Hydro',
+            data: matchedHydro.map((v, i) => v + matchedCleanFirm[i]),
+            backgroundColor: COLORS.hydro.alpha,
+            borderColor: OUTLINE_COLOR,
+            borderWidth: 1.5,
+            fill: '-1',
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.3,
+            order: 8
+        },
+        {
+            label: 'Wind',
+            data: matchedWind.map((v, i) => v + matchedHydro[i] + matchedCleanFirm[i]),
+            backgroundColor: COLORS.wind.alpha,
+            borderColor: OUTLINE_COLOR,
+            borderWidth: 1.5,
+            fill: '-1',
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.3,
+            order: 7
+        },
+        {
+            label: 'Solar',
+            data: matchedSolar.map((v, i) => v + matchedWind[i] + matchedHydro[i] + matchedCleanFirm[i]),
+            backgroundColor: COLORS.solar.alpha,
+            borderColor: OUTLINE_COLOR,
+            borderWidth: 1.5,
+            fill: '-1',
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.3,
+            order: 6
+        },
+        {
+            label: 'Storage Dispatch',
+            data: matchedTotal.slice(),
+            backgroundColor: COLORS.storage.alpha,
+            borderColor: OUTLINE_COLOR,
+            borderWidth: 1.5,
+            fill: '-1',
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.3,
+            order: 5
+        }
+    ];
+
+    // Remember the index of the Storage Dispatch dataset (top of matched stack)
+    const storageDispatchIdx = datasets.length - 1;
+
+    // Storage charging (shown as negative below the x-axis)
+    const hasCharge = storageCharge.some(v => v > 0.001);
+    if (hasCharge) {
+        datasets.push({
+            label: 'Storage Charge',
+            data: storageCharge.map(v => -Math.abs(v)),
+            backgroundColor: 'rgba(199,91,74,0.35)',
+            borderColor: COLORS.storage.base,
+            borderWidth: 1.5,
+            fill: 'origin',
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.3,
+            order: 11,
+            _isCharge: true
+        });
+    }
+
+    // Curtailment order: solar first, then wind, hydro, clean firm last
+    // Each stacks on top of the matched total + previous surplus layers
+    // IMPORTANT: use explicit dataset index for fill target to avoid cross-hatching the whole chart
+    const curtailOrder = ['solar', 'wind', 'hydro', 'clean_firm'];
+    const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, clean_firm: surplusCleanFirm };
+    let curtailCumulative = matchedTotal.slice();
+    let prevCurtailIdx = storageDispatchIdx; // first curtailed fills to top of matched stack
+
+    for (const rt of curtailOrder) {
+        const surpVals = surplusArrays[rt];
+        const hasSurplus = surpVals.some(v => v > 1);
+        if (!hasSurplus) continue;
+
+        const stackedData = surpVals.map((v, i) => {
+            curtailCumulative[i] += Math.max(0, v);
+            return curtailCumulative[i];
+        });
+
+        const thisIdx = datasets.length;
+        datasets.push({
+            label: RESOURCE_LABELS[rt] + ' (Curtailed)',
+            data: stackedData,
+            backgroundColor: surplusPatterns[rt],
+            borderColor: COLORS[rt].base,
+            borderWidth: 0.5,
+            borderDash: [3, 3],
+            fill: { target: prevCurtailIdx, above: surplusPatterns[rt] },
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.3,
+            order: 4 - curtailOrder.indexOf(rt),
+            _surplusVals: surpVals // stash for tooltip
+        });
+        prevCurtailIdx = thisIdx;
+    }
+
+    // Demand line on top
+    datasets.push({
+        label: 'Demand',
+        data: cd.demand.map(v => toMW(v)),
+        backgroundColor: 'transparent',
+        borderColor: '#1a1a2e',
+        borderWidth: 2.5,
+        borderDash: [6, 4],
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0.3,
+        order: -1
+    });
+
+    // Add gap dataset if there's any gap
+    const hasGap = gap.some(v => v > 0.0001);
+    if (hasGap) {
+        datasets.push({
+            label: 'Unmatched (Gap)',
+            data: cd.demand.map((d, i) => {
+                const demandMW = toMW(d);
+                const matched = matchedTotal[i];
+                return Math.max(0, demandMW - matched);
+            }),
+            backgroundColor: COLORS.gap.alpha,
+            borderColor: OUTLINE_COLOR,
+            borderWidth: 1.5,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.3,
+            order: 10,
+            hidden: true // shown in tooltip only
+        });
+    }
+
+    if (compressedDayChart) {
+        compressedDayChart.data.labels = hourLabels;
+        compressedDayChart.data.datasets = datasets;
+        compressedDayChart.update('active');
+    } else {
+        compressedDayChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: hourLabels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 500 },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(74,69,64,0.06)' },
+                        ticks: {
+                            font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                            color: '#6B6356',
+                            maxRotation: 0
+                        }
+                    },
+                    y: {
+                        grid: { color: 'rgba(0,0,0,0.06)' },
+                        ticks: {
+                            font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                            color: '#6B6356',
+                            callback: function(v) {
+                                const abs = Math.abs(v);
+                                const label = abs >= 1000 ? (abs/1000).toFixed(0) + 'k' : abs.toFixed(0);
+                                return v < 0 ? '-' + label : label;
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Average MW',
+                            font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12, weight: '600' },
+                            color: '#4A4540'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                            color: '#1A1A1A',
+                            usePointStyle: true,
+                            pointStyle: 'rectRounded',
+                            padding: 14,
+                            filter: function(item) {
+                                return item.text !== 'Unmatched (Gap)';
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(26,39,68,0.92)',
+                        titleFont: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 13, weight: '600' },
+                        bodyFont: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                const ds = context.dataset;
+                                const fmtMW = (v) => {
+                                    const abs = Math.abs(v);
+                                    const s = abs >= 1000 ? Math.round(abs).toLocaleString() + ' MW' : abs.toFixed(0) + ' MW';
+                                    return v < 0 ? '-' + s : s;
+                                };
+                                if (ds.label === 'Demand') {
+                                    return ` Demand: ${fmtMW(context.parsed.y)}`;
+                                }
+                                if (ds.label === 'Unmatched (Gap)') return null;
+                                // Storage charge (negative)
+                                if (ds._isCharge) {
+                                    const cv = Math.abs(context.parsed.y);
+                                    if (cv < 1) return null;
+                                    return ` Storage Charge: ${fmtMW(cv)}`;
+                                }
+                                // For curtailed datasets, use stashed surplus values
+                                if (ds._surplusVals) {
+                                    const sv = ds._surplusVals[context.dataIndex];
+                                    if (sv < 1) return null;
+                                    return ` ${ds.label}: ${fmtMW(sv)}`;
+                                }
+                                // For stacked matched, show individual contribution
+                                const idx = context.dataIndex;
+                                const dsIdx = context.datasetIndex;
+                                const val = context.parsed.y;
+                                const prev = dsIdx > 0 ? compressedDayChart.data.datasets[dsIdx - 1].data[idx] : 0;
+                                const contribution = val - prev;
+                                if (contribution < 1) return null;
+                                return ` ${ds.label}: ${fmtMW(contribution)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ---- Peak Capacity Visual ----
+function updatePeakCapacity(entry, region) {
+    const container = document.getElementById('peakCapacityVisual');
+    if (!container) return;
+
+    const peakGapPct = entry.peak_gap_pct || 0;
+    const peakDemandMW = region.peak_demand_mw || 0;
+    const gapMW = Math.round(peakDemandMW * peakGapPct / 100);
+    const coveredMW = peakDemandMW - gapMW;
+    const procPct = entry.procurement_pct || 0;
+
+    // Bar heights proportional to MW (max = peakDemandMW → 160px)
+    const maxBarH = 220;
+    const demandH = maxBarH;
+    const coveredH = peakDemandMW > 0 ? Math.max(8, (coveredMW / peakDemandMW) * maxBarH) : 8;
+    const gapH = peakDemandMW > 0 ? Math.max(4, (gapMW / peakDemandMW) * maxBarH) : 4;
+
+    container.innerHTML = `
+        <div class="peak-tower-wrap">
+            <div class="peak-tower">
+                <div class="peak-tower-value">${formatCommas(peakDemandMW)} MW</div>
+                <div class="peak-tower-bar" style="height:${demandH}px; background: rgba(212,168,75,0.45); border: 2px solid #D4A84B;"></div>
+                <div class="peak-tower-label">Peak<br>Demand</div>
+            </div>
+            <div class="peak-tower">
+                <div class="peak-tower-value">${formatCommas(coveredMW)} MW</div>
+                <div class="peak-tower-bar" style="height:${coveredH}px; background: rgba(26,39,68,0.45); border: 2px solid #1A2744;"></div>
+                <div class="peak-tower-label">Clean<br>Coverage</div>
+            </div>
+            <div class="peak-tower">
+                <div class="peak-tower-value" style="color:#C75B4A;">${formatCommas(gapMW)} MW</div>
+                <div class="peak-tower-bar" style="height:${gapH}px; background: rgba(199,91,74,0.45); border: 2px solid #C75B4A;"></div>
+                <div class="peak-tower-label">Backup<br>Needed</div>
+            </div>
+        </div>
+        <div class="peak-capacity-note">
+            At <strong>${procPct}%</strong> procurement, the worst single hour still needs
+            <strong>${formatPct(peakGapPct)}</strong> of peak demand from backup sources.
+        </div>
+    `;
+}
+
+// ---- Cost Panel ----
+function updateCostPanel(entry) {
+    const content = document.getElementById('costContent');
+    const costs = entry.costs;
+
+    if (!costs || !costs.resource_costs) {
+        content.innerHTML = `
+            <div class="cost-unavailable">
+                Cost breakdown data is not available for this configuration.
+                Cost modeling requires <code>regional_lcoe</code> and <code>grid_mix_shares</code> in the config.
+            </div>
+        `;
+        return;
+    }
+
+    const rc = costs.resource_costs;
+    const resources = ['clean_firm', 'solar', 'wind', 'hydro', 'storage'];
+
+    let rows = '';
+    resources.forEach(r => {
+        const d = rc[r];
+        if (!d) return;
+
+        if (r === 'storage') {
+            rows += `
+                <tr>
+                    <td><span class="resource-dot" style="background:${COLORS.storage.alpha}"></span>Storage</td>
+                    <td colspan="3" style="text-align:center;color:var(--text-muted);font-style:italic;">
+                        ${d.dispatch_pct != null ? d.dispatch_pct + '% dispatch' : '--'}
+                    </td>
+                    <td>${d.cost_per_demand_mwh != null ? '$' + formatNum(d.cost_per_demand_mwh) : '--'}</td>
+                </tr>`;
+        } else {
+            rows += `
+                <tr>
+                    <td><span class="resource-dot" style="background:${COLORS[r].alpha}"></span>${RESOURCE_LABELS[r]}</td>
+                    <td>${d.total_pct_of_demand != null ? d.total_pct_of_demand + '%' : '--'}</td>
+                    <td>${d.existing_pct != null ? d.existing_pct + '%' : '--'}</td>
+                    <td>${d.new_pct != null ? d.new_pct + '%' : '--'}</td>
+                    <td>${d.cost_per_demand_mwh != null ? '$' + formatNum(d.cost_per_demand_mwh) : '--'}</td>
+                </tr>`;
+        }
+    });
+
+    content.innerHTML = `
+        <div class="cost-table-wrapper">
+            <table class="cost-table">
+                <thead>
+                    <tr>
+                        <th>Resource</th>
+                        <th>Total (% of Demand)</th>
+                        <th>Existing Grid</th>
+                        <th>New Build</th>
+                        <th>Cost ($/MWh)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                    <tr class="row-total">
+                        <td>Total Blended Cost</td>
+                        <td colspan="3"></td>
+                        <td>${costs.total_cost_per_demand_mwh != null ? '$' + formatNum(costs.total_cost_per_demand_mwh) : '--'}/MWh</td>
+                    </tr>
+                    ${costs.effective_cost_per_useful_mwh != null ? `
+                    <tr class="row-total">
+                        <td>Effective Cost (adj. for curtailment)</td>
+                        <td colspan="3"></td>
+                        <td>$${formatNum(costs.effective_cost_per_useful_mwh)}/MWh</td>
+                    </tr>` : ''}
+                </tbody>
+            </table>
+        </div>
+        ${costs.baseline_wholesale_cost != null ? `
+        <div class="cost-note">
+            Baseline wholesale cost: $${formatNum(costs.baseline_wholesale_cost, 0)}/MWh &bull;
+            Incremental above baseline: $${formatNum(costs.incremental_above_baseline)}/MWh
+            ${costs.curtailment_pct != null && costs.curtailment_pct > 0 ?
+                '&bull; Curtailment (' + formatNum(costs.curtailment_pct) + '%) inflates effective cost above blended cost.' : ''}
+        </div>` : ''}
+    `;
+}
+
+// ---- Narrative Stats ----
+function populateNarrativeStats() {
+    const container = document.getElementById('narrativeCostStats');
+    if (!container || !DATA) return;
+
+    // Find lowest and highest cost across all ISOs
+    const isos = Object.keys(DATA.results);
+    let stats = [];
+
+    for (const iso of isos) {
+        const region = DATA.results[iso];
+        const thresholds = region.thresholds;
+        const t75 = thresholds['75'];
+        const t99 = thresholds['99'];
+        const t100 = thresholds['100'];
+        if (t75 && t99) {
+            const cost75 = t75.costs?.effective_cost_per_useful_mwh || 0;
+            const cost99 = t99.costs?.effective_cost_per_useful_mwh || 0;
+            const cost100 = t100?.costs?.effective_cost_per_useful_mwh || null;
+            stats.push({
+                iso: iso,
+                label: region.label,
+                cost75: cost75,
+                cost99: cost99,
+                cost100: cost100,
+                multiplier: cost99 / cost75,
+                proc99: t99.procurement_pct
+            });
+        }
+    }
+
+    if (stats.length === 0) return;
+
+    // Average across ISOs
+    const avgCost75 = stats.reduce((s, d) => s + d.cost75, 0) / stats.length;
+    const avgCost99 = stats.reduce((s, d) => s + d.cost99, 0) / stats.length;
+    const avgMultiplier = avgCost99 / avgCost75;
+    const maxProc99 = Math.max(...stats.map(d => d.proc99));
+
+    // Also compute 95% and 100% averages
+    let avgCost95 = 0, avgCost100 = 0, count95 = 0, count100 = 0;
+    for (const iso of isos) {
+        const t95 = DATA.results[iso]?.thresholds?.['95'];
+        const t100 = DATA.results[iso]?.thresholds?.['100'];
+        if (t95?.costs?.effective_cost_per_useful_mwh) {
+            avgCost95 += t95.costs.effective_cost_per_useful_mwh;
+            count95++;
+        }
+        if (t100?.costs?.effective_cost_per_useful_mwh) {
+            avgCost100 += t100.costs.effective_cost_per_useful_mwh;
+            count100++;
+        }
+    }
+    if (count95 > 0) avgCost95 /= count95;
+    if (count100 > 0) avgCost100 /= count100;
+
+    // Compute 100% vs 75% multiplier for intro
+    const fullMultiplier = count100 > 0 ? (avgCost100 / avgCost75) : avgMultiplier;
+
+    container.innerHTML = `
+        <div class="story-stat-card">
+            <div class="story-stat-label">75% Match Cost</div>
+            <div class="story-stat-value" style="color:#7A8B5C;">$${avgCost75.toFixed(0)}</div>
+            <div class="story-stat-sub">avg $/MWh across ISOs</div>
+        </div>
+        <div class="story-stat-card">
+            <div class="story-stat-label">99% Match Cost</div>
+            <div class="story-stat-value" style="color:#C75B4A;">$${avgCost99.toFixed(0)}</div>
+            <div class="story-stat-sub">avg $/MWh across ISOs</div>
+        </div>
+        ${count100 > 0 ? `
+        <div class="story-stat-card">
+            <div class="story-stat-label">100% Match Cost</div>
+            <div class="story-stat-value" style="color:#C75B4A;">$${avgCost100.toFixed(0)}</div>
+            <div class="story-stat-sub">avg $/MWh across ISOs</div>
+        </div>` : `
+        <div class="story-stat-card">
+            <div class="story-stat-label">Cost Multiplier</div>
+            <div class="story-stat-value">${avgMultiplier.toFixed(1)}x</div>
+            <div class="story-stat-sub">99% vs 75% cost ratio</div>
+        </div>`}
+        <div class="story-stat-card">
+            <div class="story-stat-label">Cost Multiplier</div>
+            <div class="story-stat-value" style="color:var(--navy);">${fullMultiplier.toFixed(1)}x</div>
+            <div class="story-stat-sub">${count100 > 0 ? '100%' : '99%'} vs 75% cost ratio</div>
+        </div>
+    `;
+
+    // Populate step card inline cost values
+    const el75 = document.getElementById('stepCost75');
+    const el95 = document.getElementById('stepCost95');
+    const el99 = document.getElementById('stepCost99');
+    if (el75) el75.textContent = `$${avgCost75.toFixed(0)}/MWh avg`;
+    if (el95 && count95 > 0) el95.textContent = `$${avgCost95.toFixed(0)}/MWh avg`;
+    if (el99) el99.textContent = `$${avgCost99.toFixed(0)}/MWh avg`;
+
+    // Populate intro multiplier
+    const introMult = document.getElementById('introMultiplier');
+    if (introMult) introMult.textContent = `${fullMultiplier.toFixed(1)}x`;
+}
+
+// ---- Narrative Mix Evolution Chart ----
+let narrativeMixChart = null;
+
+function initNarrativeMixChart() {
+    const canvas = document.getElementById('narrativeMixChart');
+    if (!canvas || !DATA) return;
+
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
+    const isos = Object.keys(DATA.results);
+    const resources = ['solar', 'wind', 'hydro', 'clean_firm', 'storage'];
+    const resourceLabels = { solar: 'Solar', wind: 'Wind', hydro: 'Hydro', clean_firm: 'Clean Firm', storage: 'Storage' };
+    const resourceColors = {
+        solar:      { fill: 'rgba(212,168,75,0.50)',  border: '#D4A84B' },
+        wind:       { fill: 'rgba(122,139,92,0.50)',  border: '#7A8B5C' },
+        hydro:      { fill: 'rgba(91,138,138,0.50)',  border: '#5B8A8A' },
+        clean_firm: { fill: 'rgba(26,39,68,0.50)',    border: '#1A2744' },
+        storage:    { fill: 'rgba(199,91,74,0.50)',   border: '#C75B4A' }
+    };
+
+    // Average mix across ISOs for each threshold
+    const labels = [];
+    const mixData = {};
+    resources.forEach(r => mixData[r] = []);
+
+    for (const tk of thresholdKeys) {
+        let found = false;
+        const avgMix = {};
+        resources.forEach(r => avgMix[r] = 0);
+        let count = 0;
+
+        for (const iso of isos) {
+            const t = DATA.results[iso]?.thresholds?.[tk];
+            const mix = t?.resource_mix || t?.optimal_mix;
+            if (t && mix) {
+                resources.forEach(r => {
+                    avgMix[r] += (mix[r] || 0);
+                });
+                count++;
+                found = true;
+            }
+        }
+
+        if (found && count > 0) {
+            labels.push(tk + '%');
+            const total = resources.reduce((s, r) => s + avgMix[r], 0) || 1;
+            resources.forEach(r => {
+                mixData[r].push(Math.round(avgMix[r] / total * 100 * 10) / 10);
+            });
+        }
+    }
+
+    if (labels.length === 0) return;
+
+    const datasets = resources.map(r => ({
+        label: resourceLabels[r],
+        data: mixData[r],
+        backgroundColor: resourceColors[r].fill,
+        borderColor: resourceColors[r].border,
+        borderWidth: 2,
+        borderRadius: 3,
+    }));
+
+    const ctx = canvas.getContext('2d');
+    narrativeMixChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 800, easing: 'easeOutCubic' },
+            layout: { padding: { top: 8, right: 8, bottom: 4, left: 4 } },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                        color: '#1A1A1A',
+                        padding: 14,
+                        generateLabels: function(chart) {
+                            return chart.data.datasets.map((ds, i) => ({
+                                text: ds.label,
+                                fillStyle: ds.backgroundColor,
+                                strokeStyle: ds.borderColor,
+                                lineWidth: 2,
+                                hidden: !chart.isDatasetVisible(i),
+                                datasetIndex: i,
+                                pointStyle: 'rectRounded',
+                            }));
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.92)',
+                    titleFont: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                    bodyFont: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                        }
+                    }
+                },
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Hourly Matching Target',
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                        color: '#6B6356',
+                    }
+                },
+                y: {
+                    stacked: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Share of Procurement (%)',
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    ticks: {
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                        color: '#6B6356',
+                        callback: (v) => v + '%',
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ---- Narrative Cost Chart (Scrollytelling) ----
+let narrativeCostChart = null;
+
+function initNarrativeCostChart() {
+    const canvas = document.getElementById('narrativeCostChart');
+    if (!canvas || !DATA) return;
+
+    // Gather cost per threshold for each ISO + average
+    // Use NUMERIC x-values so the axis is proportional (99→100 = 1% gap vs 5% gaps)
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
+    const thresholdNums = [75, 80, 85, 90, 95, 99, 100];
+    const isos = Object.keys(DATA.results);
+    const xValues = [];     // numeric x positions
+    const avgCosts = [];
+    const isoData = {};
+
+    // ISO line colors (thin, translucent)
+    const isoLineColors = {
+        'CAISO': 'rgba(212,168,75,0.4)',
+        'ERCOT': 'rgba(122,139,92,0.4)',
+        'PJM':   'rgba(91,138,138,0.4)',
+        'NYISO': 'rgba(199,91,74,0.4)',
+        'NEISO': 'rgba(138,129,120,0.4)',
+    };
+
+    for (const iso of isos) isoData[iso] = [];
+
+    for (let ti = 0; ti < thresholdKeys.length; ti++) {
+        const tk = thresholdKeys[ti];
+        let costSum = 0, count = 0;
+        let hasData = false;
+        for (const iso of isos) {
+            const t = DATA.results[iso]?.thresholds?.[tk];
+            if (t && t.costs?.effective_cost_per_useful_mwh) {
+                const cost = t.costs.effective_cost_per_useful_mwh;
+                isoData[iso].push({ x: thresholdNums[ti], y: Math.round(cost) });
+                costSum += cost;
+                count++;
+                hasData = true;
+            } else {
+                isoData[iso].push({ x: thresholdNums[ti], y: null });
+            }
+        }
+        if (hasData) {
+            xValues.push(thresholdNums[ti]);
+            avgCosts.push({ x: thresholdNums[ti], y: Math.round(costSum / count) });
+        }
+    }
+
+    if (xValues.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+
+    // Create gradient fill for the average line
+    const gradient = ctx.createLinearGradient(0, 0, 0, 340);
+    gradient.addColorStop(0, 'rgba(26,39,68,0.12)');
+    gradient.addColorStop(1, 'rgba(26,39,68,0.01)');
+
+    // Point colors — all start muted, will be highlighted by scroll
+    const pointColors = avgCosts.map(() => 'rgba(26,39,68,0.3)');
+    const pointRadii = avgCosts.map(() => 5);
+
+    // Build datasets: individual ISO lines (thin, behind) + bold average line (front)
+    const datasets = [];
+
+    // Individual ISO lines
+    for (const iso of isos) {
+        const isoLabel = DATA.results[iso]?.label || iso;
+        datasets.push({
+            label: isoLabel,
+            data: isoData[iso].filter(d => d.y !== null),
+            borderColor: isoLineColors[iso] || 'rgba(150,150,150,0.3)',
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            borderDash: [4, 3],
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointBackgroundColor: isoLineColors[iso] || 'rgba(150,150,150,0.3)',
+            fill: false,
+            tension: 0.35,
+            order: 2,
+        });
+    }
+
+    // Average line (bold, on top)
+    datasets.push({
+        label: 'Avg Cost ($/MWh)',
+        data: avgCosts,
+        borderColor: '#1A2744',
+        backgroundColor: gradient,
+        borderWidth: 3,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: pointColors,
+        pointRadius: pointRadii,
+        pointHoverRadius: 8,
+        fill: true,
+        tension: 0.35,
+        order: 1,
+    });
+
+    narrativeCostChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: datasets,
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutCubic' },
+            layout: { padding: { top: 44, right: 16, bottom: 4, left: 4 } },
+            interaction: {
+                mode: 'nearest',
+                intersect: false,
+                axis: 'x',
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'line',
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                        color: '#1A1A1A',
+                        padding: 14,
+                        boxWidth: 20,
+                        boxHeight: 1,
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.92)',
+                    titleFont: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                    bodyFont: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) {
+                            if (items.length > 0) return items[0].parsed.x + '% Target';
+                            return '';
+                        },
+                        label: function(context) {
+                            if (context.parsed.y == null) return null;
+                            return ` ${context.dataset.label}: $${context.parsed.y}/MWh`;
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {}
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: {
+                        display: true,
+                        text: 'Hourly Matching Target',
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                        color: '#6B6356',
+                        callback: (v) => v + '%',
+                        stepSize: 5,
+                    },
+                    min: 73,
+                    max: 102,
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Blended Cost ($/MWh)',
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    ticks: {
+                        font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 11 },
+                        color: '#6B6356',
+                        callback: (v) => '$' + v,
+                    },
+                    beginAtZero: true,
+                    grace: '15%',
+                }
+            }
+        }
+    });
+}
+
+function highlightCostStep(stepName) {
+    if (!narrativeCostChart) return;
+
+    // Average line is the LAST dataset (individual ISOs are before it)
+    const dsCount = narrativeCostChart.data.datasets.length;
+    const ds = narrativeCostChart.data.datasets[dsCount - 1]; // avg line
+    const n = ds.data.length;
+
+    // Helper: find data index by x value (threshold number)
+    const findIdx = (xVal) => ds.data.findIndex(d => d.x === xVal);
+    const getY = (idx) => idx >= 0 ? ds.data[idx].y : null;
+    const getX = (idx) => idx >= 0 ? ds.data[idx].x : null;
+
+    // Reset all points to muted
+    const colors = new Array(n).fill('rgba(26,39,68,0.25)');
+    const radii = new Array(n).fill(5);
+    const annotations = {};
+
+    if (stepName === 'cost-intro') {
+        // Highlight all — full curve glow
+        for (let i = 0; i < n; i++) {
+            colors[i] = '#1A2744';
+            radii[i] = 6;
+        }
+    } else if (stepName === 'cost-75') {
+        // Highlight 75%
+        const idx = findIdx(75);
+        if (idx >= 0) {
+            colors[idx] = '#7A8B5C';
+            radii[idx] = 10;
+            annotations['highlight'] = {
+                type: 'point',
+                xValue: 75,
+                yValue: getY(idx),
+                backgroundColor: 'rgba(122,139,92,0.15)',
+                borderColor: '#7A8B5C',
+                borderWidth: 2,
+                radius: 18,
+            };
+            annotations['label75'] = {
+                type: 'label',
+                xValue: 75,
+                yValue: getY(idx),
+                content: '$' + getY(idx) + '/MWh',
+                font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 13, weight: 700 },
+                color: '#7A8B5C',
+                position: 'start',
+                yAdjust: -28,
+            };
+        }
+    } else if (stepName === 'cost-95') {
+        // Highlight 75% through 95% range
+        const idx75 = findIdx(75);
+        const idx95 = findIdx(95);
+        if (idx75 >= 0 && idx95 >= 0) {
+            for (let i = idx75; i <= idx95; i++) {
+                colors[i] = '#C75B4A';
+                radii[i] = 7;
+            }
+            radii[idx95] = 10;
+            annotations['highlight95'] = {
+                type: 'point',
+                xValue: 95,
+                yValue: getY(idx95),
+                backgroundColor: 'rgba(199,91,74,0.15)',
+                borderColor: '#C75B4A',
+                borderWidth: 2,
+                radius: 18,
+            };
+            annotations['label95'] = {
+                type: 'label',
+                xValue: 95,
+                yValue: getY(idx95),
+                content: '$' + getY(idx95) + '/MWh',
+                font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 13, weight: 700 },
+                color: '#C75B4A',
+                position: 'start',
+                yAdjust: -28,
+            };
+            // Shade the region
+            annotations['zone'] = {
+                type: 'box',
+                xMin: 74,
+                xMax: 96,
+                backgroundColor: 'rgba(199,91,74,0.04)',
+                borderColor: 'transparent',
+            };
+        }
+    } else if (stepName === 'cost-99') {
+        // Highlight 99-100% zone — the steep climb
+        const idx99 = findIdx(99);
+        const idx100 = findIdx(100);
+        const topIdx = idx100 >= 0 ? idx100 : idx99;
+        if (idx99 >= 0) {
+            colors[idx99] = '#C75B4A';
+            radii[idx99] = 10;
+            if (idx100 >= 0) {
+                colors[idx100] = '#C75B4A';
+                radii[idx100] = 10;
+            }
+            annotations['highlight99'] = {
+                type: 'point',
+                xValue: getX(topIdx),
+                yValue: getY(topIdx),
+                backgroundColor: 'rgba(199,91,74,0.15)',
+                borderColor: '#C75B4A',
+                borderWidth: 2,
+                radius: 18,
+            };
+            annotations['label99'] = {
+                type: 'label',
+                xValue: getX(topIdx),
+                yValue: getY(topIdx),
+                content: '$' + getY(topIdx) + '/MWh',
+                font: { family: "'Franklin Gothic Medium','Arial Narrow',sans-serif", size: 13, weight: 700 },
+                color: '#C75B4A',
+                position: 'end',
+                yAdjust: -28,
+            };
+            // Danger zone shading — 99 to 100 is proportionally narrow
+            annotations['dangerZone'] = {
+                type: 'box',
+                xMin: 98.5,
+                xMax: 100.5,
+                backgroundColor: 'rgba(199,91,74,0.06)',
+                borderColor: 'rgba(199,91,74,0.2)',
+                borderWidth: 1.5,
+            };
+        }
+    }
+
+    // Apply
+    ds.pointBackgroundColor = colors;
+    ds.pointBorderColor = colors;
+    ds.pointRadius = radii;
+    narrativeCostChart.options.plugins.annotation.annotations = annotations;
+    narrativeCostChart.update('none');
+}
+
+// ---- Scroll-triggered fade-in + scrollytelling step observer ----
+function initScrollAnimations() {
+    // 1. Fade-in observer for story sections and scrolly steps
+    const fadeObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.story-fade-in').forEach(el => {
+        fadeObserver.observe(el);
+    });
+
+    // 2. Scrollytelling step observer — highlight cost chart based on active step
+    const steps = document.querySelectorAll('.scrolly-step');
+    if (steps.length === 0) return;
+
+    let activeStep = null;
+    const stepObserver = new IntersectionObserver((entries) => {
+        // Find the most-visible step
+        let best = null;
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                if (!best || entry.intersectionRatio > best.intersectionRatio) {
+                    best = entry;
+                }
+            }
+        });
+
+        if (best) {
+            const stepEl = best.target;
+            const stepName = stepEl.getAttribute('data-step');
+
+            if (stepName !== activeStep) {
+                activeStep = stepName;
+                // Remove active from all
+                steps.forEach(s => s.classList.remove('active'));
+                stepEl.classList.add('active');
+                highlightCostStep(stepName);
+            }
+        }
+    }, {
+        threshold: [0.1, 0.3, 0.5, 0.7, 0.9],
+        rootMargin: '-20% 0px -30% 0px'
+    });
+
+    steps.forEach(step => stepObserver.observe(step));
+
+    // 3. Initialize the narrative cost chart when it scrolls into view
+    const chartContainer = document.querySelector('.scrolly-container');
+    if (chartContainer) {
+        const chartInitObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !narrativeCostChart) {
+                initNarrativeCostChart();
+                // Start with the intro highlight
+                setTimeout(() => highlightCostStep('cost-intro'), 300);
+            }
+        }, { threshold: 0.05 });
+        chartInitObserver.observe(chartContainer);
+    }
+
+    // 4. Initialize the narrative mix chart when it scrolls into view
+    const mixCanvas = document.getElementById('narrativeMixChart');
+    if (mixCanvas) {
+        const mixInitObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !narrativeMixChart) {
+                initNarrativeMixChart();
+            }
+        }, { threshold: 0.05 });
+        mixInitObserver.observe(mixCanvas.closest('.story-section') || mixCanvas);
+    }
+}
+
+// ---- Boot ----
+document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+    initScrollAnimations();
+});
+</script>
+</body>
+</html>

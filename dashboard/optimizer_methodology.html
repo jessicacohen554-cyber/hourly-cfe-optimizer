@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Methodology - Hourly Clean Energy Cost Optimizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --c-navy: #0A2540;
+            --c-navy-dark: #061B2E;
+            --c-blue: #2372B9;
+            --c-blue-light: #60A5FA;
+            --c-blue-pale: #DBEAFE;
+            --c-white: #ffffff;
+            --c-gray-50: #F8FAFC;
+            --c-gray-100: #F1F5F9;
+            --c-gray-200: #E2E8F0;
+            --c-gray-400: #94A3B8;
+            --c-gray-500: #64748B;
+            --c-gray-600: #475569;
+            --c-gray-700: #334155;
+            --c-gray-800: #1E293B;
+            --font-body: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+            --font-heading: 'Plus Jakarta Sans', 'Inter', 'Segoe UI Semibold', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-body);
+            color: var(--c-gray-700);
+            background: var(--c-gray-50);
+            background-image:
+                radial-gradient(ellipse at 20% 0%, rgba(35,114,185,0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(35,114,185,0.02) 0%, transparent 50%);
+            background-attachment: fixed;
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a5a9e 0%, #2372B9 35%, #1e68a8 65%, #165a96 100%);
+            color: var(--c-white);
+            padding: 52px 24px 48px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+        }
+        .header-logo {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .header-logo img {
+            height: 36px;
+            opacity: 0.9;
+        }
+        .header h1 {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .header .subtitle {
+            font-size: 1rem;
+            font-weight: 300;
+            opacity: 0.75;
+            max-width: 640px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 32px;
+            color: var(--c-blue);
+            font-family: var(--font-heading);
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            padding: 6px 12px;
+            border-radius: 8px;
+        }
+        .back-link:hover {
+            color: #1a5a9e;
+            background: rgba(35,114,185,0.05);
+        }
+
+        .toc {
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 14px;
+            padding: 28px 36px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .toc h2 {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            color: var(--c-gray-800);
+            margin-bottom: 12px;
+        }
+        .toc ol { padding-left: 20px; }
+        .toc li { margin-bottom: 6px; }
+        .toc a {
+            color: var(--c-blue);
+            text-decoration: none;
+            font-size: 0.92rem;
+        }
+        .toc a:hover { text-decoration: underline; }
+
+        h2 {
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            color: var(--c-blue);
+            margin-top: 52px;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--c-blue-pale);
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        h3 {
+            font-family: var(--font-heading);
+            font-size: 1.15rem;
+            color: var(--c-gray-800);
+            margin-top: 28px;
+            margin-bottom: 10px;
+        }
+
+        p { margin-bottom: 14px; font-size: 0.95rem; }
+
+        .formula-box {
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 22px 28px;
+            margin: 20px 0 24px;
+            font-family: var(--font-mono);
+            font-size: 0.88rem;
+            line-height: 1.9;
+            overflow-x: auto;
+            color: #E2E8F0;
+        }
+        .formula-box .label {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            color: #60A5FA;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .note-box {
+            background: linear-gradient(135deg, rgba(219,234,254,0.5) 0%, rgba(224,231,255,0.3) 100%);
+            border: 1px solid rgba(35,114,185,0.1);
+            border-left: 4px solid var(--c-blue);
+            border-radius: 0 12px 12px 0;
+            padding: 18px 24px;
+            margin: 20px 0 24px;
+            font-size: 0.9rem;
+            color: var(--c-gray-600);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 16px 0 24px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+            border: 1px solid rgba(126,128,131,0.15);
+        }
+        thead {
+            background: rgba(35,114,185,0.9);
+            color: var(--c-white);
+        }
+        th {
+            font-family: var(--font-heading);
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 0;
+        }
+        th:first-child { text-align: left; }
+        td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--c-gray-100);
+            font-size: 0.88rem;
+        }
+        tbody tr:nth-child(even) { background: var(--c-gray-50); }
+        tbody tr:last-child td { border-bottom: none; }
+        td:not(:first-child) { text-align: center; }
+
+        .figure {
+            margin: 24px 0;
+            text-align: center;
+        }
+        .figure img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .figure-caption {
+            font-size: 0.82rem;
+            color: var(--c-gray-500);
+            font-style: italic;
+            margin-top: 8px;
+        }
+
+        .source-list {
+            list-style: none;
+            padding: 0;
+        }
+        .source-list li {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+            font-size: 0.9rem;
+        }
+        .source-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 9px;
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, var(--c-blue) 0%, var(--c-blue-light) 100%);
+            border-radius: 50%;
+        }
+        .source-list a {
+            color: var(--c-blue);
+            text-decoration: none;
+        }
+        .source-list a:hover { text-decoration: underline; }
+
+        .color-swatch {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-right: 6px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .accent-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #1a5a9e 0%, #2372B9 25%, #60A5FA 50%, #2372B9 75%, #1a5a9e 100%);
+            z-index: 1000;
+        }
+
+        @media print {
+            body { background: white; }
+            .header { background: var(--c-blue); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            h2 { page-break-before: auto; }
+            .formula-box { page-break-inside: avoid; }
+            table { page-break-inside: avoid; }
+            .accent-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-logo">
+        <img src="img/constellation-logo.png" alt="Constellation">
+    </div>
+    <h1>Hourly Clean Energy Cost Optimizer</h1>
+    <p class="subtitle">Methodology &amp; Technical Reference</p>
+</div>
+
+<div class="content">
+    <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <ol>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#data-sources">Data Sources</a></li>
+            <li><a href="#demand-profiles">Demand Profiles</a></li>
+            <li><a href="#supply-profiles">Supply / Generation Profiles</a></li>
+            <li><a href="#optimization-model">Optimization Model</a></li>
+            <li><a href="#storage-model">Storage Model</a></li>
+            <li><a href="#cost-model">Cost Model</a></li>
+            <li><a href="#compressed-day">Compressed Day Visualization</a></li>
+            <li><a href="#assumptions">Assumptions &amp; Limitations</a></li>
+            <li><a href="#sources-list">Data Sources List</a></li>
+        </ol>
+    </div>
+
+    <!-- ======== SECTION 1: OVERVIEW ======== -->
+    <h2 id="overview">1. Overview</h2>
+    <p>
+        The Hourly Clean Energy Cost Optimizer determines the most cost-effective clean energy
+        portfolio for achieving target levels of <strong>hourly matching</strong> across five major U.S.
+        Independent System Operator (ISO) regions. Unlike traditional annual matching&mdash;where a buyer
+        procures enough certificates to cover total annual consumption regardless of timing&mdash;hourly
+        matching requires that clean generation coincide with actual demand in each of the 8,760 hours
+        of a year.
+    </p>
+    <p>
+        The tool <strong>co-optimizes cost and hourly matching</strong> simultaneously. For each target
+        threshold (75%, 80%, 85%, 90%, 95%, 99%), the model searches across procurement levels (70% to 300%
+        of annual demand), resource mix combinations (clean firm, solar, wind, hydro), and battery storage
+        dispatch levels to find the <strong>cheapest portfolio</strong> that meets or exceeds the target.
+    </p>
+    <p>
+        This dual optimization is critical. A sequential approach (optimize matching first, then calculate
+        cost) would fail to capture the fundamental cost-matching tradeoff: at lower thresholds, the cheapest
+        solution may use a different procurement level or resource mix than the one that maximizes matching.
+        For example, a solar/wind-heavy portfolio at 90% procurement may achieve 80% matching more cheaply
+        than a clean-firm-heavy portfolio at 80% procurement, even though the latter uses less total energy.
+    </p>
+    <p>
+        The model also produces a <strong>sweep visualization</strong> showing the maximum achievable hourly
+        match score at each procurement level from 70% to 300%+, revealing the frontier of diminishing returns
+        as procurement increases.
+    </p>
+
+    <!-- ======== SECTION 2: DATA SOURCES ======== -->
+    <h2 id="data-sources">2. Data Sources</h2>
+
+    <h3>2.1 EIA-930 Hourly Electric Grid Monitor</h3>
+    <p>
+        Both demand and generation profiles are sourced from the <strong>U.S. Energy Information Administration
+        (EIA) Form 930</strong> Hourly Electric Grid Monitor. EIA-930 provides hourly balancing authority-level
+        data for electricity demand and generation by energy source across U.S. ISOs.
+    </p>
+    <p>
+        Data is downloaded as bulk CSV files (EIA930_BALANCE files for demand, generation-by-source files
+        for supply profiles) covering the 2025 analysis year. Both the January&ndash;June and July&ndash;December
+        files are combined to produce full-year 8,760-hour datasets.
+    </p>
+    <p>
+        <strong>Source:</strong> EIA Hourly Electric Grid Monitor &mdash;
+        <a href="https://www.eia.gov/electricity/gridmonitor/" target="_blank">https://www.eia.gov/electricity/gridmonitor/</a><br>
+        About: <a href="https://www.eia.gov/electricity/gridmonitor/about" target="_blank">https://www.eia.gov/electricity/gridmonitor/about</a>
+    </p>
+
+    <h3>2.2 EIA Generation Profiles</h3>
+    <p>
+        Hourly generation profiles by fuel type (solar, wind, nuclear, hydro, geothermal) are extracted from
+        EIA-930 data for each ISO region. These profiles capture the actual temporal patterns of clean energy
+        production: when the sun shines, when the wind blows, and how hydro dispatch varies seasonally.
+    </p>
+    <p>
+        Each profile is <strong>normalized</strong> so that the sum across all 8,760 hours equals 1.0. This
+        normalization makes the optimization scale-independent: results are the same whether the buyer consumes
+        100 MWh/year or 100,000,000 MWh/year.
+    </p>
+
+    <div class="note-box">
+        <strong>Note on NYISO Solar:</strong> EIA does not report a separate solar generation series for NYISO.
+        This tool uses NEISO's solar generation profile as a proxy for NYISO, labeled "solar_proxy" in the data.
+        This is a reasonable approximation given the similar latitude and solar resource characteristics of
+        the two regions.
+    </div>
+
+    <h3>2.3 Balancing Authority Mapping</h3>
+    <table>
+        <thead>
+            <tr><th>ISO Region</th><th>EIA BA Code</th><th>Coverage Area</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>CISO</td><td>California</td></tr>
+            <tr><td>ERCOT</td><td>ERCO</td><td>Texas (most)</td></tr>
+            <tr><td>PJM</td><td>PJM</td><td>Mid-Atlantic / Great Lakes (13 states + DC)</td></tr>
+            <tr><td>NYISO</td><td>NYIS</td><td>New York</td></tr>
+            <tr><td>NEISO</td><td>ISNE</td><td>New England (6 states)</td></tr>
+        </tbody>
+    </table>
+
+    <!-- ======== SECTION 3: DEMAND PROFILES ======== -->
+    <h2 id="demand-profiles">3. Demand Profiles</h2>
+    <p>
+        Regional electricity demand profiles are extracted from EIA-930 balance data for each of the five
+        ISO regions. The raw data provides hourly demand in megawatts (MW) for each balancing authority.
+    </p>
+
+    <h3>3.1 Chronological Ordering</h3>
+    <p>
+        EIA-930 CSV files use two columns for time identification: <strong>Data Date</strong> (the calendar
+        date, e.g., "01/15/2025") and <strong>Hour Number</strong> (an integer 1&ndash;24 representing the
+        hour ending within that date). The tool uses these two columns together to establish the correct
+        chronological order of hourly observations. This pairing avoids ambiguity that could arise from
+        timezone-shifted timestamps and ensures the demand vector aligns precisely with the generation
+        profiles for accurate hourly matching.
+    </p>
+
+    <h3>3.2 Normalization</h3>
+    <p>
+        The demand profile is normalized so the sum across all 8,760 hours equals 1.0. Each hour's value
+        represents that hour's fractional share of total annual demand. This normalization enables the
+        optimization to operate on unitless ratios, making results independent of absolute load size.
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Demand Normalization</span>
+        DemandNorm<sub>h</sub> = DemandRaw<sub>h</sub> / SUM(DemandRaw<sub>h</sub> for all h)
+
+        Where h = 1 to 8,760 and SUM(DemandNorm<sub>h</sub>) = 1.0
+    </div>
+
+    <h3>3.3 Data Quality</h3>
+    <p>
+        EIA-930 data occasionally contains reporting gaps where all generation types report exactly zero for
+        a given hour. These are identified as <strong>data anomalies</strong> (not real zero-generation events)
+        and are excluded from peak gap analysis. Demand values below 100 MW are interpolated from nearest
+        valid neighbors to prevent spurious results.
+    </p>
+
+    <!-- ======== SECTION 4: SUPPLY PROFILES ======== -->
+    <h2 id="supply-profiles">4. Supply / Generation Profiles</h2>
+    <p>
+        The model uses four clean energy resource types, each with a distinct hourly generation profile.
+    </p>
+
+    <table>
+        <thead>
+            <tr><th>Resource</th><th>Technologies</th><th>Profile Source</th><th>Characteristics</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><span class="color-swatch" style="background:#2372B9;"></span> Clean Firm</td>
+                <td>Nuclear + Geothermal</td>
+                <td>Flat baseload (1/8760 per hour)</td>
+                <td>Dispatchable 24/7, no hourly variation</td>
+            </tr>
+            <tr>
+                <td><span class="color-swatch" style="background:#FBB254;"></span> Solar</td>
+                <td>Utility-scale PV</td>
+                <td>EIA-930 hourly regional profile</td>
+                <td>Daytime only, seasonal variation</td>
+            </tr>
+            <tr>
+                <td><span class="color-swatch" style="background:#CADB2E;"></span> Wind</td>
+                <td>Onshore wind</td>
+                <td>EIA-930 hourly regional profile</td>
+                <td>Variable, often stronger at night</td>
+            </tr>
+            <tr>
+                <td><span class="color-swatch" style="background:#007FA4;"></span> Hydro</td>
+                <td>Conventional hydro</td>
+                <td>EIA-930 hourly regional profile</td>
+                <td>Seasonal, constrained by regional caps</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>4.1 Clean Firm Profile</h3>
+    <p>
+        Clean firm generation (nuclear and geothermal) is modeled as a <strong>flat baseload profile</strong>:
+        equal output in every hour of the year (1/8760 of annual generation per hour). This reflects the
+        operational reality that nuclear plants run at high capacity factors (~90%+) with minimal hourly
+        variation, and geothermal similarly provides constant output. The model does not account for planned
+        refueling outages or forced outages.
+    </p>
+
+    <h3>4.2 Intermittent Profiles (Solar, Wind, Hydro)</h3>
+    <p>
+        Solar, wind, and hydro profiles are derived from actual 2025 EIA-930 hourly generation data for each
+        ISO region. Each profile is normalized to sum to 1.0. When the optimizer allocates, for example, 30%
+        of procurement to solar, the hourly solar supply equals:
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Resource Supply Construction</span>
+        Supply<sub>type,h</sub> = ProcurementFactor &times; ResourceShare<sub>type</sub> &times; GenProfile<sub>type,h</sub>
+
+        Where:
+          ProcurementFactor = ProcurementPct / 100 (e.g., 1.2 for 120% procurement)
+          ResourceShare = resource percentage / 100 (e.g., 0.30 for 30% solar)
+          GenProfile<sub>type,h</sub> = normalized hourly generation shape (sums to 1.0)
+    </div>
+
+    <h3>4.3 Hydro Capacity Caps</h3>
+    <p>
+        Hydroelectric generation is constrained by regional availability. Unlike solar, wind, or nuclear,
+        new hydro capacity is extremely limited by geography and permitting. The following caps reflect each
+        region's realistic maximum hydro procurement share:
+    </p>
+
+    <table>
+        <thead>
+            <tr><th>ISO Region</th><th>Hydro Cap (%)</th><th>Rationale</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO (California)</td><td>29%</td><td>Significant Sierra Nevada hydro resources</td></tr>
+            <tr><td>ERCOT (Texas)</td><td>1%</td><td>Very limited hydro resources</td></tr>
+            <tr><td>PJM (Mid-Atlantic)</td><td>3%</td><td>Limited Appalachian hydro</td></tr>
+            <tr><td>NYISO (New York)</td><td>25%</td><td>Substantial Niagara/St. Lawrence hydro</td></tr>
+            <tr><td>NEISO (New England)</td><td>10%</td><td>Moderate New England/Quebec hydro imports</td></tr>
+        </tbody>
+    </table>
+
+    <p>
+        These caps constrain the optimizer: the hydro share of any resource mix cannot exceed the cap
+        for that region. The remaining portfolio (clean firm + solar + wind) must sum to at least
+        (100% &minus; hydro cap).
+    </p>
+
+    <!-- ======== SECTION 5: OPTIMIZATION MODEL ======== -->
+    <h2 id="optimization-model">5. Optimization Model</h2>
+    <p>
+        The optimizer simultaneously searches across <strong>three dimensions</strong>: procurement level
+        (70%&ndash;300% of annual demand), resource mix (clean firm / solar / wind / hydro percentages
+        summing to 100%), and storage dispatch level. It employs two complementary strategies.
+    </p>
+
+    <h3>5.1 Dual Optimization Approach</h3>
+
+    <p><strong>Strategy A &mdash; Sweep (Max-Matching):</strong> For each procurement level (70%, 80%, 90%,
+        100%, 110%, 120%, 140%, 160%, ..., 300%), the model evaluates all resource mix combinations to find
+        the mix that <strong>maximizes the hourly match score</strong>. This produces the sweep chart showing
+        the matching frontier&mdash;the best possible matching at each procurement level.
+    </p>
+
+    <p><strong>Strategy B &mdash; Threshold (Min-Cost):</strong> For each target threshold (75%, 80%, 85%,
+        90%, 95%, 99%), the model searches simultaneously across procurement levels AND resource mixes to find
+        the <strong>cheapest combination</strong> that meets or exceeds the target. This produces the
+        threshold-specific results with cost estimates.
+    </p>
+
+    <div class="note-box">
+        <strong>Key Insight &mdash; Co-Optimization:</strong> The co-optimization is essential because for
+        lower matching targets (e.g., 75%), the cheapest solution might actually use <em>higher</em>
+        procurement if the resource mix is cheaper. For example, 110% procurement with a wind-heavy mix in
+        ERCOT (where wind is $40/MWh new-build) may cost less than 80% procurement with a clean-firm-heavy
+        mix ($90/MWh new-build), even though the wind-heavy portfolio procures more total energy. A sequential
+        approach would miss this.
+    </div>
+
+    <h3>5.2 Three-Phase Refinement</h3>
+    <p>
+        The optimizer uses a three-phase refinement strategy to balance computational speed with precision:
+    </p>
+
+    <table>
+        <thead>
+            <tr><th>Phase</th><th>Mix Step</th><th>Procurement Step</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Phase 1: Coarse</strong></td>
+                <td>5%</td>
+                <td>10%</td>
+                <td>Evaluate all 5%-increment mix combinations across 10%-step procurement levels (70%&ndash;300%). Uses numpy-accelerated scoring without storage. Identifies top candidates within 15% of best cost.</td>
+            </tr>
+            <tr>
+                <td><strong>Phase 2: Medium</strong></td>
+                <td>&plusmn;5%</td>
+                <td>&plusmn;5%</td>
+                <td>Refine top 8 candidates with &plusmn;5% mix adjustments and &plusmn;5% procurement adjustments. Tests storage at multiple dispatch levels (5%, 10%, 15%, 20% of annual demand).</td>
+            </tr>
+            <tr>
+                <td><strong>Phase 3: Fine</strong></td>
+                <td>&plusmn;2%</td>
+                <td>&plusmn;2%</td>
+                <td>Fine-tune the top 5 finalists (within 5% of best cost) with &plusmn;2% adjustments. Tests storage in 2% steps for precise optimization.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>5.3 Hourly Matching Calculation</h3>
+    <p>
+        For each candidate portfolio, the hourly match score is calculated by comparing total clean energy
+        supply against demand in each of the 8,760 hours:
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Hourly Matching Score</span>
+        For each hour h:
+          Matched<sub>h</sub> = min(Demand<sub>h</sub>, TotalSupply<sub>h</sub>)
+          Surplus<sub>h</sub> = max(0, TotalSupply<sub>h</sub> - Demand<sub>h</sub>)
+          Gap<sub>h</sub>     = max(0, Demand<sub>h</sub> - TotalSupply<sub>h</sub>)
+
+        Hourly Match Score = SUM(Matched<sub>h</sub>) / SUM(Demand<sub>h</sub>) &times; 100%
+    </div>
+
+    <p>
+        Because demand is normalized to sum to 1.0, the match score equals the sum of matched values directly.
+    </p>
+
+    <h3>5.4 Numpy Acceleration</h3>
+    <p>
+        The coarse screening phase evaluates thousands of resource mix combinations at dozens of procurement
+        levels. To achieve acceptable performance, the model uses <strong>numpy vectorized operations</strong>
+        for the initial scoring. Supply profiles are pre-stacked into a (4, 8760) matrix, and the hourly match
+        score is computed as a single vectorized operation:
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Vectorized Score Computation</span>
+        supply = procurement_factor &times; dot(mix_fractions, supply_matrix)
+        matched = minimum(demand_arr, supply)
+        score = sum(matched)
+
+        Where supply_matrix is shape (4, 8760) for [clean_firm, solar, wind, hydro]
+        and mix_fractions is a (4,) vector of resource shares
+    </div>
+
+    <p>
+        This numpy acceleration reduces the coarse phase from minutes to seconds, enabling the three-phase
+        refinement to complete in reasonable time for all five ISO regions.
+    </p>
+
+    <h3>5.5 Mix Generation</h3>
+    <p>
+        Resource mix combinations are generated exhaustively: for a given step size (e.g., 5%), all
+        combinations of clean firm, solar, wind, and hydro percentages that sum to exactly 100% are enumerated,
+        subject to the hydro cap constraint. At 5% steps, this produces several hundred valid combinations
+        per region; at 1% steps, tens of thousands.
+    </p>
+
+    <!-- ======== SECTION 6: STORAGE MODEL ======== -->
+    <h2 id="storage-model">6. Storage Model</h2>
+    <p>
+        Battery storage shifts surplus clean energy from hours of oversupply to hours of deficit,
+        improving hourly matching without requiring additional generation procurement.
+    </p>
+
+    <h3>6.1 Storage Parameters</h3>
+    <table>
+        <thead>
+            <tr><th>Parameter</th><th>Value</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Technology</td><td>4-hour Lithium-ion battery</td><td>Industry standard</td></tr>
+            <tr><td>Duration</td><td>4 hours</td><td>Most common utility-scale duration</td></tr>
+            <tr><td>Round-Trip Efficiency (RTE)</td><td>85%</td><td>NREL ATB 2024</td></tr>
+            <tr><td>Dispatch Target</td><td>Optimized per scenario (uncapped)</td><td>Model output</td></tr>
+            <tr><td>Cycling</td><td>Daily: charge from surplus, discharge into gaps</td><td>Modeling assumption</td></tr>
+        </tbody>
+    </table>
+
+    <h3>6.2 Daily Dispatch Simulation</h3>
+    <p>
+        Storage operates on a <strong>daily cycle</strong>. For each 24-hour period, the simulation:
+    </p>
+    <ol style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
+        <li>Identifies hours with surplus clean generation (supply &gt; demand)</li>
+        <li>Identifies hours with gaps (demand &gt; supply)</li>
+        <li>Charges from surplus hours, prioritizing largest surpluses first</li>
+        <li>Discharges into gap hours, prioritizing largest gaps first</li>
+        <li>State of charge resets at the start of each day</li>
+    </ol>
+
+    <div class="formula-box">
+        <span class="label">Storage Derivation from Dispatch Target</span>
+        Daily Dispatch Target = (StorageDispatchPct / 100) / NumDays
+
+        Power Rating (MW) = Daily Dispatch Target / 4 hours
+
+        Required Charge = Dispatch / 0.85 (RTE)
+
+        Actual Dispatch = min(DailyTarget, AvailableSurplus &times; 0.85, TotalGap)
+    </div>
+
+    <h3>6.3 Operating Constraints</h3>
+    <ul style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
+        <li><strong>Charge only from surplus:</strong> Storage absorbs only excess clean energy, never grid power</li>
+        <li><strong>Dispatch only into gaps:</strong> Storage discharges only during hours with unmet demand</li>
+        <li><strong>Power limit:</strong> Charge and discharge rates capped by power rating (MW)</li>
+        <li><strong>Efficiency loss:</strong> For every 1 MWh charged, only 0.85 MWh is dispatched</li>
+        <li><strong>Daily reset:</strong> State of charge resets each day for even annual distribution</li>
+        <li><strong>Greedy dispatch:</strong> Largest surpluses charged first; largest gaps discharged first</li>
+    </ul>
+
+    <h3>6.4 Storage Optimization</h3>
+    <p>
+        The storage dispatch target (as a percentage of annual demand) is itself optimized. During the sweep
+        (max-matching) phase, storage is swept from 0% to 50% in 5% steps, then refined to 1% around the best
+        level. During threshold optimization (min-cost), storage is tested at discrete levels (5%, 10%, 15%, 20%)
+        during Phase 1&ndash;2, and in 2% steps during Phase 3. Higher dispatch targets deploy more storage
+        capacity, shifting more energy but incurring higher costs.
+    </p>
+
+    <!-- ======== SECTION 7: COST MODEL ======== -->
+    <h2 id="cost-model">7. Cost Model</h2>
+    <p>
+        The cost model is <strong>integrated directly into the threshold optimization</strong>, not applied
+        as a post-hoc layer. For each matching target, the optimizer simultaneously evaluates cost across all
+        candidate portfolios to find the cheapest feasible solution.
+    </p>
+
+    <h3>7.1 Existing vs. New-Build Pricing</h3>
+    <p>
+        The model distinguishes between two pricing tiers for each resource type:
+    </p>
+    <ul style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
+        <li><strong>Existing resources</strong> (up to the current grid mix share for that resource type in
+            that region) are priced at the <strong>regional wholesale electricity market price</strong>. This
+            represents contracting existing clean generation capacity that already operates on the grid.</li>
+        <li><strong>New-build resources</strong> (any procurement above the current grid mix share) are priced
+            at the <strong>regional new-build LCOE</strong>. This represents financing and constructing new
+            clean generation capacity.</li>
+    </ul>
+
+    <div class="formula-box">
+        <span class="label">Blended Resource Cost</span>
+        For each resource type <em>r</em> in region <em>i</em>:
+
+          resource_mwh = procurement_factor &times; (resource_pct / 100)
+          existing_mwh = min(resource_mwh, grid_mix_share<sub>r,i</sub> / 100)
+          new_mwh      = max(0, resource_mwh - grid_mix_share<sub>r,i</sub> / 100)
+
+          resource_cost = existing_mwh &times; wholesale_price<sub>i</sub>
+                        + new_mwh &times; lcoe<sub>r,i</sub>
+
+        Total blended cost = SUM(resource_cost for all r) + storage_cost
+
+        Where storage_cost = (storage_dispatch_pct / 100) &times; storage_lcoe
+    </div>
+
+    <div class="note-box">
+        <strong>Hydro Exception:</strong> Hydro is always priced at the wholesale market rate regardless of
+        volume, reflecting the fact that new hydro construction is not a practical option. The hydro cap
+        already constrains the maximum hydro share.
+    </div>
+
+    <h3>7.2 Wholesale Market Prices</h3>
+    <p>
+        Regional wholesale electricity prices represent 2023&ndash;2024 average day-ahead market prices
+        from ISO market monitoring reports:
+    </p>
+
+    <table>
+        <thead>
+            <tr><th>ISO Region</th><th>Wholesale Price ($/MWh)</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO (California)</td><td>$41</td><td>FERC/CAISO market data, 2023&ndash;2024 avg</td></tr>
+            <tr><td>ERCOT (Texas)</td><td>$27</td><td>ERCOT market data, 2023&ndash;2024 avg</td></tr>
+            <tr><td>PJM (Mid-Atlantic)</td><td>$36</td><td>PJM IMM State of the Market, 2023&ndash;2024</td></tr>
+            <tr><td>NYISO (New York)</td><td>$41</td><td>NYISO market data, 2023&ndash;2024 avg</td></tr>
+            <tr><td>NEISO (New England)</td><td>$46</td><td>ISO-NE market data, 2023&ndash;2024 avg</td></tr>
+        </tbody>
+    </table>
+
+    <h3>7.3 Regional New-Build LCOE</h3>
+    <p>
+        New-build costs vary by region due to differences in solar irradiance, wind resources, labor costs,
+        and interconnection costs. Wind LCOE is scaled +30% from 2024 LBNL PPA data to reflect 2025 cost
+        trends, consistent with the observed year-over-year increase in solar PPA prices.
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ISO Region</th>
+                <th>Clean Firm ($/MWh)</th>
+                <th>Solar ($/MWh)</th>
+                <th>Wind ($/MWh)</th>
+                <th>Storage LCOS ($/MWh)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>$90</td><td>$60</td><td>$73</td><td>$100</td></tr>
+            <tr><td>ERCOT</td><td>$90</td><td>$54</td><td>$40</td><td>$100</td></tr>
+            <tr><td>PJM</td><td>$90</td><td>$65</td><td>$62</td><td>$100</td></tr>
+            <tr><td>NYISO</td><td>$90</td><td>$92</td><td>$81</td><td>$100</td></tr>
+            <tr><td>NEISO</td><td>$90</td><td>$82</td><td>$73</td><td>$100</td></tr>
+        </tbody>
+    </table>
+    <p style="font-size:0.82rem;color:var(--c-gray-500);">
+        Clean firm = blended nuclear/geothermal new-build. Storage = levelized cost of storage (LCOS) for 4h Li-ion.
+        Hydro LCOE is not applicable (capped at existing levels, priced at wholesale).
+    </p>
+
+    <h3>7.4 Existing Clean Grid Mix Shares</h3>
+    <p>
+        The threshold between wholesale and new-build pricing is determined by each region's existing clean
+        generation share, computed from 2025 EIA-930 hourly data. Resources procured up to these shares are
+        priced at wholesale; procurement above these shares triggers new-build LCOE pricing.
+    </p>
+
+    <table>
+        <thead>
+            <tr><th>ISO Region</th><th>Clean Firm</th><th>Solar</th><th>Wind</th><th>Hydro</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>7.9%</td><td>22.3%</td><td>8.8%</td><td>9.5%</td></tr>
+            <tr><td>ERCOT</td><td>8.6%</td><td>13.8%</td><td>23.6%</td><td>0.1%</td></tr>
+            <tr><td>PJM</td><td>32.1%</td><td>2.9%</td><td>3.8%</td><td>1.8%</td></tr>
+            <tr><td>NYISO</td><td>18.4%</td><td>0.0%</td><td>4.7%</td><td>15.9%</td></tr>
+            <tr><td>NEISO</td><td>23.8%</td><td>1.4%</td><td>3.9%</td><td>4.4%</td></tr>
+        </tbody>
+    </table>
+
+    <h3>7.5 Curtailment and Effective Cost</h3>
+    <p>
+        Surplus procurement inevitably results in <strong>curtailment</strong>: clean energy generated during hours
+        when supply already exceeds demand cannot be used for matching. The buyer pays for all procured energy
+        but receives matching credit only for the portion that temporally coincides with demand.
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Effective Cost Per Useful MWh</span>
+        Effective $/MWh = Total Procurement Cost / Matched Fraction of Demand
+
+        Where:
+          Total Procurement Cost = SUM(resource costs) + storage cost  (in $/MWh-of-demand)
+          Matched Fraction = Hourly Match Score / 100
+
+        Curtailment % = (Procurement Factor - Matched Fraction) / Procurement Factor &times; 100
+    </div>
+
+    <p>
+        At 200% procurement with 95% matching, nearly half of all procured energy is curtailed, roughly
+        doubling the effective cost per useful MWh. This curtailment penalty is the fundamental economic
+        constraint on achieving very high hourly match scores with intermittent resources.
+    </p>
+
+    <h3>7.6 Incremental Cost</h3>
+    <p>
+        Results include both the <strong>total effective cost</strong> and an <strong>incremental cost above
+        the wholesale baseline</strong>. The baseline represents what a buyer would pay for undifferentiated
+        grid electricity at regional wholesale market prices. The incremental cost represents the premium
+        for achieving the target hourly match score.
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Incremental Cost</span>
+        Incremental $/MWh = Effective $/MWh - Regional Wholesale Price
+    </div>
+
+    <!-- ======== SECTION 8: COMPRESSED DAY ======== -->
+    <h2 id="compressed-day">8. Compressed Day Visualization</h2>
+    <p>
+        For each threshold result, the tool generates a <strong>compressed day profile</strong>&mdash;a
+        representative 24-hour shape built by aggregating all 8,760 hourly values by hour-of-day.
+    </p>
+
+    <h3>8.1 Aggregation Method</h3>
+    <p>
+        For each hour-of-day (0&ndash;23), the tool sums all corresponding values across the entire year.
+        For example, the "hour 14" value for solar represents the sum of solar generation at 2:00 PM on every
+        day of the year. This produces a representative daily shape that captures the average temporal pattern
+        while preserving the total annual volume.
+    </p>
+
+    <h3>8.2 Stack Composition</h3>
+    <p>
+        The compressed day is decomposed into matched and surplus components for each resource type.
+        Resources are matched to demand in a priority order that places baseload resources first:
+    </p>
+    <ol style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
+        <li><span class="color-swatch" style="background:#2372B9;"></span> Clean Firm (matched first)</li>
+        <li><span class="color-swatch" style="background:#007FA4;"></span> Hydro</li>
+        <li><span class="color-swatch" style="background:#CADB2E;"></span> Wind</li>
+        <li><span class="color-swatch" style="background:#FBB254;"></span> Solar</li>
+        <li><span class="color-swatch" style="background:#F47B27;"></span> Storage Dispatch (fills remaining gaps)</li>
+    </ol>
+
+    <p>
+        Surplus cutting follows the <strong>reverse order</strong>: solar surplus is cut first, then wind,
+        then hydro, then clean firm. Storage charging absorbs surplus in the same cut order, reducing the
+        tradeable surplus shown in the visualization.
+    </p>
+
+    <div class="note-box">
+        <strong>Important:</strong> The compressed day chart is an <em>illustrative</em> representation.
+        Because it aggregates at the hour-of-day level, each hour shows either surplus or gap, never both
+        simultaneously. The precise hourly match score is calculated from the exact hour-by-hour matching
+        across all 8,760 hours and may differ slightly from what the compressed day implies.
+    </div>
+
+    <h3>8.3 Storage Visualization</h3>
+    <p>
+        Storage charge is shown as <strong>negative values</strong> (below zero) in the compressed day chart,
+        while storage dispatch appears as a positive component filling gap hours. This visually represents the
+        time-shifting of clean energy from surplus hours to deficit hours.
+    </p>
+
+    <!-- ======== SECTION 9: ASSUMPTIONS ======== -->
+    <h2 id="assumptions">9. Assumptions &amp; Limitations</h2>
+    <ul style="margin: 10px 0 16px 24px; font-size: 0.95rem; line-height: 2;">
+        <li><strong>No transmission modeling:</strong> Transmission constraints, congestion pricing, and
+            deliverability requirements are not modeled. Results assume clean energy can be delivered to
+            the load in any hour within the same ISO region.</li>
+        <li><strong>Perfect clean firm availability:</strong> Nuclear/geothermal is modeled as perfectly flat
+            baseload. Real nuclear plants have planned outages (refueling) and occasional forced outages,
+            which may slightly overstate clean firm's contribution.</li>
+        <li><strong>Single year of weather data:</strong> Generation profiles are based on 2025 EIA-930 data.
+            Year-to-year variability in solar irradiance, wind patterns, and hydro availability could shift
+            results by several percentage points.</li>
+        <li><strong>4-hour battery storage only:</strong> Only 4h Li-ion is modeled. Longer-duration storage
+            (8h+, pumped hydro, compressed air) could improve matching at lower cost for high-threshold
+            targets but is not included.</li>
+        <li><strong>Static cost assumptions:</strong> LCOE and wholesale price values are fixed. In reality,
+            costs change over time as markets mature, supply chains develop, and technology improves.</li>
+        <li><strong>No market price feedback:</strong> The model does not account for the price effects of
+            large-scale clean energy deployment (merit order effects, price cannibalization of solar during
+            midday hours).</li>
+        <li><strong>Scalability of procurement:</strong> At very high procurement levels (200%+), the
+            model results are more theoretical than practical. Deploying that volume of clean energy in a
+            single ISO region presents real-world challenges.</li>
+        <li><strong>Proxy data:</strong> EIA-930 grid-level generation patterns are used as proxies for
+            project-level assets. Actual generation profiles for a specific solar or wind farm may differ
+            from the regional average.</li>
+        <li><strong>Daily storage cycling:</strong> The storage simulation uses a daily cycling model with
+            greedy charge/discharge allocation. Real-world battery operation involves more sophisticated
+            dispatch optimization that could achieve marginally better results.</li>
+        <li><strong>CO<sub>2</sub> not modeled:</strong> Unlike the hourly matching GHG calculator, this
+            optimization tool does not calculate emissions. It focuses exclusively on cost and hourly
+            matching percentage as outputs.</li>
+        <li><strong>5 ISO regions only:</strong> The tool currently covers CAISO, ERCOT, PJM, NYISO, and
+            NEISO. Other U.S. regions (MISO, SPP, etc.) are not yet included.</li>
+        <li><strong>Daylight Saving Time:</strong> UTC offsets are applied as fixed shifts and do not account
+            for DST transitions. This may introduce a 1-hour shift for portions of the year in affected
+            regions.</li>
+    </ul>
+
+    <!-- ======== SECTION 10: SOURCES LIST ======== -->
+    <h2 id="sources-list">10. Data Sources List</h2>
+    <ul class="source-list">
+        <li>
+            <strong>EIA-930 Hourly Electric Grid Monitor (2025)</strong> &mdash; Hourly demand and generation by energy source<br>
+            <a href="https://www.eia.gov/electricity/gridmonitor/" target="_blank">https://www.eia.gov/electricity/gridmonitor/</a><br>
+            Bulk data: EIA930_BALANCE_2025_Jan_Jun.csv, EIA930_BALANCE_2025_Jul_Dec.csv<br>
+            Balancing authority codes: CISO, ERCO, PJM, NYIS, ISNE
+        </li>
+        <li>
+            <strong>LBNL Utility-Scale Solar Report (2024 edition)</strong> &mdash; Regional PPA price data for utility-scale solar<br>
+            <a href="https://emp.lbl.gov/utility-scale-solar" target="_blank">https://emp.lbl.gov/utility-scale-solar</a>
+        </li>
+        <li>
+            <strong>LBNL Land-Based Wind Market Report (2024 edition)</strong> &mdash; Regional PPA price data for onshore wind<br>
+            <a href="https://emp.lbl.gov/wind-technologies-market-report" target="_blank">https://emp.lbl.gov/wind-technologies-market-report</a><br>
+            Wind costs scaled +30% from 2024 to 2025 to match solar YoY trend.
+        </li>
+        <li>
+            <strong>Lazard Levelized Cost of Energy Analysis (v17, 2024)</strong> &mdash; National LCOE benchmarks<br>
+            Used for cross-referencing clean firm and storage cost baselines.
+        </li>
+        <li>
+            <strong>NREL Annual Technology Baseline (ATB 2024)</strong> &mdash; Technology cost and performance data<br>
+            <a href="https://atb.nrel.gov/" target="_blank">https://atb.nrel.gov/</a><br>
+            Storage round-trip efficiency: 85% for 4h Li-ion.
+            <a href="https://atb.nrel.gov/electricity/2024/utility-scale_battery_storage" target="_blank">Battery storage reference</a>
+        </li>
+        <li>
+            <strong>FERC / ISO Market Reports (2023&ndash;2024)</strong> &mdash; Regional wholesale electricity prices<br>
+            PJM Independent Market Monitor State of the Market Report<br>
+            NYISO, ISO-NE, CAISO, ERCOT market monitoring reports
+        </li>
+        <li>
+            <strong>EIA Today in Energy</strong> &mdash; Battery storage and pumped hydro efficiency data<br>
+            <a href="https://www.eia.gov/todayinenergy/detail.php?id=46756" target="_blank">https://www.eia.gov/todayinenergy/detail.php?id=46756</a>
+        </li>
+    </ul>
+
+    <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--c-gray-200);font-size:0.82rem;color:var(--c-gray-400);text-align:center;">
+        Hourly Clean Energy Cost Optimizer &mdash; Methodology Document v1.0
+    </p>
+</div>
+
+<div class="accent-bar"></div>
+
+</body>
+</html>
