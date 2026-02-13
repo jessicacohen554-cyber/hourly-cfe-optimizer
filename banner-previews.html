@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banner & Typography Previews</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: #F0F0F4;
+    padding: 40px 24px 80px;
+    color: #111;
+}
+.section-title {
+    text-align: center;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #333;
+    margin: 48px 0 28px;
+    letter-spacing: 0.02em;
+}
+.section-title:first-of-type { margin-top: 0; }
+.section-desc {
+    text-align: center;
+    color: #777;
+    font-size: 0.9rem;
+    margin-bottom: 32px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.preview-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+}
+.preview-grid.three-col {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+@media (max-width: 1100px) {
+    .preview-grid.three-col { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+    .preview-grid { grid-template-columns: 1fr; }
+    .preview-grid.three-col { grid-template-columns: 1fr; }
+}
+.preview-card {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    background: #fff;
+}
+.preview-label {
+    padding: 16px 20px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #555;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #eee;
+}
+.preview-label span {
+    display: block;
+    font-weight: 400;
+    font-size: 0.82rem;
+    color: #888;
+    margin-top: 4px;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.45;
+}
+
+/* ===== SHARED HEADER BASE ===== */
+.header {
+    color: #ffffff;
+    padding: 52px 24px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.header h1 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-weight: 400;
+    font-size: 2rem;
+    letter-spacing: 1.2px;
+    text-transform: capitalize;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    line-height: 1.15;
+}
+.header .subtitle {
+    font-size: 0.95rem;
+    font-weight: 400;
+    font-style: italic;
+    opacity: 0.9;
+    max-width: 520px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.2);
+    line-height: 1.5;
+}
+.header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #6B8DB5 25%, #5B8A8A 50%, #D4A84B 75%, #C75B4A 100%);
+    z-index: 10;
+}
+
+/* ===== OPTION 1: HORIZON GRADIENT ===== */
+.header-horizon {
+    background: linear-gradient(180deg,
+        #0F1A2E 0%,
+        #1A2744 20%,
+        #2A4068 40%,
+        #3D6B8A 55%,
+        #5B8A8A 65%,
+        #8AAA6E 74%,
+        #D4A84B 85%,
+        #C75B4A 95%,
+        #9E4239 100%
+    );
+}
+.header-horizon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, transparent 60%, rgba(212,168,75,0.15) 80%, rgba(199,91,74,0.1) 100%),
+        radial-gradient(ellipse at 50% 95%, rgba(212,168,75,0.25) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 1;
+}
+.header-horizon::after {
+    content: '';
+    position: absolute;
+    bottom: 18%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.12) 70%, transparent 95%);
+    z-index: 1;
+}
+
+/* ===== OPTION 2: PULSE / WAVEFORM ===== */
+.header-pulse {
+    background: #1A2744;
+}
+.header-pulse::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 120% 50% at 20% 80%, rgba(107,141,181,0.35) 0%, transparent 70%),
+        radial-gradient(ellipse 80% 40% at 70% 70%, rgba(91,138,138,0.25) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 30% at 85% 85%, rgba(212,168,75,0.2) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+}
+.header-pulse::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    height: 80px;
+    z-index: 1;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C50,60 80,55 120,48 C160,41 200,30 260,25 C320,20 360,35 400,40 C440,45 480,38 540,28 C600,18 640,12 700,15 C760,18 800,35 840,42 C880,49 920,48 960,40 C1000,32 1040,22 1080,28 C1120,34 1160,50 1200,55' fill='none' stroke='rgba(212,168,75,0.35)' stroke-width='2'/%3E%3Cpath d='M0,50 C60,50 100,42 160,35 C220,28 260,20 320,18 C380,16 420,28 480,35 C540,42 580,48 640,44 C700,40 740,30 800,22 C860,14 900,18 960,28 C1020,38 1060,48 1120,50 C1160,51 1180,48 1200,45' fill='none' stroke='rgba(91,138,138,0.3)' stroke-width='1.5'/%3E%3Cpath d='M0,45 C80,42 140,38 200,30 C260,22 300,15 380,12 C460,9 500,18 560,28 C620,38 680,45 740,48 C800,51 860,44 920,35 C980,26 1020,20 1080,24 C1120,27 1160,38 1200,42' fill='none' stroke='rgba(199,91,74,0.25)' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat center bottom;
+    background-size: 100% 100%;
+    pointer-events: none;
+}
+
+/* ===== OPTION 3: STACKED FLOW ===== */
+.header-flow {
+    background: #1A2744;
+}
+.header-flow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(165deg,
+            rgba(26,39,68,0) 0%,
+            rgba(107,141,181,0.3) 15%,
+            rgba(107,141,181,0) 30%,
+            rgba(91,138,138,0.25) 40%,
+            rgba(91,138,138,0) 55%,
+            rgba(122,139,92,0.2) 60%,
+            rgba(122,139,92,0) 72%,
+            rgba(212,168,75,0.25) 78%,
+            rgba(212,168,75,0) 90%,
+            rgba(199,91,74,0.15) 95%,
+            rgba(199,91,74,0) 100%
+        );
+    pointer-events: none;
+    z-index: 1;
+}
+.header-flow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'%3E%3Cpath d='M0,200 L0,140 C200,130 400,110 600,115 C800,120 1000,135 1200,125 L1200,200 Z' fill='rgba(107,141,181,0.12)'/%3E%3Cpath d='M0,200 L0,155 C200,148 400,135 600,140 C800,145 1000,155 1200,148 L1200,200 Z' fill='rgba(91,138,138,0.1)'/%3E%3Cpath d='M0,200 L0,168 C200,162 400,155 600,160 C800,165 1000,172 1200,165 L1200,200 Z' fill='rgba(212,168,75,0.1)'/%3E%3Cpath d='M0,200 L0,182 C200,178 400,174 600,177 C800,180 1000,185 1200,180 L1200,200 Z' fill='rgba(199,91,74,0.08)'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ===== OPTION 4: RADIAL DAWN ===== */
+.header-dawn {
+    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 50%, #1E2F50 100%);
+}
+.header-dawn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 90% 70% at 50% 110%, rgba(212,168,75,0.4) 0%, rgba(212,168,75,0.15) 30%, transparent 65%),
+        radial-gradient(ellipse 70% 50% at 30% 100%, rgba(91,138,138,0.25) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 50% at 70% 100%, rgba(199,91,74,0.2) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 50% 90%, rgba(107,141,181,0.15) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 1;
+}
+.header-dawn::after {
+    content: '';
+    position: absolute;
+    bottom: 20%;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212,168,75,0.3) 30%, rgba(212,168,75,0.4) 50%, rgba(199,91,74,0.3) 70%, transparent);
+    z-index: 1;
+    filter: blur(1px);
+}
+
+/* ===== OPTION 5: GRID NETWORK ===== */
+.header-grid-net {
+    background: linear-gradient(160deg, #0F1A2E 0%, #1A2744 40%, #1E2F50 100%);
+}
+.header-grid-net::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        /* Grid line pattern - horizontal */
+        repeating-linear-gradient(0deg,
+            transparent,
+            transparent 38px,
+            rgba(107,141,181,0.06) 38px,
+            rgba(107,141,181,0.06) 40px
+        ),
+        /* Grid line pattern - vertical */
+        repeating-linear-gradient(90deg,
+            transparent,
+            transparent 58px,
+            rgba(107,141,181,0.05) 58px,
+            rgba(107,141,181,0.05) 60px
+        ),
+        /* Node glows at intersections */
+        radial-gradient(circle 3px at 30% 35%, rgba(91,138,138,0.5) 0%, transparent 100%),
+        radial-gradient(circle 4px at 55% 65%, rgba(212,168,75,0.5) 0%, transparent 100%),
+        radial-gradient(circle 3px at 75% 30%, rgba(199,91,74,0.4) 0%, transparent 100%),
+        radial-gradient(circle 2px at 15% 70%, rgba(107,141,181,0.5) 0%, transparent 100%),
+        radial-gradient(circle 3px at 85% 75%, rgba(91,138,138,0.4) 0%, transparent 100%),
+        radial-gradient(circle 2px at 42% 25%, rgba(212,168,75,0.35) 0%, transparent 100%),
+        /* Ambient glow */
+        radial-gradient(ellipse 80% 60% at 50% 50%, rgba(107,141,181,0.1) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+}
+.header-grid-net::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        /* Connection lines between nodes */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 200' preserveAspectRatio='none'%3E%3Cline x1='240' y1='70' x2='440' y2='130' stroke='rgba(91,138,138,0.15)' stroke-width='1'/%3E%3Cline x1='440' y1='130' x2='600' y2='60' stroke='rgba(212,168,75,0.12)' stroke-width='1'/%3E%3Cline x1='120' y1='140' x2='240' y2='70' stroke='rgba(107,141,181,0.12)' stroke-width='1'/%3E%3Cline x1='600' y1='60' x2='680' y2='150' stroke='rgba(199,91,74,0.1)' stroke-width='1'/%3E%3Cline x1='440' y1='130' x2='336' y2='50' stroke='rgba(212,168,75,0.08)' stroke-width='1'/%3E%3Ccircle cx='240' cy='70' r='3' fill='rgba(91,138,138,0.4)'/%3E%3Ccircle cx='440' cy='130' r='4' fill='rgba(212,168,75,0.45)'/%3E%3Ccircle cx='600' cy='60' r='3' fill='rgba(199,91,74,0.35)'/%3E%3Ccircle cx='120' cy='140' r='2.5' fill='rgba(107,141,181,0.4)'/%3E%3Ccircle cx='680' cy='150' r='2.5' fill='rgba(91,138,138,0.35)'/%3E%3Ccircle cx='336' cy='50' r='2' fill='rgba(212,168,75,0.3)'/%3E%3C/svg%3E");
+    background-size: 100% 100%;
+}
+
+/* ===== OPTION 6: DISPATCH CURVE ===== */
+.header-dispatch {
+    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3050 100%);
+}
+.header-dispatch::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(91,138,138,0.25)'/%3E%3Cstop offset='1' stop-color='rgba(91,138,138,0.02)'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(212,168,75,0.2)'/%3E%3Cstop offset='1' stop-color='rgba(212,168,75,0.02)'/%3E%3C/linearGradient%3E%3ClinearGradient id='g3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(122,139,92,0.18)'/%3E%3Cstop offset='1' stop-color='rgba(122,139,92,0.02)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,200 L0,160 C100,158 200,150 300,135 C400,120 500,100 600,95 C700,90 800,98 900,110 C1000,122 1100,140 1200,145 L1200,200 Z' fill='url(%23g1)'/%3E%3Cpath d='M0,200 L0,170 C100,168 200,162 300,152 C400,142 500,128 600,125 C700,122 800,130 900,140 C1000,150 1100,162 1200,165 L1200,200 Z' fill='url(%23g3)'/%3E%3Cpath d='M0,200 L0,180 C100,178 200,174 300,168 C400,162 500,152 600,150 C700,148 800,155 900,163 C1000,171 1100,180 1200,182 L1200,200 Z' fill='url(%23g2)'/%3E%3Cpath d='M0,160 C100,158 200,150 300,135 C400,120 500,100 600,95 C700,90 800,98 900,110 C1000,122 1100,140 1200,145' fill='none' stroke='rgba(91,138,138,0.4)' stroke-width='1.5'/%3E%3Cpath d='M0,170 C100,168 200,162 300,152 C400,142 500,128 600,125 C700,122 800,130 900,140 C1000,150 1100,162 1200,165' fill='none' stroke='rgba(122,139,92,0.35)' stroke-width='1.5'/%3E%3Cpath d='M0,180 C100,178 200,174 300,168 C400,162 500,152 600,150 C700,148 800,155 900,163 C1000,171 1100,180 1200,182' fill='none' stroke='rgba(212,168,75,0.35)' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%;
+}
+.header-dispatch::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 100% 50% at 50% 100%, rgba(26,39,68,0.3) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 30% at 50% 90%, rgba(91,138,138,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ============================================================ */
+/* ===== TYPOGRAPHY PREVIEW SECTION ===== */
+/* ============================================================ */
+.typo-card {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    background: #FAF6EF;
+    padding: 28px 24px;
+}
+.typo-card .typo-name {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #1A2744;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+.typo-card .typo-meta {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.78rem;
+    color: #9A9083;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+.typo-card .typo-heading {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: #C75B4A;
+    margin-bottom: 10px;
+    text-transform: capitalize;
+    letter-spacing: 0.04em;
+}
+.typo-card .typo-body {
+    font-size: 0.95rem;
+    color: #1A1A1A;
+    line-height: 1.65;
+    margin-bottom: 12px;
+}
+.typo-card .typo-small {
+    font-size: 0.82rem;
+    color: #9A9083;
+    line-height: 1.5;
+}
+.typo-card.font-inter .typo-body,
+.typo-card.font-inter .typo-small { font-family: 'Inter', sans-serif; }
+
+.typo-card.font-dm .typo-body,
+.typo-card.font-dm .typo-small { font-family: 'DM Sans', sans-serif; }
+
+.typo-card.font-source .typo-body,
+.typo-card.font-source .typo-small { font-family: 'Source Sans 3', sans-serif; }
+
+.typo-card.font-plex .typo-body,
+.typo-card.font-plex .typo-small { font-family: 'IBM Plex Sans', sans-serif; }
+
+.typo-card.font-space .typo-body,
+.typo-card.font-space .typo-small { font-family: 'Space Grotesk', sans-serif; }
+
+.typo-card.font-outfit .typo-body,
+.typo-card.font-outfit .typo-small { font-family: 'Outfit', sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- ============ BANNERS ============ -->
+<div class="section-title">Banner Style Previews</div>
+<p class="section-desc">Six options that abstractly nod to hourly electric grid operations and deep decarbonization. All use the same color palette.</p>
+
+<div class="preview-grid">
+
+    <!-- OPTION 1: HORIZON -->
+    <div class="preview-card">
+        <div class="preview-label">
+            Option 1: Horizon Gradient
+            <span>Layered generation-stack bands evoking a 24hr clean energy profile. Colors shift from deep navy (night/baseload) through teal and green (renewables) to warm gold and coral (solar peak/storage dispatch).</span>
+        </div>
+        <header class="header header-horizon">
+            <h1>Hourly Clean Energy Cost Optimizer</h1>
+            <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
+            <div class="header-accent"></div>
+        </header>
+    </div>
+
+    <!-- OPTION 2: PULSE -->
+    <div class="preview-card">
+        <div class="preview-label">
+            Option 2: Load Curve Pulse
+            <span>Subtle waveform traces in gold, teal, and coral on navy. Evokes overlapping hourly load curves and generation dispatch profiles running across the grid.</span>
+        </div>
+        <header class="header header-pulse">
+            <h1>Hourly Clean Energy Cost Optimizer</h1>
+            <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
+            <div class="header-accent"></div>
+        </header>
+    </div>
+
+    <!-- OPTION 3: STACKED FLOW -->
+    <div class="preview-card">
+        <div class="preview-label">
+            Option 3: Abstract Stacked Flow
+            <span>Soft flowing diagonal bands of color like a simplified stacked-area generation mix chart. Suggests the grid's evolving resource portfolio composition.</span>
+        </div>
+        <header class="header header-flow">
+            <h1>Hourly Clean Energy Cost Optimizer</h1>
+            <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
+            <div class="header-accent"></div>
+        </header>
+    </div>
+
+    <!-- OPTION 4: RADIAL DAWN -->
+    <div class="preview-card">
+        <div class="preview-label">
+            Option 4: Radial Dawn
+            <span>Golden sunrise glow from below flanked by teal and coral. Evokes the daily clean energy cycle: solar dawn, wind dispatch, storage at dusk. A clean grid emerging.</span>
+        </div>
+        <header class="header header-dawn">
+            <h1>Hourly Clean Energy Cost Optimizer</h1>
+            <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
+            <div class="header-accent"></div>
+        </header>
+    </div>
+
+    <!-- OPTION 5: GRID NETWORK -->
+    <div class="preview-card">
+        <div class="preview-label">
+            Option 5: Grid Network
+            <span>Subtle grid lines with glowing nodes connected by transmission paths. Evokes the physical topology of the electric grid: substations, interconnections, and power flow between regions.</span>
+        </div>
+        <header class="header header-grid-net">
+            <h1>Hourly Clean Energy Cost Optimizer</h1>
+            <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
+            <div class="header-accent"></div>
+        </header>
+    </div>
+
+    <!-- OPTION 6: DISPATCH CURVE -->
+    <div class="preview-card">
+        <div class="preview-label">
+            Option 6: Dispatch Stack
+            <span>Stacked area curves rising from the bottom in teal, green, and gold. A direct visual metaphor for the hourly generation dispatch stack: clean resources displacing fossil fuels from the bottom up.</span>
+        </div>
+        <header class="header header-dispatch">
+            <h1>Hourly Clean Energy Cost Optimizer</h1>
+            <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
+            <div class="header-accent"></div>
+        </header>
+    </div>
+
+</div>
+
+<!-- ============ TYPOGRAPHY ============ -->
+<div class="section-title" style="margin-top: 64px;">Typography Previews</div>
+<p class="section-desc">Body font options to replace Lora (serif). All paired with Barlow Semi Condensed headings. Chosen for readability with analytical/technical energy content.</p>
+
+<div class="preview-grid three-col">
+
+    <!-- INTER -->
+    <div class="typo-card font-inter">
+        <div class="typo-name">Inter</div>
+        <div class="typo-meta">Geometric sans-serif / Clean, precise, data-native</div>
+        <div class="typo-heading">Peak Hour Capacity Need</div>
+        <div class="typo-body">At 95% hourly procurement, the worst single hour still requires 15% of peak demand from backup sources. Solar and wind curtailment drives the marginal cost of the final 5% significantly higher than the portfolio average.</div>
+        <div class="typo-small">CAISO Region &middot; 8,760 hours analyzed &middot; 2023 generation data</div>
+    </div>
+
+    <!-- DM SANS -->
+    <div class="typo-card font-dm">
+        <div class="typo-name">DM Sans</div>
+        <div class="typo-meta">Geometric sans-serif / Modern warmth, slightly rounded</div>
+        <div class="typo-heading">Peak Hour Capacity Need</div>
+        <div class="typo-body">At 95% hourly procurement, the worst single hour still requires 15% of peak demand from backup sources. Solar and wind curtailment drives the marginal cost of the final 5% significantly higher than the portfolio average.</div>
+        <div class="typo-small">CAISO Region &middot; 8,760 hours analyzed &middot; 2023 generation data</div>
+    </div>
+
+    <!-- SOURCE SANS 3 -->
+    <div class="typo-card font-source">
+        <div class="typo-name">Source Sans 3</div>
+        <div class="typo-meta">Humanist sans-serif / Professional, technical clarity</div>
+        <div class="typo-heading">Peak Hour Capacity Need</div>
+        <div class="typo-body">At 95% hourly procurement, the worst single hour still requires 15% of peak demand from backup sources. Solar and wind curtailment drives the marginal cost of the final 5% significantly higher than the portfolio average.</div>
+        <div class="typo-small">CAISO Region &middot; 8,760 hours analyzed &middot; 2023 generation data</div>
+    </div>
+
+    <!-- IBM PLEX SANS -->
+    <div class="typo-card font-plex">
+        <div class="typo-name">IBM Plex Sans</div>
+        <div class="typo-meta">Technical sans-serif / Engineering precision, analytical feel</div>
+        <div class="typo-heading">Peak Hour Capacity Need</div>
+        <div class="typo-body">At 95% hourly procurement, the worst single hour still requires 15% of peak demand from backup sources. Solar and wind curtailment drives the marginal cost of the final 5% significantly higher than the portfolio average.</div>
+        <div class="typo-small">CAISO Region &middot; 8,760 hours analyzed &middot; 2023 generation data</div>
+    </div>
+
+    <!-- SPACE GROTESK -->
+    <div class="typo-card font-space">
+        <div class="typo-name">Space Grotesk</div>
+        <div class="typo-meta">Geometric-grotesque / Technical futurism, energy-forward</div>
+        <div class="typo-heading">Peak Hour Capacity Need</div>
+        <div class="typo-body">At 95% hourly procurement, the worst single hour still requires 15% of peak demand from backup sources. Solar and wind curtailment drives the marginal cost of the final 5% significantly higher than the portfolio average.</div>
+        <div class="typo-small">CAISO Region &middot; 8,760 hours analyzed &middot; 2023 generation data</div>
+    </div>
+
+    <!-- OUTFIT -->
+    <div class="typo-card font-outfit">
+        <div class="typo-name">Outfit</div>
+        <div class="typo-meta">Geometric sans-serif / Contemporary, friendly yet serious</div>
+        <div class="typo-heading">Peak Hour Capacity Need</div>
+        <div class="typo-body">At 95% hourly procurement, the worst single hour still requires 15% of peak demand from backup sources. Solar and wind curtailment drives the marginal cost of the final 5% significantly higher than the portfolio average.</div>
+        <div class="typo-small">CAISO Region &middot; 8,760 hours analyzed &middot; 2023 generation data</div>
+    </div>
+
+</div>
+
+</body>
+</html>
