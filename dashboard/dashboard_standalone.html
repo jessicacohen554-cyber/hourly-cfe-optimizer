@@ -1889,6 +1889,192 @@ body {
     }
 }
 
+/* ========== HERO TAKEAWAY BANNER ========== */
+.hero-takeaway {
+    background: linear-gradient(135deg, #0F1D32 0%, #1A2744 60%, #1E3A5F 100%);
+    border-radius: 18px;
+    padding: 40px 36px;
+    margin: 0 auto 32px;
+    max-width: 900px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(34,197,94,0.2);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.hero-takeaway::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: 50%; transform: translateX(-50%);
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(34,197,94,0.1) 0%, transparent 70%);
+}
+.hero-takeaway-icon {
+    width: 64px; height: 64px;
+    margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(34,197,94,0.12);
+    border-radius: 50%;
+    border: 2px solid rgba(34,197,94,0.3);
+    position: relative; z-index: 1;
+}
+.hero-takeaway-headline {
+    font-family: 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+    margin-bottom: 14px;
+    position: relative; z-index: 1;
+}
+.hero-takeaway-headline em {
+    font-style: normal;
+    color: #22C55E;
+}
+.hero-takeaway-sub {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.6;
+    max-width: 680px;
+    margin: 0 auto;
+    position: relative; z-index: 1;
+}
+.hero-takeaway-sub strong {
+    color: rgba(255,255,255,0.95);
+}
+@media (max-width: 768px) {
+    .hero-takeaway { padding: 28px 22px; margin-bottom: 24px; }
+    .hero-takeaway-headline { font-size: 1.3rem; }
+    .hero-takeaway-sub { font-size: 0.95rem; }
+    .hero-takeaway-icon { width: 52px; height: 52px; }
+}
+@media (max-width: 480px) {
+    .hero-takeaway { padding: 24px 16px; border-radius: 14px; }
+    .hero-takeaway-headline { font-size: 1.15rem; }
+    .hero-takeaway-sub { font-size: 0.88rem; }
+}
+
+/* ========== NUCLEAR PRESERVATION PANEL ========== */
+.preservation-panel {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid var(--border-light);
+    padding: 36px 32px;
+    margin: 36px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.preservation-panel h3 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 0 0 6px;
+}
+.preservation-panel .preservation-sub {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+.preservation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 24px 0;
+}
+.preservation-card {
+    background: linear-gradient(135deg, rgba(30,58,95,0.04) 0%, rgba(30,58,95,0.01) 100%);
+    border: 1px solid rgba(30,58,95,0.1);
+    border-radius: 12px;
+    padding: 20px 18px;
+}
+.preservation-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.preservation-card-iso {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy);
+}
+.preservation-card-share {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--navy);
+    border-radius: 10px;
+    padding: 2px 8px;
+}
+.preservation-card-cost {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #DC2626;
+}
+.preservation-card-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-top: 4px;
+}
+.preservation-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(220,38,38,0.1);
+    margin-top: 10px;
+    overflow: hidden;
+}
+.preservation-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #F59E0B, #DC2626);
+}
+.ccs-economics-row {
+    display: flex;
+    gap: 16px;
+    margin: 24px 0;
+    flex-wrap: wrap;
+}
+.ccs-econ-card {
+    flex: 1;
+    min-width: 180px;
+    background: rgba(34,197,94,0.05);
+    border: 1px solid rgba(34,197,94,0.15);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+}
+.ccs-econ-value {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy);
+}
+.ccs-econ-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.3;
+}
+@media (max-width: 768px) {
+    .preservation-panel { padding: 28px 20px; }
+    .preservation-grid { grid-template-columns: 1fr; gap: 14px; }
+    .preservation-card-cost { font-size: 1.3rem; }
+    .ccs-economics-row { flex-direction: column; }
+    .ccs-econ-card { min-width: unset; }
+}
+@media (max-width: 480px) {
+    .preservation-panel { padding: 22px 16px; border-radius: 12px; }
+    .preservation-panel h3 { font-size: 1.1rem; }
+    .preservation-card { padding: 16px 14px; }
+    .preservation-card-cost { font-size: 1.2rem; }
+    .ccs-econ-value { font-size: 1.3rem; }
+}
+
 /* ========== FOOTER ========== */
 .footer {
     text-align: center;
@@ -2276,6 +2462,30 @@ body {
 </header>
 <div class="bottom-banner"></div>
 
+<!-- HERO TAKEAWAY BANNER -->
+<div class="hero-takeaway">
+    <div class="hero-takeaway-icon">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="9" stroke="#22C55E" stroke-width="2.5" fill="none"/>
+            <circle cx="16" cy="16" r="3" fill="#22C55E"/>
+            <path d="M16 4 L16 7 M16 25 L16 28 M4 16 L7 16 M25 16 L28 16" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+            <path d="M7.5 7.5 L9.5 9.5 M22.5 22.5 L24.5 24.5 M7.5 24.5 L9.5 22.5 M22.5 9.5 L24.5 7.5" stroke="rgba(34,197,94,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+    </div>
+    <div class="hero-takeaway-headline">
+        Investing in <em>clean firm power today</em> is the single<br>
+        most important step toward deep decarbonization
+    </div>
+    <p class="hero-takeaway-sub">
+        Our analysis of 8,760 hours across five U.S. power markets reveals that
+        <strong>cheap renewables alone cannot achieve high hourly matching targets</strong>.
+        Beyond 90% matching, the cost curve inflects sharply and the resource mix pivots toward
+        firm, dispatchable clean generation. Organizations that invest only in wind and solar today
+        will face steep costs and stranded procurement when they pursue deeper decarbonization.
+        <strong>The time to secure clean firm power is now &mdash; before you need it.</strong>
+    </p>
+</div>
+
 <!-- LOADING STATE -->
 <div class="main-content" id="loadingState">
     <div class="loading-overlay">
@@ -2428,7 +2638,7 @@ body {
                             <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 22 L14 6 L23 22 Z" stroke="#22C55E" stroke-width="2" fill="rgba(34,197,94,0.2)"/><path d="M14 6 L14 14" stroke="#22C55E" stroke-width="2"/></svg>
                         </div>
                         <h4>75% Matching</h4>
-                        <p>Wind and solar dominate. Cheap renewables cover most hours. Storage plays no role. The easy path.</p>
+                        <p>Wind and solar dominate. Cheap renewables cover most hours cost-effectively. The easy path.</p>
                     </div>
                     <div class="conclusion-pillar">
                         <div class="conclusion-pillar-icon" style="background:rgba(245,158,11,0.15);">
@@ -2457,19 +2667,20 @@ body {
                 </div>
 
                 <p>
-                    <strong>Storage is not the answer for the hardest hours.</strong> Battery deployment remains near
-                    zero below 95% matching, and even at 100% only reaches 6&ndash;10% of the mix. Four-hour batteries
-                    can shift solar surplus to evenings, but they cannot cover the multi-hour overnight gaps and winter
-                    peaks that drive the 99&ndash;100% cost cliff. The marginal hours require firm, dispatchable generation
-                    &mdash; not time-shifting.
+                    <strong>Short-duration storage alone won&rsquo;t close the gap.</strong> In this analysis (4-hour
+                    Li-ion), battery deployment remains near zero below 95% matching. Four-hour storage can shift
+                    solar surplus to evenings but struggles with multi-day wind droughts and long winter nights.
+                    Longer-duration storage technologies (iron-air, compressed air, hydrogen) may expand
+                    storage&rsquo;s role significantly &mdash; but firm, dispatchable generation will remain essential
+                    for the hardest hours regardless.
                 </p>
 
                 <p>
-                    <strong>Regional advantages are real but temporary.</strong> ERCOT&rsquo;s cheap wind ($40/MWh)
-                    lets it delay the clean firm pivot 5 percentage points beyond other regions. But by 99% matching,
-                    every region converges on the same reality: firm power dominates. Regions with existing nuclear
-                    fleets (PJM at 32%, NEISO at 24%) have a structural advantage &mdash; access to clean firm power
-                    at wholesale rates rather than new-build LCOE.
+                    <strong>Existing clean firm is irreplaceable at any cost.</strong> PJM (32% nuclear), NEISO (24%),
+                    and NYISO (18%) benefit enormously from already-built nuclear fleets that deliver clean baseload
+                    at wholesale prices. Losing these assets to economic shutdown &mdash; as nearly happened in the
+                    2010s &mdash; would add $5&ndash;18/MWh to every matching target. These plants should be valued
+                    not by today&rsquo;s wholesale price, but by the cost of replacing them.
                 </p>
 
                 <p>
@@ -3121,6 +3332,306 @@ body {
                     generation &mdash; addressing the cost cliff above 95% hourly matching without the
                     full premium of 100% clean firm power. Building CCS-ready CCGTs today is an investment
                     in tomorrow&rsquo;s clean firm capacity.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 9: PRESERVING EXISTING CLEAN FIRM -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge" style="background:rgba(30,58,95,0.12);color:var(--navy);">Critical Asset</span>
+            <h2>Existing Nuclear &amp; Geothermal: The Foundation We Can&rsquo;t Afford to Lose</h2>
+
+            <!-- Illustration: Shield protecting clean firm from economic shutdown -->
+            <div class="section-illustration">
+                <svg width="480" height="140" viewBox="0 0 480 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Shield shape -->
+                    <path d="M240 10 L290 30 L290 75 Q290 110 240 130 Q190 110 190 75 L190 30 Z" fill="rgba(30,58,95,0.08)" stroke="#1E3A5F" stroke-width="2"/>
+                    <text x="240" y="62" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1E3A5F">EXISTING</text>
+                    <text x="240" y="76" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1E3A5F">CLEAN FIRM</text>
+                    <text x="240" y="95" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1E3A5F">Nuclear &amp; Geo</text>
+
+                    <!-- Left: economic threats -->
+                    <rect x="20" y="24" width="120" height="36" rx="6" fill="rgba(239,68,68,0.08)" stroke="#EF4444" stroke-width="1"/>
+                    <text x="80" y="38" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#DC2626">Cheap Gas Competition</text>
+                    <text x="80" y="51" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#9CA3AF">$2-3/MMBtu threatens margins</text>
+                    <path d="M140 42 L185 55" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+                    <rect x="20" y="72" width="120" height="36" rx="6" fill="rgba(239,68,68,0.08)" stroke="#EF4444" stroke-width="1"/>
+                    <text x="80" y="86" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#DC2626">Market Revenue Gaps</text>
+                    <text x="80" y="99" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#9CA3AF">Below operating cost recovery</text>
+                    <path d="M140 90 L185 80" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+                    <!-- Right: irreplaceable value -->
+                    <rect x="340" y="24" width="120" height="36" rx="6" fill="rgba(34,197,94,0.08)" stroke="#22C55E" stroke-width="1"/>
+                    <text x="400" y="38" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#16A34A">No New CapEx Required</text>
+                    <text x="400" y="51" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#9CA3AF">Already built &amp; operating</text>
+                    <path d="M340 42 L295 55" stroke="#22C55E" stroke-width="1.5"/>
+
+                    <rect x="340" y="72" width="120" height="36" rx="6" fill="rgba(34,197,94,0.08)" stroke="#22C55E" stroke-width="1"/>
+                    <text x="400" y="86" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#16A34A">24/7 Baseload Clean</text>
+                    <text x="400" y="99" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" fill="#9CA3AF">Covers hardest hours reliably</text>
+                    <path d="M340 90 L295 80" stroke="#22C55E" stroke-width="1.5"/>
+                </svg>
+            </div>
+
+            <p class="story-lead">
+                Existing nuclear and geothermal plants are <strong>the most cost-effective clean firm generation
+                we have</strong>. Unlike new-build options, they carry no upfront capital expenditure or steep
+                financing costs. Keeping these resources online is not just beneficial &mdash; it is
+                <strong>essential to achieving deep decarbonization</strong>.
+            </p>
+
+            <p>
+                Yet these assets face real economic threats. The wave of cheap natural gas and subsidized renewables
+                that drove several nuclear plant shutdowns in the 2010s has not fully abated. When wholesale power
+                prices fall below operating costs, even well-run plants face pressure to shut down permanently.
+                Once retired, a nuclear plant cannot economically restart &mdash; the clean firm capacity is
+                gone forever, and replacing it requires new-build at 2&ndash;3x the cost.
+            </p>
+
+            <h3 style="margin-top:28px;font-size:1.15rem;color:var(--navy);">What Losing Existing Clean Firm Would Cost</h3>
+            <p>
+                Our model quantifies this directly. If existing nuclear and geothermal capacity were unavailable
+                and had to be replaced with new-build clean firm generation at $90/MWh LCOE, the cost impact
+                is dramatic &mdash; especially in regions with large existing fleets:
+            </p>
+
+            <div class="preservation-panel">
+                <h3>Cost Impact of Losing Existing Clean Firm Resources</h3>
+                <div class="preservation-sub">If existing nuclear/geothermal had to be replaced with new-build at $90/MWh</div>
+
+                <div class="preservation-grid">
+                    <div class="preservation-card">
+                        <div class="preservation-card-header">
+                            <span class="preservation-card-iso">PJM</span>
+                            <span class="preservation-card-share">32.1% existing clean firm</span>
+                        </div>
+                        <div class="preservation-card-cost">+$18/MWh (+31&ndash;39%)</div>
+                        <div class="preservation-card-desc">
+                            Largest nuclear fleet. At 90% matching, costs jump from $59 to $77/MWh. The existing fleet
+                            saves more per MWh than any other single intervention.
+                        </div>
+                        <div class="preservation-bar"><div class="preservation-bar-fill" style="width:100%;"></div></div>
+                    </div>
+                    <div class="preservation-card">
+                        <div class="preservation-card-header">
+                            <span class="preservation-card-iso">NEISO</span>
+                            <span class="preservation-card-share">23.8% existing clean firm</span>
+                        </div>
+                        <div class="preservation-card-cost">+$12/MWh (+17&ndash;21%)</div>
+                        <div class="preservation-card-desc">
+                            Millstone and Seabrook anchor New England&rsquo;s clean firm supply.
+                            Losing them would push 90% matching costs above $80/MWh.
+                        </div>
+                        <div class="preservation-bar"><div class="preservation-bar-fill" style="width:64%;"></div></div>
+                    </div>
+                    <div class="preservation-card">
+                        <div class="preservation-card-header">
+                            <span class="preservation-card-iso">NYISO</span>
+                            <span class="preservation-card-share">18.4% existing clean firm</span>
+                        </div>
+                        <div class="preservation-card-cost">+$9/MWh (+14&ndash;16%)</div>
+                        <div class="preservation-card-desc">
+                            Indian Point&rsquo;s closure already demonstrated the cost. The remaining fleet
+                            is critical to any affordable path beyond 90%.
+                        </div>
+                        <div class="preservation-bar"><div class="preservation-bar-fill" style="width:48%;"></div></div>
+                    </div>
+                    <div class="preservation-card">
+                        <div class="preservation-card-header">
+                            <span class="preservation-card-iso">ERCOT &amp; CAISO</span>
+                            <span class="preservation-card-share">8&ndash;9% existing clean firm</span>
+                        </div>
+                        <div class="preservation-card-cost">+$5/MWh (+9&ndash;15%)</div>
+                        <div class="preservation-card-desc">
+                            Smaller fleets but still significant. Even 8% of baseload clean firm at
+                            wholesale prices saves $5/MWh across every matching target.
+                        </div>
+                        <div class="preservation-bar"><div class="preservation-bar-fill" style="width:27%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <p>
+                The math is straightforward: existing plants provide clean firm power at <strong>wholesale market
+                rates ($27&ndash;42/MWh)</strong> because their capital costs are already paid. New-build clean firm
+                costs <strong>$90/MWh</strong> &mdash; a 2&ndash;3x premium. Every megawatt of existing clean firm
+                that retires prematurely is a megawatt that must eventually be replaced at far higher cost if
+                deep decarbonization goals are to be met. These assets should be valued not just by their wholesale
+                power price, but by the <strong>cost that would be incurred to replace them</strong>.
+            </p>
+
+            <h3 style="margin-top:32px;font-size:1.15rem;color:var(--navy);">CCS Retrofits: Adding New Clean Firm to the Stack</h3>
+            <p>
+                Where existing nuclear and geothermal provide the foundation, <strong>CCS-retrofitted gas plants
+                can build on it</strong>. Current estimates put CCS retrofit LCOE at <strong>$70&ndash;100/MWh</strong>
+                before incentives, driven by capture equipment CapEx, a 10&ndash;15% parasitic efficiency penalty,
+                and CO&#8322; transport/storage costs.
+            </p>
+
+            <div class="ccs-economics-row">
+                <div class="ccs-econ-card">
+                    <div class="ccs-econ-value">$85/ton</div>
+                    <div class="ccs-econ-label">45Q tax credit per ton of CO&#8322; captured (post-OBBBA)</div>
+                </div>
+                <div class="ccs-econ-card">
+                    <div class="ccs-econ-value">$15&ndash;25</div>
+                    <div class="ccs-econ-label">$/MWh effective 45Q offset for CCGT+CCS at 90% capture</div>
+                </div>
+                <div class="ccs-econ-card">
+                    <div class="ccs-econ-value">$55&ndash;80</div>
+                    <div class="ccs-econ-label">$/MWh net LCOE after 45Q credit (competitive with new nuclear)</div>
+                </div>
+            </div>
+
+            <p>
+                At $85/ton, the 45Q credit meaningfully narrows the gap. A CCGT capturing ~0.3 tons CO&#8322;/MWh at
+                90% capture rate receives ~$25/MWh in credits, pushing net LCOE toward <strong>$55&ndash;80/MWh</strong>
+                &mdash; competitive with new nuclear and well below the cost of the last percentage points of hourly
+                matching. To maximize captured tons and 45Q value, CCS plants would likely operate at high capacity
+                factors resembling <strong>baseload dispatch</strong>, conveniently filling the exact role the grid
+                needs: steady, dispatchable clean firm generation.
+            </p>
+
+            <div class="story-insight-box" style="border-left-color:var(--navy);">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Protect What You Have, Build What You Need:</strong> Existing nuclear and
+                    geothermal provide irreplaceable clean firm generation at a fraction of new-build cost.
+                    Losing these assets to economic pressure would increase decarbonization costs by
+                    $5&ndash;18/MWh depending on region &mdash; a penalty that compounds at every matching
+                    target. Meanwhile, CCS retrofits on existing gas infrastructure offer the most viable
+                    near-term pathway to <em>add</em> new clean firm capacity at costs competitive with
+                    new nuclear, especially with 45Q incentives driving baseload-like operation.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 10: LIMITATIONS — Transmission & Distribution -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge" style="background:rgba(107,114,128,0.12);color:#6B7280;">Important Context</span>
+            <h2>What This Analysis Does Not Capture</h2>
+
+            <!-- T&D Illustration -->
+            <div class="section-illustration">
+                <svg width="500" height="120" viewBox="0 0 500 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Title -->
+                    <text x="250" y="16" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#6B7280">TRANSMISSION &amp; DISTRIBUTION: THE HIDDEN COST LAYER</text>
+
+                    <!-- Generator (left) -->
+                    <rect x="15" y="35" width="60" height="45" rx="6" fill="rgba(34,197,94,0.08)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="45" y="55" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#16A34A">Generator</text>
+                    <text x="45" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="7" fill="#6B7280">LCOE only</text>
+
+                    <!-- Transmission line with poles -->
+                    <!-- Pole 1 -->
+                    <line x1="110" y1="32" x2="110" y2="80" stroke="#9CA3AF" stroke-width="2"/>
+                    <line x1="100" y1="36" x2="120" y2="36" stroke="#9CA3AF" stroke-width="2"/>
+                    <line x1="103" y1="44" x2="117" y2="44" stroke="#9CA3AF" stroke-width="1.5"/>
+                    <!-- Wires from pole 1 to pole 2 -->
+                    <path d="M100 36 Q155 28 210 36" stroke="#D97706" stroke-width="1.2" fill="none"/>
+                    <path d="M103 44 Q155 36 207 44" stroke="#D97706" stroke-width="1.2" fill="none"/>
+                    <!-- Pole 2 -->
+                    <line x1="210" y1="32" x2="210" y2="80" stroke="#9CA3AF" stroke-width="2"/>
+                    <line x1="200" y1="36" x2="220" y2="36" stroke="#9CA3AF" stroke-width="2"/>
+                    <line x1="203" y1="44" x2="217" y2="44" stroke="#9CA3AF" stroke-width="1.5"/>
+                    <!-- Wires from pole 2 to pole 3 -->
+                    <path d="M200 36 Q255 28 310 36" stroke="#D97706" stroke-width="1.2" fill="none"/>
+                    <path d="M203 44 Q255 36 307 44" stroke="#D97706" stroke-width="1.2" fill="none"/>
+                    <!-- Pole 3 -->
+                    <line x1="310" y1="32" x2="310" y2="80" stroke="#9CA3AF" stroke-width="2"/>
+                    <line x1="300" y1="36" x2="320" y2="36" stroke="#9CA3AF" stroke-width="2"/>
+                    <line x1="303" y1="44" x2="317" y2="44" stroke="#9CA3AF" stroke-width="1.5"/>
+
+                    <!-- T&D cost label -->
+                    <rect x="140" y="58" width="140" height="24" rx="4" fill="rgba(245,158,11,0.1)" stroke="#F59E0B" stroke-width="1"/>
+                    <text x="210" y="74" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#D97706">+$15&ndash;40/MWh T&amp;D cost</text>
+
+                    <!-- Substation -->
+                    <rect x="350" y="35" width="45" height="45" rx="6" fill="rgba(245,158,11,0.08)" stroke="#F59E0B" stroke-width="1.5"/>
+                    <text x="372" y="55" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="7" font-weight="600" fill="#D97706">Substation</text>
+                    <text x="372" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="7" fill="#6B7280">Step-down</text>
+                    <line x1="320" y1="57" x2="348" y2="57" stroke="#D97706" stroke-width="1.5"/>
+
+                    <!-- Load (right) -->
+                    <rect x="425" y="35" width="60" height="45" rx="6" fill="rgba(30,58,95,0.08)" stroke="#1E3A5F" stroke-width="1.5"/>
+                    <text x="455" y="53" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#1E3A5F">Load</text>
+                    <text x="455" y="65" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="7" fill="#6B7280">Delivered</text>
+                    <text x="455" y="75" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="7" fill="#6B7280">cost</text>
+                    <line x1="397" y1="57" x2="423" y2="57" stroke="#1E3A5F" stroke-width="1.5"/>
+
+                    <!-- Annotation -->
+                    <text x="250" y="108" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#9CA3AF">This analysis models generator-level LCOE only &mdash; delivered cost to load is higher</text>
+                </svg>
+            </div>
+
+            <p class="story-lead">
+                This optimization models energy procurement and resource costs but <strong>does not include
+                transmission, distribution, or interconnection costs</strong>. In practice, these costs
+                can materially change the economics &mdash; and may strengthen or weaken the case for
+                specific resource types depending on geography and grid constraints.
+            </p>
+
+            <div class="preservation-panel" style="border-left: 4px solid #F59E0B;">
+                <h3 style="color:#D97706;">Transmission &amp; Distribution Considerations</h3>
+
+                <div class="ccs-economics-row" style="margin-top:20px;">
+                    <div class="ccs-econ-card" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);">
+                        <div class="ccs-econ-value" style="color:#D97706;">$15&ndash;40+</div>
+                        <div class="ccs-econ-label">$/MWh added cost for new long-distance transmission (HVDC, regional backbone)</div>
+                    </div>
+                    <div class="ccs-econ-card" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);">
+                        <div class="ccs-econ-value" style="color:#D97706;">5&ndash;10+ yrs</div>
+                        <div class="ccs-econ-label">Typical timeline for major transmission permitting and construction</div>
+                    </div>
+                    <div class="ccs-econ-card" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);">
+                        <div class="ccs-econ-value" style="color:#D97706;">2,000+ GW</div>
+                        <div class="ccs-econ-label">of generation stuck in U.S. interconnection queues (mostly wind &amp; solar)</div>
+                    </div>
+                </div>
+
+                <p style="margin-top:18px;font-size:0.95rem;color:var(--text-body);line-height:1.7;">
+                    <strong>For remote renewables</strong>, transmission adds significant cost. The best wind and solar
+                    resources are often far from load centers, requiring new high-voltage lines that can add
+                    $15&ndash;40/MWh or more to delivered cost. Interconnection queue backlogs often exceed 5 years,
+                    delaying projects regardless of resource quality. This hidden cost narrows the apparent LCOE
+                    advantage of renewables over firm resources located closer to demand.
+                </p>
+
+                <p style="font-size:0.95rem;color:var(--text-body);line-height:1.7;">
+                    <strong>For existing nuclear plants</strong>, the transmission advantage is significant. These
+                    facilities are already interconnected, often at high-voltage nodes near population centers. They
+                    require no new transmission investment and face no queue delays. This further strengthens the
+                    case for preserving existing clean firm assets.
+                </p>
+
+                <p style="font-size:0.95rem;color:var(--text-body);line-height:1.7;">
+                    <strong>For CCS retrofits on existing gas plants</strong>, the same advantage applies &mdash; the
+                    electrical interconnection exists. However, CCS adds a new infrastructure requirement:
+                    CO&#8322; transport pipelines to sequestration sites, which carry their own permitting,
+                    cost, and timeline challenges.
+                </p>
+
+                <p style="font-size:0.95rem;color:var(--text-body);line-height:1.7;">
+                    <strong>For longer-duration storage</strong>, siting flexibility could reduce transmission needs
+                    by locating storage near load centers, effectively substituting storage investment for
+                    transmission investment. This is an area where future analysis incorporating T&amp;D costs
+                    could meaningfully shift the optimal resource mix.
+                </p>
+            </div>
+
+            <div class="story-insight-box" style="border-left-color:#F59E0B;">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Net Impact:</strong> Including transmission and interconnection costs would likely
+                    <strong>strengthen</strong> the case for existing nuclear (already connected), <strong>increase</strong>
+                    the true delivered cost of remote renewables, and add complexity to CCS deployment (CO&#8322;
+                    pipelines). Our cost estimates for wind and solar should be considered <em>optimistic</em>
+                    relative to fully delivered costs in many regions.
                 </div>
             </div>
         </div>
