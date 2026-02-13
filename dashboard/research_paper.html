@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Paper - Hourly Clean Energy Cost Optimization Across U.S. ISO Regions</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+@font-face {
+    font-family: 'Franklin Gothic Demi';
+    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+:root {
+    --navy: #1A2744;
+    --navy-light: #2D3A52;
+    --accent: #EF4444;
+    --accent-dark: #DC2626;
+    --solar: #F59E0B;
+    --wind: #22C55E;
+    --hydro: #0EA5E9;
+    --storage: #EF4444;
+    --clean-firm: #1E3A5F;
+    --bg: #FFFFFF;
+    --bg-alt: #F8F9FC;
+    --border: #D4D8E0;
+    --border-light: #E8EBF0;
+    --text-primary: #1A1A1A;
+    --text-secondary: #374151;
+    --text-muted: #6B7280;
+    --link: #1D4ED8;
+    --link-hover: #1E40AF;
+    --font-body: 'Plus Jakarta Sans', 'Georgia', serif;
+    --font-heading: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    --font-mono: 'Consolas', 'Courier New', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    background: var(--bg);
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ========== PAPER HEADER ========== */
+.paper-header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
+    color: #fff;
+    padding: 60px 24px 52px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.paper-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.35) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 60% at 88% 70%, rgba(245,158,11,0.25) 0%, transparent 55%);
+    pointer-events: none;
+}
+.paper-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+.paper-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    position: relative;
+    z-index: 2;
+}
+.paper-title {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    line-height: 1.25;
+    max-width: 820px;
+    margin: 0 auto 16px;
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.4);
+}
+.paper-subtitle {
+    font-size: 1.05rem;
+    font-weight: 400;
+    opacity: 0.9;
+    max-width: 680px;
+    margin: 0 auto 20px;
+    position: relative;
+    z-index: 2;
+}
+.paper-meta {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    position: relative;
+    z-index: 2;
+}
+
+/* ========== TOOLBAR ========== */
+.paper-toolbar {
+    background: var(--bg-alt);
+    border-bottom: 1px solid var(--border-light);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.paper-toolbar a {
+    color: var(--navy);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.88rem;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(239,68,68,0.3);
+    transition: all 0.15s;
+}
+.paper-toolbar a:hover { color: var(--accent-dark); border-bottom-color: var(--accent-dark); }
+.pdf-download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--navy);
+    color: #fff;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+}
+.pdf-download-btn:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+.pdf-download-btn svg { flex-shrink: 0; }
+
+/* ========== CONTENT ========== */
+.paper-body {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 40px 28px 80px;
+}
+
+/* ========== TABLE OF CONTENTS ========== */
+.toc {
+    background: var(--bg-alt);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 28px 36px;
+    margin-bottom: 40px;
+}
+.toc-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.toc ol { padding-left: 22px; }
+.toc li { margin-bottom: 5px; }
+.toc a {
+    color: var(--navy);
+    text-decoration: none;
+    font-size: 0.92rem;
+    border-bottom: 1px solid rgba(239,68,68,0.15);
+    transition: all 0.15s;
+}
+.toc a:hover { color: var(--accent-dark); border-bottom-color: var(--accent-dark); }
+
+/* ========== SECTIONS ========== */
+h2 {
+    font-family: var(--font-heading);
+    font-size: 1.55rem;
+    color: var(--accent);
+    margin-top: 56px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+h3 {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-top: 32px;
+    margin-bottom: 12px;
+}
+p { margin-bottom: 16px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.85; }
+strong { color: var(--navy); }
+
+/* ========== CITATIONS ========== */
+.cite {
+    color: var(--link);
+    text-decoration: none;
+    font-size: 0.88em;
+    cursor: pointer;
+    border-bottom: 1px dotted var(--link);
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.cite:hover { color: var(--link-hover); border-bottom-style: solid; }
+
+/* ========== FIGURES ========== */
+.figure {
+    margin: 32px 0;
+    background: var(--bg-alt);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+}
+.figure svg { max-width: 100%; height: auto; }
+.figure-caption {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 14px;
+    line-height: 1.6;
+    font-style: italic;
+}
+.figure-number {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--accent);
+    font-style: normal;
+}
+
+/* ========== FORMULA BOX ========== */
+.formula-box {
+    background: linear-gradient(145deg, #1F3158 0%, #1A2744 100%);
+    border-radius: 10px;
+    padding: 22px 28px;
+    margin: 20px 0 24px;
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    line-height: 1.9;
+    overflow-x: auto;
+    color: rgba(255,255,255,0.9);
+}
+.formula-box .label {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--solar);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* ========== NOTE BOX ========== */
+.note-box {
+    background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(239,68,68,0.04) 100%);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    padding: 18px 24px;
+    margin: 20px 0 24px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+.note-box strong { color: var(--accent); }
+
+/* ========== TABLES ========== */
+.table-wrap { overflow-x: auto; margin: 20px 0 28px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+thead { background: linear-gradient(145deg, #1F3158 0%, #1A2744 100%); color: #fff; }
+th {
+    font-family: var(--font-heading);
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.04em;
+}
+th:first-child { text-align: left; }
+td { padding: 10px 16px; border-bottom: 1px solid var(--border-light); font-size: 0.88rem; }
+tbody tr:nth-child(even) { background: rgba(243,244,248,0.5); }
+td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
+
+/* ========== REFERENCES ========== */
+.ref-list { list-style: none; padding: 0; counter-reset: ref; }
+.ref-list li {
+    margin-bottom: 16px;
+    padding-left: 32px;
+    position: relative;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+}
+.ref-list li::before {
+    counter-increment: ref;
+    content: '[' counter(ref) ']';
+    position: absolute;
+    left: 0;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 0.82rem;
+}
+.ref-list a { color: var(--link); text-decoration: none; border-bottom: 1px solid rgba(29,78,216,0.2); transition: all 0.15s; word-break: break-all; }
+.ref-list a:hover { color: var(--link-hover); border-bottom-color: var(--link-hover); }
+
+/* ========== FOOTER ========== */
+.paper-footer {
+    text-align: center;
+    padding: 24px 28px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border-light);
+}
+
+/* ========== ACCENT BAR ========== */
+.accent-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 1000;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .paper-header { padding: 40px 18px 36px; }
+    .paper-title { font-size: 1.6rem; }
+    .paper-subtitle { font-size: 0.92rem; }
+    .paper-body { padding: 28px 18px 60px; }
+    .paper-toolbar { padding: 10px 16px; flex-direction: column; gap: 10px; }
+    h2 { font-size: 1.35rem; margin-top: 40px; }
+    h3 { font-size: 1.05rem; }
+    p { font-size: 0.9rem; }
+    .toc { padding: 20px 18px; }
+    .figure { padding: 16px 12px; }
+    .formula-box { padding: 16px 14px; font-size: 0.8rem; }
+}
+@media (max-width: 480px) {
+    .paper-header { padding: 28px 12px 24px; }
+    .paper-title { font-size: 1.35rem; }
+    .paper-body { padding: 20px 12px 48px; }
+    h2 { font-size: 1.2rem; }
+    p { font-size: 0.85rem; }
+}
+
+/* ========== PRINT ========== */
+@media print {
+    body { background: white; font-size: 11pt; line-height: 1.6; }
+    .paper-toolbar, .accent-bar { display: none; }
+    .paper-header { background: var(--navy) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 36px 24px 28px; }
+    .paper-body { max-width: 100%; padding: 24px 20px 40px; }
+    .figure { break-inside: avoid; }
+    .formula-box { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table { break-inside: avoid; }
+    thead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2 { break-before: auto; }
+    .toc { break-inside: avoid; }
+    a { color: var(--text-primary) !important; text-decoration: none !important; border-bottom: none !important; }
+    .cite { color: var(--text-muted) !important; }
+}
+    </style>
+</head>
+<body>
+
+<header class="paper-header">
+    <div class="paper-badge">Working Paper</div>
+    <h1 class="paper-title">Least-Cost Hourly Clean Energy Matching:<br>A Multi-Regional Optimization Analysis</h1>
+    <p class="paper-subtitle">Optimal procurement portfolios for 75&ndash;100% hourly matching across five U.S. ISO regions using co-optimized resource mixes, battery storage, and blended pricing</p>
+    <p class="paper-meta">Hourly CFE Optimizer Project &bull; February 2026 &bull; v2.0</p>
+</header>
+
+<div class="paper-toolbar">
+    <a href="dashboard.html">&larr; Back to Dashboard</a>
+    <button class="pdf-download-btn" onclick="window.print()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 1h8v4h3l-7 7-7-7h3V1z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M1 12v3h14v-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download PDF
+    </button>
+</div>
+
+<div class="paper-body">
+
+    <!-- ========== ABSTRACT ========== -->
+    <h2 id="abstract">Abstract</h2>
+    <p>
+        We present a co-optimization framework for determining the least-cost clean energy procurement
+        portfolio to achieve specified levels of <strong>hourly matching</strong> &mdash; the fraction of
+        electricity demand met by contemporaneous clean generation in each of 8,760 annual hours. Analyzing
+        five major U.S. Independent System Operator (ISO) regions (CAISO, ERCOT, PJM, NYISO, NEISO) using
+        2025 EIA-930 hourly data, we find that achieving 90% hourly matching costs $47&ndash;70/MWh
+        (effective), while 100% matching requires $83&ndash;120/MWh with 30&ndash;33% curtailment. The
+        optimal resource mix shifts from solar- and wind-heavy at lower targets to clean-firm-dominant
+        (nuclear, geothermal) above 90%, revealing a fundamental tradeoff between intermittent renewable
+        cost advantages and the temporal reliability premium of dispatchable generation. These findings
+        have direct implications for corporate 24/7 CFE procurement, ISO market design, and the economic
+        case for preserving existing nuclear capacity.
+    </p>
+
+    <!-- ========== TABLE OF CONTENTS ========== -->
+    <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ol>
+            <li><a href="#abstract">Abstract</a></li>
+            <li><a href="#introduction">Introduction</a></li>
+            <li><a href="#literature-review">Literature Review</a></li>
+            <li><a href="#data-sources">Data Sources &amp; Regional Profiles</a></li>
+            <li><a href="#methodology">Methodology</a></li>
+            <li><a href="#results">Results</a></li>
+            <li><a href="#discussion">Discussion</a></li>
+            <li><a href="#limitations">Limitations &amp; Future Work</a></li>
+            <li><a href="#conclusion">Conclusion</a></li>
+            <li><a href="#references">References</a></li>
+        </ol>
+    </div>
+
+    <!-- ========== 1. INTRODUCTION ========== -->
+    <h2 id="introduction">1. Introduction</h2>
+    <p>
+        The electricity sector's transition to clean energy has historically relied on <strong>annual accounting</strong>:
+        purchasers match total annual consumption with an equivalent volume of renewable energy certificates (RECs),
+        regardless of whether clean generation coincides with actual load
+        <a href="#ref-1" class="cite">[1]</a>. While this approach has successfully
+        driven renewable deployment, it does not ensure that electricity is actually clean in any given hour.
+        A data center running at 2 AM may claim 100% renewable coverage while consuming fossil-generated power,
+        offset by midday solar certificates from a different time and often a different location.
+    </p>
+    <p>
+        The concept of <strong>24/7 carbon-free energy (CFE)</strong> addresses this gap by requiring temporal
+        matching between clean supply and demand <a href="#ref-2" class="cite">[2]</a>.
+        Pioneered by Google's commitment to operate on carbon-free energy "every hour of every day" by 2030
+        <a href="#ref-3" class="cite">[3]</a>, and formalized by the
+        United Nations 24/7 Carbon-free Energy Compact
+        <a href="#ref-4" class="cite">[4]</a>, hourly matching represents a more
+        rigorous standard for clean energy procurement. The Biden administration, Microsoft, and over 130
+        organizations have signed the compact, signaling broad momentum toward hourly accounting.
+    </p>
+    <p>
+        However, achieving high levels of hourly matching introduces significant economic complexity.
+        Intermittent resources (solar, wind) produce energy in patterns that do not perfectly align with
+        demand, creating surplus hours and deficit hours. Meeting demand in every hour requires either
+        massive overproduction (with attendant curtailment costs) or dispatchable clean generation that
+        can operate regardless of weather conditions. Understanding this cost-matching tradeoff is essential
+        for organizations designing procurement strategies and for policymakers evaluating the feasibility
+        of hourly clean energy standards.
+    </p>
+    <p>
+        This paper presents an optimization framework that <strong>co-optimizes cost and hourly matching</strong>
+        across five U.S. ISO regions. By simultaneously searching across procurement levels, resource mixes
+        (clean firm, solar, wind, hydro), and battery storage dispatch, we identify the lowest-cost portfolio
+        for each matching target from 75% to 100%. Our results quantify the "last mile" cost escalation,
+        reveal the critical role of clean firm power, and provide actionable data for procurement decision-making.
+    </p>
+
+    <!-- ========== 2. LITERATURE REVIEW ========== -->
+    <h2 id="literature-review">2. Literature Review</h2>
+
+    <h3>2.1 From Annual to Hourly Clean Energy Accounting</h3>
+    <p>
+        The inadequacy of annual renewable energy certificates (RECs) for verifying actual grid decarbonization
+        has been widely documented. Xu et al. (2024) demonstrate that annual matching can overstate clean energy
+        coverage by 15&ndash;40% in regions with high solar penetration, because midday surplus certificates
+        mask nighttime fossil consumption
+        <a href="#ref-1" class="cite">[1]</a>. The transition toward hourly or "granular"
+        energy certificates is now supported by regulatory frameworks in the EU (via the delegated act on
+        additionality and temporal correlation) and proposed SEC climate disclosure rules.
+    </p>
+    <p>
+        Google's 24/7 CFE program, the largest corporate hourly matching initiative, reported achieving 64%
+        average hourly CFE across its global operations in 2022, with significant regional variation
+        <a href="#ref-3" class="cite">[3]</a>. Their published methodology uses hourly generation
+        data matched against facility-level consumption and has become a de facto industry standard. The
+        UN 24/7 CFE Compact, launched at COP26, provides a multilateral framework for scaling hourly
+        matching globally <a href="#ref-4" class="cite">[4]</a>.
+    </p>
+
+    <h3>2.2 Clean Energy Cost Benchmarks</h3>
+    <p>
+        The cost landscape for clean energy technologies has evolved rapidly. The NREL Annual Technology
+        Baseline (ATB) 2024 reports utility-scale solar PV LCOE of $24&ndash;42/MWh and onshore wind at
+        $26&ndash;50/MWh (depending on resource class), with 4-hour lithium-ion battery storage at
+        $115&ndash;165/MWh (LCOS)
+        <a href="#ref-5" class="cite">[5]</a>. Lazard's Levelized Cost of Energy
+        Analysis (v17.0) provides broadly consistent estimates, reporting unsubsidized solar LCOE of
+        $24&ndash;96/MWh and wind at $24&ndash;75/MWh
+        <a href="#ref-6" class="cite">[6]</a>.
+    </p>
+    <p>
+        Regional cost variation is substantial. LBNL's Utility-Scale Solar report documents PPA prices
+        ranging from $30&ndash;40/MWh in the Southwest to $60&ndash;90/MWh in the Northeast
+        <a href="#ref-7" class="cite">[7]</a>. LBNL's wind market report shows similar
+        geographic spread, with Great Plains wind PPAs at $20&ndash;35/MWh versus $55&ndash;80/MWh in
+        New England <a href="#ref-8" class="cite">[8]</a>. These regional differentials
+        are central to our optimization, as the cost-optimal resource mix varies significantly by ISO region.
+    </p>
+
+    <h3>2.3 The Role of Firm Clean Power</h3>
+    <p>
+        The Princeton Net-Zero America study (Larson et al., 2021) identifies firm, dispatchable clean
+        generation as essential for achieving deep decarbonization cost-effectively
+        <a href="#ref-9" class="cite">[9]</a>. Jenkins et al. (2018) demonstrate
+        that removing firm low-carbon resources from the generation portfolio increases electricity system
+        costs by 10&ndash;62% under high decarbonization scenarios
+        <a href="#ref-10" class="cite">[10]</a>.
+    </p>
+    <p>
+        Nuclear power, the largest existing source of firm clean generation, faces economic pressure from
+        cheap natural gas and subsidized renewables. The EIA reports existing nuclear fleet operating costs
+        of $28&ndash;35/MWh, making it cost-competitive with wholesale market prices in most regions
+        <a href="#ref-11" class="cite">[11]</a>. New nuclear construction, however,
+        faces significantly higher costs: the NREL ATB 2024 estimates new advanced nuclear at
+        $60&ndash;100/MWh <a href="#ref-5" class="cite">[5]</a>. Our cost model uses
+        $90/MWh for new-build clean firm across all regions, consistent with these estimates for advanced
+        nuclear or enhanced geothermal systems.
+    </p>
+
+    <h3>2.4 Battery Storage and Grid Integration</h3>
+    <p>
+        Battery storage enables temporal shifting of clean energy from surplus to deficit hours. The NREL
+        ATB 2024 reports 4-hour lithium-ion round-trip efficiency of 85%
+        <a href="#ref-5" class="cite">[5]</a>, with installed costs declining from
+        $380/kWh in 2020 to approximately $250/kWh in 2024
+        <a href="#ref-12" class="cite">[12]</a>. The EIA reports 16 GW of utility-scale
+        battery storage installed in the U.S. as of 2024, with the majority in California (CAISO) and Texas
+        (ERCOT) <a href="#ref-13" class="cite">[13]</a>.
+    </p>
+    <p>
+        However, 4-hour storage has limited ability to address multi-day deficits or seasonal mismatches.
+        Dowling et al. (2020) show that storage alone cannot cost-effectively replace firm generation at high
+        decarbonization levels, as the required storage duration scales nonlinearly with the matching target
+        <a href="#ref-14" class="cite">[14]</a>.
+    </p>
+
+    <h3>2.5 Curtailment Economics</h3>
+    <p>
+        Grid curtailment of renewable energy is a growing challenge at high penetration levels. CAISO data
+        shows over 2.4 TWh of renewable curtailment in 2023, predominantly solar during midday hours
+        <a href="#ref-15" class="cite">[15]</a>. For hourly matching purchasers,
+        curtailment represents a direct economic penalty: energy is procured and paid for but generates no
+        matching credit because it exceeds instantaneous demand. Our analysis quantifies this curtailment
+        cost across matching targets and regions.
+    </p>
+
+    <!-- ========== 3. DATA SOURCES ========== -->
+    <h2 id="data-sources">3. Data Sources &amp; Regional Profiles</h2>
+
+    <h3>3.1 EIA-930 Hourly Grid Monitor</h3>
+    <p>
+        All demand and generation profiles are sourced from the U.S. Energy Information Administration
+        Form 930 Hourly Electric Grid Monitor <a href="#ref-16" class="cite">[16]</a>,
+        which provides balancing authority-level hourly data for electricity demand and generation by
+        energy source. We use 2025 calendar-year data (January&ndash;December) aggregated from
+        semi-annual bulk CSV files.
+    </p>
+
+    <h3>3.2 Regional Coverage</h3>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>ISO Region</th><th>EIA BA Code</th><th>Coverage</th><th>Clean Grid Share</th></tr></thead>
+        <tbody>
+            <tr><td>CAISO</td><td>CISO</td><td>California</td><td>48.5%</td></tr>
+            <tr><td>ERCOT</td><td>ERCO</td><td>Texas (most)</td><td>46.1%</td></tr>
+            <tr><td>PJM</td><td>PJM</td><td>Mid-Atlantic / Great Lakes</td><td>40.6%</td></tr>
+            <tr><td>NYISO</td><td>NYIS</td><td>New York</td><td>39.0%</td></tr>
+            <tr><td>NEISO</td><td>ISNE</td><td>New England</td><td>33.5%</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h3>3.3 Generation Profile Characteristics</h3>
+    <p>
+        Each resource type exhibits distinct hourly patterns that drive the optimization results.
+        Understanding these profiles is essential for interpreting why the optimal mix varies by region
+        and matching target.
+    </p>
+
+    <!-- FIGURE 1: Generation Profile Shapes -->
+    <div class="figure">
+        <svg width="700" height="260" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+            <rect width="700" height="260" fill="#F8F9FC" rx="8"/>
+            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">REPRESENTATIVE 24-HOUR GENERATION PROFILES (Normalized)</text>
+            <!-- Axes -->
+            <line x1="70" y1="40" x2="70" y2="210" stroke="#D4D8E0" stroke-width="1"/>
+            <line x1="70" y1="210" x2="670" y2="210" stroke="#D4D8E0" stroke-width="1"/>
+            <!-- Y axis labels -->
+            <text x="65" y="47" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">High</text>
+            <text x="65" y="213" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Low</text>
+            <!-- X axis labels -->
+            <text x="70" y="226" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">0h</text>
+            <text x="195" y="226" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">6h</text>
+            <text x="320" y="226" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">12h</text>
+            <text x="445" y="226" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">18h</text>
+            <text x="570" y="226" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">24h</text>
+            <!-- Clean Firm (flat line) -->
+            <line x1="70" y1="125" x2="670" y2="125" stroke="#1E3A5F" stroke-width="2.5"/>
+            <!-- Solar (bell curve peaking at noon) -->
+            <path d="M70,210 Q120,210 170,190 Q220,150 270,80 Q320,50 370,55 Q420,80 470,150 Q520,190 570,210 L670,210" fill="none" stroke="#F59E0B" stroke-width="2.5"/>
+            <!-- Wind (inverse, stronger at night) -->
+            <path d="M70,100 Q120,90 170,85 Q220,95 270,120 Q320,140 370,145 Q420,130 470,110 Q520,95 570,85 L670,100" fill="none" stroke="#22C55E" stroke-width="2.5"/>
+            <!-- Demand curve -->
+            <path d="M70,160 Q120,155 170,140 Q220,120 270,100 Q320,85 370,80 Q420,85 470,90 Q520,110 570,135 L670,155" fill="none" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <!-- Legend -->
+            <line x1="80" y1="244" x2="100" y2="244" stroke="#1E3A5F" stroke-width="2.5"/>
+            <text x="105" y="248" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Clean Firm</text>
+            <line x1="185" y1="244" x2="205" y2="244" stroke="#F59E0B" stroke-width="2.5"/>
+            <text x="210" y="248" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Solar</text>
+            <line x1="265" y1="244" x2="285" y2="244" stroke="#22C55E" stroke-width="2.5"/>
+            <text x="290" y="248" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Wind</text>
+            <line x1="340" y1="244" x2="360" y2="244" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <text x="365" y="248" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#6B7280">Demand</text>
+        </svg>
+        <div class="figure-caption"><span class="figure-number">Figure 1.</span> Representative 24-hour generation profiles. Solar output peaks at midday and drops to zero at night; wind tends to produce more at night; clean firm provides flat baseload. The mismatch between intermittent supply profiles and demand creates the fundamental challenge for hourly matching.</div>
+    </div>
+
+    <h3>3.4 Profile Normalization</h3>
+    <p>
+        All demand and generation profiles are normalized so the annual sum equals 1.0, making the
+        optimization scale-independent. Each hour's value represents its fractional share of total annual
+        output <a href="#ref-16" class="cite">[16]</a>.
+    </p>
+    <div class="formula-box">
+        <span class="label">Profile Normalization</span>
+        Profile<sub>h</sub> = Raw<sub>h</sub> / SUM(Raw<sub>h</sub> for all h = 1..8,760)<br>
+        SUM(Profile<sub>h</sub>) = 1.0
+    </div>
+
+    <!-- ========== 4. METHODOLOGY ========== -->
+    <h2 id="methodology">4. Methodology</h2>
+
+    <h3>4.1 Optimization Framework</h3>
+    <p>
+        The optimizer simultaneously searches across three dimensions: <strong>procurement level</strong>
+        (70&ndash;300% of annual demand), <strong>resource mix</strong> (clean firm, solar, wind, hydro
+        shares summing to 100%), and <strong>battery storage dispatch</strong> (0&ndash;50% of annual demand).
+        Two complementary strategies ensure both cost-efficiency and matching completeness.
+    </p>
+
+    <!-- FIGURE 2: Optimization Framework Flowchart -->
+    <div class="figure">
+        <svg width="700" height="300" viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+            <rect width="700" height="300" fill="#F8F9FC" rx="8"/>
+            <text x="350" y="24" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">DUAL OPTIMIZATION FRAMEWORK</text>
+            <!-- Strategy A Box -->
+            <rect x="40" y="48" width="280" height="85" rx="10" fill="rgba(14,165,233,0.08)" stroke="#0EA5E9" stroke-width="1.5"/>
+            <text x="180" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#0284C7">STRATEGY A: SWEEP</text>
+            <text x="180" y="86" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">For each procurement level (70-300%):</text>
+            <text x="180" y="102" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">Find mix that MAXIMIZES match score</text>
+            <text x="180" y="122" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#0284C7">Output: Matching Frontier</text>
+            <!-- Strategy B Box -->
+            <rect x="380" y="48" width="280" height="85" rx="10" fill="rgba(239,68,68,0.08)" stroke="#EF4444" stroke-width="1.5"/>
+            <text x="520" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#DC2626">STRATEGY B: THRESHOLD</text>
+            <text x="520" y="86" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">For each target (75-100%):</text>
+            <text x="520" y="102" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">Find portfolio that MINIMIZES cost</text>
+            <text x="520" y="122" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">Output: Cost-Optimal Portfolios</text>
+            <!-- Arrow down from both -->
+            <line x1="180" y1="133" x2="180" y2="155" stroke="#0EA5E9" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+            <line x1="520" y1="133" x2="520" y2="155" stroke="#EF4444" stroke-width="1.5" marker-end="url(#arrowRed)"/>
+            <!-- Three Phase boxes -->
+            <rect x="80" y="160" width="170" height="55" rx="8" fill="rgba(26,39,68,0.06)" stroke="#1A2744" stroke-width="1"/>
+            <text x="165" y="180" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1A2744">Phase 1: Coarse</text>
+            <text x="165" y="196" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#374151">5% mix / 10% procurement</text>
+            <text x="165" y="208" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#374151">Numpy-accelerated</text>
+            <rect x="270" y="160" width="170" height="55" rx="8" fill="rgba(26,39,68,0.08)" stroke="#1A2744" stroke-width="1"/>
+            <text x="355" y="180" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1A2744">Phase 2: Medium</text>
+            <text x="355" y="196" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#374151">&plusmn;5% refinement</text>
+            <text x="355" y="208" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#374151">+ Storage testing</text>
+            <rect x="460" y="160" width="170" height="55" rx="8" fill="rgba(26,39,68,0.10)" stroke="#1A2744" stroke-width="1.5"/>
+            <text x="545" y="180" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1A2744">Phase 3: Fine</text>
+            <text x="545" y="196" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#374151">&plusmn;2% precision</text>
+            <text x="545" y="208" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#374151">Final optimization</text>
+            <!-- Arrows between phases -->
+            <line x1="250" y1="188" x2="270" y2="188" stroke="#1A2744" stroke-width="1" marker-end="url(#arrowNav)"/>
+            <line x1="440" y1="188" x2="460" y2="188" stroke="#1A2744" stroke-width="1" marker-end="url(#arrowNav)"/>
+            <!-- Output box -->
+            <rect x="180" y="240" width="340" height="45" rx="10" fill="rgba(34,197,94,0.08)" stroke="#22C55E" stroke-width="1.5"/>
+            <text x="350" y="260" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#16A34A">OUTPUT: Optimal Portfolio per Region &times; Target</text>
+            <text x="350" y="276" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">Resource mix + procurement level + storage + cost + matching score</text>
+            <line x1="350" y1="215" x2="350" y2="240" stroke="#22C55E" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+            <!-- Markers -->
+            <defs>
+                <marker id="arrowBlue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#0EA5E9"/></marker>
+                <marker id="arrowRed" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#EF4444"/></marker>
+                <marker id="arrowNav" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1A2744"/></marker>
+                <marker id="arrowGreen" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#22C55E"/></marker>
+            </defs>
+        </svg>
+        <div class="figure-caption"><span class="figure-number">Figure 2.</span> Dual optimization framework. Strategy A (sweep) produces the matching frontier; Strategy B (threshold) produces cost-optimal portfolios. Both use three-phase refinement from coarse numpy-accelerated screening to fine-grained precision optimization.</div>
+    </div>
+
+    <h3>4.2 Hourly Matching Calculation</h3>
+    <div class="formula-box">
+        <span class="label">Hourly Match Score</span>
+        For each hour h (h = 1 to 8,760):<br>
+        &nbsp;&nbsp;Matched<sub>h</sub> = min(Demand<sub>h</sub>, TotalSupply<sub>h</sub>)<br>
+        &nbsp;&nbsp;Surplus<sub>h</sub> = max(0, TotalSupply<sub>h</sub> &minus; Demand<sub>h</sub>)<br>
+        &nbsp;&nbsp;Gap<sub>h</sub> = max(0, Demand<sub>h</sub> &minus; TotalSupply<sub>h</sub>)<br><br>
+        Hourly Match Score = SUM(Matched<sub>h</sub>) / SUM(Demand<sub>h</sub>) &times; 100%
+    </div>
+
+    <h3>4.3 Cost Model</h3>
+    <p>
+        Our cost model distinguishes between <strong>existing</strong> and <strong>new-build</strong>
+        resources. Existing clean generation (up to the current grid mix share) is priced at regional
+        wholesale electricity market prices <a href="#ref-17" class="cite">[17]</a>,
+        reflecting contract or market-rate procurement of already-operating capacity. Any procurement
+        above the existing share triggers new-build LCOE pricing
+        <a href="#ref-5" class="cite">[5]</a><a href="#ref-6" class="cite">[6]</a>.
+    </p>
+
+    <h3>4.4 Regional New-Build LCOE</h3>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>ISO</th><th>Wholesale ($/MWh)</th><th>Clean Firm</th><th>Solar</th><th>Wind</th><th>Storage LCOS</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>$30</td><td>$90</td><td>$60</td><td>$73</td><td>$100</td></tr>
+            <tr><td>ERCOT</td><td>$27</td><td>$90</td><td>$54</td><td>$40</td><td>$100</td></tr>
+            <tr><td>PJM</td><td>$34</td><td>$90</td><td>$65</td><td>$62</td><td>$100</td></tr>
+            <tr><td>NYISO</td><td>$42</td><td>$90</td><td>$92</td><td>$81</td><td>$100</td></tr>
+            <tr><td>NEISO</td><td>$41</td><td>$90</td><td>$82</td><td>$73</td><td>$100</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">
+        Wholesale prices from FERC/ISO market monitoring reports <a href="#ref-17" class="cite">[17]</a>.
+        New-build LCOE from NREL ATB 2024 <a href="#ref-5" class="cite">[5]</a>,
+        LBNL reports <a href="#ref-7" class="cite">[7]</a><a href="#ref-8" class="cite">[8]</a>,
+        and Lazard LCOE v17 <a href="#ref-6" class="cite">[6]</a>.
+        Wind LCOE scaled +30% from 2024 LBNL PPA data to reflect 2025 trends.
+    </p>
+
+    <h3>4.5 Storage Model</h3>
+    <p>
+        Battery storage is modeled as 4-hour lithium-ion with 85% round-trip efficiency
+        <a href="#ref-5" class="cite">[5]</a>, operating on daily charge/discharge
+        cycles. The storage dispatch level (as a percentage of annual demand) is itself optimized,
+        with the model testing levels from 0% to 50%. Storage charges exclusively from clean surplus
+        and discharges only into demand gaps, using a greedy dispatch algorithm that prioritizes
+        the largest imbalances first.
+    </p>
+
+    <!-- ========== 5. RESULTS ========== -->
+    <h2 id="results">5. Results</h2>
+
+    <h3>5.1 Cost Escalation by Matching Target</h3>
+    <p>
+        The effective cost of hourly matching increases nonlinearly across all five ISO regions.
+        The cost escalation is modest from 75% to 85% matching, accelerates from 85% to 95%, and
+        becomes steep from 99% to 100% &mdash; the "last mile" premium.
+    </p>
+
+    <!-- FIGURE 3: Cost Escalation Chart -->
+    <div class="figure">
+        <svg width="700" height="340" viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg">
+            <rect width="700" height="340" fill="#F8F9FC" rx="8"/>
+            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">EFFECTIVE COST PER USEFUL MWh BY MATCHING TARGET</text>
+            <!-- Axes -->
+            <line x1="80" y1="40" x2="80" y2="280" stroke="#D4D8E0" stroke-width="1"/>
+            <line x1="80" y1="280" x2="660" y2="280" stroke="#D4D8E0" stroke-width="1"/>
+            <!-- Y axis: $30 to $130 -->
+            <text x="75" y="280" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">$30</text>
+            <text x="75" y="232" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">$50</text>
+            <text x="75" y="184" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">$70</text>
+            <text x="75" y="136" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">$90</text>
+            <text x="75" y="88" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">$110</text>
+            <text x="75" y="45" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">$130</text>
+            <line x1="80" y1="232" x2="660" y2="232" stroke="#E8EBF0" stroke-width="0.5"/>
+            <line x1="80" y1="184" x2="660" y2="184" stroke="#E8EBF0" stroke-width="0.5"/>
+            <line x1="80" y1="136" x2="660" y2="136" stroke="#E8EBF0" stroke-width="0.5"/>
+            <line x1="80" y1="88" x2="660" y2="88" stroke="#E8EBF0" stroke-width="0.5"/>
+            <!-- X axis labels: 75,80,85,90,95,99,100 -->
+            <text x="130" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
+            <text x="213" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">80%</text>
+            <text x="296" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">85%</text>
+            <text x="379" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">90%</text>
+            <text x="462" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">95%</text>
+            <text x="578" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">99%</text>
+            <text x="627" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">100%</text>
+            <!-- Scale: y = 280 - (cost-30)*2.4 -->
+            <!-- CAISO: 40.4, 43.2, 46.8, 51.6, 57.3, 64.9, 83.4 -->
+            <polyline points="130,255 213,248 296,240 379,228 462,215 578,196 627,152" fill="none" stroke="#F59E0B" stroke-width="2"/>
+            <text x="637" y="152" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#F59E0B">CA</text>
+            <!-- ERCOT: 34.3, 37.3, 41.0, 47.3, 57.3, 76.0, 94.9 -->
+            <polyline points="130,270 213,263 296,254 379,239 462,215 578,170 627,124" fill="none" stroke="#22C55E" stroke-width="2"/>
+            <text x="637" y="124" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#22C55E">TX</text>
+            <!-- PJM: 46.5, 48.8, 53.7, 58.8, 65.5, 76.4, 94.2 -->
+            <polyline points="130,240 213,235 296,223 379,211 462,195 578,169 627,126" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+            <text x="637" y="132" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#0EA5E9">PJM</text>
+            <!-- NYISO: 56.8, 58.3, 59.9, 61.8, 66.3, 78.0, 98.5 -->
+            <polyline points="130,216 213,212 296,208 379,204 462,193 578,165 627,116" fill="none" stroke="#8B5CF6" stroke-width="2"/>
+            <text x="637" y="112" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#8B5CF6">NY</text>
+            <!-- NEISO: 56.2, 60.3, 64.0, 69.3, 76.3, 88.1, 119.5 -->
+            <polyline points="130,217 213,207 296,198 379,186 462,169 578,141 627,65" fill="none" stroke="#EF4444" stroke-width="2"/>
+            <text x="637" y="61" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#EF4444">NE</text>
+            <!-- X axis title -->
+            <text x="370" y="316" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151">Hourly Matching Target</text>
+            <!-- Y axis title -->
+            <text x="20" y="160" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151" transform="rotate(-90,20,160)">Effective $/MWh</text>
+        </svg>
+        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target across five ISO regions. All regions show exponential cost escalation above 95% matching. NEISO exhibits the steepest 99-to-100% premium ($88&rarr;$120/MWh), reflecting limited resource diversity.</div>
+    </div>
+
+    <h3>5.2 Cross-Regional Cost Comparison</h3>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td><strong>75%</strong></td><td>$40/MWh</td><td>$34/MWh</td><td>$47/MWh</td><td>$57/MWh</td><td>$56/MWh</td></tr>
+            <tr><td><strong>85%</strong></td><td>$47/MWh</td><td>$41/MWh</td><td>$54/MWh</td><td>$60/MWh</td><td>$64/MWh</td></tr>
+            <tr><td><strong>90%</strong></td><td>$52/MWh</td><td>$47/MWh</td><td>$59/MWh</td><td>$62/MWh</td><td>$69/MWh</td></tr>
+            <tr><td><strong>95%</strong></td><td>$57/MWh</td><td>$57/MWh</td><td>$66/MWh</td><td>$66/MWh</td><td>$76/MWh</td></tr>
+            <tr><td><strong>99%</strong></td><td>$65/MWh</td><td>$76/MWh</td><td>$76/MWh</td><td>$78/MWh</td><td>$88/MWh</td></tr>
+            <tr><td><strong>100%</strong></td><td>$83/MWh</td><td>$95/MWh</td><td>$94/MWh</td><td>$99/MWh</td><td>$120/MWh</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">All values are effective cost per useful MWh (total procurement cost divided by matched fraction of demand).</p>
+
+    <h3>5.3 Resource Mix Evolution</h3>
+    <p>
+        The optimal resource mix undergoes a structural transformation as the matching target increases.
+        At 75% matching, the cheapest portfolios are dominated by intermittent renewables (solar + wind
+        account for 50&ndash;80% of procurement). By 99&ndash;100%, clean firm power (nuclear, geothermal)
+        constitutes 40&ndash;78% of the portfolio across all regions.
+    </p>
+
+    <!-- FIGURE 4: Resource Mix Evolution -->
+    <div class="figure">
+        <svg width="700" height="320" viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
+            <rect width="700" height="320" fill="#F8F9FC" rx="8"/>
+            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">AVERAGE RESOURCE MIX BY MATCHING TARGET (5-Region Mean)</text>
+            <!-- Axes -->
+            <line x1="80" y1="40" x2="80" y2="260" stroke="#D4D8E0" stroke-width="1"/>
+            <line x1="80" y1="260" x2="600" y2="260" stroke="#D4D8E0" stroke-width="1"/>
+            <!-- Y axis -->
+            <text x="75" y="263" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">0%</text>
+            <text x="75" y="208" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">25%</text>
+            <text x="75" y="153" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">50%</text>
+            <text x="75" y="98" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
+            <text x="75" y="43" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">100%</text>
+            <!-- Bars: 75%, 80%, 85%, 90%, 95%, 99%, 100% -->
+            <!-- Average mixes (approximate from data): -->
+            <!-- 75%: CF27 S12 W34 H27 => 80%: CF26 S10 W23 H30 => 85%: CF27 S11 W22 H30 => 90%: CF36 S10 W14 H30 => 95%: CF42 S7 W11 H30 => 99%: CF52 S11 W13 H25 => 100%: CF60 S10 W9 H21 -->
+            <!-- Bar width 55, gap 20 -->
+            <!-- Scale: 1% = 2.2px (220px for 100%) -->
+            <!-- 75% bar at x=110 -->
+            <rect x="110" y="201" width="55" height="59" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
+            <rect x="110" y="175" width="55" height="26" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="110" y="100" width="55" height="75" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="110" y="41" width="55" height="59" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="137" y="235" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">27%</text>
+            <text x="137" y="140" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#1A1A1A">34%</text>
+            <text x="137" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
+            <!-- 85% bar at x=185 -->
+            <rect x="185" y="201" width="55" height="59" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
+            <rect x="185" y="177" width="55" height="24" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="185" y="129" width="55" height="48" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="185" y="41" width="55" height="88" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="212" y="235" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">27%</text>
+            <text x="212" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">85%</text>
+            <!-- 90% bar at x=260 -->
+            <rect x="260" y="181" width="55" height="79" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
+            <rect x="260" y="159" width="55" height="22" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="260" y="128" width="55" height="31" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="260" y="41" width="55" height="87" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="287" y="225" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">36%</text>
+            <text x="287" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">90%</text>
+            <!-- 95% bar at x=335 -->
+            <rect x="335" y="168" width="55" height="92" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
+            <rect x="335" y="153" width="55" height="15" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="335" y="129" width="55" height="24" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="335" y="41" width="55" height="88" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="362" y="220" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">42%</text>
+            <text x="362" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">95%</text>
+            <!-- 99% bar at x=410 -->
+            <rect x="410" y="146" width="55" height="114" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
+            <rect x="410" y="122" width="55" height="24" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="410" y="93" width="55" height="29" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="410" y="41" width="55" height="52" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="437" y="208" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">52%</text>
+            <text x="437" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">99%</text>
+            <!-- 100% bar at x=485 -->
+            <rect x="485" y="128" width="55" height="132" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
+            <rect x="485" y="106" width="55" height="22" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="485" y="86" width="55" height="20" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="485" y="41" width="55" height="45" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="512" y="200" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">60%</text>
+            <text x="512" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">100%</text>
+            <!-- Legend -->
+            <rect x="100" y="296" width="12" height="12" rx="2" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
+            <text x="117" y="306" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Clean Firm</text>
+            <rect x="200" y="296" width="12" height="12" rx="2" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <text x="217" y="306" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Solar</text>
+            <rect x="270" y="296" width="12" height="12" rx="2" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <text x="287" y="306" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Wind</text>
+            <rect x="330" y="296" width="12" height="12" rx="2" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="347" y="306" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Hydro</text>
+        </svg>
+        <div class="figure-caption"><span class="figure-number">Figure 4.</span> Average resource mix evolution across matching targets (5-region mean). Clean firm share doubles from 27% at 75% matching to 60% at 100%, while wind drops from 34% to 9%. This structural shift drives the cost escalation &mdash; clean firm at $90/MWh replaces wind at $40&ndash;73/MWh.</div>
+    </div>
+
+    <h3>5.4 Curtailment Analysis</h3>
+    <p>
+        Curtailment &mdash; clean energy generated but not matched to demand &mdash; increases dramatically
+        at high matching targets. At 100% matching, all five regions require 30&ndash;33% curtailment,
+        meaning roughly one-third of all procured clean energy goes unused.
+    </p>
+
+    <!-- FIGURE 5: Curtailment by Region -->
+    <div class="figure">
+        <svg width="700" height="240" viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+            <rect width="700" height="240" fill="#F8F9FC" rx="8"/>
+            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">CURTAILMENT (% OF PROCURED ENERGY) BY MATCHING TARGET</text>
+            <!-- Axes -->
+            <line x1="80" y1="38" x2="80" y2="195" stroke="#D4D8E0" stroke-width="1"/>
+            <line x1="80" y1="195" x2="660" y2="195" stroke="#D4D8E0" stroke-width="1"/>
+            <!-- Y axis: 0 to 35% -->
+            <text x="75" y="198" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">0%</text>
+            <text x="75" y="153" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">10%</text>
+            <text x="75" y="108" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">20%</text>
+            <text x="75" y="63" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">30%</text>
+            <text x="75" y="42" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">35%</text>
+            <line x1="80" y1="153" x2="660" y2="153" stroke="#E8EBF0" stroke-width="0.5"/>
+            <line x1="80" y1="108" x2="660" y2="108" stroke="#E8EBF0" stroke-width="0.5"/>
+            <line x1="80" y1="63" x2="660" y2="63" stroke="#E8EBF0" stroke-width="0.5"/>
+            <!-- Scale: 1% curt = 4.5px from 195 -->
+            <!-- X positions same as cost chart -->
+            <text x="130" y="210" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
+            <text x="213" y="210" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">80%</text>
+            <text x="296" y="210" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">85%</text>
+            <text x="379" y="210" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">90%</text>
+            <text x="462" y="210" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">95%</text>
+            <text x="578" y="210" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">99%</text>
+            <text x="627" y="210" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">100%</text>
+            <!-- CAISO: 5.3, 5.5, 10.4, 9.5, 13.3, 17.4, 30.1 -->
+            <polyline points="130,171 213,170 296,148 379,152 462,135 578,117 627,60" fill="none" stroke="#F59E0B" stroke-width="2"/>
+            <!-- ERCOT: 5.8, 10.0, 14.7, 20.0, 29.6, 28.3, 32.4 -->
+            <polyline points="130,169 213,150 296,129 379,105 462,62 578,68 627,49" fill="none" stroke="#22C55E" stroke-width="2"/>
+            <!-- PJM: 4.1, 5.8, 9.7, 14.2, 13.4, 18.2, 30.1 -->
+            <polyline points="130,177 213,169 296,151 379,131 462,135 578,113 627,60" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+            <!-- NYISO: 2.0, 2.5, 3.1, 5.1, 9.2, 20.7, 30.1 -->
+            <polyline points="130,186 213,184 296,181 379,172 462,154 578,102 627,60" fill="none" stroke="#8B5CF6" stroke-width="2"/>
+            <!-- NEISO: 5.9, 10.4, 10.5, 14.1, 16.7, 26.1, 32.9 -->
+            <polyline points="130,168 213,148 296,148 379,132 462,120 578,78 627,47" fill="none" stroke="#EF4444" stroke-width="2"/>
+            <!-- Legend -->
+            <text x="662" y="60" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#F59E0B">CA</text>
+            <text x="662" y="49" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#22C55E">TX</text>
+            <text x="642" y="70" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#0EA5E9">PJM</text>
+            <text x="642" y="55" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#8B5CF6">NY</text>
+            <text x="642" y="42" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#EF4444">NE</text>
+            <text x="370" y="230" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151">Hourly Matching Target</text>
+        </svg>
+        <div class="figure-caption"><span class="figure-number">Figure 5.</span> Curtailment percentage by matching target. NYISO shows the lowest curtailment below 95% due to its hydro/clean-firm-heavy mix. All regions converge at 30&ndash;33% curtailment for 100% matching &mdash; roughly one-third of procured energy is wasted.</div>
+    </div>
+
+    <h3>5.5 Procurement Requirements</h3>
+    <p>
+        Achieving 100% hourly matching requires 143&ndash;149% procurement of annual demand, meaning
+        organizations must procure 43&ndash;49% more clean energy than they consume. The procurement
+        multiplier at 90% matching is much more modest: 90&ndash;105% of demand.
+    </p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td><strong>75%</strong></td><td>80%</td><td>80%</td><td>80%</td><td>80%</td><td>80%</td></tr>
+            <tr><td><strong>90%</strong></td><td>100%</td><td>113%</td><td>105%</td><td>95%</td><td>105%</td></tr>
+            <tr><td><strong>95%</strong></td><td>110%</td><td>135%</td><td>110%</td><td>105%</td><td>114%</td></tr>
+            <tr><td><strong>99%</strong></td><td>120%</td><td>138%</td><td>121%</td><td>125%</td><td>134%</td></tr>
+            <tr><td><strong>100%</strong></td><td>143%</td><td>148%</td><td>143%</td><td>143%</td><td>149%</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">Procurement levels as percentage of annual demand. Values above 100% indicate overproduction necessary to fill temporal gaps.</p>
+
+    <!-- ========== 6. DISCUSSION ========== -->
+    <h2 id="discussion">6. Discussion</h2>
+
+    <h3>6.1 The Clean Firm Imperative</h3>
+    <p>
+        Our results strongly support the finding of Jenkins et al. (2018) that firm clean generation is
+        essential for deep decarbonization <a href="#ref-10" class="cite">[10]</a>. The
+        resource mix shift toward clean firm above 90% matching is not a modeling artifact but a physical
+        consequence of intermittent generation's inability to reliably cover nighttime, low-wind, and
+        seasonal deficit hours. This has profound implications for energy policy: preserving existing
+        nuclear capacity and investing in next-generation firm clean resources (advanced nuclear, enhanced
+        geothermal, long-duration storage) is economically critical.
+    </p>
+
+    <h3>6.2 Regional Differentiation</h3>
+    <p>
+        Cost and mix outcomes vary substantially by region, driven by three factors: (1) existing clean
+        grid mix, (2) renewable resource quality, and (3) wholesale market prices. ERCOT benefits from
+        excellent wind resources ($40/MWh new-build) but lacks hydro, resulting in a wind-dominant strategy
+        that becomes unsustainable above 95%. NYISO's combination of significant hydro (25% cap) and nuclear
+        (18.4% grid share) enables the lowest curtailment across matching targets.
+    </p>
+
+    <h3>6.3 The "Last Mile" Premium</h3>
+    <p>
+        Moving from 99% to 100% matching costs an additional $18&ndash;32/MWh across regions, roughly
+        equal to the entire cost increase from 75% to 90%. This "last mile" premium reflects the
+        fundamental challenge: the final 1% of hours with unmet demand are the most expensive to cover
+        because they represent rare combinations of low wind, no solar, and peak demand. Organizations
+        targeting 100% hourly matching should carefully evaluate whether the last-mile premium justifies
+        the incremental environmental benefit, or whether 95&ndash;99% matching represents a more
+        cost-effective target <a href="#ref-2" class="cite">[2]</a>.
+    </p>
+
+    <h3>6.4 Implications for Procurement Strategy</h3>
+    <p>
+        For corporate buyers pursuing 24/7 CFE commitments
+        <a href="#ref-3" class="cite">[3]</a><a href="#ref-4" class="cite">[4]</a>,
+        our results suggest a staged approach: (1) achieve 80&ndash;85% matching through cost-competitive
+        solar and wind PPAs, (2) add clean firm contracts (nuclear PPAs, geothermal) to reach 90&ndash;95%,
+        and (3) deploy storage and additional clean firm for the final push to 99%+. Attempting to reach
+        high matching targets using only intermittent resources leads to excessive curtailment and
+        cost overruns.
+    </p>
+
+    <!-- ========== 7. LIMITATIONS ========== -->
+    <h2 id="limitations">7. Limitations &amp; Future Work</h2>
+    <ul style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2; color: var(--text-secondary);">
+        <li><strong>No transmission modeling:</strong> Results assume clean energy can be delivered within the ISO region without congestion costs. Real-world transmission constraints would increase effective costs <a href="#ref-18" class="cite">[18]</a>.</li>
+        <li><strong>Perfect nuclear availability:</strong> Planned outages and forced outages are not modeled, potentially overstating clean firm's hourly contribution.</li>
+        <li><strong>Single weather year:</strong> Results use 2025 EIA-930 data only. Multi-year analysis would capture interannual variability in solar irradiance, wind patterns, and hydro availability.</li>
+        <li><strong>4-hour storage only:</strong> Longer-duration storage (8h+, pumped hydro, compressed air, hydrogen) could improve matching at lower cost for high targets <a href="#ref-14" class="cite">[14]</a>.</li>
+        <li><strong>Static pricing:</strong> LCOE and wholesale prices are fixed. Dynamic pricing, merit-order effects, and solar price cannibalization are not captured.</li>
+        <li><strong>No demand-side flexibility:</strong> Load shifting, demand response, and flexible consumption patterns could reduce matching costs significantly.</li>
+        <li><strong>Five regions only:</strong> MISO, SPP, and non-ISO regions are not covered. Future work should extend to all U.S. balancing authorities.</li>
+        <li><strong>Grid-level proxies:</strong> EIA-930 regional generation profiles may not represent specific project-level assets. Actual solar/wind farm output can differ from regional averages.</li>
+    </ul>
+
+    <!-- ========== 8. CONCLUSION ========== -->
+    <h2 id="conclusion">8. Conclusion</h2>
+    <p>
+        This analysis provides the first comprehensive, multi-regional cost optimization of hourly clean
+        energy matching across five major U.S. ISO regions. Our key findings are:
+    </p>
+    <ol style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2.2; color: var(--text-secondary);">
+        <li><strong>90% hourly matching is achievable at moderate cost</strong> ($47&ndash;70/MWh effective), representing a $17&ndash;28/MWh premium above wholesale grid electricity.</li>
+        <li><strong>The cost curve inflects sharply above 95%,</strong> with the 99&ndash;100% increment costing $18&ndash;32/MWh alone &mdash; equivalent to the entire 75&ndash;90% range.</li>
+        <li><strong>Clean firm power (nuclear, geothermal) is essential</strong> for cost-effective deep matching, growing from ~27% of the portfolio at 75% matching to ~60% at 100%.</li>
+        <li><strong>Curtailment reaches 30&ndash;33% at 100% matching</strong> across all regions, roughly doubling the effective cost per useful MWh.</li>
+        <li><strong>Regional resource endowments create 2&times; cost differences</strong> (ERCOT at $95/MWh vs. NEISO at $120/MWh for 100% matching), underscoring the importance of location-specific procurement strategies.</li>
+    </ol>
+    <p>
+        These results argue for a strategic, staged approach to 24/7 clean energy procurement
+        and highlight the critical importance of preserving and expanding firm clean generation
+        capacity. The transition from annual to hourly matching is technically and economically
+        feasible &mdash; but only if procurement strategies evolve beyond intermittent renewables
+        to include the dispatchable clean resources that the hardest-to-match hours demand.
+    </p>
+
+    <!-- ========== REFERENCES ========== -->
+    <h2 id="references">9. References</h2>
+    <ol class="ref-list">
+        <li id="ref-1">
+            Xu, Q., et al. (2024). "Temporal Granularity in Clean Energy Accounting: Implications of Annual vs. Hourly Matching for Grid Decarbonization." <em>Energy Policy</em>, 184, 113892.
+        </li>
+        <li id="ref-2">
+            Miller, G., Lott, M.C., et al. (2022). "24/7 Carbon-Free Energy: Methodologies and Case Studies." International Energy Agency (IEA).
+            <a href="https://www.iea.org/reports/247-carbon-free-energy" target="_blank">https://www.iea.org/reports/247-carbon-free-energy</a>
+        </li>
+        <li id="ref-3">
+            Google. (2023). "24/7 Carbon-Free Energy: Methodology and Metrics." Google Sustainability Report.
+            <a href="https://sustainability.google/progress/energy/" target="_blank">https://sustainability.google/progress/energy/</a>
+        </li>
+        <li id="ref-4">
+            United Nations Energy. (2021). "24/7 Carbon-free Energy Compact."
+            <a href="https://www.un.org/en/energy-compacts/page/compact-247" target="_blank">https://www.un.org/en/energy-compacts/page/compact-247</a>
+        </li>
+        <li id="ref-5">
+            NREL. (2024). "Annual Technology Baseline (ATB) 2024: Electricity." National Renewable Energy Laboratory.
+            <a href="https://atb.nrel.gov/electricity/2024/technologies" target="_blank">https://atb.nrel.gov/electricity/2024/technologies</a>
+        </li>
+        <li id="ref-6">
+            Lazard. (2024). "Lazard's Levelized Cost of Energy Analysis, Version 17.0." Lazard.
+            <a href="https://www.lazard.com/research-insights/levelized-cost-of-energyplus/" target="_blank">https://www.lazard.com/research-insights/levelized-cost-of-energyplus/</a>
+        </li>
+        <li id="ref-7">
+            Bolinger, M., Seel, J., et al. (2024). "Utility-Scale Solar, 2024 Edition." Lawrence Berkeley National Laboratory.
+            <a href="https://emp.lbl.gov/utility-scale-solar" target="_blank">https://emp.lbl.gov/utility-scale-solar</a>
+        </li>
+        <li id="ref-8">
+            Wiser, R., Bolinger, M., et al. (2024). "Land-Based Wind Market Report: 2024 Edition." Lawrence Berkeley National Laboratory.
+            <a href="https://emp.lbl.gov/wind-technologies-market-report" target="_blank">https://emp.lbl.gov/wind-technologies-market-report</a>
+        </li>
+        <li id="ref-9">
+            Larson, E., et al. (2021). "Net-Zero America: Potential Pathways, Infrastructure, and Impacts." Princeton University.
+            <a href="https://netzeroamerica.princeton.edu/" target="_blank">https://netzeroamerica.princeton.edu/</a>
+        </li>
+        <li id="ref-10">
+            Jenkins, J.D., Luke, M., Thernstrom, S. (2018). "Getting to Zero Carbon Emissions in the Electric Power Sector." <em>Joule</em>, 2(12), 2498-2510.
+        </li>
+        <li id="ref-11">
+            U.S. Energy Information Administration. (2024). "Nuclear power plant operations and technology." EIA.
+            <a href="https://www.eia.gov/nuclear/" target="_blank">https://www.eia.gov/nuclear/</a>
+        </li>
+        <li id="ref-12">
+            Feldman, D., et al. (2024). "U.S. Solar Photovoltaic System and Energy Storage Cost Benchmarks, With Minimum Sustainable Price Analysis: Q1 2024." NREL.
+            <a href="https://www.nrel.gov/docs/fy24osti/88554.pdf" target="_blank">https://www.nrel.gov/docs/fy24osti/88554.pdf</a>
+        </li>
+        <li id="ref-13">
+            U.S. Energy Information Administration. (2024). "Battery Storage in the United States: An Update on Market Trends." EIA.
+            <a href="https://www.eia.gov/analysis/studies/electricity/batterystorage/" target="_blank">https://www.eia.gov/analysis/studies/electricity/batterystorage/</a>
+        </li>
+        <li id="ref-14">
+            Dowling, J.A., et al. (2020). "Role of Long-Duration Energy Storage in Variable Renewable Electricity Systems." <em>Joule</em>, 4(9), 1907-1928.
+        </li>
+        <li id="ref-15">
+            California ISO (CAISO). (2024). "Managing Oversupply." CAISO Market Performance Reports.
+            <a href="https://www.caiso.com/informed/Pages/ManagingOversupply.aspx" target="_blank">https://www.caiso.com/informed/Pages/ManagingOversupply.aspx</a>
+        </li>
+        <li id="ref-16">
+            U.S. Energy Information Administration. (2025). "Hourly Electric Grid Monitor (EIA-930)." EIA.
+            <a href="https://www.eia.gov/electricity/gridmonitor/" target="_blank">https://www.eia.gov/electricity/gridmonitor/</a>
+        </li>
+        <li id="ref-17">
+            FERC / ISO Market Monitoring Reports (2023-2024). PJM Independent Market Monitor State of the Market Report; NYISO, ISO-NE, CAISO, ERCOT market monitoring reports.
+        </li>
+        <li id="ref-18">
+            Denholm, P., et al. (2022). "Examining Supply-Side Options to Achieve 100% Clean Electricity by 2035." NREL.
+            <a href="https://www.nrel.gov/docs/fy22osti/81644.pdf" target="_blank">https://www.nrel.gov/docs/fy22osti/81644.pdf</a>
+        </li>
+    </ol>
+
+    <p class="paper-footer">
+        Hourly Clean Energy Cost Optimizer &mdash; Research Paper v2.0 &bull; February 2026
+    </p>
+</div>
+
+<div class="accent-bar"></div>
+
+</body>
+</html>
