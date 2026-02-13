@@ -1551,18 +1551,38 @@ body {
         gap: 8px;
     }
     .curtail-bar-group {
-        min-width: 60px;
+        min-width: 50px;
+    }
+    .curtail-bar-stack {
+        height: 90px;
+    }
+    .curtail-bar-label {
+        font-size: 0.72rem;
+    }
+    .curtail-bar-value {
+        font-size: 0.78rem;
     }
     .reliability-gauge-row {
         gap: 10px;
     }
     .reliability-gauge {
-        min-width: 100px;
+        min-width: 80px;
         padding: 14px 8px;
     }
     .gauge-ring {
         width: 70px;
         height: 70px;
+    }
+    .gauge-ring svg {
+        width: 70px;
+        height: 70px;
+    }
+    .gauge-ring-label {
+        font-size: 0.95rem;
+    }
+    .trilemma-visual {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .trilemma-diagram {
         width: 260px;
@@ -1572,9 +1592,93 @@ body {
         font-size: 0.82rem;
         padding: 10px 14px;
     }
+    .transition-fuel-row {
+        flex-direction: column;
+        gap: 14px;
+    }
     .transition-fuel-card {
-        min-width: 160px;
+        min-width: unset;
         padding: 18px 14px;
+    }
+    .transition-fuel-stat {
+        font-size: 1.3rem;
+    }
+    .section-illustration {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 18px -10px;
+        padding: 0 10px;
+    }
+    .section-illustration svg {
+        min-width: 320px;
+    }
+}
+
+@media (max-width: 480px) {
+    .curtailment-visual {
+        gap: 5px;
+    }
+    .curtail-bar-group {
+        min-width: 42px;
+    }
+    .curtail-bar-stack {
+        height: 70px;
+    }
+    .curtail-bar-label {
+        font-size: 0.65rem;
+    }
+    .curtail-bar-value {
+        font-size: 0.7rem;
+    }
+    .curtail-bar-sub {
+        font-size: 0.6rem;
+    }
+    .reliability-gauge-row {
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    .reliability-gauge {
+        min-width: 70px;
+        max-width: 80px;
+        padding: 10px 6px;
+    }
+    .gauge-ring {
+        width: 56px;
+        height: 56px;
+    }
+    .gauge-ring svg {
+        width: 56px;
+        height: 56px;
+    }
+    .gauge-ring-label {
+        font-size: 0.82rem;
+    }
+    .gauge-name {
+        font-size: 0.68rem;
+    }
+    .trilemma-diagram {
+        width: 220px;
+        height: 210px;
+    }
+    .trilemma-diagram svg {
+        width: 220px;
+        height: 200px;
+    }
+    .transition-fuel-card {
+        padding: 14px 12px;
+    }
+    .transition-fuel-title {
+        font-size: 0.95rem;
+    }
+    .transition-fuel-desc {
+        font-size: 0.82rem;
+    }
+    .transition-fuel-stat {
+        font-size: 1.15rem;
+    }
+    .section-illustration svg {
+        min-width: 280px;
     }
 }
 
