@@ -383,7 +383,74 @@ Each region gets a dedicated deep-dive page linked from the main dashboard top n
 
 ---
 
-## 15. Methodology HTML Page (Trimmed)
+## 15. Abatement Cost Comparison Page (NEW)
+
+### Concept
+A "Liebreich ladder for grid decarbonization" — analyzing when/where/under what conditions pushing grid decarbonization % is no longer cost-effective compared to alternative mitigation and carbon removal options. Linked from dashboard navigation.
+
+**File**: `dashboard/abatement_comparison.html`
+
+**Core Question**: "Should we focus the next marginal dollar on the last 5% of PJM grid decarbonization, sustainable aviation fuel, or direct air capture?"
+
+### Analysis Framework
+
+**Y-axis**: Cost of carbon abatement ($/ton CO2)
+**X-axis**: Cumulative abatement potential or grid % target
+
+**Grid Decarbonization Curves** (from our model):
+- Regional marginal abatement cost curves (75-100%) for each ISO under L/M/H sensitivities
+- Show hockey-stick inflection where costs spike (typically 95-100%)
+- Each region's curve under different sensitivity scenarios
+
+**Comparison Benchmarks** (horizontal lines/bands on same chart):
+| Mitigation Option | Low $/ton | Medium $/ton | High $/ton | Source |
+|---|---|---|---|---|
+| Energy efficiency (buildings) | $0 | $20 | $50 | IEA, McKinsey |
+| Industrial electrification | $30 | $75 | $150 | IEA |
+| Sustainable Aviation Fuel (SAF) | $150 | $250 | $400 | ICCT, BloombergNEF |
+| Green hydrogen (industrial) | $100 | $200 | $350 | Liebreich, BNEF |
+| BECCS | $100 | $175 | $300 | IPCC AR6 |
+| Direct Air Capture (DAC) | $250 | $400 | $600+ | Carbon Engineering, Climeworks |
+| Enhanced weathering | $50 | $125 | $200 | IPCC |
+| Carbon credits (voluntary market) | $10 | $50 | $150 | Ecosystem Marketplace |
+| EU ETS carbon price (2024-2025) | $60 | $80 | $100 | EMBER |
+
+### Key Analytical Sections
+
+1. **The Grid Decarbonization Curve** — Our model's regional marginal abatement curves plotted together. Where does each region's curve cross the DAC line? The SAF line?
+
+2. **The Inflection Point Analysis** — For each region × sensitivity scenario, identify the % threshold where grid decarbonization costs exceed:
+   - The social cost of carbon ($51/ton EPA, $185/ton Rennert et al.)
+   - DAC costs ($250-600/ton)
+   - SAF costs ($150-400/ton)
+   - Voluntary carbon market prices ($10-150/ton)
+
+3. **The Liebreich-Style Ladder** — Rank all mitigation options by cost-effectiveness at each grid % level. At 85% grid target, what's cheaper? At 95%? At 99%?
+
+4. **Regional Divergence** — Some regions (ERCOT with cheap wind) stay cost-competitive deep into high %'s. Others (NYISO) become expensive earlier. Map the crossover points.
+
+5. **The Net-Zero Pathway** — Given that residual emissions exist at any grid %, what's the optimal split between:
+   - Pushing grid % higher (expensive past inflection)
+   - Investing in DAC for residual emissions
+   - Investing in other sectors (SAF, industrial) for cross-sector abatement
+
+6. **Sensitivity Scenarios** — How do different cost assumptions shift the inflection points? Under low DAC cost assumptions, the crossover happens earlier. Under high renewable cost assumptions, same.
+
+### Visual Design
+- Large interactive chart: Regional MAC curves overlaid with benchmark bands
+- Horizontal benchmark lines clearly labeled with color-coded bands
+- Inflection point callouts where curves cross benchmarks
+- Toggle: Region selector, sensitivity scenario
+- Scrollytelling narrative explaining the analysis
+
+### Audience
+- Same business professional audience
+- Build the case: "Here's when clean energy procurement stops being the cheapest path and alternatives become more efficient"
+- Frame as strategic portfolio optimization, not just grid optimization
+
+---
+
+## 15b. Methodology HTML Page (Trimmed)
 
 - **Keep**: Technical methodology, model specifications, algorithm descriptions
 - **Remove**: Deep narrative content (moved to PDF paper and regional pages)
