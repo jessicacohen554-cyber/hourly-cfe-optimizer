@@ -1481,8 +1481,8 @@ body {
 }
 .trilemma-diagram {
     position: relative;
-    width: 320px;
-    height: 300px;
+    width: 380px;
+    max-width: 100%;
 }
 .trilemma-node {
     position: absolute;
@@ -1610,8 +1610,12 @@ body {
         -webkit-overflow-scrolling: touch;
     }
     .trilemma-diagram {
-        width: 260px;
-        height: 250px;
+        width: 300px;
+        max-width: 100%;
+    }
+    .trilemma-diagram svg {
+        width: 100%;
+        height: auto;
     }
     .trilemma-node {
         font-size: 0.82rem;
@@ -1635,7 +1639,7 @@ body {
         padding: 0 10px;
     }
     .section-illustration svg {
-        min-width: 320px;
+        min-width: 340px;
     }
 }
 
@@ -1683,12 +1687,12 @@ body {
         font-size: 0.68rem;
     }
     .trilemma-diagram {
-        width: 220px;
-        height: 210px;
+        width: 250px;
+        max-width: 100%;
     }
     .trilemma-diagram svg {
-        width: 220px;
-        height: 200px;
+        width: 100%;
+        height: auto;
     }
     .transition-fuel-card {
         padding: 14px 12px;
@@ -1703,7 +1707,7 @@ body {
         font-size: 1.15rem;
     }
     .section-illustration svg {
-        min-width: 280px;
+        min-width: 340px;
     }
 }
 
@@ -1860,9 +1864,27 @@ body {
         border-radius: 14px;
     }
     .conclusion-panel h2 {
-        font-size: 1.35rem;
+        font-size: 1.25rem;
     }
     .conclusion-panel .conclusion-subtitle {
+        font-size: 0.9rem;
+    }
+    .conclusion-panel p {
+        font-size: 0.88rem;
+    }
+    .conclusion-warning {
+        padding: 16px 14px;
+    }
+    .conclusion-warning p {
+        font-size: 0.85rem;
+    }
+    .conclusion-pillar h4 {
+        font-size: 0.95rem;
+    }
+    .conclusion-pillar p {
+        font-size: 0.82rem;
+    }
+    .conclusion-bottom-line {
         font-size: 0.95rem;
     }
 }
@@ -2791,8 +2813,8 @@ body {
 
             <!-- Trilemma diagram -->
             <div class="trilemma-visual">
-                <div class="trilemma-diagram" style="width:380px;height:340px;">
-                    <svg width="380" height="330" viewBox="0 0 380 330" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div class="trilemma-diagram">
+                    <svg viewBox="0 0 380 330" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <!-- Triangle connecting three nodes -->
                         <polygon points="190,40 40,280 340,280" fill="rgba(26,39,68,0.03)" stroke="rgba(26,39,68,0.15)" stroke-width="2" stroke-dasharray="6 4"/>
                         <!-- Center label -->
