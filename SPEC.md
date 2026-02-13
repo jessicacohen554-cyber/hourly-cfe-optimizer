@@ -11,8 +11,8 @@
 - **No demand growth projections** — point-in-time scenario analysis only
 - **Grid mix baseline** = actual 2025 regional shares, priced at wholesale, selectable as reference scenario (fixed, not adjustable by user)
 - **Regions**: CAISO, ERCOT, PJM, NYISO, NEISO
-- **Repo**: `hourly-cfe-optimizer-advanced` under `jessicacohen554-cyber` (current repo preserved untouched)
-- **Dev branch**: `claude/enhance-optimizer-model-IqSpe`
+- **Repo**: `jessicacohen554-cyber/hourly-cfe-optimizer`
+- **Dev branch**: `claude/enhance-optimizer-model-IqSpe` (all advanced model work on this branch)
 
 ---
 

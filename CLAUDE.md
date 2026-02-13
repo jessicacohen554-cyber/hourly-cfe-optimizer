@@ -5,7 +5,7 @@
 1. **Read SPEC.md first** — it contains every design decision, cost table, and implementation detail
 2. **Check the todo list** or review git log to see what's been completed
 3. **Branch**: `claude/enhance-optimizer-model-IqSpe`
-4. **Repo**: `jessicacohen554-cyber/hourly-cfe-optimizer` (push to designated branch only)
+4. **Repo**: `jessicacohen554-cyber/hourly-cfe-optimizer` (all advanced model work on designated branch)
 
 ## Architecture Overview
 
