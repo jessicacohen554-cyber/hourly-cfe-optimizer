@@ -513,6 +513,7 @@
             <li><a href="#cost-model">Cost Model</a></li>
             <li><a href="#compressed-day">Compressed Day Visualization</a></li>
             <li><a href="#assumptions">Assumptions &amp; Limitations</a></li>
+            <li><a href="#toggle-pairing">Sensitivity Toggle Pairing Methodology</a></li>
             <li><a href="#sources-list">Data Sources List</a></li>
         </ol>
     </div>
@@ -1132,8 +1133,145 @@
             regions.</li>
     </ul>
 
-    <!-- ======== SECTION 10: SOURCES LIST ======== -->
-    <h2 id="sources-list">10. Data Sources List</h2>
+    <!-- ======== SECTION 10: TOGGLE PAIRING ======== -->
+    <h2 id="toggle-pairing">10. Sensitivity Toggle Pairing Methodology</h2>
+
+    <h3>10.1 Overview</h3>
+    <p>
+        The model uses <strong>5 paired sensitivity toggle groups</strong> instead of 10 individual toggles.
+        Related cost variables are grouped so they move in lockstep (all Low, all Medium, or all High),
+        reducing dashboard complexity while preserving meaningful sensitivity analysis. Each toggle group
+        controls two or more underlying cost parameters that share structural cost drivers, ensuring that
+        the paired movement reflects real-world correlation rather than an arbitrary simplification.
+    </p>
+
+    <h3>10.2 The 5 Paired Groups</h3>
+
+    <h3>10.2.1 Renewable Generation Cost (Solar LCOE + Wind LCOE)</h3>
+    <p>
+        Solar and wind costs are driven by similar factors&mdash;manufacturing scale economies, global
+        supply chain dynamics (polysilicon, rare earths, steel), installation labor markets, and federal
+        incentive structures (ITC/PTC). Historical data from NREL ATB and Lazard shows these costs have
+        moved in parallel over the past decade, typically within &plusmn;15% of each other&rsquo;s
+        year-over-year change rates. Pairing them reflects the structural correlation in their cost drivers.
+    </p>
+
+    <h3>10.2.2 Firm Generation Cost (Clean Firm LCOE + CCS-CCGT LCOE)</h3>
+    <p>
+        Nuclear/geothermal and CCS-CCGT share capital-intensive, long-lead-time cost structures. Both face
+        similar financing cost sensitivity (high WACC impact on levelized cost), similar construction labor
+        constraints, and similar regulatory/permitting timeline risks. The key cost uncertainty for both is
+        construction duration and financing terms rather than fuel or operating costs.
+    </p>
+
+    <h3>10.2.3 Storage Cost (Battery LCOS + LDES LCOS)</h3>
+    <p>
+        Li-ion battery and iron-air LDES costs share upstream manufacturing/materials cost drivers. Both
+        depend on mining output (lithium, iron, nickel), battery manufacturing scale, and balance-of-system
+        installation costs. While they use different chemistries, the dominant cost factors&mdash;manufacturing
+        learning curves, raw material prices, and project development costs&mdash;are correlated.
+    </p>
+
+    <h3>10.2.4 Fossil Fuel Price (Natural Gas + Coal + Oil)</h3>
+    <p>
+        Energy commodity prices are structurally correlated through substitution effects (fuel switching in
+        power generation), macroeconomic conditions (GDP growth, industrial demand), and geopolitical supply
+        factors. The EIA Annual Energy Outlook consistently models these as co-moving in Low/Reference/High
+        scenarios. In the power sector specifically, gas-coal fuel switching creates a direct price linkage.
+    </p>
+
+    <h3>10.2.5 Transmission Cost (All Resource Adders)</h3>
+    <p>
+        Grid interconnection and transmission infrastructure costs are driven by region-specific
+        factors&mdash;steel/conductor commodity prices, right-of-way acquisition costs, specialized labor
+        availability, and permitting/regulatory timelines. These factors affect all new-build resources
+        within a region roughly equally, making a single regional transmission cost toggle appropriate.
+    </p>
+
+    <h3>10.3 Paired Toggle Groups Summary</h3>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Toggle Group</th>
+                <th>Paired Variables</th>
+                <th>Levels</th>
+                <th>Key Correlation Driver</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Renewable Generation Cost</td>
+                <td>Solar LCOE, Wind LCOE</td>
+                <td>Low / Medium / High</td>
+                <td>Shared supply chain, manufacturing scale, federal incentives</td>
+            </tr>
+            <tr>
+                <td>Firm Generation Cost</td>
+                <td>Clean Firm LCOE, CCS-CCGT LCOE</td>
+                <td>Low / Medium / High</td>
+                <td>Capital-intensive construction, financing terms, permitting</td>
+            </tr>
+            <tr>
+                <td>Storage Cost</td>
+                <td>Battery LCOS, LDES LCOS</td>
+                <td>Low / Medium / High</td>
+                <td>Mining output, manufacturing learning curves, material prices</td>
+            </tr>
+            <tr>
+                <td>Fossil Fuel Price</td>
+                <td>Natural Gas, Coal, Oil</td>
+                <td>Low / Medium / High</td>
+                <td>Fuel switching, macroeconomic conditions, geopolitical supply</td>
+            </tr>
+            <tr>
+                <td>Transmission Cost</td>
+                <td>All resource transmission adders</td>
+                <td>None / Low / Medium / High</td>
+                <td>Regional steel, labor, permitting, right-of-way costs</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h3>10.4 Scenario Count Reduction</h3>
+    <p>
+        With 5 paired groups (3 levels each, except Transmission with 4 levels including None), the total
+        cost scenario space is:
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Scenario Space Comparison</span>
+        Paired toggles:     3 &times; 3 &times; 3 &times; 3 &times; 4 = 324 scenarios per region per threshold
+        Independent toggles: 3<sup>10</sup> = 59,049 scenarios per region per threshold
+
+        Reduction factor: 182&times; fewer scenarios
+    </div>
+
+    <p>
+        This reduction from 59,049 to 324 scenarios makes real-time dashboard interaction feasible while
+        preserving the ability to explore meaningful cost sensitivities across all major cost categories.
+    </p>
+
+    <h3>10.5 Optimization Approach</h3>
+    <p>
+        Resource mix is optimized once at <strong>Medium costs</strong>. The dashboard applies Low/Medium/High
+        cost overlays on cached resource mixes without re-running the optimizer, since cost toggle changes
+        affect $/MWh calculations but not the optimal hourly resource dispatch pattern. The dispatch pattern
+        depends on resource generation profiles (solar shape, wind shape, etc.) and the procurement level,
+        which are independent of cost assumptions. Only the financial result&mdash;the total and effective
+        cost per MWh&mdash;changes when toggles are adjusted.
+    </p>
+
+    <div class="note-box">
+        <strong>Why this works:</strong> The hourly match score is a physical quantity determined by how
+        much clean energy is available in each hour relative to demand. Changing the <em>price</em> of
+        solar does not change how much solar is generated at 2 PM. Therefore, the same optimized resource
+        mix and procurement level remain valid across all cost scenarios&mdash;only the cost metric shifts.
+    </div>
+
+    <!-- ======== SECTION 11: SOURCES LIST ======== -->
+    <h2 id="sources-list">11. Data Sources List</h2>
     <ul class="source-list">
         <li>
             <strong>EIA-930 Hourly Electric Grid Monitor (2025)</strong> &mdash; Hourly demand and generation by energy source<br>
