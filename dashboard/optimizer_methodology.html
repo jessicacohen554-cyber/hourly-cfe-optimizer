@@ -6,25 +6,25 @@
     <title>Methodology - Hourly Clean Energy Cost Optimizer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --navy: #1A2744;
             --navy-light: #2D3A52;
-            --accent: #C75B4A;
-            --accent-dark: #9E4239;
-            --solar: #D4A84B;
-            --wind: #7A8B5C;
-            --hydro: #5B8A8A;
-            --storage: #C75B4A;
-            --bg: #F5F0E8;
-            --bg-card: #FAF6EF;
-            --border: #DDD0C0;
-            --border-light: #E8DFD2;
-            --text-primary: #111111;
-            --text-secondary: #1A1A1A;
-            --text-muted: #9A9083;
-            --font-body: 'Lora', 'Georgia', 'Times New Roman', serif;
+            --accent: #EF4444;
+            --accent-dark: #DC2626;
+            --solar: #F59E0B;
+            --wind: #22C55E;
+            --hydro: #0EA5E9;
+            --storage: #EF4444;
+            --bg: #F3F4F8;
+            --bg-card: #FFFFFF;
+            --border: #D4D8E0;
+            --border-light: #E5E7EB;
+            --text-primary: #000000;
+            --text-secondary: #000000;
+            --text-muted: #6B7280;
+            --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
             --font-heading: 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
             --font-mono: 'Consolas', 'Courier New', monospace;
         }
@@ -36,8 +36,8 @@
             color: var(--text-primary);
             background: var(--bg);
             background-image:
-                radial-gradient(ellipse at 20% 0%, rgba(212,168,75,0.04) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 100%, rgba(199,91,74,0.03) 0%, transparent 50%);
+                radial-gradient(ellipse at 20% 0%, rgba(245,158,11,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(239,68,68,0.03) 0%, transparent 50%);
             background-attachment: fixed;
             line-height: 1.7;
             -webkit-font-smoothing: antialiased;
@@ -45,7 +45,7 @@
         }
 
         .header {
-            background: var(--navy);
+            background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3050 100%);
             color: #ffffff;
             padding: 52px 24px 48px;
             text-align: center;
@@ -56,26 +56,21 @@
             content: '';
             position: absolute;
             inset: 0;
-            background:
-                linear-gradient(135deg,
-                    #1A2744 0%, #1A2744 28%,
-                    #6B8DB5 28%, #6B8DB5 42%,
-                    #C75B4A 42%, #C75B4A 56%,
-                    #D4A84B 56%, #D4A84B 70%,
-                    #1A2744 70%, #1A2744 100%
-                );
-            opacity: 0.88;
+            z-index: 1;
             pointer-events: none;
+            background:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(14,165,233,0.25)'/%3E%3Cstop offset='1' stop-color='rgba(14,165,233,0.02)'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.2)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.02)'/%3E%3C/linearGradient%3E%3ClinearGradient id='g3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.18)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.02)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,200 L0,160 C100,158 200,150 300,135 C400,120 500,100 600,95 C700,90 800,98 900,110 C1000,122 1100,140 1200,145 L1200,200 Z' fill='url(%23g1)'/%3E%3Cpath d='M0,200 L0,170 C100,168 200,162 300,152 C400,142 500,128 600,125 C700,122 800,130 900,140 C1000,150 1100,162 1200,165 L1200,200 Z' fill='url(%23g3)'/%3E%3Cpath d='M0,200 L0,180 C100,178 200,174 300,168 C400,162 500,152 600,150 C700,148 800,155 900,163 C1000,171 1100,180 1200,182 L1200,200 Z' fill='url(%23g2)'/%3E%3Cpath d='M0,160 C100,158 200,150 300,135 C400,120 500,100 600,95 C700,90 800,98 900,110 C1000,122 1100,140 1200,145' fill='none' stroke='rgba(14,165,233,0.4)' stroke-width='1.5'/%3E%3Cpath d='M0,170 C100,168 200,162 300,152 C400,142 500,128 600,125 C700,122 800,130 900,140 C1000,150 1100,162 1200,165' fill='none' stroke='rgba(34,197,94,0.35)' stroke-width='1.5'/%3E%3Cpath d='M0,180 C100,178 200,174 300,168 C400,162 500,152 600,150 C700,148 800,155 900,163 C1000,171 1100,180 1200,182' fill='none' stroke='rgba(245,158,11,0.35)' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat bottom center;
+            background-size: 100% 100%;
         }
         .header::after {
             content: '';
             position: absolute;
             inset: 0;
-            background:
-                linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.04) 42%, transparent 42%),
-                linear-gradient(45deg, transparent 55%, rgba(255,255,255,0.03) 55%, rgba(255,255,255,0.03) 57%, transparent 57%),
-                linear-gradient(45deg, transparent 70%, rgba(26,39,68,0.4) 70%);
+            z-index: 1;
             pointer-events: none;
+            background:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,40 L180,40 L200,15 L220,65 L240,25 L260,55 L280,40 L1200,40' fill='none' stroke='rgba(14,165,233,0.18)' stroke-width='1.5'/%3E%3Cpath d='M0,50 L480,50 L500,25 L520,72 L540,30 L560,60 L580,50 L1200,50' fill='none' stroke='rgba(245,158,11,0.14)' stroke-width='1.5'/%3E%3Cpath d='M0,35 L780,35 L800,12 L820,58 L840,20 L860,50 L880,35 L1200,35' fill='none' stroke='rgba(239,68,68,0.12)' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat top center;
+            background-size: 100% 80px;
         }
         .header-accent {
             position: absolute;
@@ -83,7 +78,7 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #1A2744 0%, #1A2744 25%, #6B8DB5 25%, #6B8DB5 50%, #C75B4A 50%, #C75B4A 75%, #D4A84B 75%, #D4A84B 100%);
+            background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
             z-index: 2;
         }
         .header-logo {
@@ -110,8 +105,7 @@
             font-family: var(--font-body);
             font-size: 1.05rem;
             font-weight: 400;
-            font-style: italic;
-            opacity: 0.92;
+            opacity: 0.88;
             max-width: 640px;
             margin: 0 auto;
             position: relative;
@@ -138,11 +132,11 @@
             transition: all 0.2s ease;
             padding: 8px 14px;
             border-radius: 8px;
-            border-bottom: 1px solid rgba(199,91,74,0.3);
+            border-bottom: 1px solid rgba(239,68,68,0.3);
         }
         .back-link:hover {
             color: var(--accent-dark);
-            background: rgba(199,91,74,0.05);
+            background: rgba(239,68,68,0.05);
             border-bottom-color: var(--accent-dark);
         }
 
@@ -175,7 +169,7 @@
             color: var(--navy);
             text-decoration: none;
             font-size: 0.92rem;
-            border-bottom: 1px solid rgba(199,91,74,0.2);
+            border-bottom: 1px solid rgba(239,68,68,0.2);
             transition: all 0.15s ease;
         }
         .toc a:hover {
@@ -236,8 +230,8 @@
         }
 
         .note-box {
-            background: linear-gradient(135deg, rgba(212,168,75,0.06) 0%, rgba(199,91,74,0.04) 100%);
-            border: 1px solid rgba(212,168,75,0.2);
+            background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(239,68,68,0.04) 100%);
+            border: 1px solid rgba(245,158,11,0.2);
             border-left: 4px solid var(--accent);
             border-radius: 0 10px 10px 0;
             padding: 18px 24px;
@@ -284,7 +278,7 @@
             font-size: 0.88rem;
             color: var(--text-primary);
         }
-        tbody tr:nth-child(even) { background: rgba(250,246,239,0.5); }
+        tbody tr:nth-child(even) { background: rgba(243,244,248,0.5); }
         tbody tr:last-child td { border-bottom: none; }
         td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
@@ -327,7 +321,7 @@
         .source-list a {
             color: var(--navy);
             text-decoration: none;
-            border-bottom: 1px solid rgba(199,91,74,0.3);
+            border-bottom: 1px solid rgba(239,68,68,0.3);
             transition: all 0.15s ease;
         }
         .source-list a:hover {
@@ -342,7 +336,7 @@
             border-radius: 3px;
             vertical-align: middle;
             margin-right: 6px;
-            border: 1.5px solid #4A4540;
+            border: 1.5px solid #374151;
         }
 
         .accent-bar {
@@ -351,7 +345,7 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #1A2744 0%, #1A2744 25%, #6B8DB5 25%, #6B8DB5 50%, #C75B4A 50%, #C75B4A 75%, #D4A84B 75%, #D4A84B 100%);
+            background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
             z-index: 1000;
         }
 
@@ -654,19 +648,19 @@
                 <td>Dispatchable 24/7, no hourly variation</td>
             </tr>
             <tr>
-                <td><span class="color-swatch" style="background:#D4A84B;"></span> Solar</td>
+                <td><span class="color-swatch" style="background:#F59E0B;"></span> Solar</td>
                 <td>Utility-scale PV</td>
                 <td>EIA-930 hourly regional profile</td>
                 <td>Daytime only, seasonal variation</td>
             </tr>
             <tr>
-                <td><span class="color-swatch" style="background:#7A8B5C;"></span> Wind</td>
+                <td><span class="color-swatch" style="background:#22C55E;"></span> Wind</td>
                 <td>Onshore wind</td>
                 <td>EIA-930 hourly regional profile</td>
                 <td>Variable, often stronger at night</td>
             </tr>
             <tr>
-                <td><span class="color-swatch" style="background:#5B8A8A;"></span> Hydro</td>
+                <td><span class="color-swatch" style="background:#0EA5E9;"></span> Hydro</td>
                 <td>Conventional hydro</td>
                 <td>EIA-930 hourly regional profile</td>
                 <td>Seasonal, constrained by regional caps</td>
@@ -1073,10 +1067,10 @@
     </p>
     <ol style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
         <li><span class="color-swatch" style="background:#1A2744;"></span> Clean Firm (matched first)</li>
-        <li><span class="color-swatch" style="background:#5B8A8A;"></span> Hydro</li>
-        <li><span class="color-swatch" style="background:#7A8B5C;"></span> Wind</li>
-        <li><span class="color-swatch" style="background:#D4A84B;"></span> Solar</li>
-        <li><span class="color-swatch" style="background:#C75B4A;"></span> Storage Dispatch (fills remaining gaps)</li>
+        <li><span class="color-swatch" style="background:#0EA5E9;"></span> Hydro</li>
+        <li><span class="color-swatch" style="background:#22C55E;"></span> Wind</li>
+        <li><span class="color-swatch" style="background:#F59E0B;"></span> Solar</li>
+        <li><span class="color-swatch" style="background:#EF4444;"></span> Storage Dispatch (fills remaining gaps)</li>
     </ol>
 
     <p>
