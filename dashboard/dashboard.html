@@ -3098,10 +3098,13 @@ body {
             <span class="story-badge">Resource Strategy</span>
             <h2>How the Optimal Mix Evolves</h2>
             <p>
-                At lower matching targets, solar and wind dominate because they are the cheapest per MWh.
-                As matching targets rise, the mix shifts toward <strong>clean firm power</strong> (nuclear,
-                geothermal) &mdash; the only resources that generate reliably regardless of weather.
-                Use the toggle below to compare how each region's optimal mix evolves differently.
+                At lower targets, solar and wind dominate. As targets rise, the mix shifts toward
+                <strong>clean firm power</strong> and total procurement exceeds 100% of demand &mdash;
+                the <span style="display:inline-block;width:16px;height:10px;background:repeating-linear-gradient(-45deg,transparent,transparent 2px,rgba(26,39,68,0.3) 2px,rgba(26,39,68,0.3) 4px);vertical-align:middle;border:1px solid rgba(26,39,68,0.3);border-radius:2px;margin:0 2px;"></span>
+                crosshatched region shows energy that must be <strong>curtailed</strong>. The dashed
+                white line within each bar marks the boundary between <em>existing</em> clean
+                resources on the grid (below) and <em>new build</em> needed (above) &mdash;
+                curtailment draws from new build first.
             </p>
             <!-- Region toggle -->
             <div class="region-toggle-row" id="mixRegionToggle">
@@ -3125,16 +3128,16 @@ body {
         </div>
     </section>
 
-    <!-- SECTION 4b: INCREMENTAL GENERATION MIX — what you need depends on what you have -->
+    <!-- SECTION 4b: INCREMENTAL RESOURCES — what you need depends on what you have -->
     <section class="story-section story-fade-in">
         <div class="story-content">
             <span class="story-badge" style="background:rgba(30,58,95,0.12);color:var(--navy);">Regional Insight</span>
             <h2>What You Need Depends on What You Have</h2>
             <p>
-                The composition of the <strong>incremental</strong> clean generation mix &mdash; what you
-                must add to move from one matching target to the next &mdash; varies dramatically by region.
-                Region-specific weather patterns, existing grid infrastructure, and resource availability
-                mean there is no one-size-fits-all prescription.
+                Each region starts with a different clean energy baseline. The bars below show
+                <strong>existing clean resources</strong> (solid, bottom) versus the <strong>new build
+                required</strong> (lighter, top) at every matching target. The dashed line marks
+                the region's current clean share &mdash; everything above it must be built.
             </p>
             <!-- Region pills -->
             <div class="incremental-region-pills" id="incrementalRegionPills">
@@ -3153,11 +3156,10 @@ body {
             <div class="story-insight-box" style="margin-top:24px;">
                 <div class="insight-icon"></div>
                 <div>
-                    <strong>Key Takeaway:</strong> Every region follows the same directional pattern &mdash;
-                    more clean firm, less wind &mdash; but the magnitude and timing differ enormously.
-                    ERCOT delays its pivot to clean firm until the very last step (95%&rarr;100%), while
-                    PJM and NYISO begin the shift earlier at 90%. Understanding your region's
-                    specific resource endowment is essential for procurement planning.
+                    <strong>Key Takeaway:</strong> Regions with more existing clean energy (like PJM's
+                    32% nuclear fleet) need far less new build at lower targets. But all regions converge
+                    on massive new procurement at 100% &mdash; the "last mile" requires building 2&ndash;3&times;
+                    what's already on the grid, regardless of starting point.
                 </div>
             </div>
         </div>
@@ -4865,64 +4867,210 @@ function getMixDataForRegion(region) {
     const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
     const isos = Object.keys(DATA.results);
     const labels = [];
-    const mixData = {};
-    MIX_RESOURCES.forEach(r => mixData[r] = []);
+    const existingData = {};
+    const newData = {};
+    MIX_RESOURCES.forEach(r => { existingData[r] = []; newData[r] = []; });
+    const curtailmentData = [];
+    const procurementData = [];
 
     for (const tk of thresholdKeys) {
-        const avgMix = {};
-        MIX_RESOURCES.forEach(r => avgMix[r] = 0);
+        const avgExisting = {};
+        const avgNew = {};
+        MIX_RESOURCES.forEach(r => { avgExisting[r] = 0; avgNew[r] = 0; });
+        let avgCurtailment = 0;
+        let avgProcurement = 0;
         let count = 0;
 
-        if (region === 'average') {
-            for (const iso of isos) {
-                const t = DATA.results[iso]?.thresholds?.[tk];
-                const mix = t?.resource_mix || t?.optimal_mix;
-                if (t && mix) {
-                    MIX_RESOURCES.forEach(r => { avgMix[r] += (mix[r] || 0); });
-                    count++;
+        const regions = region === 'average' ? isos : [region];
+        for (const iso of regions) {
+            const t = DATA.results[iso]?.thresholds?.[tk];
+            if (!t) continue;
+            const rc = t.costs?.resource_costs;
+            if (!rc) continue;
+
+            MIX_RESOURCES.forEach(r => {
+                if (r === 'storage') {
+                    avgNew[r] += (rc.storage?.dispatch_pct || 0);
+                } else {
+                    avgExisting[r] += (rc[r]?.existing_pct || 0);
+                    avgNew[r] += (rc[r]?.new_pct || 0);
                 }
-            }
-        } else {
-            const t = DATA.results[region]?.thresholds?.[tk];
-            const mix = t?.resource_mix || t?.optimal_mix;
-            if (t && mix) {
-                MIX_RESOURCES.forEach(r => { avgMix[r] = (mix[r] || 0); });
-                count = 1;
-            }
+            });
+            const curtailAsDemand = (t.procurement_pct || 0) * (t.costs?.curtailment_pct || 0) / 100;
+            avgCurtailment += curtailAsDemand;
+            avgProcurement += (t.procurement_pct || 0);
+            count++;
         }
 
         if (count > 0) {
             labels.push(tk + '%');
-            const total = MIX_RESOURCES.reduce((s, r) => s + avgMix[r], 0) || 1;
             MIX_RESOURCES.forEach(r => {
-                mixData[r].push(Math.round(avgMix[r] / total * 100 * 10) / 10);
+                existingData[r].push(Math.round(avgExisting[r] / count * 10) / 10);
+                newData[r].push(Math.round(avgNew[r] / count * 10) / 10);
             });
+            curtailmentData.push(Math.round(avgCurtailment / count * 10) / 10);
+            procurementData.push(Math.round(avgProcurement / count * 10) / 10);
         }
     }
-    return { labels, mixData };
+    return { labels, existingData, newData, curtailmentData, procurementData };
+}
+
+// Crosshatch curtailment overlay plugin
+const curtailmentOverlayPlugin = {
+    id: 'curtailmentOverlay',
+    afterDatasetsDraw(chart) {
+        const curtailArr = chart._curtailmentData;
+        const procArr = chart._procurementData;
+        if (!curtailArr || !procArr) return;
+
+        const ctx = chart.ctx;
+        const yScale = chart.scales.y;
+        // Get bar geometry from first visible dataset
+        let refMeta = null;
+        for (let d = 0; d < chart.data.datasets.length; d++) {
+            if (chart.isDatasetVisible(d)) { refMeta = chart.getDatasetMeta(d); break; }
+        }
+        if (!refMeta || refMeta.data.length === 0) return;
+
+        for (let i = 0; i < chart.data.labels.length; i++) {
+            const curtailAmt = curtailArr[i] || 0;
+            if (curtailAmt <= 0) continue;
+            const totalProc = procArr[i];
+            const usefulEnd = totalProc - curtailAmt;
+
+            const bar = refMeta.data[i];
+            const barHW = bar.width / 2;
+            const xL = bar.x - barHW;
+            const yTop = yScale.getPixelForValue(totalProc);
+            const yBot = yScale.getPixelForValue(usefulEnd);
+            const w = bar.width;
+            const h = yBot - yTop;
+            if (h <= 0) continue;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(xL, yTop, w, h);
+            ctx.clip();
+            // White wash
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.fillRect(xL, yTop, w, h);
+            // Diagonal lines
+            ctx.strokeStyle = 'rgba(26,39,68,0.45)';
+            ctx.lineWidth = 1.3;
+            const step = 6;
+            const diag = w + h;
+            for (let d = 0; d < diag; d += step) {
+                ctx.beginPath();
+                ctx.moveTo(xL + d, yTop);
+                ctx.lineTo(xL + d - h, yTop + h);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+    }
+};
+
+// Existing/new boundary plugin — draws subtle dashed line at existing/new boundary
+const existingBoundaryPlugin = {
+    id: 'existingBoundary',
+    afterDatasetsDraw(chart) {
+        const boundaryMap = chart._existingBoundary;
+        if (!boundaryMap) return;
+        const ctx = chart.ctx;
+        const yScale = chart.scales.y;
+        // boundaryMap: array of { existingTop: cumulative existing total at each bar index }
+        let refMeta = null;
+        for (let d = 0; d < chart.data.datasets.length; d++) {
+            if (chart.isDatasetVisible(d)) { refMeta = chart.getDatasetMeta(d); break; }
+        }
+        if (!refMeta || refMeta.data.length === 0) return;
+
+        for (let i = 0; i < boundaryMap.length; i++) {
+            const existTop = boundaryMap[i];
+            if (existTop <= 0) continue;
+            const bar = refMeta.data[i];
+            const barHW = bar.width / 2;
+            const yPx = yScale.getPixelForValue(existTop);
+            ctx.save();
+            ctx.setLineDash([4, 3]);
+            ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(bar.x - barHW + 2, yPx);
+            ctx.lineTo(bar.x + barHW - 2, yPx);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+};
+
+function buildMixDatasets(data) {
+    const { existingData, newData } = data;
+    // Stack order (bottom to top): existing resources, then new resources
+    // Existing: clean_firm, hydro, wind, solar (bottom)
+    // New: solar, wind, hydro, storage, clean_firm (top — so curtailment hits new first)
+    const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = ['solar', 'wind', 'hydro', 'storage', 'clean_firm'];
+
+    const existingAlpha = 0.75;
+    const newAlpha = 0.45;
+    const datasets = [];
+
+    for (const r of EXISTING_ORDER) {
+        const c = MIX_COLORS[r];
+        datasets.push({
+            label: MIX_LABELS_MAP[r] + ' (existing)',
+            data: existingData[r],
+            backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
+            borderColor: c.border,
+            borderWidth: 1.5,
+            borderRadius: 0,
+            stack: 'mix',
+            _resourceKey: r,
+            _isExisting: true,
+        });
+    }
+    for (const r of NEW_ORDER) {
+        const c = MIX_COLORS[r];
+        datasets.push({
+            label: MIX_LABELS_MAP[r] + ' (new)',
+            data: newData[r],
+            backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
+            borderColor: c.border,
+            borderWidth: 1,
+            borderRadius: (r === NEW_ORDER[NEW_ORDER.length - 1]) ? 3 : 0,
+            borderSkipped: 'start',
+            stack: 'mix',
+            _resourceKey: r,
+            _isExisting: false,
+        });
+    }
+    return datasets;
 }
 
 function initNarrativeMixChart() {
     const canvas = document.getElementById('narrativeMixChart');
     if (!canvas || !DATA) return;
 
-    const { labels, mixData } = getMixDataForRegion('average');
-    if (labels.length === 0) return;
+    const data = getMixDataForRegion('average');
+    if (data.labels.length === 0) return;
 
-    const datasets = MIX_RESOURCES.map(r => ({
-        label: MIX_LABELS_MAP[r],
-        data: mixData[r],
-        backgroundColor: MIX_COLORS[r].fill,
-        borderColor: MIX_COLORS[r].border,
-        borderWidth: 2,
-        borderRadius: 3,
-    }));
+    const datasets = buildMixDatasets(data);
+    const maxProc = Math.max(...data.procurementData);
+    const yMax = Math.ceil(maxProc / 10) * 10 + 10;
+
+    // Calculate existing boundary line positions
+    const existingBoundary = data.labels.map((_, i) => {
+        let total = 0;
+        MIX_RESOURCES.forEach(r => { total += data.existingData[r][i]; });
+        return total;
+    });
 
     const ctx = canvas.getContext('2d');
     narrativeMixChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets },
-        plugins: [ChartDataLabels],
+        data: { labels: data.labels, datasets },
+        plugins: [ChartDataLabels, curtailmentOverlayPlugin, existingBoundaryPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -4939,17 +5087,32 @@ function initNarrativeMixChart() {
                         color: '#1A1A1A',
                         padding: 14,
                         generateLabels: function(chart) {
-                            return chart.data.datasets.map((ds, i) => ({
-                                text: ds.label,
-                                fillStyle: ds.backgroundColor,
-                                strokeStyle: ds.borderColor,
+                            // Merge existing+new into one legend entry per resource
+                            const items = MIX_RESOURCES.map(r => {
+                                const c = MIX_COLORS[r];
+                                return {
+                                    text: MIX_LABELS_MAP[r],
+                                    fillStyle: c.fill,
+                                    strokeStyle: c.border,
+                                    lineWidth: 2,
+                                    hidden: false,
+                                    pointStyle: 'rectRounded',
+                                };
+                            });
+                            // Add curtailment legend entry
+                            items.push({
+                                text: 'Curtailment',
+                                fillStyle: 'rgba(26,39,68,0.12)',
+                                strokeStyle: 'rgba(26,39,68,0.45)',
                                 lineWidth: 2,
-                                hidden: !chart.isDatasetVisible(i),
-                                datasetIndex: i,
-                                pointStyle: 'rectRounded',
-                            }));
+                                pointStyle: 'line',
+                                lineDash: [3,2],
+                                hidden: false,
+                            });
+                            return items;
                         }
-                    }
+                    },
+                    onClick: () => {} // disable toggle
                 },
                 tooltip: {
                     backgroundColor: 'rgba(26,39,68,0.92)',
@@ -4957,28 +5120,59 @@ function initNarrativeMixChart() {
                     bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
                     padding: 12,
                     cornerRadius: 8,
+                    filter: function(tooltipItem) {
+                        return tooltipItem.parsed.y > 0;
+                    },
                     callbacks: {
+                        title: function(items) {
+                            if (!items.length) return '';
+                            const idx = items[0].dataIndex;
+                            const proc = narrativeMixChart._procurementData[idx];
+                            const curtail = narrativeMixChart._curtailmentData[idx];
+                            return items[0].label + '  (procure ' + Math.round(proc) + '% of demand, curtail ' + Math.round(curtail) + '%)';
+                        },
                         label: function(context) {
-                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}% of demand`;
                         }
                     }
                 },
                 datalabels: {
                     display: function(context) {
-                        return context.dataset.data[context.dataIndex] >= 8;
+                        return context.dataset.data[context.dataIndex] >= 6;
                     },
                     color: function(context) {
-                        const label = context.dataset.label;
-                        if (label === 'Clean Firm') return '#FFFFFF';
+                        if (context.dataset._resourceKey === 'clean_firm') return '#FFFFFF';
                         return '#1A1A1A';
                     },
-                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 },
+                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 700 },
                     formatter: function(value) {
                         return Math.round(value) + '%';
                     },
                     anchor: 'center',
                     align: 'center',
                 },
+                annotation: {
+                    annotations: {
+                        demandLine: {
+                            type: 'line',
+                            yMin: 100,
+                            yMax: 100,
+                            borderColor: 'rgba(26,39,68,0.6)',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: '100% of demand',
+                                position: 'end',
+                                backgroundColor: 'rgba(26,39,68,0.75)',
+                                color: '#fff',
+                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 600 },
+                                padding: { x: 6, y: 3 },
+                                borderRadius: 4,
+                            }
+                        }
+                    }
+                }
             },
             scales: {
                 x: {
@@ -4997,10 +5191,10 @@ function initNarrativeMixChart() {
                 },
                 y: {
                     stacked: true,
-                    max: 100,
+                    max: yMax,
                     title: {
                         display: true,
-                        text: 'Share of Procurement (%)',
+                        text: 'Procurement (% of demand)',
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
@@ -5014,6 +5208,11 @@ function initNarrativeMixChart() {
             }
         }
     });
+
+    // Attach custom data for plugins
+    narrativeMixChart._curtailmentData = data.curtailmentData;
+    narrativeMixChart._procurementData = data.procurementData;
+    narrativeMixChart._existingBoundary = existingBoundary;
 
     // Bind region toggle buttons
     const toggleRow = document.getElementById('mixRegionToggle');
@@ -5032,11 +5231,28 @@ function initNarrativeMixChart() {
 function updateMixChartRegion(region) {
     if (!narrativeMixChart || !DATA) return;
     currentMixRegion = region;
-    const { labels, mixData } = getMixDataForRegion(region);
-    narrativeMixChart.data.labels = labels;
-    MIX_RESOURCES.forEach((r, i) => {
-        narrativeMixChart.data.datasets[i].data = mixData[r];
+    const data = getMixDataForRegion(region);
+    narrativeMixChart.data.labels = data.labels;
+
+    const newDatasets = buildMixDatasets(data);
+    newDatasets.forEach((ds, i) => {
+        narrativeMixChart.data.datasets[i].data = ds.data;
     });
+
+    // Update plugin data
+    narrativeMixChart._curtailmentData = data.curtailmentData;
+    narrativeMixChart._procurementData = data.procurementData;
+    const existingBoundary = data.labels.map((_, i) => {
+        let total = 0;
+        MIX_RESOURCES.forEach(r => { total += data.existingData[r][i]; });
+        return total;
+    });
+    narrativeMixChart._existingBoundary = existingBoundary;
+
+    // Update y-axis max
+    const maxProc = Math.max(...data.procurementData);
+    narrativeMixChart.options.scales.y.max = Math.ceil(maxProc / 10) * 10 + 10;
+
     narrativeMixChart.update();
 
     const insightEl = document.getElementById('mixRegionInsight');
@@ -5045,67 +5261,114 @@ function updateMixChartRegion(region) {
     }
 }
 
-// ---- Incremental Generation Mix Chart ----
+// ---- Incremental Resources Chart — existing vs new at each target ----
 let incrementalMixChart = null;
 let currentIncrementalRegion = 'CAISO';
 
 const INCREMENTAL_INSIGHTS = {
-    CAISO: '<strong>CAISO:</strong> The 95%→100% transition costs +$28.70/MWh and requires +6% storage and +8% clean firm while dropping wind by 9%. Curtailment jumps by 16.8 percentage points — the clearest illustration of the "last mile" penalty.',
-    ERCOT: '<strong>ERCOT:</strong> Shows the most dramatic pivot at 95%→100%: clean firm surges +49 percentage points while wind drops 40 points. Cost jumps $40.43/MWh — the largest final-step premium of any region. Wind-heavy strategies collapse in the last 5%.',
-    PJM: '<strong>PJM:</strong> Keeps the same resource mix from 75% to 90%, simply scaling up procurement. The 90%→95% step triggers a regime change: +20% clean firm, −15% wind, −5% solar. Curtailment actually drops slightly at this step, a sign of better-matched resources.',
-    NYISO: '<strong>NYISO:</strong> Hydro stays locked at 40% throughout. Uses zero solar until 100%. The 95%→100% transition introduces both solar (+4%) and storage (+8%) for the first time — a fundamentally different portfolio than all lower targets.',
-    NEISO: '<strong>NEISO:</strong> The most expensive final push at +$47.03/MWh. Uniquely, hydro drops by 14 points at 95%→100% (from 30% to 16%), wind is completely eliminated, and clean firm reaches 78% — the highest of any region.'
+    CAISO: '<strong>CAISO:</strong> Starts with 48.5% existing clean (solar-heavy). New build is modest through 90%, then accelerates sharply — at 100%, new clean firm alone exceeds 53% of demand, more than all existing clean combined.',
+    ERCOT: '<strong>ERCOT:</strong> Only 46.1% existing clean, mostly wind. New wind additions drive early targets cheaply. But at 100%, new clean firm (47%) dwarfs the entire existing fleet — a near-complete rebuild of the generation stack.',
+    PJM: '<strong>PJM:</strong> The 32% existing nuclear fleet gives PJM a massive head start. New build stays minimal through 90% — then jumps as clean firm additions pile on. Even so, PJM needs less new build at 100% than most regions.',
+    NYISO: '<strong>NYISO:</strong> Existing hydro (16%) and nuclear (18%) cover early targets efficiently. New build stays modest through 95%, then explodes at 100% with +34% new hydro and +54% new clean firm — the sharpest final step.',
+    NEISO: '<strong>NEISO:</strong> Starts with 33.5% existing clean but it\'s spread thin across resources. New clean firm dominates at every target level, reaching 65% of demand at 100% — the highest new-build intensity of any region.'
 };
 
 function getIncrementalData(region) {
-    const transitions = [
-        { from: '75', to: '90', label: '75%→90%' },
-        { from: '90', to: '95', label: '90%→95%' },
-        { from: '95', to: '100', label: '95%→100%' }
-    ];
-
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
     const labels = [];
-    const deltas = {};
-    MIX_RESOURCES.forEach(r => deltas[r] = []);
+    const existingData = {};
+    const newData = {};
+    MIX_RESOURCES.forEach(r => { existingData[r] = []; newData[r] = []; });
+    let existingCleanTotal = 0;
 
-    for (const tr of transitions) {
-        const tFrom = DATA.results[region]?.thresholds?.[tr.from];
-        const tTo = DATA.results[region]?.thresholds?.[tr.to];
-        if (!tFrom || !tTo) continue;
-        const mixFrom = tFrom.resource_mix || tFrom.optimal_mix || {};
-        const mixTo = tTo.resource_mix || tTo.optimal_mix || {};
+    // Get total existing clean for the region
+    const gridMix = DATA.config?.grid_mix_shares?.[region];
+    if (gridMix) {
+        existingCleanTotal = Object.values(gridMix).reduce((s, v) => s + v, 0);
+    }
 
-        labels.push(tr.label);
+    for (const tk of thresholdKeys) {
+        const t = DATA.results[region]?.thresholds?.[tk];
+        if (!t) continue;
+        const rc = t.costs?.resource_costs;
+        if (!rc) continue;
+
+        labels.push(tk + '%');
         MIX_RESOURCES.forEach(r => {
-            const fromPct = mixFrom[r] || 0;
-            const toPct = mixTo[r] || 0;
-            deltas[r].push(toPct - fromPct);
+            if (r === 'storage') {
+                existingData[r].push(0);
+                newData[r].push(rc.storage?.dispatch_pct || 0);
+            } else {
+                existingData[r].push(rc[r]?.existing_pct || 0);
+                newData[r].push(rc[r]?.new_pct || 0);
+            }
         });
     }
-    return { labels, deltas };
+    return { labels, existingData, newData, existingCleanTotal };
+}
+
+function buildIncrementalDatasets(data) {
+    const { existingData, newData } = data;
+    const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = ['solar', 'wind', 'hydro', 'storage', 'clean_firm'];
+    const existingAlpha = 0.75;
+    const newAlpha = 0.40;
+    const datasets = [];
+
+    for (const r of EXISTING_ORDER) {
+        const c = MIX_COLORS[r];
+        datasets.push({
+            label: MIX_LABELS_MAP[r] + ' (existing)',
+            data: existingData[r],
+            backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
+            borderColor: c.border,
+            borderWidth: 1.5,
+            borderRadius: 0,
+            stack: 'incr',
+            _resourceKey: r,
+            _isExisting: true,
+        });
+    }
+    for (const r of NEW_ORDER) {
+        const c = MIX_COLORS[r];
+        datasets.push({
+            label: MIX_LABELS_MAP[r] + ' (new)',
+            data: newData[r],
+            backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
+            borderColor: c.border,
+            borderWidth: 1,
+            borderRadius: (r === NEW_ORDER[NEW_ORDER.length - 1]) ? 3 : 0,
+            borderSkipped: 'start',
+            stack: 'incr',
+            _resourceKey: r,
+            _isExisting: false,
+        });
+    }
+    return datasets;
 }
 
 function initIncrementalMixChart() {
     const canvas = document.getElementById('incrementalMixChart');
     if (!canvas || !DATA) return;
 
-    const { labels, deltas } = getIncrementalData('CAISO');
-    if (labels.length === 0) return;
+    const data = getIncrementalData('CAISO');
+    if (data.labels.length === 0) return;
 
-    const datasets = MIX_RESOURCES.map(r => ({
-        label: MIX_LABELS_MAP[r],
-        data: deltas[r],
-        backgroundColor: MIX_COLORS[r].fill,
-        borderColor: MIX_COLORS[r].border,
-        borderWidth: 2,
-        borderRadius: 3,
-    }));
+    const datasets = buildIncrementalDatasets(data);
+
+    // Compute max for y-axis
+    const maxTotal = data.labels.map((_, i) => {
+        let sum = 0;
+        MIX_RESOURCES.forEach(r => { sum += data.existingData[r][i] + data.newData[r][i]; });
+        return sum;
+    });
+    const yMax = Math.ceil(Math.max(...maxTotal) / 10) * 10 + 10;
 
     const ctx = canvas.getContext('2d');
     incrementalMixChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets },
-        plugins: [ChartDataLabels],
+        data: { labels: data.labels, datasets },
+        plugins: [ChartDataLabels, existingBoundaryPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -5122,17 +5385,32 @@ function initIncrementalMixChart() {
                         color: '#1A1A1A',
                         padding: 14,
                         generateLabels: function(chart) {
-                            return chart.data.datasets.map((ds, i) => ({
-                                text: ds.label,
-                                fillStyle: ds.backgroundColor,
-                                strokeStyle: ds.borderColor,
+                            const items = MIX_RESOURCES.map(r => ({
+                                text: MIX_LABELS_MAP[r],
+                                fillStyle: MIX_COLORS[r].fill,
+                                strokeStyle: MIX_COLORS[r].border,
                                 lineWidth: 2,
-                                hidden: !chart.isDatasetVisible(i),
-                                datasetIndex: i,
+                                hidden: false,
                                 pointStyle: 'rectRounded',
                             }));
+                            items.push({
+                                text: 'Existing',
+                                fillStyle: 'rgba(100,100,100,0.7)',
+                                strokeStyle: '#666',
+                                lineWidth: 2,
+                                pointStyle: 'rectRounded',
+                            });
+                            items.push({
+                                text: 'New Build',
+                                fillStyle: 'rgba(100,100,100,0.3)',
+                                strokeStyle: '#999',
+                                lineWidth: 2,
+                                pointStyle: 'rectRounded',
+                            });
+                            return items;
                         }
-                    }
+                    },
+                    onClick: () => {}
                 },
                 tooltip: {
                     backgroundColor: 'rgba(26,39,68,0.92)',
@@ -5140,38 +5418,66 @@ function initIncrementalMixChart() {
                     bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
                     padding: 12,
                     cornerRadius: 8,
+                    filter: function(tooltipItem) { return tooltipItem.parsed.y > 0; },
                     callbacks: {
+                        title: function(items) {
+                            if (!items.length) return '';
+                            const idx = items[0].dataIndex;
+                            let totalNew = 0;
+                            MIX_RESOURCES.forEach(r => {
+                                totalNew += incrementalMixChart._incrNewData[r][idx] || 0;
+                            });
+                            return items[0].label + ' target  (new build: ' + Math.round(totalNew) + '% of demand)';
+                        },
                         label: function(context) {
-                            const v = context.parsed.y;
-                            const sign = v >= 0 ? '+' : '';
-                            return ` ${context.dataset.label}: ${sign}${v.toFixed(0)}pp`;
+                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}% of demand`;
                         }
                     }
                 },
                 datalabels: {
                     display: function(context) {
-                        return Math.abs(context.dataset.data[context.dataIndex]) >= 4;
+                        return context.dataset.data[context.dataIndex] >= 5;
                     },
                     color: function(context) {
-                        const v = context.dataset.data[context.dataIndex];
-                        const label = context.dataset.label;
-                        if (label === 'Clean Firm' && v > 0) return '#FFFFFF';
+                        if (context.dataset._resourceKey === 'clean_firm') return '#FFFFFF';
                         return '#1A1A1A';
                     },
-                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 },
+                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 700 },
                     formatter: function(value) {
-                        const sign = value >= 0 ? '+' : '';
-                        return sign + Math.round(value) + 'pp';
+                        return Math.round(value) + '%';
                     },
                     anchor: 'center',
                     align: 'center',
                 },
+                annotation: {
+                    annotations: {
+                        existingLine: {
+                            type: 'line',
+                            yMin: data.existingCleanTotal,
+                            yMax: data.existingCleanTotal,
+                            borderColor: 'rgba(26,39,68,0.5)',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: 'Current grid clean: ' + Math.round(data.existingCleanTotal) + '%',
+                                position: 'start',
+                                backgroundColor: 'rgba(26,39,68,0.75)',
+                                color: '#fff',
+                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 600 },
+                                padding: { x: 6, y: 3 },
+                                borderRadius: 4,
+                            }
+                        }
+                    }
+                }
             },
             scales: {
                 x: {
+                    stacked: true,
                     title: {
                         display: true,
-                        text: 'Matching Target Transition',
+                        text: 'Hourly Matching Target',
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
@@ -5182,9 +5488,11 @@ function initIncrementalMixChart() {
                     }
                 },
                 y: {
+                    stacked: true,
+                    max: yMax,
                     title: {
                         display: true,
-                        text: 'Change in Mix Share (percentage points)',
+                        text: 'Resources (% of demand)',
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
@@ -5192,11 +5500,20 @@ function initIncrementalMixChart() {
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
-                        callback: (v) => (v >= 0 ? '+' : '') + v + 'pp',
+                        callback: (v) => v + '%',
                     }
                 }
             }
         }
+    });
+
+    // Attach data for tooltip
+    incrementalMixChart._incrNewData = data.newData;
+    // Attach existing boundary for plugin
+    incrementalMixChart._existingBoundary = data.labels.map((_, i) => {
+        let total = 0;
+        MIX_RESOURCES.forEach(r => { total += data.existingData[r][i]; });
+        return total;
     });
 
     // Set initial insight
@@ -5220,11 +5537,36 @@ function initIncrementalMixChart() {
 function updateIncrementalChart(region) {
     if (!incrementalMixChart || !DATA) return;
     currentIncrementalRegion = region;
-    const { labels, deltas } = getIncrementalData(region);
-    incrementalMixChart.data.labels = labels;
-    MIX_RESOURCES.forEach((r, i) => {
-        incrementalMixChart.data.datasets[i].data = deltas[r];
+    const data = getIncrementalData(region);
+
+    const newDatasets = buildIncrementalDatasets(data);
+    incrementalMixChart.data.labels = data.labels;
+    newDatasets.forEach((ds, i) => {
+        incrementalMixChart.data.datasets[i].data = ds.data;
     });
+
+    // Update existing boundary
+    incrementalMixChart._existingBoundary = data.labels.map((_, i) => {
+        let total = 0;
+        MIX_RESOURCES.forEach(r => { total += data.existingData[r][i]; });
+        return total;
+    });
+    incrementalMixChart._incrNewData = data.newData;
+
+    // Update existing clean line annotation
+    const ann = incrementalMixChart.options.plugins.annotation.annotations;
+    ann.existingLine.yMin = data.existingCleanTotal;
+    ann.existingLine.yMax = data.existingCleanTotal;
+    ann.existingLine.label.content = 'Current grid clean: ' + Math.round(data.existingCleanTotal) + '%';
+
+    // Update y-axis max
+    const maxTotal = data.labels.map((_, i) => {
+        let sum = 0;
+        MIX_RESOURCES.forEach(r => { sum += data.existingData[r][i] + data.newData[r][i]; });
+        return sum;
+    });
+    incrementalMixChart.options.scales.y.max = Math.ceil(Math.max(...maxTotal) / 10) * 10 + 10;
+
     incrementalMixChart.update();
 
     const insightEl = document.getElementById('incrementalInsight');
