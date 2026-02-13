@@ -52,7 +52,7 @@ print(f"Annotation plugin: {len(annotation_script):,} chars")
 # ---- 1. Remove Google Fonts CDN links ----
 html = html.replace('<link rel="preconnect" href="https://fonts.googleapis.com">\n', '')
 html = html.replace('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n', '')
-html = re.sub(r'<link href="https://fonts\.googleapis\.com/css2\?family=Lora[^"]*" rel="stylesheet">\n',
+html = re.sub(r'<link href="https://fonts\.googleapis\.com/css2\?[^"]*" rel="stylesheet">\n',
               '<!-- Fonts: Falls back to system fonts offline -->\n', html)
 
 # ---- 2. Replace CDN script tags with inlined versions ----
