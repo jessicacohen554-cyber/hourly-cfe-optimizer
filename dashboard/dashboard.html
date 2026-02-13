@@ -1506,6 +1506,98 @@ body {
     max-width: 680px;
     height: auto;
 }
+/* Trilemma figure */
+.trilemma-svg {
+    max-width: 420px !important;
+}
+
+/* Region toggle pills */
+.region-toggle-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin: 16px 0 8px;
+}
+.region-toggle-btn {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 9999px;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    cursor: pointer;
+    border: 2px solid #D4D8E0;
+    background: rgba(255,255,255,0.7);
+    color: #374151;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+.region-toggle-btn:hover {
+    border-color: #0EA5E9;
+    color: #0284C7;
+    background: rgba(14,165,233,0.06);
+}
+.region-toggle-btn.active {
+    border-color: #1A2744;
+    background: #1A2744;
+    color: #fff;
+}
+
+/* Incremental mix section */
+.incremental-mix-wrap {
+    margin: 24px 0;
+}
+.incremental-chart-container {
+    min-height: 320px;
+    position: relative;
+}
+.incremental-region-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin: 16px 0 12px;
+}
+.incremental-pill {
+    display: inline-block;
+    padding: 5px 16px;
+    border-radius: 9999px;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    cursor: pointer;
+    border: 2px solid #D4D8E0;
+    background: rgba(255,255,255,0.7);
+    color: #374151;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+.incremental-pill:hover {
+    border-color: #0EA5E9;
+    color: #0284C7;
+}
+.incremental-pill.active {
+    border-color: #1A2744;
+    background: #1A2744;
+    color: #fff;
+}
+.incremental-insight {
+    margin-top: 16px;
+    padding: 14px 20px;
+    background: rgba(26,39,68,0.04);
+    border-left: 4px solid #1A2744;
+    border-radius: 0 10px 10px 0;
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.65;
+    transition: opacity 0.3s;
+}
+.incremental-insight strong {
+    color: #1A2744;
+}
 
 /* Transition fuel visual */
 .transition-fuel-row {
@@ -1603,6 +1695,20 @@ body {
     .section-illustration svg {
         min-width: 340px;
     }
+    .trilemma-svg {
+        max-width: 300px !important;
+        min-width: 260px !important;
+    }
+    .region-toggle-row, .incremental-region-pills {
+        gap: 6px;
+    }
+    .region-toggle-btn, .incremental-pill {
+        padding: 5px 12px;
+        font-size: 0.75rem;
+    }
+    .incremental-chart-container {
+        min-height: 260px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1662,6 +1768,24 @@ body {
     }
     .section-illustration svg {
         min-width: 340px;
+    }
+    .trilemma-svg {
+        max-width: 260px !important;
+        min-width: 220px !important;
+    }
+    .region-toggle-row, .incremental-region-pills {
+        gap: 4px;
+    }
+    .region-toggle-btn, .incremental-pill {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .incremental-chart-container {
+        min-height: 220px;
+    }
+    .incremental-insight {
+        font-size: 0.82rem;
+        padding: 10px 14px;
     }
 }
 
@@ -2929,7 +3053,7 @@ body {
         </div>
     </section>
 
-    <!-- SECTION 4: RESOURCE MIX — with stacked bar chart -->
+    <!-- SECTION 4: RESOURCE MIX — with stacked bar chart + region toggle -->
     <section class="story-section story-fade-in">
         <div class="story-content">
             <span class="story-badge">Resource Strategy</span>
@@ -2938,15 +3062,63 @@ body {
                 At lower matching targets, solar and wind dominate because they are the cheapest per MWh.
                 As matching targets rise, the mix shifts toward <strong>clean firm power</strong> (nuclear,
                 geothermal) &mdash; the only resources that generate reliably regardless of weather.
+                Use the toggle below to compare how each region's optimal mix evolves differently.
             </p>
-            <div class="scrolly-chart-wrap" style="margin:24px 0; min-height:280px;">
+            <!-- Region toggle -->
+            <div class="region-toggle-row" id="mixRegionToggle">
+                <button class="region-toggle-btn active" data-region="average">All Regions Avg</button>
+                <button class="region-toggle-btn" data-region="CAISO">CAISO</button>
+                <button class="region-toggle-btn" data-region="ERCOT">ERCOT</button>
+                <button class="region-toggle-btn" data-region="PJM">PJM</button>
+                <button class="region-toggle-btn" data-region="NYISO">NYISO</button>
+                <button class="region-toggle-btn" data-region="NEISO">NEISO</button>
+            </div>
+            <div class="scrolly-chart-wrap" style="margin:12px 0 24px; min-height:280px;">
                 <canvas id="narrativeMixChart"></canvas>
             </div>
             <div class="story-insight-box">
                 <div class="insight-icon"></div>
-                <div>
+                <div id="mixRegionInsight">
                     <strong>Regional Variation:</strong> Wind-rich ERCOT sustains wind-heavy mixes to 95%+,
                     while PJM and NEISO require a pivot to nuclear/clean firm at lower thresholds.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4b: INCREMENTAL GENERATION MIX — what you need depends on what you have -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge" style="background:rgba(30,58,95,0.12);color:var(--navy);">Regional Insight</span>
+            <h2>What You Need Depends on What You Have</h2>
+            <p>
+                The composition of the <strong>incremental</strong> clean generation mix &mdash; what you
+                must add to move from one matching target to the next &mdash; varies dramatically by region.
+                Region-specific weather patterns, existing grid infrastructure, and resource availability
+                mean there is no one-size-fits-all prescription.
+            </p>
+            <!-- Region pills -->
+            <div class="incremental-region-pills" id="incrementalRegionPills">
+                <button class="incremental-pill active" data-region="CAISO">CAISO</button>
+                <button class="incremental-pill" data-region="ERCOT">ERCOT</button>
+                <button class="incremental-pill" data-region="PJM">PJM</button>
+                <button class="incremental-pill" data-region="NYISO">NYISO</button>
+                <button class="incremental-pill" data-region="NEISO">NEISO</button>
+            </div>
+            <div class="incremental-chart-container">
+                <canvas id="incrementalMixChart"></canvas>
+            </div>
+            <div class="incremental-insight" id="incrementalInsight">
+                <!-- Populated by JS -->
+            </div>
+            <div class="story-insight-box" style="margin-top:24px;">
+                <div class="insight-icon"></div>
+                <div>
+                    <strong>Key Takeaway:</strong> Every region follows the same directional pattern &mdash;
+                    more clean firm, less wind &mdash; but the magnitude and timing differ enormously.
+                    ERCOT delays its pivot to clean firm until the very last step (95%&rarr;100%), while
+                    PJM and NYISO begin the shift earlier at 90%. Understanding your region's
+                    specific resource endowment is essential for procurement planning.
                 </div>
             </div>
         </div>
@@ -3156,6 +3328,47 @@ body {
                 For decades, energy planning balanced <strong>reliability</strong> and
                 <strong>affordability</strong>. Hourly matching adds a third dimension: <strong>clean</strong>.
             </p>
+
+            <!-- Trilemma triangle figure -->
+            <div class="section-illustration">
+                <svg class="trilemma-svg" viewBox="0 0 520 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Triangle -->
+                    <polygon points="260,40 50,370 470,370" fill="none" stroke="#1A2744" stroke-width="2.5" stroke-linejoin="round"/>
+                    <!-- Gradient fills for each zone -->
+                    <polygon points="260,40 155,222 365,222" fill="rgba(34,197,94,0.08)" stroke="none"/>
+                    <polygon points="155,222 50,370 260,370" fill="rgba(245,158,11,0.08)" stroke="none"/>
+                    <polygon points="365,222 260,370 470,370" fill="rgba(14,165,233,0.08)" stroke="none"/>
+                    <!-- Vertex labels -->
+                    <text x="260" y="26" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="15" font-weight="700" fill="#16A34A">CLEAN</text>
+                    <text x="30" y="392" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="15" font-weight="700" fill="#D97706">AFFORDABLE</text>
+                    <text x="490" y="392" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="15" font-weight="700" fill="#0284C7">RELIABLE</text>
+                    <!-- Center icon -->
+                    <circle cx="260" cy="260" r="28" fill="rgba(239,68,68,0.12)" stroke="#EF4444" stroke-width="2"/>
+                    <text x="260" y="256" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#DC2626">24/7</text>
+                    <text x="260" y="270" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#DC2626">CFE</text>
+                    <!-- Matching target zones -->
+                    <circle cx="210" cy="310" r="34" fill="rgba(34,197,94,0.1)" stroke="#22C55E" stroke-width="1.5" stroke-dasharray="4 3"/>
+                    <text x="210" y="306" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#16A34A">75%</text>
+                    <text x="210" y="320" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#374151">Renewables</text>
+                    <text x="210" y="332" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#374151">lead</text>
+
+                    <circle cx="310" cy="280" r="34" fill="rgba(245,158,11,0.1)" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4 3"/>
+                    <text x="310" y="276" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#D97706">95%</text>
+                    <text x="310" y="290" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#374151">Firm power</text>
+                    <text x="310" y="302" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#374151">essential</text>
+
+                    <circle cx="260" cy="200" r="38" fill="rgba(239,68,68,0.1)" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="4 3"/>
+                    <text x="260" y="194" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#DC2626">99%+</text>
+                    <text x="260" y="208" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#374151">Full toolkit</text>
+                    <text x="260" y="220" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#374151">required</text>
+
+                    <!-- Edge labels -->
+                    <text x="140" y="175" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280" transform="rotate(-57,140,175)">Low carbon</text>
+                    <text x="380" y="175" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280" transform="rotate(57,380,175)">Firm capacity</text>
+                    <text x="260" y="390" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280">Low cost per MWh</text>
+                </svg>
+            </div>
+
             <p>
                 At 75% matching, affordability dominates &mdash; cheap renewables suffice. By 95%, reliability
                 forces the mix toward costlier firm generation. At 99%+, all three dimensions are stressed,
@@ -4541,64 +4754,82 @@ function populateNarrativeStats() {
     if (introMult) introMult.textContent = `${fullMultiplier.toFixed(1)}x`;
 }
 
-// ---- Narrative Mix Evolution Chart ----
+// ---- Narrative Mix Evolution Chart (with region toggle) ----
 let narrativeMixChart = null;
+let currentMixRegion = 'average';
+
+const MIX_RESOURCES = ['clean_firm', 'solar', 'wind', 'hydro', 'storage'];
+const MIX_LABELS_MAP = { clean_firm: 'Clean Firm', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', storage: 'Storage' };
+const MIX_COLORS = {
+    solar:      { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
+    wind:       { fill: 'rgba(34,197,94,0.50)',  border: '#22C55E' },
+    hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
+    clean_firm: { fill: 'rgba(26,39,68,0.50)',    border: '#1A2744' },
+    storage:    { fill: 'rgba(239,68,68,0.50)',   border: '#EF4444' }
+};
+
+const MIX_REGION_INSIGHTS = {
+    average: '<strong>Regional Variation:</strong> Wind-rich ERCOT sustains wind-heavy mixes to 95%+, while PJM and NEISO require a pivot to nuclear/clean firm at lower thresholds.',
+    CAISO: '<strong>CAISO (California):</strong> Leverages strong solar (35% at 75%) and high hydro cap (30%). Clean firm rises from 10% to 43% at 100%. Solar stays relevant throughout due to excellent irradiance.',
+    ERCOT: '<strong>ERCOT (Texas):</strong> Wind dominates at 65% through 95% matching thanks to $40/MWh wind LCOE. The 95%→100% transition is the most dramatic of any region: clean firm surges +49pp while wind drops 40pp.',
+    PJM: '<strong>PJM (Mid-Atlantic):</strong> Existing 32% nuclear fleet provides a massive head start. The mix holds steady from 75% to 90%, then jumps to 60% clean firm at 95%. PJM reaches 68% clean firm at 100%.',
+    NYISO: '<strong>NYISO (New York):</strong> Hydro stays locked at 40% across all targets. Uses zero solar until 100%. The simplest mix — essentially clean firm + hydro + wind — reflects the region\'s unique resource endowment.',
+    NEISO: '<strong>NEISO (New England):</strong> The most expensive region shows the sharpest shift. Clean firm reaches 78% at 100% — the highest of any region. Hydro drops from 30% to 16% and wind is eliminated entirely at 100%.'
+};
+
+function getMixDataForRegion(region) {
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
+    const isos = Object.keys(DATA.results);
+    const labels = [];
+    const mixData = {};
+    MIX_RESOURCES.forEach(r => mixData[r] = []);
+
+    for (const tk of thresholdKeys) {
+        const avgMix = {};
+        MIX_RESOURCES.forEach(r => avgMix[r] = 0);
+        let count = 0;
+
+        if (region === 'average') {
+            for (const iso of isos) {
+                const t = DATA.results[iso]?.thresholds?.[tk];
+                const mix = t?.resource_mix || t?.optimal_mix;
+                if (t && mix) {
+                    MIX_RESOURCES.forEach(r => { avgMix[r] += (mix[r] || 0); });
+                    count++;
+                }
+            }
+        } else {
+            const t = DATA.results[region]?.thresholds?.[tk];
+            const mix = t?.resource_mix || t?.optimal_mix;
+            if (t && mix) {
+                MIX_RESOURCES.forEach(r => { avgMix[r] = (mix[r] || 0); });
+                count = 1;
+            }
+        }
+
+        if (count > 0) {
+            labels.push(tk + '%');
+            const total = MIX_RESOURCES.reduce((s, r) => s + avgMix[r], 0) || 1;
+            MIX_RESOURCES.forEach(r => {
+                mixData[r].push(Math.round(avgMix[r] / total * 100 * 10) / 10);
+            });
+        }
+    }
+    return { labels, mixData };
+}
 
 function initNarrativeMixChart() {
     const canvas = document.getElementById('narrativeMixChart');
     if (!canvas || !DATA) return;
 
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
-    const isos = Object.keys(DATA.results);
-    const resources = ['clean_firm', 'solar', 'wind', 'hydro', 'storage'];
-    const resourceLabels = { clean_firm: 'Clean Firm', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', storage: 'Storage' };
-    const resourceColors = {
-        solar:      { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
-        wind:       { fill: 'rgba(34,197,94,0.50)',  border: '#22C55E' },
-        hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
-        clean_firm: { fill: 'rgba(26,39,68,0.50)',    border: '#1A2744' },
-        storage:    { fill: 'rgba(239,68,68,0.50)',   border: '#EF4444' }
-    };
-
-    // Average mix across ISOs for each threshold
-    const labels = [];
-    const mixData = {};
-    resources.forEach(r => mixData[r] = []);
-
-    for (const tk of thresholdKeys) {
-        let found = false;
-        const avgMix = {};
-        resources.forEach(r => avgMix[r] = 0);
-        let count = 0;
-
-        for (const iso of isos) {
-            const t = DATA.results[iso]?.thresholds?.[tk];
-            const mix = t?.resource_mix || t?.optimal_mix;
-            if (t && mix) {
-                resources.forEach(r => {
-                    avgMix[r] += (mix[r] || 0);
-                });
-                count++;
-                found = true;
-            }
-        }
-
-        if (found && count > 0) {
-            labels.push(tk + '%');
-            const total = resources.reduce((s, r) => s + avgMix[r], 0) || 1;
-            resources.forEach(r => {
-                mixData[r].push(Math.round(avgMix[r] / total * 100 * 10) / 10);
-            });
-        }
-    }
-
+    const { labels, mixData } = getMixDataForRegion('average');
     if (labels.length === 0) return;
 
-    const datasets = resources.map(r => ({
-        label: resourceLabels[r],
+    const datasets = MIX_RESOURCES.map(r => ({
+        label: MIX_LABELS_MAP[r],
         data: mixData[r],
-        backgroundColor: resourceColors[r].fill,
-        borderColor: resourceColors[r].border,
+        backgroundColor: MIX_COLORS[r].fill,
+        borderColor: MIX_COLORS[r].border,
         borderWidth: 2,
         borderRadius: 3,
     }));
@@ -4699,6 +4930,223 @@ function initNarrativeMixChart() {
             }
         }
     });
+
+    // Bind region toggle buttons
+    const toggleRow = document.getElementById('mixRegionToggle');
+    if (toggleRow) {
+        toggleRow.addEventListener('click', function(e) {
+            const btn = e.target.closest('.region-toggle-btn');
+            if (!btn) return;
+            const region = btn.dataset.region;
+            toggleRow.querySelectorAll('.region-toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateMixChartRegion(region);
+        });
+    }
+}
+
+function updateMixChartRegion(region) {
+    if (!narrativeMixChart || !DATA) return;
+    currentMixRegion = region;
+    const { labels, mixData } = getMixDataForRegion(region);
+    narrativeMixChart.data.labels = labels;
+    MIX_RESOURCES.forEach((r, i) => {
+        narrativeMixChart.data.datasets[i].data = mixData[r];
+    });
+    narrativeMixChart.update();
+
+    const insightEl = document.getElementById('mixRegionInsight');
+    if (insightEl && MIX_REGION_INSIGHTS[region]) {
+        insightEl.innerHTML = MIX_REGION_INSIGHTS[region];
+    }
+}
+
+// ---- Incremental Generation Mix Chart ----
+let incrementalMixChart = null;
+let currentIncrementalRegion = 'CAISO';
+
+const INCREMENTAL_INSIGHTS = {
+    CAISO: '<strong>CAISO:</strong> The 95%→100% transition costs +$28.70/MWh and requires +6% storage and +8% clean firm while dropping wind by 9%. Curtailment jumps by 16.8 percentage points — the clearest illustration of the "last mile" penalty.',
+    ERCOT: '<strong>ERCOT:</strong> Shows the most dramatic pivot at 95%→100%: clean firm surges +49 percentage points while wind drops 40 points. Cost jumps $40.43/MWh — the largest final-step premium of any region. Wind-heavy strategies collapse in the last 5%.',
+    PJM: '<strong>PJM:</strong> Keeps the same resource mix from 75% to 90%, simply scaling up procurement. The 90%→95% step triggers a regime change: +20% clean firm, −15% wind, −5% solar. Curtailment actually drops slightly at this step, a sign of better-matched resources.',
+    NYISO: '<strong>NYISO:</strong> Hydro stays locked at 40% throughout. Uses zero solar until 100%. The 95%→100% transition introduces both solar (+4%) and storage (+8%) for the first time — a fundamentally different portfolio than all lower targets.',
+    NEISO: '<strong>NEISO:</strong> The most expensive final push at +$47.03/MWh. Uniquely, hydro drops by 14 points at 95%→100% (from 30% to 16%), wind is completely eliminated, and clean firm reaches 78% — the highest of any region.'
+};
+
+function getIncrementalData(region) {
+    const transitions = [
+        { from: '75', to: '90', label: '75%→90%' },
+        { from: '90', to: '95', label: '90%→95%' },
+        { from: '95', to: '100', label: '95%→100%' }
+    ];
+
+    const labels = [];
+    const deltas = {};
+    MIX_RESOURCES.forEach(r => deltas[r] = []);
+
+    for (const tr of transitions) {
+        const tFrom = DATA.results[region]?.thresholds?.[tr.from];
+        const tTo = DATA.results[region]?.thresholds?.[tr.to];
+        if (!tFrom || !tTo) continue;
+        const mixFrom = tFrom.resource_mix || tFrom.optimal_mix || {};
+        const mixTo = tTo.resource_mix || tTo.optimal_mix || {};
+
+        labels.push(tr.label);
+        MIX_RESOURCES.forEach(r => {
+            const fromPct = mixFrom[r] || 0;
+            const toPct = mixTo[r] || 0;
+            deltas[r].push(toPct - fromPct);
+        });
+    }
+    return { labels, deltas };
+}
+
+function initIncrementalMixChart() {
+    const canvas = document.getElementById('incrementalMixChart');
+    if (!canvas || !DATA) return;
+
+    const { labels, deltas } = getIncrementalData('CAISO');
+    if (labels.length === 0) return;
+
+    const datasets = MIX_RESOURCES.map(r => ({
+        label: MIX_LABELS_MAP[r],
+        data: deltas[r],
+        backgroundColor: MIX_COLORS[r].fill,
+        borderColor: MIX_COLORS[r].border,
+        borderWidth: 2,
+        borderRadius: 3,
+    }));
+
+    const ctx = canvas.getContext('2d');
+    incrementalMixChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutCubic' },
+            layout: { padding: { top: 12, right: 8, bottom: 4, left: 4 } },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        color: '#1A1A1A',
+                        padding: 14,
+                        generateLabels: function(chart) {
+                            return chart.data.datasets.map((ds, i) => ({
+                                text: ds.label,
+                                fillStyle: ds.backgroundColor,
+                                strokeStyle: ds.borderColor,
+                                lineWidth: 2,
+                                hidden: !chart.isDatasetVisible(i),
+                                datasetIndex: i,
+                                pointStyle: 'rectRounded',
+                            }));
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.92)',
+                    titleFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                    bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            const v = context.parsed.y;
+                            const sign = v >= 0 ? '+' : '';
+                            return ` ${context.dataset.label}: ${sign}${v.toFixed(0)}pp`;
+                        }
+                    }
+                },
+                datalabels: {
+                    display: function(context) {
+                        return Math.abs(context.dataset.data[context.dataIndex]) >= 4;
+                    },
+                    color: function(context) {
+                        const v = context.dataset.data[context.dataIndex];
+                        const label = context.dataset.label;
+                        if (label === 'Clean Firm' && v > 0) return '#FFFFFF';
+                        return '#1A1A1A';
+                    },
+                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 },
+                    formatter: function(value) {
+                        const sign = value >= 0 ? '+' : '';
+                        return sign + Math.round(value) + 'pp';
+                    },
+                    anchor: 'center',
+                    align: 'center',
+                },
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Matching Target Transition',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#1A2744',
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Change in Mix Share (percentage points)',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    ticks: {
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        color: '#6B6356',
+                        callback: (v) => (v >= 0 ? '+' : '') + v + 'pp',
+                    }
+                }
+            }
+        }
+    });
+
+    // Set initial insight
+    const insightEl = document.getElementById('incrementalInsight');
+    if (insightEl) insightEl.innerHTML = INCREMENTAL_INSIGHTS['CAISO'];
+
+    // Bind region pills
+    const pillRow = document.getElementById('incrementalRegionPills');
+    if (pillRow) {
+        pillRow.addEventListener('click', function(e) {
+            const pill = e.target.closest('.incremental-pill');
+            if (!pill) return;
+            const region = pill.dataset.region;
+            pillRow.querySelectorAll('.incremental-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            updateIncrementalChart(region);
+        });
+    }
+}
+
+function updateIncrementalChart(region) {
+    if (!incrementalMixChart || !DATA) return;
+    currentIncrementalRegion = region;
+    const { labels, deltas } = getIncrementalData(region);
+    incrementalMixChart.data.labels = labels;
+    MIX_RESOURCES.forEach((r, i) => {
+        incrementalMixChart.data.datasets[i].data = deltas[r];
+    });
+    incrementalMixChart.update();
+
+    const insightEl = document.getElementById('incrementalInsight');
+    if (insightEl && INCREMENTAL_INSIGHTS[region]) {
+        insightEl.innerHTML = INCREMENTAL_INSIGHTS[region];
+    }
 }
 
 // ---- Narrative Cost Chart (Scrollytelling) ----
@@ -5280,6 +5728,17 @@ function initScrollAnimations() {
             }
         }, { threshold: 0.05 });
         mixInitObserver.observe(mixCanvas.closest('.story-section') || mixCanvas);
+    }
+
+    // 5. Initialize the incremental mix chart when it scrolls into view
+    const incrCanvas = document.getElementById('incrementalMixChart');
+    if (incrCanvas) {
+        const incrInitObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !incrementalMixChart) {
+                initIncrementalMixChart();
+            }
+        }, { threshold: 0.05 });
+        incrInitObserver.observe(incrCanvas.closest('.story-section') || incrCanvas);
     }
 }
 
