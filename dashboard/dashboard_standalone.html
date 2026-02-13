@@ -142,7 +142,7 @@ body {
 .header-logo {
     display: none;
 }
-.header h1 {
+.header h4 {
     font-family: 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
     font-weight: 700;
     font-size: 2.6rem;
@@ -1411,10 +1411,10 @@ body {
         padding: 20px 14px 40px;
     }
     .header {
-        padding: 32px 16px 28px;
+        padding: 44px 16px 36px;
     }
-    .header h1 {
-        font-size: 1.5rem;
+    .header h4 {
+        font-size: 1.8rem;
         letter-spacing: 0.5px;
     }
     .header .subtitle {
@@ -1558,10 +1558,10 @@ body {
         gap: 12px;
     }
     .story-stat-card {
-        padding: 16px 12px;
+        padding: 22px 16px;
     }
     .story-stat-value {
-        font-size: 1.5rem;
+        font-size: 1.9rem;
     }
     .story-stat-label {
         font-size: 0.7rem;
@@ -1599,10 +1599,10 @@ body {
         padding: 14px 10px 32px;
     }
     .header {
-        padding: 24px 12px 20px;
+        padding: 38px 12px 30px;
     }
-    .header h1 {
-        font-size: 1.3rem;
+    .header h4 {
+        font-size: 1.6rem;
         letter-spacing: 0;
     }
     .header .subtitle {
@@ -1673,10 +1673,10 @@ body {
         gap: 8px;
     }
     .story-stat-card {
-        padding: 12px 8px;
+        padding: 18px 14px;
     }
     .story-stat-value {
-        font-size: 1.3rem;
+        font-size: 1.7rem;
     }
     .story-insight-box {
         padding: 14px 12px;
@@ -1765,7 +1765,7 @@ body {
 <!-- HEADER -->
 <header class="header">
     <!-- Logo removed for rebrand -->
-    <h1>Hourly Clean Energy Cost Optimizer</h1>
+    <h4>Hourly Clean Energy Cost Optimizer</h4>
     <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
     <div class="header-accent"></div>
 </header>
@@ -1898,10 +1898,6 @@ body {
      ═════════════════════════════════════════════════════════════════ -->
 <div id="narrativeSection" style="display:none;">
 
-    <!-- Divider -->
-    <div class="story-divider-wrap">
-        <hr class="story-divider">
-    </div>
 
     <!-- SECTION 1: INTRO — with big number callout -->
     <section class="story-section story-fade-in">
@@ -2819,7 +2815,7 @@ function updatePeakCapacity(entry, region) {
 
     container.innerHTML = `
         <div class="peak-capacity-note">
-            At <strong style="color:#0EA5E9;">${procPct}%</strong> procurement, the worst single hour still needs
+            At <strong style="color:#0047AB;">${procPct}%</strong> procurement, the worst single hour still needs
             <strong style="color:#EF4444;">${formatPct(peakGapPct)}</strong> of peak demand from backup sources.
         </div>
         <div class="peak-tower-wrap">
@@ -2829,8 +2825,8 @@ function updatePeakCapacity(entry, region) {
                 <div class="peak-tower-label">Peak<br>Demand</div>
             </div>
             <div class="peak-tower">
-                <div class="peak-tower-value" style="color:#0EA5E9;">${formatCommas(coveredMW)} MW</div>
-                <div class="peak-tower-bar" style="height:${coveredH}px; background: rgba(14,165,233,0.4); border: 2px solid #0EA5E9;"></div>
+                <div class="peak-tower-value" style="color:#0047AB;">${formatCommas(coveredMW)} MW</div>
+                <div class="peak-tower-bar" style="height:${coveredH}px; background: rgba(0,71,171,0.4); border: 2px solid #0047AB;"></div>
                 <div class="peak-tower-label">Clean<br>Coverage</div>
             </div>
             <div class="peak-tower">
@@ -3436,6 +3432,7 @@ function highlightCostStep(stepName) {
                 color: '#EF4444',
                 position: 'start',
                 yAdjust: -42,
+                xAdjust: -10,
             };
             // Shade the region
             annotations['zone'] = {
@@ -3475,7 +3472,8 @@ function highlightCostStep(stepName) {
                 font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 700 },
                 color: '#EF4444',
                 position: 'end',
-                yAdjust: -42,
+                yAdjust: 20,
+                xAdjust: -15,
             };
             // Danger zone shading — 99 to 100 is proportionally narrow
             annotations['dangerZone'] = {
@@ -3563,7 +3561,7 @@ function getStepAnnotations(stepName, avgCosts) {
             for (let i = idx75; i <= idx95; i++) { colors[i] = '#EF4444'; radii[i] = 5; }
             radii[idx95] = 8;
             annotations['highlight95'] = { type: 'point', xValue: 95, yValue: getY(idx95), backgroundColor: 'rgba(239,68,68,0.15)', borderColor: '#EF4444', borderWidth: 2, radius: 14 };
-            annotations['label95'] = { type: 'label', xValue: 95, yValue: getY(idx95), content: '$' + getY(idx95) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'start', yAdjust: -36 };
+            annotations['label95'] = { type: 'label', xValue: 95, yValue: getY(idx95), content: '$' + getY(idx95) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'start', yAdjust: -36, xAdjust: -10 };
             annotations['zone'] = { type: 'box', xMin: 74, xMax: 96, backgroundColor: 'rgba(239,68,68,0.04)', borderColor: 'transparent' };
         }
     } else if (stepName === 'cost-99') {
@@ -3573,7 +3571,7 @@ function getStepAnnotations(stepName, avgCosts) {
             colors[idx99] = '#EF4444'; radii[idx99] = 8;
             if (idx100 >= 0) { colors[idx100] = '#EF4444'; radii[idx100] = 8; }
             annotations['highlight99'] = { type: 'point', xValue: getX(topIdx), yValue: getY(topIdx), backgroundColor: 'rgba(239,68,68,0.15)', borderColor: '#EF4444', borderWidth: 2, radius: 14 };
-            annotations['label99'] = { type: 'label', xValue: getX(topIdx), yValue: getY(topIdx), content: '$' + getY(topIdx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'end', yAdjust: -36 };
+            annotations['label99'] = { type: 'label', xValue: getX(topIdx), yValue: getY(topIdx), content: '$' + getY(topIdx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'end', yAdjust: 20, xAdjust: -15 };
             annotations['dangerZone'] = { type: 'box', xMin: 98.5, xMax: 100.5, backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5 };
         }
     }
