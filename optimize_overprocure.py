@@ -74,8 +74,8 @@ ISO_LABELS = {
 # 5 optimization resource types (sum to 100%)
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
-# 18 target thresholds
-THRESHOLDS = [75, 80, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
+# 7 target thresholds (reduced from 18 — captures key inflection points)
+THRESHOLDS = [75, 80, 85, 90, 95, 99, 100]
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COST TABLES — Medium values used by optimizer; full L/M/H output for dashboard
@@ -139,6 +139,44 @@ FULL_LCOE_TABLES = {
         'Low':    {'CAISO': 135, 'ERCOT': 116, 'PJM': 128, 'NYISO': 150, 'NEISO': 143},
         'Medium': {'CAISO': 180, 'ERCOT': 155, 'PJM': 170, 'NYISO': 200, 'NEISO': 190},
         'High':   {'CAISO': 234, 'ERCOT': 202, 'PJM': 221, 'NYISO': 260, 'NEISO': 247},
+    },
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAIRED TOGGLE GROUPS — 5 groups replacing 10 individual toggles
+# Dashboard toggles move all member variables in lockstep (all L, all M, or all H)
+# ══════════════════════════════════════════════════════════════════════════════
+
+PAIRED_TOGGLE_GROUPS = {
+    'renewable_generation': {
+        'label': 'Renewable Generation Cost',
+        'options': ['Low', 'Medium', 'High'],
+        'members': ['solar', 'wind'],
+        'description': 'Solar and wind LCOE move together — driven by similar manufacturing scale, supply chain, and installation labor factors',
+    },
+    'firm_generation': {
+        'label': 'Firm Generation Cost',
+        'options': ['Low', 'Medium', 'High'],
+        'members': ['clean_firm', 'ccs_ccgt'],
+        'description': 'Clean firm (nuclear/geothermal) and CCS-CCGT share capital-intensive, long-lead-time cost structures',
+    },
+    'storage': {
+        'label': 'Storage Cost',
+        'options': ['Low', 'Medium', 'High'],
+        'members': ['battery', 'ldes'],
+        'description': 'Battery and LDES costs share manufacturing/materials cost drivers across storage technologies',
+    },
+    'fossil_fuel': {
+        'label': 'Fossil Fuel Price',
+        'options': ['Low', 'Medium', 'High'],
+        'members': ['natural_gas', 'coal', 'oil'],
+        'description': 'Gas, coal, and oil prices are correlated through energy commodity markets and macro conditions',
+    },
+    'transmission': {
+        'label': 'Transmission Cost',
+        'options': ['None', 'Low', 'Medium', 'High'],
+        'members': ['wind', 'solar', 'clean_firm', 'ccs_ccgt', 'battery', 'ldes'],
+        'description': 'Grid interconnection and transmission infrastructure costs affect all new-build resources within a region',
     },
 }
 
@@ -1015,6 +1053,132 @@ def compute_costs(iso, resource_pcts, procurement_pct, battery_dispatch_pct, lde
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# PARAMETERIZED COST COMPUTATION (for paired toggle sensitivity scenarios)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Wholesale price adjustments by region and fossil fuel price level
+# Based on regional fossil fuel generation share and fuel price sensitivity
+# Gas heat rate ~7 MMBtu/MWh × price delta, weighted by regional fossil share
+WHOLESALE_FUEL_ADJUSTMENTS = {
+    'CAISO': {'Low': -5, 'Medium': 0, 'High': 10},   # ~40% gas generation
+    'ERCOT': {'Low': -7, 'Medium': 0, 'High': 12},   # ~50% gas, most sensitive
+    'PJM':   {'Low': -6, 'Medium': 0, 'High': 11},   # ~40% gas + coal mix
+    'NYISO': {'Low': -4, 'Medium': 0, 'High': 8},    # ~35% gas, more nuclear
+    'NEISO': {'Low': -4, 'Medium': 0, 'High': 8},    # ~35% gas, more nuclear
+}
+
+
+def compute_costs_parameterized(iso, resource_pcts, procurement_pct, battery_dispatch_pct,
+                                 ldes_dispatch_pct, hourly_match_score,
+                                 renewable_gen_level, firm_gen_level, storage_level,
+                                 fossil_fuel_level, transmission_level):
+    """
+    Compute costs for a specific paired toggle scenario on a cached resource mix.
+
+    Instead of reading from global Medium constants, uses the full L/M/H cost tables
+    mapped through the paired toggle groups.
+    """
+    # Map paired toggle levels to individual resource LCOEs
+    lcoe_map = {
+        'solar': FULL_LCOE_TABLES['solar'][renewable_gen_level][iso],
+        'wind': FULL_LCOE_TABLES['wind'][renewable_gen_level][iso],
+        'clean_firm': FULL_LCOE_TABLES['clean_firm'][firm_gen_level][iso],
+        'ccs_ccgt': FULL_LCOE_TABLES['ccs_ccgt'][firm_gen_level][iso],
+        'battery': FULL_LCOE_TABLES['battery'][storage_level][iso],
+        'ldes': FULL_LCOE_TABLES['ldes'][storage_level][iso],
+        'hydro': 0,
+    }
+
+    # Map transmission level to per-resource adders
+    tx_map = {rtype: FULL_TRANSMISSION_TABLES[rtype][transmission_level][iso]
+              for rtype in FULL_TRANSMISSION_TABLES}
+
+    # Adjust wholesale price based on fossil fuel level
+    wholesale = WHOLESALE_PRICES[iso] + WHOLESALE_FUEL_ADJUSTMENTS[iso][fossil_fuel_level]
+    wholesale = max(5, wholesale)  # Floor at $5/MWh
+
+    grid_shares = GRID_MIX_SHARES[iso]
+    procurement_factor = procurement_pct / 100.0
+
+    total_cost_per_demand = 0.0
+
+    for rtype in RESOURCE_TYPES:
+        pct = resource_pcts.get(rtype, 0)
+        if pct <= 0:
+            continue
+
+        resource_fraction = procurement_factor * (pct / 100.0)
+        resource_pct_of_demand = resource_fraction * 100.0
+
+        existing_share = grid_shares.get(rtype, 0)
+        existing_pct = min(resource_pct_of_demand, existing_share)
+        new_pct = max(0, resource_pct_of_demand - existing_share)
+
+        if rtype == 'hydro':
+            cost_per_demand = resource_pct_of_demand / 100.0 * wholesale
+        else:
+            new_build_cost = lcoe_map.get(rtype, 0) + tx_map.get(rtype, 0)
+            cost_per_demand = (existing_pct / 100.0 * wholesale) + (new_pct / 100.0 * new_build_cost)
+
+        total_cost_per_demand += cost_per_demand
+
+    # Battery storage cost
+    battery_cost_rate = lcoe_map['battery'] + tx_map.get('battery', 0)
+    total_cost_per_demand += (battery_dispatch_pct / 100.0) * battery_cost_rate
+
+    # LDES storage cost
+    ldes_cost_rate = lcoe_map['ldes'] + tx_map.get('ldes', 0)
+    total_cost_per_demand += (ldes_dispatch_pct / 100.0) * ldes_cost_rate
+
+    # Effective cost per useful MWh
+    matched_fraction = hourly_match_score / 100.0 if hourly_match_score > 0 else 1.0
+    effective_cost = total_cost_per_demand / matched_fraction
+    incremental = effective_cost - wholesale
+
+    return {
+        'effective_cost': round(effective_cost, 2),
+        'incremental': round(incremental, 2),
+        'total_cost': round(total_cost_per_demand, 2),
+        'wholesale': round(wholesale, 2),
+    }
+
+
+def precompute_sensitivity_costs(iso, result, emission_rates, demand_total_mwh):
+    """
+    Pre-compute costs for all 324 paired toggle combinations on a cached resource mix.
+
+    Returns dict keyed by scenario string: "{renew}_{firm}_{storage}_{fuel}_{tx}"
+    where each level is L/M/H (or N for None on transmission).
+    """
+    resource_pcts = result['resource_mix']
+    procurement_pct = result['procurement_pct']
+    battery_pct = result['battery_dispatch_pct']
+    ldes_pct = result['ldes_dispatch_pct']
+    match_score = result['hourly_match_score']
+
+    level_keys = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
+    gen_levels = ['Low', 'Medium', 'High']
+    tx_levels = ['None', 'Low', 'Medium', 'High']
+
+    scenarios = {}
+
+    for renew in gen_levels:
+        for firm in gen_levels:
+            for storage in gen_levels:
+                for fuel in gen_levels:
+                    for tx in tx_levels:
+                        key = f"{level_keys[renew]}{level_keys[firm]}{level_keys[storage]}_{level_keys[fuel]}_{level_keys[tx]}"
+                        cost_data = compute_costs_parameterized(
+                            iso, resource_pcts, procurement_pct,
+                            battery_pct, ldes_pct, match_score,
+                            renew, firm, storage, fuel, tx
+                        )
+                        scenarios[key] = cost_data
+
+    return scenarios
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PEAK GAP COMPUTATION
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1245,7 +1409,8 @@ def optimize_at_procurement_level(iso, demand_norm, supply_profiles, procurement
 # ══════════════════════════════════════════════════════════════════════════════
 
 def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_cap,
-                           emission_rates, demand_total_mwh):
+                           emission_rates, demand_total_mwh,
+                           cost_levels=None, score_cache=None):
     """
     CO-OPTIMIZE cost and matching simultaneously for a given threshold target.
     Search across procurement levels AND resource mixes to find the CHEAPEST
@@ -1255,20 +1420,72 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
       Phase 1: Coarse scan (10% mix steps, 10% procurement steps)
       Phase 2: Medium refinement (5% mix steps, 5% procurement steps)
       Phase 3: Fine-tune (1% mix, 2% procurement, refined storage)
+
+    Args:
+        cost_levels: Optional tuple (renewable_gen_level, firm_gen_level, storage_level,
+                     fossil_fuel_level, transmission_level). If None, uses Medium costs.
+        score_cache: Optional dict for caching matching scores across cost scenarios.
+                     Matching scores are physics-based and cost-independent, so caching
+                     them across cost scenarios is scientifically correct (not a shortcut).
+
+    Returns: best_result dict or None
     """
     target = threshold / 100.0
     max_proc = 500 if target >= 0.995 else 310
     storage_threshold = max(0.5, target - 0.05)
     demand_arr, supply_arrs, supply_matrix = prepare_numpy_profiles(demand_norm, supply_profiles)
 
+    if score_cache is None:
+        score_cache = {}
+
+    # ---- Cached scoring wrappers ----
+    # Matching scores are physics (hourly profile alignment) — cost-independent.
+    # Caching them across cost scenarios avoids redundant computation without
+    # compromising scientific rigor.
+
+    def c_hourly_score(mix_fracs_tuple, pf):
+        key = ('h', mix_fracs_tuple, round(pf, 4))
+        if key not in score_cache:
+            score_cache[key] = fast_hourly_score(demand_arr, supply_matrix,
+                                                  np.array(mix_fracs_tuple), pf)
+        return score_cache[key]
+
+    def c_battery_score(mix_fracs_tuple, pf, bp):
+        key = ('b', mix_fracs_tuple, round(pf, 4), bp)
+        if key not in score_cache:
+            score_cache[key] = fast_score_with_battery(demand_arr, supply_matrix,
+                                                        np.array(mix_fracs_tuple), pf, bp)
+        return score_cache[key]
+
+    def c_both_score(mix_fracs_tuple, pf, bp, lp):
+        key = ('bl', mix_fracs_tuple, round(pf, 4), bp, lp)
+        if key not in score_cache:
+            score_cache[key] = fast_score_with_both_storage(demand_arr, supply_matrix,
+                                                              np.array(mix_fracs_tuple), pf, bp, lp)
+        return score_cache[key]
+
+    # ---- Cost function: uses scenario-specific costs ----
     best_result = None
     best_cost = float('inf')
 
+    def eval_cost(combo, proc, bp, lp, score):
+        """Evaluate cost using the scenario's cost function. Cost drives mix selection."""
+        if cost_levels:
+            r_gen, f_gen, stor, fuel, tx = cost_levels
+            cost_data = compute_costs_parameterized(
+                iso, combo, proc, bp, lp, score * 100,
+                r_gen, f_gen, stor, fuel, tx
+            )
+            return cost_data['effective_cost']
+        else:
+            cost_data = compute_costs(iso, combo, proc, bp, lp, score * 100,
+                                       demand_norm, supply_profiles)
+            return cost_data['effective_cost_per_useful_mwh']
+
     def update_best(combo, proc, bp, lp, score):
-        """Helper to update best result if this is the cheapest so far."""
+        """Update best result if this is the cheapest so far under current cost scenario."""
         nonlocal best_result, best_cost
-        cost_data = compute_costs(iso, combo, proc, bp, lp, score * 100, demand_norm, supply_profiles)
-        cost = cost_data['effective_cost_per_useful_mwh']
+        cost = eval_cost(combo, proc, bp, lp, score)
         if cost < best_cost:
             best_cost = cost
             best_result = {
@@ -1287,29 +1504,23 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     for procurement_pct in range(70, max_proc, 10):
         pf = procurement_pct / 100.0
         for combo in combos_10:
-            mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
-            score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
+            mix_fracs = tuple(combo[rt] / 100.0 for rt in RESOURCE_TYPES)
+            score = c_hourly_score(mix_fracs, pf)
 
             if score >= target:
                 cost = update_best(combo, procurement_pct, 0, 0, score)
                 candidates.append((cost, combo, score, 0, 0, procurement_pct))
             elif score >= storage_threshold:
-                # Try battery levels first
                 for bp in [5, 10, 15, 20]:
-                    score_ws = fast_score_with_battery(
-                        demand_arr, supply_matrix, mix_fracs, pf, bp
-                    )
+                    score_ws = c_battery_score(mix_fracs, pf, bp)
                     if score_ws >= target:
                         cost = update_best(combo, procurement_pct, bp, 0, score_ws)
                         candidates.append((cost, combo, score_ws, bp, 0, procurement_pct))
                         break
                 else:
-                    # Try battery + LDES
                     for bp in [5, 10, 15]:
                         for lp in [5, 10, 15]:
-                            score_ws = fast_score_with_both_storage(
-                                demand_arr, supply_matrix, mix_fracs, pf, bp, lp
-                            )
+                            score_ws = c_both_score(mix_fracs, pf, bp, lp)
                             if score_ws >= target:
                                 cost = update_best(combo, procurement_pct, bp, lp, score_ws)
                                 candidates.append((cost, combo, score_ws, bp, lp, procurement_pct))
@@ -1321,9 +1532,9 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     if not candidates:
         return None
 
-    # Keep top candidates within 15% of best cost
+    # Select top candidates for refinement — ranked by THIS scenario's cost function
     candidates.sort(key=lambda x: x[0])
-    top = [c for c in candidates if c[0] <= best_cost * 1.15][:8]
+    top = [c for c in candidates if c[0] <= best_cost * 1.30][:15]
 
     # ---- Phase 2: 5% refinement around top candidates ----
     phase2 = []
@@ -1335,7 +1546,6 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 continue
             pf = p / 100.0
 
-            # Generate 5% neighborhood around this combo
             neighborhood = generate_combinations_around(combo, hydro_cap, step=5, radius=1)
             for rcombo in neighborhood:
                 key = (rcombo['clean_firm'], rcombo['solar'], rcombo['wind'],
@@ -1344,31 +1554,24 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                     continue
                 seen.add(key)
 
-                mix_fracs = np.array([rcombo[rt] / 100.0 for rt in RESOURCE_TYPES])
+                mix_fracs = tuple(rcombo[rt] / 100.0 for rt in RESOURCE_TYPES)
 
-                # Try without storage first
-                score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
+                score = c_hourly_score(mix_fracs, pf)
                 best_bp = 0
                 best_lp = 0
 
                 if score < target:
-                    # Try battery
                     for bp in [5, 10, 15, 20]:
-                        score_ws = fast_score_with_battery(
-                            demand_arr, supply_matrix, mix_fracs, pf, bp
-                        )
+                        score_ws = c_battery_score(mix_fracs, pf, bp)
                         if score_ws >= target:
                             score = score_ws
                             best_bp = bp
                             break
 
                 if score < target:
-                    # Try battery + LDES
                     for bp in [5, 10, 15]:
                         for lp in [5, 10, 15]:
-                            score_ws = fast_score_with_both_storage(
-                                demand_arr, supply_matrix, mix_fracs, pf, bp, lp
-                            )
+                            score_ws = c_both_score(mix_fracs, pf, bp, lp)
                             if score_ws >= target:
                                 score = score_ws
                                 best_bp = bp
@@ -1395,7 +1598,6 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 continue
             pf = p / 100.0
 
-            # Fine neighborhood (1% step, radius 2)
             fine_combos = generate_combinations_around(combo, hydro_cap, step=1, radius=2)
             for rcombo in fine_combos:
                 key = (rcombo['clean_firm'], rcombo['solar'], rcombo['wind'],
@@ -1404,42 +1606,32 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                     continue
                 seen2.add(key)
 
-                mix_fracs = np.array([rcombo[rt] / 100.0 for rt in RESOURCE_TYPES])
+                mix_fracs = tuple(rcombo[rt] / 100.0 for rt in RESOURCE_TYPES)
 
-                # Try no-storage first
-                score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
+                score = c_hourly_score(mix_fracs, pf)
                 best_bp = 0
                 best_lp = 0
                 best_score_here = score
 
-                # Try battery in 2% steps
                 for bp in range(2, 22, 2):
-                    score_ws = fast_score_with_battery(
-                        demand_arr, supply_matrix, mix_fracs, pf, bp
-                    )
+                    score_ws = c_battery_score(mix_fracs, pf, bp)
                     if score_ws > best_score_here:
                         best_score_here = score_ws
                         best_bp = bp
                     if score_ws >= target and best_bp == bp:
                         break
 
-                # If still not enough, try adding LDES
                 if best_score_here < target:
                     for lp in range(2, 22, 2):
-                        score_ws = fast_score_with_both_storage(
-                            demand_arr, supply_matrix, mix_fracs, pf, best_bp, lp
-                        )
+                        score_ws = c_both_score(mix_fracs, pf, bp, lp)
                         if score_ws > best_score_here:
                             best_score_here = score_ws
                             best_lp = lp
                         if score_ws >= target and best_lp == lp:
                             break
                 elif best_score_here >= target:
-                    # Already met target with battery only; try adding small LDES for cost benefit
                     for lp in range(2, 12, 2):
-                        score_ws = fast_score_with_both_storage(
-                            demand_arr, supply_matrix, mix_fracs, pf, best_bp, lp
-                        )
+                        score_ws = c_both_score(mix_fracs, pf, best_bp, lp)
                         if score_ws > best_score_here:
                             best_score_here = score_ws
                             best_lp = lp
@@ -1602,6 +1794,8 @@ def main():
         'regional_lcoe': REGIONAL_LCOE,
         'grid_mix_shares': GRID_MIX_SHARES,
         'ccs_residual_emission_rate': CCS_RESIDUAL_EMISSION_RATE,
+        # Paired toggle group definitions for dashboard controls
+        'paired_toggle_groups': PAIRED_TOGGLE_GROUPS,
         # Full L/M/H tables for dashboard cost recalculation
         'lcoe_tables': FULL_LCOE_TABLES,
         'transmission_tables': FULL_TRANSMISSION_TABLES,
