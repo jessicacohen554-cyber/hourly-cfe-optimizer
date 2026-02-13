@@ -62,6 +62,12 @@
 - All text readable in all figures at all sizes
 - No console errors, no broken layouts
 
+### Animations & Interactivity
+- Regional deep-dive pages should be illustrative and dynamic with animations
+- Abatement comparison page: creative animations, animated number counters, scroll-triggered transitions
+- Use CSS animations, scroll-based triggers, Chart.js animation options
+- Keep it professional (Bloomberg/McKinsey quality) but engaging
+
 ### Build Process
 - Deploy agents in parallel for non-dependent tasks
 - Push early so user can iterate/review while optimizer builds
