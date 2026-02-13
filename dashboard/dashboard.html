@@ -2819,25 +2819,19 @@ body {
 
             <!-- Curtailment illustration -->
             <div class="section-illustration">
-                <svg width="420" height="110" viewBox="0 0 420 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Labels above bars -->
-                    <text x="140" y="16" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#0284C7">Matched to Demand</text>
-                    <text x="330" y="16" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#DC2626">Curtailed (Paid but Unused)</text>
-                    <!-- Bracket arrow above curtailed portion -->
-                    <path d="M255 28 L395 28" stroke="#EF4444" stroke-width="1.5"/>
-                    <path d="M255 24 L255 32" stroke="#EF4444" stroke-width="1.5"/>
-                    <path d="M395 24 L395 32" stroke="#EF4444" stroke-width="1.5"/>
-                    <path d="M325 28 L325 36" stroke="#EF4444" stroke-width="1.5" marker-end="url(#arrowRedCurt)"/>
+                <svg width="420" height="120" viewBox="0 0 420 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <!-- Supply bar -->
-                    <rect x="20" y="44" width="380" height="40" rx="6" fill="rgba(34,197,94,0.12)" stroke="#22C55E" stroke-width="1.5"/>
-                    <text x="200" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="600" fill="#16A34A">Total Procurement</text>
-                    <rect x="20" y="44" width="230" height="40" rx="6" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
-                    <text x="135" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="600" fill="#0284C7">Matched</text>
+                    <rect x="20" y="30" width="380" height="40" rx="6" fill="rgba(34,197,94,0.12)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="200" y="54" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#16A34A">Total Procurement</text>
+                    <rect x="20" y="30" width="230" height="40" rx="6" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
+                    <text x="135" y="54" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#0284C7">Matched</text>
                     <!-- Curtailed divider -->
-                    <line x1="250" y1="38" x2="250" y2="90" stroke="#EF4444" stroke-width="2" stroke-dasharray="4 3"/>
-                    <!-- Percent labels below -->
-                    <text x="135" y="100" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" fill="#0284C7">~60% of total</text>
-                    <text x="325" y="100" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" fill="#DC2626">~40% curtailed</text>
+                    <line x1="250" y1="24" x2="250" y2="76" stroke="#EF4444" stroke-width="2" stroke-dasharray="4 3"/>
+                    <!-- Labels below bars -->
+                    <text x="135" y="88" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#0284C7">Matched to Demand</text>
+                    <text x="135" y="102" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#0284C7">~60% of total</text>
+                    <text x="325" y="88" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#DC2626">Curtailed (Unused)</text>
+                    <text x="325" y="102" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#DC2626">~40% paid but wasted</text>
                     <defs><marker id="arrowRedCurt" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#EF4444"/></marker></defs>
                 </svg>
             </div>
@@ -3134,26 +3128,34 @@ body {
 
             <!-- Transition fuel illustration -->
             <div class="section-illustration">
-                <svg width="460" height="130" viewBox="0 0 460 130" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Timeline arrow -->
-                    <line x1="30" y1="65" x2="430" y2="65" stroke="#1A2744" stroke-width="2"/>
-                    <polygon points="430,65 420,58 420,72" fill="#1A2744"/>
-                    <text x="230" y="20" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1A2744">TRANSITION PATHWAY</text>
+                <svg width="460" height="140" viewBox="0 0 460 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <text x="230" y="18" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="700" fill="#1A2744">TRANSITION PATHWAY</text>
                     <!-- Phase 1: Today -->
-                    <rect x="40" y="40" width="100" height="50" rx="8" fill="rgba(239,68,68,0.1)" stroke="#EF4444" stroke-width="1.5"/>
-                    <text x="90" y="60" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">Unabated Gas</text>
-                    <text x="90" y="75" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#DC2626">Peaking + Base</text>
-                    <text x="90" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Today</text>
+                    <rect x="40" y="30" width="100" height="50" rx="8" fill="rgba(239,68,68,0.1)" stroke="#EF4444" stroke-width="1.5"/>
+                    <text x="90" y="50" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">Unabated Gas</text>
+                    <text x="90" y="65" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#DC2626">Peaking + Base</text>
+                    <text x="90" y="94" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Today</text>
                     <!-- Phase 2: Near-term -->
-                    <rect x="170" y="40" width="100" height="50" rx="8" fill="rgba(245,158,11,0.1)" stroke="#F59E0B" stroke-width="1.5"/>
-                    <text x="220" y="58" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#D97706">Efficient CCGT</text>
-                    <text x="220" y="72" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#D97706">Backup + Balance</text>
-                    <text x="220" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Near-term</text>
+                    <rect x="170" y="30" width="100" height="50" rx="8" fill="rgba(245,158,11,0.1)" stroke="#F59E0B" stroke-width="1.5"/>
+                    <text x="220" y="48" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#D97706">Efficient CCGT</text>
+                    <text x="220" y="62" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#D97706">Backup + Balance</text>
+                    <text x="220" y="94" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Near-term</text>
                     <!-- Phase 3: Mid-term -->
-                    <rect x="300" y="40" width="110" height="50" rx="8" fill="rgba(34,197,94,0.1)" stroke="#22C55E" stroke-width="1.5"/>
-                    <text x="355" y="58" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#16A34A">CCGT + CCS</text>
-                    <text x="355" y="72" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Dispatchable Low-C</text>
-                    <text x="355" y="104" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Mid-term</text>
+                    <rect x="300" y="30" width="110" height="50" rx="8" fill="rgba(34,197,94,0.1)" stroke="#22C55E" stroke-width="1.5"/>
+                    <text x="355" y="48" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#16A34A">CCGT + CCS</text>
+                    <text x="355" y="62" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Dispatchable Low-C</text>
+                    <text x="355" y="94" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">Mid-term</text>
+                    <!-- Timeline arrow below tiles -->
+                    <line x1="40" y1="118" x2="420" y2="118" stroke="#1A2744" stroke-width="2"/>
+                    <polygon points="420,118 410,112 410,124" fill="#1A2744"/>
+                    <!-- Connector lines from tiles to arrow -->
+                    <line x1="90" y1="94" x2="90" y2="118" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 2"/>
+                    <line x1="220" y1="94" x2="220" y2="118" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 2"/>
+                    <line x1="355" y1="94" x2="355" y2="118" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 2"/>
+                    <!-- Small dots on timeline -->
+                    <circle cx="90" cy="118" r="3" fill="#EF4444"/>
+                    <circle cx="220" cy="118" r="3" fill="#F59E0B"/>
+                    <circle cx="355" cy="118" r="3" fill="#22C55E"/>
                 </svg>
             </div>
 
@@ -3277,9 +3279,6 @@ body {
                     <path d="M450 120 L450 165" stroke="#16A34A" stroke-width="1.5" marker-end="url(#arrowCCSgr)"/>
                     <text x="450" y="180" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">Permanent</text>
                     <text x="450" y="192" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#16A34A">sequestration</text>
-
-                    <!-- Title -->
-                    <text x="250" y="16" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">HOW CARBON CAPTURE AND STORAGE (CCS) WORKS</text>
 
                     <defs>
                         <marker id="arrowCCSg" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/></marker>
@@ -5096,12 +5095,13 @@ function highlightCostStep(stepName) {
                 type: 'label',
                 xValue: getX(topIdx),
                 yValue: getY(topIdx),
-                content: 'PREMIUM ZONE',
-                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 600 },
-                color: 'rgba(239,68,68,0.6)',
+                content: 'PREMIUM',
+                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 9, weight: 600 },
+                color: 'rgba(239,68,68,0.55)',
                 backgroundColor: 'transparent',
-                xAdjust: -70,
-                yAdjust: 6,
+                position: 'end',
+                xAdjust: -90,
+                yAdjust: 8,
             };
             // Danger zone shading — 99 to 100 is proportionally narrow
             annotations['dangerZone'] = {
