@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banner Options — Hourly CFE Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: #F3F4F8;
+    color: #000;
+    padding: 24px 16px;
+}
+h1.page-title {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #1A2744;
+}
+p.page-subtitle {
+    text-align: center;
+    color: #6B7280;
+    margin-bottom: 32px;
+    font-size: 0.95rem;
+}
+.option-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.option-label {
+    padding: 16px 20px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1A2744;
+    border-bottom: 1px solid #E5E7EB;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.option-label .number {
+    background: #1A2744;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+}
+.option-label .desc {
+    color: #6B7280;
+    font-weight: 400;
+    font-size: 0.9rem;
+    font-family: 'Inter', sans-serif;
+}
+
+/* ====== BANNER CONTAINERS ====== */
+.banner {
+    color: #ffffff;
+    padding: 48px 24px 44px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.banner h2 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-weight: 400;
+    font-size: 1.8rem;
+    letter-spacing: 1.2px;
+    text-transform: capitalize;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 2;
+}
+.banner .sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 400;
+    opacity: 0.9;
+    position: relative;
+    z-index: 2;
+    max-width: 560px;
+    margin: 0 auto;
+}
+.accent-bar {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+
+/* ====== OPTION A: Current (Navy Overlay) ====== */
+.banner-a {
+    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3050 100%);
+}
+.banner-a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(14,165,233,0.25)'/%3E%3Cstop offset='1' stop-color='rgba(14,165,233,0.02)'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.2)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.02)'/%3E%3C/linearGradient%3E%3ClinearGradient id='g3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.18)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.02)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,200 L0,160 C100,158 200,150 300,135 C400,120 500,100 600,95 C700,90 800,98 900,110 C1000,122 1100,140 1200,145 L1200,200 Z' fill='url(%23g1)'/%3E%3Cpath d='M0,200 L0,170 C100,168 200,162 300,152 C400,142 500,128 600,125 C700,122 800,130 900,140 C1000,150 1100,162 1200,165 L1200,200 Z' fill='url(%23g3)'/%3E%3Cpath d='M0,200 L0,180 C100,178 200,174 300,168 C400,162 500,152 600,150 C700,148 800,155 900,163 C1000,171 1100,180 1200,182 L1200,200 Z' fill='url(%23g2)'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%;
+}
+.banner-a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,40 L180,40 L200,15 L220,65 L240,25 L260,55 L280,40 L1200,40' fill='none' stroke='rgba(14,165,233,0.18)' stroke-width='1.5'/%3E%3Cpath d='M0,50 L480,50 L500,25 L520,72 L540,30 L560,60 L580,50 L1200,50' fill='none' stroke='rgba(245,158,11,0.14)' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 80px;
+}
+
+/* ====== OPTION B: Vivid Gradient — Brighter base, higher opacity SVGs ====== */
+.banner-b {
+    background: linear-gradient(135deg, #0C1929 0%, #122244 30%, #1A3355 60%, #0F2847 100%);
+}
+.banner-b::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='b1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(14,165,233,0.5)'/%3E%3Cstop offset='1' stop-color='rgba(14,165,233,0.05)'/%3E%3C/linearGradient%3E%3ClinearGradient id='b2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.4)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.05)'/%3E%3C/linearGradient%3E%3ClinearGradient id='b3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.4)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.05)'/%3E%3C/linearGradient%3E%3ClinearGradient id='b4' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(239,68,68,0.3)'/%3E%3Cstop offset='1' stop-color='rgba(239,68,68,0.03)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,240 L0,140 C150,130 300,105 450,85 C600,65 750,55 900,65 C1050,75 1150,100 1200,115 L1200,240 Z' fill='url(%23b1)'/%3E%3Cpath d='M0,240 L0,160 C150,155 300,140 450,120 C600,100 750,90 900,100 C1050,110 1150,130 1200,140 L1200,240 Z' fill='url(%23b3)'/%3E%3Cpath d='M0,240 L0,180 C150,178 300,168 450,155 C600,142 750,135 900,142 C1050,149 1150,165 1200,172 L1200,240 Z' fill='url(%23b2)'/%3E%3Cpath d='M0,240 L0,200 C150,198 300,192 450,184 C600,176 750,172 900,178 C1050,184 1150,195 1200,200 L1200,240 Z' fill='url(%23b4)'/%3E%3Cpath d='M0,140 C150,130 300,105 450,85 C600,65 750,55 900,65 C1050,75 1150,100 1200,115' fill='none' stroke='rgba(14,165,233,0.7)' stroke-width='2'/%3E%3Cpath d='M0,160 C150,155 300,140 450,120 C600,100 750,90 900,100 C1050,110 1150,130 1200,140' fill='none' stroke='rgba(34,197,94,0.6)' stroke-width='2'/%3E%3Cpath d='M0,180 C150,178 300,168 450,155 C600,142 750,135 900,142 C1050,149 1150,165 1200,172' fill='none' stroke='rgba(245,158,11,0.6)' stroke-width='2'/%3E%3Cpath d='M0,200 C150,198 300,192 450,184 C600,176 750,172 900,178 C1050,184 1150,195 1200,200' fill='none' stroke='rgba(239,68,68,0.5)' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%;
+}
+.banner-b::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,40 L150,40 L170,10 L190,70 L210,18 L230,62 L250,40 L1200,40' fill='none' stroke='rgba(14,165,233,0.35)' stroke-width='2'/%3E%3Cpath d='M0,55 L450,55 L470,22 L490,78 L510,28 L530,65 L550,55 L1200,55' fill='none' stroke='rgba(245,158,11,0.3)' stroke-width='2'/%3E%3Cpath d='M0,28 L750,28 L770,5 L790,55 L810,12 L830,48 L850,28 L1200,28' fill='none' stroke='rgba(239,68,68,0.22)' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 80px;
+}
+
+/* ====== OPTION C: Dark-to-Midnight with Bright Neon Curves ====== */
+.banner-c {
+    background: linear-gradient(180deg, #050D1A 0%, #0A1628 40%, #0E1F3D 100%);
+}
+.banner-c::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='c1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(14,165,233,0.6)'/%3E%3Cstop offset='1' stop-color='rgba(14,165,233,0.08)'/%3E%3C/linearGradient%3E%3ClinearGradient id='c2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.55)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.06)'/%3E%3C/linearGradient%3E%3ClinearGradient id='c3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.5)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.06)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,240 L0,120 Q300,60 600,80 Q900,100 1200,50 L1200,240 Z' fill='url(%23c1)'/%3E%3Cpath d='M0,240 L0,150 Q300,100 600,120 Q900,140 1200,90 L1200,240 Z' fill='url(%23c2)'/%3E%3Cpath d='M0,240 L0,180 Q300,150 600,160 Q900,170 1200,140 L1200,240 Z' fill='url(%23c3)'/%3E%3Cpath d='M0,120 Q300,60 600,80 Q900,100 1200,50' fill='none' stroke='%230EA5E9' stroke-width='2.5' stroke-opacity='0.8'/%3E%3Cpath d='M0,150 Q300,100 600,120 Q900,140 1200,90' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.7'/%3E%3Cpath d='M0,180 Q300,150 600,160 Q900,170 1200,140' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.7'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%;
+}
+.banner-c::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0,30 L200,30 L220,5 L240,55 L260,10 L280,50 L300,30 L700,30 L720,8 L740,52 L760,12 L780,48 L800,30 L1200,30' fill='none' stroke='%230EA5E9' stroke-width='2' stroke-opacity='0.5'/%3E%3Cpath d='M100,45 L400,45 L420,20 L440,58 L460,22 L480,52 L500,45 L900,45 L920,18 L940,56 L960,22 L980,50 L1000,45 L1200,45' fill='none' stroke='%23EF4444' stroke-width='1.5' stroke-opacity='0.35'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 60px;
+}
+
+/* ====== OPTION D: Color-Band Horizon — Horizontal energy strata ====== */
+.banner-d {
+    background: linear-gradient(180deg, #0B1120 0%, #111B30 50%, #152240 100%);
+}
+.banner-d::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        linear-gradient(180deg,
+            transparent 0%,
+            transparent 35%,
+            rgba(14,165,233,0.35) 45%,
+            rgba(14,165,233,0.15) 52%,
+            rgba(34,197,94,0.3) 58%,
+            rgba(34,197,94,0.12) 65%,
+            rgba(245,158,11,0.3) 70%,
+            rgba(245,158,11,0.12) 78%,
+            rgba(239,68,68,0.25) 83%,
+            rgba(239,68,68,0.08) 92%,
+            transparent 100%
+        );
+}
+.banner-d::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0,30 L180,30 L200,8 L218,52 L236,12 L254,48 L272,30 L1200,30' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='1.5'/%3E%3Cpath d='M0,42 L550,42 L568,18 L586,56 L604,20 L622,52 L640,42 L1200,42' fill='none' stroke='rgba(255,255,255,0.12)' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat center center;
+    background-size: 100% 60px;
+}
+
+/* ====== OPTION E: Radial Glow — Energy source spotlights ====== */
+.banner-e {
+    background: #0A1525;
+}
+.banner-e::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 50% 80% at 15% 70%, rgba(14,165,233,0.45) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 70% at 40% 80%, rgba(34,197,94,0.4) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 75% at 65% 75%, rgba(245,158,11,0.4) 0%, transparent 70%),
+        radial-gradient(ellipse 35% 60% at 88% 65%, rgba(239,68,68,0.35) 0%, transparent 70%);
+}
+.banner-e::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,50 L250,50 L270,18 L288,68 L306,22 L324,60 L342,50 L1200,50' fill='none' stroke='rgba(14,165,233,0.5)' stroke-width='2'/%3E%3Cpath d='M0,35 L600,35 L618,10 L636,60 L654,14 L672,55 L690,35 L1200,35' fill='none' stroke='rgba(245,158,11,0.4)' stroke-width='2'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 80px;
+}
+
+/* ====== OPTION F: Bright Gradient — Light teal-to-blue with vivid curves ====== */
+.banner-f {
+    background: linear-gradient(135deg, #0B3D91 0%, #0E4DA4 30%, #1565C0 60%, #0D47A1 100%);
+}
+.banner-f::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='f1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(255,255,255,0.2)'/%3E%3Cstop offset='1' stop-color='rgba(255,255,255,0.02)'/%3E%3C/linearGradient%3E%3ClinearGradient id='f2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.45)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.05)'/%3E%3C/linearGradient%3E%3ClinearGradient id='f3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.45)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.05)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,240 L0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100 L1200,240 Z' fill='url(%23f1)'/%3E%3Cpath d='M0,240 L0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140 L1200,240 Z' fill='url(%23f2)'/%3E%3Cpath d='M0,240 L0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180 L1200,240 Z' fill='url(%23f3)'/%3E%3Cpath d='M0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'/%3E%3Cpath d='M0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.7'/%3E%3Cpath d='M0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.7'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%;
+}
+.banner-f::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 70' preserveAspectRatio='none'%3E%3Cpath d='M0,35 L300,35 L320,8 L340,62 L360,12 L380,55 L400,35 L800,35 L820,10 L840,58 L860,14 L880,52 L900,35 L1200,35' fill='none' stroke='rgba(255,255,255,0.35)' stroke-width='2'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 70px;
+}
+
+/* ====== OPTION G: Vivid Aurora — Color-rich flowing waves ====== */
+.banner-g {
+    background: linear-gradient(180deg, #040C18 0%, #081426 60%, #0C1A30 100%);
+}
+.banner-g::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 80% 50% at 30% 100%, rgba(14,165,233,0.5) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 60% 100%, rgba(34,197,94,0.45) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 35% at 85% 100%, rgba(245,158,11,0.4) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 10% 90%, rgba(239,68,68,0.3) 0%, transparent 45%);
+}
+.banner-g::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'%3E%3Cpath d='M0,180 Q200,140 400,150 Q600,160 800,130 Q1000,100 1200,120' fill='none' stroke='%230EA5E9' stroke-width='2.5' stroke-opacity='0.6'/%3E%3Cpath d='M0,160 Q200,120 400,135 Q600,150 800,115 Q1000,80 1200,100' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.5'/%3E%3Cpath d='M0,140 Q200,105 400,118 Q600,131 800,100 Q1000,69 1200,85' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.5'/%3E%3Cpath d='M0,50 L160,50 L178,18 L196,72 L214,22 L232,65 L250,50 L620,50 L638,20 L656,70 L674,24 L692,62 L710,50 L1200,50' fill='none' stroke='%230EA5E9' stroke-width='2' stroke-opacity='0.4'/%3E%3Cpath d='M300,35 L500,35 L518,10 L536,58 L554,14 L572,52 L590,35 L900,35 L918,8 L936,60 L954,12 L972,55 L990,35 L1200,35' fill='none' stroke='%23EF4444' stroke-width='1.5' stroke-opacity='0.3'/%3E%3C/svg%3E") no-repeat center center;
+    background-size: 100% 100%;
+}
+
+/* ====== OPTION H: Grid Topology — Clean lines evoking transmission network ====== */
+.banner-h {
+    background: linear-gradient(180deg, #0D1B2A 0%, #1B2838 50%, #1A2744 100%);
+}
+.banner-h::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 300' preserveAspectRatio='none'%3E%3C!-- Vertical grid lines --%3E%3Cline x1='100' y1='0' x2='100' y2='300' stroke='rgba(14,165,233,0.1)' stroke-width='1'/%3E%3Cline x1='300' y1='0' x2='300' y2='300' stroke='rgba(14,165,233,0.1)' stroke-width='1'/%3E%3Cline x1='500' y1='0' x2='500' y2='300' stroke='rgba(14,165,233,0.1)' stroke-width='1'/%3E%3Cline x1='700' y1='0' x2='700' y2='300' stroke='rgba(14,165,233,0.1)' stroke-width='1'/%3E%3Cline x1='900' y1='0' x2='900' y2='300' stroke='rgba(14,165,233,0.1)' stroke-width='1'/%3E%3Cline x1='1100' y1='0' x2='1100' y2='300' stroke='rgba(14,165,233,0.1)' stroke-width='1'/%3E%3C!-- Hour markers --%3E%3Cline x1='0' y1='200' x2='1200' y2='200' stroke='rgba(255,255,255,0.06)' stroke-width='1' stroke-dasharray='4,8'/%3E%3C!-- Load curves --%3E%3Cpath d='M0,250 C100,240 200,200 300,170 C400,140 450,130 500,120 C600,140 700,180 800,200 C900,180 1000,150 1100,160 L1200,180' fill='none' stroke='%230EA5E9' stroke-width='2.5' stroke-opacity='0.65'/%3E%3Cpath d='M0,260 C100,255 200,230 350,210 C500,190 550,200 600,210 C700,195 800,170 950,185 C1050,195 1150,210 1200,220' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.55'/%3E%3Cpath d='M0,220 C50,218 150,225 300,240 Q450,255 600,240 Q750,225 900,235 Q1050,245 1200,230' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.55'/%3E%3C!-- Transmission pulse --%3E%3Cpath d='M0,80 L200,80 L218,40 L236,110 L254,45 L272,105 L290,80 L700,80 L718,42 L736,108 L754,46 L772,102 L790,80 L1200,80' fill='none' stroke='rgba(14,165,233,0.4)' stroke-width='2'/%3E%3C!-- Node dots --%3E%3Ccircle cx='100' cy='245' r='4' fill='%230EA5E9' opacity='0.6'/%3E%3Ccircle cx='300' cy='170' r='4' fill='%230EA5E9' opacity='0.6'/%3E%3Ccircle cx='500' cy='120' r='5' fill='%230EA5E9' opacity='0.7'/%3E%3Ccircle cx='700' cy='180' r='4' fill='%230EA5E9' opacity='0.6'/%3E%3Ccircle cx='900' cy='180' r='4' fill='%230EA5E9' opacity='0.6'/%3E%3Ccircle cx='1100' cy='160' r='4' fill='%230EA5E9' opacity='0.6'/%3E%3Ccircle cx='350' cy='210' r='3' fill='%2322C55E' opacity='0.5'/%3E%3Ccircle cx='600' cy='210' r='3' fill='%2322C55E' opacity='0.5'/%3E%3Ccircle cx='950' cy='185' r='3' fill='%2322C55E' opacity='0.5'/%3E%3C/svg%3E") no-repeat center center;
+    background-size: 100% 100%;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Banner Design Options</h1>
+<p class="page-subtitle">8 banner styles for the Hourly CFE Optimizer. Scroll to compare, then tell me your favorite number(s).</p>
+
+<!-- Option A: Current -->
+<div class="option-card">
+    <div class="option-label"><span class="number">A</span> Current — Navy Overlay + Subtle Curves <span class="desc">(what's live now)</span></div>
+    <div class="banner banner-a">
+        <h2>Hourly Clean Energy Cost Optimizer</h2>
+        <div class="sub">A modeling tool for the impact of 24/7 carbon-free energy procurement strategies on system costs</div>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- Option B: Vivid Gradient -->
+<div class="option-card">
+    <div class="option-label"><span class="number">B</span> Vivid Dispatch Stack <span class="desc">— Higher opacity curves, 4-layer stack with pulse lines</span></div>
+    <div class="banner banner-b">
+        <h2>Hourly Clean Energy Cost Optimizer</h2>
+        <div class="sub">A modeling tool for the impact of 24/7 carbon-free energy procurement strategies on system costs</div>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- Option C: Dark Midnight + Neon -->
+<div class="option-card">
+    <div class="option-label"><span class="number">C</span> Midnight Neon <span class="desc">— Near-black bg, bright neon dispatch curves + dual pulse</span></div>
+    <div class="banner banner-c">
+        <h2>Hourly Clean Energy Cost Optimizer</h2>
+        <div class="sub">A modeling tool for the impact of 24/7 carbon-free energy procurement strategies on system costs</div>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- Option D: Color-Band Horizon -->
+<div class="option-card">
+    <div class="option-label"><span class="number">D</span> Color-Band Horizon <span class="desc">— Horizontal energy strata with transmission pulses</span></div>
+    <div class="banner banner-d">
+        <h2>Hourly Clean Energy Cost Optimizer</h2>
+        <div class="sub">A modeling tool for the impact of 24/7 carbon-free energy procurement strategies on system costs</div>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- Option E: Radial Glow -->
+<div class="option-card">
+    <div class="option-label"><span class="number">E</span> Radial Glow <span class="desc">— Energy source spotlights with heartbeat pulse lines</span></div>
+    <div class="banner banner-e">
+        <h2>Hourly Clean Energy Cost Optimizer</h2>
+        <div class="sub">A modeling tool for the impact of 24/7 carbon-free energy procurement strategies on system costs</div>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- Option F: Bright Blue Gradient -->
+<div class="option-card">
+    <div class="option-label"><span class="number">F</span> Bright Cobalt <span class="desc">— Lighter blue gradient base, white + color curves, pulse line</span></div>
+    <div class="banner banner-f">
+        <h2>Hourly Clean Energy Cost Optimizer</h2>
+        <div class="sub">A modeling tool for the impact of 24/7 carbon-free energy procurement strategies on system costs</div>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- Option G: Vivid Aurora -->
+<div class="option-card">
+    <div class="option-label"><span class="number">G</span> Vivid Aurora <span class="desc">— Dark sky with color aurora glow from bottom + flowing curves + dual pulse</span></div>
+    <div class="banner banner-g">
+        <h2>Hourly Clean Energy Cost Optimizer</h2>
+        <div class="sub">A modeling tool for the impact of 24/7 carbon-free energy procurement strategies on system costs</div>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- Option H: Grid Topology -->
+<div class="option-card">
+    <div class="option-label"><span class="number">H</span> Grid Topology <span class="desc">— Transmission grid lines, load curves with node dots, pulse line</span></div>
+    <div class="banner banner-h">
+        <h2>Hourly Clean Energy Cost Optimizer</h2>
+        <div class="sub">A modeling tool for the impact of 24/7 carbon-free energy procurement strategies on system costs</div>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+</body>
+</html>
