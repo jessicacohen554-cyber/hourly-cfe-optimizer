@@ -124,21 +124,21 @@ body {
     text-transform: capitalize;
     margin-bottom: 10px;
     position: relative;
-    z-index: 1;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    z-index: 3;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
     line-height: 1.15;
 }
 .header .subtitle {
     font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
     font-size: 1.05rem;
     font-weight: 400;
-    opacity: 0.88;
+    opacity: 0.92;
     max-width: 620px;
     margin: 0 auto;
     letter-spacing: 0.2px;
     position: relative;
-    z-index: 1;
-    text-shadow: 0 1px 6px rgba(0,0,0,0.2);
+    z-index: 3;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
     line-height: 1.55;
 }
 .header .data-year-label {
@@ -196,7 +196,7 @@ body {
     padding: 11px 38px 11px 16px;
     border: 1.5px solid var(--border);
     border-radius: 8px;
-    background: #FAF6EF;
+    background: #FFFFFF;
     color: var(--text-primary);
     cursor: pointer;
     appearance: none;
@@ -1003,7 +1003,7 @@ body {
     margin: 32px 0;
 }
 .story-stat-card {
-    background: rgba(250,246,239,0.92);
+    background: rgba(255,255,255,0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(221,208,192,0.5);
@@ -1021,7 +1021,7 @@ body {
 .story-stat-label {
     font-size: 0.76rem;
     font-weight: 700;
-    color: #9A9083;
+    color: #6B7280;
     letter-spacing: 0.8px;
     text-transform: capitalize;
     margin-bottom: 8px;
@@ -1035,13 +1035,13 @@ body {
 }
 .story-stat-sub {
     font-size: 0.8rem;
-    color: #9A9083;
+    color: #6B7280;
     margin-top: 6px;
 }
 .story-insight-box {
     display: flex;
     gap: 16px;
-    background: rgba(250,246,239,0.92);
+    background: rgba(255,255,255,0.92);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(221,208,192,0.5);
@@ -1093,7 +1093,7 @@ body {
 }
 .hero-callout-label {
     font-size: 0.8rem;
-    color: #9A9083;
+    color: #6B7280;
     margin-top: 6px;
     font-weight: 600;
     letter-spacing: 1px;
@@ -1174,7 +1174,7 @@ body {
 }
 
 .scrolly-chart-wrap {
-    background: rgba(250,246,239,0.92);
+    background: rgba(255,255,255,0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(221,208,192,0.5);
@@ -1230,7 +1230,7 @@ body {
 }
 
 .step-card {
-    background: rgba(250,246,239,0.92);
+    background: rgba(255,255,255,0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(221,208,192,0.5);
@@ -1297,7 +1297,7 @@ body {
         width: 100%;
         height: 240px;
         margin-bottom: 18px;
-        background: rgba(250,246,239,0.92);
+        background: rgba(255,255,255,0.92);
         border: 1px solid rgba(221,208,192,0.5);
         border-radius: 12px;
         padding: 12px 8px;
@@ -1455,7 +1455,7 @@ body {
         font-size: 0.78rem;
     }
     .compressed-day-container {
-        height: 280px;
+        height: 500px;
     }
     .peak-tower-wrap {
         height: 240px;
@@ -1603,7 +1603,7 @@ body {
         font-size: 1.45rem;
     }
     .compressed-day-container {
-        height: 220px;
+        height: 440px;
     }
     .peak-tower-wrap {
         height: 200px;
@@ -2445,7 +2445,7 @@ function updateCompressedDay(entry, region) {
             compressedDayChart = null;
         }
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.fillStyle = '#9A9083';
+        ctx.fillStyle = '#6B7280';
         ctx.font = "14px 'Barlow Semi Condensed', 'Arial Narrow', sans-serif";
         ctx.textAlign = 'center';
         ctx.fillText('Compressed day profile not available for this selection.', ctx.canvas.width / 2, ctx.canvas.height / 2);
@@ -3001,8 +3001,8 @@ function initNarrativeMixChart() {
 
     const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
     const isos = Object.keys(DATA.results);
-    const resources = ['solar', 'wind', 'hydro', 'clean_firm', 'storage'];
-    const resourceLabels = { solar: 'Solar', wind: 'Wind', hydro: 'Hydro', clean_firm: 'Clean Firm', storage: 'Storage' };
+    const resources = ['clean_firm', 'solar', 'wind', 'hydro', 'storage'];
+    const resourceLabels = { clean_firm: 'Clean Firm', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', storage: 'Storage' };
     const resourceColors = {
         solar:      { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
         wind:       { fill: 'rgba(34,197,94,0.50)',  border: '#22C55E' },
@@ -3372,7 +3372,7 @@ function highlightCostStep(stepName) {
                 font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 700 },
                 color: '#22C55E',
                 position: 'start',
-                yAdjust: -28,
+                yAdjust: -42,
             };
         }
     } else if (stepName === 'cost-95') {
@@ -3402,7 +3402,7 @@ function highlightCostStep(stepName) {
                 font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 700 },
                 color: '#EF4444',
                 position: 'start',
-                yAdjust: -28,
+                yAdjust: -42,
             };
             // Shade the region
             annotations['zone'] = {
@@ -3442,7 +3442,7 @@ function highlightCostStep(stepName) {
                 font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 700 },
                 color: '#EF4444',
                 position: 'end',
-                yAdjust: -28,
+                yAdjust: -42,
             };
             // Danger zone shading — 99 to 100 is proportionally narrow
             annotations['dangerZone'] = {
@@ -3522,7 +3522,7 @@ function getStepAnnotations(stepName, avgCosts) {
         if (idx >= 0) {
             colors[idx] = '#22C55E'; radii[idx] = 8;
             annotations['highlight'] = { type: 'point', xValue: 75, yValue: getY(idx), backgroundColor: 'rgba(34,197,94,0.15)', borderColor: '#22C55E', borderWidth: 2, radius: 14 };
-            annotations['label75'] = { type: 'label', xValue: 75, yValue: getY(idx), content: '$' + getY(idx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#22C55E', position: 'start', yAdjust: -22 };
+            annotations['label75'] = { type: 'label', xValue: 75, yValue: getY(idx), content: '$' + getY(idx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#22C55E', position: 'start', yAdjust: -36 };
         }
     } else if (stepName === 'cost-95') {
         const idx75 = findIdx(75), idx95 = findIdx(95);
@@ -3530,7 +3530,7 @@ function getStepAnnotations(stepName, avgCosts) {
             for (let i = idx75; i <= idx95; i++) { colors[i] = '#EF4444'; radii[i] = 5; }
             radii[idx95] = 8;
             annotations['highlight95'] = { type: 'point', xValue: 95, yValue: getY(idx95), backgroundColor: 'rgba(239,68,68,0.15)', borderColor: '#EF4444', borderWidth: 2, radius: 14 };
-            annotations['label95'] = { type: 'label', xValue: 95, yValue: getY(idx95), content: '$' + getY(idx95) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'start', yAdjust: -22 };
+            annotations['label95'] = { type: 'label', xValue: 95, yValue: getY(idx95), content: '$' + getY(idx95) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'start', yAdjust: -36 };
             annotations['zone'] = { type: 'box', xMin: 74, xMax: 96, backgroundColor: 'rgba(239,68,68,0.04)', borderColor: 'transparent' };
         }
     } else if (stepName === 'cost-99') {
@@ -3540,7 +3540,7 @@ function getStepAnnotations(stepName, avgCosts) {
             colors[idx99] = '#EF4444'; radii[idx99] = 8;
             if (idx100 >= 0) { colors[idx100] = '#EF4444'; radii[idx100] = 8; }
             annotations['highlight99'] = { type: 'point', xValue: getX(topIdx), yValue: getY(topIdx), backgroundColor: 'rgba(239,68,68,0.15)', borderColor: '#EF4444', borderWidth: 2, radius: 14 };
-            annotations['label99'] = { type: 'label', xValue: getX(topIdx), yValue: getY(topIdx), content: '$' + getY(topIdx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'end', yAdjust: -22 };
+            annotations['label99'] = { type: 'label', xValue: getX(topIdx), yValue: getY(topIdx), content: '$' + getY(topIdx) + '/MWh', font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 }, color: '#EF4444', position: 'end', yAdjust: -36 };
             annotations['dangerZone'] = { type: 'box', xMin: 98.5, xMax: 100.5, backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5 };
         }
     }
