@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Typography Options — Hourly CFE Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Nunito+Sans:wght@400;500;600;700&family=Rubik:wght@400;500;600&family=Work+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600&family=Barlow:wght@400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:wght@400;500;600;700;800;900&family=Michroma&family=Chakra+Petch:wght@400;500;600;700&family=Saira:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: #F3F4F8;
+    color: #000;
+    padding: 24px 16px;
+}
+h1.page-title {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #1A2744;
+}
+p.page-subtitle {
+    text-align: center;
+    color: #6B7280;
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.section-divider {
+    text-align: center;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin: 36px 0 20px;
+    padding: 12px 0;
+    border-top: 2px solid #D4D8E0;
+    border-bottom: 2px solid #D4D8E0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+.option-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 24px;
+}
+.option-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #E5E7EB;
+}
+.option-header .number {
+    background: #1A2744;
+    color: white;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+    flex-shrink: 0;
+}
+.option-header .font-name {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1A2744;
+}
+.option-header .font-desc {
+    color: #6B7280;
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+}
+.sample-body {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #000;
+    margin-bottom: 12px;
+}
+.sample-caption {
+    font-size: 0.85rem;
+    color: #6B7280;
+    margin-bottom: 8px;
+}
+.sample-data {
+    font-size: 0.95rem;
+    color: #374151;
+}
+.sample-heading {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1A2744;
+    margin-bottom: 10px;
+}
+.mini-banner {
+    background: linear-gradient(135deg, #050D1A 0%, #0E1F3D 100%);
+    color: white;
+    padding: 28px 16px 24px;
+    border-radius: 8px;
+    text-align: center;
+    margin-top: 16px;
+    position: relative;
+    overflow: hidden;
+}
+.mini-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 80% 50% at 30% 100%, rgba(14,165,233,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 70% 100%, rgba(34,197,94,0.3) 0%, transparent 55%);
+    pointer-events: none;
+}
+.mini-banner h3 {
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+}
+.mini-banner p {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    position: relative;
+    z-index: 1;
+}
+.accent-bar {
+    height: 4px;
+    background: linear-gradient(90deg, #0EA5E9 0%, #22C55E 33%, #F59E0B 66%, #EF4444 100%);
+    border-radius: 0 0 8px 8px;
+    margin-top: 0;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Typography Options</h1>
+<p class="page-subtitle">Part 1: Bold banner heading fonts (paired with Inter body for comparison).<br>Part 2: Body/page font options (paired with Barlow Semi Condensed headings).</p>
+
+<!-- ======================== PART 1: BANNER HEADING FONTS ======================== -->
+<div class="section-divider">Part 1: Banner Heading Fonts</div>
+
+<!-- H1: Barlow Semi Condensed Bold (current) -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H1</span>
+        <div><span class="font-name">Barlow Semi Condensed 400</span> <span class="font-desc">— Current. Light weight, condensed, technical feel.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Barlow Semi Condensed',sans-serif; font-weight:400; text-transform:capitalize;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- H2: Barlow Semi Condensed 700+ -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H2</span>
+        <div><span class="font-name">Barlow Semi Condensed 700</span> <span class="font-desc">— Same font, much bolder. More commanding presence.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Barlow Semi Condensed',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:2px;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- H3: Oswald -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H3</span>
+        <div><span class="font-name">Oswald 600</span> <span class="font-desc">— Tall, narrow, high-impact. Industrial energy sector feel.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Oswald',sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:3px;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- H4: Rajdhani -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H4</span>
+        <div><span class="font-name">Rajdhani 700</span> <span class="font-desc">— Angular, technical, futuristic. Evokes engineering and infrastructure.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Rajdhani',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:2px; font-size:1.6rem;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- H5: Exo 2 -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H5</span>
+        <div><span class="font-name">Exo 2 — 800</span> <span class="font-desc">— Geometric, futuristic, technical. Energy/science aesthetic.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Exo 2',sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:2px;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- H6: Orbitron -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H6</span>
+        <div><span class="font-name">Orbitron 700</span> <span class="font-desc">— Futuristic, display-grade, grid/circuit board aesthetic. Very bold statement.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Orbitron',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:2px; font-size:1.2rem;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- H7: Chakra Petch -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H7</span>
+        <div><span class="font-name">Chakra Petch 700</span> <span class="font-desc">— Technical mono-inspired angles. Dashboard/control room vibe.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Chakra Petch',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:2px;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- H8: Saira -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H8</span>
+        <div><span class="font-name">Saira 800</span> <span class="font-desc">— Wide, geometric, powerful. Clean modern infrastructure feel.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Saira',sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:2px;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- H9: Barlow 900 (Extra Bold Full-Width) -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">H9</span>
+        <div><span class="font-name">Barlow 900 (Black)</span> <span class="font-desc">— Full-width Barlow at maximum weight. Bold, commanding, stays in the family.</span></div>
+    </div>
+    <div class="mini-banner">
+        <h3 style="font-family:'Barlow',sans-serif; font-weight:900; text-transform:uppercase; letter-spacing:3px;">Hourly Clean Energy Cost Optimizer</h3>
+        <p style="font-family:'Inter',sans-serif;">A modeling tool for 24/7 carbon-free energy procurement strategies</p>
+    </div>
+    <div class="accent-bar"></div>
+</div>
+
+<!-- ======================== PART 2: BODY FONTS ======================== -->
+<div class="section-divider">Part 2: Body / Page Fonts</div>
+
+<!-- B1: Inter (current) -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B1</span>
+        <div><span class="font-name">Inter</span> <span class="font-desc">— Current. Geometric, neutral, ubiquitous in dashboards.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'Inter',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'Inter',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+<!-- B2: DM Sans -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B2</span>
+        <div><span class="font-name">DM Sans</span> <span class="font-desc">— Softer geometry, friendly but professional. Great for data-rich pages.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'DM Sans',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'DM Sans',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+<!-- B3: Source Sans 3 -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B3</span>
+        <div><span class="font-name">Source Sans 3</span> <span class="font-desc">— Adobe's workhorse. Excellent for technical/scientific content.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'Source Sans 3',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'Source Sans 3',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+<!-- B4: IBM Plex Sans -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B4</span>
+        <div><span class="font-name">IBM Plex Sans</span> <span class="font-desc">— Precise, industrial. Built for engineering dashboards and technical reports.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'IBM Plex Sans',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'IBM Plex Sans',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+<!-- B5: Nunito Sans -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B5</span>
+        <div><span class="font-name">Nunito Sans</span> <span class="font-desc">— Rounded terminals, warm but clean. Approachable modern SaaS feel.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'Nunito Sans',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'Nunito Sans',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+<!-- B6: Rubik -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B6</span>
+        <div><span class="font-name">Rubik</span> <span class="font-desc">— Compact, slightly rounded. Popular in data-heavy interfaces.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'Rubik',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'Rubik',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+<!-- B7: Work Sans -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B7</span>
+        <div><span class="font-name">Work Sans</span> <span class="font-desc">— Screen-optimized, slightly humanist. Clean UI text.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'Work Sans',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'Work Sans',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+<!-- B8: Plus Jakarta Sans -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B8</span>
+        <div><span class="font-name">Plus Jakarta Sans</span> <span class="font-desc">— Modern geometry with personality. Contemporary dashboard aesthetic.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'Plus Jakarta Sans',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'Plus Jakarta Sans',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+<!-- B9: Outfit -->
+<div class="option-card">
+    <div class="option-header">
+        <span class="number">B9</span>
+        <div><span class="font-name">Outfit</span> <span class="font-desc">— Geometric with softened edges. Distinctive, clean modern character.</span></div>
+    </div>
+    <div class="sample-heading" style="font-family:'Barlow Semi Condensed',sans-serif;">Peak Hour Capacity Analysis</div>
+    <div class="sample-body" style="font-family:'Outfit',sans-serif;">The optimizer evaluates hourly generation profiles across solar, wind, and firm clean energy sources to determine the cost-optimal procurement strategy. Storage dispatch is modeled with round-trip efficiency losses of 15% and a 4-hour duration constraint.</div>
+    <div class="sample-data" style="font-family:'Outfit',sans-serif;">Average CFE Score: <strong>94.2%</strong> · Annual Cost: <strong>$42.8M</strong> · Storage Cycles: <strong>312</strong></div>
+</div>
+
+</body>
+</html>
