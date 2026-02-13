@@ -46,8 +46,23 @@ if not annotation_script:
     data = urllib.request.urlopen('https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js').read().decode()
     annotation_script = f'<script>{data}</script>'
 
+# ---- Get ChartDataLabels plugin ----
+datalabels_script = None
+if os.path.exists(existing_standalone):
+    with open(existing_standalone, 'r', encoding='utf-8') as f:
+        orig_dl = f.read()
+    m = re.search(r'<script>.*?chartjs-plugin-datalabels.*?</script>', orig_dl, re.DOTALL)
+    if m:
+        datalabels_script = m.group(0)
+
+if not datalabels_script:
+    print("Downloading chartjs-plugin-datalabels from CDN...")
+    data = urllib.request.urlopen('https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js').read().decode()
+    datalabels_script = f'<script>{data}</script>'
+
 print(f"Chart.js script: {len(chartjs_script):,} chars")
 print(f"Annotation plugin: {len(annotation_script):,} chars")
+print(f"DataLabels plugin: {len(datalabels_script):,} chars")
 
 # ---- 1. Remove Google Fonts CDN links ----
 html = html.replace('<link rel="preconnect" href="https://fonts.googleapis.com">\n', '')
@@ -63,6 +78,10 @@ html = html.replace(
 html = html.replace(
     '<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>',
     annotation_script
+)
+html = html.replace(
+    '<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>',
+    datalabels_script
 )
 
 # ---- 3. Embed JSON data inline ----
