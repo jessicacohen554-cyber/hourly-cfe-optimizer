@@ -8,18 +8,12 @@ Omitting it produces:
 This module provides helpers that automatically detect and include the media_type.
 
 Usage:
-    from anthropic_image_utils import make_image_content_block
+    from anthropic_image_utils import make_image_content_block, fix_messages
 
-    # From a file path:
+    # === Option 1: Build image blocks correctly from the start ===
+
     block = make_image_content_block(file_path="screenshot.png")
 
-    # From raw bytes:
-    block = make_image_content_block(image_bytes=raw_bytes, media_type="image/png")
-
-    # From an already-encoded base64 string:
-    block = make_image_content_block(base64_data=b64_str, media_type="image/jpeg")
-
-    # Then include it in your messages:
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=1024,
@@ -31,6 +25,18 @@ Usage:
             ]
         }]
     )
+
+    # === Option 2: Fix existing messages that are missing media_type ===
+
+    messages = [...]  # your existing messages list
+    fixed = fix_messages(messages)  # patches any image blocks missing media_type
+    response = client.messages.create(model="...", max_tokens=1024, messages=fixed)
+
+    # === Option 3: Validate messages before sending ===
+
+    errors = validate_messages(messages)
+    if errors:
+        print("Problems found:", errors)
 """
 
 import base64
@@ -172,3 +178,115 @@ def make_image_content_block(
             "data": base64_str,
         },
     }
+
+
+# --- Magic number signatures for media type detection ---
+_MAGIC_BYTES = [
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"GIF87a", "image/gif"),
+    (b"GIF89a", "image/gif"),
+    (b"RIFF", "image/webp"),  # WebP starts with RIFF....WEBP
+]
+
+
+def _detect_media_type_from_base64(base64_data: str) -> str:
+    """Detect media type by decoding the first few bytes of a base64 string.
+
+    Returns a media type string, or "image/png" as a safe fallback.
+    """
+    try:
+        # Only need the first ~16 bytes to check magic numbers
+        # Decode a small prefix (24 base64 chars = 18 raw bytes)
+        prefix = base64_data[:24]
+        # Pad if needed
+        padding = 4 - len(prefix) % 4
+        if padding != 4:
+            prefix += "=" * padding
+        raw = base64.standard_b64decode(prefix)
+
+        for magic, media_type in _MAGIC_BYTES:
+            if raw[: len(magic)] == magic:
+                return media_type
+    except Exception:
+        pass
+
+    # Default fallback - PNG is the most common for screenshots
+    return "image/png"
+
+
+def fix_messages(messages: list) -> list:
+    """Fix a messages array by adding missing media_type to any base64 image blocks.
+
+    This is the quickest fix for the error:
+        messages.X.content.Y.image.source.base64.media_type: Field required
+
+    It walks through all messages and content blocks, finds image blocks with
+    base64 sources that are missing media_type, and auto-detects it from the
+    image data's magic bytes.
+
+    Args:
+        messages: A list of message dicts (the "messages" parameter for the API).
+
+    Returns:
+        The same list, mutated in-place with media_type added where missing.
+        Also returned for convenience.
+    """
+    for msg in messages:
+        content = msg.get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") != "image":
+                continue
+            source = block.get("source")
+            if not isinstance(source, dict):
+                continue
+            if source.get("type") != "base64":
+                continue
+            # This is a base64 image block - ensure media_type exists
+            if not source.get("media_type"):
+                data = source.get("data", "")
+                source["media_type"] = _detect_media_type_from_base64(data)
+    return messages
+
+
+def validate_messages(messages: list) -> list[str]:
+    """Check messages for image blocks that would cause API errors.
+
+    Returns a list of human-readable error descriptions. Empty list = all good.
+    """
+    errors = []
+    for i, msg in enumerate(messages):
+        content = msg.get("content")
+        if not isinstance(content, list):
+            continue
+        for j, block in enumerate(content):
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") != "image":
+                continue
+            source = block.get("source")
+            if not isinstance(source, dict):
+                errors.append(
+                    f"messages[{i}].content[{j}]: image block has no 'source'"
+                )
+                continue
+            if source.get("type") == "base64":
+                if not source.get("media_type"):
+                    errors.append(
+                        f"messages[{i}].content[{j}]: base64 image missing "
+                        f"'media_type' (add e.g. 'image/png')"
+                    )
+                elif source["media_type"] not in SUPPORTED_MEDIA_TYPES:
+                    errors.append(
+                        f"messages[{i}].content[{j}]: unsupported media_type "
+                        f"'{source['media_type']}'"
+                    )
+                if not source.get("data"):
+                    errors.append(
+                        f"messages[{i}].content[{j}]: base64 image missing 'data'"
+                    )
+    return errors
