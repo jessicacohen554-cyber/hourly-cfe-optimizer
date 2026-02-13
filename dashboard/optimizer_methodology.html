@@ -522,8 +522,8 @@
     <p>
         The Hourly Clean Energy Cost Optimizer determines the most cost-effective clean energy
         portfolio for achieving target levels of <strong>hourly matching</strong> across five major U.S.
-        Independent System Operator (ISO) regions. Unlike traditional annual matching&mdash;where a buyer
-        procures enough certificates to cover total annual consumption regardless of timing&mdash;hourly
+        Independent System Operator (ISO) regions. Unlike annual matching&mdash;where a buyer
+        procures certificates to cover total annual consumption regardless of timing&mdash;hourly
         matching requires that clean generation coincide with actual demand in each of the 8,760 hours
         of a year.
     </p>
@@ -531,19 +531,19 @@
         The tool <strong>co-optimizes cost and hourly matching</strong> simultaneously. For each target
         threshold (75%, 80%, 85%, 90%, 95%, 99%), the model searches across procurement levels (70% to 300%
         of annual demand), resource mix combinations (clean firm, solar, wind, hydro), and battery storage
-        dispatch levels to find the <strong>cheapest portfolio</strong> that meets or exceeds the target.
+        dispatch levels to find the <strong>lowest-cost portfolio</strong> that meets or exceeds the target.
     </p>
     <p>
-        This dual optimization is critical. A sequential approach (optimize matching first, then calculate
-        cost) would fail to capture the fundamental cost-matching tradeoff: at lower thresholds, the cheapest
+        Co-optimization is essential. A sequential approach (optimize matching first, then calculate
+        cost) would fail to capture the cost-matching tradeoff: at lower thresholds, the cheapest
         solution may use a different procurement level or resource mix than the one that maximizes matching.
-        For example, a solar/wind-heavy portfolio at 90% procurement may achieve 80% matching more cheaply
+        For example, a solar/wind-heavy portfolio at 90% procurement may achieve 80% matching at lower cost
         than a clean-firm-heavy portfolio at 80% procurement, even though the latter uses less total energy.
     </p>
     <p>
         The model also produces a <strong>sweep visualization</strong> showing the maximum achievable hourly
-        match score at each procurement level from 70% to 300%+, revealing the frontier of diminishing returns
-        as procurement increases.
+        match score at each procurement level from 70% to 300%+, illustrating the diminishing returns
+        frontier as procurement increases.
     </p>
 
     <!-- ======== SECTION 2: DATA SOURCES ======== -->
@@ -551,14 +551,14 @@
 
     <h3>2.1 EIA-930 Hourly Electric Grid Monitor</h3>
     <p>
-        Both demand and generation profiles are sourced from the <strong>U.S. Energy Information Administration
-        (EIA) Form 930</strong> Hourly Electric Grid Monitor. EIA-930 provides hourly balancing authority-level
+        Demand and generation profiles are sourced from the <strong>U.S. Energy Information Administration
+        (EIA) Form 930</strong> Hourly Electric Grid Monitor, which provides hourly balancing authority-level
         data for electricity demand and generation by energy source across U.S. ISOs.
     </p>
     <p>
-        Data is downloaded as bulk CSV files (EIA930_BALANCE files for demand, generation-by-source files
-        for supply profiles) covering the 2025 analysis year. Both the January&ndash;June and July&ndash;December
-        files are combined to produce full-year 8,760-hour datasets.
+        Bulk CSV files (EIA930_BALANCE for demand, generation-by-source for supply profiles) covering
+        the 2025 analysis year are combined from January&ndash;June and July&ndash;December files to
+        produce full-year 8,760-hour datasets.
     </p>
     <p>
         <strong>Source:</strong> EIA Hourly Electric Grid Monitor &mdash;
@@ -569,13 +569,12 @@
     <h3>2.2 EIA Generation Profiles</h3>
     <p>
         Hourly generation profiles by fuel type (solar, wind, nuclear, hydro, geothermal) are extracted from
-        EIA-930 data for each ISO region. These profiles capture the actual temporal patterns of clean energy
-        production: when the sun shines, when the wind blows, and how hydro dispatch varies seasonally.
+        EIA-930 data for each ISO region, capturing the actual temporal patterns of clean energy
+        production&mdash;solar irradiance cycles, wind variability, and seasonal hydro dispatch.
     </p>
     <p>
-        Each profile is <strong>normalized</strong> so that the sum across all 8,760 hours equals 1.0. This
-        normalization makes the optimization scale-independent: results are the same whether the buyer consumes
-        100 MWh/year or 100,000,000 MWh/year.
+        Each profile is <strong>normalized</strong> so that the sum across all 8,760 hours equals 1.0,
+        making the optimization scale-independent regardless of buyer load size.
     </p>
 
     <div class="note-box">
@@ -641,7 +640,7 @@
     <!-- ======== SECTION 4: SUPPLY PROFILES ======== -->
     <h2 id="supply-profiles">4. Supply / Generation Profiles</h2>
     <p>
-        The model uses four clean energy resource types, each with a distinct hourly generation profile.
+        The model uses four clean energy resource types, each with distinct hourly generation characteristics.
     </p>
 
     <table>
@@ -679,10 +678,9 @@
     <h3>4.1 Clean Firm Profile</h3>
     <p>
         Clean firm generation (nuclear and geothermal) is modeled as a <strong>flat baseload profile</strong>:
-        equal output in every hour of the year (1/8760 of annual generation per hour). This reflects the
-        operational reality that nuclear plants run at high capacity factors (~90%+) with minimal hourly
-        variation, and geothermal similarly provides constant output. The model does not account for planned
-        refueling outages or forced outages.
+        equal output in every hour (1/8760 of annual generation per hour). Nuclear capacity factors exceed
+        90% with minimal hourly variation; geothermal similarly provides constant output. Planned refueling
+        and forced outages are not modeled.
     </p>
 
     <h3>4.2 Intermittent Profiles (Solar, Wind, Hydro)</h3>
@@ -704,9 +702,8 @@
 
     <h3>4.3 Hydro Capacity Caps</h3>
     <p>
-        Hydroelectric generation is constrained by regional availability. Unlike solar, wind, or nuclear,
-        new hydro capacity is extremely limited by geography and permitting. The following caps reflect each
-        region's realistic maximum hydro procurement share:
+        Hydroelectric generation is constrained by regional availability. New hydro capacity is limited
+        by geography and permitting, so the following caps reflect each region's realistic maximum share:
     </p>
 
     <table>
@@ -731,9 +728,9 @@
     <!-- ======== SECTION 5: OPTIMIZATION MODEL ======== -->
     <h2 id="optimization-model">5. Optimization Model</h2>
     <p>
-        The optimizer simultaneously searches across <strong>three dimensions</strong>: procurement level
+        The optimizer searches simultaneously across <strong>three dimensions</strong>: procurement level
         (70%&ndash;300% of annual demand), resource mix (clean firm / solar / wind / hydro percentages
-        summing to 100%), and storage dispatch level. It employs two complementary strategies.
+        summing to 100%), and storage dispatch level, using two complementary strategies.
     </p>
 
     <h3>5.1 Dual Optimization Approach</h3>
@@ -812,10 +809,9 @@
 
     <h3>5.4 Numpy Acceleration</h3>
     <p>
-        The coarse screening phase evaluates thousands of resource mix combinations at dozens of procurement
-        levels. To achieve acceptable performance, the model uses <strong>numpy vectorized operations</strong>
-        for the initial scoring. Supply profiles are pre-stacked into a (4, 8760) matrix, and the hourly match
-        score is computed as a single vectorized operation:
+        The coarse screening phase evaluates thousands of combinations using <strong>numpy vectorized
+        operations</strong>. Supply profiles are pre-stacked into a (4, 8760) matrix and the hourly match
+        score is computed in a single operation:
     </p>
 
     <div class="formula-box">
@@ -829,23 +825,21 @@
     </div>
 
     <p>
-        This numpy acceleration reduces the coarse phase from minutes to seconds, enabling the three-phase
-        refinement to complete in reasonable time for all five ISO regions.
+        This reduces the coarse phase from minutes to seconds across all five ISO regions.
     </p>
 
     <h3>5.5 Mix Generation</h3>
     <p>
-        Resource mix combinations are generated exhaustively: for a given step size (e.g., 5%), all
-        combinations of clean firm, solar, wind, and hydro percentages that sum to exactly 100% are enumerated,
-        subject to the hydro cap constraint. At 5% steps, this produces several hundred valid combinations
-        per region; at 1% steps, tens of thousands.
+        Resource mix combinations are enumerated exhaustively: all combinations of clean firm, solar, wind,
+        and hydro percentages summing to 100% (subject to hydro caps) at the given step size. At 5% steps
+        this yields several hundred valid combinations per region.
     </p>
 
     <!-- ======== SECTION 6: STORAGE MODEL ======== -->
     <h2 id="storage-model">6. Storage Model</h2>
     <p>
-        Battery storage shifts surplus clean energy from hours of oversupply to hours of deficit,
-        improving hourly matching without requiring additional generation procurement.
+        Battery storage shifts surplus clean energy from oversupply hours to deficit hours,
+        improving hourly matching without additional generation procurement.
     </p>
 
     <h3>6.1 Storage Parameters</h3>
@@ -908,8 +902,8 @@
     <h2 id="cost-model">7. Cost Model</h2>
     <p>
         The cost model is <strong>integrated directly into the threshold optimization</strong>, not applied
-        as a post-hoc layer. For each matching target, the optimizer simultaneously evaluates cost across all
-        candidate portfolios to find the cheapest feasible solution.
+        post-hoc. For each matching target, the optimizer evaluates cost across all candidate portfolios
+        to find the lowest-cost feasible solution.
     </p>
 
     <h3>7.1 Existing vs. New-Build Pricing</h3>
@@ -991,7 +985,7 @@
             <tr><td>NEISO</td><td>$90</td><td>$82</td><td>$73</td><td>$100</td></tr>
         </tbody>
     </table>
-    <p style="font-size:0.82rem;color:var(--c-gray-500);">
+    <p style="font-size:0.82rem;color:var(--text-muted);">
         Clean firm = blended nuclear/geothermal new-build. Storage = levelized cost of storage (LCOS) for 4h Li-ion.
         Hydro LCOE is not applicable (capped at existing levels, priced at wholesale).
     </p>
@@ -1018,9 +1012,9 @@
 
     <h3>7.5 Curtailment and Effective Cost</h3>
     <p>
-        Surplus procurement inevitably results in <strong>curtailment</strong>: clean energy generated during hours
-        when supply already exceeds demand cannot be used for matching. The buyer pays for all procured energy
-        but receives matching credit only for the portion that temporally coincides with demand.
+        Surplus procurement results in <strong>curtailment</strong>: clean energy generated when supply
+        already exceeds demand cannot be used for matching. The buyer pays for all procured energy but
+        receives matching credit only for the portion that temporally coincides with demand.
     </p>
 
     <div class="formula-box">
@@ -1035,17 +1029,16 @@
     </div>
 
     <p>
-        At 200% procurement with 95% matching, nearly half of all procured energy is curtailed, roughly
+        At 200% procurement with 95% matching, nearly half of procured energy is curtailed, roughly
         doubling the effective cost per useful MWh. This curtailment penalty is the fundamental economic
-        constraint on achieving very high hourly match scores with intermittent resources.
+        constraint on achieving high hourly match scores with intermittent resources alone.
     </p>
 
     <h3>7.6 Incremental Cost</h3>
     <p>
         Results include both the <strong>total effective cost</strong> and an <strong>incremental cost above
-        the wholesale baseline</strong>. The baseline represents what a buyer would pay for undifferentiated
-        grid electricity at regional wholesale market prices. The incremental cost represents the premium
-        for achieving the target hourly match score.
+        the wholesale baseline</strong>. The baseline represents undifferentiated grid electricity at
+        regional wholesale prices; the increment represents the premium for hourly matching.
     </p>
 
     <div class="formula-box">
@@ -1057,15 +1050,14 @@
     <h2 id="compressed-day">8. Compressed Day Visualization</h2>
     <p>
         For each threshold result, the tool generates a <strong>compressed day profile</strong>&mdash;a
-        representative 24-hour shape built by aggregating all 8,760 hourly values by hour-of-day.
+        representative 24-hour shape aggregating all 8,760 hourly values by hour-of-day.
     </p>
 
     <h3>8.1 Aggregation Method</h3>
     <p>
-        For each hour-of-day (0&ndash;23), the tool sums all corresponding values across the entire year.
-        For example, the "hour 14" value for solar represents the sum of solar generation at 2:00 PM on every
-        day of the year. This produces a representative daily shape that captures the average temporal pattern
-        while preserving the total annual volume.
+        For each hour-of-day (0&ndash;23), corresponding values are summed across all 365 days. For example,
+        the &ldquo;hour 14&rdquo; solar value represents cumulative 2:00 PM generation across the year,
+        producing a representative daily shape that preserves total annual volumes.
     </p>
 
     <h3>8.2 Stack Composition</h3>
@@ -1179,7 +1171,7 @@
         </li>
     </ul>
 
-    <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--c-gray-200);font-size:0.82rem;color:var(--c-gray-400);text-align:center;">
+    <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--border-light);font-size:0.82rem;color:var(--text-muted);text-align:center;">
         Hourly Clean Energy Cost Optimizer &mdash; Methodology Document v1.0
     </p>
 </div>
