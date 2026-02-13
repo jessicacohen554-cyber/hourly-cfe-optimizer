@@ -37,17 +37,18 @@
 
 ---
 
-## 3. Thresholds (7 total — reduced from 18)
+## 3. Thresholds (10 total — reduced from 18)
 
 ```
-75, 80, 85, 90, 95, 99, 100
+75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
 ```
 
-- 5% intervals from 75-95 (captures broad trend)
-- Jump to 99% and 100% (captures the steep cost inflection)
-- Reduced from 18 to 7 to cut optimizer runtime by ~60%
+- 5% intervals from 75-85 (captures broad trend)
+- 2.5% intervals from 87.5-97.5 (captures steep cost inflection zone)
+- 99% and 100% anchor the extreme end
+- Reduced from 18 to 10 while adding granularity in the inflection zone
+- Key inflection behavior (CCS/LDES entering mix, storage costs spiking) captured at 90-97.5
 - Dashboard interpolates smoothly between these anchor points for abatement curves
-- Key inflection behavior (CCS/LDES entering mix) still captured at 90-95-99 transitions
 
 ---
 

@@ -74,8 +74,23 @@ ISO_LABELS = {
 # 5 optimization resource types (sum to 100%)
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
-# 7 target thresholds (reduced from 18 — captures key inflection points)
-THRESHOLDS = [75, 80, 85, 90, 95, 99, 100]
+# 10 target thresholds — key inflection points with 2.5% granularity in steep zone
+THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+
+# Adaptive procurement bounds by threshold — avoids wasting compute searching
+# procurement levels that can't possibly be optimal for a given threshold
+PROCUREMENT_BOUNDS = {
+    75:   (70, 110),
+    80:   (70, 110),
+    85:   (80, 110),
+    87.5: (87, 200),
+    90:   (90, 200),
+    92.5: (92, 200),
+    95:   (95, 200),
+    97.5: (100, 250),
+    99:   (100, 250),
+    100:  (100, 500),
+}
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COST TABLES — Medium values used by optimizer; full L/M/H output for dashboard
@@ -786,19 +801,19 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
 # 5D COMBINATION GENERATOR
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_combinations(hydro_cap, step=5):
+def generate_combinations(hydro_cap, step=5, max_single=80):
     """
     Generate all valid resource mix combinations that sum to 100%.
     Resources: clean_firm, solar, wind, ccs_ccgt, hydro
-    Hydro capped by region.
+    Hydro capped by region. No single resource exceeds max_single%.
     """
     combos = []
-    for cf in range(0, 101, step):
-        for sol in range(0, 101 - cf, step):
-            for wnd in range(0, 101 - cf - sol, step):
-                for ccs in range(0, 101 - cf - sol - wnd, step):
+    for cf in range(0, min(max_single + 1, 101), step):
+        for sol in range(0, min(max_single + 1, 101 - cf), step):
+            for wnd in range(0, min(max_single + 1, 101 - cf - sol), step):
+                for ccs in range(0, min(max_single + 1, 101 - cf - sol - wnd), step):
                     hyd = 100 - cf - sol - wnd - ccs
-                    if hyd >= 0 and hyd <= hydro_cap:
+                    if hyd >= 0 and hyd <= hydro_cap and hyd <= max_single:
                         combos.append({
                             'clean_firm': cf, 'solar': sol, 'wind': wnd,
                             'ccs_ccgt': ccs, 'hydro': hyd
@@ -1431,7 +1446,8 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     Returns: best_result dict or None
     """
     target = threshold / 100.0
-    max_proc = 500 if target >= 0.995 else 310
+    # Adaptive procurement bounds per threshold
+    proc_min, proc_max = PROCUREMENT_BOUNDS.get(threshold, (70, 310))
     storage_threshold = max(0.5, target - 0.05)
     demand_arr, supply_arrs, supply_matrix = prepare_numpy_profiles(demand_norm, supply_profiles)
 
@@ -1501,7 +1517,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     combos_10 = generate_combinations(hydro_cap, step=10)
     candidates = []
 
-    for procurement_pct in range(70, max_proc, 10):
+    for procurement_pct in range(proc_min, proc_max + 1, 10):
         pf = procurement_pct / 100.0
         for combo in combos_10:
             mix_fracs = tuple(combo[rt] / 100.0 for rt in RESOURCE_TYPES)
@@ -1542,7 +1558,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     for _, combo, _, bp_base, lp_base, proc in top:
         for p_d in [-5, 0, 5]:
             p = proc + p_d
-            if p < 70 or p > max_proc:
+            if p < proc_min or p > proc_max:
                 continue
             pf = p / 100.0
 
@@ -1594,7 +1610,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     for _, combo, _, bp_base, lp_base, proc in finalists:
         for p_d in range(-2, 3):
             p = proc + p_d
-            if p < 70 or p > max_proc:
+            if p < proc_min or p > proc_max:
                 continue
             pf = p / 100.0
 
@@ -1646,8 +1662,41 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
 # PER-ISO WORKER (for multiprocessing)
 # ══════════════════════════════════════════════════════════════════════════════
 
+def generate_all_cost_scenarios():
+    """
+    Generate all 324 paired toggle cost scenarios.
+    Returns list of (scenario_key, cost_levels_tuple) pairs.
+    """
+    level_keys = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
+    gen_levels = ['Low', 'Medium', 'High']
+    tx_levels = ['None', 'Low', 'Medium', 'High']
+
+    scenarios = []
+    for renew in gen_levels:
+        for firm in gen_levels:
+            for storage in gen_levels:
+                for fuel in gen_levels:
+                    for tx in tx_levels:
+                        key = f"{level_keys[renew]}{level_keys[firm]}{level_keys[storage]}_{level_keys[fuel]}_{level_keys[tx]}"
+                        levels = (renew, firm, storage, fuel, tx)
+                        scenarios.append((key, levels))
+    return scenarios
+
+
+ALL_COST_SCENARIOS = generate_all_cost_scenarios()
+
+
 def process_iso(args):
-    """Process a single ISO region. Called by multiprocessing pool."""
+    """
+    Process a single ISO region. Called by multiprocessing pool.
+
+    For each threshold:
+      1. Run full 3-phase co-optimization for all 324 cost scenarios
+      2. Each scenario uses its own cost function → different costs produce different optimal mixes
+      3. Matching cache shared across scenarios within a threshold (physics reuse only)
+      4. Phase 2/3 refinement neighborhoods are cost-driven (different per scenario)
+      5. Monotonicity enforcement: cost(T) <= cost(T+1) for all scenarios
+    """
     iso, demand_data, gen_profiles, emission_rates = args
 
     print(f"\n{'='*70}")
@@ -1708,65 +1757,134 @@ def process_iso(args):
         r['co2_abated'] = co2
         iso_results['sweep'].append(r)
 
-    # ---- THRESHOLDS: co-optimize cost + matching for each target ----
-    print(f"\n  Cost-optimizing thresholds...")
-    for threshold in THRESHOLDS:
-        print(f"    Target {threshold}%...")
-        result = optimize_for_threshold(
-            iso, demand_norm, supply_profiles, threshold, hydro_cap,
-            emission_rates, demand_total_mwh
-        )
-        if result:
-            # Compute peak gap
-            peak_gap = compute_peak_gap(
-                demand_norm, supply_profiles, result['resource_mix'],
-                result['procurement_pct'], result['battery_dispatch_pct'],
-                result['ldes_dispatch_pct'], anomaly_hours
-            )
-            result['peak_gap_pct'] = peak_gap
+    # ---- THRESHOLDS: co-optimize cost + matching for ALL 324 cost scenarios ----
+    print(f"\n  Cost-optimizing thresholds (324 scenarios each)...")
 
-            # Compute costs
-            costs = compute_costs(
-                iso, result['resource_mix'], result['procurement_pct'],
-                result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
-                result['hourly_match_score'],
+    # Track results per scenario across thresholds for monotonicity enforcement
+    # scenario_key -> list of (threshold, effective_cost, result) for sorting
+    scenario_results_by_threshold = {}
+
+    for threshold in THRESHOLDS:
+        t_start = time.time()
+        # Fresh matching cache per threshold — no cross-threshold contamination
+        score_cache = {}
+        threshold_scenarios = {}
+        medium_result = None
+
+        for s_idx, (scenario_key, cost_levels) in enumerate(ALL_COST_SCENARIOS):
+            result = optimize_for_threshold(
+                iso, demand_norm, supply_profiles, threshold, hydro_cap,
+                emission_rates, demand_total_mwh,
+                cost_levels=cost_levels, score_cache=score_cache
+            )
+
+            if result:
+                # Compute cost for this scenario
+                r_gen, f_gen, stor, fuel, tx = cost_levels
+                cost_data = compute_costs_parameterized(
+                    iso, result['resource_mix'], result['procurement_pct'],
+                    result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
+                    result['hourly_match_score'],
+                    r_gen, f_gen, stor, fuel, tx
+                )
+                result['costs'] = cost_data
+
+                threshold_scenarios[scenario_key] = result
+
+                # Track for monotonicity enforcement
+                if scenario_key not in scenario_results_by_threshold:
+                    scenario_results_by_threshold[scenario_key] = []
+                scenario_results_by_threshold[scenario_key].append(
+                    (threshold, cost_data['effective_cost'], result)
+                )
+
+                # Track Medium scenario for logging
+                if scenario_key == 'MMM_M_M':
+                    medium_result = result
+
+        # Log Medium scenario progress
+        t_elapsed = time.time() - t_start
+        cache_size = len(score_cache)
+        if medium_result:
+            mix = medium_result['resource_mix']
+            print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
+                  f"cache={cache_size}, {t_elapsed:.1f}s | "
+                  f"Medium: CF{mix['clean_firm']}/Sol{mix['solar']}/Wnd{mix['wind']}"
+                  f"/CCS{mix['ccs_ccgt']}/Hyd{mix['hydro']} "
+                  f"batt={medium_result['battery_dispatch_pct']}% "
+                  f"ldes={medium_result['ldes_dispatch_pct']}%")
+        else:
+            print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
+                  f"cache={cache_size}, {t_elapsed:.1f}s")
+
+        # Store all scenarios for this threshold
+        # Medium result gets full detail (compressed day, peak gap, CO2)
+        medium_key = 'MMM_M_M'
+        if medium_key in threshold_scenarios:
+            med = threshold_scenarios[medium_key]
+            peak_gap = compute_peak_gap(
+                demand_norm, supply_profiles, med['resource_mix'],
+                med['procurement_pct'], med['battery_dispatch_pct'],
+                med['ldes_dispatch_pct'], anomaly_hours
+            )
+            med['peak_gap_pct'] = peak_gap
+
+            # Full costs at Medium
+            full_costs = compute_costs(
+                iso, med['resource_mix'], med['procurement_pct'],
+                med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
+                med['hourly_match_score'],
                 demand_norm, supply_profiles
             )
-            result['costs'] = costs
+            med['costs_detail'] = full_costs
 
-            # Compute CO2 abatement
             co2 = compute_co2_abatement(
-                iso, result['resource_mix'], result['procurement_pct'],
-                result['hourly_match_score'],
-                result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
+                iso, med['resource_mix'], med['procurement_pct'],
+                med['hourly_match_score'],
+                med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
                 emission_rates, demand_total_mwh
             )
-            result['co2_abated'] = co2
+            med['co2_abated'] = co2
 
-            # Generate compressed day
             cdp = compute_compressed_day(
-                demand_norm, supply_profiles, result['resource_mix'],
-                result['procurement_pct'],
-                result['battery_dispatch_pct'], result['ldes_dispatch_pct']
+                demand_norm, supply_profiles, med['resource_mix'],
+                med['procurement_pct'],
+                med['battery_dispatch_pct'], med['ldes_dispatch_pct']
             )
+            med['compressed_day'] = cdp
 
-            iso_results['thresholds'][str(threshold)] = {
-                **result,
-                'compressed_day': cdp,
-            }
+        iso_results['thresholds'][str(threshold)] = {
+            'scenarios': threshold_scenarios,
+            'scenario_count': len(threshold_scenarios),
+        }
 
-            mix = result['resource_mix']
-            cost_info = result['costs']
-            print(f"      => procurement={result['procurement_pct']}%, "
-                  f"score={result['hourly_match_score']}%, "
-                  f"mix=CF{mix['clean_firm']}/Sol{mix['solar']}/Wnd{mix['wind']}"
-                  f"/CCS{mix['ccs_ccgt']}/Hyd{mix['hydro']} "
-                  f"batt={result['battery_dispatch_pct']}% ldes={result['ldes_dispatch_pct']}% "
-                  f"cost=${cost_info['effective_cost_per_useful_mwh']}/MWh "
-                  f"(+${cost_info['incremental_above_baseline']}/MWh) "
-                  f"CO2={co2['total_co2_abated_tons']:.0f}t")
-        else:
-            print(f"      => No feasible solution found for {threshold}%")
+    # ---- MONOTONICITY ENFORCEMENT ----
+    # For each cost scenario, ensure cost(T) <= cost(T+next) across thresholds
+    # If a higher threshold found a cheaper solution, propagate it down
+    # (a solution meeting 90% also meets 75%, so it's a valid cheaper 75% solution)
+    mono_fixes = 0
+    for scenario_key, threshold_results in scenario_results_by_threshold.items():
+        # Sort by threshold descending (100 first)
+        threshold_results.sort(key=lambda x: x[0], reverse=True)
+
+        # Walk from highest threshold down, propagating cheaper solutions
+        for i in range(len(threshold_results) - 1):
+            higher_t, higher_cost, higher_result = threshold_results[i]
+            lower_t, lower_cost, lower_result = threshold_results[i + 1]
+
+            if higher_cost < lower_cost:
+                # Higher threshold is cheaper → propagate to lower threshold
+                t_str = str(lower_t)
+                if t_str in iso_results['thresholds']:
+                    scenarios = iso_results['thresholds'][t_str]['scenarios']
+                    if scenario_key in scenarios:
+                        scenarios[scenario_key] = dict(higher_result)
+                        mono_fixes += 1
+                # Update in tracking list too
+                threshold_results[i + 1] = (lower_t, higher_cost, higher_result)
+
+    if mono_fixes > 0:
+        print(f"  Monotonicity: {mono_fixes} fixes applied across scenarios")
 
     return iso, iso_results
 
@@ -1790,6 +1908,8 @@ def main():
         'hydro_caps': HYDRO_CAPS,
         'resource_types': RESOURCE_TYPES,
         'thresholds': THRESHOLDS,
+        'procurement_bounds': {str(k): list(v) for k, v in PROCUREMENT_BOUNDS.items()},
+        'total_scenarios_per_threshold': len(ALL_COST_SCENARIOS),
         'wholesale_prices': WHOLESALE_PRICES,
         'regional_lcoe': REGIONAL_LCOE,
         'grid_mix_shares': GRID_MIX_SHARES,
