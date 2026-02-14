@@ -342,9 +342,40 @@ For each resource:
 ## 11. Performance Optimizations
 
 - **Parallelization**: All 5 ISOs run concurrently via multiprocessing pool
-- **Caching**: Phase 1/2 optimization results cached to disk
-- **Incremental cost recalculation**: When only cost toggles change (not resource mix), recalculate costs on cached mix results without re-optimizing
-- **18 thresholds × 5 regions × 3 phases** — parallelization essential for reasonable runtime
+- **Caching**: Matching scores cached across 324 cost scenarios per threshold (physics reuse — cost-independent)
+- **Cross-pollination**: After all 324 scenarios run per threshold, every unique mix re-evaluated against all scenarios
+- **10 thresholds × 5 regions × 324 scenarios × 3 phases** — parallelization essential for reasonable runtime
+
+### 11.1 Adaptive Procurement Bounds
+
+Compressed procurement sweep ranges per threshold to avoid wasting compute on levels that can't be optimal:
+
+| Threshold | Min% | Max% | Rationale |
+|-----------|------|------|-----------|
+| 75% | 75 | 105 | Easy target, minimal overprocurement needed |
+| 80% | 75 | 110 | Slight headroom |
+| 85% | 80 | 110 | Still achievable without heavy overprocurement |
+| 87.5% | 87 | 130 | Storage helps close gap, not raw procurement |
+| 90% | 90 | 140 | Moderate overprocurement + storage |
+| 92.5% | 92 | 150 | Entering inflection zone |
+| 95% | 95 | 175 | Significant overprocurement may be needed |
+| 97.5% | 100 | 200 | Heavy overprocurement territory |
+| 99% | 100 | 220 | Near-perfect matching |
+| 100% | 100 | 200 | If 2× procurement can't hit 100%, it's not cost-viable |
+
+### 11.2 Edge Case Seed Mixes
+
+17 forced seed mixes injected into Phase 1 coarse scan to guarantee extreme-but-potentially-optimal mixes survive pruning. Categories:
+
+- **Solar-dominant** (70-75%): captures low-cost renewable scenarios where massive solar + storage is cheapest
+- **Wind-dominant** (70-75%): captures ERCOT-like regions where wind + LDES dominates
+- **Balanced renewable** (40/40 solar/wind): diversified variable generation
+- **Clean firm dominant** (60-80%): captures low-cost nuclear/geothermal scenarios
+- **Combined firm** (CF 30-40% + CCS 30-40%): dual-firm strategy
+- **CCS-dominant** (50-60%): regions with favorable geology (ERCOT Gulf Coast)
+- **High-hydro** (40% hydro): NYISO, CAISO, NEISO where existing hydro fleet is large
+
+Seeds filtered at runtime by regional hydro cap. Adds ~10-15 combos to the ~280 coarse grid combos per region — negligible compute cost, significant coverage improvement.
 
 ---
 

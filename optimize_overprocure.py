@@ -80,16 +80,16 @@ THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 # Adaptive procurement bounds by threshold — avoids wasting compute searching
 # procurement levels that can't possibly be optimal for a given threshold
 PROCUREMENT_BOUNDS = {
-    75:   (70, 110),
-    80:   (70, 110),
+    75:   (75, 105),
+    80:   (75, 110),
     85:   (80, 110),
-    87.5: (87, 150),
-    90:   (90, 150),
+    87.5: (87, 130),
+    90:   (90, 140),
     92.5: (92, 150),
-    95:   (95, 200),
-    97.5: (100, 250),
-    99:   (100, 250),
-    100:  (100, 250),
+    95:   (95, 175),
+    97.5: (100, 200),
+    99:   (100, 220),
+    100:  (100, 200),
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -801,6 +801,43 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
 # 5D COMBINATION GENERATOR
 # ══════════════════════════════════════════════════════════════════════════════
 
+# Edge case seed mixes — injected into Phase 1 to ensure extreme but potentially
+# optimal mixes survive coarse pruning. Under low-cost renewables, a solar-dominant
+# mix with heavy storage may be globally cheapest for <90% targets. Under low-cost
+# firm generation, clean firm or CCS-dominant mixes may win. The coarse grid
+# generates these combos but may not rank them highly enough to survive to Phase 2/3
+# under all 324 cost scenarios. Seeds guarantee they're always evaluated.
+#
+# Format: {clean_firm, solar, wind, ccs_ccgt, hydro} — must sum to 100%
+# Hydro-dependent seeds filtered at runtime by regional hydro cap.
+EDGE_CASE_SEEDS = [
+    # Low-cost renewable: solar-dominant
+    {'clean_firm': 10, 'solar': 70, 'wind': 10, 'ccs_ccgt': 0, 'hydro': 10},
+    {'clean_firm': 5,  'solar': 75, 'wind': 10, 'ccs_ccgt': 0, 'hydro': 10},
+    {'clean_firm': 10, 'solar': 60, 'wind': 20, 'ccs_ccgt': 0, 'hydro': 10},
+    # Low-cost renewable: wind-dominant
+    {'clean_firm': 10, 'solar': 10, 'wind': 70, 'ccs_ccgt': 0, 'hydro': 10},
+    {'clean_firm': 5,  'solar': 10, 'wind': 75, 'ccs_ccgt': 0, 'hydro': 10},
+    {'clean_firm': 10, 'solar': 20, 'wind': 60, 'ccs_ccgt': 0, 'hydro': 10},
+    # Low-cost renewable: balanced solar+wind
+    {'clean_firm': 10, 'solar': 40, 'wind': 40, 'ccs_ccgt': 0, 'hydro': 10},
+    {'clean_firm': 5,  'solar': 45, 'wind': 45, 'ccs_ccgt': 0, 'hydro': 5},
+    # Low-cost clean firm: nuclear/geothermal dominant
+    {'clean_firm': 70, 'solar': 10, 'wind': 10, 'ccs_ccgt': 0, 'hydro': 10},
+    {'clean_firm': 80, 'solar': 10, 'wind': 10, 'ccs_ccgt': 0, 'hydro': 0},
+    {'clean_firm': 60, 'solar': 15, 'wind': 15, 'ccs_ccgt': 0, 'hydro': 10},
+    # Low-cost firm: combined clean firm + CCS
+    {'clean_firm': 40, 'solar': 10, 'wind': 10, 'ccs_ccgt': 30, 'hydro': 10},
+    {'clean_firm': 30, 'solar': 10, 'wind': 10, 'ccs_ccgt': 40, 'hydro': 10},
+    # CCS-dominant (cheap firm gen + favorable geology)
+    {'clean_firm': 20, 'solar': 15, 'wind': 15, 'ccs_ccgt': 50, 'hydro': 0},
+    {'clean_firm': 10, 'solar': 10, 'wind': 10, 'ccs_ccgt': 60, 'hydro': 10},
+    # High-hydro regions (NYISO, CAISO, NEISO) — hydro + firm
+    {'clean_firm': 30, 'solar': 10, 'wind': 10, 'ccs_ccgt': 10, 'hydro': 40},
+    {'clean_firm': 20, 'solar': 20, 'wind': 10, 'ccs_ccgt': 10, 'hydro': 40},
+]
+
+
 def generate_combinations(hydro_cap, step=5, max_single=80):
     """
     Generate all valid resource mix combinations that sum to 100%.
@@ -819,6 +856,23 @@ def generate_combinations(hydro_cap, step=5, max_single=80):
                             'ccs_ccgt': ccs, 'hydro': hyd
                         })
     return combos
+
+
+def get_seed_combos(hydro_cap):
+    """
+    Return edge case seed mixes valid for this region's hydro cap.
+    Filters out seeds where hydro exceeds regional cap.
+    """
+    valid = []
+    seen = set()
+    for seed in EDGE_CASE_SEEDS:
+        if seed['hydro'] > hydro_cap:
+            continue
+        key = tuple(seed[rt] for rt in RESOURCE_TYPES)
+        if key not in seen:
+            seen.add(key)
+            valid.append(dict(seed))
+    return valid
 
 
 def generate_combinations_around(base_combo, hydro_cap, step=1, radius=2):
@@ -1513,8 +1567,15 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
             }
         return cost
 
-    # ---- Phase 1: Coarse scan ----
+    # ---- Phase 1: Coarse scan + edge case seeds ----
     combos_10 = generate_combinations(hydro_cap, step=10)
+    # Inject edge case seeds to guarantee extreme mixes survive pruning
+    seeds = get_seed_combos(hydro_cap)
+    seed_set = set(tuple(s[rt] for rt in RESOURCE_TYPES) for s in seeds)
+    existing_set = set(tuple(c[rt] for rt in RESOURCE_TYPES) for c in combos_10)
+    for seed in seeds:
+        if tuple(seed[rt] for rt in RESOURCE_TYPES) not in existing_set:
+            combos_10.append(seed)
     candidates = []
 
     for procurement_pct in range(proc_min, proc_max + 1, 10):
