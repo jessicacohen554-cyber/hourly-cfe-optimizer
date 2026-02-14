@@ -57,6 +57,18 @@
 - **Only surface errors when you can't resolve them** — try to self-recover first; if stuck after reasonable attempts, explain what failed and what you tried
 - **Skip QA narration unless something fails** — don't describe each passing check. Just "QA passed" or report failures.
 
+### Completion Verification (Critical — Never Claim False Completions)
+- **NEVER mark a task as [x] completed in SPEC.md or todo list without verification.** Verification means:
+  1. For HTML pages: Grep the file for actual JavaScript initialization (e.g., `new Chart(`) — canvas elements without JS are NOT "done"
+  2. For charts: Confirm `new Chart(` calls exist for every `<canvas id=...>` element
+  3. For controls/toggles: Confirm `addEventListener` or equivalent wiring exists
+  4. For narrative content: Confirm actual text exists, not empty containers or placeholder divs
+  5. For data-dependent features: Note explicitly that they need optimizer results — don't mark complete
+- **If a page is a wireframe/skeleton**: Say so. "Structure created, awaiting implementation" is honest. "[x] Created page with 4 charts" when the charts are blank canvases is a false claim.
+- **Run a verification audit before every commit** that touches SPEC.md status: For each [x] item, the evidence must be in the file (grep for JS, check line counts, verify content exists).
+- **Stub pages get their own status**: `[ ] page.html — wireframe only (structure + CSS, no JS/content)` is the correct way to track a page that exists but doesn't work.
+- **This rule exists because**: Previous sessions marked pages as "complete" when they were empty shells with canvas placeholders. This wasted user tokens on false confidence and delayed real progress.
+
 ### Token Efficiency (Critical — Protect User's Weekly Budget)
 - **Targeted file reads only** — always use `offset`/`limit` on large files. Never re-read a file already read in the same session unless it's been modified since the last read.
 - **Exploration agents: return summaries, not raw content** — exploration agents should return structured summaries (architecture, key functions, line numbers). Never paste full file contents back. A 2K-line file dump in an agent response is a token waste.
