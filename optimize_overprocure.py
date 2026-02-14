@@ -1479,7 +1479,9 @@ def optimize_at_procurement_level(iso, demand_norm, supply_profiles, procurement
 
 def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_cap,
                            emission_rates, demand_total_mwh,
-                           cost_levels=None, score_cache=None):
+                           cost_levels=None, score_cache=None,
+                           resweep=False, seed_mixes=None,
+                           procurement_bounds_override=None):
     """
     CO-OPTIMIZE cost and matching simultaneously for a given threshold target.
     Search across procurement levels AND resource mixes to find the CHEAPEST
@@ -1496,12 +1498,23 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
         score_cache: Optional dict for caching matching scores across cost scenarios.
                      Matching scores are physics-based and cost-independent, so caching
                      them across cost scenarios is scientifically correct (not a shortcut).
+        resweep: If True, use broader search parameters (finer Phase 1 step, more
+                 Phase 2/3 candidates). Triggered by monotonicity violations.
+        seed_mixes: Optional list of resource mix dicts to inject as seeds in Phase 1.
+                    Used during re-sweep to seed with mixes that achieved better cost
+                    at a higher threshold.
+        procurement_bounds_override: Optional (min, max) tuple to override default
+                                     procurement bounds. Used during re-sweep to expand
+                                     the search range.
 
     Returns: best_result dict or None
     """
     target = threshold / 100.0
-    # Adaptive procurement bounds per threshold
-    proc_min, proc_max = PROCUREMENT_BOUNDS.get(threshold, (70, 310))
+    # Adaptive procurement bounds per threshold (use override during re-sweep)
+    if procurement_bounds_override:
+        proc_min, proc_max = procurement_bounds_override
+    else:
+        proc_min, proc_max = PROCUREMENT_BOUNDS.get(threshold, (70, 310))
     storage_threshold = max(0.5, target - 0.10)  # Wider net to catch storage-dependent optima
     demand_arr, supply_arrs, supply_matrix = prepare_numpy_profiles(demand_norm, supply_profiles)
 
@@ -1568,7 +1581,9 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
         return cost
 
     # ---- Phase 1: Coarse scan + edge case seeds ----
-    combos_10 = generate_combinations(hydro_cap, step=10)
+    # Re-sweep uses 5% step for finer exploration; normal uses 10%
+    phase1_step = 5 if resweep else 10
+    combos_10 = generate_combinations(hydro_cap, step=phase1_step)
     # Inject edge case seeds to guarantee extreme mixes survive pruning
     seeds = get_seed_combos(hydro_cap)
     seed_set = set(tuple(s[rt] for rt in RESOURCE_TYPES) for s in seeds)
@@ -1576,6 +1591,13 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     for seed in seeds:
         if tuple(seed[rt] for rt in RESOURCE_TYPES) not in existing_set:
             combos_10.append(seed)
+    # Inject re-sweep seed mixes (from higher thresholds that achieved better cost)
+    if seed_mixes:
+        for smix in seed_mixes:
+            key = tuple(smix[rt] for rt in RESOURCE_TYPES)
+            if key not in existing_set:
+                existing_set.add(key)
+                combos_10.append(dict(smix))
     candidates = []
 
     for procurement_pct in range(proc_min, proc_max + 1, 10):
@@ -1618,8 +1640,11 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
         return None
 
     # Select top candidates for refinement — ranked by THIS scenario's cost function
+    # Re-sweep uses wider cost filter and more candidates for broader exploration
+    phase2_cost_mult = 2.00 if resweep else 1.50
+    phase2_top_n = 30 if resweep else 20
     candidates.sort(key=lambda x: x[0])
-    top = [c for c in candidates if c[0] <= best_cost * 1.50][:20]
+    top = [c for c in candidates if c[0] <= best_cost * phase2_cost_mult][:phase2_top_n]
 
     # ---- Phase 2: 5% refinement around top candidates ----
     phase2 = []
@@ -1681,9 +1706,12 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                     phase2.append((cost, rcombo, score, best_bp, best_lp, p))
 
     # ---- Phase 3: Fine-tune (1% mix, 2% procurement, refined storage) ----
+    # Re-sweep uses wider filter and more finalists to avoid pruning the true optimum
+    phase3_cost_mult = 1.20 if resweep else 1.10
+    phase3_top_n = 15 if resweep else 8
     all_phase2 = phase2 if phase2 else top
     all_phase2.sort(key=lambda x: x[0])
-    finalists = [c for c in all_phase2 if c[0] <= best_cost * 1.10][:8]
+    finalists = [c for c in all_phase2 if c[0] <= best_cost * phase3_cost_mult][:phase3_top_n]
 
     seen2 = set()
     for _, combo, _, bp_base, lp_base, proc in finalists:
@@ -1763,6 +1791,8 @@ def generate_all_cost_scenarios():
 
 
 ALL_COST_SCENARIOS = generate_all_cost_scenarios()
+# Dict for O(1) lookup of cost_levels by scenario key (used during re-sweep)
+COST_SCENARIO_MAP = {key: levels for key, levels in ALL_COST_SCENARIOS}
 
 
 def process_iso(args):
@@ -1774,7 +1804,9 @@ def process_iso(args):
       2. Each scenario uses its own cost function → different costs produce different optimal mixes
       3. Matching cache shared across scenarios within a threshold (physics reuse only)
       4. Phase 2/3 refinement neighborhoods are cost-driven (different per scenario)
-      5. Monotonicity enforcement: cost(T) <= cost(T+1) for all scenarios
+      5. Post-hoc monotonicity re-sweep: if cost(T_lower) > cost(T_higher), re-sweep
+         T_lower with broader parameters (5% Phase 1 step, expanded procurement range,
+         seed mixes from T_higher) to find the true optimum — up to 2 rounds
     """
     iso, demand_data, gen_profiles, emission_rates = args
 
@@ -1839,8 +1871,8 @@ def process_iso(args):
     # ---- THRESHOLDS: co-optimize cost + matching for ALL 324 cost scenarios ----
     print(f"\n  Cost-optimizing thresholds (324 scenarios each)...")
 
-    # No top-down processing: each threshold optimized independently
-    # Monotonicity checked post-hoc (detection only, not enforcement)
+    # Each threshold optimized independently; monotonicity enforced via
+    # post-hoc re-sweep with broader parameters (not by result replacement)
 
     for threshold in THRESHOLDS:
         t_start = time.time()
@@ -1972,11 +2004,15 @@ def process_iso(args):
             'scenario_count': len(threshold_scenarios),
         }
 
-    # ---- MONOTONICITY CHECK (detection only, not enforcement) ----
-    # For each cost scenario, verify cost is non-decreasing across thresholds.
-    # Violations indicate the search missed a global optimum at a lower threshold.
-    mono_violations = 0
+    # ---- MONOTONICITY RE-SWEEP ----
+    # For each cost scenario, cost must be non-decreasing across thresholds.
+    # If cost(T_lower) > cost(T_higher), the search missed a better solution at T_lower.
+    # Instead of replacing with the higher threshold's result, re-sweep T_lower
+    # with broader parameters + seeds from the higher threshold's winning mix.
+    MAX_RESWEEP_ROUNDS = 2
     sorted_thresholds = sorted(THRESHOLDS)
+
+    # Build set of all scenario keys present across thresholds
     checked_scenarios = set()
     for t_idx in range(len(sorted_thresholds)):
         t_str = str(sorted_thresholds[t_idx])
@@ -1985,33 +2021,194 @@ def process_iso(args):
         for sk in iso_results['thresholds'][t_str]['scenarios']:
             checked_scenarios.add(sk)
 
-    for scenario_key in checked_scenarios:
-        prev_cost = None
-        prev_t = None
-        for threshold in sorted_thresholds:
-            t_str = str(threshold)
-            if t_str not in iso_results['thresholds']:
-                continue
-            scenarios = iso_results['thresholds'][t_str]['scenarios']
-            if scenario_key not in scenarios:
-                continue
-            result = scenarios[scenario_key]
-            if 'costs' not in result:
-                continue
-            cost = result['costs']['effective_cost']
-            if prev_cost is not None and cost < prev_cost - 0.01:
-                mono_violations += 1
-                if mono_violations <= 5:
-                    print(f"  WARNING: Monotonicity violation: {scenario_key} "
-                          f"{prev_t}%=${prev_cost:.1f} > {threshold}%=${cost:.1f}")
-            prev_cost = cost
-            prev_t = threshold
+    for resweep_round in range(MAX_RESWEEP_ROUNDS):
+        # Detect monotonicity violations: {threshold: {scenario_key: better_threshold}}
+        violations = {}
+        total_violations = 0
+        for scenario_key in checked_scenarios:
+            prev_cost = None
+            prev_t = None
+            for threshold in sorted_thresholds:
+                t_str = str(threshold)
+                if t_str not in iso_results['thresholds']:
+                    continue
+                scenarios = iso_results['thresholds'][t_str]['scenarios']
+                if scenario_key not in scenarios:
+                    continue
+                result = scenarios[scenario_key]
+                if 'costs' not in result:
+                    continue
+                cost = result['costs']['effective_cost']
+                if prev_cost is not None and cost < prev_cost - 0.01:
+                    total_violations += 1
+                    if prev_t not in violations:
+                        violations[prev_t] = {}
+                    violations[prev_t][scenario_key] = threshold
+                prev_cost = cost
+                prev_t = threshold
 
-    if mono_violations > 0:
-        print(f"  WARNING: {mono_violations} monotonicity violations detected "
-              f"(search may have missed global optima at lower thresholds)")
+        if not violations:
+            if resweep_round == 0:
+                print(f"  Monotonicity check passed for all scenarios")
+            else:
+                print(f"  Monotonicity re-sweep round {resweep_round}: all violations resolved")
+            break
+
+        print(f"  Monotonicity round {resweep_round + 1}: {total_violations} violations "
+              f"across {len(violations)} threshold(s) — triggering re-sweep")
+
+        # Re-sweep each violated threshold with broader parameters
+        for viol_threshold in sorted(violations.keys()):
+            violated_scenarios = violations[viol_threshold]
+            t_str = str(viol_threshold)
+
+            # Collect seed mixes from the thresholds that achieved better cost
+            seed_mixes_for_resweep = []
+            seen_seeds = set()
+            for sk, better_t in violated_scenarios.items():
+                better_result = iso_results['thresholds'][str(better_t)]['scenarios'].get(sk)
+                if better_result and 'resource_mix' in better_result:
+                    key = tuple(better_result['resource_mix'][rt] for rt in RESOURCE_TYPES)
+                    if key not in seen_seeds:
+                        seen_seeds.add(key)
+                        seed_mixes_for_resweep.append(dict(better_result['resource_mix']))
+
+            # Expand procurement bounds for broader search
+            default_min, default_max = PROCUREMENT_BOUNDS.get(viol_threshold, (70, 310))
+            expanded_min = max(50, default_min - 20)
+            expanded_max = min(500, default_max + 30)
+
+            print(f"    Re-sweeping {viol_threshold}%: {len(violated_scenarios)} scenarios, "
+                  f"{len(seed_mixes_for_resweep)} seed mixes, "
+                  f"procurement [{expanded_min}-{expanded_max}%]")
+
+            # Fresh score cache for re-sweep (shared across re-swept scenarios)
+            resweep_cache = {}
+            resweep_fixes = 0
+            threshold_scenarios = iso_results['thresholds'][t_str]['scenarios']
+
+            for scenario_key in violated_scenarios:
+                cost_levels = COST_SCENARIO_MAP[scenario_key]
+                result = optimize_for_threshold(
+                    iso, demand_norm, supply_profiles, viol_threshold, hydro_cap,
+                    emission_rates, demand_total_mwh,
+                    cost_levels=cost_levels, score_cache=resweep_cache,
+                    resweep=True, seed_mixes=seed_mixes_for_resweep,
+                    procurement_bounds_override=(expanded_min, expanded_max)
+                )
+
+                if result:
+                    r_gen, f_gen, stor, fuel, tx = cost_levels
+                    cost_data = compute_costs_parameterized(
+                        iso, result['resource_mix'], result['procurement_pct'],
+                        result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
+                        result['hourly_match_score'],
+                        r_gen, f_gen, stor, fuel, tx
+                    )
+                    result['costs'] = cost_data
+
+                    # Replace only if the re-sweep found a cheaper solution
+                    current = threshold_scenarios.get(scenario_key)
+                    if current is None or cost_data['effective_cost'] < current['costs']['effective_cost']:
+                        threshold_scenarios[scenario_key] = result
+                        resweep_fixes += 1
+
+            # Cross-pollination within re-swept threshold
+            unique_results = []
+            seen_mix_keys = set()
+            for sk, res in threshold_scenarios.items():
+                mix = res['resource_mix']
+                mk = (mix['clean_firm'], mix['solar'], mix['wind'],
+                      mix['ccs_ccgt'], mix['hydro'],
+                      res['procurement_pct'],
+                      res['battery_dispatch_pct'],
+                      res['ldes_dispatch_pct'])
+                if mk not in seen_mix_keys:
+                    seen_mix_keys.add(mk)
+                    unique_results.append(res)
+
+            cross_fixes = 0
+            for scenario_key in violated_scenarios:
+                cost_levels = COST_SCENARIO_MAP[scenario_key]
+                r_gen, f_gen, stor, fuel, tx = cost_levels
+                current = threshold_scenarios.get(scenario_key)
+                current_cost = current['costs']['effective_cost'] if current and 'costs' in current else float('inf')
+
+                for candidate in unique_results:
+                    if candidate['hourly_match_score'] < viol_threshold:
+                        continue
+                    cand_cost_data = compute_costs_parameterized(
+                        iso, candidate['resource_mix'], candidate['procurement_pct'],
+                        candidate['battery_dispatch_pct'], candidate['ldes_dispatch_pct'],
+                        candidate['hourly_match_score'],
+                        r_gen, f_gen, stor, fuel, tx
+                    )
+                    if cand_cost_data['effective_cost'] < current_cost:
+                        threshold_scenarios[scenario_key] = dict(candidate)
+                        threshold_scenarios[scenario_key]['costs'] = cand_cost_data
+                        current_cost = cand_cost_data['effective_cost']
+                        cross_fixes += 1
+
+            # Update Medium scenario detail if it was re-swept
+            medium_key = 'MMM_M_M'
+            if medium_key in violated_scenarios and medium_key in threshold_scenarios:
+                med = threshold_scenarios[medium_key]
+                peak_gap = compute_peak_gap(
+                    demand_norm, supply_profiles, med['resource_mix'],
+                    med['procurement_pct'], med['battery_dispatch_pct'],
+                    med['ldes_dispatch_pct'], anomaly_hours
+                )
+                med['peak_gap_pct'] = peak_gap
+                full_costs = compute_costs(
+                    iso, med['resource_mix'], med['procurement_pct'],
+                    med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
+                    med['hourly_match_score'],
+                    demand_norm, supply_profiles
+                )
+                med['costs_detail'] = full_costs
+                co2 = compute_co2_abatement(
+                    iso, med['resource_mix'], med['procurement_pct'],
+                    med['hourly_match_score'],
+                    med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
+                    emission_rates, demand_total_mwh
+                )
+                med['co2_abated'] = co2
+                cdp = compute_compressed_day(
+                    demand_norm, supply_profiles, med['resource_mix'],
+                    med['procurement_pct'],
+                    med['battery_dispatch_pct'], med['ldes_dispatch_pct']
+                )
+                med['compressed_day'] = cdp
+
+            print(f"      Fixed {resweep_fixes} via re-sweep, "
+                  f"{cross_fixes} via cross-pollination")
+
     else:
-        print(f"  Monotonicity check passed for all scenarios")
+        # Exhausted MAX_RESWEEP_ROUNDS — report remaining violations
+        remaining = 0
+        for scenario_key in checked_scenarios:
+            prev_cost = None
+            prev_t = None
+            for threshold in sorted_thresholds:
+                t_str = str(threshold)
+                if t_str not in iso_results['thresholds']:
+                    continue
+                scenarios = iso_results['thresholds'][t_str]['scenarios']
+                if scenario_key not in scenarios:
+                    continue
+                result = scenarios[scenario_key]
+                if 'costs' not in result:
+                    continue
+                cost = result['costs']['effective_cost']
+                if prev_cost is not None and cost < prev_cost - 0.01:
+                    remaining += 1
+                prev_cost = cost
+                prev_t = threshold
+        if remaining > 0:
+            print(f"  WARNING: {remaining} monotonicity violations remain after "
+                  f"{MAX_RESWEEP_ROUNDS} re-sweep rounds (search space exhausted)")
+        else:
+            print(f"  All monotonicity violations resolved after {MAX_RESWEEP_ROUNDS} rounds")
 
     return iso, iso_results
 
@@ -2116,7 +2313,7 @@ def main():
     cache_data = {
         'metadata': {
             'created_at': datetime.now(timezone.utc).isoformat(),
-            'optimizer_version': '3.0-paired-toggles',
+            'optimizer_version': '3.1-paired-toggles-resweep',
             'git_commit': git_hash,
             'runtime_seconds': round(time.time() - start_time, 1),
             'description': 'Full co-optimized results: 10 thresholds x 324 paired-toggle scenarios x 5 ISOs',

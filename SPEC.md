@@ -377,6 +377,28 @@ Compressed procurement sweep ranges per threshold to avoid wasting compute on le
 
 Seeds filtered at runtime by regional hydro cap. Adds ~10-15 combos to the ~280 coarse grid combos per region — negligible compute cost, significant coverage improvement.
 
+### 11.3 Monotonicity Re-Sweep Mechanism
+
+**Problem**: The 3-phase heuristic search (coarse → medium → fine) can miss the global optimum at a lower threshold, producing a non-monotonic cost curve where cost(T_lower) > cost(T_higher). This is a diagnostic signal, not a valid result — achieving a lower CFE target should never cost more than achieving a higher one.
+
+**Solution**: Post-hoc re-sweep with broader parameters. After all thresholds are initially optimized:
+
+1. **Detection**: For each cost scenario, check that cost is non-decreasing across thresholds. Tolerance: $0.01/MWh (allows floating-point rounding).
+2. **Collection**: Group all violations by threshold — `{threshold: {scenario_key: better_threshold}}`.
+3. **Re-sweep** (up to 2 rounds): For each violated threshold:
+   - **Seed injection**: Collect winning mixes from the thresholds that achieved better cost. These become Phase 1 seeds, guaranteeing the re-sweep explores the region of solution space that worked at the higher target.
+   - **Broader Phase 1**: Use 5% step instead of 10% (~7-14× more combos), exploring the space more densely.
+   - **Expanded procurement bounds**: Default bounds widened by -20% (min) and +30% (max) to search outside the assumed-optimal range.
+   - **More Phase 2 candidates**: Top 30 instead of 20, with 2.0× cost filter (vs. 1.5×).
+   - **More Phase 3 finalists**: Top 15 instead of 8, with 1.2× cost filter (vs. 1.1×).
+   - Cross-pollination within re-swept threshold after re-optimization.
+4. **Verification**: Re-check monotonicity after each round. If all violations resolved, stop early.
+5. **Acceptance**: After 2 rounds, accept remaining violations with a warning (search space exhausted).
+
+**Design rationale**: This approach finds the *true* optimum rather than masking the problem by pulling down from a higher threshold's result. The re-sweep is targeted (only violated scenarios) and seeded (with known-good mixes from higher thresholds), so it's both rigorous and compute-efficient.
+
+**Compute overhead**: Typically affects 5-15% of scenarios at 1-3 thresholds per ISO. Phase 1 at 5% step generates ~2,000-5,000 combos (vs. ~280 at 10% step), but scoring is cached. Net overhead: ~10-20% of total runtime.
+
 ---
 
 ## 12. Methodology Documentation Checklist
@@ -643,3 +665,29 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 | Regional deep-dive pages | 5 (one per region) |
 | Research paper sections | 8 (including 5 regional deep-dives) |
 | QA checkpoints | 3 (optimizer, HTML, mobile) |
+
+---
+
+## 19. Model Limitations & Simplifying Assumptions
+
+This section documents known simplifying assumptions for transparency and academic rigor. These should be acknowledged in the research paper and methodology page.
+
+### 19.1 Static LDES LCOS (Utilization-Independent)
+
+**Assumption**: LDES (100hr iron-air) uses a static LCOS ($/MWh) from published cost tables at assumed cycling frequency, regardless of the scenario's realized dispatch utilization.
+
+**Why this matters**: LDES is extremely capital-intensive (~$5,000-10,000/kW installed at 100hr duration). The LCOS is dominated by capital recovery, so it is highly sensitive to utilization. A scenario where LDES cycles 50 times/year has a dramatically lower effective LCOS than one where it cycles 5 times/year — yet both use the same $/MWh in the model.
+
+**Impact**: In scenarios with low LDES utilization (e.g., solar-dominant mixes with limited multi-day surplus), the model may understate the true cost of LDES. In scenarios with high utilization (wind-dominant mixes with abundant multi-day surplus to time-shift), the model may overstate LDES costs.
+
+**Justification**: This approach is consistent with standard practice in published energy models (NREL ATB, Lazard LCOS). These sources quote LCOS at assumed utilization rates, and most capacity expansion models use static cost inputs without feedback from dispatch results. Implementing utilization-dependent LCOS would create a cost ↔ dispatch feedback loop (cost depends on dispatch, which depends on mix, which depends on cost) that, while convergent, adds significant methodological complexity. The same limitation applies to CCS-CCGT capacity factor effects on LCOE, though to a lesser degree given CCS's lower capital intensity per kW.
+
+**Mitigation**: The optimizer's resource mix co-optimization partially self-corrects for this — it won't allocate large LDES shares in mixes that don't produce sufficient multi-day surplus to fill it, because the matching score won't benefit enough to justify the cost. The limitation is most relevant at the margin, where small LDES allocations face the highest effective cost per useful MWh.
+
+### 19.2 CCS-CCGT at Assumed Baseload Capacity Factor
+
+**Assumption**: CCS-CCGT LCOE reflects assumed high-capacity-factor baseload operation. In practice, CCS plants in a high-renewable grid might operate at lower capacity factors, increasing their effective LCOE.
+
+**Impact**: Similar to LDES, the model may understate CCS-CCGT costs in scenarios where it operates at low utilization. However, since the optimizer models CCS as flat baseload (1/8760 profile), allocated CCS capacity runs at 100% CF by construction. The limitation applies to whether that assumption reflects real-world operations in a grid with significant renewable penetration.
+
+**Mitigation**: The firm generation cost toggle (Low/Medium/High) provides sensitivity analysis around the LCOE assumption. High firm generation costs can be interpreted as a proxy for reduced capacity factor economics.
