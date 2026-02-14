@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Carbon Abatement Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face {
+    font-family: 'Franklin Gothic Demi';
+    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+}
+body {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    background: #F3F4F8;
+    color: #000000;
+    line-height: 1.55;
+    min-height: 100vh;
+}
+:root {
+    --navy: #1A2744;
+    --navy-light: #2D3A52;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F7F8FA;
+    --border: #D4D8E0;
+    --border-light: #E5E7EB;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+    --text-muted: #6B7280;
+    --clean-firm: #1E3A5F;
+    --solar: #F59E0B;
+    --wind: #22C55E;
+    --hydro: #0EA5E9;
+    --storage: #EF4444;
+    --accent-blue: #4a90d9;
+    --accent-warm: #f4a261;
+}
+
+/* ========== TOP NAVIGATION BAR ========== */
+.top-nav {
+    background: #1a1a2e;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+.top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: 1440px;
+    width: 100%;
+    justify-content: center;
+}
+.top-nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 14px 18px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+.top-nav a:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.06);
+}
+.top-nav a.nav-active {
+    color: #ffffff;
+    border-bottom-color: #0EA5E9;
+    background: rgba(14,165,233,0.1);
+}
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+.nav-hamburger svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+@media (max-width: 768px) {
+    .top-nav { flex-wrap: wrap; padding: 0 12px; justify-content: space-between; }
+    .top-nav-inner { display: none; flex-direction: column; width: 100%; padding-bottom: 8px; }
+    .top-nav-inner.nav-open { display: flex; }
+    .top-nav a { padding: 12px 16px; border-bottom: none; border-left: 3px solid transparent; width: 100%; text-align: left; }
+    .top-nav a.nav-active { border-left-color: #0EA5E9; border-bottom: none; background: rgba(14,165,233,0.12); }
+    .nav-hamburger { display: flex; }
+    .nav-brand { display: flex; align-items: center; color: #ffffff; font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.03em; padding: 12px 0; }
+}
+@media (min-width: 769px) { .nav-brand { display: none; } }
+
+/* ========== HEADER BANNER ========== */
+.header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
+    color: #ffffff;
+    padding: 72px 24px 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.4) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 60% at 38% 85%, rgba(34,197,94,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 65% at 62% 80%, rgba(245,158,11,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='a1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(255,255,255,0.15)'/%3E%3Cstop offset='1' stop-color='rgba(255,255,255,0.01)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.03)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.03)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,240 L0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100 L1200,240 Z' fill='url(%23a1)'/%3E%3Cpath d='M0,240 L0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140 L1200,240 Z' fill='url(%23a2)'/%3E%3Cpath d='M0,240 L0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180 L1200,240 Z' fill='url(%23a3)'/%3E%3Cpath d='M0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2'/%3E%3Cpath d='M0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.6'/%3E%3Cpath d='M0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.6'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+}
+.header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 70% 45% at 50% 45%, rgba(5,15,35,0.55) 0%, transparent 100%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,50 L250,50 L270,18 L288,68 L306,22 L324,60 L342,50 L1200,50' fill='none' stroke='rgba(14,165,233,0.5)' stroke-width='2'/%3E%3Cpath d='M0,35 L600,35 L618,10 L636,60 L654,14 L672,55 L690,35 L1200,35' fill='none' stroke='rgba(245,158,11,0.4)' stroke-width='2'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 100%, 100% 80px;
+}
+.header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 2;
+}
+.header h1 {
+    font-family: 'Franklin Gothic Demi', 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 3.2rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+    line-height: 1.15;
+}
+.header .subtitle {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    opacity: 0.92;
+    max-width: 660px;
+    margin: 0 auto;
+    letter-spacing: 0.2px;
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
+    line-height: 1.55;
+}
+@media (max-width: 768px) {
+    .header { padding: 48px 18px 40px; }
+    .header h1 { font-size: 2rem; }
+    .header .subtitle { font-size: 0.95rem; }
+}
+
+/* ========== DASHBOARD LAYOUT ========== */
+.dashboard-wrap {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+}
+.page-title-section {
+    text-align: center;
+    margin-bottom: 28px;
+}
+.page-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #DC2626;
+    margin-bottom: 10px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+.page-intro {
+    font-size: 0.95rem;
+    color: #374151;
+    line-height: 1.7;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* ========== CONTROLS PANEL ========== */
+.controls-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.controls-panel-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.controls-panel-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+.ctrl-group label {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--navy);
+    display: block;
+    margin-bottom: 8px;
+    letter-spacing: 0.03em;
+}
+.ctrl-group .info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(74,144,217,0.1);
+    color: var(--accent-blue);
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: help;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.ctrl-toggle {
+    display: flex;
+    gap: 0;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.ctrl-toggle button {
+    flex: 1;
+    padding: 8px 14px;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border: none;
+    background: #fff;
+    color: var(--navy);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+}
+.ctrl-toggle button:not(:last-child) {
+    border-right: 1px solid var(--border-light);
+}
+.ctrl-toggle button:hover {
+    background: rgba(74,144,217,0.06);
+}
+.ctrl-toggle button.active {
+    background: var(--navy);
+    color: #fff;
+}
+
+/* ========== SUMMARY STRIP ========== */
+.summary-strip {
+    background: linear-gradient(135deg, rgba(14,165,233,0.06), rgba(233,30,99,0.04));
+    border: 2px solid rgba(14,165,233,0.15);
+    border-radius: 12px;
+    padding: 18px 24px;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.65;
+    transition: opacity 0.3s;
+}
+.summary-strip strong { color: var(--navy); }
+
+/* ========== CHART GRID ========== */
+.chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+.chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.chart-card-full {
+    grid-column: 1 / -1;
+}
+.chart-card-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--navy);
+    margin-bottom: 14px;
+    text-align: center;
+}
+.chart-card canvas {
+    width: 100% !important;
+    height: 340px !important;
+}
+.chart-card-full canvas {
+    height: 400px !important;
+}
+
+/* ========== INFLECTION TABLE ========== */
+.inflection-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    overflow-x: auto;
+}
+.inflection-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+.inflection-card th {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 12px 10px;
+    border-bottom: 2px solid var(--border);
+    text-align: center;
+    white-space: nowrap;
+}
+.inflection-card td {
+    padding: 10px;
+    text-align: center;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-light);
+}
+.inflection-card td:first-child {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    color: var(--navy);
+    text-align: left;
+    font-weight: 700;
+}
+.cell-green { background: rgba(34,197,94,0.12); color: #15803d; }
+.cell-yellow { background: rgba(245,158,11,0.12); color: #b45309; }
+.cell-orange { background: rgba(239,68,68,0.08); color: #c2410c; }
+.cell-red { background: rgba(220,38,38,0.12); color: #dc2626; }
+
+/* ========== FOOTER ========== */
+.page-footer {
+    background: #0F1A2E;
+    color: rgba(255,255,255,0.7);
+    padding: 32px 24px;
+    text-align: center;
+}
+.footer-links { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; margin-bottom: 12px; }
+.footer-links a { color: rgba(255,255,255,0.65); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
+.footer-links a:hover { color: #ffffff; }
+.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+
+.bottom-banner {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 900px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .controls-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+    .dashboard-wrap { padding: 20px 14px 36px; }
+    .controls-panel { padding: 20px 16px; }
+    .controls-grid { grid-template-columns: 1fr; }
+    .chart-card { padding: 16px; }
+    .chart-card canvas { height: 260px !important; }
+    .chart-card-full canvas { height: 300px !important; }
+    .page-title { font-size: 1.6rem; }
+    .inflection-card { padding: 14px; }
+    .inflection-card table { font-size: 0.75rem; }
+    .inflection-card th { font-size: 0.68rem; padding: 8px 6px; }
+    .inflection-card td { padding: 8px 6px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+    <span class="nav-brand">The 8,760 Problem</span>
+    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html" class="nav-active">Abatement Dashboard</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+</nav>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle">Every climate solution depends on a clean grid. An economic analysis of deep decarbonization, hour by hour, region by region.</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- MAIN DASHBOARD -->
+<div class="dashboard-wrap">
+
+    <!-- Title + Intro -->
+    <div class="page-title-section">
+        <h2 class="page-title">Carbon Abatement Dashboard</h2>
+        <p class="page-intro">
+            How does hourly grid decarbonization compare to alternative carbon removal strategies?
+            Adjust the toggles below to stress-test different cost assumptions and see how crossover points shift
+            across regions and technologies in real time.
+        </p>
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="controls-panel">
+        <div class="controls-panel-title">Stress-Test Assumptions</div>
+        <div class="controls-panel-subtitle">Adjust cost assumptions for grid decarbonization and competing technologies to see how crossover points shift.</div>
+        <div class="controls-grid">
+            <div class="ctrl-group">
+                <label>Grid Cost Scenario <span class="info-icon" title="Low = cheap renewables, fast permitting, falling storage costs. High = tariffs, supply chain disruptions, permitting delays.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="grid">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $250/ton by 2030. Medium = current trajectory, $400-600/ton. High = slow scaling, $1000+/ton.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="dac">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>Industrial Decarb Cost <span class="info-icon" title="Low = electrification is cheaper than fossil (net savings). Medium = moderate carbon price needed. High = expensive retrofit + high energy costs.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="industrial">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>Carbon Removal Alternatives <span class="info-icon" title="Low = BECCS + enhanced weathering hit scale, $50-100/ton. Medium = moderate scaling. High = limited deployment, $200+/ton.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="removal">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+        </div>
+        <div class="summary-strip" id="crossoverSummary"></div>
+    </div>
+
+    <!-- Chart Grid -->
+    <div class="chart-grid">
+        <!-- MAC Curve -->
+        <div class="chart-card">
+            <div class="chart-card-title">Regional Marginal Abatement Costs</div>
+            <canvas id="macChart"></canvas>
+        </div>
+
+        <!-- Portfolio Mix -->
+        <div class="chart-card">
+            <div class="chart-card-title">Optimal Decarbonization Portfolio</div>
+            <canvas id="portfolioChart"></canvas>
+        </div>
+
+        <!-- Abatement Ladder (full width) -->
+        <div class="chart-card chart-card-full">
+            <div class="chart-card-title">Abatement Cost Ladder: Grid vs. Alternatives</div>
+            <canvas id="ladderChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Inflection Table -->
+    <div class="inflection-card">
+        <div class="chart-card-title" style="margin-bottom:16px;">Inflection Points: Where Grid Costs Exceed Key Benchmarks</div>
+        <table>
+            <thead><tr id="inflectionHead"></tr></thead>
+            <tbody id="inflectionBody"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<script>
+// ============================================================================
+// DATA
+// ============================================================================
+const THRESHOLDS = [75, 80, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100];
+
+const MAC_DATA = {
+    medium: {
+        CAISO:  [22, 28, 38, 42, 48, 56, 68, 82, 100, 125, 158, 200, 260, 350, 480, 650, 900, 1350],
+        ERCOT:  [15, 20, 28, 31, 35, 40, 47, 56, 68,  82,  100, 125, 160, 210, 290, 410, 580, 850],
+        PJM:    [18, 24, 34, 38, 44, 52, 62, 75, 92,  115, 145, 185, 240, 325, 450, 620, 860, 1250],
+        NYISO:  [30, 40, 55, 62, 72, 85, 102, 125, 155, 195, 250, 320, 420, 560, 740, 980, 1300, 1850],
+        NEISO:  [26, 35, 48, 54, 62, 74, 88, 108, 132, 165, 210, 270, 350, 470, 640, 870, 1180, 1700]
+    },
+    low: {
+        CAISO:  [16, 20, 28, 31, 35, 40, 48, 58, 72,  90,  115, 148, 195, 265, 365, 500, 700, 1050],
+        ERCOT:  [10, 14, 20, 22, 25, 28, 34, 40, 48,  58,  72,  90,  115, 152, 210, 300, 425, 640],
+        PJM:    [13, 17, 24, 27, 31, 37, 44, 54, 66,  82,  105, 135, 175, 238, 330, 460, 645, 950],
+        NYISO:  [22, 28, 40, 45, 52, 62, 74, 90, 112, 142, 182, 235, 310, 415, 555, 740, 990, 1420],
+        NEISO:  [19, 25, 35, 39, 45, 53, 64, 78, 96,  120, 154, 200, 260, 350, 480, 655, 895, 1300]
+    },
+    high: {
+        CAISO:  [30, 38, 52, 58, 66, 78, 94, 115, 140, 175, 220, 280, 365, 490, 670, 910, 1260, 1880],
+        ERCOT:  [22, 28, 38, 42, 48, 55, 65, 78,  95,  115, 142, 178, 228, 300, 415, 580, 815, 1200],
+        PJM:    [25, 32, 46, 52, 60, 72, 86, 105, 128, 160, 202, 258, 335, 455, 628, 865, 1200, 1740],
+        NYISO:  [40, 54, 75, 85, 98, 118, 140, 172, 215, 270, 345, 445, 580, 775, 1020, 1350, 1800, 2550],
+        NEISO:  [35, 47, 65, 74, 85, 100, 120, 148, 182, 228, 290, 375, 485, 650, 885, 1200, 1640, 2350]
+    }
+};
+
+const REGION_COLORS = { CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0' };
+
+const BENCHMARKS_STATIC = [
+    { name: 'Energy Efficiency (Buildings)', short: 'Energy Eff.', low: -100, mid: 0, high: 60, color: '#4CAF50', category: 'demand_reduction' },
+    { name: 'EU ETS Price', short: 'EU ETS', low: 65, mid: 88, high: 92, color: '#2196F3', category: 'benchmark' },
+    { name: 'SCC \u2014 EPA ($190/ton)', short: 'SCC (EPA)', low: 140, mid: 190, high: 380, color: '#FF9800', category: 'benchmark' },
+    { name: 'SCC \u2014 Rennert et al.', short: 'SCC (Rennert)', low: 120, mid: 185, high: 450, color: '#E65100', category: 'benchmark' },
+    { name: 'Carbon Credits (Nature)', short: 'Carbon Credits', low: 3, mid: 15, high: 35, color: '#9E9E9E', category: 'voluntary' },
+];
+
+const BENCHMARKS_DYNAMIC = {
+    dac: {
+        name: 'Direct Air Capture (DAC)', short: 'DAC', color: '#E91E63',
+        Low: { low: 250, mid: 400, high: 600 },
+        Medium: { low: 400, mid: 600, high: 1500 },
+        High: { low: 600, mid: 1000, high: 1500 }
+    },
+    industrial: {
+        name: 'Industrial Electrification', short: 'Ind. Electrification', color: '#8BC34A',
+        Low: { low: -50, mid: 20, high: 60 },
+        Medium: { low: 0, mid: 60, high: 160 },
+        High: { low: 60, mid: 120, high: 250 }
+    },
+    removal: {
+        name: 'Carbon Removal (BECCS + Weathering)', short: 'Carbon Removal', color: '#009688',
+        Low: { low: 20, mid: 75, high: 150 },
+        Medium: { low: 50, mid: 150, high: 300 },
+        High: { low: 100, mid: 200, high: 350 }
+    }
+};
+
+const BENCHMARKS_EXTRA = [
+    { name: 'Green Hydrogen (Industrial)', short: 'Green H\u2082', low: 150, mid: 500, high: 1250, color: '#00BCD4' },
+    { name: 'Sustainable Aviation Fuel', short: 'SAF', low: 136, mid: 300, high: 500, color: '#FF5722' },
+    { name: 'CDR Credits (Engineered)', short: 'CDR Credits', low: 177, mid: 320, high: 600, color: '#7C4DFF' },
+    { name: 'EVs vs ICE (Fleet)', short: 'EVs vs ICE', low: -50, mid: 250, high: 970, color: '#FF6F00' },
+];
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+function getState() {
+    const state = { grid: 'Medium', dac: 'Medium', industrial: 'Medium', removal: 'Medium' };
+    document.querySelectorAll('.ctrl-toggle').forEach(toggle => {
+        const ctrl = toggle.dataset.ctrl;
+        const active = toggle.querySelector('button.active');
+        if (active && ctrl) state[ctrl] = active.dataset.value;
+    });
+    return state;
+}
+
+function getAllBenchmarks() {
+    const s = getState();
+    const dynamic = Object.keys(BENCHMARKS_DYNAMIC).map(key => {
+        const b = BENCHMARKS_DYNAMIC[key];
+        const costs = b[s[key]] || b.Medium;
+        return { name: b.name, short: b.short, low: costs.low, mid: costs.mid, high: costs.high, color: b.color };
+    });
+    return [...BENCHMARKS_STATIC, ...dynamic, ...BENCHMARKS_EXTRA].filter(b => b.mid >= 0).sort((a, b) => a.mid - b.mid);
+}
+
+function findCrossover(regionData, costLevel) {
+    for (let i = 0; i < regionData.length; i++) {
+        if (regionData[i] >= costLevel) return THRESHOLDS[i];
+    }
+    return '>100';
+}
+
+function cellClass(val) {
+    if (val === '>100' || val >= 97) return 'cell-green';
+    if (val >= 95) return 'cell-yellow';
+    if (val >= 92) return 'cell-orange';
+    return 'cell-red';
+}
+
+// Shared chart defaults: rounded bars, no grid lines, keep axes
+const CHART_DEFAULTS = {
+    borderRadius: 6,
+    grid: { display: false },
+    axisStyle: { grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
+};
+
+// ============================================================================
+// CHART: MAC Curves
+// ============================================================================
+let macChartInst = null;
+function buildMacChart() {
+    const s = getState();
+    const gridLevel = s.grid.toLowerCase();
+    const data = MAC_DATA[gridLevel] || MAC_DATA.medium;
+    const ctx = document.getElementById('macChart').getContext('2d');
+
+    const datasets = [];
+    Object.keys(data).forEach(region => {
+        // Confidence band
+        if (MAC_DATA.low[region] && MAC_DATA.high[region]) {
+            datasets.push({
+                label: region + ' band high', data: THRESHOLDS.map((t, i) => ({ x: t, y: MAC_DATA.high[region][i] })),
+                borderColor: 'transparent', backgroundColor: REGION_COLORS[region] + '12', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 2
+            });
+            datasets.push({
+                label: region + ' band low', data: THRESHOLDS.map((t, i) => ({ x: t, y: MAC_DATA.low[region][i] })),
+                borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, fill: false, tension: 0.3, order: 2
+            });
+        }
+        datasets.push({
+            label: region, data: THRESHOLDS.map((t, i) => ({ x: t, y: data[region][i] })),
+            borderColor: REGION_COLORS[region], backgroundColor: REGION_COLORS[region] + '18',
+            borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, fill: false, tension: 0.3, order: 1
+        });
+    });
+
+    // Benchmark annotation lines
+    const dacCosts = BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
+    const annotations = {
+        sccLine: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF9800', borderWidth: 1.5, borderDash: [6, 4],
+            label: { display: true, content: 'EPA SCC $190', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } },
+        dacLine: { type: 'line', yMin: dacCosts.mid, yMax: dacCosts.mid, borderColor: '#E91E63', borderWidth: 1.5, borderDash: [6, 4],
+            label: { display: true, content: 'DAC $' + dacCosts.mid, position: 'end', font: { size: 9, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } }
+    };
+
+    if (macChartInst) macChartInst.destroy();
+    macChartInst = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'nearest', intersect: false },
+            scales: {
+                x: { type: 'linear', min: 74, max: 101,
+                    title: { display: true, text: 'Hourly Clean Energy Target (%)', font: { size: 12, weight: 600 } },
+                    ticks: { stepSize: 5, callback: v => v + '%', font: { size: 10 } },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
+                },
+                y: { type: 'logarithmic', min: 10, max: 2800,
+                    title: { display: true, text: '$/ton CO\u2082', font: { size: 12, weight: 600 } },
+                    ticks: { callback: v => [10,20,50,100,200,500,1000,2000].includes(v) ? '$'+v.toLocaleString() : '', font: { size: 10 } },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
+                }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11, weight: 600 },
+                    filter: item => !item.text.includes('band') } },
+                tooltip: { callbacks: { title: items => items[0].raw.x + '% Target', label: item => item.dataset.label + ': $' + item.raw.y.toLocaleString() + '/ton' } },
+                annotation: { annotations },
+                datalabels: { display: false }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// CHART: Portfolio
+// ============================================================================
+let portfolioInst = null;
+function buildPortfolio() {
+    const ctx = document.getElementById('portfolioChart').getContext('2d');
+    const targets = [75, 80, 85, 88, 90, 92, 94, 95, 96, 97, 98, 99, 100];
+    const gridShare =       [95, 92, 88, 85, 80, 72, 62, 55, 45, 35, 25, 18, 10];
+    const efficiencyShare = [3,  5,  7,  8,  10, 12, 14, 15, 16, 16, 15, 14, 12];
+    const crossSector =     [1.5,2,  3,  4,  5,  8,  12, 15, 18, 22, 26, 28, 30];
+    const removal =         [0.5,1,  2,  3,  5,  8,  12, 15, 21, 27, 34, 40, 48];
+
+    if (portfolioInst) portfolioInst.destroy();
+    portfolioInst = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: targets.map(t => t + '%'),
+            datasets: [
+                { label: 'Grid Decarbonization', data: gridShare, backgroundColor: 'rgba(74,144,217,0.7)', borderColor: '#4a90d9', borderWidth: 2, fill: 'origin', tension: 0.4, pointRadius: 0 },
+                { label: 'Efficiency & Electrification', data: efficiencyShare, backgroundColor: 'rgba(34,197,94,0.7)', borderColor: '#22C55E', borderWidth: 2, fill: 'origin', tension: 0.4, pointRadius: 0 },
+                { label: 'Cross-Sector (SAF, H\u2082)', data: crossSector, backgroundColor: 'rgba(255,152,0,0.7)', borderColor: '#FF9800', borderWidth: 2, fill: 'origin', tension: 0.4, pointRadius: 0 },
+                { label: 'Carbon Removal (DAC, BECCS)', data: removal, backgroundColor: 'rgba(233,30,99,0.7)', borderColor: '#E91E63', borderWidth: 2, fill: 'origin', tension: 0.4, pointRadius: 0 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { title: { display: true, text: 'Grid Clean Energy Target', font: { size: 12, weight: 600 } }, ticks: { font: { size: 10 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                y: { stacked: true, min: 0, max: 100, title: { display: true, text: 'Budget Share (%)', font: { size: 12, weight: 600 } }, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10, weight: 600 } } },
+                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + '%' } },
+                datalabels: { display: false },
+                annotation: { annotations: { inflection: { type: 'line', xMin: 4, xMax: 4, borderColor: 'rgba(0,0,0,0.2)', borderWidth: 2, borderDash: [6,4],
+                    label: { display: true, content: '90% Inflection', position: 'start', font: { size: 10, weight: 600 }, color: 'rgba(0,0,0,0.45)', backgroundColor: 'rgba(255,255,255,0.8)', padding: 3 } } } }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// CHART: Abatement Ladder (horizontal bar)
+// ============================================================================
+let ladderInst = null;
+function buildLadder() {
+    const ctx = document.getElementById('ladderChart').getContext('2d');
+    const benchmarks = getAllBenchmarks();
+    const s = getState();
+    const gridLevel = s.grid.toLowerCase();
+    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
+
+    const labels = benchmarks.map(b => b.short || b.name);
+    const barData = benchmarks.map(b => [Math.max(b.low, 0), Math.min(b.high, 650)]);
+    const bgColors = benchmarks.map(b => b.color + '40');
+    const borderColors = benchmarks.map(b => b.color);
+
+    // Grid crossover annotations
+    const annotations = {};
+    const markerPairs = [
+        { label: 'ERCOT 90%', cost: macData.ERCOT[THRESHOLDS.indexOf(90)], color: REGION_COLORS.ERCOT },
+        { label: 'CAISO 95%', cost: macData.CAISO[THRESHOLDS.indexOf(95)], color: REGION_COLORS.CAISO },
+        { label: 'NYISO 95%', cost: macData.NYISO[THRESHOLDS.indexOf(95)], color: REGION_COLORS.NYISO },
+        { label: 'PJM 97%', cost: macData.PJM[THRESHOLDS.indexOf(97)], color: REGION_COLORS.PJM }
+    ];
+    markerPairs.forEach((m, i) => {
+        annotations['grid' + i] = {
+            type: 'line', xMin: m.cost, xMax: m.cost,
+            borderColor: m.color + 'aa', borderWidth: 2, borderDash: [4, 3],
+            label: { display: true, content: m.label, position: i % 2 === 0 ? 'start' : 'end',
+                font: { size: 9 }, color: m.color, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 }
+        };
+    });
+
+    if (ladderInst) ladderInst.destroy();
+    ladderInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Cost Range',
+                data: barData,
+                backgroundColor: bgColors,
+                borderColor: borderColors,
+                borderWidth: 2,
+                borderRadius: 6,
+                borderSkipped: false,
+                barPercentage: 0.65
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { min: 0, max: 650,
+                    title: { display: true, text: '$/ton CO\u2082', font: { size: 12, weight: 600 } },
+                    ticks: { stepSize: 50, callback: v => '$' + v, font: { size: 10 } },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
+                },
+                y: { ticks: { font: { size: 11, weight: 500 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => Array.isArray(ctx.raw) ? 'Range: $' + ctx.raw[0] + ' \u2013 $' + ctx.raw[1] + '/ton' : '' } },
+                datalabels: { display: false },
+                annotation: { annotations }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// TABLE: Inflection Points
+// ============================================================================
+function buildInflectionTable() {
+    const s = getState();
+    const gridLevel = s.grid.toLowerCase();
+    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
+    const dacMid = (BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium).mid;
+    const indMid = (BENCHMARKS_DYNAMIC.industrial[s.industrial] || BENCHMARKS_DYNAMIC.industrial.Medium).mid;
+    const remMid = (BENCHMARKS_DYNAMIC.removal[s.removal] || BENCHMARKS_DYNAMIC.removal.Medium).mid;
+
+    const head = document.getElementById('inflectionHead');
+    head.innerHTML = '<th>Region</th><th>EPA SCC<br>($190)</th><th>EU ETS<br>($88)</th><th>Rennert SCC<br>($185)</th><th>Industrial<br>($' + indMid + ')</th><th>Removal<br>($' + remMid + ')</th><th>DAC<br>($' + dacMid + ')</th>';
+
+    const tbody = document.getElementById('inflectionBody');
+    tbody.innerHTML = '';
+    ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'].forEach(region => {
+        const row = document.createElement('tr');
+        const vals = [
+            findCrossover(macData[region], 190),
+            findCrossover(macData[region], 88),
+            findCrossover(macData[region], 185),
+            findCrossover(macData[region], Math.max(indMid, 10)),
+            findCrossover(macData[region], remMid),
+            findCrossover(macData[region], dacMid)
+        ];
+        row.innerHTML = '<td>' + region + '</td>' + vals.map(v => '<td class="' + cellClass(v) + '">' + (v === '>100' ? '>100%' : v + '%') + '</td>').join('');
+        tbody.appendChild(row);
+    });
+}
+
+// ============================================================================
+// SUMMARY
+// ============================================================================
+function updateSummary() {
+    const s = getState();
+    const gridLevel = s.grid.toLowerCase();
+    const data = MAC_DATA[gridLevel] || MAC_DATA.medium;
+    const dacMid = (BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium).mid;
+
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const insights = regions.map(r => ({ region: r, dacCross: findCrossover(data[r], dacMid) }));
+    const best = insights.reduce((a, b) => {
+        const aVal = a.dacCross === '>100' ? 101 : a.dacCross;
+        const bVal = b.dacCross === '>100' ? 101 : b.dacCross;
+        return aVal > bVal ? a : b;
+    });
+    const worst = insights.reduce((a, b) => {
+        const aVal = a.dacCross === '>100' ? 101 : a.dacCross;
+        const bVal = b.dacCross === '>100' ? 101 : b.dacCross;
+        return aVal < bVal ? a : b;
+    });
+
+    const el = document.getElementById('crossoverSummary');
+    let html = '<strong>Under these assumptions:</strong> Grid decarbonization beats DAC through <strong>' +
+        (best.dacCross === '>100' ? '>100%' : best.dacCross + '%') + '</strong> in ' + best.region +
+        ' (best) and through <strong>' + (worst.dacCross === '>100' ? '>100%' : worst.dacCross + '%') +
+        '</strong> in ' + worst.region + ' (worst).';
+    if (s.dac === 'Low') html += ' With aggressive DAC cost declines, crossovers shift 2\u20134 points earlier.';
+    if (s.grid === 'High') html += ' High grid costs accelerate the crossover \u2014 tariffs and permitting delays weaken the backbone.';
+    el.innerHTML = html;
+}
+
+// ============================================================================
+// REBUILD ALL
+// ============================================================================
+function rebuildAll() {
+    buildMacChart();
+    buildPortfolio();
+    buildLadder();
+    buildInflectionTable();
+    updateSummary();
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    rebuildAll();
+
+    // Wire toggle buttons
+    document.querySelectorAll('.ctrl-toggle button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.closest('.ctrl-toggle').querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            rebuildAll();
+        });
+    });
+});
+</script>
+</body>
+</html>

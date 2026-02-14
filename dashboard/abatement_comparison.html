@@ -1043,13 +1043,15 @@ body {
     </button>
     <div class="top-nav-inner">
         <a href="index.html">Home</a>
-        <a href="dashboard.html">Dashboard</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
         <a href="region_deepdive.html">Regional Deep Dives</a>
-        <a href="abatement_comparison.html" class="nav-active">CO&#8322; Abatement</a>
+        <a href="abatement_comparison.html" class="nav-active">CO&#8322; Abatement Summary</a>
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
     </div>
 </nav>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- ========== HEADER BANNER ========== -->
 <header class="header">
@@ -1451,7 +1453,9 @@ body {
 <!-- ========== FOOTER ========== -->
 <footer class="page-footer">
     <div class="footer-links">
-        <a href="dashboard.html">Dashboard</a>
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
         <a href="region_deepdive.html">Regional Deep Dives</a>
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
@@ -1716,7 +1720,7 @@ function buildMacChart(scenario) {
                         callback: v => v + '%',
                         font: { size: 11 }
                     },
-                    grid: { color: 'rgba(0,0,0,0.06)' }
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
                 },
                 y: {
                     type: 'logarithmic',
@@ -1730,7 +1734,7 @@ function buildMacChart(scenario) {
                         },
                         font: { size: 11 }
                     },
-                    grid: { color: 'rgba(0,0,0,0.06)' }
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
                 }
             },
             plugins: {
@@ -1987,7 +1991,7 @@ function buildBandChart() {
                     backgroundColor: backgroundColors,
                     borderColor: borderColors,
                     borderWidth: 2,
-                    borderRadius: 4,
+                    borderRadius: 6,
                     borderSkipped: false,
                     barPercentage: 0.65
                 },
@@ -2024,11 +2028,11 @@ function buildBandChart() {
                         callback: v => '$' + v,
                         font: { size: 10 }
                     },
-                    grid: { color: 'rgba(0,0,0,0.06)' }
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
                 },
                 y: {
                     ticks: { font: { size: 11, weight: 500 } },
-                    grid: { display: false }
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
                 }
             },
             plugins: {
@@ -2200,7 +2204,7 @@ function buildPortfolioChart() {
                 x: {
                     title: { display: true, text: 'Grid Clean Energy Target', font: { size: 13, weight: 600 } },
                     ticks: { font: { size: 11 } },
-                    grid: { color: 'rgba(0,0,0,0.04)' }
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
                 },
                 y: {
                     stacked: true,
@@ -2211,7 +2215,7 @@ function buildPortfolioChart() {
                         callback: v => v + '%',
                         font: { size: 11 }
                     },
-                    grid: { color: 'rgba(0,0,0,0.06)' }
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
                 }
             },
             plugins: {
@@ -2252,7 +2256,7 @@ function buildPortfolioChart() {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    buildMacChart('medium');
+    if (document.getElementById('macCurveChart')) buildMacChart('medium');
     buildLadder();
     buildBandChart();
     buildInflectionTable();
