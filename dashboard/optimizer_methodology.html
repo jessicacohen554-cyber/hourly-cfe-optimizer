@@ -718,9 +718,11 @@
         data for electricity demand and generation by energy source across U.S. ISOs.
     </p>
     <p>
-        Bulk CSV files (EIA930_BALANCE for demand, generation-by-source for supply profiles) covering
-        the 2025 analysis year are combined from January&ndash;June and July&ndash;December files to
-        produce full-year 8,760-hour datasets.
+        Hourly profile <em>shapes</em> (both generation and demand) are element-wise averages of 2021&ndash;2025
+        data (5 years), smoothing single-year weather anomalies. Leap years (2024) are handled by excising
+        Feb 29 hours before averaging. Absolute quantities (total annual MWh, grid mix shares, hydro caps,
+        peak demand) use 2025 actuals, anchoring the model to the current year while using weather-representative
+        hourly patterns.
     </p>
     <p>
         <strong>Source:</strong> EIA Hourly Electric Grid Monitor &mdash;
@@ -839,10 +841,12 @@
 
     <h3>4.1 Clean Firm Profile</h3>
     <p>
-        Clean firm generation (nuclear and geothermal) is modeled as a <strong>flat baseload profile</strong>:
-        equal output in every hour (1/8760 of annual generation per hour). Nuclear capacity factors exceed
-        90% with minimal hourly variation; geothermal similarly provides constant output. Planned refueling
-        and forced outages are not modeled.
+        Clean firm generation (nuclear and geothermal) uses a <strong>seasonally derated baseload profile</strong>.
+        Geothermal provides constant output (flat 1/8760 per hour). The nuclear component applies monthly
+        capacity factor adjustments derived from 2021&ndash;2025 EIA data, reflecting staggered refueling
+        outages across the fleet (~18&ndash;24 day outages per plant every 18&ndash;24 months, concentrated
+        in spring/fall shoulder seasons). Summer and winter capacity factors approach ~100%; spring and fall
+        derate to reflect observed fleet-wide patterns.
     </p>
 
     <h3>4.2 Intermittent Profiles (Solar, Wind, Hydro)</h3>
@@ -873,11 +877,11 @@
             <tr><th>ISO Region</th><th>Hydro Cap (%)</th><th>Rationale</th></tr>
         </thead>
         <tbody>
-            <tr><td>CAISO (California)</td><td>29%</td><td>Significant Sierra Nevada hydro resources</td></tr>
-            <tr><td>ERCOT (Texas)</td><td>1%</td><td>Very limited hydro resources</td></tr>
-            <tr><td>PJM (Mid-Atlantic)</td><td>3%</td><td>Limited Appalachian hydro</td></tr>
-            <tr><td>NYISO (New York)</td><td>25%</td><td>Substantial Niagara/St. Lawrence hydro</td></tr>
-            <tr><td>NEISO (New England)</td><td>10%</td><td>Moderate New England/Quebec hydro imports</td></tr>
+            <tr><td>CAISO (California)</td><td>9.5%</td><td>Sierra Nevada hydro; 2025 actual share (5-yr range: 5.2&ndash;11.2%)</td></tr>
+            <tr><td>ERCOT (Texas)</td><td>0.1%</td><td>Very limited hydro resources</td></tr>
+            <tr><td>PJM (Mid-Atlantic)</td><td>1.8%</td><td>Limited Appalachian hydro (5-yr range: 1.9&ndash;2.1%)</td></tr>
+            <tr><td>NYISO (New York)</td><td>15.9%</td><td>Niagara/St. Lawrence hydro (5-yr range: 15.9&ndash;18.3%)</td></tr>
+            <tr><td>NEISO (New England)</td><td>4.4%</td><td>New England hydro + Quebec imports (5-yr range: 4.5&ndash;7.8%)</td></tr>
         </tbody>
     </table>
 
@@ -1232,10 +1236,12 @@
         NYISO highest (limited onshore wind resource, offshore wind excluded from this resource class).
     </p>
 
-    <h3>7.2.3 Clean Firm LCOE ($/MWh)</h3>
+    <h3>7.2.3 Clean Firm LCOE ($/MWh) &mdash; Blended Uprate + New-Build</h3>
     <p>
-        Clean firm combines nuclear and geothermal new-build costs, regionalized by geothermal access.
-        Regions with geothermal potential (CAISO) have lower blended costs; nuclear-only regions (NYISO) are higher.
+        Clean firm LCOE is a <strong>capacity-weighted blend</strong> of nuclear uprate costs ($15&ndash;55/MWh)
+        and new-build costs ($88&ndash;110/MWh at Medium). The first incremental clean firm capacity comes from
+        uprating existing plants (cheaper) before requiring new-build SMRs. Regional uprate shares: CAISO 15%,
+        ERCOT 25%, PJM 50%, NYISO 30%, NEISO 20%.
     </p>
     <div class="table-wrap">
     <table>
@@ -1243,22 +1249,22 @@
             <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
         </thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$58</td><td>$63</td><td>$72</td><td>$75</td><td>$73</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$78</td><td>$85</td><td>$93</td><td>$98</td><td>$96</td></tr>
-            <tr><td><strong>High</strong></td><td>$110</td><td>$120</td><td>$140</td><td>$150</td><td>$145</td></tr>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$56</td><td>$48</td><td>$64</td><td>$69</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$79</td><td>$79</td><td>$68</td><td>$86</td><td>$92</td></tr>
+            <tr><td><strong>High</strong></td><td>$115</td><td>$115</td><td>$108</td><td>$136</td><td>$143</td></tr>
         </tbody>
     </table>
     </div>
     <p style="font-size:0.82rem;color:var(--text-muted);">
-        Sources: NREL ATB 2024 (nuclear, geothermal), Lazard LCOE v17.
-        CAISO lowest (Salton Sea, Imperial Valley, The Geysers geothermal access).
-        NYISO highest (nuclear-only, zero geothermal potential, highest construction labor costs).
+        Sources: NREL ATB 2024, Lazard LCOE v17, INL LWRS Program (uprates), NRC uprate database.
+        PJM cheapest due to largest uprate pool (32 GW nuclear fleet, 50% uprate share).
+        NEISO/NYISO highest due to smaller fleets and higher new-build costs.
     </p>
 
     <h3 id="ccs-ccgt-buildup">7.2.4 CCS-CCGT LCOE ($/MWh, Net of 45Q)</h3>
     <p>
         CCS-CCGT (Carbon Capture and Storage on Combined Cycle Gas Turbine) is a dispatchable baseload resource
-        with 90% CO<sub>2</sub> capture. The LCOE is presented net of the Section 45Q tax credit.
+        with 95% CO<sub>2</sub> capture. The LCOE is presented net of the Section 45Q tax credit.
     </p>
     <div class="table-wrap">
     <table>
@@ -1301,11 +1307,11 @@
         CCS-CCGT LCOE = Base CCGT LCOE + Capture Cost + Transport Cost + Storage Cost &minus; 45Q Offset
 
         Key parameters:
-          Capture rate: 90%
+          Capture rate: 95%
           Unabated CCGT emission rate: ~0.37 tCO<sub>2</sub>/MWh
-          Post-capture residual: ~0.037 tCO<sub>2</sub>/MWh (10% of unabated)
-          CO<sub>2</sub> captured per MWh: ~0.34 tCO<sub>2</sub>/MWh
-          45Q credit: $85/ton &times; 0.34 tCO<sub>2</sub>/MWh = ~$29/MWh offset
+          Post-capture residual: ~0.0185 tCO<sub>2</sub>/MWh (5% of unabated)
+          CO<sub>2</sub> captured per MWh: ~0.35 tCO<sub>2</sub>/MWh
+          45Q credit: $85/ton &times; 0.35 tCO<sub>2</sub>/MWh = ~$30/MWh offset
     </div>
 
     <div class="note-box">
@@ -1953,22 +1959,22 @@
     <h3>11.2 CCS-CCGT Partial Credit</h3>
     <p>
         CCS-CCGT receives a <strong>partial emission displacement credit</strong>. Unlike zero-emission
-        resources (solar, wind, nuclear), CCS-CCGT has residual emissions due to the 90% capture rate:
+        resources (solar, wind, nuclear), CCS-CCGT has residual emissions due to the 95% capture rate:
     </p>
 
     <div class="formula-box">
         <span class="label">CCS-CCGT CO<sub>2</sub> Accounting</span>
         Unabated CCGT emission rate: ~0.37 tCO<sub>2</sub>/MWh
-        CCS capture rate: 90%
-        Post-capture residual: 0.37 &times; (1 &minus; 0.90) = ~0.037 tCO<sub>2</sub>/MWh
+        CCS capture rate: 95%
+        Post-capture residual: 0.37 &times; (1 &minus; 0.95) = ~0.0185 tCO<sub>2</sub>/MWh
 
         Net displacement per MWh of CCS-CCGT:
           = Regional marginal rate &minus; CCS residual rate
-          = (e.g., 0.42 &minus; 0.037) = ~0.383 tCO<sub>2</sub>/MWh displaced (ERCOT example)
+          = (e.g., 0.42 &minus; 0.0185) = ~0.402 tCO<sub>2</sub>/MWh displaced (ERCOT example)
 
         Compared to zero-emission resource displacing same marginal unit:
           = 0.42 tCO<sub>2</sub>/MWh displaced
-          CCS-CCGT achieves ~91% of the displacement of a zero-emission resource
+          CCS-CCGT achieves ~96% of the displacement of a zero-emission resource
     </div>
 
     <h3>11.3 Abatement Cost Formulas</h3>
@@ -2028,11 +2034,11 @@
             <tr><th>Region</th><th>Hydro Cap (%)</th><th>Cap (GW)</th><th>Rationale</th></tr>
         </thead>
         <tbody>
-            <tr><td>CAISO</td><td>29%</td><td>30</td><td>Significant Sierra Nevada hydro resources (Hetch Hetchy, Shasta, Oroville)</td></tr>
-            <tr><td>ERCOT</td><td>1%</td><td>5</td><td>Very limited hydro in Texas (Sam Rayburn, small run-of-river)</td></tr>
-            <tr><td>PJM</td><td>3%</td><td>15</td><td>Limited Appalachian hydro (Conowingo, Bath County pumped storage)</td></tr>
-            <tr><td>NYISO</td><td>25%</td><td>40</td><td>Substantial Niagara Falls and St. Lawrence River hydro</td></tr>
-            <tr><td>NEISO</td><td>10%</td><td>30</td><td>Moderate New England hydro plus Quebec hydro imports (HQ interconnections)</td></tr>
+            <tr><td>CAISO</td><td>9.5%</td><td>&mdash;</td><td>Sierra Nevada hydro; 2025 actual share (5-yr range: 5.2&ndash;11.2%)</td></tr>
+            <tr><td>ERCOT</td><td>0.1%</td><td>&mdash;</td><td>Very limited hydro resources in Texas</td></tr>
+            <tr><td>PJM</td><td>1.8%</td><td>&mdash;</td><td>Limited Appalachian hydro (Conowingo, Bath County pumped storage)</td></tr>
+            <tr><td>NYISO</td><td>15.9%</td><td>&mdash;</td><td>Niagara Falls and St. Lawrence River hydro (5-yr range: 15.9&ndash;18.3%)</td></tr>
+            <tr><td>NEISO</td><td>4.4%</td><td>&mdash;</td><td>New England hydro + Quebec imports (5-yr range: 4.5&ndash;7.8%)</td></tr>
         </tbody>
     </table>
     </div>

@@ -728,8 +728,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         All demand and generation profiles are sourced from the U.S. Energy Information Administration
         Form 930 Hourly Electric Grid Monitor <a href="#ref-16" class="cite">[16]</a>,
         which provides balancing authority-level hourly data for electricity demand and generation by
-        energy source. We use 2025 calendar-year data (January&ndash;December) aggregated from
-        semi-annual bulk CSV files.
+        energy source. Hourly profile <em>shapes</em> (generation and demand) are element-wise averages
+        of 2021&ndash;2025 data (5 years), smoothing single-year weather anomalies. Absolute quantities
+        (total annual MWh, grid mix shares, hydro caps, peak demand) use 2025 actuals.
     </p>
 
     <h3>3.2 Regional Coverage</h3>
@@ -893,11 +894,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <tr><th>ISO</th><th>Wholesale ($/MWh)</th><th>Clean Firm</th><th>Solar</th><th>Wind</th><th>Storage LCOS</th></tr>
         </thead>
         <tbody>
-            <tr><td>CAISO</td><td>$30</td><td>$90</td><td>$60</td><td>$73</td><td>$100</td></tr>
-            <tr><td>ERCOT</td><td>$27</td><td>$90</td><td>$54</td><td>$40</td><td>$100</td></tr>
-            <tr><td>PJM</td><td>$34</td><td>$90</td><td>$65</td><td>$62</td><td>$100</td></tr>
-            <tr><td>NYISO</td><td>$42</td><td>$90</td><td>$92</td><td>$81</td><td>$100</td></tr>
-            <tr><td>NEISO</td><td>$41</td><td>$90</td><td>$82</td><td>$73</td><td>$100</td></tr>
+            <tr><td>CAISO</td><td>$30</td><td>$79</td><td>$60</td><td>$73</td><td>$102</td></tr>
+            <tr><td>ERCOT</td><td>$27</td><td>$79</td><td>$54</td><td>$40</td><td>$92</td></tr>
+            <tr><td>PJM</td><td>$34</td><td>$68</td><td>$65</td><td>$62</td><td>$98</td></tr>
+            <tr><td>NYISO</td><td>$42</td><td>$86</td><td>$92</td><td>$81</td><td>$108</td></tr>
+            <tr><td>NEISO</td><td>$41</td><td>$92</td><td>$82</td><td>$73</td><td>$105</td></tr>
         </tbody>
     </table>
     </div>
@@ -907,16 +908,19 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         LBNL reports <a href="#ref-7" class="cite">[7]</a><a href="#ref-8" class="cite">[8]</a>,
         and Lazard LCOE v17 <a href="#ref-6" class="cite">[6]</a>.
         Wind LCOE scaled +30% from 2024 LBNL PPA data to reflect 2025 trends.
+        Clean firm LCOE reflects a capacity-weighted blend of nuclear uprate and new-build costs (see &sect;6.4 and Appendix B.2).
+        Storage LCOS is regionalized for both battery and LDES (see Appendix B.3).
     </p>
 
     <h3>4.5 Storage Model</h3>
     <p>
-        Battery storage is modeled as 4-hour lithium-ion with 85% round-trip efficiency
-        <a href="#ref-5" class="cite">[5]</a>, operating on daily charge/discharge
-        cycles. The storage dispatch level (as a percentage of annual demand) is itself optimized,
-        with the model testing levels from 0% to 50%. Storage charges exclusively from clean surplus
-        and discharges only into demand gaps, using a greedy dispatch algorithm that prioritizes
-        the largest imbalances first.
+        Two storage technologies are modeled: <strong>4-hour lithium-ion batteries</strong> (85% round-trip
+        efficiency, daily charge/discharge cycles) and <strong>100-hour iron-air LDES</strong> (50% round-trip
+        efficiency, multi-day/seasonal dispatch via rolling 7-day windows)
+        <a href="#ref-5" class="cite">[5]</a>. Both are capacity-constrained: dispatch
+        cannot exceed built capacity, and LCOS reflects actual utilization of that capacity.
+        Storage charges exclusively from clean surplus and discharges only into demand gaps.
+        See Appendix B.3 for regionalized cost tables.
     </p>
 
     <!-- ========== 5. RESULTS ========== -->
@@ -1326,7 +1330,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         Cost and mix outcomes vary substantially by region, driven by three factors: (1) existing clean
         grid mix, (2) renewable resource quality, and (3) wholesale market prices. ERCOT benefits from
         excellent wind resources ($40/MWh new-build) but lacks hydro, resulting in a wind-dominant strategy
-        that becomes unsustainable above 95%. NYISO's combination of significant hydro (40% cap) and nuclear
+        that becomes unsustainable above 95%. NYISO's combination of hydro (15.9% cap) and nuclear
         (18.4% grid share) enables the lowest curtailment across matching targets.
     </p>
 
@@ -1343,10 +1347,12 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>6.4 Sensitivity to Clean Firm Cost Assumptions</h3>
     <p>
-        Our baseline analysis uses $90/MWh for new-build clean firm power across all regions, consistent
-        with NREL ATB 2024 estimates for advanced nuclear <a href="#ref-5" class="cite">[5]</a>.
-        However, this assumption carries significant uncertainty. Lazard's LCOE v17.0 reports unsubsidized
-        new nuclear costs of $141&ndash;220/MWh <a href="#ref-6" class="cite">[6]</a>, and recent
+        Our baseline analysis uses <strong>regionalized blended clean firm LCOE</strong> ($68&ndash;92/MWh
+        at Medium), reflecting a capacity-weighted blend of nuclear uprate costs ($15&ndash;55/MWh) and
+        new-build costs ($88&ndash;110/MWh). Regional uprate shares range from 15% (CAISO) to 50% (PJM),
+        reflecting each region's existing nuclear fleet size and uprate potential. See Appendix B.2 for
+        full regional tables. However, clean firm cost carries significant uncertainty. Lazard's LCOE v17.0
+        reports unsubsidized new nuclear costs of $141&ndash;220/MWh <a href="#ref-6" class="cite">[6]</a>, and recent
         U.S. construction experience (Vogtle Units 3&ndash;4) suggests realized costs may substantially exceed
         projections. Natural gas with carbon capture and storage (CCS) offers a range of $65&ndash;152/MWh
         depending on capture rate and CO&#8322; transport costs.
@@ -1501,12 +1507,15 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             profiles for the full year. Real procurement decisions face significant weather uncertainty, demand
             forecast error, and generator outage risk&mdash;all of which would increase the cost of achieving a
             given matching target.</li>
-        <li><strong>Single weather year:</strong> Results use 2025 EIA-930 data only. Multi-year analysis would
-            capture interannual variability in solar irradiance, wind patterns, and hydro availability, as well
-            as extreme weather events (e.g., Texas Winter Storm Uri 2021, California heat domes).</li>
-        <li><strong>Perfect nuclear availability:</strong> Nuclear/geothermal is modeled as perfectly flat baseload.
-            Real nuclear plants have planned outages (refueling ~30 days every 18&ndash;24 months) and occasional
-            forced outages, potentially overstating clean firm's hourly contribution by 2&ndash;5%.</li>
+        <li><strong>Multi-year averaged profiles:</strong> Hourly generation and demand profile <em>shapes</em> are
+            element-wise averages of 2021&ndash;2025 EIA-930 data (5 years), smoothing single-year weather
+            anomalies. Absolute quantities (total annual MWh, grid mix shares, hydro caps) use 2025 actuals.
+            This balances weather representativeness with current-year anchoring, though extreme single-year
+            events (e.g., Texas Winter Storm Uri 2021, California heat domes) are averaged out.</li>
+        <li><strong>Nuclear seasonal derate:</strong> The nuclear component of clean firm applies a monthly seasonal
+            derate derived from 2021&ndash;2025 EIA fleet data, capturing spring/fall refueling patterns.
+            This is more realistic than a flat annual capacity factor but does not model individual plant outage
+            schedules or forced outages, potentially overstating availability during specific weeks by 2&ndash;5%.</li>
         <li><strong>Grid-level proxies:</strong> EIA-930 regional generation profiles may not represent specific
             project-level assets. Actual solar/wind farm output can differ from regional averages due to
             microclimate, panel orientation, hub height, and turbine technology.</li>
@@ -1656,7 +1665,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         upper-bound pathway and serves as the critical inflection point where firm generation investment
         decisions lock in. <strong>99&ndash;100% / 2045</strong> reflects the SBTi "near-zero" endpoint, California's
         100% zero-carbon mandate, and the practical ceiling where marginal abatement costs remain within
-        range of established carbon pricing benchmarks (EPA social cost of carbon at $51/ton, EU ETS at
+        range of established carbon pricing benchmarks (EPA 2023 social cost of carbon at $190/ton, EU ETS at
         $60&ndash;100/ton, Rennert et al. $185/ton).
     </div>
 
@@ -1976,14 +1985,14 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </table>
     </div>
 
-    <p><strong>Clean Firm LCOE ($/MWh)</strong> &mdash; Nuclear + Geothermal blend</p>
+    <p><strong>Clean Firm LCOE ($/MWh)</strong> &mdash; Blended uprate + new-build (uprate shares: CAISO 15%, ERCOT 25%, PJM 50%, NYISO 30%, NEISO 20%)</p>
     <div class="table-wrap">
     <table>
         <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$58</td><td>$63</td><td>$72</td><td>$75</td><td>$73</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$78</td><td>$85</td><td>$93</td><td>$98</td><td>$96</td></tr>
-            <tr><td><strong>High</strong></td><td>$110</td><td>$120</td><td>$140</td><td>$150</td><td>$145</td></tr>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$56</td><td>$48</td><td>$64</td><td>$69</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$79</td><td>$79</td><td>$68</td><td>$86</td><td>$92</td></tr>
+            <tr><td><strong>High</strong></td><td>$115</td><td>$115</td><td>$108</td><td>$136</td><td>$143</td></tr>
         </tbody>
     </table>
     </div>
@@ -2093,13 +2102,13 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </p>
     <p style="font-size:0.85rem;color:var(--text-muted);">
         Sources: EPA eGRID 2023, EIA-930 hourly generation data.
-        CCS-CCGT receives partial displacement credit: ~0.037 tCO&#8322;/MWh residual (10% of unabated rate).
+        CCS-CCGT receives partial displacement credit: ~0.0185 tCO&#8322;/MWh residual (5% of unabated rate, reflecting 95% capture).
     </p>
 
     <h3>B.7 Hydro Treatment</h3>
     <p>
         Hydro is modeled as existing-only (no new-build), wholesale-priced ($0 transmission adder), with regional
-        capacity caps: CAISO 29%, ERCOT 1%, PJM 3%, NYISO 25%, NEISO 10%. New large-scale hydro faces
+        capacity caps based on 2025 actuals: CAISO 9.5%, ERCOT 0.1%, PJM 1.8%, NYISO 15.9%, NEISO 4.4%. New large-scale hydro faces
         insurmountable barriers: virtually all viable sites are developed, 10&ndash;20 year environmental
         permitting timelines, and ecological concerns make new projects infeasible.
     </p>

@@ -4403,11 +4403,11 @@ const MIX_COLORS = {
 
 const MIX_REGION_INSIGHTS = {
     average: '<strong>Regional Variation:</strong> Wind-rich ERCOT sustains wind-heavy mixes to 95%+, while PJM and NEISO require a pivot to nuclear/clean firm at lower thresholds.',
-    CAISO: '<strong>CAISO (California):</strong> Leverages strong solar (35% at 75%) and high hydro cap (30%). Clean firm rises from 10% to 43% at 100%. Solar stays relevant throughout due to excellent irradiance.',
-    ERCOT: '<strong>ERCOT (Texas):</strong> Wind dominates at 65% through 95% matching thanks to $40/MWh wind LCOE. The 95%→100% transition is the most dramatic of any region: clean firm surges +49pp while wind drops 40pp.',
-    PJM: '<strong>PJM (Mid-Atlantic):</strong> Existing 32% nuclear fleet provides a massive head start. The mix holds steady from 75% to 90%, then jumps to 60% clean firm at 95%. PJM reaches 68% clean firm at 100%.',
-    NYISO: '<strong>NYISO (New York):</strong> Hydro stays locked at 40% across all targets. Uses zero solar until 100%. The simplest mix — essentially clean firm + hydro + wind — reflects the region\'s unique resource endowment.',
-    NEISO: '<strong>NEISO (New England):</strong> The most expensive region shows the sharpest shift. Clean firm reaches 78% at 100% — the highest of any region. Hydro drops from 30% to 16% and wind is eliminated entirely at 100%.'
+    CAISO: '<strong>CAISO:</strong> Solar-driven mix with 9.5% hydro base; clean firm rises sharply above 90%. <a href="region_deepdive.html#caiso">See regional deep dive →</a>',
+    ERCOT: '<strong>ERCOT:</strong> Wind dominates at 65% through 95%, then clean firm surges +49pp in the final stretch — the most dramatic transition of any region. <a href="region_deepdive.html#ercot">See regional deep dive →</a>',
+    PJM: '<strong>PJM:</strong> Existing 32% nuclear fleet provides a head start; mix holds steady to 90%, then jumps to 60%+ clean firm. <a href="region_deepdive.html#pjm">See regional deep dive →</a>',
+    NYISO: '<strong>NYISO:</strong> Strong hydro (16%) and nuclear (18%) foundation yields a clean firm + hydro + wind mix. <a href="region_deepdive.html#nyiso">See regional deep dive →</a>',
+    NEISO: '<strong>NEISO:</strong> Most expensive region with the sharpest shift toward clean firm at high targets due to limited solar and costly siting. <a href="region_deepdive.html#neiso">See regional deep dive →</a>'
 };
 
 function getMixDataForRegion(region) {
@@ -4813,11 +4813,11 @@ let incrementalMixChart = null;
 let currentIncrementalRegion = 'CAISO';
 
 const INCREMENTAL_INSIGHTS = {
-    CAISO: '<strong>CAISO:</strong> Starts with 48.5% existing clean (solar-heavy). New build is modest through 90%, then accelerates sharply — at 100%, new clean firm alone exceeds 53% of demand, more than all existing clean combined.',
-    ERCOT: '<strong>ERCOT:</strong> Only 46.1% existing clean, mostly wind. New wind additions drive early targets cheaply. But at 100%, new clean firm (47%) dwarfs the entire existing fleet — a near-complete rebuild of the generation stack.',
-    PJM: '<strong>PJM:</strong> The 32% existing nuclear fleet gives PJM a massive head start. New build stays minimal through 90% — then jumps as clean firm additions pile on. Even so, PJM needs less new build at 100% than most regions.',
-    NYISO: '<strong>NYISO:</strong> Existing hydro (16%) and nuclear (18%) cover early targets efficiently. New build stays modest through 95%, then explodes at 100% with +34% new hydro and +54% new clean firm — the sharpest final step.',
-    NEISO: '<strong>NEISO:</strong> Starts with 33.5% existing clean but it\'s spread thin across resources. New clean firm dominates at every target level, reaching 65% of demand at 100% — the highest new-build intensity of any region.'
+    CAISO: '<strong>CAISO:</strong> New build modest through 90%; at 100%, new clean firm alone exceeds 53% of demand.',
+    ERCOT: '<strong>ERCOT:</strong> At 100%, new clean firm (47%) dwarfs the entire existing fleet — a near-complete rebuild.',
+    PJM: '<strong>PJM:</strong> 32% existing nuclear keeps new build minimal through 90%; lowest new-build needs at 100%.',
+    NYISO: '<strong>NYISO:</strong> New build stays modest through 95%, then explodes at 100% with +54% new clean firm.',
+    NEISO: '<strong>NEISO:</strong> New clean firm reaches 65% of demand at 100% — the highest new-build intensity of any region.'
 };
 
 function getIncrementalData(region) {
