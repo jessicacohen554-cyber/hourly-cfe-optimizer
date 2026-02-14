@@ -172,11 +172,12 @@ body {
 .header {
     background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
     color: #ffffff;
-    padding: 90px 24px 80px;
+    padding: 72px 24px 64px;
     text-align: center;
     position: relative;
     overflow: hidden;
 }
+/* Radial energy glows + dispatch stack curves (bottom) */
 .header::before {
     content: '';
     position: absolute;
@@ -187,15 +188,21 @@ body {
         radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.4) 0%, transparent 65%),
         radial-gradient(ellipse 45% 60% at 38% 85%, rgba(34,197,94,0.35) 0%, transparent 60%),
         radial-gradient(ellipse 50% 65% at 62% 80%, rgba(245,158,11,0.35) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%);
+        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='a1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(255,255,255,0.15)'/%3E%3Cstop offset='1' stop-color='rgba(255,255,255,0.01)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.03)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.03)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,240 L0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100 L1200,240 Z' fill='url(%23a1)'/%3E%3Cpath d='M0,240 L0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140 L1200,240 Z' fill='url(%23a2)'/%3E%3Cpath d='M0,240 L0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180 L1200,240 Z' fill='url(%23a3)'/%3E%3Cpath d='M0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2'/%3E%3Cpath d='M0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.6'/%3E%3Cpath d='M0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.6'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
 }
+/* Vibrant pulse lines (top) + dark text backing overlay */
 .header::after {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: radial-gradient(ellipse 70% 45% at 50% 45%, rgba(5,15,35,0.55) 0%, transparent 100%);
+    background:
+        radial-gradient(ellipse 70% 45% at 50% 45%, rgba(5,15,35,0.55) 0%, transparent 100%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,50 L250,50 L270,18 L288,68 L306,22 L324,60 L342,50 L1200,50' fill='none' stroke='rgba(14,165,233,0.5)' stroke-width='2'/%3E%3Cpath d='M0,35 L600,35 L618,10 L636,60 L654,14 L672,55 L690,35 L1200,35' fill='none' stroke='rgba(245,158,11,0.4)' stroke-width='2'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 100%, 100% 80px;
 }
 .header-accent {
     position: absolute;
@@ -877,9 +884,8 @@ body {
     background: #1a1a2e;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     padding: 20px 24px;
-    position: sticky;
-    top: 48px;
-    z-index: 998;
+    position: relative;
+    z-index: 10;
 }
 .controls-inner {
     max-width: 1200px;
@@ -994,7 +1000,7 @@ body {
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .controls-grid { grid-template-columns: repeat(2, 1fr); }
-    .comparison-controls { padding: 14px 16px; top: 48px; }
+    .comparison-controls { padding: 14px 16px; }
     .header { padding: 60px 16px 50px; }
     .header h1 { font-size: 2.2rem; }
     .header .subtitle { font-size: 1rem; }
@@ -1058,52 +1064,52 @@ body {
 <!-- Scroll progress bar -->
 <div id="scrollProgress" style="position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent-blue),#22C55E);width:0%;z-index:10001;transition:width 0.1s linear;"></div>
 
-<!-- ========== COMPARISON CONTROLS ========== -->
-<div class="comparison-controls" id="comparisonControls">
-    <div class="controls-inner">
-        <div class="controls-label">Stress-Test Assumptions <span class="info-icon" title="Adjust cost assumptions for competing decarbonization technologies. These shift the crossover points — where grid decarbonization stops being the cheapest path.">i</span></div>
-        <div class="controls-grid">
-            <div class="ctrl-group">
-                <label>Grid Cost Scenario <span class="info-icon" title="Low = cheap renewables, fast permitting, falling storage costs. High = tariffs, supply chain disruptions, permitting delays.">i</span></label>
-                <div class="ctrl-toggle" data-ctrl="grid" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $250/ton by 2030. Medium = current trajectory, $400-600/ton. High = slow scaling, $1000+/ton.">i</span></label>
-                <div class="ctrl-toggle" data-ctrl="dac" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <label>Industrial Decarb Cost <span class="info-icon" title="Low = electrification is cheaper than fossil (net savings). Medium = moderate carbon price needed. High = expensive retrofit + high energy costs.">i</span></label>
-                <div class="ctrl-toggle" data-ctrl="industrial" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <label>Carbon Removal Alternatives <span class="info-icon" title="Low = BECCS + enhanced weathering hit scale, $50-100/ton. Medium = moderate scaling. High = limited deployment, $200+/ton.">i</span></label>
-                <div class="ctrl-toggle" data-ctrl="removal" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-        </div>
-        <div class="crossover-summary" id="crossoverSummary">
-            <!-- Dynamically populated with crossover insights -->
-        </div>
-    </div>
-</div>
-
 <!-- ========== MAIN CONTENT ========== -->
 <main class="main-content">
+
+    <!-- ========== COMPARISON CONTROLS ========== -->
+    <div class="comparison-controls" id="comparisonControls">
+        <div class="controls-inner">
+            <div class="controls-label">Stress-Test Assumptions <span class="info-icon" title="Adjust cost assumptions for competing decarbonization technologies. These shift the crossover points — where grid decarbonization stops being the cheapest path.">i</span></div>
+            <div class="controls-grid">
+                <div class="ctrl-group">
+                    <label>Grid Cost Scenario <span class="info-icon" title="Low = cheap renewables, fast permitting, falling storage costs. High = tariffs, supply chain disruptions, permitting delays.">i</span></label>
+                    <div class="ctrl-toggle" data-ctrl="grid" data-default="Medium">
+                        <button data-value="Low">Low</button>
+                        <button data-value="Medium" class="active">Medium</button>
+                        <button data-value="High">High</button>
+                    </div>
+                </div>
+                <div class="ctrl-group">
+                    <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $250/ton by 2030. Medium = current trajectory, $400-600/ton. High = slow scaling, $1000+/ton.">i</span></label>
+                    <div class="ctrl-toggle" data-ctrl="dac" data-default="Medium">
+                        <button data-value="Low">Low</button>
+                        <button data-value="Medium" class="active">Medium</button>
+                        <button data-value="High">High</button>
+                    </div>
+                </div>
+                <div class="ctrl-group">
+                    <label>Industrial Decarb Cost <span class="info-icon" title="Low = electrification is cheaper than fossil (net savings). Medium = moderate carbon price needed. High = expensive retrofit + high energy costs.">i</span></label>
+                    <div class="ctrl-toggle" data-ctrl="industrial" data-default="Medium">
+                        <button data-value="Low">Low</button>
+                        <button data-value="Medium" class="active">Medium</button>
+                        <button data-value="High">High</button>
+                    </div>
+                </div>
+                <div class="ctrl-group">
+                    <label>Carbon Removal Alternatives <span class="info-icon" title="Low = BECCS + enhanced weathering hit scale, $50-100/ton. Medium = moderate scaling. High = limited deployment, $200+/ton.">i</span></label>
+                    <div class="ctrl-toggle" data-ctrl="removal" data-default="Medium">
+                        <button data-value="Low">Low</button>
+                        <button data-value="Medium" class="active">Medium</button>
+                        <button data-value="High">High</button>
+                    </div>
+                </div>
+            </div>
+            <div class="crossover-summary" id="crossoverSummary">
+                <!-- Dynamically populated with crossover insights -->
+            </div>
+        </div>
+    </div>
 
     <!-- ================================================================ -->
     <!-- SECTION 1: THE BIG PICTURE                                       -->
