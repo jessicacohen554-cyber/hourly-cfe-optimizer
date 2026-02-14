@@ -47,11 +47,22 @@
 - User can always override this ordering for specific tasks
 
 ### Communication Style
+- **Don't narrate — just do.** Skip "Let me read the file...", "Now I'll edit...", "Let me check..." filler. Execute the work, report the outcome.
+- **Use the TodoWrite checklist on a frequent cadence** — the todo list IS the status communication. Update it in real-time so the user always sees current progress without needing to ask.
+- **Don't echo back the user's decisions** — when they confirm something, acknowledge briefly and act. Don't restate what they said.
 - **Be verbose when it matters** — emphasize important decisions, tradeoffs, and anything the user needs to know
 - **Be concise otherwise** — don't pad responses with filler or restate the obvious
 - **Explain reasoning concisely** — a sentence or two on *why*, not a paragraph
 - **Prefer bullets with clear headers and numbered lists** — avoid walls of prose
 - **Only surface errors when you can't resolve them** — try to self-recover first; if stuck after reasonable attempts, explain what failed and what you tried
+- **Skip QA narration unless something fails** — don't describe each passing check. Just "QA passed" or report failures.
+
+### Token Efficiency (Critical — Protect User's Weekly Budget)
+- **Targeted file reads only** — always use `offset`/`limit` on large files. Never re-read a file already read in the same session unless it's been modified since the last read.
+- **Exploration agents: return summaries, not raw content** — exploration agents should return structured summaries (architecture, key functions, line numbers). Never paste full file contents back. A 2K-line file dump in an agent response is a token waste.
+- **Prefer Grep/Glob over Explore agents for directed lookups** — if searching for a specific function, pattern, or file name, use Grep/Glob directly. Explore agents are 10× more expensive and should only be used for broad, open-ended codebase understanding.
+- **Batch all related edits into one response** — don't make 6 sequential edits with narration between each. Plan them, execute them all in parallel where possible, report once.
+- **Don't repeat large code blocks back to the user** — if the user can see the file, don't paste it into the response. Reference by file:line instead.
 
 ### Optimizer Run Discipline (Critical — Token Budget Protection)
 - **Optimizer runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every optimizer run as a high-value operation that must succeed.
