@@ -195,7 +195,7 @@ body {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
     font-weight: 600;
     font-size: 1.15rem;
-    color: var(--navy);
+    color: #DC2626;
     margin-bottom: 6px;
     letter-spacing: 0.04em;
 }
@@ -386,7 +386,7 @@ body {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
     font-weight: 600;
     font-size: 1.3rem;
-    color: var(--navy);
+    color: #DC2626;
     margin-bottom: 8px;
     letter-spacing: 0.04em;
 }
@@ -1025,26 +1025,6 @@ body {
 
 /* ========== KEY FINDINGS ========== */
 /* ========== PATHWAY PLANNING PANEL ========== */
-.pathway-panel {
-    background: var(--bg-card);
-    border-radius: 14px;
-    padding: 28px 32px;
-    margin-bottom: 28px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    border: 1px solid var(--border-light);
-}
-.pathway-panel h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 4px;
-}
-.pathway-subtitle {
-    font-size: 0.88rem;
-    color: var(--text-muted);
-    margin-bottom: 20px;
-}
 .pathway-controls {
     display: flex;
     gap: 20px;
@@ -1114,23 +1094,11 @@ body {
     margin-top: 4px;
     line-height: 1.35;
 }
-.pathway-insight {
-    background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(34,197,94,0.04) 100%);
-    border: 1px solid rgba(14,165,233,0.15);
-    border-radius: 10px;
-    padding: 16px 20px;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    color: var(--text-primary);
-}
-.pathway-insight strong { color: var(--navy); }
 @media (max-width: 768px) {
-    .pathway-panel { padding: 20px 16px; }
     .pathway-controls { flex-direction: column; gap: 14px; }
     .pathway-ctrl { min-width: auto; }
     .pathway-metrics { grid-template-columns: 1fr; gap: 12px; }
     .pathway-metric-value { font-size: 1.5rem; }
-    .pathway-insight { font-size: 0.85rem; padding: 14px 16px; }
 }
 
 .key-findings {
@@ -2570,126 +2538,6 @@ body {
     .dashboard-intro-text { font-size: 0.85rem; }
 }
 
-/* ========== NUCLEAR PRESERVATION PANEL ========== */
-.preservation-panel {
-    background: #fff;
-    border-radius: 16px;
-    border: 1px solid var(--border-light);
-    padding: 36px 32px;
-    margin: 36px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-.preservation-panel h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin: 0 0 6px;
-}
-.preservation-panel .preservation-sub {
-    font-size: 0.95rem;
-    color: var(--text-muted);
-    margin-bottom: 24px;
-}
-.preservation-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin: 24px 0;
-}
-.preservation-card {
-    background: linear-gradient(135deg, rgba(30,58,95,0.04) 0%, rgba(30,58,95,0.01) 100%);
-    border: 1px solid rgba(30,58,95,0.1);
-    border-radius: 12px;
-    padding: 20px 18px;
-}
-.preservation-card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-.preservation-card-iso {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--navy);
-}
-.preservation-card-share {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #fff;
-    background: var(--navy);
-    border-radius: 10px;
-    padding: 2px 8px;
-}
-.preservation-card-cost {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #DC2626;
-}
-.preservation-card-desc {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    line-height: 1.4;
-    margin-top: 4px;
-}
-.preservation-bar {
-    height: 6px;
-    border-radius: 3px;
-    background: rgba(220,38,38,0.1);
-    margin-top: 10px;
-    overflow: hidden;
-}
-.preservation-bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    background: linear-gradient(90deg, #F59E0B, #DC2626);
-}
-.ccs-economics-row {
-    display: flex;
-    gap: 16px;
-    margin: 24px 0;
-    flex-wrap: wrap;
-}
-.ccs-econ-card {
-    flex: 1;
-    min-width: 180px;
-    background: rgba(34,197,94,0.05);
-    border: 1px solid rgba(34,197,94,0.15);
-    border-radius: 12px;
-    padding: 18px 16px;
-    text-align: center;
-}
-.ccs-econ-value {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--navy);
-}
-.ccs-econ-label {
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    margin-top: 4px;
-    line-height: 1.3;
-}
-@media (max-width: 768px) {
-    .preservation-panel { padding: 28px 20px; }
-    .preservation-grid { grid-template-columns: 1fr; gap: 14px; }
-    .preservation-card-cost { font-size: 1.3rem; }
-    .ccs-economics-row { flex-direction: column; }
-    .ccs-econ-card { min-width: unset; }
-}
-@media (max-width: 480px) {
-    .preservation-panel { padding: 22px 16px; border-radius: 12px; }
-    .preservation-panel h3 { font-size: 1.1rem; }
-    .preservation-card { padding: 16px 14px; }
-    .preservation-card-cost { font-size: 1.2rem; }
-    .ccs-econ-value { font-size: 1.3rem; }
-}
-
 /* ========== FOOTER ========== */
 .footer {
     text-align: center;
@@ -3107,29 +2955,6 @@ body {
     </p>
 </div>
 
-<!-- HERO TAKEAWAY BANNER -->
-<div class="hero-takeaway">
-    <div class="hero-takeaway-icon">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <circle cx="14" cy="14" r="8" stroke="#1E3A5F" stroke-width="2" fill="none"/>
-            <circle cx="14" cy="14" r="2.5" fill="#16A34A"/>
-            <path d="M14 3 L14 6 M14 22 L14 25 M3 14 L6 14 M22 14 L25 14" stroke="#1E3A5F" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-    </div>
-    <div class="hero-takeaway-headline">
-        Investing in <em>clean firm power today</em> is the single<br>
-        most important step toward deep decarbonization
-    </div>
-    <p class="hero-takeaway-sub">
-        Our analysis of 8,760 hours across five U.S. power markets reveals that
-        <strong>renewables alone cannot achieve high hourly matching targets</strong>.
-        Beyond 90% matching, the cost curve inflects sharply and the resource mix pivots toward
-        firm, dispatchable clean generation. Organizations that rely exclusively on wind and solar
-        will face steep costs and stranded procurement as they pursue deeper decarbonization.
-        <strong>Early investment in clean firm power significantly reduces long-term costs.</strong>
-    </p>
-</div>
-
 <!-- LOADING STATE -->
 <div class="main-content" id="loadingState">
     <div class="loading-overlay">
@@ -3323,63 +3148,6 @@ body {
     </div>
 
     <!-- PATHWAY PLANNING: Interim → Long-term Target with Demand Growth -->
-    <div class="pathway-panel" id="pathwayPanel" style="display:none;">
-        <h3>Pathway Planning: From Interim to Long-term Target</h3>
-        <p class="pathway-subtitle">How much of today's investment carries forward vs. becomes redundant as your target evolves?</p>
-
-        <div class="pathway-controls">
-            <div class="pathway-ctrl">
-                <label>Interim Year</label>
-                <select id="interimYear">
-                    <option value="2027">2027</option>
-                    <option value="2029" selected>2029</option>
-                    <option value="2031">2031</option>
-                    <option value="2033">2033</option>
-                </select>
-            </div>
-            <div class="pathway-ctrl">
-                <label>Long-term Year</label>
-                <select id="longtermYear">
-                    <option value="2035">2035</option>
-                    <option value="2038">2038</option>
-                    <option value="2042" selected>2042</option>
-                    <option value="2050">2050</option>
-                </select>
-            </div>
-            <div class="pathway-ctrl">
-                <label>Demand Growth <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Regional annual electricity demand growth rate based on ISO-specific forecasts. Higher growth means more of today's procurement remains useful at higher future targets. Rates are region-specific: ERCOT's data center boom drives the highest growth; ISO-NE has the most modest projections.</span></span></label>
-                <div class="toggle-btn-group" data-toggle="demand_growth" data-default="Medium">
-                    <button data-value="Low" data-toggle-group="demand_growth" data-level="Low">Low</button>
-                    <button data-value="Medium" data-toggle-group="demand_growth" data-level="Medium" class="active">Medium</button>
-                    <button data-value="High" data-toggle-group="demand_growth" data-level="High">High</button>
-                </div>
-                <div class="pathway-rate-display" id="demandRateDisplay" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;"></div>
-            </div>
-        </div>
-
-        <div class="pathway-results" id="pathwayResults">
-            <div class="pathway-metrics">
-                <div class="pathway-metric">
-                    <div class="pathway-metric-value" id="pwCarriedForward">--</div>
-                    <div class="pathway-metric-label">Carried Forward</div>
-                    <div class="pathway-metric-sub">% of interim procurement useful at long-term target</div>
-                </div>
-                <div class="pathway-metric pathway-metric-warn">
-                    <div class="pathway-metric-value" id="pwWastedCost">--</div>
-                    <div class="pathway-metric-label">Stranded Investment</div>
-                    <div class="pathway-metric-sub">Est. $/MWh cost of over-procured resources</div>
-                </div>
-                <div class="pathway-metric">
-                    <div class="pathway-metric-value" id="pwDemandEffect">--</div>
-                    <div class="pathway-metric-label">Demand Growth Offset</div>
-                    <div class="pathway-metric-sub">Reduction in waste due to demand growth absorbing surplus</div>
-                </div>
-            </div>
-            <div class="pathway-insight" id="pathwayInsight">
-                <!-- Dynamic narrative -->
-            </div>
-        </div>
-    </div>
 
     <!-- KEY FINDING -->
     <div class="key-findings" id="keyFinding" style="display:none;">
@@ -3427,23 +3195,97 @@ body {
         </div>
     </div>
 
-    <!-- WHAT YOU NEED DEPENDS ON WHAT YOU HAVE -->
+    <!-- WHAT YOU NEED DEPENDS ON WHAT YOU HAVE AND WHERE YOU'RE GOING -->
     <div class="what-you-need-panel" id="whatYouNeedPanel">
-        <h3>What You Need Depends on What You Have</h3>
+        <h3>What You Need Depends on What You Have &mdash; and Where You're Going</h3>
         <p class="wyn-subtitle">
-            The bars below compare <strong>existing clean resources</strong> already on the grid (solid, bottom)
-            versus the <strong>new build required</strong> (lighter, top) to reach the selected matching target.
-            The dashed line marks the region's current clean share — everything above it must be built.
+            The chart compares the <strong>existing clean resources</strong> on the grid today with the
+            <strong>optimal portfolios</strong> at your interim and long-term targets — in TWh, scaled by
+            demand growth. When the long-term optimal mix differs from the interim, some of today's
+            investment becomes <strong>stranded</strong>. Building strategically toward the end state
+            from the start can save significant capital.
         </p>
-        <div class="wyn-chart-container">
+
+        <div class="pathway-controls">
+            <div class="pathway-ctrl">
+                <label>Interim Year</label>
+                <select id="interimYear">
+                    <option value="2027">2027</option>
+                    <option value="2029" selected>2029</option>
+                    <option value="2031">2031</option>
+                    <option value="2033">2033</option>
+                </select>
+            </div>
+            <div class="pathway-ctrl">
+                <label>Long-term Year</label>
+                <select id="longtermYear">
+                    <option value="2035">2035</option>
+                    <option value="2038">2038</option>
+                    <option value="2042" selected>2042</option>
+                    <option value="2050">2050</option>
+                </select>
+            </div>
+            <div class="pathway-ctrl">
+                <label>Demand Growth <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Regional annual demand growth. Higher growth absorbs more interim procurement and reduces stranded investment. Rates are ISO-specific: ERCOT's data-center boom drives highest growth.</span></span></label>
+                <div class="toggle-btn-group" data-toggle="demand_growth" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="demand_growth" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="demand_growth" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="demand_growth" data-level="High">High</button>
+                </div>
+                <div class="pathway-rate-display" id="demandRateDisplay" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;"></div>
+            </div>
+        </div>
+
+        <div class="wyn-chart-container" style="height:360px;">
             <canvas id="wynCompareChart"></canvas>
         </div>
+
+        <!-- Stranded Investment Metrics -->
+        <div class="pathway-metrics" id="wynMetrics">
+            <div class="pathway-metric">
+                <div class="pathway-metric-value" id="pwCarriedForward">--</div>
+                <div class="pathway-metric-label">Carried Forward</div>
+                <div class="pathway-metric-sub">% of interim procurement useful at long-term target</div>
+            </div>
+            <div class="pathway-metric pathway-metric-warn">
+                <div class="pathway-metric-value" id="pwWastedCost">--</div>
+                <div class="pathway-metric-label">Stranded Investment</div>
+                <div class="pathway-metric-sub">Estimated wasted cost from building toward interim instead of long-term</div>
+            </div>
+            <div class="pathway-metric">
+                <div class="pathway-metric-value" id="pwDemandEffect">--</div>
+                <div class="pathway-metric-label">Demand Growth Offset</div>
+                <div class="pathway-metric-sub">How much demand growth reduces waste by absorbing surplus capacity</div>
+            </div>
+        </div>
+
         <div class="wyn-insight-box" id="wynInsightBox">
-            Select a region and threshold to see the resource comparison.
+            Select a region and matching targets to see the resource pathway comparison.
         </div>
     </div>
+</div>
 
-    <!-- Narrative content has moved to index.html (landing homepage) -->
+<!-- HERO TAKEAWAY BANNER (below results) -->
+<div class="hero-takeaway" id="heroTakeaway" style="display:none;">
+    <div class="hero-takeaway-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="8" stroke="#1E3A5F" stroke-width="2" fill="none"/>
+            <circle cx="14" cy="14" r="2.5" fill="#16A34A"/>
+            <path d="M14 3 L14 6 M14 22 L14 25 M3 14 L6 14 M22 14 L25 14" stroke="#1E3A5F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+    </div>
+    <div class="hero-takeaway-headline">
+        Investing in <em>clean firm power today</em> is the single<br>
+        most important step toward deep decarbonization
+    </div>
+    <p class="hero-takeaway-sub">
+        Our analysis of 8,760 hours across five U.S. power markets reveals that
+        <strong>renewables alone cannot achieve high hourly matching targets</strong>.
+        Beyond 90% matching, the cost curve inflects sharply and the resource mix pivots toward
+        firm, dispatchable clean generation. Organizations that rely exclusively on wind and solar
+        will face steep costs and stranded procurement as they pursue deeper decarbonization.
+        <strong>Early investment in clean firm power significantly reduces long-term costs.</strong>
+    </p>
 </div>
 
 <!-- FOOTER -->
@@ -3623,6 +3465,7 @@ function onCfCostChange() {
 function initDashboard() {
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('dashboardContent').style.display = 'block';
+    document.getElementById('heroTakeaway').style.display = 'block';
     document.getElementById('footer').style.display = 'block';
     // Narrative sections moved to index.html
 
@@ -5961,61 +5804,101 @@ function updateCO2Tile(entry) {
     }
 }
 
-// ---- What You Need: Existing vs Target Comparison Chart ----
+// ---- What You Need: Existing → Interim → Long-term in TWh ----
 let wynCompareChartInstance = null;
 
 function updateWhatYouNeedPanel(region, entry, threshold) {
+    // This is called on every dashboard update; it renders the 3-bar TWh chart
+    // and computes stranded investment metrics.
     const canvas = document.getElementById('wynCompareChart');
     const insightBox = document.getElementById('wynInsightBox');
+    const metricsEl = document.getElementById('wynMetrics');
     if (!canvas || !DATA) return;
 
     const iso = document.getElementById('regionSelect').value;
     const regionData = DATA.results?.[iso];
     if (!regionData || !entry) return;
 
-    const rc = entry.costs?.resource_costs;
-    if (!rc) {
+    const annualDemandMWh = regionData.annual_demand_mwh || 1;
+    const annualDemandTWh = annualDemandMWh / 1e6;
+
+    // Get interim entry resource costs
+    const interimRC = entry.costs?.resource_costs;
+    if (!interimRC) {
         if (insightBox) insightBox.innerHTML = 'Resource cost data not available for this threshold.';
         return;
     }
 
-    // Build two-bar comparison: "Existing Clean on Grid" vs "What It Takes to Reach X%"
+    // Long-term target
+    const longtermVal = document.getElementById('longtermTarget').value;
+    const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
+    const longtermEntry = longtermThreshold ? regionData.thresholds[longtermThreshold] : null;
+    const longtermRC = longtermEntry?.costs?.resource_costs;
+
+    // Time horizons and demand growth
+    const interimYear = parseInt(document.getElementById('interimYear')?.value || '2029', 10);
+    const longtermYear = parseInt(document.getElementById('longtermYear')?.value || '2042', 10);
+    const yearsToInterim = Math.max(1, interimYear - 2025);
+    const yearsToLongterm = Math.max(1, longtermYear - 2025);
+
+    const growthLevel = getDemandGrowthLevel();
+    const rates = DEMAND_GROWTH_RATES[iso] || DEMAND_GROWTH_RATES.CAISO;
+    const annualRate = rates[growthLevel] || rates.Medium;
+    const interimGrowthFactor = Math.pow(1 + annualRate, yearsToInterim);
+    const longtermGrowthFactor = Math.pow(1 + annualRate, yearsToLongterm);
+
+    // TWh at each stage
+    const todayTWh = annualDemandTWh;
+    const interimTWh = annualDemandTWh * interimGrowthFactor;
+    const longtermTWh = longtermRC ? annualDemandTWh * longtermGrowthFactor : null;
+
+    // Helper: extract resource data for a resource_costs object, scaled to TWh
+    function getResourceTWh(rc, demandTWh) {
+        const existing = {};
+        const newBuild = {};
+        MIX_RESOURCES.forEach(r => {
+            if (r === 'storage') {
+                existing[r] = 0;
+                newBuild[r] = (rc.storage?.dispatch_pct || 0) / 100 * demandTWh;
+            } else {
+                existing[r] = (rc[r]?.existing_pct || 0) / 100 * demandTWh;
+                newBuild[r] = (rc[r]?.new_pct || 0) / 100 * demandTWh;
+            }
+        });
+        return { existing, newBuild };
+    }
+
+    // Today: existing clean only (no target, no new build)
+    const todayData = getResourceTWh(interimRC, todayTWh);
+    // Interim target
+    const interimData = getResourceTWh(interimRC, interimTWh);
+    // Long-term target (if selected)
+    const longtermData = longtermRC ? getResourceTWh(longtermRC, longtermTWh) : null;
+
+    // Build chart labels
+    const hasLongterm = longtermData !== null;
+    const labels = hasLongterm
+        ? [`Existing Clean\nToday (${Math.round(todayTWh)} TWh demand)`,
+           `${threshold}% Target\n${interimYear} (${Math.round(interimTWh)} TWh)`,
+           `${longtermThreshold}% Target\n${longtermYear} (${Math.round(longtermTWh)} TWh)`]
+        : [`Existing Clean\nToday (${Math.round(todayTWh)} TWh demand)`,
+           `${threshold}% Target\n${interimYear} (${Math.round(interimTWh)} TWh)`];
+
     const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
     const NEW_ORDER = ['solar', 'wind', 'hydro', 'storage', 'clean_firm'];
-    const labels = ['Existing Clean\non Grid', threshold + '% Target'];
-
-    // Get existing and new data for this threshold
-    const existingVals = {};
-    const newVals = {};
-    MIX_RESOURCES.forEach(r => {
-        if (r === 'storage') {
-            existingVals[r] = 0;
-            newVals[r] = rc.storage?.dispatch_pct || 0;
-        } else {
-            existingVals[r] = rc[r]?.existing_pct || 0;
-            newVals[r] = rc[r]?.new_pct || 0;
-        }
-    });
-
-    // Total existing clean
-    let totalExisting = 0;
-    MIX_RESOURCES.forEach(r => { totalExisting += existingVals[r]; });
-
-    // Total at target = existing + new
-    let totalTarget = 0;
-    MIX_RESOURCES.forEach(r => { totalTarget += existingVals[r] + newVals[r]; });
-
-    // Build datasets: for bar 0 (existing) only existing resources, for bar 1 (target) existing + new stacked
-    const datasets = [];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
+    const datasets = [];
 
-    // Existing portion (appears in both bars)
+    // Existing portion datasets
     for (const r of EXISTING_ORDER) {
         const c = MIX_COLORS[r];
+        const data = hasLongterm
+            ? [todayData.existing[r], interimData.existing[r], longtermData.existing[r]]
+            : [todayData.existing[r], interimData.existing[r]];
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (existing)',
-            data: [existingVals[r], existingVals[r]],
+            data,
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
@@ -6025,12 +5908,15 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             _isExisting: true,
         });
     }
-    // New build portion (only in bar 1)
+    // New build portion datasets
     for (const r of NEW_ORDER) {
         const c = MIX_COLORS[r];
+        const data = hasLongterm
+            ? [0, interimData.newBuild[r], longtermData.newBuild[r]]
+            : [0, interimData.newBuild[r]];
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (new build)',
-            data: [0, newVals[r]],
+            data,
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
@@ -6042,7 +5928,18 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         });
     }
 
-    const yMax = Math.ceil(Math.max(totalExisting, totalTarget) / 10) * 10 + 10;
+    // Compute totals for y-axis
+    let maxTWh = 0;
+    for (let i = 0; i < labels.length; i++) {
+        let barTotal = 0;
+        datasets.forEach(ds => { barTotal += ds.data[i] || 0; });
+        if (barTotal > maxTWh) maxTWh = barTotal;
+    }
+    const yMax = Math.ceil(maxTWh / 10) * 10 + 5;
+
+    // Existing clean line (today's total)
+    let existingCleanTWh = 0;
+    MIX_RESOURCES.forEach(r => { existingCleanTWh += todayData.existing[r]; });
 
     if (wynCompareChartInstance) wynCompareChartInstance.destroy();
     const ctx = canvas.getContext('2d');
@@ -6098,24 +5995,25 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
                     padding: 12,
                     cornerRadius: 8,
-                    filter: function(tooltipItem) { return tooltipItem.parsed.y > 0; },
+                    filter: function(tooltipItem) { return tooltipItem.parsed.y > 0.1; },
                     callbacks: {
                         label: function(context) {
-                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}% of demand`;
+                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)} TWh`;
                         }
                     }
                 },
                 datalabels: {
                     display: function(context) {
-                        return context.dataset.data[context.dataIndex] >= 3;
+                        return context.dataset.data[context.dataIndex] >= (maxTWh * 0.03);
                     },
                     color: function(context) {
                         if (context.dataset._resourceKey === 'clean_firm') return '#FFFFFF';
                         return '#1A1A1A';
                     },
-                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 },
+                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 700 },
                     formatter: function(value) {
-                        return Math.round(value) + '%';
+                        if (value >= 10) return Math.round(value) + ' TWh';
+                        return value.toFixed(1) + ' TWh';
                     },
                     anchor: 'center',
                     align: 'center',
@@ -6124,14 +6022,14 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     annotations: {
                         existingLine: {
                             type: 'line',
-                            yMin: totalExisting,
-                            yMax: totalExisting,
+                            yMin: existingCleanTWh,
+                            yMax: existingCleanTWh,
                             borderColor: 'rgba(26,39,68,0.5)',
                             borderWidth: 2,
                             borderDash: [6, 4],
                             label: {
                                 display: true,
-                                content: 'Current grid clean: ' + Math.round(totalExisting) + '%',
+                                content: 'Current grid clean: ' + existingCleanTWh.toFixed(1) + ' TWh',
                                 position: 'start',
                                 backgroundColor: 'rgba(26,39,68,0.75)',
                                 color: '#fff',
@@ -6149,7 +6047,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     grid: { display: false },
                     border: { display: true, color: '#D4D8E0' },
                     ticks: {
-                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 600 },
                         color: '#1A2744',
                     }
                 },
@@ -6158,7 +6056,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     max: yMax,
                     title: {
                         display: true,
-                        text: 'Resources (% of demand)',
+                        text: 'Clean Energy Procurement (TWh)',
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
@@ -6167,33 +6065,176 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
-                        callback: (v) => v + '%',
+                        callback: (v) => v + ' TWh',
                     }
                 }
             }
         }
     });
 
-    // Update insight text
-    if (insightBox) {
-        const totalNew = Math.round(totalTarget - totalExisting);
-        const gap = parseFloat(threshold) - (region.baseline_hourly_match || 0);
-        // Find the dominant new resource
-        let maxNewR = 'clean_firm';
-        let maxNewVal = 0;
-        MIX_RESOURCES.forEach(r => {
-            if (newVals[r] > maxNewVal) { maxNewVal = newVals[r]; maxNewR = r; }
-        });
-        const dominantLabel = MIX_LABELS_MAP[maxNewR] || maxNewR;
+    // ---- Stranded Investment Calculation ----
+    if (hasLongterm && metricsEl) {
+        metricsEl.style.display = '';
 
-        insightBox.innerHTML = `<strong>${iso}</strong> starts with <strong>${Math.round(totalExisting)}%</strong> existing clean energy. ` +
-            `Reaching <strong>${threshold}%</strong> hourly matching requires adding <strong>${totalNew}%</strong> of demand in new resources` +
-            (totalNew > 0 ? `, led by <strong>${dominantLabel}</strong> at ${Math.round(maxNewVal)}%.` : '.') +
-            (gap > 0 ? ` That's a <strong>${Math.round(gap)} percentage point</strong> gap to close.` : '');
+        // Compare interim resource mix vs long-term resource mix
+        // Resources built for interim that exceed long-term needs → stranded
+        let totalInterimProcTWh = 0;
+        let totalCarriedTWh = 0;
+        let totalStrandedCostM = 0; // in $M
+
+        const strandedDetails = [];
+        const allResources = new Set([...Object.keys(interimRC), ...Object.keys(longtermRC)]);
+
+        allResources.forEach(r => {
+            const intRes = interimRC[r] || {};
+            const ltRes = longtermRC[r] || {};
+
+            // Interim procurement at interim demand level, in TWh
+            const interimTotalPct = intRes.total_pct_of_demand || 0;
+            const interimCostPerDemandMWh = intRes.cost_per_demand_mwh || 0;
+            const interimProcTWh = interimTotalPct / 100 * interimTWh;
+
+            // Long-term needs at long-term demand level, in TWh
+            const longtermTotalPct = ltRes.total_pct_of_demand || 0;
+            const longtermNeedTWh = longtermTotalPct / 100 * longtermTWh;
+
+            if (interimProcTWh <= 0) return;
+            totalInterimProcTWh += interimProcTWh;
+
+            // How much of interim procurement is absorbed by long-term?
+            // Demand growth helps: interim capacity serves grown long-term demand
+            const carriedTWh = Math.min(interimProcTWh, longtermNeedTWh);
+            const strandedTWh = Math.max(0, interimProcTWh - longtermNeedTWh);
+            totalCarriedTWh += carriedTWh;
+
+            // Stranded cost = stranded TWh × cost per MWh (proportional allocation)
+            if (strandedTWh > 0) {
+                const strandedCostM = strandedTWh * 1e6 * interimCostPerDemandMWh / 1e6; // $M
+                totalStrandedCostM += strandedCostM;
+                strandedDetails.push({
+                    resource: RESOURCE_DISPLAY_NAMES[r] || r,
+                    strandedTWh,
+                    interimTWh: interimProcTWh,
+                    longtermTWh: longtermNeedTWh,
+                });
+            }
+        });
+
+        const carriedPct = totalInterimProcTWh > 0
+            ? (totalCarriedTWh / totalInterimProcTWh * 100) : 100;
+        const strandedPct = 100 - carriedPct;
+
+        // Also compute static (no growth) version for demand offset
+        const staticInterimTWh_total = Object.keys(interimRC).reduce((s, r) => {
+            return s + (interimRC[r]?.total_pct_of_demand || 0) / 100 * todayTWh;
+        }, 0);
+        const staticCarriedTWh = Object.keys(interimRC).reduce((s, r) => {
+            const intPct = interimRC[r]?.total_pct_of_demand || 0;
+            const ltPct = (longtermRC[r]?.total_pct_of_demand || 0);
+            const intT = intPct / 100 * todayTWh;
+            const ltT = ltPct / 100 * todayTWh; // no growth
+            return s + Math.min(intT, ltT);
+        }, 0);
+        const staticCarriedPct = staticInterimTWh_total > 0
+            ? (staticCarriedTWh / staticInterimTWh_total * 100) : 100;
+        const demandOffset = carriedPct - staticCarriedPct;
+
+        // Stranded cost as $/MWh of demand (more relatable)
+        const strandedPerMWh = totalStrandedCostM * 1e6 / (interimTWh * 1e6);
+
+        // Update metrics
+        const pwCarried = document.getElementById('pwCarriedForward');
+        const pwWasted = document.getElementById('pwWastedCost');
+        const pwDemand = document.getElementById('pwDemandEffect');
+
+        if (pwCarried) pwCarried.textContent = Math.round(carriedPct) + '%';
+        if (pwWasted) {
+            if (strandedPerMWh > 0.5) {
+                pwWasted.textContent = '$' + strandedPerMWh.toFixed(1) + '/MWh';
+                pwWasted.closest('.pathway-metric')?.classList.add('pathway-metric-warn');
+            } else {
+                pwWasted.textContent = '~$0';
+                pwWasted.closest('.pathway-metric')?.classList.remove('pathway-metric-warn');
+            }
+        }
+        if (pwDemand) {
+            if (demandOffset > 0.5) {
+                pwDemand.textContent = '+' + Math.round(demandOffset) + ' pp';
+            } else {
+                pwDemand.textContent = 'Minimal';
+            }
+        }
+
+        // Narrative
+        if (insightBox) {
+            const isoLabel = regionData.label?.split(' (')[0] || iso;
+            let narrative = '';
+            if (carriedPct >= 95) {
+                narrative = `<strong>Nearly all interim investment carries forward.</strong> Moving from ` +
+                    `<strong>${threshold}%</strong> to <strong>${longtermThreshold}%</strong> in ${isoLabel} ` +
+                    `is highly capital-efficient — ${Math.round(carriedPct)}% of your ${Math.round(interimTWh)} TWh ` +
+                    `interim portfolio remains useful at the ${Math.round(longtermTWh)} TWh long-term state.`;
+            } else if (carriedPct >= 75) {
+                const topStranded = strandedDetails.sort((a, b) => b.strandedTWh - a.strandedTWh)[0];
+                narrative = `<strong>Most interim investment carries forward, with some rebalancing.</strong> ` +
+                    `${Math.round(carriedPct)}% of your interim procurement remains useful.`;
+                if (topStranded) {
+                    narrative += ` The main shift: <strong>${topStranded.resource}</strong> has ` +
+                        `${topStranded.strandedTWh.toFixed(1)} TWh of stranded capacity as the mix shifts toward ` +
+                        `firm generation at ${longtermThreshold}%.`;
+                }
+                if (strandedPerMWh > 1) {
+                    narrative += ` Building strategically toward ${longtermThreshold}% from the start could save ` +
+                        `~<strong>$${strandedPerMWh.toFixed(1)}/MWh</strong> of stranded investment.`;
+                }
+            } else {
+                narrative = `<strong>Significant portfolio restructuring required.</strong> ` +
+                    `Only <strong>${Math.round(carriedPct)}%</strong> of the ${threshold}% portfolio carries ` +
+                    `to the ${longtermThreshold}% end state.`;
+                if (strandedDetails.length > 0) {
+                    const topTwo = strandedDetails.sort((a, b) => b.strandedTWh - a.strandedTWh).slice(0, 2);
+                    narrative += ` Biggest stranded assets: ` + topTwo.map(s =>
+                        `<strong>${s.resource}</strong> (${s.strandedTWh.toFixed(1)} TWh excess)`
+                    ).join(' and ') + '.';
+                }
+                if (strandedPerMWh > 2) {
+                    narrative += ` This represents <strong>$${strandedPerMWh.toFixed(1)}/MWh</strong> of wasted ` +
+                        `investment — the cost of optimizing for ${threshold}% instead of building toward ` +
+                        `${longtermThreshold}% from day one.`;
+                }
+                if (demandOffset > 3) {
+                    narrative += ` Demand growth of ${(annualRate * 100).toFixed(1)}%/yr helps absorb ` +
+                        `<strong>${Math.round(demandOffset)} pp</strong> of surplus vs. static demand.`;
+                }
+            }
+            insightBox.innerHTML = narrative;
+        }
+    } else {
+        // No long-term target selected — show simpler insight, hide metrics
+        if (metricsEl) metricsEl.style.display = 'none';
+        if (insightBox) {
+            let totalExistingTWh = 0;
+            let totalTargetTWh = 0;
+            MIX_RESOURCES.forEach(r => {
+                totalExistingTWh += todayData.existing[r];
+                totalTargetTWh += interimData.existing[r] + interimData.newBuild[r];
+            });
+            const newBuildTWh = totalTargetTWh - totalExistingTWh;
+            // Dominant new resource
+            let maxR = 'clean_firm', maxV = 0;
+            MIX_RESOURCES.forEach(r => {
+                if (interimData.newBuild[r] > maxV) { maxV = interimData.newBuild[r]; maxR = r; }
+            });
+            insightBox.innerHTML = `<strong>${iso}</strong> has <strong>${totalExistingTWh.toFixed(1)} TWh</strong> of existing clean energy. ` +
+                `Reaching <strong>${threshold}%</strong> hourly matching by ${interimYear} requires ` +
+                `<strong>${newBuildTWh.toFixed(1)} TWh</strong> of new procurement` +
+                (maxV > 0.1 ? `, led by <strong>${MIX_LABELS_MAP[maxR]}</strong> at ${maxV.toFixed(1)} TWh.` : '.') +
+                ` Select a <strong>long-term target</strong> above to see stranded investment analysis.`;
+        }
     }
 }
 
-// ---- Pathway Analysis: Interim → Long-term Target with ISO-Specific Demand Growth ----
+// ---- Pathway Analysis: demand growth + stranded investment ----
 
 // ISO-specific annual demand growth rates (based on ISO forecasts and EIA/FERC data)
 const DEMAND_GROWTH_RATES = {
@@ -6225,18 +6266,15 @@ function initPathwayAnalysis() {
     const longtermSel = document.getElementById('longtermTarget');
     const regionSel = document.getElementById('regionSelect');
 
-    // Populate long-term target options based on available thresholds
     function populateLongtermOptions() {
         const interimVal = parseInt(interimSel.value, 10);
         const currentLtVal = longtermSel.value;
-        // Clear existing options (keep "Same as Interim")
         longtermSel.innerHTML = '<option value="">Same as Interim</option>';
 
         const iso = regionSel.value;
         const region = DATA?.results?.[iso];
         if (!region) return;
 
-        // Get available thresholds and add those >= interim
         const available = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
         available.forEach(t => {
             if (t > interimVal) {
@@ -6247,43 +6285,47 @@ function initPathwayAnalysis() {
             }
         });
 
-        // Restore previous selection if still valid
         if (currentLtVal && longtermSel.querySelector(`option[value="${currentLtVal}"]`)) {
             longtermSel.value = currentLtVal;
         }
     }
 
-    // Update long-term options when interim target or region changes
+    // Re-render the unified panel when pathway controls change
+    function triggerRerender() {
+        updateDemandGrowthLabel();
+        // Call the main dashboard update to re-render the WYN chart
+        const iso = regionSel.value;
+        const region = DATA?.results?.[iso];
+        if (!region) return;
+        const threshold = document.getElementById('thresholdSelect').value;
+        const entry = region.thresholds[findClosestThreshold(region, threshold)];
+        if (entry) updateWhatYouNeedPanel(region, entry, threshold);
+    }
+
     interimSel.addEventListener('change', () => {
         populateLongtermOptions();
-        updatePathwayAnalysis();
+        triggerRerender();
     });
     regionSel.addEventListener('change', () => {
         populateLongtermOptions();
-        updateDemandGrowthLabel();
-        updatePathwayAnalysis();
+        triggerRerender();
     });
-    longtermSel.addEventListener('change', updatePathwayAnalysis);
+    longtermSel.addEventListener('change', triggerRerender);
+    document.getElementById('interimYear')?.addEventListener('change', triggerRerender);
+    document.getElementById('longtermYear')?.addEventListener('change', triggerRerender);
 
-    // Bind pathway control events
-    document.getElementById('interimYear')?.addEventListener('change', updatePathwayAnalysis);
-    document.getElementById('longtermYear')?.addEventListener('change', updatePathwayAnalysis);
-
-    // Bind demand growth toggle buttons
     const demandGrowthBtns = document.querySelectorAll('[data-toggle-group="demand_growth"]');
     demandGrowthBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('[data-toggle-group="demand_growth"]').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            updatePathwayAnalysis();
+            triggerRerender();
         });
     });
 
-    // Initial population
     if (DATA) {
         populateLongtermOptions();
         updateDemandGrowthLabel();
-        updatePathwayAnalysis();
     }
 }
 
@@ -6303,197 +6345,9 @@ function updateDemandGrowthLabel() {
     display.innerHTML = `<strong>${(rate * 100).toFixed(1)}%/yr</strong> — ${rates.label}`;
 }
 
+// updatePathwayAnalysis is now a no-op — all logic merged into updateWhatYouNeedPanel
 function updatePathwayAnalysis() {
-    const panel = document.getElementById('pathwayPanel');
-    const longtermVal = document.getElementById('longtermTarget').value;
-    const iso = document.getElementById('regionSelect').value;
-
-    // Update demand growth label whenever pathway recalculates
     updateDemandGrowthLabel();
-
-    // Hide panel if no long-term target selected
-    if (!longtermVal || !DATA) {
-        if (panel) panel.style.display = 'none';
-        return;
-    }
-
-    const region = DATA.results[iso];
-    if (!region) return;
-
-    const interimThreshold = findClosestThreshold(region, document.getElementById('thresholdSelect').value);
-    const longtermThreshold = findClosestThreshold(region, longtermVal);
-
-    const interimEntry = region.thresholds[interimThreshold];
-    const longtermEntry = region.thresholds[longtermThreshold];
-
-    if (!interimEntry || !longtermEntry) {
-        if (panel) panel.style.display = 'none';
-        return;
-    }
-
-    // Show panel
-    panel.style.display = 'block';
-
-    // Time period
-    const interimYear = parseInt(document.getElementById('interimYear')?.value || '2029', 10);
-    const longtermYear = parseInt(document.getElementById('longtermYear')?.value || '2042', 10);
-    const years = Math.max(1, longtermYear - interimYear);
-
-    // Demand growth
-    const growthLevel = getDemandGrowthLevel();
-    const rates = DEMAND_GROWTH_RATES[iso] || DEMAND_GROWTH_RATES.CAISO;
-    const annualRate = rates[growthLevel] || rates.Medium;
-    const growthFactor = Math.pow(1 + annualRate, years);
-
-    // Get resource-level data
-    const interimCosts = interimEntry.costs?.resource_costs || {};
-    const longtermCosts = longtermEntry.costs?.resource_costs || {};
-    const allResources = new Set([...Object.keys(interimCosts), ...Object.keys(longtermCosts)]);
-
-    let totalInterimPctOfDemand = 0;
-    let totalCarriedStatic = 0;
-    let totalCarriedGrowth = 0;
-    let totalStrandedCostStatic = 0;
-    let totalStrandedCostGrowth = 0;
-    let strandedDetails = [];
-
-    allResources.forEach(r => {
-        const intRes = interimCosts[r] || {};
-        const ltRes = longtermCosts[r] || {};
-
-        const interimPct = intRes.total_pct_of_demand || 0;
-        const longtermPct = ltRes.total_pct_of_demand || 0;
-        const interimCostPerDemand = intRes.cost_per_demand_mwh || 0;
-
-        if (interimPct <= 0) return;
-
-        totalInterimPctOfDemand += interimPct;
-
-        // Static analysis (no demand growth)
-        const carriedStatic = Math.min(interimPct, longtermPct);
-        const strandedStatic = Math.max(0, interimPct - longtermPct);
-        totalCarriedStatic += carriedStatic;
-
-        // Stranded cost (proportional to stranded fraction of that resource)
-        if (strandedStatic > 0 && interimPct > 0) {
-            const strandedFraction = strandedStatic / interimPct;
-            totalStrandedCostStatic += interimCostPerDemand * strandedFraction;
-        }
-
-        // Growth-adjusted analysis
-        // Interim capacity as % of new (grown) demand
-        const interimPctOfNewDemand = interimPct / growthFactor;
-        const carriedGrowth = Math.min(interimPctOfNewDemand, longtermPct);
-        const strandedGrowth = Math.max(0, interimPctOfNewDemand - longtermPct);
-        totalCarriedGrowth += carriedGrowth;
-
-        if (strandedGrowth > 0 && interimPctOfNewDemand > 0) {
-            const strandedFractionG = strandedGrowth / interimPctOfNewDemand;
-            totalStrandedCostGrowth += (interimCostPerDemand / growthFactor) * strandedFractionG;
-        }
-
-        // Track stranded details for narrative
-        if (strandedStatic > 0) {
-            strandedDetails.push({
-                resource: RESOURCE_DISPLAY_NAMES[r] || r,
-                strandedStatic: strandedStatic,
-                strandedGrowth: strandedGrowth,
-                interimPct: interimPct,
-                longtermPct: longtermPct
-            });
-        }
-    });
-
-    // Calculate percentages
-    const carriedForwardStatic = totalInterimPctOfDemand > 0
-        ? (totalCarriedStatic / totalInterimPctOfDemand * 100) : 100;
-
-    const interimPctOfNewDemandTotal = totalInterimPctOfDemand / growthFactor;
-    const carriedForwardGrowth = interimPctOfNewDemandTotal > 0
-        ? (totalCarriedGrowth / interimPctOfNewDemandTotal * 100) : 100;
-
-    const demandOffset = carriedForwardGrowth - carriedForwardStatic;
-
-    // Update UI
-    const pwCarried = document.getElementById('pwCarriedForward');
-    const pwWasted = document.getElementById('pwWastedCost');
-    const pwDemand = document.getElementById('pwDemandEffect');
-    const pwInsight = document.getElementById('pathwayInsight');
-
-    if (pwCarried) pwCarried.textContent = Math.round(carriedForwardGrowth) + '%';
-    if (pwWasted) {
-        if (totalStrandedCostGrowth > 0.5) {
-            pwWasted.textContent = '$' + totalStrandedCostGrowth.toFixed(1) + '/MWh';
-        } else {
-            pwWasted.textContent = '~$0';
-            // Remove warn styling if no stranding
-            pwWasted.closest('.pathway-metric')?.classList.remove('pathway-metric-warn');
-        }
-        // Add warn styling if stranding is significant
-        if (totalStrandedCostGrowth > 2) {
-            pwWasted.closest('.pathway-metric')?.classList.add('pathway-metric-warn');
-        }
-    }
-    if (pwDemand) {
-        if (demandOffset > 0.5) {
-            pwDemand.textContent = '+' + Math.round(demandOffset) + ' pp';
-        } else {
-            pwDemand.textContent = 'Minimal';
-        }
-    }
-
-    // Generate narrative insight
-    if (pwInsight) {
-        const isoLabel = region.label?.split(' (')[0] || iso;
-        const interimProcPct = interimEntry.procurement_pct;
-        const longtermProcPct = longtermEntry.procurement_pct;
-
-        let narrative = '';
-        if (carriedForwardGrowth >= 95) {
-            narrative = `<strong>Nearly all interim investment carries forward.</strong> Moving from ` +
-                `<strong>${interimThreshold}%</strong> to <strong>${longtermThreshold}%</strong> in ${isoLabel} ` +
-                `is highly capital-efficient. The ${interimProcPct}% procurement at the interim level is almost ` +
-                `entirely absorbed by the long-term ${longtermProcPct}% portfolio, especially with ` +
-                `${(annualRate * 100).toFixed(1)}%/yr demand growth over ${years} years.`;
-        } else if (carriedForwardGrowth >= 75) {
-            const topStranded = strandedDetails.sort((a, b) => b.strandedGrowth - a.strandedGrowth)[0];
-            narrative = `<strong>Most interim investment carries forward, with some rebalancing needed.</strong> ` +
-                `Moving from <strong>${interimThreshold}%</strong> to <strong>${longtermThreshold}%</strong> ` +
-                `in ${isoLabel}: <strong>${Math.round(carriedForwardGrowth)}%</strong> of your interim procurement ` +
-                `remains useful at the long-term target.`;
-            if (topStranded) {
-                narrative += ` The main shift: <strong>${topStranded.resource}</strong> drops from ` +
-                    `${topStranded.interimPct.toFixed(0)}% to ${topStranded.longtermPct.toFixed(0)}% of demand ` +
-                    `as the optimal mix shifts toward firm generation at higher match levels.`;
-            }
-            if (demandOffset > 2) {
-                narrative += ` Demand growth of ${(annualRate * 100).toFixed(1)}%/yr absorbs much of this surplus — ` +
-                    `without growth, only ${Math.round(carriedForwardStatic)}% would carry forward.`;
-            }
-        } else {
-            narrative = `<strong>Significant portfolio restructuring required.</strong> ` +
-                `The jump from <strong>${interimThreshold}%</strong> to <strong>${longtermThreshold}%</strong> ` +
-                `in ${isoLabel} means the optimal resource mix shifts substantially. Only ` +
-                `<strong>${Math.round(carriedForwardGrowth)}%</strong> of interim procurement remains useful.`;
-            if (strandedDetails.length > 0) {
-                const topTwo = strandedDetails.sort((a, b) => b.strandedGrowth - a.strandedGrowth).slice(0, 2);
-                narrative += ` The biggest shifts: `;
-                narrative += topTwo.map(s =>
-                    `<strong>${s.resource}</strong> (${s.interimPct.toFixed(0)}% → ${s.longtermPct.toFixed(0)}%)`
-                ).join(' and ') + '.';
-            }
-            if (totalStrandedCostGrowth > 2) {
-                narrative += ` This represents roughly <strong>$${totalStrandedCostGrowth.toFixed(1)}/MWh</strong> ` +
-                    `of stranded investment — resources procured for the interim target that don't contribute ` +
-                    `to the long-term goal.`;
-            }
-            if (demandOffset > 3) {
-                narrative += ` However, demand growth helps: at ${(annualRate * 100).toFixed(1)}%/yr, the carried-forward ` +
-                    `rate improves by <strong>${Math.round(demandOffset)} percentage points</strong> vs. static demand.`;
-            }
-        }
-        pwInsight.innerHTML = narrative;
-    }
 }
 
 // ---- Navigation Hamburger Menu ----
