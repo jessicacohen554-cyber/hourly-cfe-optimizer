@@ -56,7 +56,7 @@
 
 ### Preserved (2):
 1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
-2. **Threshold select** (7 values: 75, 80, 85, 90, 95, 99, 100)
+2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100)
 
 ### Paired sensitivity toggles (5 groups replacing 10 individual):
 
@@ -81,7 +81,7 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 
 **NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
 
-**Optimizer approach**: Resource mix optimized ONCE at Medium costs. Dashboard applies L/M/H cost overlays on cached mixes without re-optimizing.
+**Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. 324 scenarios × 10 thresholds × 5 regions = 16,200 independent co-optimizations, with matching score cache shared across cost scenarios (physics reuse, not a shortcut).
 
 **Grid mix baseline**: Selectable as reference scenario (not a toggle — fixed 2025 actual at wholesale)
 
@@ -563,11 +563,11 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 | Item | Count |
 |---|---|
 | Resources | 7 |
-| Thresholds | 7 (reduced from 18) |
+| Thresholds | 10 (reduced from 18) |
 | Regions | 5 |
 | Dashboard controls | 7 (2 existing + 5 paired toggles) |
 | Paired toggle groups | 5 (from 10 individual toggles) |
-| Cost scenarios per region/threshold | 324 (3×3×3×3×4) |
+| Cost scenarios per region/threshold | 324 (3×3×3×3×4) — each independently co-optimized |
 | New chart types | 2 (average + marginal abatement curves) |
 | New panels | 1 ("What You Need" panel) |
 | New metric tiles | 1 (CO2 abated) |
