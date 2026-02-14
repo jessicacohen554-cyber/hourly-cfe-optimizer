@@ -574,12 +574,15 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 **Why this matters**: This reframes the "100% clean grid" question. If DAC-on-curtailment is cheaper than the last 5-10% of grid matching, the rational strategy is to overbuild VRE (creating more curtailment) and co-locate DAC — achieving net-zero at lower total cost than pure grid matching.
 
-**DAC CapEx vs. curtailment capacity factor**:
-- Running DAC only on curtailed hours (15-30% CF) increases amortized CapEx/ton by 3-6x
-- Energy savings ($120-170/ton) partially offset but don't fully compensate
-- **Optimal: Hybrid model** — DAC runs baseload at 70-80% CF (grid power), with curtailed hours as supplemental free energy
-- This spreads CapEx over sufficient tons while capturing curtailment energy savings
-- The MAC curves for DAC typically assume ~90% CF with market-rate power; our model should account for the CF impact on per-ton costs
+**DAC operating model: curtailment-only (20-30% CF)**:
+- DAC as a **grid balancing tool** — runs only on otherwise-curtailed renewable energy
+- This avoids adding demand that competes with other loads, which would drive up wholesale prices and congestion
+- From a social good standpoint: DAC should not increase grid costs; it should absorb energy that would be wasted
+- At 20-30% CF: CapEx/ton is 3-6x higher than full utilization, but energy cost is near-zero ($0-5/MWh)
+- 2025 total: ~$835/ton (too expensive); **2040 projected: ~$360-410/ton** (competitive above 96-97% grid MAC)
+- **2045-2050 projected: ~$280-320/ton** (competitive above 93-95% grid MAC in most regions)
+- Standard DAC MAC curves assume ~90% CF — our model adjusts for curtailment-only operation
+- Additional value not captured in per-ton cost: DAC provides grid stabilization by absorbing excess generation
 
 **Abatement page section**: Dedicated section with narrative walkthrough + findings in the Key Insights panel at top.
 
