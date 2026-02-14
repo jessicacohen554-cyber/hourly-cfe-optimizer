@@ -535,11 +535,12 @@ body {
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="top-nav-inner">
+        <a href="index.html">Home</a>
         <a href="dashboard.html">Dashboard</a>
         <a href="region_deepdive.html" class="nav-active">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">Marginal CO2 Abatement Analysis</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement</a>
         <a href="optimizer_methodology.html">Methodology</a>
-        <a href="research_paper.html">Paper</a>
+        <a href="research_paper.html">Research Paper</a>
     </div>
 </nav>
 
@@ -690,7 +691,7 @@ body {
             <h2>Carbon Abatement Economics</h2>
 
             <div class="chart-container">
-                <div class="chart-title">Cost per Ton of CO2 Avoided</div>
+                <div class="chart-title">Cost per Ton of CO&#8322; Avoided</div>
                 <canvas id="abatementChart"></canvas>
             </div>
 
@@ -801,7 +802,7 @@ body {
 <footer class="page-footer">
     <div class="footer-links">
         <a href="dashboard.html">Back to Dashboard</a>
-        <a href="abatement_comparison.html">Marginal CO2 Abatement Analysis</a>
+        <a href="abatement_comparison.html">Marginal CO&#8322; Abatement Analysis</a>
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
     </div>
@@ -1020,19 +1021,7 @@ body {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    annotation: {
-                        annotations: {
-                            wholesale: {
-                                type: 'line', yMin: wholesalePrice, yMax: wholesalePrice,
-                                borderColor: 'rgba(107,114,128,0.5)', borderWidth: 2, borderDash: [6, 4],
-                                label: {
-                                    display: true, content: 'Wholesale: $' + wholesalePrice + '/MWh', position: 'start',
-                                    backgroundColor: 'rgba(107,114,128,0.8)', color: '#fff',
-                                    font: { size: 11, weight: '600' }, borderRadius: 4
-                                }
-                            }
-                        }
-                    },
+                    annotation: { annotations: {} },
                     tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) + '/MWh' } }
                 },
                 scales: {
@@ -1612,7 +1601,7 @@ body {
                 labels: thresholdLabels,
                 datasets: [
                     {
-                        label: 'Average $/ton CO2',
+                        label: 'Average $/ton CO\u2082',
                         data: avgAbatement,
                         backgroundColor: 'rgba(30,58,95,0.50)',
                         borderColor: '#1E3A5F',
@@ -1621,7 +1610,7 @@ body {
                         order: 2
                     },
                     {
-                        label: 'Marginal $/ton CO2',
+                        label: 'Marginal $/ton CO\u2082',
                         data: margAbatement,
                         type: 'line',
                         borderColor: '#EF4444',
@@ -1645,7 +1634,7 @@ body {
                     tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(0) + '/ton' } }
                 },
                 scales: {
-                    y: { beginAtZero: true, title: { display: true, text: 'Abatement Cost ($/ton CO2)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Abatement Cost ($/ton CO\u2082)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
                     x: { title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
                 }
             }
@@ -1654,10 +1643,10 @@ body {
         const avgAt90 = avgAbatement[thresholds.indexOf(90)] || avgAbatement[avgAbatement.length - 3] || 0;
         document.getElementById('insightAbatement').innerHTML =
             '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> At ' + currentRegion + '\'s emission rate of ' +
-            emissionRate.toFixed(2) + ' tCO2/MWh, the average abatement cost at 90% is ~$' + avgAt90.toFixed(0) +
+            emissionRate.toFixed(2) + ' tCO\u2082/MWh, the average abatement cost at 90% is ~$' + avgAt90.toFixed(0) +
             '/ton. The marginal cost rises steeply above 95%, reflecting the expense of eliminating the last few hours of fossil generation.</div>';
         document.getElementById('narrativeAbatement').textContent =
-            'Each clean MWh displaces ' + emissionRate.toFixed(2) + ' metric tons of CO2 from fossil generation in this region. ' +
+            'Each clean MWh displaces ' + emissionRate.toFixed(2) + ' metric tons of CO\u2082 from fossil generation in this region. ' +
             'The early tons are cheap; the last tons are expensive. Understanding this curve helps set realistic decarbonization budgets.';
 
         // ========== CHART 6: Regional comparison ==========
