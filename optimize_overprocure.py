@@ -1882,9 +1882,47 @@ ALL_COST_SCENARIOS = generate_all_cost_scenarios()
 COST_SCENARIO_MAP = {key: levels for key, levels in ALL_COST_SCENARIOS}
 
 
+CHECKPOINT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'checkpoints')
+
+
+def save_checkpoint(iso, iso_results, phase='threshold'):
+    """Save incremental checkpoint for an ISO's results."""
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    ckpt_path = os.path.join(CHECKPOINT_DIR, f'{iso}_checkpoint.json')
+    with open(ckpt_path, 'w') as f:
+        json.dump({'iso': iso, 'phase': phase, 'results': iso_results}, f)
+    print(f"    [checkpoint] Saved {iso} ({phase}) → {os.path.getsize(ckpt_path)/1024:.0f} KB")
+
+
+def load_checkpoint(iso):
+    """Load existing checkpoint for an ISO. Returns (iso_results, completed_thresholds) or None."""
+    ckpt_path = os.path.join(CHECKPOINT_DIR, f'{iso}_checkpoint.json')
+    if not os.path.exists(ckpt_path):
+        return None
+    try:
+        with open(ckpt_path) as f:
+            data = json.load(f)
+        iso_results = data['results']
+        completed = set(iso_results.get('thresholds', {}).keys())
+        phase = data.get('phase', 'unknown')
+        print(f"    [checkpoint] Resuming {iso} from {phase}: "
+              f"{len(completed)} thresholds already done")
+        return iso_results, completed
+    except Exception as e:
+        print(f"    [checkpoint] Failed to load {iso}: {e}")
+        return None
+
+
+def clear_checkpoint(iso):
+    """Remove checkpoint after ISO is fully complete."""
+    ckpt_path = os.path.join(CHECKPOINT_DIR, f'{iso}_checkpoint.json')
+    if os.path.exists(ckpt_path):
+        os.remove(ckpt_path)
+
+
 def process_iso(args):
     """
-    Process a single ISO region. Called by multiprocessing pool.
+    Process a single ISO region. Called sequentially.
 
     For each threshold:
       1. Run full 3-phase co-optimization for all 324 cost scenarios
@@ -1894,6 +1932,9 @@ def process_iso(args):
       5. Post-hoc monotonicity re-sweep: if cost(T_lower) > cost(T_higher), re-sweep
          T_lower with broader parameters (5% Phase 1 step, expanded procurement range,
          seed mixes from T_higher) to find the true optimum — up to 2 rounds
+
+    Saves checkpoint after each threshold so progress is never lost.
+    Resumes from checkpoint if one exists for this ISO.
     """
     # Unpack args — supports both old (4-tuple) and new (5-tuple) format
     if len(args) == 5:
@@ -1913,62 +1954,89 @@ def process_iso(args):
     np_profiles = prepare_numpy_profiles(demand_norm, supply_profiles)
     demand_total_mwh = demand_data[iso]['total_annual_mwh']
 
-    iso_results = {
-        'iso': iso,
-        'label': ISO_LABELS[iso],
-        'annual_demand_mwh': demand_total_mwh,
-        'peak_demand_mw': demand_data[iso]['peak_mw'],
-        'sweep': [],
-        'thresholds': {},
-    }
+    # ── Check for existing checkpoint to resume from ──
+    checkpoint = load_checkpoint(iso)
+    completed_thresholds = set()
+    if checkpoint:
+        iso_results, completed_thresholds = checkpoint
+        # Re-derive sweep_results dict from stored sweep list (if any)
+        if iso_results.get('sweep'):
+            print(f"  Resuming from checkpoint: sweep done, "
+                  f"{len(completed_thresholds)} thresholds complete")
+        else:
+            print(f"  Checkpoint found but no sweep — starting fresh")
+            checkpoint = None
+
+    if not checkpoint:
+        iso_results = {
+            'iso': iso,
+            'label': ISO_LABELS[iso],
+            'annual_demand_mwh': demand_total_mwh,
+            'peak_demand_mw': demand_data[iso]['peak_mw'],
+            'sweep': [],
+            'thresholds': {},
+        }
 
     # ---- SWEEP: max-matching runs for the sweep chart visualization ----
-    print(f"  Sweep: max-matching at key procurement levels...")
-    sweep_results = {}
-    for proc_pct in list(range(70, 130, 10)) + list(range(140, 520, 20)):
-        result = optimize_at_procurement_level(
-            iso, demand_norm, supply_profiles, proc_pct, hydro_cap,
-            np_profiles=np_profiles
-        )
-        sweep_results[proc_pct] = result
-        score = result['hourly_match_score']
-        print(f"    {proc_pct}%: {score}% match")
-        if score >= 99.95 and proc_pct >= 140:
-            break
+    if not iso_results.get('sweep'):
+        print(f"  Sweep: max-matching at key procurement levels...")
+        sweep_results = {}
+        for proc_pct in list(range(70, 130, 10)) + list(range(140, 520, 20)):
+            result = optimize_at_procurement_level(
+                iso, demand_norm, supply_profiles, proc_pct, hydro_cap,
+                np_profiles=np_profiles
+            )
+            sweep_results[proc_pct] = result
+            score = result['hourly_match_score']
+            print(f"    {proc_pct}%: {score}% match")
+            if score >= 99.95 and proc_pct >= 140:
+                break
+    else:
+        print(f"  Sweep: loaded from checkpoint ({len(iso_results['sweep'])} points)")
+        sweep_results = None  # Already in iso_results['sweep']
 
-    # Build sweep with costs, peak gap, and CO2
-    for p in sorted(sweep_results.keys()):
-        r = sweep_results[p]
-        peak_gap = compute_peak_gap(
-            demand_norm, supply_profiles, r['resource_mix'],
-            r['procurement_pct'], r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
-            anomaly_hours
-        )
-        r['peak_gap_pct'] = peak_gap
-        costs = compute_costs(
-            iso, r['resource_mix'], r['procurement_pct'],
-            r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
-            r['hourly_match_score'],
-            demand_norm, supply_profiles
-        )
-        r['costs'] = costs
-        co2 = compute_co2_abatement(
-            iso, r['resource_mix'], r['procurement_pct'], r['hourly_match_score'],
-            r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
-            emission_rates, demand_total_mwh,
-            demand_norm=demand_norm, supply_profiles=supply_profiles,
-            fossil_mix=fossil_mix
-        )
-        r['co2_abated'] = co2
-        iso_results['sweep'].append(r)
+    # Build sweep with costs, peak gap, and CO2 (skip if loaded from checkpoint)
+    if sweep_results is not None:
+        for p in sorted(sweep_results.keys()):
+            r = sweep_results[p]
+            peak_gap = compute_peak_gap(
+                demand_norm, supply_profiles, r['resource_mix'],
+                r['procurement_pct'], r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
+                anomaly_hours
+            )
+            r['peak_gap_pct'] = peak_gap
+            costs = compute_costs(
+                iso, r['resource_mix'], r['procurement_pct'],
+                r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
+                r['hourly_match_score'],
+                demand_norm, supply_profiles
+            )
+            r['costs'] = costs
+            co2 = compute_co2_abatement(
+                iso, r['resource_mix'], r['procurement_pct'], r['hourly_match_score'],
+                r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
+                emission_rates, demand_total_mwh,
+                demand_norm=demand_norm, supply_profiles=supply_profiles,
+                fossil_mix=fossil_mix
+            )
+            r['co2_abated'] = co2
+            iso_results['sweep'].append(r)
+        save_checkpoint(iso, iso_results, phase='sweep')
 
     # ---- THRESHOLDS: co-optimize cost + matching for ALL 324 cost scenarios ----
-    print(f"\n  Cost-optimizing thresholds (324 scenarios each)...")
+    remaining = [t for t in THRESHOLDS if str(t) not in completed_thresholds]
+    print(f"\n  Cost-optimizing thresholds (324 scenarios each)... "
+          f"[{len(THRESHOLDS) - len(remaining)} done, {len(remaining)} remaining]")
 
     # Each threshold optimized independently; monotonicity enforced via
     # post-hoc re-sweep with broader parameters (not by result replacement)
 
     for threshold in THRESHOLDS:
+        t_str = str(threshold)
+        if t_str in completed_thresholds:
+            print(f"    {threshold}%: loaded from checkpoint — skipping")
+            continue
+
         t_start = time.time()
         # Fresh matching cache per threshold — no cross-threshold contamination
         score_cache = {}
@@ -2099,6 +2167,8 @@ def process_iso(args):
             'scenarios': threshold_scenarios,
             'scenario_count': len(threshold_scenarios),
         }
+        # Checkpoint after each threshold — never lose more than one threshold's work
+        save_checkpoint(iso, iso_results, phase=f'threshold-{threshold}')
 
     # ---- MONOTONICITY RE-SWEEP ----
     # For each cost scenario, cost must be non-decreasing across thresholds.
@@ -2308,6 +2378,8 @@ def process_iso(args):
         else:
             print(f"  All monotonicity violations resolved after {MAX_RESWEEP_ROUNDS} rounds")
 
+    # ISO complete — clear checkpoint (full results saved in main())
+    clear_checkpoint(iso)
     return iso, iso_results
 
 
@@ -2371,30 +2443,24 @@ def main():
         'results': {},
     }
 
-    # Run all 5 ISOs concurrently using multiprocessing
-    worker_args = [
-        (iso, demand_data, gen_profiles, emission_rates, fossil_mix)
-        for iso in ISOS
-    ]
-
-    try:
-        with Pool(processes=min(5, len(ISOS))) as pool:
-            results_list = pool.map(process_iso, worker_args)
-
-        for iso, iso_results in results_list:
-            all_results['results'][iso] = iso_results
-    except Exception as e:
-        # Fallback to sequential if multiprocessing fails (e.g., in some environments)
-        print(f"\n  Multiprocessing failed ({e}), falling back to sequential...")
-        for args in worker_args:
-            iso, iso_results = process_iso(args)
-            all_results['results'][iso] = iso_results
-
-    # Save results (dashboard consumption)
     output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard', 'overprocure_results.json')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, 'w') as f:
-        json.dump(all_results, f)
+
+    # Run ISOs sequentially to avoid memory pressure and enable incremental saves.
+    # Each ISO does 10 thresholds × 324 scenarios — heavy compute per ISO.
+    for iso in ISOS:
+        iso_start = time.time()
+        args = (iso, demand_data, gen_profiles, emission_rates, fossil_mix)
+        iso_name, iso_results = process_iso(args)
+        all_results['results'][iso_name] = iso_results
+        iso_elapsed = time.time() - iso_start
+        print(f"\n  {iso_name} completed in {iso_elapsed:.0f}s")
+
+        # Incremental save after each ISO — never lose progress
+        with open(output_path, 'w') as f:
+            json.dump(all_results, f)
+        print(f"  Saved incrementally: {os.path.getsize(output_path) / 1024:.0f} KB "
+              f"({len(all_results['results'])}/{len(ISOS)} ISOs)")
 
     # Save cached results file (reusable input for future projects)
     cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'optimizer_cache.json')
