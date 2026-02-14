@@ -53,16 +53,18 @@
 - **Prefer bullets with clear headers and numbered lists** — avoid walls of prose
 - **Only surface errors when you can't resolve them** — try to self-recover first; if stuck after reasonable attempts, explain what failed and what you tried
 
-### Optimizer Run Discipline (Critical)
-- **NEVER start an optimizer run while decisions are still being discussed.** The optimizer is expensive compute — running it on stale code wastes time and produces results that get thrown away.
+### Optimizer Run Discipline (Critical — Token Budget Protection)
+- **Optimizer runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every optimizer run as a high-value operation that must succeed.
+- **NEVER start an optimizer run while decisions are still being discussed.** The optimizer must reflect ALL decisions made up to the point of launch.
 - **Pre-run gate**: Before launching `optimize_overprocure.py`, explicitly verify:
   1. All decisions from the current conversation have been implemented in the optimizer code
   2. All decisions have been captured in SPEC.md (per Documentation-First rule above)
   3. No open questions remain that could change optimizer logic, cost tables, or methodology
   4. The code passes a syntax check (`python -c "import py_compile; py_compile.compile(...)"`)
+- **Once running, the optimizer is the top priority.** Do NOT let it get interrupted, stopped, or deprioritized. It runs in the background — other non-optimizer work can happen concurrently, but nothing should kill the process. If the session is approaching token limits, warn the user that the optimizer is still running and needs to complete.
 - **If new decisions are made while the optimizer is running in the background**: Immediately flag to the user that the running optimizer does NOT reflect the new decision, and confirm whether to (a) let it finish anyway (if the decision doesn't affect current run), or (b) stop it and re-run after implementing the change. Never silently let a stale run continue as if it's current.
 - **If the user asks to run the optimizer**: Treat it as a trigger to do a final audit — scan the recent conversation for any unimplemented decisions before starting the run. If anything is missing, implement it first, THEN run.
-- **Background optimizer + other edits is fine** — but only for edits that don't touch optimizer logic (e.g., HTML, CSS, documentation, dashboard JS). If an edit changes anything the optimizer consumes (cost tables, algorithms, thresholds, resource types, dispatch logic), the optimizer must be re-run.
+- **Background optimizer + other edits is fine** — but only for edits that don't touch optimizer logic (e.g., HTML, CSS, documentation, dashboard JS). If an edit changes anything the optimizer consumes (cost tables, algorithms, thresholds, resource types, dispatch logic), the optimizer must be re-run after the current run completes.
 
 ### Change Propagation (Critical)
 - **"Fix something" = fix it everywhere** — any request to fix, update, or change something applies to ALL regions and ALL pages by default, not just the one being discussed
