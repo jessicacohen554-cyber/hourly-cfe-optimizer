@@ -11,10 +11,10 @@
 ## Workflow Preferences (Apply to EVERY Session)
 
 ### Documentation-First Development
-- **Always maintain SPEC.md** — update it as decisions are made so context is never lost between sessions
+- **CRITICAL — Decisions go to SPEC.md IMMEDIATELY**: The *very first action* after any design, methodology, or architectural decision is confirmed by the user is to write it to SPEC.md. Do NOT continue with implementation, code changes, or further discussion until the decision is captured. This is the highest-priority workflow rule — sessions can be disrupted or hit token limits at any time, and SPEC.md is the single source of truth that enables seamless continuity. The lag between a decision being made and it being recorded in SPEC.md must be zero.
 - **Always maintain this CLAUDE.md** — update it when new preferences, design decisions, or architecture changes are established
 - Before ending any session, ensure both files reflect all decisions made during the session
-- If new features or design choices are discussed, document them in SPEC.md immediately — don't wait until the end
+- If multiple decisions are made in rapid succession (e.g., user approves a batch), pause implementation and write ALL of them to SPEC.md before proceeding with any code
 
 ### Parallel Execution
 - **Deploy as many agents as possible in parallel** for non-dependent tasks to maximize efficiency
