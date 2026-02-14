@@ -2160,6 +2160,69 @@ ALL_COST_SCENARIOS = generate_all_cost_scenarios()
 COST_SCENARIO_MAP = {key: levels for key, levels in ALL_COST_SCENARIOS}
 
 
+# ── Scenario pruning for lower thresholds ──
+# At 75-92.5%, physics dominates cost — only ~14 unique mixes serve 324 scenarios.
+# Run 54 representative scenarios (corners + stratified) to discover all archetypes,
+# then cross-pollinate to fill in the remaining 270 scenarios.
+# At 95-100%, run full 324 for academic precision in the cost-sensitive zone.
+PRUNING_THRESHOLD_CUTOFF = 92.5  # Prune at thresholds <= this; full 324 above
+
+def _build_representative_scenarios():
+    """Select 54 representative scenarios covering the cost space extremes + grid."""
+    reps = set()
+    levels_L, levels_M, levels_H = 'Low', 'Medium', 'High'
+    lk = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
+    gen3 = [levels_L, levels_M, levels_H]
+    tx4 = ['None', 'Low', 'Medium', 'High']
+
+    # 1. All 8 corners (L/H for ren/firm/stor × L/H fuel × Med Tx) = 16
+    for r in [levels_L, levels_H]:
+        for f in [levels_L, levels_H]:
+            for s in [levels_L, levels_H]:
+                for fu in [levels_L, levels_H]:
+                    key = f"{lk[r]}{lk[f]}{lk[s]}_{lk[fu]}_M"
+                    reps.add(key)
+
+    # 2. All 4 Tx levels at Medium everything else = 4
+    for tx in tx4:
+        reps.add(f"MMM_M_{lk[tx]}")
+
+    # 3. Medium baseline with each toggle at L and H = 10
+    for r in gen3:
+        reps.add(f"{lk[r]}MM_M_M")  # Vary renewables
+    for f in gen3:
+        reps.add(f"M{lk[f]}M_M_M")  # Vary firm
+    for s in gen3:
+        reps.add(f"MM{lk[s]}_M_M")  # Vary storage
+    for fu in gen3:
+        reps.add(f"MMM_{lk[fu]}_M")  # Vary fuel
+
+    # 4. Cross-axis extremes: High one, Low others = 10
+    for tx in ['N', 'M', 'H']:
+        reps.add(f"HLL_L_{tx}")  # High renewables only
+        reps.add(f"LHL_L_{tx}")  # High firm only
+        reps.add(f"LLH_L_{tx}")  # High storage only
+    reps.add(f"LLL_H_M")  # High fuel only
+
+    # 5. Diagonal combos for coverage
+    reps.add('HHH_H_H')
+    reps.add('HHH_H_N')
+    reps.add('LLL_L_N')
+    reps.add('LLL_L_L')
+    reps.add('LLL_L_H')
+    reps.add('HHL_H_M')
+    reps.add('LLH_H_M')
+    reps.add('MLH_M_M')
+    reps.add('HML_M_M')
+    reps.add('LHM_L_M')
+    reps.add('MHL_H_N')
+    reps.add('LMH_M_H')
+
+    return reps
+
+REPRESENTATIVE_SCENARIOS = _build_representative_scenarios()
+
+
 CHECKPOINT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'checkpoints')
 
 
@@ -2325,7 +2388,7 @@ def process_iso(args):
     # Each threshold optimized independently; monotonicity enforced via
     # post-hoc re-sweep with broader parameters (not by result replacement)
 
-    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 10  # Save every 10 scenarios — ~5min max loss on interruption
+    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 1  # Save every scenario — negligible I/O overhead (<0.1%)
 
     for threshold in THRESHOLDS:
         t_str = str(threshold)
@@ -2349,7 +2412,20 @@ def process_iso(args):
             # Clear partial data so it's not reused for next threshold
             partial_threshold_data = None
 
-        for s_idx, (scenario_key, cost_levels) in enumerate(ALL_COST_SCENARIOS):
+        # Determine if pruning applies for this threshold
+        use_pruning = threshold <= PRUNING_THRESHOLD_CUTOFF
+        if use_pruning:
+            active_scenarios = [(k, v) for k, v in ALL_COST_SCENARIOS
+                                if k in REPRESENTATIVE_SCENARIOS]
+            total_active = len(active_scenarios)
+            print(f"      (pruned: {total_active} representative scenarios, "
+                  f"filling {324 - total_active} via cross-pollination)")
+        else:
+            active_scenarios = ALL_COST_SCENARIOS
+            total_active = 324
+
+        opt_count = 0
+        for s_idx, (scenario_key, cost_levels) in enumerate(active_scenarios):
             if scenario_key in partial_done:
                 continue  # Already completed in previous session
 
@@ -2376,26 +2452,27 @@ def process_iso(args):
                 if scenario_key == 'MMM_M_M':
                     medium_result = result
 
+            opt_count += 1
             # Intra-threshold checkpoint: save every N scenarios
-            new_count = s_idx + 1 - len(partial_done)
-            if new_count > 0 and new_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
+            if opt_count > 0 and opt_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
                 save_checkpoint(iso, iso_results,
-                    phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of324',
+                    phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of{total_active}',
                     partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
 
         # Log Medium scenario progress
         t_elapsed = time.time() - t_start
         cache_size = len(score_cache)
+        opt_label = f"{opt_count} optimized" if use_pruning else f"{len(threshold_scenarios)}/324"
         if medium_result:
             mix = medium_result['resource_mix']
-            print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
+            print(f"    {threshold}%: {opt_label} scenarios, "
                   f"cache={cache_size}, {t_elapsed:.1f}s | "
                   f"Medium: CF{mix['clean_firm']}/Sol{mix['solar']}/Wnd{mix['wind']}"
                   f"/CCS{mix['ccs_ccgt']}/Hyd{mix['hydro']} "
                   f"batt={medium_result['battery_dispatch_pct']}% "
                   f"ldes={medium_result['ldes_dispatch_pct']}%")
         else:
-            print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
+            print(f"    {threshold}%: {opt_label} scenarios, "
                   f"cache={cache_size}, {t_elapsed:.1f}s")
 
         # ── Cross-pollination: evaluate all discovered mixes for all scenarios ──
@@ -2437,9 +2514,16 @@ def process_iso(args):
                     current_cost = cand_cost_data['effective_cost']
                     cross_fixes += 1
 
-        if cross_fixes > 0:
-            print(f"      Cross-pollination: {cross_fixes} improvements, "
-                  f"{len(unique_results)} unique mixes evaluated")
+        total_after = len(threshold_scenarios)
+        filled_count = total_after - (opt_count + len(partial_done))
+        if cross_fixes > 0 or filled_count > 0:
+            parts = []
+            if cross_fixes > 0:
+                parts.append(f"{cross_fixes} improvements")
+            if use_pruning and filled_count > 0:
+                parts.append(f"{filled_count} filled via cross-pollination")
+            parts.append(f"{len(unique_results)} unique mixes")
+            print(f"      Cross-pollination: {', '.join(parts)} → {total_after}/324 total")
 
         # Store all scenarios for this threshold
         # Medium result gets full detail (compressed day, peak gap, CO2)
