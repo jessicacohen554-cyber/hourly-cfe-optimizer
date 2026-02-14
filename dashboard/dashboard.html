@@ -183,7 +183,7 @@ body {
     .nav-brand { display: none; }
 }
 
-/* ========== SENSITIVITY TOGGLES ========== */
+/* ========== SENSITIVITY TOGGLES (5 Paired Groups) ========== */
 .sensitivity-panel {
     background: var(--bg-card);
     border: 1px solid var(--border-light);
@@ -196,42 +196,57 @@ body {
     font-weight: 600;
     font-size: 1.15rem;
     color: var(--navy);
-    margin-bottom: 18px;
+    margin-bottom: 6px;
     letter-spacing: 0.04em;
 }
-.sensitivity-group-label {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    font-weight: 600;
-    font-size: 0.82rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+.sensitivity-panel .sensitivity-subtitle {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.84rem;
     color: var(--text-muted);
-    margin: 18px 0 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border-light);
-}
-.sensitivity-group-label:first-of-type {
-    margin-top: 0;
+    margin-bottom: 20px;
+    line-height: 1.45;
 }
 .sensitivity-toggles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 14px 24px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px 28px;
 }
 .sensitivity-toggle-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8f9fb;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.sensitivity-toggle-item label {
+.sensitivity-toggle-item:hover {
+    border-color: var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.sensitivity-toggle-item .toggle-label-area {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.sensitivity-toggle-item .toggle-label-main {
     font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
     font-size: 0.88rem;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-primary);
-    min-width: 130px;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+}
+.sensitivity-toggle-item .toggle-label-sub {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    line-height: 1.35;
 }
 .sensitivity-toggle-item .info-icon {
     display: inline-flex;
@@ -242,11 +257,49 @@ body {
     border-radius: 50%;
     background: rgba(107,114,128,0.12);
     color: var(--text-muted);
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 700;
     cursor: help;
     flex-shrink: 0;
     line-height: 1;
+    position: relative;
+}
+/* Custom tooltip for info icons */
+.info-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+}
+.info-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.45;
+    padding: 10px 14px;
+    border-radius: 8px;
+    width: 280px;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    pointer-events: none;
+}
+.info-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1a1a2e;
+}
+.info-icon-wrapper:hover .info-tooltip,
+.info-icon-wrapper:focus-within .info-tooltip {
+    display: block;
 }
 .toggle-btn-group {
     display: inline-flex;
@@ -254,6 +307,7 @@ body {
     border-radius: 6px;
     overflow: hidden;
     background: #f3f4f6;
+    flex-shrink: 0;
 }
 .toggle-btn-group button {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
@@ -286,9 +340,18 @@ body {
     }
     .sensitivity-toggle-item {
         flex-wrap: wrap;
+        padding: 10px 12px;
     }
     .sensitivity-panel {
         padding: 18px 16px;
+    }
+    .info-tooltip {
+        width: 220px;
+        left: 0;
+        transform: translateX(-20%);
+    }
+    .info-tooltip::after {
+        left: 30%;
     }
 }
 
@@ -3168,103 +3231,105 @@ body {
         <span id="cfCostIndicatorText">Sensitivity scenario active: costs adjusted for clean firm at $X/MWh (medium model uses $90/MWh)</span>
     </div>
 
-    <!-- SENSITIVITY TOGGLES -->
+    <!-- SENSITIVITY TOGGLES (5 Paired Groups) -->
     <div class="sensitivity-panel" id="sensitivityPanel">
-        <h3>Sensitivity Assumptions</h3>
+        <h3>Sensitivity Controls</h3>
+        <p class="sensitivity-subtitle">Adjust cost assumptions to see how they change the optimal clean energy portfolio and total cost. Each toggle moves related technologies together, reflecting real-world cost correlations.</p>
 
-        <div class="sensitivity-group-label">Generation Costs</div>
         <div class="sensitivity-toggles-grid">
-            <div class="sensitivity-toggle-item">
-                <label>Solar <span class="info-icon" title="Adjusts the assumed cost of building new solar farms. Low = optimistic technology progress, Medium = current best estimates, High = supply chain challenges or tariffs increase costs.">i</span></label>
-                <div class="toggle-btn-group" data-toggle="solar_gen_cost" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
+            <!-- 1. Renewable Generation Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="renewable_gen">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Renewable Generation Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of building new solar and wind projects together. When renewable costs are <strong>Low</strong>, solar panels and wind turbines are cheap to build (e.g., technology breakthroughs). <strong>Medium</strong> reflects today's best estimates. <strong>High</strong> means supply chain problems or tariffs make them more expensive. This is the single biggest driver of clean energy cost.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Solar + Wind LCOE</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="renewable_gen" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="renewable_gen" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="renewable_gen" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="renewable_gen" data-level="High">High</button>
                 </div>
             </div>
-            <div class="sensitivity-toggle-item">
-                <label>Wind <span class="info-icon" title="Adjusts the assumed cost of building new wind farms. Low = favorable siting and supply chain, Medium = current best estimates, High = permitting delays or material cost increases.">i</span></label>
-                <div class="toggle-btn-group" data-toggle="wind_gen_cost" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-            <div class="sensitivity-toggle-item">
-                <label>Clean Firm <span class="info-icon" title="Adjusts the assumed cost of clean firm power (nuclear, geothermal). Low = favorable construction and licensing, Medium = current best estimates, High = project overruns or regulatory delays.">i</span></label>
-                <div class="toggle-btn-group" data-toggle="clean_firm_gen_cost" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-            <div class="sensitivity-toggle-item">
-                <label>CCS-CCGT <span class="info-icon" title="Adjusts the assumed cost of gas plants with carbon capture. Low = favorable geology and policy support, Medium = current best estimates, High = technology or permitting challenges increase costs.">i</span></label>
-                <div class="toggle-btn-group" data-toggle="ccs_ccgt_gen_cost" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-        </div>
 
-        <div class="sensitivity-group-label">Storage Costs</div>
-        <div class="sensitivity-toggles-grid">
-            <div class="sensitivity-toggle-item">
-                <label>Battery (4hr) <span class="info-icon" title="Adjusts the cost of lithium-ion battery storage (4-hour duration). Low = rapid cost declines continue, Medium = current best estimates, High = lithium supply constraints raise costs.">i</span></label>
-                <div class="toggle-btn-group" data-toggle="battery_storage_cost" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
+            <!-- 2. Firm Generation Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="firm_gen">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Firm Generation Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of "always-on" clean power sources -- advanced nuclear and gas plants with carbon capture (CCS-CCGT). These resources run 24/7 regardless of weather. <strong>Low</strong> = favorable construction and policy support. <strong>Medium</strong> = current best estimates. <strong>High</strong> = project overruns or regulatory delays. Firm generation fills the gaps when sun and wind are unavailable.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Clean Firm + CCS-CCGT LCOE</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="firm_gen" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="firm_gen" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="firm_gen" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="firm_gen" data-level="High">High</button>
                 </div>
             </div>
-            <div class="sensitivity-toggle-item">
-                <label>LDES (100hr) <span class="info-icon" title="Adjusts the cost of long-duration energy storage (100-hour iron-air batteries). Low = technology matures quickly, Medium = current best estimates, High = manufacturing scale-up takes longer.">i</span></label>
-                <div class="toggle-btn-group" data-toggle="ldes_storage_cost" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-        </div>
 
-        <div class="sensitivity-group-label">Infrastructure</div>
-        <div class="sensitivity-toggles-grid">
-            <div class="sensitivity-toggle-item">
-                <label>Transmission <span class="info-icon" title="Adjusts the cost of connecting new clean energy projects to the grid. None = no extra cost (on-site or existing lines), Low = short connections, Medium = typical new builds, High = long-distance or congested corridors.">i</span></label>
-                <div class="toggle-btn-group" data-toggle="transmission_cost" data-default="Medium">
-                    <button data-value="None">None</button>
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
+            <!-- 3. Storage Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="storage">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Storage Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of energy storage -- both 4-hour lithium-ion batteries and 100-hour long-duration iron-air batteries. Storage captures excess solar/wind energy and releases it later. <strong>Low</strong> = rapid battery cost declines continue. <strong>Medium</strong> = current best estimates. <strong>High</strong> = lithium or iron supply constraints raise costs. Storage is critical for matching clean energy to demand hour-by-hour.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Battery (4hr) + LDES (100hr) LCOS</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="storage" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="storage" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="storage" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="storage" data-level="High">High</button>
                 </div>
             </div>
-        </div>
 
-        <div class="sensitivity-group-label">Fuel Prices</div>
-        <div class="sensitivity-toggles-grid">
-            <div class="sensitivity-toggle-item">
-                <label>Natural Gas <span class="info-icon" title="Adjusts the price of natural gas, which affects wholesale electricity prices and the cost of gas-fired generation. Low = $2.00/MMBtu (abundant supply), Medium = $3.50/MMBtu (current market), High = $6.00/MMBtu (supply constraints or export demand).">i</span></label>
-                <div class="toggle-btn-group" data-toggle="natural_gas_price" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
+            <!-- 4. Fossil Fuel Price -->
+            <div class="sensitivity-toggle-item" data-toggle-group="fossil_fuel">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Fossil Fuel Price
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the price of natural gas, coal, and oil -- which together determine the wholesale electricity price you're comparing against. <strong>Low</strong> = cheap fossil fuels make grid power inexpensive (harder for clean energy to compete). <strong>Medium</strong> = current market prices. <strong>High</strong> = supply constraints or carbon pricing raise fossil costs (clean energy looks better by comparison).</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Affects wholesale electricity price</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="fossil_fuel" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="fossil_fuel" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="fossil_fuel" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="fossil_fuel" data-level="High">High</button>
                 </div>
             </div>
-            <div class="sensitivity-toggle-item">
-                <label>Coal <span class="info-icon" title="Adjusts the price of coal, which affects wholesale electricity prices in coal-heavy regions. Low = $1.80/MMBtu (cheap supply), Medium = $2.50/MMBtu (current market), High = $4.00/MMBtu (transport or regulatory costs increase).">i</span></label>
-                <div class="toggle-btn-group" data-toggle="coal_price" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
+
+            <!-- 5. Transmission Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="transmission">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Transmission Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the cost of connecting new clean energy projects to the grid. Every new solar farm or wind project needs transmission lines to deliver power. <strong>None</strong> = on-site generation or existing lines (no extra cost). <strong>Low</strong> = short, easy connections. <strong>Medium</strong> = typical new builds. <strong>High</strong> = long-distance or congested corridors requiring major new infrastructure.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">All resource transmission adders</div>
                 </div>
-            </div>
-            <div class="sensitivity-toggle-item">
-                <label>Oil <span class="info-icon" title="Adjusts the price of oil, which has a secondary effect on electricity costs in some regions. Low = $55/barrel (oversupply), Medium = $75/barrel (current market), High = $110/barrel (supply disruptions or high demand).">i</span></label>
-                <div class="toggle-btn-group" data-toggle="oil_price" data-default="Medium">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
+                <div class="toggle-btn-group" data-toggle="transmission" data-default="Medium">
+                    <button data-value="None" data-toggle-group="transmission" data-level="None">None</button>
+                    <button data-value="Low" data-toggle-group="transmission" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="transmission" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="transmission" data-level="High">High</button>
                 </div>
             </div>
         </div>
@@ -6812,18 +6877,13 @@ function initScrollAnimations() {
     }
 }
 
-// ---- Sensitivity Toggle State ----
+// ---- Sensitivity Toggle State (5 Paired Groups) ----
 const sensitivityState = {
-    solar_gen_cost: 'Medium',
-    wind_gen_cost: 'Medium',
-    clean_firm_gen_cost: 'Medium',
-    ccs_ccgt_gen_cost: 'Medium',
-    battery_storage_cost: 'Medium',
-    ldes_storage_cost: 'Medium',
-    transmission_cost: 'Medium',
-    natural_gas_price: 'Medium',
-    coal_price: 'Medium',
-    oil_price: 'Medium'
+    renewable_gen: 'Medium',   // Solar + Wind LCOE
+    firm_gen: 'Medium',        // Clean Firm + CCS-CCGT LCOE
+    storage: 'Medium',         // Battery (4hr) + LDES (100hr) LCOS
+    fossil_fuel: 'Medium',     // Wholesale electricity price driver
+    transmission: 'Medium'     // All resource transmission adders
 };
 
 function initSensitivityToggles() {
