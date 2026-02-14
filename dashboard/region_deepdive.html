@@ -536,13 +536,15 @@ body {
     </button>
     <div class="top-nav-inner">
         <a href="index.html">Home</a>
-        <a href="dashboard.html">Dashboard</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
         <a href="region_deepdive.html" class="nav-active">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
     </div>
 </nav>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- ========== HEADER BANNER (shared across all pages) ========== -->
 <header class="header">
@@ -691,8 +693,9 @@ body {
 <!-- ========== FOOTER ========== -->
 <footer class="page-footer">
     <div class="footer-links">
-        <a href="dashboard.html">Back to Dashboard</a>
-        <a href="abatement_comparison.html">Marginal CO&#8322; Abatement Analysis</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
     </div>
@@ -824,7 +827,7 @@ body {
                         '#9CA3AF'
                     ],
                     borderWidth: 2,
-                    borderRadius: 4
+                    borderRadius: 6
                 }]
             },
             options: {
@@ -845,8 +848,8 @@ body {
                     tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed.x.toFixed(1) + '%' } }
                 },
                 scales: {
-                    x: { beginAtZero: true, max: 100, title: { display: true, text: 'Share of Generation (%)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                    y: { grid: { display: false } }
+                    x: { beginAtZero: true, max: 100, title: { display: true, text: 'Share of Generation (%)', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                    y: { grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
                 }
             },
             plugins: [ChartDataLabels]
@@ -993,8 +996,8 @@ body {
                     tooltip: { callbacks: { label: ctx => ctx.dataset.label === 'Sensitivity Range' ? null : ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh' } }
                 },
                 scales: {
-                    y: { beginAtZero: false, title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                    x: { title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                    y: { beginAtZero: false, title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                    x: { title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
                 }
             }
         });
@@ -1044,6 +1047,7 @@ body {
                 backgroundColor: MIX_COLORS[r].fill,
                 borderColor: MIX_COLORS[r].border,
                 borderWidth: 1.5,
+                borderRadius: 6,
                 stack: 'mix'
             })),
             {
@@ -1052,6 +1056,7 @@ body {
                 backgroundColor: MIX_COLORS.battery.fill,
                 borderColor: MIX_COLORS.battery.border,
                 borderWidth: 1.5,
+                borderRadius: 6,
                 stack: 'mix'
             },
             {
@@ -1060,6 +1065,7 @@ body {
                 backgroundColor: MIX_COLORS.ldes.fill,
                 borderColor: MIX_COLORS.ldes.border,
                 borderWidth: 1.5,
+                borderRadius: 6,
                 stack: 'mix'
             },
             {
@@ -1083,6 +1089,7 @@ body {
                 borderColor: '#9CA3AF',
                 borderWidth: 1.5,
                 borderDash: [3, 2],
+                borderRadius: 6,
                 stack: 'mix'
             }
         ];
@@ -1126,8 +1133,8 @@ body {
                     tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%' } }
                 },
                 scales: {
-                    y: { stacked: true, beginAtZero: true, max: Math.ceil(maxProcPct / 10) * 10 + 5, title: { display: true, text: 'Share of Demand (%)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                    x: { stacked: true, title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                    y: { stacked: true, beginAtZero: true, max: Math.ceil(maxProcPct / 10) * 10 + 5, title: { display: true, text: 'Share of Demand (%)', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                    x: { stacked: true, title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
                 }
             },
             plugins: [ChartDataLabels]
@@ -1181,6 +1188,7 @@ body {
                 backgroundColor: MIX_COLORS[r].fill.replace('0.50', '0.30'),
                 borderColor: MIX_COLORS[r].border,
                 borderWidth: 1,
+                borderRadius: 6,
                 stack: 'nv'
             });
         });
@@ -1192,6 +1200,7 @@ body {
                 backgroundColor: MIX_COLORS[r].fill,
                 borderColor: MIX_COLORS[r].border,
                 borderWidth: 2,
+                borderRadius: 6,
                 stack: 'nv'
             });
         });
@@ -1230,8 +1239,8 @@ body {
                     tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%' } }
                 },
                 scales: {
-                    y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Share of Demand (%)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                    x: { stacked: true, title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Share of Demand (%)', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                    x: { stacked: true, title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
                 }
             }
         });
@@ -1280,7 +1289,7 @@ body {
             data: {
                 labels: thresholdLabels,
                 datasets: [
-                    { label: 'Average $/ton CO\u2082', data: avgAbatement, backgroundColor: 'rgba(30,58,95,0.50)', borderColor: '#1E3A5F', borderWidth: 1.5, borderRadius: 4, order: 2 },
+                    { label: 'Average $/ton CO\u2082', data: avgAbatement, backgroundColor: 'rgba(30,58,95,0.50)', borderColor: '#1E3A5F', borderWidth: 1.5, borderRadius: 6, order: 2 },
                     { label: 'Marginal $/ton CO\u2082', data: margAbatement, type: 'line', borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.1)', pointBackgroundColor: '#EF4444', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5, borderWidth: 2.5, tension: 0.3, fill: false, order: 1 }
                 ]
             },
@@ -1292,8 +1301,8 @@ body {
                     tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(0) + '/ton' } }
                 },
                 scales: {
-                    y: { beginAtZero: true, title: { display: true, text: 'Abatement Cost ($/ton CO\u2082)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                    x: { title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                    y: { beginAtZero: true, title: { display: true, text: 'Abatement Cost ($/ton CO\u2082)', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                    x: { title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
                 }
             }
         });
