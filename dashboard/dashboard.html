@@ -3232,13 +3232,15 @@ body {
     </button>
     <div class="top-nav-inner" id="navLinks">
         <a href="index.html">Home</a>
-        <a href="dashboard.html" class="nav-active">Dashboard</a>
+        <a href="dashboard.html" class="nav-active">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
         <a href="region_deepdive.html">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
     </div>
 </nav>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER / BANNER -->
 <header class="header">
@@ -4466,7 +4468,7 @@ function updateCompressedDay(entry, region) {
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(74,69,64,0.06)' },
+                        grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                         ticks: {
                             font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                             color: '#6B6356',
@@ -4474,7 +4476,7 @@ function updateCompressedDay(entry, region) {
                         }
                     },
                     y: {
-                        grid: { color: 'rgba(0,0,0,0.06)' },
+                        grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                         ticks: {
                             font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                             color: '#6B6356',
@@ -5010,7 +5012,7 @@ function buildMixDatasets(data) {
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
-            borderRadius: 0,
+            borderRadius: 6,
             stack: 'mix',
             _resourceKey: r,
             _isExisting: true,
@@ -5024,7 +5026,7 @@ function buildMixDatasets(data) {
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
-            borderRadius: (r === NEW_ORDER[NEW_ORDER.length - 1]) ? 3 : 0,
+            borderRadius: 6,
             borderSkipped: 'start',
             stack: 'mix',
             _resourceKey: r,
@@ -5169,7 +5171,7 @@ function initNarrativeMixChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { display: false },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -5184,7 +5186,7 @@ function initNarrativeMixChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -5309,7 +5311,7 @@ function buildIncrementalDatasets(data) {
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
-            borderRadius: 0,
+            borderRadius: 6,
             stack: 'incr',
             _resourceKey: r,
             _isExisting: true,
@@ -5323,7 +5325,7 @@ function buildIncrementalDatasets(data) {
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
-            borderRadius: (r === NEW_ORDER[NEW_ORDER.length - 1]) ? 3 : 0,
+            borderRadius: 6,
             borderSkipped: 'start',
             stack: 'incr',
             _resourceKey: r,
@@ -5467,7 +5469,7 @@ function initIncrementalMixChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { display: false },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#1A2744',
@@ -5482,7 +5484,7 @@ function initIncrementalMixChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -5720,7 +5722,7 @@ function initNarrativeCostChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { display: false },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -5737,7 +5739,7 @@ function initNarrativeCostChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -6086,7 +6088,7 @@ function initMobileStepCharts() {
                     x: {
                         type: 'linear', min: 73, max: 102,
                         title: { display: false },
-                        grid: { display: false },
+                        grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                         ticks: {
                             font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10 },
                             color: '#6B6356', callback: (v) => v + '%', stepSize: 5,
@@ -6094,7 +6096,7 @@ function initMobileStepCharts() {
                     },
                     y: {
                         title: { display: false },
-                        grid: { color: 'rgba(74,69,64,0.06)' },
+                        grid: { display: false }, border: { display: true, color: '#D4D8E0' },
                         ticks: {
                             font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10 },
                             color: '#6B6356', callback: (v) => '$' + v,
@@ -6398,8 +6400,8 @@ function updateAbatementCurves() {
                     }
                 },
                 scales: {
-                    y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, beginAtZero: false },
-                    x: { title: { display: true, text: 'Hourly Match Target', font: { size: 11 } } }
+                    y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, beginAtZero: false, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                    x: { title: { display: true, text: 'Hourly Match Target', font: { size: 11 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
                 }
             }
         });
@@ -6424,9 +6426,9 @@ function updateAbatementCurves() {
                     data: macData,
                     backgroundColor: macData.map(v => {
                         if (v == null) return 'rgba(200,200,200,0.3)';
-                        if (v < 100) return 'rgba(34,197,94,0.7)';
-                        if (v < 200) return 'rgba(245,158,11,0.7)';
-                        return 'rgba(239,68,68,0.7)';
+                        if (v < 100) return 'rgba(34,197,94,0.25)';
+                        if (v < 200) return 'rgba(245,158,11,0.25)';
+                        return 'rgba(239,68,68,0.25)';
                     }),
                     borderColor: macData.map(v => {
                         if (v == null) return 'rgba(200,200,200,0.5)';
@@ -6435,7 +6437,7 @@ function updateAbatementCurves() {
                         return '#EF4444';
                     }),
                     borderWidth: 1.5,
-                    borderRadius: 4
+                    borderRadius: 6
                 }]
             },
             options: {
@@ -6469,8 +6471,8 @@ function updateAbatementCurves() {
                     }
                 },
                 scales: {
-                    y: { title: { display: true, text: '$/ton CO₂', font: { size: 11 } }, beginAtZero: true },
-                    x: { title: { display: true, text: 'Hourly Match Target', font: { size: 11 } } }
+                    y: { title: { display: true, text: '$/ton CO₂', font: { size: 11 } }, beginAtZero: true, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                    x: { title: { display: true, text: 'Hourly Match Target', font: { size: 11 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
                 }
             }
         });
