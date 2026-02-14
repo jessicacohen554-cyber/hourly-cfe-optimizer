@@ -516,6 +516,9 @@ body {
     .story-stat-row { grid-template-columns: repeat(2, 1fr); }
     .story-insight-box { flex-direction: column; gap: 8px; }
 }
+@media (max-width: 768px) {
+    #sensitivityLabels > div { grid-template-columns: 1fr !important; }
+}
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
@@ -702,10 +705,80 @@ body {
 
     <div class="story-divider-wrap"><hr class="story-divider"></div>
 
-    <!-- ===== ACT VI: Regional Comparison ===== -->
+    <!-- ===== ACT VI: Cost Sensitivity Envelope ===== -->
     <section class="story-section story-fade-in">
         <div class="story-content">
             <span class="story-badge story-badge-green">Act VI</span>
+            <h2>Cost Sensitivity Envelope</h2>
+
+            <p>How much could costs vary under different technology and market assumptions? The shaded band below spans all 324 sensitivity scenarios — from the most optimistic (lowest LCOE, no transmission adders) to the most pessimistic (highest costs across the board). The midpoint line shows the central estimate.</p>
+
+            <div class="story-stat-row">
+                <div class="story-stat-card">
+                    <div class="story-stat-label">Low Estimate (90%)</div>
+                    <div class="story-stat-value" id="statFanLow">—</div>
+                </div>
+                <div class="story-stat-card">
+                    <div class="story-stat-label">Midpoint (90%)</div>
+                    <div class="story-stat-value" id="statFanMid">—</div>
+                </div>
+                <div class="story-stat-card">
+                    <div class="story-stat-label">High Estimate (90%)</div>
+                    <div class="story-stat-value" id="statFanHigh">—</div>
+                </div>
+                <div class="story-stat-card">
+                    <div class="story-stat-label">Spread (90%)</div>
+                    <div class="story-stat-value" id="statFanSpread">—</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Cost Envelope Across 324 Sensitivity Scenarios</div>
+                <canvas id="costFanChart"></canvas>
+            </div>
+
+            <div class="story-insight-box" id="insightFan">
+                <span class="insight-icon">&#9889;</span>
+                <div>Loading insight...</div>
+            </div>
+
+            <p id="narrativeFan">Loading...</p>
+        </div>
+    </section>
+
+    <div class="story-divider-wrap"><hr class="story-divider"></div>
+
+    <!-- ===== ACT VII: Sensitivity Drivers & Resource Mix Comparison ===== -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-orange">Act VII</span>
+            <h2>What Drives Low vs. High Cost — and How the Mix Shifts</h2>
+
+            <p>The sensitivity parameters that produce the lowest and highest cost scenarios reveal which assumptions matter most. Below, the resource mix is shown at the <strong>90% target</strong> for the cheapest, midpoint, and most expensive sensitivity combinations — alongside the toggle settings that produced each outcome.</p>
+
+            <!-- Sensitivity parameter labels -->
+            <div id="sensitivityLabels" style="margin: 24px 0;"></div>
+
+            <div class="chart-container">
+                <div class="chart-title">Resource Mix: Lowest-Cost vs. Midpoint vs. Highest-Cost Scenario at 90% Target</div>
+                <canvas id="mixCompareChart"></canvas>
+            </div>
+
+            <div class="story-insight-box" id="insightMixCompare">
+                <span class="insight-icon">&#9889;</span>
+                <div>Loading insight...</div>
+            </div>
+
+            <p id="narrativeMixCompare">Loading...</p>
+        </div>
+    </section>
+
+    <div class="story-divider-wrap"><hr class="story-divider"></div>
+
+    <!-- ===== ACT VIII: Regional Comparison ===== -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-green">Act VIII</span>
             <h2>How This Region Compares</h2>
 
             <div class="chart-container">
@@ -1087,6 +1160,422 @@ body {
         document.getElementById('narrativeStorage').textContent =
             'Batteries (4-hour Li-ion, 85% efficiency) operate on a daily charge/discharge cycle. Long-duration storage (100-hour iron-air, ' +
             '50% efficiency) addresses the fundamentally different problem of surviving extended low-renewable periods.';
+
+        // ========== SENSITIVITY COST TABLES (from SPEC.md) ==========
+        const LCOE_TABLES = {
+            solar: {
+                Low:    { CAISO: 45, ERCOT: 40, PJM: 50, NYISO: 70, NEISO: 62 },
+                Medium: { CAISO: 60, ERCOT: 54, PJM: 65, NYISO: 92, NEISO: 82 },
+                High:   { CAISO: 78, ERCOT: 70, PJM: 85, NYISO: 120, NEISO: 107 }
+            },
+            wind: {
+                Low:    { CAISO: 55, ERCOT: 30, PJM: 47, NYISO: 61, NEISO: 55 },
+                Medium: { CAISO: 73, ERCOT: 40, PJM: 62, NYISO: 81, NEISO: 73 },
+                High:   { CAISO: 95, ERCOT: 52, PJM: 81, NYISO: 105, NEISO: 95 }
+            },
+            clean_firm: {
+                Low:    { CAISO: 58, ERCOT: 63, PJM: 72, NYISO: 75, NEISO: 73 },
+                Medium: { CAISO: 78, ERCOT: 85, PJM: 93, NYISO: 98, NEISO: 96 },
+                High:   { CAISO: 110, ERCOT: 120, PJM: 140, NYISO: 150, NEISO: 145 }
+            },
+            ccs_ccgt: {
+                Low:    { CAISO: 58, ERCOT: 52, PJM: 62, NYISO: 78, NEISO: 75 },
+                Medium: { CAISO: 86, ERCOT: 71, PJM: 79, NYISO: 99, NEISO: 96 },
+                High:   { CAISO: 115, ERCOT: 92, PJM: 102, NYISO: 128, NEISO: 122 }
+            },
+            battery: {
+                Low:    { CAISO: 77, ERCOT: 69, PJM: 74, NYISO: 81, NEISO: 79 },
+                Medium: { CAISO: 102, ERCOT: 92, PJM: 98, NYISO: 108, NEISO: 105 },
+                High:   { CAISO: 133, ERCOT: 120, PJM: 127, NYISO: 140, NEISO: 137 }
+            },
+            ldes: {
+                Low:    { CAISO: 135, ERCOT: 116, PJM: 128, NYISO: 150, NEISO: 143 },
+                Medium: { CAISO: 180, ERCOT: 155, PJM: 170, NYISO: 200, NEISO: 190 },
+                High:   { CAISO: 234, ERCOT: 202, PJM: 221, NYISO: 260, NEISO: 247 }
+            }
+        };
+
+        const TX_TABLES = {
+            solar:      { None: 0, Low: { CAISO: 1, ERCOT: 1, PJM: 2, NYISO: 3, NEISO: 3 }, Medium: { CAISO: 3, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 }, High: { CAISO: 6, ERCOT: 5, PJM: 9, NYISO: 12, NEISO: 10 } },
+            wind:       { None: 0, Low: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 }, Medium: { CAISO: 8, ERCOT: 6, PJM: 10, NYISO: 14, NEISO: 12 }, High: { CAISO: 14, ERCOT: 10, PJM: 18, NYISO: 22, NEISO: 20 } },
+            clean_firm: { None: 0, Low: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 }, Medium: { CAISO: 3, ERCOT: 2, PJM: 3, NYISO: 5, NEISO: 4 }, High: { CAISO: 6, ERCOT: 4, PJM: 6, NYISO: 9, NEISO: 7 } },
+            ccs_ccgt:   { None: 0, Low: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 }, Medium: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 }, High: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 } },
+            battery:    { None: 0, Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 1, NEISO: 1 }, Medium: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 }, High: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 } },
+            ldes:       { None: 0, Low: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 }, Medium: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 }, High: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 } }
+        };
+
+        // Fuel price impact on wholesale (simplified regional multipliers)
+        const FUEL_WHOLESALE_MULT = { Low: 0.85, Medium: 1.0, High: 1.35 };
+        const LEVELS = ['Low', 'Medium', 'High'];
+        const TX_LEVELS = ['None', 'Low', 'Medium', 'High'];
+
+        function getTxAdder(resource, txLevel, region) {
+            const tbl = TX_TABLES[resource];
+            if (!tbl) return 0;
+            if (txLevel === 'None') return 0;
+            const entry = tbl[txLevel];
+            if (typeof entry === 'number') return entry;
+            return entry ? (entry[region] || 0) : 0;
+        }
+
+        // Compute effective cost for a single scenario at a given threshold
+        function computeScenarioCost(region, thresholdData, renewLevel, firmLevel, storageLevel, fuelLevel, txLevel) {
+            const mix = thresholdData.resource_mix;
+            const procPct = thresholdData.procurement_pct || 100;
+            const storagePct = thresholdData.storage_dispatch_pct || 0;
+
+            // Resource generation costs (LCOE + transmission for new build share)
+            let totalCostPerDemand = 0;
+            const resources = ['clean_firm', 'solar', 'wind'];
+            const levelMap = { solar: renewLevel, wind: renewLevel, clean_firm: firmLevel, ccs_ccgt: firmLevel };
+
+            for (const res of resources) {
+                const sharePct = mix[res] || 0;
+                if (sharePct <= 0) continue;
+                const existingPct = gridMix[res] || 0;
+                const totalOfDemand = sharePct * procPct / 100;
+                const existingOfDemand = Math.min(totalOfDemand, existingPct);
+                const newOfDemand = totalOfDemand - existingOfDemand;
+                const level = levelMap[res];
+                const lcoe = LCOE_TABLES[res][level][region];
+                const txAdd = newOfDemand > 0 ? getTxAdder(res, txLevel, region) : 0;
+                // Existing priced at wholesale, new at LCOE + tx
+                const existingCost = existingOfDemand * wholesalePrice / 100;
+                const newCost = newOfDemand * (lcoe + txAdd) / 100;
+                totalCostPerDemand += existingCost + newCost;
+            }
+
+            // Hydro — always existing, wholesale
+            const hydroShare = mix.hydro || 0;
+            const hydroOfDemand = hydroShare * procPct / 100;
+            totalCostPerDemand += hydroOfDemand * wholesalePrice / 100;
+
+            // Storage cost (battery + LDES)
+            if (storagePct > 0) {
+                const batteryLCOS = LCOE_TABLES.battery[storageLevel][region];
+                const ldesLCOS = LCOE_TABLES.ldes[storageLevel][region];
+                const batteryTx = getTxAdder('battery', txLevel, region);
+                const ldesTx = getTxAdder('ldes', txLevel, region);
+                // Assume LDES kicks in for thresholds >= 95%
+                const threshVal = thresholdData.hourly_match_score || 0;
+                let ldesShare = 0, batteryShare = storagePct;
+                if (threshVal >= 95) {
+                    ldesShare = Math.min(storagePct, storagePct * ((threshVal - 90) / 15));
+                    batteryShare = storagePct - ldesShare;
+                }
+                totalCostPerDemand += batteryShare * (batteryLCOS + batteryTx) / 100;
+                totalCostPerDemand += ldesShare * (ldesLCOS + ldesTx) / 100;
+            }
+
+            // Fuel price effect on wholesale baseline
+            const adjWholesale = wholesalePrice * FUEL_WHOLESALE_MULT[fuelLevel];
+            const curtailmentPct = thresholdData.costs.curtailment_pct || 0;
+            const usefulFraction = (100 - curtailmentPct) / 100;
+            const effectiveCost = usefulFraction > 0 ? totalCostPerDemand / usefulFraction : totalCostPerDemand;
+
+            return effectiveCost;
+        }
+
+        // ========== CHART 6: Cost Sensitivity Fan ==========
+        destroyChart('costFanChart');
+        const fanMinCosts = [], fanMaxCosts = [], fanMidCosts = [];
+        const fanAllScenarios = {}; // threshold -> [{cost, params}]
+
+        thresholds.forEach(t => {
+            const td = regionData.thresholds[String(t)];
+            if (!td) { fanMinCosts.push(0); fanMaxCosts.push(0); fanMidCosts.push(0); return; }
+
+            const scenarios = [];
+            for (const rl of LEVELS) {
+                for (const fl of LEVELS) {
+                    for (const sl of LEVELS) {
+                        for (const fuelL of LEVELS) {
+                            for (const txL of TX_LEVELS) {
+                                const cost = computeScenarioCost(currentRegion, td, rl, fl, sl, fuelL, txL);
+                                scenarios.push({
+                                    cost,
+                                    renew: rl, firm: fl, storage: sl, fuel: fuelL, tx: txL
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            scenarios.sort((a, b) => a.cost - b.cost);
+            fanAllScenarios[t] = scenarios;
+            fanMinCosts.push(scenarios[0].cost);
+            fanMaxCosts.push(scenarios[scenarios.length - 1].cost);
+            fanMidCosts.push((scenarios[0].cost + scenarios[scenarios.length - 1].cost) / 2);
+        });
+
+        // Update stat cards
+        const idx90Fan = thresholds.indexOf(90);
+        if (idx90Fan >= 0) {
+            document.getElementById('statFanLow').textContent = '$' + fanMinCosts[idx90Fan].toFixed(0);
+            document.getElementById('statFanMid').textContent = '$' + fanMidCosts[idx90Fan].toFixed(0);
+            document.getElementById('statFanHigh').textContent = '$' + fanMaxCosts[idx90Fan].toFixed(0);
+            document.getElementById('statFanSpread').textContent = '$' + (fanMaxCosts[idx90Fan] - fanMinCosts[idx90Fan]).toFixed(0);
+        }
+
+        chartInstances['costFanChart'] = new Chart(document.getElementById('costFanChart'), {
+            type: 'line',
+            data: {
+                labels: thresholdLabels,
+                datasets: [
+                    {
+                        label: 'High Bound',
+                        data: fanMaxCosts,
+                        borderColor: 'rgba(239,68,68,0.7)',
+                        backgroundColor: 'rgba(239,68,68,0.0)',
+                        borderWidth: 2,
+                        borderDash: [4, 3],
+                        pointRadius: 4,
+                        pointBackgroundColor: '#EF4444',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 1.5,
+                        fill: false,
+                        tension: 0.3,
+                        order: 2
+                    },
+                    {
+                        label: 'Sensitivity Range',
+                        data: fanMaxCosts,
+                        borderColor: 'transparent',
+                        backgroundColor: 'rgba(14,165,233,0.15)',
+                        fill: '+1',
+                        pointRadius: 0,
+                        tension: 0.3,
+                        order: 3
+                    },
+                    {
+                        label: 'Low Bound',
+                        data: fanMinCosts,
+                        borderColor: 'rgba(34,197,94,0.7)',
+                        backgroundColor: 'rgba(34,197,94,0.0)',
+                        borderWidth: 2,
+                        borderDash: [4, 3],
+                        pointRadius: 4,
+                        pointBackgroundColor: '#22C55E',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 1.5,
+                        fill: false,
+                        tension: 0.3,
+                        order: 4
+                    },
+                    {
+                        label: 'Midpoint',
+                        data: fanMidCosts,
+                        borderColor: meta.color,
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: meta.color,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        fill: false,
+                        tension: 0.3,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true, padding: 16, font: { size: 12 },
+                            filter: item => item.text !== 'Sensitivity Range'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                if (ctx.dataset.label === 'Sensitivity Range') return null;
+                                return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: false, title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                }
+            }
+        });
+
+        // Fan insight
+        if (idx90Fan >= 0) {
+            const spread90 = fanMaxCosts[idx90Fan] - fanMinCosts[idx90Fan];
+            const spreadPct = ((spread90 / fanMidCosts[idx90Fan]) * 100).toFixed(0);
+            document.getElementById('insightFan').innerHTML =
+                '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> At the 90% target in ' + currentRegion +
+                ', the cost could range from <strong>$' + fanMinCosts[idx90Fan].toFixed(0) + '</strong> to <strong>$' + fanMaxCosts[idx90Fan].toFixed(0) +
+                '/MWh</strong> — a $' + spread90.toFixed(0) + ' spread (' + spreadPct +
+                '% of midpoint). Technology cost trajectories are the largest source of uncertainty in decarbonization economics.</div>';
+        }
+        document.getElementById('narrativeFan').textContent =
+            'The fan chart captures the full range of cost outcomes under 324 combinations of renewable generation costs, firm generation costs, storage costs, fossil fuel prices, and transmission costs (all at Low/Medium/High, with transmission also including a "None" option). The spread widens at higher thresholds because the marginal resources (CCS, LDES, firm generation) have the widest cost uncertainty.';
+
+        // ========== CHART 7: Sensitivity Drivers + Mix Comparison ==========
+        destroyChart('mixCompareChart');
+        const refThresh = idx90Fan >= 0 ? 90 : thresholds[Math.floor(thresholds.length / 2)];
+        const refScenarios = fanAllScenarios[refThresh] || [];
+        const lowScenario = refScenarios[0];
+        const highScenario = refScenarios[refScenarios.length - 1];
+        // Find closest to midpoint
+        const midTarget = lowScenario && highScenario ? (lowScenario.cost + highScenario.cost) / 2 : 0;
+        let midScenario = refScenarios[0];
+        let minMidDiff = Infinity;
+        for (const s of refScenarios) {
+            const diff = Math.abs(s.cost - midTarget);
+            if (diff < minMidDiff) { minMidDiff = diff; midScenario = s; }
+        }
+
+        // Now recompute resource mixes for each scenario
+        // The resource mix is from the optimizer (same for all scenarios at a threshold),
+        // but we show how cost composition changes
+        const td90 = regionData.thresholds[String(refThresh)];
+        const baseMix = td90 ? td90.resource_mix : { clean_firm: 25, solar: 25, wind: 25, hydro: 25 };
+        const baseStoragePct = td90 ? (td90.storage_dispatch_pct || 0) : 0;
+
+        function getResourceCostBreakdown(scenario, mix, storagePct, threshData) {
+            const procPct = threshData ? (threshData.procurement_pct || 100) : 100;
+            const result = {};
+            const resources = ['clean_firm', 'solar', 'wind', 'hydro'];
+            const levelMap = { solar: scenario.renew, wind: scenario.renew, clean_firm: scenario.firm, ccs_ccgt: scenario.firm };
+
+            for (const res of resources) {
+                const sharePct = mix[res] || 0;
+                const totalOfDemand = sharePct * procPct / 100;
+                const existingPct = gridMix[res] || 0;
+                const existingOfDemand = Math.min(totalOfDemand, existingPct);
+                const newOfDemand = totalOfDemand - existingOfDemand;
+                if (res === 'hydro') {
+                    result[res] = totalOfDemand * wholesalePrice / 100;
+                } else {
+                    const lcoe = LCOE_TABLES[res][levelMap[res]][currentRegion];
+                    const txAdd = newOfDemand > 0 ? getTxAdder(res, scenario.tx, currentRegion) : 0;
+                    result[res] = existingOfDemand * wholesalePrice / 100 + newOfDemand * (lcoe + txAdd) / 100;
+                }
+            }
+
+            // Storage
+            result.battery = 0;
+            result.ldes = 0;
+            if (storagePct > 0) {
+                const threshVal = threshData ? (threshData.hourly_match_score || 0) : 0;
+                let ldesShare = 0, batteryShare = storagePct;
+                if (threshVal >= 95) {
+                    ldesShare = Math.min(storagePct, storagePct * ((threshVal - 90) / 15));
+                    batteryShare = storagePct - ldesShare;
+                }
+                const batteryLCOS = LCOE_TABLES.battery[scenario.storage][currentRegion];
+                const ldesLCOS = LCOE_TABLES.ldes[scenario.storage][currentRegion];
+                result.battery = batteryShare * (batteryLCOS + getTxAdder('battery', scenario.tx, currentRegion)) / 100;
+                result.ldes = ldesShare * (ldesLCOS + getTxAdder('ldes', scenario.tx, currentRegion)) / 100;
+            }
+
+            return result;
+        }
+
+        const lowBreakdown = lowScenario ? getResourceCostBreakdown(lowScenario, baseMix, baseStoragePct, td90) : {};
+        const midBreakdown = midScenario ? getResourceCostBreakdown(midScenario, baseMix, baseStoragePct, td90) : {};
+        const highBreakdown = highScenario ? getResourceCostBreakdown(highScenario, baseMix, baseStoragePct, td90) : {};
+
+        const mixCompResources = ['clean_firm', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+        const mixCompLabels = { clean_firm: 'Clean Firm', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES' };
+
+        chartInstances['mixCompareChart'] = new Chart(document.getElementById('mixCompareChart'), {
+            type: 'bar',
+            data: {
+                labels: [
+                    'Lowest Cost ($' + (lowScenario ? lowScenario.cost.toFixed(0) : '?') + '/MWh)',
+                    'Midpoint ($' + (midScenario ? midScenario.cost.toFixed(0) : '?') + '/MWh)',
+                    'Highest Cost ($' + (highScenario ? highScenario.cost.toFixed(0) : '?') + '/MWh)'
+                ],
+                datasets: mixCompResources.map((r, i) => ({
+                    label: mixCompLabels[r],
+                    data: [
+                        lowBreakdown[r] || 0,
+                        midBreakdown[r] || 0,
+                        highBreakdown[r] || 0
+                    ],
+                    backgroundColor: MIX_COLORS[r] ? MIX_COLORS[r].fill : 'rgba(100,100,100,0.3)',
+                    borderColor: MIX_COLORS[r] ? MIX_COLORS[r].border : '#666',
+                    borderWidth: 1.5,
+                    borderRadius: (i === mixCompResources.length - 1) ? 3 : 0,
+                    borderSkipped: (i === mixCompResources.length - 1) ? 'start' : true
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { size: 12 } } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh' } }
+                },
+                scales: {
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Cost Contribution ($/MWh)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { stacked: true, grid: { display: false } }
+                }
+            }
+        });
+
+        // Build sensitivity labels
+        function levelBadge(level) {
+            const colors = { Low: '#22C55E', Medium: '#F59E0B', High: '#EF4444', None: '#6B7280' };
+            return '<span style="display:inline-block;padding:3px 10px;border-radius:9999px;font-size:0.78rem;font-weight:700;color:#fff;background:' + (colors[level] || '#999') + ';margin:0 3px;">' + level + '</span>';
+        }
+
+        if (lowScenario && highScenario && midScenario) {
+            const labelHTML = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;font-size:0.88rem;">' +
+                '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:16px;">' +
+                '<div style="font-weight:700;color:#22C55E;margin-bottom:8px;">Lowest Cost Scenario</div>' +
+                '<div>Renewable: ' + levelBadge(lowScenario.renew) + '</div>' +
+                '<div>Firm Gen: ' + levelBadge(lowScenario.firm) + '</div>' +
+                '<div>Storage: ' + levelBadge(lowScenario.storage) + '</div>' +
+                '<div>Fuel Price: ' + levelBadge(lowScenario.fuel) + '</div>' +
+                '<div>Transmission: ' + levelBadge(lowScenario.tx) + '</div>' +
+                '</div>' +
+                '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:16px;">' +
+                '<div style="font-weight:700;color:#F59E0B;margin-bottom:8px;">Midpoint Scenario</div>' +
+                '<div>Renewable: ' + levelBadge(midScenario.renew) + '</div>' +
+                '<div>Firm Gen: ' + levelBadge(midScenario.firm) + '</div>' +
+                '<div>Storage: ' + levelBadge(midScenario.storage) + '</div>' +
+                '<div>Fuel Price: ' + levelBadge(midScenario.fuel) + '</div>' +
+                '<div>Transmission: ' + levelBadge(midScenario.tx) + '</div>' +
+                '</div>' +
+                '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:16px;">' +
+                '<div style="font-weight:700;color:#EF4444;margin-bottom:8px;">Highest Cost Scenario</div>' +
+                '<div>Renewable: ' + levelBadge(highScenario.renew) + '</div>' +
+                '<div>Firm Gen: ' + levelBadge(highScenario.firm) + '</div>' +
+                '<div>Storage: ' + levelBadge(highScenario.storage) + '</div>' +
+                '<div>Fuel Price: ' + levelBadge(highScenario.fuel) + '</div>' +
+                '<div>Transmission: ' + levelBadge(highScenario.tx) + '</div>' +
+                '</div></div>';
+
+            document.getElementById('sensitivityLabels').innerHTML = labelHTML;
+
+            // Identify what changed the most between low and high
+            const drivers = [];
+            if (lowScenario.renew !== highScenario.renew) drivers.push('renewable generation costs');
+            if (lowScenario.firm !== highScenario.firm) drivers.push('firm generation costs');
+            if (lowScenario.storage !== highScenario.storage) drivers.push('storage costs');
+            if (lowScenario.fuel !== highScenario.fuel) drivers.push('fossil fuel prices');
+            if (lowScenario.tx !== highScenario.tx) drivers.push('transmission costs');
+
+            document.getElementById('insightMixCompare').innerHTML =
+                '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> The cost difference between the lowest ($' + lowScenario.cost.toFixed(0) +
+                '/MWh) and highest ($' + highScenario.cost.toFixed(0) + '/MWh) scenarios is driven by differences in <strong>' +
+                drivers.join(', ') + '</strong>. The resource mix stays the same (optimized at Medium), but cost composition shifts dramatically.</div>';
+        }
+
+        document.getElementById('narrativeMixCompare').textContent =
+            'The stacked bars show how each resource\'s cost contribution changes across sensitivity assumptions. While the physical resource mix is co-optimized at Medium costs, ' +
+            'the total cost varies significantly as technology costs, fuel prices, and transmission charges shift. This decomposition reveals which cost categories have the most leverage on total procurement cost.';
 
         // ========== CHART 5: Abatement ==========
         destroyChart('abatementChart');
