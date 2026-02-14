@@ -4,7 +4,7 @@
 
 1. **Read SPEC.md first** — it contains every design decision, cost table, and implementation detail
 2. **Check the todo list** or review git log to see what's been completed
-3. **Branch**: `claude/enhance-optimizer-model-IqSpe`
+3. **Branch**: `claude/enhance-optimizer-pairing-k0h9h`
 4. **Repo**: `jessicacohen554-cyber/hourly-cfe-optimizer` (all advanced model work on designated branch)
 # Claude Code — Session Instructions
 
@@ -76,6 +76,7 @@
 - **If new decisions are made while the optimizer is running in the background**: Immediately flag to the user that the running optimizer does NOT reflect the new decision, and confirm whether to (a) let it finish anyway (if the decision doesn't affect current run), or (b) stop it and re-run after implementing the change. Never silently let a stale run continue as if it's current.
 - **If the user asks to run the optimizer**: Treat it as a trigger to do a final audit — scan the recent conversation for any unimplemented decisions before starting the run. If anything is missing, implement it first, THEN run.
 - **Background optimizer + other edits is fine** — but only for edits that don't touch optimizer logic (e.g., HTML, CSS, documentation, dashboard JS). If an edit changes anything the optimizer consumes (cost tables, algorithms, thresholds, resource types, dispatch logic), the optimizer must be re-run after the current run completes.
+- **If the optimizer crashes or exits without writing results**: Automatically troubleshoot, debug, and retry. Don't wait idle — check logs/stderr, identify the failure mode (OOM, timeout, runtime error, etc.), apply a fix or workaround, and re-launch. Only escalate to the user if the root cause is ambiguous or requires a design decision.
 
 ### Change Propagation (Critical)
 - **"Fix something" = fix it everywhere** — any request to fix, update, or change something applies to ALL regions and ALL pages by default, not just the one being discussed
