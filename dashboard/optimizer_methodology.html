@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Methodology - Hourly Clean Energy Cost Optimizer</title>
+    <title>The 8,760 Problem — Methodology & Technical Reference</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -120,7 +120,7 @@
         .header {
             background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
             color: #ffffff;
-            padding: 52px 24px 48px;
+            padding: 72px 24px 64px;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -609,28 +609,34 @@
 
 <!-- ========== TOP NAVIGATION ========== -->
 <nav class="top-nav">
-    <span class="nav-brand">Hourly CFE Optimizer</span>
+    <span class="nav-brand">The 8,760 Problem</span>
     <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="top-nav-inner">
         <a href="dashboard.html">Dashboard</a>
-        <a href="region_caiso.html">CAISO</a>
-        <a href="region_ercot.html">ERCOT</a>
-        <a href="region_pjm.html">PJM</a>
-        <a href="region_nyiso.html">NYISO</a>
-        <a href="region_neiso.html">NEISO</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
         <a href="abatement_comparison.html">Abatement</a>
         <a href="optimizer_methodology.html" class="nav-active">Methodology</a>
-        <a href="research_paper.html">Paper</a>
+        <a href="research_paper.html">Research Paper</a>
     </div>
 </nav>
 
 <header class="header">
-    <h1>Hourly Clean Energy Cost Optimizer</h1>
-    <p class="subtitle">Methodology &amp; Technical Reference</p>
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle">Every climate solution depends on a clean grid. An economic analysis of deep decarbonization, hour by hour, region by region.</p>
     <div class="header-accent"></div>
 </header>
+
+<div style="max-width:900px;margin:0 auto;padding:40px 48px 24px;background:#F3F4F8;">
+    <h2 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif;font-size:2.4rem;font-weight:800;color:#DC2626;margin-bottom:16px;letter-spacing:-0.5px;line-height:1.2;">Methodology & Technical Reference</h2>
+    <p style="font-size:0.98rem;color:#1A1A1A;line-height:1.75;max-width:800px;">
+        This document details the optimization model, data sources, cost assumptions, and dispatch algorithms
+        that power the analysis. The optimizer uses a three-phase sweep across 16,200 scenarios to co-optimize
+        resource mix and cost at every threshold. All inputs are grounded in published data from NREL ATB, EIA,
+        eGRID, and Lazard.
+    </p>
+</div>
 
 <div class="content">
     <div class="toc">
