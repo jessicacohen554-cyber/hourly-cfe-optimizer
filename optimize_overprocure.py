@@ -2165,7 +2165,7 @@ COST_SCENARIO_MAP = {key: levels for key, levels in ALL_COST_SCENARIOS}
 # Run 54 representative scenarios (corners + stratified) to discover all archetypes,
 # then cross-pollinate to fill in the remaining 270 scenarios.
 # At 95-100%, run full 324 for academic precision in the cost-sensitive zone.
-PRUNING_THRESHOLD_CUTOFF = 92.5  # Prune at thresholds <= this; full 324 above
+PRUNING_THRESHOLD_CUTOFF = 100  # Prune all thresholds — empirically, 44 reps discover all archetypes
 
 def _build_representative_scenarios():
     """Select 54 representative scenarios covering the cost space extremes + grid."""
@@ -2458,6 +2458,48 @@ def process_iso(args):
                 save_checkpoint(iso, iso_results,
                     phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of{total_active}',
                     partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
+
+        # ── Safety net: if all representative scenarios found unique mixes, expand ──
+        if use_pruning:
+            initial_unique = set()
+            for res in threshold_scenarios.values():
+                m = res['resource_mix']
+                initial_unique.add((m['clean_firm'], m['solar'], m['wind'],
+                                    m['ccs_ccgt'], m['hydro'],
+                                    res['procurement_pct'],
+                                    res['battery_dispatch_pct'],
+                                    res['ldes_dispatch_pct']))
+            if len(initial_unique) >= len(REPRESENTATIVE_SCENARIOS) * 0.9:
+                # Saturation detected — expand to remaining scenarios
+                print(f"      SAFETY NET: {len(initial_unique)} unique mixes from "
+                      f"{len(threshold_scenarios)} scenarios — expanding to full 324")
+                already_done = set(threshold_scenarios.keys())
+                for s_idx2, (scenario_key, cost_levels) in enumerate(ALL_COST_SCENARIOS):
+                    if scenario_key in already_done:
+                        continue
+                    result = optimize_for_threshold(
+                        iso, demand_norm, supply_profiles, threshold, hydro_cap,
+                        emission_rates, demand_total_mwh,
+                        cost_levels=cost_levels, score_cache=score_cache
+                    )
+                    if result:
+                        r_gen, f_gen, stor, fuel, tx = cost_levels
+                        cost_data = compute_costs_parameterized(
+                            iso, result['resource_mix'], result['procurement_pct'],
+                            result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
+                            result['hourly_match_score'],
+                            r_gen, f_gen, stor, fuel, tx
+                        )
+                        result['costs'] = cost_data
+                        threshold_scenarios[scenario_key] = result
+                        if scenario_key == 'MMM_M_M':
+                            medium_result = result
+                    opt_count += 1
+                    if opt_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
+                        save_checkpoint(iso, iso_results,
+                            phase=f'threshold-{threshold}-expanded-{len(threshold_scenarios)}of324',
+                            partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
+                print(f"      Expanded: {len(threshold_scenarios)}/324 scenarios after safety net")
 
         # Log Medium scenario progress
         t_elapsed = time.time() - t_start
