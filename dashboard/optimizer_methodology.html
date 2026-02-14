@@ -619,8 +619,7 @@
         <a href="abatement_dashboard.html">Abatement Dashboard</a>
         <a href="region_deepdive.html">Regional Deep Dives</a>
         <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
-        <a href="optimizer_methodology.html" class="nav-active">Methodology</a>
-        <a href="research_paper.html">Research Paper</a>
+        <a href="research_paper.html" class="nav-active">Methodology &amp; Paper</a>
     </div>
 </nav>
 <div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
@@ -1680,10 +1679,11 @@
 
     <h3>9.5 Emission Accounting Limitations</h3>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.93rem; line-height: 2;">
-        <li><strong>CO<sub>2</sub> simplified methodology:</strong> CO<sub>2</sub> displacement uses regional
-            marginal emission rates from EPA eGRID. Actual marginal emission rates vary hourly and depend
-            on the dispatch order of generators in each region. The model uses annual average non-baseload
-            emission rates as a simplification.</li>
+        <li><strong>CO<sub>2</sub> hourly methodology:</strong> CO<sub>2</sub> displacement uses hourly
+            variable emission rates built from EPA eGRID 2023 per-fuel factors (coal, gas, oil) weighted by
+            EIA-930 hourly fossil fuel mix shares. This captures hour-by-hour variation in carbon intensity
+            as the fossil dispatch mix changes. Under fuel price sensitivity scenarios, coal/gas shares shift
+            via regional fuel-switching elasticity.</li>
         <li><strong>No embodied emissions:</strong> Life-cycle emissions from manufacturing, construction,
             and decommissioning of clean energy infrastructure are not included. Solar panels, wind turbines,
             and batteries all have embodied carbon from mining, manufacturing, and transport.</li>

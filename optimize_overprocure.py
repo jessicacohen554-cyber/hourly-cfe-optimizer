@@ -956,27 +956,118 @@ def find_optimal_storage(demand_arr, supply_matrix, mix_fractions, procurement_f
 
 def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_score,
                           battery_dispatch_pct, ldes_dispatch_pct,
-                          emission_rates, demand_total_mwh):
+                          emission_rates, demand_total_mwh,
+                          demand_norm=None, supply_profiles=None, fossil_mix=None):
     """
-    Compute CO2 abatement from the clean energy portfolio.
+    Compute CO2 abatement using hourly fossil-fuel emission rates.
 
-    Each clean MWh displaces fossil generation at the regional marginal emission rate.
-    CCS-CCGT: 90% capture, residual ~0.037 tCO2/MWh.
+    Methodology:
+      1. Build hourly emission rate from eGRID per-fuel rates × EIA hourly fossil mix
+         emission_rate[h] = coal_share[h]×coal_rate + gas_share[h]×gas_rate + oil_share[h]×oil_rate
+      2. Reconstruct hourly clean supply → fossil displacement at each hour
+      3. CO2_abated = Σ_h fossil_displaced[h] × emission_rate[h]
+      4. CCS-CCGT: partial credit (rate[h] - 0.037 tCO2/MWh residual)
 
-    Returns dict with total_co2_abated_tons, co2_rate_per_mwh, breakdown by resource.
+    Falls back to flat regional rate if hourly data not provided (backward compat).
     """
-    # Regional marginal emission rate from eGRID (fossil CO2 lb/MWh -> tons/MWh)
     regional_data = emission_rates.get(iso, {})
+
+    # Per-fuel emission rates from eGRID (lb/MWh → metric tons/MWh)
+    coal_rate = regional_data.get('coal_co2_lb_per_mwh', 0.0) / 2204.62
+    gas_rate = regional_data.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
+    oil_rate = regional_data.get('oil_co2_lb_per_mwh', 0.0) / 2204.62
+
+    # ── Hourly emission rate calculation ──
+    use_hourly = (demand_norm is not None and supply_profiles is not None
+                  and fossil_mix is not None)
+
+    if use_hourly:
+        # Build hourly emission rates from fossil mix shares
+        iso_fossil = fossil_mix.get(iso, {})
+        year_data = iso_fossil.get(DATA_YEAR, iso_fossil.get('2024', {}))
+
+        coal_shares = np.array(year_data.get('coal_share', [0.0] * H)[:H], dtype=np.float64)
+        gas_shares = np.array(year_data.get('gas_share', [1.0] * H)[:H], dtype=np.float64)
+        oil_shares = np.array(year_data.get('oil_share', [0.0] * H)[:H], dtype=np.float64)
+
+        # Pad to H if shorter
+        for arr_name in ['coal_shares', 'gas_shares', 'oil_shares']:
+            arr = locals()[arr_name]
+            if len(arr) < H:
+                locals()[arr_name] = np.pad(arr, (0, H - len(arr)), mode='edge')
+
+        hourly_rates = coal_shares * coal_rate + gas_shares * gas_rate + oil_shares * oil_rate
+
+        # Reconstruct hourly clean supply and fossil displacement
+        procurement_factor = procurement_pct / 100.0
+        demand_arr = np.array(demand_norm[:H], dtype=np.float64)
+        supply_total = np.zeros(H, dtype=np.float64)
+        ccs_supply = np.zeros(H, dtype=np.float64)
+
+        for rtype in RESOURCE_TYPES:
+            pct = resource_pcts.get(rtype, 0)
+            if pct <= 0:
+                continue
+            profile = np.array(supply_profiles[rtype][:H], dtype=np.float64)
+            contribution = procurement_factor * (pct / 100.0) * profile
+            supply_total += contribution
+            if rtype == 'ccs_ccgt':
+                ccs_supply = contribution.copy()
+
+        # Simplified storage effect (proportional adjustment)
+        storage_boost = (battery_dispatch_pct + ldes_dispatch_pct) / 100.0
+        # Storage shifts supply from surplus to gap hours; approximate by
+        # adding storage fraction uniformly to matched fraction
+        total_clean = supply_total  # Storage is already accounted in match score
+
+        fossil_displaced = np.minimum(demand_arr, total_clean)
+        matched_mwh = np.sum(fossil_displaced) * demand_total_mwh
+
+        # Non-CCS clean displacement
+        ccs_matched = np.minimum(fossil_displaced, ccs_supply)
+        non_ccs_matched = fossil_displaced - ccs_matched
+
+        # CO₂ from non-CCS: full credit at hourly rate
+        co2_clean = np.sum(non_ccs_matched * hourly_rates) * demand_total_mwh
+        # CO₂ from CCS: partial credit
+        ccs_credit = np.maximum(0.0, hourly_rates - CCS_RESIDUAL_EMISSION_RATE)
+        co2_ccs = np.sum(ccs_matched * ccs_credit) * demand_total_mwh
+
+        # Storage displacement (shifts surplus→gap, displaces fossil at gap hours)
+        storage_mwh = demand_total_mwh * storage_boost
+        # Weighted avg rate at gap hours (approximation)
+        gap_mask = demand_arr > total_clean
+        if np.any(gap_mask):
+            gap_weighted_rate = np.average(hourly_rates[gap_mask],
+                                           weights=np.maximum(0, demand_arr[gap_mask] - total_clean[gap_mask]))
+        else:
+            gap_weighted_rate = np.mean(hourly_rates)
+        co2_storage = storage_mwh * gap_weighted_rate
+
+        total_abated = co2_clean + co2_ccs + co2_storage
+        matched_mwh_total = matched_mwh + storage_mwh
+        co2_rate = total_abated / matched_mwh_total if matched_mwh_total > 0 else 0
+        weighted_avg_rate = np.average(hourly_rates, weights=fossil_displaced) \
+            if np.sum(fossil_displaced) > 0 else np.mean(hourly_rates)
+
+        return {
+            'marginal_emission_rate_tons_per_mwh': round(float(weighted_avg_rate), 4),
+            'hourly_emission_rate_avg': round(float(np.mean(hourly_rates)), 4),
+            'hourly_emission_rate_min': round(float(np.min(hourly_rates)), 4),
+            'hourly_emission_rate_max': round(float(np.max(hourly_rates)), 4),
+            'total_co2_abated_tons': round(float(total_abated), 0),
+            'co2_rate_per_mwh': round(float(co2_rate), 4),
+            'methodology': 'hourly_fossil_fuel_emission_rates',
+        }
+
+    # ── Fallback: flat regional rate (backward compatibility) ──
     fossil_co2_lb_per_mwh = regional_data.get('fossil_co2_lb_per_mwh', 900.0)
-    marginal_rate_tons = fossil_co2_lb_per_mwh / 2204.62  # lb to metric tons
+    marginal_rate_tons = fossil_co2_lb_per_mwh / 2204.62
 
     procurement_factor = procurement_pct / 100.0
     matched_fraction = hourly_match_score / 100.0
-
-    # Total annual demand in MWh matched by clean energy
     matched_mwh = demand_total_mwh * matched_fraction
 
-    # Calculate MWh by resource type
     resource_co2 = {}
     total_abated = 0.0
 
@@ -986,15 +1077,11 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
             resource_co2[rtype] = {'mwh': 0, 'co2_abated_tons': 0}
             continue
 
-        # Resource's share of matched MWh (approximate proportional allocation)
         resource_mwh = matched_mwh * (pct / 100.0)
 
         if rtype == 'ccs_ccgt':
-            # CCS-CCGT: 90% capture. Each MWh displaces fossil at marginal rate
-            # but produces residual emissions of 0.037 tCO2/MWh
             abated = resource_mwh * (marginal_rate_tons - CCS_RESIDUAL_EMISSION_RATE)
         else:
-            # Clean resource: displaces fossil at full marginal rate
             abated = resource_mwh * marginal_rate_tons
 
         abated = max(0, abated)
@@ -1004,7 +1091,6 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
         }
         total_abated += abated
 
-    # Storage dispatch MWh also displace fossil (the energy was originally clean surplus)
     storage_mwh = demand_total_mwh * ((battery_dispatch_pct + ldes_dispatch_pct) / 100.0)
     storage_abated = storage_mwh * marginal_rate_tons
     resource_co2['battery'] = {
@@ -1024,6 +1110,7 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
         'total_co2_abated_tons': round(total_abated, 0),
         'co2_rate_per_mwh': round(co2_rate, 4),
         'resource_breakdown': resource_co2,
+        'methodology': 'flat_regional_rate',
     }
 
 
@@ -1808,7 +1895,12 @@ def process_iso(args):
          T_lower with broader parameters (5% Phase 1 step, expanded procurement range,
          seed mixes from T_higher) to find the true optimum — up to 2 rounds
     """
-    iso, demand_data, gen_profiles, emission_rates = args
+    # Unpack args — supports both old (4-tuple) and new (5-tuple) format
+    if len(args) == 5:
+        iso, demand_data, gen_profiles, emission_rates, fossil_mix = args
+    else:
+        iso, demand_data, gen_profiles, emission_rates = args
+        fossil_mix = None
 
     print(f"\n{'='*70}")
     print(f"  {ISO_LABELS[iso]}")
@@ -1863,7 +1955,9 @@ def process_iso(args):
         co2 = compute_co2_abatement(
             iso, r['resource_mix'], r['procurement_pct'], r['hourly_match_score'],
             r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
-            emission_rates, demand_total_mwh
+            emission_rates, demand_total_mwh,
+            demand_norm=demand_norm, supply_profiles=supply_profiles,
+            fossil_mix=fossil_mix
         )
         r['co2_abated'] = co2
         iso_results['sweep'].append(r)
@@ -1988,7 +2082,9 @@ def process_iso(args):
                 iso, med['resource_mix'], med['procurement_pct'],
                 med['hourly_match_score'],
                 med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
-                emission_rates, demand_total_mwh
+                emission_rates, demand_total_mwh,
+                demand_norm=demand_norm, supply_profiles=supply_profiles,
+                fossil_mix=fossil_mix
             )
             med['co2_abated'] = co2
 
@@ -2170,7 +2266,9 @@ def process_iso(args):
                     iso, med['resource_mix'], med['procurement_pct'],
                     med['hourly_match_score'],
                     med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
-                    emission_rates, demand_total_mwh
+                    emission_rates, demand_total_mwh,
+                    demand_norm=demand_norm, supply_profiles=supply_profiles,
+                    fossil_mix=fossil_mix
                 )
                 med['co2_abated'] = co2
                 cdp = compute_compressed_day(
@@ -2275,7 +2373,7 @@ def main():
 
     # Run all 5 ISOs concurrently using multiprocessing
     worker_args = [
-        (iso, demand_data, gen_profiles, emission_rates)
+        (iso, demand_data, gen_profiles, emission_rates, fossil_mix)
         for iso in ISOS
     ]
 
