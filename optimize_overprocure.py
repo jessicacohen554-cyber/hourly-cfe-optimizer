@@ -10,11 +10,11 @@ to maximize hourly matching at minimum cost.
 Three-phase refinement: coarse -> medium -> fine (adapted for 5D)
 
 Resource types:
-  - Clean Firm: flat baseload (1/8760 per hour) — nuclear/geothermal
-  - Solar: EIA 2025 hourly regional profile
-  - Wind: EIA 2025 hourly regional profile
-  - CCS-CCGT: flat baseload (1/8760 per hour) — dispatchable, 90% capture
-  - Hydro: EIA 2025 hourly regional profile (capped by region, existing only)
+  - Clean Firm: seasonally-derated baseload — nuclear/geothermal
+  - Solar: EIA 2021-2025 averaged hourly profile (DST-aware nighttime zeroing)
+  - Wind: EIA 2021-2025 averaged hourly profile
+  - CCS-CCGT: flat baseload (1/8760 per hour) — dispatchable, 95% capture
+  - Hydro: EIA 2021-2025 averaged hourly profile (capped by region, existing only)
 
 Storage:
   - Battery: 4hr Li-ion, 85% RTE, daily-cycle greedy dispatch
@@ -35,8 +35,10 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
-DATA_YEAR = '2025'
+DATA_YEAR = '2025'        # Actuals year for total MWh, grid mix, hydro caps
+PROFILE_YEARS = ['2021', '2022', '2023', '2024', '2025']  # Years to average for shapes
 H = 8760
+LEAP_FEB29_START = 1416   # Hour index where Feb 29 starts in a leap year (744+672)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STORAGE CONSTANTS
@@ -50,15 +52,46 @@ LDES_DURATION_HOURS = 100
 LDES_WINDOW_DAYS = 7
 
 # ══════════════════════════════════════════════════════════════════════════════
+# NUCLEAR SEASONAL DERATE (from EIA 2021-2025 analysis)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Nuclear share of clean firm generation by ISO
+# CAISO: ~1 GW geothermal + Diablo Canyon (~2.3 GW) → ~70% nuclear
+# All others: clean firm is effectively 100% nuclear
+NUCLEAR_SHARE_OF_CLEAN_FIRM = {
+    'CAISO': 0.70,  # ~2.3 GW nuclear / (~2.3 GW nuclear + ~1 GW geothermal)
+    'ERCOT': 1.0,   # South Texas Project only
+    'PJM': 1.0,     # Large nuclear fleet (Limerick, Peach Bottom, etc.)
+    'NYISO': 1.0,   # Nine Mile Point, Ginna, FitzPatrick
+    'NEISO': 1.0,   # Millstone, Seabrook
+}
+
+# Seasonal capacity factors relative to peak (from 5-year EIA average)
+# Applied to nuclear portion only. Geothermal stays flat.
+# Months: 1=Jan, 12=Dec
+NUCLEAR_MONTHLY_CF = {  # relative to nameplate (where winter peak = 1.0)
+    'CAISO': {1: 0.94, 2: 0.94, 3: 0.85, 4: 0.75, 5: 0.80, 6: 0.99,
+              7: 1.0, 8: 1.0, 9: 0.90, 10: 0.78, 11: 0.82, 12: 0.94},
+    'ERCOT': {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.89, 6: 0.97,
+              7: 0.97, 8: 0.96, 9: 0.88, 10: 0.79, 11: 0.85, 12: 1.0},
+    'PJM':   {1: 1.0, 2: 1.0, 3: 0.92, 4: 0.85, 5: 0.87, 6: 0.98,
+              7: 0.99, 8: 0.97, 9: 0.93, 10: 0.89, 11: 0.91, 12: 1.0},
+    'NYISO': {1: 1.0, 2: 1.0, 3: 0.88, 4: 0.78, 5: 0.81, 6: 0.95,
+              7: 0.96, 8: 0.94, 9: 0.85, 10: 0.75, 11: 0.79, 12: 1.0},
+    'NEISO': {1: 1.0, 2: 0.99, 3: 0.92, 4: 0.83, 5: 0.88, 6: 0.96,
+              7: 0.97, 8: 0.95, 9: 0.88, 10: 0.82, 11: 0.85, 12: 1.0},
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
 # REGIONAL CONSTANTS
 # ══════════════════════════════════════════════════════════════════════════════
 
-HYDRO_CAPS = {
-    'CAISO': 30,
-    'ERCOT': 5,
-    'PJM': 15,
-    'NYISO': 40,
-    'NEISO': 30,
+HYDRO_CAPS = {  # 2025 actual hydro share of demand from EIA data
+    'CAISO': 9.5,   # 5yr range: 5.2% (drought 2021) - 11.2% (wet 2023)
+    'ERCOT': 0.1,   # Minimal hydro in Texas
+    'PJM': 1.8,     # 5yr range: 1.9% - 2.1%
+    'NYISO': 15.9,  # 5yr range: 15.9% - 18.3%
+    'NEISO': 4.4,   # 5yr range: 4.5% - 7.8%
 }
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
@@ -106,12 +139,12 @@ WHOLESALE_PRICES = {
 }
 
 # Medium LCOE values used by the optimizer for mix optimization
-REGIONAL_LCOE = {
-    'CAISO': {'clean_firm': 78, 'solar': 60, 'wind': 73, 'ccs_ccgt': 86, 'hydro': 0, 'battery': 102, 'ldes': 180},
-    'ERCOT': {'clean_firm': 85, 'solar': 54, 'wind': 40, 'ccs_ccgt': 71, 'hydro': 0, 'battery': 92, 'ldes': 155},
-    'PJM':   {'clean_firm': 93, 'solar': 65, 'wind': 62, 'ccs_ccgt': 79, 'hydro': 0, 'battery': 98, 'ldes': 170},
-    'NYISO': {'clean_firm': 98, 'solar': 92, 'wind': 81, 'ccs_ccgt': 99, 'hydro': 0, 'battery': 108, 'ldes': 200},
-    'NEISO': {'clean_firm': 96, 'solar': 82, 'wind': 73, 'ccs_ccgt': 96, 'hydro': 0, 'battery': 105, 'ldes': 190},
+REGIONAL_LCOE = {  # Medium level — blended uprate+new-build for clean_firm
+    'CAISO': {'clean_firm': 79, 'solar': 60, 'wind': 73, 'ccs_ccgt': 86, 'hydro': 0, 'battery': 102, 'ldes': 180},
+    'ERCOT': {'clean_firm': 79, 'solar': 54, 'wind': 40, 'ccs_ccgt': 71, 'hydro': 0, 'battery': 92, 'ldes': 155},
+    'PJM':   {'clean_firm': 68, 'solar': 65, 'wind': 62, 'ccs_ccgt': 79, 'hydro': 0, 'battery': 98, 'ldes': 170},
+    'NYISO': {'clean_firm': 86, 'solar': 92, 'wind': 81, 'ccs_ccgt': 99, 'hydro': 0, 'battery': 108, 'ldes': 200},
+    'NEISO': {'clean_firm': 92, 'solar': 82, 'wind': 73, 'ccs_ccgt': 96, 'hydro': 0, 'battery': 105, 'ldes': 190},
 }
 
 # Transmission adders at Medium level (used by optimizer)
@@ -135,10 +168,10 @@ FULL_LCOE_TABLES = {
         'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73},
         'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95},
     },
-    'clean_firm': {
-        'Low':    {'CAISO': 58, 'ERCOT': 63, 'PJM': 72, 'NYISO': 75, 'NEISO': 73},
-        'Medium': {'CAISO': 78, 'ERCOT': 85, 'PJM': 93, 'NYISO': 98, 'NEISO': 96},
-        'High':   {'CAISO': 110, 'ERCOT': 120, 'PJM': 140, 'NYISO': 150, 'NEISO': 145},
+    'clean_firm': {  # Blended uprate + new-build LCOE
+        'Low':    {'CAISO': 58, 'ERCOT': 56, 'PJM': 48, 'NYISO': 64, 'NEISO': 69},
+        'Medium': {'CAISO': 79, 'ERCOT': 79, 'PJM': 68, 'NYISO': 86, 'NEISO': 92},
+        'High':   {'CAISO': 115, 'ERCOT': 115, 'PJM': 108, 'NYISO': 136, 'NEISO': 143},
     },
     'ccs_ccgt': {
         'Low':    {'CAISO': 58, 'ERCOT': 52, 'PJM': 62, 'NYISO': 78, 'NEISO': 75},
@@ -259,7 +292,7 @@ GRID_MIX_SHARES = {
     'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
 }
 
-# CCS-CCGT residual emission rate (tCO2/MWh) after 90% capture
+# CCS-CCGT residual emission rate (tCO2/MWh) after 95% capture
 CCS_RESIDUAL_EMISSION_RATE = 0.0185  # 95% capture from ~0.37 tCO2/MWh CCGT
 
 
@@ -267,21 +300,121 @@ CCS_RESIDUAL_EMISSION_RATE = 0.0185  # 95% capture from ~0.37 tCO2/MWh CCGT
 # DATA LOADING
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _remove_leap_day(profile_8784):
+    """Remove Feb 29 hours (indices 1416-1439) from a leap year 8784-hour profile."""
+    if len(profile_8784) <= H:
+        return list(profile_8784[:H])
+    return list(profile_8784[:LEAP_FEB29_START]) + list(profile_8784[LEAP_FEB29_START + 24:H + 24])
+
+
+def _average_profiles(yearly_profiles):
+    """Element-wise average of multiple 8760-hour profiles."""
+    if not yearly_profiles:
+        return [0.0] * H
+    n = len(yearly_profiles)
+    avg = [0.0] * H
+    for profile in yearly_profiles:
+        for h in range(H):
+            avg[h] += profile[h]
+    for h in range(H):
+        avg[h] /= n
+    return avg
+
+
 def load_data():
-    """Load demand profiles, generation profiles, emission rates, and fossil mix."""
+    """Load demand profiles, generation profiles, emission rates, and fossil mix.
+
+    Data split (per SPEC.md §19.4):
+      - Profile SHAPES: 5-year average (2021-2025) for weather smoothing
+      - Scalar quantities: 2025 actuals (total_annual_mwh, peak_mw, grid mix, hydro caps)
+    Leap year 2024 handled by removing Feb 29 before averaging.
+    """
     print("Loading data...")
 
     with open(os.path.join(DATA_DIR, 'eia_demand_profiles.json')) as f:
-        demand_data = json.load(f)
+        demand_raw = json.load(f)
 
     with open(os.path.join(DATA_DIR, 'eia_generation_profiles.json')) as f:
-        gen_profiles = json.load(f)
+        gen_raw = json.load(f)
 
     with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
         emission_rates = json.load(f)
 
     with open(os.path.join(DATA_DIR, 'eia_fossil_mix.json')) as f:
         fossil_mix = json.load(f)
+
+    # ── Average generation profiles across PROFILE_YEARS ──
+    gen_profiles = {}
+    for iso in ISOS:
+        iso_raw = gen_raw.get(iso, {})
+        available_years = [y for y in PROFILE_YEARS if y in iso_raw]
+        if not available_years:
+            raise ValueError(f"No generation profile years found for {iso}")
+
+        # Collect all resource types across years
+        all_rtypes = set()
+        for y in available_years:
+            all_rtypes.update(iso_raw[y].keys())
+
+        gen_profiles[iso] = {}
+        for rtype in all_rtypes:
+            yearly = []
+            for y in available_years:
+                raw = iso_raw[y].get(rtype)
+                if raw is None:
+                    continue
+                # Handle leap year 2024: remove Feb 29 to get 8760
+                if len(raw) > H:
+                    raw = _remove_leap_day(raw)
+                else:
+                    raw = list(raw[:H])
+                yearly.append(raw)
+            if yearly:
+                gen_profiles[iso][rtype] = _average_profiles(yearly)
+
+        n_yrs = len(available_years)
+        print(f"  {iso}: gen profiles averaged over {n_yrs} years ({', '.join(available_years)})")
+
+    # ── Average demand profiles; use 2025 actuals for scalars ──
+    demand_data = {}
+    for iso in ISOS:
+        iso_data = demand_raw.get(iso, {})
+
+        # Check if year-keyed
+        year_keys = [k for k in iso_data.keys() if k.isdigit()]
+        if not year_keys and 'normalized' in iso_data:
+            # Old format: single year, use as-is
+            demand_data[iso] = iso_data
+            continue
+
+        # Average normalized shape across available PROFILE_YEARS
+        available_years = [y for y in PROFILE_YEARS if y in iso_data]
+        if not available_years:
+            raise ValueError(f"No demand data years found for {iso}")
+
+        yearly_norms = []
+        for y in available_years:
+            raw = iso_data[y].get('normalized', [])
+            if len(raw) > H:
+                raw = _remove_leap_day(raw)
+            else:
+                raw = list(raw[:H])
+            yearly_norms.append(raw)
+
+        avg_norm = _average_profiles(yearly_norms)
+
+        # Use 2025 actuals for scalar quantities
+        actuals_year = DATA_YEAR if DATA_YEAR in iso_data else available_years[-1]
+        if actuals_year != DATA_YEAR:
+            print(f"  Warning: {iso} demand using {actuals_year} actuals (2025 not found)")
+
+        demand_data[iso] = {
+            'normalized': avg_norm,
+            'total_annual_mwh': iso_data[actuals_year]['total_annual_mwh'],
+            'peak_mw': iso_data[actuals_year]['peak_mw'],
+        }
+        print(f"  {iso}: demand shape averaged over {len(available_years)} years, "
+              f"scalars from {actuals_year}")
 
     print("  Data loaded.")
     return demand_data, gen_profiles, emission_rates, fossil_mix
@@ -291,43 +424,96 @@ def get_supply_profiles(iso, gen_profiles):
     """Get generation shape profiles for the 5 resource types."""
     profiles = {}
 
-    # Clean firm = flat baseload
-    profiles['clean_firm'] = [1.0 / H] * H
+    # Clean firm = seasonally-derated baseload
+    # Nuclear portion gets spring/fall derate; geothermal stays flat
+    nuc_share = NUCLEAR_SHARE_OF_CLEAN_FIRM.get(iso, 1.0)
+    geo_share = 1.0 - nuc_share
+    monthly_cf = NUCLEAR_MONTHLY_CF.get(iso, {m: 1.0 for m in range(1, 13)})
+    cf_profile = []
+    # Build 8760 profile: each hour gets its month's derate
+    # Month boundaries for non-leap year (H=8760)
+    month_hours = [744, 672, 744, 720, 744, 720, 744, 744, 720, 744, 720, 744]
+    hour = 0
+    for month_idx, hours_in_month in enumerate(month_hours):
+        month_num = month_idx + 1  # 1-indexed
+        nuc_cf = monthly_cf.get(month_num, 1.0)
+        # Blended CF: nuclear derated + geothermal flat
+        blended = nuc_share * nuc_cf + geo_share * 1.0
+        for _ in range(hours_in_month):
+            if hour < H:
+                cf_profile.append(blended / H)
+                hour += 1
+    # Fill any remaining hours (shouldn't happen, but safety)
+    while len(cf_profile) < H:
+        cf_profile.append(1.0 / H)
+    profiles['clean_firm'] = cf_profile[:H]
 
-    # Solar
+    # Solar (with DST-aware nighttime correction)
     if iso == 'NYISO':
-        p = gen_profiles[iso][DATA_YEAR].get('solar_proxy')
+        p = gen_profiles[iso].get('solar_proxy')
         if not p:
-            p = gen_profiles['NEISO'][DATA_YEAR].get('solar')
-        profiles['solar'] = p[:H]
+            p = gen_profiles['NEISO'].get('solar')
+        solar_raw = list(p[:H])
     else:
-        profiles['solar'] = gen_profiles[iso][DATA_YEAR].get('solar', [0.0] * H)[:H]
+        solar_raw = list(gen_profiles[iso].get('solar', [0.0] * H)[:H])
+
+    # Zero out nighttime solar — DST-aware UTC conversion
+    # EIA data hours are sequential UTC. Convert local daylight windows to UTC,
+    # adjusting the offset during DST months (March–November).
+    # Standard UTC offsets (hours ahead of local): PST=8, CST=6, EST=5
+    STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5}
+    # DST boundaries: 2nd Sunday of March (~day 69) to 1st Sunday of Nov (~day 307)
+    # Representative across 2021-2025 (actual dates: Mar 9-14, Nov 2-7)
+    DST_START_DAY = 69    # ~March 10
+    DST_END_DAY = 307     # ~November 3
+    local_start, local_end = 6, 19  # 6am-7pm local prevailing time
+    std_off = STD_UTC_OFFSETS.get(iso, 5)
+
+    for day in range(H // 24):
+        ds = day * 24
+        # During DST, clocks spring forward → UTC offset is 1 less
+        is_dst = DST_START_DAY <= day < DST_END_DAY
+        utc_off = std_off - (1 if is_dst else 0)
+        utc_start = (local_start + utc_off) % 24
+        utc_end = (local_end + utc_off) % 24
+        for h_utc in range(24):
+            idx = ds + h_utc
+            if idx < len(solar_raw):
+                if utc_start <= utc_end:
+                    is_daylight = utc_start <= h_utc <= utc_end
+                else:
+                    is_daylight = h_utc >= utc_start or h_utc <= utc_end
+                if not is_daylight:
+                    solar_raw[idx] = 0.0
+    profiles['solar'] = solar_raw
 
     # Wind
-    profiles['wind'] = gen_profiles[iso][DATA_YEAR].get('wind', [0.0] * H)[:H]
+    profiles['wind'] = gen_profiles[iso].get('wind', [0.0] * H)[:H]
 
     # CCS-CCGT = flat baseload (same shape as clean firm)
     profiles['ccs_ccgt'] = [1.0 / H] * H
 
     # Hydro
-    profiles['hydro'] = gen_profiles[iso][DATA_YEAR].get('hydro', [0.0] * H)[:H]
+    profiles['hydro'] = gen_profiles[iso].get('hydro', [0.0] * H)[:H]
 
-    # Ensure all profiles are exactly H hours
+    # Ensure all profiles are exactly H hours with no negative values
     for rtype in RESOURCE_TYPES:
         if len(profiles[rtype]) > H:
             profiles[rtype] = profiles[rtype][:H]
         elif len(profiles[rtype]) < H:
             profiles[rtype] = profiles[rtype] + [0.0] * (H - len(profiles[rtype]))
+        # Clamp negatives (floating point noise, pumped hydro charging)
+        profiles[rtype] = [max(0.0, v) for v in profiles[rtype]]
 
     return profiles
 
 
 def find_anomaly_hours(iso, gen_profiles):
     """Find hours where all gen types report zero (EIA data gaps)."""
-    types = [t for t in gen_profiles[iso][DATA_YEAR].keys() if t != 'solar_proxy']
+    types = [t for t in gen_profiles[iso].keys() if t != 'solar_proxy']
     anomalies = set()
     for h in range(H):
-        if all(gen_profiles[iso][DATA_YEAR][t][h] == 0.0 for t in types):
+        if all(gen_profiles[iso][t][h] == 0.0 for t in types):
             anomalies.add(h)
     return anomalies
 
@@ -2132,7 +2318,7 @@ def process_iso(args):
     # Each threshold optimized independently; monotonicity enforced via
     # post-hoc re-sweep with broader parameters (not by result replacement)
 
-    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 5  # Save every 5 scenarios (~27s max loss)
+    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 1  # Save every scenario — zero compute loss on interruption
 
     for threshold in THRESHOLDS:
         t_str = str(threshold)
