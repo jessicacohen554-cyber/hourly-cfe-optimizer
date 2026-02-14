@@ -89,9 +89,9 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 ### Key resource decisions:
 - **H2 storage excluded** (explicitly out of scope)
 - **Hydro**: Existing only, capped at regional capacity, wholesale priced, no new-build tier, $0 transmission
-- **CCS-CCGT**: 90% capture rate, residual ~0.037 tCO2/MWh, 45Q ($85/ton = ~$29/MWh offset) baked into LCOE, fuel cost linked to gas price toggle
-- **LDES**: 100-hour iron-air, 50% round-trip efficiency, new multi-day dispatch algorithm
-- **Battery**: 4-hour Li-ion, 85% round-trip efficiency, existing daily-cycle greedy dispatch preserved
+- **CCS-CCGT**: 95% capture rate, residual ~0.0185 tCO2/MWh, 45Q ($85/ton = ~$29/MWh offset) baked into LCOE, fuel cost linked to gas price toggle. **Modeled as flat baseload (not dispatchable) by design** — while CCS-CCGT is physically dispatchable, the 45Q tax credit ($85/ton for geologic storage) incentivizes running at maximum capacity factor to maximize capture credits. This is an economics-driven decision, not a physical constraint. The perverse policy incentive drives gas demand even when the grid doesn't need it. Not worth the compute to model dispatchability when the economics don't support it today.
+- **LDES**: 100-hour iron-air, 50% round-trip efficiency, capacity-constrained dispatch with dynamic capacity sizing. LCOS reflects actual utilization of built capacity.
+- **Battery**: 4-hour Li-ion, 85% round-trip efficiency, capacity-constrained daily-cycle dispatch. LCOS reflects actual utilization — oversized capacity that sits idle drives cost up.
 
 ---
 
@@ -188,7 +188,7 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 - Fuel cost: Heat rate × gas price (responds to gas toggle)
 - 45Q offset: -$29/MWh ($85/ton × 0.34 tCO2/MWh)
 - Capture rate: 90%
-- Residual emissions: ~0.037 tCO2/MWh
+- Residual emissions: ~0.0185 tCO2/MWh (95% capture)
 
 ### 5.5 Battery LCOS ($/MWh) — Regionalized
 
@@ -262,20 +262,30 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 
 ## 6. Storage Algorithms
 
-### 6.1 Battery (4hr Li-ion) — EXISTING algorithm, unchanged
-1. Calculate per-day dispatch target from total annual %
-2. Identify daily surplus hours (supply > demand) and gap hours (demand > supply)
-3. Charge from largest surpluses up to power rating (capacity/4hr), up to required charge amount
-4. Discharge to largest gaps up to power rating, up to charged energy × 85% efficiency
-5. Repeat for each of 365 days
+### 6.1 Battery (4hr Li-ion) — CAPACITY-CONSTRAINED dispatch
 
-### 6.2 LDES (100hr iron-air) — NEW algorithm
-1. **Rolling 7-day window** (fine phase: full-year optimization)
-2. Identify sustained multi-day surplus periods (spring wind runs, long sunny stretches)
-3. Charge during surplus periods up to power rating (capacity/100hr), respecting energy capacity
-4. Identify sustained multi-day deficit periods (winter evening doldrums, cloudy windless stretches)
-5. Discharge during deficit periods up to power rating, up to stored energy × 50% efficiency
-6. Seasonal shifting: captures week-to-week and seasonal patterns batteries cannot
+**Key principle**: Cost comes from capacity built. LCOS must reflect actual utilization — can't have huge redundant capacity that's barely used. The optimizer co-optimizes capacity size and dispatch.
+
+1. `battery_dispatch_pct` maps to a **capacity** (MWh) and **power rating** (MW = capacity / 4hr)
+2. Each day: charge from surplus hours up to min(available surplus, capacity), discharge to gap hours up to min(stored energy × 85% RTE, capacity)
+3. Days with insufficient surplus → partial cycle → less dispatch that day
+4. Annual MWh dispatched = sum of actual daily dispatches (variable, not uniform)
+5. **Utilization factor** = actual annual cycles / 365 theoretical max cycles
+6. **LCOS** = annualized capital cost of built capacity / actual MWh dispatched — underutilized capacity drives LCOS up, creating a natural cost penalty for oversizing
+7. Optimizer finds the sweet spot: enough capacity to be useful at the target threshold, not so much that idle capacity inflates cost
+
+### 6.2 LDES (100hr iron-air) — CAPACITY-CONSTRAINED dispatch with dynamic sizing
+
+**Same capacity-constrained principle as battery.**
+
+1. `ldes_dispatch_pct` maps to a **capacity** (MWh) that scales dynamically (not fixed at 1 day of demand) and **power rating** (MW = capacity / 100hr)
+2. **Rolling 7-day window**: identify sustained multi-day surplus periods (spring wind, long sunny stretches) and deficit periods (winter evening doldrums, cloudy windless stretches)
+3. Charge during surplus periods up to min(available surplus, power rating), respecting energy capacity
+4. Discharge during deficit periods up to min(stored energy × 50% RTE, power rating)
+5. State of charge carries over between windows
+6. **Utilization factor** = actual annual energy throughput / (capacity × theoretical max cycles)
+7. **LCOS** = annualized capital cost of built capacity / actual MWh dispatched — same utilization penalty as battery
+8. Seasonal shifting: captures week-to-week and seasonal patterns batteries cannot
 
 ---
 
@@ -305,12 +315,19 @@ This produces a variable hourly emission rate that reflects the actual fossil fu
 - Regional fuel-switching elasticity from Section 5.9 applied as shift factors to coal/gas shares
 - ERCOT: Low elasticity (coal mostly retired); PJM: High elasticity (45GW coal remaining)
 
-**Step 5 — CO₂ abated** (hourly resolution):
+**Step 5 — CO₂ abated** (hourly resolution, with storage dispatch attribution):
 - For each hour h: `fossil_displaced[h] = clean_supply[h] − max(0, clean_supply[h] − demand[h])`
 - `CO₂_abated = Σ_h fossil_displaced[h] × emission_rate[h]`
-- CCS-CCGT gets **partial credit**: 90% capture → residual ~0.037 tCO₂/MWh (vs ~0.37 unabated CCGT)
+- CCS-CCGT gets **partial credit**: 95% capture → residual ~0.0185 tCO₂/MWh (vs ~0.37 unabated CCGT)
 
-**Why this matters**: Flat emission rates overcount abatement during low-emission gas-dominant hours and undercount during high-emission coal-dominant hours. The hourly approach captures the actual carbon intensity of displaced generation.
+**Step 6 — Storage CO₂ attribution** (hourly dispatch tracking):
+- Track exact hours each storage type (battery/LDES) dispatches into → use those hours' specific emission rates for abatement credit
+- **Net against charge-side emissions**: when storage charges during hours with nonzero fossil on the margin, the charging energy carries an emissions cost. `net_storage_abatement = Σ_discharge_hours(dispatch[h] × emission_rate[h]) − Σ_charge_hours(charge[h] × emission_rate[h] / RTE)`
+- This replaces the previous gap-weighted average approximation with exact hourly attribution
+- Storage charging from pure surplus clean energy (no fossil on margin) → charge emissions = 0
+- Storage charging during hours when fossil is still marginal → charge has real emissions that reduce net abatement
+
+**Why this matters**: Flat emission rates overcount abatement during low-emission gas-dominant hours and undercount during high-emission coal-dominant hours. The hourly approach captures the actual carbon intensity of displaced generation. The storage charge-side netting prevents overcounting — a battery that charges from gas-marginal hours and discharges to gas-marginal hours provides less net abatement than one charging from clean surplus hours.
 
 **Data sources**:
 - `data/egrid_emission_rates.json` — 2023 eGRID per-fuel CO₂ rates (lb/MWh) by region
