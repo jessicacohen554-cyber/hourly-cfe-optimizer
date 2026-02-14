@@ -20,7 +20,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-<style>
 /* ========== RESET & BASE ========== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -738,6 +737,231 @@ body {
     margin: 0 auto;
     padding: 0 0 40px;
 }
+
+/* ========== HEADER ========== */
+.header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
+    color: #ffffff;
+    padding: 72px 24px 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.4) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 60% at 38% 85%, rgba(34,197,94,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 65% at 62% 80%, rgba(245,158,11,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='a1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(255,255,255,0.15)'/%3E%3Cstop offset='1' stop-color='rgba(255,255,255,0.01)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.03)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.03)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,240 L0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100 L1200,240 Z' fill='url(%23a1)'/%3E%3Cpath d='M0,240 L0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140 L1200,240 Z' fill='url(%23a2)'/%3E%3Cpath d='M0,240 L0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180 L1200,240 Z' fill='url(%23a3)'/%3E%3Cpath d='M0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2'/%3E%3Cpath d='M0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.6'/%3E%3Cpath d='M0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.6'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+}
+.header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 70% 45% at 50% 45%, rgba(5,15,35,0.55) 0%, transparent 100%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,50 L250,50 L270,18 L288,68 L306,22 L324,60 L342,50 L1200,50' fill='none' stroke='rgba(14,165,233,0.5)' stroke-width='2'/%3E%3Cpath d='M0,35 L600,35 L618,10 L636,60 L654,14 L672,55 L690,35 L1200,35' fill='none' stroke='rgba(245,158,11,0.4)' stroke-width='2'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 100%, 100% 80px;
+}
+.header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 2;
+}
+.header h1 {
+    font-family: 'Franklin Gothic Demi', 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 3.2rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+    line-height: 1.15;
+}
+.header .subtitle {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    opacity: 0.92;
+    max-width: 660px;
+    margin: 0 auto;
+    letter-spacing: 0.2px;
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
+    line-height: 1.55;
+}
+@media (max-width: 768px) {
+    .header { padding: 48px 20px 40px; }
+    .header h1 { font-size: 2.2rem; }
+    .header .subtitle { font-size: 1rem; }
+}
+@media (max-width: 480px) {
+    .header { padding: 36px 16px 32px; }
+    .header h1 { font-size: 1.8rem; }
+    .header .subtitle { font-size: 0.9rem; }
+}
+
+/* ========== CONCLUSION PANEL ========== */
+.conclusion-panel {
+    background: linear-gradient(135deg, #1A2744 0%, #2D3F5E 100%);
+    border-radius: 20px;
+    padding: 48px 40px;
+    margin: 48px 0 32px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+}
+.conclusion-panel::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.conclusion-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -40px;
+    left: -40px;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle, rgba(14,165,233,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.conclusion-panel h2 {
+    font-family: 'Franklin Gothic Demi', 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 8px;
+    line-height: 1.2;
+    position: relative;
+    z-index: 1;
+}
+.conclusion-panel .conclusion-subtitle {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+}
+.conclusion-panel p {
+    color: rgba(255,255,255,0.88);
+    line-height: 1.7;
+    position: relative;
+    z-index: 1;
+}
+.conclusion-panel strong {
+    color: #fff;
+}
+.conclusion-pillars {
+    display: flex;
+    gap: 20px;
+    margin: 32px 0;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+}
+.conclusion-pillar {
+    flex: 1;
+    min-width: 200px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 24px 20px;
+    backdrop-filter: blur(10px);
+}
+.conclusion-pillar-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    font-size: 1.5rem;
+}
+.conclusion-pillar h4 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 8px;
+}
+.conclusion-pillar p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.72);
+    margin: 0;
+    line-height: 1.5;
+}
+.conclusion-warning {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 28px 0;
+    position: relative;
+    z-index: 1;
+}
+.conclusion-warning strong {
+    color: #FCA5A5;
+}
+.conclusion-warning p {
+    color: rgba(255,255,255,0.82);
+    margin: 0;
+    font-size: 0.95rem;
+}
+.conclusion-bottom-line {
+    font-family: 'Franklin Gothic Demi', 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #22C55E;
+    text-align: center;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    z-index: 1;
+}
+@media (max-width: 768px) {
+    .conclusion-panel { padding: 32px 24px; margin: 32px 0 24px; }
+    .conclusion-panel h2 { font-size: 1.6rem; }
+    .conclusion-pillars { flex-direction: column; gap: 14px; }
+    .conclusion-pillar { min-width: unset; padding: 18px 16px; }
+    .conclusion-bottom-line { font-size: 1.05rem; }
+}
+@media (max-width: 480px) {
+    .conclusion-panel { padding: 24px 18px; border-radius: 14px; }
+    .conclusion-panel h2 { font-size: 1.25rem; }
+    .conclusion-panel .conclusion-subtitle { font-size: 0.9rem; }
+    .conclusion-panel p { font-size: 0.88rem; }
+    .conclusion-warning { padding: 16px 14px; }
+    .conclusion-warning p { font-size: 0.85rem; }
+    .conclusion-pillar h4 { font-size: 0.95rem; }
+    .conclusion-pillar p { font-size: 0.82rem; }
+    .conclusion-bottom-line { font-size: 0.95rem; }
+}
 </style>
 </head>
 <body>
@@ -758,17 +982,11 @@ body {
     </div>
 </nav>
 
-<!-- HEADER BANNER -->
-<header style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%);padding:40px 24px;text-align:center;">
-    <div style="max-width:900px;margin:0 auto;">
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px;">
-            <span style="font-size:2.2rem;">&#9889;</span>
-            <h1 style="font-family:'Rajdhani','Franklin Gothic Demi',sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;color:#ffffff;letter-spacing:-1px;margin:0;">The 8,760 Problem</h1>
-        </div>
-        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(0.85rem,1.6vw,1.05rem);color:rgba(255,255,255,0.8);max-width:700px;margin:0 auto;">
-            What does it cost to match every hour of electricity demand with clean energy?
-        </p>
-    </div>
+<!-- HEADER / BANNER -->
+<header class="header">
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle">What does it cost to match every hour of electricity demand with clean energy?</p>
+    <div class="header-accent"></div>
 </header>
 
 <!-- HERO INTRO -->
@@ -1736,7 +1954,7 @@ function initHomepage() {
     // Initialize charts if canvases exist
     if (document.getElementById('narrativeCostChart')) initNarrativeCostChart();
     if (document.getElementById('narrativeMixChart')) initNarrativeMixChart();
-    if (document.getElementById('incrementalMixChart')) buildIncrementalMixChart();
+    if (document.getElementById('incrementalMixChart')) initIncrementalMixChart();
     
     // Trigger scroll animations
     setupScrollObserver();
@@ -1827,6 +2045,41 @@ function populateReliabilityGauges() {
         </div>`;
     }
     if (html) container.innerHTML = html;
+}
+
+function cfAdjust(entry, iso) {
+    if (selectedCfCost === 90 || !entry?.costs?.resource_costs?.clean_firm) {
+        const c = entry?.costs || {};
+        return {
+            totalDelta: 0,
+            effectiveDelta: 0,
+            newTotal: c.total_cost_per_demand_mwh || 0,
+            newEffective: c.effective_cost_per_useful_mwh || 0,
+            newIncremental: c.incremental_above_baseline || 0,
+            cfCostDelta: 0,
+            newCfCostPerMwh: c.resource_costs?.clean_firm?.cost_per_demand_mwh || 0,
+        };
+    }
+    const costs = entry.costs;
+    const cf = costs.resource_costs.clean_firm;
+    const newPct = cf.new_pct || 0;
+    const priceDelta = selectedCfCost - 90;
+    const totalDelta = (newPct / 100) * priceDelta;
+    const newTotal = costs.total_cost_per_demand_mwh + totalDelta;
+    const proc = entry.procurement_pct / 100;
+    const match = entry.hourly_match_score / 100;
+    const newEffective = match > 0 ? newTotal * proc / match : newTotal;
+    const baseline = costs.baseline_wholesale_cost || 0;
+    const newIncremental = newEffective - baseline;
+    const newCfCostPerMwh = cf.cost_per_demand_mwh + (newPct / 100) * priceDelta;
+    return { totalDelta, effectiveDelta: newEffective - costs.effective_cost_per_useful_mwh, newTotal, newEffective, newIncremental, cfCostDelta: totalDelta, newCfCostPerMwh };
+}
+
+function getAdjustedEffectiveCost(iso, thresholdKey) {
+    const t = DATA.results[iso]?.thresholds?.[thresholdKey];
+    if (!t?.costs) return null;
+    const adj = cfAdjust(t, iso);
+    return adj.newEffective;
 }
 
 function getAvgAdjustedCost(thresholdKey) {
@@ -3261,126 +3514,6 @@ function initScrollAnimations() {
         incrInitObserver.observe(incrCanvas.closest('.story-section') || incrCanvas);
     }
 }
-
-// ---- Sensitivity Toggle State (5 Paired Groups) ----
-const sensitivityState = {
-    renewable_gen: 'Medium',   // Solar + Wind LCOE
-    firm_gen: 'Medium',        // Clean Firm + CCS-CCGT LCOE
-    storage: 'Medium',         // Battery (4hr) + LDES (100hr) LCOS
-    fossil_fuel: 'Medium',     // Wholesale electricity price driver
-    transmission: 'Medium'     // All resource transmission adders
-};
-
-function initSensitivityToggles() {
-    document.querySelectorAll('.toggle-btn-group').forEach(group => {
-        const toggleKey = group.getAttribute('data-toggle');
-        if (!toggleKey) return;
-        group.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('click', function() {
-                // Update active state
-                group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                // Update state
-                sensitivityState[toggleKey] = this.getAttribute('data-value');
-                // Trigger recalculation if data is available
-                if (DATA) {
-                    updateAll();
-                    // Re-render narrative if initialized
-                    if (typeof narrativeCostChart !== 'undefined' && narrativeCostChart) {
-                        refreshNarrativeCostChart();
-                    }
-                    if (typeof refreshNarrativeStats === 'function') {
-                        refreshNarrativeStats();
-                    }
-                }
-            });
-        });
-    });
-}
-
-// ---- CO2 Metric Tile Update ----
-function updateCO2Tile(entry) {
-    const el = document.getElementById('metricCO2Abated');
-    const sub = document.getElementById('metricCO2AbatedSub');
-    if (!el) return;
-    // Check if CO2 data exists in the entry
-    if (entry && entry.co2_abated_tons != null) {
-        el.textContent = formatCommas(Math.round(entry.co2_abated_tons));
-        sub.textContent = 'tons';
-    } else {
-        el.textContent = '--';
-        sub.textContent = 'tons';
-    }
-}
-
-// ---- What You Need Panel Update ----
-function updateWhatYouNeedPanel(region, entry, threshold) {
-    const wynTarget = document.getElementById('wynTarget');
-    if (!wynTarget) return;
-    // Update target from threshold
-    wynTarget.textContent = threshold + '%';
-    // Baseline: check if region has a baseline_match_score
-    const baselineEl = document.getElementById('wynBaseline');
-    if (region.baseline_hourly_match != null) {
-        baselineEl.textContent = formatPct(region.baseline_hourly_match, 0);
-    } else {
-        baselineEl.textContent = '--';
-    }
-    // Gap
-    const gapEl = document.getElementById('wynGap');
-    if (region.baseline_hourly_match != null) {
-        const gap = parseFloat(threshold) - region.baseline_hourly_match;
-        gapEl.textContent = formatNum(gap, 0) + ' pp';
-    } else {
-        gapEl.textContent = '--';
-    }
-    // Incremental cost
-    const incrCostEl = document.getElementById('wynIncrCost');
-    const iso = document.getElementById('regionSelect').value;
-    if (entry && entry.costs && entry.costs.incremental_above_baseline != null) {
-        const adj = cfAdjust(entry, iso);
-        incrCostEl.textContent = '$' + formatNum(adj.newIncremental, 0);
-    } else {
-        incrCostEl.textContent = '$--';
-    }
-    // CO2 Impact
-    const co2El = document.getElementById('wynCO2Impact');
-    if (entry && entry.co2_abated_tons != null) {
-        co2El.textContent = formatCommas(Math.round(entry.co2_abated_tons));
-    } else {
-        co2El.textContent = '--';
-    }
-}
-
-// ---- Abatement Cost Curve Charts ----
-let costCurveChartInstance = null;
-let macCurveChartInstance = null;
-
-function updateAbatementCurves() {
-    const iso = document.getElementById('regionSelect').value;
-    const region = DATA?.results?.[iso];
-    if (!region) return;
-
-    const abatementRow = document.getElementById('abatementRow');
-    const thresholds = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
-    if (thresholds.length < 3) {
-        if (abatementRow) abatementRow.style.display = 'none';
-        return;
-    }
-    if (abatementRow) abatementRow.style.display = '';
-
-    const labels = thresholds.map(t => t + '%');
-    const avgCosts = [];
-    const incrCosts = [];
-    const macData = [];
-    const baseline = region.thresholds[String(thresholds[0])]?.costs?.baseline_wholesale_cost || 30;
-
-    // CO2 emission rate (tons/MWh) - approximate regional values from eGRID
-    const CO2_RATES = { CAISO: 0.22, ERCOT: 0.39, PJM: 0.37, NYISO: 0.19, NEISO: 0.25 };
-    const co2Rate = CO2_RATES[iso] || 0.30;
-
-    thresholds.forEach((t, i) => {
-        const entry = region.thresholds[String(t)];
 
 // Scroll observer for fade-in animations
 function setupScrollObserver() {
