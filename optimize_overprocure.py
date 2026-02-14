@@ -1448,7 +1448,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     target = threshold / 100.0
     # Adaptive procurement bounds per threshold
     proc_min, proc_max = PROCUREMENT_BOUNDS.get(threshold, (70, 310))
-    storage_threshold = max(0.5, target - 0.05)
+    storage_threshold = max(0.5, target - 0.10)  # Wider net to catch storage-dependent optima
     demand_arr, supply_arrs, supply_matrix = prepare_numpy_profiles(demand_norm, supply_profiles)
 
     if score_cache is None:
@@ -1527,30 +1527,38 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 cost = update_best(combo, procurement_pct, 0, 0, score)
                 candidates.append((cost, combo, score, 0, 0, procurement_pct))
             elif score >= storage_threshold:
-                for bp in [5, 10, 15, 20]:
+                # Battery only
+                for bp in [5, 10, 15, 20, 25]:
                     score_ws = c_battery_score(mix_fracs, pf, bp)
                     if score_ws >= target:
                         cost = update_best(combo, procurement_pct, bp, 0, score_ws)
                         candidates.append((cost, combo, score_ws, bp, 0, procurement_pct))
                         break
-                else:
-                    for bp in [5, 10, 15]:
-                        for lp in [5, 10, 15]:
-                            score_ws = c_both_score(mix_fracs, pf, bp, lp)
-                            if score_ws >= target:
-                                cost = update_best(combo, procurement_pct, bp, lp, score_ws)
-                                candidates.append((cost, combo, score_ws, bp, lp, procurement_pct))
-                                break
-                        else:
-                            continue
+                # LDES only (wind-heavy mixes benefit from multi-day shifting)
+                for lp in [5, 10, 15, 20]:
+                    score_ws = c_both_score(mix_fracs, pf, 0, lp)
+                    if score_ws >= target:
+                        cost = update_best(combo, procurement_pct, 0, lp, score_ws)
+                        candidates.append((cost, combo, score_ws, 0, lp, procurement_pct))
                         break
+                # Combined battery + LDES
+                for bp in [5, 10, 15, 20]:
+                    for lp in [5, 10, 15, 20]:
+                        score_ws = c_both_score(mix_fracs, pf, bp, lp)
+                        if score_ws >= target:
+                            cost = update_best(combo, procurement_pct, bp, lp, score_ws)
+                            candidates.append((cost, combo, score_ws, bp, lp, procurement_pct))
+                            break
+                    else:
+                        continue
+                    break
 
     if not candidates:
         return None
 
     # Select top candidates for refinement — ranked by THIS scenario's cost function
     candidates.sort(key=lambda x: x[0])
-    top = [c for c in candidates if c[0] <= best_cost * 1.30][:15]
+    top = [c for c in candidates if c[0] <= best_cost * 1.50][:20]
 
     # ---- Phase 2: 5% refinement around top candidates ----
     phase2 = []
@@ -1577,7 +1585,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 best_lp = 0
 
                 if score < target:
-                    for bp in [5, 10, 15, 20]:
+                    for bp in [5, 10, 15, 20, 25]:
                         score_ws = c_battery_score(mix_fracs, pf, bp)
                         if score_ws >= target:
                             score = score_ws
@@ -1585,8 +1593,18 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                             break
 
                 if score < target:
-                    for bp in [5, 10, 15]:
-                        for lp in [5, 10, 15]:
+                    # Try LDES only
+                    for lp in [5, 10, 15, 20]:
+                        score_ws = c_both_score(mix_fracs, pf, 0, lp)
+                        if score_ws >= target:
+                            score = score_ws
+                            best_bp = 0
+                            best_lp = lp
+                            break
+
+                if score < target:
+                    for bp in [5, 10, 15, 20]:
+                        for lp in [5, 10, 15, 20]:
                             score_ws = c_both_score(mix_fracs, pf, bp, lp)
                             if score_ws >= target:
                                 score = score_ws
@@ -1604,7 +1622,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     # ---- Phase 3: Fine-tune (1% mix, 2% procurement, refined storage) ----
     all_phase2 = phase2 if phase2 else top
     all_phase2.sort(key=lambda x: x[0])
-    finalists = [c for c in all_phase2 if c[0] <= best_cost * 1.05][:5]
+    finalists = [c for c in all_phase2 if c[0] <= best_cost * 1.10][:8]
 
     seen2 = set()
     for _, combo, _, bp_base, lp_base, proc in finalists:
@@ -1760,9 +1778,8 @@ def process_iso(args):
     # ---- THRESHOLDS: co-optimize cost + matching for ALL 324 cost scenarios ----
     print(f"\n  Cost-optimizing thresholds (324 scenarios each)...")
 
-    # Track results per scenario across thresholds for monotonicity enforcement
-    # scenario_key -> list of (threshold, effective_cost, result) for sorting
-    scenario_results_by_threshold = {}
+    # No top-down processing: each threshold optimized independently
+    # Monotonicity checked post-hoc (detection only, not enforcement)
 
     for threshold in THRESHOLDS:
         t_start = time.time()
@@ -1791,13 +1808,6 @@ def process_iso(args):
 
                 threshold_scenarios[scenario_key] = result
 
-                # Track for monotonicity enforcement
-                if scenario_key not in scenario_results_by_threshold:
-                    scenario_results_by_threshold[scenario_key] = []
-                scenario_results_by_threshold[scenario_key].append(
-                    (threshold, cost_data['effective_cost'], result)
-                )
-
                 # Track Medium scenario for logging
                 if scenario_key == 'MMM_M_M':
                     medium_result = result
@@ -1816,6 +1826,49 @@ def process_iso(args):
         else:
             print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
                   f"cache={cache_size}, {t_elapsed:.1f}s")
+
+        # ── Cross-pollination: evaluate all discovered mixes for all scenarios ──
+        # A mix found optimal for one cost scenario may be cheaper for another
+        unique_results = []
+        seen_mix_keys = set()
+        for sk, res in threshold_scenarios.items():
+            mix = res['resource_mix']
+            mk = (mix['clean_firm'], mix['solar'], mix['wind'],
+                  mix['ccs_ccgt'], mix['hydro'],
+                  res['procurement_pct'],
+                  res['battery_dispatch_pct'],
+                  res['ldes_dispatch_pct'])
+            if mk not in seen_mix_keys:
+                seen_mix_keys.add(mk)
+                unique_results.append(res)
+
+        cross_fixes = 0
+        for scenario_key, cost_levels in ALL_COST_SCENARIOS:
+            r_gen, f_gen, stor, fuel, tx = cost_levels
+            current_cost = float('inf')
+            if scenario_key in threshold_scenarios:
+                current = threshold_scenarios[scenario_key]
+                if 'costs' in current:
+                    current_cost = current['costs']['effective_cost']
+
+            for candidate in unique_results:
+                if candidate['hourly_match_score'] < threshold:
+                    continue
+                cand_cost_data = compute_costs_parameterized(
+                    iso, candidate['resource_mix'], candidate['procurement_pct'],
+                    candidate['battery_dispatch_pct'], candidate['ldes_dispatch_pct'],
+                    candidate['hourly_match_score'],
+                    r_gen, f_gen, stor, fuel, tx
+                )
+                if cand_cost_data['effective_cost'] < current_cost:
+                    threshold_scenarios[scenario_key] = dict(candidate)
+                    threshold_scenarios[scenario_key]['costs'] = cand_cost_data
+                    current_cost = cand_cost_data['effective_cost']
+                    cross_fixes += 1
+
+        if cross_fixes > 0:
+            print(f"      Cross-pollination: {cross_fixes} improvements, "
+                  f"{len(unique_results)} unique mixes evaluated")
 
         # Store all scenarios for this threshold
         # Medium result gets full detail (compressed day, peak gap, CO2)
@@ -1858,33 +1911,46 @@ def process_iso(args):
             'scenario_count': len(threshold_scenarios),
         }
 
-    # ---- MONOTONICITY ENFORCEMENT ----
-    # For each cost scenario, ensure cost(T) <= cost(T+next) across thresholds
-    # If a higher threshold found a cheaper solution, propagate it down
-    # (a solution meeting 90% also meets 75%, so it's a valid cheaper 75% solution)
-    mono_fixes = 0
-    for scenario_key, threshold_results in scenario_results_by_threshold.items():
-        # Sort by threshold descending (100 first)
-        threshold_results.sort(key=lambda x: x[0], reverse=True)
+    # ---- MONOTONICITY CHECK (detection only, not enforcement) ----
+    # For each cost scenario, verify cost is non-decreasing across thresholds.
+    # Violations indicate the search missed a global optimum at a lower threshold.
+    mono_violations = 0
+    sorted_thresholds = sorted(THRESHOLDS)
+    checked_scenarios = set()
+    for t_idx in range(len(sorted_thresholds)):
+        t_str = str(sorted_thresholds[t_idx])
+        if t_str not in iso_results['thresholds']:
+            continue
+        for sk in iso_results['thresholds'][t_str]['scenarios']:
+            checked_scenarios.add(sk)
 
-        # Walk from highest threshold down, propagating cheaper solutions
-        for i in range(len(threshold_results) - 1):
-            higher_t, higher_cost, higher_result = threshold_results[i]
-            lower_t, lower_cost, lower_result = threshold_results[i + 1]
+    for scenario_key in checked_scenarios:
+        prev_cost = None
+        prev_t = None
+        for threshold in sorted_thresholds:
+            t_str = str(threshold)
+            if t_str not in iso_results['thresholds']:
+                continue
+            scenarios = iso_results['thresholds'][t_str]['scenarios']
+            if scenario_key not in scenarios:
+                continue
+            result = scenarios[scenario_key]
+            if 'costs' not in result:
+                continue
+            cost = result['costs']['effective_cost']
+            if prev_cost is not None and cost < prev_cost - 0.01:
+                mono_violations += 1
+                if mono_violations <= 5:
+                    print(f"  WARNING: Monotonicity violation: {scenario_key} "
+                          f"{prev_t}%=${prev_cost:.1f} > {threshold}%=${cost:.1f}")
+            prev_cost = cost
+            prev_t = threshold
 
-            if higher_cost < lower_cost:
-                # Higher threshold is cheaper → propagate to lower threshold
-                t_str = str(lower_t)
-                if t_str in iso_results['thresholds']:
-                    scenarios = iso_results['thresholds'][t_str]['scenarios']
-                    if scenario_key in scenarios:
-                        scenarios[scenario_key] = dict(higher_result)
-                        mono_fixes += 1
-                # Update in tracking list too
-                threshold_results[i + 1] = (lower_t, higher_cost, higher_result)
-
-    if mono_fixes > 0:
-        print(f"  Monotonicity: {mono_fixes} fixes applied across scenarios")
+    if mono_violations > 0:
+        print(f"  WARNING: {mono_violations} monotonicity violations detected "
+              f"(search may have missed global optima at lower thresholds)")
+    else:
+        print(f"  Monotonicity check passed for all scenarios")
 
     return iso, iso_results
 
