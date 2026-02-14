@@ -21,10 +21,8 @@
 - [x] **Optimizer checkpointing**: Saves after each threshold + resume from checkpoint on restart
 - [x] **Sequential ISO processing**: Runs one ISO at a time with incremental result saves (avoids OOM)
 
-### NOT actually done (previously claimed complete — corrected)
-- [ ] **CO₂ Abatement Summary (`abatement_comparison.html`)** — HTML structure exists but canvas elements have NO JavaScript initialization. Charts are blank. Narrative sections are empty shells. **Needs full JS implementation.**
-- [ ] **Regional Deep Dives (`region_deepdive.html`)** — Wireframe only. 5 canvas placeholders exist but NO chart rendering code, NO regional content text, NO region selector logic. **Needs complete build-out.**
-- [ ] **Dashboard abatement section (`dashboard.html`)** — 5 paired toggles work, 4 core charts work. BUT the abatement cost section has placeholder divs ("Data loading after optimizer update...") — **not implemented yet, needs optimizer results + JS wiring.**
+### Needs work (awaiting optimizer results)
+- [ ] **Dashboard abatement section (`dashboard.html`)** — 5 paired toggles work, 4 core charts work. Abatement cost section has placeholder divs awaiting optimizer results data.
 
 ### What's in progress
 - [ ] **Optimizer running** (sequential mode with checkpointing). Incremental saves after each ISO.
