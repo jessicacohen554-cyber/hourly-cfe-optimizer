@@ -25,7 +25,7 @@
 - [ ] **Dashboard abatement section (`dashboard.html`)** — 5 paired toggles work, 4 core charts work. Abatement cost section has placeholder divs awaiting optimizer results data.
 
 ### What's in progress
-- [ ] **Optimizer running** (sequential mode with checkpointing). Incremental saves after each ISO.
+- [ ] **Optimizer stopped** — hydro caps were incorrect (CAISO 30% vs actual ~14%). Waiting for EIA 2021-2025 actuals to compute proper 5-year average caps. All prior CAISO results (75%, 80%) invalidated.
 - [ ] Site content gap closure: building out the 3 incomplete pages above
 
 ### Pipeline when optimizer completes
@@ -41,6 +41,20 @@
 3. Average profiles, apply to 2025 totals
 4. Re-run optimizer (Phase 1+3 hybrid)
 5. Update dashboards + narratives, final QA/QC
+
+### Pre-Run QA/QC Gate (Mandatory Before Every Optimizer Run)
+**This gate exists because**: a previous run wasted 3+ hours of compute due to incorrect hydro caps that weren't caught before launch. Every optimizer run is expensive — never launch without verifying assumptions first.
+
+Before launching `optimize_overprocure.py`, the following must be verified:
+1. All decisions from the current conversation implemented in optimizer code
+2. All decisions captured in SPEC.md
+3. No open questions that could change optimizer logic, cost tables, or methodology
+4. Code passes syntax check (`python -c "import py_compile; py_compile.compile(...)"`)
+5. **Full assumptions audit**: verify ALL key assumptions (hydro caps, cost tables, resource constraints, dispatch logic, procurement bounds, storage parameters) match SPEC.md and real-world data
+6. **Dry-run test**: imports, constants, data loading, checkpoint save/load round-trip
+7. **Checkpoint system verified**: save/load/resume works, interval set appropriately
+8. Present user with summary of verified assumptions before starting
+9. User explicitly approves the run
 
 ### Open questions
 - Path-dependent MAC visualization: may need alternative to MAC curve format
