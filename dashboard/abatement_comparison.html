@@ -1042,9 +1042,10 @@ body {
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="top-nav-inner">
+        <a href="index.html">Home</a>
         <a href="dashboard.html">Dashboard</a>
         <a href="region_deepdive.html">Regional Deep Dives</a>
-        <a href="abatement_comparison.html" class="nav-active">Marginal CO2 Abatement Analysis</a>
+        <a href="abatement_comparison.html" class="nav-active">CO&#8322; Abatement</a>
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
     </div>
@@ -1067,10 +1068,32 @@ body {
     <h2 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif;font-size:2.4rem;font-weight:800;color:#DC2626;margin-bottom:16px;letter-spacing:-0.5px;line-height:1.2;">Marginal Carbon Abatement Analysis</h2>
     <p style="font-size:0.98rem;color:#1A1A1A;line-height:1.75;max-width:800px;">
         How does hourly grid decarbonization compare to alternative carbon removal strategies? This analysis
-        benchmarks the marginal cost of avoiding CO2 through clean energy procurement against direct air capture (DAC),
+        benchmarks the marginal cost of avoiding CO&#8322; through clean energy procurement against direct air capture (DAC),
         sustainable aviation fuel (SAF), BECCS, and other pathways &mdash; revealing where grid investment delivers
         the most cost-effective abatement and where diminishing returns set in.
     </p>
+</div>
+
+<!-- KEY INSIGHTS PANEL -->
+<div style="max-width:900px;margin:0 auto;padding:0 48px 24px;background:#F3F4F8;">
+    <div style="background:linear-gradient(135deg,rgba(14,165,233,0.06),rgba(233,30,99,0.04));border:2px solid rgba(14,165,233,0.15);border-radius:16px;padding:28px 32px;">
+        <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.3rem;color:#1A2744;margin-bottom:16px;letter-spacing:-0.3px;">Key Insights</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;">
+            <div style="padding:16px;background:rgba(255,255,255,0.7);border-radius:10px;border-left:4px solid #22C55E;">
+                <div style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.5rem;font-weight:800;color:#22C55E;">75&ndash;90%</div>
+                <div style="font-size:0.88rem;color:#1A1A1A;line-height:1.55;margin-top:4px;">Grid decarbonization dominates. Marginal costs stay below $80&ndash;120/ton &mdash; cheaper than virtually every alternative. Push here first.</div>
+            </div>
+            <div style="padding:16px;background:rgba(255,255,255,0.7);border-radius:10px;border-left:4px solid #F59E0B;">
+                <div style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.5rem;font-weight:800;color:#D97706;">90&ndash;95%</div>
+                <div style="font-size:0.88rem;color:#1A1A1A;line-height:1.55;margin-top:4px;">The inflection zone. Costs rise sharply and begin crossing social cost of carbon benchmarks. Portfolio diversification becomes rational.</div>
+            </div>
+            <div style="padding:16px;background:rgba(255,255,255,0.7);border-radius:10px;border-left:4px solid #E91E63;">
+                <div style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.5rem;font-weight:800;color:#E91E63;">95%+</div>
+                <div style="font-size:0.88rem;color:#1A1A1A;line-height:1.55;margin-top:4px;">Grid costs rival or exceed DAC. The last 5% may be better addressed through carbon removal, SAF, and cross-sector investment.</div>
+            </div>
+        </div>
+        <p style="font-size:0.85rem;color:#6B7280;margin-top:16px;line-height:1.6;"><strong>The 90/10 insight:</strong> For most regions, pushing grid clean energy to ~90&ndash;95% is the most cost-effective climate investment. The remaining gap is better filled with a diversified portfolio of removal and cross-sector strategies.</p>
+    </div>
 </div>
 
     <!-- ========== COMPARISON CONTROLS ========== -->
@@ -1149,75 +1172,70 @@ body {
         </div>
 
         <div class="callout-box">
-            <strong>What is a marginal abatement cost?</strong> It measures the cost of eliminating one additional ton of CO2. If moving from 90% to 91% hourly clean energy costs $2 million more and avoids 10,000 additional tons, the marginal abatement cost is $200/ton. This number tends to rise steeply at higher grid decarbonization targets, because the remaining "dirty" hours are the hardest and most expensive to replace.
+            <strong>What is a marginal abatement cost?</strong> It measures the cost of eliminating one additional ton of CO&#8322;. If moving from 90% to 91% hourly clean energy costs $2 million more and avoids 10,000 additional tons, the marginal abatement cost is $200/ton. This number tends to rise steeply at higher grid decarbonization targets, because the remaining "dirty" hours are the hardest and most expensive to replace.
         </div>
     </section>
 
-    <!-- ================================================================ -->
-    <!-- SECTION 2: GRID DECARBONIZATION COST CURVE                       -->
-    <!-- ================================================================ -->
-    <section class="scroll-section">
-        <span class="section-number">Section 2</span>
-        <h2 class="section-title">Stress-Testing the Backbone: Five Regions Under Pressure</h2>
-        <div class="section-narrative">
-            <p>Every region tells the same story, but at different volumes. Below, five regional marginal abatement cost curves show what each additional ton of CO2 avoidance costs as grid targets rise. The <strong>shaded bands</strong> show the uncertainty range between low and high cost scenarios -- use the <strong>Grid Cost Scenario</strong> toggle above to shift between optimistic, central, and pessimistic grid cost assumptions.</p>
-
-            <p>The horizontal reference lines shift when you change the <strong>DAC</strong>, <strong>Industrial Decarb</strong>, and <strong>Carbon Removal</strong> toggles above. This is the core stress test: where does each region's grid cost curve cross into territory where alternatives become competitive?</p>
-
-            <p>Notice the <strong>hockey stick shape</strong>. From 75% to roughly 90%, the backbone is solid -- costs are moderate ($30-120/ton) and grid investment clearly dominates. But somewhere between 90% and 95%, the curve bends sharply upward. This inflection zone is where the strategic question becomes live.</p>
-
-            <p>The divergence between regions is profound. ERCOT (Texas), with cheap wind and Gulf Coast CCS geology, keeps the backbone strong through ~97%. NYISO (New York), constrained by expensive siting, limited resources, and no sequestration geology, sees the backbone strain by 93%. <strong>Your region determines your strategy.</strong></p>
-        </div>
-
-        <div class="chart-container chart-container-wide">
-            <div class="chart-title">The Backbone Under Pressure: Regional Marginal Abatement Cost vs. Alternatives</div>
-            <canvas id="macCurveChart"></canvas>
-            <div class="confidence-legend">
-                <div class="conf-item"><div class="conf-swatch" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3);"></div> Uncertainty band (low-to-high range)</div>
-                <div class="conf-item"><div class="conf-swatch" style="background:#F59E0B; height:3px; border-radius:2px;"></div> Central estimate</div>
-                <div class="conf-item"><div class="conf-swatch" style="background:rgba(233,30,99,0.08); border:1px dashed rgba(233,30,99,0.4);"></div> DAC cost range (toggle-driven)</div>
-            </div>
-        </div>
-
-        <div class="callout-box">
-            <strong>Why the hockey stick?</strong> At lower targets, you are matching hours when the wind is blowing or the sun is shining -- cheap power for cheap displacement. As targets rise, the remaining unmatched hours are the worst: winter nights, cloudy windless weeks, peak demand evenings. Filling these gaps requires overbuilding generation, deploying expensive storage, or running clean firm plants that sit idle most of the year. Low utilization drives high per-MWh (and per-ton) costs. <strong>This is physics, not economics -- and physics-constrained costs don't decline on learning curves the way DAC does.</strong>
-        </div>
-    </section>
+    <!-- Section 2 (regional MAC chart) removed — redundant with abatement ladder below -->
 
     <!-- ================================================================ -->
     <!-- SECTION 3: THE COMPARISON LANDSCAPE                              -->
     <!-- ================================================================ -->
     <section class="scroll-section">
-        <span class="section-number">Section 3</span>
-        <h2 class="section-title">The Abatement Ladder: Where Grid Costs Meet the Alternatives</h2>
+        <span class="section-number">Section 2</span>
+        <h2 class="section-title">The Abatement Cost Ladder: Grid Decarbonization vs. Alternatives</h2>
         <div class="section-narrative">
-            <p>Now we place grid decarbonization costs in context. The visualization below is a modern take on the <strong>Liebreich ladder</strong> -- ranking carbon abatement and removal options from cheapest to most expensive. Each bar represents a different mitigation or removal pathway, with the bar height spanning from its low-cost estimate to its high-cost estimate. The darker core band shows the mid-range cost.</p>
-
-            <p>Overlaid on this landscape are dashed horizontal lines showing where each region's grid decarbonization costs land at key thresholds. As you read from left to right, you are climbing the cost ladder. The critical insight: <strong>at lower grid targets (85-90%), grid decarbonization is among the cheapest abatement options available. At higher targets (97-100%), it rivals or exceeds the cost of direct air capture.</strong></p>
-
-            <p>Hover over any bar to see its full cost range, source, and where regional grid costs intersect it.</p>
+            <p>How does grid decarbonization stack up against other CO&#8322; reduction pathways? The chart below ranks abatement and removal options by cost, with dashed vertical lines showing where regional grid costs land at 90%, 95%, and 99% targets. The critical insight: <strong>at lower grid targets (85&ndash;90%), grid decarbonization is among the cheapest abatement options available. At higher targets (97&ndash;100%), it rivals or exceeds the cost of direct air capture.</strong></p>
         </div>
 
-        <div class="ladder-container">
-            <div class="ladder-title">The Abatement Cost Ladder: Grid Decarbonization vs. Alternatives</div>
-            <div class="ladder-subtitle">Bars show low-to-high cost range for each option. Dashed lines mark regional grid decarbonization costs at 90%, 95%, and 99% targets.</div>
-
-            <div class="ladder-scale" id="ladderScale">
-                <div class="ladder-y-axis" id="ladderYAxis"></div>
-                <div class="ladder-bars" id="ladderBars"></div>
-                <div class="ladder-grid-markers" id="ladderMarkers"></div>
-            </div>
-            <div id="ladderLabels" style="display:flex; gap:6px; padding-left:80px; padding-right:20px;"></div>
-        </div>
-        <div class="ladder-tooltip" id="ladderTooltip"></div>
-
-        <div class="chart-container chart-container-wide" style="margin-top:24px;">
-            <div class="chart-title">Alternative View: Cost Band Comparison with Grid Crossover Points</div>
+        <div class="chart-container chart-container-wide">
+            <div class="chart-title">The Abatement Cost Ladder: Grid Decarbonization vs. Alternatives</div>
             <canvas id="bandChart"></canvas>
+            <p style="font-size:0.78rem;color:#6B7280;margin-top:8px;"><sup>1</sup> Carbon Removal includes BECCS and enhanced weathering pathways.</p>
         </div>
 
         <div class="callout-box callout-box-warn">
-            <strong>A critical nuance:</strong> These comparisons are not perfectly apples-to-apples. Grid decarbonization avoids emissions in real-time with high additionality. Carbon credits vary enormously in quality. DAC permanently removes CO2 but at very high cost. SAF reduces hard-to-abate aviation emissions that have no grid alternative. Each option has a different role in a net-zero portfolio -- the question is not "which is best" but "what is the right mix at the right price point."
+            <strong>A critical nuance:</strong> These comparisons are not perfectly apples-to-apples. Grid decarbonization avoids emissions in real-time with high additionality. Carbon credits vary enormously in quality. DAC permanently removes CO&#8322; but at very high cost. SAF reduces hard-to-abate aviation emissions that have no grid alternative. Each option has a different role in a net-zero portfolio &mdash; the question is not &ldquo;which is best&rdquo; but &ldquo;what is the right mix at the right price point.&rdquo;
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 3: NET-ZERO PORTFOLIO — OPTIMAL ALLOCATION               -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">Section 3</span>
+        <h2 class="section-title">The Net-Zero Portfolio: When to Diversify Beyond the Grid</h2>
+        <div class="section-narrative">
+            <p>No organization achieves net-zero through a single strategy. The chart below shows the optimal allocation of decarbonization spending: as grid targets rise, the share going to alternatives (DAC, SAF, industrial efficiency) should increase. The crossover point varies by region &mdash; earlier for NYISO, later for ERCOT.</p>
+
+            <p><strong>The 90/10 insight:</strong> For most regions, pushing grid clean energy to ~90&ndash;95% is the most cost-effective climate investment. The remaining 5&ndash;10% is better addressed through a diversified portfolio of carbon removal and cross-sector strategies.</p>
+        </div>
+
+        <div class="chart-container chart-container-wide">
+            <div class="chart-title">Optimal Decarbonization Portfolio: Grid vs. Alternative Investments</div>
+            <canvas id="portfolioChart"></canvas>
+            <div class="portfolio-legend">
+                <div class="portfolio-legend-item">
+                    <div class="portfolio-legend-swatch" style="background: #4a90d9;"></div>
+                    Grid Decarbonization
+                </div>
+                <div class="portfolio-legend-item">
+                    <div class="portfolio-legend-swatch" style="background: #22C55E;"></div>
+                    Energy Efficiency &amp; Electrification
+                </div>
+                <div class="portfolio-legend-item">
+                    <div class="portfolio-legend-swatch" style="background: #FF9800;"></div>
+                    Cross-Sector (SAF, Green H&#8322;)
+                </div>
+                <div class="portfolio-legend-item">
+                    <div class="portfolio-legend-swatch" style="background: #E91E63;"></div>
+                    Carbon Removal (DAC, BECCS)
+                </div>
+            </div>
+        </div>
+
+        <div class="callout-box">
+            <strong>The portfolio mindset:</strong> A company targeting net-zero might push grid procurement to 92% hourly clean energy (where grid costs are ~$120/ton), then allocate the next budget tranche to high-quality carbon removal at $250/ton for the remaining 8%. Total cost is substantially less than pushing the grid to 100% where marginal costs reach $800/ton &mdash; achieving the same climate outcome at a fraction of the cost.
         </div>
     </section>
 
@@ -1301,11 +1319,11 @@ body {
         <div class="section-narrative">
             <p>Consider the dynamics:</p>
 
-            <p><strong>Electric vehicles:</strong> An EV on today's average US grid avoids ~0.2 tons CO2 per year compared to an efficient ICE car. On a 90% clean grid, that jumps to ~0.6 tons. On a 95% clean grid, ~0.7 tons. The grid's cleanliness determines the EV's climate value -- and there are 280 million vehicles in the US fleet.</p>
+            <p><strong>Electric vehicles:</strong> An EV on today's average US grid avoids ~0.2 tons CO&#8322; per year compared to an efficient ICE car. On a 90% clean grid, that jumps to ~0.6 tons. On a 95% clean grid, ~0.7 tons. The grid's cleanliness determines the EV's climate value -- and there are 280 million vehicles in the US fleet.</p>
 
-            <p><strong>Industrial heat pumps:</strong> At $60-160/ton CO2 avoided, industrial electrification is one of the cheapest decarbonization options -- <em>but only if the electricity is clean.</em> A heat pump running on a coal-heavy grid can actually increase emissions. The grid backbone must be strong before industrial electrification delivers its full potential.</p>
+            <p><strong>Industrial heat pumps:</strong> At $60-160/ton CO&#8322; avoided, industrial electrification is one of the cheapest decarbonization options -- <em>but only if the electricity is clean.</em> A heat pump running on a coal-heavy grid can actually increase emissions. The grid backbone must be strong before industrial electrification delivers its full potential.</p>
 
-            <p><strong>Direct air capture:</strong> DAC requires enormous amounts of energy (~1.5-2.5 MWh per ton CO2 captured). On a dirty grid, DAC's net removal is significantly reduced by the emissions from its own electricity consumption. A cleaner grid makes DAC more effective per dollar spent.</p>
+            <p><strong>Direct air capture:</strong> DAC requires enormous amounts of energy (~1.5-2.5 MWh per ton CO&#8322; captured). On a dirty grid, DAC's net removal is significantly reduced by the emissions from its own electricity consumption. A cleaner grid makes DAC more effective per dollar spent.</p>
 
             <p>This creates a <strong>sequencing imperative:</strong> grid decarbonization should generally come first, because it makes everything that follows cheaper and more impactful. The question is not whether to invest in the backbone -- it's how far to push it before the multiplier effect plateaus and direct alternatives become more efficient.</p>
         </div>
@@ -1319,49 +1337,7 @@ body {
         </div>
     </section>
 
-    <!-- ================================================================ -->
-    <!-- SECTION 5: NET-ZERO PORTFOLIO QUESTION                           -->
-    <!-- ================================================================ -->
-    <section class="scroll-section">
-        <span class="section-number">Section 5</span>
-        <h2 class="section-title">The Net-Zero Portfolio Question: When to Diversify Beyond the Grid</h2>
-        <div class="section-narrative">
-            <p>No organization achieves net-zero through a single strategy. The question is not whether to diversify, but when. The chart below illustrates a conceptual framework: for each dollar spent on decarbonization, what is the optimal allocation between pushing grid clean energy higher versus investing in alternative abatement and removal?</p>
-
-            <p>At lower grid targets (75-90%), the answer is clear: <strong>grid decarbonization dominates.</strong> Each dollar achieves more CO2 reduction per dollar on the grid than anywhere else. Solar and wind are cheap, batteries are proven, and the marginal abatement cost is well below the cost of alternatives.</p>
-
-            <p>But as grid targets rise past the 90-95% inflection, the calculus shifts. The chart shows a conceptual "optimal portfolio" where the share allocated to grid decarbonization declines and the share going to alternatives (DAC, offsets, SAF, industrial efficiency) rises. The crossover point varies by region -- earlier for NYISO, later for ERCOT -- but the principle is universal.</p>
-
-            <p><strong>This is the 90/10 insight:</strong> For most regions, pushing grid clean energy from the current baseline to roughly 90-95% is the most cost-effective thing you can do. The remaining 5-10% may be better addressed through a diversified portfolio of grid hardening, carbon removal, and cross-sector investment.</p>
-        </div>
-
-        <div class="chart-container chart-container-wide">
-            <div class="chart-title">Conceptual Optimal Portfolio: Grid Decarbonization vs. Alternative Investments</div>
-            <canvas id="portfolioChart"></canvas>
-            <div class="portfolio-legend">
-                <div class="portfolio-legend-item">
-                    <div class="portfolio-legend-swatch" style="background: #4a90d9;"></div>
-                    Grid Decarbonization
-                </div>
-                <div class="portfolio-legend-item">
-                    <div class="portfolio-legend-swatch" style="background: #22C55E;"></div>
-                    Energy Efficiency & Electrification
-                </div>
-                <div class="portfolio-legend-item">
-                    <div class="portfolio-legend-swatch" style="background: #FF9800;"></div>
-                    Cross-Sector (SAF, Green H2)
-                </div>
-                <div class="portfolio-legend-item">
-                    <div class="portfolio-legend-swatch" style="background: #E91E63;"></div>
-                    Carbon Removal (DAC, BECCS)
-                </div>
-            </div>
-        </div>
-
-        <div class="callout-box">
-            <strong>The portfolio mindset:</strong> A company targeting net-zero might optimally push its grid procurement to 92% hourly clean energy (where grid costs are $120/ton), then allocate the next tranche of budget to high-quality carbon removal at $250/ton for the remaining 8%. Total cost? Substantially less than pushing the grid to 100% where marginal costs might reach $800/ton. The 8% gap is filled by removal credits that permanently sequester CO2 -- achieving the same climate outcome at a fraction of the cost.
-        </div>
-    </section>
+    <!-- Portfolio section moved up to Section 3 -->
 
     <!-- ================================================================ -->
     <!-- SECTION 6: REGIONAL DEEP-DIVES ON CROSSOVER POINTS               -->
@@ -1392,7 +1368,7 @@ body {
                     <div class="region-card-name">ERCOT (Texas)</div>
                 </div>
                 <p>Texas is the cost leader in grid decarbonization, and it is not particularly close. ERCOT's marginal abatement curve stays below $100/ton through 93% and below $200/ton through 96%. The reasons: the nation's cheapest wind ($40/MWh at Medium), favorable CCS-CCGT geology along the Gulf Coast ($71/MWh), and the lowest storage costs in the country due to fast permitting and low labor costs.</p>
-                <p>ERCOT also benefits from a unique CO2 intensity story. Its remaining fossil fleet is almost entirely natural gas (coal is largely retired), which means each displaced MWh avoids moderate emissions -- neither as high as PJM's coal-heavy grid nor as low as CAISO's already-clean fleet.</p>
+                <p>ERCOT also benefits from a unique CO&#8322; intensity story. Its remaining fossil fleet is almost entirely natural gas (coal is largely retired), which means each displaced MWh avoids moderate emissions -- neither as high as PJM's coal-heavy grid nor as low as CAISO's already-clean fleet.</p>
                 <p><strong>Strategy:</strong> ERCOT is the one region where pushing to 97% grid clean energy may be cheaper than most alternatives. Gulf Coast DAC potential (1PointFive, Carbon Engineering) could handle the last 3% at declining costs as the industry scales.</p>
             </div>
 
@@ -1534,22 +1510,22 @@ const REGION_COLORS = {
 // Benchmark abatement cost data — researched L/M/H with sources
 // Categories: demand_reduction, industrial_decarb, carbon_removal, transport, benchmarks
 const BENCHMARKS_STATIC = [
-    { name: 'Energy Efficiency (Buildings)', low: -100, mid: 0,   high: 60,   color: '#4CAF50', category: 'demand_reduction', trajectory: 'stable', confidence: 'high',
+    { name: 'Energy Efficiency (Buildings)', short: 'Energy Efficiency', low: -100, mid: 0,   high: 60,   color: '#4CAF50', category: 'demand_reduction', trajectory: 'stable', confidence: 'high',
       sources: 'EDF/Evolved Energy MAC 2.0, World Bank, Gillingham & Stock' },
-    { name: 'EU ETS Price',                  low: 65,   mid: 88,  high: 92,   color: '#2196F3', category: 'benchmark', trajectory: 'rising', confidence: 'high',
+    { name: 'EU ETS Price',                  short: 'EU ETS', low: 65,   mid: 88,  high: 92,   color: '#2196F3', category: 'benchmark', trajectory: 'rising', confidence: 'high',
       sources: 'Trading Economics, Sandbag, BNEF' },
-    { name: 'SCC — EPA ($190/ton)',          low: 140,  mid: 190, high: 380,  color: '#FF9800', category: 'benchmark', trajectory: 'rising', confidence: 'medium',
+    { name: 'SCC \u2014 EPA ($190/ton)',     short: 'SCC (EPA)', low: 140,  mid: 190, high: 380,  color: '#FF9800', category: 'benchmark', trajectory: 'rising', confidence: 'medium',
       sources: 'EPA Dec 2023 Report' },
-    { name: 'SCC — Rennert et al.',          low: 120,  mid: 185, high: 450,  color: '#E65100', category: 'benchmark', trajectory: 'rising', confidence: 'medium',
+    { name: 'SCC \u2014 Rennert et al.',     short: 'SCC (Rennert)', low: 120,  mid: 185, high: 450,  color: '#E65100', category: 'benchmark', trajectory: 'rising', confidence: 'medium',
       sources: 'Rennert et al. (2022) Nature' },
-    { name: 'Carbon Credits (Nature)',       low: 3,    mid: 15,  high: 35,   color: '#9E9E9E', category: 'voluntary', trajectory: 'rising', confidence: 'medium',
+    { name: 'Carbon Credits (Nature)',       short: 'Carbon Credits', low: 3,    mid: 15,  high: 35,   color: '#9E9E9E', category: 'voluntary', trajectory: 'rising', confidence: 'medium',
       sources: 'Sylvera 2026, Regreener, MSCI' },
 ];
 
 // Dynamic benchmarks — shift with user toggles
 const BENCHMARKS_DYNAMIC = {
     dac: {
-        name: 'Direct Air Capture (DAC)',    color: '#E91E63', category: 'carbon_removal', confidence: 'low',
+        name: 'Direct Air Capture (DAC)',    short: 'DAC', color: '#E91E63', category: 'carbon_removal', confidence: 'low',
         trajectory: 'declining_steep',
         Low:    { low: 250,  mid: 400,  high: 600 },
         Medium: { low: 400,  mid: 600,  high: 1500 },
@@ -1557,7 +1533,7 @@ const BENCHMARKS_DYNAMIC = {
         sources: 'ETH Zurich 2024, Climeworks, Belfer Center'
     },
     industrial: {
-        name: 'Industrial Electrification', color: '#8BC34A', category: 'industrial_decarb', confidence: 'medium',
+        name: 'Industrial Electrification', short: 'Ind. Electrification', color: '#8BC34A', category: 'industrial_decarb', confidence: 'medium',
         trajectory: 'declining',
         Low:    { low: -50, mid: 20,  high: 60 },
         Medium: { low: 0,   mid: 60,  high: 160 },
@@ -1565,7 +1541,7 @@ const BENCHMARKS_DYNAMIC = {
         sources: 'McKinsey, Thunder Said Energy, Rewiring America'
     },
     removal: {
-        name: 'Carbon Removal (BECCS + Enhanced Weathering)', color: '#009688', category: 'carbon_removal', confidence: 'low',
+        name: 'Carbon Removal (BECCS + Enhanced Weathering)', short: 'Carbon Removal\u00B9', color: '#009688', category: 'carbon_removal', confidence: 'low',
         trajectory: 'declining',
         Low:    { low: 20,  mid: 75,  high: 150 },
         Medium: { low: 50,  mid: 150, high: 300 },
@@ -1576,13 +1552,13 @@ const BENCHMARKS_DYNAMIC = {
 
 // Additional comparison technologies (not toggle-controlled)
 const BENCHMARKS_EXTRA = [
-    { name: 'Green Hydrogen (Industrial)',  low: 150, mid: 500, high: 1250, color: '#00BCD4', category: 'industrial_decarb',
+    { name: 'Green Hydrogen (Industrial)',  short: 'Green H\u2082', low: 150, mid: 500, high: 1250, color: '#00BCD4', category: 'industrial_decarb',
       trajectory: 'declining', confidence: 'low', sources: 'Shafiee & Schrag (Joule 2024), Belfer Center' },
-    { name: 'Sustainable Aviation Fuel',    low: 136, mid: 300, high: 500,  color: '#FF5722', category: 'transport',
+    { name: 'Sustainable Aviation Fuel',    short: 'SAF', low: 136, mid: 300, high: 500,  color: '#FF5722', category: 'transport',
       trajectory: 'declining', confidence: 'medium', sources: 'NREL, RMI 2025, ICCT, WEF' },
-    { name: 'CDR Credits (Engineered)',     low: 177, mid: 320, high: 600,  color: '#7C4DFF', category: 'voluntary',
+    { name: 'CDR Credits (Engineered)',     short: 'CDR Credits', low: 177, mid: 320, high: 600,  color: '#7C4DFF', category: 'voluntary',
       trajectory: 'declining', confidence: 'medium', sources: 'Sylvera, CarbonCredits.com' },
-    { name: 'EVs vs ICE (Fleet)',           low: -50, mid: 250, high: 970,  color: '#FF6F00', category: 'transport',
+    { name: 'EVs vs ICE (Fleet)',           short: 'EVs vs ICE', low: -50, mid: 250, high: 970,  color: '#FF6F00', category: 'transport',
       trajectory: 'declining_steep', confidence: 'medium', sources: 'Argonne Labs, Penn Wharton, RFF' },
 ];
 
@@ -1593,7 +1569,7 @@ function getAllBenchmarks() {
         const b = BENCHMARKS_DYNAMIC[key];
         const level = toggleState[key] || 'Medium';
         const costs = b[level];
-        return { name: b.name, low: costs.low, mid: costs.mid, high: costs.high, color: b.color,
+        return { name: b.name, short: b.short || b.name, low: costs.low, mid: costs.mid, high: costs.high, color: b.color,
                  category: b.category, confidence: b.confidence, trajectory: b.trajectory, sources: b.sources };
     });
     return [...BENCHMARKS_STATIC, ...dynamic, ...BENCHMARKS_EXTRA]
@@ -1746,7 +1722,7 @@ function buildMacChart(scenario) {
                     type: 'logarithmic',
                     min: 10,
                     max: 2800,
-                    title: { display: true, text: 'Marginal Abatement Cost ($/ton CO2)', font: { size: 13, weight: 600 } },
+                    title: { display: true, text: 'Marginal Abatement Cost ($/ton CO\u2082)', font: { size: 13, weight: 600 } },
                     ticks: {
                         callback: v => {
                             if ([10,20,50,100,200,500,1000,2000].includes(v)) return '$' + v.toLocaleString();
@@ -1971,7 +1947,7 @@ function buildBandChart() {
     const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
 
     // Horizontal floating bar chart: each benchmark is a row
-    const labels = BENCHMARKS.map(b => b.name);
+    const labels = BENCHMARKS.map(b => b.short || b.name);
     const backgroundColors = BENCHMARKS.map(b => b.color + '40');
     const borderColors = BENCHMARKS.map(b => b.color);
 
@@ -2042,7 +2018,7 @@ function buildBandChart() {
                 x: {
                     min: 0,
                     max: 650,
-                    title: { display: true, text: '$/ton CO2', font: { size: 13, weight: 600 } },
+                    title: { display: true, text: '$/ton CO\u2082', font: { size: 13, weight: 600 } },
                     ticks: {
                         stepSize: 50,
                         callback: v => '$' + v,
@@ -2177,42 +2153,42 @@ function buildPortfolioChart() {
                 {
                     label: 'Grid Decarbonization',
                     data: gridShare,
-                    backgroundColor: 'rgba(74,144,217,0.35)',
+                    backgroundColor: 'rgba(74,144,217,0.7)',
                     borderColor: '#4a90d9',
                     borderWidth: 2,
-                    fill: true,
+                    fill: 'origin',
                     tension: 0.4,
-                    pointRadius: 3
+                    pointRadius: 0
                 },
                 {
                     label: 'Energy Efficiency & Electrification',
                     data: efficiencyShare,
-                    backgroundColor: 'rgba(34,197,94,0.30)',
+                    backgroundColor: 'rgba(34,197,94,0.7)',
                     borderColor: '#22C55E',
                     borderWidth: 2,
-                    fill: true,
+                    fill: 'origin',
                     tension: 0.4,
-                    pointRadius: 3
+                    pointRadius: 0
                 },
                 {
-                    label: 'Cross-Sector (SAF, Green H2)',
+                    label: 'Cross-Sector (SAF, Green H\u2082)',
                     data: crossSector,
-                    backgroundColor: 'rgba(255,152,0,0.30)',
+                    backgroundColor: 'rgba(255,152,0,0.7)',
                     borderColor: '#FF9800',
                     borderWidth: 2,
-                    fill: true,
+                    fill: 'origin',
                     tension: 0.4,
-                    pointRadius: 3
+                    pointRadius: 0
                 },
                 {
                     label: 'Carbon Removal (DAC, BECCS)',
                     data: removal,
-                    backgroundColor: 'rgba(233,30,99,0.30)',
+                    backgroundColor: 'rgba(233,30,99,0.7)',
                     borderColor: '#E91E63',
                     borderWidth: 2,
-                    fill: true,
+                    fill: 'origin',
                     tension: 0.4,
-                    pointRadius: 3
+                    pointRadius: 0
                 }
             ]
         },
@@ -2227,7 +2203,7 @@ function buildPortfolioChart() {
                     grid: { color: 'rgba(0,0,0,0.04)' }
                 },
                 y: {
-                    stacked: false,
+                    stacked: true,
                     min: 0,
                     max: 100,
                     title: { display: true, text: 'Share of Decarbonization Budget (%)', font: { size: 13, weight: 600 } },

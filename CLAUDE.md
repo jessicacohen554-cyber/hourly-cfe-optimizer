@@ -157,9 +157,11 @@ When facing compute vs. rigor tradeoffs:
 ### Visual & UX
 - Banner goes ABOVE intro text on main page (not below)
 - ALL pages share same header banner styling — only title and tagline vary per page
-- Top navigation bar on ALL pages: Dashboard | CAISO | ERCOT | PJM | NYISO | NEISO | Methodology | Paper
+- Top navigation bar on ALL pages: Home | Dashboard | Regional Deep Dives | CO2 Abatement | Methodology | Paper
 - Current page highlighted in nav; mobile gets hamburger/collapsible nav
 - Scrollytelling format for regional deep-dive pages, matching main dashboard style
+- **Homepage (index.html)** is the landing page with scrollytell narrative and key conclusions; dashboard.html is the interactive optimizer
+- **Static pages default to Medium cost sensitivities** — homepage and regional deep dives use all-Medium toggle data unless a figure is explicitly designed to show L/M/H comparison ranges
 - Layer in explanations for model elements — assume reader has minimal energy domain knowledge
 - Clean, crisp visual identity — no clutter
 - Both mobile and desktop compatible (44px min tap targets, responsive charts, no horizontal overflow)
