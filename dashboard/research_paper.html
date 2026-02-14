@@ -521,13 +521,14 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </button>
     <div class="top-nav-inner">
         <a href="index.html">Home</a>
-        <a href="dashboard.html">Dashboard</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
         <a href="region_deepdive.html">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement</a>
-        <a href="optimizer_methodology.html">Methodology</a>
-        <a href="research_paper.html" class="nav-active">Research Paper</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
+        <a href="research_paper.html" class="nav-active">Methodology &amp; Paper</a>
     </div>
 </nav>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <header class="paper-header">
     <div class="paper-header-accent"></div>
@@ -578,7 +579,14 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <li><a href="#discussion">Discussion</a></li>
             <li><a href="#limitations">Limitations &amp; Future Work</a></li>
             <li><a href="#conclusion">Conclusion</a></li>
-            <li><a href="#appendix">Appendix: Detailed Sensitivity Results &amp; Investment Planning Scenarios</a></li>
+            <li><a href="#appendix">Appendix A: Detailed Sensitivity Results &amp; Investment Planning Scenarios</a></li>
+            <li><a href="#appendix-b">Appendix B: Detailed Technical Methodology</a>
+                <ol type="a" style="margin-top:4px;">
+                    <li><a href="#appendix-b">Cost Tables (Solar, Wind, Clean Firm, CCS-CCGT, Storage)</a></li>
+                    <li><a href="#appendix-b">Transmission Adders &amp; Fuel Price Scenarios</a></li>
+                    <li><a href="#appendix-b">Toggle Pairing, CO&#8322; Methodology, Hydro Treatment</a></li>
+                </ol>
+            </li>
             <li><a href="#references">References</a></li>
         </ol>
     </div>
@@ -1911,6 +1919,162 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </p>
 
     <!-- ========== REFERENCES ========== -->
+    <!-- ========== APPENDIX B: DETAILED METHODOLOGY ========== -->
+    <h2 id="appendix-b">Appendix B: Detailed Technical Methodology</h2>
+    <p>
+        This appendix provides the complete technical specification of the optimization model, including all cost
+        tables, transmission adders, fuel price scenarios, sensitivity toggle pairing rationale, CO&#8322; emission
+        factor methodology, and hydro treatment rules. These details supplement the condensed methodology in
+        Section 4 with implementation-level precision.
+    </p>
+
+    <h3>B.1 Two-Tier Pricing Model</h3>
+    <p>
+        The model distinguishes between two pricing tiers for each resource type:
+        <strong>existing resources</strong> (up to the current grid mix share) are priced at the regional wholesale
+        electricity market price, while <strong>new-build resources</strong> (above the current share) are priced
+        at regional new-build LCOE + transmission adder.
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Blended Resource Cost</span>
+        resource_cost = existing_mwh &times; wholesale_price + new_mwh &times; (lcoe + tx_adder)
+
+        Special cases:
+          Hydro: always wholesale priced ($0 transmission), no new-build tier
+          CCS-CCGT: no existing share (entirely new-build), all at LCOE + transmission
+    </div>
+
+    <h3>B.2 Generation Cost Tables (Low / Medium / High)</h3>
+
+    <p><strong>Solar LCOE ($/MWh)</strong></p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$45</td><td>$40</td><td>$50</td><td>$70</td><td>$62</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$60</td><td>$54</td><td>$65</td><td>$92</td><td>$82</td></tr>
+            <tr><td><strong>High</strong></td><td>$78</td><td>$70</td><td>$85</td><td>$120</td><td>$107</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <p><strong>Wind LCOE ($/MWh)</strong></p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$55</td><td>$30</td><td>$47</td><td>$61</td><td>$55</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$73</td><td>$40</td><td>$62</td><td>$81</td><td>$73</td></tr>
+            <tr><td><strong>High</strong></td><td>$95</td><td>$52</td><td>$81</td><td>$105</td><td>$95</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <p><strong>Clean Firm LCOE ($/MWh)</strong> &mdash; Nuclear + Geothermal blend</p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$63</td><td>$72</td><td>$75</td><td>$73</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$78</td><td>$85</td><td>$93</td><td>$98</td><td>$96</td></tr>
+            <tr><td><strong>High</strong></td><td>$110</td><td>$120</td><td>$140</td><td>$150</td><td>$145</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <p><strong>CCS-CCGT LCOE ($/MWh, Net of 45Q)</strong></p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$52</td><td>$62</td><td>$78</td><td>$75</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$86</td><td>$71</td><td>$79</td><td>$99</td><td>$96</td></tr>
+            <tr><td><strong>High</strong></td><td>$115</td><td>$92</td><td>$102</td><td>$128</td><td>$122</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h3>B.3 Storage Cost Tables (Low / Medium / High)</h3>
+
+    <p><strong>Battery LCOS ($/MWh) &mdash; 4hr Li-ion</strong></p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$77</td><td>$69</td><td>$74</td><td>$81</td><td>$79</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$102</td><td>$92</td><td>$98</td><td>$108</td><td>$105</td></tr>
+            <tr><td><strong>High</strong></td><td>$133</td><td>$120</td><td>$127</td><td>$140</td><td>$137</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <p><strong>LDES LCOS ($/MWh) &mdash; 100hr Iron-Air</strong></p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$135</td><td>$116</td><td>$128</td><td>$150</td><td>$143</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$180</td><td>$155</td><td>$170</td><td>$200</td><td>$190</td></tr>
+            <tr><td><strong>High</strong></td><td>$234</td><td>$202</td><td>$221</td><td>$260</td><td>$247</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h3>B.4 Transmission Adders ($/MWh, New-Build Only)</h3>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Resource</th><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <tbody>
+            <tr><td rowspan="3"><strong>Wind</strong></td><td>Low</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
+            <tr><td>Medium</td><td>$8</td><td>$6</td><td>$10</td><td>$14</td><td>$12</td></tr>
+            <tr><td>High</td><td>$14</td><td>$10</td><td>$18</td><td>$22</td><td>$20</td></tr>
+            <tr><td rowspan="3"><strong>Solar</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$2</td><td>$3</td><td>$3</td></tr>
+            <tr><td>Medium</td><td>$3</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
+            <tr><td>High</td><td>$6</td><td>$5</td><td>$9</td><td>$12</td><td>$10</td></tr>
+            <tr><td rowspan="3"><strong>Clean Firm</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
+            <tr><td>Medium</td><td>$3</td><td>$2</td><td>$3</td><td>$5</td><td>$4</td></tr>
+            <tr><td>High</td><td>$6</td><td>$4</td><td>$6</td><td>$9</td><td>$7</td></tr>
+            <tr><td><strong>Hydro</strong></td><td>All</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h3>B.5 Sensitivity Toggle Pairing</h3>
+    <p>
+        The model uses <strong>5 paired sensitivity toggle groups</strong> (3 levels each, except Transmission with 4):
+        Renewable Generation (Solar + Wind), Firm Generation (Clean Firm + CCS-CCGT), Storage (Battery + LDES),
+        Fossil Fuel Price (Gas + Coal + Oil), and Transmission (all adders). This produces 3 &times; 3 &times; 3
+        &times; 3 &times; 4 = <strong>324 scenarios per region per threshold</strong>, a 182&times; reduction from
+        59,049 independent toggle combinations while preserving the ability to explore all major cost sensitivities.
+    </p>
+
+    <h3>B.6 CO&#8322; Emission Factor Methodology</h3>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Region</th><th>Marginal Rate (tCO&#8322;/MWh)</th><th>Dominant Marginal Fuel</th></tr></thead>
+        <tbody>
+            <tr><td>CAISO</td><td>~0.39</td><td>Natural gas (CCGT/peakers)</td></tr>
+            <tr><td>ERCOT</td><td>~0.42</td><td>Natural gas + some coal</td></tr>
+            <tr><td>PJM</td><td>~0.55</td><td>Natural gas + coal</td></tr>
+            <tr><td>NYISO</td><td>~0.37</td><td>Natural gas (CCGT/peakers)</td></tr>
+            <tr><td>NEISO</td><td>~0.38</td><td>Natural gas (CCGT)</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.85rem;color:var(--text-muted);">
+        Source: EPA eGRID 2022. Rates shift with the Fossil Fuel Price toggle through fuel-switching dynamics.
+        CCS-CCGT receives partial displacement credit: ~0.037 tCO&#8322;/MWh residual (10% of unabated rate).
+    </p>
+
+    <h3>B.7 Hydro Treatment</h3>
+    <p>
+        Hydro is modeled as existing-only (no new-build), wholesale-priced ($0 transmission adder), with regional
+        capacity caps: CAISO 29%, ERCOT 1%, PJM 3%, NYISO 25%, NEISO 10%. New large-scale hydro faces
+        insurmountable barriers: virtually all viable sites are developed, 10&ndash;20 year environmental
+        permitting timelines, and ecological concerns make new projects infeasible.
+    </p>
+
     <h2 id="references">9. References</h2>
     <ol class="ref-list">
         <li id="ref-1">
