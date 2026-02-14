@@ -260,7 +260,7 @@ GRID_MIX_SHARES = {
 }
 
 # CCS-CCGT residual emission rate (tCO2/MWh) after 90% capture
-CCS_RESIDUAL_EMISSION_RATE = 0.037
+CCS_RESIDUAL_EMISSION_RATE = 0.0185  # 95% capture from ~0.37 tCO2/MWh CCGT
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -365,8 +365,16 @@ def fast_hourly_score(demand_arr, supply_matrix, mix_fractions, procurement_fact
 def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procurement_factor,
                             battery_dispatch_pct):
     """
-    Fast scoring with battery storage (4hr Li-ion, 85% RTE, daily-cycle greedy dispatch).
-    Preserves the original daily-cycle algorithm exactly.
+    Fast scoring with capacity-constrained battery storage (4hr Li-ion, 85% RTE).
+
+    battery_dispatch_pct maps to a CAPACITY, not a guaranteed dispatch amount.
+    Capacity (MWh) = battery_dispatch_pct / 100.0 (normalized to demand sum ~1.0).
+    Power rating (MW) = capacity / 4hr.
+
+    Each day: charge from available surplus up to capacity, discharge to gaps.
+    Days with low surplus → partial cycle → less dispatch.
+    Actual annual dispatch varies based on surplus availability.
+
     Returns matching score (0-1).
     """
     supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
@@ -377,12 +385,12 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
     if battery_dispatch_pct <= 0:
         return base_matched.sum()
 
-    storage_dispatch_total = battery_dispatch_pct / 100.0
-    num_days = H // 24
-    daily_dispatch_target = storage_dispatch_total / num_days
-    power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
+    # Capacity-based sizing: pct maps to energy capacity
+    capacity_mwh = battery_dispatch_pct / 100.0  # normalized energy capacity
+    power_rating = capacity_mwh / BATTERY_DURATION_HOURS
 
     total_dispatched = 0.0
+    num_days = H // 24
     for day in range(num_days):
         ds = day * 24
         de = ds + 24
@@ -393,8 +401,11 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
         total_surplus = day_surplus.sum()
         total_gap = day_gap.sum()
 
-        max_from_charge = total_surplus * BATTERY_EFFICIENCY
-        actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap)
+        # Charge limited by: available surplus, capacity, power rating × hours
+        max_charge = min(total_surplus, capacity_mwh)
+        max_from_charge = max_charge * BATTERY_EFFICIENCY
+        # Dispatch limited by: charged energy × RTE, gap, capacity
+        actual_dispatch = min(max_from_charge, total_gap, capacity_mwh)
         if actual_dispatch <= 0:
             continue
 
@@ -425,16 +436,19 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
     return base_matched.sum() + total_dispatched
 
 
-def compute_ldes_dispatch(demand_arr, supply_arr_total):
+def compute_ldes_dispatch(demand_arr, supply_arr_total, ldes_dispatch_pct=10):
     """
     LDES dispatch algorithm: 100hr iron-air, 50% RTE, 7-day rolling window.
+    Capacity-constrained with dynamic sizing.
 
-    Charges during multi-day surplus periods, discharges during multi-day deficit periods.
-    Power rating = capacity / 100hr (very low power, huge energy).
+    ldes_dispatch_pct maps to CAPACITY (not guaranteed dispatch).
+    Capacity (MWh) = ldes_dispatch_pct / 100.0 (normalized to demand).
+    Power rating (MW) = capacity / 100hr.
 
     Args:
         demand_arr: numpy array (H,) of normalized demand
         supply_arr_total: numpy array (H,) of total supply after resource mix
+        ldes_dispatch_pct: capacity sizing parameter (% of normalized demand)
 
     Returns:
         ldes_dispatch: numpy array (H,) of LDES dispatch amounts (added to matched)
@@ -447,11 +461,8 @@ def compute_ldes_dispatch(demand_arr, supply_arr_total):
     ldes_dispatch = np.zeros(H, dtype=np.float64)
     ldes_charge = np.zeros(H, dtype=np.float64)
 
-    # LDES energy capacity: use a capacity that scales with total demand
-    # Set capacity as fraction of total demand energy
-    total_demand_energy = demand_arr.sum()  # sums to ~1.0 for normalized
-    # Capacity sized relative to demand: enough to store ~1 day of average demand
-    ldes_energy_capacity = total_demand_energy * (24.0 / H)  # ~1 day of energy
+    # Dynamic capacity sizing: scales with ldes_dispatch_pct
+    ldes_energy_capacity = ldes_dispatch_pct / 100.0  # normalized energy capacity
     ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
 
     state_of_charge = 0.0
@@ -462,7 +473,6 @@ def compute_ldes_dispatch(demand_arr, supply_arr_total):
     for w in range(num_windows):
         w_start = w * window_hours
         w_end = min(w_start + window_hours, H)
-        window_len = w_end - w_start
 
         # Identify surplus and deficit hours in this window
         w_surplus = surplus[w_start:w_end].copy()
@@ -492,7 +502,6 @@ def compute_ldes_dispatch(demand_arr, supply_arr_total):
             dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, available)
             if dispatch_amt > 0:
                 ldes_dispatch[w_start + idx] = dispatch_amt
-                # Energy drawn from storage = dispatch / efficiency
                 state_of_charge -= dispatch_amt / LDES_EFFICIENCY
                 state_of_charge = max(0.0, state_of_charge)
 
@@ -504,7 +513,7 @@ def fast_score_with_ldes(demand_arr, supply_matrix, mix_fractions, procurement_f
                          ldes_dispatch_pct):
     """
     Fast scoring with LDES only (no battery). Used in sweep/optimization.
-    ldes_dispatch_pct is a scaling hint for how much LDES capacity is available.
+    ldes_dispatch_pct maps to LDES capacity (dynamic sizing).
     Returns matching score (0-1).
     """
     supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
@@ -514,21 +523,22 @@ def fast_score_with_ldes(demand_arr, supply_matrix, mix_fractions, procurement_f
         return matched.sum()
 
     base_matched = np.minimum(demand_arr, supply)
-    ldes_dispatch_arr, _, total_dispatched = compute_ldes_dispatch(demand_arr, supply)
+    ldes_dispatch_arr, _, total_dispatched = compute_ldes_dispatch(
+        demand_arr, supply, ldes_dispatch_pct=ldes_dispatch_pct)
 
-    # Scale the dispatch by the ldes_dispatch_pct factor
-    scale = ldes_dispatch_pct / 10.0  # normalize: 10% = 1x capacity
+    # Dispatch is already capacity-constrained; just cap at remaining gap
     gap = np.maximum(0.0, demand_arr - supply)
-    scaled_dispatch = np.minimum(ldes_dispatch_arr * scale, gap)
+    capped_dispatch = np.minimum(ldes_dispatch_arr, gap)
 
-    return base_matched.sum() + scaled_dispatch.sum()
+    return base_matched.sum() + capped_dispatch.sum()
 
 
 def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procurement_factor,
                                  battery_dispatch_pct, ldes_dispatch_pct):
     """
-    Fast scoring with both battery (daily) and LDES (multi-day).
+    Fast scoring with both capacity-constrained battery (daily) and LDES (multi-day).
     Battery runs first on daily cycle, LDES fills remaining multi-day gaps.
+    Both use capacity-based sizing where dispatch_pct maps to built capacity.
     Returns matching score (0-1).
     """
     supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
@@ -540,12 +550,11 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
     residual_gap = gap.copy()
     residual_surplus = surplus.copy()
 
-    # Phase 1: Battery daily-cycle dispatch
+    # Phase 1: Battery capacity-constrained daily-cycle dispatch
     if battery_dispatch_pct > 0:
-        batt_dispatch_total = battery_dispatch_pct / 100.0
+        batt_capacity = battery_dispatch_pct / 100.0  # normalized energy capacity
+        batt_power_rating = batt_capacity / BATTERY_DURATION_HOURS
         num_days = H // 24
-        daily_dispatch_target = batt_dispatch_total / num_days
-        batt_power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
 
         for day in range(num_days):
             ds = day * 24
@@ -557,8 +566,10 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
             total_surplus_day = day_surplus.sum()
             total_gap_day = day_gap.sum()
 
-            max_from_charge = total_surplus_day * BATTERY_EFFICIENCY
-            actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap_day)
+            # Capacity-constrained: charge limited by surplus and capacity
+            max_charge = min(total_surplus_day, batt_capacity)
+            max_from_charge = max_charge * BATTERY_EFFICIENCY
+            actual_dispatch = min(max_from_charge, total_gap_day, batt_capacity)
             if actual_dispatch <= 0:
                 continue
 
@@ -588,12 +599,10 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
                 total_dispatched += amt
                 remaining_dispatch -= amt
 
-    # Phase 2: LDES multi-day dispatch on remaining gaps
+    # Phase 2: LDES capacity-constrained multi-day dispatch on remaining gaps
     if ldes_dispatch_pct > 0:
-        total_demand_energy = demand_arr.sum()
-        ldes_energy_capacity = total_demand_energy * (24.0 / H)
+        ldes_energy_capacity = ldes_dispatch_pct / 100.0  # dynamic capacity sizing
         ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
-        scale = ldes_dispatch_pct / 10.0
 
         state_of_charge = 0.0
         window_hours = LDES_WINDOW_DAYS * 24
@@ -611,10 +620,10 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
             for idx in surplus_indices:
                 if w_surplus[idx] <= 0:
                     break
-                space = (ldes_energy_capacity * scale) - state_of_charge
+                space = ldes_energy_capacity - state_of_charge
                 if space <= 0:
                     break
-                charge_amt = min(float(w_surplus[idx]), ldes_power_rating * scale, space)
+                charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
                 if charge_amt > 0:
                     state_of_charge += charge_amt
 
@@ -626,7 +635,7 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
                 available = state_of_charge * LDES_EFFICIENCY
                 if available <= 1e-12:
                     break
-                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating * scale, available)
+                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, available)
                 if dispatch_amt > 0:
                     total_dispatched += dispatch_amt
                     state_of_charge -= dispatch_amt / LDES_EFFICIENCY
@@ -684,12 +693,11 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
     residual_surplus = surplus_arr.copy()
     residual_gap = gap_arr.copy()
 
-    # Phase 1: Battery daily-cycle dispatch
+    # Phase 1: Battery capacity-constrained daily-cycle dispatch
     if battery_dispatch_pct > 0:
-        batt_dispatch_total = battery_dispatch_pct / 100.0
+        batt_capacity = battery_dispatch_pct / 100.0  # normalized energy capacity
+        batt_power_rating = batt_capacity / BATTERY_DURATION_HOURS
         num_days = H // 24
-        daily_dispatch_target = batt_dispatch_total / num_days
-        batt_power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
 
         for day in range(num_days):
             ds = day * 24
@@ -701,8 +709,10 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
             total_surplus_day = day_surplus.sum()
             total_gap_day = day_gap.sum()
 
-            max_from_charge = total_surplus_day * BATTERY_EFFICIENCY
-            actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap_day)
+            # Capacity-constrained: charge limited by surplus and capacity
+            max_charge = min(total_surplus_day, batt_capacity)
+            max_from_charge = max_charge * BATTERY_EFFICIENCY
+            actual_dispatch = min(max_from_charge, total_gap_day, batt_capacity)
             if actual_dispatch <= 0:
                 continue
 
@@ -733,12 +743,10 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
                 residual_gap[ds + idx] -= amt
                 remaining_dispatch -= amt
 
-    # Phase 2: LDES multi-day dispatch on remaining gaps
+    # Phase 2: LDES capacity-constrained multi-day dispatch on remaining gaps
     if ldes_dispatch_pct > 0:
-        total_demand_energy = demand_arr.sum()
-        ldes_energy_capacity = total_demand_energy * (24.0 / H)
+        ldes_energy_capacity = ldes_dispatch_pct / 100.0  # dynamic capacity sizing
         ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
-        scale = ldes_dispatch_pct / 10.0
 
         state_of_charge = 0.0
         window_hours = LDES_WINDOW_DAYS * 24
@@ -756,10 +764,10 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
             for idx in surplus_indices:
                 if w_surplus[idx] <= 0:
                     break
-                space = (ldes_energy_capacity * scale) - state_of_charge
+                space = ldes_energy_capacity - state_of_charge
                 if space <= 0:
                     break
-                charge_amt = min(float(w_surplus[idx]), ldes_power_rating * scale, space)
+                charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
                 if charge_amt > 0:
                     ldes_charge_profile[w_start + idx] = charge_amt
                     residual_surplus[w_start + idx] -= charge_amt
@@ -773,7 +781,7 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
                 available = state_of_charge * LDES_EFFICIENCY
                 if available <= 1e-12:
                     break
-                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating * scale, available)
+                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, available)
                 if dispatch_amt > 0:
                     ldes_dispatch_profile[w_start + idx] = dispatch_amt
                     residual_gap[w_start + idx] -= dispatch_amt
@@ -966,7 +974,7 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
          emission_rate[h] = coal_share[h]×coal_rate + gas_share[h]×gas_rate + oil_share[h]×oil_rate
       2. Reconstruct hourly clean supply → fossil displacement at each hour
       3. CO2_abated = Σ_h fossil_displaced[h] × emission_rate[h]
-      4. CCS-CCGT: partial credit (rate[h] - 0.037 tCO2/MWh residual)
+      4. CCS-CCGT: partial credit (rate[h] - 0.0185 tCO2/MWh residual, 95% capture)
 
     Falls back to flat regional rate if hourly data not provided (backward compat).
     """
@@ -1014,13 +1022,8 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
             if rtype == 'ccs_ccgt':
                 ccs_supply = contribution.copy()
 
-        # Simplified storage effect (proportional adjustment)
-        storage_boost = (battery_dispatch_pct + ldes_dispatch_pct) / 100.0
-        # Storage shifts supply from surplus to gap hours; approximate by
-        # adding storage fraction uniformly to matched fraction
-        total_clean = supply_total  # Storage is already accounted in match score
-
-        fossil_displaced = np.minimum(demand_arr, total_clean)
+        # Direct generation displacement (no storage)
+        fossil_displaced = np.minimum(demand_arr, supply_total)
         matched_mwh = np.sum(fossil_displaced) * demand_total_mwh
 
         # Non-CCS clean displacement
@@ -1029,23 +1032,102 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
 
         # CO₂ from non-CCS: full credit at hourly rate
         co2_clean = np.sum(non_ccs_matched * hourly_rates) * demand_total_mwh
-        # CO₂ from CCS: partial credit
+        # CO₂ from CCS: partial credit (95% capture)
         ccs_credit = np.maximum(0.0, hourly_rates - CCS_RESIDUAL_EMISSION_RATE)
         co2_ccs = np.sum(ccs_matched * ccs_credit) * demand_total_mwh
 
-        # Storage displacement (shifts surplus→gap, displaces fossil at gap hours)
-        storage_mwh = demand_total_mwh * storage_boost
-        # Weighted avg rate at gap hours (approximation)
-        gap_mask = demand_arr > total_clean
-        if np.any(gap_mask):
-            gap_weighted_rate = np.average(hourly_rates[gap_mask],
-                                           weights=np.maximum(0, demand_arr[gap_mask] - total_clean[gap_mask]))
-        else:
-            gap_weighted_rate = np.mean(hourly_rates)
-        co2_storage = storage_mwh * gap_weighted_rate
+        # ── Storage CO₂: hourly dispatch attribution with charge-side netting ──
+        # Run actual storage dispatch to get hourly charge/discharge profiles
+        surplus = np.maximum(0.0, supply_total - demand_arr)
+        gap = np.maximum(0.0, demand_arr - supply_total)
+        residual_surplus = surplus.copy()
+        residual_gap = gap.copy()
 
+        batt_dispatch_hrs = np.zeros(H, dtype=np.float64)
+        batt_charge_hrs = np.zeros(H, dtype=np.float64)
+        ldes_dispatch_hrs = np.zeros(H, dtype=np.float64)
+        ldes_charge_hrs = np.zeros(H, dtype=np.float64)
+
+        # Battery dispatch (capacity-constrained)
+        if battery_dispatch_pct > 0:
+            batt_capacity = battery_dispatch_pct / 100.0
+            batt_pr = batt_capacity / BATTERY_DURATION_HOURS
+            num_days = H // 24
+            for day in range(num_days):
+                ds, de = day * 24, (day + 1) * 24
+                ds_surplus = residual_surplus[ds:de]
+                ds_gap = residual_gap[ds:de]
+                max_charge = min(ds_surplus.sum(), batt_capacity)
+                max_dispatch = min(max_charge * BATTERY_EFFICIENCY, ds_gap.sum(), batt_capacity)
+                if max_dispatch <= 0:
+                    continue
+                req_charge = max_dispatch / BATTERY_EFFICIENCY
+                for idx in np.argsort(-ds_surplus):
+                    if req_charge <= 0 or ds_surplus[idx] <= 0:
+                        break
+                    amt = min(float(ds_surplus[idx]), batt_pr, req_charge)
+                    batt_charge_hrs[ds + idx] = amt
+                    residual_surplus[ds + idx] -= amt
+                    req_charge -= amt
+                actual_charge_done = (max_dispatch / BATTERY_EFFICIENCY) - req_charge
+                actual_batt_dispatch = min(max_dispatch, actual_charge_done * BATTERY_EFFICIENCY)
+                rem = actual_batt_dispatch
+                for idx in np.argsort(-ds_gap):
+                    if rem <= 0 or ds_gap[idx] <= 0:
+                        break
+                    amt = min(float(ds_gap[idx]), batt_pr, rem)
+                    batt_dispatch_hrs[ds + idx] = amt
+                    residual_gap[ds + idx] -= amt
+                    rem -= amt
+
+        # LDES dispatch (capacity-constrained, dynamic sizing)
+        if ldes_dispatch_pct > 0:
+            ldes_cap = ldes_dispatch_pct / 100.0
+            ldes_pr = ldes_cap / LDES_DURATION_HOURS
+            soc = 0.0
+            wh = LDES_WINDOW_DAYS * 24
+            for w in range((H + wh - 1) // wh):
+                ws, we = w * wh, min((w + 1) * wh, H)
+                ws_surplus = residual_surplus[ws:we]
+                ws_gap = residual_gap[ws:we]
+                for idx in np.argsort(-ws_surplus):
+                    if ws_surplus[idx] <= 0:
+                        break
+                    space = ldes_cap - soc
+                    if space <= 0:
+                        break
+                    amt = min(float(ws_surplus[idx]), ldes_pr, space)
+                    if amt > 0:
+                        ldes_charge_hrs[ws + idx] = amt
+                        residual_surplus[ws + idx] -= amt
+                        soc += amt
+                for idx in np.argsort(-ws_gap):
+                    if ws_gap[idx] <= 0:
+                        break
+                    avail = soc * LDES_EFFICIENCY
+                    if avail <= 1e-12:
+                        break
+                    amt = min(float(ws_gap[idx]), ldes_pr, avail)
+                    if amt > 0:
+                        ldes_dispatch_hrs[ws + idx] = amt
+                        soc -= amt / LDES_EFFICIENCY
+                        soc = max(0.0, soc)
+
+        # CO₂ from storage dispatch (hourly attribution at discharge hours' rates)
+        storage_dispatch_total = batt_dispatch_hrs + ldes_dispatch_hrs
+        co2_storage_dispatch = np.sum(storage_dispatch_total * hourly_rates) * demand_total_mwh
+
+        # Charge-side emissions netting: charging draws energy that may have fossil
+        # on the margin. Net these against discharge abatement.
+        batt_charge_emissions = np.sum(batt_charge_hrs * hourly_rates) * demand_total_mwh
+        ldes_charge_emissions = np.sum(ldes_charge_hrs * hourly_rates) * demand_total_mwh
+
+        # Net storage abatement = dispatch abatement - charge emissions
+        co2_storage = co2_storage_dispatch - batt_charge_emissions - ldes_charge_emissions
+
+        storage_dispatch_mwh = float(np.sum(storage_dispatch_total)) * demand_total_mwh
         total_abated = co2_clean + co2_ccs + co2_storage
-        matched_mwh_total = matched_mwh + storage_mwh
+        matched_mwh_total = matched_mwh + storage_dispatch_mwh
         co2_rate = total_abated / matched_mwh_total if matched_mwh_total > 0 else 0
         weighted_avg_rate = np.average(hourly_rates, weights=fossil_displaced) \
             if np.sum(fossil_displaced) > 0 else np.mean(hourly_rates)
@@ -1057,7 +1139,10 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
             'hourly_emission_rate_max': round(float(np.max(hourly_rates)), 4),
             'total_co2_abated_tons': round(float(total_abated), 0),
             'co2_rate_per_mwh': round(float(co2_rate), 4),
-            'methodology': 'hourly_fossil_fuel_emission_rates',
+            'co2_storage_net_tons': round(float(co2_storage), 0),
+            'co2_storage_dispatch_tons': round(float(co2_storage_dispatch), 0),
+            'co2_storage_charge_emissions_tons': round(float(batt_charge_emissions + ldes_charge_emissions), 0),
+            'methodology': 'hourly_dispatch_attribution_with_charge_netting',
         }
 
     # ── Fallback: flat regional rate (backward compatibility) ──
