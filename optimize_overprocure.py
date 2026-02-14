@@ -2034,11 +2034,42 @@ def main():
             iso, iso_results = process_iso(args)
             all_results['results'][iso] = iso_results
 
-    # Save results
+    # Save results (dashboard consumption)
     output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard', 'overprocure_results.json')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, 'w') as f:
         json.dump(all_results, f)
+
+    # Save cached results file (reusable input for future projects)
+    cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'optimizer_cache.json')
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    try:
+        import subprocess
+        git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                           cwd=os.path.dirname(os.path.abspath(__file__)),
+                                           stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        git_hash = 'unknown'
+
+    from datetime import datetime, timezone
+    cache_data = {
+        'metadata': {
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'optimizer_version': '3.0-paired-toggles',
+            'git_commit': git_hash,
+            'runtime_seconds': round(time.time() - start_time, 1),
+            'description': 'Full co-optimized results: 10 thresholds x 324 paired-toggle scenarios x 5 ISOs',
+            'thresholds': THRESHOLDS,
+            'isos': ISOS,
+            'scenarios_per_threshold': len(ALL_COST_SCENARIOS),
+            'total_optimizations': len(THRESHOLDS) * len(ALL_COST_SCENARIOS) * len(ISOS),
+        },
+        'config': config,
+        'results': all_results['results'],
+    }
+    with open(cache_path, 'w') as f:
+        json.dump(cache_data, f, indent=2)
+    print(f"  Cached results: {cache_path} ({os.path.getsize(cache_path) / 1024:.0f} KB)")
 
     elapsed = time.time() - start_time
     print(f"\n{'='*70}")

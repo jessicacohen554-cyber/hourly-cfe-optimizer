@@ -8,6 +8,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+    @font-face {
+        font-family: 'Franklin Gothic Demi';
+        src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
+        font-weight: 600;
+        font-style: normal;
+        font-display: swap;
+    }
+    </style>
+    <style>
         :root {
             --navy: #1A2744;
             --navy-light: #2D3A52;
@@ -43,6 +52,69 @@
             line-height: 1.7;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ========== TOP NAVIGATION BAR ========== */
+        .top-nav {
+            background: #1a1a2e;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            min-height: 48px;
+        }
+        .top-nav-inner {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            max-width: 1440px;
+            width: 100%;
+            justify-content: center;
+        }
+        .top-nav a {
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            padding: 14px 18px;
+            transition: color 0.2s, background 0.2s, border-color 0.2s;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+        .top-nav a:hover {
+            color: #ffffff;
+            background: rgba(255,255,255,0.06);
+        }
+        .top-nav a.nav-active {
+            color: #ffffff;
+            border-bottom-color: #0EA5E9;
+            background: rgba(14,165,233,0.1);
+        }
+        .nav-hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 10px;
+            min-width: 44px;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-hamburger svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
         }
 
         .header {
@@ -359,6 +431,45 @@
 
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
+            .top-nav {
+                flex-wrap: wrap;
+                padding: 0 12px;
+                justify-content: space-between;
+            }
+            .top-nav-inner {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+                padding-bottom: 8px;
+            }
+            .top-nav-inner.nav-open {
+                display: flex;
+            }
+            .top-nav a {
+                padding: 12px 16px;
+                border-bottom: none;
+                border-left: 3px solid transparent;
+                width: 100%;
+                text-align: left;
+            }
+            .top-nav a.nav-active {
+                border-left-color: #0EA5E9;
+                border-bottom: none;
+                background: rgba(14,165,233,0.12);
+            }
+            .nav-hamburger {
+                display: flex;
+            }
+            .nav-brand {
+                display: flex;
+                align-items: center;
+                color: #ffffff;
+                font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+                font-size: 0.9rem;
+                font-weight: 700;
+                letter-spacing: 0.03em;
+                padding: 12px 0;
+            }
             html { font-size: 15px; }
             .header {
                 padding: 32px 16px 28px;
@@ -404,6 +515,10 @@
             .source-list li {
                 font-size: 0.85rem;
             }
+        }
+
+        @media (min-width: 769px) {
+            .nav-brand { display: none; }
         }
 
         @media (max-width: 480px) {
@@ -492,6 +607,24 @@
 </head>
 <body>
 
+<!-- ========== TOP NAVIGATION ========== -->
+<nav class="top-nav">
+    <span class="nav-brand">Hourly CFE Optimizer</span>
+    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="region_caiso.html">CAISO</a>
+        <a href="region_ercot.html">ERCOT</a>
+        <a href="region_pjm.html">PJM</a>
+        <a href="region_nyiso.html">NYISO</a>
+        <a href="region_neiso.html">NEISO</a>
+        <a href="optimizer_methodology.html" class="nav-active">Methodology</a>
+        <a href="research_paper.html">Paper</a>
+    </div>
+</nav>
+
 <header class="header">
     <h1>Hourly Clean Energy Cost Optimizer</h1>
     <p class="subtitle">Methodology &amp; Technical Reference</p>
@@ -499,8 +632,6 @@
 </header>
 
 <div class="content">
-    <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
-
     <div class="toc">
         <h2>Table of Contents</h2>
         <ol>
@@ -509,11 +640,22 @@
             <li><a href="#demand-profiles">Demand Profiles</a></li>
             <li><a href="#supply-profiles">Supply / Generation Profiles</a></li>
             <li><a href="#optimization-model">Optimization Model</a></li>
-            <li><a href="#storage-model">Storage Model</a></li>
-            <li><a href="#cost-model">Cost Model</a></li>
+            <li><a href="#storage-model">Storage Model (Battery &amp; LDES)</a></li>
+            <li><a href="#cost-model">Cost Model</a>
+                <ol style="list-style-type: lower-alpha; padding-left: 18px; margin-top: 4px;">
+                    <li><a href="#two-tier-pricing">Two-Tier Pricing</a></li>
+                    <li><a href="#generation-costs">Generation Cost Tables (L/M/H)</a></li>
+                    <li><a href="#ccs-ccgt-buildup">CCS-CCGT Cost Buildup</a></li>
+                    <li><a href="#storage-costs">Storage Cost Tables (L/M/H)</a></li>
+                    <li><a href="#transmission-adders">Transmission Adders (None/L/M/H)</a></li>
+                    <li><a href="#fuel-prices">Fuel Price Scenarios</a></li>
+                </ol>
+            </li>
             <li><a href="#compressed-day">Compressed Day Visualization</a></li>
             <li><a href="#assumptions">Assumptions &amp; Limitations</a></li>
             <li><a href="#toggle-pairing">Sensitivity Toggle Pairing Methodology</a></li>
+            <li><a href="#co2-methodology">CO<sub>2</sub> Emission Factor Methodology</a></li>
+            <li><a href="#hydro-treatment">Hydro Treatment Rationale</a></li>
             <li><a href="#sources-list">Data Sources List</a></li>
         </ol>
     </div>
@@ -837,29 +979,41 @@
     </p>
 
     <!-- ======== SECTION 6: STORAGE MODEL ======== -->
-    <h2 id="storage-model">6. Storage Model</h2>
+    <h2 id="storage-model">6. Storage Model (Battery &amp; LDES)</h2>
     <p>
-        Battery storage shifts surplus clean energy from oversupply hours to deficit hours,
+        The model includes two distinct storage technologies with fundamentally different duration, efficiency,
+        and dispatch characteristics. Both shift surplus clean energy from oversupply periods to deficit periods,
         improving hourly matching without additional generation procurement.
     </p>
 
-    <h3>6.1 Storage Parameters</h3>
+    <h3>6.1 Technology Comparison</h3>
+    <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Parameter</th><th>Value</th><th>Source</th></tr>
+            <tr><th>Parameter</th><th>Battery (4hr Li-ion)</th><th>LDES (100hr Iron-Air)</th></tr>
         </thead>
         <tbody>
-            <tr><td>Technology</td><td>4-hour Lithium-ion battery</td><td>Industry standard</td></tr>
-            <tr><td>Duration</td><td>4 hours</td><td>Most common utility-scale duration</td></tr>
-            <tr><td>Round-Trip Efficiency (RTE)</td><td>85%</td><td>NREL ATB 2024</td></tr>
-            <tr><td>Dispatch Target</td><td>Optimized per scenario (uncapped)</td><td>Model output</td></tr>
-            <tr><td>Cycling</td><td>Daily: charge from surplus, discharge into gaps</td><td>Modeling assumption</td></tr>
+            <tr><td>Duration</td><td>4 hours</td><td>100 hours</td></tr>
+            <tr><td>Round-Trip Efficiency (RTE)</td><td>85%</td><td>50%</td></tr>
+            <tr><td>Dispatch Cycle</td><td>Daily (24-hour)</td><td>Multi-day / seasonal (7-day rolling window)</td></tr>
+            <tr><td>Primary Use Case</td><td>Intra-day shifting (solar peak &rarr; evening)</td><td>Multi-day weather events, seasonal balancing</td></tr>
+            <tr><td>Chemistry</td><td>Lithium-ion (NMC/LFP)</td><td>Iron-air (Fe-air)</td></tr>
+            <tr><td>Maturity</td><td>Commercial, widely deployed</td><td>Pre-commercial / early deployment</td></tr>
+            <tr><td>Source</td><td>NREL ATB 2024</td><td>NREL ATB 2024, Form Energy data</td></tr>
         </tbody>
     </table>
+    </div>
 
-    <h3>6.2 Daily Dispatch Simulation</h3>
+    <div class="note-box">
+        <strong>Why two storage types:</strong> 4-hour batteries excel at daily solar shifting but cannot bridge
+        multi-day weather events (e.g., 3-day windless periods). LDES fills this gap with 100-hour duration,
+        enabling week-scale energy shifting at the cost of lower round-trip efficiency. H2 storage is explicitly
+        excluded from this model.
+    </div>
+
+    <h3>6.2 Battery Dispatch Algorithm (Daily Cycle)</h3>
     <p>
-        Storage operates on a <strong>daily cycle</strong>. For each 24-hour period, the simulation:
+        Battery storage operates on a <strong>daily cycle</strong>. For each 24-hour period, the simulation:
     </p>
     <ol style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
         <li>Identifies hours with surplus clean generation (supply &gt; demand)</li>
@@ -870,7 +1024,7 @@
     </ol>
 
     <div class="formula-box">
-        <span class="label">Storage Derivation from Dispatch Target</span>
+        <span class="label">Battery Dispatch Derivation</span>
         Daily Dispatch Target = (StorageDispatchPct / 100) / NumDays
 
         Power Rating (MW) = Daily Dispatch Target / 4 hours
@@ -880,44 +1034,73 @@
         Actual Dispatch = min(DailyTarget, AvailableSurplus &times; 0.85, TotalGap)
     </div>
 
-    <h3>6.3 Operating Constraints</h3>
+    <h3>6.3 LDES Dispatch Algorithm (Multi-Day / Seasonal)</h3>
+    <p>
+        LDES uses a fundamentally different dispatch algorithm designed for multi-day and seasonal energy shifting:
+    </p>
+    <ol style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
+        <li><strong>Rolling 7-day window</strong> (fine phase uses full-year optimization)</li>
+        <li>Identifies sustained multi-day surplus periods (spring wind runs, extended sunny stretches)</li>
+        <li>Charges during surplus periods up to power rating (capacity / 100 hours), respecting energy capacity</li>
+        <li>Identifies sustained multi-day deficit periods (winter evening doldrums, cloudy windless stretches)</li>
+        <li>Discharges during deficit periods up to power rating, limited by stored energy &times; 50% RTE</li>
+        <li>Captures week-to-week and seasonal patterns that 4-hour batteries cannot address</li>
+    </ol>
+
+    <div class="formula-box">
+        <span class="label">LDES Dispatch Derivation</span>
+        Power Rating (MW) = Energy Capacity (MWh) / 100 hours
+
+        Usable Discharge = Stored Energy &times; 0.50 (RTE)
+
+        Charge Window: Rolling 7-day surplus identification
+        Discharge Window: Rolling 7-day deficit identification
+
+        State of charge persists across days (no daily reset)
+    </div>
+
+    <h3>6.4 Operating Constraints (Both Technologies)</h3>
     <ul style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
         <li><strong>Charge only from surplus:</strong> Storage absorbs only excess clean energy, never grid power</li>
         <li><strong>Dispatch only into gaps:</strong> Storage discharges only during hours with unmet demand</li>
         <li><strong>Power limit:</strong> Charge and discharge rates capped by power rating (MW)</li>
-        <li><strong>Efficiency loss:</strong> For every 1 MWh charged, only 0.85 MWh is dispatched</li>
-        <li><strong>Daily reset:</strong> State of charge resets each day for even annual distribution</li>
-        <li><strong>Greedy dispatch:</strong> Largest surpluses charged first; largest gaps discharged first</li>
+        <li><strong>Battery efficiency loss:</strong> For every 1 MWh charged, 0.85 MWh is dispatched</li>
+        <li><strong>LDES efficiency loss:</strong> For every 1 MWh charged, 0.50 MWh is dispatched</li>
+        <li><strong>Battery daily reset:</strong> State of charge resets each day for even annual distribution</li>
+        <li><strong>LDES persistent state:</strong> State of charge carries across days within rolling windows</li>
+        <li><strong>Greedy dispatch:</strong> Largest surpluses/gaps addressed first in both technologies</li>
     </ul>
 
-    <h3>6.4 Storage Optimization</h3>
+    <h3>6.5 Storage Optimization</h3>
     <p>
-        The storage dispatch target (as a percentage of annual demand) is itself optimized. During the sweep
-        (max-matching) phase, storage is swept from 0% to 50% in 5% steps, then refined to 1% around the best
-        level. During threshold optimization (min-cost), storage is tested at discrete levels (5%, 10%, 15%, 20%)
-        during Phase 1&ndash;2, and in 2% steps during Phase 3. Higher dispatch targets deploy more storage
-        capacity, shifting more energy but incurring higher costs.
+        The storage dispatch targets (as a percentage of annual demand) are optimized independently for battery
+        and LDES. During the sweep (max-matching) phase, storage is swept from 0% to 50% in 5% steps, then
+        refined to 1% around the best level. During threshold optimization (min-cost), storage is tested at
+        discrete levels (5%, 10%, 15%, 20%) during Phase 1&ndash;2, and in 2% steps during Phase 3. Higher
+        dispatch targets deploy more storage capacity, shifting more energy but incurring higher costs.
     </p>
 
     <!-- ======== SECTION 7: COST MODEL ======== -->
     <h2 id="cost-model">7. Cost Model</h2>
     <p>
-        The cost model is <strong>integrated directly into the threshold optimization</strong>, not applied
-        post-hoc. For each matching target, the optimizer evaluates cost across all candidate portfolios
-        to find the lowest-cost feasible solution.
+        The cost model is <strong>integrated directly into the threshold optimization</strong>&mdash;cost and
+        resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal
+        resource mixes. This co-optimization is the core scientific contribution: cost is never a secondary
+        overlay applied post-hoc.
     </p>
 
-    <h3>7.1 Existing vs. New-Build Pricing</h3>
+    <!-- 7.1 Two-Tier Pricing -->
+    <h3 id="two-tier-pricing">7.1 Two-Tier Pricing Model</h3>
     <p>
         The model distinguishes between two pricing tiers for each resource type:
     </p>
     <ul style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
-        <li><strong>Existing resources</strong> (up to the current grid mix share for that resource type in
+        <li><strong>Existing resources</strong> (up to the current grid mix share for that resource in
             that region) are priced at the <strong>regional wholesale electricity market price</strong>. This
             represents contracting existing clean generation capacity that already operates on the grid.</li>
         <li><strong>New-build resources</strong> (any procurement above the current grid mix share) are priced
-            at the <strong>regional new-build LCOE</strong>. This represents financing and constructing new
-            clean generation capacity.</li>
+            at the <strong>regional new-build LCOE + transmission adder</strong>. This represents financing
+            and constructing new clean generation capacity plus interconnection costs.</li>
     </ul>
 
     <div class="formula-box">
@@ -929,89 +1112,329 @@
           new_mwh      = max(0, resource_mwh - grid_mix_share<sub>r,i</sub> / 100)
 
           resource_cost = existing_mwh &times; wholesale_price<sub>i</sub>
-                        + new_mwh &times; lcoe<sub>r,i</sub>
+                        + new_mwh &times; (lcoe<sub>r,i</sub> + transmission_adder<sub>r,i</sub>)
 
-        Total blended cost = SUM(resource_cost for all r) + storage_cost
+        Total blended cost = SUM(resource_cost for all r) + battery_cost + ldes_cost
 
-        Where storage_cost = (storage_dispatch_pct / 100) &times; storage_lcoe
+        Special cases:
+          &bull; Hydro: always wholesale priced ($0 transmission), no new-build tier
+          &bull; CCS-CCGT: no existing share (entirely new-build), all at LCOE + transmission
+    </div>
+
+    <h3>7.1.1 Existing Clean Grid Mix Shares</h3>
+    <p>
+        The threshold between wholesale and new-build pricing is determined by each region&rsquo;s existing
+        clean generation share, computed from 2025 EIA-930 hourly data:
+    </p>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>ISO Region</th><th>Clean Firm</th><th>Solar</th><th>Wind</th><th>Hydro</th><th>Total Clean</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>7.9%</td><td>22.3%</td><td>8.8%</td><td>9.5%</td><td>48.5%</td></tr>
+            <tr><td>ERCOT</td><td>8.6%</td><td>13.8%</td><td>23.6%</td><td>0.1%</td><td>46.1%</td></tr>
+            <tr><td>PJM</td><td>32.1%</td><td>2.9%</td><td>3.8%</td><td>1.8%</td><td>40.6%</td></tr>
+            <tr><td>NYISO</td><td>18.4%</td><td>0.0%</td><td>4.7%</td><td>15.9%</td><td>39.0%</td></tr>
+            <tr><td>NEISO</td><td>23.8%</td><td>1.4%</td><td>3.9%</td><td>4.4%</td><td>33.5%</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">
+        Source: EIA-930 2025 hourly generation data, computed as share of total regional generation.
+    </p>
+
+    <h3>7.1.2 Wholesale Market Prices</h3>
+    <p>
+        Regional wholesale electricity prices represent 2023&ndash;2024 average day-ahead market prices
+        from ISO market monitoring reports. Actual hourly price profiles from EIA 2025 data are used for
+        storage arbitrage, deficit-hour costing, and curtailment economics:
+    </p>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>ISO Region</th><th>Avg. Wholesale ($/MWh)</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO (California)</td><td>~$30</td><td>FERC/CAISO market monitoring, 2023&ndash;2025</td></tr>
+            <tr><td>ERCOT (Texas)</td><td>~$27</td><td>ERCOT market data, 2023&ndash;2025</td></tr>
+            <tr><td>PJM (Mid-Atlantic)</td><td>~$34</td><td>PJM IMM State of the Market, 2023&ndash;2025</td></tr>
+            <tr><td>NYISO (New York)</td><td>~$42</td><td>NYISO market data, 2023&ndash;2025</td></tr>
+            <tr><td>NEISO (New England)</td><td>~$41</td><td>ISO-NE market data, 2023&ndash;2025</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <!-- 7.2 Generation Cost Tables -->
+    <h3 id="generation-costs">7.2 Generation Cost Tables (Low / Medium / High)</h3>
+    <p>
+        All generation LCOE values vary by region and sensitivity level. Costs reflect 2025 snapshot values
+        derived from NREL ATB 2024, Lazard LCOE v17, and LBNL regional PPA data. Wind LCOE is scaled +30%
+        from 2024 LBNL PPA data to reflect observed 2025 cost trends.
+    </p>
+
+    <h3>7.2.1 Solar LCOE ($/MWh)</h3>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$45</td><td>$40</td><td>$50</td><td>$70</td><td>$62</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$60</td><td>$54</td><td>$65</td><td>$92</td><td>$82</td></tr>
+            <tr><td><strong>High</strong></td><td>$78</td><td>$70</td><td>$85</td><td>$120</td><td>$107</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">
+        Sources: NREL ATB 2024 utility-scale PV, LBNL Utility-Scale Solar 2024 regional PPA data, Lazard LCOE v17.
+        Regional variation driven by solar irradiance (GHI), labor costs, and interconnection costs.
+        ERCOT lowest (high irradiance, low labor). NYISO highest (low irradiance, high labor, constrained siting).
+    </p>
+
+    <h3>7.2.2 Wind LCOE ($/MWh)</h3>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$55</td><td>$30</td><td>$47</td><td>$61</td><td>$55</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$73</td><td>$40</td><td>$62</td><td>$81</td><td>$73</td></tr>
+            <tr><td><strong>High</strong></td><td>$95</td><td>$52</td><td>$81</td><td>$105</td><td>$95</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">
+        Sources: LBNL Land-Based Wind Market Report 2024 (+30% escalation to 2025), NREL ATB 2024 onshore wind.
+        ERCOT lowest (exceptional wind resource in West Texas/Panhandle, CREZ transmission buildout).
+        NYISO highest (limited onshore wind resource, offshore wind excluded from this resource class).
+    </p>
+
+    <h3>7.2.3 Clean Firm LCOE ($/MWh)</h3>
+    <p>
+        Clean firm combines nuclear and geothermal new-build costs, regionalized by geothermal access.
+        Regions with geothermal potential (CAISO) have lower blended costs; nuclear-only regions (NYISO) are higher.
+    </p>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$63</td><td>$72</td><td>$75</td><td>$73</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$78</td><td>$85</td><td>$93</td><td>$98</td><td>$96</td></tr>
+            <tr><td><strong>High</strong></td><td>$110</td><td>$120</td><td>$140</td><td>$150</td><td>$145</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">
+        Sources: NREL ATB 2024 (nuclear, geothermal), Lazard LCOE v17.
+        CAISO lowest (Salton Sea, Imperial Valley, The Geysers geothermal access).
+        NYISO highest (nuclear-only, zero geothermal potential, highest construction labor costs).
+    </p>
+
+    <h3 id="ccs-ccgt-buildup">7.2.4 CCS-CCGT LCOE ($/MWh, Net of 45Q)</h3>
+    <p>
+        CCS-CCGT (Carbon Capture and Storage on Combined Cycle Gas Turbine) is a dispatchable baseload resource
+        with 90% CO<sub>2</sub> capture. The LCOE is presented net of the Section 45Q tax credit.
+    </p>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$52</td><td>$62</td><td>$78</td><td>$75</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$86</td><td>$71</td><td>$79</td><td>$99</td><td>$96</td></tr>
+            <tr><td><strong>High</strong></td><td>$115</td><td>$92</td><td>$102</td><td>$128</td><td>$122</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">
+        ERCOT lowest (Gulf Coast Class VI wells, abundant geology, cheap gas, shortest CO<sub>2</sub> transport).
+        NYISO highest (no suitable sequestration geology, longest transport distance, highest permitting burden).
+    </p>
+
+    <h3>7.2.5 CCS-CCGT Cost Buildup</h3>
+    <p>
+        The CCS-CCGT LCOE is constructed from five components, each varying by region:
+    </p>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Component</th><th>Range ($/MWh)</th><th>Regional Driver</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CO<sub>2</sub> Capture Cost</td><td>$30 &ndash; $40</td><td>Technology-dependent, relatively uniform across regions</td></tr>
+            <tr><td>CO<sub>2</sub> Transport</td><td>$2 &ndash; $20</td><td>Distance to Class VI well (ERCOT: $2&ndash;5, NYISO: $15&ndash;20)</td></tr>
+            <tr><td>CO<sub>2</sub> Storage (Sequestration)</td><td>$5 &ndash; $15</td><td>Geology and well costs (Gulf Coast: $5, Northeast: $15)</td></tr>
+            <tr><td>Fuel Cost</td><td>Heat rate &times; gas price</td><td>Responds to the Fossil Fuel Price toggle</td></tr>
+            <tr><td>45Q Tax Credit Offset</td><td>&minus;$29</td><td>$85/ton &times; 0.34 tCO<sub>2</sub>/MWh captured = $29/MWh</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <div class="formula-box">
+        <span class="label">CCS-CCGT Cost Formula</span>
+        CCS-CCGT LCOE = Base CCGT LCOE + Capture Cost + Transport Cost + Storage Cost &minus; 45Q Offset
+
+        Key parameters:
+          Capture rate: 90%
+          Unabated CCGT emission rate: ~0.37 tCO<sub>2</sub>/MWh
+          Post-capture residual: ~0.037 tCO<sub>2</sub>/MWh (10% of unabated)
+          CO<sub>2</sub> captured per MWh: ~0.34 tCO<sub>2</sub>/MWh
+          45Q credit: $85/ton &times; 0.34 tCO<sub>2</sub>/MWh = ~$29/MWh offset
     </div>
 
     <div class="note-box">
-        <strong>Hydro Exception:</strong> Hydro is always priced at the wholesale market rate regardless of
-        volume, reflecting the fact that new hydro construction is not a practical option. The hydro cap
-        already constrains the maximum hydro share.
+        <strong>Class VI Well Availability:</strong> ERCOT benefits from Gulf Coast geology (extensive saline
+        aquifer storage formations, active Class VI well permitting). PJM has moderate access via Appalachian
+        basin formations. NYISO and NEISO face the greatest challenges: limited suitable geology in the
+        Northeast requires longer CO<sub>2</sub> pipeline transport distances (100+ miles) and higher
+        permitting burden, driving significantly higher transport and storage costs.
     </div>
 
-    <h3>7.2 Wholesale Market Prices</h3>
-    <p>
-        Regional wholesale electricity prices represent 2023&ndash;2024 average day-ahead market prices
-        from ISO market monitoring reports:
-    </p>
+    <!-- 7.3 Storage Cost Tables -->
+    <h3 id="storage-costs">7.3 Storage Cost Tables (Low / Medium / High)</h3>
 
+    <h3>7.3.1 Battery LCOS ($/MWh) &mdash; 4hr Li-ion, Regionalized</h3>
+    <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>ISO Region</th><th>Wholesale Price ($/MWh)</th><th>Source</th></tr>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
         </thead>
         <tbody>
-            <tr><td>CAISO (California)</td><td>$41</td><td>FERC/CAISO market data, 2023&ndash;2024 avg</td></tr>
-            <tr><td>ERCOT (Texas)</td><td>$27</td><td>ERCOT market data, 2023&ndash;2024 avg</td></tr>
-            <tr><td>PJM (Mid-Atlantic)</td><td>$36</td><td>PJM IMM State of the Market, 2023&ndash;2024</td></tr>
-            <tr><td>NYISO (New York)</td><td>$41</td><td>NYISO market data, 2023&ndash;2024 avg</td></tr>
-            <tr><td>NEISO (New England)</td><td>$46</td><td>ISO-NE market data, 2023&ndash;2024 avg</td></tr>
+            <tr><td><strong>Low</strong></td><td>$77</td><td>$69</td><td>$74</td><td>$81</td><td>$79</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$102</td><td>$92</td><td>$98</td><td>$108</td><td>$105</td></tr>
+            <tr><td><strong>High</strong></td><td>$133</td><td>$120</td><td>$127</td><td>$140</td><td>$137</td></tr>
         </tbody>
     </table>
-
-    <h3>7.3 Regional New-Build LCOE</h3>
-    <p>
-        New-build costs vary by region due to differences in solar irradiance, wind resources, labor costs,
-        and interconnection costs. Wind LCOE is scaled +30% from 2024 LBNL PPA data to reflect 2025 cost
-        trends, consistent with the observed year-over-year increase in solar PPA prices.
-    </p>
-
-    <table>
-        <thead>
-            <tr>
-                <th>ISO Region</th>
-                <th>Clean Firm ($/MWh)</th>
-                <th>Solar ($/MWh)</th>
-                <th>Wind ($/MWh)</th>
-                <th>Storage LCOS ($/MWh)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td>CAISO</td><td>$90</td><td>$60</td><td>$73</td><td>$100</td></tr>
-            <tr><td>ERCOT</td><td>$90</td><td>$54</td><td>$40</td><td>$100</td></tr>
-            <tr><td>PJM</td><td>$90</td><td>$65</td><td>$62</td><td>$100</td></tr>
-            <tr><td>NYISO</td><td>$90</td><td>$92</td><td>$81</td><td>$100</td></tr>
-            <tr><td>NEISO</td><td>$90</td><td>$82</td><td>$73</td><td>$100</td></tr>
-        </tbody>
-    </table>
+    </div>
     <p style="font-size:0.82rem;color:var(--text-muted);">
-        Clean firm = blended nuclear/geothermal new-build. Storage = levelized cost of storage (LCOS) for 4h Li-ion.
-        Hydro LCOE is not applicable (capped at existing levels, priced at wholesale).
+        Sources: NREL ATB 2024 (4hr Li-ion utility-scale battery), Lazard LCOS v9.
+        ERCOT lowest (low labor costs, fast permitting, flat land for siting).
+        NYISO highest (highest labor costs, most constrained siting, dense urban proximity).
     </p>
 
-    <h3>7.4 Existing Clean Grid Mix Shares</h3>
-    <p>
-        The threshold between wholesale and new-build pricing is determined by each region's existing clean
-        generation share, computed from 2025 EIA-930 hourly data. Resources procured up to these shares are
-        priced at wholesale; procurement above these shares triggers new-build LCOE pricing.
-    </p>
-
+    <h3>7.3.2 LDES LCOS ($/MWh) &mdash; 100hr Iron-Air, Regionalized</h3>
+    <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>ISO Region</th><th>Clean Firm</th><th>Solar</th><th>Wind</th><th>Hydro</th></tr>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
         </thead>
         <tbody>
-            <tr><td>CAISO</td><td>7.9%</td><td>22.3%</td><td>8.8%</td><td>9.5%</td></tr>
-            <tr><td>ERCOT</td><td>8.6%</td><td>13.8%</td><td>23.6%</td><td>0.1%</td></tr>
-            <tr><td>PJM</td><td>32.1%</td><td>2.9%</td><td>3.8%</td><td>1.8%</td></tr>
-            <tr><td>NYISO</td><td>18.4%</td><td>0.0%</td><td>4.7%</td><td>15.9%</td></tr>
-            <tr><td>NEISO</td><td>23.8%</td><td>1.4%</td><td>3.9%</td><td>4.4%</td></tr>
+            <tr><td><strong>Low</strong></td><td>$135</td><td>$116</td><td>$128</td><td>$150</td><td>$143</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$180</td><td>$155</td><td>$170</td><td>$200</td><td>$190</td></tr>
+            <tr><td><strong>High</strong></td><td>$234</td><td>$202</td><td>$221</td><td>$260</td><td>$247</td></tr>
         </tbody>
     </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">
+        Sources: NREL ATB 2024, Form Energy published projections, Lazard LCOS v9 (long-duration category).
+        ERCOT lowest (Gulf Coast geology for compressed air variants, low labor).
+        NYISO highest (expensive labor, constrained siting, limited suitable geology).
+    </p>
 
-    <h3>7.5 Curtailment and Effective Cost</h3>
+    <!-- 7.4 Transmission Adders -->
+    <h3 id="transmission-adders">7.4 Transmission Adders ($/MWh, New-Build Only)</h3>
+    <p>
+        Transmission adders represent the incremental cost of interconnection and grid upgrades required to
+        deliver new-build generation to load. Adders apply only to new-build capacity (above existing grid
+        mix share) and vary by resource type and region. The Transmission toggle offers four levels:
+        <strong>None</strong> (no adder), <strong>Low</strong>, <strong>Medium</strong>, and <strong>High</strong>.
+    </p>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Resource</th><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+        </thead>
+        <tbody>
+            <tr><td rowspan="3"><strong>Wind</strong></td><td>Low</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
+            <tr><td>Medium</td><td>$8</td><td>$6</td><td>$10</td><td>$14</td><td>$12</td></tr>
+            <tr><td>High</td><td>$14</td><td>$10</td><td>$18</td><td>$22</td><td>$20</td></tr>
+
+            <tr><td rowspan="3"><strong>Solar</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$2</td><td>$3</td><td>$3</td></tr>
+            <tr><td>Medium</td><td>$3</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
+            <tr><td>High</td><td>$6</td><td>$5</td><td>$9</td><td>$12</td><td>$10</td></tr>
+
+            <tr><td rowspan="3"><strong>Clean Firm</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
+            <tr><td>Medium</td><td>$3</td><td>$2</td><td>$3</td><td>$5</td><td>$4</td></tr>
+            <tr><td>High</td><td>$6</td><td>$4</td><td>$6</td><td>$9</td><td>$7</td></tr>
+
+            <tr><td rowspan="3"><strong>CCS-CCGT</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
+            <tr><td>Medium</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td></tr>
+            <tr><td>High</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
+
+            <tr><td rowspan="3"><strong>Battery</strong></td><td>Low</td><td>$0</td><td>$0</td><td>$0</td><td>$1</td><td>$1</td></tr>
+            <tr><td>Medium</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
+            <tr><td>High</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td></tr>
+
+            <tr><td rowspan="3"><strong>LDES</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
+            <tr><td>Medium</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td></tr>
+            <tr><td>High</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
+
+            <tr><td><strong>Hydro</strong></td><td>All</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td></tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);">
+        Sources: LBNL &ldquo;Queued Up&rdquo; interconnection cost study (2024), MISO/SPP interconnection cost data.
+        ERCOT lowest (CREZ transmission buildout completed, less congestion).
+        NYISO highest (constrained transmission corridors, siting opposition, high labor costs).
+        Wind has highest adders (remote siting requires longest new transmission).
+        Battery/LDES have lowest adders (typically co-located with generation or at substations).
+        Hydro always $0 (existing infrastructure, no new-build).
+    </p>
+
+    <!-- 7.5 Fuel Price Scenarios -->
+    <h3 id="fuel-prices">7.5 Fuel Price Scenarios</h3>
+    <p>
+        The Fossil Fuel Price toggle adjusts natural gas, coal, and oil prices simultaneously. These prices
+        affect the wholesale electricity market price (through dispatch economics), CCS-CCGT fuel costs, and
+        regional emission rates (through fuel-switching dynamics).
+    </p>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Fuel</th><th>Low</th><th>Medium</th><th>High</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Natural Gas</td><td>$2.00/MMBtu</td><td>$3.50/MMBtu</td><td>$6.00/MMBtu</td><td>EIA AEO 2024, Henry Hub</td></tr>
+            <tr><td>Coal</td><td>$1.80/MMBtu</td><td>$2.50/MMBtu</td><td>$4.00/MMBtu</td><td>EIA AEO 2024</td></tr>
+            <tr><td>Oil</td><td>$55/bbl</td><td>$75/bbl</td><td>$110/bbl</td><td>EIA AEO 2024, WTI/Brent</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h3>7.5.1 Fuel Price &rarr; Wholesale Price &amp; Emission Rate Impact</h3>
+    <p>
+        Changing fuel prices shifts regional wholesale electricity prices based on each region&rsquo;s 2025
+        fossil fuel mix composition, using hourly wholesale price profiles from EIA 2025 data (not flat averages).
+        Additionally, fuel price changes alter marginal emission rates through <strong>fuel-switching elasticity</strong>:
+    </p>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Region</th><th>Coal Fleet Status</th><th>Switching Elasticity</th><th>Rationale</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>Near zero</td><td>Very Low</td><td>Almost no coal option; gas price has minimal impact on emission rate</td></tr>
+            <tr><td>ERCOT</td><td>~10 GW remaining</td><td>Low</td><td>Limited coal to switch to; gas dominates dispatch stack</td></tr>
+            <tr><td>PJM</td><td>~45 GW remaining</td><td>High</td><td>Gas price increases drive meaningful coal resurgence, emission rate jumps</td></tr>
+            <tr><td>NYISO</td><td>Minimal</td><td>Low</td><td>Small coal fleet limits switching effect</td></tr>
+            <tr><td>NEISO</td><td>Minimal (retiring)</td><td>Low</td><td>Small and declining coal fleet</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <!-- 7.6 Curtailment and Effective Cost -->
+    <h3>7.6 Curtailment and Effective Cost</h3>
     <p>
         Surplus procurement results in <strong>curtailment</strong>: clean energy generated when supply
         already exceeds demand cannot be used for matching. The buyer pays for all procured energy but
@@ -1035,7 +1458,7 @@
         constraint on achieving high hourly match scores with intermittent resources alone.
     </p>
 
-    <h3>7.6 Incremental Cost</h3>
+    <h3>7.7 Incremental Cost</h3>
     <p>
         Results include both the <strong>total effective cost</strong> and an <strong>incremental cost above
         the wholesale baseline</strong>. The baseline represents undifferentiated grid electricity at
@@ -1097,7 +1520,8 @@
     <!-- ======== SECTION 9: ASSUMPTIONS ======== -->
     <h2 id="assumptions">9. Assumptions &amp; Limitations</h2>
     <ul style="margin: 10px 0 16px 24px; font-size: 0.95rem; line-height: 2;">
-        <li><strong>No transmission modeling:</strong> Transmission constraints, congestion pricing, and
+        <li><strong>Transmission cost adders only:</strong> Transmission is modeled as a cost adder ($/MWh)
+            on new-build resources, but physical transmission constraints, congestion pricing, and
             deliverability requirements are not modeled. Results assume clean energy can be delivered to
             the load in any hour within the same ISO region.</li>
         <li><strong>Perfect clean firm availability:</strong> Nuclear/geothermal is modeled as perfectly flat
@@ -1106,9 +1530,9 @@
         <li><strong>Single year of weather data:</strong> Generation profiles are based on 2025 EIA-930 data.
             Year-to-year variability in solar irradiance, wind patterns, and hydro availability could shift
             results by several percentage points.</li>
-        <li><strong>4-hour battery storage only:</strong> Only 4h Li-ion is modeled. Longer-duration storage
-            (8h+, pumped hydro, compressed air) could improve matching at lower cost for high-threshold
-            targets but is not included.</li>
+        <li><strong>Two storage technologies only:</strong> Only 4h Li-ion battery and 100h iron-air LDES
+            are modeled. Other storage technologies (8h Li-ion, pumped hydro, compressed air, hydrogen)
+            could provide additional flexibility but are not included.</li>
         <li><strong>Static cost assumptions:</strong> LCOE and wholesale price values are fixed. In reality,
             costs change over time as markets mature, supply chains develop, and technology improves.</li>
         <li><strong>No market price feedback:</strong> The model does not account for the price effects of
@@ -1123,9 +1547,9 @@
         <li><strong>Daily storage cycling:</strong> The storage simulation uses a daily cycling model with
             greedy charge/discharge allocation. Real-world battery operation involves more sophisticated
             dispatch optimization that could achieve marginally better results.</li>
-        <li><strong>CO<sub>2</sub> not modeled:</strong> Unlike the hourly matching GHG calculator, this
-            optimization tool does not calculate emissions. It focuses exclusively on cost and hourly
-            matching percentage as outputs.</li>
+        <li><strong>CO<sub>2</sub> simplified methodology:</strong> CO<sub>2</sub> displacement uses regional
+            marginal emission rates from EPA eGRID. Actual marginal emission rates vary hourly and by
+            dispatch stack composition. The model uses annual average marginal rates as a simplification.</li>
         <li><strong>5 ISO regions only:</strong> The tool currently covers CAISO, ERCOT, PJM, NYISO, and
             NEISO. Other U.S. regions (MISO, SPP, etc.) are not yet included.</li>
         <li><strong>Daylight Saving Time:</strong> UTC offsets are applied as fixed shifts and do not account
@@ -1270,14 +1694,155 @@
         mix and procurement level remain valid across all cost scenarios&mdash;only the cost metric shifts.
     </div>
 
-    <!-- ======== SECTION 11: SOURCES LIST ======== -->
-    <h2 id="sources-list">11. Data Sources List</h2>
+    <!-- ======== SECTION 11: CO2 EMISSION FACTOR METHODOLOGY ======== -->
+    <h2 id="co2-methodology">11. CO<sub>2</sub> Emission Factor Methodology</h2>
+
+    <h3>11.1 Marginal Emission Rates</h3>
+    <p>
+        Each MWh of clean energy procured displaces fossil generation at the <strong>regional marginal
+        emission rate</strong> derived from EPA eGRID data. The marginal rate represents the CO<sub>2</sub>
+        intensity of the generation that would otherwise serve load&mdash;typically natural gas combined
+        cycle or coal units at the margin of the dispatch stack.
+    </p>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Region</th><th>Marginal Emission Rate (tCO<sub>2</sub>/MWh)</th><th>Dominant Marginal Fuel</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>~0.39</td><td>Natural gas (CCGT/peakers)</td><td>EPA eGRID 2022</td></tr>
+            <tr><td>ERCOT</td><td>~0.42</td><td>Natural gas (CCGT) + some coal</td><td>EPA eGRID 2022</td></tr>
+            <tr><td>PJM</td><td>~0.55</td><td>Natural gas + coal (significant coal fleet)</td><td>EPA eGRID 2022</td></tr>
+            <tr><td>NYISO</td><td>~0.37</td><td>Natural gas (CCGT/peakers)</td><td>EPA eGRID 2022</td></tr>
+            <tr><td>NEISO</td><td>~0.38</td><td>Natural gas (CCGT)</td><td>EPA eGRID 2022</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <div class="note-box">
+        <strong>Emission rate sensitivity:</strong> These rates shift with the Fossil Fuel Price toggle through
+        fuel-switching dynamics (see Section 7.5.1). When gas prices rise in PJM, coal dispatch increases and
+        the marginal emission rate climbs. In CAISO and NEISO, where coal has largely retired, the emission
+        rate is less sensitive to gas price changes.
+    </div>
+
+    <h3>11.2 CCS-CCGT Partial Credit</h3>
+    <p>
+        CCS-CCGT receives a <strong>partial emission displacement credit</strong>. Unlike zero-emission
+        resources (solar, wind, nuclear), CCS-CCGT has residual emissions due to the 90% capture rate:
+    </p>
+
+    <div class="formula-box">
+        <span class="label">CCS-CCGT CO<sub>2</sub> Accounting</span>
+        Unabated CCGT emission rate: ~0.37 tCO<sub>2</sub>/MWh
+        CCS capture rate: 90%
+        Post-capture residual: 0.37 &times; (1 &minus; 0.90) = ~0.037 tCO<sub>2</sub>/MWh
+
+        Net displacement per MWh of CCS-CCGT:
+          = Regional marginal rate &minus; CCS residual rate
+          = (e.g., 0.42 &minus; 0.037) = ~0.383 tCO<sub>2</sub>/MWh displaced (ERCOT example)
+
+        Compared to zero-emission resource displacing same marginal unit:
+          = 0.42 tCO<sub>2</sub>/MWh displaced
+          CCS-CCGT achieves ~91% of the displacement of a zero-emission resource
+    </div>
+
+    <h3>11.3 Abatement Cost Formulas</h3>
+    <p>
+        The model calculates two abatement cost metrics for each threshold and scenario:
+    </p>
+
+    <div class="formula-box">
+        <span class="label">Average Cost of Abatement</span>
+        Average $/ton CO<sub>2</sub> = Total Incremental Cost / Total CO<sub>2</sub> Abated
+
+        Where:
+          Total Incremental Cost = (Effective $/MWh &minus; Wholesale $/MWh) &times; Annual Demand (MWh)
+          Total CO<sub>2</sub> Abated = SUM(Clean MWh<sub>type</sub> &times; Displacement Rate<sub>type</sub>)
+    </div>
+
+    <div class="formula-box">
+        <span class="label">Marginal Cost of Abatement</span>
+        Marginal $/ton CO<sub>2</sub> = (Cost<sub>X+1%</sub> &minus; Cost<sub>X%</sub>) / (CO2<sub>X+1%</sub> &minus; CO2<sub>X%</sub>)
+
+        Represents the cost of the <em>next</em> ton of CO<sub>2</sub> abated at each threshold step.
+        Exhibits hockey-stick behavior: cheap early tons, exponentially expensive last tons.
+    </div>
+
+    <!-- ======== SECTION 12: HYDRO TREATMENT ======== -->
+    <h2 id="hydro-treatment">12. Hydro Treatment Rationale</h2>
+    <p>
+        Hydroelectric generation receives unique treatment in the model, distinct from all other resource types.
+        This section documents the rationale and implementation of each special rule.
+    </p>
+
+    <h3>12.1 Existing-Only Constraint</h3>
+    <p>
+        Unlike solar, wind, clean firm, and CCS-CCGT, hydro is modeled as <strong>existing capacity only</strong>
+        with no new-build option. New large-scale hydro construction in the United States faces insurmountable
+        barriers: virtually all viable dam sites are already developed, environmental permitting for new dams
+        requires 10&ndash;20 year timelines with uncertain outcomes, and ecological impact concerns (fish
+        migration, river ecosystems) make new projects politically infeasible in most regions.
+    </p>
+
+    <h3>12.2 Wholesale Pricing (No New-Build Tier)</h3>
+    <p>
+        Because no new hydro capacity is assumed, all hydro generation is priced at the <strong>regional
+        wholesale electricity price</strong>. There is no new-build LCOE tier for hydro. This reflects the
+        reality of contracting existing hydroelectric output through PPAs or wholesale market purchases.
+    </p>
+
+    <h3>12.3 Regional Capacity Caps</h3>
+    <p>
+        The optimizer constrains hydro&rsquo;s share of any resource portfolio to the following regional caps,
+        reflecting each region&rsquo;s realistic maximum available hydroelectric generation:
+    </p>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Region</th><th>Hydro Cap (%)</th><th>Cap (GW)</th><th>Rationale</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>29%</td><td>30</td><td>Significant Sierra Nevada hydro resources (Hetch Hetchy, Shasta, Oroville)</td></tr>
+            <tr><td>ERCOT</td><td>1%</td><td>5</td><td>Very limited hydro in Texas (Sam Rayburn, small run-of-river)</td></tr>
+            <tr><td>PJM</td><td>3%</td><td>15</td><td>Limited Appalachian hydro (Conowingo, Bath County pumped storage)</td></tr>
+            <tr><td>NYISO</td><td>25%</td><td>40</td><td>Substantial Niagara Falls and St. Lawrence River hydro</td></tr>
+            <tr><td>NEISO</td><td>10%</td><td>30</td><td>Moderate New England hydro plus Quebec hydro imports (HQ interconnections)</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h3>12.4 Zero Transmission Adder</h3>
+    <p>
+        Hydro carries a <strong>$0 transmission adder</strong> at all toggle levels. Existing hydro facilities
+        are already interconnected to the grid with established transmission infrastructure. No new transmission
+        is required to deliver their output.
+    </p>
+
+    <h3>12.5 Optimizer Interaction</h3>
+    <p>
+        The hydro cap constrains the optimizer: the hydro share of any resource mix cannot exceed the regional
+        cap. The remaining portfolio (clean firm + solar + wind + CCS-CCGT) must sum to at least
+        (100% &minus; hydro cap). This ensures the optimizer does not over-rely on hydro in regions where
+        physical hydro capacity is limited.
+    </p>
+
+    <!-- ======== SECTION 13: SOURCES LIST ======== -->
+    <h2 id="sources-list">13. Data Sources List</h2>
     <ul class="source-list">
         <li>
             <strong>EIA-930 Hourly Electric Grid Monitor (2025)</strong> &mdash; Hourly demand and generation by energy source<br>
             <a href="https://www.eia.gov/electricity/gridmonitor/" target="_blank">https://www.eia.gov/electricity/gridmonitor/</a><br>
             Bulk data: EIA930_BALANCE_2025_Jan_Jun.csv, EIA930_BALANCE_2025_Jul_Dec.csv<br>
             Balancing authority codes: CISO, ERCO, PJM, NYIS, ISNE
+        </li>
+        <li>
+            <strong>NREL Annual Technology Baseline (ATB 2024)</strong> &mdash; Technology cost and performance data<br>
+            <a href="https://atb.nrel.gov/" target="_blank">https://atb.nrel.gov/</a><br>
+            Solar, wind, nuclear, geothermal LCOE; battery storage (85% RTE for 4h Li-ion); LDES cost projections.<br>
+            <a href="https://atb.nrel.gov/electricity/2024/utility-scale_battery_storage" target="_blank">Battery storage reference</a>
         </li>
         <li>
             <strong>LBNL Utility-Scale Solar Report (2024 edition)</strong> &mdash; Regional PPA price data for utility-scale solar<br>
@@ -1289,19 +1854,36 @@
             Wind costs scaled +30% from 2024 to 2025 to match solar YoY trend.
         </li>
         <li>
-            <strong>Lazard Levelized Cost of Energy Analysis (v17, 2024)</strong> &mdash; National LCOE benchmarks<br>
-            Used for cross-referencing clean firm and storage cost baselines.
+            <strong>LBNL &ldquo;Queued Up&rdquo; Interconnection Study (2024)</strong> &mdash; Regional transmission interconnection costs<br>
+            <a href="https://emp.lbl.gov/queued-up" target="_blank">https://emp.lbl.gov/queued-up</a><br>
+            Source for transmission adder values by resource type and region. Supplemented by MISO/SPP interconnection cost data.
         </li>
         <li>
-            <strong>NREL Annual Technology Baseline (ATB 2024)</strong> &mdash; Technology cost and performance data<br>
-            <a href="https://atb.nrel.gov/" target="_blank">https://atb.nrel.gov/</a><br>
-            Storage round-trip efficiency: 85% for 4h Li-ion.
-            <a href="https://atb.nrel.gov/electricity/2024/utility-scale_battery_storage" target="_blank">Battery storage reference</a>
+            <strong>Lazard Levelized Cost of Energy Analysis (v17, 2024)</strong> &mdash; National LCOE/LCOS benchmarks<br>
+            Used for cross-referencing clean firm, CCS-CCGT, and storage cost ranges.
         </li>
         <li>
-            <strong>FERC / ISO Market Reports (2023&ndash;2024)</strong> &mdash; Regional wholesale electricity prices<br>
+            <strong>EIA Annual Energy Outlook (AEO 2024)</strong> &mdash; Fuel price projections<br>
+            <a href="https://www.eia.gov/outlooks/aeo/" target="_blank">https://www.eia.gov/outlooks/aeo/</a><br>
+            Natural gas (Henry Hub), coal, and oil price scenarios for Low/Medium/High fuel price toggles.
+        </li>
+        <li>
+            <strong>EPA eGRID (2022)</strong> &mdash; Regional marginal CO<sub>2</sub> emission rates<br>
+            <a href="https://www.epa.gov/egrid" target="_blank">https://www.epa.gov/egrid</a><br>
+            Subregion non-baseload output emission rates used for marginal displacement calculations.
+        </li>
+        <li>
+            <strong>FERC / ISO Market Reports (2023&ndash;2025)</strong> &mdash; Regional wholesale electricity prices<br>
             PJM Independent Market Monitor State of the Market Report<br>
-            NYISO, ISO-NE, CAISO, ERCOT market monitoring reports
+            NYISO, ISO-NE, CAISO, ERCOT market monitoring reports. Used for wholesale pricing tiers.
+        </li>
+        <li>
+            <strong>IRC Section 45Q Tax Credit</strong> &mdash; Carbon capture and sequestration tax credit<br>
+            $85/ton CO<sub>2</sub> for geological sequestration (Class VI wells), applied to CCS-CCGT cost buildup.
+        </li>
+        <li>
+            <strong>Form Energy</strong> &mdash; Iron-air long-duration energy storage cost and performance data<br>
+            100-hour duration, 50% round-trip efficiency specifications for LDES modeling.
         </li>
         <li>
             <strong>EIA Today in Energy</strong> &mdash; Battery storage and pumped hydro efficiency data<br>
@@ -1310,7 +1892,7 @@
     </ul>
 
     <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--border-light);font-size:0.82rem;color:var(--text-muted);text-align:center;">
-        Hourly Clean Energy Cost Optimizer &mdash; Methodology Document v1.0
+        Hourly Clean Energy Cost Optimizer &mdash; Methodology Document v2.0 &mdash; Advanced Sensitivity Model
     </p>
 </div>
 

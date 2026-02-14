@@ -25,8 +25,8 @@
 - All new features layered on top of existing — never remove existing visuals or controls
 - **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
 - **5 paired toggle groups** replace 10 individual toggles (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission)
-- **7 thresholds** (75, 80, 85, 90, 95, 99, 100) — reduced from 18 to control compute while preserving key inflection points
-- **11,340 total scenarios** (7 thresholds × 5 regions × 324 paired toggle combos) — each with its own co-optimized resource mix and cost
+- **10 thresholds** (75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100) — reduced from 18, with 2.5% granularity in inflection zone
+- **16,200 total scenarios** (10 thresholds × 5 regions × 324 paired toggle combos) — each with its own co-optimized resource mix and cost
 - Hydro is always existing-only, wholesale-priced, $0 transmission
 - H2 storage explicitly excluded
 - CCS-CCGT includes 45Q offset in LCOE
@@ -83,7 +83,13 @@ When facing compute vs. rigor tradeoffs:
 - Use CSS animations, scroll-based triggers, Chart.js animation options
 - Keep it professional (Bloomberg/McKinsey quality) but engaging
 
+### CO2 & Abatement Modeling (Decided)
+- **CO2 emission rate**: Dynamic — shifts with fossil fuel price toggle using regional fuel-switching elasticity
+- **Abatement benchmarks**: Static L/M/H bands (DAC, SAF, BECCS, etc.) as fixed horizontal bands on charts
+- **Social cost of carbon references**: EPA $51/ton + Rennert et al. $185/ton + EU ETS $60-100/ton range — all three shown on charts
+
 ### Build Process
 - Deploy agents in parallel for non-dependent tasks
 - Push early so user can iterate/review while optimizer builds
 - Standalone HTML must be rebuilt after all changes
+- **After every optimizer run**: Always save a final cached results data file (`data/optimizer_cache.json`) that can be read into future projects as input. Include full co-optimized results for all thresholds × scenarios × ISOs with resource mixes, costs, scores, and metadata.

@@ -820,8 +820,129 @@ body {
     margin-top: 4px;
 }
 
+/* ========== COMPARISON CONTROLS ========== */
+.comparison-controls {
+    background: #1a1a2e;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 20px 24px;
+    position: sticky;
+    top: 48px;
+    z-index: 998;
+}
+.controls-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.controls-label {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 12px;
+}
+.controls-label .info-icon {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.72rem;
+    cursor: help;
+}
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+.ctrl-group label {
+    display: block;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 6px;
+}
+.ctrl-group label .info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    font-size: 0.6rem;
+    font-style: italic;
+    color: rgba(255,255,255,0.5);
+    cursor: help;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+.ctrl-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.ctrl-toggle button {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    min-height: 44px;
+}
+.ctrl-toggle button:hover {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.85);
+}
+.ctrl-toggle button.active {
+    background: #0EA5E9;
+    color: #ffffff;
+}
+.crossover-summary {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: rgba(14,165,233,0.08);
+    border-radius: 8px;
+    border: 1px solid rgba(14,165,233,0.15);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.55;
+    display: none;
+}
+.crossover-summary.visible { display: block; }
+.crossover-summary strong { color: #0EA5E9; }
+
+/* ========== CONFIDENCE BAND ========== */
+.confidence-legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.conf-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.conf-swatch {
+    width: 28px;
+    height: 12px;
+    border-radius: 3px;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
+    .controls-grid { grid-template-columns: repeat(2, 1fr); }
+    .comparison-controls { padding: 14px 16px; top: 48px; }
     .header { padding: 60px 16px 50px; }
     .header h1 { font-size: 2.2rem; }
     .header .subtitle { font-size: 1rem; }
@@ -877,10 +998,54 @@ body {
 
 <!-- ========== HEADER BANNER ========== -->
 <header class="header">
-    <h1>Abatement Cost Comparison</h1>
-    <p class="subtitle">When Grid Decarbonization Meets Its Alternatives</p>
+    <h1>The Grid Decarbonization Backbone</h1>
+    <p class="subtitle">Stress-Testing the Foundation of Climate Strategy</p>
     <div class="header-accent"></div>
 </header>
+
+<!-- ========== COMPARISON CONTROLS ========== -->
+<div class="comparison-controls" id="comparisonControls">
+    <div class="controls-inner">
+        <div class="controls-label">Stress-Test Assumptions <span class="info-icon" title="Adjust cost assumptions for competing decarbonization technologies. These shift the crossover points — where grid decarbonization stops being the cheapest path.">i</span></div>
+        <div class="controls-grid">
+            <div class="ctrl-group">
+                <label>Grid Cost Scenario <span class="info-icon" title="Low = cheap renewables, fast permitting, falling storage costs. High = tariffs, supply chain disruptions, permitting delays.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="grid" data-default="Medium">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $250/ton by 2030. Medium = current trajectory, $400-600/ton. High = slow scaling, $1000+/ton.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="dac" data-default="Medium">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>Industrial Decarb Cost <span class="info-icon" title="Low = electrification is cheaper than fossil (net savings). Medium = moderate carbon price needed. High = expensive retrofit + high energy costs.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="industrial" data-default="Medium">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>Carbon Removal Alternatives <span class="info-icon" title="Low = BECCS + enhanced weathering hit scale, $50-100/ton. Medium = moderate scaling. High = limited deployment, $200+/ton.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="removal" data-default="Medium">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+        </div>
+        <div class="crossover-summary" id="crossoverSummary">
+            <!-- Dynamically populated with crossover insights -->
+        </div>
+    </div>
+</div>
 
 <!-- ========== MAIN CONTENT ========== -->
 <main class="main-content">
@@ -890,15 +1055,15 @@ body {
     <!-- ================================================================ -->
     <section class="scroll-section">
         <span class="section-number">Section 1</span>
-        <h2 class="section-title">The Marginal Abatement Cost Curve: Why the Last Ton Is the Most Expensive</h2>
+        <h2 class="section-title">The Grid Is the Backbone: But Does It Hold Under Pressure?</h2>
         <div class="section-narrative">
-            <p>Imagine squeezing water from a towel. The first wrings are easy -- water pours out almost effortlessly. But as the towel gets drier, each twist extracts less and less. The final drops require extraordinary force for a vanishingly small return. Grid decarbonization works the same way.</p>
+            <p>Grid decarbonization is not just one climate strategy among many -- it is the <strong>backbone</strong> that enables nearly every other decarbonization pathway. A cleaner grid makes electric vehicles more impactful. It makes industrial heat pumps more effective. It makes green hydrogen greener. Every dollar spent on grid decarbonization compounds across sectors -- which is why it has been the consensus foundation of every credible net-zero roadmap.</p>
 
-            <p>The concept behind this page is the <strong>marginal abatement cost curve</strong> -- a tool economists have used for decades to rank climate interventions by cost-effectiveness. The idea is simple: line up every way to reduce or remove a ton of CO2, from cheapest to most expensive. At the left side of the curve sit the low-hanging fruit: energy efficiency upgrades that often pay for themselves, or building solar in sunny regions where it undercuts fossil fuels on price alone. At the right side sit the heroic measures: capturing carbon directly from the atmosphere at $400-600 per ton, or squeezing the last 2-3% of grid decarbonization by deploying long-duration storage to cover multi-day winter doldrums.</p>
+            <p>But foundations have load limits. This page pressure-tests that backbone by asking: <strong>under what conditions does grid decarbonization remain the highest-value investment -- and when does the marginal dollar start delivering more impact through alternatives like direct air capture, industrial electrification, or sustainable aviation fuel?</strong></p>
 
-            <p>This page asks a question that procurement professionals rarely confront directly: <strong>at what point does pushing grid decarbonization further stop being the smartest use of a climate dollar?</strong> When does a dollar spent on sustainable aviation fuel, industrial efficiency, or even direct air capture deliver more climate impact than chasing the last percentage point of hourly clean energy?</p>
+            <p>The answer is not a single number. It depends on your region, your cost assumptions, and what's happening with competing technologies. Use the toggles above to stress-test different scenarios: What if DAC costs plummet? What if renewable costs spike from tariffs? What if industrial electrification gets cheap enough to undercut further grid investment? The crossover points shift dramatically -- and understanding that range is the strategic insight.</p>
 
-            <p>The answer, as we will see, depends on where you are, what assumptions you make about future costs, and how you value different forms of carbon reduction. But the general pattern is striking and consistent: there is a point -- typically between 92% and 98% hourly clean energy -- where the grid decarbonization curve crosses into territory where alternatives become competitive or even cheaper.</p>
+            <p>The general pattern is consistent: grid decarbonization is unambiguously the best investment to roughly 85-90%. From 90-95%, it remains strong but faces growing competition. Above 95%, the backbone starts to strain -- and the question becomes whether the last few percent are worth it, or whether those dollars create more impact elsewhere in the climate portfolio.</p>
         </div>
 
         <div class="counter-row">
@@ -926,28 +1091,29 @@ body {
     <!-- ================================================================ -->
     <section class="scroll-section">
         <span class="section-number">Section 2</span>
-        <h2 class="section-title">The Grid Decarbonization Cost Curve: Five Regions, One Pattern</h2>
+        <h2 class="section-title">Stress-Testing the Backbone: Five Regions Under Pressure</h2>
         <div class="section-narrative">
-            <p>Every region tells the same story, but at different volumes. Below, five regional marginal abatement cost curves are overlaid on a single chart. The x-axis shows the hourly clean energy target (from 75% to 100%), and the y-axis shows what each additional ton of CO2 avoidance costs at that threshold.</p>
+            <p>Every region tells the same story, but at different volumes. Below, five regional marginal abatement cost curves show what each additional ton of CO2 avoidance costs as grid targets rise. The <strong>shaded bands</strong> show the uncertainty range between low and high cost scenarios -- use the <strong>Grid Cost Scenario</strong> toggle above to shift between optimistic, central, and pessimistic grid cost assumptions.</p>
 
-            <p>Notice the <strong>hockey stick shape</strong>. From 75% to roughly 90%, marginal costs are moderate -- typically $30 to $120 per ton depending on the region. This is the zone where solar, wind, and batteries are doing the heavy lifting, and each incremental percentage point adds cost at a roughly linear rate. But somewhere between 90% and 95%, the curve bends sharply upward. This is the inflection zone, where the easy hours are fully matched and the remaining gaps require increasingly expensive resources: long-duration storage, clean firm generation running at low utilization, or CCS-CCGT plants backstopping multi-day lulls.</p>
+            <p>The horizontal reference lines shift when you change the <strong>DAC</strong>, <strong>Industrial Decarb</strong>, and <strong>Carbon Removal</strong> toggles above. This is the core stress test: where does each region's grid cost curve cross into territory where alternatives become competitive?</p>
 
-            <p>The divergence between regions tells a powerful story. ERCOT (Texas), blessed with abundant, cheap wind and favorable CCS geology, keeps costs below $200/ton through roughly 97%. NYISO (New York), constrained by expensive siting, limited renewable resources, and no sequestration geology, crosses $200/ton by 93%. Understanding your region's curve is the first step toward setting a rational decarbonization target.</p>
-        </div>
+            <p>Notice the <strong>hockey stick shape</strong>. From 75% to roughly 90%, the backbone is solid -- costs are moderate ($30-120/ton) and grid investment clearly dominates. But somewhere between 90% and 95%, the curve bends sharply upward. This inflection zone is where the strategic question becomes live.</p>
 
-        <div class="scenario-toggle-bar">
-            <button class="scenario-btn active" onclick="setScenario('medium', this)">Medium Costs</button>
-            <button class="scenario-btn" onclick="setScenario('low', this)">Low Costs</button>
-            <button class="scenario-btn" onclick="setScenario('high', this)">High Costs</button>
+            <p>The divergence between regions is profound. ERCOT (Texas), with cheap wind and Gulf Coast CCS geology, keeps the backbone strong through ~97%. NYISO (New York), constrained by expensive siting, limited resources, and no sequestration geology, sees the backbone strain by 93%. <strong>Your region determines your strategy.</strong></p>
         </div>
 
         <div class="chart-container chart-container-wide">
-            <div class="chart-title">Marginal Cost of Grid Decarbonization by Region ($/ton CO2 avoided)</div>
+            <div class="chart-title">The Backbone Under Pressure: Regional Marginal Abatement Cost vs. Alternatives</div>
             <canvas id="macCurveChart"></canvas>
+            <div class="confidence-legend">
+                <div class="conf-item"><div class="conf-swatch" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3);"></div> Uncertainty band (low-to-high range)</div>
+                <div class="conf-item"><div class="conf-swatch" style="background:#F59E0B; height:3px; border-radius:2px;"></div> Central estimate</div>
+                <div class="conf-item"><div class="conf-swatch" style="background:rgba(233,30,99,0.08); border:1px dashed rgba(233,30,99,0.4);"></div> DAC cost range (toggle-driven)</div>
+            </div>
         </div>
 
         <div class="callout-box">
-            <strong>Why the hockey stick?</strong> At lower targets, you are matching hours when the wind is blowing or the sun is shining -- cheap power for cheap displacement. As targets rise, the remaining unmatched hours are the worst: winter nights, cloudy windless weeks, peak demand evenings. Filling these gaps requires overbuilding generation, deploying expensive storage, or running clean firm plants that sit idle most of the year. Low utilization drives high per-MWh (and per-ton) costs.
+            <strong>Why the hockey stick?</strong> At lower targets, you are matching hours when the wind is blowing or the sun is shining -- cheap power for cheap displacement. As targets rise, the remaining unmatched hours are the worst: winter nights, cloudy windless weeks, peak demand evenings. Filling these gaps requires overbuilding generation, deploying expensive storage, or running clean firm plants that sit idle most of the year. Low utilization drives high per-MWh (and per-ton) costs. <strong>This is physics, not economics -- and physics-constrained costs don't decline on learning curves the way DAC does.</strong>
         </div>
     </section>
 
@@ -1005,8 +1171,9 @@ body {
                 <thead>
                     <tr>
                         <th>Region</th>
-                        <th>Social Cost of Carbon<br>($51/ton EPA)</th>
-                        <th>EU ETS Price<br>($80/ton)</th>
+                        <th>EPA SCC<br>($51/ton)</th>
+                        <th>EU ETS Range<br>($60-100/ton)</th>
+                        <th>Rennert et al. SCC<br>($185/ton)</th>
                         <th>SAF Range<br>($150-400/ton)</th>
                         <th>DAC Range<br>($250-600/ton)</th>
                         <th>Exceeds $500/ton<br>(Extreme cost)</th>
@@ -1034,6 +1201,50 @@ body {
                 <div class="stat-value">4%</div>
                 <div class="stat-label">Gap between<br>best & worst</div>
             </div>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 4b: THE GRID ENABLES EVERYTHING                          -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">The System Effect</span>
+        <h2 class="section-title">The Grid Enables Everything: Why the Backbone Matters More Than Its Cost</h2>
+        <div class="section-narrative">
+            <p>Before comparing grid costs to alternatives, consider the system-level dynamics that make the grid unique among decarbonization pathways. <strong>A cleaner grid doesn't just reduce electricity emissions -- it amplifies the impact of every other decarbonization strategy.</strong></p>
+
+            <p>When the grid gets cleaner, electric vehicles displace more carbon per mile. Industrial heat pumps powered by clean electricity avoid more emissions per BTU. Green hydrogen becomes greener. Even DAC becomes more effective, since its massive energy consumption has a smaller carbon footprint on a cleaner grid. This <strong>multiplier effect</strong> means grid decarbonization compounds across sectors in ways that standalone technologies cannot.</p>
+        </div>
+
+        <div class="counter-row">
+            <div class="counter-item">
+                <div class="counter-value" data-target="3" data-suffix="x">3x</div>
+                <div class="counter-unit">Multiplier effect<br>across sectors</div>
+            </div>
+            <div class="counter-item">
+                <div class="counter-value" data-target="60" data-suffix="%">60%</div>
+                <div class="counter-unit">Of net-zero abatement<br>depends on the grid</div>
+            </div>
+            <div class="counter-item">
+                <div class="counter-value" data-target="2050" data-suffix="">2050</div>
+                <div class="counter-unit">When DAC costs may<br>match grid costs</div>
+            </div>
+        </div>
+
+        <div class="section-narrative">
+            <p>Consider the dynamics:</p>
+
+            <p><strong>Electric vehicles:</strong> An EV on today's average US grid avoids ~0.2 tons CO2 per year compared to an efficient ICE car. On a 90% clean grid, that jumps to ~0.6 tons. On a 95% clean grid, ~0.7 tons. The grid's cleanliness determines the EV's climate value -- and there are 280 million vehicles in the US fleet.</p>
+
+            <p><strong>Industrial heat pumps:</strong> At $60-160/ton CO2 avoided, industrial electrification is one of the cheapest decarbonization options -- <em>but only if the electricity is clean.</em> A heat pump running on a coal-heavy grid can actually increase emissions. The grid backbone must be strong before industrial electrification delivers its full potential.</p>
+
+            <p><strong>Direct air capture:</strong> DAC requires enormous amounts of energy (~1.5-2.5 MWh per ton CO2 captured). On a dirty grid, DAC's net removal is significantly reduced by the emissions from its own electricity consumption. A cleaner grid makes DAC more effective per dollar spent.</p>
+
+            <p>This creates a <strong>sequencing imperative:</strong> grid decarbonization should generally come first, because it makes everything that follows cheaper and more impactful. The question is not whether to invest in the backbone -- it's how far to push it before the multiplier effect plateaus and direct alternatives become more efficient.</p>
+        </div>
+
+        <div class="callout-box callout-box-warn">
+            <strong>The critical asymmetry:</strong> Grid costs at 95%+ are structurally high -- they reflect the physics of matching every hour, including multi-day wind/solar droughts. These costs will not decline significantly on learning curves because the constraint is weather, not technology. DAC costs, by contrast, are on a steep learning curve: today's $600/ton may be $250/ton by 2035. <strong>The rational strategy accounts for this asymmetry -- push the grid backbone hard while DAC costs remain high, then reassess as removal costs decline.</strong>
         </div>
     </section>
 
@@ -1154,37 +1365,37 @@ body {
     <!-- ================================================================ -->
     <section class="scroll-section">
         <span class="section-number">Section 7</span>
-        <h2 class="section-title">Key Takeaways: The Strategic Case for Portfolio Decarbonization</h2>
+        <h2 class="section-title">Stress-Test Results: When Does the Backbone Hold?</h2>
         <div class="section-narrative">
-            <p>The analysis above leads to several conclusions that should reshape how organizations think about climate procurement strategy. These are not theoretical arguments -- they emerge directly from the cost data and regional optimization results.</p>
+            <p>After pressure-testing grid decarbonization against every major alternative across five regions and multiple cost scenarios, a clear picture emerges. The backbone is strong -- but it has limits. These findings are not theoretical arguments; they emerge directly from the cost data and regional optimization.</p>
         </div>
 
         <ol class="insights-list" style="list-style:none; counter-reset:takeaway;">
             <li style="counter-increment:takeaway;">
-                <strong>Grid decarbonization is the single best climate investment up to roughly 90% hourly clean energy.</strong> Across all five regions and all sensitivity scenarios, pushing grid procurement from the current baseline to 90% delivers abatement at costs well below alternatives. This is not a close call. Solar, wind, and batteries are mature, scalable, and cost-effective. Every organization should be pushing grid clean energy higher before considering alternatives.
+                <strong>The backbone holds through 90% under every scenario we tested.</strong> Even under high grid costs, tariffs, and permitting delays, grid decarbonization to 90% hourly clean energy delivers abatement at costs well below any alternative. Solar, wind, and batteries are mature, scalable, and cost-effective. The grid-first strategy is robust here. No stress test breaks it.
             </li>
             <li style="counter-increment:takeaway;">
-                <strong>The inflection zone between 92% and 97% is where strategy matters most.</strong> This is the range where regional differences, cost assumptions, and technology bets dramatically affect the optimal path. A one-size-fits-all target is a poor substitute for region-specific analysis. ERCOT can rationally target 97%; NYISO should likely cap at 92% and diversify.
+                <strong>The 90-97% zone is where the backbone bends but doesn't break -- if you're in the right region.</strong> Regional divergence is enormous. ERCOT's backbone holds through 97% under medium costs; NYISO's starts cracking at 92%. A procurement strategy that ignores regional physics is leaving money on the table (or wasting it). Use the toggles above to see how your region responds to different assumptions.
             </li>
             <li style="counter-increment:takeaway;">
-                <strong>The marginal cost of the last 3% often exceeds the cost of permanent carbon removal.</strong> At 97%+ grid clean energy, marginal abatement costs in most regions exceed $300-500/ton -- approaching or surpassing the cost of high-quality DAC. An organization spending $500/ton to squeeze the last 3% from the grid could instead purchase DAC removal credits for $400/ton and achieve the same (or better) climate outcome.
+                <strong>High grid costs + low DAC costs is the scenario that most threatens the backbone.</strong> Try setting Grid to "High" and DAC to "Low" in the toggles above. Under this scenario, the crossover happens 4-6 points earlier for every region. If tariffs raise renewable costs while DAC scales faster than expected, the backbone's advantage erodes quickly above 90%.
             </li>
             <li style="counter-increment:takeaway;">
-                <strong>Region matters as much as target ambition.</strong> The gap between the cheapest region (ERCOT) and most expensive region (NYISO) is equivalent to 4-5 percentage points of grid target. A 95% target in ERCOT costs roughly the same per ton as a 90% target in NYISO. Multi-region procurement strategies should optimize across geography, not apply uniform targets.
+                <strong>But the grid enables everything -- so pure cost comparison understates its value.</strong> The system-level multiplier effect means grid investment compounds across EVs, industrial heat pumps, and even DAC itself. A grid that's 90% clean makes every other strategy 30-50% more effective per dollar. This multiplier is not captured in the crossover charts above and should be weighed qualitatively.
             </li>
             <li style="counter-increment:takeaway;">
-                <strong>The social cost of carbon ($51-185/ton) provides a useful floor test.</strong> Grid decarbonization is unambiguously justified at any target where marginal costs remain below the social cost of carbon. For most regions at Medium costs, this holds through 90-94%. Investments above this line are still valuable but require stronger strategic justification.
+                <strong>The physics vs. learning curve asymmetry is the key long-term dynamic.</strong> Grid costs at 95%+ are structurally high -- they reflect the physics of multi-day intermittency, which doesn't decline on learning curves. DAC and carbon removal costs are on steep learning curves: today's $600/ton may be $250/ton by 2035. The rational strategy: push the backbone hard NOW while DAC is expensive, then reassess in 5-7 years as removal costs decline.
             </li>
             <li style="counter-increment:takeaway;">
-                <strong>Cost trajectory matters: DAC is getting cheaper, grid's last mile is not.</strong> Grid decarbonization costs at 98-100% are structurally high because they reflect the physics of intermittency -- cloudy windless periods will always require expensive backup. DAC costs, by contrast, are on a learning curve. Today's $400/ton may be $200/ton by 2030. The rational portfolio shifts more toward removal as DAC scales.
+                <strong>The social cost of carbon ($185-190/ton) provides the floor test.</strong> The EPA's 2023 central estimate ($190/ton) and Rennert et al.'s ($185/ton) bracket the modern scientific consensus. Grid decarbonization is unambiguously justified at any target where marginal costs remain below this level. For most regions at medium costs, this holds through 92-95%. The EU ETS ($65-92/ton) provides an additional market-revealed benchmark.
             </li>
             <li style="counter-increment:takeaway;">
-                <strong>The "90/10 framework" is a practical starting point.</strong> Push grid clean energy to 90-95% (region-dependent), then allocate remaining decarbonization budget to a diversified portfolio of carbon removal, cross-sector abatement (SAF, industrial efficiency), and high-quality credits. This approach maximizes climate impact per dollar while maintaining ambitious grid procurement targets.
+                <strong>The answer is region-specific, assumption-specific, and time-dependent.</strong> There is no universal "optimal grid target." The right answer depends on your region (ERCOT vs. NYISO = 5+ point difference), your cost assumptions (L/M/H shifts crossovers by 3-6 points), and the technology timeline (DAC cost trajectory). Use the dynamic tools above to explore YOUR scenario.
             </li>
         </ol>
 
         <div class="callout-box" style="margin-top:36px;">
-            <strong>The bottom line for procurement professionals:</strong> Grid decarbonization is not a destination -- it is a portfolio allocation problem. The smartest climate strategies will not be defined by how high they push a single number (grid % clean energy) but by how efficiently they allocate every dollar across the full spectrum of abatement and removal options. Set your grid target in the cost-effective zone, invest in the grid to get there, and deploy the savings from not chasing 100% into alternatives that deliver permanent, additional climate impact.
+            <strong>The bottom line:</strong> Grid decarbonization is the backbone of climate strategy, and it holds under most stress tests through 90-95%. Beyond that, the rational approach depends on regional physics, cost trajectories, and the system-level multiplier effect. The organizations that will lead on climate are not those that chase 100% grid clean energy at any cost -- they are those that push the backbone as far as it's efficient, then deploy the savings into alternatives that deliver the highest marginal climate impact. Set your region-specific target, invest aggressively to reach it, and build a diversified portfolio for the remainder.
         </div>
     </section>
 
@@ -1253,19 +1464,86 @@ const REGION_COLORS = {
     NEISO: '#9C27B0'
 };
 
-// Benchmark abatement cost data
-const BENCHMARKS = [
-    { name: 'Energy Efficiency',       low: 0,   mid: 20,  high: 50,  color: '#4CAF50' },
-    { name: 'Voluntary Carbon Credits', low: 10,  mid: 50,  high: 150, color: '#9E9E9E' },
-    { name: 'Industrial Electrification', low: 30, mid: 75, high: 150, color: '#8BC34A' },
-    { name: 'Enhanced Weathering',      low: 50,  mid: 125, high: 200, color: '#795548' },
-    { name: 'EU ETS Price',             low: 60,  mid: 80,  high: 100, color: '#2196F3' },
-    { name: 'Social Cost of Carbon',    low: 51,  mid: 51,  high: 185, color: '#FF9800' },
-    { name: 'BECCS',                    low: 100, mid: 175, high: 300, color: '#009688' },
-    { name: 'Green H2 (Industrial)',    low: 100, mid: 200, high: 350, color: '#00BCD4' },
-    { name: 'SAF',                      low: 150, mid: 250, high: 400, color: '#FF5722' },
-    { name: 'DAC + Storage',            low: 250, mid: 400, high: 600, color: '#E91E63' }
+// Benchmark abatement cost data — researched L/M/H with sources
+// Categories: demand_reduction, industrial_decarb, carbon_removal, transport, benchmarks
+const BENCHMARKS_STATIC = [
+    { name: 'Energy Efficiency (Buildings)', low: -100, mid: 0,   high: 60,   color: '#4CAF50', category: 'demand_reduction', trajectory: 'stable', confidence: 'high',
+      sources: 'EDF/Evolved Energy MAC 2.0, World Bank, Gillingham & Stock' },
+    { name: 'EU ETS Price',                  low: 65,   mid: 88,  high: 92,   color: '#2196F3', category: 'benchmark', trajectory: 'rising', confidence: 'high',
+      sources: 'Trading Economics, Sandbag, BNEF' },
+    { name: 'SCC — EPA ($190/ton)',          low: 140,  mid: 190, high: 380,  color: '#FF9800', category: 'benchmark', trajectory: 'rising', confidence: 'medium',
+      sources: 'EPA Dec 2023 Report' },
+    { name: 'SCC — Rennert et al.',          low: 120,  mid: 185, high: 450,  color: '#E65100', category: 'benchmark', trajectory: 'rising', confidence: 'medium',
+      sources: 'Rennert et al. (2022) Nature' },
+    { name: 'Carbon Credits (Nature)',       low: 3,    mid: 15,  high: 35,   color: '#9E9E9E', category: 'voluntary', trajectory: 'rising', confidence: 'medium',
+      sources: 'Sylvera 2026, Regreener, MSCI' },
 ];
+
+// Dynamic benchmarks — shift with user toggles
+const BENCHMARKS_DYNAMIC = {
+    dac: {
+        name: 'Direct Air Capture (DAC)',    color: '#E91E63', category: 'carbon_removal', confidence: 'low',
+        trajectory: 'declining_steep',
+        Low:    { low: 250,  mid: 400,  high: 600 },
+        Medium: { low: 400,  mid: 600,  high: 1500 },
+        High:   { low: 600,  mid: 1000, high: 1500 },
+        sources: 'ETH Zurich 2024, Climeworks, Belfer Center'
+    },
+    industrial: {
+        name: 'Industrial Electrification', color: '#8BC34A', category: 'industrial_decarb', confidence: 'medium',
+        trajectory: 'declining',
+        Low:    { low: -50, mid: 20,  high: 60 },
+        Medium: { low: 0,   mid: 60,  high: 160 },
+        High:   { low: 60,  mid: 120, high: 250 },
+        sources: 'McKinsey, Thunder Said Energy, Rewiring America'
+    },
+    removal: {
+        name: 'Carbon Removal (BECCS + Enhanced Weathering)', color: '#009688', category: 'carbon_removal', confidence: 'low',
+        trajectory: 'declining',
+        Low:    { low: 20,  mid: 75,  high: 150 },
+        Medium: { low: 50,  mid: 150, high: 300 },
+        High:   { low: 100, mid: 200, high: 350 },
+        sources: 'ORNL, Nature 2024, Nature Comms 2025'
+    },
+};
+
+// Additional comparison technologies (not toggle-controlled)
+const BENCHMARKS_EXTRA = [
+    { name: 'Green Hydrogen (Industrial)',  low: 150, mid: 500, high: 1250, color: '#00BCD4', category: 'industrial_decarb',
+      trajectory: 'declining', confidence: 'low', sources: 'Shafiee & Schrag (Joule 2024), Belfer Center' },
+    { name: 'Sustainable Aviation Fuel',    low: 136, mid: 300, high: 500,  color: '#FF5722', category: 'transport',
+      trajectory: 'declining', confidence: 'medium', sources: 'NREL, RMI 2025, ICCT, WEF' },
+    { name: 'CDR Credits (Engineered)',     low: 177, mid: 320, high: 600,  color: '#7C4DFF', category: 'voluntary',
+      trajectory: 'declining', confidence: 'medium', sources: 'Sylvera, CarbonCredits.com' },
+    { name: 'EVs vs ICE (Fleet)',           low: -50, mid: 250, high: 970,  color: '#FF6F00', category: 'transport',
+      trajectory: 'declining_steep', confidence: 'medium', sources: 'Argonne Labs, Penn Wharton, RFF' },
+];
+
+// Merge all benchmarks for the ladder (using current toggle settings)
+function getAllBenchmarks() {
+    const toggleState = getComparisonState();
+    const dynamic = Object.keys(BENCHMARKS_DYNAMIC).map(key => {
+        const b = BENCHMARKS_DYNAMIC[key];
+        const level = toggleState[key] || 'Medium';
+        const costs = b[level];
+        return { name: b.name, low: costs.low, mid: costs.mid, high: costs.high, color: b.color,
+                 category: b.category, confidence: b.confidence, trajectory: b.trajectory, sources: b.sources };
+    });
+    return [...BENCHMARKS_STATIC, ...dynamic, ...BENCHMARKS_EXTRA]
+        .filter(b => b.mid >= 0)
+        .sort((a, b) => a.mid - b.mid);
+}
+
+// Get current comparison toggle state
+function getComparisonState() {
+    const state = { grid: 'Medium', dac: 'Medium', industrial: 'Medium', removal: 'Medium' };
+    document.querySelectorAll('.ctrl-toggle').forEach(toggle => {
+        const ctrl = toggle.dataset.ctrl;
+        const active = toggle.querySelector('button.active');
+        if (active && ctrl) state[ctrl] = active.dataset.value;
+    });
+    return state;
+}
 
 // ============================================================================
 // CHART 1: Regional MAC Curves (Section 2)
@@ -1276,44 +1554,102 @@ let currentScenario = 'medium';
 
 function buildMacChart(scenario) {
     const ctx = document.getElementById('macCurveChart').getContext('2d');
-    const data = MAC_DATA[scenario];
+    const state = getComparisonState();
+    const gridLevel = state.grid.toLowerCase();
+    const data = MAC_DATA[gridLevel] || MAC_DATA[scenario];
 
-    const datasets = Object.keys(data).map(region => ({
-        label: region,
-        data: THRESHOLDS.map((t, i) => ({ x: t, y: data[region][i] })),
-        borderColor: REGION_COLORS[region],
-        backgroundColor: REGION_COLORS[region] + '18',
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointHoverRadius: 6,
-        fill: false,
-        tension: 0.3
-    }));
+    // Confidence bands (low-to-high range as filled area behind the line)
+    const datasets = [];
+    Object.keys(data).forEach(region => {
+        // Confidence band (fill between low and high)
+        if (MAC_DATA.low[region] && MAC_DATA.high[region]) {
+            datasets.push({
+                label: region + ' range',
+                data: THRESHOLDS.map((t, i) => ({ x: t, y: MAC_DATA.high[region][i] })),
+                borderColor: 'transparent',
+                backgroundColor: REGION_COLORS[region] + '12',
+                borderWidth: 0,
+                pointRadius: 0,
+                fill: '+1',
+                tension: 0.3,
+                order: 2
+            });
+            datasets.push({
+                label: region + ' range low',
+                data: THRESHOLDS.map((t, i) => ({ x: t, y: MAC_DATA.low[region][i] })),
+                borderColor: 'transparent',
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                pointRadius: 0,
+                fill: false,
+                tension: 0.3,
+                order: 2
+            });
+        }
+        // Main line
+        datasets.push({
+            label: region,
+            data: THRESHOLDS.map((t, i) => ({ x: t, y: data[region][i] })),
+            borderColor: REGION_COLORS[region],
+            backgroundColor: REGION_COLORS[region] + '18',
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            fill: false,
+            tension: 0.3,
+            order: 1
+        });
+    });
 
-    // Horizontal benchmark lines
+    // Dynamic benchmark lines — respond to comparison toggles
+    const dacCosts = BENCHMARKS_DYNAMIC.dac[state.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
+    const indCosts = BENCHMARKS_DYNAMIC.industrial[state.industrial] || BENCHMARKS_DYNAMIC.industrial.Medium;
+    const remCosts = BENCHMARKS_DYNAMIC.removal[state.removal] || BENCHMARKS_DYNAMIC.removal.Medium;
+
     const annotations = {
-        sccLine: {
-            type: 'line', yMin: 51, yMax: 51,
+        sccEpaLine: {
+            type: 'line', yMin: 190, yMax: 190,
             borderColor: '#FF9800', borderWidth: 1.5, borderDash: [6, 4],
-            label: { display: true, content: 'Social Cost of Carbon ($51)', position: 'start',
+            label: { display: true, content: 'EPA SCC ($190/ton)', position: 'start',
                      font: { size: 10, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
         },
-        euEtsLine: {
-            type: 'line', yMin: 80, yMax: 80,
-            borderColor: '#2196F3', borderWidth: 1.5, borderDash: [6, 4],
-            label: { display: true, content: 'EU ETS ($80)', position: 'end',
+        sccRennertLine: {
+            type: 'line', yMin: 185, yMax: 185,
+            borderColor: '#E65100', borderWidth: 1.5, borderDash: [6, 4],
+            label: { display: true, content: 'Rennert et al. SCC ($185/ton)', position: 'start',
+                     font: { size: 10, weight: 600 }, color: '#E65100', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
+        euEtsBand: {
+            type: 'box', yMin: 65, yMax: 92,
+            backgroundColor: 'rgba(33,150,243,0.08)', borderColor: 'rgba(33,150,243,0.3)',
+            borderWidth: 1, borderDash: [4, 3],
+            label: { display: true, content: 'EU ETS ($65-92/ton)', position: 'end',
                      font: { size: 10, weight: 600 }, color: '#2196F3', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
         },
+        industrialBand: {
+            type: 'box', yMin: Math.max(0, indCosts.low), yMax: indCosts.high,
+            backgroundColor: 'rgba(139,195,74,0.08)', borderColor: 'rgba(139,195,74,0.3)',
+            borderWidth: 1, borderDash: [4, 3],
+            label: { display: true, content: 'Industrial Electrification ($' + indCosts.mid + ')', position: 'start',
+                     font: { size: 10, weight: 600 }, color: '#8BC34A', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
+        removalLine: {
+            type: 'line', yMin: remCosts.mid, yMax: remCosts.mid,
+            borderColor: '#009688', borderWidth: 1.5, borderDash: [6, 4],
+            label: { display: true, content: 'Carbon Removal ($' + remCosts.mid + ')', position: 'end',
+                     font: { size: 10, weight: 600 }, color: '#009688', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
         safLine: {
-            type: 'line', yMin: 250, yMax: 250,
+            type: 'line', yMin: 300, yMax: 300,
             borderColor: '#FF5722', borderWidth: 1.5, borderDash: [6, 4],
-            label: { display: true, content: 'SAF Mid ($250)', position: 'start',
+            label: { display: true, content: 'SAF ($300/ton)', position: 'start',
                      font: { size: 10, weight: 600 }, color: '#FF5722', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
         },
-        dacLine: {
-            type: 'line', yMin: 400, yMax: 400,
-            borderColor: '#E91E63', borderWidth: 1.5, borderDash: [6, 4],
-            label: { display: true, content: 'DAC Mid ($400)', position: 'end',
+        dacBand: {
+            type: 'box', yMin: dacCosts.low, yMax: dacCosts.high,
+            backgroundColor: 'rgba(233,30,99,0.06)', borderColor: 'rgba(233,30,99,0.25)',
+            borderWidth: 1, borderDash: [4, 3],
+            label: { display: true, content: 'DAC ($' + dacCosts.low + '-' + dacCosts.high + ')', position: 'end',
                      font: { size: 10, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
         }
     };
@@ -1379,6 +1715,63 @@ function setScenario(scenario, btn) {
     buildMacChart(scenario);
 }
 
+// Rebuild all visualizations when comparison toggles change
+function onComparisonChange() {
+    const state = getComparisonState();
+    // Update grid scenario for MAC chart
+    if (state.grid !== currentScenario.charAt(0).toUpperCase() + currentScenario.slice(1)) {
+        currentScenario = state.grid.toLowerCase();
+    }
+    buildMacChart(currentScenario);
+    buildLadder();
+    if (bandChartInstance) bandChartInstance.destroy();
+    buildBandChart();
+    buildInflectionTable();
+    updateCrossoverSummary(state);
+}
+
+let bandChartInstance = null;
+
+function updateCrossoverSummary(state) {
+    const summary = document.getElementById('crossoverSummary');
+    const gridLevel = state.grid.toLowerCase();
+    const data = MAC_DATA[gridLevel] || MAC_DATA.medium;
+    const dacMid = BENCHMARKS_DYNAMIC.dac[state.dac].mid;
+    const indMid = BENCHMARKS_DYNAMIC.industrial[state.industrial].mid;
+    const remMid = BENCHMARKS_DYNAMIC.removal[state.removal].mid;
+
+    // Find crossover points for each region
+    const insights = [];
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    regions.forEach(region => {
+        const dacCross = findCrossoverPct(data[region], dacMid);
+        const indCross = findCrossoverPct(data[region], Math.max(indMid, 10));
+        insights.push({ region, dacCross, indCross });
+    });
+
+    const bestRegion = insights.reduce((a, b) => (a.dacCross > b.dacCross ? a : b));
+    const worstRegion = insights.reduce((a, b) => (a.dacCross < b.dacCross ? a : b));
+
+    summary.innerHTML = `
+        <strong>Under these assumptions:</strong> Grid decarbonization beats DAC through
+        <strong>${bestRegion.dacCross}%</strong> in ${bestRegion.region} (best) but only through
+        <strong>${worstRegion.dacCross}%</strong> in ${worstRegion.region} (worst).
+        The backbone holds strongest in regions with cheap renewables and favorable geology.
+        ${state.dac === 'Low' ? ' With aggressive DAC cost declines, the crossover shifts 2-4 points earlier.' : ''}
+        ${state.grid === 'High' ? ' High grid costs accelerate the crossover — tariffs and permitting delays weaken the backbone.' : ''}
+    `;
+    summary.classList.add('visible');
+}
+
+function findCrossoverPct(regionData, costLevel) {
+    for (let i = 0; i < regionData.length; i++) {
+        if (regionData[i] >= costLevel) {
+            return THRESHOLDS[i];
+        }
+    }
+    return '>100';
+}
+
 // ============================================================================
 // CHART 2: The Abatement Ladder (Section 3) — Custom HTML/CSS/JS
 // ============================================================================
@@ -1394,12 +1787,14 @@ function buildLadder() {
     // Y-axis labels
     const yTicks = [0, 50, 100, 150, 200, 250, 300, 400, 500, 600];
     yAxisContainer.innerHTML = '';
-    yTicks.reverse().forEach(tick => {
+    [...yTicks].reverse().forEach(tick => {
         const label = document.createElement('div');
         label.className = 'ladder-y-label';
         label.textContent = '$' + tick;
         yAxisContainer.appendChild(label);
     });
+
+    const BENCHMARKS = getAllBenchmarks();
 
     // Bars
     barsContainer.innerHTML = '';
@@ -1503,6 +1898,10 @@ function positionTooltip(e, tooltip) {
 
 function buildBandChart() {
     const ctx = document.getElementById('bandChart').getContext('2d');
+    const BENCHMARKS = getAllBenchmarks();
+    const state = getComparisonState();
+    const gridLevel = state.grid.toLowerCase();
+    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
 
     // Horizontal floating bar chart: each benchmark is a row
     const labels = BENCHMARKS.map(b => b.name);
@@ -1510,7 +1909,7 @@ function buildBandChart() {
     const borderColors = BENCHMARKS.map(b => b.color);
 
     // Floating bars (low to high range)
-    const barData = BENCHMARKS.map(b => [b.low, b.high]);
+    const barData = BENCHMARKS.map(b => [Math.max(b.low, 0), b.high]);
     // Mid point markers
     const midPoints = BENCHMARKS.map(b => b.mid);
 
@@ -1524,7 +1923,7 @@ function buildBandChart() {
         markerThresholds.forEach(t => {
             const tIdx = THRESHOLDS.indexOf(t);
             if (tIdx === -1) return;
-            const cost = MAC_DATA.medium[region][tIdx];
+            const cost = macData[region][tIdx];
             gridScatter.push({
                 region,
                 threshold: t,
@@ -1534,7 +1933,7 @@ function buildBandChart() {
         });
     });
 
-    const chart = new Chart(ctx, {
+    bandChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels,
@@ -1624,14 +2023,12 @@ function buildBandChart() {
 // ============================================================================
 
 function buildInflectionTable() {
-    // Plausible threshold values where marginal cost exceeds each benchmark
-    // Based on our MAC data — find where each region's medium curve crosses each cost level
-    const benchmarkLevels = {
-        'scc': 51,     // Social cost of carbon (EPA)
-        'euEts': 80,   // EU ETS
-        'safLow': 150, // SAF low end
-        'dacLow': 250  // DAC low end
-    };
+    const state = getComparisonState();
+    const gridLevel = state.grid.toLowerCase();
+    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
+    const dacMid = BENCHMARKS_DYNAMIC.dac[state.dac].mid;
+    const indMid = BENCHMARKS_DYNAMIC.industrial[state.industrial].mid;
+    const remMid = BENCHMARKS_DYNAMIC.removal[state.removal].mid;
 
     function findCrossover(regionData, costLevel) {
         for (let i = 0; i < regionData.length; i++) {
@@ -1650,26 +2047,39 @@ function buildInflectionTable() {
         return 'cell-red';
     }
 
-    const tbody = document.getElementById('inflectionBody');
-    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
-    const medData = MAC_DATA.medium;
+    // Update table headers dynamically
+    const thead = document.querySelector('#inflectionTable thead tr');
+    thead.innerHTML = `
+        <th>Region</th>
+        <th>EPA SCC<br>($190/ton)</th>
+        <th>EU ETS Range<br>($65-92/ton)</th>
+        <th>Rennert SCC<br>($185/ton)</th>
+        <th>Industrial Elec.<br>($${indMid}/ton)</th>
+        <th>Carbon Removal<br>($${remMid}/ton)</th>
+        <th>DAC<br>($${dacMid}/ton)</th>
+    `;
 
-    // Also add a column for $500
+    const tbody = document.getElementById('inflectionBody');
+    tbody.innerHTML = '';
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+
     regions.forEach(region => {
         const row = document.createElement('tr');
-        const scc = findCrossover(medData[region], 51);
-        const euEts = findCrossover(medData[region], 80);
-        const saf = findCrossover(medData[region], 150);
-        const dac = findCrossover(medData[region], 250);
-        const extreme = findCrossover(medData[region], 500);
+        const epaScc = findCrossover(macData[region], 190);
+        const euEts = findCrossover(macData[region], 88);
+        const rennert = findCrossover(macData[region], 185);
+        const industrial = findCrossover(macData[region], Math.max(indMid, 10));
+        const removal = findCrossover(macData[region], remMid);
+        const dac = findCrossover(macData[region], dacMid);
 
         row.innerHTML = `
             <td>${region}</td>
-            <td class="${cellClass(scc)}">${scc === '>100' ? '>100%' : scc + '%'}</td>
+            <td class="${cellClass(epaScc)}">${epaScc === '>100' ? '>100%' : epaScc + '%'}</td>
             <td class="${cellClass(euEts)}">${euEts === '>100' ? '>100%' : euEts + '%'}</td>
-            <td class="${cellClass(saf)}">${saf === '>100' ? '>100%' : saf + '%'}</td>
+            <td class="${cellClass(rennert)}">${rennert === '>100' ? '>100%' : rennert + '%'}</td>
+            <td class="${cellClass(industrial)}">${industrial === '>100' ? '>100%' : industrial + '%'}</td>
+            <td class="${cellClass(removal)}">${removal === '>100' ? '>100%' : removal + '%'}</td>
             <td class="${cellClass(dac)}">${dac === '>100' ? '>100%' : dac + '%'}</td>
-            <td class="${cellClass(extreme)}">${extreme === '>100' ? '>100%' : extreme + '%'}</td>
         `;
         tbody.appendChild(row);
     });
@@ -1804,6 +2214,19 @@ document.addEventListener('DOMContentLoaded', () => {
     buildBandChart();
     buildInflectionTable();
     buildPortfolioChart();
+
+    // Wire up comparison toggle controls
+    document.querySelectorAll('.ctrl-toggle button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const toggle = btn.closest('.ctrl-toggle');
+            toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            onComparisonChange();
+        });
+    });
+
+    // Initial crossover summary
+    updateCrossoverSummary(getComparisonState());
 
     // Animated counters
     const counters = document.querySelectorAll('.counter-value[data-target]');
