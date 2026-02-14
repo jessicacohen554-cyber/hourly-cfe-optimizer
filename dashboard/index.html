@@ -2774,7 +2774,7 @@ function buildMixDatasets(data) {
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
-            borderRadius: 0,
+            borderRadius: 6,
             stack: 'mix',
             _resourceKey: r,
             _isExisting: true,
@@ -2788,7 +2788,7 @@ function buildMixDatasets(data) {
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
-            borderRadius: (r === NEW_ORDER[NEW_ORDER.length - 1]) ? 3 : 0,
+            borderRadius: 6,
             borderSkipped: 'start',
             stack: 'mix',
             _resourceKey: r,
@@ -2934,6 +2934,7 @@ function initNarrativeMixChart() {
                         color: '#4A4540',
                     },
                     grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -2948,7 +2949,8 @@ function initNarrativeMixChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -3073,7 +3075,7 @@ function buildIncrementalDatasets(data) {
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
-            borderRadius: 0,
+            borderRadius: 6,
             stack: 'incr',
             _resourceKey: r,
             _isExisting: true,
@@ -3087,7 +3089,7 @@ function buildIncrementalDatasets(data) {
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
-            borderRadius: (r === NEW_ORDER[NEW_ORDER.length - 1]) ? 3 : 0,
+            borderRadius: 6,
             borderSkipped: 'start',
             stack: 'incr',
             _resourceKey: r,
@@ -3232,6 +3234,7 @@ function initIncrementalMixChart() {
                         color: '#4A4540',
                     },
                     grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#1A2744',
@@ -3246,7 +3249,8 @@ function initIncrementalMixChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -3482,6 +3486,7 @@ function initNarrativeCostChart() {
                         color: '#4A4540',
                     },
                     grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -3498,7 +3503,8 @@ function initNarrativeCostChart() {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
-                    grid: { color: 'rgba(74,69,64,0.06)' },
+                    grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
                     ticks: {
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
                         color: '#6B6356',
@@ -3848,6 +3854,7 @@ function initMobileStepCharts() {
                         type: 'linear', min: 73, max: 102,
                         title: { display: false },
                         grid: { display: false },
+                        border: { display: true, color: '#D4D8E0' },
                         ticks: {
                             font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10 },
                             color: '#6B6356', callback: (v) => v + '%', stepSize: 5,
@@ -3855,7 +3862,8 @@ function initMobileStepCharts() {
                     },
                     y: {
                         title: { display: false },
-                        grid: { color: 'rgba(74,69,64,0.06)' },
+                        grid: { display: false },
+                        border: { display: true, color: '#D4D8E0' },
                         ticks: {
                             font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10 },
                             color: '#6B6356', callback: (v) => '$' + v,
@@ -3990,7 +3998,7 @@ function initHomepage90CostChart() {
                 backgroundColor: fills,
                 borderColor: borders,
                 borderWidth: 2,
-                borderRadius: 4
+                borderRadius: 6
             }]
         },
         options: {
@@ -4024,8 +4032,8 @@ function initHomepage90CostChart() {
                 tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.x.toFixed(1) + '/MWh at 90% target' } }
             },
             scales: {
-                x: { beginAtZero: true, title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                y: { grid: { display: false } }
+                x: { beginAtZero: true, title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                y: { grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
             }
         },
         plugins: [ChartDataLabels]
