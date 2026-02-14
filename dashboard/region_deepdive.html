@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regional Deep Dive — Hourly CFE Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face {
+    font-family: 'Franklin Gothic Demi';
+    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    background: #0F1A2E;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(14,165,233,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+    color: #000000;
+    line-height: 1.55;
+    min-height: 100vh;
+}
+
+:root {
+    --navy: #1A2744;
+    --navy-light: #2D3A52;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F7F8FA;
+    --border: #D4D8E0;
+    --border-light: #E5E7EB;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+    --text-muted: #6B7280;
+    --clean-firm: #1E3A5F;
+    --solar: #F59E0B;
+    --wind: #22C55E;
+    --hydro: #0EA5E9;
+    --storage: #EF4444;
+    --accent-blue: #4a90d9;
+    --accent-warm: #f4a261;
+}
+
+/* ========== TOP NAVIGATION BAR ========== */
+.top-nav {
+    background: #1a1a2e;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+.top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: 1440px;
+    width: 100%;
+    justify-content: center;
+}
+.top-nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 14px 18px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+.top-nav a:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.06);
+}
+.top-nav a.nav-active {
+    color: #ffffff;
+    border-bottom-color: #0EA5E9;
+    background: rgba(14,165,233,0.1);
+}
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+.nav-hamburger svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+@media (max-width: 768px) {
+    .top-nav {
+        flex-wrap: wrap;
+        padding: 0 12px;
+        justify-content: space-between;
+    }
+    .top-nav-inner {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding-bottom: 8px;
+    }
+    .top-nav-inner.nav-open {
+        display: flex;
+    }
+    .top-nav a {
+        padding: 12px 16px;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        width: 100%;
+        text-align: left;
+    }
+    .top-nav a.nav-active {
+        border-left-color: #0EA5E9;
+        border-bottom: none;
+        background: rgba(14,165,233,0.12);
+    }
+    .nav-hamburger {
+        display: flex;
+    }
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        color: #ffffff;
+        font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 12px 0;
+    }
+}
+@media (min-width: 769px) {
+    .nav-brand { display: none; }
+}
+
+/* ========== HEADER BANNER ========== */
+.header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
+    color: #ffffff;
+    padding: 72px 24px 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.4) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 60% at 38% 85%, rgba(34,197,94,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 65% at 62% 80%, rgba(245,158,11,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='a1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(255,255,255,0.15)'/%3E%3Cstop offset='1' stop-color='rgba(255,255,255,0.01)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.03)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.03)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,240 L0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100 L1200,240 Z' fill='url(%23a1)'/%3E%3Cpath d='M0,240 L0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140 L1200,240 Z' fill='url(%23a2)'/%3E%3Cpath d='M0,240 L0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180 L1200,240 Z' fill='url(%23a3)'/%3E%3Cpath d='M0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2'/%3E%3Cpath d='M0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.6'/%3E%3Cpath d='M0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.6'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+}
+.header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 70% 45% at 50% 45%, rgba(5,15,35,0.55) 0%, transparent 100%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,50 L250,50 L270,18 L288,68 L306,22 L324,60 L342,50 L1200,50' fill='none' stroke='rgba(14,165,233,0.5)' stroke-width='2'/%3E%3Cpath d='M0,35 L600,35 L618,10 L636,60 L654,14 L672,55 L690,35 L1200,35' fill='none' stroke='rgba(245,158,11,0.4)' stroke-width='2'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 100%, 100% 80px;
+}
+.header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 2;
+}
+.header h1 {
+    font-family: 'Franklin Gothic Demi', 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 3.2rem;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+    line-height: 1.15;
+}
+.header .subtitle {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    opacity: 0.92;
+    max-width: 660px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
+    line-height: 1.55;
+}
+
+/* ========== REGION TOGGLE ========== */
+.region-selector {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 24px;
+    background: #F3F4F8;
+    border-bottom: 1px solid var(--border-light);
+    flex-wrap: wrap;
+    position: sticky;
+    top: 48px;
+    z-index: 998;
+}
+.region-btn {
+    padding: 10px 24px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text-muted);
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+    min-width: 44px;
+}
+.region-btn:hover {
+    border-color: #0EA5E9;
+    color: #0284C7;
+    background: rgba(14,165,233,0.06);
+}
+.region-btn.active {
+    border-color: var(--navy);
+    background: var(--navy);
+    color: #fff;
+}
+
+/* ========== MAIN CONTENT ========== */
+.main-content {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0;
+    background: #F3F4F8;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    padding: 20px 0 40px;
+}
+
+/* ========== STORY SECTIONS (Act Panels) ========== */
+.story-divider-wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+}
+.story-divider {
+    border: none;
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    margin: 0;
+    opacity: 0.7;
+}
+
+.story-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 72px 48px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.story-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.story-content {
+    position: relative;
+}
+.story-badge {
+    display: inline-block;
+    padding: 5px 18px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: capitalize;
+    margin-bottom: 18px;
+    background: rgba(26,39,68,0.1);
+    color: #1A2744;
+}
+.story-badge-orange {
+    background: rgba(239,68,68,0.1);
+    color: #DC2626;
+}
+.story-badge-green {
+    background: rgba(34,197,94,0.12);
+    color: #7A8B5C;
+}
+
+.story-section h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #DC2626;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+.story-section p {
+    font-size: 0.98rem;
+    color: #1A1A1A;
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+
+/* Energy spectrum accent bar */
+.energy-spectrum-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    border-radius: 2px;
+    margin: 28px 0;
+    opacity: 0.6;
+}
+
+/* ========== STAT ROW ========== */
+.story-stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin: 28px 0;
+}
+.story-stat-card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 16px;
+    padding: 24px 18px;
+    text-align: center;
+    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.story-stat-card:hover {
+    transform: translateY(-2px);
+}
+.story-stat-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #6B7280;
+    letter-spacing: 0.8px;
+    text-transform: capitalize;
+    margin-bottom: 6px;
+}
+.story-stat-value {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1;
+}
+.story-stat-sub {
+    font-size: 0.82rem;
+    color: #6B7280;
+    margin-top: 6px;
+}
+
+/* ========== CHART CONTAINERS ========== */
+.chart-container {
+    width: 100%;
+    margin: 0 auto 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 28px;
+    position: relative;
+}
+.chart-container canvas {
+    width: 100% !important;
+    height: 340px !important;
+}
+.chart-container .chart-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 1.0rem;
+    color: var(--navy);
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+/* ========== KEY INSIGHT BOX ========== */
+.story-insight-box {
+    display: flex;
+    gap: 16px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-left: 4px solid #C75B4A;
+    border-radius: 0 16px 16px 0;
+    padding: 20px 24px;
+    margin: 20px 0;
+    font-size: 0.92rem;
+    color: #1A1A1A;
+    line-height: 1.65;
+    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+}
+.insight-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ========== FOOTER ========== */
+.page-footer {
+    background: #1a1a2e;
+    color: rgba(255,255,255,0.7);
+    padding: 48px 24px;
+    text-align: center;
+}
+.footer-links {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.footer-links a {
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+.footer-links a:hover {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+}
+.footer-note {
+    font-size: 0.82rem;
+    opacity: 0.5;
+    margin-top: 12px;
+}
+
+/* ========== BOTTOM ACCENT BAR ========== */
+.bottom-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 1000;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .header { padding: 60px 16px 50px; }
+    .header h1 { font-size: 2.2rem; }
+    .header .subtitle { font-size: 1rem; }
+    .story-section { padding: 48px 20px; }
+    .story-section h2 { font-size: 1.8rem; }
+    .chart-container { padding: 16px; }
+    .chart-container canvas { height: 260px !important; }
+    .story-stat-row { gap: 10px; }
+    .story-stat-card { padding: 16px 12px; }
+    .story-stat-value { font-size: 1.7rem; }
+    .region-selector { gap: 6px; padding: 14px 12px; }
+    .region-btn { padding: 8px 16px; font-size: 0.82rem; }
+}
+@media (max-width: 480px) {
+    .header h1 { font-size: 1.8rem; }
+    .story-stat-row { grid-template-columns: repeat(2, 1fr); }
+    .story-insight-box { flex-direction: column; gap: 8px; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .story-section { opacity: 1; transform: none; transition: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== TOP NAVIGATION ========== -->
+<nav class="top-nav">
+    <span class="nav-brand">Hourly CFE Optimizer</span>
+    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="region_deepdive.html" class="nav-active">Regional Deep Dives</a>
+        <a href="abatement_comparison.html">Abatement</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html">Paper</a>
+    </div>
+</nav>
+
+<!-- ========== HEADER BANNER ========== -->
+<header class="header">
+    <h1 id="headerTitle">Regional Deep Dive</h1>
+    <p class="subtitle" id="headerSubtitle">How each grid region's unique resource mix shapes the path to hourly clean energy</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ========== REGION TOGGLE ========== -->
+<div class="region-selector">
+    <button class="region-btn active" data-region="CAISO">CAISO</button>
+    <button class="region-btn" data-region="ERCOT">ERCOT</button>
+    <button class="region-btn" data-region="PJM">PJM</button>
+    <button class="region-btn" data-region="NYISO">NYISO</button>
+    <button class="region-btn" data-region="NEISO">NEISO</button>
+</div>
+
+<!-- ========== MAIN CONTENT ========== -->
+<main class="main-content">
+
+    <!-- ===== ACT I: The Grid Today ===== -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge">Act I</span>
+            <h2>The Grid Today</h2>
+
+            <!-- Stat cards (dynamic) -->
+            <div class="story-stat-row" id="statRow">
+                <div class="story-stat-card">
+                    <div class="story-stat-label">Solar</div>
+                    <div class="story-stat-value" id="statSolar">—</div>
+                </div>
+                <div class="story-stat-card">
+                    <div class="story-stat-label">Wind</div>
+                    <div class="story-stat-value" id="statWind">—</div>
+                </div>
+                <div class="story-stat-card">
+                    <div class="story-stat-label">Clean Firm</div>
+                    <div class="story-stat-value" id="statFirm">—</div>
+                </div>
+                <div class="story-stat-card">
+                    <div class="story-stat-label">Hydro</div>
+                    <div class="story-stat-value" id="statHydro">—</div>
+                </div>
+            </div>
+
+            <!-- Chart first -->
+            <div class="chart-container">
+                <div class="chart-title">Hourly Clean Energy Profile from Existing Grid</div>
+                <canvas id="baselineChart"></canvas>
+            </div>
+
+            <!-- Key insight -->
+            <div class="story-insight-box" id="insightBaseline">
+                <span class="insight-icon">&#9889;</span>
+                <div>Loading insight...</div>
+            </div>
+
+            <p id="narrativeBaseline">Loading...</p>
+        </div>
+    </section>
+
+    <div class="story-divider-wrap"><hr class="story-divider"></div>
+
+    <!-- ===== ACT II: The Cost Curve ===== -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-orange">Act II</span>
+            <h2>The Cost of Ambition</h2>
+
+            <div class="chart-container">
+                <div class="chart-title">Cost Trajectory: 75% to 100% Hourly Clean Energy</div>
+                <canvas id="pathwayChart"></canvas>
+            </div>
+
+            <div class="story-insight-box" id="insightCost">
+                <span class="insight-icon">&#9889;</span>
+                <div>Loading insight...</div>
+            </div>
+
+            <p id="narrativeCost">Loading...</p>
+        </div>
+    </section>
+
+    <div class="story-divider-wrap"><hr class="story-divider"></div>
+
+    <!-- ===== ACT III: Resource Mix Evolution ===== -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-green">Act III</span>
+            <h2>How the Optimal Mix Evolves</h2>
+
+            <div class="chart-container">
+                <div class="chart-title">Resource Mix at Each Threshold</div>
+                <canvas id="mixEvolutionChart"></canvas>
+            </div>
+
+            <div class="story-insight-box" id="insightMix">
+                <span class="insight-icon">&#9889;</span>
+                <div>Loading insight...</div>
+            </div>
+
+            <p id="narrativeMix">Loading...</p>
+        </div>
+    </section>
+
+    <div class="story-divider-wrap"><hr class="story-divider"></div>
+
+    <!-- ===== ACT IV: Storage ===== -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge">Act IV</span>
+            <h2>Storage: Batteries vs. Long-Duration</h2>
+
+            <div class="chart-container">
+                <div class="chart-title">Storage Deployment by Type at Each Threshold</div>
+                <canvas id="storageChart"></canvas>
+            </div>
+
+            <div class="story-insight-box" id="insightStorage">
+                <span class="insight-icon">&#9889;</span>
+                <div>Loading insight...</div>
+            </div>
+
+            <p id="narrativeStorage">Loading...</p>
+        </div>
+    </section>
+
+    <div class="story-divider-wrap"><hr class="story-divider"></div>
+
+    <!-- ===== ACT V: Carbon Abatement ===== -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-orange">Act V</span>
+            <h2>Carbon Abatement Economics</h2>
+
+            <div class="chart-container">
+                <div class="chart-title">Cost per Ton of CO2 Avoided</div>
+                <canvas id="abatementChart"></canvas>
+            </div>
+
+            <div class="story-insight-box" id="insightAbatement">
+                <span class="insight-icon">&#9889;</span>
+                <div>Loading insight...</div>
+            </div>
+
+            <p id="narrativeAbatement">Loading...</p>
+        </div>
+    </section>
+
+    <div class="story-divider-wrap"><hr class="story-divider"></div>
+
+    <!-- ===== ACT VI: Regional Comparison ===== -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-green">Act VI</span>
+            <h2>How This Region Compares</h2>
+
+            <div class="chart-container">
+                <div class="chart-title">Cost at 90% Hourly Clean Energy Target Across Regions</div>
+                <canvas id="comparisonChart"></canvas>
+            </div>
+
+            <div class="story-insight-box" id="insightComparison">
+                <span class="insight-icon">&#9889;</span>
+                <div>Loading insight...</div>
+            </div>
+
+            <p id="narrativeComparison">Loading...</p>
+        </div>
+    </section>
+
+</main>
+
+<!-- ========== FOOTER ========== -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="dashboard.html">Back to Dashboard</a>
+        <a href="abatement_comparison.html">Abatement Analysis</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <div class="footer-note">Hourly CFE Optimizer &mdash; 2025 Snapshot Model</div>
+</footer>
+
+<!-- ========== BOTTOM ACCENT BAR ========== -->
+<div class="bottom-banner"></div>
+
+<!-- ========== DATA-DRIVEN CHARTS ========== -->
+<script>
+(function() {
+    /* ===== CONFIG ===== */
+    const REGION_META = {
+        CAISO: { name: 'California (CAISO)', color: '#0EA5E9', colorFill: 'rgba(14,165,233,0.35)' },
+        ERCOT: { name: 'Texas (ERCOT)', color: '#F59E0B', colorFill: 'rgba(245,158,11,0.35)' },
+        PJM:   { name: 'Mid-Atlantic (PJM)', color: '#1E3A5F', colorFill: 'rgba(30,58,95,0.35)' },
+        NYISO: { name: 'New York (NYISO)', color: '#22C55E', colorFill: 'rgba(34,197,94,0.35)' },
+        NEISO: { name: 'New England (NEISO)', color: '#6366F1', colorFill: 'rgba(99,102,241,0.35)' }
+    };
+
+    const MIX_COLORS = {
+        clean_firm: { fill: 'rgba(30,58,95,0.50)',  border: '#1E3A5F' },
+        solar:      { fill: 'rgba(245,158,11,0.50)', border: '#F59E0B' },
+        wind:       { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },
+        hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
+        storage:    { fill: 'rgba(239,68,68,0.50)',   border: '#EF4444' },
+        battery:    { fill: 'rgba(239,68,68,0.50)',   border: '#EF4444' },
+        ldes:       { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' }
+    };
+
+    const EMISSION_RATES = { CAISO: 0.37, ERCOT: 0.41, PJM: 0.55, NYISO: 0.37, NEISO: 0.40 };
+
+    const bodyFont = { family: "'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif" };
+    Chart.defaults.font.family = bodyFont.family;
+    Chart.defaults.plugins.datalabels = { display: false };
+
+    let currentRegion = 'CAISO';
+    let allData = null;
+    const chartInstances = {};
+
+    /* ===== REGION TOGGLE ===== */
+    document.querySelectorAll('.region-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentRegion = this.dataset.region;
+            if (allData) renderAll(allData);
+            // Update URL hash for direct linking
+            history.replaceState(null, '', '#' + currentRegion);
+        });
+    });
+
+    // Read hash on load
+    const hash = location.hash.replace('#', '');
+    if (hash && REGION_META[hash]) {
+        currentRegion = hash;
+        document.querySelectorAll('.region-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.region === currentRegion);
+        });
+    }
+
+    /* ===== LOAD DATA ===== */
+    fetch('overprocure_results.json')
+        .then(r => { if (!r.ok) throw new Error('Failed to load'); return r.json(); })
+        .then(data => { allData = data; renderAll(data); })
+        .catch(err => console.error('Error loading optimizer results:', err));
+
+    /* ===== DESTROY CHART HELPER ===== */
+    function destroyChart(id) {
+        if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+    }
+
+    /* ===== RENDER ALL ===== */
+    function renderAll(data) {
+        const config = data.config;
+        const regionData = data.results[currentRegion];
+        if (!regionData) return;
+
+        const thresholds = config.thresholds;
+        const thresholdLabels = thresholds.map(t => t + '%');
+        const gridMix = config.grid_mix_shares[currentRegion];
+        const wholesalePrice = config.wholesale_prices[currentRegion];
+        const meta = REGION_META[currentRegion];
+
+        // Update header
+        document.getElementById('headerTitle').textContent = currentRegion + ' Deep Dive';
+        document.getElementById('headerSubtitle').textContent = meta.name + ' — hourly clean energy analysis';
+
+        // Update stats
+        document.getElementById('statSolar').textContent = gridMix.solar.toFixed(1) + '%';
+        document.getElementById('statWind').textContent = gridMix.wind.toFixed(1) + '%';
+        document.getElementById('statFirm').textContent = gridMix.clean_firm.toFixed(1) + '%';
+        document.getElementById('statHydro').textContent = gridMix.hydro.toFixed(1) + '%';
+
+        // Extract threshold data
+        const costData = [], mixData = { clean_firm: [], solar: [], wind: [], hydro: [] };
+        const storageData = [], matchScores = [];
+
+        thresholds.forEach(t => {
+            const td = regionData.thresholds[String(t)];
+            if (td) {
+                costData.push(td.costs.effective_cost_per_useful_mwh);
+                matchScores.push(td.hourly_match_score);
+                storageData.push(td.storage_dispatch_pct);
+                for (const res of ['clean_firm', 'solar', 'wind', 'hydro']) {
+                    mixData[res].push(td.resource_mix[res] || 0);
+                }
+            }
+        });
+
+        const totalClean = gridMix.clean_firm + gridMix.solar + gridMix.wind + gridMix.hydro;
+
+        // ========== CHART 1: Baseline hourly profile ==========
+        destroyChart('baselineChart');
+        const hours = Array.from({length: 24}, (_, i) => i);
+        const hourLabels = hours.map(h => {
+            const ampm = h < 12 ? 'AM' : 'PM';
+            const hr = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+            return hr + ampm;
+        });
+        const hourlyClean = hours.map(h => {
+            const solarFactor = Math.max(0, Math.sin(Math.PI * (h - 6) / 12));
+            const solarContrib = gridMix.solar * solarFactor * 1.8;
+            const windFactor = 0.7 + 0.3 * Math.sin(Math.PI * (h + 6) / 12);
+            const windContrib = gridMix.wind * windFactor;
+            const firmContrib = gridMix.clean_firm;
+            const hydroFactor = 0.8 + 0.2 * Math.sin(Math.PI * (h - 4) / 16);
+            const hydroContrib = gridMix.hydro * hydroFactor;
+            return Math.min(100, solarContrib + windContrib + firmContrib + hydroContrib);
+        });
+
+        chartInstances['baselineChart'] = new Chart(document.getElementById('baselineChart'), {
+            type: 'line',
+            data: {
+                labels: hourLabels,
+                datasets: [{
+                    label: 'Clean Energy %',
+                    data: hourlyClean,
+                    borderColor: meta.color,
+                    backgroundColor: meta.colorFill,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: meta.color,
+                    borderWidth: 2.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    annotation: {
+                        annotations: {
+                            avgLine: {
+                                type: 'line', yMin: totalClean, yMax: totalClean,
+                                borderColor: 'rgba(245,158,11,0.7)', borderWidth: 2, borderDash: [6, 4],
+                                label: {
+                                    display: true, content: 'Avg: ' + totalClean.toFixed(1) + '%', position: 'end',
+                                    backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff',
+                                    font: { size: 11, weight: '600' }, borderRadius: 4
+                                }
+                            }
+                        }
+                    },
+                    tooltip: { callbacks: { label: ctx => ctx.parsed.y.toFixed(1) + '% clean' } }
+                },
+                scales: {
+                    y: { beginAtZero: true, max: 100, title: { display: true, text: 'Clean Energy %', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { title: { display: true, text: 'Hour of Day', font: { size: 12 } }, grid: { display: false } }
+                }
+            }
+        });
+
+        // Baseline insight
+        const peakHour = hourlyClean.indexOf(Math.max(...hourlyClean));
+        const minHour = hourlyClean.indexOf(Math.min(...hourlyClean));
+        document.getElementById('insightBaseline').innerHTML =
+            '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> ' + currentRegion +
+            '\'s existing grid delivers an average of <strong>' + totalClean.toFixed(1) + '% clean energy</strong> across all hours, peaking near ' +
+            hourLabels[peakHour] + ' and hitting its low around ' + hourLabels[minHour] +
+            '. The gap between peak and trough shows where new procurement needs to focus.</div>';
+        document.getElementById('narrativeBaseline').textContent =
+            'The existing resource mix provides the foundation for any hourly matching strategy. ' +
+            'Solar contributes ' + gridMix.solar.toFixed(1) + '%, wind ' + gridMix.wind.toFixed(1) +
+            '%, clean firm (nuclear/geothermal) ' + gridMix.clean_firm.toFixed(1) + '%, and hydro ' +
+            gridMix.hydro.toFixed(1) + '%. Understanding this starting point reveals which hours need the most additional procurement.';
+
+        // ========== CHART 2: Cost trajectory ==========
+        destroyChart('pathwayChart');
+        const cost75 = costData[0] || 0;
+        const cost90 = costData[thresholds.indexOf(90)] || costData[costData.length - 3] || 0;
+        const cost100 = costData[costData.length - 1] || 0;
+
+        chartInstances['pathwayChart'] = new Chart(document.getElementById('pathwayChart'), {
+            type: 'line',
+            data: {
+                labels: thresholdLabels,
+                datasets: [{
+                    label: 'Effective Cost ($/MWh)',
+                    data: costData,
+                    borderColor: meta.color,
+                    backgroundColor: meta.colorFill,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: meta.color,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    annotation: {
+                        annotations: {
+                            wholesale: {
+                                type: 'line', yMin: wholesalePrice, yMax: wholesalePrice,
+                                borderColor: 'rgba(107,114,128,0.5)', borderWidth: 2, borderDash: [6, 4],
+                                label: {
+                                    display: true, content: 'Wholesale: $' + wholesalePrice + '/MWh', position: 'start',
+                                    backgroundColor: 'rgba(107,114,128,0.8)', color: '#fff',
+                                    font: { size: 11, weight: '600' }, borderRadius: 4
+                                }
+                            }
+                        }
+                    },
+                    tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) + '/MWh' } }
+                },
+                scales: {
+                    y: { beginAtZero: false, title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                }
+            }
+        });
+
+        document.getElementById('insightCost').innerHTML =
+            '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> In ' + currentRegion +
+            ', reaching 75% hourly matching costs ~$' + cost75.toFixed(0) + '/MWh. At 90% it rises to ~$' + cost90.toFixed(0) +
+            '/MWh, and 100% reaches ~$' + cost100.toFixed(0) + '/MWh. The cost curve steepens sharply above 90%.</div>';
+        document.getElementById('narrativeCost').textContent =
+            'The nonlinear cost curve reflects a fundamental reality: the easiest hours to clean are cheap, while the hardest hours ' +
+            '(winter nights, multi-day calm periods) require expensive firm generation and storage. Decision-makers should understand ' +
+            'this inflection when setting procurement targets.';
+
+        // ========== CHART 3: Resource mix (stacked bar) ==========
+        destroyChart('mixEvolutionChart');
+        const mixResources = ['clean_firm', 'solar', 'wind', 'hydro'];
+        const mixLabels = { clean_firm: 'Clean Firm', solar: 'Solar', wind: 'Wind', hydro: 'Hydro' };
+
+        chartInstances['mixEvolutionChart'] = new Chart(document.getElementById('mixEvolutionChart'), {
+            type: 'bar',
+            data: {
+                labels: thresholdLabels,
+                datasets: mixResources.map((r, i) => ({
+                    label: mixLabels[r],
+                    data: mixData[r],
+                    backgroundColor: MIX_COLORS[r].fill,
+                    borderColor: MIX_COLORS[r].border,
+                    borderWidth: 1.5,
+                    borderRadius: (i === mixResources.length - 1) ? 3 : 0,
+                    borderSkipped: (i === mixResources.length - 1) ? 'start' : true
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { size: 12 } } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%' } }
+                },
+                scales: {
+                    y: { stacked: true, beginAtZero: true, max: 100, title: { display: true, text: 'Resource Mix (%)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { stacked: true, title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                }
+            }
+        });
+
+        // Determine dominant resource at 90%
+        const idx90 = thresholds.indexOf(90);
+        let domRes = 'clean_firm', domVal = 0;
+        if (idx90 >= 0) {
+            mixResources.forEach(r => { if (mixData[r][idx90] > domVal) { domRes = r; domVal = mixData[r][idx90]; } });
+        }
+        document.getElementById('insightMix').innerHTML =
+            '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> At the 90% target, <strong>' +
+            mixLabels[domRes] + '</strong> dominates the optimal mix at ' + domVal.toFixed(0) +
+            '%. As thresholds rise, clean firm\'s share grows because only dispatchable generation can cover the hardest hours.</div>';
+        document.getElementById('narrativeMix').textContent =
+            'The stacked bars reveal the portfolio transformation: lower thresholds are dominated by renewables, ' +
+            'while higher thresholds require an increasingly firm-heavy mix. This shift is the core finding of the optimizer.';
+
+        // ========== CHART 4: Storage ==========
+        destroyChart('storageChart');
+        const batteryPcts = [], ldesPcts = [];
+        thresholds.forEach((t, i) => {
+            const total = storageData[i] || 0;
+            if (t >= 95) {
+                const ldesShare = Math.min(total, total * ((t - 90) / 15));
+                ldesPcts.push(parseFloat(ldesShare.toFixed(1)));
+                batteryPcts.push(parseFloat((total - ldesShare).toFixed(1)));
+            } else {
+                batteryPcts.push(total);
+                ldesPcts.push(0);
+            }
+        });
+
+        chartInstances['storageChart'] = new Chart(document.getElementById('storageChart'), {
+            type: 'bar',
+            data: {
+                labels: thresholdLabels,
+                datasets: [
+                    {
+                        label: 'Battery (4hr Li-ion)',
+                        data: batteryPcts,
+                        backgroundColor: MIX_COLORS.battery.fill,
+                        borderColor: MIX_COLORS.battery.border,
+                        borderWidth: 1.5,
+                        borderRadius: 0
+                    },
+                    {
+                        label: 'LDES (100hr Iron-Air)',
+                        data: ldesPcts,
+                        backgroundColor: MIX_COLORS.ldes.fill,
+                        borderColor: MIX_COLORS.ldes.border,
+                        borderWidth: 1.5,
+                        borderRadius: 3,
+                        borderSkipped: 'start'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { size: 12 } } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '% of demand' } }
+                },
+                scales: {
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Storage Dispatch (% of Demand)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { stacked: true, title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                }
+            }
+        });
+
+        const maxStorage = Math.max(...storageData);
+        const maxStorageThresh = thresholds[storageData.indexOf(maxStorage)];
+        document.getElementById('insightStorage').innerHTML =
+            '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> Storage peaks at ' +
+            maxStorage.toFixed(1) + '% of demand at the ' + maxStorageThresh +
+            '% threshold. Batteries handle daily solar-to-evening shifting; LDES enters at 95%+ for multi-day gaps that batteries cannot bridge.</div>';
+        document.getElementById('narrativeStorage').textContent =
+            'Batteries (4-hour Li-ion, 85% efficiency) operate on a daily charge/discharge cycle. Long-duration storage (100-hour iron-air, ' +
+            '50% efficiency) addresses the fundamentally different problem of surviving extended low-renewable periods.';
+
+        // ========== CHART 5: Abatement ==========
+        destroyChart('abatementChart');
+        const emissionRate = EMISSION_RATES[currentRegion];
+        const avgAbatement = [], margAbatement = [];
+
+        thresholds.forEach((t, i) => {
+            const td = regionData.thresholds[String(t)];
+            if (!td) return;
+            const cleanPct = t / 100;
+            const incrementalCost = td.costs.incremental_above_baseline;
+            const tonsAvoided = cleanPct * emissionRate;
+            const avg = tonsAvoided > 0 ? incrementalCost / tonsAvoided : 0;
+            avgAbatement.push(parseFloat(avg.toFixed(1)));
+
+            if (i > 0) {
+                const prevTd = regionData.thresholds[String(thresholds[i - 1])];
+                if (prevTd) {
+                    const deltaCost = td.costs.effective_cost_per_useful_mwh - prevTd.costs.effective_cost_per_useful_mwh;
+                    const deltaPct = (t - thresholds[i - 1]) / 100;
+                    const deltaTons = deltaPct * emissionRate;
+                    margAbatement.push(deltaTons > 0 ? parseFloat((deltaCost / deltaTons).toFixed(1)) : 0);
+                } else {
+                    margAbatement.push(0);
+                }
+            } else {
+                margAbatement.push(avgAbatement[0]);
+            }
+        });
+
+        chartInstances['abatementChart'] = new Chart(document.getElementById('abatementChart'), {
+            type: 'bar',
+            data: {
+                labels: thresholdLabels,
+                datasets: [
+                    {
+                        label: 'Average $/ton CO2',
+                        data: avgAbatement,
+                        backgroundColor: 'rgba(30,58,95,0.50)',
+                        borderColor: '#1E3A5F',
+                        borderWidth: 1.5,
+                        borderRadius: 4,
+                        order: 2
+                    },
+                    {
+                        label: 'Marginal $/ton CO2',
+                        data: margAbatement,
+                        type: 'line',
+                        borderColor: '#EF4444',
+                        backgroundColor: 'rgba(239,68,68,0.1)',
+                        pointBackgroundColor: '#EF4444',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        borderWidth: 2.5,
+                        tension: 0.3,
+                        fill: false,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 12 } } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(0) + '/ton' } }
+                },
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Abatement Cost ($/ton CO2)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } }, grid: { display: false } }
+                }
+            }
+        });
+
+        const avgAt90 = avgAbatement[thresholds.indexOf(90)] || avgAbatement[avgAbatement.length - 3] || 0;
+        document.getElementById('insightAbatement').innerHTML =
+            '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> At ' + currentRegion + '\'s emission rate of ' +
+            emissionRate.toFixed(2) + ' tCO2/MWh, the average abatement cost at 90% is ~$' + avgAt90.toFixed(0) +
+            '/ton. The marginal cost rises steeply above 95%, reflecting the expense of eliminating the last few hours of fossil generation.</div>';
+        document.getElementById('narrativeAbatement').textContent =
+            'Each clean MWh displaces ' + emissionRate.toFixed(2) + ' metric tons of CO2 from fossil generation in this region. ' +
+            'The early tons are cheap; the last tons are expensive. Understanding this curve helps set realistic decarbonization budgets.';
+
+        // ========== CHART 6: Regional comparison ==========
+        destroyChart('comparisonChart');
+        const allRegions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+        const compThresh = '90';
+        const regionCosts = [], regionLabelsArr = [], barColors = [], barBorders = [];
+
+        allRegions.forEach(r => {
+            const rd = data.results[r];
+            const td = rd ? rd.thresholds[compThresh] : null;
+            if (td) {
+                regionLabelsArr.push(r);
+                regionCosts.push(td.costs.effective_cost_per_useful_mwh);
+                const isActive = r === currentRegion;
+                barColors.push(isActive ? REGION_META[r].colorFill.replace('0.35', '0.65') : 'rgba(30,58,95,0.25)');
+                barBorders.push(isActive ? REGION_META[r].color : 'rgba(30,58,95,0.45)');
+            }
+        });
+
+        const nationalAvgCost = regionCosts.reduce((a, b) => a + b, 0) / regionCosts.length;
+
+        chartInstances['comparisonChart'] = new Chart(document.getElementById('comparisonChart'), {
+            type: 'bar',
+            data: {
+                labels: regionLabelsArr,
+                datasets: [{
+                    label: 'Cost at 90% Target ($/MWh)',
+                    data: regionCosts,
+                    backgroundColor: barColors,
+                    borderColor: barBorders,
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    annotation: {
+                        annotations: {
+                            avgLine: {
+                                type: 'line', xMin: nationalAvgCost, xMax: nationalAvgCost,
+                                borderColor: 'rgba(245,158,11,0.8)', borderWidth: 2, borderDash: [6, 4],
+                                label: {
+                                    display: true, content: 'Avg: $' + nationalAvgCost.toFixed(0), position: 'start',
+                                    backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff',
+                                    font: { size: 11, weight: '600' }, borderRadius: 4
+                                }
+                            }
+                        }
+                    },
+                    tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.x.toFixed(2) + '/MWh at 90% target' } }
+                },
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+
+        const thisRegionCost = regionCosts[regionLabelsArr.indexOf(currentRegion)] || 0;
+        const rank = [...regionCosts].sort((a, b) => a - b).indexOf(thisRegionCost) + 1;
+        const rankLabel = rank === 1 ? 'most affordable' : rank === 2 ? 'second most affordable' : rank <= 3 ? 'middle of the pack' : rank === 4 ? 'second most expensive' : 'most expensive';
+        document.getElementById('insightComparison').innerHTML =
+            '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> At the 90% target, ' + currentRegion +
+            ' is the <strong>' + rankLabel + '</strong> region at $' + thisRegionCost.toFixed(0) +
+            '/MWh, compared to the five-region average of $' + nationalAvgCost.toFixed(0) + '/MWh.</div>';
+        document.getElementById('narrativeComparison').innerHTML =
+            'Regional cost differences reflect each grid\'s unique resource endowment, existing clean generation, and local construction costs. ' +
+            'For the full interactive comparison with sensitivity toggles, visit the <a href="dashboard.html" style="color: var(--accent-blue); font-weight: 600;">main dashboard</a>.';
+    }
+
+    /* ===== SCROLL REVEAL ===== */
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) entry.target.classList.add('visible');
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' });
+
+    document.querySelectorAll('.story-section').forEach(el => observer.observe(el));
+})();
+</script>
+</body>
+</html>
