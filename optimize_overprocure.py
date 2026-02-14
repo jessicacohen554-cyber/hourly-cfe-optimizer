@@ -1885,17 +1885,28 @@ COST_SCENARIO_MAP = {key: levels for key, levels in ALL_COST_SCENARIOS}
 CHECKPOINT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'checkpoints')
 
 
-def save_checkpoint(iso, iso_results, phase='threshold'):
-    """Save incremental checkpoint for an ISO's results."""
+def save_checkpoint(iso, iso_results, phase='threshold', partial_threshold=None):
+    """Save incremental checkpoint for an ISO's results.
+
+    partial_threshold: optional dict with {threshold, scenarios} for mid-threshold saves.
+    This allows resuming from within a threshold's 324-scenario loop.
+    """
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     ckpt_path = os.path.join(CHECKPOINT_DIR, f'{iso}_checkpoint.json')
+    payload = {'iso': iso, 'phase': phase, 'results': iso_results}
+    if partial_threshold:
+        payload['partial_threshold'] = partial_threshold
     with open(ckpt_path, 'w') as f:
-        json.dump({'iso': iso, 'phase': phase, 'results': iso_results}, f)
+        json.dump(payload, f)
     print(f"    [checkpoint] Saved {iso} ({phase}) → {os.path.getsize(ckpt_path)/1024:.0f} KB")
 
 
 def load_checkpoint(iso):
-    """Load existing checkpoint for an ISO. Returns (iso_results, completed_thresholds) or None."""
+    """Load existing checkpoint for an ISO.
+
+    Returns (iso_results, completed_thresholds, partial_threshold) or None.
+    partial_threshold is a dict {threshold, scenarios} if a threshold was mid-progress.
+    """
     ckpt_path = os.path.join(CHECKPOINT_DIR, f'{iso}_checkpoint.json')
     if not os.path.exists(ckpt_path):
         return None
@@ -1905,9 +1916,13 @@ def load_checkpoint(iso):
         iso_results = data['results']
         completed = set(iso_results.get('thresholds', {}).keys())
         phase = data.get('phase', 'unknown')
+        partial = data.get('partial_threshold', None)
+        partial_msg = ''
+        if partial:
+            partial_msg = f", partial {partial['threshold']}% ({len(partial['scenarios'])}/324 scenarios)"
         print(f"    [checkpoint] Resuming {iso} from {phase}: "
-              f"{len(completed)} thresholds already done")
-        return iso_results, completed
+              f"{len(completed)} thresholds done{partial_msg}")
+        return iso_results, completed, partial
     except Exception as e:
         print(f"    [checkpoint] Failed to load {iso}: {e}")
         return None
@@ -1957,8 +1972,9 @@ def process_iso(args):
     # ── Check for existing checkpoint to resume from ──
     checkpoint = load_checkpoint(iso)
     completed_thresholds = set()
+    partial_threshold_data = None
     if checkpoint:
-        iso_results, completed_thresholds = checkpoint
+        iso_results, completed_thresholds, partial_threshold_data = checkpoint
         # Re-derive sweep_results dict from stored sweep list (if any)
         if iso_results.get('sweep'):
             print(f"  Resuming from checkpoint: sweep done, "
@@ -2031,6 +2047,8 @@ def process_iso(args):
     # Each threshold optimized independently; monotonicity enforced via
     # post-hoc re-sweep with broader parameters (not by result replacement)
 
+    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 100  # Save every 100 scenarios within a threshold
+
     for threshold in THRESHOLDS:
         t_str = str(threshold)
         if t_str in completed_thresholds:
@@ -2043,7 +2061,20 @@ def process_iso(args):
         threshold_scenarios = {}
         medium_result = None
 
+        # Resume from partial checkpoint if available for this threshold
+        partial_done = set()
+        if partial_threshold_data and str(partial_threshold_data.get('threshold')) == t_str:
+            threshold_scenarios = partial_threshold_data.get('scenarios', {})
+            partial_done = set(threshold_scenarios.keys())
+            print(f"    {threshold}%: resuming from partial checkpoint "
+                  f"({len(partial_done)}/324 scenarios done)")
+            # Clear partial data so it's not reused for next threshold
+            partial_threshold_data = None
+
         for s_idx, (scenario_key, cost_levels) in enumerate(ALL_COST_SCENARIOS):
+            if scenario_key in partial_done:
+                continue  # Already completed in previous session
+
             result = optimize_for_threshold(
                 iso, demand_norm, supply_profiles, threshold, hydro_cap,
                 emission_rates, demand_total_mwh,
@@ -2066,6 +2097,13 @@ def process_iso(args):
                 # Track Medium scenario for logging
                 if scenario_key == 'MMM_M_M':
                     medium_result = result
+
+            # Intra-threshold checkpoint: save every N scenarios
+            new_count = s_idx + 1 - len(partial_done)
+            if new_count > 0 and new_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
+                save_checkpoint(iso, iso_results,
+                    phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of324',
+                    partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
 
         # Log Medium scenario progress
         t_elapsed = time.time() - t_start
