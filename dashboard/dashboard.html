@@ -355,57 +355,23 @@ body {
     }
 }
 
-/* ========== ABATEMENT CHARTS PLACEHOLDER ========== */
-.abatement-section {
-    margin-bottom: 28px;
-}
-.abatement-section h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    font-weight: 600;
-    font-size: 1.3rem;
-    color: #DC2626;
+/* ========== WHAT YOU NEED CHART ========== */
+.wyn-chart-container {
+    position: relative;
+    height: 300px;
     margin-bottom: 16px;
-    text-transform: capitalize;
-    letter-spacing: 0.04em;
 }
-.abatement-charts-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-}
-.abatement-chart-panel {
-    background: var(--bg-card);
+.wyn-insight-box {
+    background: linear-gradient(145deg, #f8f9fb 0%, #f0f2f5 100%);
     border: 1px solid var(--border-light);
-    border-radius: 10px;
-    padding: 28px;
-    min-height: 300px;
-    display: flex;
-    flex-direction: column;
-}
-.abatement-chart-panel h4 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    font-weight: 600;
-    font-size: 1.05rem;
-    color: var(--navy);
-    margin-bottom: 16px;
-}
-.abatement-chart-placeholder {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    font-style: italic;
-    border: 2px dashed var(--border-light);
     border-radius: 8px;
-    padding: 24px;
-    min-height: 220px;
+    padding: 14px 18px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
 }
-@media (max-width: 768px) {
-    .abatement-charts-row {
-        grid-template-columns: 1fr;
-    }
+.wyn-insight-box strong {
+    color: var(--navy);
 }
 
 /* ========== WHAT YOU NEED PANEL ========== */
@@ -421,75 +387,18 @@ body {
     font-weight: 600;
     font-size: 1.3rem;
     color: var(--navy);
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+}
+.what-you-need-panel .wyn-subtitle {
+    font-size: 0.88rem;
+    color: var(--text-muted);
     margin-bottom: 20px;
-    letter-spacing: 0.04em;
-}
-.wyn-metrics-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-}
-.wyn-metric {
-    background: linear-gradient(145deg, #f8f9fb 0%, #f0f2f5 100%);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    padding: 16px;
-    text-align: center;
-}
-.wyn-metric-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-}
-.wyn-metric-value {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--navy);
-    line-height: 1.1;
-}
-.wyn-metric-unit {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin-top: 4px;
-}
-.wyn-table-wrap {
-    overflow-x: auto;
-}
-.wyn-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-}
-.wyn-table th {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    padding: 10px 14px;
-    text-align: left;
-    border-bottom: 2px solid var(--border);
-    letter-spacing: 0.04em;
-}
-.wyn-table td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border-light);
-    color: var(--text-secondary);
-}
-.wyn-table .placeholder-row td {
-    color: var(--text-muted);
-    font-style: italic;
+    line-height: 1.5;
 }
 @media (max-width: 768px) {
     .what-you-need-panel { padding: 18px 16px; }
-    .wyn-metrics-row { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 480px) {
-    .wyn-metrics-row { grid-template-columns: 1fr; }
+    .wyn-chart-container { height: 240px; }
 }
 
 /* ========== HEADER ========== */
@@ -953,55 +862,6 @@ body {
     font-style: italic;
 }
 
-/* ========== METHODOLOGY ========== */
-.methodology-panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: 10px;
-    padding: 28px;
-    margin-bottom: 28px;
-}
-
-.methodology-panel h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    font-weight: 600;
-    font-size: 1.3rem;
-    color: #DC2626;
-    margin-bottom: 16px;
-    text-transform: capitalize;
-    letter-spacing: 0.04em;
-}
-
-.methodology-panel p {
-    font-size: 0.92rem;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    line-height: 1.65;
-    max-width: 960px;
-}
-
-.methodology-panel p:last-child {
-    margin-bottom: 0;
-}
-
-.methodology-panel strong {
-    color: var(--navy);
-    font-weight: 600;
-}
-
-.methodology-link {
-    color: #1A2744;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-decoration: none;
-    border-bottom: 1px solid rgba(239,68,68,0.3);
-    transition: all 0.15s ease;
-}
-.methodology-link:hover {
-    color: #DC2626;
-    border-bottom-color: #DC2626;
-}
 
 /* ========== PEAK CAPACITY + COST ROW ========== */
 .peak-cost-row {
@@ -1429,11 +1289,6 @@ body {
 .cost-panel {
     animation: fadeInUp 0.5s ease both;
     animation-delay: 0.4s;
-}
-
-.methodology-panel {
-    animation: fadeIn 0.6s ease both;
-    animation-delay: 0.5s;
 }
 
 .scroll-transition {
@@ -2985,12 +2840,6 @@ body {
     .cost-table td {
         padding: 8px 8px;
     }
-    .methodology-panel {
-        padding: 18px 14px;
-    }
-    .methodology-panel p {
-        font-size: 0.85rem;
-    }
     .scroll-transition-inner {
         padding: 28px 20px;
     }
@@ -3201,10 +3050,6 @@ body {
     .story-stat-card:hover {
         transform: none;
         box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
-    }
-    .methodology-link {
-        padding: 4px 0;
-        display: inline-block;
     }
 }
 
@@ -3582,140 +3427,19 @@ body {
         </div>
     </div>
 
-    <!-- ABATEMENT COST CURVES -->
-    <div class="charts-row" id="abatementRow" style="display:none;">
-        <div class="chart-panel">
-            <h3>The Cost Curve: How Expensive Is Each Additional Percent?</h3>
-            <p class="chart-subtitle" style="font-size:0.82rem; color:var(--text-muted); margin:-8px 0 12px;">
-                Average and incremental cost rises sharply above 90% — the "last mile" of hourly matching
-                costs dramatically more per MWh. Compare against
-                <a href="abatement_comparison.html" style="color:var(--accent);">alternative decarbonization strategies &rarr;</a>
-            </p>
-            <div style="position:relative; height:280px;">
-                <canvas id="costCurveChart"></canvas>
-            </div>
-        </div>
-        <div class="chart-panel">
-            <h3>Marginal Abatement Cost: $/ton CO<sub>2</sub> at Each Target</h3>
-            <p class="chart-subtitle" style="font-size:0.82rem; color:var(--text-muted); margin:-8px 0 12px;">
-                The marginal cost of avoiding one additional ton of CO<sub>2</sub> through grid decarbonization.
-                Reference lines show costs of alternative abatement approaches.
-            </p>
-            <div style="position:relative; height:280px;">
-                <canvas id="macCurveChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- METHODOLOGY -->
-    <div class="methodology-panel">
-        <h3>Methodology &amp; Technical Reference</h3>
-        <p>
-            This analysis uses a co-optimization approach that simultaneously minimizes cost while achieving
-            target hourly matching thresholds. Resource mixes, procurement levels, and storage dispatch are
-            jointly optimized using a three-phase refinement process with numpy-accelerated scoring.
-        </p>
-        <p>
-            <a href="research_paper.html" class="methodology-link">
-                Read Full Methodology &amp; Research Paper &rarr;
-            </a>
-        </p>
-    </div>
-
-    <!-- Navigation cards removed — use top nav bar -->
-
-    <!-- ABATEMENT COST CURVES (Placeholder) -->
-    <div class="abatement-section" id="abatementSection">
-        <h3>Carbon Abatement Analysis</h3>
-        <div class="abatement-charts-row">
-            <div class="abatement-chart-panel">
-                <h4>Average Cost of Carbon Abatement ($/ton CO&#8322;)</h4>
-                <div class="abatement-chart-placeholder">
-                    <span id="avgAbatementPlaceholder">Data loading after optimizer update...</span>
-                </div>
-            </div>
-            <div class="abatement-chart-panel">
-                <h4>Marginal Cost of Carbon Abatement ($/ton CO&#8322;)</h4>
-                <div class="abatement-chart-placeholder">
-                    <span id="marginalAbatementPlaceholder">Data loading after optimizer update...</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- WHAT YOU NEED DEPENDS ON WHAT YOU HAVE -->
     <div class="what-you-need-panel" id="whatYouNeedPanel">
         <h3>What You Need Depends on What You Have</h3>
-        <div class="wyn-metrics-row">
-            <div class="wyn-metric">
-                <div class="wyn-metric-label">Starting Point</div>
-                <div class="wyn-metric-value" id="wynBaseline">--</div>
-                <div class="wyn-metric-unit">Grid baseline match score</div>
-            </div>
-            <div class="wyn-metric">
-                <div class="wyn-metric-label">Target</div>
-                <div class="wyn-metric-value" id="wynTarget">--</div>
-                <div class="wyn-metric-unit">Selected threshold</div>
-            </div>
-            <div class="wyn-metric">
-                <div class="wyn-metric-label">Gap to Close</div>
-                <div class="wyn-metric-value" id="wynGap">--</div>
-                <div class="wyn-metric-unit">percentage points</div>
-            </div>
-            <div class="wyn-metric">
-                <div class="wyn-metric-label">Incremental Cost</div>
-                <div class="wyn-metric-value" id="wynIncrCost">$--</div>
-                <div class="wyn-metric-unit">per MWh incremental</div>
-            </div>
-            <div class="wyn-metric">
-                <div class="wyn-metric-label">CO&#8322; Impact</div>
-                <div class="wyn-metric-value" id="wynCO2Impact">--</div>
-                <div class="wyn-metric-unit">tons abated</div>
-            </div>
+        <p class="wyn-subtitle">
+            The bars below compare <strong>existing clean resources</strong> already on the grid (solid, bottom)
+            versus the <strong>new build required</strong> (lighter, top) to reach the selected matching target.
+            The dashed line marks the region's current clean share — everything above it must be built.
+        </p>
+        <div class="wyn-chart-container">
+            <canvas id="wynCompareChart"></canvas>
         </div>
-        <h4 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif; font-weight:600; font-size:1rem; color:var(--navy); margin-bottom:12px;">Incremental Resources Needed</h4>
-        <div class="wyn-table-wrap">
-            <table class="wyn-table" id="wynResourceTable">
-                <thead>
-                    <tr>
-                        <th>Resource</th>
-                        <th>Incremental Share</th>
-                        <th>Role</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="placeholder-row">
-                        <td>Solar</td>
-                        <td>--</td>
-                        <td>Daytime generation</td>
-                    </tr>
-                    <tr class="placeholder-row">
-                        <td>Wind</td>
-                        <td>--</td>
-                        <td>Variable generation</td>
-                    </tr>
-                    <tr class="placeholder-row">
-                        <td>Clean Firm</td>
-                        <td>--</td>
-                        <td>Always-on baseload</td>
-                    </tr>
-                    <tr class="placeholder-row">
-                        <td>CCS-CCGT</td>
-                        <td>--</td>
-                        <td>Dispatchable with carbon capture</td>
-                    </tr>
-                    <tr class="placeholder-row">
-                        <td>Battery</td>
-                        <td>--</td>
-                        <td>Daily shifting (4hr)</td>
-                    </tr>
-                    <tr class="placeholder-row">
-                        <td>LDES</td>
-                        <td>--</td>
-                        <td>Multi-day / seasonal storage (100hr)</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="wyn-insight-box" id="wynInsightBox">
+            Select a region and threshold to see the resource comparison.
         </div>
     </div>
 
@@ -3983,7 +3707,6 @@ function updateAll() {
     updateCostPanel(entry);
     updateWhatYouNeedPanel(region, entry, threshold);
     updateCO2Tile(entry);
-    updateAbatementCurves();
     updatePathwayAnalysis();
 }
 
@@ -6238,237 +5961,235 @@ function updateCO2Tile(entry) {
     }
 }
 
-// ---- What You Need Panel Update ----
+// ---- What You Need: Existing vs Target Comparison Chart ----
+let wynCompareChartInstance = null;
+
 function updateWhatYouNeedPanel(region, entry, threshold) {
-    const wynTarget = document.getElementById('wynTarget');
-    if (!wynTarget) return;
-    // Update target from threshold
-    wynTarget.textContent = threshold + '%';
-    // Baseline: check if region has a baseline_match_score
-    const baselineEl = document.getElementById('wynBaseline');
-    if (region.baseline_hourly_match != null) {
-        baselineEl.textContent = formatPct(region.baseline_hourly_match, 0);
-    } else {
-        baselineEl.textContent = '--';
-    }
-    // Gap
-    const gapEl = document.getElementById('wynGap');
-    if (region.baseline_hourly_match != null) {
-        const gap = parseFloat(threshold) - region.baseline_hourly_match;
-        gapEl.textContent = formatNum(gap, 0) + ' pp';
-    } else {
-        gapEl.textContent = '--';
-    }
-    // Incremental cost
-    const incrCostEl = document.getElementById('wynIncrCost');
+    const canvas = document.getElementById('wynCompareChart');
+    const insightBox = document.getElementById('wynInsightBox');
+    if (!canvas || !DATA) return;
+
     const iso = document.getElementById('regionSelect').value;
-    if (entry && entry.costs && entry.costs.incremental_above_baseline != null) {
-        const adj = cfAdjust(entry, iso);
-        incrCostEl.textContent = '$' + formatNum(adj.newIncremental, 0);
-    } else {
-        incrCostEl.textContent = '$--';
-    }
-    // CO2 Impact
-    const co2El = document.getElementById('wynCO2Impact');
-    if (entry && entry.co2_abated_tons != null) {
-        co2El.textContent = formatCommas(Math.round(entry.co2_abated_tons));
-    } else {
-        co2El.textContent = '--';
-    }
-}
+    const regionData = DATA.results?.[iso];
+    if (!regionData || !entry) return;
 
-// ---- Abatement Cost Curve Charts ----
-let costCurveChartInstance = null;
-let macCurveChartInstance = null;
-
-function updateAbatementCurves() {
-    const iso = document.getElementById('regionSelect').value;
-    const region = DATA?.results?.[iso];
-    if (!region) return;
-
-    const abatementRow = document.getElementById('abatementRow');
-    const thresholds = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
-    if (thresholds.length < 3) {
-        if (abatementRow) abatementRow.style.display = 'none';
+    const rc = entry.costs?.resource_costs;
+    if (!rc) {
+        if (insightBox) insightBox.innerHTML = 'Resource cost data not available for this threshold.';
         return;
     }
-    if (abatementRow) abatementRow.style.display = '';
 
-    const labels = thresholds.map(t => t + '%');
-    const avgCosts = [];
-    const incrCosts = [];
-    const macData = [];
-    const baseline = region.thresholds[String(thresholds[0])]?.costs?.baseline_wholesale_cost || 30;
+    // Build two-bar comparison: "Existing Clean on Grid" vs "What It Takes to Reach X%"
+    const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = ['solar', 'wind', 'hydro', 'storage', 'clean_firm'];
+    const labels = ['Existing Clean\non Grid', threshold + '% Target'];
 
-    // CO2 emission rate (tons/MWh) - approximate regional values from eGRID
-    const CO2_RATES = { CAISO: 0.22, ERCOT: 0.39, PJM: 0.37, NYISO: 0.19, NEISO: 0.25 };
-    const co2Rate = CO2_RATES[iso] || 0.30;
-
-    thresholds.forEach((t, i) => {
-        const entry = region.thresholds[String(t)];
-        if (!entry?.costs) { avgCosts.push(null); incrCosts.push(null); macData.push(null); return; }
-
-        const adj = cfAdjust(entry, iso);
-        avgCosts.push(adj.newEffective);
-
-        // Incremental: difference vs previous threshold
-        if (i === 0) {
-            incrCosts.push(adj.newIncremental);
+    // Get existing and new data for this threshold
+    const existingVals = {};
+    const newVals = {};
+    MIX_RESOURCES.forEach(r => {
+        if (r === 'storage') {
+            existingVals[r] = 0;
+            newVals[r] = rc.storage?.dispatch_pct || 0;
         } else {
-            const prevEntry = region.thresholds[String(thresholds[i - 1])];
-            if (prevEntry?.costs) {
-                const prevAdj = cfAdjust(prevEntry, iso);
-                const costDelta = adj.newEffective - prevAdj.newEffective;
-                const matchDelta = (entry.hourly_match_score - prevEntry.hourly_match_score) / 100;
-                incrCosts.push(matchDelta > 0 ? costDelta / matchDelta : costDelta);
-            } else {
-                incrCosts.push(null);
-            }
+            existingVals[r] = rc[r]?.existing_pct || 0;
+            newVals[r] = rc[r]?.new_pct || 0;
         }
+    });
 
-        // MAC: $/ton CO2 = incremental cost / CO2 displaced per MWh
-        // Each additional % of hourly match displaces approximately co2Rate tons per MWh
-        if (i === 0) {
-            macData.push(adj.newIncremental > 0 ? adj.newIncremental / co2Rate : 0);
-        } else {
-            const prevEntry = region.thresholds[String(thresholds[i - 1])];
-            if (prevEntry?.costs) {
-                const prevAdj = cfAdjust(prevEntry, iso);
-                const marginalCost = adj.newEffective - prevAdj.newEffective;
-                const matchGain = (entry.hourly_match_score - prevEntry.hourly_match_score) / 100;
-                const procGain = (entry.procurement_pct - prevEntry.procurement_pct) / 100;
-                const tonsDisplaced = matchGain * co2Rate;
-                macData.push(tonsDisplaced > 0 ? marginalCost / tonsDisplaced : null);
-            } else {
-                macData.push(null);
+    // Total existing clean
+    let totalExisting = 0;
+    MIX_RESOURCES.forEach(r => { totalExisting += existingVals[r]; });
+
+    // Total at target = existing + new
+    let totalTarget = 0;
+    MIX_RESOURCES.forEach(r => { totalTarget += existingVals[r] + newVals[r]; });
+
+    // Build datasets: for bar 0 (existing) only existing resources, for bar 1 (target) existing + new stacked
+    const datasets = [];
+    const existingAlpha = 0.75;
+    const newAlpha = 0.40;
+
+    // Existing portion (appears in both bars)
+    for (const r of EXISTING_ORDER) {
+        const c = MIX_COLORS[r];
+        datasets.push({
+            label: MIX_LABELS_MAP[r] + ' (existing)',
+            data: [existingVals[r], existingVals[r]],
+            backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
+            borderColor: c.border,
+            borderWidth: 1.5,
+            borderRadius: 6,
+            stack: 'compare',
+            _resourceKey: r,
+            _isExisting: true,
+        });
+    }
+    // New build portion (only in bar 1)
+    for (const r of NEW_ORDER) {
+        const c = MIX_COLORS[r];
+        datasets.push({
+            label: MIX_LABELS_MAP[r] + ' (new build)',
+            data: [0, newVals[r]],
+            backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
+            borderColor: c.border,
+            borderWidth: 1,
+            borderRadius: 6,
+            borderSkipped: 'start',
+            stack: 'compare',
+            _resourceKey: r,
+            _isExisting: false,
+        });
+    }
+
+    const yMax = Math.ceil(Math.max(totalExisting, totalTarget) / 10) * 10 + 10;
+
+    if (wynCompareChartInstance) wynCompareChartInstance.destroy();
+    const ctx = canvas.getContext('2d');
+    wynCompareChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutCubic' },
+            layout: { padding: { top: 12, right: 8, bottom: 4, left: 4 } },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        color: '#1A1A1A',
+                        padding: 14,
+                        generateLabels: function() {
+                            const items = MIX_RESOURCES.map(r => ({
+                                text: MIX_LABELS_MAP[r],
+                                fillStyle: MIX_COLORS[r].fill,
+                                strokeStyle: MIX_COLORS[r].border,
+                                lineWidth: 2,
+                                pointStyle: 'rectRounded',
+                            }));
+                            items.push({
+                                text: 'Existing',
+                                fillStyle: 'rgba(100,100,100,0.7)',
+                                strokeStyle: '#666',
+                                lineWidth: 2,
+                                pointStyle: 'rectRounded',
+                            });
+                            items.push({
+                                text: 'New Build',
+                                fillStyle: 'rgba(100,100,100,0.3)',
+                                strokeStyle: '#999',
+                                lineWidth: 2,
+                                pointStyle: 'rectRounded',
+                            });
+                            return items;
+                        }
+                    },
+                    onClick: () => {}
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.92)',
+                    titleFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                    bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    filter: function(tooltipItem) { return tooltipItem.parsed.y > 0; },
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}% of demand`;
+                        }
+                    }
+                },
+                datalabels: {
+                    display: function(context) {
+                        return context.dataset.data[context.dataIndex] >= 3;
+                    },
+                    color: function(context) {
+                        if (context.dataset._resourceKey === 'clean_firm') return '#FFFFFF';
+                        return '#1A1A1A';
+                    },
+                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 700 },
+                    formatter: function(value) {
+                        return Math.round(value) + '%';
+                    },
+                    anchor: 'center',
+                    align: 'center',
+                },
+                annotation: {
+                    annotations: {
+                        existingLine: {
+                            type: 'line',
+                            yMin: totalExisting,
+                            yMax: totalExisting,
+                            borderColor: 'rgba(26,39,68,0.5)',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: 'Current grid clean: ' + Math.round(totalExisting) + '%',
+                                position: 'start',
+                                backgroundColor: 'rgba(26,39,68,0.75)',
+                                color: '#fff',
+                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 600 },
+                                padding: { x: 6, y: 3 },
+                                borderRadius: 4,
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
+                    ticks: {
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                        color: '#1A2744',
+                    }
+                },
+                y: {
+                    stacked: true,
+                    max: yMax,
+                    title: {
+                        display: true,
+                        text: 'Resources (% of demand)',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
+                    ticks: {
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        color: '#6B6356',
+                        callback: (v) => v + '%',
+                    }
+                }
             }
         }
     });
 
-    // Cost Curve Chart
-    const costCtx = document.getElementById('costCurveChart')?.getContext('2d');
-    if (costCtx) {
-        if (costCurveChartInstance) costCurveChartInstance.destroy();
-        costCurveChartInstance = new Chart(costCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Average Cost ($/MWh)',
-                        data: avgCosts,
-                        borderColor: '#0B3D91',
-                        backgroundColor: 'rgba(11,61,145,0.08)',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        borderWidth: 2.5
-                    },
-                    {
-                        label: 'Marginal Cost ($/MWh per %)',
-                        data: incrCosts,
-                        borderColor: '#C75B4A',
-                        backgroundColor: 'transparent',
-                        borderDash: [5, 3],
-                        tension: 0.3,
-                        pointRadius: 3,
-                        pointHoverRadius: 5,
-                        borderWidth: 2
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y?.toFixed(1)}/MWh`
-                        }
-                    },
-                    annotation: {
-                        annotations: {}
-                    }
-                },
-                scales: {
-                    y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, beginAtZero: false, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
-                    x: { title: { display: true, text: 'Hourly Match Target', font: { size: 11 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
-                }
-            }
+    // Update insight text
+    if (insightBox) {
+        const totalNew = Math.round(totalTarget - totalExisting);
+        const gap = parseFloat(threshold) - (region.baseline_hourly_match || 0);
+        // Find the dominant new resource
+        let maxNewR = 'clean_firm';
+        let maxNewVal = 0;
+        MIX_RESOURCES.forEach(r => {
+            if (newVals[r] > maxNewVal) { maxNewVal = newVals[r]; maxNewR = r; }
         });
-    }
+        const dominantLabel = MIX_LABELS_MAP[maxNewR] || maxNewR;
 
-    // MAC Curve Chart
-    const macCtx = document.getElementById('macCurveChart')?.getContext('2d');
-    if (macCtx) {
-        if (macCurveChartInstance) macCurveChartInstance.destroy();
-
-        // Reference line values
-        const dacMid = 600;
-        const industrialMid = 60;
-        const epaScc = 190;
-
-        macCurveChartInstance = new Chart(macCtx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Marginal Abatement Cost ($/ton CO₂)',
-                    data: macData,
-                    backgroundColor: macData.map(v => {
-                        if (v == null) return 'rgba(200,200,200,0.3)';
-                        if (v < 100) return 'rgba(34,197,94,0.25)';
-                        if (v < 200) return 'rgba(245,158,11,0.25)';
-                        return 'rgba(239,68,68,0.25)';
-                    }),
-                    borderColor: macData.map(v => {
-                        if (v == null) return 'rgba(200,200,200,0.5)';
-                        if (v < 100) return '#22C55E';
-                        if (v < 200) return '#F59E0B';
-                        return '#EF4444';
-                    }),
-                    borderWidth: 1.5,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => `$${ctx.parsed.y?.toFixed(0)}/ton CO₂`
-                        }
-                    },
-                    annotation: {
-                        annotations: {
-                            dacLine: {
-                                type: 'line', yMin: dacMid, yMax: dacMid,
-                                borderColor: '#E91E63', borderDash: [6, 3], borderWidth: 1.5,
-                                label: { display: true, content: `DAC ~$${dacMid}/ton`, position: 'end', font: { size: 10 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.8)' }
-                            },
-                            epaSccLine: {
-                                type: 'line', yMin: epaScc, yMax: epaScc,
-                                borderColor: '#6366F1', borderDash: [4, 4], borderWidth: 1.5,
-                                label: { display: true, content: `EPA SCC $${epaScc}/ton`, position: 'start', font: { size: 10 }, color: '#6366F1', backgroundColor: 'rgba(255,255,255,0.8)' }
-                            },
-                            industrialLine: {
-                                type: 'line', yMin: industrialMid, yMax: industrialMid,
-                                borderColor: '#8BC34A', borderDash: [3, 3], borderWidth: 1.5,
-                                label: { display: true, content: `Industrial Decarb ~$${industrialMid}/ton`, position: 'end', font: { size: 10 }, color: '#8BC34A', backgroundColor: 'rgba(255,255,255,0.8)' }
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: { title: { display: true, text: '$/ton CO₂', font: { size: 11 } }, beginAtZero: true, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
-                    x: { title: { display: true, text: 'Hourly Match Target', font: { size: 11 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
-                }
-            }
-        });
+        insightBox.innerHTML = `<strong>${iso}</strong> starts with <strong>${Math.round(totalExisting)}%</strong> existing clean energy. ` +
+            `Reaching <strong>${threshold}%</strong> hourly matching requires adding <strong>${totalNew}%</strong> of demand in new resources` +
+            (totalNew > 0 ? `, led by <strong>${dominantLabel}</strong> at ${Math.round(maxNewVal)}%.` : '.') +
+            (gap > 0 ? ` That's a <strong>${Math.round(gap)} percentage point</strong> gap to close.` : '');
     }
 }
 
