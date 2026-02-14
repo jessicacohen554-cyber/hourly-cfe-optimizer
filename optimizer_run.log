@@ -4,29 +4,6 @@ Loading data...
 ======================================================================
   CAISO (California)
 ======================================================================
-  Sweep: max-matching at key procurement levels...
-    70%: 70.0% match
-    80%: 80.0% match
-    90%: 89.5% match
-    100%: 96.2% match
-    110%: 99.3% match
-    120%: 100.0% match
-    140%: 100.0% match
-    [checkpoint] Saved CAISO (sweep) → 9 KB
-
-  Cost-optimizing thresholds (324 scenarios each)... [0 done, 10 remaining]
-    75%: 324/324 scenarios, cache=484594, 1757.2s | Medium: CF20/Sol35/Wnd15/CCS0/Hyd30 batt=0% ldes=0%
-    [checkpoint] Saved CAISO (threshold-75) → 107 KB
-    80%: 324/324 scenarios, cache=460402, 1750.0s | Medium: CF25/Sol30/Wnd15/CCS0/Hyd30 batt=0% ldes=0%
-      Cross-pollination: 8 improvements, 11 unique mixes evaluated
-    [checkpoint] Saved CAISO (threshold-80) → 206 KB
-[watcher] New optimizer PID: 61362
-Loading data...
-  Data loaded.
-
-======================================================================
-  CAISO (California)
-======================================================================
     [checkpoint] Resuming CAISO from threshold-80: 2 thresholds done
   Resuming from checkpoint: sweep done, 2 thresholds complete
   Sweep: loaded from checkpoint (7 points)
@@ -34,29 +11,5 @@ Loading data...
   Cost-optimizing thresholds (324 scenarios each)... [2 done, 8 remaining]
     75%: loaded from checkpoint — skipping
     80%: loaded from checkpoint — skipping
-Loading data...
-  Data loaded.
-
-======================================================================
-  CAISO (California)
-======================================================================
-    [checkpoint] Resuming CAISO from threshold-80: 2 thresholds done
-  Resuming from checkpoint: sweep done, 2 thresholds complete
-  Sweep: loaded from checkpoint (7 points)
-
-  Cost-optimizing thresholds (324 scenarios each)... [2 done, 8 remaining]
-    75%: loaded from checkpoint — skipping
-    80%: loaded from checkpoint — skipping
-Loading data...
-  Data loaded.
-
-======================================================================
-  CAISO (California)
-======================================================================
-    [checkpoint] Resuming CAISO from threshold-80: 2 thresholds done
-  Resuming from checkpoint: sweep done, 2 thresholds complete
-  Sweep: loaded from checkpoint (7 points)
-
-  Cost-optimizing thresholds (324 scenarios each)... [2 done, 8 remaining]
-    75%: loaded from checkpoint — skipping
-    80%: loaded from checkpoint — skipping
+    [checkpoint] Saved CAISO (threshold-85-partial-50of324) → 221 KB
+    [checkpoint] Saved CAISO (threshold-85-partial-100of324) → 235 KB
