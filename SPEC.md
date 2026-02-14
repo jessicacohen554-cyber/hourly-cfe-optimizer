@@ -82,6 +82,42 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 **NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
 
 **Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. 324 scenarios × 10 thresholds × 5 regions = 16,200 independent co-optimizations, with matching score cache shared across cost scenarios (physics reuse, not a shortcut).
+## 3. Thresholds (18 total)
+
+```
+75, 80, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100
+```
+
+- 5% intervals: 75-85
+- 1% intervals: 85-100 (inflection zone where CCS/LDES enter optimal mix)
+- Critical for smooth abatement cost curves
+
+---
+
+## 4. Dashboard Controls (12 total)
+
+### Preserved (2):
+1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
+2. **Threshold select** (expanded from 7 to 18 values)
+
+### New sensitivity toggles (10):
+
+| # | Toggle | Options | Affects |
+|---|---|---|---|
+| 3 | Solar Generation Cost | Low / Medium / High | Solar LCOE (regional) |
+| 4 | Wind Generation Cost | Low / Medium / High | Wind LCOE (regional) |
+| 5 | Clean Firm Generation Cost | Low / Medium / High | CF LCOE (regional — geothermal blend) |
+| 6 | CCS-CCGT Generation Cost | Low / Medium / High | CCS LCOE (regional — Class VI, 45Q, fuel) |
+| 7 | Battery Storage Cost | Low / Medium / High | Battery LCOS (regional) |
+| 8 | LDES Storage Cost | Low / Medium / High | LDES LCOS (regional) |
+| 9 | Transmission Cost | None / Low / Medium / High | Resource+region adders on new-build |
+| 10 | Natural Gas Price | Low / Medium / High | Wholesale price + CCS fuel cost + emission rate |
+| 11 | Coal Price | Low / Medium / High | Wholesale price + emission rate |
+| 12 | Oil Price | Low / Medium / High | Wholesale price + emission rate |
+
+**NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
+
+**Replaces**: Old single Clean Firm cost dropdown ($90/$120/$150)
 
 **Grid mix baseline**: Selectable as reference scenario (not a toggle — fixed 2025 actual at wholesale)
 
@@ -572,6 +608,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 | New panels | 1 ("What You Need" panel) |
 | New metric tiles | 1 (CO2 abated) |
 | Cost tables in methodology | ~15 |
+| Sensitivity toggles | 10 (all Low/Medium/High except Transmission which adds None) |
 | Regional deep-dive pages | 5 (one per region) |
 | Research paper sections | 8 (including 5 regional deep-dives) |
 | QA checkpoints | 3 (optimizer, HTML, mobile) |
