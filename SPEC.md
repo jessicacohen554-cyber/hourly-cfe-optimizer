@@ -437,11 +437,16 @@ Each region gets a dedicated deep-dive page linked from the main dashboard top n
 - **Format**: Scrollytelling narrative matching main dashboard visual identity
 - **Content**: In-depth exploration of what deep decarbonization looks like for that region under different sensitivity scenarios
 
+### Default Cost Scenario for Static Pages
+- **Homepage (index.html)** and **Regional Deep-Dive pages**: All figures and narrative use **Medium cost sensitivities** (all 5 toggle groups at Medium) unless a figure is explicitly designed to show Low/Medium/High ranges for comparison purposes.
+- **Dashboard (dashboard.html)**: Interactive — user controls sensitivities via toggles.
+- This ensures consistency across static narrative pages and reserves L/M/H range displays for intentional comparison figures (e.g., cost sensitivity deep-dive section #4 below).
+
 ### Per-Region Content Sections
 1. **Region Overview** — grid composition, geography, market structure, current clean energy share
 2. **Baseline Analysis** — existing grid hourly match score, seasonal patterns, strengths/weaknesses
 3. **Decarbonization Pathway** — how optimal resource mix evolves from 75% → 100% threshold
-4. **Cost Sensitivity Deep-Dive** — how L/M/H scenarios on key resources (regional priority resources) change the cost picture
+4. **Cost Sensitivity Deep-Dive** — how L/M/H scenarios on key resources (regional priority resources) change the cost picture (this section explicitly shows ranges)
 5. **Storage Role** — battery vs LDES contributions at different thresholds, dispatch patterns
 6. **CO2 Abatement Profile** — regional abatement curves with commentary on inflection points
 7. **Key Regional Insights** — unique factors (e.g., ERCOT's wind dominance, NYISO's nuclear fleet, CAISO's solar+storage, PJM's coal fleet switching dynamics)
