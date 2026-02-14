@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Regional Deep Dive — Hourly CFE Optimizer</title>
+<title>The 8,760 Problem — Regional Deep Dives</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -527,7 +527,7 @@ body {
 
 <!-- ========== TOP NAVIGATION ========== -->
 <nav class="top-nav">
-    <span class="nav-brand">Hourly CFE Optimizer</span>
+    <span class="nav-brand">The 8,760 Problem</span>
     <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
@@ -540,12 +540,23 @@ body {
     </div>
 </nav>
 
-<!-- ========== HEADER BANNER ========== -->
+<!-- ========== HEADER BANNER (shared across all pages) ========== -->
 <header class="header">
-    <h1 id="headerTitle">Regional Deep Dive</h1>
-    <p class="subtitle" id="headerSubtitle">How each grid region's unique resource mix shapes the path to hourly clean energy</p>
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle">Every climate solution depends on a clean grid. An economic analysis of deep decarbonization, hour by hour, region by region.</p>
     <div class="header-accent"></div>
 </header>
+
+<!-- ========== PAGE TITLE ========== -->
+<div style="max-width:900px;margin:0 auto;padding:40px 48px 8px;background:#F3F4F8;">
+    <h2 id="headerTitle" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif;font-size:2.4rem;font-weight:800;color:#DC2626;margin-bottom:16px;letter-spacing:-0.5px;line-height:1.2;">Regional Deep Dives</h2>
+    <p id="headerSubtitle" style="font-size:0.98rem;color:#1A1A1A;line-height:1.75;max-width:800px;">
+        Each U.S. grid region has a unique resource endowment that shapes its path to hourly clean energy.
+        Select a region below to explore its existing generation mix, cost trajectory, optimal resource
+        portfolio, storage requirements, and carbon abatement economics &mdash; all driven by the optimizer's
+        co-optimized results.
+    </p>
+</div>
 
 <!-- ========== REGION TOGGLE ========== -->
 <div class="region-selector">
@@ -721,7 +732,7 @@ body {
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
     </div>
-    <div class="footer-note">Hourly CFE Optimizer &mdash; 2025 Snapshot Model</div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
 </footer>
 
 <!-- ========== BOTTOM ACCENT BAR ========== -->
@@ -803,9 +814,9 @@ body {
         const wholesalePrice = config.wholesale_prices[currentRegion];
         const meta = REGION_META[currentRegion];
 
-        // Update header
-        document.getElementById('headerTitle').textContent = currentRegion + ' Deep Dive';
-        document.getElementById('headerSubtitle').textContent = meta.name + ' — hourly clean energy analysis';
+        // Update page title (not site banner)
+        document.getElementById('headerTitle').textContent = currentRegion + ' Regional Deep Dive';
+        document.getElementById('headerSubtitle').textContent = meta.name + ' — exploring the cost trajectory, optimal resource mix, storage needs, and abatement economics for this region.';
 
         // Update stats
         document.getElementById('statSolar').textContent = gridMix.solar.toFixed(1) + '%';
