@@ -539,6 +539,57 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 6. **Sensitivity Scenarios** — How do different cost assumptions shift the inflection points? Under low DAC cost assumptions, the crossover happens earlier. Under high renewable cost assumptions, same.
 
+### Path-Dependency & Retroactive Cost Modeling (Under Development)
+
+**Problem**: The optimizer independently optimizes each threshold. The 85% mix and 95% mix may differ fundamentally — heavy solar at 85%, heavy clean firm at 95%. Building the 85%-optimal mix then upgrading to 95% would strand solar assets and cost more than building toward 95% from the start.
+
+**Proposed Approach**: Model backwards from the inflection point where the optimal grid solution's LCOE crosses a benchmark price:
+- **Primary benchmark**: DAC cost projected to the target year
+  - 2025: $400-600/ton → grid dominates through ~97%
+  - 2035: $250-350/ton → grid dominates through ~93-95%
+  - 2045: $150-250/ton → grid dominates through ~90-93%
+- At the crossover threshold, the optimal mix is fixed. Then model the build-up path from lower thresholds using the cheapest-first resource ordering that converges to the crossover mix.
+- DAC learning curve: ~15-20% cost reduction per doubling of deployment (ETH Zurich/Climeworks data)
+- This creates a **declining optimal grid target over time** as removal costs fall — counterintuitive but logical.
+
+**Status**: Waiting for optimizer results to analyze mix divergence between thresholds. If divergence is small (resources are additive), the current independent optimization is sufficient. If large (mix pivots between thresholds), path-constrained modeling is needed.
+
+### DAC-VRE Co-Optimization Insight (Under Development)
+
+**Core insight**: DAC is a flexible load that can absorb curtailed renewable energy. At high grid targets, significant curtailment occurs — this energy is nearly free ($0-5/MWh). DAC facilities co-located with sequestration geology (Class VI wells) can use curtailed power to remove CO₂ at dramatically reduced costs.
+
+**Regional specialization model**:
+- **ERCOT/CAISO**: Push grid to 95-97% (cheap wind/solar), operate DAC on curtailed surplus. Gulf Coast & Imperial Valley have Class VI well capacity.
+- **PJM**: Push grid to 93-95%, buy ERCOT/regional DAC credits for residual emissions.
+- **NYISO/NEISO**: Push grid to 90-92% (expensive beyond), heavy DAC credit procurement from regions with cheaper removal.
+
+**DAC cost with curtailed power**: If energy is the #1 DAC cost driver (~60% of total), curtailed power at $0-5/MWh could reduce DAC from $400-600/ton to $150-250/ton — making it competitive with grid decarbonization costs above 93% in most regions.
+
+**Analysis needed**:
+1. From optimizer results: quantify curtailed MWh at each threshold × region
+2. Estimate DAC capacity supportable by curtailed energy (assume 2 MWh/ton)
+3. Derive DAC marginal cost curve as a function of curtailment availability
+4. Compare DAC-on-curtailment cost to grid MAC at each threshold
+5. Find the optimal regional grid target + DAC allocation
+
+**Why this matters**: This reframes the "100% clean grid" question. If DAC-on-curtailment is cheaper than the last 5-10% of grid matching, the rational strategy is to overbuild VRE (creating more curtailment) and co-locate DAC — achieving net-zero at lower total cost than pure grid matching.
+
+**DAC CapEx vs. curtailment capacity factor**:
+- Running DAC only on curtailed hours (15-30% CF) increases amortized CapEx/ton by 3-6x
+- Energy savings ($120-170/ton) partially offset but don't fully compensate
+- **Optimal: Hybrid model** — DAC runs baseload at 70-80% CF (grid power), with curtailed hours as supplemental free energy
+- This spreads CapEx over sufficient tons while capturing curtailment energy savings
+- The MAC curves for DAC typically assume ~90% CF with market-rate power; our model should account for the CF impact on per-ton costs
+
+**Abatement page section**: Dedicated section with narrative walkthrough + findings in the Key Insights panel at top.
+
+**Implementation scope**: Supplementary analysis for the **abatement page only** — not the main dashboard.
+- Run supplementary optimizer scenarios for ERCOT and CAISO (both have Class VI well capacity — Gulf Coast and Central Valley/Salton Sea respectively)
+- Model allows monetizing curtailed energy via DAC-VRE co-location
+- These regions push to 100%+ procurement with excess curtailment → DAC
+- DAC credits offset residual emissions in NYISO/NEISO/PJM at high targets where grid costs are steep
+- Produces a "cross-regional portfolio" where cheap-DAC regions export removal credits to expensive-grid regions
+
 ### Visual Design
 - Large interactive chart: Regional MAC curves overlaid with benchmark bands
 - Horizontal benchmark lines clearly labeled with color-coded bands
