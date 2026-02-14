@@ -24,17 +24,23 @@
 ### Needs work (awaiting optimizer results)
 - [ ] **Dashboard abatement section (`dashboard.html`)** — 5 paired toggles work, 4 core charts work. Abatement cost section has placeholder divs awaiting optimizer results data.
 
-### What's in progress
-- [x] **Hydro caps fixed** — updated to 2025 actuals. CAISO: 9.5%, ERCOT: 0.1%, PJM: 1.8%, NYISO: 15.9%, NEISO: 4.4%. All prior results invalidated; full re-run required.
-- [x] **5-year profile averaging** — gen and demand shapes now averaged across 2021-2025 (2024 leap year handled by removing Feb 29). Scalars (total MWh, peak MW) from 2025 actuals.
-- [x] **DST-aware solar nighttime correction** — daylight window (6am-7pm local prevailing time) adjusts UTC offset by -1 during DST months (Mar-Nov).
-- [x] **Nuclear seasonal derate** — monthly CF factors applied to nuclear portion of clean_firm.
-- [x] **Nuclear uprate LCOE blending** — clean_firm LCOE blends uprate ($15-55) + new-build ($80-170) costs by regional uprate share.
-- [x] **CCS 95% capture rate** — residual emission rate 0.0185 tCO2/MWh.
-- [x] **Capacity-constrained storage** — battery and LDES dispatch_pct maps to built capacity (standard GenX/ReEDS methodology).
-- [x] **CO2 hourly dispatch attribution** — charge-side emission netting for battery and LDES.
-- [x] **1-scenario checkpointing** — zero compute loss on interruption.
-- [ ] Site content gap closure: building out the 3 incomplete pages above
+### Optimizer code — ready for run (all completed)
+- [x] **Hydro caps** — 2025 actuals: CAISO 9.5%, ERCOT 0.1%, PJM 1.8%, NYISO 15.9%, NEISO 4.4%
+- [x] **5-year profile averaging** — gen + demand shapes averaged 2021-2025 (leap year handled)
+- [x] **DST-aware solar nighttime correction** — 6am-7pm local prevailing time, UTC offset adjusts during DST
+- [x] **Nuclear seasonal derate** — monthly CF factors × nuclear share of clean_firm
+- [x] **Nuclear uprate LCOE blending** — regional uprate share blends cheap uprates with new-build
+- [x] **CCS 95% capture rate** — residual 0.0185 tCO2/MWh
+- [x] **Capacity-constrained storage** — battery + LDES dispatch_pct = built capacity
+- [x] **CO2 hourly dispatch attribution** — charge-side emission netting
+- [x] **1-scenario checkpointing** — zero compute loss on interruption
+- [x] **Wholesale fuel adjustments** — documented in §5.9 with per-ISO $/MWh table
+- [x] **SPEC.md ↔ code audit** — 150+ values verified, 0 discrepancies
+
+### Needs work (awaiting optimizer results)
+- [ ] Dashboard abatement section (`dashboard.html`) — placeholder divs awaiting results
+- [ ] Site content gap closure: incomplete pages need optimizer data
+- [ ] Update narratives + research paper with new results
 
 ### Pipeline when optimizer completes
 1. Run `recompute_co2.py` → hourly CO₂ correction
@@ -42,13 +48,6 @@
 3. Update dashboards with real data, update narratives
 4. DAC-VRE analysis, resource mix analysis, path-dependent MAC
 5. Commit + push
-
-### After initial push
-1. Fetch 2021-2025 multi-year EIA data (need API key)
-2. Convert to local time with DST
-3. Average profiles, apply to 2025 totals
-4. Re-run optimizer (Phase 1+3 hybrid)
-5. Update dashboards + narratives, final QA/QC
 
 ### Pre-Run QA/QC Gate (Mandatory Before Every Optimizer Run)
 **This gate exists because**: a previous run wasted 3+ hours of compute due to incorrect hydro caps that weren't caught before launch. Every optimizer run is expensive — never launch without verifying assumptions first.
@@ -288,6 +287,16 @@ Clean firm LCOE is a **capacity-weighted blend** of nuclear uprate costs and new
 ### 5.9 Fuel Price → Wholesale + Emission Rate Impact
 
 **Wholesale**: Shifts based on regional 2025 fossil fuel mix composition. Uses **hourly wholesale price profiles** from EIA 2025 data (not flat averages).
+
+**Wholesale fuel price adjustments** ($/MWh adder to base wholesale, by fossil fuel toggle level):
+
+| Region | Low | Medium | High | Rationale |
+|--------|-----|--------|------|-----------|
+| CAISO  | -5  |   0    | +10  | ~40% gas generation |
+| ERCOT  | -7  |   0    | +12  | ~50% gas, most sensitive to fuel prices |
+| PJM    | -6  |   0    | +11  | ~40% gas + coal mix |
+| NYISO  | -4  |   0    |  +8  | ~35% gas, more nuclear insulates from fuel |
+| NEISO  | -4  |   0    |  +8  | ~35% gas, more nuclear insulates from fuel |
 
 **Emission rate — Regional fuel-switching elasticity**:
 
