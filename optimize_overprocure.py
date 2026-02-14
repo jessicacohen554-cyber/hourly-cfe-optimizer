@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """
-Over-Procurement Optimization Engine
-======================================
-For each ISO region (using EIA demand shape), sweep over-procurement levels
-(100%, 120%, 140%...) and find the optimal mix of 4 resource types
-(clean firm, solar, wind, hydro) + uncapped storage to maximize hourly matching.
+Over-Procurement Optimization Engine — Advanced Sensitivity Model
+==================================================================
+For each ISO region (CAISO, ERCOT, PJM, NYISO, NEISO), sweep over-procurement
+levels and find the optimal mix of 5 resource types (clean_firm, solar, wind,
+ccs_ccgt, hydro) + 2 storage types (battery 4hr Li-ion + LDES 100hr iron-air)
+to maximize hourly matching at minimum cost.
 
-Three-phase refinement: 20% coarse → 5% medium → 1% fine
+Three-phase refinement: coarse -> medium -> fine (adapted for 5D)
 
 Resource types:
-  - Clean Firm: flat baseload (1/8760 per hour) — represents nuclear/geothermal
-  - Solar: EIA regional profile
-  - Wind: EIA regional profile
-  - Hydro: EIA regional profile (capped by region)
+  - Clean Firm: flat baseload (1/8760 per hour) — nuclear/geothermal
+  - Solar: EIA 2025 hourly regional profile
+  - Wind: EIA 2025 hourly regional profile
+  - CCS-CCGT: flat baseload (1/8760 per hour) — dispatchable, 90% capture
+  - Hydro: EIA 2025 hourly regional profile (capped by region, existing only)
 
-Storage: 4h Li-ion, 85% RTE, dispatch target optimized (uncapped)
+Storage:
+  - Battery: 4hr Li-ion, 85% RTE, daily-cycle greedy dispatch
+  - LDES: 100hr iron-air, 50% RTE, 7-day rolling window multi-day dispatch
 """
 
 import json
@@ -22,19 +26,33 @@ import os
 import sys
 import time
 import numpy as np
-from itertools import product
+from multiprocessing import Pool
 
 if sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 DATA_YEAR = '2025'
 H = 8760
 
-STORAGE_EFFICIENCY = 0.85
-STORAGE_DURATION_HOURS = 4
+# ══════════════════════════════════════════════════════════════════════════════
+# STORAGE CONSTANTS
+# ══════════════════════════════════════════════════════════════════════════════
 
-# Hydro caps (same as before)
+BATTERY_EFFICIENCY = 0.85
+BATTERY_DURATION_HOURS = 4
+
+LDES_EFFICIENCY = 0.50
+LDES_DURATION_HOURS = 100
+LDES_WINDOW_DAYS = 7
+
+# ══════════════════════════════════════════════════════════════════════════════
+# REGIONAL CONSTANTS
+# ══════════════════════════════════════════════════════════════════════════════
+
 HYDRO_CAPS = {
     'CAISO': 30,
     'ERCOT': 5,
@@ -53,17 +71,32 @@ ISO_LABELS = {
     'NEISO': 'NEISO (New England)',
 }
 
-# Resource types (order for optimization)
-RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'hydro']
+# 5 optimization resource types (sum to 100%)
+RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
-# Target thresholds to find
-THRESHOLDS = [75, 80, 85, 90, 95, 99, 100]
+# 10 target thresholds — key inflection points with 2.5% granularity in steep zone
+THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+
+# Adaptive procurement bounds by threshold — avoids wasting compute searching
+# procurement levels that can't possibly be optimal for a given threshold
+PROCUREMENT_BOUNDS = {
+    75:   (70, 110),
+    80:   (70, 110),
+    85:   (80, 110),
+    87.5: (87, 200),
+    90:   (90, 200),
+    92.5: (92, 200),
+    95:   (95, 200),
+    97.5: (100, 250),
+    99:   (100, 250),
+    100:  (100, 500),
+}
 
 # ══════════════════════════════════════════════════════════════════════════════
-# COST LAYER — Regional LCOE and Wholesale Market Prices
+# COST TABLES — Medium values used by optimizer; full L/M/H output for dashboard
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Wholesale electricity prices ($/MWh) — 2023-2024 averages from FERC/ISO market reports
+# Wholesale electricity prices ($/MWh) — 2025 averages from FERC/ISO market reports
 WHOLESALE_PRICES = {
     'CAISO': 30,
     'ERCOT': 27,
@@ -72,32 +105,170 @@ WHOLESALE_PRICES = {
     'NEISO': 41,
 }
 
-# New-build LCOE by resource type and ISO ($/MWh)
-# Sources: LBNL Utility-Scale Solar 2024, LBNL Wind Market Report 2024
-# Wind scaled +30% from 2024 PPA prices to reflect 2025 cost trends (matching solar YoY trajectory)
-# Clean firm: $90/MWh nationally (nuclear/geothermal new-build blended estimate)
-# Storage: $100/MWh (4h Li-ion LCOS estimate, 2025)
+# Medium LCOE values used by the optimizer for mix optimization
 REGIONAL_LCOE = {
-    'CAISO': {'clean_firm': 90, 'solar': 60, 'wind': 73, 'hydro': 0, 'storage': 100},
-    'ERCOT': {'clean_firm': 90, 'solar': 54, 'wind': 40, 'hydro': 0, 'storage': 100},
-    'PJM':   {'clean_firm': 90, 'solar': 65, 'wind': 62, 'hydro': 0, 'storage': 100},
-    'NYISO': {'clean_firm': 90, 'solar': 92, 'wind': 81, 'hydro': 0, 'storage': 100},
-    'NEISO': {'clean_firm': 90, 'solar': 82, 'wind': 73, 'hydro': 0, 'storage': 100},
+    'CAISO': {'clean_firm': 78, 'solar': 60, 'wind': 73, 'ccs_ccgt': 86, 'hydro': 0, 'battery': 102, 'ldes': 180},
+    'ERCOT': {'clean_firm': 85, 'solar': 54, 'wind': 40, 'ccs_ccgt': 71, 'hydro': 0, 'battery': 92, 'ldes': 155},
+    'PJM':   {'clean_firm': 93, 'solar': 65, 'wind': 62, 'ccs_ccgt': 79, 'hydro': 0, 'battery': 98, 'ldes': 170},
+    'NYISO': {'clean_firm': 98, 'solar': 92, 'wind': 81, 'ccs_ccgt': 99, 'hydro': 0, 'battery': 108, 'ldes': 200},
+    'NEISO': {'clean_firm': 96, 'solar': 82, 'wind': 73, 'ccs_ccgt': 96, 'hydro': 0, 'battery': 105, 'ldes': 190},
+}
+
+# Transmission adders at Medium level (used by optimizer)
+TRANSMISSION_ADDERS = {
+    'CAISO': {'wind': 8, 'solar': 3, 'clean_firm': 3, 'ccs_ccgt': 2, 'battery': 1, 'ldes': 2, 'hydro': 0},
+    'ERCOT': {'wind': 6, 'solar': 3, 'clean_firm': 2, 'ccs_ccgt': 2, 'battery': 1, 'ldes': 2, 'hydro': 0},
+    'PJM':   {'wind': 10, 'solar': 5, 'clean_firm': 3, 'ccs_ccgt': 3, 'battery': 1, 'ldes': 3, 'hydro': 0},
+    'NYISO': {'wind': 14, 'solar': 7, 'clean_firm': 5, 'ccs_ccgt': 4, 'battery': 2, 'ldes': 4, 'hydro': 0},
+    'NEISO': {'wind': 12, 'solar': 6, 'clean_firm': 4, 'ccs_ccgt': 3, 'battery': 2, 'ldes': 3, 'hydro': 0},
+}
+
+# Full L/M/H cost tables for dashboard output
+FULL_LCOE_TABLES = {
+    'solar': {
+        'Low':    {'CAISO': 45, 'ERCOT': 40, 'PJM': 50, 'NYISO': 70, 'NEISO': 62},
+        'Medium': {'CAISO': 60, 'ERCOT': 54, 'PJM': 65, 'NYISO': 92, 'NEISO': 82},
+        'High':   {'CAISO': 78, 'ERCOT': 70, 'PJM': 85, 'NYISO': 120, 'NEISO': 107},
+    },
+    'wind': {
+        'Low':    {'CAISO': 55, 'ERCOT': 30, 'PJM': 47, 'NYISO': 61, 'NEISO': 55},
+        'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73},
+        'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95},
+    },
+    'clean_firm': {
+        'Low':    {'CAISO': 58, 'ERCOT': 63, 'PJM': 72, 'NYISO': 75, 'NEISO': 73},
+        'Medium': {'CAISO': 78, 'ERCOT': 85, 'PJM': 93, 'NYISO': 98, 'NEISO': 96},
+        'High':   {'CAISO': 110, 'ERCOT': 120, 'PJM': 140, 'NYISO': 150, 'NEISO': 145},
+    },
+    'ccs_ccgt': {
+        'Low':    {'CAISO': 58, 'ERCOT': 52, 'PJM': 62, 'NYISO': 78, 'NEISO': 75},
+        'Medium': {'CAISO': 86, 'ERCOT': 71, 'PJM': 79, 'NYISO': 99, 'NEISO': 96},
+        'High':   {'CAISO': 115, 'ERCOT': 92, 'PJM': 102, 'NYISO': 128, 'NEISO': 122},
+    },
+    'battery': {
+        'Low':    {'CAISO': 77, 'ERCOT': 69, 'PJM': 74, 'NYISO': 81, 'NEISO': 79},
+        'Medium': {'CAISO': 102, 'ERCOT': 92, 'PJM': 98, 'NYISO': 108, 'NEISO': 105},
+        'High':   {'CAISO': 133, 'ERCOT': 120, 'PJM': 127, 'NYISO': 140, 'NEISO': 137},
+    },
+    'ldes': {
+        'Low':    {'CAISO': 135, 'ERCOT': 116, 'PJM': 128, 'NYISO': 150, 'NEISO': 143},
+        'Medium': {'CAISO': 180, 'ERCOT': 155, 'PJM': 170, 'NYISO': 200, 'NEISO': 190},
+        'High':   {'CAISO': 234, 'ERCOT': 202, 'PJM': 221, 'NYISO': 260, 'NEISO': 247},
+    },
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAIRED TOGGLE GROUPS — 5 groups replacing 10 individual toggles
+# Dashboard toggles move all member variables in lockstep (all L, all M, or all H)
+# ══════════════════════════════════════════════════════════════════════════════
+
+PAIRED_TOGGLE_GROUPS = {
+    'renewable_generation': {
+        'label': 'Renewable Generation Cost',
+        'options': ['Low', 'Medium', 'High'],
+        'members': ['solar', 'wind'],
+        'description': 'Solar and wind LCOE move together — driven by similar manufacturing scale, supply chain, and installation labor factors',
+    },
+    'firm_generation': {
+        'label': 'Firm Generation Cost',
+        'options': ['Low', 'Medium', 'High'],
+        'members': ['clean_firm', 'ccs_ccgt'],
+        'description': 'Clean firm (nuclear/geothermal) and CCS-CCGT share capital-intensive, long-lead-time cost structures',
+    },
+    'storage': {
+        'label': 'Storage Cost',
+        'options': ['Low', 'Medium', 'High'],
+        'members': ['battery', 'ldes'],
+        'description': 'Battery and LDES costs share manufacturing/materials cost drivers across storage technologies',
+    },
+    'fossil_fuel': {
+        'label': 'Fossil Fuel Price',
+        'options': ['Low', 'Medium', 'High'],
+        'members': ['natural_gas', 'coal', 'oil'],
+        'description': 'Gas, coal, and oil prices are correlated through energy commodity markets and macro conditions',
+    },
+    'transmission': {
+        'label': 'Transmission Cost',
+        'options': ['None', 'Low', 'Medium', 'High'],
+        'members': ['wind', 'solar', 'clean_firm', 'ccs_ccgt', 'battery', 'ldes'],
+        'description': 'Grid interconnection and transmission infrastructure costs affect all new-build resources within a region',
+    },
+}
+
+# Full transmission adder tables (None/Low/Medium/High) for dashboard
+FULL_TRANSMISSION_TABLES = {
+    'wind': {
+        'None':   {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'Low':    {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6},
+        'Medium': {'CAISO': 8, 'ERCOT': 6, 'PJM': 10, 'NYISO': 14, 'NEISO': 12},
+        'High':   {'CAISO': 14, 'ERCOT': 10, 'PJM': 18, 'NYISO': 22, 'NEISO': 20},
+    },
+    'solar': {
+        'None':   {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'Low':    {'CAISO': 1, 'ERCOT': 1, 'PJM': 2, 'NYISO': 3, 'NEISO': 3},
+        'Medium': {'CAISO': 3, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6},
+        'High':   {'CAISO': 6, 'ERCOT': 5, 'PJM': 9, 'NYISO': 12, 'NEISO': 10},
+    },
+    'clean_firm': {
+        'None':   {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'Low':    {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2},
+        'Medium': {'CAISO': 3, 'ERCOT': 2, 'PJM': 3, 'NYISO': 5, 'NEISO': 4},
+        'High':   {'CAISO': 6, 'ERCOT': 4, 'PJM': 6, 'NYISO': 9, 'NEISO': 7},
+    },
+    'ccs_ccgt': {
+        'None':   {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'Low':    {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2},
+        'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3},
+        'High':   {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6},
+    },
+    'battery': {
+        'None':   {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'Low':    {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 1, 'NEISO': 1},
+        'Medium': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2},
+        'High':   {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3},
+    },
+    'ldes': {
+        'None':   {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'Low':    {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2},
+        'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3},
+        'High':   {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6},
+    },
+    'hydro': {
+        'None':   {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'Low':    {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'Medium': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+        'High':   {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0},
+    },
+}
+
+# Fuel prices (L/M/H) for dashboard
+FUEL_PRICES = {
+    'natural_gas': {'Low': 2.00, 'Medium': 3.50, 'High': 6.00},
+    'coal':        {'Low': 1.80, 'Medium': 2.50, 'High': 4.00},
+    'oil':         {'Low': 55,   'Medium': 75,   'High': 110},
 }
 
 # Existing clean grid mix shares (% of total generation) from EIA-930 2025 data
 # Resources up to these shares priced at wholesale; above = new-build LCOE
+# CCS-CCGT has no existing share (entirely new-build)
 GRID_MIX_SHARES = {
-    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'hydro': 9.5},
-    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'hydro': 0.1},
-    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'hydro': 1.8},
-    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'hydro': 15.9},
-    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'hydro': 4.4},
+    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'ccs_ccgt': 0, 'hydro': 9.5},
+    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'ccs_ccgt': 0, 'hydro': 0.1},
+    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
+    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
+    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
 }
 
+# CCS-CCGT residual emission rate (tCO2/MWh) after 90% capture
+CCS_RESIDUAL_EMISSION_RATE = 0.037
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DATA LOADING
+# ══════════════════════════════════════════════════════════════════════════════
 
 def load_data():
-    """Load demand profiles and generation profiles."""
+    """Load demand profiles, generation profiles, emission rates, and fossil mix."""
     print("Loading data...")
 
     with open(os.path.join(DATA_DIR, 'eia_demand_profiles.json')) as f:
@@ -106,12 +277,18 @@ def load_data():
     with open(os.path.join(DATA_DIR, 'eia_generation_profiles.json')) as f:
         gen_profiles = json.load(f)
 
+    with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
+        emission_rates = json.load(f)
+
+    with open(os.path.join(DATA_DIR, 'eia_fossil_mix.json')) as f:
+        fossil_mix = json.load(f)
+
     print("  Data loaded.")
-    return demand_data, gen_profiles
+    return demand_data, gen_profiles, emission_rates, fossil_mix
 
 
 def get_supply_profiles(iso, gen_profiles):
-    """Get generation shape profiles for the 4 resource types."""
+    """Get generation shape profiles for the 5 resource types."""
     profiles = {}
 
     # Clean firm = flat baseload
@@ -122,15 +299,25 @@ def get_supply_profiles(iso, gen_profiles):
         p = gen_profiles[iso][DATA_YEAR].get('solar_proxy')
         if not p:
             p = gen_profiles['NEISO'][DATA_YEAR].get('solar')
-        profiles['solar'] = p
+        profiles['solar'] = p[:H]
     else:
-        profiles['solar'] = gen_profiles[iso][DATA_YEAR].get('solar')
+        profiles['solar'] = gen_profiles[iso][DATA_YEAR].get('solar', [0.0] * H)[:H]
 
     # Wind
-    profiles['wind'] = gen_profiles[iso][DATA_YEAR].get('wind')
+    profiles['wind'] = gen_profiles[iso][DATA_YEAR].get('wind', [0.0] * H)[:H]
+
+    # CCS-CCGT = flat baseload (same shape as clean firm)
+    profiles['ccs_ccgt'] = [1.0 / H] * H
 
     # Hydro
-    profiles['hydro'] = gen_profiles[iso][DATA_YEAR].get('hydro')
+    profiles['hydro'] = gen_profiles[iso][DATA_YEAR].get('hydro', [0.0] * H)[:H]
+
+    # Ensure all profiles are exactly H hours
+    for rtype in RESOURCE_TYPES:
+        if len(profiles[rtype]) > H:
+            profiles[rtype] = profiles[rtype][:H]
+        elif len(profiles[rtype]) < H:
+            profiles[rtype] = profiles[rtype] + [0.0] * (H - len(profiles[rtype]))
 
     return profiles
 
@@ -145,33 +332,41 @@ def find_anomaly_hours(iso, gen_profiles):
     return anomalies
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# NUMPY PROFILE PREPARATION
+# ══════════════════════════════════════════════════════════════════════════════
+
 def prepare_numpy_profiles(demand_norm, supply_profiles):
     """Convert profiles to numpy arrays for fast vectorized computation."""
-    demand_arr = np.array(demand_norm, dtype=np.float64)
+    demand_arr = np.array(demand_norm[:H], dtype=np.float64)
     supply_arrs = {}
     for rtype in RESOURCE_TYPES:
-        supply_arrs[rtype] = np.array(supply_profiles[rtype], dtype=np.float64)
-    # Pre-build supply matrix: shape (4, 8760) for [cf, solar, wind, hydro]
-    supply_matrix = np.stack([supply_arrs[rt] for rt in RESOURCE_TYPES])  # (4, 8760)
+        supply_arrs[rtype] = np.array(supply_profiles[rtype][:H], dtype=np.float64)
+    # Pre-build supply matrix: shape (5, 8760) for [cf, solar, wind, ccs_ccgt, hydro]
+    supply_matrix = np.stack([supply_arrs[rt] for rt in RESOURCE_TYPES])  # (5, 8760)
     return demand_arr, supply_arrs, supply_matrix
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FAST SCORING FUNCTIONS (numpy-accelerated)
+# ══════════════════════════════════════════════════════════════════════════════
 
 def fast_hourly_score(demand_arr, supply_matrix, mix_fractions, procurement_factor):
     """
     Ultra-fast hourly matching score using numpy vectorized ops.
-    mix_fractions: array of [cf, solar, wind, hydro] as fractions (sum to 1.0)
-    Returns: matching score (0-1)
+    mix_fractions: array of [cf, solar, wind, ccs_ccgt, hydro] as fractions (sum to 1.0)
+    Returns: matching score (0-1), where demand sums to 1.0
     """
-    # Weighted supply = procurement_factor * sum(fraction_i * profile_i)
     supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
     matched = np.minimum(demand_arr, supply)
-    return matched.sum()  # demand sums to 1.0, so this is the score
+    return matched.sum()
 
 
-def fast_score_with_storage(demand_arr, supply_matrix, mix_fractions, procurement_factor,
-                            storage_dispatch_pct):
+def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procurement_factor,
+                            battery_dispatch_pct):
     """
-    Fast scoring with storage (numpy-accelerated).
+    Fast scoring with battery storage (4hr Li-ion, 85% RTE, daily-cycle greedy dispatch).
+    Preserves the original daily-cycle algorithm exactly.
     Returns matching score (0-1).
     """
     supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
@@ -179,14 +374,13 @@ def fast_score_with_storage(demand_arr, supply_matrix, mix_fractions, procuremen
     gap = np.maximum(0.0, demand_arr - supply)
     base_matched = np.minimum(demand_arr, supply)
 
-    if storage_dispatch_pct <= 0:
+    if battery_dispatch_pct <= 0:
         return base_matched.sum()
 
-    # Storage dispatch simulation
-    storage_dispatch_total = storage_dispatch_pct / 100.0
+    storage_dispatch_total = battery_dispatch_pct / 100.0
     num_days = H // 24
     daily_dispatch_target = storage_dispatch_total / num_days
-    power_rating = daily_dispatch_target / STORAGE_DURATION_HOURS
+    power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
 
     total_dispatched = 0.0
     for day in range(num_days):
@@ -199,12 +393,12 @@ def fast_score_with_storage(demand_arr, supply_matrix, mix_fractions, procuremen
         total_surplus = day_surplus.sum()
         total_gap = day_gap.sum()
 
-        max_from_charge = total_surplus * STORAGE_EFFICIENCY
+        max_from_charge = total_surplus * BATTERY_EFFICIENCY
         actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap)
         if actual_dispatch <= 0:
             continue
 
-        required_charge = actual_dispatch / STORAGE_EFFICIENCY
+        required_charge = actual_dispatch / BATTERY_EFFICIENCY
 
         # Distribute charge (greedily, largest surplus first)
         sorted_idx = np.argsort(-day_surplus)
@@ -212,11 +406,11 @@ def fast_score_with_storage(demand_arr, supply_matrix, mix_fractions, procuremen
         for idx in sorted_idx:
             if remaining_charge <= 0 or day_surplus[idx] <= 0:
                 break
-            amt = min(day_surplus[idx], power_rating, remaining_charge)
+            amt = min(float(day_surplus[idx]), power_rating, remaining_charge)
             remaining_charge -= amt
 
         actual_charge = required_charge - remaining_charge
-        ach_dispatch = min(actual_dispatch, actual_charge * STORAGE_EFFICIENCY)
+        ach_dispatch = min(actual_dispatch, actual_charge * BATTERY_EFFICIENCY)
 
         # Distribute dispatch (greedily, largest gap first)
         sorted_idx = np.argsort(-day_gap)
@@ -224,41 +418,248 @@ def fast_score_with_storage(demand_arr, supply_matrix, mix_fractions, procuremen
         for idx in sorted_idx:
             if remaining_dispatch <= 0 or day_gap[idx] <= 0:
                 break
-            amt = min(day_gap[idx], power_rating, remaining_dispatch)
+            amt = min(float(day_gap[idx]), power_rating, remaining_dispatch)
             total_dispatched += amt
             remaining_dispatch -= amt
 
     return base_matched.sum() + total_dispatched
 
 
-def compute_hourly_matching(demand_norm, supply_profiles, resource_pcts, procurement_pct,
-                            storage_dispatch_pct=0):
+def compute_ldes_dispatch(demand_arr, supply_arr_total):
     """
-    Compute hourly matching score.
-    resource_pcts: dict of resource -> % of PROCURED amount (sums to 100)
-    procurement_pct: total procurement as % of annual load (e.g., 100, 120, 150)
-    storage_dispatch_pct: % of annual load to dispatch from storage (0 = no storage)
+    LDES dispatch algorithm: 100hr iron-air, 50% RTE, 7-day rolling window.
 
-    Returns: (score, hourly_detail, dispatch_profile, charge_profile)
+    Charges during multi-day surplus periods, discharges during multi-day deficit periods.
+    Power rating = capacity / 100hr (very low power, huge energy).
+
+    Args:
+        demand_arr: numpy array (H,) of normalized demand
+        supply_arr_total: numpy array (H,) of total supply after resource mix
+
+    Returns:
+        ldes_dispatch: numpy array (H,) of LDES dispatch amounts (added to matched)
+        ldes_charge: numpy array (H,) of LDES charge amounts (absorbed from surplus)
+        total_dispatched: float total energy dispatched
     """
-    # Build hourly demand and supply
-    # Use normalized profiles — demand_norm sums to 1.0, supply profiles sum to ~1.0
-    # procurement_pct/100 is the multiplier for total supply vs total demand
+    surplus = np.maximum(0.0, supply_arr_total - demand_arr)
+    gap = np.maximum(0.0, demand_arr - supply_arr_total)
 
+    ldes_dispatch = np.zeros(H, dtype=np.float64)
+    ldes_charge = np.zeros(H, dtype=np.float64)
+
+    # LDES energy capacity: use a capacity that scales with total demand
+    # Set capacity as fraction of total demand energy
+    total_demand_energy = demand_arr.sum()  # sums to ~1.0 for normalized
+    # Capacity sized relative to demand: enough to store ~1 day of average demand
+    ldes_energy_capacity = total_demand_energy * (24.0 / H)  # ~1 day of energy
+    ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
+
+    state_of_charge = 0.0
+    window_hours = LDES_WINDOW_DAYS * 24
+
+    # Process in 7-day rolling windows
+    num_windows = (H + window_hours - 1) // window_hours
+    for w in range(num_windows):
+        w_start = w * window_hours
+        w_end = min(w_start + window_hours, H)
+        window_len = w_end - w_start
+
+        # Identify surplus and deficit hours in this window
+        w_surplus = surplus[w_start:w_end].copy()
+        w_gap = gap[w_start:w_end].copy()
+
+        # Phase 1: Charge during surplus hours (largest surpluses first)
+        surplus_indices = np.argsort(-w_surplus)
+        for idx in surplus_indices:
+            if w_surplus[idx] <= 0:
+                break
+            space = ldes_energy_capacity - state_of_charge
+            if space <= 0:
+                break
+            charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
+            if charge_amt > 0:
+                ldes_charge[w_start + idx] = charge_amt
+                state_of_charge += charge_amt
+
+        # Phase 2: Discharge during deficit hours (largest gaps first)
+        gap_indices = np.argsort(-w_gap)
+        for idx in gap_indices:
+            if w_gap[idx] <= 0:
+                break
+            available = state_of_charge * LDES_EFFICIENCY
+            if available <= 1e-12:
+                break
+            dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, available)
+            if dispatch_amt > 0:
+                ldes_dispatch[w_start + idx] = dispatch_amt
+                # Energy drawn from storage = dispatch / efficiency
+                state_of_charge -= dispatch_amt / LDES_EFFICIENCY
+                state_of_charge = max(0.0, state_of_charge)
+
+    total_dispatched = ldes_dispatch.sum()
+    return ldes_dispatch, ldes_charge, total_dispatched
+
+
+def fast_score_with_ldes(demand_arr, supply_matrix, mix_fractions, procurement_factor,
+                         ldes_dispatch_pct):
+    """
+    Fast scoring with LDES only (no battery). Used in sweep/optimization.
+    ldes_dispatch_pct is a scaling hint for how much LDES capacity is available.
+    Returns matching score (0-1).
+    """
+    supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
+
+    if ldes_dispatch_pct <= 0:
+        matched = np.minimum(demand_arr, supply)
+        return matched.sum()
+
+    base_matched = np.minimum(demand_arr, supply)
+    ldes_dispatch_arr, _, total_dispatched = compute_ldes_dispatch(demand_arr, supply)
+
+    # Scale the dispatch by the ldes_dispatch_pct factor
+    scale = ldes_dispatch_pct / 10.0  # normalize: 10% = 1x capacity
+    gap = np.maximum(0.0, demand_arr - supply)
+    scaled_dispatch = np.minimum(ldes_dispatch_arr * scale, gap)
+
+    return base_matched.sum() + scaled_dispatch.sum()
+
+
+def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procurement_factor,
+                                 battery_dispatch_pct, ldes_dispatch_pct):
+    """
+    Fast scoring with both battery (daily) and LDES (multi-day).
+    Battery runs first on daily cycle, LDES fills remaining multi-day gaps.
+    Returns matching score (0-1).
+    """
+    supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
+    surplus = np.maximum(0.0, supply - demand_arr)
+    gap = np.maximum(0.0, demand_arr - supply)
+    base_matched = np.minimum(demand_arr, supply)
+
+    total_dispatched = 0.0
+    residual_gap = gap.copy()
+    residual_surplus = surplus.copy()
+
+    # Phase 1: Battery daily-cycle dispatch
+    if battery_dispatch_pct > 0:
+        batt_dispatch_total = battery_dispatch_pct / 100.0
+        num_days = H // 24
+        daily_dispatch_target = batt_dispatch_total / num_days
+        batt_power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
+
+        for day in range(num_days):
+            ds = day * 24
+            de = ds + 24
+
+            day_surplus = residual_surplus[ds:de]
+            day_gap = residual_gap[ds:de]
+
+            total_surplus_day = day_surplus.sum()
+            total_gap_day = day_gap.sum()
+
+            max_from_charge = total_surplus_day * BATTERY_EFFICIENCY
+            actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap_day)
+            if actual_dispatch <= 0:
+                continue
+
+            required_charge = actual_dispatch / BATTERY_EFFICIENCY
+
+            # Charge from largest surpluses
+            sorted_idx = np.argsort(-day_surplus)
+            remaining_charge = required_charge
+            for idx in sorted_idx:
+                if remaining_charge <= 0 or day_surplus[idx] <= 0:
+                    break
+                amt = min(float(day_surplus[idx]), batt_power_rating, remaining_charge)
+                residual_surplus[ds + idx] -= amt
+                remaining_charge -= amt
+
+            actual_charge = required_charge - remaining_charge
+            ach_dispatch = min(actual_dispatch, actual_charge * BATTERY_EFFICIENCY)
+
+            # Dispatch to largest gaps
+            sorted_idx = np.argsort(-day_gap)
+            remaining_dispatch = ach_dispatch
+            for idx in sorted_idx:
+                if remaining_dispatch <= 0 or day_gap[idx] <= 0:
+                    break
+                amt = min(float(day_gap[idx]), batt_power_rating, remaining_dispatch)
+                residual_gap[ds + idx] -= amt
+                total_dispatched += amt
+                remaining_dispatch -= amt
+
+    # Phase 2: LDES multi-day dispatch on remaining gaps
+    if ldes_dispatch_pct > 0:
+        total_demand_energy = demand_arr.sum()
+        ldes_energy_capacity = total_demand_energy * (24.0 / H)
+        ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
+        scale = ldes_dispatch_pct / 10.0
+
+        state_of_charge = 0.0
+        window_hours = LDES_WINDOW_DAYS * 24
+
+        num_windows = (H + window_hours - 1) // window_hours
+        for w in range(num_windows):
+            w_start = w * window_hours
+            w_end = min(w_start + window_hours, H)
+
+            w_surplus = residual_surplus[w_start:w_end]
+            w_gap = residual_gap[w_start:w_end]
+
+            # Charge
+            surplus_indices = np.argsort(-w_surplus)
+            for idx in surplus_indices:
+                if w_surplus[idx] <= 0:
+                    break
+                space = (ldes_energy_capacity * scale) - state_of_charge
+                if space <= 0:
+                    break
+                charge_amt = min(float(w_surplus[idx]), ldes_power_rating * scale, space)
+                if charge_amt > 0:
+                    state_of_charge += charge_amt
+
+            # Discharge
+            gap_indices = np.argsort(-w_gap)
+            for idx in gap_indices:
+                if w_gap[idx] <= 0:
+                    break
+                available = state_of_charge * LDES_EFFICIENCY
+                if available <= 1e-12:
+                    break
+                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating * scale, available)
+                if dispatch_amt > 0:
+                    total_dispatched += dispatch_amt
+                    state_of_charge -= dispatch_amt / LDES_EFFICIENCY
+                    state_of_charge = max(0.0, state_of_charge)
+
+    return base_matched.sum() + total_dispatched
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DETAILED DISPATCH COMPUTATION (for final results)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts, procurement_pct,
+                                     battery_dispatch_pct=0, ldes_dispatch_pct=0):
+    """
+    Compute detailed hourly matching with both storage types.
+    Returns: (score, hourly_detail, battery_dispatch_profile, battery_charge_profile,
+              ldes_dispatch_profile, ldes_charge_profile)
+    """
     procurement_factor = procurement_pct / 100.0
 
-    # Compute hourly detail (surplus/gap before storage)
     hourly_detail = []
-    for h in range(H):
-        demand_h = demand_norm[h]  # normalized, sums to 1.0
+    supply_total = np.zeros(H, dtype=np.float64)
 
+    for h in range(H):
+        demand_h = demand_norm[h]
         supply_h = 0.0
         for rtype, pct in resource_pcts.items():
             if pct <= 0:
                 continue
-            # This resource's share of procured amount × its hourly shape
             supply_h += procurement_factor * (pct / 100.0) * supply_profiles[rtype][h]
 
+        supply_total[h] = supply_h
         matched_h = min(demand_h, supply_h)
         surplus_h = max(0.0, supply_h - demand_h)
         gap_h = max(0.0, demand_h - supply_h)
@@ -271,510 +672,335 @@ def compute_hourly_matching(demand_norm, supply_profiles, resource_pcts, procure
             'gap': gap_h,
         })
 
-    # Apply storage if dispatch_pct > 0
-    dispatch_profile = [0.0] * H
-    charge_profile = [0.0] * H
+    demand_arr = np.array([d['demand'] for d in hourly_detail], dtype=np.float64)
+    surplus_arr = np.array([d['surplus'] for d in hourly_detail], dtype=np.float64)
+    gap_arr = np.array([d['gap'] for d in hourly_detail], dtype=np.float64)
 
-    if storage_dispatch_pct > 0:
-        # Storage dispatch target as fraction of total demand (which sums to 1.0)
-        storage_dispatch_total = storage_dispatch_pct / 100.0
+    battery_dispatch_profile = np.zeros(H, dtype=np.float64)
+    battery_charge_profile = np.zeros(H, dtype=np.float64)
+    ldes_dispatch_profile = np.zeros(H, dtype=np.float64)
+    ldes_charge_profile = np.zeros(H, dtype=np.float64)
+
+    residual_surplus = surplus_arr.copy()
+    residual_gap = gap_arr.copy()
+
+    # Phase 1: Battery daily-cycle dispatch
+    if battery_dispatch_pct > 0:
+        batt_dispatch_total = battery_dispatch_pct / 100.0
         num_days = H // 24
-        daily_dispatch_target = storage_dispatch_total / num_days
-        power_rating = daily_dispatch_target / STORAGE_DURATION_HOURS
+        daily_dispatch_target = batt_dispatch_total / num_days
+        batt_power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
 
         for day in range(num_days):
             ds = day * 24
-            de = min(ds + 24, H)
+            de = ds + 24
 
-            surplus_hours = []
-            gap_hours = []
-            for h_idx in range(ds, de):
-                d = hourly_detail[h_idx]
-                if d['surplus'] > 0:
-                    surplus_hours.append((h_idx, d['surplus']))
-                if d['gap'] > 0:
-                    gap_hours.append((h_idx, d['gap']))
+            day_surplus = residual_surplus[ds:de]
+            day_gap = residual_gap[ds:de]
 
-            total_surplus = sum(s for _, s in surplus_hours)
-            total_gap = sum(g for _, g in gap_hours)
+            total_surplus_day = day_surplus.sum()
+            total_gap_day = day_gap.sum()
 
-            max_from_charge = total_surplus * STORAGE_EFFICIENCY
-            actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap)
+            max_from_charge = total_surplus_day * BATTERY_EFFICIENCY
+            actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap_day)
             if actual_dispatch <= 0:
                 continue
 
-            required_charge = actual_dispatch / STORAGE_EFFICIENCY
+            required_charge = actual_dispatch / BATTERY_EFFICIENCY
 
-            # Distribute charge
+            # Charge from largest surpluses
+            sorted_idx = np.argsort(-day_surplus)
             remaining_charge = required_charge
-            surplus_hours.sort(key=lambda x: -x[1])
-            for h_idx, surplus in surplus_hours:
-                if remaining_charge <= 0:
+            for idx in sorted_idx:
+                if remaining_charge <= 0 or day_surplus[idx] <= 0:
                     break
-                amt = min(surplus, power_rating, remaining_charge)
-                charge_profile[h_idx] = amt
+                amt = min(float(day_surplus[idx]), batt_power_rating, remaining_charge)
+                battery_charge_profile[ds + idx] = amt
+                residual_surplus[ds + idx] -= amt
                 remaining_charge -= amt
 
             actual_charge = required_charge - remaining_charge
-            ach_dispatch = min(actual_dispatch, actual_charge * STORAGE_EFFICIENCY)
+            ach_dispatch = min(actual_dispatch, actual_charge * BATTERY_EFFICIENCY)
 
-            # Distribute dispatch
+            # Dispatch to largest gaps
+            sorted_idx = np.argsort(-day_gap)
             remaining_dispatch = ach_dispatch
-            gap_hours.sort(key=lambda x: -x[1])
-            for h_idx, gap in gap_hours:
-                if remaining_dispatch <= 0:
+            for idx in sorted_idx:
+                if remaining_dispatch <= 0 or day_gap[idx] <= 0:
                     break
-                amt = min(gap, power_rating, remaining_dispatch)
-                dispatch_profile[h_idx] = amt
+                amt = min(float(day_gap[idx]), batt_power_rating, remaining_dispatch)
+                battery_dispatch_profile[ds + idx] = amt
+                residual_gap[ds + idx] -= amt
                 remaining_dispatch -= amt
+
+    # Phase 2: LDES multi-day dispatch on remaining gaps
+    if ldes_dispatch_pct > 0:
+        total_demand_energy = demand_arr.sum()
+        ldes_energy_capacity = total_demand_energy * (24.0 / H)
+        ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
+        scale = ldes_dispatch_pct / 10.0
+
+        state_of_charge = 0.0
+        window_hours = LDES_WINDOW_DAYS * 24
+
+        num_windows = (H + window_hours - 1) // window_hours
+        for w in range(num_windows):
+            w_start = w * window_hours
+            w_end = min(w_start + window_hours, H)
+
+            w_surplus = residual_surplus[w_start:w_end]
+            w_gap = residual_gap[w_start:w_end]
+
+            # Charge from surplus
+            surplus_indices = np.argsort(-w_surplus)
+            for idx in surplus_indices:
+                if w_surplus[idx] <= 0:
+                    break
+                space = (ldes_energy_capacity * scale) - state_of_charge
+                if space <= 0:
+                    break
+                charge_amt = min(float(w_surplus[idx]), ldes_power_rating * scale, space)
+                if charge_amt > 0:
+                    ldes_charge_profile[w_start + idx] = charge_amt
+                    residual_surplus[w_start + idx] -= charge_amt
+                    state_of_charge += charge_amt
+
+            # Discharge to gaps
+            gap_indices = np.argsort(-w_gap)
+            for idx in gap_indices:
+                if w_gap[idx] <= 0:
+                    break
+                available = state_of_charge * LDES_EFFICIENCY
+                if available <= 1e-12:
+                    break
+                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating * scale, available)
+                if dispatch_amt > 0:
+                    ldes_dispatch_profile[w_start + idx] = dispatch_amt
+                    residual_gap[w_start + idx] -= dispatch_amt
+                    state_of_charge -= dispatch_amt / LDES_EFFICIENCY
+                    state_of_charge = max(0.0, state_of_charge)
 
     # Compute final score
     total_matched = 0.0
     total_demand = 0.0
     for h in range(H):
         d = hourly_detail[h]
-        disp = dispatch_profile[h]
-        new_matched = d['matched'] + min(d['gap'], disp)
+        batt_disp = battery_dispatch_profile[h]
+        ldes_disp = ldes_dispatch_profile[h]
+        new_matched = d['matched'] + min(d['gap'], batt_disp + ldes_disp)
         total_matched += new_matched
         total_demand += d['demand']
 
     score = total_matched / total_demand if total_demand > 0 else 0.0
-    return score, hourly_detail, dispatch_profile, charge_profile
+    return (score, hourly_detail,
+            battery_dispatch_profile, battery_charge_profile,
+            ldes_dispatch_profile, ldes_charge_profile)
 
 
-def generate_combinations(hydro_cap, step=5):
+# ══════════════════════════════════════════════════════════════════════════════
+# 5D COMBINATION GENERATOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+def generate_combinations(hydro_cap, step=5, max_single=80):
     """
     Generate all valid resource mix combinations that sum to 100%.
-    Resources: clean_firm (0-100), solar (0-100), wind (0-100), hydro (0-hydro_cap)
+    Resources: clean_firm, solar, wind, ccs_ccgt, hydro
+    Hydro capped by region. No single resource exceeds max_single%.
     """
     combos = []
-    for cf in range(0, 101, step):
-        for sol in range(0, 101 - cf, step):
-            for wnd in range(0, 101 - cf - sol, step):
-                hyd = 100 - cf - sol - wnd
-                if hyd <= hydro_cap and hyd >= 0:
+    for cf in range(0, min(max_single + 1, 101), step):
+        for sol in range(0, min(max_single + 1, 101 - cf), step):
+            for wnd in range(0, min(max_single + 1, 101 - cf - sol), step):
+                for ccs in range(0, min(max_single + 1, 101 - cf - sol - wnd), step):
+                    hyd = 100 - cf - sol - wnd - ccs
+                    if hyd >= 0 and hyd <= hydro_cap and hyd <= max_single:
+                        combos.append({
+                            'clean_firm': cf, 'solar': sol, 'wind': wnd,
+                            'ccs_ccgt': ccs, 'hydro': hyd
+                        })
+    return combos
+
+
+def generate_combinations_around(base_combo, hydro_cap, step=1, radius=2):
+    """
+    Generate combinations in a neighborhood around base_combo with given step and radius.
+    """
+    combos = []
+    seen = set()
+    ranges = {}
+    for rtype in RESOURCE_TYPES:
+        base = base_combo[rtype]
+        cap = hydro_cap if rtype == 'hydro' else 100
+        low = max(0, base - radius * step)
+        high = min(cap, base + radius * step)
+        ranges[rtype] = list(range(low, high + 1, step))
+
+    for cf in ranges['clean_firm']:
+        for sol in ranges['solar']:
+            for wnd in ranges['wind']:
+                for ccs in ranges['ccs_ccgt']:
+                    hyd = 100 - cf - sol - wnd - ccs
+                    if hyd < 0 or hyd > hydro_cap:
+                        continue
+                    key = (cf, sol, wnd, ccs, hyd)
+                    if key in seen:
+                        continue
+                    seen.add(key)
                     combos.append({
-                        'clean_firm': cf, 'solar': sol, 'wind': wnd, 'hydro': hyd
+                        'clean_firm': cf, 'solar': sol, 'wind': wnd,
+                        'ccs_ccgt': ccs, 'hydro': hyd
                     })
     return combos
 
 
-def find_optimal_storage(demand_norm, supply_profiles, resource_pcts, procurement_pct):
+# ══════════════════════════════════════════════════════════════════════════════
+# STORAGE OPTIMIZATION
+# ══════════════════════════════════════════════════════════════════════════════
+
+def find_optimal_storage(demand_arr, supply_matrix, mix_fractions, procurement_factor, hydro_cap):
     """
-    Find the optimal storage dispatch % that maximizes hourly matching.
-    Sweep from 0 to 50% of annual load in steps of 5%, then refine to 1%.
+    Find the optimal battery + LDES dispatch percentages that maximize hourly matching.
+    Sweep battery from 0-30% and LDES from 0-20%, then refine.
     """
-    best_score = 0
-    best_dispatch_pct = 0
+    best_score = fast_hourly_score(demand_arr, supply_matrix, mix_fractions, procurement_factor)
+    best_batt = 0
+    best_ldes = 0
 
-    # Coarse sweep 0-50% in 5% steps
-    for dp in range(0, 55, 5):
-        score, _, _, _ = compute_hourly_matching(
-            demand_norm, supply_profiles, resource_pcts, procurement_pct, dp
-        )
-        if score > best_score:
-            best_score = score
-            best_dispatch_pct = dp
-
-    # Fine sweep around best
-    for dp_10 in range(max(0, (best_dispatch_pct - 4) * 10), (best_dispatch_pct + 5) * 10, 10):
-        dp = dp_10 / 10.0
-        score, _, _, _ = compute_hourly_matching(
-            demand_norm, supply_profiles, resource_pcts, procurement_pct, dp
-        )
-        if score > best_score:
-            best_score = score
-            best_dispatch_pct = dp
-
-    return best_score, best_dispatch_pct
-
-
-def optimize_at_procurement_level(iso, demand_norm, supply_profiles, procurement_pct, hydro_cap,
-                                   np_profiles=None):
-    """
-    Find the resource mix that maximizes hourly matching at a given procurement level.
-    Used for sweep visualization. Two-phase: 5% coarse → 1% fine, then storage.
-    Uses numpy for the coarse phase if np_profiles provided.
-    """
-    pf = procurement_pct / 100.0
-
-    if np_profiles:
-        demand_arr, _, supply_matrix = np_profiles
-        # Fast coarse search
-        combos = generate_combinations(hydro_cap, step=5)
-        best_score = -1
-        best_combo = None
-
-        for combo in combos:
-            mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
-            score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
-            if score > best_score:
-                best_score = score
-                best_combo = combo
-
-        # 1% refinement (also numpy)
-        refined_ranges = {}
-        for rtype in RESOURCE_TYPES:
-            base = best_combo[rtype]
-            cap = hydro_cap if rtype == 'hydro' else 100
-            refined_ranges[rtype] = list(range(max(0, base - 4), min(cap, base + 4) + 1))
-
-        for cf in refined_ranges['clean_firm']:
-            for sol in refined_ranges['solar']:
-                for wnd in refined_ranges['wind']:
-                    hyd = 100 - cf - sol - wnd
-                    if hyd < 0 or hyd > hydro_cap:
-                        continue
-                    combo = {'clean_firm': cf, 'solar': sol, 'wind': wnd, 'hydro': hyd}
-                    mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
-                    score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
-                    if score > best_score:
-                        best_score = score
-                        best_combo = combo
-    else:
-        combos = generate_combinations(hydro_cap, step=5)
-        best_score = -1
-        best_combo = None
-
-        for combo in combos:
-            score, _, _, _ = compute_hourly_matching(
-                demand_norm, supply_profiles, combo, procurement_pct, 0
+    # Coarse sweep
+    for bp in range(0, 35, 5):
+        for lp in range(0, 25, 5):
+            if bp == 0 and lp == 0:
+                continue
+            score = fast_score_with_both_storage(
+                demand_arr, supply_matrix, mix_fractions, procurement_factor, bp, lp
             )
             if score > best_score:
                 best_score = score
-                best_combo = combo
+                best_batt = bp
+                best_ldes = lp
 
-        # 1% refinement
-        refined_ranges = {}
-        for rtype in RESOURCE_TYPES:
-            base = best_combo[rtype]
-            cap = hydro_cap if rtype == 'hydro' else 100
-            refined_ranges[rtype] = list(range(max(0, base - 4), min(cap, base + 4) + 1))
+    # Fine sweep around best
+    fine_best_score = best_score
+    fine_best_batt = best_batt
+    fine_best_ldes = best_ldes
+    for bp in range(max(0, best_batt - 4), best_batt + 5, 2):
+        for lp in range(max(0, best_ldes - 4), best_ldes + 5, 2):
+            score = fast_score_with_both_storage(
+                demand_arr, supply_matrix, mix_fractions, procurement_factor, bp, lp
+            )
+            if score > fine_best_score:
+                fine_best_score = score
+                fine_best_batt = bp
+                fine_best_ldes = lp
 
-        for cf in refined_ranges['clean_firm']:
-            for sol in refined_ranges['solar']:
-                for wnd in refined_ranges['wind']:
-                    hyd = 100 - cf - sol - wnd
-                    if hyd < 0 or hyd > hydro_cap:
-                        continue
-                    combo = {'clean_firm': cf, 'solar': sol, 'wind': wnd, 'hydro': hyd}
-                    score, _, _, _ = compute_hourly_matching(
-                        demand_norm, supply_profiles, combo, procurement_pct, 0
-                    )
-                    if score > best_score:
-                        best_score = score
-                        best_combo = combo
-
-    # Optimize storage (uses original functions — only called once per level)
-    best_score_ws, best_storage_pct = find_optimal_storage(
-        demand_norm, supply_profiles, best_combo, procurement_pct
-    )
-
-    return {
-        'procurement_pct': procurement_pct,
-        'resource_mix': best_combo,
-        'storage_dispatch_pct': round(best_storage_pct, 1),
-        'hourly_match_score': round(best_score_ws * 100, 1),
-    }
+    return fine_best_score, fine_best_batt, fine_best_ldes
 
 
-def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_cap):
+# ══════════════════════════════════════════════════════════════════════════════
+# CO2 ABATEMENT
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_score,
+                          battery_dispatch_pct, ldes_dispatch_pct,
+                          emission_rates, demand_total_mwh):
     """
-    CO-OPTIMIZE cost and matching simultaneously.
-    For a given threshold target (e.g., 75%), search across procurement levels
-    AND resource mixes to find the CHEAPEST combination that meets or exceeds it.
+    Compute CO2 abatement from the clean energy portfolio.
 
-    Uses numpy-accelerated scoring for speed.
+    Each clean MWh displaces fossil generation at the regional marginal emission rate.
+    CCS-CCGT: 90% capture, residual ~0.037 tCO2/MWh.
 
-    Performance-optimized 3-phase approach:
-      Phase 1: Coarse scan (10% mix × 10% procurement × fast no-storage scoring)
-      Phase 2: Refine top candidates (5% mix × 5% procurement × storage check)
-      Phase 3: Fine-tune best result (1% mix × 1% procurement × optimized storage)
+    Returns dict with total_co2_abated_tons, co2_rate_per_mwh, breakdown by resource.
     """
-    target = threshold / 100.0
-    max_proc = 500 if target >= 0.995 else 310  # Higher range for 100% target
-    # Allow near-misses: combos within 5% of target get storage check
-    storage_threshold = max(0.5, target - 0.05)
-    demand_arr, supply_arrs, supply_matrix = prepare_numpy_profiles(demand_norm, supply_profiles)
+    # Regional marginal emission rate from eGRID (fossil CO2 lb/MWh -> tons/MWh)
+    regional_data = emission_rates.get(iso, {})
+    fossil_co2_lb_per_mwh = regional_data.get('fossil_co2_lb_per_mwh', 900.0)
+    marginal_rate_tons = fossil_co2_lb_per_mwh / 2204.62  # lb to metric tons
 
-    best_result = None
-    best_cost = float('inf')
-
-    def update_best(combo, proc, sp, score):
-        """Helper to update best result if this is the cheapest so far."""
-        nonlocal best_result, best_cost
-        cost_data = compute_costs(iso, combo, proc, sp, score * 100, demand_norm, supply_profiles)
-        cost = cost_data['effective_cost_per_useful_mwh']
-        if cost < best_cost:
-            best_cost = cost
-            best_result = {
-                'procurement_pct': proc,
-                'resource_mix': dict(combo),
-                'storage_dispatch_pct': round(sp, 1),
-                'hourly_match_score': round(score * 100, 1),
-            }
-        return cost
-
-    # ── Phase 1: Scan with numpy fast scoring ──
-    # 5% mix grid × procurement levels in 10% steps
-    combos_5 = generate_combinations(hydro_cap, step=5)
-    candidates = []
-
-    for procurement_pct in range(70, max_proc, 10):
-        pf = procurement_pct / 100.0
-        for combo in combos_5:
-            mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
-            # Fast no-storage score
-            score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
-            if score >= target:
-                cost = update_best(combo, procurement_pct, 0, score)
-                candidates.append((cost, combo, score, 0, procurement_pct))
-            elif score >= storage_threshold:
-                # Near-miss: try with storage at a few levels
-                for sp in [5, 10, 15, 20]:
-                    score_ws = fast_score_with_storage(
-                        demand_arr, supply_matrix, mix_fracs, pf, sp
-                    )
-                    if score_ws >= target:
-                        cost = update_best(combo, procurement_pct, sp, score_ws)
-                        candidates.append((cost, combo, score_ws, sp, procurement_pct))
-                        break  # Found a working storage level
-
-    if not candidates:
-        return None
-
-    # Keep top candidates within 15% of best cost
-    candidates.sort(key=lambda x: x[0])
-    top = [c for c in candidates if c[0] <= best_cost * 1.15][:8]
-
-    # ── Phase 2: 5% refinement around top candidates ──
-    phase2 = []
-    seen = set()
-    for _, combo, _, sp_base, proc in top:
-        for p_d in [-5, 0, 5]:
-            p = proc + p_d
-            if p < 70 or p > max_proc:
-                continue
-            pf = p / 100.0
-
-            for cf_d in [-5, 0, 5]:
-                for sol_d in [-5, 0, 5]:
-                    for wnd_d in [-5, 0, 5]:
-                        cf = combo['clean_firm'] + cf_d
-                        sol = combo['solar'] + sol_d
-                        wnd = combo['wind'] + wnd_d
-                        hyd = 100 - cf - sol - wnd
-                        if cf < 0 or sol < 0 or wnd < 0 or hyd < 0 or hyd > hydro_cap:
-                            continue
-                        if cf > 100 or sol > 100 or wnd > 100:
-                            continue
-
-                        key = (cf, sol, wnd, p)
-                        if key in seen:
-                            continue
-                        seen.add(key)
-
-                        rcombo = {'clean_firm': cf, 'solar': sol, 'wind': wnd, 'hydro': hyd}
-                        mix_fracs = np.array([rcombo[rt] / 100.0 for rt in RESOURCE_TYPES])
-
-                        # Try without storage first
-                        score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
-                        best_sp = 0
-
-                        if score < target:
-                            # Try storage levels
-                            for sp in [5, 10, 15, 20]:
-                                score_ws = fast_score_with_storage(
-                                    demand_arr, supply_matrix, mix_fracs, pf, sp
-                                )
-                                if score_ws >= target:
-                                    score = score_ws
-                                    best_sp = sp
-                                    break
-
-                        if score >= target:
-                            cost = update_best(rcombo, p, best_sp, score)
-                            phase2.append((cost, rcombo, score, best_sp, p))
-
-    # ── Phase 3: Fine-tune (1% mix, ±2% procurement, refined storage) ──
-    all_phase2 = phase2 if phase2 else top
-    all_phase2.sort(key=lambda x: x[0])
-    finalists = [c for c in all_phase2 if c[0] <= best_cost * 1.05][:5]
-
-    seen2 = set()
-    for _, combo, _, sp_base, proc in finalists:
-        for p_d in range(-2, 3):
-            p = proc + p_d
-            if p < 70 or p > max_proc:
-                continue
-            pf = p / 100.0
-
-            for cf_d in range(-2, 3):
-                for sol_d in range(-2, 3):
-                    for wnd_d in range(-2, 3):
-                        cf = combo['clean_firm'] + cf_d
-                        sol = combo['solar'] + sol_d
-                        wnd = combo['wind'] + wnd_d
-                        hyd = 100 - cf - sol - wnd
-                        if cf < 0 or sol < 0 or wnd < 0 or hyd < 0 or hyd > hydro_cap:
-                            continue
-                        if cf > 100 or sol > 100 or wnd > 100:
-                            continue
-
-                        key = (cf, sol, wnd, p)
-                        if key in seen2:
-                            continue
-                        seen2.add(key)
-
-                        rcombo = {'clean_firm': cf, 'solar': sol, 'wind': wnd, 'hydro': hyd}
-                        mix_fracs = np.array([rcombo[rt] / 100.0 for rt in RESOURCE_TYPES])
-
-                        # Try no-storage first
-                        score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
-                        best_sp = 0
-                        best_score = score
-
-                        # Try storage in 2% steps for finer tuning
-                        for sp in range(2, 22, 2):
-                            score_ws = fast_score_with_storage(
-                                demand_arr, supply_matrix, mix_fracs, pf, sp
-                            )
-                            if score_ws > best_score:
-                                best_score = score_ws
-                                best_sp = sp
-                            if score_ws >= target and best_sp == sp:
-                                break  # Got enough, stop adding storage cost
-
-                        if best_score >= target:
-                            update_best(rcombo, p, best_sp, best_score)
-
-    return best_result
-
-
-def compute_peak_gap(demand_norm, supply_profiles, resource_pcts, procurement_pct,
-                     storage_dispatch_pct, anomaly_hours):
-    """Compute peak single-hour gap % after storage."""
-    score, hourly_detail, dispatch_profile, _ = compute_hourly_matching(
-        demand_norm, supply_profiles, resource_pcts, procurement_pct, storage_dispatch_pct
-    )
-    peak_gap = 0.0
-    for h in range(H):
-        if h in anomaly_hours:
-            continue
-        d = hourly_detail[h]
-        disp = dispatch_profile[h]
-        residual_gap = max(0, d['gap'] - disp)
-        if d['demand'] > 0:
-            gap_pct = (residual_gap / d['demand']) * 100
-            if gap_pct > peak_gap:
-                peak_gap = gap_pct
-    return round(peak_gap, 1)
-
-
-def compute_compressed_day(demand_norm, supply_profiles, resource_pcts, procurement_pct,
-                           storage_dispatch_pct):
-    """Build compressed day profile for visualization."""
     procurement_factor = procurement_pct / 100.0
+    matched_fraction = hourly_match_score / 100.0
 
-    _, hourly_detail, dispatch_profile, charge_profile = compute_hourly_matching(
-        demand_norm, supply_profiles, resource_pcts, procurement_pct, storage_dispatch_pct
-    )
+    # Total annual demand in MWh matched by clean energy
+    matched_mwh = demand_total_mwh * matched_fraction
 
-    demand_sums = [0.0] * 24
-    supply_by_type = {rt: [0.0]*24 for rt in RESOURCE_TYPES}
-    gap_sums = [0.0] * 24
-    surplus_sums = [0.0] * 24
-    storage_dispatch_sums = [0.0] * 24
-    storage_charge_sums = [0.0] * 24
+    # Calculate MWh by resource type
+    resource_co2 = {}
+    total_abated = 0.0
 
-    for h in range(H):
-        hod = h % 24
-        d = hourly_detail[h]
-        demand_sums[hod] += d['demand']
+    for rtype in RESOURCE_TYPES:
+        pct = resource_pcts.get(rtype, 0)
+        if pct <= 0:
+            resource_co2[rtype] = {'mwh': 0, 'co2_abated_tons': 0}
+            continue
 
-        # Supply by type
-        for rtype, pct in resource_pcts.items():
-            if pct <= 0:
-                continue
-            type_supply = procurement_factor * (pct / 100.0) * supply_profiles[rtype][h]
-            supply_by_type[rtype][hod] += type_supply
+        # Resource's share of matched MWh (approximate proportional allocation)
+        resource_mwh = matched_mwh * (pct / 100.0)
 
-        storage_dispatch_sums[hod] += dispatch_profile[h]
-        storage_charge_sums[hod] += charge_profile[h]
+        if rtype == 'ccs_ccgt':
+            # CCS-CCGT: 90% capture. Each MWh displaces fossil at marginal rate
+            # but produces residual emissions of 0.037 tCO2/MWh
+            abated = resource_mwh * (marginal_rate_tons - CCS_RESIDUAL_EMISSION_RATE)
+        else:
+            # Clean resource: displaces fossil at full marginal rate
+            abated = resource_mwh * marginal_rate_tons
 
-    # Match supply to demand per hour-of-day
-    # Match order: clean_firm, hydro, wind, solar (same baseload-first concept)
-    match_order = ['clean_firm', 'hydro', 'wind', 'solar']
-    cut_order = list(reversed(match_order))  # solar cut first
+        abated = max(0, abated)
+        resource_co2[rtype] = {
+            'mwh': round(resource_mwh, 0),
+            'co2_abated_tons': round(abated, 0),
+        }
+        total_abated += abated
 
-    matched_by_type = {rt: [0.0]*24 for rt in RESOURCE_TYPES}
-    surplus_by_type = {rt: [0.0]*24 for rt in RESOURCE_TYPES}
-    matched_by_type['storage'] = [0.0]*24
+    # Storage dispatch MWh also displace fossil (the energy was originally clean surplus)
+    storage_mwh = demand_total_mwh * ((battery_dispatch_pct + ldes_dispatch_pct) / 100.0)
+    storage_abated = storage_mwh * marginal_rate_tons
+    resource_co2['battery'] = {
+        'mwh': round(demand_total_mwh * battery_dispatch_pct / 100.0, 0),
+        'co2_abated_tons': round(demand_total_mwh * battery_dispatch_pct / 100.0 * marginal_rate_tons, 0),
+    }
+    resource_co2['ldes'] = {
+        'mwh': round(demand_total_mwh * ldes_dispatch_pct / 100.0, 0),
+        'co2_abated_tons': round(demand_total_mwh * ldes_dispatch_pct / 100.0 * marginal_rate_tons, 0),
+    }
+    total_abated += storage_abated
 
-    for hod in range(24):
-        remaining = demand_sums[hod]
-        for rtype in match_order:
-            avail = supply_by_type[rtype][hod]
-            matched = min(remaining, avail)
-            matched_by_type[rtype][hod] = matched
-            surplus_by_type[rtype][hod] = avail - matched
-            remaining -= matched
-
-        # Storage dispatch fills remaining gap
-        disp = min(remaining, storage_dispatch_sums[hod])
-        matched_by_type['storage'][hod] = disp
-        remaining -= disp
-
-        gap_sums[hod] = max(0, remaining)
-
-        # Reduce surplus by charging
-        rem_charge = storage_charge_sums[hod]
-        for rtype in cut_order:
-            if rem_charge <= 0:
-                break
-            absorb = min(surplus_by_type[rtype][hod], rem_charge)
-            surplus_by_type[rtype][hod] -= absorb
-            rem_charge -= absorb
-
-    # Total surplus per hour-of-day
-    for hod in range(24):
-        surplus_sums[hod] = sum(surplus_by_type[rt][hod] for rt in RESOURCE_TYPES)
+    co2_rate = total_abated / matched_mwh if matched_mwh > 0 else 0
 
     return {
-        'demand': [round(v, 4) for v in demand_sums],
-        'matched': {rt: [round(v, 4) for v in matched_by_type[rt]] for rt in list(RESOURCE_TYPES) + ['storage']},
-        'surplus': {rt: [round(v, 4) for v in surplus_by_type[rt]] for rt in RESOURCE_TYPES},
-        'gap': [round(v, 4) for v in gap_sums],
-        'storage_charge': [round(v, 4) for v in storage_charge_sums],
-        'total_surplus': [round(v, 4) for v in surplus_sums],
+        'marginal_emission_rate_tons_per_mwh': round(marginal_rate_tons, 4),
+        'total_co2_abated_tons': round(total_abated, 0),
+        'co2_rate_per_mwh': round(co2_rate, 4),
+        'resource_breakdown': resource_co2,
     }
 
 
-def compute_costs(iso, resource_pcts, procurement_pct, storage_dispatch_pct,
-                   hourly_match_score, demand_norm, supply_profiles):
+# ══════════════════════════════════════════════════════════════════════════════
+# COST COMPUTATION
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_costs(iso, resource_pcts, procurement_pct, battery_dispatch_pct, ldes_dispatch_pct,
+                  hourly_match_score, demand_norm, supply_profiles):
     """
     Compute blended cost of energy and incremental cost above baseline.
 
     Cost model:
-      - Resources up to the existing grid mix share → priced at wholesale market rate
-      - Resources above the existing grid mix share → priced at new-build LCOE
-      - Storage → priced at storage LCOS for dispatched MWh
-      - Curtailment inflates effective cost: we pay for ALL procured MWh but only
-        get credit for USEFUL (matched) MWh, so over-procurement raises $/useful-MWh
+      - Resources up to existing grid mix share -> priced at wholesale market rate
+      - Resources above grid mix share -> priced at new-build LCOE + transmission adder
+      - CCS-CCGT: no existing share, all new-build priced
+      - Hydro: always at wholesale (existing resource, no new-build)
+      - Battery storage -> priced at battery LCOS + tx adder for dispatched MWh
+      - LDES storage -> priced at LDES LCOS + tx adder for dispatched MWh
 
     Returns dict with cost metrics in $/MWh (per MWh of demand served).
     """
     wholesale = WHOLESALE_PRICES[iso]
     lcoe = REGIONAL_LCOE[iso]
+    tx = TRANSMISSION_ADDERS[iso]
     grid_shares = GRID_MIX_SHARES[iso]
 
     procurement_factor = procurement_pct / 100.0
 
-    # Total procured MWh by resource (as % of annual demand)
-    # resource_pcts sum to 100 and represent share of PROCURED amount
-    # So actual MWh as fraction of demand = procurement_factor × (pct/100)
     resource_costs = {}
-    total_cost_per_demand = 0.0  # Total cost expressed as $/MWh-of-demand
+    total_cost_per_demand = 0.0
 
     for rtype in RESOURCE_TYPES:
         pct = resource_pcts.get(rtype, 0)
@@ -782,23 +1008,20 @@ def compute_costs(iso, resource_pcts, procurement_pct, storage_dispatch_pct,
             resource_costs[rtype] = {'existing_share': 0, 'new_share': 0, 'cost': 0}
             continue
 
-        # This resource's total MWh as fraction of annual demand
         resource_fraction = procurement_factor * (pct / 100.0)
-        # In percentage terms (of annual demand)
         resource_pct_of_demand = resource_fraction * 100.0
 
-        # Existing share is priced at wholesale
         existing_share = grid_shares.get(rtype, 0)
         existing_pct = min(resource_pct_of_demand, existing_share)
         new_pct = max(0, resource_pct_of_demand - existing_share)
 
-        # Cost in $/MWh-of-demand for this resource
-        # (existing_pct/100 × wholesale) + (new_pct/100 × lcoe)
-        cost_per_demand = (existing_pct / 100.0 * wholesale) + (new_pct / 100.0 * lcoe.get(rtype, 0))
-
-        # Hydro: always at wholesale (existing resource, no new-build)
         if rtype == 'hydro':
+            # Hydro: always at wholesale, no new-build, no transmission adder
             cost_per_demand = resource_pct_of_demand / 100.0 * wholesale
+        else:
+            # Existing portion at wholesale, new-build at LCOE + transmission
+            new_build_cost = lcoe.get(rtype, 0) + tx.get(rtype, 0)
+            cost_per_demand = (existing_pct / 100.0 * wholesale) + (new_pct / 100.0 * new_build_cost)
 
         resource_costs[rtype] = {
             'total_pct_of_demand': round(resource_pct_of_demand, 1),
@@ -808,26 +1031,29 @@ def compute_costs(iso, resource_pcts, procurement_pct, storage_dispatch_pct,
         }
         total_cost_per_demand += cost_per_demand
 
-    # Storage cost: only pay for dispatched MWh
-    # storage_dispatch_pct is % of annual demand dispatched
-    storage_cost_per_demand = (storage_dispatch_pct / 100.0) * lcoe['storage']
-    resource_costs['storage'] = {
-        'dispatch_pct': round(storage_dispatch_pct, 1),
-        'cost_per_demand_mwh': round(storage_cost_per_demand, 2),
+    # Battery storage cost: pay for dispatched MWh at battery LCOS + tx
+    battery_cost_rate = lcoe['battery'] + tx.get('battery', 0)
+    battery_cost_per_demand = (battery_dispatch_pct / 100.0) * battery_cost_rate
+    resource_costs['battery'] = {
+        'dispatch_pct': round(battery_dispatch_pct, 1),
+        'cost_per_demand_mwh': round(battery_cost_per_demand, 2),
     }
-    total_cost_per_demand += storage_cost_per_demand
+    total_cost_per_demand += battery_cost_per_demand
 
-    # Effective cost per USEFUL MWh (accounting for curtailment)
-    # hourly_match_score is the % of demand actually matched
-    # But we're buying procurement_factor × demand worth of energy
-    # Effective cost = total_cost / (matched fraction of demand)
+    # LDES storage cost: pay for dispatched MWh at LDES LCOS + tx
+    ldes_cost_rate = lcoe['ldes'] + tx.get('ldes', 0)
+    ldes_cost_per_demand = (ldes_dispatch_pct / 100.0) * ldes_cost_rate
+    resource_costs['ldes'] = {
+        'dispatch_pct': round(ldes_dispatch_pct, 1),
+        'cost_per_demand_mwh': round(ldes_cost_per_demand, 2),
+    }
+    total_cost_per_demand += ldes_cost_per_demand
+
+    # Effective cost per useful MWh (accounting for curtailment)
     matched_fraction = hourly_match_score / 100.0 if hourly_match_score > 0 else 1.0
     effective_cost_per_useful_mwh = total_cost_per_demand / matched_fraction
 
-    # Baseline cost: 100% wholesale (what you'd pay for grid power)
     baseline_cost = wholesale
-
-    # Incremental cost above baseline
     incremental = effective_cost_per_useful_mwh - baseline_cost
 
     return {
@@ -841,121 +1067,1009 @@ def compute_costs(iso, resource_pcts, procurement_pct, storage_dispatch_pct,
     }
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PARAMETERIZED COST COMPUTATION (for paired toggle sensitivity scenarios)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Wholesale price adjustments by region and fossil fuel price level
+# Based on regional fossil fuel generation share and fuel price sensitivity
+# Gas heat rate ~7 MMBtu/MWh × price delta, weighted by regional fossil share
+WHOLESALE_FUEL_ADJUSTMENTS = {
+    'CAISO': {'Low': -5, 'Medium': 0, 'High': 10},   # ~40% gas generation
+    'ERCOT': {'Low': -7, 'Medium': 0, 'High': 12},   # ~50% gas, most sensitive
+    'PJM':   {'Low': -6, 'Medium': 0, 'High': 11},   # ~40% gas + coal mix
+    'NYISO': {'Low': -4, 'Medium': 0, 'High': 8},    # ~35% gas, more nuclear
+    'NEISO': {'Low': -4, 'Medium': 0, 'High': 8},    # ~35% gas, more nuclear
+}
+
+
+def compute_costs_parameterized(iso, resource_pcts, procurement_pct, battery_dispatch_pct,
+                                 ldes_dispatch_pct, hourly_match_score,
+                                 renewable_gen_level, firm_gen_level, storage_level,
+                                 fossil_fuel_level, transmission_level):
+    """
+    Compute costs for a specific paired toggle scenario on a cached resource mix.
+
+    Instead of reading from global Medium constants, uses the full L/M/H cost tables
+    mapped through the paired toggle groups.
+    """
+    # Map paired toggle levels to individual resource LCOEs
+    lcoe_map = {
+        'solar': FULL_LCOE_TABLES['solar'][renewable_gen_level][iso],
+        'wind': FULL_LCOE_TABLES['wind'][renewable_gen_level][iso],
+        'clean_firm': FULL_LCOE_TABLES['clean_firm'][firm_gen_level][iso],
+        'ccs_ccgt': FULL_LCOE_TABLES['ccs_ccgt'][firm_gen_level][iso],
+        'battery': FULL_LCOE_TABLES['battery'][storage_level][iso],
+        'ldes': FULL_LCOE_TABLES['ldes'][storage_level][iso],
+        'hydro': 0,
+    }
+
+    # Map transmission level to per-resource adders
+    tx_map = {rtype: FULL_TRANSMISSION_TABLES[rtype][transmission_level][iso]
+              for rtype in FULL_TRANSMISSION_TABLES}
+
+    # Adjust wholesale price based on fossil fuel level
+    wholesale = WHOLESALE_PRICES[iso] + WHOLESALE_FUEL_ADJUSTMENTS[iso][fossil_fuel_level]
+    wholesale = max(5, wholesale)  # Floor at $5/MWh
+
+    grid_shares = GRID_MIX_SHARES[iso]
+    procurement_factor = procurement_pct / 100.0
+
+    total_cost_per_demand = 0.0
+
+    for rtype in RESOURCE_TYPES:
+        pct = resource_pcts.get(rtype, 0)
+        if pct <= 0:
+            continue
+
+        resource_fraction = procurement_factor * (pct / 100.0)
+        resource_pct_of_demand = resource_fraction * 100.0
+
+        existing_share = grid_shares.get(rtype, 0)
+        existing_pct = min(resource_pct_of_demand, existing_share)
+        new_pct = max(0, resource_pct_of_demand - existing_share)
+
+        if rtype == 'hydro':
+            cost_per_demand = resource_pct_of_demand / 100.0 * wholesale
+        else:
+            new_build_cost = lcoe_map.get(rtype, 0) + tx_map.get(rtype, 0)
+            cost_per_demand = (existing_pct / 100.0 * wholesale) + (new_pct / 100.0 * new_build_cost)
+
+        total_cost_per_demand += cost_per_demand
+
+    # Battery storage cost
+    battery_cost_rate = lcoe_map['battery'] + tx_map.get('battery', 0)
+    total_cost_per_demand += (battery_dispatch_pct / 100.0) * battery_cost_rate
+
+    # LDES storage cost
+    ldes_cost_rate = lcoe_map['ldes'] + tx_map.get('ldes', 0)
+    total_cost_per_demand += (ldes_dispatch_pct / 100.0) * ldes_cost_rate
+
+    # Effective cost per useful MWh
+    matched_fraction = hourly_match_score / 100.0 if hourly_match_score > 0 else 1.0
+    effective_cost = total_cost_per_demand / matched_fraction
+    incremental = effective_cost - wholesale
+
+    return {
+        'effective_cost': round(effective_cost, 2),
+        'incremental': round(incremental, 2),
+        'total_cost': round(total_cost_per_demand, 2),
+        'wholesale': round(wholesale, 2),
+    }
+
+
+def precompute_sensitivity_costs(iso, result, emission_rates, demand_total_mwh):
+    """
+    Pre-compute costs for all 324 paired toggle combinations on a cached resource mix.
+
+    Returns dict keyed by scenario string: "{renew}_{firm}_{storage}_{fuel}_{tx}"
+    where each level is L/M/H (or N for None on transmission).
+    """
+    resource_pcts = result['resource_mix']
+    procurement_pct = result['procurement_pct']
+    battery_pct = result['battery_dispatch_pct']
+    ldes_pct = result['ldes_dispatch_pct']
+    match_score = result['hourly_match_score']
+
+    level_keys = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
+    gen_levels = ['Low', 'Medium', 'High']
+    tx_levels = ['None', 'Low', 'Medium', 'High']
+
+    scenarios = {}
+
+    for renew in gen_levels:
+        for firm in gen_levels:
+            for storage in gen_levels:
+                for fuel in gen_levels:
+                    for tx in tx_levels:
+                        key = f"{level_keys[renew]}{level_keys[firm]}{level_keys[storage]}_{level_keys[fuel]}_{level_keys[tx]}"
+                        cost_data = compute_costs_parameterized(
+                            iso, resource_pcts, procurement_pct,
+                            battery_pct, ldes_pct, match_score,
+                            renew, firm, storage, fuel, tx
+                        )
+                        scenarios[key] = cost_data
+
+    return scenarios
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PEAK GAP COMPUTATION
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_peak_gap(demand_norm, supply_profiles, resource_pcts, procurement_pct,
+                     battery_dispatch_pct, ldes_dispatch_pct, anomaly_hours):
+    """Compute peak single-hour gap % after both storage types."""
+    (score, hourly_detail,
+     batt_dispatch, batt_charge,
+     ldes_dispatch, ldes_charge) = compute_hourly_matching_detailed(
+        demand_norm, supply_profiles, resource_pcts, procurement_pct,
+        battery_dispatch_pct, ldes_dispatch_pct
+    )
+    peak_gap = 0.0
+    for h in range(H):
+        if h in anomaly_hours:
+            continue
+        d = hourly_detail[h]
+        disp = batt_dispatch[h] + ldes_dispatch[h]
+        residual_gap = max(0, d['gap'] - disp)
+        if d['demand'] > 0:
+            gap_pct = (residual_gap / d['demand']) * 100
+            if gap_pct > peak_gap:
+                peak_gap = gap_pct
+    return round(peak_gap, 1)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COMPRESSED DAY PROFILE
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_compressed_day(demand_norm, supply_profiles, resource_pcts, procurement_pct,
+                           battery_dispatch_pct, ldes_dispatch_pct):
+    """Build compressed day profile for visualization with all 7 resource types."""
+    procurement_factor = procurement_pct / 100.0
+
+    (_, hourly_detail,
+     batt_dispatch_profile, batt_charge_profile,
+     ldes_dispatch_profile, ldes_charge_profile) = compute_hourly_matching_detailed(
+        demand_norm, supply_profiles, resource_pcts, procurement_pct,
+        battery_dispatch_pct, ldes_dispatch_pct
+    )
+
+    demand_sums = [0.0] * 24
+    supply_by_type = {rt: [0.0]*24 for rt in RESOURCE_TYPES}
+    gap_sums = [0.0] * 24
+    surplus_sums = [0.0] * 24
+    batt_dispatch_sums = [0.0] * 24
+    batt_charge_sums = [0.0] * 24
+    ldes_dispatch_sums = [0.0] * 24
+    ldes_charge_sums = [0.0] * 24
+
+    for h in range(H):
+        hod = h % 24
+        d = hourly_detail[h]
+        demand_sums[hod] += d['demand']
+
+        for rtype, pct in resource_pcts.items():
+            if pct <= 0:
+                continue
+            type_supply = procurement_factor * (pct / 100.0) * supply_profiles[rtype][h]
+            supply_by_type[rtype][hod] += type_supply
+
+        batt_dispatch_sums[hod] += batt_dispatch_profile[h]
+        batt_charge_sums[hod] += batt_charge_profile[h]
+        ldes_dispatch_sums[hod] += ldes_dispatch_profile[h]
+        ldes_charge_sums[hod] += ldes_charge_profile[h]
+
+    # Match supply to demand per hour-of-day
+    # Match order: clean_firm, ccs_ccgt, hydro, wind, solar (baseload first, then variable)
+    match_order = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar']
+    cut_order = list(reversed(match_order))  # solar curtailed first
+
+    matched_by_type = {rt: [0.0]*24 for rt in RESOURCE_TYPES}
+    surplus_by_type = {rt: [0.0]*24 for rt in RESOURCE_TYPES}
+    matched_by_type['battery'] = [0.0]*24
+    matched_by_type['ldes'] = [0.0]*24
+
+    for hod in range(24):
+        remaining = demand_sums[hod]
+
+        # Match generation resources
+        for rtype in match_order:
+            avail = supply_by_type[rtype][hod]
+            matched = min(remaining, avail)
+            matched_by_type[rtype][hod] = matched
+            surplus_by_type[rtype][hod] = avail - matched
+            remaining -= matched
+
+        # Battery dispatch fills remaining gap
+        batt_disp = min(remaining, batt_dispatch_sums[hod])
+        matched_by_type['battery'][hod] = batt_disp
+        remaining -= batt_disp
+
+        # LDES dispatch fills further remaining gap
+        ldes_disp = min(remaining, ldes_dispatch_sums[hod])
+        matched_by_type['ldes'][hod] = ldes_disp
+        remaining -= ldes_disp
+
+        gap_sums[hod] = max(0, remaining)
+
+        # Reduce surplus by battery charging
+        rem_charge = batt_charge_sums[hod]
+        for rtype in cut_order:
+            if rem_charge <= 0:
+                break
+            absorb = min(surplus_by_type[rtype][hod], rem_charge)
+            surplus_by_type[rtype][hod] -= absorb
+            rem_charge -= absorb
+
+        # Reduce surplus by LDES charging
+        rem_charge = ldes_charge_sums[hod]
+        for rtype in cut_order:
+            if rem_charge <= 0:
+                break
+            absorb = min(surplus_by_type[rtype][hod], rem_charge)
+            surplus_by_type[rtype][hod] -= absorb
+            rem_charge -= absorb
+
+    # Total surplus per hour-of-day
+    for hod in range(24):
+        surplus_sums[hod] = sum(surplus_by_type[rt][hod] for rt in RESOURCE_TYPES)
+
+    all_match_types = list(RESOURCE_TYPES) + ['battery', 'ldes']
+
+    return {
+        'demand': [round(v, 4) for v in demand_sums],
+        'matched': {rt: [round(v, 4) for v in matched_by_type[rt]] for rt in all_match_types},
+        'surplus': {rt: [round(v, 4) for v in surplus_by_type[rt]] for rt in RESOURCE_TYPES},
+        'gap': [round(v, 4) for v in gap_sums],
+        'battery_charge': [round(v, 4) for v in batt_charge_sums],
+        'ldes_charge': [round(v, 4) for v in ldes_charge_sums],
+        'total_surplus': [round(v, 4) for v in surplus_sums],
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# OPTIMIZATION AT PROCUREMENT LEVEL (for sweep chart)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def optimize_at_procurement_level(iso, demand_norm, supply_profiles, procurement_pct, hydro_cap,
+                                  np_profiles=None):
+    """
+    Find the resource mix that maximizes hourly matching at a given procurement level.
+    Two-phase: coarse (5%) -> fine (1%), then optimize both storage types.
+    """
+    pf = procurement_pct / 100.0
+
+    if np_profiles:
+        demand_arr, _, supply_matrix = np_profiles
+
+        # Coarse search with 10% step for 5D
+        combos = generate_combinations(hydro_cap, step=10)
+        best_score = -1
+        best_combo = None
+
+        for combo in combos:
+            mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
+            score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
+            if score > best_score:
+                best_score = score
+                best_combo = combo
+
+        # Medium refinement (5% step, radius 10)
+        if best_combo:
+            combos_med = generate_combinations_around(best_combo, hydro_cap, step=5, radius=2)
+            for combo in combos_med:
+                mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
+                score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
+                if score > best_score:
+                    best_score = score
+                    best_combo = combo
+
+        # Fine refinement (1% step, radius 3)
+        if best_combo:
+            combos_fine = generate_combinations_around(best_combo, hydro_cap, step=1, radius=3)
+            for combo in combos_fine:
+                mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
+                score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
+                if score > best_score:
+                    best_score = score
+                    best_combo = combo
+
+        # Optimize storage
+        mix_fracs = np.array([best_combo[rt] / 100.0 for rt in RESOURCE_TYPES])
+        best_score_ws, best_batt, best_ldes = find_optimal_storage(
+            demand_arr, supply_matrix, mix_fracs, pf, hydro_cap
+        )
+    else:
+        combos = generate_combinations(hydro_cap, step=10)
+        best_score = -1
+        best_combo = None
+
+        demand_arr = np.array(demand_norm[:H], dtype=np.float64)
+        supply_matrix = np.stack([np.array(supply_profiles[rt][:H], dtype=np.float64) for rt in RESOURCE_TYPES])
+
+        for combo in combos:
+            mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
+            score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
+            if score > best_score:
+                best_score = score
+                best_combo = combo
+
+        if best_combo:
+            combos_fine = generate_combinations_around(best_combo, hydro_cap, step=1, radius=3)
+            for combo in combos_fine:
+                mix_fracs = np.array([combo[rt] / 100.0 for rt in RESOURCE_TYPES])
+                score = fast_hourly_score(demand_arr, supply_matrix, mix_fracs, pf)
+                if score > best_score:
+                    best_score = score
+                    best_combo = combo
+
+        mix_fracs = np.array([best_combo[rt] / 100.0 for rt in RESOURCE_TYPES])
+        best_score_ws, best_batt, best_ldes = find_optimal_storage(
+            demand_arr, supply_matrix, mix_fracs, pf, hydro_cap
+        )
+
+    return {
+        'procurement_pct': procurement_pct,
+        'resource_mix': best_combo,
+        'battery_dispatch_pct': round(best_batt, 1),
+        'ldes_dispatch_pct': round(best_ldes, 1),
+        'hourly_match_score': round(best_score_ws * 100, 1),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# THRESHOLD OPTIMIZATION (3-phase: coarse -> medium -> fine)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_cap,
+                           emission_rates, demand_total_mwh,
+                           cost_levels=None, score_cache=None):
+    """
+    CO-OPTIMIZE cost and matching simultaneously for a given threshold target.
+    Search across procurement levels AND resource mixes to find the CHEAPEST
+    combination that meets or exceeds the threshold.
+
+    3-phase approach adapted for 5D resource space:
+      Phase 1: Coarse scan (10% mix steps, 10% procurement steps)
+      Phase 2: Medium refinement (5% mix steps, 5% procurement steps)
+      Phase 3: Fine-tune (1% mix, 2% procurement, refined storage)
+
+    Args:
+        cost_levels: Optional tuple (renewable_gen_level, firm_gen_level, storage_level,
+                     fossil_fuel_level, transmission_level). If None, uses Medium costs.
+        score_cache: Optional dict for caching matching scores across cost scenarios.
+                     Matching scores are physics-based and cost-independent, so caching
+                     them across cost scenarios is scientifically correct (not a shortcut).
+
+    Returns: best_result dict or None
+    """
+    target = threshold / 100.0
+    # Adaptive procurement bounds per threshold
+    proc_min, proc_max = PROCUREMENT_BOUNDS.get(threshold, (70, 310))
+    storage_threshold = max(0.5, target - 0.10)  # Wider net to catch storage-dependent optima
+    demand_arr, supply_arrs, supply_matrix = prepare_numpy_profiles(demand_norm, supply_profiles)
+
+    if score_cache is None:
+        score_cache = {}
+
+    # ---- Cached scoring wrappers ----
+    # Matching scores are physics (hourly profile alignment) — cost-independent.
+    # Caching them across cost scenarios avoids redundant computation without
+    # compromising scientific rigor.
+
+    def c_hourly_score(mix_fracs_tuple, pf):
+        key = ('h', mix_fracs_tuple, round(pf, 4))
+        if key not in score_cache:
+            score_cache[key] = fast_hourly_score(demand_arr, supply_matrix,
+                                                  np.array(mix_fracs_tuple), pf)
+        return score_cache[key]
+
+    def c_battery_score(mix_fracs_tuple, pf, bp):
+        key = ('b', mix_fracs_tuple, round(pf, 4), bp)
+        if key not in score_cache:
+            score_cache[key] = fast_score_with_battery(demand_arr, supply_matrix,
+                                                        np.array(mix_fracs_tuple), pf, bp)
+        return score_cache[key]
+
+    def c_both_score(mix_fracs_tuple, pf, bp, lp):
+        key = ('bl', mix_fracs_tuple, round(pf, 4), bp, lp)
+        if key not in score_cache:
+            score_cache[key] = fast_score_with_both_storage(demand_arr, supply_matrix,
+                                                              np.array(mix_fracs_tuple), pf, bp, lp)
+        return score_cache[key]
+
+    # ---- Cost function: uses scenario-specific costs ----
+    best_result = None
+    best_cost = float('inf')
+
+    def eval_cost(combo, proc, bp, lp, score):
+        """Evaluate cost using the scenario's cost function. Cost drives mix selection."""
+        if cost_levels:
+            r_gen, f_gen, stor, fuel, tx = cost_levels
+            cost_data = compute_costs_parameterized(
+                iso, combo, proc, bp, lp, score * 100,
+                r_gen, f_gen, stor, fuel, tx
+            )
+            return cost_data['effective_cost']
+        else:
+            cost_data = compute_costs(iso, combo, proc, bp, lp, score * 100,
+                                       demand_norm, supply_profiles)
+            return cost_data['effective_cost_per_useful_mwh']
+
+    def update_best(combo, proc, bp, lp, score):
+        """Update best result if this is the cheapest so far under current cost scenario."""
+        nonlocal best_result, best_cost
+        cost = eval_cost(combo, proc, bp, lp, score)
+        if cost < best_cost:
+            best_cost = cost
+            best_result = {
+                'procurement_pct': proc,
+                'resource_mix': dict(combo),
+                'battery_dispatch_pct': round(bp, 1),
+                'ldes_dispatch_pct': round(lp, 1),
+                'hourly_match_score': round(score * 100, 1),
+            }
+        return cost
+
+    # ---- Phase 1: Coarse scan ----
+    combos_10 = generate_combinations(hydro_cap, step=10)
+    candidates = []
+
+    for procurement_pct in range(proc_min, proc_max + 1, 10):
+        pf = procurement_pct / 100.0
+        for combo in combos_10:
+            mix_fracs = tuple(combo[rt] / 100.0 for rt in RESOURCE_TYPES)
+            score = c_hourly_score(mix_fracs, pf)
+
+            if score >= target:
+                cost = update_best(combo, procurement_pct, 0, 0, score)
+                candidates.append((cost, combo, score, 0, 0, procurement_pct))
+            elif score >= storage_threshold:
+                # Battery only
+                for bp in [5, 10, 15, 20, 25]:
+                    score_ws = c_battery_score(mix_fracs, pf, bp)
+                    if score_ws >= target:
+                        cost = update_best(combo, procurement_pct, bp, 0, score_ws)
+                        candidates.append((cost, combo, score_ws, bp, 0, procurement_pct))
+                        break
+                # LDES only (wind-heavy mixes benefit from multi-day shifting)
+                for lp in [5, 10, 15, 20]:
+                    score_ws = c_both_score(mix_fracs, pf, 0, lp)
+                    if score_ws >= target:
+                        cost = update_best(combo, procurement_pct, 0, lp, score_ws)
+                        candidates.append((cost, combo, score_ws, 0, lp, procurement_pct))
+                        break
+                # Combined battery + LDES
+                for bp in [5, 10, 15, 20]:
+                    for lp in [5, 10, 15, 20]:
+                        score_ws = c_both_score(mix_fracs, pf, bp, lp)
+                        if score_ws >= target:
+                            cost = update_best(combo, procurement_pct, bp, lp, score_ws)
+                            candidates.append((cost, combo, score_ws, bp, lp, procurement_pct))
+                            break
+                    else:
+                        continue
+                    break
+
+    if not candidates:
+        return None
+
+    # Select top candidates for refinement — ranked by THIS scenario's cost function
+    candidates.sort(key=lambda x: x[0])
+    top = [c for c in candidates if c[0] <= best_cost * 1.50][:20]
+
+    # ---- Phase 2: 5% refinement around top candidates ----
+    phase2 = []
+    seen = set()
+    for _, combo, _, bp_base, lp_base, proc in top:
+        for p_d in [-5, 0, 5]:
+            p = proc + p_d
+            if p < proc_min or p > proc_max:
+                continue
+            pf = p / 100.0
+
+            neighborhood = generate_combinations_around(combo, hydro_cap, step=5, radius=1)
+            for rcombo in neighborhood:
+                key = (rcombo['clean_firm'], rcombo['solar'], rcombo['wind'],
+                       rcombo['ccs_ccgt'], rcombo['hydro'], p)
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                mix_fracs = tuple(rcombo[rt] / 100.0 for rt in RESOURCE_TYPES)
+
+                score = c_hourly_score(mix_fracs, pf)
+                best_bp = 0
+                best_lp = 0
+
+                if score < target:
+                    for bp in [5, 10, 15, 20, 25]:
+                        score_ws = c_battery_score(mix_fracs, pf, bp)
+                        if score_ws >= target:
+                            score = score_ws
+                            best_bp = bp
+                            break
+
+                if score < target:
+                    # Try LDES only
+                    for lp in [5, 10, 15, 20]:
+                        score_ws = c_both_score(mix_fracs, pf, 0, lp)
+                        if score_ws >= target:
+                            score = score_ws
+                            best_bp = 0
+                            best_lp = lp
+                            break
+
+                if score < target:
+                    for bp in [5, 10, 15, 20]:
+                        for lp in [5, 10, 15, 20]:
+                            score_ws = c_both_score(mix_fracs, pf, bp, lp)
+                            if score_ws >= target:
+                                score = score_ws
+                                best_bp = bp
+                                best_lp = lp
+                                break
+                        else:
+                            continue
+                        break
+
+                if score >= target:
+                    cost = update_best(rcombo, p, best_bp, best_lp, score)
+                    phase2.append((cost, rcombo, score, best_bp, best_lp, p))
+
+    # ---- Phase 3: Fine-tune (1% mix, 2% procurement, refined storage) ----
+    all_phase2 = phase2 if phase2 else top
+    all_phase2.sort(key=lambda x: x[0])
+    finalists = [c for c in all_phase2 if c[0] <= best_cost * 1.10][:8]
+
+    seen2 = set()
+    for _, combo, _, bp_base, lp_base, proc in finalists:
+        for p_d in range(-2, 3):
+            p = proc + p_d
+            if p < proc_min or p > proc_max:
+                continue
+            pf = p / 100.0
+
+            fine_combos = generate_combinations_around(combo, hydro_cap, step=1, radius=2)
+            for rcombo in fine_combos:
+                key = (rcombo['clean_firm'], rcombo['solar'], rcombo['wind'],
+                       rcombo['ccs_ccgt'], rcombo['hydro'], p)
+                if key in seen2:
+                    continue
+                seen2.add(key)
+
+                mix_fracs = tuple(rcombo[rt] / 100.0 for rt in RESOURCE_TYPES)
+
+                score = c_hourly_score(mix_fracs, pf)
+                best_bp = 0
+                best_lp = 0
+                best_score_here = score
+
+                for bp in range(2, 22, 2):
+                    score_ws = c_battery_score(mix_fracs, pf, bp)
+                    if score_ws > best_score_here:
+                        best_score_here = score_ws
+                        best_bp = bp
+                    if score_ws >= target and best_bp == bp:
+                        break
+
+                if best_score_here < target:
+                    for lp in range(2, 22, 2):
+                        score_ws = c_both_score(mix_fracs, pf, bp, lp)
+                        if score_ws > best_score_here:
+                            best_score_here = score_ws
+                            best_lp = lp
+                        if score_ws >= target and best_lp == lp:
+                            break
+                elif best_score_here >= target:
+                    for lp in range(2, 12, 2):
+                        score_ws = c_both_score(mix_fracs, pf, best_bp, lp)
+                        if score_ws > best_score_here:
+                            best_score_here = score_ws
+                            best_lp = lp
+
+                if best_score_here >= target:
+                    update_best(rcombo, p, best_bp, best_lp, best_score_here)
+
+    return best_result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PER-ISO WORKER (for multiprocessing)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def generate_all_cost_scenarios():
+    """
+    Generate all 324 paired toggle cost scenarios.
+    Returns list of (scenario_key, cost_levels_tuple) pairs.
+    """
+    level_keys = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
+    gen_levels = ['Low', 'Medium', 'High']
+    tx_levels = ['None', 'Low', 'Medium', 'High']
+
+    scenarios = []
+    for renew in gen_levels:
+        for firm in gen_levels:
+            for storage in gen_levels:
+                for fuel in gen_levels:
+                    for tx in tx_levels:
+                        key = f"{level_keys[renew]}{level_keys[firm]}{level_keys[storage]}_{level_keys[fuel]}_{level_keys[tx]}"
+                        levels = (renew, firm, storage, fuel, tx)
+                        scenarios.append((key, levels))
+    return scenarios
+
+
+ALL_COST_SCENARIOS = generate_all_cost_scenarios()
+
+
+def process_iso(args):
+    """
+    Process a single ISO region. Called by multiprocessing pool.
+
+    For each threshold:
+      1. Run full 3-phase co-optimization for all 324 cost scenarios
+      2. Each scenario uses its own cost function → different costs produce different optimal mixes
+      3. Matching cache shared across scenarios within a threshold (physics reuse only)
+      4. Phase 2/3 refinement neighborhoods are cost-driven (different per scenario)
+      5. Monotonicity enforcement: cost(T) <= cost(T+1) for all scenarios
+    """
+    iso, demand_data, gen_profiles, emission_rates = args
+
+    print(f"\n{'='*70}")
+    print(f"  {ISO_LABELS[iso]}")
+    print(f"{'='*70}")
+
+    demand_norm = demand_data[iso]['normalized'][:H]
+    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    hydro_cap = HYDRO_CAPS[iso]
+    anomaly_hours = find_anomaly_hours(iso, gen_profiles)
+    np_profiles = prepare_numpy_profiles(demand_norm, supply_profiles)
+    demand_total_mwh = demand_data[iso]['total_annual_mwh']
+
+    iso_results = {
+        'iso': iso,
+        'label': ISO_LABELS[iso],
+        'annual_demand_mwh': demand_total_mwh,
+        'peak_demand_mw': demand_data[iso]['peak_mw'],
+        'sweep': [],
+        'thresholds': {},
+    }
+
+    # ---- SWEEP: max-matching runs for the sweep chart visualization ----
+    print(f"  Sweep: max-matching at key procurement levels...")
+    sweep_results = {}
+    for proc_pct in list(range(70, 130, 10)) + list(range(140, 520, 20)):
+        result = optimize_at_procurement_level(
+            iso, demand_norm, supply_profiles, proc_pct, hydro_cap,
+            np_profiles=np_profiles
+        )
+        sweep_results[proc_pct] = result
+        score = result['hourly_match_score']
+        print(f"    {proc_pct}%: {score}% match")
+        if score >= 99.95 and proc_pct >= 140:
+            break
+
+    # Build sweep with costs, peak gap, and CO2
+    for p in sorted(sweep_results.keys()):
+        r = sweep_results[p]
+        peak_gap = compute_peak_gap(
+            demand_norm, supply_profiles, r['resource_mix'],
+            r['procurement_pct'], r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
+            anomaly_hours
+        )
+        r['peak_gap_pct'] = peak_gap
+        costs = compute_costs(
+            iso, r['resource_mix'], r['procurement_pct'],
+            r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
+            r['hourly_match_score'],
+            demand_norm, supply_profiles
+        )
+        r['costs'] = costs
+        co2 = compute_co2_abatement(
+            iso, r['resource_mix'], r['procurement_pct'], r['hourly_match_score'],
+            r['battery_dispatch_pct'], r['ldes_dispatch_pct'],
+            emission_rates, demand_total_mwh
+        )
+        r['co2_abated'] = co2
+        iso_results['sweep'].append(r)
+
+    # ---- THRESHOLDS: co-optimize cost + matching for ALL 324 cost scenarios ----
+    print(f"\n  Cost-optimizing thresholds (324 scenarios each)...")
+
+    # No top-down processing: each threshold optimized independently
+    # Monotonicity checked post-hoc (detection only, not enforcement)
+
+    for threshold in THRESHOLDS:
+        t_start = time.time()
+        # Fresh matching cache per threshold — no cross-threshold contamination
+        score_cache = {}
+        threshold_scenarios = {}
+        medium_result = None
+
+        for s_idx, (scenario_key, cost_levels) in enumerate(ALL_COST_SCENARIOS):
+            result = optimize_for_threshold(
+                iso, demand_norm, supply_profiles, threshold, hydro_cap,
+                emission_rates, demand_total_mwh,
+                cost_levels=cost_levels, score_cache=score_cache
+            )
+
+            if result:
+                # Compute cost for this scenario
+                r_gen, f_gen, stor, fuel, tx = cost_levels
+                cost_data = compute_costs_parameterized(
+                    iso, result['resource_mix'], result['procurement_pct'],
+                    result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
+                    result['hourly_match_score'],
+                    r_gen, f_gen, stor, fuel, tx
+                )
+                result['costs'] = cost_data
+
+                threshold_scenarios[scenario_key] = result
+
+                # Track Medium scenario for logging
+                if scenario_key == 'MMM_M_M':
+                    medium_result = result
+
+        # Log Medium scenario progress
+        t_elapsed = time.time() - t_start
+        cache_size = len(score_cache)
+        if medium_result:
+            mix = medium_result['resource_mix']
+            print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
+                  f"cache={cache_size}, {t_elapsed:.1f}s | "
+                  f"Medium: CF{mix['clean_firm']}/Sol{mix['solar']}/Wnd{mix['wind']}"
+                  f"/CCS{mix['ccs_ccgt']}/Hyd{mix['hydro']} "
+                  f"batt={medium_result['battery_dispatch_pct']}% "
+                  f"ldes={medium_result['ldes_dispatch_pct']}%")
+        else:
+            print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
+                  f"cache={cache_size}, {t_elapsed:.1f}s")
+
+        # ── Cross-pollination: evaluate all discovered mixes for all scenarios ──
+        # A mix found optimal for one cost scenario may be cheaper for another
+        unique_results = []
+        seen_mix_keys = set()
+        for sk, res in threshold_scenarios.items():
+            mix = res['resource_mix']
+            mk = (mix['clean_firm'], mix['solar'], mix['wind'],
+                  mix['ccs_ccgt'], mix['hydro'],
+                  res['procurement_pct'],
+                  res['battery_dispatch_pct'],
+                  res['ldes_dispatch_pct'])
+            if mk not in seen_mix_keys:
+                seen_mix_keys.add(mk)
+                unique_results.append(res)
+
+        cross_fixes = 0
+        for scenario_key, cost_levels in ALL_COST_SCENARIOS:
+            r_gen, f_gen, stor, fuel, tx = cost_levels
+            current_cost = float('inf')
+            if scenario_key in threshold_scenarios:
+                current = threshold_scenarios[scenario_key]
+                if 'costs' in current:
+                    current_cost = current['costs']['effective_cost']
+
+            for candidate in unique_results:
+                if candidate['hourly_match_score'] < threshold:
+                    continue
+                cand_cost_data = compute_costs_parameterized(
+                    iso, candidate['resource_mix'], candidate['procurement_pct'],
+                    candidate['battery_dispatch_pct'], candidate['ldes_dispatch_pct'],
+                    candidate['hourly_match_score'],
+                    r_gen, f_gen, stor, fuel, tx
+                )
+                if cand_cost_data['effective_cost'] < current_cost:
+                    threshold_scenarios[scenario_key] = dict(candidate)
+                    threshold_scenarios[scenario_key]['costs'] = cand_cost_data
+                    current_cost = cand_cost_data['effective_cost']
+                    cross_fixes += 1
+
+        if cross_fixes > 0:
+            print(f"      Cross-pollination: {cross_fixes} improvements, "
+                  f"{len(unique_results)} unique mixes evaluated")
+
+        # Store all scenarios for this threshold
+        # Medium result gets full detail (compressed day, peak gap, CO2)
+        medium_key = 'MMM_M_M'
+        if medium_key in threshold_scenarios:
+            med = threshold_scenarios[medium_key]
+            peak_gap = compute_peak_gap(
+                demand_norm, supply_profiles, med['resource_mix'],
+                med['procurement_pct'], med['battery_dispatch_pct'],
+                med['ldes_dispatch_pct'], anomaly_hours
+            )
+            med['peak_gap_pct'] = peak_gap
+
+            # Full costs at Medium
+            full_costs = compute_costs(
+                iso, med['resource_mix'], med['procurement_pct'],
+                med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
+                med['hourly_match_score'],
+                demand_norm, supply_profiles
+            )
+            med['costs_detail'] = full_costs
+
+            co2 = compute_co2_abatement(
+                iso, med['resource_mix'], med['procurement_pct'],
+                med['hourly_match_score'],
+                med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
+                emission_rates, demand_total_mwh
+            )
+            med['co2_abated'] = co2
+
+            cdp = compute_compressed_day(
+                demand_norm, supply_profiles, med['resource_mix'],
+                med['procurement_pct'],
+                med['battery_dispatch_pct'], med['ldes_dispatch_pct']
+            )
+            med['compressed_day'] = cdp
+
+        iso_results['thresholds'][str(threshold)] = {
+            'scenarios': threshold_scenarios,
+            'scenario_count': len(threshold_scenarios),
+        }
+
+    # ---- MONOTONICITY CHECK (detection only, not enforcement) ----
+    # For each cost scenario, verify cost is non-decreasing across thresholds.
+    # Violations indicate the search missed a global optimum at a lower threshold.
+    mono_violations = 0
+    sorted_thresholds = sorted(THRESHOLDS)
+    checked_scenarios = set()
+    for t_idx in range(len(sorted_thresholds)):
+        t_str = str(sorted_thresholds[t_idx])
+        if t_str not in iso_results['thresholds']:
+            continue
+        for sk in iso_results['thresholds'][t_str]['scenarios']:
+            checked_scenarios.add(sk)
+
+    for scenario_key in checked_scenarios:
+        prev_cost = None
+        prev_t = None
+        for threshold in sorted_thresholds:
+            t_str = str(threshold)
+            if t_str not in iso_results['thresholds']:
+                continue
+            scenarios = iso_results['thresholds'][t_str]['scenarios']
+            if scenario_key not in scenarios:
+                continue
+            result = scenarios[scenario_key]
+            if 'costs' not in result:
+                continue
+            cost = result['costs']['effective_cost']
+            if prev_cost is not None and cost < prev_cost - 0.01:
+                mono_violations += 1
+                if mono_violations <= 5:
+                    print(f"  WARNING: Monotonicity violation: {scenario_key} "
+                          f"{prev_t}%=${prev_cost:.1f} > {threshold}%=${cost:.1f}")
+            prev_cost = cost
+            prev_t = threshold
+
+    if mono_violations > 0:
+        print(f"  WARNING: {mono_violations} monotonicity violations detected "
+              f"(search may have missed global optima at lower thresholds)")
+    else:
+        print(f"  Monotonicity check passed for all scenarios")
+
+    return iso, iso_results
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════════════════════════════
+
 def main():
     start_time = time.time()
-    demand_data, gen_profiles = load_data()
+    demand_data, gen_profiles, emission_rates, fossil_mix = load_data()
+
+    # Build config section with ALL cost tables for dashboard recalculation
+    config = {
+        'data_year': DATA_YEAR,
+        'battery_duration': '4h',
+        'battery_efficiency': BATTERY_EFFICIENCY,
+        'ldes_duration': '100h',
+        'ldes_efficiency': LDES_EFFICIENCY,
+        'ldes_window_days': LDES_WINDOW_DAYS,
+        'hydro_caps': HYDRO_CAPS,
+        'resource_types': RESOURCE_TYPES,
+        'thresholds': THRESHOLDS,
+        'procurement_bounds': {str(k): list(v) for k, v in PROCUREMENT_BOUNDS.items()},
+        'total_scenarios_per_threshold': len(ALL_COST_SCENARIOS),
+        'wholesale_prices': WHOLESALE_PRICES,
+        'regional_lcoe': REGIONAL_LCOE,
+        'grid_mix_shares': GRID_MIX_SHARES,
+        'ccs_residual_emission_rate': CCS_RESIDUAL_EMISSION_RATE,
+        # Paired toggle group definitions for dashboard controls
+        'paired_toggle_groups': PAIRED_TOGGLE_GROUPS,
+        # Full L/M/H tables for dashboard cost recalculation
+        'lcoe_tables': FULL_LCOE_TABLES,
+        'transmission_tables': FULL_TRANSMISSION_TABLES,
+        'fuel_prices': FUEL_PRICES,
+        # Emission rates from eGRID (for CO2 calculations)
+        'emission_rates': {
+            iso: {
+                'fossil_co2_lb_per_mwh': emission_rates[iso]['fossil_co2_lb_per_mwh'],
+                'gas_co2_lb_per_mwh': emission_rates[iso]['gas_co2_lb_per_mwh'],
+                'coal_co2_lb_per_mwh': emission_rates[iso]['coal_co2_lb_per_mwh'],
+                'oil_co2_lb_per_mwh': emission_rates[iso]['oil_co2_lb_per_mwh'],
+                'total_co2_lb_per_mwh': emission_rates[iso]['total_co2_lb_per_mwh'],
+            }
+            for iso in ISOS
+        },
+        # Grid mix shares for baseline display
+        'grid_mix_shares_display': GRID_MIX_SHARES,
+        # Regional fossil fuel mix shares (for fuel price sensitivity)
+        'fossil_mix': {
+            iso: {
+                'coal_share': fossil_mix[iso][DATA_YEAR]['coal_share'][:24] if DATA_YEAR in fossil_mix.get(iso, {}) else [],
+                'gas_share': fossil_mix[iso][DATA_YEAR]['gas_share'][:24] if DATA_YEAR in fossil_mix.get(iso, {}) else [],
+                'oil_share': fossil_mix[iso][DATA_YEAR]['oil_share'][:24] if DATA_YEAR in fossil_mix.get(iso, {}) else [],
+            }
+            for iso in ISOS
+        },
+    }
 
     all_results = {
-        'config': {
-            'data_year': DATA_YEAR,
-            'storage_duration': '4h',
-            'storage_efficiency': STORAGE_EFFICIENCY,
-            'hydro_caps': HYDRO_CAPS,
-            'resource_types': RESOURCE_TYPES,
-            'thresholds': THRESHOLDS,
-            'wholesale_prices': WHOLESALE_PRICES,
-            'regional_lcoe': REGIONAL_LCOE,
-            'grid_mix_shares': GRID_MIX_SHARES,
-        },
+        'config': config,
         'results': {},
     }
 
-    for iso in ISOS:
-        print(f"\n{'='*70}")
-        print(f"  {ISO_LABELS[iso]}")
-        print(f"{'='*70}")
+    # Run all 5 ISOs concurrently using multiprocessing
+    worker_args = [
+        (iso, demand_data, gen_profiles, emission_rates)
+        for iso in ISOS
+    ]
 
-        demand_norm = demand_data[iso]['normalized']
-        supply_profiles = get_supply_profiles(iso, gen_profiles)
-        hydro_cap = HYDRO_CAPS[iso]
-        anomaly_hours = find_anomaly_hours(iso, gen_profiles)
-        np_profiles = prepare_numpy_profiles(demand_norm, supply_profiles)
+    try:
+        with Pool(processes=min(5, len(ISOS))) as pool:
+            results_list = pool.map(process_iso, worker_args)
 
-        iso_results = {
-            'iso': iso,
-            'label': ISO_LABELS[iso],
-            'annual_demand_mwh': demand_data[iso]['total_annual_mwh'],
-            'peak_demand_mw': demand_data[iso]['peak_mw'],
-            'sweep': [],  # All procurement levels tested
-            'thresholds': {},  # Results at each target threshold
-        }
+        for iso, iso_results in results_list:
+            all_results['results'][iso] = iso_results
+    except Exception as e:
+        # Fallback to sequential if multiprocessing fails (e.g., in some environments)
+        print(f"\n  Multiprocessing failed ({e}), falling back to sequential...")
+        for args in worker_args:
+            iso, iso_results = process_iso(args)
+            all_results['results'][iso] = iso_results
 
-        # ── SWEEP: max-matching runs for the sweep chart visualization ──
-        print(f"  Sweep: max-matching at key procurement levels...")
-        sweep_results = {}
-        for proc_pct in list(range(70, 130, 10)) + list(range(140, 520, 20)):
-            result = optimize_at_procurement_level(
-                iso, demand_norm, supply_profiles, proc_pct, hydro_cap,
-                np_profiles=np_profiles
-            )
-            sweep_results[proc_pct] = result
-            score = result['hourly_match_score']
-            print(f"    {proc_pct}%: {score}% match")
-            if score >= 99.95 and proc_pct >= 140:
-                break  # No need to go further
-
-        # Build sweep with costs and peak gap
-        for p in sorted(sweep_results.keys()):
-            r = sweep_results[p]
-            peak_gap = compute_peak_gap(
-                demand_norm, supply_profiles, r['resource_mix'],
-                r['procurement_pct'], r['storage_dispatch_pct'], anomaly_hours
-            )
-            r['peak_gap_pct'] = peak_gap
-            costs = compute_costs(
-                iso, r['resource_mix'], r['procurement_pct'],
-                r['storage_dispatch_pct'], r['hourly_match_score'],
-                demand_norm, supply_profiles
-            )
-            r['costs'] = costs
-            iso_results['sweep'].append(r)
-
-        # ── THRESHOLDS: co-optimize cost + matching for each target ──
-        print(f"\n  Cost-optimizing thresholds...")
-        for threshold in THRESHOLDS:
-            print(f"    Target {threshold}%...")
-            result = optimize_for_threshold(
-                iso, demand_norm, supply_profiles, threshold, hydro_cap
-            )
-            if result:
-                # Compute peak gap and costs
-                peak_gap = compute_peak_gap(
-                    demand_norm, supply_profiles, result['resource_mix'],
-                    result['procurement_pct'], result['storage_dispatch_pct'], anomaly_hours
-                )
-                result['peak_gap_pct'] = peak_gap
-                costs = compute_costs(
-                    iso, result['resource_mix'], result['procurement_pct'],
-                    result['storage_dispatch_pct'], result['hourly_match_score'],
-                    demand_norm, supply_profiles
-                )
-                result['costs'] = costs
-
-                # Generate compressed day
-                cdp = compute_compressed_day(
-                    demand_norm, supply_profiles, result['resource_mix'],
-                    result['procurement_pct'], result['storage_dispatch_pct']
-                )
-                iso_results['thresholds'][str(threshold)] = {
-                    **result,
-                    'compressed_day': cdp,
-                }
-                cost_info = result['costs']
-                mix = result['resource_mix']
-                print(f"      => procurement={result['procurement_pct']}%, "
-                      f"score={result['hourly_match_score']}%, "
-                      f"mix=CF{mix['clean_firm']}/Sol{mix['solar']}/Wnd{mix['wind']}/Hyd{mix['hydro']} "
-                      f"cost=${cost_info['effective_cost_per_useful_mwh']}/MWh "
-                      f"(+${cost_info['incremental_above_baseline']}/MWh)")
-            else:
-                print(f"      => No feasible solution found for {threshold}%")
-
-        all_results['results'][iso] = iso_results
-
-    # Save results
-    output_path = os.path.join(os.path.dirname(__file__), 'dashboard', 'overprocure_results.json')
+    # Save results (dashboard consumption)
+    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard', 'overprocure_results.json')
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, 'w') as f:
         json.dump(all_results, f)
+
+    # Save cached results file (reusable input for future projects)
+    cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'optimizer_cache.json')
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    try:
+        import subprocess
+        git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                           cwd=os.path.dirname(os.path.abspath(__file__)),
+                                           stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        git_hash = 'unknown'
+
+    from datetime import datetime, timezone
+    cache_data = {
+        'metadata': {
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'optimizer_version': '3.0-paired-toggles',
+            'git_commit': git_hash,
+            'runtime_seconds': round(time.time() - start_time, 1),
+            'description': 'Full co-optimized results: 10 thresholds x 324 paired-toggle scenarios x 5 ISOs',
+            'thresholds': THRESHOLDS,
+            'isos': ISOS,
+            'scenarios_per_threshold': len(ALL_COST_SCENARIOS),
+            'total_optimizations': len(THRESHOLDS) * len(ALL_COST_SCENARIOS) * len(ISOS),
+        },
+        'config': config,
+        'results': all_results['results'],
+    }
+    with open(cache_path, 'w') as f:
+        json.dump(cache_data, f, indent=2)
+    print(f"  Cached results: {cache_path} ({os.path.getsize(cache_path) / 1024:.0f} KB)")
 
     elapsed = time.time() - start_time
     print(f"\n{'='*70}")
