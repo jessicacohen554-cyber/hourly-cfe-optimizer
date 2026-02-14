@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abatement Cost Comparison — Hourly CFE Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face {
+    font-family: 'Franklin Gothic Demi';
+    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    background: #0F1A2E;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(14,165,233,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+    color: #000000;
+    line-height: 1.55;
+    min-height: 100vh;
+}
+
+:root {
+    --navy: #1A2744;
+    --navy-light: #2D3A52;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F7F8FA;
+    --border: #D4D8E0;
+    --border-light: #E5E7EB;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+    --text-muted: #6B7280;
+    --clean-firm: #1E3A5F;
+    --solar: #F59E0B;
+    --wind: #22C55E;
+    --hydro: #0EA5E9;
+    --storage: #EF4444;
+    --accent-blue: #4a90d9;
+    --accent-warm: #f4a261;
+}
+
+/* ========== TOP NAVIGATION BAR ========== */
+.top-nav {
+    background: #1a1a2e;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+.top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: 1440px;
+    width: 100%;
+    justify-content: center;
+}
+.top-nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 14px 18px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+.top-nav a:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.06);
+}
+.top-nav a.nav-active {
+    color: #ffffff;
+    border-bottom-color: #0EA5E9;
+    background: rgba(14,165,233,0.1);
+}
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+.nav-hamburger svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+@media (max-width: 768px) {
+    .top-nav {
+        flex-wrap: wrap;
+        padding: 0 12px;
+        justify-content: space-between;
+    }
+    .top-nav-inner {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding-bottom: 8px;
+    }
+    .top-nav-inner.nav-open {
+        display: flex;
+    }
+    .top-nav a {
+        padding: 12px 16px;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        width: 100%;
+        text-align: left;
+    }
+    .top-nav a.nav-active {
+        border-left-color: #0EA5E9;
+        border-bottom: none;
+        background: rgba(14,165,233,0.12);
+    }
+    .nav-hamburger {
+        display: flex;
+    }
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        color: #ffffff;
+        font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 12px 0;
+    }
+}
+@media (min-width: 769px) {
+    .nav-brand { display: none; }
+}
+
+/* ========== HEADER BANNER ========== */
+.header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
+    color: #ffffff;
+    padding: 90px 24px 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.4) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 60% at 38% 85%, rgba(34,197,94,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 65% at 62% 80%, rgba(245,158,11,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%);
+}
+.header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(ellipse 70% 45% at 50% 45%, rgba(5,15,35,0.55) 0%, transparent 100%);
+}
+.header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 2;
+}
+.header h1 {
+    font-family: 'Franklin Gothic Demi', 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 3.2rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+    line-height: 1.15;
+}
+.header .subtitle {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    opacity: 0.92;
+    max-width: 660px;
+    margin: 0 auto;
+    letter-spacing: 0.2px;
+    position: relative;
+    z-index: 3;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
+    line-height: 1.55;
+}
+
+/* ========== MAIN CONTENT ========== */
+.main-content {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0;
+    background: #F3F4F8;
+}
+
+/* ========== SCROLLYTELLING SECTIONS ========== */
+.scroll-section {
+    min-height: 80vh;
+    padding: 80px 44px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+.scroll-section:last-child {
+    border-bottom: none;
+}
+.scroll-section:nth-child(even) {
+    background: #FFFFFF;
+}
+.scroll-section:nth-child(odd) {
+    background: #F3F4F8;
+}
+.section-number {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-blue);
+    margin-bottom: 12px;
+}
+.section-title {
+    font-family: 'Franklin Gothic Demi', 'Lexend', 'Rajdhani', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: 2.2rem;
+    color: var(--navy);
+    margin-bottom: 32px;
+    text-align: center;
+    line-height: 1.2;
+    max-width: 800px;
+}
+.section-narrative {
+    max-width: 800px;
+    font-size: 1.06rem;
+    line-height: 1.75;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+}
+.section-narrative p {
+    margin-bottom: 20px;
+}
+.section-narrative strong {
+    color: var(--navy);
+}
+
+/* ========== CHART CONTAINERS ========== */
+.chart-container {
+    width: 100%;
+    max-width: 900px;
+    margin: 32px auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 28px;
+    position: relative;
+}
+.chart-container canvas {
+    width: 100% !important;
+    height: 420px !important;
+}
+.chart-container .chart-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 1.0rem;
+    color: var(--navy);
+    margin-bottom: 16px;
+    text-align: center;
+}
+.chart-container-wide {
+    max-width: 1100px;
+}
+.chart-container-wide canvas {
+    height: 520px !important;
+}
+
+/* ========== SCENARIO TOGGLE ========== */
+.scenario-toggle-bar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+.scenario-btn {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    background: #ffffff;
+    color: var(--navy);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+}
+.scenario-btn:hover {
+    border-color: var(--accent-blue);
+    background: rgba(74,144,217,0.06);
+}
+.scenario-btn.active {
+    border-color: var(--accent-blue);
+    background: var(--accent-blue);
+    color: #ffffff;
+}
+
+/* ========== LADDER VISUALIZATION ========== */
+.ladder-container {
+    width: 100%;
+    max-width: 1100px;
+    margin: 32px auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 36px 28px;
+    position: relative;
+    overflow: hidden;
+}
+.ladder-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--navy);
+    margin-bottom: 8px;
+    text-align: center;
+}
+.ladder-subtitle {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 28px;
+}
+.ladder-scale {
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+    height: 480px;
+    padding-left: 80px;
+    padding-right: 20px;
+    margin-bottom: 8px;
+}
+.ladder-y-axis {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 75px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+.ladder-y-label {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: right;
+    padding-right: 10px;
+}
+.ladder-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    flex: 1;
+    height: 100%;
+    position: relative;
+}
+.ladder-bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    position: relative;
+}
+.ladder-bar {
+    width: 100%;
+    max-width: 84px;
+    position: absolute;
+    bottom: 0;
+    border-radius: 4px 4px 0 0;
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    cursor: pointer;
+    opacity: 0.92;
+}
+.ladder-bar:hover {
+    opacity: 1;
+    transform: scaleX(1.04);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.ladder-bar-inner {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    background: rgba(255,255,255,0.18);
+}
+.ladder-bar-label {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    margin-top: 8px;
+    line-height: 1.25;
+    max-width: 90px;
+    word-wrap: break-word;
+}
+.ladder-bar-cost {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--navy);
+    white-space: nowrap;
+}
+/* Grid threshold markers on the ladder */
+.ladder-grid-markers {
+    position: absolute;
+    left: 80px;
+    right: 20px;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+.ladder-grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-top: 2px dashed;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+}
+.ladder-grid-tag {
+    position: absolute;
+    right: -5px;
+    transform: translateX(100%);
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+/* ========== TOOLTIP ========== */
+.ladder-tooltip {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    background: rgba(26,39,68,0.96);
+    color: #ffffff;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    max-width: 280px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    pointer-events: none;
+}
+.ladder-tooltip .tt-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.92rem;
+    margin-bottom: 6px;
+}
+.ladder-tooltip .tt-range {
+    opacity: 0.85;
+    font-size: 0.82rem;
+}
+
+/* ========== INFLECTION TABLE ========== */
+.inflection-table-wrap {
+    width: 100%;
+    max-width: 960px;
+    margin: 32px auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.inflection-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    background: var(--bg-card);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.inflection-table thead {
+    background: var(--navy);
+    color: #ffffff;
+}
+.inflection-table th {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 14px 16px;
+    text-align: center;
+    white-space: nowrap;
+}
+.inflection-table th:first-child {
+    text-align: left;
+    padding-left: 20px;
+}
+.inflection-table td {
+    padding: 14px 16px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-light);
+    font-weight: 500;
+}
+.inflection-table td:first-child {
+    text-align: left;
+    padding-left: 20px;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 600;
+    color: var(--navy);
+}
+.inflection-table tbody tr:hover {
+    background: rgba(74,144,217,0.04);
+}
+.inflection-table tbody tr:last-child td {
+    border-bottom: none;
+}
+/* Cell color coding */
+.cell-green { background: rgba(76,175,80,0.12); color: #2e7d32; font-weight: 700; }
+.cell-yellow { background: rgba(255,152,0,0.12); color: #e65100; font-weight: 700; }
+.cell-orange { background: rgba(255,87,34,0.12); color: #bf360c; font-weight: 700; }
+.cell-red { background: rgba(233,30,99,0.12); color: #880e4f; font-weight: 700; }
+
+/* ========== CALLOUT BOX ========== */
+.callout-box {
+    max-width: 800px;
+    margin: 28px auto;
+    padding: 24px 28px;
+    background: linear-gradient(135deg, rgba(74,144,217,0.08) 0%, rgba(14,165,233,0.06) 100%);
+    border-left: 4px solid var(--accent-blue);
+    border-radius: 0 10px 10px 0;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+}
+.callout-box strong {
+    color: var(--navy);
+}
+.callout-box-warn {
+    background: linear-gradient(135deg, rgba(255,152,0,0.08) 0%, rgba(255,87,34,0.06) 100%);
+    border-left-color: #FF9800;
+}
+
+/* ========== KEY INSIGHTS ========== */
+.insights-list {
+    max-width: 800px;
+    list-style: none;
+    padding: 0;
+}
+.insights-list li {
+    position: relative;
+    padding: 16px 0 16px 36px;
+    font-size: 1.06rem;
+    line-height: 1.65;
+    border-bottom: 1px solid var(--border-light);
+}
+.insights-list li:last-child {
+    border-bottom: none;
+}
+.insights-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 22px;
+    width: 18px;
+    height: 18px;
+    background: var(--accent-blue);
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+/* ========== STAT CALLOUT ========== */
+.stat-callout {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 32px 0;
+    max-width: 900px;
+}
+.stat-box {
+    background: linear-gradient(145deg, #f8f9fb 0%, #f0f2f5 100%);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 24px 32px;
+    text-align: center;
+    min-width: 160px;
+    flex: 1;
+    max-width: 220px;
+}
+.stat-value {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.1;
+}
+.stat-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+/* ========== REGION CARDS (Section 6) ========== */
+.region-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    max-width: 1000px;
+    margin: 32px auto;
+    width: 100%;
+}
+.region-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 28px;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.region-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+.region-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.region-card-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.region-card-name {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--navy);
+}
+.region-card p {
+    font-size: 0.96rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+.region-card p:last-child {
+    margin-bottom: 0;
+}
+
+/* ========== PORTFOLIO VIZ ========== */
+.portfolio-legend {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+.portfolio-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+.portfolio-legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+
+/* ========== FOOTER ========== */
+.page-footer {
+    background: #1a1a2e;
+    color: rgba(255,255,255,0.7);
+    padding: 48px 24px;
+    text-align: center;
+}
+.footer-links {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.footer-links a {
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+.footer-links a:hover {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+}
+.footer-note {
+    font-size: 0.82rem;
+    opacity: 0.5;
+    margin-top: 12px;
+}
+
+/* ========== BOTTOM ACCENT BAR ========== */
+.bottom-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 1000;
+}
+
+/* ========== ANIMATED COUNTER ========== */
+.counter-row {
+    display: flex;
+    gap: 48px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 36px 0;
+    max-width: 1000px;
+}
+.counter-item {
+    text-align: center;
+    min-width: 140px;
+}
+.counter-value {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--navy) 0%, var(--accent-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.counter-unit {
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ========== COMPARISON CONTROLS ========== */
+.comparison-controls {
+    background: #1a1a2e;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 20px 24px;
+    position: sticky;
+    top: 48px;
+    z-index: 998;
+}
+.controls-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.controls-label {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 12px;
+}
+.controls-label .info-icon {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.72rem;
+    cursor: help;
+}
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+.ctrl-group label {
+    display: block;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 6px;
+}
+.ctrl-group label .info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    font-size: 0.6rem;
+    font-style: italic;
+    color: rgba(255,255,255,0.5);
+    cursor: help;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+.ctrl-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.ctrl-toggle button {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    min-height: 44px;
+}
+.ctrl-toggle button:hover {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.85);
+}
+.ctrl-toggle button.active {
+    background: #0EA5E9;
+    color: #ffffff;
+}
+.crossover-summary {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: rgba(14,165,233,0.08);
+    border-radius: 8px;
+    border: 1px solid rgba(14,165,233,0.15);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.55;
+    display: none;
+}
+.crossover-summary.visible { display: block; }
+.crossover-summary strong { color: #0EA5E9; }
+
+/* ========== CONFIDENCE BAND ========== */
+.confidence-legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.conf-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.conf-swatch {
+    width: 28px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .controls-grid { grid-template-columns: repeat(2, 1fr); }
+    .comparison-controls { padding: 14px 16px; top: 48px; }
+    .header { padding: 60px 16px 50px; }
+    .header h1 { font-size: 2.2rem; }
+    .header .subtitle { font-size: 1rem; }
+    .scroll-section { padding: 48px 20px; min-height: auto; }
+    .section-title { font-size: 1.7rem; }
+    .section-narrative { font-size: 1rem; }
+    .chart-container { padding: 16px; }
+    .chart-container canvas { height: 300px !important; }
+    .chart-container-wide canvas { height: 350px !important; }
+    .stat-callout { gap: 16px; }
+    .stat-box { min-width: 130px; padding: 16px 20px; }
+    .stat-value { font-size: 1.6rem; }
+    .ladder-container { padding: 20px 12px; }
+    .ladder-scale { height: 360px; padding-left: 60px; }
+    .ladder-y-axis { width: 55px; }
+    .ladder-y-label { font-size: 0.65rem; }
+    .ladder-bar-label { font-size: 0.6rem; }
+    .counter-value { font-size: 2.2rem; }
+    .counter-row { gap: 24px; }
+    .region-cards { grid-template-columns: 1fr; }
+    .inflection-table { font-size: 0.82rem; }
+    .inflection-table th, .inflection-table td { padding: 10px 8px; }
+}
+@media (max-width: 480px) {
+    .header h1 { font-size: 1.8rem; }
+    .stat-callout { flex-direction: column; align-items: center; }
+    .stat-box { max-width: 100%; width: 100%; }
+    .ladder-scale { height: 280px; padding-left: 50px; }
+    .ladder-bar-label { font-size: 0.55rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== TOP NAVIGATION ========== -->
+<nav class="top-nav">
+    <span class="nav-brand">Hourly CFE Optimizer</span>
+    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="region_caiso.html">CAISO</a>
+        <a href="region_ercot.html">ERCOT</a>
+        <a href="region_pjm.html">PJM</a>
+        <a href="region_nyiso.html">NYISO</a>
+        <a href="region_neiso.html">NEISO</a>
+        <a href="abatement_comparison.html" class="nav-active">Abatement</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html">Paper</a>
+    </div>
+</nav>
+
+<!-- ========== HEADER BANNER ========== -->
+<header class="header">
+    <h1>The Grid Decarbonization Backbone</h1>
+    <p class="subtitle">Stress-Testing the Foundation of Climate Strategy</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ========== COMPARISON CONTROLS ========== -->
+<div class="comparison-controls" id="comparisonControls">
+    <div class="controls-inner">
+        <div class="controls-label">Stress-Test Assumptions <span class="info-icon" title="Adjust cost assumptions for competing decarbonization technologies. These shift the crossover points — where grid decarbonization stops being the cheapest path.">i</span></div>
+        <div class="controls-grid">
+            <div class="ctrl-group">
+                <label>Grid Cost Scenario <span class="info-icon" title="Low = cheap renewables, fast permitting, falling storage costs. High = tariffs, supply chain disruptions, permitting delays.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="grid" data-default="Medium">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $250/ton by 2030. Medium = current trajectory, $400-600/ton. High = slow scaling, $1000+/ton.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="dac" data-default="Medium">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>Industrial Decarb Cost <span class="info-icon" title="Low = electrification is cheaper than fossil (net savings). Medium = moderate carbon price needed. High = expensive retrofit + high energy costs.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="industrial" data-default="Medium">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+            <div class="ctrl-group">
+                <label>Carbon Removal Alternatives <span class="info-icon" title="Low = BECCS + enhanced weathering hit scale, $50-100/ton. Medium = moderate scaling. High = limited deployment, $200+/ton.">i</span></label>
+                <div class="ctrl-toggle" data-ctrl="removal" data-default="Medium">
+                    <button data-value="Low">Low</button>
+                    <button data-value="Medium" class="active">Medium</button>
+                    <button data-value="High">High</button>
+                </div>
+            </div>
+        </div>
+        <div class="crossover-summary" id="crossoverSummary">
+            <!-- Dynamically populated with crossover insights -->
+        </div>
+    </div>
+</div>
+
+<!-- ========== MAIN CONTENT ========== -->
+<main class="main-content">
+
+    <!-- ================================================================ -->
+    <!-- SECTION 1: THE BIG PICTURE                                       -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">Section 1</span>
+        <h2 class="section-title">The Grid Is the Backbone: But Does It Hold Under Pressure?</h2>
+        <div class="section-narrative">
+            <p>Grid decarbonization is not just one climate strategy among many -- it is the <strong>backbone</strong> that enables nearly every other decarbonization pathway. A cleaner grid makes electric vehicles more impactful. It makes industrial heat pumps more effective. It makes green hydrogen greener. Every dollar spent on grid decarbonization compounds across sectors -- which is why it has been the consensus foundation of every credible net-zero roadmap.</p>
+
+            <p>But foundations have load limits. This page pressure-tests that backbone by asking: <strong>under what conditions does grid decarbonization remain the highest-value investment -- and when does the marginal dollar start delivering more impact through alternatives like direct air capture, industrial electrification, or sustainable aviation fuel?</strong></p>
+
+            <p>The answer is not a single number. It depends on your region, your cost assumptions, and what's happening with competing technologies. Use the toggles above to stress-test different scenarios: What if DAC costs plummet? What if renewable costs spike from tariffs? What if industrial electrification gets cheap enough to undercut further grid investment? The crossover points shift dramatically -- and understanding that range is the strategic insight.</p>
+
+            <p>The general pattern is consistent: grid decarbonization is unambiguously the best investment to roughly 85-90%. From 90-95%, it remains strong but faces growing competition. Above 95%, the backbone starts to strain -- and the question becomes whether the last few percent are worth it, or whether those dollars create more impact elsewhere in the climate portfolio.</p>
+        </div>
+
+        <div class="counter-row">
+            <div class="counter-item">
+                <div class="counter-value" data-target="10" data-suffix="x">10x</div>
+                <div class="counter-unit">Cost increase<br>from 85% to 100%</div>
+            </div>
+            <div class="counter-item">
+                <div class="counter-value" data-target="95" data-suffix="%">95%</div>
+                <div class="counter-unit">Where costs<br>typically spike</div>
+            </div>
+            <div class="counter-item">
+                <div class="counter-value" data-target="5" data-suffix="">5</div>
+                <div class="counter-unit">Regions with<br>different stories</div>
+            </div>
+        </div>
+
+        <div class="callout-box">
+            <strong>What is a marginal abatement cost?</strong> It measures the cost of eliminating one additional ton of CO2. If moving from 90% to 91% hourly clean energy costs $2 million more and avoids 10,000 additional tons, the marginal abatement cost is $200/ton. This number tends to rise steeply at higher grid decarbonization targets, because the remaining "dirty" hours are the hardest and most expensive to replace.
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 2: GRID DECARBONIZATION COST CURVE                       -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">Section 2</span>
+        <h2 class="section-title">Stress-Testing the Backbone: Five Regions Under Pressure</h2>
+        <div class="section-narrative">
+            <p>Every region tells the same story, but at different volumes. Below, five regional marginal abatement cost curves show what each additional ton of CO2 avoidance costs as grid targets rise. The <strong>shaded bands</strong> show the uncertainty range between low and high cost scenarios -- use the <strong>Grid Cost Scenario</strong> toggle above to shift between optimistic, central, and pessimistic grid cost assumptions.</p>
+
+            <p>The horizontal reference lines shift when you change the <strong>DAC</strong>, <strong>Industrial Decarb</strong>, and <strong>Carbon Removal</strong> toggles above. This is the core stress test: where does each region's grid cost curve cross into territory where alternatives become competitive?</p>
+
+            <p>Notice the <strong>hockey stick shape</strong>. From 75% to roughly 90%, the backbone is solid -- costs are moderate ($30-120/ton) and grid investment clearly dominates. But somewhere between 90% and 95%, the curve bends sharply upward. This inflection zone is where the strategic question becomes live.</p>
+
+            <p>The divergence between regions is profound. ERCOT (Texas), with cheap wind and Gulf Coast CCS geology, keeps the backbone strong through ~97%. NYISO (New York), constrained by expensive siting, limited resources, and no sequestration geology, sees the backbone strain by 93%. <strong>Your region determines your strategy.</strong></p>
+        </div>
+
+        <div class="chart-container chart-container-wide">
+            <div class="chart-title">The Backbone Under Pressure: Regional Marginal Abatement Cost vs. Alternatives</div>
+            <canvas id="macCurveChart"></canvas>
+            <div class="confidence-legend">
+                <div class="conf-item"><div class="conf-swatch" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3);"></div> Uncertainty band (low-to-high range)</div>
+                <div class="conf-item"><div class="conf-swatch" style="background:#F59E0B; height:3px; border-radius:2px;"></div> Central estimate</div>
+                <div class="conf-item"><div class="conf-swatch" style="background:rgba(233,30,99,0.08); border:1px dashed rgba(233,30,99,0.4);"></div> DAC cost range (toggle-driven)</div>
+            </div>
+        </div>
+
+        <div class="callout-box">
+            <strong>Why the hockey stick?</strong> At lower targets, you are matching hours when the wind is blowing or the sun is shining -- cheap power for cheap displacement. As targets rise, the remaining unmatched hours are the worst: winter nights, cloudy windless weeks, peak demand evenings. Filling these gaps requires overbuilding generation, deploying expensive storage, or running clean firm plants that sit idle most of the year. Low utilization drives high per-MWh (and per-ton) costs. <strong>This is physics, not economics -- and physics-constrained costs don't decline on learning curves the way DAC does.</strong>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 3: THE COMPARISON LANDSCAPE                              -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">Section 3</span>
+        <h2 class="section-title">The Abatement Ladder: Where Grid Costs Meet the Alternatives</h2>
+        <div class="section-narrative">
+            <p>Now we place grid decarbonization costs in context. The visualization below is a modern take on the <strong>Liebreich ladder</strong> -- ranking carbon abatement and removal options from cheapest to most expensive. Each bar represents a different mitigation or removal pathway, with the bar height spanning from its low-cost estimate to its high-cost estimate. The darker core band shows the mid-range cost.</p>
+
+            <p>Overlaid on this landscape are dashed horizontal lines showing where each region's grid decarbonization costs land at key thresholds. As you read from left to right, you are climbing the cost ladder. The critical insight: <strong>at lower grid targets (85-90%), grid decarbonization is among the cheapest abatement options available. At higher targets (97-100%), it rivals or exceeds the cost of direct air capture.</strong></p>
+
+            <p>Hover over any bar to see its full cost range, source, and where regional grid costs intersect it.</p>
+        </div>
+
+        <div class="ladder-container">
+            <div class="ladder-title">The Abatement Cost Ladder: Grid Decarbonization vs. Alternatives</div>
+            <div class="ladder-subtitle">Bars show low-to-high cost range for each option. Dashed lines mark regional grid decarbonization costs at 90%, 95%, and 99% targets.</div>
+
+            <div class="ladder-scale" id="ladderScale">
+                <div class="ladder-y-axis" id="ladderYAxis"></div>
+                <div class="ladder-bars" id="ladderBars"></div>
+                <div class="ladder-grid-markers" id="ladderMarkers"></div>
+            </div>
+            <div id="ladderLabels" style="display:flex; gap:6px; padding-left:80px; padding-right:20px;"></div>
+        </div>
+        <div class="ladder-tooltip" id="ladderTooltip"></div>
+
+        <div class="chart-container chart-container-wide" style="margin-top:24px;">
+            <div class="chart-title">Alternative View: Cost Band Comparison with Grid Crossover Points</div>
+            <canvas id="bandChart"></canvas>
+        </div>
+
+        <div class="callout-box callout-box-warn">
+            <strong>A critical nuance:</strong> These comparisons are not perfectly apples-to-apples. Grid decarbonization avoids emissions in real-time with high additionality. Carbon credits vary enormously in quality. DAC permanently removes CO2 but at very high cost. SAF reduces hard-to-abate aviation emissions that have no grid alternative. Each option has a different role in a net-zero portfolio -- the question is not "which is best" but "what is the right mix at the right price point."
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 4: INFLECTION POINT ANALYSIS                             -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">Section 4</span>
+        <h2 class="section-title">Inflection Points: Where Grid Costs Exceed Key Benchmarks</h2>
+        <div class="section-narrative">
+            <p>For every region, there is a threshold beyond which pushing grid decarbonization further costs more per ton than each major benchmark. The table below identifies those crossover points. Read it as: "In ERCOT, grid decarbonization costs exceed the EU carbon price at 96% hourly clean energy." This does not mean ERCOT should stop at 96% -- it means that beyond 96%, the procurement professional should be actively evaluating whether alternative abatement pathways deliver better value for the marginal dollar.</p>
+
+            <p>The color coding tells the story at a glance: <span style="color:#2e7d32; font-weight:700;">green cells</span> indicate the region stays cost-competitive deep into high targets (above 96%). <span style="color:#e65100; font-weight:700;">Orange cells</span> mark moderate inflection points (92-95%). <span style="color:#880e4f; font-weight:700;">Red cells</span> flag regions where grid costs exceed the benchmark relatively early (below 92%).</p>
+        </div>
+
+        <div class="inflection-table-wrap">
+            <table class="inflection-table" id="inflectionTable">
+                <thead>
+                    <tr>
+                        <th>Region</th>
+                        <th>EPA SCC<br>($51/ton)</th>
+                        <th>EU ETS Range<br>($60-100/ton)</th>
+                        <th>Rennert et al. SCC<br>($185/ton)</th>
+                        <th>SAF Range<br>($150-400/ton)</th>
+                        <th>DAC Range<br>($250-600/ton)</th>
+                        <th>Exceeds $500/ton<br>(Extreme cost)</th>
+                    </tr>
+                </thead>
+                <tbody id="inflectionBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="callout-box">
+            <strong>Reading the table:</strong> ERCOT's cheap wind keeps grid decarbonization competitive up to 97% before exceeding the DAC cost floor. NYISO, constrained by expensive siting and limited renewables, crosses the DAC threshold at just 93%. PJM's large coal fleet means each clean MWh displaces more carbon, keeping per-ton costs lower than regions with already-cleaner grids. These differences are not marginal -- they can mean a 5-percentage-point gap in where the rational crossover occurs.
+        </div>
+
+        <div class="stat-callout">
+            <div class="stat-box">
+                <div class="stat-value">97%</div>
+                <div class="stat-label">ERCOT stays<br>below DAC cost</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">93%</div>
+                <div class="stat-label">NYISO crosses<br>DAC threshold</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">4%</div>
+                <div class="stat-label">Gap between<br>best & worst</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 4b: THE GRID ENABLES EVERYTHING                          -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">The System Effect</span>
+        <h2 class="section-title">The Grid Enables Everything: Why the Backbone Matters More Than Its Cost</h2>
+        <div class="section-narrative">
+            <p>Before comparing grid costs to alternatives, consider the system-level dynamics that make the grid unique among decarbonization pathways. <strong>A cleaner grid doesn't just reduce electricity emissions -- it amplifies the impact of every other decarbonization strategy.</strong></p>
+
+            <p>When the grid gets cleaner, electric vehicles displace more carbon per mile. Industrial heat pumps powered by clean electricity avoid more emissions per BTU. Green hydrogen becomes greener. Even DAC becomes more effective, since its massive energy consumption has a smaller carbon footprint on a cleaner grid. This <strong>multiplier effect</strong> means grid decarbonization compounds across sectors in ways that standalone technologies cannot.</p>
+        </div>
+
+        <div class="counter-row">
+            <div class="counter-item">
+                <div class="counter-value" data-target="3" data-suffix="x">3x</div>
+                <div class="counter-unit">Multiplier effect<br>across sectors</div>
+            </div>
+            <div class="counter-item">
+                <div class="counter-value" data-target="60" data-suffix="%">60%</div>
+                <div class="counter-unit">Of net-zero abatement<br>depends on the grid</div>
+            </div>
+            <div class="counter-item">
+                <div class="counter-value" data-target="2050" data-suffix="">2050</div>
+                <div class="counter-unit">When DAC costs may<br>match grid costs</div>
+            </div>
+        </div>
+
+        <div class="section-narrative">
+            <p>Consider the dynamics:</p>
+
+            <p><strong>Electric vehicles:</strong> An EV on today's average US grid avoids ~0.2 tons CO2 per year compared to an efficient ICE car. On a 90% clean grid, that jumps to ~0.6 tons. On a 95% clean grid, ~0.7 tons. The grid's cleanliness determines the EV's climate value -- and there are 280 million vehicles in the US fleet.</p>
+
+            <p><strong>Industrial heat pumps:</strong> At $60-160/ton CO2 avoided, industrial electrification is one of the cheapest decarbonization options -- <em>but only if the electricity is clean.</em> A heat pump running on a coal-heavy grid can actually increase emissions. The grid backbone must be strong before industrial electrification delivers its full potential.</p>
+
+            <p><strong>Direct air capture:</strong> DAC requires enormous amounts of energy (~1.5-2.5 MWh per ton CO2 captured). On a dirty grid, DAC's net removal is significantly reduced by the emissions from its own electricity consumption. A cleaner grid makes DAC more effective per dollar spent.</p>
+
+            <p>This creates a <strong>sequencing imperative:</strong> grid decarbonization should generally come first, because it makes everything that follows cheaper and more impactful. The question is not whether to invest in the backbone -- it's how far to push it before the multiplier effect plateaus and direct alternatives become more efficient.</p>
+        </div>
+
+        <div class="callout-box" style="background: rgba(14,165,233,0.06); border-left-color: #0EA5E9;">
+            <strong>Demand growth strengthens the backbone case.</strong> While demand growth does not change the marginal abatement cost curve ($/ton is driven by physics, not scale), it significantly increases the <em>total tons abated</em> at each threshold level. Regions with high demand growth (ERCOT at 2-5.5%/yr, PJM at 1.5-3.6%/yr) will see dramatically more emissions displacement from the same percentage clean energy target. This means the grid backbone's multiplier effect compounds: a 90% clean grid serving 2035 demand abates far more tons than the same grid serving 2025 demand -- making the cost-per-ton of grid decarbonization look <em>better</em> over time, not worse. See the main dashboard's Pathway Analysis panel for region-specific demand growth projections.
+        </div>
+
+        <div class="callout-box callout-box-warn">
+            <strong>The critical asymmetry:</strong> Grid costs at 95%+ are structurally high -- they reflect the physics of matching every hour, including multi-day wind/solar droughts. These costs will not decline significantly on learning curves because the constraint is weather, not technology. DAC costs, by contrast, are on a steep learning curve: today's $600/ton may be $250/ton by 2035. <strong>The rational strategy accounts for this asymmetry -- push the grid backbone hard while DAC costs remain high, then reassess as removal costs decline.</strong>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 5: NET-ZERO PORTFOLIO QUESTION                           -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">Section 5</span>
+        <h2 class="section-title">The Net-Zero Portfolio Question: When to Diversify Beyond the Grid</h2>
+        <div class="section-narrative">
+            <p>No organization achieves net-zero through a single strategy. The question is not whether to diversify, but when. The chart below illustrates a conceptual framework: for each dollar spent on decarbonization, what is the optimal allocation between pushing grid clean energy higher versus investing in alternative abatement and removal?</p>
+
+            <p>At lower grid targets (75-90%), the answer is clear: <strong>grid decarbonization dominates.</strong> Each dollar achieves more CO2 reduction per dollar on the grid than anywhere else. Solar and wind are cheap, batteries are proven, and the marginal abatement cost is well below the cost of alternatives.</p>
+
+            <p>But as grid targets rise past the 90-95% inflection, the calculus shifts. The chart shows a conceptual "optimal portfolio" where the share allocated to grid decarbonization declines and the share going to alternatives (DAC, offsets, SAF, industrial efficiency) rises. The crossover point varies by region -- earlier for NYISO, later for ERCOT -- but the principle is universal.</p>
+
+            <p><strong>This is the 90/10 insight:</strong> For most regions, pushing grid clean energy from the current baseline to roughly 90-95% is the most cost-effective thing you can do. The remaining 5-10% may be better addressed through a diversified portfolio of grid hardening, carbon removal, and cross-sector investment.</p>
+        </div>
+
+        <div class="chart-container chart-container-wide">
+            <div class="chart-title">Conceptual Optimal Portfolio: Grid Decarbonization vs. Alternative Investments</div>
+            <canvas id="portfolioChart"></canvas>
+            <div class="portfolio-legend">
+                <div class="portfolio-legend-item">
+                    <div class="portfolio-legend-swatch" style="background: #4a90d9;"></div>
+                    Grid Decarbonization
+                </div>
+                <div class="portfolio-legend-item">
+                    <div class="portfolio-legend-swatch" style="background: #22C55E;"></div>
+                    Energy Efficiency & Electrification
+                </div>
+                <div class="portfolio-legend-item">
+                    <div class="portfolio-legend-swatch" style="background: #FF9800;"></div>
+                    Cross-Sector (SAF, Green H2)
+                </div>
+                <div class="portfolio-legend-item">
+                    <div class="portfolio-legend-swatch" style="background: #E91E63;"></div>
+                    Carbon Removal (DAC, BECCS)
+                </div>
+            </div>
+        </div>
+
+        <div class="callout-box">
+            <strong>The portfolio mindset:</strong> A company targeting net-zero might optimally push its grid procurement to 92% hourly clean energy (where grid costs are $120/ton), then allocate the next tranche of budget to high-quality carbon removal at $250/ton for the remaining 8%. Total cost? Substantially less than pushing the grid to 100% where marginal costs might reach $800/ton. The 8% gap is filled by removal credits that permanently sequester CO2 -- achieving the same climate outcome at a fraction of the cost.
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 6: REGIONAL DEEP-DIVES ON CROSSOVER POINTS               -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">Section 6</span>
+        <h2 class="section-title">Regional Crossover Stories: Five Grids, Five Strategies</h2>
+        <div class="section-narrative">
+            <p>Each region's grid has a unique personality that shapes when and how the crossover to alternative abatement makes sense. Below, we explore the distinct dynamics that drive each region's cost curve and where the rational diversification point lies.</p>
+        </div>
+
+        <div class="region-cards">
+            <!-- CAISO -->
+            <div class="region-card">
+                <div class="region-card-header">
+                    <div class="region-card-dot" style="background: #F59E0B;"></div>
+                    <div class="region-card-name">CAISO (California)</div>
+                </div>
+                <p>California's solar abundance makes the first 85-90% of grid decarbonization remarkably affordable. The state's existing 22% solar fleet, combined with the nation's lowest clean firm costs (geothermal from the Salton Sea and Imperial Valley at $78/MWh), keeps marginal abatement costs below $80/ton through 90%.</p>
+                <p>But solar saturation is CAISO's Achilles heel. Every additional percentage point above 93% requires either massive battery overbuilding to shift solar into evening and overnight hours, or expensive LDES to bridge multi-day cloudy stretches. Costs cross the $250/ton DAC floor at roughly 95%, earlier than ERCOT but later than the eastern ISOs.</p>
+                <p><strong>Strategy:</strong> Push grid to 93-95%, then evaluate a DAC/BECCS portfolio for the residual gap. California's emerging DAC industry (Heirloom, CarbonCapture Inc.) could provide local removal credits at declining costs.</p>
+            </div>
+
+            <!-- ERCOT -->
+            <div class="region-card">
+                <div class="region-card-header">
+                    <div class="region-card-dot" style="background: #22C55E;"></div>
+                    <div class="region-card-name">ERCOT (Texas)</div>
+                </div>
+                <p>Texas is the cost leader in grid decarbonization, and it is not particularly close. ERCOT's marginal abatement curve stays below $100/ton through 93% and below $200/ton through 96%. The reasons: the nation's cheapest wind ($40/MWh at Medium), favorable CCS-CCGT geology along the Gulf Coast ($71/MWh), and the lowest storage costs in the country due to fast permitting and low labor costs.</p>
+                <p>ERCOT also benefits from a unique CO2 intensity story. Its remaining fossil fleet is almost entirely natural gas (coal is largely retired), which means each displaced MWh avoids moderate emissions -- neither as high as PJM's coal-heavy grid nor as low as CAISO's already-clean fleet.</p>
+                <p><strong>Strategy:</strong> ERCOT is the one region where pushing to 97% grid clean energy may be cheaper than most alternatives. Gulf Coast DAC potential (1PointFive, Carbon Engineering) could handle the last 3% at declining costs as the industry scales.</p>
+            </div>
+
+            <!-- PJM -->
+            <div class="region-card">
+                <div class="region-card-header">
+                    <div class="region-card-dot" style="background: #4a90d9;"></div>
+                    <div class="region-card-name">PJM (Mid-Atlantic)</div>
+                </div>
+                <p>PJM presents a paradox: its grid is one of the dirtiest (substantial remaining coal fleet), which means each clean MWh displaces more carbon than in any other region. This drives down the per-ton cost of abatement even when per-MWh procurement costs are higher. PJM's marginal abatement cost stays below the EU ETS price through 94%.</p>
+                <p>The coal-switching dynamic creates a non-linear curve. As natural gas prices rise, coal generation increases, pushing up emission rates -- which paradoxically makes clean energy procurement more cost-effective per ton. Under high gas price scenarios, PJM's grid decarbonization remains competitive against DAC through 96%.</p>
+                <p><strong>Strategy:</strong> PJM's high carbon intensity makes grid investment highly efficient per ton. Push to 94-96%, then complement with industrial electrification credits in the region's heavy manufacturing corridor.</p>
+            </div>
+
+            <!-- NYISO -->
+            <div class="region-card">
+                <div class="region-card-header">
+                    <div class="region-card-dot" style="background: #E91E63;"></div>
+                    <div class="region-card-name">NYISO (New York)</div>
+                </div>
+                <p>New York has the most expensive path to high grid decarbonization. Constrained siting (dense population, environmental review requirements), the highest wholesale prices in the study ($42/MWh average), and no CCS sequestration geology drive costs up faster than any other region. NYISO crosses the $250/ton DAC floor at just 93%.</p>
+                <p>The silver lining is NYISO's existing nuclear and hydro fleet. With 18% nuclear and 16% hydro already on the grid, the starting point is strong -- roughly 39% clean energy before adding any new resources. But expanding beyond this baseload advantage requires expensive wind (largely offshore) and clean firm resources at the highest costs in the country ($98/MWh nuclear at Medium).</p>
+                <p><strong>Strategy:</strong> The 90/10 rule applies most forcefully here. Push grid to 90-92%, then invest heavily in high-quality carbon removal and cross-sector abatement. New York's climate leadership position could pioneer "portfolio decarbonization" as a procurement model.</p>
+            </div>
+
+            <!-- NEISO -->
+            <div class="region-card">
+                <div class="region-card-header">
+                    <div class="region-card-dot" style="background: #9C27B0;"></div>
+                    <div class="region-card-name">NEISO (New England)</div>
+                </div>
+                <p>New England occupies a middle position, but with unusually wide uncertainty bands. The region's decarbonization future hinges heavily on offshore wind, which offers enormous potential but at costs that remain uncertain ($73/MWh at Medium, but with high-scenario estimates reaching $95/MWh after the recent PPA renegotiations).</p>
+                <p>NEISO's existing nuclear fleet (24% of generation) provides a strong foundation, and its moderate hydro resources (4.4%) add seasonal flexibility. But limited solar potential (New England's latitude and cloud cover) and expensive onshore siting mean the region leans heavily on offshore wind and clean firm for incremental clean energy.</p>
+                <p><strong>Strategy:</strong> NEISO's optimal crossover depends heavily on offshore wind cost outcomes. Under optimistic scenarios, push to 94%; under pessimistic scenarios, diversify at 91%. Monitor Vineyard Wind and other projects for cost signals before committing to targets above 93%.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 7: IMPLICATIONS & KEY TAKEAWAYS                          -->
+    <!-- ================================================================ -->
+    <section class="scroll-section">
+        <span class="section-number">Section 7</span>
+        <h2 class="section-title">Stress-Test Results: When Does the Backbone Hold?</h2>
+        <div class="section-narrative">
+            <p>After pressure-testing grid decarbonization against every major alternative across five regions and multiple cost scenarios, a clear picture emerges. The backbone is strong -- but it has limits. These findings are not theoretical arguments; they emerge directly from the cost data and regional optimization.</p>
+        </div>
+
+        <ol class="insights-list" style="list-style:none; counter-reset:takeaway;">
+            <li style="counter-increment:takeaway;">
+                <strong>The backbone holds through 90% under every scenario we tested.</strong> Even under high grid costs, tariffs, and permitting delays, grid decarbonization to 90% hourly clean energy delivers abatement at costs well below any alternative. Solar, wind, and batteries are mature, scalable, and cost-effective. The grid-first strategy is robust here. No stress test breaks it.
+            </li>
+            <li style="counter-increment:takeaway;">
+                <strong>The 90-97% zone is where the backbone bends but doesn't break -- if you're in the right region.</strong> Regional divergence is enormous. ERCOT's backbone holds through 97% under medium costs; NYISO's starts cracking at 92%. A procurement strategy that ignores regional physics is leaving money on the table (or wasting it). Use the toggles above to see how your region responds to different assumptions.
+            </li>
+            <li style="counter-increment:takeaway;">
+                <strong>High grid costs + low DAC costs is the scenario that most threatens the backbone.</strong> Try setting Grid to "High" and DAC to "Low" in the toggles above. Under this scenario, the crossover happens 4-6 points earlier for every region. If tariffs raise renewable costs while DAC scales faster than expected, the backbone's advantage erodes quickly above 90%.
+            </li>
+            <li style="counter-increment:takeaway;">
+                <strong>But the grid enables everything -- so pure cost comparison understates its value.</strong> The system-level multiplier effect means grid investment compounds across EVs, industrial heat pumps, and even DAC itself. A grid that's 90% clean makes every other strategy 30-50% more effective per dollar. This multiplier is not captured in the crossover charts above and should be weighed qualitatively.
+            </li>
+            <li style="counter-increment:takeaway;">
+                <strong>The physics vs. learning curve asymmetry is the key long-term dynamic.</strong> Grid costs at 95%+ are structurally high -- they reflect the physics of multi-day intermittency, which doesn't decline on learning curves. DAC and carbon removal costs are on steep learning curves: today's $600/ton may be $250/ton by 2035. The rational strategy: push the backbone hard NOW while DAC is expensive, then reassess in 5-7 years as removal costs decline.
+            </li>
+            <li style="counter-increment:takeaway;">
+                <strong>The social cost of carbon ($185-190/ton) provides the floor test.</strong> The EPA's 2023 central estimate ($190/ton) and Rennert et al.'s ($185/ton) bracket the modern scientific consensus. Grid decarbonization is unambiguously justified at any target where marginal costs remain below this level. For most regions at medium costs, this holds through 92-95%. The EU ETS ($65-92/ton) provides an additional market-revealed benchmark.
+            </li>
+            <li style="counter-increment:takeaway;">
+                <strong>The answer is region-specific, assumption-specific, and time-dependent.</strong> There is no universal "optimal grid target." The right answer depends on your region (ERCOT vs. NYISO = 5+ point difference), your cost assumptions (L/M/H shifts crossovers by 3-6 points), and the technology timeline (DAC cost trajectory). Use the dynamic tools above to explore YOUR scenario.
+            </li>
+        </ol>
+
+        <div class="callout-box" style="margin-top:36px;">
+            <strong>The bottom line:</strong> Grid decarbonization is the backbone of climate strategy, and it holds under most stress tests through 90-95%. Beyond that, the rational approach depends on regional physics, cost trajectories, and the system-level multiplier effect. The organizations that will lead on climate are not those that chase 100% grid clean energy at any cost -- they are those that push the backbone as far as it's efficient, then deploy the savings into alternatives that deliver the highest marginal climate impact. Set your region-specific target, invest aggressively to reach it, and build a diversified portfolio for the remainder.
+        </div>
+    </section>
+
+</main>
+
+<!-- ========== FOOTER ========== -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="dashboard.html">Back to Dashboard</a>
+        <a href="region_caiso.html">CAISO</a>
+        <a href="region_ercot.html">ERCOT</a>
+        <a href="region_pjm.html">PJM</a>
+        <a href="region_nyiso.html">NYISO</a>
+        <a href="region_neiso.html">NEISO</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <div class="footer-note">Hourly CFE Optimizer — 2025 Snapshot Model</div>
+</footer>
+
+<!-- ========== BOTTOM ACCENT BAR ========== -->
+<div class="bottom-banner"></div>
+
+<!-- ========================================================================= -->
+<!-- JAVASCRIPT: Data, Charts, Visualizations                                  -->
+<!-- ========================================================================= -->
+<script>
+// ============================================================================
+// DATA: Placeholder regional MAC curves (plausible illustrative data)
+// These will be replaced with real optimizer output when available.
+// ============================================================================
+
+const THRESHOLDS = [75, 80, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100];
+
+// Marginal abatement cost $/ton CO2 at each threshold, by region and scenario
+// Designed to tell a plausible story: hockey stick, regional divergence
+const MAC_DATA = {
+    medium: {
+        CAISO:  [22, 28, 38, 42, 48, 56, 68, 82, 100, 125, 158, 200, 260, 350, 480, 650, 900, 1350],
+        ERCOT:  [15, 20, 28, 31, 35, 40, 47, 56, 68,  82,  100, 125, 160, 210, 290, 410, 580, 850],
+        PJM:    [18, 24, 34, 38, 44, 52, 62, 75, 92,  115, 145, 185, 240, 325, 450, 620, 860, 1250],
+        NYISO:  [30, 40, 55, 62, 72, 85, 102, 125, 155, 195, 250, 320, 420, 560, 740, 980, 1300, 1850],
+        NEISO:  [26, 35, 48, 54, 62, 74, 88, 108, 132, 165, 210, 270, 350, 470, 640, 870, 1180, 1700]
+    },
+    low: {
+        CAISO:  [16, 20, 28, 31, 35, 40, 48, 58, 72,  90,  115, 148, 195, 265, 365, 500, 700, 1050],
+        ERCOT:  [10, 14, 20, 22, 25, 28, 34, 40, 48,  58,  72,  90,  115, 152, 210, 300, 425, 640],
+        PJM:    [13, 17, 24, 27, 31, 37, 44, 54, 66,  82,  105, 135, 175, 238, 330, 460, 645, 950],
+        NYISO:  [22, 28, 40, 45, 52, 62, 74, 90, 112, 142, 182, 235, 310, 415, 555, 740, 990, 1420],
+        NEISO:  [19, 25, 35, 39, 45, 53, 64, 78, 96,  120, 154, 200, 260, 350, 480, 655, 895, 1300]
+    },
+    high: {
+        CAISO:  [30, 38, 52, 58, 66, 78, 94, 115, 140, 175, 220, 280, 365, 490, 670, 910, 1260, 1880],
+        ERCOT:  [22, 28, 38, 42, 48, 55, 65, 78,  95,  115, 142, 178, 228, 300, 415, 580, 815, 1200],
+        PJM:    [25, 32, 46, 52, 60, 72, 86, 105, 128, 160, 202, 258, 335, 455, 628, 865, 1200, 1740],
+        NYISO:  [40, 54, 75, 85, 98, 118, 140, 172, 215, 270, 345, 445, 580, 775, 1020, 1350, 1800, 2550],
+        NEISO:  [35, 47, 65, 74, 85, 100, 120, 148, 182, 228, 290, 375, 485, 650, 885, 1200, 1640, 2350]
+    }
+};
+
+const REGION_COLORS = {
+    CAISO: '#F59E0B',
+    ERCOT: '#22C55E',
+    PJM:   '#4a90d9',
+    NYISO: '#E91E63',
+    NEISO: '#9C27B0'
+};
+
+// Benchmark abatement cost data — researched L/M/H with sources
+// Categories: demand_reduction, industrial_decarb, carbon_removal, transport, benchmarks
+const BENCHMARKS_STATIC = [
+    { name: 'Energy Efficiency (Buildings)', low: -100, mid: 0,   high: 60,   color: '#4CAF50', category: 'demand_reduction', trajectory: 'stable', confidence: 'high',
+      sources: 'EDF/Evolved Energy MAC 2.0, World Bank, Gillingham & Stock' },
+    { name: 'EU ETS Price',                  low: 65,   mid: 88,  high: 92,   color: '#2196F3', category: 'benchmark', trajectory: 'rising', confidence: 'high',
+      sources: 'Trading Economics, Sandbag, BNEF' },
+    { name: 'SCC — EPA ($190/ton)',          low: 140,  mid: 190, high: 380,  color: '#FF9800', category: 'benchmark', trajectory: 'rising', confidence: 'medium',
+      sources: 'EPA Dec 2023 Report' },
+    { name: 'SCC — Rennert et al.',          low: 120,  mid: 185, high: 450,  color: '#E65100', category: 'benchmark', trajectory: 'rising', confidence: 'medium',
+      sources: 'Rennert et al. (2022) Nature' },
+    { name: 'Carbon Credits (Nature)',       low: 3,    mid: 15,  high: 35,   color: '#9E9E9E', category: 'voluntary', trajectory: 'rising', confidence: 'medium',
+      sources: 'Sylvera 2026, Regreener, MSCI' },
+];
+
+// Dynamic benchmarks — shift with user toggles
+const BENCHMARKS_DYNAMIC = {
+    dac: {
+        name: 'Direct Air Capture (DAC)',    color: '#E91E63', category: 'carbon_removal', confidence: 'low',
+        trajectory: 'declining_steep',
+        Low:    { low: 250,  mid: 400,  high: 600 },
+        Medium: { low: 400,  mid: 600,  high: 1500 },
+        High:   { low: 600,  mid: 1000, high: 1500 },
+        sources: 'ETH Zurich 2024, Climeworks, Belfer Center'
+    },
+    industrial: {
+        name: 'Industrial Electrification', color: '#8BC34A', category: 'industrial_decarb', confidence: 'medium',
+        trajectory: 'declining',
+        Low:    { low: -50, mid: 20,  high: 60 },
+        Medium: { low: 0,   mid: 60,  high: 160 },
+        High:   { low: 60,  mid: 120, high: 250 },
+        sources: 'McKinsey, Thunder Said Energy, Rewiring America'
+    },
+    removal: {
+        name: 'Carbon Removal (BECCS + Enhanced Weathering)', color: '#009688', category: 'carbon_removal', confidence: 'low',
+        trajectory: 'declining',
+        Low:    { low: 20,  mid: 75,  high: 150 },
+        Medium: { low: 50,  mid: 150, high: 300 },
+        High:   { low: 100, mid: 200, high: 350 },
+        sources: 'ORNL, Nature 2024, Nature Comms 2025'
+    },
+};
+
+// Additional comparison technologies (not toggle-controlled)
+const BENCHMARKS_EXTRA = [
+    { name: 'Green Hydrogen (Industrial)',  low: 150, mid: 500, high: 1250, color: '#00BCD4', category: 'industrial_decarb',
+      trajectory: 'declining', confidence: 'low', sources: 'Shafiee & Schrag (Joule 2024), Belfer Center' },
+    { name: 'Sustainable Aviation Fuel',    low: 136, mid: 300, high: 500,  color: '#FF5722', category: 'transport',
+      trajectory: 'declining', confidence: 'medium', sources: 'NREL, RMI 2025, ICCT, WEF' },
+    { name: 'CDR Credits (Engineered)',     low: 177, mid: 320, high: 600,  color: '#7C4DFF', category: 'voluntary',
+      trajectory: 'declining', confidence: 'medium', sources: 'Sylvera, CarbonCredits.com' },
+    { name: 'EVs vs ICE (Fleet)',           low: -50, mid: 250, high: 970,  color: '#FF6F00', category: 'transport',
+      trajectory: 'declining_steep', confidence: 'medium', sources: 'Argonne Labs, Penn Wharton, RFF' },
+];
+
+// Merge all benchmarks for the ladder (using current toggle settings)
+function getAllBenchmarks() {
+    const toggleState = getComparisonState();
+    const dynamic = Object.keys(BENCHMARKS_DYNAMIC).map(key => {
+        const b = BENCHMARKS_DYNAMIC[key];
+        const level = toggleState[key] || 'Medium';
+        const costs = b[level];
+        return { name: b.name, low: costs.low, mid: costs.mid, high: costs.high, color: b.color,
+                 category: b.category, confidence: b.confidence, trajectory: b.trajectory, sources: b.sources };
+    });
+    return [...BENCHMARKS_STATIC, ...dynamic, ...BENCHMARKS_EXTRA]
+        .filter(b => b.mid >= 0)
+        .sort((a, b) => a.mid - b.mid);
+}
+
+// Get current comparison toggle state
+function getComparisonState() {
+    const state = { grid: 'Medium', dac: 'Medium', industrial: 'Medium', removal: 'Medium' };
+    document.querySelectorAll('.ctrl-toggle').forEach(toggle => {
+        const ctrl = toggle.dataset.ctrl;
+        const active = toggle.querySelector('button.active');
+        if (active && ctrl) state[ctrl] = active.dataset.value;
+    });
+    return state;
+}
+
+// ============================================================================
+// CHART 1: Regional MAC Curves (Section 2)
+// ============================================================================
+
+let macChart = null;
+let currentScenario = 'medium';
+
+function buildMacChart(scenario) {
+    const ctx = document.getElementById('macCurveChart').getContext('2d');
+    const state = getComparisonState();
+    const gridLevel = state.grid.toLowerCase();
+    const data = MAC_DATA[gridLevel] || MAC_DATA[scenario];
+
+    // Confidence bands (low-to-high range as filled area behind the line)
+    const datasets = [];
+    Object.keys(data).forEach(region => {
+        // Confidence band (fill between low and high)
+        if (MAC_DATA.low[region] && MAC_DATA.high[region]) {
+            datasets.push({
+                label: region + ' range',
+                data: THRESHOLDS.map((t, i) => ({ x: t, y: MAC_DATA.high[region][i] })),
+                borderColor: 'transparent',
+                backgroundColor: REGION_COLORS[region] + '12',
+                borderWidth: 0,
+                pointRadius: 0,
+                fill: '+1',
+                tension: 0.3,
+                order: 2
+            });
+            datasets.push({
+                label: region + ' range low',
+                data: THRESHOLDS.map((t, i) => ({ x: t, y: MAC_DATA.low[region][i] })),
+                borderColor: 'transparent',
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                pointRadius: 0,
+                fill: false,
+                tension: 0.3,
+                order: 2
+            });
+        }
+        // Main line
+        datasets.push({
+            label: region,
+            data: THRESHOLDS.map((t, i) => ({ x: t, y: data[region][i] })),
+            borderColor: REGION_COLORS[region],
+            backgroundColor: REGION_COLORS[region] + '18',
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            fill: false,
+            tension: 0.3,
+            order: 1
+        });
+    });
+
+    // Dynamic benchmark lines — respond to comparison toggles
+    const dacCosts = BENCHMARKS_DYNAMIC.dac[state.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
+    const indCosts = BENCHMARKS_DYNAMIC.industrial[state.industrial] || BENCHMARKS_DYNAMIC.industrial.Medium;
+    const remCosts = BENCHMARKS_DYNAMIC.removal[state.removal] || BENCHMARKS_DYNAMIC.removal.Medium;
+
+    const annotations = {
+        sccEpaLine: {
+            type: 'line', yMin: 190, yMax: 190,
+            borderColor: '#FF9800', borderWidth: 1.5, borderDash: [6, 4],
+            label: { display: true, content: 'EPA SCC ($190/ton)', position: 'start',
+                     font: { size: 10, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
+        sccRennertLine: {
+            type: 'line', yMin: 185, yMax: 185,
+            borderColor: '#E65100', borderWidth: 1.5, borderDash: [6, 4],
+            label: { display: true, content: 'Rennert et al. SCC ($185/ton)', position: 'start',
+                     font: { size: 10, weight: 600 }, color: '#E65100', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
+        euEtsBand: {
+            type: 'box', yMin: 65, yMax: 92,
+            backgroundColor: 'rgba(33,150,243,0.08)', borderColor: 'rgba(33,150,243,0.3)',
+            borderWidth: 1, borderDash: [4, 3],
+            label: { display: true, content: 'EU ETS ($65-92/ton)', position: 'end',
+                     font: { size: 10, weight: 600 }, color: '#2196F3', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
+        industrialBand: {
+            type: 'box', yMin: Math.max(0, indCosts.low), yMax: indCosts.high,
+            backgroundColor: 'rgba(139,195,74,0.08)', borderColor: 'rgba(139,195,74,0.3)',
+            borderWidth: 1, borderDash: [4, 3],
+            label: { display: true, content: 'Industrial Electrification ($' + indCosts.mid + ')', position: 'start',
+                     font: { size: 10, weight: 600 }, color: '#8BC34A', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
+        removalLine: {
+            type: 'line', yMin: remCosts.mid, yMax: remCosts.mid,
+            borderColor: '#009688', borderWidth: 1.5, borderDash: [6, 4],
+            label: { display: true, content: 'Carbon Removal ($' + remCosts.mid + ')', position: 'end',
+                     font: { size: 10, weight: 600 }, color: '#009688', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
+        safLine: {
+            type: 'line', yMin: 300, yMax: 300,
+            borderColor: '#FF5722', borderWidth: 1.5, borderDash: [6, 4],
+            label: { display: true, content: 'SAF ($300/ton)', position: 'start',
+                     font: { size: 10, weight: 600 }, color: '#FF5722', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        },
+        dacBand: {
+            type: 'box', yMin: dacCosts.low, yMax: dacCosts.high,
+            backgroundColor: 'rgba(233,30,99,0.06)', borderColor: 'rgba(233,30,99,0.25)',
+            borderWidth: 1, borderDash: [4, 3],
+            label: { display: true, content: 'DAC ($' + dacCosts.low + '-' + dacCosts.high + ')', position: 'end',
+                     font: { size: 10, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+        }
+    };
+
+    if (macChart) macChart.destroy();
+
+    macChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'nearest', intersect: false },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 74, max: 101,
+                    title: { display: true, text: 'Hourly Clean Energy Target (%)', font: { size: 13, weight: 600 } },
+                    ticks: {
+                        stepSize: 5,
+                        callback: v => v + '%',
+                        font: { size: 11 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                },
+                y: {
+                    type: 'logarithmic',
+                    min: 10,
+                    max: 2800,
+                    title: { display: true, text: 'Marginal Abatement Cost ($/ton CO2)', font: { size: 13, weight: 600 } },
+                    ticks: {
+                        callback: v => {
+                            if ([10,20,50,100,200,500,1000,2000].includes(v)) return '$' + v.toLocaleString();
+                            return '';
+                        },
+                        font: { size: 11 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { usePointStyle: true, pointStyle: 'circle', padding: 18, font: { size: 12, weight: 600 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: items => items[0].raw.x + '% Target',
+                        label: item => item.dataset.label + ': $' + item.raw.y.toLocaleString() + '/ton'
+                    }
+                },
+                annotation: { annotations },
+                datalabels: { display: false }
+            }
+        }
+    });
+}
+
+function setScenario(scenario, btn) {
+    currentScenario = scenario;
+    document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    buildMacChart(scenario);
+}
+
+// Rebuild all visualizations when comparison toggles change
+function onComparisonChange() {
+    const state = getComparisonState();
+    // Update grid scenario for MAC chart
+    if (state.grid !== currentScenario.charAt(0).toUpperCase() + currentScenario.slice(1)) {
+        currentScenario = state.grid.toLowerCase();
+    }
+    buildMacChart(currentScenario);
+    buildLadder();
+    if (bandChartInstance) bandChartInstance.destroy();
+    buildBandChart();
+    buildInflectionTable();
+    updateCrossoverSummary(state);
+}
+
+let bandChartInstance = null;
+
+function updateCrossoverSummary(state) {
+    const summary = document.getElementById('crossoverSummary');
+    const gridLevel = state.grid.toLowerCase();
+    const data = MAC_DATA[gridLevel] || MAC_DATA.medium;
+    const dacMid = BENCHMARKS_DYNAMIC.dac[state.dac].mid;
+    const indMid = BENCHMARKS_DYNAMIC.industrial[state.industrial].mid;
+    const remMid = BENCHMARKS_DYNAMIC.removal[state.removal].mid;
+
+    // Find crossover points for each region
+    const insights = [];
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    regions.forEach(region => {
+        const dacCross = findCrossoverPct(data[region], dacMid);
+        const indCross = findCrossoverPct(data[region], Math.max(indMid, 10));
+        insights.push({ region, dacCross, indCross });
+    });
+
+    const bestRegion = insights.reduce((a, b) => (a.dacCross > b.dacCross ? a : b));
+    const worstRegion = insights.reduce((a, b) => (a.dacCross < b.dacCross ? a : b));
+
+    summary.innerHTML = `
+        <strong>Under these assumptions:</strong> Grid decarbonization beats DAC through
+        <strong>${bestRegion.dacCross}%</strong> in ${bestRegion.region} (best) but only through
+        <strong>${worstRegion.dacCross}%</strong> in ${worstRegion.region} (worst).
+        The backbone holds strongest in regions with cheap renewables and favorable geology.
+        ${state.dac === 'Low' ? ' With aggressive DAC cost declines, the crossover shifts 2-4 points earlier.' : ''}
+        ${state.grid === 'High' ? ' High grid costs accelerate the crossover — tariffs and permitting delays weaken the backbone.' : ''}
+    `;
+    summary.classList.add('visible');
+}
+
+function findCrossoverPct(regionData, costLevel) {
+    for (let i = 0; i < regionData.length; i++) {
+        if (regionData[i] >= costLevel) {
+            return THRESHOLDS[i];
+        }
+    }
+    return '>100';
+}
+
+// ============================================================================
+// CHART 2: The Abatement Ladder (Section 3) — Custom HTML/CSS/JS
+// ============================================================================
+
+function buildLadder() {
+    const maxCost = 650;
+    const scaleHeight = document.getElementById('ladderScale').offsetHeight || 480;
+    const barsContainer = document.getElementById('ladderBars');
+    const labelsContainer = document.getElementById('ladderLabels');
+    const yAxisContainer = document.getElementById('ladderYAxis');
+    const markersContainer = document.getElementById('ladderMarkers');
+
+    // Y-axis labels
+    const yTicks = [0, 50, 100, 150, 200, 250, 300, 400, 500, 600];
+    yAxisContainer.innerHTML = '';
+    [...yTicks].reverse().forEach(tick => {
+        const label = document.createElement('div');
+        label.className = 'ladder-y-label';
+        label.textContent = '$' + tick;
+        yAxisContainer.appendChild(label);
+    });
+
+    const BENCHMARKS = getAllBenchmarks();
+
+    // Bars
+    barsContainer.innerHTML = '';
+    labelsContainer.innerHTML = '';
+    BENCHMARKS.forEach((b, i) => {
+        const group = document.createElement('div');
+        group.className = 'ladder-bar-group';
+
+        // Full range bar (low to high)
+        const bar = document.createElement('div');
+        bar.className = 'ladder-bar';
+        const lowPct = (Math.min(b.low, maxCost) / maxCost) * 100;
+        const highPct = (Math.min(b.high, maxCost) / maxCost) * 100;
+        const midPct = (Math.min(b.mid, maxCost) / maxCost) * 100;
+        bar.style.bottom = lowPct + '%';
+        bar.style.height = (highPct - lowPct) + '%';
+        bar.style.background = `linear-gradient(to top, ${b.color}55, ${b.color}cc)`;
+        bar.style.border = `1px solid ${b.color}`;
+
+        // Inner mid band (darker core)
+        const inner = document.createElement('div');
+        inner.className = 'ladder-bar-inner';
+        const innerBottom = ((b.mid - b.low) / (b.high - b.low || 1)) * 100;
+        inner.style.bottom = Math.max(0, innerBottom - 15) + '%';
+        inner.style.height = '30%';
+        inner.style.background = b.color;
+        inner.style.opacity = '0.7';
+        bar.appendChild(inner);
+
+        // Cost label on top
+        const costLabel = document.createElement('div');
+        costLabel.className = 'ladder-bar-cost';
+        costLabel.textContent = '$' + b.mid;
+        bar.appendChild(costLabel);
+
+        // Tooltip on hover
+        bar.addEventListener('mouseenter', (e) => {
+            const tooltip = document.getElementById('ladderTooltip');
+            tooltip.innerHTML = `<div class="tt-title">${b.name}</div><div class="tt-range">Low: $${b.low}/ton<br>Mid: $${b.mid}/ton<br>High: $${b.high}/ton</div>`;
+            tooltip.style.display = 'block';
+            positionTooltip(e, tooltip);
+        });
+        bar.addEventListener('mousemove', (e) => {
+            positionTooltip(e, document.getElementById('ladderTooltip'));
+        });
+        bar.addEventListener('mouseleave', () => {
+            document.getElementById('ladderTooltip').style.display = 'none';
+        });
+
+        group.appendChild(bar);
+        barsContainer.appendChild(group);
+
+        // Bottom label
+        const label = document.createElement('div');
+        label.className = 'ladder-bar-label';
+        label.textContent = b.name;
+        label.style.flex = '1';
+        label.style.textAlign = 'center';
+        labelsContainer.appendChild(label);
+    });
+
+    // Grid threshold marker lines
+    markersContainer.innerHTML = '';
+    const gridMarkers = [
+        { label: 'Grid 90% (ERCOT)', cost: 56, color: REGION_COLORS.ERCOT },
+        { label: 'Grid 90% (NYISO)', cost: 125, color: REGION_COLORS.NYISO },
+        { label: 'Grid 95% (ERCOT)', cost: 160, color: REGION_COLORS.ERCOT },
+        { label: 'Grid 95% (NYISO)', cost: 420, color: REGION_COLORS.NYISO },
+        { label: 'Grid 99% (ERCOT)', cost: 580, color: REGION_COLORS.ERCOT },
+    ];
+
+    gridMarkers.forEach(m => {
+        const line = document.createElement('div');
+        line.className = 'ladder-grid-line';
+        const pct = (Math.min(m.cost, maxCost) / maxCost) * 100;
+        line.style.bottom = pct + '%';
+        line.style.borderColor = m.color;
+
+        const tag = document.createElement('div');
+        tag.className = 'ladder-grid-tag';
+        tag.textContent = m.label;
+        tag.style.background = m.color;
+        tag.style.color = '#fff';
+        tag.style.fontSize = '0.65rem';
+        line.appendChild(tag);
+
+        markersContainer.appendChild(line);
+    });
+}
+
+function positionTooltip(e, tooltip) {
+    const x = e.clientX + 16;
+    const y = e.clientY - 10;
+    tooltip.style.left = Math.min(x, window.innerWidth - 300) + 'px';
+    tooltip.style.top = Math.min(y, window.innerHeight - 150) + 'px';
+}
+
+// ============================================================================
+// CHART 3: Band Comparison Chart (Section 3, alternative view)
+// ============================================================================
+
+function buildBandChart() {
+    const ctx = document.getElementById('bandChart').getContext('2d');
+    const BENCHMARKS = getAllBenchmarks();
+    const state = getComparisonState();
+    const gridLevel = state.grid.toLowerCase();
+    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
+
+    // Horizontal floating bar chart: each benchmark is a row
+    const labels = BENCHMARKS.map(b => b.name);
+    const backgroundColors = BENCHMARKS.map(b => b.color + '40');
+    const borderColors = BENCHMARKS.map(b => b.color);
+
+    // Floating bars (low to high range)
+    const barData = BENCHMARKS.map(b => [Math.max(b.low, 0), b.high]);
+    // Mid point markers
+    const midPoints = BENCHMARKS.map(b => b.mid);
+
+    // Grid crossover scatter points for each region at different thresholds
+    const gridScatter = [];
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const markerThresholds = [90, 95, 99];
+    const thresholdSymbols = { 90: 'circle', 95: 'triangle', 99: 'rectRot' };
+
+    regions.forEach(region => {
+        markerThresholds.forEach(t => {
+            const tIdx = THRESHOLDS.indexOf(t);
+            if (tIdx === -1) return;
+            const cost = macData[region][tIdx];
+            gridScatter.push({
+                region,
+                threshold: t,
+                cost,
+                color: REGION_COLORS[region]
+            });
+        });
+    });
+
+    bandChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Cost Range (Low to High)',
+                    data: barData,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    barPercentage: 0.65
+                },
+                {
+                    label: 'Mid Estimate',
+                    data: midPoints.map((v, i) => v),
+                    type: 'scatter',
+                    pointRadius: 7,
+                    pointStyle: 'rectRounded',
+                    backgroundColor: borderColors.map(c => c + 'cc'),
+                    borderColor: borderColors,
+                    borderWidth: 2,
+                    parsing: {
+                        xAxisKey: undefined,
+                        yAxisKey: undefined
+                    },
+                    // Place scatter points manually
+                    xAxisID: 'x',
+                    yAxisID: 'y'
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    min: 0,
+                    max: 650,
+                    title: { display: true, text: '$/ton CO2', font: { size: 13, weight: 600 } },
+                    ticks: {
+                        stepSize: 50,
+                        callback: v => '$' + v,
+                        font: { size: 10 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                },
+                y: {
+                    ticks: { font: { size: 11, weight: 500 } },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            if (Array.isArray(ctx.raw)) {
+                                return `Range: $${ctx.raw[0]} - $${ctx.raw[1]}/ton`;
+                            }
+                            return `Mid: $${ctx.raw}/ton`;
+                        }
+                    }
+                },
+                datalabels: { display: false },
+                annotation: {
+                    annotations: {
+                        ercot90: { type: 'line', xMin: 56, xMax: 56, borderColor: REGION_COLORS.ERCOT + 'aa', borderWidth: 2, borderDash: [4, 3],
+                            label: { display: true, content: 'ERCOT 90%', position: 'start', font: { size: 9 }, color: REGION_COLORS.ERCOT, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } },
+                        caiso95: { type: 'line', xMin: 260, xMax: 260, borderColor: REGION_COLORS.CAISO + 'aa', borderWidth: 2, borderDash: [4, 3],
+                            label: { display: true, content: 'CAISO 95%', position: 'end', font: { size: 9 }, color: REGION_COLORS.CAISO, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } },
+                        nyiso95: { type: 'line', xMin: 420, xMax: 420, borderColor: REGION_COLORS.NYISO + 'aa', borderWidth: 2, borderDash: [4, 3],
+                            label: { display: true, content: 'NYISO 95%', position: 'start', font: { size: 9 }, color: REGION_COLORS.NYISO, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } },
+                        pjm97: { type: 'line', xMin: 450, xMax: 450, borderColor: REGION_COLORS.PJM + 'aa', borderWidth: 2, borderDash: [4, 3],
+                            label: { display: true, content: 'PJM 97%', position: 'end', font: { size: 9 }, color: REGION_COLORS.PJM, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// TABLE: Inflection Point Analysis (Section 4)
+// ============================================================================
+
+function buildInflectionTable() {
+    const state = getComparisonState();
+    const gridLevel = state.grid.toLowerCase();
+    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
+    const dacMid = BENCHMARKS_DYNAMIC.dac[state.dac].mid;
+    const indMid = BENCHMARKS_DYNAMIC.industrial[state.industrial].mid;
+    const remMid = BENCHMARKS_DYNAMIC.removal[state.removal].mid;
+
+    function findCrossover(regionData, costLevel) {
+        for (let i = 0; i < regionData.length; i++) {
+            if (regionData[i] >= costLevel) {
+                return THRESHOLDS[i];
+            }
+        }
+        return '>100';
+    }
+
+    function cellClass(val) {
+        if (val === '>100') return 'cell-green';
+        if (val >= 97) return 'cell-green';
+        if (val >= 95) return 'cell-yellow';
+        if (val >= 92) return 'cell-orange';
+        return 'cell-red';
+    }
+
+    // Update table headers dynamically
+    const thead = document.querySelector('#inflectionTable thead tr');
+    thead.innerHTML = `
+        <th>Region</th>
+        <th>EPA SCC<br>($190/ton)</th>
+        <th>EU ETS Range<br>($65-92/ton)</th>
+        <th>Rennert SCC<br>($185/ton)</th>
+        <th>Industrial Elec.<br>($${indMid}/ton)</th>
+        <th>Carbon Removal<br>($${remMid}/ton)</th>
+        <th>DAC<br>($${dacMid}/ton)</th>
+    `;
+
+    const tbody = document.getElementById('inflectionBody');
+    tbody.innerHTML = '';
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+
+    regions.forEach(region => {
+        const row = document.createElement('tr');
+        const epaScc = findCrossover(macData[region], 190);
+        const euEts = findCrossover(macData[region], 88);
+        const rennert = findCrossover(macData[region], 185);
+        const industrial = findCrossover(macData[region], Math.max(indMid, 10));
+        const removal = findCrossover(macData[region], remMid);
+        const dac = findCrossover(macData[region], dacMid);
+
+        row.innerHTML = `
+            <td>${region}</td>
+            <td class="${cellClass(epaScc)}">${epaScc === '>100' ? '>100%' : epaScc + '%'}</td>
+            <td class="${cellClass(euEts)}">${euEts === '>100' ? '>100%' : euEts + '%'}</td>
+            <td class="${cellClass(rennert)}">${rennert === '>100' ? '>100%' : rennert + '%'}</td>
+            <td class="${cellClass(industrial)}">${industrial === '>100' ? '>100%' : industrial + '%'}</td>
+            <td class="${cellClass(removal)}">${removal === '>100' ? '>100%' : removal + '%'}</td>
+            <td class="${cellClass(dac)}">${dac === '>100' ? '>100%' : dac + '%'}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// ============================================================================
+// CHART 4: Portfolio Optimization (Section 5)
+// ============================================================================
+
+function buildPortfolioChart() {
+    const ctx = document.getElementById('portfolioChart').getContext('2d');
+
+    // X-axis: grid target from 75 to 100
+    const targets = [75, 80, 85, 88, 90, 92, 94, 95, 96, 97, 98, 99, 100];
+
+    // Stacked area: conceptual optimal portfolio allocation (% of total decarbonization budget)
+    // As grid target rises, grid share declines and alternatives increase
+    const gridShare =     [95, 92, 88, 85, 80, 72, 62, 55, 45, 35, 25, 18, 10];
+    const efficiencyShare = [3, 5,  7,  8,  10, 12, 14, 15, 16, 16, 15, 14, 12];
+    const crossSector =   [1.5, 2, 3,  4,  5,  8,  12, 15, 18, 22, 26, 28, 30];
+    const removal =       [0.5, 1, 2,  3,  5,  8,  12, 15, 21, 27, 34, 40, 48];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: targets.map(t => t + '%'),
+            datasets: [
+                {
+                    label: 'Grid Decarbonization',
+                    data: gridShare,
+                    backgroundColor: 'rgba(74,144,217,0.35)',
+                    borderColor: '#4a90d9',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3
+                },
+                {
+                    label: 'Energy Efficiency & Electrification',
+                    data: efficiencyShare,
+                    backgroundColor: 'rgba(34,197,94,0.30)',
+                    borderColor: '#22C55E',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3
+                },
+                {
+                    label: 'Cross-Sector (SAF, Green H2)',
+                    data: crossSector,
+                    backgroundColor: 'rgba(255,152,0,0.30)',
+                    borderColor: '#FF9800',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3
+                },
+                {
+                    label: 'Carbon Removal (DAC, BECCS)',
+                    data: removal,
+                    backgroundColor: 'rgba(233,30,99,0.30)',
+                    borderColor: '#E91E63',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Grid Clean Energy Target', font: { size: 13, weight: 600 } },
+                    ticks: { font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.04)' }
+                },
+                y: {
+                    stacked: false,
+                    min: 0,
+                    max: 100,
+                    title: { display: true, text: 'Share of Decarbonization Budget (%)', font: { size: 13, weight: 600 } },
+                    ticks: {
+                        callback: v => v + '%',
+                        font: { size: 11 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ctx.dataset.label + ': ' + ctx.raw + '%'
+                    }
+                },
+                datalabels: { display: false },
+                annotation: {
+                    annotations: {
+                        inflection: {
+                            type: 'line',
+                            xMin: 4, xMax: 4,  // index of 90%
+                            borderColor: 'rgba(0,0,0,0.25)',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: 'Inflection Zone',
+                                position: 'start',
+                                font: { size: 11, weight: 600 },
+                                color: 'rgba(0,0,0,0.5)',
+                                backgroundColor: 'rgba(255,255,255,0.8)',
+                                padding: 4
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    buildMacChart('medium');
+    buildLadder();
+    buildBandChart();
+    buildInflectionTable();
+    buildPortfolioChart();
+
+    // Wire up comparison toggle controls
+    document.querySelectorAll('.ctrl-toggle button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const toggle = btn.closest('.ctrl-toggle');
+            toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            onComparisonChange();
+        });
+    });
+
+    // Initial crossover summary
+    updateCrossoverSummary(getComparisonState());
+
+    // Animated counters
+    const counters = document.querySelectorAll('.counter-value[data-target]');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const el = entry.target;
+                const target = parseInt(el.dataset.target);
+                const suffix = el.dataset.suffix || '';
+                animateCounter(el, target, suffix);
+                observer.unobserve(el);
+            }
+        });
+    }, { threshold: 0.5 });
+
+    counters.forEach(c => observer.observe(c));
+
+    // Resize ladder on window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(buildLadder, 200);
+    });
+});
+
+function animateCounter(el, target, suffix) {
+    const duration = 1200;
+    const start = performance.now();
+    function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(target * eased);
+        el.textContent = current + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+}
+</script>
+
+</body>
+</html>

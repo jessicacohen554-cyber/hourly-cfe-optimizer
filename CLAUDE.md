@@ -1,3 +1,11 @@
+# Claude Code — Session Continuity Instructions
+
+## If Resuming This Project
+
+1. **Read SPEC.md first** — it contains every design decision, cost table, and implementation detail
+2. **Check the todo list** or review git log to see what's been completed
+3. **Branch**: `claude/enhance-optimizer-model-IqSpe`
+4. **Repo**: `jessicacohen554-cyber/hourly-cfe-optimizer` (all advanced model work on designated branch)
 # Claude Code — Session Instructions
 
 ## Workflow Preferences (Apply to EVERY Session)
@@ -92,12 +100,28 @@
 - 2025 snapshot model (no forward projections)
 - All sensitivity toggles use Low/Medium/High naming (never "Base" or "Baseline")
 - All new features layered on top of existing — never remove existing visuals or controls
+- **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
+- **5 paired toggle groups** replace 10 individual toggles (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission)
+- **10 thresholds** (75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100) — reduced from 18, with 2.5% granularity in inflection zone
+- **16,200 total scenarios** (10 thresholds × 5 regions × 324 paired toggle combos) — each with its own co-optimized resource mix and cost
 - Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached mixes
 - Hydro is always existing-only, wholesale-priced, $0 transmission
 - H2 storage explicitly excluded
 - CCS-CCGT includes 45Q offset in LCOE
 - LDES = 100hr iron-air, 50% RT efficiency, new multi-day dispatch algorithm
 - Battery = 4hr Li-ion, 85% RT efficiency, existing daily-cycle dispatch preserved
+
+## Critical: Scientific Rigor vs. Compute
+
+**NEVER sacrifice scientific integrity to save compute.** Use as much compute as necessary to achieve academically rigorous results. The user expects this project to withstand academic scrutiny.
+
+When facing compute vs. rigor tradeoffs:
+1. **Always discuss the tradeoff with the user first** — don't unilaterally choose minimal compute
+2. **Find the best middle ground** that balances rigor with feasibility
+3. **Pairing variables** (e.g., 5 paired toggles vs. 10 individual) is an acceptable rigor-compute tradeoff because it reflects real-world cost correlations
+4. **Reducing thresholds** from 18 to 7 is acceptable because it preserves key inflection points
+5. **Never decouple cost from optimization** — the co-optimization of cost + resource mix is the whole point
+6. **Never re-rank cached results as a shortcut** when full optimization is needed — if costs change the cost function, the optimization must use that cost function
 
 ## User Preferences (Do Not Re-Ask These)
 
@@ -125,6 +149,11 @@
 - Methodology HTML: Technical specs only (detailed narrative lives in PDF paper)
 
 ### QA/QC Requirements (Before Any Push)
+- Validate optimizer results against published research (NREL ATB, Lazard, LBNL)
+- Check HTML formatting, visual consistency, all controls functional
+- Mobile compatibility at 320px, 375px, 768px viewports
+- All text readable in all figures at all sizes
+- No console errors, no broken layouts
 - **Always do a full QA/QC sweep** on functionality, visuals, and narrative before pushing
 - Validate optimizer results against published research (NREL ATB, Lazard, LBNL)
 - Check HTML formatting, visual consistency, all controls functional across ALL pages
@@ -140,6 +169,16 @@
 - Use CSS animations, scroll-based triggers, Chart.js animation options
 - Keep it professional (Bloomberg/McKinsey quality) but engaging
 
+### CO2 & Abatement Modeling (Decided)
+- **CO2 emission rate**: Dynamic — shifts with fossil fuel price toggle using regional fuel-switching elasticity
+- **Abatement benchmarks**: Static L/M/H bands (DAC, SAF, BECCS, etc.) as fixed horizontal bands on charts
+- **Social cost of carbon references**: EPA $51/ton + Rennert et al. $185/ton + EU ETS $60-100/ton range — all three shown on charts
+
+### Build Process
+- Deploy agents in parallel for non-dependent tasks
+- Push early so user can iterate/review while optimizer builds
+- Standalone HTML must be rebuilt after all changes
+- **After every optimizer run**: Always save a final cached results data file (`data/optimizer_cache.json`) that can be read into future projects as input. Include full co-optimized results for all thresholds × scenarios × ISOs with resource mixes, costs, scores, and metadata.
 ### Build Process
 - Deploy agents in parallel for non-dependent tasks (see Workflow Preferences above)
 - Standalone HTML must be rebuilt after all changes (`python dashboard/build_standalone.py`)
