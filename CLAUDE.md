@@ -11,10 +11,10 @@
 ## Workflow Preferences (Apply to EVERY Session)
 
 ### Documentation-First Development
-- **Always maintain SPEC.md** — update it as decisions are made so context is never lost between sessions
+- **CRITICAL — Decisions go to SPEC.md IMMEDIATELY**: The *very first action* after any design, methodology, or architectural decision is confirmed by the user is to write it to SPEC.md. Do NOT continue with implementation, code changes, or further discussion until the decision is captured. This is the highest-priority workflow rule — sessions can be disrupted or hit token limits at any time, and SPEC.md is the single source of truth that enables seamless continuity. The lag between a decision being made and it being recorded in SPEC.md must be zero.
 - **Always maintain this CLAUDE.md** — update it when new preferences, design decisions, or architecture changes are established
 - Before ending any session, ensure both files reflect all decisions made during the session
-- If new features or design choices are discussed, document them in SPEC.md immediately — don't wait until the end
+- If multiple decisions are made in rapid succession (e.g., user approves a batch), pause implementation and write ALL of them to SPEC.md before proceeding with any code
 
 ### Parallel Execution
 - **Deploy as many agents as possible in parallel** for non-dependent tasks to maximize efficiency
@@ -47,11 +47,35 @@
 - User can always override this ordering for specific tasks
 
 ### Communication Style
+- **Don't narrate — just do.** Skip "Let me read the file...", "Now I'll edit...", "Let me check..." filler. Execute the work, report the outcome.
+- **Use the TodoWrite checklist on a frequent cadence** — the todo list IS the status communication. Update it in real-time so the user always sees current progress without needing to ask.
+- **Don't echo back the user's decisions** — when they confirm something, acknowledge briefly and act. Don't restate what they said.
 - **Be verbose when it matters** — emphasize important decisions, tradeoffs, and anything the user needs to know
 - **Be concise otherwise** — don't pad responses with filler or restate the obvious
 - **Explain reasoning concisely** — a sentence or two on *why*, not a paragraph
 - **Prefer bullets with clear headers and numbered lists** — avoid walls of prose
 - **Only surface errors when you can't resolve them** — try to self-recover first; if stuck after reasonable attempts, explain what failed and what you tried
+- **Skip QA narration unless something fails** — don't describe each passing check. Just "QA passed" or report failures.
+
+### Token Efficiency (Critical — Protect User's Weekly Budget)
+- **Targeted file reads only** — always use `offset`/`limit` on large files. Never re-read a file already read in the same session unless it's been modified since the last read.
+- **Exploration agents: return summaries, not raw content** — exploration agents should return structured summaries (architecture, key functions, line numbers). Never paste full file contents back. A 2K-line file dump in an agent response is a token waste.
+- **Prefer Grep/Glob over Explore agents for directed lookups** — if searching for a specific function, pattern, or file name, use Grep/Glob directly. Explore agents are 10× more expensive and should only be used for broad, open-ended codebase understanding.
+- **Batch all related edits into one response** — don't make 6 sequential edits with narration between each. Plan them, execute them all in parallel where possible, report once.
+- **Don't repeat large code blocks back to the user** — if the user can see the file, don't paste it into the response. Reference by file:line instead.
+
+### Optimizer Run Discipline (Critical — Token Budget Protection)
+- **Optimizer runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every optimizer run as a high-value operation that must succeed.
+- **NEVER start an optimizer run while decisions are still being discussed.** The optimizer must reflect ALL decisions made up to the point of launch.
+- **Pre-run gate**: Before launching `optimize_overprocure.py`, explicitly verify:
+  1. All decisions from the current conversation have been implemented in the optimizer code
+  2. All decisions have been captured in SPEC.md (per Documentation-First rule above)
+  3. No open questions remain that could change optimizer logic, cost tables, or methodology
+  4. The code passes a syntax check (`python -c "import py_compile; py_compile.compile(...)"`)
+- **Once running, the optimizer is the top priority.** Do NOT let it get interrupted, stopped, or deprioritized. It runs in the background — other non-optimizer work can happen concurrently, but nothing should kill the process. If the session is approaching token limits, warn the user that the optimizer is still running and needs to complete.
+- **If new decisions are made while the optimizer is running in the background**: Immediately flag to the user that the running optimizer does NOT reflect the new decision, and confirm whether to (a) let it finish anyway (if the decision doesn't affect current run), or (b) stop it and re-run after implementing the change. Never silently let a stale run continue as if it's current.
+- **If the user asks to run the optimizer**: Treat it as a trigger to do a final audit — scan the recent conversation for any unimplemented decisions before starting the run. If anything is missing, implement it first, THEN run.
+- **Background optimizer + other edits is fine** — but only for edits that don't touch optimizer logic (e.g., HTML, CSS, documentation, dashboard JS). If an edit changes anything the optimizer consumes (cost tables, algorithms, thresholds, resource types, dispatch logic), the optimizer must be re-run after the current run completes.
 
 ### Change Propagation (Critical)
 - **"Fix something" = fix it everywhere** — any request to fix, update, or change something applies to ALL regions and ALL pages by default, not just the one being discussed
