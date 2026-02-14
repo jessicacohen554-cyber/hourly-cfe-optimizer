@@ -655,5 +655,569 @@ body {
 <!-- ========== BOTTOM ACCENT BAR ========== -->
 <div class="bottom-banner"></div>
 
+<!-- ========== DATA-DRIVEN CHARTS ========== -->
+<script>
+(function() {
+    const REGION = 'CAISO';
+    const COLORS = {
+        clean_firm: '#1E3A5F',
+        solar: '#F59E0B',
+        wind: '#22C55E',
+        ccs_ccgt: '#6366F1',
+        hydro: '#0EA5E9',
+        battery: '#EF4444',
+        ldes: '#8B5CF6'
+    };
+    const RESOURCE_LABELS = {
+        clean_firm: 'Clean Firm',
+        solar: 'Solar',
+        wind: 'Wind',
+        hydro: 'Hydro',
+        ccs_ccgt: 'CCS-CCGT',
+        battery: 'Battery',
+        ldes: 'LDES'
+    };
+    // Emission rates (tCO2/MWh) for fossil generation displaced
+    const EMISSION_RATES = {
+        CAISO: 0.37, ERCOT: 0.41, PJM: 0.55, NYISO: 0.37, NEISO: 0.40
+    };
+
+    const chartFont = { family: "'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif" };
+    const bodyFont = { family: "'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif" };
+
+    Chart.defaults.font.family = bodyFont.family;
+    Chart.defaults.plugins.datalabels = { display: false };
+
+    function hidePlaceholder(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (canvas && canvas.parentElement) {
+            const msg = canvas.parentElement.querySelector('.chart-placeholder-msg');
+            if (msg) msg.style.display = 'none';
+        }
+    }
+
+    function showError(canvasId, message) {
+        const canvas = document.getElementById(canvasId);
+        if (canvas && canvas.parentElement) {
+            const msg = canvas.parentElement.querySelector('.chart-placeholder-msg');
+            if (msg) {
+                msg.textContent = message;
+                msg.style.display = 'block';
+            }
+        }
+    }
+
+    fetch('overprocure_results.json')
+        .then(r => { if (!r.ok) throw new Error('Failed to load results'); return r.json(); })
+        .then(data => {
+            const config = data.config;
+            const regionData = data.results[REGION];
+            if (!regionData) throw new Error('Region data not found');
+
+            const thresholds = config.thresholds;
+            const thresholdLabels = thresholds.map(t => t + '%');
+            const gridMix = config.grid_mix_shares[REGION];
+            const wholesalePrice = config.wholesale_prices[REGION];
+
+            // Extract per-threshold data
+            const costData = [];
+            const mixData = { clean_firm: [], solar: [], wind: [], hydro: [] };
+            const storageData = [];
+            const matchScores = [];
+            const costBreakdowns = [];
+
+            thresholds.forEach(t => {
+                const td = regionData.thresholds[String(t)];
+                if (td) {
+                    costData.push(td.costs.effective_cost_per_useful_mwh);
+                    matchScores.push(td.hourly_match_score);
+                    storageData.push(td.storage_dispatch_pct);
+                    costBreakdowns.push(td.costs.resource_costs);
+                    for (const res of ['clean_firm', 'solar', 'wind', 'hydro']) {
+                        mixData[res].push(td.resource_mix[res] || 0);
+                    }
+                }
+            });
+
+            // ========== CHART 1: Baseline hourly clean energy (existing grid) ==========
+            hidePlaceholder('baselineChart');
+            const totalClean = gridMix.clean_firm + gridMix.solar + gridMix.wind + gridMix.hydro;
+            // Simulate 24-hour profile using resource characteristics
+            const hours = Array.from({length: 24}, (_, i) => i);
+            const hourLabels = hours.map(h => {
+                const ampm = h < 12 ? 'AM' : 'PM';
+                const hr = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+                return hr + ampm;
+            });
+            // Build synthetic hourly clean % based on solar curve + flat firm/wind/hydro
+            const hourlyClean = hours.map(h => {
+                const solarFactor = Math.max(0, Math.sin(Math.PI * (h - 6) / 12));
+                const solarContrib = gridMix.solar * solarFactor * 1.8;
+                const windFactor = 0.7 + 0.3 * Math.sin(Math.PI * (h + 6) / 12);
+                const windContrib = gridMix.wind * windFactor;
+                const firmContrib = gridMix.clean_firm;
+                const hydroFactor = 0.8 + 0.2 * Math.sin(Math.PI * (h - 4) / 16);
+                const hydroContrib = gridMix.hydro * hydroFactor;
+                return Math.min(100, solarContrib + windContrib + firmContrib + hydroContrib);
+            });
+
+            new Chart(document.getElementById('baselineChart'), {
+                type: 'line',
+                data: {
+                    labels: hourLabels,
+                    datasets: [{
+                        label: 'Clean Energy %',
+                        data: hourlyClean,
+                        borderColor: '#0EA5E9',
+                        backgroundColor: 'rgba(14,165,233,0.15)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#0EA5E9',
+                        borderWidth: 2.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                avgLine: {
+                                    type: 'line',
+                                    yMin: totalClean,
+                                    yMax: totalClean,
+                                    borderColor: 'rgba(245,158,11,0.7)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 4],
+                                    label: {
+                                        display: true,
+                                        content: 'Avg: ' + totalClean.toFixed(1) + '%',
+                                        position: 'end',
+                                        backgroundColor: 'rgba(245,158,11,0.85)',
+                                        color: '#fff',
+                                        font: { size: 11, weight: '600' }
+                                    }
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.parsed.y.toFixed(1) + '% clean'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Clean Energy %', font: { size: 12 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Hour of Day', font: { size: 12 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // ========== CHART 2: Cost trajectory ==========
+            hidePlaceholder('pathwayChart');
+            new Chart(document.getElementById('pathwayChart'), {
+                type: 'line',
+                data: {
+                    labels: thresholdLabels,
+                    datasets: [{
+                        label: 'Effective Cost ($/MWh)',
+                        data: costData,
+                        borderColor: '#1E3A5F',
+                        backgroundColor: 'rgba(30,58,95,0.12)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#1E3A5F',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                wholesale: {
+                                    type: 'line',
+                                    yMin: wholesalePrice,
+                                    yMax: wholesalePrice,
+                                    borderColor: 'rgba(107,114,128,0.5)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 4],
+                                    label: {
+                                        display: true,
+                                        content: 'Wholesale: $' + wholesalePrice + '/MWh',
+                                        position: 'start',
+                                        backgroundColor: 'rgba(107,114,128,0.8)',
+                                        color: '#fff',
+                                        font: { size: 11, weight: '600' }
+                                    }
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => '$' + ctx.parsed.y.toFixed(2) + '/MWh'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // ========== CHART 3: Resource mix evolution (stacked bar) ==========
+            hidePlaceholder('mixEvolutionChart');
+            new Chart(document.getElementById('mixEvolutionChart'), {
+                type: 'bar',
+                data: {
+                    labels: thresholdLabels,
+                    datasets: [
+                        { label: 'Clean Firm', data: mixData.clean_firm, backgroundColor: COLORS.clean_firm },
+                        { label: 'Solar', data: mixData.solar, backgroundColor: COLORS.solar },
+                        { label: 'Wind', data: mixData.wind, backgroundColor: COLORS.wind },
+                        { label: 'Hydro', data: mixData.hydro, backgroundColor: COLORS.hydro }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Resource Mix (%)', font: { size: 12 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        },
+                        x: {
+                            stacked: true,
+                            title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // ========== CHART 4: Sensitivity impact (cost breakdown by resource) ==========
+            hidePlaceholder('sensitivityChart');
+            // Show per-resource cost contribution at key thresholds to illustrate what drives total cost
+            const sensitivityThresholds = [75, 85, 95, 100];
+            const sensLabels = sensitivityThresholds.map(t => t + '%');
+            const sensData = { clean_firm: [], solar: [], wind: [], hydro: [], storage: [] };
+            sensitivityThresholds.forEach(t => {
+                const td = regionData.thresholds[String(t)];
+                if (td) {
+                    const rc = td.costs.resource_costs;
+                    sensData.clean_firm.push(rc.clean_firm ? rc.clean_firm.cost_per_demand_mwh : 0);
+                    sensData.solar.push(rc.solar ? (rc.solar.cost_per_demand_mwh || rc.solar.cost || 0) : 0);
+                    sensData.wind.push(rc.wind ? (rc.wind.cost_per_demand_mwh || rc.wind.cost || 0) : 0);
+                    sensData.hydro.push(rc.hydro ? (rc.hydro.cost_per_demand_mwh || 0) : 0);
+                    sensData.storage.push(rc.storage ? rc.storage.cost_per_demand_mwh : 0);
+                }
+            });
+
+            new Chart(document.getElementById('sensitivityChart'), {
+                type: 'bar',
+                data: {
+                    labels: sensLabels,
+                    datasets: [
+                        { label: 'Clean Firm', data: sensData.clean_firm, backgroundColor: COLORS.clean_firm },
+                        { label: 'Solar', data: sensData.solar, backgroundColor: COLORS.solar },
+                        { label: 'Wind', data: sensData.wind, backgroundColor: COLORS.wind },
+                        { label: 'Hydro', data: sensData.hydro, backgroundColor: COLORS.hydro },
+                        { label: 'Storage', data: sensData.storage, backgroundColor: COLORS.battery }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(2) + '/MWh' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: { display: true, text: 'Cost per MWh of Demand ($/MWh)', font: { size: 12 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        },
+                        x: {
+                            stacked: true,
+                            title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // ========== CHART 5: Storage deployment ==========
+            hidePlaceholder('storageChart');
+            // Split storage into battery vs LDES estimate based on threshold
+            const batteryPcts = [];
+            const ldesPcts = [];
+            thresholds.forEach((t, i) => {
+                const total = storageData[i] || 0;
+                if (t >= 95) {
+                    // At 95%+ LDES enters; split roughly
+                    const ldesShare = Math.min(total, total * ((t - 90) / 15));
+                    ldesPcts.push(parseFloat(ldesShare.toFixed(1)));
+                    batteryPcts.push(parseFloat((total - ldesShare).toFixed(1)));
+                } else {
+                    batteryPcts.push(total);
+                    ldesPcts.push(0);
+                }
+            });
+
+            new Chart(document.getElementById('storageChart'), {
+                type: 'bar',
+                data: {
+                    labels: thresholdLabels,
+                    datasets: [
+                        { label: 'Battery (4hr Li-ion)', data: batteryPcts, backgroundColor: COLORS.battery },
+                        { label: 'LDES (100hr Iron-Air)', data: ldesPcts, backgroundColor: COLORS.ldes }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '% of demand' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: { display: true, text: 'Storage Dispatch (% of Demand)', font: { size: 12 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        },
+                        x: {
+                            stacked: true,
+                            title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // ========== CHART 6: CO2 Abatement cost ==========
+            hidePlaceholder('abatementChart');
+            const emissionRate = EMISSION_RATES[REGION];
+            const avgAbatement = [];
+            const margAbatement = [];
+            thresholds.forEach((t, i) => {
+                const td = regionData.thresholds[String(t)];
+                if (!td) return;
+                const cleanPct = t / 100;
+                const fossilPct = 1 - cleanPct;
+                const incrementalCost = td.costs.incremental_above_baseline;
+                const tonsAvoided = cleanPct * emissionRate;
+                const avg = tonsAvoided > 0 ? incrementalCost / tonsAvoided : 0;
+                avgAbatement.push(parseFloat(avg.toFixed(1)));
+
+                if (i > 0) {
+                    const prevTd = regionData.thresholds[String(thresholds[i - 1])];
+                    if (prevTd) {
+                        const deltaCost = td.costs.effective_cost_per_useful_mwh - prevTd.costs.effective_cost_per_useful_mwh;
+                        const deltaPct = (t - thresholds[i - 1]) / 100;
+                        const deltaTons = deltaPct * emissionRate;
+                        const marg = deltaTons > 0 ? deltaCost / deltaTons : 0;
+                        margAbatement.push(parseFloat(marg.toFixed(1)));
+                    } else {
+                        margAbatement.push(0);
+                    }
+                } else {
+                    margAbatement.push(avgAbatement[0]);
+                }
+            });
+
+            new Chart(document.getElementById('abatementChart'), {
+                type: 'bar',
+                data: {
+                    labels: thresholdLabels,
+                    datasets: [
+                        {
+                            label: 'Average $/ton CO2',
+                            data: avgAbatement,
+                            backgroundColor: 'rgba(30,58,95,0.75)',
+                            borderColor: '#1E3A5F',
+                            borderWidth: 1,
+                            order: 2
+                        },
+                        {
+                            label: 'Marginal $/ton CO2',
+                            data: margAbatement,
+                            type: 'line',
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239,68,68,0.1)',
+                            pointBackgroundColor: '#EF4444',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            fill: false,
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, padding: 16, font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(0) + '/ton' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Abatement Cost ($/ton CO2)', font: { size: 12 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Hourly Clean Energy Target', font: { size: 12 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // ========== CHART 7: Regional comparison ==========
+            hidePlaceholder('comparisonChart');
+            const allRegions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+            // Compare at 90% threshold
+            const compThresh = '90';
+            const regionCosts = [];
+            const regionClean = [];
+            const regionLabels = [];
+            const barColors = [];
+            allRegions.forEach(r => {
+                const rd = data.results[r];
+                const td = rd ? rd.thresholds[compThresh] : null;
+                if (td) {
+                    regionLabels.push(r);
+                    regionCosts.push(td.costs.effective_cost_per_useful_mwh);
+                    const gm = config.grid_mix_shares[r];
+                    regionClean.push(gm.clean_firm + gm.solar + gm.wind + gm.hydro);
+                    barColors.push(r === REGION ? '#0EA5E9' : 'rgba(30,58,95,0.45)');
+                }
+            });
+
+            // National average cost at 90%
+            const nationalAvgCost = regionCosts.reduce((a, b) => a + b, 0) / regionCosts.length;
+
+            new Chart(document.getElementById('comparisonChart'), {
+                type: 'bar',
+                data: {
+                    labels: regionLabels,
+                    datasets: [{
+                        label: 'Cost at 90% Target ($/MWh)',
+                        data: regionCosts,
+                        backgroundColor: barColors,
+                        borderColor: barColors.map(c => c === '#0EA5E9' ? '#0284C7' : 'rgba(30,58,95,0.6)'),
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                avgLine: {
+                                    type: 'line',
+                                    xMin: nationalAvgCost,
+                                    xMax: nationalAvgCost,
+                                    borderColor: 'rgba(245,158,11,0.8)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 4],
+                                    label: {
+                                        display: true,
+                                        content: 'Avg: $' + nationalAvgCost.toFixed(0),
+                                        position: 'start',
+                                        backgroundColor: 'rgba(245,158,11,0.85)',
+                                        color: '#fff',
+                                        font: { size: 11, weight: '600' }
+                                    }
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: { label: ctx => '$' + ctx.parsed.x.toFixed(2) + '/MWh at 90% target' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        },
+                        y: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+        })
+        .catch(err => {
+            console.error('Error loading optimizer results:', err);
+            ['baselineChart', 'pathwayChart', 'mixEvolutionChart', 'sensitivityChart', 'storageChart', 'abatementChart', 'comparisonChart'].forEach(id => {
+                showError(id, 'Unable to load optimizer results. Please ensure overprocure_results.json is available.');
+            });
+        });
+})();
+</script>
 </body>
 </html>
