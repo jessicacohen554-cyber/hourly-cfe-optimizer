@@ -76,11 +76,427 @@ body {
     --gap-70: rgba(209, 213, 219, 0.55);
 }
 
+/* ========== TOP NAVIGATION BAR ========== */
+.top-nav {
+    background: #1a1a2e;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+.top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: 1440px;
+    width: 100%;
+    justify-content: center;
+}
+.top-nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 14px 18px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+.top-nav a:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.06);
+}
+.top-nav a.nav-active {
+    color: #ffffff;
+    border-bottom-color: #0EA5E9;
+    background: rgba(14,165,233,0.1);
+}
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+.nav-hamburger svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+@media (max-width: 768px) {
+    .top-nav {
+        flex-wrap: wrap;
+        padding: 0 12px;
+        justify-content: space-between;
+    }
+    .top-nav-inner {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding-bottom: 8px;
+    }
+    .top-nav-inner.nav-open {
+        display: flex;
+    }
+    .top-nav a {
+        padding: 12px 16px;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        width: 100%;
+        text-align: left;
+    }
+    .top-nav a.nav-active {
+        border-left-color: #0EA5E9;
+        border-bottom: none;
+        background: rgba(14,165,233,0.12);
+    }
+    .nav-hamburger {
+        display: flex;
+    }
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        color: #ffffff;
+        font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 12px 0;
+    }
+}
+@media (min-width: 769px) {
+    .nav-brand { display: none; }
+}
+
+/* ========== SENSITIVITY TOGGLES (5 Paired Groups) ========== */
+.sensitivity-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+}
+.sensitivity-panel h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.15rem;
+    color: var(--navy);
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+}
+.sensitivity-panel .sensitivity-subtitle {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.45;
+}
+.sensitivity-toggles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px 28px;
+}
+.sensitivity-toggle-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8f9fb;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sensitivity-toggle-item:hover {
+    border-color: var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.sensitivity-toggle-item .toggle-label-area {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.sensitivity-toggle-item .toggle-label-main {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.sensitivity-toggle-item .toggle-label-sub {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+.sensitivity-toggle-item .info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(107,114,128,0.12);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: help;
+    flex-shrink: 0;
+    line-height: 1;
+    position: relative;
+}
+/* Custom tooltip for info icons */
+.info-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+}
+.info-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.45;
+    padding: 10px 14px;
+    border-radius: 8px;
+    width: 280px;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    pointer-events: none;
+}
+.info-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1a1a2e;
+}
+.info-icon-wrapper:hover .info-tooltip,
+.info-icon-wrapper:focus-within .info-tooltip {
+    display: block;
+}
+.toggle-btn-group {
+    display: inline-flex;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f3f4f6;
+    flex-shrink: 0;
+}
+.toggle-btn-group button {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    letter-spacing: 0.02em;
+}
+.toggle-btn-group button:not(:last-child) {
+    border-right: 1px solid var(--border-light);
+}
+.toggle-btn-group button.active {
+    background: var(--navy);
+    color: #ffffff;
+}
+.toggle-btn-group button:hover:not(.active) {
+    background: rgba(26,39,68,0.08);
+    color: var(--text-primary);
+}
+@media (max-width: 768px) {
+    .sensitivity-toggles-grid {
+        grid-template-columns: 1fr;
+    }
+    .sensitivity-toggle-item {
+        flex-wrap: wrap;
+        padding: 10px 12px;
+    }
+    .sensitivity-panel {
+        padding: 18px 16px;
+    }
+    .info-tooltip {
+        width: 220px;
+        left: 0;
+        transform: translateX(-20%);
+    }
+    .info-tooltip::after {
+        left: 30%;
+    }
+}
+
+/* ========== ABATEMENT CHARTS PLACEHOLDER ========== */
+.abatement-section {
+    margin-bottom: 28px;
+}
+.abatement-section h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: #DC2626;
+    margin-bottom: 16px;
+    text-transform: capitalize;
+    letter-spacing: 0.04em;
+}
+.abatement-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+.abatement-chart-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 28px;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+.abatement-chart-panel h4 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--navy);
+    margin-bottom: 16px;
+}
+.abatement-chart-placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+    border: 2px dashed var(--border-light);
+    border-radius: 8px;
+    padding: 24px;
+    min-height: 220px;
+}
+@media (max-width: 768px) {
+    .abatement-charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ========== WHAT YOU NEED PANEL ========== */
+.what-you-need-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 28px;
+    margin-bottom: 28px;
+}
+.what-you-need-panel h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: var(--navy);
+    margin-bottom: 20px;
+    letter-spacing: 0.04em;
+}
+.wyn-metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.wyn-metric {
+    background: linear-gradient(145deg, #f8f9fb 0%, #f0f2f5 100%);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+}
+.wyn-metric-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.wyn-metric-value {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.1;
+}
+.wyn-metric-unit {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+.wyn-table-wrap {
+    overflow-x: auto;
+}
+.wyn-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+.wyn-table th {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    letter-spacing: 0.04em;
+}
+.wyn-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-secondary);
+}
+.wyn-table .placeholder-row td {
+    color: var(--text-muted);
+    font-style: italic;
+}
+@media (max-width: 768px) {
+    .what-you-need-panel { padding: 18px 16px; }
+    .wyn-metrics-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+    .wyn-metrics-row { grid-template-columns: 1fr; }
+}
+
 /* ========== HEADER ========== */
 .header {
     background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
     color: #ffffff;
-    padding: 90px 24px 80px;
+    padding: 72px 24px 64px;
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -271,7 +687,7 @@ body {
 /* ========== METRIC TILES ========== */
 .metrics-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 18px;
     margin-bottom: 28px;
 }
@@ -748,6 +1164,115 @@ body {
 }
 
 /* ========== KEY FINDINGS ========== */
+/* ========== PATHWAY PLANNING PANEL ========== */
+.pathway-panel {
+    background: var(--bg-card);
+    border-radius: 14px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid var(--border-light);
+}
+.pathway-panel h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.pathway-subtitle {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+.pathway-controls {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+.pathway-ctrl {
+    flex: 1;
+    min-width: 160px;
+}
+.pathway-ctrl label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+.pathway-ctrl select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    background: #FFFFFF;
+    color: var(--text-primary);
+    min-height: 44px;
+}
+.pathway-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.pathway-metric {
+    background: #F3F4F8;
+    border-radius: 10px;
+    padding: 18px 16px;
+    text-align: center;
+}
+.pathway-metric-warn {
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.15);
+}
+.pathway-metric-value {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.1;
+}
+.pathway-metric-warn .pathway-metric-value {
+    color: #C75B4A;
+}
+.pathway-metric-label {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.pathway-metric-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.35;
+}
+.pathway-insight {
+    background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(34,197,94,0.04) 100%);
+    border: 1px solid rgba(14,165,233,0.15);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+.pathway-insight strong { color: var(--navy); }
+@media (max-width: 768px) {
+    .pathway-panel { padding: 20px 16px; }
+    .pathway-controls { flex-direction: column; gap: 14px; }
+    .pathway-ctrl { min-width: auto; }
+    .pathway-metrics { grid-template-columns: 1fr; gap: 12px; }
+    .pathway-metric-value { font-size: 1.5rem; }
+    .pathway-insight { font-size: 0.85rem; padding: 14px 16px; }
+}
+
 .key-findings {
     background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(239,68,68,0.04) 100%);
     border: 1px solid rgba(245,158,11,0.2);
@@ -884,6 +1409,7 @@ body {
 .metrics-row .metric-tile:nth-child(2) { animation-delay: 0.1s; }
 .metrics-row .metric-tile:nth-child(3) { animation-delay: 0.15s; }
 .metrics-row .metric-tile:nth-child(4) { animation-delay: 0.2s; }
+.metrics-row .metric-tile:nth-child(5) { animation-delay: 0.25s; }
 
 .key-findings {
     animation: slideInLeft 0.5s ease both;
@@ -2314,6 +2840,11 @@ body {
         grid-template-columns: 1fr;
     }
 }
+@media (max-width: 1000px) {
+    .metrics-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
 @media (max-width: 860px) {
     .metrics-row {
         grid-template-columns: repeat(2, 1fr);
@@ -2683,6 +3214,33 @@ body {
 </head>
 <body>
 
+<!-- TOP NAVIGATION BAR -->
+<nav class="top-nav" id="topNav">
+    <span class="nav-brand">CFE Optimizer</span>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner" id="navLinks">
+        <a href="dashboard.html" class="nav-active">Dashboard</a>
+        <a href="region_caiso.html">CAISO</a>
+        <a href="region_ercot.html">ERCOT</a>
+        <a href="region_pjm.html">PJM</a>
+        <a href="region_nyiso.html">NYISO</a>
+        <a href="region_neiso.html">NEISO</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html">Paper</a>
+    </div>
+</nav>
+
+<!-- HEADER / BANNER -->
+<header class="header">
+    <!-- Logo removed for rebrand -->
+    <h1>Hourly CFE Optimizer</h1>
+    <p class="subtitle">Advanced Sensitivity Model</p>
+    <div class="header-accent"></div>
+</header>
+<div class="bottom-banner"></div>
+
 <!-- SITE INTRO -->
 <div class="site-intro">
     <h2 class="site-intro-title">Understanding the Real Cost of 24/7 Clean Energy</h2>
@@ -2705,15 +3263,6 @@ body {
         </button>
     </div>
 </div>
-
-<!-- HEADER -->
-<header class="header">
-    <!-- Logo removed for rebrand -->
-    <h1>Hourly Clean Energy Cost Optimizer</h1>
-    <p class="subtitle">Procurement Strategy &amp; Cost Optimization Analysis</p>
-    <div class="header-accent"></div>
-</header>
-<div class="bottom-banner"></div>
 
 <!-- HERO TAKEAWAY BANNER -->
 <div class="hero-takeaway">
@@ -2772,13 +3321,20 @@ body {
             <select id="regionSelect"></select>
         </div>
         <div class="control-group">
-            <label for="thresholdSelect">Hourly Match Target</label>
+            <label for="thresholdSelect">Interim Target <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Your near-term hourly clean energy procurement target. This drives today's resource procurement decisions. Set this to what you plan to achieve in the next 3-5 years.</span></span></label>
             <select id="thresholdSelect"></select>
         </div>
         <div class="control-group">
+            <label for="longtermTarget">Long-term Target <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Your ultimate hourly clean energy goal (must be &ge; interim target). Used to calculate how much of today's interim procurement remains useful at the end state &mdash; and how much becomes redundant if the optimal resource mix shifts.</span></span></label>
+            <select id="longtermTarget">
+                <option value="">Same as Interim</option>
+            </select>
+        </div>
+        <!-- Legacy cfCostSelect hidden for backward compat -->
+        <div class="control-group" style="display:none;">
             <label for="cfCostSelect">Clean Firm Cost Assumption</label>
             <select id="cfCostSelect">
-                <option value="90">$90/MWh (Baseline)</option>
+                <option value="90">$90/MWh (Medium)</option>
                 <option value="120">$120/MWh (Moderate)</option>
                 <option value="150">$150/MWh (High &mdash; Lazard Nuclear)</option>
             </select>
@@ -2787,7 +3343,111 @@ body {
     </div>
     <div class="cf-cost-indicator" id="cfCostIndicator" style="display:none;">
         <span class="cf-indicator-icon">&#9888;</span>
-        <span id="cfCostIndicatorText">Sensitivity scenario active: costs adjusted for clean firm at $X/MWh (baseline model uses $90/MWh)</span>
+        <span id="cfCostIndicatorText">Sensitivity scenario active: costs adjusted for clean firm at $X/MWh (medium model uses $90/MWh)</span>
+    </div>
+
+    <!-- SENSITIVITY TOGGLES (5 Paired Groups) -->
+    <div class="sensitivity-panel" id="sensitivityPanel">
+        <h3>Sensitivity Controls</h3>
+        <p class="sensitivity-subtitle">Adjust cost assumptions to see how they change the optimal clean energy portfolio and total cost. Each toggle moves related technologies together, reflecting real-world cost correlations.</p>
+
+        <div class="sensitivity-toggles-grid">
+            <!-- 1. Renewable Generation Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="renewable_gen">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Renewable Generation Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of building new solar and wind projects together. When renewable costs are <strong>Low</strong>, solar panels and wind turbines are cheap to build (e.g., technology breakthroughs). <strong>Medium</strong> reflects today's best estimates. <strong>High</strong> means supply chain problems or tariffs make them more expensive. This is the single biggest driver of clean energy cost.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Solar + Wind LCOE</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="renewable_gen" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="renewable_gen" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="renewable_gen" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="renewable_gen" data-level="High">High</button>
+                </div>
+            </div>
+
+            <!-- 2. Firm Generation Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="firm_gen">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Firm Generation Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of "always-on" clean power sources -- advanced nuclear and gas plants with carbon capture (CCS-CCGT). These resources run 24/7 regardless of weather. <strong>Low</strong> = favorable construction and policy support. <strong>Medium</strong> = current best estimates. <strong>High</strong> = project overruns or regulatory delays. Firm generation fills the gaps when sun and wind are unavailable.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Clean Firm + CCS-CCGT LCOE</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="firm_gen" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="firm_gen" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="firm_gen" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="firm_gen" data-level="High">High</button>
+                </div>
+            </div>
+
+            <!-- 3. Storage Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="storage">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Storage Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of energy storage -- both 4-hour lithium-ion batteries and 100-hour long-duration iron-air batteries. Storage captures excess solar/wind energy and releases it later. <strong>Low</strong> = rapid battery cost declines continue. <strong>Medium</strong> = current best estimates. <strong>High</strong> = lithium or iron supply constraints raise costs. Storage is critical for matching clean energy to demand hour-by-hour.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Battery (4hr) + LDES (100hr) LCOS</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="storage" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="storage" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="storage" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="storage" data-level="High">High</button>
+                </div>
+            </div>
+
+            <!-- 4. Fossil Fuel Price -->
+            <div class="sensitivity-toggle-item" data-toggle-group="fossil_fuel">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Fossil Fuel Price
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the price of natural gas, coal, and oil -- which together determine the wholesale electricity price you're comparing against. <strong>Low</strong> = cheap fossil fuels make grid power inexpensive (harder for clean energy to compete). <strong>Medium</strong> = current market prices. <strong>High</strong> = supply constraints or carbon pricing raise fossil costs (clean energy looks better by comparison).</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Affects wholesale electricity price</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="fossil_fuel" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="fossil_fuel" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="fossil_fuel" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="fossil_fuel" data-level="High">High</button>
+                </div>
+            </div>
+
+            <!-- 5. Transmission Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="transmission">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Transmission Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the cost of connecting new clean energy projects to the grid. Every new solar farm or wind project needs transmission lines to deliver power. <strong>None</strong> = on-site generation or existing lines (no extra cost). <strong>Low</strong> = short, easy connections. <strong>Medium</strong> = typical new builds. <strong>High</strong> = long-distance or congested corridors requiring major new infrastructure.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">All resource transmission adders</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="transmission" data-default="Medium">
+                    <button data-value="None" data-toggle-group="transmission" data-level="None">None</button>
+                    <button data-value="Low" data-toggle-group="transmission" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="transmission" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="transmission" data-level="High">High</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- METRIC TILES -->
@@ -2812,6 +3472,70 @@ body {
             <div class="tile-value" id="metricCurtail">--</div>
             <div class="tile-sub" id="metricCurtailSub">of procured energy</div>
         </div>
+        <div class="metric-tile">
+            <div class="tile-label">CO2 Emissions Abated</div>
+            <div class="tile-value" id="metricCO2Abated">--</div>
+            <div class="tile-sub" id="metricCO2AbatedSub">tons</div>
+        </div>
+    </div>
+
+    <!-- PATHWAY PLANNING: Interim → Long-term Target with Demand Growth -->
+    <div class="pathway-panel" id="pathwayPanel" style="display:none;">
+        <h3>Pathway Planning: From Interim to Long-term Target</h3>
+        <p class="pathway-subtitle">How much of today's investment carries forward vs. becomes redundant as your target evolves?</p>
+
+        <div class="pathway-controls">
+            <div class="pathway-ctrl">
+                <label>Interim Year</label>
+                <select id="interimYear">
+                    <option value="2027">2027</option>
+                    <option value="2029" selected>2029</option>
+                    <option value="2031">2031</option>
+                    <option value="2033">2033</option>
+                </select>
+            </div>
+            <div class="pathway-ctrl">
+                <label>Long-term Year</label>
+                <select id="longtermYear">
+                    <option value="2035">2035</option>
+                    <option value="2038">2038</option>
+                    <option value="2042" selected>2042</option>
+                    <option value="2050">2050</option>
+                </select>
+            </div>
+            <div class="pathway-ctrl">
+                <label>Demand Growth <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Regional annual electricity demand growth rate based on ISO-specific forecasts. Higher growth means more of today's procurement remains useful at higher future targets. Rates are region-specific: ERCOT's data center boom drives the highest growth; ISO-NE has the most modest projections.</span></span></label>
+                <div class="toggle-btn-group" data-toggle="demand_growth" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="demand_growth" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="demand_growth" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="demand_growth" data-level="High">High</button>
+                </div>
+                <div class="pathway-rate-display" id="demandRateDisplay" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;"></div>
+            </div>
+        </div>
+
+        <div class="pathway-results" id="pathwayResults">
+            <div class="pathway-metrics">
+                <div class="pathway-metric">
+                    <div class="pathway-metric-value" id="pwCarriedForward">--</div>
+                    <div class="pathway-metric-label">Carried Forward</div>
+                    <div class="pathway-metric-sub">% of interim procurement useful at long-term target</div>
+                </div>
+                <div class="pathway-metric pathway-metric-warn">
+                    <div class="pathway-metric-value" id="pwWastedCost">--</div>
+                    <div class="pathway-metric-label">Stranded Investment</div>
+                    <div class="pathway-metric-sub">Est. $/MWh cost of over-procured resources</div>
+                </div>
+                <div class="pathway-metric">
+                    <div class="pathway-metric-value" id="pwDemandEffect">--</div>
+                    <div class="pathway-metric-label">Demand Growth Offset</div>
+                    <div class="pathway-metric-sub">Reduction in waste due to demand growth absorbing surplus</div>
+                </div>
+            </div>
+            <div class="pathway-insight" id="pathwayInsight">
+                <!-- Dynamic narrative -->
+            </div>
+        </div>
     </div>
 
     <!-- KEY FINDING -->
@@ -2824,7 +3548,7 @@ body {
     <div class="charts-row">
         <!-- DONUT -->
         <div class="chart-panel donut-panel">
-            <h3>Resource Procurement Mix</h3>
+            <h3>How Your Clean Energy is Sourced</h3>
             <div class="donut-container">
                 <canvas id="donutChart"></canvas>
                 <div class="donut-center-label">
@@ -2836,7 +3560,7 @@ body {
         </div>
         <!-- COMPRESSED DAY -->
         <div class="chart-panel">
-            <h3>Compressed Day Profile &mdash; Average Hourly Pattern</h3>
+            <h3>A Typical Day: When Clean Energy Meets Demand</h3>
             <div class="compressed-day-container">
                 <canvas id="compressedDayChart"></canvas>
             </div>
@@ -2847,7 +3571,7 @@ body {
     <div class="peak-cost-row">
         <!-- PEAK CAPACITY VISUAL -->
         <div class="peak-capacity-panel" id="peakCapacityPanel">
-            <h3>Peak Hour Capacity Need</h3>
+            <h3>Peak Hour: How Much Backup is Needed (Capacity)</h3>
             <div class="peak-capacity-visual" id="peakCapacityVisual">
                 <!-- Populated by JS -->
             </div>
@@ -2855,8 +3579,33 @@ body {
 
         <!-- COST BREAKDOWN -->
         <div class="cost-panel" id="costPanel">
-            <h3>Cost Breakdown</h3>
+            <h3>What You Pay: Cost Breakdown by Resource</h3>
             <div id="costContent"></div>
+        </div>
+    </div>
+
+    <!-- ABATEMENT COST CURVES -->
+    <div class="charts-row" id="abatementRow" style="display:none;">
+        <div class="chart-panel">
+            <h3>The Cost Curve: How Expensive Is Each Additional Percent?</h3>
+            <p class="chart-subtitle" style="font-size:0.82rem; color:var(--text-muted); margin:-8px 0 12px;">
+                Average and incremental cost rises sharply above 90% — the "last mile" of hourly matching
+                costs dramatically more per MWh. Compare against
+                <a href="abatement_comparison.html" style="color:var(--accent);">alternative decarbonization strategies &rarr;</a>
+            </p>
+            <div style="position:relative; height:280px;">
+                <canvas id="costCurveChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-panel">
+            <h3>Marginal Abatement Cost: $/ton CO<sub>2</sub> at Each Target</h3>
+            <p class="chart-subtitle" style="font-size:0.82rem; color:var(--text-muted); margin:-8px 0 12px;">
+                The marginal cost of avoiding one additional ton of CO<sub>2</sub> through grid decarbonization.
+                Reference lines show costs of alternative abatement approaches.
+            </p>
+            <div style="position:relative; height:280px;">
+                <canvas id="macCurveChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -2877,6 +3626,103 @@ body {
                 Technical Methodology &rarr;
             </a>
         </p>
+    </div>
+
+    <!-- ABATEMENT COST CURVES (Placeholder) -->
+    <div class="abatement-section" id="abatementSection">
+        <h3>Carbon Abatement Analysis</h3>
+        <div class="abatement-charts-row">
+            <div class="abatement-chart-panel">
+                <h4>Average Cost of Carbon Abatement ($/ton CO2)</h4>
+                <div class="abatement-chart-placeholder">
+                    <canvas id="avgAbatementChart" style="display:none;"></canvas>
+                    <span id="avgAbatementPlaceholder">Data loading after optimizer update...</span>
+                </div>
+            </div>
+            <div class="abatement-chart-panel">
+                <h4>Marginal Cost of Carbon Abatement ($/ton CO2)</h4>
+                <div class="abatement-chart-placeholder">
+                    <canvas id="marginalAbatementChart" style="display:none;"></canvas>
+                    <span id="marginalAbatementPlaceholder">Data loading after optimizer update...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WHAT YOU NEED DEPENDS ON WHAT YOU HAVE -->
+    <div class="what-you-need-panel" id="whatYouNeedPanel">
+        <h3>What You Need Depends on What You Have</h3>
+        <div class="wyn-metrics-row">
+            <div class="wyn-metric">
+                <div class="wyn-metric-label">Starting Point</div>
+                <div class="wyn-metric-value" id="wynBaseline">--</div>
+                <div class="wyn-metric-unit">Grid baseline match score</div>
+            </div>
+            <div class="wyn-metric">
+                <div class="wyn-metric-label">Target</div>
+                <div class="wyn-metric-value" id="wynTarget">--</div>
+                <div class="wyn-metric-unit">Selected threshold</div>
+            </div>
+            <div class="wyn-metric">
+                <div class="wyn-metric-label">Gap to Close</div>
+                <div class="wyn-metric-value" id="wynGap">--</div>
+                <div class="wyn-metric-unit">percentage points</div>
+            </div>
+            <div class="wyn-metric">
+                <div class="wyn-metric-label">Incremental Cost</div>
+                <div class="wyn-metric-value" id="wynIncrCost">$--</div>
+                <div class="wyn-metric-unit">per MWh above wholesale</div>
+            </div>
+            <div class="wyn-metric">
+                <div class="wyn-metric-label">CO2 Impact</div>
+                <div class="wyn-metric-value" id="wynCO2Impact">--</div>
+                <div class="wyn-metric-unit">tons abated</div>
+            </div>
+        </div>
+        <h4 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif; font-weight:600; font-size:1rem; color:var(--navy); margin-bottom:12px;">Incremental Resources Needed</h4>
+        <div class="wyn-table-wrap">
+            <table class="wyn-table" id="wynResourceTable">
+                <thead>
+                    <tr>
+                        <th>Resource</th>
+                        <th>Incremental Share</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="placeholder-row">
+                        <td>Solar</td>
+                        <td>--</td>
+                        <td>Daytime generation</td>
+                    </tr>
+                    <tr class="placeholder-row">
+                        <td>Wind</td>
+                        <td>--</td>
+                        <td>Variable generation</td>
+                    </tr>
+                    <tr class="placeholder-row">
+                        <td>Clean Firm</td>
+                        <td>--</td>
+                        <td>Always-on baseload</td>
+                    </tr>
+                    <tr class="placeholder-row">
+                        <td>CCS-CCGT</td>
+                        <td>--</td>
+                        <td>Dispatchable with carbon capture</td>
+                    </tr>
+                    <tr class="placeholder-row">
+                        <td>Battery</td>
+                        <td>--</td>
+                        <td>Daily shifting (4hr)</td>
+                    </tr>
+                    <tr class="placeholder-row">
+                        <td>LDES</td>
+                        <td>--</td>
+                        <td>Multi-day / seasonal storage (100hr)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- SCROLL TRANSITION -->
@@ -3926,7 +4772,7 @@ function updateCfIndicator() {
     } else {
         indicator.style.display = 'flex';
         document.getElementById('cfCostIndicatorText').innerHTML =
-            `<strong>Sensitivity scenario active:</strong> All costs adjusted for new-build clean firm at <strong>$${selectedCfCost}/MWh</strong> (baseline model uses $90/MWh). Resource mix and curtailment are unchanged &mdash; only cost figures are affected.`;
+            `<strong>Sensitivity scenario active:</strong> All costs adjusted for new-build clean firm at <strong>$${selectedCfCost}/MWh</strong> (medium estimate is $90/MWh). Resource mix and curtailment are unchanged &mdash; only cost figures are affected.`;
     }
 }
 
@@ -3965,12 +4811,13 @@ function initDashboard() {
         regionSel.appendChild(opt);
     });
 
-    // Populate threshold dropdown
+    // Populate threshold dropdown — full 18-value set
     const threshSel = document.getElementById('thresholdSelect');
-    cfg.thresholds.forEach(t => {
+    const FULL_THRESHOLDS = [75, 80, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100];
+    FULL_THRESHOLDS.forEach(t => {
         const opt = document.createElement('option');
         opt.value = String(t);
-        opt.textContent = t === 100 ? '100%' : t === 99 ? '99%' : `${t}%`;
+        opt.textContent = `${t}%`;
         threshSel.appendChild(opt);
     });
     // Default to 99%
@@ -3982,17 +4829,41 @@ function initDashboard() {
     const cfCostSel = document.getElementById('cfCostSelect');
     if (cfCostSel) cfCostSel.addEventListener('change', onCfCostChange);
 
+    // Initialize sensitivity toggle buttons
+    initSensitivityToggles();
+
+    // Initialize pathway analysis (interim → long-term target with demand growth)
+    initPathwayAnalysis();
+
     updateAll();
 
     // Initialize mobile inline step charts after a short delay for layout
     setTimeout(initMobileStepCharts, 400);
 }
 
+// ---- Find closest available threshold ----
+function findClosestThreshold(region, requestedThreshold) {
+    const requested = parseInt(requestedThreshold, 10);
+    if (region.thresholds[String(requested)]) return String(requested);
+    // Find the closest available threshold in the data
+    const available = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
+    if (available.length === 0) return requestedThreshold;
+    let closest = available[0];
+    let minDiff = Math.abs(requested - closest);
+    for (const t of available) {
+        const diff = Math.abs(requested - t);
+        if (diff < minDiff) { minDiff = diff; closest = t; }
+    }
+    return String(closest);
+}
+
 // ---- Update everything ----
 function updateAll() {
     const iso = document.getElementById('regionSelect').value;
-    const threshold = document.getElementById('thresholdSelect').value;
+    const requestedThreshold = document.getElementById('thresholdSelect').value;
     const region = DATA.results[iso];
+    // Fallback to closest available if this threshold isn't in the data
+    const threshold = findClosestThreshold(region, requestedThreshold);
     const entry = region.thresholds[threshold];
     if (!entry) return;
 
@@ -4003,6 +4874,10 @@ function updateAll() {
     updateCompressedDay(entry, region);
     updatePeakCapacity(entry, region);
     updateCostPanel(entry);
+    updateWhatYouNeedPanel(region, entry, threshold);
+    updateCO2Tile(entry);
+    updateAbatementCurves();
+    updatePathwayAnalysis();
 }
 
 // ---- Key Finding ----
@@ -4085,7 +4960,7 @@ function updateMetrics(region, entry) {
         document.getElementById('metricCost').textContent = '$' + formatNum(adj.newEffective);
         if (costs.incremental_above_baseline != null) {
             document.getElementById('metricCostSub').innerHTML =
-                `<span class="accent">+$${formatNum(adj.newIncremental)}</span> above baseline` +
+                `<span class="accent">+$${formatNum(adj.newIncremental)}</span> above wholesale` +
                 (selectedCfCost !== 90 ? ` <span style="color:#D97706;font-size:0.78rem;">(CF@$${selectedCfCost})</span>` : '');
         } else {
             document.getElementById('metricCostSub').textContent = 'per MWh (effective)';
@@ -4690,8 +5565,8 @@ function updateCostPanel(entry) {
         ${cfNote}
         ${costs.baseline_wholesale_cost != null ? `
         <div class="cost-note">
-            Baseline wholesale cost: $${formatNum(costs.baseline_wholesale_cost, 0)}/MWh &bull;
-            Incremental above baseline: $${formatNum(adj.newIncremental)}/MWh
+            Wholesale grid cost: $${formatNum(costs.baseline_wholesale_cost, 0)}/MWh &bull;
+            Incremental above wholesale: $${formatNum(adj.newIncremental)}/MWh
             ${costs.curtailment_pct != null && costs.curtailment_pct > 0 ?
                 '&bull; Curtailment (' + formatNum(costs.curtailment_pct) + '%) inflates effective cost above blended cost.' : ''}
         </div>` : ''}
@@ -6206,10 +7081,630 @@ function initScrollAnimations() {
     }
 }
 
+// ---- Sensitivity Toggle State (5 Paired Groups) ----
+const sensitivityState = {
+    renewable_gen: 'Medium',   // Solar + Wind LCOE
+    firm_gen: 'Medium',        // Clean Firm + CCS-CCGT LCOE
+    storage: 'Medium',         // Battery (4hr) + LDES (100hr) LCOS
+    fossil_fuel: 'Medium',     // Wholesale electricity price driver
+    transmission: 'Medium'     // All resource transmission adders
+};
+
+function initSensitivityToggles() {
+    document.querySelectorAll('.toggle-btn-group').forEach(group => {
+        const toggleKey = group.getAttribute('data-toggle');
+        if (!toggleKey) return;
+        group.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update active state
+                group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                // Update state
+                sensitivityState[toggleKey] = this.getAttribute('data-value');
+                // Trigger recalculation if data is available
+                if (DATA) {
+                    updateAll();
+                    // Re-render narrative if initialized
+                    if (typeof narrativeCostChart !== 'undefined' && narrativeCostChart) {
+                        refreshNarrativeCostChart();
+                    }
+                    if (typeof refreshNarrativeStats === 'function') {
+                        refreshNarrativeStats();
+                    }
+                }
+            });
+        });
+    });
+}
+
+// ---- CO2 Metric Tile Update ----
+function updateCO2Tile(entry) {
+    const el = document.getElementById('metricCO2Abated');
+    const sub = document.getElementById('metricCO2AbatedSub');
+    if (!el) return;
+    // Check if CO2 data exists in the entry
+    if (entry && entry.co2_abated_tons != null) {
+        el.textContent = formatCommas(Math.round(entry.co2_abated_tons));
+        sub.textContent = 'tons';
+    } else {
+        el.textContent = '--';
+        sub.textContent = 'tons';
+    }
+}
+
+// ---- What You Need Panel Update ----
+function updateWhatYouNeedPanel(region, entry, threshold) {
+    const wynTarget = document.getElementById('wynTarget');
+    if (!wynTarget) return;
+    // Update target from threshold
+    wynTarget.textContent = threshold + '%';
+    // Baseline: check if region has a baseline_match_score
+    const baselineEl = document.getElementById('wynBaseline');
+    if (region.baseline_hourly_match != null) {
+        baselineEl.textContent = formatPct(region.baseline_hourly_match, 0);
+    } else {
+        baselineEl.textContent = '--';
+    }
+    // Gap
+    const gapEl = document.getElementById('wynGap');
+    if (region.baseline_hourly_match != null) {
+        const gap = parseFloat(threshold) - region.baseline_hourly_match;
+        gapEl.textContent = formatNum(gap, 0) + ' pp';
+    } else {
+        gapEl.textContent = '--';
+    }
+    // Incremental cost
+    const incrCostEl = document.getElementById('wynIncrCost');
+    const iso = document.getElementById('regionSelect').value;
+    if (entry && entry.costs && entry.costs.incremental_above_baseline != null) {
+        const adj = cfAdjust(entry, iso);
+        incrCostEl.textContent = '$' + formatNum(adj.newIncremental, 0);
+    } else {
+        incrCostEl.textContent = '$--';
+    }
+    // CO2 Impact
+    const co2El = document.getElementById('wynCO2Impact');
+    if (entry && entry.co2_abated_tons != null) {
+        co2El.textContent = formatCommas(Math.round(entry.co2_abated_tons));
+    } else {
+        co2El.textContent = '--';
+    }
+}
+
+// ---- Abatement Cost Curve Charts ----
+let costCurveChartInstance = null;
+let macCurveChartInstance = null;
+
+function updateAbatementCurves() {
+    const iso = document.getElementById('regionSelect').value;
+    const region = DATA?.results?.[iso];
+    if (!region) return;
+
+    const abatementRow = document.getElementById('abatementRow');
+    const thresholds = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
+    if (thresholds.length < 3) {
+        if (abatementRow) abatementRow.style.display = 'none';
+        return;
+    }
+    if (abatementRow) abatementRow.style.display = '';
+
+    const labels = thresholds.map(t => t + '%');
+    const avgCosts = [];
+    const incrCosts = [];
+    const macData = [];
+    const baseline = region.thresholds[String(thresholds[0])]?.costs?.baseline_wholesale_cost || 30;
+
+    // CO2 emission rate (tons/MWh) - approximate regional values from eGRID
+    const CO2_RATES = { CAISO: 0.22, ERCOT: 0.39, PJM: 0.37, NYISO: 0.19, NEISO: 0.25 };
+    const co2Rate = CO2_RATES[iso] || 0.30;
+
+    thresholds.forEach((t, i) => {
+        const entry = region.thresholds[String(t)];
+        if (!entry?.costs) { avgCosts.push(null); incrCosts.push(null); macData.push(null); return; }
+
+        const adj = cfAdjust(entry, iso);
+        avgCosts.push(adj.newEffective);
+
+        // Incremental: difference vs previous threshold
+        if (i === 0) {
+            incrCosts.push(adj.newIncremental);
+        } else {
+            const prevEntry = region.thresholds[String(thresholds[i - 1])];
+            if (prevEntry?.costs) {
+                const prevAdj = cfAdjust(prevEntry, iso);
+                const costDelta = adj.newEffective - prevAdj.newEffective;
+                const matchDelta = (entry.hourly_match_score - prevEntry.hourly_match_score) / 100;
+                incrCosts.push(matchDelta > 0 ? costDelta / matchDelta : costDelta);
+            } else {
+                incrCosts.push(null);
+            }
+        }
+
+        // MAC: $/ton CO2 = incremental cost / CO2 displaced per MWh
+        // Each additional % of hourly match displaces approximately co2Rate tons per MWh
+        if (i === 0) {
+            macData.push(adj.newIncremental > 0 ? adj.newIncremental / co2Rate : 0);
+        } else {
+            const prevEntry = region.thresholds[String(thresholds[i - 1])];
+            if (prevEntry?.costs) {
+                const prevAdj = cfAdjust(prevEntry, iso);
+                const marginalCost = adj.newEffective - prevAdj.newEffective;
+                const matchGain = (entry.hourly_match_score - prevEntry.hourly_match_score) / 100;
+                const procGain = (entry.procurement_pct - prevEntry.procurement_pct) / 100;
+                const tonsDisplaced = matchGain * co2Rate;
+                macData.push(tonsDisplaced > 0 ? marginalCost / tonsDisplaced : null);
+            } else {
+                macData.push(null);
+            }
+        }
+    });
+
+    // Cost Curve Chart
+    const costCtx = document.getElementById('costCurveChart')?.getContext('2d');
+    if (costCtx) {
+        if (costCurveChartInstance) costCurveChartInstance.destroy();
+        costCurveChartInstance = new Chart(costCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Average Cost ($/MWh)',
+                        data: avgCosts,
+                        borderColor: '#0B3D91',
+                        backgroundColor: 'rgba(11,61,145,0.08)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'Marginal Cost ($/MWh per %)',
+                        data: incrCosts,
+                        borderColor: '#C75B4A',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 3],
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y?.toFixed(1)}/MWh`
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            wholesaleLine: {
+                                type: 'line', yMin: baseline, yMax: baseline,
+                                borderColor: 'rgba(100,100,100,0.4)', borderDash: [4, 4], borderWidth: 1,
+                                label: { display: true, content: `Wholesale $${baseline.toFixed(0)}/MWh`, position: 'start', font: { size: 10 }, color: '#666' }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, beginAtZero: false },
+                    x: { title: { display: true, text: 'Hourly Match Target', font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // MAC Curve Chart
+    const macCtx = document.getElementById('macCurveChart')?.getContext('2d');
+    if (macCtx) {
+        if (macCurveChartInstance) macCurveChartInstance.destroy();
+
+        // Reference line values
+        const dacMid = 600;
+        const industrialMid = 60;
+        const epaScc = 190;
+
+        macCurveChartInstance = new Chart(macCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Marginal Abatement Cost ($/ton CO₂)',
+                    data: macData,
+                    backgroundColor: macData.map(v => {
+                        if (v == null) return 'rgba(200,200,200,0.3)';
+                        if (v < 100) return 'rgba(34,197,94,0.7)';
+                        if (v < 200) return 'rgba(245,158,11,0.7)';
+                        return 'rgba(239,68,68,0.7)';
+                    }),
+                    borderColor: macData.map(v => {
+                        if (v == null) return 'rgba(200,200,200,0.5)';
+                        if (v < 100) return '#22C55E';
+                        if (v < 200) return '#F59E0B';
+                        return '#EF4444';
+                    }),
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `$${ctx.parsed.y?.toFixed(0)}/ton CO₂`
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            dacLine: {
+                                type: 'line', yMin: dacMid, yMax: dacMid,
+                                borderColor: '#E91E63', borderDash: [6, 3], borderWidth: 1.5,
+                                label: { display: true, content: `DAC ~$${dacMid}/ton`, position: 'end', font: { size: 10 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.8)' }
+                            },
+                            epaSccLine: {
+                                type: 'line', yMin: epaScc, yMax: epaScc,
+                                borderColor: '#6366F1', borderDash: [4, 4], borderWidth: 1.5,
+                                label: { display: true, content: `EPA SCC $${epaScc}/ton`, position: 'start', font: { size: 10 }, color: '#6366F1', backgroundColor: 'rgba(255,255,255,0.8)' }
+                            },
+                            industrialLine: {
+                                type: 'line', yMin: industrialMid, yMax: industrialMid,
+                                borderColor: '#8BC34A', borderDash: [3, 3], borderWidth: 1.5,
+                                label: { display: true, content: `Industrial Decarb ~$${industrialMid}/ton`, position: 'end', font: { size: 10 }, color: '#8BC34A', backgroundColor: 'rgba(255,255,255,0.8)' }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { title: { display: true, text: '$/ton CO₂', font: { size: 11 } }, beginAtZero: true },
+                    x: { title: { display: true, text: 'Hourly Match Target', font: { size: 11 } } }
+                }
+            }
+        });
+    }
+}
+
+// ---- Pathway Analysis: Interim → Long-term Target with ISO-Specific Demand Growth ----
+
+// ISO-specific annual demand growth rates (based on ISO forecasts and EIA/FERC data)
+const DEMAND_GROWTH_RATES = {
+    CAISO:  { Low: 0.014, Medium: 0.019, High: 0.025,
+              label: 'CA electrification-driven' },
+    ERCOT:  { Low: 0.020, Medium: 0.035, High: 0.055,
+              label: 'TX data centers + population' },
+    PJM:    { Low: 0.015, Medium: 0.024, High: 0.036,
+              label: 'Data center corridor' },
+    NYISO:  { Low: 0.013, Medium: 0.020, High: 0.044,
+              label: 'CLCPA mandate-driven' },
+    NEISO:  { Low: 0.009, Medium: 0.018, High: 0.029,
+              label: 'Heating electrification' }
+};
+
+const RESOURCE_DISPLAY_NAMES = {
+    clean_firm: 'Clean Firm',
+    solar: 'Solar',
+    wind: 'Wind',
+    hydro: 'Hydro',
+    storage: 'Storage',
+    ccs_ccgt: 'CCS-CCGT',
+    ldes: 'LDES',
+    battery: 'Battery'
+};
+
+function initPathwayAnalysis() {
+    const interimSel = document.getElementById('thresholdSelect');
+    const longtermSel = document.getElementById('longtermTarget');
+    const regionSel = document.getElementById('regionSelect');
+
+    // Populate long-term target options based on available thresholds
+    function populateLongtermOptions() {
+        const interimVal = parseInt(interimSel.value, 10);
+        const currentLtVal = longtermSel.value;
+        // Clear existing options (keep "Same as Interim")
+        longtermSel.innerHTML = '<option value="">Same as Interim</option>';
+
+        const iso = regionSel.value;
+        const region = DATA?.results?.[iso];
+        if (!region) return;
+
+        // Get available thresholds and add those >= interim
+        const available = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
+        available.forEach(t => {
+            if (t > interimVal) {
+                const opt = document.createElement('option');
+                opt.value = String(t);
+                opt.textContent = `${t}%`;
+                longtermSel.appendChild(opt);
+            }
+        });
+
+        // Restore previous selection if still valid
+        if (currentLtVal && longtermSel.querySelector(`option[value="${currentLtVal}"]`)) {
+            longtermSel.value = currentLtVal;
+        }
+    }
+
+    // Update long-term options when interim target or region changes
+    interimSel.addEventListener('change', () => {
+        populateLongtermOptions();
+        updatePathwayAnalysis();
+    });
+    regionSel.addEventListener('change', () => {
+        populateLongtermOptions();
+        updateDemandGrowthLabel();
+        updatePathwayAnalysis();
+    });
+    longtermSel.addEventListener('change', updatePathwayAnalysis);
+
+    // Bind pathway control events
+    document.getElementById('interimYear')?.addEventListener('change', updatePathwayAnalysis);
+    document.getElementById('longtermYear')?.addEventListener('change', updatePathwayAnalysis);
+
+    // Bind demand growth toggle buttons
+    const demandGrowthBtns = document.querySelectorAll('[data-toggle-group="demand_growth"]');
+    demandGrowthBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('[data-toggle-group="demand_growth"]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            updatePathwayAnalysis();
+        });
+    });
+
+    // Initial population
+    if (DATA) {
+        populateLongtermOptions();
+        updateDemandGrowthLabel();
+        updatePathwayAnalysis();
+    }
+}
+
+function getDemandGrowthLevel() {
+    const activeBtn = document.querySelector('[data-toggle-group="demand_growth"].active');
+    return activeBtn ? activeBtn.getAttribute('data-value') : 'Medium';
+}
+
+function updateDemandGrowthLabel() {
+    const iso = document.getElementById('regionSelect').value;
+    const display = document.getElementById('demandRateDisplay');
+    if (!display || !iso) return;
+    const rates = DEMAND_GROWTH_RATES[iso];
+    if (!rates) { display.textContent = ''; return; }
+    const level = getDemandGrowthLevel();
+    const rate = rates[level] || rates.Medium;
+    display.innerHTML = `<strong>${(rate * 100).toFixed(1)}%/yr</strong> — ${rates.label}`;
+}
+
+function updatePathwayAnalysis() {
+    const panel = document.getElementById('pathwayPanel');
+    const longtermVal = document.getElementById('longtermTarget').value;
+    const iso = document.getElementById('regionSelect').value;
+
+    // Update demand growth label whenever pathway recalculates
+    updateDemandGrowthLabel();
+
+    // Hide panel if no long-term target selected
+    if (!longtermVal || !DATA) {
+        if (panel) panel.style.display = 'none';
+        return;
+    }
+
+    const region = DATA.results[iso];
+    if (!region) return;
+
+    const interimThreshold = findClosestThreshold(region, document.getElementById('thresholdSelect').value);
+    const longtermThreshold = findClosestThreshold(region, longtermVal);
+
+    const interimEntry = region.thresholds[interimThreshold];
+    const longtermEntry = region.thresholds[longtermThreshold];
+
+    if (!interimEntry || !longtermEntry) {
+        if (panel) panel.style.display = 'none';
+        return;
+    }
+
+    // Show panel
+    panel.style.display = 'block';
+
+    // Time period
+    const interimYear = parseInt(document.getElementById('interimYear')?.value || '2029', 10);
+    const longtermYear = parseInt(document.getElementById('longtermYear')?.value || '2042', 10);
+    const years = Math.max(1, longtermYear - interimYear);
+
+    // Demand growth
+    const growthLevel = getDemandGrowthLevel();
+    const rates = DEMAND_GROWTH_RATES[iso] || DEMAND_GROWTH_RATES.CAISO;
+    const annualRate = rates[growthLevel] || rates.Medium;
+    const growthFactor = Math.pow(1 + annualRate, years);
+
+    // Get resource-level data
+    const interimCosts = interimEntry.costs?.resource_costs || {};
+    const longtermCosts = longtermEntry.costs?.resource_costs || {};
+    const allResources = new Set([...Object.keys(interimCosts), ...Object.keys(longtermCosts)]);
+
+    let totalInterimPctOfDemand = 0;
+    let totalCarriedStatic = 0;
+    let totalCarriedGrowth = 0;
+    let totalStrandedCostStatic = 0;
+    let totalStrandedCostGrowth = 0;
+    let strandedDetails = [];
+
+    allResources.forEach(r => {
+        const intRes = interimCosts[r] || {};
+        const ltRes = longtermCosts[r] || {};
+
+        const interimPct = intRes.total_pct_of_demand || 0;
+        const longtermPct = ltRes.total_pct_of_demand || 0;
+        const interimCostPerDemand = intRes.cost_per_demand_mwh || 0;
+
+        if (interimPct <= 0) return;
+
+        totalInterimPctOfDemand += interimPct;
+
+        // Static analysis (no demand growth)
+        const carriedStatic = Math.min(interimPct, longtermPct);
+        const strandedStatic = Math.max(0, interimPct - longtermPct);
+        totalCarriedStatic += carriedStatic;
+
+        // Stranded cost (proportional to stranded fraction of that resource)
+        if (strandedStatic > 0 && interimPct > 0) {
+            const strandedFraction = strandedStatic / interimPct;
+            totalStrandedCostStatic += interimCostPerDemand * strandedFraction;
+        }
+
+        // Growth-adjusted analysis
+        // Interim capacity as % of new (grown) demand
+        const interimPctOfNewDemand = interimPct / growthFactor;
+        const carriedGrowth = Math.min(interimPctOfNewDemand, longtermPct);
+        const strandedGrowth = Math.max(0, interimPctOfNewDemand - longtermPct);
+        totalCarriedGrowth += carriedGrowth;
+
+        if (strandedGrowth > 0 && interimPctOfNewDemand > 0) {
+            const strandedFractionG = strandedGrowth / interimPctOfNewDemand;
+            totalStrandedCostGrowth += (interimCostPerDemand / growthFactor) * strandedFractionG;
+        }
+
+        // Track stranded details for narrative
+        if (strandedStatic > 0) {
+            strandedDetails.push({
+                resource: RESOURCE_DISPLAY_NAMES[r] || r,
+                strandedStatic: strandedStatic,
+                strandedGrowth: strandedGrowth,
+                interimPct: interimPct,
+                longtermPct: longtermPct
+            });
+        }
+    });
+
+    // Calculate percentages
+    const carriedForwardStatic = totalInterimPctOfDemand > 0
+        ? (totalCarriedStatic / totalInterimPctOfDemand * 100) : 100;
+
+    const interimPctOfNewDemandTotal = totalInterimPctOfDemand / growthFactor;
+    const carriedForwardGrowth = interimPctOfNewDemandTotal > 0
+        ? (totalCarriedGrowth / interimPctOfNewDemandTotal * 100) : 100;
+
+    const demandOffset = carriedForwardGrowth - carriedForwardStatic;
+
+    // Update UI
+    const pwCarried = document.getElementById('pwCarriedForward');
+    const pwWasted = document.getElementById('pwWastedCost');
+    const pwDemand = document.getElementById('pwDemandEffect');
+    const pwInsight = document.getElementById('pathwayInsight');
+
+    if (pwCarried) pwCarried.textContent = Math.round(carriedForwardGrowth) + '%';
+    if (pwWasted) {
+        if (totalStrandedCostGrowth > 0.5) {
+            pwWasted.textContent = '$' + totalStrandedCostGrowth.toFixed(1) + '/MWh';
+        } else {
+            pwWasted.textContent = '~$0';
+            // Remove warn styling if no stranding
+            pwWasted.closest('.pathway-metric')?.classList.remove('pathway-metric-warn');
+        }
+        // Add warn styling if stranding is significant
+        if (totalStrandedCostGrowth > 2) {
+            pwWasted.closest('.pathway-metric')?.classList.add('pathway-metric-warn');
+        }
+    }
+    if (pwDemand) {
+        if (demandOffset > 0.5) {
+            pwDemand.textContent = '+' + Math.round(demandOffset) + ' pp';
+        } else {
+            pwDemand.textContent = 'Minimal';
+        }
+    }
+
+    // Generate narrative insight
+    if (pwInsight) {
+        const isoLabel = region.label?.split(' (')[0] || iso;
+        const interimProcPct = interimEntry.procurement_pct;
+        const longtermProcPct = longtermEntry.procurement_pct;
+
+        let narrative = '';
+        if (carriedForwardGrowth >= 95) {
+            narrative = `<strong>Nearly all interim investment carries forward.</strong> Moving from ` +
+                `<strong>${interimThreshold}%</strong> to <strong>${longtermThreshold}%</strong> in ${isoLabel} ` +
+                `is highly capital-efficient. The ${interimProcPct}% procurement at the interim level is almost ` +
+                `entirely absorbed by the long-term ${longtermProcPct}% portfolio, especially with ` +
+                `${(annualRate * 100).toFixed(1)}%/yr demand growth over ${years} years.`;
+        } else if (carriedForwardGrowth >= 75) {
+            const topStranded = strandedDetails.sort((a, b) => b.strandedGrowth - a.strandedGrowth)[0];
+            narrative = `<strong>Most interim investment carries forward, with some rebalancing needed.</strong> ` +
+                `Moving from <strong>${interimThreshold}%</strong> to <strong>${longtermThreshold}%</strong> ` +
+                `in ${isoLabel}: <strong>${Math.round(carriedForwardGrowth)}%</strong> of your interim procurement ` +
+                `remains useful at the long-term target.`;
+            if (topStranded) {
+                narrative += ` The main shift: <strong>${topStranded.resource}</strong> drops from ` +
+                    `${topStranded.interimPct.toFixed(0)}% to ${topStranded.longtermPct.toFixed(0)}% of demand ` +
+                    `as the optimal mix shifts toward firm generation at higher match levels.`;
+            }
+            if (demandOffset > 2) {
+                narrative += ` Demand growth of ${(annualRate * 100).toFixed(1)}%/yr absorbs much of this surplus — ` +
+                    `without growth, only ${Math.round(carriedForwardStatic)}% would carry forward.`;
+            }
+        } else {
+            narrative = `<strong>Significant portfolio restructuring required.</strong> ` +
+                `The jump from <strong>${interimThreshold}%</strong> to <strong>${longtermThreshold}%</strong> ` +
+                `in ${isoLabel} means the optimal resource mix shifts substantially. Only ` +
+                `<strong>${Math.round(carriedForwardGrowth)}%</strong> of interim procurement remains useful.`;
+            if (strandedDetails.length > 0) {
+                const topTwo = strandedDetails.sort((a, b) => b.strandedGrowth - a.strandedGrowth).slice(0, 2);
+                narrative += ` The biggest shifts: `;
+                narrative += topTwo.map(s =>
+                    `<strong>${s.resource}</strong> (${s.interimPct.toFixed(0)}% → ${s.longtermPct.toFixed(0)}%)`
+                ).join(' and ') + '.';
+            }
+            if (totalStrandedCostGrowth > 2) {
+                narrative += ` This represents roughly <strong>$${totalStrandedCostGrowth.toFixed(1)}/MWh</strong> ` +
+                    `of stranded investment — resources procured for the interim target that don't contribute ` +
+                    `to the long-term goal.`;
+            }
+            if (demandOffset > 3) {
+                narrative += ` However, demand growth helps: at ${(annualRate * 100).toFixed(1)}%/yr, the carried-forward ` +
+                    `rate improves by <strong>${Math.round(demandOffset)} percentage points</strong> vs. static demand.`;
+            }
+        }
+        pwInsight.innerHTML = narrative;
+    }
+}
+
+// ---- Navigation Hamburger Menu ----
+function initNavHamburger() {
+    const hamburger = document.getElementById('navHamburger');
+    const navLinks = document.getElementById('navLinks');
+    if (hamburger && navLinks) {
+        hamburger.addEventListener('click', function() {
+            navLinks.classList.toggle('nav-open');
+            // Toggle hamburger icon between menu and close
+            const isOpen = navLinks.classList.contains('nav-open');
+            this.innerHTML = isOpen
+                ? '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>'
+                : '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+        });
+        // Close menu when a link is clicked (on mobile)
+        navLinks.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    navLinks.classList.remove('nav-open');
+                    hamburger.innerHTML = '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+                }
+            });
+        });
+    }
+}
+
 // ---- Boot ----
 document.addEventListener('DOMContentLoaded', () => {
     loadData();
     initScrollAnimations();
+    initNavHamburger();
 });
 </script>
 </body>
