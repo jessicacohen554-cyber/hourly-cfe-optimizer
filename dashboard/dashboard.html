@@ -3639,6 +3639,55 @@ body {
         </p>
     </div>
 
+    <!-- ========== EXPLORE MORE: CTA CARDS ========== -->
+    <div style="max-width:1000px;margin:32px auto 28px;padding:0 24px;">
+        <h2 style="text-align:center;margin-bottom:8px;font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif;color:var(--navy);">Go Deeper</h2>
+        <p style="text-align:center;color:#6B7280;margin-bottom:28px;font-size:1.02rem;">
+            Explore regional stories and compare grid decarbonization against alternative strategies
+        </p>
+
+        <!-- Regional Deep-Dive Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px;">
+            <a href="region_caiso.html" class="cta-card" style="text-decoration:none;display:block;padding:22px 16px;border-radius:12px;background:linear-gradient(135deg,#1E3A5F 0%,#2D5F8A 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(30,58,95,0.2);">
+                <div style="font-size:1.6rem;margin-bottom:8px;">&#9728;</div>
+                <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">CAISO</div>
+                <div style="font-size:0.78rem;opacity:0.85;">Solar-rich California</div>
+            </a>
+            <a href="region_ercot.html" class="cta-card" style="text-decoration:none;display:block;padding:22px 16px;border-radius:12px;background:linear-gradient(135deg,#065F46 0%,#059669 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(6,95,70,0.2);">
+                <div style="font-size:1.6rem;margin-bottom:8px;">&#127811;</div>
+                <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">ERCOT</div>
+                <div style="font-size:0.78rem;opacity:0.85;">Wind-powered Texas</div>
+            </a>
+            <a href="region_pjm.html" class="cta-card" style="text-decoration:none;display:block;padding:22px 16px;border-radius:12px;background:linear-gradient(135deg,#7C3AED 0%,#8B5CF6 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(124,58,237,0.2);">
+                <div style="font-size:1.6rem;margin-bottom:8px;">&#9889;</div>
+                <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">PJM</div>
+                <div style="font-size:0.78rem;opacity:0.85;">Largest US grid</div>
+            </a>
+            <a href="region_nyiso.html" class="cta-card" style="text-decoration:none;display:block;padding:22px 16px;border-radius:12px;background:linear-gradient(135deg,#B45309 0%,#D97706 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(180,83,9,0.2);">
+                <div style="font-size:1.6rem;margin-bottom:8px;">&#127751;</div>
+                <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">NYISO</div>
+                <div style="font-size:0.78rem;opacity:0.85;">Urban-constrained NY</div>
+            </a>
+            <a href="region_neiso.html" class="cta-card" style="text-decoration:none;display:block;padding:22px 16px;border-radius:12px;background:linear-gradient(135deg,#0369A1 0%,#0EA5E9 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(3,105,161,0.2);">
+                <div style="font-size:1.6rem;margin-bottom:8px;">&#10052;</div>
+                <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">NEISO</div>
+                <div style="font-size:0.78rem;opacity:0.85;">Winter-challenged NE</div>
+            </a>
+        </div>
+
+        <!-- Abatement Comparison CTA -->
+        <a href="abatement_comparison.html" class="cta-card" style="text-decoration:none;display:flex;align-items:center;gap:24px;padding:24px 28px;border-radius:14px;background:linear-gradient(135deg,#F3F4F8 0%,#E5E7EB 100%);border:2px solid #D1D5DB;color:var(--navy);transition:transform 0.25s ease,box-shadow 0.25s ease,border-color 0.25s ease;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+            <div style="flex-shrink:0;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#DC2626,#F59E0B);display:flex;align-items:center;justify-content:center;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
+            </div>
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:1.1rem;margin-bottom:4px;">Abatement Cost Comparison</div>
+                <div style="font-size:0.9rem;color:#6B7280;">Is grid decarbonization cost-competitive with DAC, SAF, and other carbon removal?</div>
+            </div>
+            <div style="flex-shrink:0;font-size:1.5rem;color:#9CA3AF;">&rarr;</div>
+        </a>
+    </div>
+
     <!-- ABATEMENT COST CURVES (Placeholder) -->
     <div class="abatement-section" id="abatementSection">
         <h3>Carbon Abatement Analysis</h3>
@@ -4617,57 +4666,6 @@ body {
                     relative to fully delivered costs in many regions.
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- ========== EXPLORE MORE: CTA CARDS ========== -->
-    <section class="story-section story-fade-in" style="padding-bottom:40px;">
-        <div class="story-content" style="max-width:1000px;">
-            <h2 style="text-align:center;margin-bottom:8px;">Go Deeper</h2>
-            <p style="text-align:center;color:#6B7280;margin-bottom:36px;font-size:1.05rem;">
-                Explore regional stories and compare grid decarbonization against alternative strategies
-            </p>
-
-            <!-- Regional Deep-Dive Cards -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:28px;">
-                <a href="region_caiso.html" class="cta-card" style="text-decoration:none;display:block;padding:24px 18px;border-radius:12px;background:linear-gradient(135deg,#1E3A5F 0%,#2D5F8A 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(30,58,95,0.2);">
-                    <div style="font-size:1.6rem;margin-bottom:8px;">&#9728;</div>
-                    <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">CAISO</div>
-                    <div style="font-size:0.78rem;opacity:0.85;">Solar-rich California</div>
-                </a>
-                <a href="region_ercot.html" class="cta-card" style="text-decoration:none;display:block;padding:24px 18px;border-radius:12px;background:linear-gradient(135deg,#065F46 0%,#059669 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(6,95,70,0.2);">
-                    <div style="font-size:1.6rem;margin-bottom:8px;">&#127811;</div>
-                    <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">ERCOT</div>
-                    <div style="font-size:0.78rem;opacity:0.85;">Wind-powered Texas</div>
-                </a>
-                <a href="region_pjm.html" class="cta-card" style="text-decoration:none;display:block;padding:24px 18px;border-radius:12px;background:linear-gradient(135deg,#7C3AED 0%,#8B5CF6 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(124,58,237,0.2);">
-                    <div style="font-size:1.6rem;margin-bottom:8px;">&#9889;</div>
-                    <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">PJM</div>
-                    <div style="font-size:0.78rem;opacity:0.85;">Largest US grid</div>
-                </a>
-                <a href="region_nyiso.html" class="cta-card" style="text-decoration:none;display:block;padding:24px 18px;border-radius:12px;background:linear-gradient(135deg,#B45309 0%,#D97706 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(180,83,9,0.2);">
-                    <div style="font-size:1.6rem;margin-bottom:8px;">&#127751;</div>
-                    <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">NYISO</div>
-                    <div style="font-size:0.78rem;opacity:0.85;">Urban-constrained NY</div>
-                </a>
-                <a href="region_neiso.html" class="cta-card" style="text-decoration:none;display:block;padding:24px 18px;border-radius:12px;background:linear-gradient(135deg,#0369A1 0%,#0EA5E9 100%);color:#fff;text-align:center;transition:transform 0.25s ease,box-shadow 0.25s ease;box-shadow:0 2px 12px rgba(3,105,161,0.2);">
-                    <div style="font-size:1.6rem;margin-bottom:8px;">&#10052;</div>
-                    <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">NEISO</div>
-                    <div style="font-size:0.78rem;opacity:0.85;">Winter-challenged NE</div>
-                </a>
-            </div>
-
-            <!-- Abatement Comparison CTA -->
-            <a href="abatement_comparison.html" class="cta-card" style="text-decoration:none;display:flex;align-items:center;gap:24px;padding:28px 32px;border-radius:14px;background:linear-gradient(135deg,#F3F4F8 0%,#E5E7EB 100%);border:2px solid #D1D5DB;color:var(--navy);transition:transform 0.25s ease,box-shadow 0.25s ease,border-color 0.25s ease;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
-                <div style="flex-shrink:0;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#DC2626,#F59E0B);display:flex;align-items:center;justify-content:center;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
-                </div>
-                <div style="flex:1;">
-                    <div style="font-weight:700;font-size:1.15rem;margin-bottom:4px;">Abatement Cost Comparison</div>
-                    <div style="font-size:0.92rem;color:#6B7280;">Is grid decarbonization cost-competitive with DAC, SAF, and other carbon removal? Stress-test the economics.</div>
-                </div>
-                <div style="flex-shrink:0;font-size:1.5rem;color:#9CA3AF;">&rarr;</div>
-            </a>
         </div>
     </section>
 

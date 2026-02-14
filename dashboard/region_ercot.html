@@ -521,6 +521,21 @@ body {
 <!-- ========== MAIN CONTENT ========== -->
 <main class="main-content">
 
+    <!-- Key Insights (moved to top) -->
+    <section class="scroll-section">
+        <h2 class="section-title">What Makes ERCOT Unique</h2>
+        <div class="section-narrative">
+            <p>ERCOT is the low-cost leader among the five regions we study, but cost is only part of the story. Here are the distinctive features that shape hourly clean energy strategy in Texas:</p>
+        </div>
+        <ul class="insights-list">
+            <li><strong>Wind is king, and it is cheap.</strong> At $40/MWh (Medium), ERCOT has the lowest wind costs of any major U.S. grid region. Wind dominates the optimal mix at every threshold, providing the foundation on which all other resources are layered. Any procurement strategy in ERCOT should start with wind.</li>
+            <li><strong>CCS-CCGT is a uniquely Texan advantage.</strong> The Gulf Coast geology, existing pipeline infrastructure, and proximity to Class VI sequestration wells give ERCOT the lowest CCS costs in the country ($71/MWh at Medium, net of 45Q). This technology fills a critical role as a dispatchable clean resource in the 88-100% range -- a role that other regions must fill with more expensive alternatives.</li>
+            <li><strong>The absence of hydro changes the storage equation.</strong> With only 0.1% hydro generation, ERCOT lacks the natural battery that regions like CAISO and NYISO rely on. This means storage technologies -- both batteries and LDES -- must do more work, and LDES enters the optimal mix slightly earlier than in hydro-rich regions.</li>
+            <li><strong>Multi-day wind variability is the binding constraint.</strong> The hardest hours to decarbonize in ERCOT are not nighttime hours (wind often blows at night) but extended calm periods when high-pressure systems suppress wind output for 2-5 days. Solving this problem requires either LDES, clean firm resources, or significant wind overbuild -- and the optimizer typically deploys a mix of all three.</li>
+            <li><strong>Low fuel-switching elasticity limits gas price impact on emissions.</strong> Because ERCOT has already largely retired its coal fleet, changes in natural gas prices do not trigger significant shifts in the grid's emission rate. This is good news for emission certainty but means there is no cheap "switch coal to gas" carbon reduction available.</li>
+        </ul>
+    </section>
+
     <!-- SECTION 1: Region Overview -->
     <section class="scroll-section">
         <span class="section-number">Section 1</span>
@@ -636,22 +651,6 @@ body {
             <canvas id="abatementChart"></canvas>
             <div class="chart-placeholder-msg">Chart data will populate when optimizer results are loaded</div>
         </div>
-    </section>
-
-    <!-- SECTION 7: Key Insights -->
-    <section class="scroll-section">
-        <span class="section-number">Section 7</span>
-        <h2 class="section-title">Key Insights: What Makes ERCOT Unique</h2>
-        <div class="section-narrative">
-            <p>ERCOT is the low-cost leader among the five regions we study, but cost is only part of the story. Here are the distinctive features that shape hourly clean energy strategy in Texas:</p>
-        </div>
-        <ul class="insights-list">
-            <li><strong>Wind is king, and it is cheap.</strong> At $40/MWh (Medium), ERCOT has the lowest wind costs of any major U.S. grid region. Wind dominates the optimal mix at every threshold, providing the foundation on which all other resources are layered. Any procurement strategy in ERCOT should start with wind.</li>
-            <li><strong>CCS-CCGT is a uniquely Texan advantage.</strong> The Gulf Coast geology, existing pipeline infrastructure, and proximity to Class VI sequestration wells give ERCOT the lowest CCS costs in the country ($71/MWh at Medium, net of 45Q). This technology fills a critical role as a dispatchable clean resource in the 88-100% range -- a role that other regions must fill with more expensive alternatives.</li>
-            <li><strong>The absence of hydro changes the storage equation.</strong> With only 0.1% hydro generation, ERCOT lacks the natural battery that regions like CAISO and NYISO rely on. This means storage technologies -- both batteries and LDES -- must do more work, and LDES enters the optimal mix slightly earlier than in hydro-rich regions.</li>
-            <li><strong>Multi-day wind variability is the binding constraint.</strong> The hardest hours to decarbonize in ERCOT are not nighttime hours (wind often blows at night) but extended calm periods when high-pressure systems suppress wind output for 2-5 days. Solving this problem requires either LDES, clean firm resources, or significant wind overbuild -- and the optimizer typically deploys a mix of all three.</li>
-            <li><strong>Low fuel-switching elasticity limits gas price impact on emissions.</strong> Because ERCOT has already largely retired its coal fleet, changes in natural gas prices do not trigger significant shifts in the grid's emission rate. This is good news for emission certainty but means there is no cheap "switch coal to gas" carbon reduction available.</li>
-        </ul>
     </section>
 
     <!-- SECTION 8: How This Region Compares -->
