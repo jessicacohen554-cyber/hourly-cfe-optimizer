@@ -1011,7 +1011,6 @@ body {
 <!-- NARRATIVE CONTENT -->
 <div class="narrative-wrap">
 
-
     <!-- Divider -->
     <div class="story-divider-wrap">
         <hr class="story-divider">
@@ -1096,6 +1095,22 @@ body {
             </div>
         </div>
     </section>
+
+    <!-- 90% COST PANEL: All regions at medium sensitivities -->
+    <section class="story-section story-fade-in" style="padding:32px 48px;">
+        <div class="story-content">
+            <div style="text-align:center;margin-bottom:16px;">
+                <span class="story-badge" style="background:rgba(14,165,233,0.12);color:#0EA5E9;">At a Glance</span>
+                <h2 style="font-size:1.6rem;color:#1A2744;margin-bottom:8px;">Cost of 90% Hourly Clean Energy at Medium Assumptions</h2>
+                <p style="color:#6B7280;font-size:0.92rem;max-width:600px;margin:0 auto;">The effective cost per MWh to meet 90% of demand with clean energy, hour by hour, across all five ISO regions.</p>
+            </div>
+            <div class="chart-container" style="max-width:700px;margin:0 auto;">
+                <canvas id="homepage90CostChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <div class="story-divider-wrap"><hr class="story-divider"></div>
 
     <!-- SECTION 1: INTRO — with big number callout -->
     <section class="story-section story-fade-in">
@@ -1955,7 +1970,8 @@ function initHomepage() {
     if (document.getElementById('narrativeCostChart')) initNarrativeCostChart();
     if (document.getElementById('narrativeMixChart')) initNarrativeMixChart();
     if (document.getElementById('incrementalMixChart')) initIncrementalMixChart();
-    
+    if (document.getElementById('homepage90CostChart')) initHomepage90CostChart();
+
     // Trigger scroll animations
     setupScrollObserver();
 }
@@ -3513,6 +3529,85 @@ function initScrollAnimations() {
         }, { threshold: 0.05 });
         incrInitObserver.observe(incrCanvas.closest('.story-section') || incrCanvas);
     }
+}
+
+// ---- Homepage 90% Cost Panel (horizontal bar by region) ----
+function initHomepage90CostChart() {
+    const canvas = document.getElementById('homepage90CostChart');
+    if (!canvas || !DATA) return;
+
+    const REGION_COLORS = {
+        CAISO: { fill: 'rgba(14,165,233,0.50)', border: '#0EA5E9' },
+        ERCOT: { fill: 'rgba(245,158,11,0.50)', border: '#F59E0B' },
+        PJM:   { fill: 'rgba(30,58,95,0.50)', border: '#1E3A5F' },
+        NYISO: { fill: 'rgba(34,197,94,0.50)', border: '#22C55E' },
+        NEISO: { fill: 'rgba(99,102,241,0.50)', border: '#6366F1' }
+    };
+
+    const isos = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const labels = [], costs = [], fills = [], borders = [];
+
+    isos.forEach(iso => {
+        const td = DATA.results[iso]?.thresholds?.['90'];
+        if (td) {
+            labels.push(iso);
+            costs.push(td.costs.effective_cost_per_useful_mwh);
+            fills.push(REGION_COLORS[iso].fill);
+            borders.push(REGION_COLORS[iso].border);
+        }
+    });
+
+    const avg = costs.reduce((a, b) => a + b, 0) / costs.length;
+
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: costs,
+                backgroundColor: fills,
+                borderColor: borders,
+                borderWidth: 2,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'right',
+                    formatter: v => '$' + v.toFixed(0) + '/MWh',
+                    font: { size: 12, weight: '700' },
+                    color: '#374151',
+                    padding: { left: 6 }
+                },
+                annotation: {
+                    annotations: {
+                        avgLine: {
+                            type: 'line', xMin: avg, xMax: avg,
+                            borderColor: 'rgba(245,158,11,0.8)', borderWidth: 2, borderDash: [6, 4],
+                            label: {
+                                display: true, content: 'Avg: $' + avg.toFixed(0), position: 'start',
+                                backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff',
+                                font: { size: 11, weight: '600' }, borderRadius: 4
+                            }
+                        }
+                    }
+                },
+                tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.x.toFixed(1) + '/MWh at 90% target' } }
+            },
+            scales: {
+                x: { beginAtZero: true, title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                y: { grid: { display: false } }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
 }
 
 // Scroll observer for fade-in animations
