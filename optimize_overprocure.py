@@ -599,9 +599,11 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
 
         # Distribute charge (greedily, largest surplus first)
         sorted_idx = np.argsort(-day_surplus)
+        pos_mask = day_surplus[sorted_idx] > 0
+        sorted_idx = sorted_idx[pos_mask]
         remaining_charge = required_charge
         for idx in sorted_idx:
-            if remaining_charge <= 0 or day_surplus[idx] <= 0:
+            if remaining_charge <= 1e-12:
                 break
             amt = min(float(day_surplus[idx]), power_rating, remaining_charge)
             remaining_charge -= amt
@@ -611,9 +613,11 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
 
         # Distribute dispatch (greedily, largest gap first)
         sorted_idx = np.argsort(-day_gap)
+        pos_mask = day_gap[sorted_idx] > 0
+        sorted_idx = sorted_idx[pos_mask]
         remaining_dispatch = ach_dispatch
         for idx in sorted_idx:
-            if remaining_dispatch <= 0 or day_gap[idx] <= 0:
+            if remaining_dispatch <= 1e-12:
                 break
             amt = min(float(day_gap[idx]), power_rating, remaining_dispatch)
             total_dispatched += amt
@@ -666,30 +670,29 @@ def compute_ldes_dispatch(demand_arr, supply_arr_total, ldes_dispatch_pct=10):
 
         # Phase 1: Charge during surplus hours (largest surpluses first)
         surplus_indices = np.argsort(-w_surplus)
+        # Filter to only positive-surplus hours for faster iteration
+        pos_mask = w_surplus[surplus_indices] > 0
+        surplus_indices = surplus_indices[pos_mask]
         for idx in surplus_indices:
-            if w_surplus[idx] <= 0:
-                break
             space = ldes_energy_capacity - state_of_charge
-            if space <= 0:
+            if space <= 1e-12:
                 break
             charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
-            if charge_amt > 0:
-                ldes_charge[w_start + idx] = charge_amt
-                state_of_charge += charge_amt
+            ldes_charge[w_start + idx] = charge_amt
+            state_of_charge += charge_amt
 
         # Phase 2: Discharge during deficit hours (largest gaps first)
         gap_indices = np.argsort(-w_gap)
+        pos_mask = w_gap[gap_indices] > 0
+        gap_indices = gap_indices[pos_mask]
         for idx in gap_indices:
-            if w_gap[idx] <= 0:
-                break
             available = state_of_charge * LDES_EFFICIENCY
             if available <= 1e-12:
                 break
             dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, available)
-            if dispatch_amt > 0:
-                ldes_dispatch[w_start + idx] = dispatch_amt
-                state_of_charge -= dispatch_amt / LDES_EFFICIENCY
-                state_of_charge = max(0.0, state_of_charge)
+            ldes_dispatch[w_start + idx] = dispatch_amt
+            state_of_charge -= dispatch_amt / LDES_EFFICIENCY
+            state_of_charge = max(0.0, state_of_charge)
 
     total_dispatched = ldes_dispatch.sum()
     return ldes_dispatch, ldes_charge, total_dispatched
@@ -763,9 +766,11 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
 
             # Charge from largest surpluses
             sorted_idx = np.argsort(-day_surplus)
+            pos_mask = day_surplus[sorted_idx] > 0
+            sorted_idx = sorted_idx[pos_mask]
             remaining_charge = required_charge
             for idx in sorted_idx:
-                if remaining_charge <= 0 or day_surplus[idx] <= 0:
+                if remaining_charge <= 1e-12:
                     break
                 amt = min(float(day_surplus[idx]), batt_power_rating, remaining_charge)
                 residual_surplus[ds + idx] -= amt
@@ -776,9 +781,11 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
 
             # Dispatch to largest gaps
             sorted_idx = np.argsort(-day_gap)
+            pos_mask = day_gap[sorted_idx] > 0
+            sorted_idx = sorted_idx[pos_mask]
             remaining_dispatch = ach_dispatch
             for idx in sorted_idx:
-                if remaining_dispatch <= 0 or day_gap[idx] <= 0:
+                if remaining_dispatch <= 1e-12:
                     break
                 amt = min(float(day_gap[idx]), batt_power_rating, remaining_dispatch)
                 residual_gap[ds + idx] -= amt
@@ -803,21 +810,20 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
 
             # Charge
             surplus_indices = np.argsort(-w_surplus)
+            pos_mask = w_surplus[surplus_indices] > 0
+            surplus_indices = surplus_indices[pos_mask]
             for idx in surplus_indices:
-                if w_surplus[idx] <= 0:
-                    break
                 space = ldes_energy_capacity - state_of_charge
-                if space <= 0:
+                if space <= 1e-12:
                     break
                 charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
-                if charge_amt > 0:
-                    state_of_charge += charge_amt
+                state_of_charge += charge_amt
 
             # Discharge
             gap_indices = np.argsort(-w_gap)
+            pos_mask = w_gap[gap_indices] > 0
+            gap_indices = gap_indices[pos_mask]
             for idx in gap_indices:
-                if w_gap[idx] <= 0:
-                    break
                 available = state_of_charge * LDES_EFFICIENCY
                 if available <= 1e-12:
                     break
@@ -1077,8 +1083,8 @@ def generate_combinations_around(base_combo, hydro_cap, step=1, radius=2):
     seen = set()
     ranges = {}
     for rtype in RESOURCE_TYPES:
-        base = base_combo[rtype]
-        cap = hydro_cap if rtype == 'hydro' else 100
+        base = int(base_combo[rtype])
+        cap = int(hydro_cap) if rtype == 'hydro' else 100
         low = max(0, base - radius * step)
         high = min(cap, base + radius * step)
         ranges[rtype] = list(range(low, high + 1, step))
@@ -1968,23 +1974,24 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 cost = update_best(combo, procurement_pct, 0, 0, score)
                 candidates.append((cost, combo, score, 0, 0, procurement_pct))
             elif score >= storage_threshold:
+                # Phase 1 uses coarse storage grid (2×2) — Phase 2/3 refine
                 # Battery only
-                for bp in [5, 10, 15, 20, 25]:
+                for bp in [10, 20]:
                     score_ws = c_battery_score(mix_fracs, pf, bp)
                     if score_ws >= target:
                         cost = update_best(combo, procurement_pct, bp, 0, score_ws)
                         candidates.append((cost, combo, score_ws, bp, 0, procurement_pct))
                         break
                 # LDES only (wind-heavy mixes benefit from multi-day shifting)
-                for lp in [5, 10, 15, 20]:
+                for lp in [10, 20]:
                     score_ws = c_both_score(mix_fracs, pf, 0, lp)
                     if score_ws >= target:
                         cost = update_best(combo, procurement_pct, 0, lp, score_ws)
                         candidates.append((cost, combo, score_ws, 0, lp, procurement_pct))
                         break
                 # Combined battery + LDES
-                for bp in [5, 10, 15, 20]:
-                    for lp in [5, 10, 15, 20]:
+                for bp in [10, 20]:
+                    for lp in [10, 20]:
                         score_ws = c_both_score(mix_fracs, pf, bp, lp)
                         if score_ws >= target:
                             cost = update_best(combo, procurement_pct, bp, lp, score_ws)
@@ -2318,7 +2325,7 @@ def process_iso(args):
     # Each threshold optimized independently; monotonicity enforced via
     # post-hoc re-sweep with broader parameters (not by result replacement)
 
-    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 1  # Save every scenario — zero compute loss on interruption
+    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 10  # Save every 10 scenarios — ~5min max loss on interruption
 
     for threshold in THRESHOLDS:
         t_str = str(threshold)
