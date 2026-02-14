@@ -1598,7 +1598,9 @@ let macChart = null;
 let currentScenario = 'medium';
 
 function buildMacChart(scenario) {
-    const ctx = document.getElementById('macCurveChart').getContext('2d');
+    const el = document.getElementById('macCurveChart');
+    if (!el) return;
+    const ctx = el.getContext('2d');
     const state = getComparisonState();
     const gridLevel = state.grid.toLowerCase();
     const data = MAC_DATA[gridLevel] || MAC_DATA[scenario];
@@ -1757,7 +1759,7 @@ function setScenario(scenario, btn) {
     currentScenario = scenario;
     document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    buildMacChart(scenario);
+    if (document.getElementById('macCurveChart')) buildMacChart(scenario);
 }
 
 // Rebuild all visualizations when comparison toggles change
@@ -1767,7 +1769,7 @@ function onComparisonChange() {
     if (state.grid !== currentScenario.charAt(0).toUpperCase() + currentScenario.slice(1)) {
         currentScenario = state.grid.toLowerCase();
     }
-    buildMacChart(currentScenario);
+    if (document.getElementById('macCurveChart')) buildMacChart(currentScenario);
     buildLadder();
     if (bandChartInstance) bandChartInstance.destroy();
     buildBandChart();

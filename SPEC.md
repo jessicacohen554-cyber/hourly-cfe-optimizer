@@ -1,7 +1,48 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Finalized: 2025-02-13. Derived from full conversation history.
+> Last updated: 2026-02-14.
+
+## Current Status (Feb 14, 2026)
+
+### What was accomplished
+- [x] Homepage (`index.html`) — injected 38 missing CSS classes, fixed layout
+- [x] Created Carbon Abatement Dashboard (`abatement_dashboard.html`) with 4 interactive charts, stress-test toggles
+- [x] Updated navigation site-wide: Home | Cost Optimizer | Abatement Dashboard | CO₂ Abatement Summary | regional pages | Methodology & Paper
+- [x] Added "Back to Home" button on all non-home pages
+- [x] Comprehensive chart styling QA/QC across all pages (borderRadius 6, no grid lines, axis borders)
+- [x] Merged methodology into research paper (Appendix B with 7 sub-sections)
+- [x] Updated tagline: "Most climate solutions depend on" across all pages
+- [x] SPEC.md sections 3, 4, 15b, 16 updated to reflect paired toggles, merged pages, new nav
+- [x] **CO₂ methodology fixed**: Hourly fossil-fuel emission rates (eGRID per-fuel × EIA hourly mix) replacing flat rate
+- [x] **Post-optimizer pipeline**: `recompute_co2.py`, `analyze_results.py`, `run_post_optimizer.sh`
+- [x] **HTML QA fixes**: nav consistency, chart styling, dead refs, orphaned canvases
+- [x] **Multi-year data infra**: `fetch_eia_multiyear.py` (2021-2025 EIA API + DST + averaging)
+- [x] **Phase 3 re-optimizer**: `optimize_phase3_only.py` (±5% neighborhood refinement)
+- [x] **New SPEC.md sections**: 19.3 (DST), 19.4 (multi-year), 19.5 (NYISO proxy), 20.1 (ELCC)
+
+### What's in progress
+- [ ] **Optimizer running** (~3.5h, 5 workers at 93% CPU). Pipeline watcher auto-triggers post-processing.
+- [ ] `dashboard_standalone.html` chart styling fix (background agent)
+
+### Pipeline when optimizer completes
+1. Auto: `recompute_co2.py` → hourly CO₂ correction
+2. Auto: `analyze_results.py` → monotonicity, literature alignment, VRE waste, DAC inputs
+3. Manual: Update dashboards with real data, update narratives
+4. Manual: DAC-VRE analysis, resource mix analysis, path-dependent MAC
+5. Commit + push
+
+### After initial push
+1. Fetch 2021-2025 multi-year EIA data (need API key)
+2. Convert to local time with DST
+3. Average profiles, apply to 2025 totals
+4. Re-run optimizer (Phase 1+3 hybrid)
+5. Update dashboards + narratives, final QA/QC
+
+### Open questions
+- Path-dependent MAC visualization: may need alternative to MAC curve format
+- ELCC: include in next run? Fixed or penetration-dependent?
+- Multi-year re-run: Phase 1+3 hybrid recommended (~40% compute savings vs full)
 
 ---
 
@@ -12,7 +53,7 @@
 - **Grid mix baseline** = actual 2025 regional shares, priced at wholesale, selectable as reference scenario (fixed, not adjustable by user)
 - **Regions**: CAISO, ERCOT, PJM, NYISO, NEISO
 - **Repo**: `jessicacohen554-cyber/hourly-cfe-optimizer`
-- **Dev branch**: `claude/enhance-optimizer-model-IqSpe` (all advanced model work on this branch)
+- **Dev branch**: `claude/enhance-optimizer-pairing-k0h9h`
 
 ---
 
@@ -82,42 +123,40 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 **NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
 
 **Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. 324 scenarios × 10 thresholds × 5 regions = 16,200 independent co-optimizations, with matching score cache shared across cost scenarios (physics reuse, not a shortcut).
-## 3. Thresholds (18 total)
+## 3. Thresholds (10 total — reduced from 18)
 
 ```
-75, 80, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100
+75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
 ```
 
-- 5% intervals: 75-85
-- 1% intervals: 85-100 (inflection zone where CCS/LDES enter optimal mix)
-- Critical for smooth abatement cost curves
+- 5% intervals: 75-85 (captures broad trend)
+- 2.5% intervals: 87.5-97.5 (captures steep cost inflection zone)
+- 99% and 100% anchor the extreme end
+- Key inflection behavior (CCS/LDES entering mix, storage costs spiking) captured at 90-97.5
+- Dashboard interpolates smoothly between anchor points for abatement curves
 
 ---
 
-## 4. Dashboard Controls (12 total)
+## 4. Dashboard Controls (7 total — paired toggles)
 
 ### Preserved (2):
 1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
-2. **Threshold select** (expanded from 7 to 18 values)
+2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100)
 
-### New sensitivity toggles (10):
+### Paired sensitivity toggles (5 groups — replacing 10 individual):
 
-| # | Toggle | Options | Affects |
-|---|---|---|---|
-| 3 | Solar Generation Cost | Low / Medium / High | Solar LCOE (regional) |
-| 4 | Wind Generation Cost | Low / Medium / High | Wind LCOE (regional) |
-| 5 | Clean Firm Generation Cost | Low / Medium / High | CF LCOE (regional — geothermal blend) |
-| 6 | CCS-CCGT Generation Cost | Low / Medium / High | CCS LCOE (regional — Class VI, 45Q, fuel) |
-| 7 | Battery Storage Cost | Low / Medium / High | Battery LCOS (regional) |
-| 8 | LDES Storage Cost | Low / Medium / High | LDES LCOS (regional) |
-| 9 | Transmission Cost | None / Low / Medium / High | Resource+region adders on new-build |
-| 10 | Natural Gas Price | Low / Medium / High | Wholesale price + CCS fuel cost + emission rate |
-| 11 | Coal Price | Low / Medium / High | Wholesale price + emission rate |
-| 12 | Oil Price | Low / Medium / High | Wholesale price + emission rate |
+| # | Paired Toggle | Options | Member Variables | Affects |
+|---|---|---|---|---|
+| 3 | **Renewable Generation Cost** | Low / Medium / High | Solar LCOE + Wind LCOE | Both solar and wind generation costs (regional) |
+| 4 | **Firm Generation Cost** | Low / Medium / High | Clean Firm LCOE + CCS-CCGT LCOE | Both firm dispatchable resource costs (regional) |
+| 5 | **Storage Cost** | Low / Medium / High | Battery LCOS + LDES LCOS | Both storage technology costs (regional) |
+| 6 | **Fossil Fuel Price** | Low / Medium / High | Gas + Coal + Oil prices | Wholesale electricity price + CCS fuel cost + emission rates |
+| 7 | **Transmission Cost** | None / Low / Medium / High | All resource transmission adders | Transmission adders on all new-build resources (regional) |
+
+**Scenario count**: 3 × 3 × 3 × 3 × 4 = **324 cost scenarios** per region per threshold
+**Total optimizations**: 324 × 10 × 5 = **16,200** independent co-optimizations
 
 **NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
-
-**Replaces**: Old single Clean Firm cost dropdown ($90/$120/$150)
 
 **Grid mix baseline**: Selectable as reference scenario (not a toggle — fixed 2025 actual at wholesale)
 
@@ -261,11 +300,42 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 
 ## 7. CO2 & Abatement
 
-### 7.1 CO2 Emissions Abated
-- Each clean MWh displaces fossil generation at **regional marginal emission rate** (eGRID)
-- Emission rate shifts with fuel price toggles using **regional fuel-switching elasticity**
-- CCS-CCGT gets **partial credit**: 90% capture → displaces ~0.037 tCO2/MWh residual (vs ~0.37 unabated CCGT)
-- New **metric tile** on dashboard showing total CO2 abated (tons) for selected scenario
+### 7.1 CO2 Emissions Abated — Hourly Fossil-Fuel Emission Rates
+
+**Methodology**: Build hourly variable emission rates from eGRID 2023 per-fuel emission factors × EIA hourly fossil fuel mix shares.
+
+**Step 1 — Per-fuel emission rates** (from eGRID, static per region):
+- `coal_rate[iso]` = eGRID coal CO₂ lb/MWh (e.g., ERCOT: 2325, PJM: 2216)
+- `gas_rate[iso]` = eGRID gas CO₂ lb/MWh (e.g., ERCOT: 867, PJM: 867)
+- `oil_rate[iso]` = eGRID oil CO₂ lb/MWh (e.g., ERCOT: 2894, PJM: 1919)
+
+**Step 2 — Hourly fossil mix** (from EIA hourly data, 8760 values per ISO):
+- `coal_share[h]`, `gas_share[h]`, `oil_share[h]` — fraction of fossil generation from each fuel at hour h
+
+**Step 3 — Hourly emission rate**:
+```
+emission_rate[h] = coal_share[h] × coal_rate + gas_share[h] × gas_rate + oil_share[h] × oil_rate
+```
+This produces a variable hourly emission rate that reflects the actual fossil fuel mix dispatched at each hour (coal-heavy night hours vs. gas-peaker daytime hours, seasonal variation, etc.)
+
+**Step 4 — Fuel price sensitivity** (shifts fossil mix):
+- **Low gas price** → more gas dispatch, less coal → lower emission rate
+- **High gas price** → coal resurgence (where coal capacity exists) → higher emission rate
+- Regional fuel-switching elasticity from Section 5.9 applied as shift factors to coal/gas shares
+- ERCOT: Low elasticity (coal mostly retired); PJM: High elasticity (45GW coal remaining)
+
+**Step 5 — CO₂ abated** (hourly resolution):
+- For each hour h: `fossil_displaced[h] = clean_supply[h] − max(0, clean_supply[h] − demand[h])`
+- `CO₂_abated = Σ_h fossil_displaced[h] × emission_rate[h]`
+- CCS-CCGT gets **partial credit**: 90% capture → residual ~0.037 tCO₂/MWh (vs ~0.37 unabated CCGT)
+
+**Why this matters**: Flat emission rates overcount abatement during low-emission gas-dominant hours and undercount during high-emission coal-dominant hours. The hourly approach captures the actual carbon intensity of displaced generation.
+
+**Data sources**:
+- `data/egrid_emission_rates.json` — 2023 eGRID per-fuel CO₂ rates (lb/MWh) by region
+- `data/eia_fossil_mix.json` — EIA hourly fossil fuel mix shares (coal/gas/oil) by ISO
+
+**Implementation note**: CO₂ calculation is post-hoc (doesn't affect cost/matching optimization). The optimizer's resource mix and cost results are unaffected. CO₂ values can be recomputed on cached results.
 
 ### 7.2 Abatement Cost Curves (2 new charts)
 - **Average Cost of Abatement**: Total incremental cost / Total CO2 abated = **$/ton CO2**
@@ -607,12 +677,13 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 ---
 
-## 15b. Methodology HTML Page (Trimmed)
+## 15b. Methodology & Research Paper (Merged)
 
-- **Keep**: Technical methodology, model specifications, algorithm descriptions
-- **Remove**: Deep narrative content (moved to PDF paper and regional pages)
-- **Purpose**: Quick-reference technical documentation for the model
-- **Links to**: PDF paper for full methodology and analysis
+- **research_paper.html** is now the single source of truth for methodology + research content
+- **Appendix B** added with: B.1 Two-Tier Pricing Model, B.2 Generation Cost Tables, B.3 Storage Cost Tables, B.4 Transmission Adders, B.5 Sensitivity Toggle Pairing, B.6 CO₂ Emission Factor Methodology, B.7 Hydro Treatment
+- **optimizer_methodology.html** preserved but removed from nav — all content consolidated
+- Nav link: "Methodology & Paper" → research_paper.html
+- Clickable table of contents at top of page
 
 ---
 
@@ -626,19 +697,24 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 ### Per-Page Banner Content
 | Page | Title | Tagline |
 |---|---|---|
-| Main Dashboard | Hourly CFE Optimizer | Advanced Sensitivity Model |
+| Homepage (index.html) | The 8,760 Problem | Most climate solutions depend on a clean grid. But how clean is clean enough? |
+| Cost Optimizer (dashboard.html) | Hourly CFE Optimizer | Advanced Sensitivity Model |
+| Abatement Dashboard (abatement_dashboard.html) | Carbon Abatement Dashboard | Interactive Abatement Cost & Portfolio Analysis |
+| CO₂ Abatement Summary (abatement_comparison.html) | CO₂ Abatement Summary | Comparing Grid Decarbonization to Alternative Pathways |
 | CAISO Deep Dive | CAISO Deep Dive | California's Path to 24/7 Clean Energy |
 | ERCOT Deep Dive | ERCOT Deep Dive | Texas Grid Decarbonization Analysis |
 | PJM Deep Dive | PJM Deep Dive | Mid-Atlantic Clean Energy Transition |
 | NYISO Deep Dive | NYISO Deep Dive | New York's Hourly Matching Challenge |
 | NEISO Deep Dive | NEISO Deep Dive | New England's Decarbonization Pathway |
-| Methodology | Technical Methodology | Model Specifications & Data Sources |
+| Methodology & Paper (research_paper.html) | Technical Methodology & Research Paper | Full Paper with Appendix B Cost Tables |
 
-### Navigation
+### Navigation (Updated Feb 14)
 - Top navigation bar on ALL pages
-- Links: Dashboard | CAISO | ERCOT | PJM | NYISO | NEISO | Methodology | Paper (PDF)
-- Current page highlighted in nav
+- Links: Home | Cost Optimizer | Abatement Dashboard | CO₂ Abatement Summary | CAISO | ERCOT | PJM | NYISO | NEISO | Methodology & Paper
+- Current page highlighted in nav (nav-active class)
 - Mobile: collapsible/hamburger nav
+- "Back to Home" button at top of all non-home pages
+- Methodology page (optimizer_methodology.html) still exists but removed from primary nav — content consolidated into research_paper.html Appendix B
 
 ---
 
@@ -750,3 +826,65 @@ This section documents known simplifying assumptions for transparency and academ
 **Impact**: Similar to LDES, the model may understate CCS-CCGT costs in scenarios where it operates at low utilization. However, since the optimizer models CCS as flat baseload (1/8760 profile), allocated CCS capacity runs at 100% CF by construction. The limitation applies to whether that assumption reflects real-world operations in a grid with significant renewable penetration.
 
 **Mitigation**: The firm generation cost toggle (Low/Medium/High) provides sensitivity analysis around the LCOE assumption. High firm generation costs can be interpreted as a proxy for reduced capacity factor economics.
+
+### 19.3 UTC Timestamps Without DST Adjustment (To Be Fixed)
+
+**Current state**: All EIA hourly data is stored in sequential UTC order. Each BA's data starts at its standard-time midnight in UTC (CAISO: T08, ERCOT: T06, PJM/NYISO/NEISO: T05). During DST months (March–November), the hour labels are off by 1 hour from local clock time.
+
+**Impact**: The optimizer's hourly matching is unaffected — `demand[h]` and `supply[h]` refer to the same physical UTC hour, so they match correctly. The issue is in `compute_compressed_day()` and any visualization that maps array index to hour-of-day: `h % 24` gives local standard time labels year-round, but during DST months the actual local clock is 1 hour ahead. This means solar peak visualization appears 1 hour early during summer months.
+
+**Fix (planned)**: Convert all profiles to local prevailing time using each BA's IANA timezone:
+- CAISO → `America/Los_Angeles`
+- ERCOT → `America/Chicago`
+- PJM → `America/New_York`
+- NYISO → `America/New_York`
+- NEISO → `America/New_York`
+
+This produces the correct local-time alignment and fixes the compressed-day hour labels. DST spring-forward hours (missing in local time) are handled by interpolation; fall-back duplicates are averaged.
+
+### 19.4 Single-Year Profiles (To Be Fixed)
+
+**Current state**: Generation and demand profiles use a single year (2025) of EIA 930 data. A single year may have unusual weather patterns (e.g., extended cloudy periods, heat waves, polar vortex events) that skew the hourly profile shapes.
+
+**Fix (planned)**: Average hourly profiles across 2021-2025 EIA 930 data in local time:
+1. Fetch 5 years of hourly data per BA from EIA API
+2. Convert all to local prevailing time (with DST handling)
+3. For each hour-of-year (1–8760), average the normalized profile across years
+4. Apply averaged profile shapes to **2025 annual totals** — so total MWh and generation shares remain 2025 actuals, but the hourly distribution is smoothed over 5 years
+5. This captures inter-annual weather variation (early/late spring, wind drought years, etc.) while preserving the 2025 snapshot model
+
+**Key constraint**: Do NOT average annual totals — only profile shapes. The proportion of solar across each hour must equate to its appropriate fractional share of 2025 generation totals.
+
+### 19.5 NYISO Solar Proxy
+
+**Status**: Working correctly. NYISO uses NEISO solar generation profile as proxy since NYISO lacks meaningful solar generation data in EIA 930. The proxy is stored in `eia_generation_profiles.json` as `solar_proxy` under NYISO and matches NEISO solar values exactly. The optimizer code (line 298-302) checks for `solar_proxy` first, falls back to NEISO solar.
+
+---
+
+## 20. Planned Enhancements
+
+### 20.1 Capacity Reserve Margin / ELCC (Under Consideration)
+
+**Concept**: Layer in a capacity reserve margin constraint using Effective Load Carrying Capability (ELCC) to ensure resource mixes maintain grid reliability.
+
+**What ELCC does**: ELCC measures the firm capacity contribution of each resource type — how much peak demand it can reliably serve. Variable resources (solar, wind) have lower ELCC than their nameplate capacity because they may not generate during peak demand hours.
+
+**Typical ELCC values** (from NREL/regional ISO studies):
+| Resource | ELCC Range | Notes |
+|---|---|---|
+| Clean Firm (nuclear) | 90-95% | Near-firm, planned outages reduce |
+| Solar | 30-70% | Varies by region, declines with penetration |
+| Wind | 10-30% | Highly region-dependent |
+| CCS-CCGT | 85-95% | Dispatchable, similar to CCGT |
+| Battery (4hr) | 60-95% | Duration-limited; declines as peak broadens |
+| LDES (100hr) | 85-95% | Long duration → high capacity value |
+
+**Implementation approach**: Add a constraint to the optimizer that the ELCC-weighted capacity of the resource mix must meet a minimum reserve margin (e.g., 15% above peak demand). This would:
+- Prevent resource mixes that meet hourly matching targets but lack capacity adequacy
+- Penalize solar-heavy mixes at high thresholds (solar ELCC drops with penetration)
+- Favor firm resources and storage at the margin
+- Better reflect real planning constraints
+
+**Complexity**: Moderate. The ELCC calculation is a post-hoc check on each candidate mix during optimization. The main challenge is ELCC values that decline with penetration (saturation effects), which creates non-linear constraints. A simplified version could use fixed ELCC percentages per resource type.
+
+**Decision**: Under consideration — user to confirm whether to implement for next optimizer run.
