@@ -1563,9 +1563,12 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             additional flexibility. Long-duration storage at 8&ndash;100+ hours could reduce 100% matching costs by
             20&ndash;40% and curtailment from 30% to 5&ndash;15%
             <a href="#ref-14" class="cite">[14]</a><a href="#ref-19" class="cite">[19]</a>.</li>
-        <li><strong>Emission rate simplification:</strong> CO<sub>2</sub> displacement uses annual average
-            non-baseload emission rates from EPA eGRID. Actual marginal emission rates vary hourly and depend on
-            dispatch order. The simplification may overstate or understate displacement in specific hours.</li>
+        <li><strong>Emission rate methodology:</strong> CO<sub>2</sub> displacement uses hourly variable
+            emission rates built from EPA eGRID 2023 per-fuel factors (coal, gas, oil) weighted by EIA hourly
+            fossil fuel mix shares. This captures hour-by-hour variation in carbon intensity as the
+            fossil dispatch mix changes (coal-heavy nights vs. gas-peaker afternoons). Under the Fossil Fuel
+            Price toggle, coal/gas shares shift via regional fuel-switching elasticity, dynamically changing
+            the hourly emission rate.</li>
         <li><strong>Five regions only:</strong> MISO, SPP, and non-ISO regions are not covered. Future work should
             extend to all U.S. balancing authorities for national applicability.</li>
     </ul>
@@ -2050,20 +2053,44 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </p>
 
     <h3>B.6 CO&#8322; Emission Factor Methodology</h3>
+    <p style="font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 12px;">
+        CO&#8322; abatement is computed at <strong>hourly resolution</strong> using variable emission rates derived from
+        two data sources:
+    </p>
+    <ol style="margin: 0 0 16px 24px; font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary);">
+        <li><strong>Per-fuel emission factors</strong> from EPA eGRID 2023 (lb CO&#8322;/MWh by fuel type per region)</li>
+        <li><strong>Hourly fossil fuel mix</strong> from EIA-930 (coal, gas, oil shares of fossil generation at each hour)</li>
+    </ol>
+    <p style="font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 12px;">
+        The hourly emission rate at hour <em>h</em> is:
+    </p>
+    <div style="background: var(--bg-highlight, #f8f7f5); border-radius: 8px; padding: 12px 18px; margin: 0 0 16px; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: var(--text-primary);">
+        rate(h) = coal_share(h) &times; coal_rate + gas_share(h) &times; gas_rate + oil_share(h) &times; oil_rate
+    </div>
+
+    <h4 style="font-size: 0.95rem; margin: 16px 0 8px;">Per-Fuel Emission Rates (eGRID 2023)</h4>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Region</th><th>Marginal Rate (tCO&#8322;/MWh)</th><th>Dominant Marginal Fuel</th></tr></thead>
+        <thead><tr><th>Region</th><th>Coal (tCO&#8322;/MWh)</th><th>Gas (tCO&#8322;/MWh)</th><th>Oil (tCO&#8322;/MWh)</th><th>Weighted Avg</th><th>Dominant Fuel</th></tr></thead>
         <tbody>
-            <tr><td>CAISO</td><td>~0.39</td><td>Natural gas (CCGT/peakers)</td></tr>
-            <tr><td>ERCOT</td><td>~0.42</td><td>Natural gas + some coal</td></tr>
-            <tr><td>PJM</td><td>~0.55</td><td>Natural gas + coal</td></tr>
-            <tr><td>NYISO</td><td>~0.37</td><td>Natural gas (CCGT/peakers)</td></tr>
-            <tr><td>NEISO</td><td>~0.38</td><td>Natural gas (CCGT)</td></tr>
+            <tr><td>CAISO</td><td>0.514</td><td>0.391</td><td>0.818</td><td>~0.39</td><td>Natural gas (99.6%)</td></tr>
+            <tr><td>ERCOT</td><td>1.055</td><td>0.394</td><td>1.313</td><td>~0.54</td><td>Gas (~72%) + coal (~28%)</td></tr>
+            <tr><td>PJM</td><td>1.006</td><td>0.393</td><td>0.871</td><td>~0.54</td><td>Gas + coal mix</td></tr>
+            <tr><td>NYISO</td><td>&mdash;</td><td>0.415</td><td>0.433</td><td>~0.41</td><td>Natural gas (>99%)</td></tr>
+            <tr><td>NEISO</td><td>1.043</td><td>0.383</td><td>0.999</td><td>~0.39</td><td>Natural gas (>95%)</td></tr>
         </tbody>
     </table>
     </div>
+
+    <h4 style="font-size: 0.95rem; margin: 16px 0 8px;">Fuel-Switching Sensitivity</h4>
+    <p style="font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 12px;">
+        Under the <strong>Fossil Fuel Price</strong> toggle, coal and gas dispatch shares shift via regional
+        fuel-switching elasticity. High gas prices drive coal resurgence in regions with remaining coal capacity (PJM:
+        high elasticity, ~45 GW coal). Low gas prices shift dispatch further toward gas, reducing emission rates.
+        Regions with minimal coal (CAISO, NYISO) show little variation.
+    </p>
     <p style="font-size:0.85rem;color:var(--text-muted);">
-        Source: EPA eGRID 2022. Rates shift with the Fossil Fuel Price toggle through fuel-switching dynamics.
+        Sources: EPA eGRID 2023, EIA-930 hourly generation data.
         CCS-CCGT receives partial displacement credit: ~0.037 tCO&#8322;/MWh residual (10% of unabated rate).
     </p>
 
