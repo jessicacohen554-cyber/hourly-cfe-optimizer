@@ -6,28 +6,27 @@
 ## Current Status (Feb 14, 2026)
 
 ### What was accomplished
-- [x] Homepage (`index.html`) — injected 38 missing CSS classes, fixed layout
-- [x] Created Carbon Abatement Dashboard (`abatement_dashboard.html`) with 3 interactive charts (MAC, portfolio, ladder), stress-test toggles
-- [x] CO₂ Abatement Summary (`abatement_comparison.html`) with benchmark bands and narrative sections
-- [x] Regional Deep Dives (`region_deepdive.html`) — single combined page with region selector
-- [x] Updated navigation site-wide: Home | Cost Optimizer | Abatement Dashboard | Regional Deep Dives | CO₂ Abatement Summary | Methodology & Paper
-- [x] Added "Back to Home" button on all non-home pages
-- [x] Comprehensive chart styling QA/QC across all pages (borderRadius 6, no grid lines, axis borders)
+- [x] Homepage (`index.html`) — 4 charts rendering with real data, region toggle pills, narrative sections
+- [x] Carbon Abatement Dashboard (`abatement_dashboard.html`) — 3 charts (MAC, portfolio, ladder) fully rendering with hardcoded illustrative data + 4 stress-test toggles
+- [x] Navigation site-wide: Home | Cost Optimizer | Abatement Dashboard | Regional Deep Dives | CO₂ Abatement Summary | Methodology & Paper
+- [x] "Back to Home" button on all non-home pages
+- [x] Chart styling QA/QC on working charts (borderRadius 6, no grid lines, axis borders)
 - [x] Merged methodology into research paper (Appendix B with 7 sub-sections)
-- [x] Updated tagline: "Most climate solutions depend on" across all pages
+- [x] Tagline: "Most climate solutions depend on" across all pages
 - [x] **CO₂ methodology fixed**: Hourly fossil-fuel emission rates (eGRID per-fuel × EIA hourly mix) replacing flat rate
 - [x] **Post-optimizer pipeline**: `recompute_co2.py`, `analyze_results.py`, `run_post_optimizer.sh`
-- [x] **HTML QA fixes**: nav consistency, chart styling, dead refs, orphaned canvases
 - [x] **Multi-year data infra**: `fetch_eia_multiyear.py` (2021-2025 EIA API + DST + averaging)
 - [x] **Phase 3 re-optimizer**: `optimize_phase3_only.py` (±5% neighborhood refinement)
 - [x] **DST fix script**: `fix_dst_profiles.py` (UTC → local prevailing time conversion)
 - [x] **Optimizer checkpointing**: Saves after each threshold + resume from checkpoint on restart
 - [x] **Sequential ISO processing**: Runs one ISO at a time with incremental result saves (avoids OOM)
-- [x] SPEC.md cleaned: removed duplicated sections 3/4, updated regional pages to combined, nav corrected
+
+### Needs work (awaiting optimizer results)
+- [ ] **Dashboard abatement section (`dashboard.html`)** — 5 paired toggles work, 4 core charts work. Abatement cost section has placeholder divs awaiting optimizer results data.
 
 ### What's in progress
-- [ ] **Optimizer running** (sequential mode, PID 25364). Checkpoints to `data/checkpoints/`. Incremental saves to `dashboard/overprocure_results.json` after each ISO.
-- [ ] Site content review: ensuring all decisions from SPEC.md are reflected in HTML pages
+- [ ] **Optimizer running** (sequential mode with checkpointing). Incremental saves after each ISO.
+- [ ] Site content gap closure: building out the 3 incomplete pages above
 
 ### Pipeline when optimizer completes
 1. Run `recompute_co2.py` → hourly CO₂ correction
