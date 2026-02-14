@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Research Paper - Hourly Clean Energy Cost Optimization Across U.S. ISO Regions</title>
+    <title>The 8,760 Problem — Research Paper</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -48,30 +48,157 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* ========== TOP NAV ========== */
+.top-nav {
+    background: #1a1a2e;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+.top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: 1440px;
+    width: 100%;
+    justify-content: center;
+}
+.top-nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 14px 18px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+.top-nav a:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.06);
+}
+.top-nav a.nav-active {
+    color: #ffffff;
+    border-bottom-color: #0EA5E9;
+    background: rgba(14,165,233,0.1);
+}
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+.nav-hamburger svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+@media (max-width: 768px) {
+    .top-nav {
+        flex-wrap: wrap;
+        padding: 0 12px;
+        justify-content: space-between;
+    }
+    .top-nav-inner {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding-bottom: 8px;
+    }
+    .top-nav-inner.nav-open {
+        display: flex;
+    }
+    .top-nav a {
+        padding: 12px 16px;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        width: 100%;
+        text-align: left;
+    }
+    .top-nav a.nav-active {
+        border-left-color: #0EA5E9;
+        border-bottom: none;
+        background: rgba(14,165,233,0.12);
+    }
+    .nav-hamburger {
+        display: flex;
+    }
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        color: #ffffff;
+        font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 12px 0;
+    }
+}
+@media (min-width: 769px) {
+    .nav-brand { display: none; }
+}
+
 /* ========== PAPER HEADER ========== */
 .paper-header {
     background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
     color: #fff;
-    padding: 60px 24px 52px;
+    padding: 72px 24px 64px;
     text-align: center;
     position: relative;
     overflow: hidden;
 }
+/* Radial energy glows + dispatch stack curves (bottom) */
 .paper-header::before {
     content: '';
     position: absolute;
     inset: 0;
-    background:
-        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.35) 0%, transparent 65%),
-        radial-gradient(ellipse 45% 60% at 88% 70%, rgba(245,158,11,0.25) 0%, transparent 55%);
+    z-index: 1;
     pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.4) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 60% at 38% 85%, rgba(34,197,94,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 65% at 62% 80%, rgba(245,158,11,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 240' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='a1' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(255,255,255,0.15)'/%3E%3Cstop offset='1' stop-color='rgba(255,255,255,0.01)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a2' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(34,197,94,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(34,197,94,0.03)'/%3E%3C/linearGradient%3E%3ClinearGradient id='a3' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgba(245,158,11,0.35)'/%3E%3Cstop offset='1' stop-color='rgba(245,158,11,0.03)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,240 L0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100 L1200,240 Z' fill='url(%23a1)'/%3E%3Cpath d='M0,240 L0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140 L1200,240 Z' fill='url(%23a2)'/%3E%3Cpath d='M0,240 L0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180 L1200,240 Z' fill='url(%23a3)'/%3E%3Cpath d='M0,130 C200,100 400,70 600,80 C800,90 1000,120 1200,100' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2'/%3E%3Cpath d='M0,160 C200,140 400,115 600,125 C800,135 1000,155 1200,140' fill='none' stroke='%2322C55E' stroke-width='2' stroke-opacity='0.6'/%3E%3Cpath d='M0,190 C200,180 400,165 600,170 C800,175 1000,188 1200,180' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-opacity='0.6'/%3E%3C/svg%3E") no-repeat bottom center;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
 }
+/* Accent bar + dark text backing overlay */
 .paper-header::after {
     content: '';
     position: absolute;
-    bottom: 0; left: 0; right: 0;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 70% 45% at 50% 45%, rgba(5,15,35,0.55) 0%, transparent 100%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0,50 L250,50 L270,18 L288,68 L306,22 L324,60 L342,50 L1200,50' fill='none' stroke='rgba(14,165,233,0.5)' stroke-width='2'/%3E%3Cpath d='M0,35 L600,35 L618,10 L636,60 L654,14 L672,55 L690,35 L1200,35' fill='none' stroke='rgba(245,158,11,0.4)' stroke-width='2'/%3E%3C/svg%3E") no-repeat top center;
+    background-size: 100% 100%, 100% 80px;
+}
+.paper-header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     height: 4px;
     background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 2;
 }
 .paper-badge {
     display: inline-block;
@@ -125,7 +252,7 @@ body {
     justify-content: space-between;
     align-items: center;
     position: sticky;
-    top: 0;
+    top: 48px;
     z-index: 100;
 }
 .paper-toolbar a {
@@ -371,7 +498,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 /* ========== PRINT ========== */
 @media print {
     body { background: white; font-size: 11pt; line-height: 1.6; }
-    .paper-toolbar, .accent-bar { display: none; }
+    .top-nav, .paper-toolbar, .accent-bar { display: none; }
     .paper-header { background: var(--navy) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 36px 24px 28px; }
     .paper-body { max-width: 100%; padding: 24px 20px 40px; }
     .figure { break-inside: avoid; }
@@ -387,15 +514,30 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 </head>
 <body>
 
+<nav class="top-nav">
+    <span class="nav-brand">The 8,760 Problem</span>
+    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
+        <a href="abatement_comparison.html">Abatement</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html" class="nav-active">Research Paper</a>
+    </div>
+</nav>
+
 <header class="paper-header">
+    <div class="paper-header-accent"></div>
     <div class="paper-badge">Working Paper</div>
     <h1 class="paper-title">Least-Cost Hourly Clean Energy Matching:<br>A Multi-Regional Optimization Analysis</h1>
     <p class="paper-subtitle">Optimal procurement portfolios for 75&ndash;100% hourly matching across five U.S. ISO regions using co-optimized resource mixes, battery storage, and blended pricing</p>
-    <p class="paper-meta">Hourly CFE Optimizer Project &bull; February 2026 &bull; v2.0</p>
+    <p class="paper-meta">The 8,760 Problem &bull; February 2026 &bull; v2.0</p>
 </header>
 
 <div class="paper-toolbar">
-    <a href="dashboard.html">&larr; Back to Dashboard</a>
+    <span></span>
     <button class="pdf-download-btn" onclick="window.print()">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 1h8v4h3l-7 7-7-7h3V1z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M1 12v3h14v-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Download PDF
