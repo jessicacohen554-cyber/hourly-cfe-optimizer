@@ -7,29 +7,33 @@
 
 ### What was accomplished
 - [x] Homepage (`index.html`) — injected 38 missing CSS classes, fixed layout
-- [x] Created Carbon Abatement Dashboard (`abatement_dashboard.html`) with 4 interactive charts, stress-test toggles
-- [x] Updated navigation site-wide: Home | Cost Optimizer | Abatement Dashboard | CO₂ Abatement Summary | regional pages | Methodology & Paper
+- [x] Created Carbon Abatement Dashboard (`abatement_dashboard.html`) with 3 interactive charts (MAC, portfolio, ladder), stress-test toggles
+- [x] CO₂ Abatement Summary (`abatement_comparison.html`) with benchmark bands and narrative sections
+- [x] Regional Deep Dives (`region_deepdive.html`) — single combined page with region selector
+- [x] Updated navigation site-wide: Home | Cost Optimizer | Abatement Dashboard | Regional Deep Dives | CO₂ Abatement Summary | Methodology & Paper
 - [x] Added "Back to Home" button on all non-home pages
 - [x] Comprehensive chart styling QA/QC across all pages (borderRadius 6, no grid lines, axis borders)
 - [x] Merged methodology into research paper (Appendix B with 7 sub-sections)
 - [x] Updated tagline: "Most climate solutions depend on" across all pages
-- [x] SPEC.md sections 3, 4, 15b, 16 updated to reflect paired toggles, merged pages, new nav
 - [x] **CO₂ methodology fixed**: Hourly fossil-fuel emission rates (eGRID per-fuel × EIA hourly mix) replacing flat rate
 - [x] **Post-optimizer pipeline**: `recompute_co2.py`, `analyze_results.py`, `run_post_optimizer.sh`
 - [x] **HTML QA fixes**: nav consistency, chart styling, dead refs, orphaned canvases
 - [x] **Multi-year data infra**: `fetch_eia_multiyear.py` (2021-2025 EIA API + DST + averaging)
 - [x] **Phase 3 re-optimizer**: `optimize_phase3_only.py` (±5% neighborhood refinement)
-- [x] **New SPEC.md sections**: 19.3 (DST), 19.4 (multi-year), 19.5 (NYISO proxy), 20.1 (ELCC)
+- [x] **DST fix script**: `fix_dst_profiles.py` (UTC → local prevailing time conversion)
+- [x] **Optimizer checkpointing**: Saves after each threshold + resume from checkpoint on restart
+- [x] **Sequential ISO processing**: Runs one ISO at a time with incremental result saves (avoids OOM)
+- [x] SPEC.md cleaned: removed duplicated sections 3/4, updated regional pages to combined, nav corrected
 
 ### What's in progress
-- [ ] **Optimizer running** (~3.5h, 5 workers at 93% CPU). Pipeline watcher auto-triggers post-processing.
-- [ ] `dashboard_standalone.html` chart styling fix (background agent)
+- [ ] **Optimizer running** (sequential mode, PID 25364). Checkpoints to `data/checkpoints/`. Incremental saves to `dashboard/overprocure_results.json` after each ISO.
+- [ ] Site content review: ensuring all decisions from SPEC.md are reflected in HTML pages
 
 ### Pipeline when optimizer completes
-1. Auto: `recompute_co2.py` → hourly CO₂ correction
-2. Auto: `analyze_results.py` → monotonicity, literature alignment, VRE waste, DAC inputs
-3. Manual: Update dashboards with real data, update narratives
-4. Manual: DAC-VRE analysis, resource mix analysis, path-dependent MAC
+1. Run `recompute_co2.py` → hourly CO₂ correction
+2. Run `analyze_results.py` → monotonicity, literature alignment, VRE waste, DAC inputs
+3. Update dashboards with real data, update narratives
+4. DAC-VRE analysis, resource mix analysis, path-dependent MAC
 5. Commit + push
 
 ### After initial push
@@ -123,42 +127,6 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 **NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
 
 **Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. 324 scenarios × 10 thresholds × 5 regions = 16,200 independent co-optimizations, with matching score cache shared across cost scenarios (physics reuse, not a shortcut).
-## 3. Thresholds (10 total — reduced from 18)
-
-```
-75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
-```
-
-- 5% intervals: 75-85 (captures broad trend)
-- 2.5% intervals: 87.5-97.5 (captures steep cost inflection zone)
-- 99% and 100% anchor the extreme end
-- Key inflection behavior (CCS/LDES entering mix, storage costs spiking) captured at 90-97.5
-- Dashboard interpolates smoothly between anchor points for abatement curves
-
----
-
-## 4. Dashboard Controls (7 total — paired toggles)
-
-### Preserved (2):
-1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
-2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100)
-
-### Paired sensitivity toggles (5 groups — replacing 10 individual):
-
-| # | Paired Toggle | Options | Member Variables | Affects |
-|---|---|---|---|---|
-| 3 | **Renewable Generation Cost** | Low / Medium / High | Solar LCOE + Wind LCOE | Both solar and wind generation costs (regional) |
-| 4 | **Firm Generation Cost** | Low / Medium / High | Clean Firm LCOE + CCS-CCGT LCOE | Both firm dispatchable resource costs (regional) |
-| 5 | **Storage Cost** | Low / Medium / High | Battery LCOS + LDES LCOS | Both storage technology costs (regional) |
-| 6 | **Fossil Fuel Price** | Low / Medium / High | Gas + Coal + Oil prices | Wholesale electricity price + CCS fuel cost + emission rates |
-| 7 | **Transmission Cost** | None / Low / Medium / High | All resource transmission adders | Transmission adders on all new-build resources (regional) |
-
-**Scenario count**: 3 × 3 × 3 × 3 × 4 = **324 cost scenarios** per region per threshold
-**Total optimizations**: 324 × 10 × 5 = **16,200** independent co-optimizations
-
-**NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
-
-**Grid mix baseline**: Selectable as reference scenario (not a toggle — fixed 2025 actual at wholesale)
 
 ---
 
@@ -411,10 +379,11 @@ For each resource:
 
 ## 11. Performance Optimizations
 
-- **Parallelization**: All 5 ISOs run concurrently via multiprocessing pool
+- **Sequential ISO processing**: ISOs run one at a time to avoid OOM; results saved incrementally after each ISO
+- **Checkpointing**: Saves after each threshold (10 per ISO); resumes from checkpoint on restart — never loses more than one threshold's work
 - **Caching**: Matching scores cached across 324 cost scenarios per threshold (physics reuse — cost-independent)
 - **Cross-pollination**: After all 324 scenarios run per threshold, every unique mix re-evaluated against all scenarios
-- **10 thresholds × 5 regions × 324 scenarios × 3 phases** — parallelization essential for reasonable runtime
+- **10 thresholds × 5 regions × 324 scenarios × 3 phases** — incremental saves essential for reliability
 
 ### 11.1 Adaptive Procurement Bounds
 
@@ -497,15 +466,15 @@ The methodology page must include:
 
 ---
 
-## 13. Regional Deep-Dive Pages (5 new HTML pages)
+## 13. Regional Deep-Dive Pages (1 combined page)
 
-Each region gets a dedicated deep-dive page linked from the main dashboard top navigation.
+All 5 regions covered in a single scrollytelling page with region selector.
 
 ### Structure
-- **File naming**: `dashboard/region_caiso.html`, `region_ercot.html`, etc.
-- **Navigation**: Top bar on main dashboard links to each region page; each region page links back to main and to other regions
+- **File**: `dashboard/region_deepdive.html` (single combined page)
+- **Navigation**: Top nav "Regional Deep Dives" links here; region selector within the page
 - **Format**: Scrollytelling narrative matching main dashboard visual identity
-- **Content**: In-depth exploration of what deep decarbonization looks like for that region under different sensitivity scenarios
+- **Content**: In-depth exploration of what deep decarbonization looks like for each region under different sensitivity scenarios
 
 ### Default Cost Scenario for Static Pages
 - **Homepage (index.html)** and **Regional Deep-Dive pages**: All figures and narrative use **Medium cost sensitivities** (all 5 toggle groups at Medium) unless a figure is explicitly designed to show Low/Medium/High ranges for comparison purposes.
@@ -710,7 +679,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 ### Navigation (Updated Feb 14)
 - Top navigation bar on ALL pages
-- Links: Home | Cost Optimizer | Abatement Dashboard | CO₂ Abatement Summary | CAISO | ERCOT | PJM | NYISO | NEISO | Methodology & Paper
+- Links: Home | Cost Optimizer | Abatement Dashboard | Regional Deep Dives | CO₂ Abatement Summary | Methodology & Paper
 - Current page highlighted in nav (nav-active class)
 - Mobile: collapsible/hamburger nav
 - "Back to Home" button at top of all non-home pages
@@ -797,7 +766,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 | New metric tiles | 1 (CO2 abated) |
 | Cost tables in methodology | ~15 |
 | Sensitivity toggles | 10 (all Low/Medium/High except Transmission which adds None) |
-| Regional deep-dive pages | 5 (one per region) |
+| Regional deep-dive pages | 1 (combined, with region selector) |
 | Research paper sections | 8 (including 5 regional deep-dives) |
 | QA checkpoints | 3 (optimizer, HTML, mobile) |
 
