@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Abatement Cost Comparison — Hourly CFE Optimizer</title>
+<title>The 8,760 Problem — Marginal Carbon Abatement Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1037,27 +1037,23 @@ body {
 
 <!-- ========== TOP NAVIGATION ========== -->
 <nav class="top-nav">
-    <span class="nav-brand">Hourly CFE Optimizer</span>
+    <span class="nav-brand">The 8,760 Problem</span>
     <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="top-nav-inner">
         <a href="dashboard.html">Dashboard</a>
-        <a href="region_caiso.html">CAISO</a>
-        <a href="region_ercot.html">ERCOT</a>
-        <a href="region_pjm.html">PJM</a>
-        <a href="region_nyiso.html">NYISO</a>
-        <a href="region_neiso.html">NEISO</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
         <a href="abatement_comparison.html" class="nav-active">Abatement</a>
         <a href="optimizer_methodology.html">Methodology</a>
-        <a href="research_paper.html">Paper</a>
+        <a href="research_paper.html">Research Paper</a>
     </div>
 </nav>
 
 <!-- ========== HEADER BANNER ========== -->
 <header class="header">
-    <h1>The Grid Decarbonization Backbone</h1>
-    <p class="subtitle">Stress-Testing the Foundation of Climate Strategy</p>
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle">Every climate solution depends on a clean grid. An economic analysis of deep decarbonization, hour by hour, region by region.</p>
     <div class="header-accent"></div>
 </header>
 
@@ -1066,6 +1062,16 @@ body {
 
 <!-- ========== MAIN CONTENT ========== -->
 <main class="main-content">
+
+<div style="max-width:900px;margin:0 auto;padding:40px 48px 24px;background:#F3F4F8;">
+    <h2 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif;font-size:2.4rem;font-weight:800;color:#DC2626;margin-bottom:16px;letter-spacing:-0.5px;line-height:1.2;">Marginal Carbon Abatement Analysis</h2>
+    <p style="font-size:0.98rem;color:#1A1A1A;line-height:1.75;max-width:800px;">
+        How does hourly grid decarbonization compare to alternative carbon removal strategies? This analysis
+        benchmarks the marginal cost of avoiding CO2 through clean energy procurement against direct air capture (DAC),
+        sustainable aviation fuel (SAF), BECCS, and other pathways &mdash; revealing where grid investment delivers
+        the most cost-effective abatement and where diminishing returns set in.
+    </p>
+</div>
 
     <!-- ========== COMPARISON CONTROLS ========== -->
     <div class="comparison-controls" id="comparisonControls">
@@ -1469,17 +1475,12 @@ body {
 <!-- ========== FOOTER ========== -->
 <footer class="page-footer">
     <div class="footer-links">
-        <a href="dashboard.html">Back to Dashboard</a>
-        <a href="region_caiso.html">CAISO</a>
-        <a href="region_ercot.html">ERCOT</a>
-        <a href="region_pjm.html">PJM</a>
-        <a href="region_nyiso.html">NYISO</a>
-        <a href="region_neiso.html">NEISO</a>
-        <a href="abatement_comparison.html">Abatement</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
         <a href="optimizer_methodology.html">Methodology</a>
         <a href="research_paper.html">Research Paper</a>
     </div>
-    <div class="footer-note">Hourly CFE Optimizer — 2025 Snapshot Model</div>
+    <div class="footer-note">The 8,760 Problem — 2025 Snapshot Model</div>
 </footer>
 
 <!-- ========== BOTTOM ACCENT BAR ========== -->
