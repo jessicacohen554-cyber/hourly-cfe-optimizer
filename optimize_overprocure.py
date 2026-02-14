@@ -2047,7 +2047,7 @@ def process_iso(args):
     # Each threshold optimized independently; monotonicity enforced via
     # post-hoc re-sweep with broader parameters (not by result replacement)
 
-    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 50  # Save every 50 scenarios (~5 min max loss)
+    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 10  # Save every 10 scenarios (~1 min max loss)
 
     for threshold in THRESHOLDS:
         t_str = str(threshold)
