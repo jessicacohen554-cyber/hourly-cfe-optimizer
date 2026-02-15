@@ -297,16 +297,12 @@ body {
                 <button class="region-pill" data-iso="NEISO">NEISO</button>
             </div>
         </div>
-        <div class="control-group" style="min-width:180px;">
-            <label>Time Horizon</label>
-            <select id="yearSelect">
-                <option value="2025">2025 (Current)</option>
-                <option value="2030" selected>2030</option>
-                <option value="2035">2035</option>
-                <option value="2040">2040</option>
-                <option value="2045">2045</option>
-                <option value="2050">2050</option>
-            </select>
+        <div class="control-group" style="flex:1;min-width:200px;">
+            <label>Time Horizon: <span id="yearValue" class="control-value">2030</span></label>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <input type="range" id="yearSlider" min="2025" max="2050" value="2030" step="1" style="flex:1;">
+                <button id="playBtn" title="Animate through years" style="background:var(--navy);color:#fff;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;min-width:32px;">&#9654;</button>
+            </div>
         </div>
         <div class="control-group" style="min-width:120px;">
             <label>Demand Growth</label>
@@ -405,6 +401,20 @@ body {
         </div>
     </div>
 
+    <!-- ========== CHARTS ROW 4: RPS vs Voluntary ========== -->
+    <div class="chart-row">
+        <div class="chart-card">
+            <h3>RPS Mandated Build vs. Voluntary Corporate Demand</h3>
+            <div class="chart-subtitle">TWh of new build driven by state mandates vs. corporate hourly matching</div>
+            <div class="chart-container"><canvas id="rpsDemandChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <h3>Buildable Supply Headroom</h3>
+            <div class="chart-subtitle">Total buildable capacity vs. combined demand — how much runway remains</div>
+            <div class="chart-container"><canvas id="headroomChart"></canvas></div>
+        </div>
+    </div>
+
     <!-- ========== ISO COMPARISON TABLE ========== -->
     <h2 class="section-header">ISO Comparison at Current Settings</h2>
     <div class="chart-card" style="overflow-x:auto;">
@@ -482,6 +492,8 @@ const SCARCITY_TEXT = { abundant: '#059669', adequate: '#65A30D', tightening: '#
 const PARTICIPATION_RATES = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100];
 const MATCH_TARGETS = [75, 80, 85, 90, 95, 99, 100];
 const YEARS = [2025, 2030, 2035, 2040, 2045, 2050];
+const YEARS_ALL = Array.from({length: 26}, (_, i) => 2025 + i); // 2025-2050 annual
+let playInterval = null;
 
 let charts = {};
 
@@ -537,10 +549,35 @@ function initControls() {
             updateAll();
         });
     });
-    // Year
-    document.getElementById('yearSelect').addEventListener('change', e => {
+    // Year slider
+    const ySlider = document.getElementById('yearSlider');
+    ySlider.addEventListener('input', e => {
         state.year = e.target.value;
+        document.getElementById('yearValue').textContent = state.year;
         updateAll();
+    });
+    // Play button
+    const playBtn = document.getElementById('playBtn');
+    playBtn.addEventListener('click', () => {
+        if (playInterval) {
+            clearInterval(playInterval);
+            playInterval = null;
+            playBtn.innerHTML = '&#9654;';
+            playBtn.title = 'Animate through years';
+            return;
+        }
+        playBtn.innerHTML = '&#9646;&#9646;';
+        playBtn.title = 'Pause animation';
+        let year = parseInt(ySlider.value);
+        if (year >= 2050) year = 2025;
+        playInterval = setInterval(() => {
+            year++;
+            if (year > 2050) { clearInterval(playInterval); playInterval = null; playBtn.innerHTML = '&#9654;'; return; }
+            ySlider.value = year;
+            state.year = String(year);
+            document.getElementById('yearValue').textContent = year;
+            updateAll();
+        }, 600);
     });
     // Participation slider
     const pSlider = document.getElementById('participationSlider');
@@ -567,6 +604,8 @@ function updateAll() {
     updateSupplyDemandChart();
     updateSupplyTimeline();
     updateInflectionChart();
+    updateRPSDemandChart();
+    updateHeadroomChart();
     updateISOTable();
 }
 
@@ -799,46 +838,52 @@ function updateSupplyDemandChart() {
 // ========== SUPPLY TIMELINE ==========
 function updateSupplyTimeline() {
     const ctx = document.getElementById('supplyTimelineChart').getContext('2d');
-    const iso = state.iso === 'ALL' ? 'PJM' : state.iso; // Default to PJM for ALL view
+    const iso = state.iso === 'ALL' ? 'PJM' : state.iso;
     const titleEl = ctx.canvas.closest('.chart-card').querySelector('h3');
     titleEl.textContent = `Supply Projection: ${ISO_LABELS[iso]} — SSS vs. Non-SSS Over Time`;
 
-    const sssData = YEARS.map(y => {
+    const sssData = YEARS_ALL.map(y => {
         const sp = DATA.supply_projections[iso]?.[String(y)]?.[state.growth];
-        return sp ? sp.sss_twh : 0;
+        return sp ? sp.sss_twh : null;
     });
-    const nonSSSData = YEARS.map(y => {
+    const nonSSSData = YEARS_ALL.map(y => {
         const sp = DATA.supply_projections[iso]?.[String(y)]?.[state.growth];
-        return sp ? sp.available_non_sss_twh : 0;
+        return sp ? sp.available_non_sss_twh : null;
     });
-    const ppasData = YEARS.map(y => {
+    const ppasData = YEARS_ALL.map(y => {
         const sp = DATA.supply_projections[iso]?.[String(y)]?.[state.growth];
-        return sp ? sp.existing_ppas_twh : 0;
+        return sp ? sp.existing_ppas_twh : null;
     });
+
+    // Highlight current year
+    const currentYearIdx = YEARS_ALL.indexOf(parseInt(state.year));
 
     if (charts.supplyTimeline) charts.supplyTimeline.destroy();
     charts.supplyTimeline = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
-            labels: YEARS.map(String),
+            labels: YEARS_ALL.map(String),
             datasets: [
                 {
                     label: 'SSS (State-Supported)',
                     data: sssData,
-                    backgroundColor: '#94A3B8',
-                    borderRadius: 4,
+                    backgroundColor: 'rgba(148,163,184,0.25)',
+                    borderColor: '#94A3B8',
+                    borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0,
                 },
                 {
                     label: 'Existing Corporate PPAs',
                     data: ppasData,
-                    backgroundColor: '#8B5CF6',
-                    borderRadius: 4,
+                    backgroundColor: 'rgba(139,92,246,0.2)',
+                    borderColor: '#8B5CF6',
+                    borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0,
                 },
                 {
                     label: 'Available for New Corporate',
                     data: nonSSSData,
-                    backgroundColor: '#22C55E',
-                    borderRadius: 4,
+                    backgroundColor: 'rgba(34,197,94,0.25)',
+                    borderColor: '#22C55E',
+                    borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 0,
                 },
             ]
         },
@@ -846,10 +891,20 @@ function updateSupplyTimeline() {
             responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
-                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} TWh` } }
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} TWh` } },
+                annotation: {
+                    annotations: {
+                        yearLine: {
+                            type: 'line',
+                            xMin: currentYearIdx, xMax: currentYearIdx,
+                            borderColor: 'rgba(220,38,38,0.7)', borderWidth: 2, borderDash: [4, 3],
+                            label: { display: true, content: state.year, position: 'start', font: { size: 10, weight: 'bold' }, backgroundColor: 'rgba(220,38,38,0.15)', color: '#DC2626' }
+                        }
+                    }
+                }
             },
             scales: {
-                x: { stacked: true, title: { display: true, text: 'Year', font: { size: 12 } } },
+                x: { title: { display: true, text: 'Year', font: { size: 12 } }, ticks: { maxTicksLimit: 10 } },
                 y: { stacked: true, title: { display: true, text: 'TWh', font: { size: 12 } }, beginAtZero: true }
             }
         }
@@ -902,6 +957,109 @@ function updateInflectionChart() {
             scales: {
                 x: { title: { display: true, text: 'Hourly Match Target', font: { size: 12 } } },
                 y: { title: { display: true, text: 'Participation % at Scarcity Inflection', font: { size: 12 } }, beginAtZero: true, max: 100 }
+            }
+        }
+    });
+}
+
+// ========== RPS vs VOLUNTARY DEMAND CHART ==========
+function updateRPSDemandChart() {
+    const ctx = document.getElementById('rpsDemandChart').getContext('2d');
+    const isos = state.iso === 'ALL' ? ISOS : [state.iso];
+
+    const datasets = [];
+    for (const iso of isos) {
+        // RPS mandated new build (from supply projections)
+        const rpsData = PARTICIPATION_RATES.map(p => {
+            const sc = findScenario(iso, state.year, state.growth, p, state.matchTarget);
+            return sc ? sc.rps_mandated_new_twh : 0;
+        });
+        datasets.push({
+            label: ISO_LABELS[iso] + ' RPS Mandated',
+            data: rpsData,
+            borderColor: ISO_COLORS[iso],
+            backgroundColor: ISO_COLORS[iso] + '30',
+            borderWidth: 2, borderDash: [6, 3],
+            pointRadius: 0, fill: false, tension: 0.3,
+        });
+        // Voluntary corporate demand
+        const volData = PARTICIPATION_RATES.map(p => {
+            const sc = findScenario(iso, state.year, state.growth, p, state.matchTarget);
+            return sc ? sc.corp_eac_demand_twh : 0;
+        });
+        datasets.push({
+            label: ISO_LABELS[iso] + ' Voluntary',
+            data: volData,
+            borderColor: ISO_COLORS[iso],
+            backgroundColor: ISO_COLORS[iso] + '15',
+            borderWidth: 2.5,
+            pointRadius: 3, fill: false, tension: 0.3,
+        });
+    }
+
+    if (charts.rpsDemand) charts.rpsDemand.destroy();
+    charts.rpsDemand = new Chart(ctx, {
+        type: 'line',
+        data: { labels: PARTICIPATION_RATES.map(p => p + '%'), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 8, font: { size: 10 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} TWh` } }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Corporate Participation (%)', font: { size: 12 } } },
+                y: { title: { display: true, text: 'TWh', font: { size: 12 } }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// ========== HEADROOM CHART ==========
+function updateHeadroomChart() {
+    const ctx = document.getElementById('headroomChart').getContext('2d');
+    const isos = state.iso === 'ALL' ? ISOS : [state.iso];
+
+    const datasets = [];
+    for (const iso of isos) {
+        const headroomData = PARTICIPATION_RATES.map(p => {
+            const sc = findScenario(iso, state.year, state.growth, p, state.matchTarget);
+            if (!sc) return null;
+            // Headroom = total buildable - combined demand
+            return Math.max(0, sc.total_buildable_twh - sc.combined_new_demand_twh);
+        });
+        datasets.push({
+            label: ISO_LABELS[iso],
+            data: headroomData,
+            borderColor: ISO_COLORS[iso],
+            backgroundColor: ISO_COLORS[iso] + '20',
+            borderWidth: 2.5,
+            pointRadius: 3, fill: true, tension: 0.3,
+        });
+    }
+
+    if (charts.headroom) charts.headroom.destroy();
+    charts.headroom = new Chart(ctx, {
+        type: 'line',
+        data: { labels: PARTICIPATION_RATES.map(p => p + '%'), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} TWh headroom` } },
+                annotation: {
+                    annotations: {
+                        zeroLine: {
+                            type: 'line', yMin: 0, yMax: 0,
+                            borderColor: 'rgba(220,38,38,0.5)', borderWidth: 2,
+                            label: { display: true, content: 'No headroom', position: 'end', font: { size: 10 }, color: '#DC2626', backgroundColor: 'rgba(220,38,38,0.1)' }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Corporate Participation (%)', font: { size: 12 } } },
+                y: { title: { display: true, text: 'Buildable Headroom (TWh)', font: { size: 12 } }, beginAtZero: true }
             }
         }
     });
