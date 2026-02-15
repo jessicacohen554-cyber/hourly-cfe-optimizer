@@ -5,31 +5,37 @@
 
 ## Current Status (Feb 15, 2026)
 
-### What was accomplished
-- [x] Project initialized — repo structure, CLAUDE.md with ported preferences
-- [x] Research launched in parallel: MJ Bradley/ERM report, top 15 generators, SBTi/IPCC/IEA targets, sustainability/CDP data, CFE optimizer insights, design cues
-- [ ] SPEC.md created with initial framework
-- [ ] eGRID 2023 data acquisition script (EPA site blocked by proxy — script created for user to run)
-- [ ] Company profiles assembled from research
-- [ ] Initial scenario analysis
-- [ ] Scrollytelling site built
+### What was accomplished this session
+- [x] Project initialized — repo structure, CLAUDE.md with ported workflow preferences
+- [x] SPEC.md created with comprehensive specification
+- [x] Research launched in parallel (7 agents): MJ Bradley/ERM, top 15 generators, SBTi/IPCC/IEA targets, sustainability/CDP data, CFE optimizer insights, design cues, broader grid decarb context
+- [x] eGRID 2023 data acquisition script (analysis/fetch_egrid.py) — EPA site blocked by proxy, script ready for manual download
+- [x] 15 company profiles assembled from research (data/processed/company_profiles.json)
+- [x] CSS stylesheet built matching hourly-cfe-optimizer visual identity
+- [x] **Complete 6-page scrollytelling site built:**
+  - [x] Executive Summary (index.html) — Bubble chart, company table, fleet paradox narrative, abatement costs, animated counters
+  - [x] Company Dashboard (dashboard.html) — Interactive toggle for all 15 companies, per-company fuel mix, peer comparison, scenarios
+  - [x] Fleet Analysis (fleet-analysis.html) — 4 fleet archetypes, MAC curves, Evergy vs Constellation paradox, regional analysis
+  - [x] Targets & Feasibility (targets.html) — SBTi/IPCC/IEA/US frameworks, target gap chart, traffic-light table for all 15
+  - [x] Policy & Conditions (policy.html) — IRA impact chart, carbon price thresholds, barriers, catalytic policy positions by archetype
+  - [x] Methodology (methodology.html) — 22 inline citations, full bibliography, data methodology, limitations
+- [x] All work siloed under `power-gen-decarbonization/` — zero modifications to root repo or optimizer
 
-### In progress
-- Research agents completing data gathering on all 15 companies
-- Building initial company profiles and emissions data
-- Designing site structure with shared visual identity from hourly-cfe-optimizer
-
-### Next steps
-1. Finalize top 15 company list with generation, emissions, and fleet data
-2. Build eGRID data processing pipeline
-3. Create scenario analysis framework leveraging CFE optimizer cost curves
-4. Build scrollytelling site with company profiles, fleet analysis, pathway feasibility
-5. Assess each company against SBTi v2, IPCC, IEA NZE targets
+### Next steps (for future session)
+1. **Incorporate research agent results** — 7 research agents completed extensive data gathering. Their findings (MJ Bradley report data, company-specific sustainability targets, SBTi v2 specifics, NREL/Princeton/Rhodium grid decarb research) need to be integrated into the site narratives and company profiles
+2. **Download and process actual eGRID 2023 data** — Run analysis/fetch_egrid.py after manually downloading the EPA Excel file. Replace research-based estimates with authoritative plant-level aggregations
+3. **Enhance company profiles** — Add specific company targets from sustainability reports and CDP data; add historical emissions trajectories
+4. **Refine scenario analysis** — Move from illustrative to data-driven scenarios using CFE optimizer cost curves and eGRID-based fleet data
+5. **Add comparison mode to dashboard** — Side-by-side or overlay charts for 2+ selected companies
+6. **Create new private repo** — When outside the proxy sandbox, create `power-gen-decarbonization` as private repo and deploy site via Netlify/Cloudflare Pages
+7. **QA/QC pass** — Mobile testing, console error check, narrative accuracy review
 
 ### Open questions
-- [ ] Should we include federal power generators (TVA, BPA) or just investor-owned + merchant?
-- [ ] Time horizon for scenario analysis: 2030/2035/2050 milestones?
-- [ ] Should the site be a single long scrollytell page or multi-page like the CFE optimizer?
+- [ ] Include federal power generators (TVA, BPA) or just investor-owned + merchant?
+- [ ] Confirm time horizon milestones: 2030/2035/2050?
+- [ ] Should comparison mode allow selecting arbitrary 2-5 companies for side-by-side?
+- [ ] How deep should individual company profiles go (current is ~1 screen each)?
+- [ ] Add historical emissions trajectory charts per company?
 
 ---
 
