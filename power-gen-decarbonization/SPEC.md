@@ -321,15 +321,17 @@ Key aspects:
 - Regional variation: 2-3x cost difference between ERCOT (cheapest) and ISO-NE (most expensive)
 - At 100% CFE, clean firm (nuclear, CCS-CCGT) dominates the resource mix
 
-### SBTi & CDP Landscape (across top 15)
-- **SBTi validated**: AES (1.5°C), AEP, Constellation, NextEra, Xcel (5 companies)
-- **SBTi committed (pending validation)**: Duke, Southern, Dominion, DTE, WEC, PPL (6 companies)
-- **No SBTi commitment**: Vistra, BH Energy, Entergy, Evergy (4 companies)
-- **CDP A- or higher**: AES, Constellation, NextEra, Xcel (4 companies)
-- **CDP B range**: Duke, Southern, AEP, Dominion, Entergy, DTE, WEC (7 companies)
-- **CDP C or below**: Vistra (C), Evergy (C), PPL (B-)
+### SBTi & CDP Landscape (across top 15) — Corrected per research (Session 2)
+- **SBTi 1.5°C validated**: AES only (validated Nov 2025) — 1 company
+- **SBTi committed (pending validation)**: NextEra — 1 company
+- **Aligned but not formally SBTi committed**: Xcel, AEP, WEC (CA100+ aligned) — 3 companies
+- **No formal SBTi commitment**: Constellation, Duke, Southern, Vistra, Dominion, BHE, Entergy, Evergy, DTE, PPL — 10 companies
+- **CDP A- or higher (active or historical)**: AES (A-, active), Xcel (A-, active), Southern (A-, 2021), Dominion (A-, 2019)
+- **CDP B–C range (active)**: Vistra (C, 2024), Entergy (B-, 2023)
+- **CDP: Not publicly reporting (2024)**: Constellation, NextEra, Duke, AEP, Evergy, DTE, WEC, PPL — 8 companies
 - **CDP F (non-disclosure)**: BH Energy
-- **Key pattern**: SBTi commitment correlates with fleet cleanliness — generators with clean foundations can afford ambitious commitments
+- **Key finding — 2024 CDP Exodus**: 8 of 15 top generators stopped public CDP reporting in 2024, a major transparency regression
+- **Key pattern**: Only 1 of 15 has SBTi-validated targets despite universal net-zero pledges — the gap between pledges and formal accountability is wide
 
 ---
 
