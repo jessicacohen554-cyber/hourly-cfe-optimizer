@@ -69,15 +69,48 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 - [x] **Add EPRI SMARTargets context** — targets.html: AT/QT framework, Ceres criticism, investor credibility debate, "both/and" resolution.
 - [x] **Add hourly RPS discussion** — targets.html: hourly RPS as policy frontier, convergence with GHG Protocol + SBTi, demand-side pull for clean firm.
 - [x] **Policy page: RPS + corporate demand under hourly matching** — SSS baseline, corporate participation scenario table (10-50% × 5 ISOs), clean premium projections by ISO.
-  - **Standard supply service baseline**: Nuclear, RPS, rate base clean gen, publicly owned assets = "standard supply service" per GHG Protocol Scope 2 revisions.
-  - **Corporate voluntary layer**: Procurement on top of SSS baseline at 10% intervals.
-  - **Clean premium estimates**: PJM $15-40, ISO-NE $20-55, CAISO $10-25, ERCOT $0-15/MWh
-- [x] **EAC scarcity analysis by ISO** — policy.html: SSS-informed analysis with ISO-by-ISO scarcity assessment.
-  - **PJM**: Severe scarcity at 20%+ participation. Nuclear being consumed by data center PPAs. Highest clean premium.
-  - **ERCOT**: Unlikely scarcity. Abundant wind/solar, no state RPS competing. Lowest premium.
-  - **CAISO**: Moderate scarcity, duck curve evening gap. CCS opportunity for gas fleet.
-  - **ISO-NE**: Moderate-to-severe scarcity. Already-high REC prices, transmission-constrained.
-  - **NYISO**: Moderate scarcity. Indian Point closure + CLCPA mandate.
+- [ ] **EAC scarcity analysis REWRITE (Feb 15)** — corrected SSS framework + interactive dashboard
+
+### Corrected SSS Framework (Feb 15)
+**SSS = mandatory/non-bypassable procurement creating a financial relationship between customers and generation.** Determined by whether a policy acts upon the EAC:
+- **RPS/CES mandates** — state renewable/clean energy standards that retire EACs on behalf of ratepayers
+- **Public ownership** — municipal utilities, federal power agencies (NYPA, BPA, TVA, WAPA)
+- **Vertically integrated / rate-base assets** — utility-owned generation in regulated territories (Dominion VA plants)
+- **State nuclear programs** — ZEC, CMC, or CES programs that retire nuclear EACs (NY ZEC, IL ZEC/CMC, CT Millstone PPA)
+
+**What is NOT SSS:**
+- **45U Production Tax Credit** — does not act on EAC, designed to decrease at higher revenues, credit rolls off if clean premium increases
+- **Merchant nuclear** — plants not in state programs are fair game for corporate procurement (LaSalle, Calvert Cliffs, Limerick, Peach Bottom)
+- **Merchant renewables** — new-build wind/solar in ERCOT or other deregulated markets without RPS obligation
+- **Corporate PPAs** — voluntary, not mandatory; reduce available supply but are not SSS
+
+**SSS is temporal** — state programs expire:
+- **IL ZEC/CMC**: expires mid-2027. Dresden, Braidwood, Byron, LaSalle, Clinton, Quad Cities (~94 TWh) shift from SSS to non-SSS/PPA
+- **NJ ZEC**: expired June 2025. Salem + Hope Creek (~27 TWh) already non-SSS
+- **NY ZEC**: extended through 2049. All 4 NYISO plants remain SSS
+- **Diablo Canyon**: state extension through 2030, NRC renewal sought to 2045. Uncertain post-2030
+- **CT Millstone PPA**: ~half of output under CT auction PPA. Remainder merchant
+
+**Key implication**: Existing merchant nuclear is available for corporate procurement. Corporations CAN buy nighttime nuclear EACs in PJM. But data center PPAs (Amazon-Susquehanna, Meta-Vistra plants, Microsoft-Crane) are rapidly consuming this supply.
+
+**National SSS estimates (2025):**
+| ISO | Total Clean (TWh) | SSS (TWh) | Non-SSS (TWh) | SSS % |
+|---|---|---|---|---|
+| PJM | ~280 | ~150-180 | ~100-130 | ~57% |
+| ERCOT | ~205 | ~20-25 | ~180-190 | ~12% |
+| CAISO | ~172 | ~140-155 | ~17-32 | ~85% |
+| NYISO | ~60 | ~49-55 | ~5-11 | ~85% |
+| NEISO | ~50 | ~25-30 | ~15-20 | ~55% |
+
+**Scarcity analysis parameters (expanded):**
+- Corporate participation: 0-100% of ISO load
+- Hourly match target: 75-100%
+- Time horizons: 2025, 2030, 2035, 2040, 2045, 2050
+- Demand growth: Low/Med/High per ISO (from dashboard DEMAND_GROWTH_RATES)
+- SSS supply evolves over time (policy expirations + new build from RPS mandates)
+- Scarcity inflection = participation × match level where hourly demand > uncommitted non-SSS supply
+
+**Interactive dashboard toggles:** Corporate participation (slider 0-100%), hourly match target (slider 75-100%), region selector (5 ISOs + national), demand growth (Low/Med/High), time horizon (2025-2050)
 
 ### Timezone / UTC Handling (Feb 15)
 - **EIA hourly data**: Local time (NOT UTC), per EIA documentation. No offset needed during data loading.
