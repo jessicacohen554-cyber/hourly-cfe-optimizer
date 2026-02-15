@@ -744,12 +744,14 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         <a href="#ref-27" class="cite">[27]</a>.
     </p>
     <p>
-        The &ldquo;last few percent&rdquo; phenomenon is well-documented: Denholm et al. (2021) show that
-        costs increase non-linearly as clean electricity targets approach 100%, with marginal abatement costs
-        reaching $930/tCO&#8322; at the final percent <a href="#ref-18" class="cite">[18]</a>. This
-        cost escalation is driven by the same supply stack dynamics we model: as cheap wind and solar sites
-        are consumed by RPS compliance, voluntary procurers face progressively more expensive resources
-        further up the stack.
+        The &ldquo;last few percent&rdquo; phenomenon is well-documented in the literature: Denholm et al. (2021) show that
+        costs increase non-linearly as clean electricity targets approach 100% <a href="#ref-18" class="cite">[18]</a>.
+        However, our optimizer results show a more nuanced picture: <strong>average marginal abatement costs
+        remain remarkably flat</strong>, ranging from $23&ndash;152/tCO&#8322; across all five ISOs through 99% hourly matching.
+        While individual 2.5-point steps above 90% can be volatile (some yielding zero incremental CO&#8322; reduction),
+        the program-level cost per ton stays well below the Rennert social cost of carbon ($185/ton) in every region.
+        The cost escalation is real but concentrated in the supply stack dynamics where combined RPS + voluntary
+        demand competes for increasingly scarce resources.
     </p>
     <p>
         Our scarcity model operationalizes these insights: RPS-mandated build consumes the cheapest tiers
@@ -1889,9 +1891,10 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p>
         The transition from 80% to 95% requires a fundamental portfolio shift. Clean firm power roughly doubles
         its share (from ~25% to ~40%), battery storage enters the mix, and curtailment approximately doubles.
-        This is the critical inflection point where firm generation investment decisions must be locked in &mdash;
+        This is the key planning window where firm generation investment decisions must be locked in &mdash;
         organizations that have not secured clean firm procurement contracts by 2035 will face supply constraints
-        and cost premiums at this stage.
+        and cost premiums at this stage. Costs rise steadily but remain manageable: average MAC stays below $152/ton
+        through 99% in all regions.
     </p>
 
     <h3 style="color:var(--wind);margin-top:24px;">A.3.1 — 95% Hourly Matching Target</h3>
@@ -2032,9 +2035,10 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         <li><strong>The last mile (99% &rarr; 100%) costs as much as the first half.</strong> The increment from 99% to 100% adds
             $13&ndash;48/MWh, comparable to the entire 75%&ndash;90% range. Curtailment jumps to 30&ndash;33%, meaning one-third
             of procured energy generates no matching credit. Under High cost assumptions, 100% matching in NEISO
-            reaches $168/MWh &mdash; <strong>4&times; wholesale electricity prices</strong>. Organizations should evaluate
-            whether the last-mile premium justifies the incremental environmental benefit versus investing the same
-            dollars in higher-impact abatement elsewhere.</li>
+            reaches $168/MWh &mdash; <strong>4&times; wholesale electricity prices</strong>. However, even at these elevated
+            per-MWh costs, the average abatement cost per ton CO&#8322; remains below $152/ton in all regions through 99%
+            &mdash; well below DAC ($400&ndash;600/ton), SAF ($300/ton), and the Rennert SCC ($185/ton). The grid
+            backbone remains the most cost-effective abatement tool available through very high hourly matching targets.</li>
     </ol>
 
     <div class="note-box">
