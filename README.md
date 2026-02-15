@@ -16,14 +16,12 @@ The optimizer finds the least-cost mix of clean firm (nuclear/geothermal), solar
 
 ## Quick Start
 
-**Just want to view the dashboard?** Open `dashboard/dashboard_standalone.html` in any browser. No server or dependencies needed -- everything is self-contained.
-
-**Want to serve the full dashboard with methodology page?**
+**To view the dashboard:**
 
 ```bash
 cd dashboard
 python -m http.server 8000
-# Open http://localhost:8000/dashboard.html
+# Open http://localhost:8000/index.html
 ```
 
 ## Project Structure
@@ -38,8 +36,7 @@ hourly-cfe-optimizer/
 |   +-- egrid_emission_rates.json
 |   +-- ...
 +-- dashboard/
-    +-- dashboard.html             # Interactive dashboard (needs local server)
-    +-- dashboard_standalone.html  # Self-contained version (open directly)
+    +-- dashboard.html             # Interactive dashboard
     +-- overprocure_results.json   # Pre-computed optimization results
     +-- optimizer_methodology.html # Detailed methodology documentation
     +-- build_standalone.py        # Builds standalone from dashboard.html
