@@ -3000,7 +3000,7 @@ def process_iso(args):
     # If cost(T_lower) > cost(T_higher), the search missed a better solution at T_lower.
     # Instead of replacing with the higher threshold's result, re-sweep T_lower
     # with broader parameters + seeds from the higher threshold's winning mix.
-    MAX_RESWEEP_ROUNDS = 2
+    MAX_RESWEEP_ROUNDS = 0  # Temporarily skip re-sweeps — generate all ISOs first, then restore to 2
     sorted_thresholds = sorted(THRESHOLDS)
 
     # Build set of all scenario keys present across thresholds
