@@ -3,7 +3,7 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-02-14.
 
-## Current Status (Feb 14, 2026)
+## Current Status (Feb 15, 2026)
 
 ### What was accomplished
 - [x] Homepage (`index.html`) — 4 charts rendering with real data, region toggle pills, narrative sections
@@ -62,6 +62,24 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 7. **Checkpoint system verified**: save/load/resume works, interval set appropriately
 8. Present user with summary of verified assumptions before starting
 9. User explicitly approves the run
+
+### Generator Analysis & Policy Page Decisions (Feb 15)
+- [ ] **Tone down Constellation-specific narrative** — make discussion generic about archetypes (nuclear-led, coal-heavy, gas-dominant, mixed fleet). Remove "unfairness" language. Analysis shouldn't sound biased.
+- [ ] **Add GHG Protocol Scope 2 revision context** — hourly accounting proposed in Scope 2 revision creates demand-side pull for deep decarb vs annual accounting
+- [ ] **Add EPRI SMARTargets context** — addresses SBTi criticisms, company-specific targets considering regional constraints
+- [ ] **Add hourly RPS discussion** — how hourly RPS targets could catalyze generator deep decarbonization via demand-side pull
+- [ ] **Policy page: RPS + corporate demand under hourly matching** — projected hourly clean premium cost curves in 5 ISOs
+  - **Standard supply service baseline**: Nuclear, RPS, rate base clean gen, publicly owned assets = "standard supply service" per GHG Protocol Scope 2 revisions. These count toward corporate hourly matching on the front end.
+  - **Corporate voluntary layer**: Corporate buyers add procurement on top of standard supply service baseline. Model at 10% intervals of corporate participation share.
+  - **Corporate buyers compete with state RPS** for existing clean resources — both draw from same pool
+  - Sources: CEBA, RE100, CDP, NREL voluntary procurement, Berkeley National Labs RPS data
+- [ ] **EAC scarcity analysis by ISO** — core question: which ISOs see EAC scarcity that drives up hourly clean premiums?
+  - **Assumption**: Corporate procurement must occur within the ISO where load is (no cross-ISO claims)
+  - **No incrementality constraint assumed** on voluntary Scope 2 claims initially
+  - **PJM**: No renewables left after RPS compliance currently. Excess nuclear after state programs, but data center PPAs (Microsoft-Constellation Crane, etc.) consuming nuclear surplus. If data center demand growth materializes → scarcity → higher EAC prices
+  - **ERCOT**: Abundant wind+solar being added rapidly, no state RPS. May never see scarcity regardless of incrementality requirements
+  - **CAISO, NYISO, NEISO**: Analyze each for supply-demand balance of clean EACs after RPS + data center growth
+  - Key output: projected hourly clean premium cost curve at 10% corporate participation intervals × hourly matching targets
 
 ### Open questions
 - Path-dependent MAC visualization: may need alternative to MAC curve format
