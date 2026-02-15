@@ -69,7 +69,90 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 - [x] **Add EPRI SMARTargets context** — targets.html: AT/QT framework, Ceres criticism, investor credibility debate, "both/and" resolution.
 - [x] **Add hourly RPS discussion** — targets.html: hourly RPS as policy frontier, convergence with GHG Protocol + SBTi, demand-side pull for clean firm.
 - [x] **Policy page: RPS + corporate demand under hourly matching** — SSS baseline, corporate participation scenario table (10-50% × 5 ISOs), clean premium projections by ISO.
-- [ ] **EAC scarcity analysis REWRITE (Feb 15)** — corrected SSS framework + interactive dashboard
+- [x] **EAC scarcity analysis REWRITE (Feb 15)** — corrected SSS framework + interactive dashboard
+- [x] **SSS pro-rata derate** — corporate EAC demand is incremental above SSS baseline allocation, not gross
+- [x] **Demand-proportional RPS** — clean supply = RPS target % × projected demand (not independent growth rate)
+- [x] **Two-component SSS** — fixed-fleet (nuclear, hydro — constant TWh) + RPS (scales with demand)
+- [x] **Diablo Canyon + NY nuclear as permanent fixed SSS** — state-supported indefinitely
+
+### EAC Scarcity: Combined RPS + Voluntary Supply Stack Model (Feb 15, rev 2)
+**Decision**: RPS mandates and voluntary corporate procurement compete for the same finite buildable clean capacity. Marginal cost is set by combined demand (RPS + voluntary) on the supply stack, not voluntary alone.
+
+**Literature validation** (Xu et al. 2024, Joule / Princeton ZERO Lab): GenX capacity expansion model shows combined RPS + voluntary C&I demand on the same regional supply curve produces non-linear cost escalation as both compete for finite buildable capacity. Gillenwater (2008, Energy Policy): only when combined demand creates real scarcity does voluntary procurement drive new investment. Denholm et al. (NREL 2021): "last few percent" costs escalate exponentially.
+
+**Previous approach (superseded, v1)**: RPS adder as economic gate — new clean only entered when LCOE < wholesale + RPS adder. This produced zero new build in all ISOs because the price signal never cleared any supply stack tier. Supply was frozen at 2025 levels.
+
+**Current approach (v2) — two-track demand, unified supply stack**:
+
+1. **RPS-mandated demand** (forced, regardless of economics):
+   - `rps_new_need = max(0, rps_target × projected_demand - existing_total_clean)`
+   - Regulators require this build — it happens whether or not LCOE < wholesale + adder
+   - New RPS build splits into SSS vs merchant per `SSS_NEW_BUILD_FRACTION`
+
+2. **Voluntary corporate demand** (additional, on top of RPS):
+   - `corp_eac_demand = CI_share × participation × incremental_need × procurement_ratio`
+   - Incremental need = `max(0, match_target% - sss_share_of_total%)`
+   - SSS share grows over time as RPS mandates add clean capacity
+
+3. **Combined demand on supply stack**:
+   - `total_new_demand = rps_new_need + corp_eac_demand`
+   - Walk up the supply stack (cheapest tier first) until total demand is met
+   - RPS compliance absorbs cheap tiers first; corporates ride on top
+   - **Marginal cost = LCOE of the tier where combined demand lands**
+   - If combined demand exceeds total buildable capacity → scarcity pricing
+
+4. **Scarcity classification**:
+   - `demand_ratio = total_new_demand / total_buildable_capacity`
+   - Bands: Abundant (<0.3), Adequate (<0.6), Tightening (<0.8), Scarce (<0.95), Critical (>0.95)
+
+5. **Clean premium = marginal LCOE - wholesale price**
+   - Reflects the REAL competition for clean resources — both mandated and voluntary
+
+**Bug fixes in v2**:
+- **SSS→non-SSS transfer**: When SSS policies expire (e.g., IL ZEC/CMC 2027), those TWh move to non-SSS merchant pool — not into the void. Plants don't disappear when subsidies end.
+- **Annual resolution**: All years 2025–2050 (26 years, not just 6 milestone years)
+
+**Supply stack per ISO** (static 2025 LCOEs, no decline curves — deliberate simplification):
+- Resources ordered by LCOE from optimizer config
+- Each tier has annual buildable TWh and cumulative max (from LBNL "Queued Up")
+- No LCOE decline or wholesale escalation modeled — avoids overcomplication
+
+**Procurement ratio** (theoretical, not optimizer-derived):
+- 75%→0.80×, 90%→1.05×, 100%→1.45×
+- Reflects temporal mismatch physics: higher match targets need more over-procurement
+
+**What stays from v1**:
+- SSS/non-SSS classification, two-component SSS (fixed + RPS), policy expirations
+- C&I demand filter (62%), demand growth rates, participation scenarios
+- Scarcity bands, supply stack LCOEs, committed hyperscaler pipeline
+- Wholesale prices, RPS target trajectories
+
+### EAC Scarcity: C&I Demand Filter (Feb 15)
+**Decision**: Corporate EAC participation base = C&I (commercial + industrial) share of total demand, not total demand. Residential load does not participate in voluntary EAC procurement.
+
+**C&I share**: ~62% of total demand (EIA 2024 national average: 38% residential, 36% commercial, 26% industrial). Applied as a flat multiplier across all ISOs and demand growth scenarios.
+
+**RPS stays against total demand**: RPS mandates apply to total retail sales (including residential), so RPS/SSS calculations continue to use full demand. Only the voluntary corporate procurement base is filtered to C&I.
+
+**Limitation (noted)**: C&I share held constant across demand growth scenarios. In practice, data center growth (classified as commercial by EIA) could shift C&I share higher over time, particularly in PJM and ERCOT. This simplification is acknowledged but not modeled.
+
+### EAC Scarcity: Hyperscaler Committed Nuclear PPA Pipeline (Feb 15)
+**Decision**: Model committed hyperscaler nuclear PPAs as a phased supply reduction rather than generic demand growth. Hyperscaler data center demand is disproportionately clean-energy-focused — these PPAs lock up specific clean generation that is no longer available for other corporate procurement.
+
+**PJM committed pipeline**: ~4 GW nuclear PPAs committed by hyperscalers:
+- Amazon-Talen: Susquehanna campus (~960 MW, operational)
+- Microsoft-Constellation: TMI Unit 1 restart (~835 MW, targeting 2028)
+- Other committed deals ramping through 2030
+
+**Phasing** (cumulative GW online → TWh/yr at 90% CF):
+- 2025: 1.0 GW → ~7.9 TWh (Susquehanna campus + early deals)
+- 2027: 2.0 GW → ~15.8 TWh
+- 2028: 3.0 GW → ~23.7 TWh (TMI restart)
+- 2030: 4.0 GW → ~31.5 TWh (full pipeline)
+
+**Implementation**: Subtracted from available non-SSS supply alongside existing corporate PPAs. Modeled as `COMMITTED_CLEAN_PIPELINE` with time-phased GW → TWh conversion. Applies only to PJM currently (can be extended to other ISOs as hyperscaler commitments are announced in those markets).
+
+**Why supply reduction, not demand growth**: Generic demand growth is diluted by the C&I share (62%) and mixed across all electricity sources. Hyperscaler nuclear PPAs specifically target and lock up clean generation — modeling as supply reduction correctly captures that these MWh are spoken for by specific off-takers.
 
 ### Corrected SSS Framework (Feb 15)
 **SSS = mandatory/non-bypassable procurement creating a financial relationship between customers and generation.** Determined by whether a policy acts upon the EAC:
@@ -105,7 +188,7 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 **Scarcity analysis parameters (expanded):**
 - Corporate participation: 0-100% of ISO load
 - Hourly match target: 75-100%
-- Time horizons: 2025, 2030, 2035, 2040, 2045, 2050
+- Time horizons: 2025–2050 (annual, 26 years)
 - Demand growth: Low/Med/High per ISO (from dashboard DEMAND_GROWTH_RATES)
 - SSS supply evolves over time (policy expirations + new build from RPS mandates)
 - Scarcity inflection = participation × match level where hourly demand > uncommitted non-SSS supply
