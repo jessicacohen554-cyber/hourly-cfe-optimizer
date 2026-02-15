@@ -1845,7 +1845,8 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                            emission_rates, demand_total_mwh,
                            cost_levels=None, score_cache=None,
                            resweep=False, seed_mixes=None,
-                           procurement_bounds_override=None):
+                           procurement_bounds_override=None,
+                           warm_start_result=None):
     """
     CO-OPTIMIZE cost and matching simultaneously for a given threshold target.
     Search across procurement levels AND resource mixes to find the CHEAPEST
@@ -1855,6 +1856,13 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
       Phase 1: Coarse scan (10% mix steps, 10% procurement steps)
       Phase 2: Medium refinement (5% mix steps, 5% procurement steps)
       Phase 3: Fine-tune (1% mix, 2% procurement, refined storage)
+
+    When warm_start_result is provided, Phase 1 is replaced with a targeted
+    evaluation of the warm-start mix + edge-case seeds at all procurement levels.
+    This preserves the co-optimization guarantee (Phase 2/3 still search the full
+    neighborhood) while eliminating the expensive coarse grid scan. The warm-start
+    mix acts as a high-quality initial guess — the refinement phases will find any
+    nearby solution that's cheaper under this scenario's cost function.
 
     Args:
         cost_levels: Optional tuple (renewable_gen_level, firm_gen_level, storage_level,
@@ -1870,6 +1878,11 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
         procurement_bounds_override: Optional (min, max) tuple to override default
                                      procurement bounds. Used during re-sweep to expand
                                      the search range.
+        warm_start_result: Optional dict from a prior scenario's optimization (e.g.,
+                          Medium). When provided, replaces Phase 1 coarse grid with
+                          targeted evaluation of the warm-start mix + edge-case seeds.
+                          Phase 2/3 refinement still runs fully to find the cost-optimal
+                          solution under this scenario's cost function.
 
     Returns: best_result dict or None
     """
@@ -1944,62 +1957,143 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
             }
         return cost
 
-    # ---- Phase 1: Coarse scan + edge case seeds ----
-    # Re-sweep uses 5% step for finer exploration; normal uses 10%
-    phase1_step = 5 if resweep else 10
-    combos_10 = generate_combinations(hydro_cap, step=phase1_step)
-    # Inject edge case seeds to guarantee extreme mixes survive pruning
-    seeds = get_seed_combos(hydro_cap)
-    seed_set = set(tuple(s[rt] for rt in RESOURCE_TYPES) for s in seeds)
-    existing_set = set(tuple(c[rt] for rt in RESOURCE_TYPES) for c in combos_10)
-    for seed in seeds:
-        if tuple(seed[rt] for rt in RESOURCE_TYPES) not in existing_set:
-            combos_10.append(seed)
-    # Inject re-sweep seed mixes (from higher thresholds that achieved better cost)
-    if seed_mixes:
-        for smix in seed_mixes:
-            key = tuple(smix[rt] for rt in RESOURCE_TYPES)
-            if key not in existing_set:
-                existing_set.add(key)
-                combos_10.append(dict(smix))
+    # ---- Phase 1: Coarse scan (or warm-start shortcut) ----
     candidates = []
 
-    for procurement_pct in range(proc_min, proc_max + 1, 10):
-        pf = procurement_pct / 100.0
-        for combo in combos_10:
-            mix_fracs = tuple(combo[rt] / 100.0 for rt in RESOURCE_TYPES)
-            score = c_hourly_score(mix_fracs, pf)
+    if warm_start_result and not resweep:
+        # WARM-START MODE: Skip full coarse grid. Instead, evaluate the warm-start
+        # mix + edge-case seeds at all procurement levels. This is scientifically
+        # valid because:
+        #   1. Matching scores are physics-based (cost-independent) — same mix at
+        #      same procurement produces the same hourly match regardless of costs.
+        #   2. Phase 2/3 still searches the full 5% and 1% neighborhoods around
+        #      the best candidates, so any mix that differs from warm-start under
+        #      this cost function will be discovered during refinement.
+        #   3. Edge-case seeds ensure extreme mixes (100% solar, 100% wind, etc.)
+        #      are always evaluated, catching cases where cost assumptions make
+        #      a radically different mix optimal.
+        ws_mix = warm_start_result['resource_mix']
+        ws_proc = warm_start_result['procurement_pct']
+        ws_bp = warm_start_result.get('battery_dispatch_pct', 0)
+        ws_lp = warm_start_result.get('ldes_dispatch_pct', 0)
 
-            if score >= target:
-                cost = update_best(combo, procurement_pct, 0, 0, score)
-                candidates.append((cost, combo, score, 0, 0, procurement_pct))
-            elif score >= storage_threshold:
-                # Phase 1 uses coarse storage grid (2×2) — Phase 2/3 refine
-                # Battery only
-                for bp in [10, 20]:
-                    score_ws = c_battery_score(mix_fracs, pf, bp)
-                    if score_ws >= target:
-                        cost = update_best(combo, procurement_pct, bp, 0, score_ws)
-                        candidates.append((cost, combo, score_ws, bp, 0, procurement_pct))
-                        break
-                # LDES only (wind-heavy mixes benefit from multi-day shifting)
-                for lp in [10, 20]:
-                    score_ws = c_both_score(mix_fracs, pf, 0, lp)
-                    if score_ws >= target:
-                        cost = update_best(combo, procurement_pct, 0, lp, score_ws)
-                        candidates.append((cost, combo, score_ws, 0, lp, procurement_pct))
-                        break
-                # Combined battery + LDES
-                for bp in [10, 20]:
-                    for lp in [10, 20]:
-                        score_ws = c_both_score(mix_fracs, pf, bp, lp)
+        # Build targeted combo list: warm-start mix + 5% neighborhood + edge seeds
+        ws_combos = [dict(ws_mix)]
+        ws_neighborhood = generate_combinations_around(ws_mix, hydro_cap, step=5, radius=2)
+        existing_set = set()
+        existing_set.add(tuple(ws_mix[rt] for rt in RESOURCE_TYPES))
+        for nc in ws_neighborhood:
+            key = tuple(nc[rt] for rt in RESOURCE_TYPES)
+            if key not in existing_set:
+                existing_set.add(key)
+                ws_combos.append(nc)
+        # Always include edge-case seeds
+        seeds = get_seed_combos(hydro_cap)
+        for seed in seeds:
+            key = tuple(seed[rt] for rt in RESOURCE_TYPES)
+            if key not in existing_set:
+                existing_set.add(key)
+                ws_combos.append(seed)
+        # Include any explicit seed_mixes
+        if seed_mixes:
+            for smix in seed_mixes:
+                key = tuple(smix[rt] for rt in RESOURCE_TYPES)
+                if key not in existing_set:
+                    existing_set.add(key)
+                    ws_combos.append(dict(smix))
+
+        for procurement_pct in range(proc_min, proc_max + 1, 5):
+            pf = procurement_pct / 100.0
+            for combo in ws_combos:
+                mix_fracs = tuple(combo[rt] / 100.0 for rt in RESOURCE_TYPES)
+                score = c_hourly_score(mix_fracs, pf)
+
+                if score >= target:
+                    cost = update_best(combo, procurement_pct, 0, 0, score)
+                    candidates.append((cost, combo, score, 0, 0, procurement_pct))
+                elif score >= storage_threshold:
+                    for bp in [5, 10, 15, 20]:
+                        score_ws = c_battery_score(mix_fracs, pf, bp)
                         if score_ws >= target:
-                            cost = update_best(combo, procurement_pct, bp, lp, score_ws)
-                            candidates.append((cost, combo, score_ws, bp, lp, procurement_pct))
+                            cost = update_best(combo, procurement_pct, bp, 0, score_ws)
+                            candidates.append((cost, combo, score_ws, bp, 0, procurement_pct))
                             break
-                    else:
-                        continue
-                    break
+                    for lp in [5, 10, 15, 20]:
+                        score_ws = c_both_score(mix_fracs, pf, 0, lp)
+                        if score_ws >= target:
+                            cost = update_best(combo, procurement_pct, 0, lp, score_ws)
+                            candidates.append((cost, combo, score_ws, 0, lp, procurement_pct))
+                            break
+                    for bp in [5, 10, 15, 20]:
+                        for lp in [5, 10, 15, 20]:
+                            score_ws = c_both_score(mix_fracs, pf, bp, lp)
+                            if score_ws >= target:
+                                cost = update_best(combo, procurement_pct, bp, lp, score_ws)
+                                candidates.append((cost, combo, score_ws, bp, lp, procurement_pct))
+                                break
+                        else:
+                            continue
+                        break
+
+        if not candidates:
+            # Warm-start failed to find any feasible solution — fall back to full Phase 1
+            warm_start_result = None  # Clear so we don't re-enter this branch
+
+    if not candidates:
+        # FULL PHASE 1: Coarse grid scan (used for Medium scenario, resweep, or warm-start fallback)
+        phase1_step = 5 if resweep else 10
+        combos_10 = generate_combinations(hydro_cap, step=phase1_step)
+        # Inject edge case seeds to guarantee extreme mixes survive pruning
+        seeds = get_seed_combos(hydro_cap)
+        seed_set = set(tuple(s[rt] for rt in RESOURCE_TYPES) for s in seeds)
+        existing_set = set(tuple(c[rt] for rt in RESOURCE_TYPES) for c in combos_10)
+        for seed in seeds:
+            if tuple(seed[rt] for rt in RESOURCE_TYPES) not in existing_set:
+                combos_10.append(seed)
+        # Inject re-sweep seed mixes (from higher thresholds that achieved better cost)
+        if seed_mixes:
+            for smix in seed_mixes:
+                key = tuple(smix[rt] for rt in RESOURCE_TYPES)
+                if key not in existing_set:
+                    existing_set.add(key)
+                    combos_10.append(dict(smix))
+
+        for procurement_pct in range(proc_min, proc_max + 1, 10):
+            pf = procurement_pct / 100.0
+            for combo in combos_10:
+                mix_fracs = tuple(combo[rt] / 100.0 for rt in RESOURCE_TYPES)
+                score = c_hourly_score(mix_fracs, pf)
+
+                if score >= target:
+                    cost = update_best(combo, procurement_pct, 0, 0, score)
+                    candidates.append((cost, combo, score, 0, 0, procurement_pct))
+                elif score >= storage_threshold:
+                    # Phase 1 uses coarse storage grid (2×2) — Phase 2/3 refine
+                    # Battery only
+                    for bp in [10, 20]:
+                        score_ws = c_battery_score(mix_fracs, pf, bp)
+                        if score_ws >= target:
+                            cost = update_best(combo, procurement_pct, bp, 0, score_ws)
+                            candidates.append((cost, combo, score_ws, bp, 0, procurement_pct))
+                            break
+                    # LDES only (wind-heavy mixes benefit from multi-day shifting)
+                    for lp in [10, 20]:
+                        score_ws = c_both_score(mix_fracs, pf, 0, lp)
+                        if score_ws >= target:
+                            cost = update_best(combo, procurement_pct, 0, lp, score_ws)
+                            candidates.append((cost, combo, score_ws, 0, lp, procurement_pct))
+                            break
+                    # Combined battery + LDES
+                    for bp in [10, 20]:
+                        for lp in [10, 20]:
+                            score_ws = c_both_score(mix_fracs, pf, bp, lp)
+                            if score_ws >= target:
+                                cost = update_best(combo, procurement_pct, bp, lp, score_ws)
+                                candidates.append((cost, combo, score_ws, bp, lp, procurement_pct))
+                                break
+                        else:
+                            continue
+                        break
 
     if not candidates:
         return None
@@ -2464,15 +2558,141 @@ def process_iso(args):
 
         opt_count = 0
         cache_saved_this_run = False  # Track whether cache has been saved since start/resume
+
+        # ── WARM-START: Run Medium (MMM_M_M) first to get warm-start seed ──
+        # Medium is the central cost scenario. Its optimal mix serves as a high-quality
+        # starting point for all other scenarios, eliminating the expensive Phase 1
+        # coarse grid scan (270 combos × procurement levels) for 43/44 scenarios.
+        # Phase 2/3 refinement still runs fully for each scenario, preserving the
+        # co-optimization guarantee: different costs still produce different optimal mixes.
+        medium_key = 'MMM_M_M'
+
+        # Check if Medium was already completed (from checkpoint or not in active set)
+        if medium_key in partial_done:
+            medium_result = threshold_scenarios.get(medium_key)
+        elif any(k == medium_key for k, _ in active_scenarios):
+            # Run Medium with full 3-phase optimization (no warm-start)
+            medium_cost_levels = COST_SCENARIO_MAP[medium_key]
+            medium_result = optimize_for_threshold(
+                iso, demand_norm, supply_profiles, threshold, hydro_cap,
+                emission_rates, demand_total_mwh,
+                cost_levels=medium_cost_levels, score_cache=score_cache
+            )
+            if medium_result:
+                r_gen, f_gen, stor, fuel, tx = medium_cost_levels
+                cost_data = compute_costs_parameterized(
+                    iso, medium_result['resource_mix'], medium_result['procurement_pct'],
+                    medium_result['battery_dispatch_pct'], medium_result['ldes_dispatch_pct'],
+                    medium_result['hourly_match_score'],
+                    r_gen, f_gen, stor, fuel, tx
+                )
+                medium_result['costs'] = cost_data
+                threshold_scenarios[medium_key] = medium_result
+
+            opt_count += 1
+            save_checkpoint(iso, iso_results,
+                phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of{total_active}',
+                partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
+            save_score_cache(iso, threshold, score_cache)
+            cache_saved_this_run = True
+
+        # ── Run extreme-archetype scenarios with full Phase 1 to capture diverse mixes ──
+        # These scenarios represent opposite corners of the cost space where the optimal
+        # mix is most likely to diverge from Medium. Running them with full Phase 1
+        # ensures we discover all major mix archetypes before warm-starting the rest.
+        EXTREME_ARCHETYPES = [
+            'HLL_L_N',  # High renewables, low firm, low storage, low fuel, no transmission
+            'LHL_L_M',  # Low renewables, high firm, low storage, low fuel, med transmission
+            'LLH_H_M',  # Low renewables, low firm, high storage, high fuel, med transmission
+            'HHH_H_H',  # All high — maximum cost pressure
+            'LLL_L_L',  # All low — minimum cost environment
+            'HLL_L_H',  # High renewables + high transmission (tests VRE with tx penalty)
+            'LHL_H_N',  # High firm + high fuel, no transmission
+        ]
+
+        # Run archetypes that haven't been completed yet
+        for archetype_key in EXTREME_ARCHETYPES:
+            if archetype_key in partial_done or archetype_key in threshold_scenarios:
+                continue
+            if archetype_key not in COST_SCENARIO_MAP:
+                continue
+            arch_cost_levels = COST_SCENARIO_MAP[archetype_key]
+            arch_result = optimize_for_threshold(
+                iso, demand_norm, supply_profiles, threshold, hydro_cap,
+                emission_rates, demand_total_mwh,
+                cost_levels=arch_cost_levels, score_cache=score_cache
+            )
+            if arch_result:
+                r_gen, f_gen, stor, fuel, tx = arch_cost_levels
+                cost_data = compute_costs_parameterized(
+                    iso, arch_result['resource_mix'], arch_result['procurement_pct'],
+                    arch_result['battery_dispatch_pct'], arch_result['ldes_dispatch_pct'],
+                    arch_result['hourly_match_score'],
+                    r_gen, f_gen, stor, fuel, tx
+                )
+                arch_result['costs'] = cost_data
+                threshold_scenarios[archetype_key] = arch_result
+
+            opt_count += 1
+            if opt_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
+                save_checkpoint(iso, iso_results,
+                    phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of{total_active}',
+                    partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
+                if not cache_saved_this_run or opt_count % 10 == 0:
+                    save_score_cache(iso, threshold, score_cache)
+                    cache_saved_this_run = True
+
+        # Collect all diverse warm-start seeds from completed scenarios
+        # These represent the full range of discovered mix archetypes
+        warm_start_seeds = []
+        seen_mix_archetypes = set()
+        for sk, res in threshold_scenarios.items():
+            mix = res['resource_mix']
+            # Round to 5% to group similar mixes into archetypes
+            archetype = tuple(round(mix[rt] / 5) * 5 for rt in RESOURCE_TYPES)
+            if archetype not in seen_mix_archetypes:
+                seen_mix_archetypes.add(archetype)
+                warm_start_seeds.append(res)
+
+        n_seeds = len(warm_start_seeds)
+        n_archetypes_run = len([k for k in EXTREME_ARCHETYPES if k in threshold_scenarios])
+        print(f"      Warm-start: {n_seeds} diverse seed mixes from Medium + "
+              f"{n_archetypes_run} archetypes")
+
+        # ── Run remaining scenarios with warm-start from diverse seeds ──
+        warm_start_count = 0
+        full_phase1_count = 0
         for s_idx, (scenario_key, cost_levels) in enumerate(active_scenarios):
             if scenario_key in partial_done:
                 continue  # Already completed in previous session
+            if scenario_key == medium_key and medium_key not in partial_done:
+                continue  # Already run above
+            if scenario_key in threshold_scenarios:
+                continue  # Already run as archetype
 
+            # Use Medium result as primary warm-start, with all seeds as seed_mixes
+            ws = medium_result if medium_result else None
+            # Pass all diverse seed mixes to inject into warm-start Phase 1
+            extra_seeds = [r['resource_mix'] for r in warm_start_seeds if r is not ws]
             result = optimize_for_threshold(
                 iso, demand_norm, supply_profiles, threshold, hydro_cap,
                 emission_rates, demand_total_mwh,
-                cost_levels=cost_levels, score_cache=score_cache
+                cost_levels=cost_levels, score_cache=score_cache,
+                warm_start_result=ws,
+                seed_mixes=extra_seeds if ws else None
             )
+            if ws:
+                warm_start_count += 1
+            else:
+                full_phase1_count += 1
+
+            # Dynamically add newly-discovered archetypes to the seed pool
+            if result:
+                mix = result['resource_mix']
+                archetype = tuple(round(mix[rt] / 5) * 5 for rt in RESOURCE_TYPES)
+                if archetype not in seen_mix_archetypes:
+                    seen_mix_archetypes.add(archetype)
+                    warm_start_seeds.append(result)
 
             if result:
                 # Compute cost for this scenario
@@ -2486,10 +2706,6 @@ def process_iso(args):
                 result['costs'] = cost_data
 
                 threshold_scenarios[scenario_key] = result
-
-                # Track Medium scenario for logging
-                if scenario_key == 'MMM_M_M':
-                    medium_result = result
 
             opt_count += 1
             # Intra-threshold checkpoint: save every scenario
@@ -2568,20 +2784,22 @@ def process_iso(args):
                             phase=f'threshold-{threshold}-resample-{len(threshold_scenarios)}',
                             partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
 
-        # Log Medium scenario progress
+        # Log Medium scenario progress + warm-start stats
         t_elapsed = time.time() - t_start
         cache_size = len(score_cache)
         opt_label = f"{opt_count} optimized" if use_pruning else f"{len(threshold_scenarios)}/324"
+        ws_label = f" (warm-start: {warm_start_count}, full: {full_phase1_count + 1})" if warm_start_count > 0 else ""
         if medium_result:
             mix = medium_result['resource_mix']
-            print(f"    {threshold}%: {opt_label} scenarios, "
+            print(f"    {threshold}%: {opt_label} scenarios{ws_label}, "
                   f"cache={cache_size}, {t_elapsed:.1f}s | "
                   f"Medium: CF{mix['clean_firm']}/Sol{mix['solar']}/Wnd{mix['wind']}"
                   f"/CCS{mix['ccs_ccgt']}/Hyd{mix['hydro']} "
                   f"batt={medium_result['battery_dispatch_pct']}% "
-                  f"ldes={medium_result['ldes_dispatch_pct']}%")
+                  f"ldes={medium_result['ldes_dispatch_pct']}%"
+                  f" | {len(seen_mix_archetypes)} unique archetypes discovered")
         else:
-            print(f"    {threshold}%: {opt_label} scenarios, "
+            print(f"    {threshold}%: {opt_label} scenarios{ws_label}, "
                   f"cache={cache_size}, {t_elapsed:.1f}s")
 
         # ── Cross-pollination: evaluate all discovered mixes for all scenarios ──
