@@ -4901,14 +4901,16 @@ function refreshNarrativeStats() {
 let narrativeMixChart = null;
 let currentMixRegion = 'average';
 
-const MIX_RESOURCES = ['clean_firm', 'solar', 'wind', 'hydro', 'storage'];
-const MIX_LABELS_MAP = { clean_firm: 'Clean Firm', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', storage: 'Storage' };
+const MIX_RESOURCES = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+const MIX_LABELS_MAP = { clean_firm: 'Clean Firm', ccs_ccgt: 'CCS-CCGT', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', battery: 'Battery (4hr)', ldes: 'LDES (100hr)' };
 const MIX_COLORS = {
     solar:      { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
-    wind:       { fill: 'rgba(34,197,94,0.50)',  border: '#22C55E' },
+    wind:       { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },
     hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
-    clean_firm: { fill: 'rgba(26,39,68,0.50)',    border: '#1A2744' },
-    storage:    { fill: 'rgba(239,68,68,0.50)',   border: '#EF4444' }
+    clean_firm: { fill: 'rgba(30,58,95,0.50)',    border: '#1E3A5F' },
+    ccs_ccgt:   { fill: 'rgba(13,148,136,0.50)',  border: '#0D9488' },
+    battery:    { fill: 'rgba(139,92,246,0.50)',   border: '#8B5CF6' },
+    ldes:       { fill: 'rgba(236,72,153,0.50)',   border: '#EC4899' }
 };
 
 const MIX_REGION_INSIGHTS = {
@@ -4947,16 +4949,21 @@ function getMixDataForRegion(region) {
             if (!rc) continue;
 
             MIX_RESOURCES.forEach(r => {
-                if (r === 'storage') {
-                    avgNew[r] += (rc.storage?.dispatch_pct || 0);
+                const rd = rc[r];
+                if (!rd) return;
+                if (r === 'battery' || r === 'ldes') {
+                    // Storage resources: dispatch_pct only (all new build)
+                    avgNew[r] += (rd.dispatch_pct || 0);
                 } else {
-                    avgExisting[r] += (rc[r]?.existing_pct || 0);
-                    avgNew[r] += (rc[r]?.new_pct || 0);
+                    // Generation resources: existing_pct/new_pct (ccs_ccgt uses existing_share/new_share when zero)
+                    avgExisting[r] += (rd.existing_pct || rd.existing_share || 0);
+                    avgNew[r] += (rd.new_pct || rd.new_share || 0);
                 }
             });
-            const curtailAsDemand = (sc.procurement_pct || 0) * (scCosts.curtailment_pct || 0) / 100;
+            const scCosts = t.costs_detail || t.costs || {};
+            const curtailAsDemand = (t.procurement_pct || 0) * (scCosts.curtailment_pct || 0) / 100;
             avgCurtailment += curtailAsDemand;
-            avgProcurement += (sc.procurement_pct || 0);
+            avgProcurement += (t.procurement_pct || 0);
             count++;
         }
 
@@ -5067,8 +5074,8 @@ function buildMixDatasets(data) {
     // Stack order (bottom to top): existing resources, then new resources
     // Existing: clean_firm, hydro, wind, solar (bottom)
     // New: solar, wind, hydro, storage, clean_firm (top — so curtailment hits new first)
-    const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'storage', 'clean_firm'];
+    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
 
     const existingAlpha = 0.75;
     const newAlpha = 0.45;
@@ -5076,9 +5083,10 @@ function buildMixDatasets(data) {
 
     for (const r of EXISTING_ORDER) {
         const c = MIX_COLORS[r];
+        if (!c) continue;
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (existing)',
-            data: existingData[r],
+            data: existingData[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
@@ -5090,6 +5098,7 @@ function buildMixDatasets(data) {
     }
     for (const r of NEW_ORDER) {
         const c = MIX_COLORS[r];
+        if (!c) continue;
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (new)',
             data: newData[r],
@@ -5354,12 +5363,14 @@ function getIncrementalData(region) {
 
         labels.push(tk + '%');
         MIX_RESOURCES.forEach(r => {
-            if (r === 'storage') {
+            const rd = rc[r];
+            if (!rd) { existingData[r].push(0); newData[r].push(0); return; }
+            if (r === 'battery' || r === 'ldes') {
                 existingData[r].push(0);
-                newData[r].push(rc.storage?.dispatch_pct || 0);
+                newData[r].push(rd.dispatch_pct || 0);
             } else {
-                existingData[r].push(rc[r]?.existing_pct || 0);
-                newData[r].push(rc[r]?.new_pct || 0);
+                existingData[r].push(rd.existing_pct || rd.existing_share || 0);
+                newData[r].push(rd.new_pct || rd.new_share || 0);
             }
         });
     }
@@ -5368,17 +5379,18 @@ function getIncrementalData(region) {
 
 function buildIncrementalDatasets(data) {
     const { existingData, newData } = data;
-    const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'storage', 'clean_firm'];
+    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
     const datasets = [];
 
     for (const r of EXISTING_ORDER) {
         const c = MIX_COLORS[r];
+        if (!c) continue;
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (existing)',
-            data: existingData[r],
+            data: existingData[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
@@ -5390,9 +5402,10 @@ function buildIncrementalDatasets(data) {
     }
     for (const r of NEW_ORDER) {
         const c = MIX_COLORS[r];
+        if (!c) continue;
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (new)',
-            data: newData[r],
+            data: newData[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
@@ -6611,14 +6624,16 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         const existing = {};
         const newBuild = {};
         MIX_RESOURCES.forEach(r => {
-            if (r === 'storage') {
+            const rd = rc[r];
+            if (!rd) { existing[r] = 0; newBuild[r] = 0; return; }
+            if (r === 'battery' || r === 'ldes') {
+                // Storage resources: dispatch_pct only (all new build)
                 existing[r] = 0;
-                newBuild[r] = (rc.storage?.dispatch_pct || 0) / 100 * targetDemandTWh;
+                newBuild[r] = (rd.dispatch_pct || 0) / 100 * targetDemandTWh;
             } else {
-                // Existing is always today's absolute TWh — does not grow
-                existing[r] = (rc[r]?.existing_pct || 0) / 100 * todayTWh;
-                // New build scales with demand at the target year
-                newBuild[r] = (rc[r]?.new_pct || 0) / 100 * targetDemandTWh;
+                // Generation resources: existing_pct/new_pct (ccs_ccgt uses existing_share/new_share when zero)
+                existing[r] = (rd.existing_pct || rd.existing_share || 0) / 100 * todayTWh;
+                newBuild[r] = (rd.new_pct || rd.new_share || 0) / 100 * targetDemandTWh;
             }
         });
         return { existing, newBuild };
@@ -6637,10 +6652,9 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         ? ['Existing', 'Interim', 'Long-term']
         : ['Existing', 'Interim'];
 
-    // Stack order: existing bottom-up (clean_firm, hydro, wind, solar), then
-    // new build inverted so solar is on top (clean_firm, storage, hydro, wind, solar)
-    const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
-    const NEW_ORDER = ['clean_firm', 'storage', 'hydro', 'wind', 'solar'];
+    // Stack order: existing bottom-up, then new build on top
+    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
     const datasets = [];
@@ -6648,9 +6662,10 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // Existing portion datasets (full saturation)
     for (const r of EXISTING_ORDER) {
         const c = MIX_COLORS[r];
+        if (!c) continue;
         const data = hasLongterm
-            ? [todayData.existing[r], interimData.existing[r], longtermData.existing[r]]
-            : [todayData.existing[r], interimData.existing[r]];
+            ? [todayData.existing[r] || 0, interimData.existing[r] || 0, longtermData.existing[r] || 0]
+            : [todayData.existing[r] || 0, interimData.existing[r] || 0];
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (existing)',
             data,
@@ -6663,12 +6678,13 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             _isExisting: true,
         });
     }
-    // New build portion datasets (opaque, solar on top)
+    // New build portion datasets
     for (const r of NEW_ORDER) {
         const c = MIX_COLORS[r];
+        if (!c) continue;
         const data = hasLongterm
-            ? [0, interimData.newBuild[r], longtermData.newBuild[r]]
-            : [0, interimData.newBuild[r]];
+            ? [0, interimData.newBuild[r] || 0, longtermData.newBuild[r] || 0]
+            : [0, interimData.newBuild[r] || 0];
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (new build)',
             data,
