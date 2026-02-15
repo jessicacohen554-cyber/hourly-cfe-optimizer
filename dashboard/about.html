@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face {
+    font-family: 'Franklin Gothic Demi';
+    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    background: #0F1A2E;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(14,165,233,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+    color: #000000;
+    line-height: 1.55;
+    min-height: 100vh;
+}
+
+:root {
+    --navy: #1A2744;
+    --navy-light: #2D3A52;
+    --bg-card: #FFFFFF;
+    --border: #D4D8E0;
+    --border-light: #E5E7EB;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+    --text-muted: #6B7280;
+    --clean-firm: #1E3A5F;
+    --solar: #F59E0B;
+    --wind: #22C55E;
+    --hydro: #0EA5E9;
+    --storage: #EF4444;
+    --gap: #D1D5DB;
+}
+
+/* ========== TOP NAVIGATION BAR ========== */
+.top-nav {
+    background: #1a1a2e;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+.top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: 1440px;
+    width: 100%;
+    justify-content: center;
+}
+.top-nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 14px 18px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+.top-nav a:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.06);
+}
+.top-nav a.nav-active {
+    color: #ffffff;
+    border-bottom-color: #0EA5E9;
+    background: rgba(14,165,233,0.1);
+}
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+.nav-hamburger svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+@media (max-width: 768px) {
+    .top-nav {
+        flex-wrap: wrap;
+        padding: 0 12px;
+        justify-content: space-between;
+    }
+    .top-nav-inner {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding-bottom: 8px;
+    }
+    .top-nav-inner.nav-open {
+        display: flex;
+    }
+    .top-nav a {
+        padding: 12px 16px;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        width: 100%;
+        text-align: left;
+    }
+    .top-nav a.nav-active {
+        border-left-color: #0EA5E9;
+        border-bottom: none;
+        background: rgba(14,165,233,0.12);
+    }
+    .nav-hamburger {
+        display: flex;
+    }
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        color: #ffffff;
+        font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 12px 0;
+    }
+}
+@media (min-width: 769px) {
+    .nav-brand { display: none; }
+}
+
+/* ========== HEADER ========== */
+.header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
+    color: #ffffff;
+    padding: 72px 24px 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.4) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 60% at 38% 85%, rgba(34,197,94,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 65% at 62% 80%, rgba(245,158,11,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 30% at 50% 100%, rgba(255,255,255,0.12) 0%, transparent 70%);
+    background-size: 100% 100%;
+}
+.header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle 200px at 20% 30%, rgba(14,165,233,0.08), transparent),
+        radial-gradient(circle 300px at 80% 60%, rgba(245,158,11,0.06), transparent),
+        radial-gradient(circle 250px at 50% 80%, rgba(34,197,94,0.05), transparent);
+}
+.header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 2;
+}
+.header h1 {
+    font-family: 'Franklin Gothic Demi', 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 3.2rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+}
+.header .subtitle {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    opacity: 0.92;
+    max-width: 700px;
+    margin: 0 auto;
+    letter-spacing: 0.2px;
+    position: relative;
+    z-index: 2;
+    line-height: 1.65;
+}
+@media (max-width: 768px) {
+    .header { padding: 48px 20px 40px; }
+    .header h1 { font-size: 2.2rem; }
+    .header .subtitle { font-size: 1rem; }
+}
+@media (max-width: 480px) {
+    .header { padding: 36px 16px 32px; }
+    .header h1 { font-size: 1.8rem; }
+    .header .subtitle { font-size: 0.9rem; }
+}
+
+/* ========== SCROLLYTELL CONTENT ========== */
+.content-wrap {
+    background: #F3F4F8;
+    max-width: 1440px;
+    margin: 0 auto;
+    border-radius: 0 0 16px 16px;
+    padding: 0 0 40px;
+}
+
+.story-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 72px 48px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.story-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+@media (max-width: 768px) {
+    .story-section { padding: 48px 20px; }
+}
+@media (max-width: 480px) {
+    .story-section { padding: 36px 16px; }
+}
+
+.story-badge {
+    display: inline-block;
+    padding: 5px 18px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: capitalize;
+    margin-bottom: 18px;
+    background: rgba(26,39,68,0.1);
+    color: #1A2744;
+}
+.story-badge-blue { background: rgba(14,165,233,0.12); color: #0369A1; }
+.story-badge-green { background: rgba(34,197,94,0.12); color: #15803D; }
+.story-badge-orange { background: rgba(239,68,68,0.1); color: #B91C1C; }
+.story-badge-amber { background: rgba(245,158,11,0.12); color: #B45309; }
+.story-badge-purple { background: rgba(139,92,246,0.12); color: #6D28D9; }
+.story-badge-teal { background: rgba(20,184,166,0.12); color: #0F766E; }
+
+.story-section h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1A2744;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+    margin-bottom: 18px;
+}
+.story-section h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1A2744;
+    margin-bottom: 12px;
+    margin-top: 24px;
+}
+.story-section p {
+    font-size: 1.05rem;
+    color: #374151;
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+.story-section p.lead {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: #1A2744;
+    line-height: 1.7;
+}
+
+/* Divider between sections */
+.section-divider {
+    max-width: 900px;
+    margin: 0 auto;
+    border: none;
+    border-top: 1px solid #D4D8E0;
+}
+
+/* ========== INSIGHT CALLOUT BOXES ========== */
+.callout-box {
+    background: #FFFFFF;
+    border: 1px solid #D4D8E0;
+    border-left: 4px solid #0EA5E9;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 20px 0;
+}
+.callout-box.callout-warning {
+    border-left-color: #F59E0B;
+    background: #FFFBEB;
+}
+.callout-box.callout-danger {
+    border-left-color: #EF4444;
+    background: #FEF2F2;
+}
+.callout-box.callout-success {
+    border-left-color: #22C55E;
+    background: #F0FDF4;
+}
+.callout-box h4 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin-bottom: 8px;
+}
+.callout-box p {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+}
+.callout-box p:last-child {
+    margin-bottom: 0;
+}
+
+/* ========== LAYER CARDS (for stacked topics) ========== */
+.layer-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 24px 0;
+}
+.layer-card {
+    background: #FFFFFF;
+    border: 1px solid #D4D8E0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.layer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+.layer-card .layer-num {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: rgba(26,39,68,0.06);
+    line-height: 1;
+}
+.layer-card h4 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.layer-card h4 .layer-icon {
+    font-size: 1.3rem;
+}
+.layer-card p {
+    font-size: 0.95rem;
+    color: #4B5563;
+    line-height: 1.65;
+    margin-bottom: 0;
+}
+.layer-card .layer-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+
+/* ========== MIND MAP ========== */
+.mindmap-container {
+    background: #FFFFFF;
+    border: 1px solid #D4D8E0;
+    border-radius: 12px;
+    padding: 32px 24px;
+    margin: 32px 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.mindmap-container h3 {
+    text-align: center;
+    margin-bottom: 24px;
+    margin-top: 0;
+}
+.mindmap-svg-wrap {
+    display: flex;
+    justify-content: center;
+    min-height: 520px;
+}
+.mindmap-svg-wrap svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ========== NOVEL INSIGHTS GRID ========== */
+.insights-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+}
+@media (max-width: 640px) {
+    .insights-grid { grid-template-columns: 1fr; }
+}
+.insight-card {
+    background: #FFFFFF;
+    border: 1px solid #D4D8E0;
+    border-radius: 10px;
+    padding: 20px 22px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.insight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+.insight-card .insight-num {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #0EA5E9;
+    margin-bottom: 6px;
+}
+.insight-card h4 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+.insight-card p {
+    font-size: 0.92rem;
+    color: #4B5563;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+/* ========== CTA NAVIGATION ========== */
+.nav-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 48px 48px;
+}
+.nav-btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+.nav-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.nav-btn-primary {
+    background: #1A2744;
+    color: #ffffff;
+}
+.nav-btn-primary:hover { background: #2D3A52; }
+.nav-btn-secondary {
+    background: #FFFFFF;
+    color: #1A2744;
+    border: 1px solid #D4D8E0;
+}
+.nav-btn-secondary:hover { background: #F7F8FA; }
+@media (max-width: 768px) {
+    .nav-buttons { padding: 0 20px 36px; }
+    .nav-btn { padding: 10px 16px; font-size: 0.82rem; }
+}
+
+/* ========== FOOTER ========== */
+.site-footer {
+    background: #1a1a2e;
+    padding: 24px;
+    text-align: center;
+}
+.site-footer a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+.site-footer a:hover { color: #ffffff; }
+.site-footer p {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.78rem;
+    margin: 0;
+}
+
+/* ========== MIND MAP NODE ANIMATIONS ========== */
+.mm-node {
+    cursor: default;
+    transition: filter 0.3s ease;
+}
+.mm-node:hover {
+    filter: brightness(1.1);
+}
+.mm-node:hover .mm-label {
+    font-weight: 800;
+}
+.mm-link {
+    transition: stroke-opacity 0.3s ease;
+}
+@keyframes pulse-glow {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(14,165,233,0.3)); }
+    50% { filter: drop-shadow(0 0 12px rgba(14,165,233,0.6)); }
+}
+.mm-center-node {
+    animation: pulse-glow 3s ease-in-out infinite;
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.mm-node { opacity: 0; }
+.mindmap-visible .mm-node {
+    animation: fadeInUp 0.5s ease forwards;
+}
+.mindmap-visible .mm-node:nth-child(1) { animation-delay: 0.1s; }
+.mindmap-visible .mm-node:nth-child(2) { animation-delay: 0.15s; }
+.mindmap-visible .mm-node:nth-child(3) { animation-delay: 0.2s; }
+.mindmap-visible .mm-node:nth-child(4) { animation-delay: 0.25s; }
+.mindmap-visible .mm-node:nth-child(5) { animation-delay: 0.3s; }
+.mindmap-visible .mm-node:nth-child(6) { animation-delay: 0.35s; }
+.mindmap-visible .mm-node:nth-child(7) { animation-delay: 0.4s; }
+.mindmap-visible .mm-node:nth-child(8) { animation-delay: 0.45s; }
+.mindmap-visible .mm-node:nth-child(9) { animation-delay: 0.5s; }
+.mindmap-visible .mm-node:nth-child(10) { animation-delay: 0.55s; }
+.mindmap-visible .mm-node:nth-child(11) { animation-delay: 0.6s; }
+.mindmap-visible .mm-node:nth-child(12) { animation-delay: 0.65s; }
+.mindmap-visible .mm-link {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: drawLine 1.5s ease forwards;
+}
+@keyframes drawLine {
+    to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .mm-node, .mindmap-visible .mm-node { animation: none; opacity: 1; }
+    .mm-center-node { animation: none; }
+    .mindmap-visible .mm-link { animation: none; stroke-dashoffset: 0; }
+    .story-section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ========== STAT COUNTERS ========== */
+.stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    margin: 28px 0;
+}
+.stat-block {
+    background: #FFFFFF;
+    border: 1px solid #D4D8E0;
+    border-radius: 10px;
+    padding: 18px 22px;
+    text-align: center;
+    min-width: 140px;
+    flex: 1;
+    max-width: 200px;
+}
+.stat-number {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1A2744;
+    line-height: 1.1;
+}
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* ========== PERVERSE INCENTIVE DIAGRAM ========== */
+.flow-diagram {
+    background: #FFFFFF;
+    border: 1px solid #D4D8E0;
+    border-radius: 12px;
+    padding: 28px 24px;
+    margin: 24px 0;
+    overflow-x: auto;
+}
+.flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0;
+}
+.flow-box {
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 160px;
+    line-height: 1.3;
+}
+.flow-box-policy { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; }
+.flow-box-action { background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; }
+.flow-box-bad { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+.flow-box-good { background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; }
+.flow-arrow {
+    font-size: 1.2rem;
+    color: #9CA3AF;
+    flex-shrink: 0;
+}
+@media (max-width: 640px) {
+    .flow-row { flex-direction: column; gap: 6px; }
+    .flow-arrow { transform: rotate(90deg); }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAVIGATION -->
+<nav class="top-nav">
+    <span class="nav-brand">The 8,760 Problem</span>
+    <button class="nav-hamburger" onclick="document.getElementById('navLinks').classList.toggle('nav-open')">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner" id="navLinks">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
+        <a href="eac_scarcity.html">EAC Scarcity</a>
+        <a href="research_paper.html">Methodology &amp; Paper</a>
+        <a href="about.html" class="nav-active">About</a>
+    </div>
+</nav>
+
+<!-- HEADER / BANNER -->
+<header class="header">
+    <h1>About This Project</h1>
+    <p class="subtitle">
+        A systems-level analysis of how grid economics, corporate procurement, policy frameworks, and
+        accounting rules interact &mdash; and where the gaps create both risk and opportunity for affordable decarbonization.
+    </p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ========== SCROLLYTELL CONTENT ========== -->
+<div class="content-wrap">
+
+<!-- SECTION 1: THE BIG PICTURE -->
+<section class="story-section" id="sec-bigpicture">
+    <div class="story-content">
+        <span class="story-badge story-badge-blue">The Big Picture</span>
+        <h2>Decarbonizing Electricity Is a Systems Problem</h2>
+        <p class="lead">
+            The power sector sits at the center of global decarbonization. But the path from today&rsquo;s fossil-dependent
+            grid to a clean one isn&rsquo;t just an engineering challenge &mdash; it&rsquo;s an economic puzzle where
+            physics, policy, markets, and accounting rules collide. Most analyses treat these layers separately. This
+            project connects them.
+        </p>
+        <p>
+            Annual clean energy targets &mdash; buying enough renewable energy certificates (RECs) to &ldquo;match&rdquo;
+            total consumption over a year &mdash; hide a critical gap: the hundreds of hours when the sun isn&rsquo;t
+            shining and the wind isn&rsquo;t blowing. A company can claim 100% renewable on paper while its actual
+            consumption is powered by gas at 2am. The emerging global consensus is that <strong>hourly matching</strong>
+            is the standard that actually drives decarbonization. But hourly matching is far more expensive than annual,
+            and the cost depends on where you are, what resources are available, and what assumptions you make about
+            future technology costs.
+        </p>
+        <p>
+            This project models that cost &mdash; hour by hour, across 8,760 hours per year, in five major
+            U.S. grid regions, under hundreds of cost scenarios &mdash; to answer the question: <strong>what does it
+            actually take to get clean electricity in every hour, and what does it cost?</strong>
+        </p>
+        <div class="stat-row">
+            <div class="stat-block">
+                <div class="stat-number" data-target="8760">0</div>
+                <div class="stat-label">Hours modeled per year</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-number" data-target="5">0</div>
+                <div class="stat-label">Grid regions (ISOs)</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-number" data-target="324">0</div>
+                <div class="stat-label">Cost scenarios</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-number" data-target="16200">0</div>
+                <div class="stat-label">Independent optimizations</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- SECTION 2: THE LAYERS -->
+<section class="story-section" id="sec-layers">
+    <div class="story-content">
+        <span class="story-badge story-badge-green">The Layers</span>
+        <h2>Six Interconnected Layers Shape the Energy Transition</h2>
+        <p>
+            Grid decarbonization isn&rsquo;t driven by a single force. It&rsquo;s shaped by overlapping layers of
+            physics, economics, policy, and corporate action. Understanding how they interact &mdash; and where they
+            conflict &mdash; is essential for making smart investment decisions.
+        </p>
+        <div class="layer-stack">
+            <div class="layer-card">
+                <div class="layer-accent" style="background:#0EA5E9;"></div>
+                <span class="layer-num">01</span>
+                <h4><span class="layer-icon">&#9889;</span> System-Level Grid Economics</h4>
+                <p>
+                    The physical grid operates on marginal cost dispatch: the cheapest available generator runs first.
+                    Adding renewables pushes fossil plants off the margin during sunny/windy hours, but the last 5&ndash;20%
+                    of hours (evenings, winters, low-wind weeks) are the hardest and most expensive to decarbonize. This
+                    creates a steep cost curve &mdash; the &ldquo;last-mile&rdquo; premium that dominates procurement economics.
+                </p>
+            </div>
+            <div class="layer-card">
+                <div class="layer-accent" style="background:#22C55E;"></div>
+                <span class="layer-num">02</span>
+                <h4><span class="layer-icon">&#127981;</span> Power Generation &amp; Corporate Decarbonization</h4>
+                <p>
+                    Utilities and IPPs face their own transition: retiring coal, extending nuclear, building renewables,
+                    and deciding whether to invest in CCS, long-duration storage, or next-gen firm power. Their fleet
+                    decisions shape the supply side of the equation. A region with 30 GW of nuclear (PJM) faces a very
+                    different clean energy future than one dominated by gas (ERCOT) or hydro imports (NYISO).
+                </p>
+            </div>
+            <div class="layer-card">
+                <div class="layer-accent" style="background:#F59E0B;"></div>
+                <span class="layer-num">03</span>
+                <h4><span class="layer-icon">&#128188;</span> Voluntary Corporate Buyers</h4>
+                <p>
+                    Tech giants (Google, Microsoft, Amazon), data center operators, and Fortune 500 companies are the
+                    primary demand signal for new clean energy. Their procurement commitments &mdash; virtual PPAs,
+                    24/7 CFE targets, hourly matching goals &mdash; shape which resources get built, where, and at what
+                    price. When corporate demand exceeds available clean supply in specific hours, Energy Attribute
+                    Certificate (EAC) scarcity emerges, driving up premiums.
+                </p>
+            </div>
+            <div class="layer-card">
+                <div class="layer-accent" style="background:#8B5CF6;"></div>
+                <span class="layer-num">04</span>
+                <h4><span class="layer-icon">&#127963;</span> State &amp; National Policy</h4>
+                <p>
+                    Renewable Portfolio Standards (RPS), clean energy mandates, tax credits (ITC, PTC, 45Q for CCS),
+                    and capacity market designs set the floor for clean energy deployment. But policies designed for
+                    annual compliance create different incentive structures than those designed for hourly matching.
+                    A state that mandates 50% renewables annually may not incentivize the firm clean power needed
+                    to fill the hardest hours.
+                </p>
+            </div>
+            <div class="layer-card">
+                <div class="layer-accent" style="background:#EF4444;"></div>
+                <span class="layer-num">05</span>
+                <h4><span class="layer-icon">&#128203;</span> Accounting &amp; Reporting Frameworks</h4>
+                <p>
+                    The GHG Protocol Scope 2 revision (expected ~2027) will likely require hourly matching and
+                    deliverability for emissions reporting. SBTi&rsquo;s power sector pathways are moving toward
+                    hourly targets by 2030. EPRI&rsquo;s SMARTargets framework offers an alternative approach.
+                    These frameworks <em>define what counts as &ldquo;clean&rdquo;</em> &mdash; and their design
+                    determines whether corporate spending actually drives real-world emissions reductions or just
+                    shuffles paper credits.
+                </p>
+            </div>
+            <div class="layer-card">
+                <div class="layer-accent" style="background:#14B8A6;"></div>
+                <span class="layer-num">06</span>
+                <h4><span class="layer-icon">&#127758;</span> Global &amp; National Goals</h4>
+                <p>
+                    The Paris Agreement, IEA Net Zero by 2050, US federal clean electricity targets, and EU
+                    climate law set the destination. But goals without mechanisms are aspirational. The gap between
+                    &ldquo;net zero by 2050&rdquo; and &ldquo;here&rsquo;s how to affordably match clean energy in
+                    every hour of 2025&rdquo; is enormous &mdash; and it&rsquo;s where this analysis operates.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- SECTION 3: THE MIND MAP -->
+<section class="story-section" id="sec-mindmap">
+    <div class="story-content">
+        <span class="story-badge story-badge-purple">Systems Map</span>
+        <h2>How These Forces Interact</h2>
+        <p>
+            These six layers don&rsquo;t operate in isolation. Policies shape corporate behavior. Corporate demand
+            drives generator investment. Accounting rules determine which investments &ldquo;count.&rdquo; And
+            grid physics constrains what&rsquo;s actually possible. The interactions can be catalytic &mdash;
+            accelerating affordable decarbonization &mdash; or perverse, channeling dollars toward paper compliance
+            rather than real impact.
+        </p>
+        <div class="mindmap-container" id="mindmapContainer">
+            <h3>The Decarbonization Ecosystem</h3>
+            <div class="mindmap-svg-wrap">
+                <svg id="mindmapSvg" viewBox="0 0 960 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mind map showing how grid economics, corporate buyers, policy, accounting rules, and global goals interact to shape decarbonization outcomes">
+                    <defs>
+                        <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+                            <feGaussianBlur stdDeviation="3" result="blur"/>
+                            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                        </filter>
+                        <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                            <path d="M0,0 L8,3 L0,6" fill="#22C55E" opacity="0.6"/>
+                        </marker>
+                        <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                            <path d="M0,0 L8,3 L0,6" fill="#EF4444" opacity="0.6"/>
+                        </marker>
+                        <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                            <path d="M0,0 L8,3 L0,6" fill="#0EA5E9" opacity="0.6"/>
+                        </marker>
+                    </defs>
+
+                    <!-- LINKS (drawn first, behind nodes) -->
+                    <g class="mm-links">
+                        <!-- Center to ring nodes -->
+                        <line class="mm-link" x1="480" y1="340" x2="480" y2="120" stroke="#0EA5E9" stroke-width="2" stroke-opacity="0.35"/>
+                        <line class="mm-link" x1="480" y1="340" x2="200" y2="200" stroke="#22C55E" stroke-width="2" stroke-opacity="0.35"/>
+                        <line class="mm-link" x1="480" y1="340" x2="760" y2="200" stroke="#F59E0B" stroke-width="2" stroke-opacity="0.35"/>
+                        <line class="mm-link" x1="480" y1="340" x2="200" y2="480" stroke="#8B5CF6" stroke-width="2" stroke-opacity="0.35"/>
+                        <line class="mm-link" x1="480" y1="340" x2="760" y2="480" stroke="#EF4444" stroke-width="2" stroke-opacity="0.35"/>
+                        <line class="mm-link" x1="480" y1="340" x2="480" y2="580" stroke="#14B8A6" stroke-width="2" stroke-opacity="0.35"/>
+
+                        <!-- Inter-node catalytic links (green = positive) -->
+                        <path class="mm-link" d="M280,200 Q340,140 400,120" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
+                        <path class="mm-link" d="M560,120 Q620,140 680,200" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
+                        <path class="mm-link" d="M280,480 Q340,540 400,580" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
+
+                        <!-- Perverse incentive links (red = negative/misaligned) -->
+                        <path class="mm-link" d="M680,200 Q780,340 680,480" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="4,6" marker-end="url(#arrowRed)"/>
+                        <path class="mm-link" d="M280,480 Q180,340 280,200" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="4,6" marker-end="url(#arrowRed)"/>
+
+                        <!-- Feedback loops (blue) -->
+                        <path class="mm-link" d="M560,580 Q680,560 680,480" stroke="#0EA5E9" stroke-width="1.5" stroke-opacity="0.3" fill="none" stroke-dasharray="3,5" marker-end="url(#arrowBlue)"/>
+                        <path class="mm-link" d="M280,200 Q180,120 400,120" stroke="#0EA5E9" stroke-width="1.5" stroke-opacity="0.3" fill="none" stroke-dasharray="3,5" marker-end="url(#arrowBlue)"/>
+                    </g>
+
+                    <!-- CENTER NODE: Affordable Decarbonization -->
+                    <g class="mm-node mm-center-node" filter="url(#glow)">
+                        <rect x="370" y="300" width="220" height="80" rx="40" fill="#1A2744" stroke="#0EA5E9" stroke-width="2"/>
+                        <text x="480" y="332" text-anchor="middle" fill="#ffffff" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="13" font-weight="700">Affordable &amp;</text>
+                        <text x="480" y="352" text-anchor="middle" fill="#ffffff" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="13" font-weight="700">Feasible Decarbonization</text>
+                    </g>
+
+                    <!-- NODE 1: Grid Economics (top center) -->
+                    <g class="mm-node">
+                        <rect x="380" y="85" width="200" height="70" rx="12" fill="#EFF6FF" stroke="#0EA5E9" stroke-width="1.5"/>
+                        <text x="480" y="114" text-anchor="middle" fill="#0369A1" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Grid Economics</text>
+                        <text x="480" y="133" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Marginal dispatch, last-mile</text>
+                        <text x="480" y="146" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">costs, hourly supply gaps</text>
+                    </g>
+
+                    <!-- NODE 2: Generators (top left) -->
+                    <g class="mm-node">
+                        <rect x="100" y="165" width="200" height="70" rx="12" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.5"/>
+                        <text x="200" y="194" text-anchor="middle" fill="#15803D" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Power Generators</text>
+                        <text x="200" y="213" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Fleet transition, nuclear,</text>
+                        <text x="200" y="226" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">CCS, renewables build-out</text>
+                    </g>
+
+                    <!-- NODE 3: Corporate Buyers (top right) -->
+                    <g class="mm-node">
+                        <rect x="660" y="165" width="200" height="70" rx="12" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/>
+                        <text x="760" y="194" text-anchor="middle" fill="#B45309" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Corporate Buyers</text>
+                        <text x="760" y="213" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">PPAs, 24/7 CFE, hourly</text>
+                        <text x="760" y="226" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">matching, EAC demand</text>
+                    </g>
+
+                    <!-- NODE 4: Policy (bottom left) -->
+                    <g class="mm-node">
+                        <rect x="100" y="445" width="200" height="70" rx="12" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.5"/>
+                        <text x="200" y="474" text-anchor="middle" fill="#6D28D9" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Policy &amp; Regulation</text>
+                        <text x="200" y="493" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">RPS, ITC/PTC, 45Q,</text>
+                        <text x="200" y="506" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">capacity markets, mandates</text>
+                    </g>
+
+                    <!-- NODE 5: Accounting (bottom right) -->
+                    <g class="mm-node">
+                        <rect x="660" y="445" width="200" height="70" rx="12" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.5"/>
+                        <text x="760" y="474" text-anchor="middle" fill="#991B1B" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Accounting Rules</text>
+                        <text x="760" y="493" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">GHG Protocol Scope 2,</text>
+                        <text x="760" y="506" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">SBTi, EPRI SMARTargets</text>
+                    </g>
+
+                    <!-- NODE 6: Global Goals (bottom center) -->
+                    <g class="mm-node">
+                        <rect x="380" y="545" width="200" height="70" rx="12" fill="#F0FDFA" stroke="#14B8A6" stroke-width="1.5"/>
+                        <text x="480" y="574" text-anchor="middle" fill="#0F766E" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Global Goals</text>
+                        <text x="480" y="593" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Paris, IEA NZE, US targets,</text>
+                        <text x="480" y="606" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">EU climate law, NDCs</text>
+                    </g>
+
+                    <!-- LEGEND -->
+                    <g transform="translate(30, 620)">
+                        <line x1="0" y1="8" x2="24" y2="8" stroke="#22C55E" stroke-width="2" stroke-dasharray="6,4"/>
+                        <text x="30" y="12" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Catalytic link</text>
+                        <line x1="140" y1="8" x2="164" y2="8" stroke="#EF4444" stroke-width="2" stroke-dasharray="4,6"/>
+                        <text x="170" y="12" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Perverse incentive risk</text>
+                        <line x1="320" y1="8" x2="344" y2="8" stroke="#0EA5E9" stroke-width="2" stroke-dasharray="3,5"/>
+                        <text x="350" y="12" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Feedback loop</text>
+                    </g>
+
+                    <!-- ANNOTATION: Catalytic example -->
+                    <g class="mm-node">
+                        <rect x="30" y="80" width="160" height="50" rx="8" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1"/>
+                        <text x="110" y="100" text-anchor="middle" fill="#065F46" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">Generator investments</text>
+                        <text x="110" y="115" text-anchor="middle" fill="#065F46" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">&#8594; lower grid costs</text>
+                    </g>
+
+                    <!-- ANNOTATION: Perverse incentive example -->
+                    <g class="mm-node">
+                        <rect x="770" y="310" width="170" height="60" rx="8" fill="#FEF2F2" stroke="#FECACA" stroke-width="1"/>
+                        <text x="855" y="330" text-anchor="middle" fill="#991B1B" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">Annual accounting</text>
+                        <text x="855" y="345" text-anchor="middle" fill="#991B1B" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">&#8594; paper compliance</text>
+                        <text x="855" y="360" text-anchor="middle" fill="#991B1B" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">without impact</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- SECTION 4: CATALYTIC vs PERVERSE -->
+<section class="story-section" id="sec-incentives">
+    <div class="story-content">
+        <span class="story-badge story-badge-orange">Incentive Design</span>
+        <h2>Catalytic Forces vs. Perverse Incentives</h2>
+        <p>
+            The design of accounting rules, policy mechanisms, and procurement frameworks determines whether clean energy
+            dollars drive real decarbonization or get wasted on paper compliance. The difference is subtle but consequential.
+        </p>
+
+        <h3>When Frameworks Catalyze Progress</h3>
+        <div class="flow-diagram">
+            <div class="flow-row">
+                <div class="flow-box flow-box-policy">Hourly matching requirement</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-action">Demand for firm clean power (nuclear, CCS, LDES)</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-good">Investment in resources that fill the hardest hours</div>
+            </div>
+            <div class="flow-row" style="margin-top:16px;">
+                <div class="flow-box flow-box-policy">GHG Protocol Scope 2 revision with deliverability</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-action">Regional clean energy investment, not cross-border RECs</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-good">Supply built where demand exists</div>
+            </div>
+        </div>
+
+        <h3>When Frameworks Create Perverse Incentives</h3>
+        <div class="flow-diagram">
+            <div class="flow-row">
+                <div class="flow-box flow-box-policy">Annual REC matching</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-bad">Cheap solar RECs cover 24/7 consumption</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-bad">No demand signal for firm clean power</div>
+            </div>
+            <div class="flow-row" style="margin-top:16px;">
+                <div class="flow-box flow-box-policy">45Q credit for CCS ($85/ton)</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-bad">Incentivizes max runtime to capture credits</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-bad">Gas plants run even when grid doesn&rsquo;t need them</div>
+            </div>
+            <div class="flow-row" style="margin-top:16px;">
+                <div class="flow-box flow-box-policy">Unbundled RECs across regions</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-bad">Cheapest-state RECs bought for any location</div>
+                <span class="flow-arrow">&#10142;</span>
+                <div class="flow-box flow-box-bad">No new capacity built where scarcity exists</div>
+            </div>
+        </div>
+
+        <div class="callout-box callout-warning">
+            <h4>The Scope 2 Revision Is the Inflection Point</h4>
+            <p>
+                The GHG Protocol&rsquo;s Scope 2 guidance revision &mdash; expected around 2027 &mdash; will redefine
+                what &ldquo;counts&rdquo; for corporate emissions reporting. If it mandates hourly temporal matching with
+                deliverability requirements (as drafted), it will create an entirely new demand signal for firm clean
+                resources. Combined with SBTi&rsquo;s 2030 hourly matching trajectory for ~8,000 companies, this will
+                reshape clean energy markets.
+            </p>
+            <p>
+                But if the revision is watered down to preserve annual matching, the current system of paper
+                compliance persists &mdash; and the hardest hours stay dirty.
+            </p>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- SECTION 5: THE GAPS -->
+<section class="story-section" id="sec-gaps">
+    <div class="story-content">
+        <span class="story-badge story-badge-amber">Research Gaps</span>
+        <h2>What This Project Addresses</h2>
+        <p>
+            Existing research on clean energy procurement tends to focus on one layer at a time: grid planning models
+            that ignore corporate procurement dynamics, corporate sustainability analyses that ignore grid physics,
+            or policy assessments that don&rsquo;t model cost sensitivity. This project bridges those silos.
+        </p>
+
+        <h3>Gap 1: Cost is treated as fixed, not as a variable</h3>
+        <p>
+            Most hourly matching analyses use a single cost assumption for each technology. But technology costs are deeply
+            uncertain &mdash; solar LCOE ranges from $40 to $120/MWh depending on region and assumptions. This project
+            co-optimizes the resource mix with costs: different cost assumptions produce different optimal portfolios.
+            That&rsquo;s not a sensitivity check &mdash; it&rsquo;s the core finding. <strong>What you need depends on
+            what things cost.</strong>
+        </p>
+
+        <h3>Gap 2: Regional variation is underappreciated</h3>
+        <p>
+            A 90% hourly clean energy target costs very different amounts in ERCOT (abundant wind, no state RPS competition)
+            vs. PJM (nuclear-heavy but under data center pressure) vs. ISO-NE (transmission-constrained, high REC prices).
+            National averages obscure the procurement decisions that actually face buyers. This project models
+            five ISOs independently, each with real 2025 hourly generation profiles, regional cost tables, and local
+            grid mix baselines.
+        </p>
+
+        <h3>Gap 3: The &ldquo;last 5%&rdquo; cost inflection is under-studied</h3>
+        <p>
+            Going from 75% to 90% hourly matching is relatively affordable. Going from 95% to 100% is dramatically
+            more expensive &mdash; sometimes 5&ndash;10x the marginal cost. This inflection zone (90&ndash;100%) is where
+            the most consequential procurement decisions happen, and it&rsquo;s where this project concentrates its
+            analytical resolution with 2.5% threshold granularity.
+        </p>
+
+        <h3>Gap 4: EAC scarcity is emerging but unquantified</h3>
+        <p>
+            As corporate demand for hourly-matched clean energy grows, some regions will run out of available clean supply
+            during peak demand hours. PJM Tier I REC prices already hit $37&ndash;40/MWh &mdash; historic highs &mdash;
+            before hourly matching is even mandated. This project quantifies the &ldquo;clean premium&rdquo; by ISO region,
+            modeling how corporate participation rates drive scarcity.
+        </p>
+
+        <h3>Gap 5: Policies and frameworks aren&rsquo;t evaluated against physical constraints</h3>
+        <p>
+            The 45Q CCS tax credit incentivizes gas plants to run at maximum capacity factor &mdash; even when the grid
+            doesn&rsquo;t need the power. Annual REC standards don&rsquo;t create demand for the firm clean resources
+            needed for the hardest hours. This project evaluates policy mechanisms and accounting frameworks against
+            the actual hourly physics of the grid, revealing where incentive structures diverge from decarbonization goals.
+        </p>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- SECTION 6: NOVEL INSIGHTS -->
+<section class="story-section" id="sec-insights">
+    <div class="story-content">
+        <span class="story-badge story-badge-teal">Novel Insights</span>
+        <h2>What This Analysis Reveals</h2>
+        <p>
+            By connecting grid physics, cost uncertainty, regional variation, and policy incentives into a single model,
+            this project produces insights that single-layer analyses miss.
+        </p>
+
+        <div class="insights-grid">
+            <div class="insight-card">
+                <div class="insight-num">INSIGHT 01</div>
+                <h4>Cost Drives the Optimal Resource Mix</h4>
+                <p>
+                    Different cost assumptions don&rsquo;t just change the price &mdash; they change <em>what you should
+                    build</em>. High renewable costs push toward nuclear; high firm costs push toward solar + storage.
+                    16,200 independent co-optimizations reveal that the &ldquo;right&rdquo; portfolio depends on cost
+                    assumptions as much as on the target threshold.
+                </p>
+            </div>
+            <div class="insight-card">
+                <div class="insight-num">INSIGHT 02</div>
+                <h4>The Inflection Zone Is Steeper Than Expected</h4>
+                <p>
+                    Between 90% and 100% hourly matching, marginal costs escalate non-linearly. The resources needed for
+                    the last 5&ndash;10% of hours (winter evenings, multi-day low-wind periods) are the most expensive and
+                    least utilized, creating a cost curve that punishes perfection.
+                </p>
+            </div>
+            <div class="insight-card">
+                <div class="insight-num">INSIGHT 03</div>
+                <h4>Region Determines Strategy, Not Just Cost</h4>
+                <p>
+                    ERCOT&rsquo;s optimal portfolio is fundamentally different from PJM&rsquo;s &mdash; not just cheaper.
+                    Wind-rich regions need less storage; nuclear-heavy regions need less new clean firm. The &ldquo;what
+                    you need depends on where you are&rdquo; finding has direct procurement implications.
+                </p>
+            </div>
+            <div class="insight-card">
+                <div class="insight-num">INSIGHT 04</div>
+                <h4>Existing Clean Assets Are Undervalued</h4>
+                <p>
+                    Nuclear uprates, existing hydro, and operating geothermal provide the cheapest clean firm capacity.
+                    But they&rsquo;re being consumed by data center PPAs and state mandates, creating scarcity for
+                    voluntary corporate buyers who need them for hourly matching.
+                </p>
+            </div>
+            <div class="insight-card">
+                <div class="insight-num">INSIGHT 05</div>
+                <h4>45Q Creates a Gas Plant Persistence Incentive</h4>
+                <p>
+                    The $85/ton 45Q credit for CCS makes gas+CCS plants economically incentivized to run at maximum
+                    capacity factor to maximize capture credits &mdash; regardless of grid need. This is a
+                    policy-designed perverse incentive that this model captures by treating CCS as baseload.
+                </p>
+            </div>
+            <div class="insight-card">
+                <div class="insight-num">INSIGHT 06</div>
+                <h4>EAC Scarcity Is Already Emerging in PJM and ISO-NE</h4>
+                <p>
+                    Before hourly matching mandates even take effect, REC prices in PJM and ISO-NE have reached historic
+                    highs. Modeling corporate participation at 10&ndash;50% penetration reveals severe EAC scarcity in
+                    these regions, with clean premiums of $20&ndash;55/MWh &mdash; costs that will be borne by buyers
+                    or passed to ratepayers.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- SECTION 7: EXPLORE THE PROJECT -->
+<section class="story-section" id="sec-explore">
+    <div class="story-content">
+        <span class="story-badge">Explore</span>
+        <h2>Dive Into the Analysis</h2>
+        <p>
+            This project includes an interactive cost optimizer, regional deep-dives, CO&#8322; abatement analysis,
+            EAC scarcity modeling, and a full research paper. Each component builds on the core 8,760-hour
+            optimization model.
+        </p>
+    </div>
+</section>
+
+<!-- NAVIGATION BUTTONS -->
+<div class="nav-buttons">
+    <a href="index.html" class="nav-btn nav-btn-primary">&#127968; Home</a>
+    <a href="dashboard.html" class="nav-btn nav-btn-secondary">&#128202; Interactive Cost Optimizer</a>
+    <a href="region_deepdive.html" class="nav-btn nav-btn-secondary">Regional Deep Dives</a>
+    <a href="abatement_comparison.html" class="nav-btn nav-btn-secondary">CO&#8322; Abatement</a>
+    <a href="eac_scarcity.html" class="nav-btn nav-btn-secondary">EAC Scarcity Analysis</a>
+    <a href="research_paper.html" class="nav-btn nav-btn-secondary">&#128196; Methodology &amp; Paper</a>
+</div>
+
+</div><!-- /content-wrap -->
+
+<!-- FOOTER -->
+<footer class="site-footer">
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-bottom:12px;">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement</a>
+        <a href="eac_scarcity.html">EAC Scarcity</a>
+        <a href="research_paper.html">Methodology &amp; Paper</a>
+    </div>
+    <p>The 8,760 Problem &mdash; 2025 Snapshot Model</p>
+</footer>
+
+<!-- ========== JAVASCRIPT ========== -->
+<script>
+// ---- Scrollytell fade-in ----
+(function() {
+    const sections = document.querySelectorAll('.story-section');
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    sections.forEach(function(s) { observer.observe(s); });
+})();
+
+// ---- Animated stat counters ----
+(function() {
+    const counters = document.querySelectorAll('.stat-number[data-target]');
+    let animated = new Set();
+
+    function formatNum(n) {
+        if (n >= 1000) return n.toLocaleString();
+        return n.toString();
+    }
+
+    function animateCounter(el) {
+        const target = parseInt(el.getAttribute('data-target'), 10);
+        const duration = 1800;
+        const start = performance.now();
+        function step(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease-out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = Math.round(eased * target);
+            el.textContent = formatNum(current);
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                el.textContent = formatNum(target);
+            }
+        }
+        requestAnimationFrame(step);
+    }
+
+    const counterObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting && !animated.has(entry.target)) {
+                animated.add(entry.target);
+                animateCounter(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+
+    counters.forEach(function(c) { counterObserver.observe(c); });
+})();
+
+// ---- Mind map node animation trigger ----
+(function() {
+    const container = document.getElementById('mindmapContainer');
+    if (!container) return;
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                container.classList.add('mindmap-visible');
+            }
+        });
+    }, { threshold: 0.2 });
+    observer.observe(container);
+})();
+</script>
+
+</body>
+</html>
