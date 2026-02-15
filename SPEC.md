@@ -1237,6 +1237,12 @@ This section documents how our model compares to established capacity expansion 
 
 **How**: `optimizer_cache.json` stores the full co-optimized results for all 16,200 scenarios. `compute_costs_parameterized()` can re-price any cached mix in milliseconds. Only changes that fundamentally alter the optimization landscape (new resource types, new dispatch algorithms, new constraint structures) require full re-runs.
 
+**Two-file architecture** (decided):
+1. **`data/optimizer_cache.json`** — Raw, untouched optimizer output. Never modified after a run. This is the canonical record of what the optimizer produced. Includes all resource mixes, costs, scores, metadata.
+2. **`dashboard/overprocure_results.json`** — Post-processed copy that feeds the live dashboard. Derived from the cache + any post-processing overlays (BECCS derating, gas adjustments, etc.). Can always be regenerated from the cache.
+
+Any post-processing (cost overlays, BECCS, gas constraints, carbon pricing) operates on a copy of the cache data and writes to the dashboard results file. The raw cache is always preserved as ground truth.
+
 ### 21.3 NEISO Gas Pipeline Constraints + BECCS (Future Iteration)
 
 **NEISO Gas Delivery Constraints**: New England has severe natural gas pipeline constraints, particularly on the Algonquin City Gate pipeline during winter peaks. Key literature:
