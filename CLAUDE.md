@@ -46,6 +46,13 @@
 - **Override signal**: If user says "representative viz" or "create a representative [chart/visualization]", that means storytelling and visual impact take priority over perfect data accuracy for that specific element
 - User can always override this ordering for specific tasks
 
+### Writing Voice (Research Paper & Narrative Content)
+- **Match the user's voice** — direct, confident, analytical. Not overly formal or academic-stiff. Think "senior analyst briefing stakeholders" rather than "PhD thesis."
+- **Brevity over verbosity** — every sentence must earn its place. Cut filler, hedging, and over-qualification. If it can be said in 10 words, don't use 30.
+- **Maintain adequate detail for peer review** — brevity ≠ vagueness. Be precise about methodology, assumptions, and data sources. Just don't be wordy about it.
+- **Professional but human** — contractions OK, passive voice only when necessary, active voice preferred. No "it should be noted that" or "it is important to consider."
+- **Lead with the insight** — state the finding first, then the supporting evidence. Don't build up to the conclusion.
+
 ### Communication Style
 - **Don't narrate — just do.** Skip "Let me read the file...", "Now I'll edit...", "Let me check..." filler. Execute the work, report the outcome.
 - **Use the TodoWrite checklist on a frequent cadence** — the todo list IS the status communication. Update it in real-time so the user always sees current progress without needing to ask.
@@ -126,13 +133,23 @@
 ## Architecture Overview
 
 - **Optimizer**: `optimize_overprocure.py` — Python, numpy-accelerated 3-phase sweep
-- **Dashboard**: `dashboard/dashboard.html` — pure HTML5 + Chart.js, no framework
-- **Regional Pages**: `dashboard/region_caiso.html`, `region_ercot.html`, etc. — 5 deep-dive pages
+- **Dashboard**: `dashboard/dashboard.html` — interactive cost optimizer with all 5 sensitivity toggles
+- **Homepage**: `dashboard/index.html` — scrollytelling landing page with key findings
+- **Regional Page**: `dashboard/region_deepdive.html` — single page with 5 ISO nav buttons (not 5 separate pages)
+- **Abatement**: `dashboard/abatement_comparison.html` — CO2 abatement analysis + `abatement_dashboard.html`
 - **Standalone**: `dashboard/dashboard_standalone.html` — self-contained with inlined assets
 - **Methodology**: `dashboard/optimizer_methodology.html` — technical specs only (trimmed)
-- **Research Paper**: `dashboard/research_paper.html` — full paper with regional deep-dives
+- **Research Paper**: `dashboard/research_paper.html` — full standalone paper with regional deep-dives
 - **Data**: `data/` — EIA hourly profiles, eGRID emission rates, fossil mix data
 - **Results**: `dashboard/overprocure_results.json` — pre-computed optimization output
+
+## Site Architecture Intent
+
+- **Research paper** (`research_paper.html`): Standalone academic artifact. Intentionally duplicates analysis from other pages — designed to be read independently as a complete paper. Do NOT cut content to avoid duplication with the interactive site.
+- **Interactive site** (all other pages): Scrollytelling/interactive mode of the same research. Pages reference each other and build a narrative journey. Cut duplicate content BETWEEN these pages (but not between them and the paper).
+- **Homepage** (`index.html`): Entry point with scrollytell narrative and key conclusions. Emphasis on "what you need depends on what you have and where you're going" — this framing is intentional and should appear on both homepage and dashboard.
+- **Dashboard** (`dashboard.html`): Interactive optimizer with all parametric toggles. The "what you need depends on what you have" framing is reinforced here too.
+- **Regional page**: Single page with ISO selector buttons, not 5 separate files. Content updates dynamically per ISO selection.
 
 ## Key Design Principles
 
@@ -191,18 +208,22 @@ When facing compute vs. rigor tradeoffs:
 
 ### QA/QC Requirements (Before Any Push)
 - Validate optimizer results against published research (NREL ATB, Lazard, LBNL)
-- Check HTML formatting, visual consistency, all controls functional
-- Mobile compatibility at 320px, 375px, 768px viewports
-- All text readable in all figures at all sizes
-- No console errors, no broken layouts
-- **Always do a full QA/QC sweep** on functionality, visuals, and narrative before pushing
-- Validate optimizer results against published research (NREL ATB, Lazard, LBNL)
 - Check HTML formatting, visual consistency, all controls functional across ALL pages
 - Mobile compatibility at 320px, 375px, 768px viewports
 - All text readable in all figures at all sizes
 - No console errors, no broken layouts
+- **Always do a full QA/QC sweep** on functionality, visuals, and narrative before pushing
 - **Proactively update narrative and explanatory text** after new results are generated — don't leave stale numbers or descriptions
 - Verify research paper reflects current results and methodology
+
+### Figure & Chart Standards (QA/QC Sweep Checklist)
+- **Adequate height/spacing on mobile**: Charts must not be compressed or unreadable on small screens. Set min-height for chart containers (e.g., 300px mobile, 400px desktop)
+- **Threshold label spacing**: Don't label every threshold point. Space labels to avoid crowding — show 75, 90, 95, 100 (skip intermediate values) on scrollytell figures. Dashboard charts can use tooltips for unlabeled points
+- **Data-driven but clean**: Scrollytell figures pull from actual optimizer results but should be illustrative — clean axes, clear legends, readable font sizes (min 12px on mobile)
+- **Dashboard tooltips**: Interactive dashboard charts should have hover tooltips showing exact values at all threshold points, so labeled points can be sparse without losing precision
+- **Consistent color palette**: Use the same colors for resources across all pages (Solar=amber, Wind=blue, Clean Firm=green, CCS=teal, Hydro=cyan, Battery=purple, LDES=pink)
+- **Chart.js responsive options**: Always set `responsive: true`, `maintainAspectRatio: false`, and use `padding` options for readable labels
+- **Mobile tap targets**: Touch targets on charts/controls must be 44px minimum
 
 ### Animations & Interactivity
 - Regional deep-dive pages should be illustrative and dynamic with animations
