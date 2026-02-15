@@ -3036,6 +3036,45 @@ body {
         max-height: 200px;
     }
 }
+
+/* ========== MOBILE COMPATIBILITY FIXES ========== */
+/* 768px: reduce controls gap, scrolly step height */
+@media (max-width: 768px) {
+    .controls-row { gap: 12px; }
+    .scrolly-step { min-height: 60vh; }
+}
+
+/* 480px: small phone adjustments */
+@media (max-width: 480px) {
+    .wyn-chart-container { height: 260px; }
+    .cost-table { font-size: 0.86rem; }
+    .cost-table th { font-size: 0.85rem; }
+    .cost-table td { padding: 10px 8px; }
+    .scrolly-step { min-height: 50vh; }
+}
+
+/* 375px: mid-range phone adjustments */
+@media (max-width: 375px) {
+    .control-group select { padding: 11px 32px 11px 14px; }
+    .region-context .ctx-label { font-size: 0.86rem; }
+    .info-tooltip { width: 200px; }
+    .step-card { padding: 16px 12px; }
+    .hero-callout-row { gap: 4px; }
+    .hero-callout-card { min-width: 65px; padding: 12px 6px; }
+}
+
+/* 320px: smallest phones */
+@media (max-width: 320px) {
+    .header { padding: 24px 10px 20px; }
+    .header h1 { font-size: 1.4rem; }
+    .main-content { padding: 12px 8px 28px; }
+    .metrics-row { gap: 6px; }
+    .metric-tile { padding: 12px 8px; }
+    .region-context .ctx-label { font-size: 0.86rem; }
+    .info-tooltip { width: 180px; }
+    .controls-row { gap: 8px; }
+    .control-group select { padding: 11px 30px 11px 12px; }
+}
 </style>
 </head>
 <body>
