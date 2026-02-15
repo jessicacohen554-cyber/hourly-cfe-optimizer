@@ -20,6 +20,7 @@
             <li><a href="targets.html">Targets & Feasibility</a></li>
             <li><a href="policy.html">Policy & Conditions</a></li>
             <li><a href="methodology.html">Methodology</a></li>
+            <li><a href="../../dashboard/index.html" style="color:#F59E0B;">&#8592; 8,760 Problem</a></li>
         </ul>
     </div>
 </nav>
@@ -139,6 +140,61 @@
 
         <div class="callout" style="margin-top: 16px;">
             <p><strong>Constellation&rsquo;s unique position:</strong> Pre-Calpine, Constellation held the <strong>#1 lowest CO₂ emission rate</strong> among the 20 largest investor-owned producers for <strong>11 consecutive years</strong> (MJ Bradley/ERM). The next-cleanest producer had 4.5&times; its CO₂ rate. Post-Calpine, the combined entity&rsquo;s blended rate jumps from ~100&ndash;200 to ~300&ndash;350 lbs/MWh, and absolute emissions rise to top-10 status nationally&mdash;a dramatic reshuffling that illustrates how M&amp;A can transform a company&rsquo;s carbon profile overnight.<sup class="ref">4</sup></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Historical Emissions Trajectories -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Historical Emissions Trajectories: 2005&ndash;2024</h2>
+            <p>How have the top generators&rsquo; CO₂ emission rates changed over the past two decades? The trajectories reveal which companies are genuinely decarbonizing and which are stalling.</p>
+        </div>
+
+        <div class="chart-container">
+            <h3>CO₂ Intensity Trajectories by Company (lbs CO₂/MWh)</h3>
+            <div class="chart-wrapper" style="height: 450px;">
+                <canvas id="trajectoryChart"></canvas>
+            </div>
+            <p class="citation">Estimated trajectories based on eGRID 2005&ndash;2023 data, EIA Form 923, company sustainability reports, and MJ Bradley/ERM annual benchmarking. Post-2023 values reflect announced retirements and additions.<sup class="ref">1,4</sup></p>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 16px; margin-bottom: 24px;" id="trajectoryLegend">
+            <button class="pill active" data-filter="all" onclick="filterTrajectory('all')">All Companies</button>
+            <button class="pill" data-filter="coal-heavy" onclick="filterTrajectory('coal-heavy')">Coal-Heavy</button>
+            <button class="pill" data-filter="diversified" onclick="filterTrajectory('diversified')">Diversified</button>
+            <button class="pill" data-filter="gas-nuclear" onclick="filterTrajectory('gas-nuclear')">Gas-Nuclear</button>
+            <button class="pill" data-filter="leaders" onclick="filterTrajectory('leaders')">Clean Leaders</button>
+        </div>
+
+        <div class="card-grid" style="margin-top: 24px;">
+            <div class="card">
+                <h4>Fastest Decarbonizers</h4>
+                <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>AEP:</strong> &darr;66% since 2005 (13 GW coal retired)</li>
+                    <li><strong>Xcel:</strong> &darr;57% since 2005 (25 coal units closed)</li>
+                    <li><strong>AES:</strong> Coal 54%&rarr;16% (2017&ndash;2024)</li>
+                    <li><strong>Constellation:</strong> Already ~90% zero-carbon pre-Calpine</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4>Stalled or Rising</h4>
+                <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>BH Energy:</strong> PacifiCorp coal retirement delayed; MidAmerican gains offset</li>
+                    <li><strong>PPL:</strong> KY coal fleet largely intact; highest intensity</li>
+                    <li><strong>Entergy:</strong> Gas dependence + industrial load growth complicates absolute reduction</li>
+                    <li><strong>Constellation (post-Calpine):</strong> Merged entity intensity roughly doubles</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="chart-container" style="margin-top: 24px;">
+            <h3>Absolute CO₂ Emissions Trajectory: Top 15 Combined</h3>
+            <div class="chart-wrapper" style="height: 320px;">
+                <canvas id="absoluteTrajectoryChart"></canvas>
+            </div>
+            <p class="citation">Top 15 generators combined annual CO₂ emissions. Based on MJ Bradley/ERM data showing ~40% decline from 2007 peak but flat since 2020.<sup class="ref">4</sup></p>
         </div>
     </section>
 
@@ -339,6 +395,7 @@
         <a href="targets.html">Targets & Feasibility</a>
         <a href="policy.html">Policy & Conditions</a>
         <a href="methodology.html">Methodology</a>
+        <a href="../../dashboard/index.html">&#8592; 8,760 Problem</a>
     </div>
     <div class="footer-note">Analysis based on EPA eGRID 2023, EIA data, company filings, and hourly CFE optimizer modeling. &copy; 2026</div>
 </footer>
@@ -373,6 +430,116 @@ new Chart(document.getElementById('hockeyStickChart').getContext('2d'), {
         scales: {
             x: { title: { display: true, text: 'Clean Energy Target (%)', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
             y: { title: { display: true, text: 'Cost Premium ($/MWh above baseline)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } }
+        }
+    }
+});
+
+// ============================================================
+// HISTORICAL EMISSIONS TRAJECTORY CHART
+// ============================================================
+const years = ['2005','2008','2010','2012','2014','2016','2018','2020','2022','2024'];
+
+// Estimated intensity trajectories (lbs CO₂/MWh) based on eGRID, company reports, MJ Bradley
+const trajectories = {
+    'Constellation':  { data: [250, 220, 200, 180, 160, 140, 120, 110, 100, 390], color: '#7C3AED', group: 'leaders', note: '2024: post-Calpine jump' },
+    'NextEra':        { data: [820, 750, 700, 650, 600, 560, 530, 510, 500, 490], color: '#22C55E', group: 'leaders' },
+    'Duke':           { data: [1100, 1050, 1000, 950, 900, 870, 840, 810, 790, 780], color: '#0EA5E9', group: 'diversified' },
+    'Southern':       { data: [1150, 1080, 1020, 970, 920, 880, 850, 820, 800, 795], color: '#06B6D4', group: 'diversified' },
+    'Vistra':         { data: [1800, 1700, 1600, 1500, 1400, 1300, 1200, 1140, 1100, 1070], color: '#DC2626', group: 'coal-heavy' },
+    'AEP':            { data: [1900, 1800, 1700, 1550, 1400, 1300, 1250, 1180, 1140, 1100], color: '#EF4444', group: 'coal-heavy' },
+    'Dominion':       { data: [1100, 1000, 920, 860, 810, 780, 760, 745, 738, 735], color: '#F59E0B', group: 'gas-nuclear' },
+    'BH Energy':      { data: [1400, 1380, 1350, 1300, 1250, 1200, 1150, 1110, 1095, 1090], color: '#9CA3AF', group: 'coal-heavy' },
+    'Entergy':        { data: [900, 880, 860, 840, 820, 800, 790, 780, 775, 770], color: '#84CC16', group: 'gas-nuclear' },
+    'AES':            { data: [1400, 1300, 1200, 1100, 1050, 1000, 950, 880, 850, 820], color: '#10B981', group: 'diversified' },
+    'Xcel':           { data: [1500, 1400, 1300, 1200, 1100, 1050, 1000, 940, 910, 880], color: '#8B5CF6', group: 'diversified' },
+    'Evergy':         { data: [1600, 1550, 1500, 1450, 1380, 1320, 1260, 1200, 1170, 1145], color: '#374151', group: 'coal-heavy' },
+    'DTE':            { data: [1400, 1350, 1300, 1250, 1200, 1140, 1080, 1020, 1000, 980], color: '#EC4899', group: 'diversified' },
+    'WEC':            { data: [1350, 1300, 1250, 1200, 1140, 1080, 1020, 970, 950, 935], color: '#6366F1', group: 'diversified' },
+    'PPL':            { data: [1500, 1480, 1460, 1440, 1400, 1370, 1340, 1310, 1285, 1260], color: '#B45309', group: 'coal-heavy' }
+};
+
+const trajectoryDatasets = Object.entries(trajectories).map(([name, t]) => ({
+    label: name,
+    data: t.data,
+    borderColor: t.color,
+    backgroundColor: 'transparent',
+    tension: 0.3,
+    pointRadius: 3,
+    borderWidth: 2,
+    hidden: false,
+    _group: t.group
+}));
+
+const trajectoryChart = new Chart(document.getElementById('trajectoryChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: years, datasets: trajectoryDatasets },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 8, font: { size: 10 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} lbs/MWh` } }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Year', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: 'CO₂ Intensity (lbs/MWh)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } }
+        },
+        interaction: { mode: 'index', intersect: false }
+    }
+});
+
+function filterTrajectory(group) {
+    document.querySelectorAll('#trajectoryLegend .pill').forEach(p => p.classList.toggle('active', p.dataset.filter === group));
+    trajectoryChart.data.datasets.forEach(ds => {
+        ds.hidden = group === 'all' ? false : ds._group !== group;
+    });
+    trajectoryChart.update();
+}
+
+// Absolute trajectory chart — combined top 15
+const absYears = ['2005','2007','2010','2012','2014','2016','2018','2020','2022','2024'];
+const absEmissions = [980, 1020, 880, 810, 760, 700, 660, 620, 610, 592]; // MT CO₂, estimated
+
+new Chart(document.getElementById('absoluteTrajectoryChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: absYears,
+        datasets: [{
+            label: 'Top 15 Combined MT CO₂',
+            data: absEmissions,
+            borderColor: '#DC2626',
+            backgroundColor: 'rgba(220,38,38,0.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: absEmissions.map((v, i) => i >= 7 ? '#F59E0B' : '#DC2626'),
+            borderWidth: 2.5
+        }, {
+            label: 'SBTi 2035 Target (~100 MT)',
+            data: absYears.map(() => 100),
+            borderColor: '#0EA5E9',
+            borderDash: [6, 3],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }, {
+            label: 'IEA NZE 2040 (~0)',
+            data: absYears.map(() => 0),
+            borderColor: '#22C55E',
+            borderDash: [6, 3],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} MT CO₂` } }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Year', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: 'Million Tons CO₂ / Year', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true }, min: 0 }
         }
     }
 });
