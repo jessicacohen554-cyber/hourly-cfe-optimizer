@@ -3194,6 +3194,45 @@ body {
         max-height: 200px;
     }
 }
+
+/* ========== MOBILE COMPATIBILITY FIXES ========== */
+/* 768px: reduce controls gap, scrolly step height */
+@media (max-width: 768px) {
+    .controls-row { gap: 12px; }
+    .scrolly-step { min-height: 60vh; }
+}
+
+/* 480px: small phone adjustments */
+@media (max-width: 480px) {
+    .wyn-chart-container { height: 260px; }
+    .cost-table { font-size: 0.86rem; }
+    .cost-table th { font-size: 0.85rem; }
+    .cost-table td { padding: 10px 8px; }
+    .scrolly-step { min-height: 50vh; }
+}
+
+/* 375px: mid-range phone adjustments */
+@media (max-width: 375px) {
+    .control-group select { padding: 11px 32px 11px 14px; }
+    .region-context .ctx-label { font-size: 0.86rem; }
+    .info-tooltip { width: 200px; }
+    .step-card { padding: 16px 12px; }
+    .hero-callout-row { gap: 4px; }
+    .hero-callout-card { min-width: 65px; padding: 12px 6px; }
+}
+
+/* 320px: smallest phones */
+@media (max-width: 320px) {
+    .header { padding: 24px 10px 20px; }
+    .header h1 { font-size: 1.4rem; }
+    .main-content { padding: 12px 8px 28px; }
+    .metrics-row { gap: 6px; }
+    .metric-tile { padding: 12px 8px; }
+    .region-context .ctx-label { font-size: 0.86rem; }
+    .info-tooltip { width: 180px; }
+    .controls-row { gap: 8px; }
+    .control-group select { padding: 11px 30px 11px 12px; }
+}
 </style>
 </head>
 <body>
@@ -3432,6 +3471,24 @@ body {
                     <button data-value="Low" data-toggle-group="transmission" data-level="Low">Low</button>
                     <button data-value="Medium" data-toggle-group="transmission" data-level="Medium" class="active">Medium</button>
                     <button data-value="High" data-toggle-group="transmission" data-level="High">High</button>
+                </div>
+            </div>
+
+            <!-- 45Q Tax Credit Toggle -->
+            <div class="sensitivity-toggle-item" data-toggle-group="45q" style="border-top: 2px solid rgba(14,165,233,0.3); padding-top: 12px; margin-top: 8px;">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        45Q Tax Credit
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">The 45Q tax credit provides $85/ton CO₂ for carbon capture and storage, reducing CCS-CCGT costs by ~$33/MWh. <strong>With 45Q</strong> reflects current policy (default). <strong>Without 45Q</strong> shows what happens if the credit expires or is repealed — CCS-CCGT becomes significantly more expensive, potentially changing optimal resource mixes.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">CCS-CCGT cost offset ($85/ton CO₂)</div>
+                </div>
+                <div class="toggle-btn-group" id="toggle45Q">
+                    <button data-value="with" class="active" style="min-width: 80px;">With 45Q</button>
+                    <button data-value="without" style="min-width: 80px;">Without 45Q</button>
                 </div>
             </div>
         </div>
@@ -3812,31 +3869,41 @@ let selectedCfCost = 90; // baseline
  * Returns { totalDelta, effectiveDelta, newTotal, newEffective, newIncremental, cfCostDelta }
  */
 function cfAdjust(entry, iso) {
-    if (selectedCfCost === 90 || !entry?.costs?.resource_costs?.clean_firm) {
-        const c = entry?.costs || {};
+    // entry is a resolved scenario object with costs (short names) and costs_detail (long names)
+    // When show45Q=false, aggregate values come from no_45q_costs, not costs_detail
+    const detail = entry?.costs_detail || {};
+    const simpleCosts = getScenarioCosts(entry) || entry?.costs || {};
+    // Only use costs_detail aggregate values when showing 45Q costs (detail reflects WITH 45Q)
+    const useDetail = show45Q;
+    const getTotal = () => (useDetail ? detail.total_cost_per_demand_mwh : null) ?? simpleCosts.total_cost ?? 0;
+    const getEffective = () => (useDetail ? detail.effective_cost_per_useful_mwh : null) ?? simpleCosts.effective_cost ?? 0;
+    const getIncremental = () => (useDetail ? detail.incremental_above_baseline : null) ?? simpleCosts.incremental ?? 0;
+    const getWholesale = () => (useDetail ? detail.baseline_wholesale_cost : null) ?? simpleCosts.wholesale ?? 0;
+
+    if (selectedCfCost === 90 || !detail?.resource_costs?.clean_firm) {
         return {
             totalDelta: 0,
             effectiveDelta: 0,
-            newTotal: c.total_cost_per_demand_mwh || 0,
-            newEffective: c.effective_cost_per_useful_mwh || 0,
-            newIncremental: c.incremental_above_baseline || 0,
+            newTotal: getTotal(),
+            newEffective: getEffective(),
+            newIncremental: getIncremental(),
             cfCostDelta: 0,
-            newCfCostPerMwh: c.resource_costs?.clean_firm?.cost_per_demand_mwh || 0,
+            newCfCostPerMwh: detail.resource_costs?.clean_firm?.cost_per_demand_mwh || 0,
         };
     }
-    const costs = entry.costs;
-    const cf = costs.resource_costs.clean_firm;
-    const newPct = cf.new_pct || 0; // % of demand that is new-build clean firm
+    const cf = detail.resource_costs.clean_firm;
+    const newPct = cf.new_pct || 0;
     const priceDelta = selectedCfCost - 90;
     const totalDelta = (newPct / 100) * priceDelta;
-    const newTotal = costs.total_cost_per_demand_mwh + totalDelta;
+    const newTotal = getTotal() + totalDelta;
     const proc = entry.procurement_pct / 100;
     const match = entry.hourly_match_score / 100;
     const newEffective = match > 0 ? newTotal * proc / match : newTotal;
-    const baseline = costs.baseline_wholesale_cost || 0;
+    const baseline = getWholesale();
     const newIncremental = newEffective - baseline;
+    const baseEffective = getEffective();
     const newCfCostPerMwh = cf.cost_per_demand_mwh + (newPct / 100) * priceDelta;
-    return { totalDelta, effectiveDelta: newEffective - costs.effective_cost_per_useful_mwh, newTotal, newEffective, newIncremental, cfCostDelta: totalDelta, newCfCostPerMwh };
+    return { totalDelta, effectiveDelta: newEffective - baseEffective, newTotal, newEffective, newIncremental, cfCostDelta: totalDelta, newCfCostPerMwh };
 }
 
 /**
@@ -3953,6 +4020,7 @@ function findClosestThreshold(region, requestedThreshold) {
 }
 
 // ---- Resolve the active entry based on target mode ----
+// Returns { entry: scenarioData, threshold: string, thresholdData: rawThresholdObj }
 function getActiveEntry(region) {
     const interimThreshold = findClosestThreshold(region, document.getElementById('thresholdSelect').value);
     const interimEntry = resolveEntry(region, interimThreshold);
@@ -3964,7 +4032,7 @@ function getActiveEntry(region) {
             if (longtermEntry) return { entry: longtermEntry, threshold: longtermThreshold };
         }
     }
-    return { entry: interimEntry, threshold: interimThreshold };
+    return { entry: interimEntry, threshold: interimThreshold, thresholdData: interimThresholdData };
 }
 
 // ---- Update everything ----
@@ -4006,7 +4074,7 @@ function updateKeyFinding(iso, threshold, entry, region) {
     const proc = entry.procurement_pct;
     const adj = cfAdjust(entry, iso);
     const incr = adj.newIncremental > 0 ? Math.round(adj.newIncremental) : null;
-    const costs = entry.costs || {};
+    const costs = getUnifiedCosts(entry);
     const curt = costs.curtailment_pct ? Math.round(costs.curtailment_pct) : 0;
     const peak = Math.round(entry.peak_gap_pct || 0);
     const mix = entry.resource_mix || {};
@@ -4070,7 +4138,7 @@ function updateMetrics(region, entry) {
         overAmt > 0 ? `+${overAmt}% above demand` : 'at demand level';
 
     // Cost tile: bold = incremental, sub = blended
-    const costs = entry.costs;
+    const costs = getUnifiedCosts(entry);
     if (costs && costs.effective_cost_per_useful_mwh != null) {
         const adj = cfAdjust(entry, iso);
         if (costs.incremental_above_baseline != null) {
@@ -4592,7 +4660,7 @@ function updatePeakCapacity(entry, region) {
 // ---- Cost Panel ----
 function updateCostPanel(entry) {
     const content = document.getElementById('costContent');
-    const costs = entry.costs;
+    const costs = getUnifiedCosts(entry);
     const iso = document.getElementById('regionSelect').value;
 
     if (!costs || !costs.resource_costs) {
@@ -4886,9 +4954,9 @@ function getMixDataForRegion(region) {
                     avgNew[r] += (rc[r]?.new_pct || 0);
                 }
             });
-            const curtailAsDemand = (t.procurement_pct || 0) * (t.costs?.curtailment_pct || 0) / 100;
+            const curtailAsDemand = (sc.procurement_pct || 0) * (scCosts.curtailment_pct || 0) / 100;
             avgCurtailment += curtailAsDemand;
-            avgProcurement += (t.procurement_pct || 0);
+            avgProcurement += (sc.procurement_pct || 0);
             count++;
         }
 
@@ -6255,13 +6323,13 @@ function updateHeatmapTiles(region, entry, iso) {
     thresholds.forEach(tk => {
         const e = resolveEntry(region, tk);
         if (!e) return;
-        const c = e.costs || {};
+        const c = getUnifiedCosts(e);
         const adj = cfAdjust(e, iso);
         const incr = adj.newIncremental;
         const match = e.hourly_match_score || 0;
         const proc = e.procurement_pct || 0;
         const curt = c.curtailment_pct || 0;
-        const co2 = e.co2_abated_tons || 0;
+        const co2 = getCO2Abated(e);
 
         if (incr != null) { minIncr = Math.min(minIncr, incr); maxIncr = Math.max(maxIncr, incr); }
         minMatch = Math.min(minMatch, match); maxMatch = Math.max(maxMatch, match);
@@ -6279,7 +6347,7 @@ function updateHeatmapTiles(region, entry, iso) {
     });
 
     const adj = cfAdjust(entry, iso);
-    const c = entry.costs || {};
+    const c = getUnifiedCosts(entry);
 
     // Apply heatmap classes
     const heatmapClasses = ['heatmap-1', 'heatmap-2', 'heatmap-3', 'heatmap-4', 'heatmap-5'];
@@ -6299,10 +6367,10 @@ function updateHeatmapTiles(region, entry, iso) {
     // Curtailment: higher = red
     applyHeatmap('tileCurtail', c.curtailment_pct || 0, minCurt, maxCurt, true);
     // CO2 abated: higher = green
-    applyHeatmap('tileCO2', entry.co2_abated_tons || 0, minCO2, maxCO2, false);
+    applyHeatmap('tileCO2', getCO2Abated(entry), minCO2, maxCO2, false);
 
     // Abatement cost tile
-    const co2Tons = entry.co2_abated_tons || 0;
+    const co2Tons = getCO2Abated(entry);
     const abateCostEl = document.getElementById('metricAbateCost');
     const abateCostSub = document.getElementById('metricAbateCostSub');
     if (abateCostEl && co2Tons > 0 && adj.newIncremental != null) {
@@ -6320,7 +6388,7 @@ function updateHeatmapTiles(region, entry, iso) {
             const prevEntry = resolveEntry(region, String(prevThresh));
             if (prevEntry) {
                 const prevAdj = cfAdjust(prevEntry, iso);
-                const prevCO2 = prevEntry.co2_abated_tons || 0;
+                const prevCO2 = getCO2Abated(prevEntry);
                 const deltaCost = (adj.newIncremental - prevAdj.newIncremental) * annDemandMWh;
                 const deltaCO2 = co2Tons - prevCO2;
                 if (deltaCO2 > 0) {
@@ -6352,6 +6420,77 @@ const sensitivityState = {
     transmission: 'Medium'     // All resource transmission adders
 };
 
+// ---- 45Q Toggle State ----
+let show45Q = true;  // Default: show costs WITH 45Q credit
+
+// ---- Scenario Resolver ----
+// Maps sensitivity toggle state → scenario key (e.g., "MMM_M_M")
+// Then extracts the scenario data from within the threshold's scenarios dict.
+function getScenarioKey() {
+    const levelMap = { Low: 'L', Medium: 'M', High: 'H', None: 'N' };
+    const r = levelMap[sensitivityState.renewable_gen] || 'M';
+    const f = levelMap[sensitivityState.firm_gen] || 'M';
+    const s = levelMap[sensitivityState.storage] || 'M';
+    const fu = levelMap[sensitivityState.fossil_fuel] || 'M';
+    const tx = levelMap[sensitivityState.transmission] || 'M';
+    return `${r}${f}${s}_${fu}_${tx}`;
+}
+
+function resolveScenario(thresholdData) {
+    if (!thresholdData?.scenarios) return null;
+    const key = getScenarioKey();
+    return thresholdData.scenarios[key] || null;
+}
+
+function getScenarioCosts(scenario) {
+    // Returns the appropriate cost dict based on 45Q toggle
+    if (!scenario) return null;
+    if (!show45Q && scenario.no_45q_costs) {
+        return scenario.no_45q_costs;
+    }
+    return scenario.costs || null;
+}
+
+function getScenarioCostsDetail(scenario) {
+    // For Medium scenario, costs_detail has full breakdown (resource_costs, curtailment, etc.)
+    if (!scenario) return null;
+    return scenario.costs_detail || null;
+}
+
+// Unified cost accessor: merges costs_detail (Medium only) with costs (all scenarios)
+// Returns object with canonical long key names for backward compat
+// When show45Q=false, aggregate costs come from no_45q_costs, not costs_detail
+function getUnifiedCosts(entry) {
+    if (!entry) return {};
+    const detail = entry.costs_detail || {};
+    const costs = show45Q ? (entry.costs || {}) : (entry.no_45q_costs || entry.costs || {});
+    // Resource breakdown is always from costs_detail (mix doesn't change with 45Q)
+    // Aggregate cost values: prefer costs_detail ONLY when show45Q is true
+    const useDetail = show45Q;
+    return {
+        resource_costs: detail.resource_costs || null,
+        effective_cost_per_useful_mwh: (useDetail ? detail.effective_cost_per_useful_mwh : null) ?? costs.effective_cost ?? null,
+        total_cost_per_demand_mwh: (useDetail ? detail.total_cost_per_demand_mwh : null) ?? costs.total_cost ?? null,
+        incremental_above_baseline: (useDetail ? detail.incremental_above_baseline : null) ?? costs.incremental ?? null,
+        baseline_wholesale_cost: (useDetail ? detail.baseline_wholesale_cost : null) ?? costs.wholesale ?? null,
+        curtailment_pct: detail.curtailment_pct ?? null,
+    };
+}
+
+// Extract CO2 abated tons from scenario (handles nested structure)
+function getCO2Abated(entry) {
+    if (!entry) return 0;
+    if (entry.co2_abated_tons != null) return entry.co2_abated_tons;
+    if (entry.co2_abated?.total_co2_abated_tons != null) return entry.co2_abated.total_co2_abated_tons;
+    return 0;
+}
+
+// Resolve scenario from threshold data using current sensitivity toggles
+function resolveThresholdToScenario(thresholdData) {
+    if (!thresholdData?.scenarios) return null;
+    return resolveScenario(thresholdData);
+}
+
 function initSensitivityToggles() {
     document.querySelectorAll('.toggle-btn-group').forEach(group => {
         const toggleKey = group.getAttribute('data-toggle');
@@ -6377,6 +6516,27 @@ function initSensitivityToggles() {
             });
         });
     });
+
+    // 45Q toggle — separate from paired sensitivity toggles
+    const toggle45Q = document.getElementById('toggle45Q');
+    if (toggle45Q) {
+        toggle45Q.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                toggle45Q.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                show45Q = (this.getAttribute('data-value') === 'with');
+                if (DATA) {
+                    updateAll();
+                    if (typeof narrativeCostChart !== 'undefined' && narrativeCostChart) {
+                        refreshNarrativeCostChart();
+                    }
+                    if (typeof refreshNarrativeStats === 'function') {
+                        refreshNarrativeStats();
+                    }
+                }
+            });
+        });
+    }
 }
 
 // ---- CO2 Metric Tile Update ----
@@ -6385,8 +6545,9 @@ function updateCO2Tile(entry) {
     const sub = document.getElementById('metricCO2AbatedSub');
     if (!el) return;
     // Check if CO2 data exists in the entry
-    if (entry && entry.co2_abated_tons != null) {
-        el.textContent = formatCommas(Math.round(entry.co2_abated_tons));
+    const co2Val = getCO2Abated(entry);
+    if (entry && co2Val > 0) {
+        el.textContent = formatCommas(Math.round(co2Val));
         sub.textContent = 'tons';
     } else {
         el.textContent = '--';
@@ -6412,14 +6573,15 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const annualDemandMWh = regionData.annual_demand_mwh || 1;
     const annualDemandTWh = annualDemandMWh / 1e6;
 
-    // Get interim entry resource costs
-    const interimRC = entry.costs?.resource_costs;
+    // Get interim entry resource costs from costs_detail (has resource_costs breakdown)
+    const interimDetail = getScenarioCostsDetail(entry);
+    const interimRC = interimDetail?.resource_costs;
     if (!interimRC) {
-        if (insightBox) insightBox.innerHTML = 'Resource cost data not available for this threshold.';
+        if (insightBox) insightBox.innerHTML = 'Resource cost data not available for this threshold. Only the Medium (MMM_M_M) scenario has full cost breakdowns.';
         return;
     }
 
-    // Long-term target
+    // Long-term target — resolve scenario within that threshold
     const longtermVal = document.getElementById('longtermTarget').value;
     const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
     const longtermEntry = longtermThreshold ? resolveEntry(regionData, longtermThreshold) : null;

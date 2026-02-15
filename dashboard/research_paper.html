@@ -1539,6 +1539,106 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         costs and clean firm availability in the specific region of operation.
     </p>
 
+    <h3 id="45q-sensitivity">6.8 45Q Tax Credit: A Make-or-Break Policy Lever</h3>
+    <p>
+        Our baseline analysis includes the Section 45Q tax credit ($85/ton CO&#8322; for geologic storage),
+        which reduces CCS-CCGT levelized cost by approximately $33/MWh. This credit is embedded in our
+        Low/Medium/High CCS cost ranges. Removing 45Q fundamentally changes CCS competitiveness and,
+        where CCS enters the optimal mix, dramatically increases portfolio costs.
+    </p>
+    <p>
+        We analyze three policy scenarios: <strong>With 45Q</strong> (current law, our default),
+        <strong>Without 45Q</strong> (credit expires or is repealed), and a <strong>45Q Midpoint</strong>
+        (half-credit, representing partial phase-down or reduced capture rates).
+    </p>
+
+    <h4>Regional Impact Varies Dramatically</h4>
+    <p>
+        The 45Q credit's importance is entirely dependent on whether CCS appears in the optimal resource mix &mdash;
+        which varies by region and matching target:
+    </p>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Region</th>
+                <th>45Q Exposure</th>
+                <th>Peak CCS Share</th>
+                <th>Max Cost Increase (w/o 45Q)</th>
+                <th>Driver</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>CAISO</strong></td>
+                <td style="color:#DC2626;font-weight:600;">High</td>
+                <td>40% (at 97.5%)</td>
+                <td>+$69/MWh (+112%)</td>
+                <td>CCS enters mix early (80% threshold), persists through 99%</td>
+            </tr>
+            <tr>
+                <td><strong>ERCOT</strong></td>
+                <td style="color:#16A34A;font-weight:600;">Minimal</td>
+                <td>5% (at 87.5% only)</td>
+                <td>+$13/MWh (+29%)</td>
+                <td>Cheap wind/solar make CCS uncompetitive at nearly all targets</td>
+            </tr>
+            <tr>
+                <td><strong>PJM</strong></td>
+                <td style="color:#D97706;font-weight:600;">Low</td>
+                <td>5% (at 95% only)</td>
+                <td>+$14/MWh (+22%)</td>
+                <td>Large nuclear fleet reduces need for CCS; enters only at 95%</td>
+            </tr>
+            <tr>
+                <td><strong>NYISO</strong></td>
+                <td style="color:#DC2626;font-weight:600;">High</td>
+                <td>20% (at 92.5%)</td>
+                <td>+$64/MWh (+77%)</td>
+                <td>CCS appears sporadically (80%, 92.5%, 97.5%) at high shares</td>
+            </tr>
+            <tr>
+                <td><strong>NEISO</strong></td>
+                <td style="color:#DC2626;font-weight:600;">High</td>
+                <td>50% (at 97.5%)</td>
+                <td>+$61/MWh (+63%)</td>
+                <td>Highest CCS dependence; dominates mix at 97.5% threshold</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h4>CCS vs. LDES Crossover</h4>
+    <p>
+        Without 45Q, CCS-CCGT baseload costs rise to $102&ndash;132/MWh depending on region (vs. $65&ndash;95/MWh
+        with 45Q). LDES (100-hour iron-air) costs $157&ndash;204/MWh. The crossover capacity factor &mdash;
+        the dispatch rate above which CCS is cheaper than LDES &mdash; clusters around
+        <strong>45% across all regions</strong> (range: 44.5&ndash;46.6%). This means:
+    </p>
+    <ul style="margin: 10px 0 20px 24px; font-size: 0.92rem; line-height: 2; color: var(--text-secondary);">
+        <li><strong>With 45Q:</strong> CCS is competitive at relatively low dispatch rates, making it the
+            preferred firm dispatchable resource. LDES plays a supplementary role.</li>
+        <li><strong>Without 45Q:</strong> CCS only makes sense for baseload operation (&gt;45% CF). For peaking
+            and intermediate dispatch, LDES becomes more cost-effective &mdash; but at higher absolute cost.</li>
+    </ul>
+
+    <div class="note-box">
+        <strong>Policy Implication:</strong> For regions where CCS constitutes 20&ndash;50% of the optimal mix
+        (CAISO, NYISO, NEISO), the 45Q tax credit is a first-order determinant of 24/7 CFE cost. Without it,
+        effective costs at 95%+ matching could nearly double. The interactive dashboard includes a 45Q toggle
+        to explore these scenarios in real time. Organizations relying on CCS in their decarbonization
+        strategies should treat 45Q extension as a critical policy dependency.
+    </div>
+
+    <h4>Midpoint Scenario</h4>
+    <p>
+        A partial 45Q scenario (50% of the current credit, equivalent to ~$42/ton) splits the cost difference.
+        For CAISO at 95% matching: with full 45Q = $68/MWh, without = $136/MWh, midpoint &asymp; $102/MWh. This
+        represents a plausible outcome under reduced capture rates, partial phase-down, or renegotiated credit levels.
+        In this scenario, CCS remains in the optimal mix but at a substantially higher cost floor, potentially
+        opening the door for LDES to displace some CCS capacity at intermediate dispatch rates.
+    </p>
+
     <!-- ========== 7. LIMITATIONS ========== -->
     <h2 id="limitations">7. Limitations &amp; Considerations</h2>
     <p>
@@ -1619,8 +1719,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             LCOE change) are not captured.</li>
         <li><strong>No grid services revenue:</strong> Ancillary service revenue (frequency regulation, capacity
             payments) that could offset procurement costs is not modeled.</li>
-        <li><strong>No policy risk:</strong> ITC/PTC extension, 45Q credit durability, and potential carbon pricing
-            are not modeled.</li>
+        <li><strong>Limited policy risk modeling:</strong> ITC/PTC extension and potential carbon pricing
+            are not modeled. 45Q credit sensitivity is analyzed in <a href="#45q-sensitivity">Section 6.8</a>,
+            showing cost increases of 22&ndash;112% where CCS enters the optimal mix.</li>
         <li><strong>No demand-side flexibility:</strong> Load shifting and demand response could reduce 100%
             matching costs by an estimated 10&ndash;20%.</li>
     </ul>
