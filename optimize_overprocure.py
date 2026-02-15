@@ -1038,17 +1038,25 @@ EDGE_CASE_SEEDS = [
 ]
 
 
-def generate_combinations(hydro_cap, step=5, max_single=80):
+def generate_combinations(hydro_cap, step=5, max_single=80, min_dispatchable=0):
     """
     Generate all valid resource mix combinations that sum to 100%.
     Resources: clean_firm, solar, wind, ccs_ccgt, hydro
     Hydro capped by region. No single resource exceeds max_single%.
+    min_dispatchable: floor on (clean_firm + ccs_ccgt) %, derived from prior threshold.
     """
     combos = []
     for cf in range(0, min(max_single + 1, 101), step):
         for sol in range(0, min(max_single + 1, 101 - cf), step):
             for wnd in range(0, min(max_single + 1, 101 - cf - sol), step):
+                # Early prune: max possible ccs is (100 - cf - sol - wnd),
+                # so if cf + max_ccs < floor, skip entire wnd iteration
+                max_ccs = 100 - cf - sol - wnd
+                if cf + max_ccs < min_dispatchable:
+                    continue
                 for ccs in range(0, min(max_single + 1, 101 - cf - sol - wnd), step):
+                    if cf + ccs < min_dispatchable:
+                        continue
                     hyd = 100 - cf - sol - wnd - ccs
                     if hyd >= 0 and hyd <= hydro_cap and hyd <= max_single:
                         combos.append({
@@ -1058,15 +1066,17 @@ def generate_combinations(hydro_cap, step=5, max_single=80):
     return combos
 
 
-def get_seed_combos(hydro_cap):
+def get_seed_combos(hydro_cap, min_dispatchable=0):
     """
     Return edge case seed mixes valid for this region's hydro cap.
-    Filters out seeds where hydro exceeds regional cap.
+    Filters out seeds where hydro exceeds regional cap or dispatchable < floor.
     """
     valid = []
     seen = set()
     for seed in EDGE_CASE_SEEDS:
         if seed['hydro'] > hydro_cap:
+            continue
+        if seed['clean_firm'] + seed['ccs_ccgt'] < min_dispatchable:
             continue
         key = tuple(seed[rt] for rt in RESOURCE_TYPES)
         if key not in seen:
@@ -1075,9 +1085,10 @@ def get_seed_combos(hydro_cap):
     return valid
 
 
-def generate_combinations_around(base_combo, hydro_cap, step=1, radius=2):
+def generate_combinations_around(base_combo, hydro_cap, step=1, radius=2, min_dispatchable=0):
     """
     Generate combinations in a neighborhood around base_combo with given step and radius.
+    min_dispatchable: floor on (clean_firm + ccs_ccgt) %, derived from prior threshold.
     """
     combos = []
     seen = set()
@@ -1093,6 +1104,8 @@ def generate_combinations_around(base_combo, hydro_cap, step=1, radius=2):
         for sol in ranges['solar']:
             for wnd in ranges['wind']:
                 for ccs in ranges['ccs_ccgt']:
+                    if cf + ccs < min_dispatchable:
+                        continue
                     hyd = 100 - cf - sol - wnd - ccs
                     if hyd < 0 or hyd > hydro_cap:
                         continue
@@ -1846,7 +1859,8 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                            cost_levels=None, score_cache=None,
                            resweep=False, seed_mixes=None,
                            procurement_bounds_override=None,
-                           warm_start_result=None):
+                           warm_start_result=None,
+                           min_dispatchable=0):
     """
     CO-OPTIMIZE cost and matching simultaneously for a given threshold target.
     Search across procurement levels AND resource mixes to find the CHEAPEST
@@ -1979,7 +1993,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
 
         # Build targeted combo list: warm-start mix + 5% neighborhood + edge seeds
         ws_combos = [dict(ws_mix)]
-        ws_neighborhood = generate_combinations_around(ws_mix, hydro_cap, step=5, radius=2)
+        ws_neighborhood = generate_combinations_around(ws_mix, hydro_cap, step=5, radius=2, min_dispatchable=min_dispatchable)
         existing_set = set()
         existing_set.add(tuple(ws_mix[rt] for rt in RESOURCE_TYPES))
         for nc in ws_neighborhood:
@@ -1988,7 +2002,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 existing_set.add(key)
                 ws_combos.append(nc)
         # Always include edge-case seeds
-        seeds = get_seed_combos(hydro_cap)
+        seeds = get_seed_combos(hydro_cap, min_dispatchable=min_dispatchable)
         for seed in seeds:
             key = tuple(seed[rt] for rt in RESOURCE_TYPES)
             if key not in existing_set:
@@ -2042,9 +2056,9 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     if not candidates:
         # FULL PHASE 1: Coarse grid scan (used for Medium scenario, resweep, or warm-start fallback)
         phase1_step = 5 if resweep else 10
-        combos_10 = generate_combinations(hydro_cap, step=phase1_step)
+        combos_10 = generate_combinations(hydro_cap, step=phase1_step, min_dispatchable=min_dispatchable)
         # Inject edge case seeds to guarantee extreme mixes survive pruning
-        seeds = get_seed_combos(hydro_cap)
+        seeds = get_seed_combos(hydro_cap, min_dispatchable=min_dispatchable)
         seed_set = set(tuple(s[rt] for rt in RESOURCE_TYPES) for s in seeds)
         existing_set = set(tuple(c[rt] for rt in RESOURCE_TYPES) for c in combos_10)
         for seed in seeds:
@@ -2123,7 +2137,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 continue
             pf = p / 100.0
 
-            neighborhood = generate_combinations_around(combo, hydro_cap, step=5, radius=1)
+            neighborhood = generate_combinations_around(combo, hydro_cap, step=5, radius=1, min_dispatchable=min_dispatchable)
             for rcombo in neighborhood:
                 key = (rcombo['clean_firm'], rcombo['solar'], rcombo['wind'],
                        rcombo['ccs_ccgt'], rcombo['hydro'], p)
@@ -2203,7 +2217,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 continue
             pf = p / 100.0
 
-            fine_combos = generate_combinations_around(combo, hydro_cap, step=1, radius=phase3_radius)
+            fine_combos = generate_combinations_around(combo, hydro_cap, step=1, radius=phase3_radius, min_dispatchable=min_dispatchable)
             for rcombo in fine_combos:
                 key = (rcombo['clean_firm'], rcombo['solar'], rcombo['wind'],
                        rcombo['ccs_ccgt'], rcombo['hydro'], p)
@@ -2568,6 +2582,29 @@ def process_iso(args):
         print(f"    [cache] Cumulative score cache: {len(cumulative_score_cache)} entries "
               f"(shared across thresholds)")
 
+    # ── DISPATCHABLE FLOOR ──
+    # At higher thresholds, dispatchable capacity (clean_firm + ccs_ccgt) must be
+    # non-decreasing. Compute min(CF+CCS) across all scenarios from the previous
+    # completed threshold and use (min - 10%) as a floor, pruning the search space.
+    # 10% headroom preserves ability for costs to shift CF↔CCS split.
+    dispatchable_floor = 0
+    sorted_thresholds = sorted(THRESHOLDS)
+    for t in sorted_thresholds:
+        t_str = str(t)
+        if t_str in completed_thresholds and t_str in iso_results.get('thresholds', {}):
+            t_data = iso_results['thresholds'][t_str]
+            scenarios = t_data.get('scenarios', {})
+            if scenarios:
+                min_disp = min(
+                    s['resource_mix']['clean_firm'] + s['resource_mix']['ccs_ccgt']
+                    for s in scenarios.values() if 'resource_mix' in s
+                )
+                dispatchable_floor = max(dispatchable_floor, min_disp - 10)
+    dispatchable_floor = max(0, dispatchable_floor)
+    if dispatchable_floor > 0:
+        print(f"    [floor] Dispatchable floor (CF+CCS): {dispatchable_floor}% "
+              f"(from prior thresholds, with 10% headroom)")
+
     for threshold in THRESHOLDS:
         t_str = str(threshold)
         if t_str in completed_thresholds:
@@ -2622,7 +2659,8 @@ def process_iso(args):
             medium_result = optimize_for_threshold(
                 iso, demand_norm, supply_profiles, threshold, hydro_cap,
                 emission_rates, demand_total_mwh,
-                cost_levels=medium_cost_levels, score_cache=score_cache
+                cost_levels=medium_cost_levels, score_cache=score_cache,
+                min_dispatchable=dispatchable_floor
             )
             if medium_result:
                 r_gen, f_gen, stor, fuel, tx = medium_cost_levels
@@ -2663,7 +2701,8 @@ def process_iso(args):
             arch_result = optimize_for_threshold(
                 iso, demand_norm, supply_profiles, threshold, hydro_cap,
                 emission_rates, demand_total_mwh,
-                cost_levels=arch_cost_levels, score_cache=score_cache
+                cost_levels=arch_cost_levels, score_cache=score_cache,
+                min_dispatchable=dispatchable_floor
             )
             if arch_result:
                 r_gen, f_gen, stor, fuel, tx = arch_cost_levels
@@ -2722,7 +2761,8 @@ def process_iso(args):
                 emission_rates, demand_total_mwh,
                 cost_levels=cost_levels, score_cache=score_cache,
                 warm_start_result=ws,
-                seed_mixes=extra_seeds if ws else None
+                seed_mixes=extra_seeds if ws else None,
+                min_dispatchable=dispatchable_floor
             )
             if ws:
                 warm_start_count += 1
@@ -2805,7 +2845,8 @@ def process_iso(args):
                     result = optimize_for_threshold(
                         iso, demand_norm, supply_profiles, threshold, hydro_cap,
                         emission_rates, demand_total_mwh,
-                        cost_levels=cost_levels, score_cache=score_cache
+                        cost_levels=cost_levels, score_cache=score_cache,
+                        min_dispatchable=dispatchable_floor
                     )
                     if result:
                         r_gen, f_gen, stor, fuel, tx = cost_levels
@@ -2942,6 +2983,18 @@ def process_iso(args):
         # Persist score cache for warm restart on interruption
         save_score_cache(iso, threshold, score_cache)
 
+        # Update dispatchable floor for next threshold
+        if threshold_scenarios:
+            min_disp = min(
+                s['resource_mix']['clean_firm'] + s['resource_mix']['ccs_ccgt']
+                for s in threshold_scenarios.values() if 'resource_mix' in s
+            )
+            new_floor = max(0, min_disp - 10)
+            if new_floor > dispatchable_floor:
+                dispatchable_floor = new_floor
+                print(f"    [floor] Updated dispatchable floor: {dispatchable_floor}% "
+                      f"(min CF+CCS={min_disp}% at {threshold}%, minus 10% headroom)")
+
     # ---- MONOTONICITY RE-SWEEP ----
     # For each cost scenario, cost must be non-decreasing across thresholds.
     # If cost(T_lower) > cost(T_higher), the search missed a better solution at T_lower.
@@ -3032,7 +3085,8 @@ def process_iso(args):
                     emission_rates, demand_total_mwh,
                     cost_levels=cost_levels, score_cache=resweep_cache,
                     resweep=True, seed_mixes=seed_mixes_for_resweep,
-                    procurement_bounds_override=(expanded_min, expanded_max)
+                    procurement_bounds_override=(expanded_min, expanded_max),
+                    min_dispatchable=dispatchable_floor
                 )
 
                 if result:
