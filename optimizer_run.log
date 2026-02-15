@@ -32,3 +32,34 @@ Loading data...
     [checkpoint] Saved CAISO (threshold-80-partial-33of44) → 118 KB
     [checkpoint] Saved CAISO (threshold-80-partial-34of44) → 118 KB
     [checkpoint] Saved CAISO (threshold-80-partial-35of44) → 119 KB
+Loading data...
+  CAISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  ERCOT: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  PJM: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  NYISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  NEISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  CAISO: demand shape averaged over 5 years, scalars from 2025
+  ERCOT: demand shape averaged over 5 years, scalars from 2025
+  PJM: demand shape averaged over 5 years, scalars from 2025
+  NYISO: demand shape averaged over 5 years, scalars from 2025
+  NEISO: demand shape averaged over 5 years, scalars from 2025
+  Data loaded.
+
+======================================================================
+  CAISO (California)
+======================================================================
+    [checkpoint] Resuming CAISO from threshold-80-partial-35of44: 1 thresholds done, partial 80% (35/324 scenarios)
+  Resuming from checkpoint: sweep done, 1 thresholds complete
+  Sweep: loaded from checkpoint (7 points)
+
+  Cost-optimizing thresholds (324 scenarios each)... [1 done, 9 remaining]
+    75%: loaded from checkpoint — skipping
+    [cache] Loaded CAISO 80% score cache: 325333 entries
+    80%: resuming from partial checkpoint (35/324 scenarios done)
+      (pruned: 44 representative scenarios, filling 280 via cross-pollination)
+      Warm-start: 11 diverse seed mixes from Medium + 7 archetypes
+    [checkpoint] Saved CAISO (threshold-80-partial-36of44) → 119 KB
+    [cache] Saved CAISO 80% score cache: 392663 entries (26.8 MB)
+    [checkpoint] Saved CAISO (threshold-80-partial-37of44) → 119 KB
+    [checkpoint] Saved CAISO (threshold-80-partial-38of44) → 120 KB
+    [checkpoint] Saved CAISO (threshold-80-partial-39of44) → 120 KB
