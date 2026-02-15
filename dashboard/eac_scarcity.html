@@ -442,10 +442,16 @@ body {
             <strong>Available Supply:</strong> Total non-SSS clean generation minus existing corporate PPAs already contracted. This represents the uncommitted pool available for new voluntary corporate procurement.
         </p>
         <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
+            <strong>Demand Scope:</strong> &ldquo;Corporate participation&rdquo; represents voluntary, hourly-matched EAC procurement by commercial &amp; industrial (C&amp;I) customers. The C&amp;I share of total load is fixed at 62% (EIA 2024 national average). At X% participation, corporate EAC demand = X% &times; C&amp;I load &times; procurement ratio for the hourly match target. Residential load participates in RPS but not voluntary procurement.
+        </p>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
+            <strong>Supply Stack:</strong> New clean generation enters the available pool only when its LCOE is below the wholesale electricity price plus the regional RPS demand adder. Existing clean (hydro, nuclear merchant, wind/solar PPAs) is priced at wholesale. The clean premium for corporate buyers equals the marginal cost of the next MWh on the supply stack above wholesale&mdash;rising as demand exhausts cheaper tiers.
+        </p>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
             <strong>Scarcity Classification:</strong> Based on demand/supply ratio. Abundant (&le;0.3), Adequate (&le;0.6), Tightening (&le;0.8), Scarce (&le;0.95), Critical (&gt;0.95).
         </p>
         <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
-            <strong>Data Sources:</strong> SSS baselines from EIA Form 923, NRC status reports, DSIRE state RPS database, ISO annual reports. Demand from EIA Hourly Electric Grid Monitor (2021&ndash;2025). Supply growth rates from state RPS trajectories, interconnection queue analysis (LBNL), and IRA incentive modeling.
+            <strong>Data Sources:</strong> SSS baselines from EIA Form 923, NRC status reports, DSIRE state RPS database, ISO annual reports. Demand from EIA Hourly Electric Grid Monitor (2021&ndash;2025). LCOEs from NREL ATB 2024. Wholesale prices from ISO market data. RPS adders from observed 2025 REC prices scaled by target trajectory.
         </p>
         <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
             Full methodology: <a href="research_paper.html" style="color:#1565C0;">Methodology &amp; Paper</a>
@@ -784,7 +790,7 @@ function updateSupplyDemandChart() {
                 }
             },
             scales: {
-                x: { title: { display: true, text: 'Corporate Participation (% of ISO load)', font: { size: 12 } } },
+                x: { title: { display: true, text: 'Corporate Participation (% of C&I Demand)', font: { size: 12 } } },
                 y: { title: { display: true, text: 'TWh', font: { size: 12 } }, beginAtZero: true }
             }
         }
