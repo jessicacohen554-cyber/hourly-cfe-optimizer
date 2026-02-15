@@ -375,6 +375,63 @@ body {
     color: var(--navy);
 }
 
+/* Stranded Asset Breakdown */
+.stranded-breakdown {
+    margin-bottom: 20px;
+}
+.stranded-breakdown-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+}
+.stranded-bar-container {
+    display: flex;
+    height: 28px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    margin-bottom: 10px;
+}
+.stranded-bar-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 6px;
+    transition: flex-basis 0.4s ease;
+}
+.stranded-resource-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.stranded-resource-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.stranded-resource-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.stranded-resource-item .stranded-val {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 /* ========== WHAT YOU NEED PANEL ========== */
 .what-you-need-panel {
     background: var(--bg-card);
@@ -683,11 +740,16 @@ body {
     margin-bottom: 28px;
 }
 
+.charts-row-duo {
+    grid-template-columns: minmax(240px, 1fr) minmax(0, 2.5fr);
+}
+
 .chart-panel {
     background: var(--bg-card);
     border: 1px solid var(--border-light);
     border-radius: 10px;
     padding: 28px;
+    min-width: 0;
 }
 
 .chart-panel.donut-panel {
@@ -695,6 +757,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    max-width: 380px;
 }
 
 .chart-panel h3 {
@@ -709,10 +772,10 @@ body {
 
 .donut-container {
     position: relative;
-    width: 90%;
-    max-width: 260px;
+    width: 100%;
+    max-width: 240px;
     margin: 0 auto;
-    padding: 8px;
+    padding: 4px;
     aspect-ratio: 1 / 1;
 }
 
@@ -769,7 +832,7 @@ body {
 .compressed-day-container {
     position: relative;
     height: 370px;
-    overflow: hidden;
+    min-width: 0;
 }
 
 /* ========== COST BREAKDOWN ========== */
@@ -1196,6 +1259,9 @@ body {
     .pathway-ctrl { min-width: auto; }
     .pathway-metrics { grid-template-columns: 1fr; gap: 12px; }
     .pathway-metric-value { font-size: 1.5rem; }
+    .stranded-bar-container { height: 24px; }
+    .stranded-bar-seg { font-size: 0.6rem; padding: 0 3px; }
+    .stranded-resource-list { font-size: 0.75rem; gap: 4px 10px; }
 }
 
 .key-findings {
@@ -2653,6 +2719,20 @@ body {
     .charts-row {
         grid-template-columns: 1fr !important;
     }
+    .charts-row-duo {
+        grid-template-columns: minmax(0, 320px) minmax(0, 1fr) !important;
+    }
+    .chart-panel.donut-panel {
+        max-width: 100%;
+    }
+}
+@media (max-width: 768px) {
+    .charts-row-duo {
+        grid-template-columns: 1fr !important;
+    }
+    .chart-panel.donut-panel {
+        max-width: 100%;
+    }
 }
 @media (max-width: 1000px) {
     .metrics-row {
@@ -2746,7 +2826,7 @@ body {
         margin-bottom: 12px;
     }
     .donut-container {
-        max-width: 200px;
+        max-width: 210px;
     }
     .donut-center-label .dcl-value {
         font-size: 1.6rem;
@@ -2761,7 +2841,7 @@ body {
         height: 10px;
     }
     .compressed-day-container {
-        height: 420px;
+        height: 400px;
     }
     .peak-tower-wrap {
         height: 240px;
@@ -3359,6 +3439,13 @@ body {
             </div>
         </div>
 
+        <!-- Stranded Asset Resource Breakdown -->
+        <div class="stranded-breakdown" id="strandedBreakdown" style="display:none;">
+            <h4 class="stranded-breakdown-title">Stranded Asset Breakdown by Resource</h4>
+            <div class="stranded-bar-container" id="strandedBarContainer"></div>
+            <div class="stranded-resource-list" id="strandedResourceList"></div>
+        </div>
+
         <div class="wyn-insight-box" id="wynInsightBox">
             Select a region and matching targets to see the resource pathway comparison.
         </div>
@@ -3416,8 +3503,8 @@ body {
         <p id="keyFindingText"></p>
     </div>
 
-    <!-- DONUT (Resource Mix) -->
-    <div class="charts-row" style="grid-template-columns: 1fr 2fr;">
+    <!-- DONUT (Resource Mix) + COMPRESSED DAY -->
+    <div class="charts-row charts-row-duo">
         <div class="chart-panel donut-panel">
             <h3>How Your Clean Energy is Sourced</h3>
             <div class="donut-container">
@@ -6555,16 +6642,19 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         const allResources = new Set([...Object.keys(interimRC), ...Object.keys(longtermRC)]);
 
         allResources.forEach(r => {
+            if (r === 'storage') return; // skip combined storage; use battery + ldes separately
             const intRes = interimRC[r] || {};
             const ltRes = longtermRC[r] || {};
 
             // Interim procurement at interim demand level, in TWh
-            const interimTotalPct = intRes.total_pct_of_demand || 0;
-            const interimCostPerDemandMWh = intRes.cost_per_demand_mwh || 0;
+            // Storage types (battery, ldes) use dispatch_pct; generation uses total_pct_of_demand
+            const isStorageType = (r === 'battery' || r === 'ldes');
+            const interimTotalPct = isStorageType ? (intRes.dispatch_pct || 0) : (intRes.total_pct_of_demand || 0);
+            const interimCostPerDemandMWh = intRes.cost_per_demand_mwh || intRes.cost || 0;
             const interimProcTWh = interimTotalPct / 100 * interimTWh;
 
             // Long-term needs at long-term demand level, in TWh
-            const longtermTotalPct = ltRes.total_pct_of_demand || 0;
+            const longtermTotalPct = isStorageType ? (ltRes.dispatch_pct || 0) : (ltRes.total_pct_of_demand || 0);
             const longtermNeedTWh = longtermTotalPct / 100 * longtermTWh;
 
             if (interimProcTWh <= 0) return;
@@ -6594,12 +6684,18 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         const strandedPct = 100 - carriedPct;
 
         // Also compute static (no growth) version for demand offset
+        const getPct = (res, key) => {
+            if (key === 'battery' || key === 'ldes') return res?.dispatch_pct || 0;
+            return res?.total_pct_of_demand || 0;
+        };
         const staticInterimTWh_total = Object.keys(interimRC).reduce((s, r) => {
-            return s + (interimRC[r]?.total_pct_of_demand || 0) / 100 * todayTWh;
+            if (r === 'storage') return s;
+            return s + getPct(interimRC[r], r) / 100 * todayTWh;
         }, 0);
         const staticCarriedTWh = Object.keys(interimRC).reduce((s, r) => {
-            const intPct = interimRC[r]?.total_pct_of_demand || 0;
-            const ltPct = (longtermRC[r]?.total_pct_of_demand || 0);
+            if (r === 'storage') return s;
+            const intPct = getPct(interimRC[r], r);
+            const ltPct = getPct(longtermRC[r], r);
             const intT = intPct / 100 * todayTWh;
             const ltT = ltPct / 100 * todayTWh; // no growth
             return s + Math.min(intT, ltT);
@@ -6638,6 +6734,55 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 pwDemand.textContent = '+' + Math.round(demandOffset) + ' pp';
             } else {
                 pwDemand.textContent = 'Minimal';
+            }
+        }
+
+        // Stranded asset resource breakdown visualization
+        const breakdownEl = document.getElementById('strandedBreakdown');
+        const barContainer = document.getElementById('strandedBarContainer');
+        const listContainer = document.getElementById('strandedResourceList');
+        if (breakdownEl && barContainer && listContainer) {
+            if (strandedDetails.length > 0) {
+                breakdownEl.style.display = '';
+                const totalStrandedTWh = strandedDetails.reduce((s, d) => s + d.strandedTWh, 0);
+
+                // Color map for stranded resources
+                const strandedColorMap = {
+                    'Clean Firm': COLORS.clean_firm.base, 'CCS-CCGT': COLORS.ccs_ccgt.base,
+                    'Solar': COLORS.solar.base, 'Wind': COLORS.wind.base,
+                    'Hydro': COLORS.hydro.base, 'Battery': COLORS.battery.base,
+                    'LDES': COLORS.ldes.base, 'Storage': COLORS.storage.base,
+                    'Clean Firm (Nuc+Geo)': COLORS.clean_firm.base
+                };
+
+                // Sort by stranded TWh descending
+                const sorted = strandedDetails.sort((a, b) => b.strandedTWh - a.strandedTWh);
+
+                // Horizontal stacked bar
+                barContainer.innerHTML = sorted.map(d => {
+                    const pct = (d.strandedTWh / totalStrandedTWh * 100);
+                    const color = strandedColorMap[d.resource] || '#888';
+                    const label = pct > 12 ? `${d.resource} ${d.strandedTWh.toFixed(1)}` : '';
+                    return `<div class="stranded-bar-seg" style="flex-basis:${pct}%;background:${color};" title="${d.resource}: ${d.strandedTWh.toFixed(2)} TWh stranded">${label}</div>`;
+                }).join('');
+
+                // Resource detail list
+                listContainer.innerHTML = sorted.map(d => {
+                    const color = strandedColorMap[d.resource] || '#888';
+                    const pctOfInterim = d.interimTWh > 0 ? Math.round(d.strandedTWh / d.interimTWh * 100) : 0;
+                    return `<div class="stranded-resource-item">
+                        <div class="stranded-resource-dot" style="background:${color}"></div>
+                        <span>${d.resource}:</span>
+                        <span class="stranded-val">${d.strandedTWh.toFixed(1)} TWh</span>
+                        <span>(${pctOfInterim}% of interim)</span>
+                    </div>`;
+                }).join('');
+            } else {
+                breakdownEl.style.display = strandedPct < 1 ? '' : 'none';
+                if (strandedPct < 1) {
+                    barContainer.innerHTML = `<div class="stranded-bar-seg" style="flex-basis:100%;background:#22C55E;">No stranded assets</div>`;
+                    listContainer.innerHTML = '';
+                }
             }
         }
 
@@ -6688,6 +6833,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     } else {
         // No long-term target selected — show simpler insight, hide metrics
         if (metricsEl) metricsEl.style.display = 'none';
+        const breakdownElHide = document.getElementById('strandedBreakdown');
+        if (breakdownElHide) breakdownElHide.style.display = 'none';
         if (insightBox) {
             let totalExistingTWh = 0;
             let totalTargetTWh = 0;
