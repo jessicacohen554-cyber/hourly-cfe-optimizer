@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The 8,760 Problem — Regional Deep Dives</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -515,9 +516,20 @@ body {
     .header h1 { font-size: 1.8rem; }
     .story-stat-row { grid-template-columns: repeat(2, 1fr); }
     .story-insight-box { flex-direction: column; gap: 8px; }
+    .chart-container canvas { height: 280px !important; }
+    .chart-container { min-height: 300px; }
+    .region-btn { padding: 10px 14px; min-height: 44px; font-size: 0.82rem; }
+    #headerTitle { font-size: 1.5rem !important; }
+    #headerSubtitle { font-size: 0.88rem !important; }
+    .story-stat-label { font-size: 0.75rem; }
 }
-@media (max-width: 768px) {
-    #sensitivityLabels > div { grid-template-columns: 1fr !important; }
+@media (max-width: 375px) {
+    .header { padding: 40px 12px 32px; }
+    .header h1 { font-size: 1.6rem; }
+    .header .subtitle { font-size: 0.88rem; }
+    #headerTitle { font-size: 1.3rem !important; }
+    .story-section { padding: 32px 14px; }
+    .region-btn { width: calc(50% - 4px); }
 }
 
 /* Reduced motion */
@@ -543,7 +555,7 @@ body {
         <a href="research_paper.html">Methodology &amp; Paper</a>
     </div>
 </nav>
-<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- ========== HEADER BANNER (shared across all pages) ========== -->
 <header class="header">
