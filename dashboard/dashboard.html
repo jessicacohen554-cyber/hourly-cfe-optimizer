@@ -3816,7 +3816,7 @@ function updateAll() {
     updateMetrics(region, displayEntry);
     updateKeyFinding(iso, displayThreshold, displayEntry, region);
     updateDonut(displayEntry);
-    updateCompressedDay(displayEntry, region);
+    updateCompressedDay(displayEntry, region, iso);
     updatePeakCapacity(displayEntry, region);
     updateCostPanel(displayEntry);
     updateWhatYouNeedPanel(region, interimEntry, interimThreshold);
@@ -4056,7 +4056,7 @@ function updateDonut(entry) {
 }
 
 // ---- Compressed Day Chart ----
-function updateCompressedDay(entry, region) {
+function updateCompressedDay(entry, region, iso) {
     const cd = entry.compressed_day;
     if (!cd) {
         // No compressed day data
@@ -4073,6 +4073,14 @@ function updateCompressedDay(entry, region) {
         return;
     }
 
+    // UTC offsets: optimizer data is in UTC hour-of-day; rotate to local time
+    // These are standard-time offsets (hours behind UTC). We use a weighted
+    // average that accounts for ~58% of hours being in DST (Mar-Nov).
+    const UTC_OFFSETS = {CAISO: 8, ERCOT: 6, PJM: 5, NYISO: 5, NEISO: 5};
+    const stdOff = UTC_OFFSETS[iso] || 5;
+    // Rotate array left by stdOff positions to convert UTC → local
+    const rotateToLocal = (arr) => [...arr.slice(stdOff), ...arr.slice(0, stdOff)];
+
     const hours = Array.from({length: 24}, (_, i) => i);
     const hourLabels = hours.map(h => {
         if (h === 0) return '12am';
@@ -4087,36 +4095,36 @@ function updateCompressedDay(entry, region) {
     const annualMWh = region.annual_demand_mwh || 1;
     const toMW = (v) => (v / 365) * annualMWh;
 
-    // Calculate stacked matched values (in MW)
-    const matchedCleanFirm = cd.matched.clean_firm.map(v => Math.max(0, toMW(v)));
-    const matchedSolar = cd.matched.solar.map(v => Math.max(0, toMW(v)));
-    const matchedWind = cd.matched.wind.map(v => Math.max(0, toMW(v)));
-    const matchedHydro = cd.matched.hydro.map(v => Math.max(0, toMW(v)));
-    // Combine battery + ldes into a single storage series
-    const matchedStorage = (cd.matched.storage || cd.matched.battery || new Array(24).fill(0)).map((v, i) => {
-        const bat = cd.matched.battery ? cd.matched.battery[i] : (cd.matched.storage ? cd.matched.storage[i] : 0);
-        const ldes = cd.matched.ldes ? cd.matched.ldes[i] : 0;
-        return Math.max(0, toMW(bat + ldes));
-    });
+    // Rotate all compressed-day arrays from UTC to local time, then convert to MW
+    const r = (arr) => rotateToLocal(arr).map(v => Math.max(0, toMW(v)));
+    const rRaw = (arr) => rotateToLocal(arr).map(v => toMW(v));
 
-    // Storage charging (negative, below x-axis) — in MW
-    // Combine battery_charge + ldes_charge if separate fields exist
+    // Calculate stacked matched values (in MW, local time)
+    const matchedCleanFirm = r(cd.matched.clean_firm);
+    const matchedSolar = r(cd.matched.solar);
+    const matchedWind = r(cd.matched.wind);
+    const matchedHydro = r(cd.matched.hydro);
+    // Combine battery + ldes into a single storage series
+    const batArr = cd.matched.battery || cd.matched.storage || new Array(24).fill(0);
+    const ldesArr = cd.matched.ldes || new Array(24).fill(0);
+    const matchedStorage = r(batArr.map((v, i) => v + (ldesArr[i] || 0)));
+
+    // Storage charging (negative, below x-axis) — in MW, local time
     const rawCharge = cd.storage_charge || null;
     const storageCharge = rawCharge
-        ? rawCharge.map(v => toMW(v))
-        : (cd.battery_charge || new Array(24).fill(0)).map((v, i) => {
-            const lc = cd.ldes_charge ? cd.ldes_charge[i] : 0;
-            return toMW(v + lc);
-        });
+        ? rRaw(rawCharge)
+        : rRaw((cd.battery_charge || new Array(24).fill(0)).map((v, i) => {
+            return v + (cd.ldes_charge ? cd.ldes_charge[i] : 0);
+        }));
 
-    // Per-resource surplus (curtailed) — in MW
-    const surplusSolar = (cd.surplus?.solar || new Array(24).fill(0)).map(v => toMW(v));
-    const surplusWind = (cd.surplus?.wind || new Array(24).fill(0)).map(v => toMW(v));
-    const surplusHydro = (cd.surplus?.hydro || new Array(24).fill(0)).map(v => toMW(v));
-    const surplusCleanFirm = (cd.surplus?.clean_firm || new Array(24).fill(0)).map(v => toMW(v));
+    // Per-resource surplus (curtailed) — in MW, local time
+    const surplusSolar = rRaw(cd.surplus?.solar || new Array(24).fill(0));
+    const surplusWind = rRaw(cd.surplus?.wind || new Array(24).fill(0));
+    const surplusHydro = rRaw(cd.surplus?.hydro || new Array(24).fill(0));
+    const surplusCleanFirm = rRaw(cd.surplus?.clean_firm || new Array(24).fill(0));
 
-    // Gap (unmatched) — in MW
-    const gap = cd.gap.map(v => toMW(v));
+    // Gap (unmatched) — in MW, local time
+    const gap = rRaw(cd.gap);
 
     // Build stacked bottom-up: clean_firm, hydro, wind, solar, storage
     // Then per-resource surplus on top (color-coded cross-hatching)
@@ -4257,7 +4265,7 @@ function updateCompressedDay(entry, region) {
     // Demand line on top
     datasets.push({
         label: 'Demand',
-        data: cd.demand.map(v => toMW(v)),
+        data: rRaw(cd.demand),
         backgroundColor: 'transparent',
         borderColor: '#1a1a2e',
         borderWidth: 2.5,
