@@ -540,25 +540,9 @@ body {
 </head>
 <body>
 
-<!-- ========== TOP NAVIGATION ========== -->
-<nav class="top-nav">
-    <span class="nav-brand">The 8,760 Problem</span>
-    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
-        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="top-nav-inner">
-        <a href="index.html">Home</a>
-        <a href="dashboard.html">Cost Optimizer</a>
-        <a href="abatement_dashboard.html">Abatement Dashboard</a>
-        <a href="region_deepdive.html" class="nav-active">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
-        <a href="eac_scarcity.html">EAC Scarcity</a>
-        <a href="research_paper.html">Methodology &amp; Paper</a>
-        <a href="about.html">About</a>
-        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
-        <a href="about.html">About</a>
-    </div>
-</nav>
+<!-- ========== TOP NAVIGATION (injected by nav.js) ========== -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
 <div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- ========== HEADER BANNER (shared across all pages) ========== -->
@@ -741,6 +725,7 @@ body {
 <div class="bottom-banner"></div>
 
 <!-- ========== DATA-DRIVEN CHARTS ========== -->
+<script src="js/shared-data.js"></script>
 <script>
 (function() {
     /* ===== CONFIG ===== */
@@ -752,15 +737,7 @@ body {
         NEISO: { name: 'New England (NEISO)', color: '#6366F1', colorFill: 'rgba(99,102,241,0.35)' }
     };
 
-    const MIX_COLORS = {
-        clean_firm: { fill: 'rgba(30,58,95,0.50)',    border: '#1E3A5F' },
-        ccs_ccgt:   { fill: 'rgba(13,148,136,0.50)',  border: '#0D9488' },
-        solar:      { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
-        wind:       { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },
-        hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
-        battery:    { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' },
-        ldes:       { fill: 'rgba(236,72,153,0.50)',  border: '#EC4899' }
-    };
+    // MIX_COLORS provided by shared-data.js (global scope)
 
     const EMISSION_RATES = { CAISO: 0.37, ERCOT: 0.41, PJM: 0.55, NYISO: 0.37, NEISO: 0.40 }; // EPA eGRID 2022 [4]
 
@@ -1010,7 +987,7 @@ body {
 
         // Build annotation labels at 75%, 90%, 100% showing High/Med/Low values
         const labelAnnotations = {};
-        [75, 90, 100].forEach(target => {
+        [75, 90, 99].forEach(target => {
             const ti = thresholds.indexOf(target);
             if (ti < 0) return;
             const xLabel = target + '%';

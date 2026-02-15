@@ -1409,25 +1409,9 @@ body {
 </head>
 <body>
 
-<!-- TOP NAV -->
-<nav class="top-nav">
-    <span class="nav-brand">The 8,760 Problem</span>
-    <button class="nav-hamburger" onclick="document.getElementById('navLinks').classList.toggle('nav-open')">
-        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="top-nav-inner" id="navLinks">
-        <a href="index.html" class="nav-active">Home</a>
-        <a href="dashboard.html">Cost Optimizer</a>
-        <a href="abatement_dashboard.html">Abatement Dashboard</a>
-        <a href="region_deepdive.html">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
-        <a href="eac_scarcity.html">EAC Scarcity</a>
-        <a href="research_paper.html">Methodology &amp; Paper</a>
-        <a href="about.html">About</a>
-        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
-        <a href="about.html">About</a>
-    </div>
-</nav>
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
 
 <!-- HEADER / BANNER -->
 <header class="header">
@@ -2396,6 +2380,7 @@ body {
     <p style="color:rgba(255,255,255,0.4);font-size:0.78rem;">The 8,760 Problem &mdash; 2025 Snapshot Model</p>
 </footer>
 
+<script src="js/shared-data.js"></script>
 <script>
 // Disable datalabels globally
 if (typeof ChartDataLabels !== 'undefined') {
@@ -2504,8 +2489,8 @@ function populateCurtailmentVisual() {
     const container = document.getElementById('curtailmentVisual');
     if (!container || !DATA) return;
     const isos = Object.keys(DATA.results);
-    const thresholds = ['75', '85', '95', '99', '100'];
-    const thresholdLabels = ['75%', '85%', '95%', '99%', '100%'];
+    const thresholds = ['75', '85', '95', '99'];
+    const thresholdLabels = ['75%', '85%', '95%', '99%'];
     let html = '';
     for (let ti = 0; ti < thresholds.length; ti++) {
         const tk = thresholds[ti];
@@ -2683,17 +2668,7 @@ function refreshNarrativeStats() {
 let narrativeMixChart = null;
 let currentMixRegion = 'average';
 
-const MIX_RESOURCES = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
-const MIX_LABELS_MAP = { clean_firm: 'Clean Firm', ccs_ccgt: 'CCS-CCGT', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', battery: 'Battery (4hr)', ldes: 'LDES (100hr)' };
-const MIX_COLORS = {
-    solar:      { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
-    wind:       { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },
-    hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
-    clean_firm: { fill: 'rgba(30,58,95,0.50)',    border: '#1E3A5F' },
-    ccs_ccgt:   { fill: 'rgba(13,148,136,0.50)',  border: '#0D9488' },
-    battery:    { fill: 'rgba(139,92,246,0.50)',   border: '#8B5CF6' },
-    ldes:       { fill: 'rgba(236,72,153,0.50)',   border: '#EC4899' }
-};
+// MIX_RESOURCES, MIX_LABELS_MAP, MIX_COLORS provided by shared-data.js
 
 const MIX_REGION_INSIGHTS = {
     average: '<strong>Regional Variation:</strong> Wind-rich ERCOT sustains wind-heavy mixes to 95%+, while PJM and NEISO require a pivot to nuclear/clean firm at lower thresholds.',
@@ -2705,7 +2680,7 @@ const MIX_REGION_INSIGHTS = {
 };
 
 function getMixDataForRegion(region) {
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
     const isos = Object.keys(DATA.results);
     const labels = [];
     const existingData = {};
@@ -3121,7 +3096,7 @@ const INCREMENTAL_INSIGHTS = {
 };
 
 function getIncrementalData(region) {
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
     const labels = [];
     const existingData = {};
     const newData = {};
@@ -3437,8 +3412,8 @@ function initNarrativeCostChart() {
 
     // Gather cost per threshold for each ISO + average
     // Use NUMERIC x-values so the axis is proportional (99→100 = 1% gap vs 5% gaps)
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99, 100];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdNums = [75, 80, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const xValues = [];     // numeric x positions
     const avgCosts = [];
@@ -3624,8 +3599,8 @@ function initNarrativeCostChart() {
 
 function refreshNarrativeCostChart() {
     if (!narrativeCostChart || !DATA) return;
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99, 100];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdNums = [75, 80, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const dsCount = narrativeCostChart.data.datasets.length;
 
@@ -3830,8 +3805,8 @@ function isMobileScrolly() {
 
 function buildStepChartData() {
     if (!DATA) return null;
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99, 100];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdNums = [75, 80, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const avgCosts = [];
     const isoData = {};

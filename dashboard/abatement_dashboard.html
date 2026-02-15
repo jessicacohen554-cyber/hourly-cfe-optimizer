@@ -441,25 +441,9 @@ body {
 </head>
 <body>
 
-<!-- TOP NAV -->
-<nav class="top-nav">
-    <span class="nav-brand">The 8,760 Problem</span>
-    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
-        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="top-nav-inner">
-        <a href="index.html">Home</a>
-        <a href="dashboard.html">Cost Optimizer</a>
-        <a href="abatement_dashboard.html" class="nav-active">Abatement Dashboard</a>
-        <a href="region_deepdive.html">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
-        <a href="eac_scarcity.html">EAC Scarcity</a>
-        <a href="research_paper.html">Methodology &amp; Paper</a>
-        <a href="about.html">About</a>
-        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
-        <a href="about.html">About</a>
-    </div>
-</nav>
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
 <div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER BANNER -->
@@ -591,76 +575,8 @@ body {
 </footer>
 <div class="bottom-banner"></div>
 
+<script src="js/shared-data.js"></script>
 <script>
-// ============================================================================
-// DATA
-// ============================================================================
-// Real optimizer average MAC ($/ton CO2) from overprocure_results.json
-// Low/High scaled ±28%/+38% from Medium per NREL ATB cost spread
-const THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
-
-const MAC_DATA = {
-    medium: {
-        CAISO:  [105, 110, 117, 118, 122, 121, 122, 128, 131],
-        ERCOT:  [23,  25,  29,  34,  34,  39,  43,  47,  52],
-        PJM:    [50,  50,  50,  51,  52,  53,  56,  64,  64],
-        NYISO:  [107, 107, 103, 103, 103, 107, 108, 119, 123],
-        NEISO:  [110, 109, 116, 122, 126, 132, 142, 149, 152]
-    },
-    low: {
-        CAISO:  [76,  79,  84,  85,  88,  87,  88,  92,  94],
-        ERCOT:  [17,  18,  21,  24,  25,  28,  31,  34,  38],
-        PJM:    [36,  36,  36,  37,  37,  38,  40,  46,  46],
-        NYISO:  [77,  77,  74,  74,  74,  77,  78,  86,  89],
-        NEISO:  [79,  78,  84,  88,  91,  95,  102, 107, 109]
-    },
-    high: {
-        CAISO:  [145, 152, 161, 163, 169, 167, 168, 177, 181],
-        ERCOT:  [32,  34,  40,  47,  47,  53,  59,  65,  72],
-        PJM:    [69,  69,  69,  70,  72,  73,  77,  88,  88],
-        NYISO:  [148, 148, 142, 142, 142, 148, 149, 164, 170],
-        NEISO:  [152, 150, 160, 168, 174, 182, 196, 206, 210]
-    }
-};
-
-const REGION_COLORS = { CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0' };
-
-const BENCHMARKS_STATIC = [
-    { name: 'Energy Efficiency (Buildings)', short: 'Energy Eff.', low: -100, mid: 0, high: 60, color: '#4CAF50', category: 'demand_reduction' }, // [10] McKinsey MAC
-    { name: 'EU ETS Price', short: 'EU ETS', low: 65, mid: 88, high: 92, color: '#2196F3', category: 'benchmark' }, // [4] EU ETS
-    { name: 'SCC \u2014 EPA ($190/ton)', short: 'SCC (EPA)', low: 140, mid: 190, high: 380, color: '#FF9800', category: 'benchmark' }, // [2] EPA Dec 2023
-    { name: 'SCC \u2014 Rennert et al.', short: 'SCC (Rennert)', low: 120, mid: 185, high: 450, color: '#E65100', category: 'benchmark' }, // [3] Rennert et al. 2022
-    { name: 'Carbon Credits (Nature)', short: 'Carbon Credits', low: 3, mid: 15, high: 35, color: '#9E9E9E', category: 'voluntary' },
-];
-
-const BENCHMARKS_DYNAMIC = {
-    dac: {
-        name: 'Direct Air Capture (DAC)', short: 'DAC', color: '#E91E63',
-        Low: { low: 250, mid: 400, high: 600 },
-        Medium: { low: 400, mid: 600, high: 1500 },
-        High: { low: 600, mid: 1000, high: 1500 }
-    },
-    industrial: {
-        name: 'Industrial Electrification', short: 'Ind. Electrification', color: '#8BC34A',
-        Low: { low: -50, mid: 20, high: 60 },
-        Medium: { low: 0, mid: 60, high: 160 },
-        High: { low: 60, mid: 120, high: 250 }
-    },
-    removal: {
-        name: 'Carbon Removal (BECCS + Weathering)', short: 'Carbon Removal', color: '#009688',
-        Low: { low: 20, mid: 75, high: 150 },
-        Medium: { low: 50, mid: 150, high: 300 },
-        High: { low: 100, mid: 200, high: 350 }
-    }
-};
-
-const BENCHMARKS_EXTRA = [
-    { name: 'Green Hydrogen (Industrial)', short: 'Green H\u2082', low: 150, mid: 500, high: 1250, color: '#00BCD4' },
-    { name: 'Sustainable Aviation Fuel', short: 'SAF', low: 136, mid: 300, high: 500, color: '#FF5722' },
-    { name: 'CDR Credits (Engineered)', short: 'CDR Credits', low: 177, mid: 320, high: 600, color: '#7C4DFF' },
-    { name: 'EVs vs ICE (Fleet)', short: 'EVs vs ICE', low: -50, mid: 250, high: 970, color: '#FF6F00' },
-];
-
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -674,29 +590,7 @@ function getState() {
     return state;
 }
 
-function getAllBenchmarks() {
-    const s = getState();
-    const dynamic = Object.keys(BENCHMARKS_DYNAMIC).map(key => {
-        const b = BENCHMARKS_DYNAMIC[key];
-        const costs = b[s[key]] || b.Medium;
-        return { name: b.name, short: b.short, low: costs.low, mid: costs.mid, high: costs.high, color: b.color };
-    });
-    return [...BENCHMARKS_STATIC, ...dynamic, ...BENCHMARKS_EXTRA].filter(b => b.mid >= 0).sort((a, b) => a.mid - b.mid);
-}
-
-function findCrossover(regionData, costLevel) {
-    for (let i = 0; i < regionData.length; i++) {
-        if (regionData[i] >= costLevel) return THRESHOLDS[i];
-    }
-    return '>100';
-}
-
-function cellClass(val) {
-    if (val === '>100' || val >= 97) return 'cell-green';
-    if (val >= 95) return 'cell-yellow';
-    if (val >= 92) return 'cell-orange';
-    return 'cell-red';
-}
+// findCrossover(), cellClass(), getAllBenchmarks() provided by shared-data.js
 
 // Shared chart defaults: rounded bars, no grid lines, keep axes
 const CHART_DEFAULTS = {
@@ -823,8 +717,8 @@ function buildPortfolio() {
 let ladderInst = null;
 function buildLadder() {
     const ctx = document.getElementById('ladderChart').getContext('2d');
-    const benchmarks = getAllBenchmarks();
     const s = getState();
+    const benchmarks = getAllBenchmarks(s);
     const gridLevel = s.grid.toLowerCase();
     const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
 
