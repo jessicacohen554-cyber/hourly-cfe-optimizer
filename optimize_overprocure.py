@@ -2226,6 +2226,44 @@ REPRESENTATIVE_SCENARIOS = _build_representative_scenarios()
 CHECKPOINT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'checkpoints')
 
 
+def save_score_cache(iso, threshold, score_cache):
+    """Persist score cache to disk for warm restart.
+
+    Keys are tuples of (type, mix_fracs_tuple, pf, [bp], [lp]).
+    Values are floats. Convert keys to JSON-safe strings.
+    """
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    cache_path = os.path.join(CHECKPOINT_DIR, f'{iso}_cache_{threshold}.json')
+    # Convert tuple keys to string keys for JSON
+    serializable = {str(k): v for k, v in score_cache.items()}
+    with open(cache_path, 'w') as f:
+        json.dump(serializable, f)
+    print(f"    [cache] Saved {iso} {threshold}% score cache: {len(score_cache)} entries "
+          f"({os.path.getsize(cache_path)/1024/1024:.1f} MB)")
+
+
+def load_score_cache(iso, threshold):
+    """Load persisted score cache for warm restart.
+
+    Returns dict with original tuple keys, or empty dict if not found.
+    """
+    cache_path = os.path.join(CHECKPOINT_DIR, f'{iso}_cache_{threshold}.json')
+    if not os.path.exists(cache_path):
+        return {}
+    try:
+        with open(cache_path) as f:
+            data = json.load(f)
+        # Convert string keys back to tuples using eval (safe: controlled data)
+        cache = {}
+        for k_str, v in data.items():
+            cache[eval(k_str)] = v
+        print(f"    [cache] Loaded {iso} {threshold}% score cache: {len(cache)} entries")
+        return cache
+    except Exception as e:
+        print(f"    [cache] Failed to load {iso} {threshold}%: {e}")
+        return {}
+
+
 def save_checkpoint(iso, iso_results, phase='threshold', partial_threshold=None):
     """Save incremental checkpoint for an ISO's results.
 
@@ -2397,8 +2435,8 @@ def process_iso(args):
             continue
 
         t_start = time.time()
-        # Fresh matching cache per threshold — no cross-threshold contamination
-        score_cache = {}
+        # Load persisted score cache for warm restart (or fresh if none exists)
+        score_cache = load_score_cache(iso, threshold)
         threshold_scenarios = {}
         medium_result = None
 
@@ -2458,6 +2496,9 @@ def process_iso(args):
                 save_checkpoint(iso, iso_results,
                     phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of{total_active}',
                     partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
+                # Persist score cache every 10 scenarios for warm restart
+                if opt_count % 10 == 0:
+                    save_score_cache(iso, threshold, score_cache)
 
         # ── Adaptive resampling: if unique mixes > 50% of scenarios run, expand ──
         # Target: unique_mixes < 50% of total scenarios run
@@ -2635,6 +2676,8 @@ def process_iso(args):
         }
         # Checkpoint after each threshold — never lose more than one threshold's work
         save_checkpoint(iso, iso_results, phase=f'threshold-{threshold}')
+        # Persist score cache for warm restart on interruption
+        save_score_cache(iso, threshold, score_cache)
 
     # ---- MONOTONICITY RE-SWEEP ----
     # For each cost scenario, cost must be non-decreasing across thresholds.
