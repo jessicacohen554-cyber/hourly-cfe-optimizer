@@ -6195,13 +6195,15 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         ? ['Existing', 'Interim', 'Long-term']
         : ['Existing', 'Interim'];
 
+    // Stack order: existing bottom-up (clean_firm, hydro, wind, solar), then
+    // new build inverted so solar is on top (clean_firm, storage, hydro, wind, solar)
     const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'storage', 'clean_firm'];
+    const NEW_ORDER = ['clean_firm', 'storage', 'hydro', 'wind', 'solar'];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
     const datasets = [];
 
-    // Existing portion datasets
+    // Existing portion datasets (full saturation)
     for (const r of EXISTING_ORDER) {
         const c = MIX_COLORS[r];
         const data = hasLongterm
@@ -6219,7 +6221,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             _isExisting: true,
         });
     }
-    // New build portion datasets
+    // New build portion datasets (opaque, solar on top)
     for (const r of NEW_ORDER) {
         const c = MIX_COLORS[r];
         const data = hasLongterm
@@ -6239,7 +6241,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         });
     }
 
-    // Compute bar totals and demand at each stage for labels
+    // Compute bar totals, curtailment, and demand at each stage
     const barTotals = [];
     for (let i = 0; i < labels.length; i++) {
         let barTotal = 0;
@@ -6249,38 +6251,95 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const demandAtStage = hasLongterm
         ? [todayTWh, interimTWh, longtermTWh]
         : [todayTWh, interimTWh];
+
+    // Existing clean total for reference line
+    let existingCleanTWh = 0;
+    MIX_RESOURCES.forEach(r => { existingCleanTWh += todayData.existing[r]; });
+
+    // Curtailment = procurement above demand (bar total - demand)
+    const curtailmentTWh = barTotals.map((bt, i) => Math.max(0, bt - demandAtStage[i]));
+
     const maxTWh = Math.max(...barTotals, ...demandAtStage);
     const yMax = Math.ceil(maxTWh / 10) * 10 + 10; // extra room for labels
 
-    // Custom plugin: draw total clean TWh + demand labels above each bar
+    // Custom plugin: demand lines, existing clean line, curtailment hatching, bar-top labels
     const wynBarTopPlugin = {
         id: 'wynBarTopLabels',
         afterDraw(chart) {
-            const { ctx: c, scales: { x, y } } = chart;
+            const { ctx: c, scales: { x, y }, chartArea } = chart;
             c.save();
-            const font = "bold 12px 'Barlow Semi Condensed','Arial Narrow',sans-serif";
-            for (let i = 0; i < barTotals.length; i++) {
-                const xPos = x.getPixelForValue(i);
-                // Total clean TWh label above bar
+            const barCount = barTotals.length;
+            const barWidth = (chartArea.right - chartArea.left) / barCount * 0.6;
+
+            for (let i = 0; i < barCount; i++) {
+                const xCenter = x.getPixelForValue(i);
+                const barLeft = xCenter - barWidth / 2;
+                const barRight = xCenter + barWidth / 2;
+
+                // --- Existing clean dotted reference line ---
+                if (i > 0) {
+                    const existY = y.getPixelForValue(existingCleanTWh);
+                    c.strokeStyle = 'rgba(26,39,68,0.45)';
+                    c.lineWidth = 1.5;
+                    c.setLineDash([5, 4]);
+                    c.beginPath();
+                    c.moveTo(barLeft, existY);
+                    c.lineTo(barRight, existY);
+                    c.stroke();
+                    c.setLineDash([]);
+                }
+
+                // --- Demand reference: solid line shifted right, label inside bar ---
+                const demandY = y.getPixelForValue(demandAtStage[i]);
+                c.strokeStyle = 'rgba(107,114,128,0.7)';
+                c.lineWidth = 2;
+                c.setLineDash([]);
+                c.beginPath();
+                c.moveTo(xCenter, demandY);
+                c.lineTo(barRight, demandY);
+                c.stroke();
+                // Label inside bar, left of line
+                c.font = "bold 11px 'Barlow Semi Condensed','Arial Narrow',sans-serif";
+                c.textAlign = 'right';
+                c.fillStyle = '#4B5563';
+                c.fillText(Math.round(demandAtStage[i]) + ' TWh demand', xCenter - 4, demandY + 4);
+
+                // --- Curtailment cross-hatch above demand line ---
+                if (curtailmentTWh[i] > 0.5) {
+                    const curtTop = y.getPixelForValue(barTotals[i]);
+                    const curtBottom = demandY;
+                    if (curtBottom > curtTop) {
+                        c.save();
+                        c.globalAlpha = 0.25;
+                        c.strokeStyle = '#6B7280';
+                        c.lineWidth = 1;
+                        // Diagonal hatch pattern
+                        c.beginPath();
+                        const step = 6;
+                        for (let ly = curtTop; ly < curtBottom + barWidth; ly += step) {
+                            c.moveTo(barLeft, ly);
+                            c.lineTo(barLeft + (curtBottom - curtTop), ly - (curtBottom - curtTop));
+                        }
+                        c.rect(barLeft, curtTop, barWidth, curtBottom - curtTop);
+                        c.clip();
+                        c.stroke();
+                        c.restore();
+                        // Curtailment label
+                        c.font = "10px 'Barlow Semi Condensed','Arial Narrow',sans-serif";
+                        c.textAlign = 'center';
+                        c.fillStyle = '#9CA3AF';
+                        if (curtBottom - curtTop > 20) {
+                            c.fillText(Math.round(curtailmentTWh[i]) + ' TWh curtailed', xCenter, (curtTop + curtBottom) / 2 + 4);
+                        }
+                    }
+                }
+
+                // --- Total clean TWh label above bar ---
                 const yPos = y.getPixelForValue(barTotals[i]);
-                c.font = font;
+                c.font = "bold 12px 'Barlow Semi Condensed','Arial Narrow',sans-serif";
                 c.textAlign = 'center';
                 c.fillStyle = '#1A2744';
-                c.fillText(Math.round(barTotals[i]) + ' TWh clean', xPos, yPos - 14);
-                // Demand reference label
-                const demandY = y.getPixelForValue(demandAtStage[i]);
-                c.fillStyle = '#6B7280';
-                c.font = "11px 'Barlow Semi Condensed','Arial Narrow',sans-serif";
-                c.fillText(Math.round(demandAtStage[i]) + ' TWh demand', xPos, demandY - 4);
-                // Demand reference tick mark
-                c.strokeStyle = 'rgba(107,114,128,0.5)';
-                c.lineWidth = 1.5;
-                c.setLineDash([4, 3]);
-                c.beginPath();
-                c.moveTo(xPos - 30, demandY);
-                c.lineTo(xPos + 30, demandY);
-                c.stroke();
-                c.setLineDash([]);
+                c.fillText(Math.round(barTotals[i]) + ' TWh clean', xCenter, yPos - 8);
             }
             c.restore();
         }
@@ -6363,7 +6422,28 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     anchor: 'center',
                     align: 'center',
                 },
-                annotation: { annotations: {} }
+                annotation: {
+                    annotations: {
+                        existingCleanLine: {
+                            type: 'line',
+                            yMin: existingCleanTWh,
+                            yMax: existingCleanTWh,
+                            borderColor: 'rgba(26,39,68,0.35)',
+                            borderWidth: 1.5,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: Math.round(existingCleanTWh) + ' TWh existing clean',
+                                position: 'start',
+                                backgroundColor: 'rgba(26,39,68,0.7)',
+                                color: '#fff',
+                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 600 },
+                                padding: { x: 5, y: 2 },
+                                borderRadius: 3,
+                            }
+                        }
+                    }
+                }
             },
             scales: {
                 x: {
