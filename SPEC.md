@@ -75,30 +75,57 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 - [x] **Two-component SSS** — fixed-fleet (nuclear, hydro — constant TWh) + RPS (scales with demand)
 - [x] **Diablo Canyon + NY nuclear as permanent fixed SSS** — state-supported indefinitely
 
-### EAC Scarcity: Supply Stack / Marginal Cost Model (Feb 15)
-**Decision**: Model clean energy supply as an economics-driven cost stack rather than seeding from optimizer results. New clean capacity only enters when economically viable (LCOE < wholesale + RPS adder). Clean premium = marginal cost of the next MWh on the supply stack to serve corporate demand.
+### EAC Scarcity: Combined RPS + Voluntary Supply Stack Model (Feb 15, rev 2)
+**Decision**: RPS mandates and voluntary corporate procurement compete for the same finite buildable clean capacity. Marginal cost is set by combined demand (RPS + voluntary) on the supply stack, not voluntary alone.
 
-**Previous approach (superseded)**: Optimizer-seeded procurement multipliers and clean premiums. This incorrectly assumed the grid decarbonizes automatically per optimizer results.
+**Literature validation** (Xu et al. 2024, Joule / Princeton ZERO Lab): GenX capacity expansion model shows combined RPS + voluntary C&I demand on the same regional supply curve produces non-linear cost escalation as both compete for finite buildable capacity. Gillenwater (2008, Energy Policy): only when combined demand creates real scarcity does voluntary procurement drive new investment. Denholm et al. (NREL 2021): "last few percent" costs escalate exponentially.
 
-**Current approach**:
-- **Existing clean supply is fixed** at 2025 baselines (SSS + non-SSS)
-- **New clean only enters when economic**: LCOE < wholesale price + RPS demand adder
-- **Supply stack per ISO**: Resources ordered by LCOE (from optimizer config). Each tier has annual buildable capacity (TWh/yr) based on interconnection queue data and resource potential.
-- **RPS adder**: Rises with RPS target over time (option 2-A). Higher mandates → higher compliance premium → more clean becomes economic. Base adder from observed 2025 REC prices.
-- **Clean premium = marginal cost**: Walk up the supply stack starting from cheapest available. RPS compliance demand absorbs cheap supply first. Corporate demand rides on top. Premium = LCOE of marginal tier - wholesale price.
-- **Procurement ratio**: Theoretical curve (not optimizer-derived) reflecting temporal mismatch physics. Higher match targets → more over-procurement needed. National curve: 75%→0.80×, 90%→1.05×, 100%→1.45×.
+**Previous approach (superseded, v1)**: RPS adder as economic gate — new clean only entered when LCOE < wholesale + RPS adder. This produced zero new build in all ISOs because the price signal never cleared any supply stack tier. Supply was frozen at 2025 levels.
 
-**Data sources**:
-- LCOEs: Optimizer config `regional_lcoe` (NREL ATB-derived, already researched)
-- Wholesale prices: Optimizer config `wholesale_prices`
-- RPS adder base: Observed REC prices (CAISO $10, ERCOT $2, PJM $8, NYISO $22, NEISO $30)
-- Annual buildable capacity: LBNL "Queued Up" deployment rates, resource potential studies
-- RPS targets: `RPS_TARGET_TRAJECTORIES` (drives adder, not supply volume directly)
+**Current approach (v2) — two-track demand, unified supply stack**:
 
-**What stays from previous model**:
+1. **RPS-mandated demand** (forced, regardless of economics):
+   - `rps_new_need = max(0, rps_target × projected_demand - existing_total_clean)`
+   - Regulators require this build — it happens whether or not LCOE < wholesale + adder
+   - New RPS build splits into SSS vs merchant per `SSS_NEW_BUILD_FRACTION`
+
+2. **Voluntary corporate demand** (additional, on top of RPS):
+   - `corp_eac_demand = CI_share × participation × incremental_need × procurement_ratio`
+   - Incremental need = `max(0, match_target% - sss_share_of_total%)`
+   - SSS share grows over time as RPS mandates add clean capacity
+
+3. **Combined demand on supply stack**:
+   - `total_new_demand = rps_new_need + corp_eac_demand`
+   - Walk up the supply stack (cheapest tier first) until total demand is met
+   - RPS compliance absorbs cheap tiers first; corporates ride on top
+   - **Marginal cost = LCOE of the tier where combined demand lands**
+   - If combined demand exceeds total buildable capacity → scarcity pricing
+
+4. **Scarcity classification**:
+   - `demand_ratio = total_new_demand / total_buildable_capacity`
+   - Bands: Abundant (<0.3), Adequate (<0.6), Tightening (<0.8), Scarce (<0.95), Critical (>0.95)
+
+5. **Clean premium = marginal LCOE - wholesale price**
+   - Reflects the REAL competition for clean resources — both mandated and voluntary
+
+**Bug fixes in v2**:
+- **SSS→non-SSS transfer**: When SSS policies expire (e.g., IL ZEC/CMC 2027), those TWh move to non-SSS merchant pool — not into the void. Plants don't disappear when subsidies end.
+- **Annual resolution**: All years 2025–2050 (26 years, not just 6 milestone years)
+
+**Supply stack per ISO** (static 2025 LCOEs, no decline curves — deliberate simplification):
+- Resources ordered by LCOE from optimizer config
+- Each tier has annual buildable TWh and cumulative max (from LBNL "Queued Up")
+- No LCOE decline or wholesale escalation modeled — avoids overcomplication
+
+**Procurement ratio** (theoretical, not optimizer-derived):
+- 75%→0.80×, 90%→1.05×, 100%→1.45×
+- Reflects temporal mismatch physics: higher match targets need more over-procurement
+
+**What stays from v1**:
 - SSS/non-SSS classification, two-component SSS (fixed + RPS), policy expirations
 - C&I demand filter (62%), demand growth rates, participation scenarios
-- Scarcity bands and classification thresholds
+- Scarcity bands, supply stack LCOEs, committed hyperscaler pipeline
+- Wholesale prices, RPS target trajectories
 
 ### EAC Scarcity: C&I Demand Filter (Feb 15)
 **Decision**: Corporate EAC participation base = C&I (commercial + industrial) share of total demand, not total demand. Residential load does not participate in voluntary EAC procurement.
@@ -161,7 +188,7 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 **Scarcity analysis parameters (expanded):**
 - Corporate participation: 0-100% of ISO load
 - Hourly match target: 75-100%
-- Time horizons: 2025, 2030, 2035, 2040, 2045, 2050
+- Time horizons: 2025–2050 (annual, 26 years)
 - Demand growth: Low/Med/High per ISO (from dashboard DEMAND_GROWTH_RATES)
 - SSS supply evolves over time (policy expirations + new build from RPS mandates)
 - Scarcity inflection = participation × match level where hourly demand > uncommitted non-SSS supply
