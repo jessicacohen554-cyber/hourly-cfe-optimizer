@@ -1111,6 +1111,8 @@ This section documents how our model compares to established capacity expansion 
 - **Hydrogen storage** — explicitly excluded (immature for grid-scale energy storage)
 - **Multi-year capacity planning** — single 2025 snapshot, not a trajectory
 - **Reliability/adequacy constraints (ELCC)** — under consideration (Section 21.1)
+- **NEISO gas delivery constraints** — New England has well-documented natural gas pipeline constraints (Algonquin pipeline congestion during winter peaks). This creates winter gas price spikes that aren't captured by our flat L/M/H gas price sensitivity. Future iteration should model seasonal gas price multipliers or a NEISO-specific winter gas adder. See §21.3.
+- **BECCS (Bioenergy with CCS)** — Not modeled in current version. Relevant for NEISO where high CCS shares (50%+ at 92.5%) suggest a natural use case. BECCS could offer negative emissions AND firm dispatchable generation. Future post-processing: derate CCS scenarios with a BECCS cost overlay to avoid full re-optimization. See §21.3.
 
 ---
 
@@ -1141,3 +1143,31 @@ This section documents how our model compares to established capacity expansion 
 **Complexity**: Moderate. The ELCC calculation is a post-hoc check on each candidate mix during optimization. The main challenge is ELCC values that decline with penetration (saturation effects), which creates non-linear constraints. A simplified version could use fixed ELCC percentages per resource type.
 
 **Decision**: Under consideration — user to confirm whether to implement for next optimizer run.
+
+### 21.2 Post-Processing from Cached Results (Decided — Future Iterations)
+
+**Principle**: After monotonicity sweeps are complete, use cached results (resource mixes + score caches + optimizer_cache.json) for future post-processing instead of full re-optimization runs. This enables:
+- Rapid sensitivity analysis (re-price existing mixes under new cost assumptions)
+- BECCS overlays (derate CCS scenarios with BECCS costs)
+- Gas constraint scenarios (apply winter price multipliers to existing mixes)
+- Carbon price sensitivity (overlay SCC/ETS prices on existing results)
+
+**How**: `optimizer_cache.json` stores the full co-optimized results for all 16,200 scenarios. `compute_costs_parameterized()` can re-price any cached mix in milliseconds. Only changes that fundamentally alter the optimization landscape (new resource types, new dispatch algorithms, new constraint structures) require full re-runs.
+
+### 21.3 NEISO Gas Pipeline Constraints + BECCS (Future Iteration)
+
+**NEISO Gas Delivery Constraints**: New England has severe natural gas pipeline constraints, particularly on the Algonquin City Gate pipeline during winter peaks. Key literature:
+- **ISO-NE Operational Fuel Security Analysis (2018)**: Documented reliability risk from winter gas constraints; gas generators unable to secure fuel during cold snaps
+- **Algonquin basis differentials**: Winter spot gas prices in New England can spike to $20-30/MMBtu (vs. $3.50 Henry Hub medium), reflecting pipeline congestion
+- **Grid-scale impact**: During 2017-2018 "bomb cyclone", New England gas prices exceeded $30/MMBtu, oil generation surged to 30%+ of total
+- **Current model limitation**: Our flat L/M/H gas price sensitivity ($2/$3.50/$6 MMBtu) doesn't capture this seasonal volatility. The "High" gas scenario ($6) still understates winter peaks by 3-5x.
+
+**Potential fix for future iteration**: Apply a NEISO-specific seasonal gas price multiplier (e.g., 3-5x during Dec-Feb) or model a winter gas constraint that caps gas-fired generation availability. This would increase the value of non-gas firm resources (nuclear, BECCS) and storage in NEISO.
+
+**BECCS for NEISO**: Current optimizer shows NEISO needs 50%+ CCS at 92.5% matching. This creates a natural use case for BECCS (Bioenergy with CCS):
+- BECCS provides firm dispatchable generation (like CCS-CCGT) PLUS negative emissions
+- NEISO has significant forestry biomass resource (wood pellets, forestry residues)
+- Cost estimate: ~$120-180/MWh LCOE (NREL ATB) — higher than CCS-CCGT but with carbon-negative value
+- **Post-processing approach**: For scenarios with high CCS share (>25%), run a cost overlay replacing a fraction of CCS with BECCS pricing. Include negative emissions credit at SCC values ($51-185/tCO2). This avoids full re-optimization — just re-price cached mixes.
+
+**Decision**: Captured for future iteration. Does not affect current optimizer run.
