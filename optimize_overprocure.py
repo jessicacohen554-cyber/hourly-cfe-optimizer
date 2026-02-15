@@ -2995,11 +2995,18 @@ def process_iso(args):
                 print(f"    [floor] Updated dispatchable floor: {dispatchable_floor}% "
                       f"(min CF+CCS={min_disp}% at {threshold}%, minus 10% headroom)")
 
-    # ---- MONOTONICITY RE-SWEEP ----
+    # ---- MONOTONICITY CORRECTION ----
     # For each cost scenario, cost must be non-decreasing across thresholds.
     # If cost(T_lower) > cost(T_higher), the search missed a better solution at T_lower.
-    # Instead of replacing with the higher threshold's result, re-sweep T_lower
-    # with broader parameters + seeds from the higher threshold's winning mix.
+    #
+    # Two-phase approach (warm-start + self-learning):
+    #   Phase 1: Global cross-threshold pollination — evaluate ALL unique mixes from
+    #            ALL higher thresholds against violated scenarios (cost math only, no
+    #            optimization). This resolves most violations in milliseconds.
+    #   Phase 2: Targeted re-sweep — only for scenarios that Phase 1 couldn't fix.
+    #            Uses normal search parameters (not 4x broader) since seed mixes from
+    #            higher thresholds are already close to optimal. Each round's winning
+    #            mixes are added to the seed library for subsequent rounds.
     MAX_RESWEEP_ROUNDS = 2
     sorted_thresholds = sorted(THRESHOLDS)
 
@@ -3012,7 +3019,37 @@ def process_iso(args):
         for sk in iso_results['thresholds'][t_str]['scenarios']:
             checked_scenarios.add(sk)
 
-    for resweep_round in range(MAX_RESWEEP_ROUNDS):
+    # ── Collect ALL unique mixes across ALL thresholds (for global cross-pollination) ──
+    all_threshold_mixes = {}  # threshold -> list of unique (result, mix_key) pairs
+    all_unique_results = []   # flat list of all unique results across all thresholds
+    global_seen_keys = set()
+    for t in sorted_thresholds:
+        t_str = str(t)
+        if t_str not in iso_results['thresholds']:
+            continue
+        t_mixes = []
+        for sk, res in iso_results['thresholds'][t_str]['scenarios'].items():
+            if 'resource_mix' not in res:
+                continue
+            mix = res['resource_mix']
+            mk = (mix['clean_firm'], mix['solar'], mix['wind'],
+                  mix['ccs_ccgt'], mix['hydro'],
+                  res['procurement_pct'],
+                  res['battery_dispatch_pct'],
+                  res['ldes_dispatch_pct'])
+            if mk not in global_seen_keys:
+                global_seen_keys.add(mk)
+                t_mixes.append(res)
+                all_unique_results.append(res)
+        all_threshold_mixes[t] = t_mixes
+    print(f"  Monotonicity: {len(all_unique_results)} unique mixes across "
+          f"{len(all_threshold_mixes)} thresholds")
+
+    # Self-learning seed library: accumulates winning mixes across rounds
+    winning_seed_library = []
+    winning_seed_keys = set()
+
+    for resweep_round in range(MAX_RESWEEP_ROUNDS + 1):  # +1: round 0 is cross-pollination only
         # Detect monotonicity violations: {threshold: {scenario_key: better_threshold}}
         violations = {}
         total_violations = 0
@@ -3042,91 +3079,32 @@ def process_iso(args):
             if resweep_round == 0:
                 print(f"  Monotonicity check passed for all scenarios")
             else:
-                print(f"  Monotonicity re-sweep round {resweep_round}: all violations resolved")
+                print(f"  Monotonicity resolved after round {resweep_round} "
+                      f"({len(winning_seed_library)} winning mixes learned)")
             break
 
-        print(f"  Monotonicity round {resweep_round + 1}: {total_violations} violations "
-              f"across {len(violations)} threshold(s) — triggering re-sweep")
-
-        # Re-sweep each violated threshold with broader parameters
+        # ── Phase 1: Global cross-threshold pollination (cost math only) ──
+        phase1_fixes = 0
         for viol_threshold in sorted(violations.keys()):
             violated_scenarios = violations[viol_threshold]
             t_str = str(viol_threshold)
-
-            # Collect seed mixes from the thresholds that achieved better cost
-            seed_mixes_for_resweep = []
-            seen_seeds = set()
-            for sk, better_t in violated_scenarios.items():
-                better_result = iso_results['thresholds'][str(better_t)]['scenarios'].get(sk)
-                if better_result and 'resource_mix' in better_result:
-                    key = tuple(better_result['resource_mix'][rt] for rt in RESOURCE_TYPES)
-                    if key not in seen_seeds:
-                        seen_seeds.add(key)
-                        seed_mixes_for_resweep.append(dict(better_result['resource_mix']))
-
-            # Expand procurement bounds for broader search
-            default_min, default_max = PROCUREMENT_BOUNDS.get(viol_threshold, (70, 310))
-            expanded_min = max(50, default_min - 20)
-            expanded_max = min(500, default_max + 30)
-
-            print(f"    Re-sweeping {viol_threshold}%: {len(violated_scenarios)} scenarios, "
-                  f"{len(seed_mixes_for_resweep)} seed mixes, "
-                  f"procurement [{expanded_min}-{expanded_max}%]")
-
-            # Re-sweep uses cumulative cache — scores are physics-based, always reusable
-            resweep_cache = dict(cumulative_score_cache)
-            resweep_fixes = 0
             threshold_scenarios = iso_results['thresholds'][t_str]['scenarios']
 
-            for scenario_key in violated_scenarios:
-                cost_levels = COST_SCENARIO_MAP[scenario_key]
-                result = optimize_for_threshold(
-                    iso, demand_norm, supply_profiles, viol_threshold, hydro_cap,
-                    emission_rates, demand_total_mwh,
-                    cost_levels=cost_levels, score_cache=resweep_cache,
-                    resweep=True, seed_mixes=seed_mixes_for_resweep,
-                    procurement_bounds_override=(expanded_min, expanded_max),
-                    min_dispatchable=dispatchable_floor
-                )
+            # Collect candidates from ALL higher thresholds + winning seed library
+            candidates = []
+            for t in sorted_thresholds:
+                if t > viol_threshold and t in all_threshold_mixes:
+                    candidates.extend(all_threshold_mixes[t])
+            candidates.extend(winning_seed_library)
 
-                if result:
-                    r_gen, f_gen, stor, fuel, tx = cost_levels
-                    cost_data = compute_costs_parameterized(
-                        iso, result['resource_mix'], result['procurement_pct'],
-                        result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
-                        result['hourly_match_score'],
-                        r_gen, f_gen, stor, fuel, tx
-                    )
-                    result['costs'] = cost_data
-
-                    # Replace only if the re-sweep found a cheaper solution
-                    current = threshold_scenarios.get(scenario_key)
-                    if current is None or cost_data['effective_cost'] < current['costs']['effective_cost']:
-                        threshold_scenarios[scenario_key] = result
-                        resweep_fixes += 1
-
-            # Cross-pollination within re-swept threshold
-            unique_results = []
-            seen_mix_keys = set()
-            for sk, res in threshold_scenarios.items():
-                mix = res['resource_mix']
-                mk = (mix['clean_firm'], mix['solar'], mix['wind'],
-                      mix['ccs_ccgt'], mix['hydro'],
-                      res['procurement_pct'],
-                      res['battery_dispatch_pct'],
-                      res['ldes_dispatch_pct'])
-                if mk not in seen_mix_keys:
-                    seen_mix_keys.add(mk)
-                    unique_results.append(res)
-
-            cross_fixes = 0
-            for scenario_key in violated_scenarios:
+            for scenario_key in list(violated_scenarios.keys()):
                 cost_levels = COST_SCENARIO_MAP[scenario_key]
                 r_gen, f_gen, stor, fuel, tx = cost_levels
                 current = threshold_scenarios.get(scenario_key)
                 current_cost = current['costs']['effective_cost'] if current and 'costs' in current else float('inf')
+                fixed = False
 
-                for candidate in unique_results:
+                for candidate in candidates:
                     if candidate['hourly_match_score'] < viol_threshold:
                         continue
                     cand_cost_data = compute_costs_parameterized(
@@ -3139,43 +3117,174 @@ def process_iso(args):
                         threshold_scenarios[scenario_key] = dict(candidate)
                         threshold_scenarios[scenario_key]['costs'] = cand_cost_data
                         current_cost = cand_cost_data['effective_cost']
-                        cross_fixes += 1
+                        fixed = True
 
-            # Update Medium scenario detail if it was re-swept
-            medium_key = 'MMM_M_M'
-            if medium_key in violated_scenarios and medium_key in threshold_scenarios:
-                med = threshold_scenarios[medium_key]
-                peak_gap = compute_peak_gap(
-                    demand_norm, supply_profiles, med['resource_mix'],
-                    med['procurement_pct'], med['battery_dispatch_pct'],
-                    med['ldes_dispatch_pct'], anomaly_hours
-                )
-                med['peak_gap_pct'] = peak_gap
-                full_costs = compute_costs(
-                    iso, med['resource_mix'], med['procurement_pct'],
-                    med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
-                    med['hourly_match_score'],
-                    demand_norm, supply_profiles
-                )
-                med['costs_detail'] = full_costs
-                co2 = compute_co2_abatement(
-                    iso, med['resource_mix'], med['procurement_pct'],
-                    med['hourly_match_score'],
-                    med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
-                    emission_rates, demand_total_mwh,
-                    demand_norm=demand_norm, supply_profiles=supply_profiles,
-                    fossil_mix=fossil_mix
-                )
-                med['co2_abated'] = co2
-                cdp = compute_compressed_day(
-                    demand_norm, supply_profiles, med['resource_mix'],
-                    med['procurement_pct'],
-                    med['battery_dispatch_pct'], med['ldes_dispatch_pct']
-                )
-                med['compressed_day'] = cdp
+                if fixed:
+                    phase1_fixes += 1
+                    del violated_scenarios[scenario_key]
 
-            print(f"      Fixed {resweep_fixes} via re-sweep, "
-                  f"{cross_fixes} via cross-pollination")
+            # Remove threshold from violations if all fixed
+            if not violated_scenarios:
+                del violations[viol_threshold]
+
+        # Re-count remaining violations after Phase 1
+        remaining_violations = sum(len(v) for v in violations.values())
+        print(f"  Monotonicity round {resweep_round + 1}: {total_violations} violations, "
+              f"{phase1_fixes} fixed via cross-threshold pollination, "
+              f"{remaining_violations} remaining")
+
+        if not violations:
+            break
+
+        # Round 0 is cross-pollination only — no re-optimization
+        if resweep_round == 0 and remaining_violations > 0:
+            print(f"    {remaining_violations} violations need targeted re-sweep")
+
+        # ── Phase 2: Targeted re-sweep (only for remaining violations) ──
+        if resweep_round > 0:
+            for viol_threshold in sorted(violations.keys()):
+                violated_scenarios = violations[viol_threshold]
+                t_str = str(viol_threshold)
+
+                # Collect seed mixes: higher threshold mixes + winning seed library
+                seed_mixes_for_resweep = []
+                seen_seeds = set()
+                # Seeds from the specific better thresholds
+                for sk, better_t in violated_scenarios.items():
+                    better_result = iso_results['thresholds'][str(better_t)]['scenarios'].get(sk)
+                    if better_result and 'resource_mix' in better_result:
+                        key = tuple(better_result['resource_mix'][rt] for rt in RESOURCE_TYPES)
+                        if key not in seen_seeds:
+                            seen_seeds.add(key)
+                            seed_mixes_for_resweep.append(dict(better_result['resource_mix']))
+                # Add winning seeds from previous rounds
+                for ws in winning_seed_library:
+                    if 'resource_mix' in ws:
+                        key = tuple(ws['resource_mix'][rt] for rt in RESOURCE_TYPES)
+                        if key not in seen_seeds:
+                            seen_seeds.add(key)
+                            seed_mixes_for_resweep.append(dict(ws['resource_mix']))
+
+                # Use normal procurement bounds (not 4x expanded) — seeds are warm
+                default_min, default_max = PROCUREMENT_BOUNDS.get(viol_threshold, (70, 310))
+                expanded_min = max(60, default_min - 10)
+                expanded_max = min(400, default_max + 20)
+
+                print(f"    Re-sweeping {viol_threshold}%: {len(violated_scenarios)} scenarios, "
+                      f"{len(seed_mixes_for_resweep)} seed mixes "
+                      f"(incl {len(winning_seed_library)} learned)")
+
+                resweep_cache = dict(cumulative_score_cache)
+                resweep_fixes = 0
+                threshold_scenarios = iso_results['thresholds'][t_str]['scenarios']
+
+                for scenario_key in violated_scenarios:
+                    cost_levels = COST_SCENARIO_MAP[scenario_key]
+                    result = optimize_for_threshold(
+                        iso, demand_norm, supply_profiles, viol_threshold, hydro_cap,
+                        emission_rates, demand_total_mwh,
+                        cost_levels=cost_levels, score_cache=resweep_cache,
+                        resweep=False, seed_mixes=seed_mixes_for_resweep,
+                        procurement_bounds_override=(expanded_min, expanded_max),
+                        min_dispatchable=dispatchable_floor
+                    )
+
+                    if result:
+                        r_gen, f_gen, stor, fuel, tx = cost_levels
+                        cost_data = compute_costs_parameterized(
+                            iso, result['resource_mix'], result['procurement_pct'],
+                            result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
+                            result['hourly_match_score'],
+                            r_gen, f_gen, stor, fuel, tx
+                        )
+                        result['costs'] = cost_data
+
+                        current = threshold_scenarios.get(scenario_key)
+                        if current is None or cost_data['effective_cost'] < current['costs']['effective_cost']:
+                            threshold_scenarios[scenario_key] = result
+                            resweep_fixes += 1
+                            # Add winning mix to seed library (self-learning)
+                            mix = result['resource_mix']
+                            mk = (mix['clean_firm'], mix['solar'], mix['wind'],
+                                  mix['ccs_ccgt'], mix['hydro'],
+                                  result['procurement_pct'],
+                                  result['battery_dispatch_pct'],
+                                  result['ldes_dispatch_pct'])
+                            if mk not in winning_seed_keys:
+                                winning_seed_keys.add(mk)
+                                winning_seed_library.append(result)
+
+                # Cross-pollination within re-swept threshold
+                unique_results = []
+                seen_mix_keys = set()
+                for sk, res in threshold_scenarios.items():
+                    mix = res['resource_mix']
+                    mk = (mix['clean_firm'], mix['solar'], mix['wind'],
+                          mix['ccs_ccgt'], mix['hydro'],
+                          res['procurement_pct'],
+                          res['battery_dispatch_pct'],
+                          res['ldes_dispatch_pct'])
+                    if mk not in seen_mix_keys:
+                        seen_mix_keys.add(mk)
+                        unique_results.append(res)
+
+                cross_fixes = 0
+                for scenario_key in violated_scenarios:
+                    cost_levels = COST_SCENARIO_MAP[scenario_key]
+                    r_gen, f_gen, stor, fuel, tx = cost_levels
+                    current = threshold_scenarios.get(scenario_key)
+                    current_cost = current['costs']['effective_cost'] if current and 'costs' in current else float('inf')
+
+                    for candidate in unique_results:
+                        if candidate['hourly_match_score'] < viol_threshold:
+                            continue
+                        cand_cost_data = compute_costs_parameterized(
+                            iso, candidate['resource_mix'], candidate['procurement_pct'],
+                            candidate['battery_dispatch_pct'], candidate['ldes_dispatch_pct'],
+                            candidate['hourly_match_score'],
+                            r_gen, f_gen, stor, fuel, tx
+                        )
+                        if cand_cost_data['effective_cost'] < current_cost:
+                            threshold_scenarios[scenario_key] = dict(candidate)
+                            threshold_scenarios[scenario_key]['costs'] = cand_cost_data
+                            current_cost = cand_cost_data['effective_cost']
+                            cross_fixes += 1
+
+                # Update Medium scenario detail if it was re-swept
+                medium_key = 'MMM_M_M'
+                if medium_key in violated_scenarios and medium_key in threshold_scenarios:
+                    med = threshold_scenarios[medium_key]
+                    peak_gap = compute_peak_gap(
+                        demand_norm, supply_profiles, med['resource_mix'],
+                        med['procurement_pct'], med['battery_dispatch_pct'],
+                        med['ldes_dispatch_pct'], anomaly_hours
+                    )
+                    med['peak_gap_pct'] = peak_gap
+                    full_costs = compute_costs(
+                        iso, med['resource_mix'], med['procurement_pct'],
+                        med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
+                        med['hourly_match_score'],
+                        demand_norm, supply_profiles
+                    )
+                    med['costs_detail'] = full_costs
+                    co2 = compute_co2_abatement(
+                        iso, med['resource_mix'], med['procurement_pct'],
+                        med['hourly_match_score'],
+                        med['battery_dispatch_pct'], med['ldes_dispatch_pct'],
+                        emission_rates, demand_total_mwh,
+                        demand_norm=demand_norm, supply_profiles=supply_profiles,
+                        fossil_mix=fossil_mix
+                    )
+                    med['co2_abated'] = co2
+                    cdp = compute_compressed_day(
+                        demand_norm, supply_profiles, med['resource_mix'],
+                        med['procurement_pct'],
+                        med['battery_dispatch_pct'], med['ldes_dispatch_pct']
+                    )
+                    med['compressed_day'] = cdp
+
+                print(f"      Fixed {resweep_fixes} via re-sweep, "
+                      f"{cross_fixes} via cross-pollination")
 
     else:
         # Exhausted MAX_RESWEEP_ROUNDS — report remaining violations
@@ -3200,9 +3309,9 @@ def process_iso(args):
                 prev_t = threshold
         if remaining > 0:
             print(f"  WARNING: {remaining} monotonicity violations remain after "
-                  f"{MAX_RESWEEP_ROUNDS} re-sweep rounds (search space exhausted)")
+                  f"{MAX_RESWEEP_ROUNDS + 1} rounds (search space exhausted)")
         else:
-            print(f"  All monotonicity violations resolved after {MAX_RESWEEP_ROUNDS} rounds")
+            print(f"  All monotonicity violations resolved after {MAX_RESWEEP_ROUNDS + 1} rounds")
 
     # ISO complete — clear checkpoint (full results saved in main())
     clear_checkpoint(iso)
