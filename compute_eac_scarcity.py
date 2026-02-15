@@ -140,6 +140,26 @@ EXISTING_CORPORATE_PPAS = {
     "NEISO": {"twh": 3,  "note": "Limited corporate PPAs"},
 }
 
+# ── Committed Hyperscaler Clean PPA Pipeline ─────────────────────────────
+# Large tech companies have committed to specific nuclear PPAs in PJM that
+# lock up clean generation. This is modeled as a supply reduction (not demand
+# growth) because the demand is disproportionately clean-energy-targeted.
+# Phased in GW → TWh at 90% capacity factor (1 GW ≈ 7.884 TWh/yr).
+COMMITTED_CLEAN_PIPELINE = {
+    "PJM": {
+        # {year: cumulative_gw} — interpolated for intermediate years
+        "phasing_gw": {
+            "2025": 1.0,   # Susquehanna campus + early deals
+            "2027": 2.0,   # Additional contracts online
+            "2028": 3.0,   # TMI Unit 1 restart
+            "2030": 4.0,   # Full pipeline
+            "2050": 4.0,   # Held constant post-2030
+        },
+        "capacity_factor": 0.90,
+        "note": "Amazon-Talen Susquehanna, Microsoft-Constellation TMI, others",
+    },
+}
+
 # ── Scenario Parameters ───────────────────────────────────────────────────
 PARTICIPATION_RATES = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100]
 MATCH_TARGETS = [75, 80, 85, 90, 95, 99, 100]
@@ -257,6 +277,16 @@ def interpolate_rps_target(iso, year, growth_level):
 def get_sss_new_fraction(iso, year):
     """Interpolate SSS new-build fraction for any year."""
     return interp_dict(SSS_NEW_BUILD_FRACTION[iso], year)
+
+
+def get_committed_pipeline_twh(iso, year):
+    """Compute TWh locked up by committed hyperscaler clean PPAs at a given year."""
+    if iso not in COMMITTED_CLEAN_PIPELINE:
+        return 0
+    pipeline = COMMITTED_CLEAN_PIPELINE[iso]
+    gw = interp_dict(pipeline["phasing_gw"], year)
+    # GW → TWh: GW × 8760 hours × capacity factor / 1000
+    return gw * 8.760 * pipeline["capacity_factor"]
 
 
 def get_procurement_ratio(match_target):
@@ -377,9 +407,11 @@ def evolve_supply(iso, year, growth_level, demand_twh_at_year):
 
     sss = sss_fixed + sss_rps
 
-    # Subtract existing corporate PPAs from available non-SSS
+    # Subtract existing corporate PPAs + committed hyperscaler pipeline
     existing_ppas = EXISTING_CORPORATE_PPAS.get(iso, {}).get("twh", 0)
-    available_non_sss = max(0, non_sss - existing_ppas)
+    committed_pipeline = get_committed_pipeline_twh(iso, year)
+    total_claimed = existing_ppas + committed_pipeline
+    available_non_sss = max(0, non_sss - total_claimed)
 
     return {
         "total_clean_twh": round(total, 1),
@@ -389,6 +421,7 @@ def evolve_supply(iso, year, growth_level, demand_twh_at_year):
         "non_sss_twh": round(non_sss, 1),
         "available_non_sss_twh": round(available_non_sss, 1),
         "existing_ppas_twh": existing_ppas,
+        "committed_pipeline_twh": round(committed_pipeline, 1),
         "sss_share_of_total": round(sss / total, 4) if total > 0 else 0,
         "rps_adder": round(rps_adder, 1),
         "new_economic_twh": round(new_economic, 1),
@@ -755,9 +788,13 @@ def main():
         s2025 = results["supply_projections"][iso]["2025"]["Medium"]
         s2035 = results["supply_projections"][iso]["2035"]["Medium"]
         adder_2035 = s2035.get("rps_adder", "?")
+        pipeline_2025 = s2025.get("committed_pipeline_twh", 0)
+        pipeline_2035 = s2035.get("committed_pipeline_twh", 0)
+        pipeline_note = f" (pipeline: {pipeline_2025} TWh)" if pipeline_2025 else ""
         print(f"\n{iso}:")
-        print(f"  2025: {s2025['available_non_sss_twh']} TWh available | RPS adder ${s2025.get('rps_adder', '?')}/MWh")
-        print(f"  2035: {s2035['available_non_sss_twh']} TWh available ({s2035.get('new_economic_twh', 0)} new) | RPS adder ${adder_2035}/MWh")
+        print(f"  2025: {s2025['available_non_sss_twh']} TWh available{pipeline_note} | RPS adder ${s2025.get('rps_adder', '?')}/MWh")
+        pipeline_note_35 = f" | pipeline: {pipeline_2035} TWh" if pipeline_2035 else ""
+        print(f"  2035: {s2035['available_non_sss_twh']} TWh available ({s2035.get('new_economic_twh', 0)} new){pipeline_note_35} | RPS adder ${adder_2035}/MWh")
         inf = results["inflection_points"][iso]["2030"]["Medium"]
         for mt in ["90", "95", "100"]:
             ip = inf.get(mt, {}).get("inflection_participation_pct")
