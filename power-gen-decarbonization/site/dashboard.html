@@ -143,8 +143,73 @@
         </div>
     </div>
 
-    <!-- Comparison Mode -->
+    <!-- Side-by-Side Comparison Mode -->
     <div class="section" style="margin-top: 48px;">
+        <div class="section-header">
+            <h2>Head-to-Head Comparison</h2>
+            <p>Select two companies to compare fleet composition, emissions, targets, and decarbonization feasibility side by side.</p>
+        </div>
+
+        <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: end; margin-bottom: 24px;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">Company A</label>
+                <select id="compareA" style="width: 100%; padding: 10px 14px; border: 2px solid var(--border-light); border-radius: var(--radius-md); font-size: 0.92rem; font-family: inherit; background: var(--bg-card); color: var(--text-primary); cursor: pointer; min-height: 44px;"></select>
+            </div>
+            <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-muted); padding-bottom: 8px;">vs</div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">Company B</label>
+                <select id="compareB" style="width: 100%; padding: 10px 14px; border: 2px solid var(--border-light); border-radius: var(--radius-md); font-size: 0.92rem; font-family: inherit; background: var(--bg-card); color: var(--text-primary); cursor: pointer; min-height: 44px;"></select>
+            </div>
+        </div>
+
+        <!-- Comparison Metrics -->
+        <div id="comparisonResult" style="display: none;">
+            <!-- Key Metrics Side-by-Side -->
+            <div style="display: grid; grid-template-columns: 1fr 120px 1fr; gap: 0; margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;">
+                <div id="compareMetricsA" style="padding: 20px; background: var(--bg-card);"></div>
+                <div style="background: var(--navy); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 8px; gap: 12px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
+                    <span>TWh</span><span>MT CO₂</span><span>lbs/MWh</span><span>GW</span><span>Target Yr</span><span>SBTi</span><span>CDP</span>
+                </div>
+                <div id="compareMetricsB" style="padding: 20px; background: var(--bg-card);"></div>
+            </div>
+
+            <!-- Fuel Mix Comparison Charts -->
+            <div class="card-grid">
+                <div class="chart-container">
+                    <h3 id="compareMixTitleA">Fuel Mix</h3>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="compareMixA"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3 id="compareMixTitleB">Fuel Mix</h3>
+                    <div class="chart-wrapper" style="height: 260px;">
+                        <canvas id="compareMixB"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scenario Comparison -->
+            <div class="chart-container" style="margin-top: 24px;">
+                <h3>Emission Reduction Scenarios: Head-to-Head</h3>
+                <div class="chart-wrapper" style="height: 350px;">
+                    <canvas id="compareScenarioChart"></canvas>
+                </div>
+                <p class="citation">Illustrative scenarios based on fleet characteristics, LCOE data, and regional cost curves.</p>
+            </div>
+
+            <!-- Qualitative Comparison -->
+            <div class="card-grid" style="margin-top: 24px;">
+                <div class="card" id="compareAssessA"></div>
+                <div class="card" id="compareAssessB"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="energy-divider"></div>
+
+    <!-- All-Company Comparison Charts -->
+    <div class="section">
         <div class="section-header">
             <h2>Cross-Company Comparison</h2>
             <p>All 15 generators compared across key metrics.</p>
@@ -448,6 +513,122 @@ new Chart(document.getElementById('allMixChart').getContext('2d'), {
 
 // Select first company by default
 selectCompany(0);
+
+// ============================================================
+// HEAD-TO-HEAD COMPARISON MODE
+// ============================================================
+const selectA = document.getElementById('compareA');
+const selectB = document.getElementById('compareB');
+let compareMixAChart = null, compareMixBChart = null, compareScenarioChartInstance = null;
+
+companies.forEach((c, i) => {
+    selectA.innerHTML += `<option value="${i}">${c.name}</option>`;
+    selectB.innerHTML += `<option value="${i}">${c.name}</option>`;
+});
+selectB.selectedIndex = 1;
+
+function getScenarioValues(c) {
+    let bau, policy, sbti, nze;
+    if (c.assessment === 'green') { bau = c.intensity*0.9; policy = c.intensity*0.7; sbti = c.intensity*0.4; nze = 50; }
+    else if (c.assessment === 'yellow') { bau = c.intensity*0.85; policy = c.intensity*0.55; sbti = c.intensity*0.3; nze = 50; }
+    else { bau = c.intensity*0.75; policy = c.intensity*0.4; sbti = c.intensity*0.25; nze = 50; }
+    return [c.intensity, Math.round(bau), Math.round(policy), Math.round(sbti), nze];
+}
+
+function renderMetricCol(c, el) {
+    const sbtiColor = c.sbtiStatus.includes('Validated') ? '#22C55E' : c.sbtiStatus.includes('Committed') ? '#F59E0B' : '#DC2626';
+    const cdpColor = c.cdpScore.startsWith('A') ? '#22C55E' : c.cdpScore.startsWith('B') ? '#F59E0B' : '#DC2626';
+    el.innerHTML = `
+        <div style="text-align: center; margin-bottom: 12px;">
+            <div style="font-weight: 700; font-size: 1rem; color: var(--navy);">${c.name}</div>
+            <span class="type-badge ${c.type.includes('Merchant') ? 'merchant' : c.type.includes('Hybrid') ? 'hybrid' : 'utility'}" style="margin-top: 4px;">${c.type}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="text-align: center;"><div style="font-size: 1.3rem; font-weight: 800; color: var(--sky);">${c.gen}</div></div>
+            <div style="text-align: center;"><div style="font-size: 1.3rem; font-weight: 800; color: var(--red-accent);">${c.co2}</div></div>
+            <div style="text-align: center;"><div style="font-size: 1.3rem; font-weight: 800; color: ${c.intensity < 600 ? 'var(--green)' : c.intensity < 900 ? 'var(--amber)' : 'var(--red-accent)'};">${c.intensity.toLocaleString()}</div></div>
+            <div style="text-align: center;"><div style="font-size: 1.3rem; font-weight: 800; color: var(--navy);">${c.capacity}</div></div>
+            <div style="text-align: center;"><div style="font-size: 1rem; font-weight: 700; color: var(--navy);">${c.targetYear || 'N/A'}</div></div>
+            <div style="text-align: center;"><div style="font-size: 0.82rem; font-weight: 600; color: ${sbtiColor};">${c.sbtiStatus.length > 30 ? c.sbtiStatus.substring(0,28) + '...' : c.sbtiStatus}</div></div>
+            <div style="text-align: center;"><div style="font-size: 1.1rem; font-weight: 800; color: ${cdpColor};">${c.cdpScore}</div></div>
+        </div>`;
+}
+
+function renderMiniDoughnut(canvas, c, chartRef) {
+    if (chartRef) chartRef.destroy();
+    const fuels = Object.entries(c.mix).filter(([_, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    return new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: fuels.map(f => f[0]),
+            datasets: [{ data: fuels.map(f => f[1]), backgroundColor: fuels.map(f => fuelColors[f[0]] || '#D1D5DB'), borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 6, font: { size: 10 } } }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw}%` } } },
+            cutout: '50%'
+        }
+    });
+}
+
+function updateComparison() {
+    const a = companies[selectA.value];
+    const b = companies[selectB.value];
+    document.getElementById('comparisonResult').style.display = 'block';
+
+    renderMetricCol(a, document.getElementById('compareMetricsA'));
+    renderMetricCol(b, document.getElementById('compareMetricsB'));
+
+    document.getElementById('compareMixTitleA').textContent = a.name + ' — Fuel Mix';
+    document.getElementById('compareMixTitleB').textContent = b.name + ' — Fuel Mix';
+    compareMixAChart = renderMiniDoughnut(document.getElementById('compareMixA'), a, compareMixAChart);
+    compareMixBChart = renderMiniDoughnut(document.getElementById('compareMixB'), b, compareMixBChart);
+
+    // Scenario comparison grouped bar
+    if (compareScenarioChartInstance) compareScenarioChartInstance.destroy();
+    const scenA = getScenarioValues(a);
+    const scenB = getScenarioValues(b);
+    compareScenarioChartInstance = new Chart(document.getElementById('compareScenarioChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['Current', 'BAU 2035', 'Policy-Enabled', 'SBTi-Aligned', 'IEA NZE'],
+            datasets: [
+                { label: a.name, data: scenA, backgroundColor: '#0EA5E9', borderRadius: 6 },
+                { label: b.name, data: scenB, backgroundColor: '#F59E0B', borderRadius: 6 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } } },
+            scales: {
+                y: { title: { display: true, text: 'lbs CO₂/MWh', font: { weight: 600 } }, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } },
+                x: { grid: { display: false }, border: { display: true } }
+            }
+        }
+    });
+
+    // Assessment cards
+    const assessA = document.getElementById('compareAssessA');
+    const assessB = document.getElementById('compareAssessB');
+    assessA.innerHTML = `<div class="traffic-light" style="margin-bottom: 8px;"><span class="traffic-dot ${a.assessment}"></span><span style="font-weight: 700;">${a.name}</span></div>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 12px;">${assessmentLabels[a.assessment]}</p>
+        <p style="font-size: 0.85rem; color: var(--text-tertiary);">${a.target}</p>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;">Key Milestone</div>
+            <p style="font-size: 0.85rem; margin-bottom: 0;">${a.keyMilestones[0]}</p>
+        </div>`;
+    assessB.innerHTML = `<div class="traffic-light" style="margin-bottom: 8px;"><span class="traffic-dot ${b.assessment}"></span><span style="font-weight: 700;">${b.name}</span></div>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 12px;">${assessmentLabels[b.assessment]}</p>
+        <p style="font-size: 0.85rem; color: var(--text-tertiary);">${b.target}</p>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;">Key Milestone</div>
+            <p style="font-size: 0.85rem; margin-bottom: 0;">${b.keyMilestones[0]}</p>
+        </div>`;
+}
+
+selectA.addEventListener('change', updateComparison);
+selectB.addEventListener('change', updateComparison);
+updateComparison();
 </script>
 
 </body>
