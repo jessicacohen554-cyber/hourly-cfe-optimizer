@@ -570,10 +570,10 @@ body {
 <div style="max-width:900px;margin:0 auto;padding:40px 48px 8px;background:#F3F4F8;">
     <h2 id="headerTitle" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif;font-size:2.4rem;font-weight:800;color:#DC2626;margin-bottom:16px;letter-spacing:-0.5px;line-height:1.2;">Regional Deep Dives</h2>
     <p id="headerSubtitle" style="font-size:0.98rem;color:#1A1A1A;line-height:1.75;max-width:800px;">
-        Each U.S. grid region has a unique resource endowment that shapes its path to hourly clean energy.
+        Each U.S. grid region has a unique resource endowment that shapes its path to hourly clean energy.<sup style="font-size:0.7em;color:#6B7280;">[1]</sup>
         Select a region below to explore its existing generation mix, cost trajectory, optimal resource
         portfolio, storage requirements, and carbon abatement economics &mdash; all driven by the optimizer's
-        co-optimized results.
+        co-optimized results using hourly profiles from EIA<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> and cost assumptions from NREL ATB 2024<sup style="font-size:0.7em;color:#6B7280;">[2]</sup> and Lazard LCOE v17.<sup style="font-size:0.7em;color:#6B7280;">[3]</sup>
     </p>
 </div>
 
@@ -617,7 +617,7 @@ body {
             <span class="story-badge story-badge-orange">Act II</span>
             <h2>The Cost of Ambition</h2>
 
-            <p>The medium-cost trajectory shows the central estimate. The shaded band spans all 324 sensitivity scenarios &mdash; from the most optimistic to the most pessimistic assumptions across renewable generation, firm generation, storage, fossil fuel prices, and transmission costs.</p>
+            <p>The medium-cost trajectory shows the central estimate, anchored to NREL ATB 2024 mid-case projections.<sup style="font-size:0.7em;color:#6B7280;">[2]</sup> The shaded band spans all 324 sensitivity scenarios &mdash; from the most optimistic to the most pessimistic assumptions across renewable generation, firm generation, storage, fossil fuel prices, and transmission costs.<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup></p>
 
             <div class="chart-container">
                 <div class="chart-title">Cost Trajectory with Sensitivity Envelope: 75% to 100% Hourly Clean Energy</div>
@@ -663,7 +663,7 @@ body {
             <span class="story-badge">Act IV</span>
             <h2>What You Need Depends on What You Have</h2>
 
-            <p class="story-lead">The optimal portfolio at any target is shaped by what this region already has. Regions with abundant existing clean energy need less new procurement &mdash; but the <em>type</em> of new resources needed depends on the gap between existing supply and hourly demand.</p>
+            <p class="story-lead">The optimal portfolio at any target is shaped by what this region already has.<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> Regions with abundant existing clean energy need less new procurement &mdash; but the <em>type</em> of new resources needed depends on the gap between existing supply and hourly demand.<sup style="font-size:0.7em;color:#6B7280;">[5]</sup></p>
 
             <div class="chart-container">
                 <div class="chart-title">New vs. Existing Resources at Each Threshold</div>
@@ -703,6 +703,23 @@ body {
 
 </main>
 
+<!-- ========== SOURCES ========== -->
+<div style="max-width:900px;margin:0 auto;padding:32px 48px 0;background:#F3F4F8;">
+    <details style="border:1px solid #D4D8E0;border-radius:10px;padding:16px 20px;background:#fff;">
+        <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.92rem;font-weight:700;color:#1A2744;cursor:pointer;letter-spacing:0.03em;">Sources &amp; References</summary>
+        <ol style="margin-top:14px;padding-left:22px;font-size:0.84rem;color:#374151;line-height:1.85;">
+            <li>EIA Hourly Electric Grid Monitor (2021&ndash;2025). U.S. Energy Information Administration.</li>
+            <li>NREL Annual Technology Baseline (ATB) 2024. National Renewable Energy Laboratory.</li>
+            <li>Lazard&rsquo;s Levelized Cost of Energy Analysis, Version 17.0 (2024).</li>
+            <li>EPA eGRID 2022. Emissions &amp; Generation Resource Integrated Database. U.S. Environmental Protection Agency.</li>
+            <li>LBNL Utility-Scale Solar &amp; Wind reports (2024). Lawrence Berkeley National Laboratory.</li>
+            <li>FERC/ISO Market Reports &mdash; regional wholesale electricity prices.</li>
+            <li>LBNL &ldquo;Queued Up&rdquo; (2024) &mdash; characteristics of power plants seeking transmission interconnection.</li>
+            <li>IEA Net Zero Roadmap: A Global Pathway to Keep the 1.5&deg;C Goal in Reach (2023 Update).</li>
+        </ol>
+    </details>
+</div>
+
 <!-- ========== FOOTER ========== -->
 <footer class="page-footer">
     <div class="footer-links">
@@ -741,7 +758,7 @@ body {
         ldes:       { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' }
     };
 
-    const EMISSION_RATES = { CAISO: 0.37, ERCOT: 0.41, PJM: 0.55, NYISO: 0.37, NEISO: 0.40 };
+    const EMISSION_RATES = { CAISO: 0.37, ERCOT: 0.41, PJM: 0.55, NYISO: 0.37, NEISO: 0.40 }; // EPA eGRID 2022 [4]
 
     const bodyFont = { family: "'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif" };
     Chart.defaults.font.family = bodyFont.family;
@@ -871,12 +888,12 @@ body {
 
         document.getElementById('insightBaseline').innerHTML =
             '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> ' + currentRegion +
-            '\'s existing grid delivers <strong>' + totalClean.toFixed(1) + '% clean energy</strong> on average. ' +
+            '\'s existing grid delivers <strong>' + totalClean.toFixed(1) + '% clean energy</strong> on average. <sup style="font-size:0.7em;color:#6B7280;">[1][4]</sup> ' +
             'Solar contributes ' + gridMix.solar.toFixed(1) + '%, wind ' + gridMix.wind.toFixed(1) +
             '%, clean firm ' + gridMix.clean_firm.toFixed(1) + '%, and hydro ' + gridMix.hydro.toFixed(1) +
             '%. The remaining ' + fossilPct.toFixed(1) + '% is fossil or unspecified generation that must be displaced.</div>';
         document.getElementById('narrativeBaseline').textContent =
-            'The existing resource mix provides the foundation for any hourly matching strategy. Understanding this starting point reveals which resources are already available and how large the gap is to any given target.';
+            'The existing resource mix &mdash; sourced from EIA hourly grid data [1] and EPA eGRID [4] &mdash; provides the foundation for any hourly matching strategy. Understanding this starting point reveals which resources are already available and how large the gap is to any given target.';
 
         // ========== CHART 2: Cost trajectory + sensitivity fan (combined) ==========
         destroyChart('pathwayChart');
@@ -884,7 +901,7 @@ body {
         const cost90 = costData[thresholds.indexOf(90)] || costData[costData.length - 3] || 0;
         const cost100 = costData[costData.length - 1] || 0;
 
-        // ========== SENSITIVITY COST TABLES (from SPEC.md) ==========
+        // ========== SENSITIVITY COST TABLES (NREL ATB 2024 [2], Lazard LCOE v17 [3]) ==========
         const LCOE_TABLES = {
             solar:      { Low: { CAISO: 45, ERCOT: 40, PJM: 50, NYISO: 70, NEISO: 62 }, Medium: { CAISO: 60, ERCOT: 54, PJM: 65, NYISO: 92, NEISO: 82 }, High: { CAISO: 78, ERCOT: 70, PJM: 85, NYISO: 120, NEISO: 107 } },
             wind:       { Low: { CAISO: 55, ERCOT: 30, PJM: 47, NYISO: 61, NEISO: 55 }, Medium: { CAISO: 73, ERCOT: 40, PJM: 62, NYISO: 81, NEISO: 73 }, High: { CAISO: 95, ERCOT: 52, PJM: 81, NYISO: 105, NEISO: 95 } },
@@ -893,6 +910,7 @@ body {
             battery:    { Low: { CAISO: 77, ERCOT: 69, PJM: 74, NYISO: 81, NEISO: 79 }, Medium: { CAISO: 102, ERCOT: 92, PJM: 98, NYISO: 108, NEISO: 105 }, High: { CAISO: 133, ERCOT: 120, PJM: 127, NYISO: 140, NEISO: 137 } },
             ldes:       { Low: { CAISO: 135, ERCOT: 116, PJM: 128, NYISO: 150, NEISO: 143 }, Medium: { CAISO: 180, ERCOT: 155, PJM: 170, NYISO: 200, NEISO: 190 }, High: { CAISO: 234, ERCOT: 202, PJM: 221, NYISO: 260, NEISO: 247 } }
         };
+        // Transmission cost adders (LBNL "Queued Up" [7], FERC/ISO reports [6])
         const TX_TABLES = {
             solar:      { None: 0, Low: { CAISO: 1, ERCOT: 1, PJM: 2, NYISO: 3, NEISO: 3 }, Medium: { CAISO: 3, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 }, High: { CAISO: 6, ERCOT: 5, PJM: 9, NYISO: 12, NEISO: 10 } },
             wind:       { None: 0, Low: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 }, Medium: { CAISO: 8, ERCOT: 6, PJM: 10, NYISO: 14, NEISO: 12 }, High: { CAISO: 14, ERCOT: 10, PJM: 18, NYISO: 22, NEISO: 20 } },
@@ -901,7 +919,7 @@ body {
             battery:    { None: 0, Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 1, NEISO: 1 }, Medium: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 }, High: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 } },
             ldes:       { None: 0, Low: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 }, Medium: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 }, High: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 } }
         };
-        const FUEL_WHOLESALE_MULT = { Low: 0.85, Medium: 1.0, High: 1.35 };
+        const FUEL_WHOLESALE_MULT = { Low: 0.85, Medium: 1.0, High: 1.35 }; // FERC/ISO market reports [6]
         const LEVELS = ['Low', 'Medium', 'High'];
         const TX_LEVELS = ['None', 'Low', 'Medium', 'High'];
 
@@ -1027,7 +1045,7 @@ body {
         }
         document.getElementById('narrativeCost').textContent =
             'The shaded band spans all 324 sensitivity scenarios. The solid line shows medium assumptions. ' +
-            'The spread widens above 90% because the marginal resources needed (clean firm, CCS, LDES) have the widest cost uncertainty. ' +
+            'The spread widens above 90% because the marginal resources needed (clean firm, CCS, LDES) have the widest cost uncertainty across published estimates [2][3]. ' +
             'Labels at 75%, 90%, and 100% show the high/medium/low range at key decision points.';
 
         // ========== CHART 3: Resource Mix Evolution (with storage, LDES, curtailment) ==========
@@ -1171,8 +1189,8 @@ body {
         document.getElementById('narrativeMix').textContent =
             'The stacked bars show the complete procurement portfolio including generation, storage, and curtailment. ' +
             'Below the 100% line is useful energy; above it (cross-hatched) is curtailed overprocurement. ' +
-            'Batteries (4hr Li-ion, 85% efficiency) handle daily cycles; LDES (100hr iron-air, 50% efficiency) bridges multi-day gaps. ' +
-            'As thresholds rise, clean firm\'s share grows because only dispatchable generation can cover the hardest hours.';
+            'Batteries (4hr Li-ion, 85% round-trip efficiency [2]) handle daily cycles; LDES (100hr iron-air, 50% round-trip efficiency [3]) bridges multi-day gaps. ' +
+            'As thresholds rise, clean firm\'s share grows because only dispatchable generation can cover the hardest hours [8].';
 
         // ========== CHART 4: What You Need Depends on What You Have ==========
         destroyChart('newVsExistingChart');
@@ -1268,10 +1286,10 @@ body {
             '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> At the 90% target, ' + currentRegion +
             ' leverages ' + totalExistAt90.toFixed(0) + '% from existing resources and needs ' + totalNewAt90.toFixed(0) +
             '% new procurement. The largest new-build need is <strong>' + biggestNewRes + '</strong> at ' + biggestNewVal.toFixed(0) +
-            '%. Regions with more existing clean energy face a smaller &mdash; but potentially more expensive &mdash; gap to fill.</div>';
+            '%. Regions with more existing clean energy face a smaller &mdash; but potentially more expensive &mdash; gap to fill. <sup style="font-size:0.7em;color:#6B7280;">[5][7]</sup></div>';
         document.getElementById('narrativeNewVsExisting').textContent =
             'The faded bars show what the existing grid already provides; the saturated bars show what must be built new. ' +
-            'This decomposition reveals why cost varies so much across regions: some start with 40%+ clean energy, others below 20%. ' +
+            'This decomposition reveals why cost varies so much across regions [1][4]: some start with 40%+ clean energy, others below 20%. ' +
             'The type of new resources needed &mdash; and whether they are dispatchable &mdash; drives the marginal cost of each additional percentage point.';
 
         // ========== CHART 5: Abatement ==========
@@ -1324,10 +1342,10 @@ body {
         const avgAt90 = avgAbatement[thresholds.indexOf(90)] || avgAbatement[avgAbatement.length - 3] || 0;
         document.getElementById('insightAbatement').innerHTML =
             '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> At ' + currentRegion + '\'s emission rate of ' +
-            emissionRate.toFixed(2) + ' tCO\u2082/MWh, the average abatement cost at 90% is ~$' + avgAt90.toFixed(0) +
+            emissionRate.toFixed(2) + ' tCO\u2082/MWh <sup style="font-size:0.7em;color:#6B7280;">[4]</sup>, the average abatement cost at 90% is ~$' + avgAt90.toFixed(0) +
             '/ton. The marginal cost rises steeply above 95%, reflecting the expense of eliminating the last few hours of fossil generation.</div>';
         document.getElementById('narrativeAbatement').textContent =
-            'Each clean MWh displaces ' + emissionRate.toFixed(2) + ' metric tons of CO\u2082 from fossil generation in this region. ' +
+            'Each clean MWh displaces ' + emissionRate.toFixed(2) + ' metric tons of CO\u2082 (EPA eGRID 2022 [4]) from fossil generation in this region. ' +
             'The early tons are cheap; the last tons are expensive. Understanding this curve helps set realistic decarbonization budgets.';
     }
 
