@@ -2459,24 +2459,47 @@ def process_iso(args):
                     phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of{total_active}',
                     partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
 
-        # ── Safety net: if all representative scenarios found unique mixes, expand ──
+        # ── Adaptive resampling: if unique mixes > 50% of scenarios run, expand ──
+        # Target: unique_mixes < 50% of total scenarios run
+        # Expansion: add unrun scenarios (midpoints) until ratio drops below 50%
         if use_pruning:
-            initial_unique = set()
-            for res in threshold_scenarios.values():
-                m = res['resource_mix']
-                initial_unique.add((m['clean_firm'], m['solar'], m['wind'],
-                                    m['ccs_ccgt'], m['hydro'],
-                                    res['procurement_pct'],
-                                    res['battery_dispatch_pct'],
-                                    res['ldes_dispatch_pct']))
-            if len(initial_unique) >= len(REPRESENTATIVE_SCENARIOS) * 0.9:
-                # Saturation detected — expand to remaining scenarios
-                print(f"      SAFETY NET: {len(initial_unique)} unique mixes from "
-                      f"{len(threshold_scenarios)} scenarios — expanding to full 324")
-                already_done = set(threshold_scenarios.keys())
-                for s_idx2, (scenario_key, cost_levels) in enumerate(ALL_COST_SCENARIOS):
-                    if scenario_key in already_done:
-                        continue
+            UNIQUENESS_THRESHOLD = 0.50  # Max ratio of unique mixes to scenarios run
+            MAX_RESAMPLE_ROUNDS = 5
+            already_run = set(threshold_scenarios.keys())
+            total_run = len(already_run)
+
+            for resample_round in range(MAX_RESAMPLE_ROUNDS):
+                unique_mixes = set()
+                for res in threshold_scenarios.values():
+                    m = res['resource_mix']
+                    unique_mixes.add((m['clean_firm'], m['solar'], m['wind'],
+                                     m['ccs_ccgt'], m['hydro'],
+                                     res['procurement_pct'],
+                                     res['battery_dispatch_pct'],
+                                     res['ldes_dispatch_pct']))
+                ratio = len(unique_mixes) / total_run if total_run > 0 else 0
+
+                if ratio <= UNIQUENESS_THRESHOLD:
+                    if resample_round > 0:
+                        print(f"      Resampling converged: {len(unique_mixes)} unique mixes "
+                              f"/ {total_run} scenarios = {ratio:.0%}")
+                    break
+
+                # Need more scenarios — pick unrun ones from ALL_COST_SCENARIOS
+                unrun = [(k, v) for k, v in ALL_COST_SCENARIOS if k not in already_run]
+                # Scale: add enough to bring ratio below threshold
+                # target_total = unique_mixes / 0.50 → need (target - current) more
+                target_total = int(len(unique_mixes) / UNIQUENESS_THRESHOLD) + 1
+                add_count = min(target_total - total_run, len(unrun))
+                # Spread evenly across unrun list (midpoints)
+                step = max(1, len(unrun) // add_count) if add_count > 0 else 1
+                to_add = [unrun[i] for i in range(0, len(unrun), step)][:add_count]
+
+                print(f"      RESAMPLE round {resample_round + 1}: "
+                      f"{len(unique_mixes)} unique / {total_run} run = {ratio:.0%} > 50% — "
+                      f"adding {len(to_add)} midpoint scenarios")
+
+                for scenario_key, cost_levels in to_add:
                     result = optimize_for_threshold(
                         iso, demand_norm, supply_profiles, threshold, hydro_cap,
                         emission_rates, demand_total_mwh,
@@ -2494,12 +2517,13 @@ def process_iso(args):
                         threshold_scenarios[scenario_key] = result
                         if scenario_key == 'MMM_M_M':
                             medium_result = result
+                    already_run.add(scenario_key)
+                    total_run += 1
                     opt_count += 1
                     if opt_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
                         save_checkpoint(iso, iso_results,
-                            phase=f'threshold-{threshold}-expanded-{len(threshold_scenarios)}of324',
+                            phase=f'threshold-{threshold}-resample-{len(threshold_scenarios)}',
                             partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
-                print(f"      Expanded: {len(threshold_scenarios)}/324 scenarios after safety net")
 
         # Log Medium scenario progress
         t_elapsed = time.time() - t_start
