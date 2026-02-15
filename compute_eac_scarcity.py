@@ -31,11 +31,11 @@ CHECKPOINT_PATH = "data/checkpoints/eac_scarcity_checkpoint.json"
 SSS_2025 = {
     "CAISO": {
         "total_clean_twh": 172,
-        "sss_fixed_twh": 55,     # Diablo Canyon (~17), public hydro (~25), rate-base geothemal (~13)
+        "sss_fixed_twh": 55,     # Diablo Canyon (~17), public hydro (~25), rate-base geothermal (~13) — permanent
         "sss_rps_twh": 92.5,     # SB 100 RPS-driven renewables
         "non_sss_twh": 24.5,     # midpoint of 17-32 (merchant wind/solar)
         "sss_pct": 0.85,
-        "notes": "High RPS (60% by 2030), Diablo Canyon extension, heavy state mandates"
+        "notes": "Diablo Canyon is fixed SSS (state-supported indefinitely). SB 100 RPS drives renewable growth."
     },
     "ERCOT": {
         "total_clean_twh": 205,
@@ -144,15 +144,15 @@ SSS_NEW_BUILD_FRACTION = {
 
 # ── Policy Expirations (SSS TWh that shifts to non-SSS) ──────────────────
 # From SPEC.md: IL ZEC/CMC expires mid-2027, NJ ZEC expired June 2025
+# "component" field: "fixed" = nuclear/hydro fixed fleet, "rps" = RPS-eligible
 SSS_EXPIRATIONS = {
     "PJM": [
-        {"year": 2027, "twh_shift": 94, "note": "IL ZEC/CMC expiry — Dresden, Braidwood, Byron, LaSalle, Clinton, Quad Cities"},
+        {"year": 2027, "twh_shift": 94, "component": "fixed",
+         "note": "IL ZEC/CMC expiry — Dresden, Braidwood, Byron, LaSalle, Clinton, Quad Cities"},
     ],
     # NJ ZEC already expired (reflected in 2025 baseline)
     # NY ZEC extended through 2049
-    "CAISO": [
-        {"year": 2030, "twh_shift": 17, "note": "Diablo Canyon extension uncertain post-2030"},
-    ],
+    # Diablo Canyon: fixed SSS indefinitely (state-supported)
 }
 
 # ── Corporate PPA Consumption (TWh already contracted, reducing non-SSS) ──
@@ -287,14 +287,19 @@ def evolve_supply(iso, year, growth_level, demand_twh_at_year):
         sss_rps = base["sss_rps_twh"]
         non_sss = base["non_sss_twh"]
     else:
-        # ── Step 1: Fixed-fleet SSS (nuclear, public hydro) ──
+        # ── Step 1: Fixed-fleet SSS (public hydro, rate-base assets) ──
         # Constant TWh — does NOT scale with demand.
-        # Only changes on policy expiry.
+        # Only changes on policy expiry of fixed-fleet components.
         sss_fixed = base["sss_fixed_twh"]
+        rps_expiry_reduction = 0
         if iso in SSS_EXPIRATIONS:
             for exp in SSS_EXPIRATIONS[iso]:
                 if year >= exp["year"]:
-                    sss_fixed -= exp["twh_shift"]
+                    if exp.get("component", "fixed") == "fixed":
+                        sss_fixed -= exp["twh_shift"]
+                    else:
+                        # RPS-eligible expiry (e.g. Diablo Canyon in CAISO CES)
+                        rps_expiry_reduction += exp["twh_shift"]
         sss_fixed = max(0, sss_fixed)
 
         # ── Step 2: Total clean supply = RPS target % × demand ──
@@ -338,6 +343,11 @@ def evolve_supply(iso, year, growth_level, demand_twh_at_year):
             total_rps_mandate = rps_eligible_needed * avg_sss_frac + base["sss_rps_twh"]
             # This is already captured above since new build fraction
             # determines the SSS/merchant split of incremental supply.
+
+    # Apply RPS-component expirations (e.g. Diablo Canyon leaving CES pool)
+    if year > 2025 and rps_expiry_reduction > 0:
+        sss_rps = max(0, sss_rps - rps_expiry_reduction)
+        non_sss += rps_expiry_reduction  # shifts to merchant pool
 
     sss = sss_fixed + sss_rps
 
