@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy & Enabling Conditions — Power Generator Decarbonization</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="index.html" class="nav-brand">Power Generator Decarbonization</a>
+        <button class="nav-hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')">&#9776;</button>
+        <ul class="nav-links">
+            <li><a href="index.html">Executive Summary</a></li>
+            <li><a href="dashboard.html">Company Dashboard</a></li>
+            <li><a href="fleet-analysis.html">Fleet Analysis</a></li>
+            <li><a href="targets.html">Targets & Feasibility</a></li>
+            <li><a href="policy.html" class="active">Policy & Conditions</a></li>
+            <li><a href="methodology.html">Methodology</a></li>
+            <li><a href="../../dashboard/index.html" style="color:#F59E0B;">&#8592; 8,760 Problem</a></li>
+        </ul>
+    </div>
+</nav>
+
+<header class="hero" style="padding: 48px 24px 40px;">
+    <div class="hero-inner">
+        <p class="tagline">Enabling Conditions & Barriers</p>
+        <h1>What Makes Ambitious Decarbonization Achievable&mdash;or Too Costly?</h1>
+        <p class="subtitle">The policy, market, and technology conditions that determine whether generators can decarbonize affordably, and what they should advocate for.</p>
+    </div>
+</header>
+
+<div class="main-content">
+
+    <div class="key-insights">
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#128176;</span>
+            <div><strong>IRA = #1 Enabler</strong><br>$369B in tax credits makes clean energy cheaper than coal operations in most markets</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#9889;</span>
+            <div><strong>Queue Crisis</strong><br>2,300 GW waiting for interconnection — only 322 miles of HV lines built in 2024</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#127981;</span>
+            <div><strong>Corporate Demand Pull</strong><br>Hyperscale data centers creating new market for CCS and clean firm via hourly matching</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#128200;</span>
+            <div><strong>Planning Regression</strong><br>Utility IRP wind+solar plans declined 20% since 2023 while new gas capacity rose 67%</div>
+        </div>
+    </div>
+
+    <!-- The Co-Optimization Imperative -->
+    <section class="story-section fade-in">
+        <span class="story-badge green">Core Principle</span>
+        <div class="story-content">
+            <h2>Affordability and Decarbonization Must Be Co-Optimized</h2>
+            <p>The most durable decarbonization pathways are those that don't require customers to choose between clean energy and affordable bills. The IRA's clean energy tax credits have fundamentally changed this equation: in many markets, clean energy is now the <em>cheapest</em> new generation option, not just the cleanest.<sup class="ref">5,12</sup></p>
+
+            <p>But "cheapest new build" doesn't mean "free transition." Stranded assets, grid integration costs, reliability investments, and community transition all carry real price tags. <strong>The policy question isn't whether to decarbonize — it's how to structure the transition so costs are manageable and fairly distributed.</strong></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Enabling Conditions -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Enabling Conditions: What Unlocks Affordable Ambition</h2>
+        </div>
+
+        <!-- IRA Tax Credits -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>1. IRA Tax Credits: The Single Largest Enabler</h3>
+            <div class="story-two-col" style="margin-top: 16px;">
+                <div>
+                    <p style="font-size: 0.92rem;">The Inflation Reduction Act (2022) provides an estimated <strong>$369 billion</strong> in clean energy tax incentives over 10 years. For power generators, three credits are transformative:<sup class="ref">12</sup></p>
+                    <ul style="margin-left: 16px; font-size: 0.9rem; color: var(--text-secondary);">
+                        <li><strong>Section 45Y (Clean Electricity PTC):</strong> ~$28/MWh for qualifying clean generation (wind, solar, nuclear, geothermal). Reduces LCOE by 30&ndash;40%.</li>
+                        <li><strong>Section 48E (Clean Electricity ITC):</strong> 30% investment tax credit for clean energy projects + 10% bonus for domestic content + 10% for energy communities.</li>
+                        <li><strong>Section 45Q (CCS Credit):</strong> $85/tonne CO₂ for geologic storage. Makes CCS economically viable on large CCGTs at ~50&ndash;60% capture rate.</li>
+                    </ul>
+                </div>
+                <div class="chart-container" style="margin: 0; padding: 16px;">
+                    <h4 style="font-size: 0.95rem;">Impact of IRA Credits on LCOE</h4>
+                    <div style="height: 250px;"><canvas id="iraChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="callout success" style="margin-top: 16px;">
+                <p><strong>Who benefits most:</strong> Coal-heavy generators gain the most because replacement renewables receive the full credit, making coal-to-clean substitution economically compelling. Gas+nuclear fleets benefit from 45Q (CCS) and 45Y (nuclear PTC) but face higher marginal costs.</p>
+            </div>
+        </div>
+
+        <!-- Carbon Pricing -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>2. Carbon Pricing: The Missing Accelerant</h3>
+            <p style="font-size: 0.92rem;">No national carbon price exists in the United States. Regional carbon markets (RGGI in the Northeast, WCI in the West) cover only a fraction of the generators analyzed here. A federal carbon price would dramatically accelerate decarbonization economics:<sup class="ref">13</sup></p>
+
+            <div class="card-grid" style="margin-top: 16px;">
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.6rem;">$40&ndash;60</div>
+                    <div class="stat-label">$/tonne CO₂</div>
+                    <div class="stat-sublabel">Makes coal retirement economic everywhere. Gas plants remain viable.</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.6rem;">$80&ndash;120</div>
+                    <div class="stat-label">$/tonne CO₂</div>
+                    <div class="stat-sublabel">CCS becomes competitive on gas. Nuclear uprates fully economic.</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.6rem;">$150+</div>
+                    <div class="stat-label">$/tonne CO₂</div>
+                    <div class="stat-sublabel">Near-100% clean electricity economic. LDES, clean firm competitive.</div>
+                </div>
+            </div>
+
+            <p style="font-size: 0.88rem; margin-top: 16px; color: var(--text-tertiary);">Reference points: EPA social cost of carbon: $51/tonne (2020$). Rennert et al. (Nature, 2022): $185/tonne. EU ETS: &euro;70&ndash;100/tonne ($75&ndash;110). RGGI: ~$15/tonne.<sup class="ref">13</sup></p>
+
+            <div class="chart-container" style="margin-top: 20px; padding: 20px;">
+                <h4 style="font-size: 0.95rem;">Social Cost of Carbon: How Different Estimates Compare</h4>
+                <div style="height: 220px;"><canvas id="sccChart"></canvas></div>
+                <p class="citation">EPA (2021 IWG), Rennert et al. (Nature 2022), EU ETS (2024 avg), RGGI (2024 auction). Abatement cost thresholds illustrate what becomes economic at each carbon price.<sup class="ref">13</sup></p>
+            </div>
+        </div>
+
+        <!-- Transmission -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>3. Transmission & Interconnection: The #1 Bottleneck</h3>
+            <p style="font-size: 0.92rem;">The single largest physical constraint on clean energy deployment is the transmission grid. The LBNL &ldquo;Queued Up&rdquo; 2025 edition paints a stark picture:<sup class="ref">14</sup></p>
+            <div class="stat-row" style="margin-top: 16px;">
+                <div class="stat-tile">
+                    <div class="stat-value danger" style="font-size: 1.4rem;">2,300 GW</div>
+                    <div class="stat-label">In Interconnection Queue</div>
+                    <div class="stat-sublabel">10,300 projects waiting (end 2024)</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value danger" style="font-size: 1.4rem;">77%</div>
+                    <div class="stat-label">Withdrawal Rate</div>
+                    <div class="stat-sublabel">Projects submitted 2000&ndash;2019</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value danger" style="font-size: 1.4rem;">322 mi</div>
+                    <div class="stat-label">HV Lines Built (2024)</div>
+                    <div class="stat-sublabel">vs ~5,000 mi/yr needed</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.4rem;">$240/kW</div>
+                    <div class="stat-label">Avg. Interconnection Cost</div>
+                    <div class="stat-sublabel">PJM completed projects</div>
+                </div>
+            </div>
+            <p style="font-size: 0.88rem; margin-top: 12px; color: var(--text-tertiary);">Median time from request to operation has <strong>doubled from &lt;2 years to &gt;4 years</strong> over the past decade. Only 13% of projects submitted 2000&ndash;2019 reached commercial operation. Gas capacity in queues is up 72% year-over-year while solar, storage, and wind are declining.<sup class="ref">14</sup></p>
+            <div class="callout warning" style="margin-top: 12px;">
+                <p><strong>Implication for generators:</strong> Even generators with ambitious clean energy plans face multi-year delays to interconnect new projects. Utilities with existing transmission rights (like vertically integrated utilities in their own service territories) have a structural advantage. FERC Order 1920 (2024) requires proactive long-range transmission planning but implementation will take years.</p>
+            </div>
+        </div>
+
+        <!-- Technology -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>4. Technology Cost Trends: The Tailwind</h3>
+            <p style="font-size: 0.92rem;">Cost declines in clean energy technologies have been the primary driver of power sector decarbonization to date:<sup class="ref">5,15</sup></p>
+            <div class="stat-row" style="margin-top: 16px;">
+                <div class="stat-tile">
+                    <div class="stat-value success" style="font-size: 1.4rem;">-90%</div>
+                    <div class="stat-label">Solar LCOE since 2010</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value success" style="font-size: 1.4rem;">-72%</div>
+                    <div class="stat-label">Wind LCOE since 2010</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value success" style="font-size: 1.4rem;">-90%+</div>
+                    <div class="stat-label">Battery costs since 2010</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.4rem;">-50%</div>
+                    <div class="stat-label">LDES projected by 2030</div>
+                    <div class="stat-sublabel">Iron-air: ~$50&ndash;80/kWh target</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Corporate Demand-Side Pull -->
+    <section class="story-section fade-in">
+        <span class="story-badge navy">Demand-Side Pull</span>
+        <div class="story-content">
+            <h2>Corporate Buyers as a Catalyst for CCS and Clean Firm Deployment</h2>
+            <p>The emerging hourly clean energy accounting framework creates a new demand signal that conventional annual REC procurement never did: <strong>demand for dispatchable, carbon-free generation that can fill hours when wind and solar are insufficient.</strong> This demand-side pull could be the catalyst that makes CCS-equipped natural gas plants commercially viable at scale.</p>
+
+            <h3 style="margin-top: 24px;">How Hourly Accounting Changes the CCS Business Case</h3>
+            <p>Under annual matching, corporate buyers have no incentive to procure CCS-equipped generation. They can meet "100% renewable" targets by purchasing cheap daytime solar RECs to offset nighttime fossil consumption. The economics are simple: buy the cheapest REC available, regardless of when or where it was generated.</p>
+
+            <p>Hourly matching eliminates this arbitrage. When every hour of consumption must be matched with carbon-free generation produced in that same hour on the same grid, corporate buyers face a structural deficit during:</p>
+            <ul style="margin-left: 20px; color: var(--text-secondary);">
+                <li><strong>Evening/night hours</strong> &mdash; after solar sets and before wind picks up</li>
+                <li><strong>Multi-day low-wind events</strong> &mdash; 3&ndash;7 day doldrums that exhaust battery storage</li>
+                <li><strong>Winter mornings</strong> &mdash; high heating demand, low solar, variable wind</li>
+                <li><strong>Seasonal troughs</strong> &mdash; particularly in northern ISOs with weak winter solar</li>
+            </ul>
+
+            <p>These gaps can only be filled by <strong>dispatchable carbon-free generation</strong>: nuclear, geothermal, or CCS-equipped natural gas. For large loads in regions like PJM, ERCOT, and CAISO, CCS-CCGT may be the fastest-deployable option since it leverages existing gas infrastructure and workforce.</p>
+
+            <div class="callout success" style="margin-top: 16px;">
+                <p><strong>The demand-side pull mechanism:</strong> When SBTi requires 50% hourly matching by 2030 and 90% by 2040, companies with loads in the tens or hundreds of GWh will need to contract for nighttime clean firm generation. CCS-CCGT plants with 45Q tax credits ($85/tonne CO&#8322; stored) can offer clean firm power at $90&ndash;130/MWh &mdash; expensive, but potentially the only option for hourly matching during multi-day low-renewable periods in regions without geothermal or nuclear expansion options.</p>
+            </div>
+
+            <h3 style="margin-top: 24px;">Who Drives This Demand?</h3>
+            <div class="card-grid" style="margin-top: 16px;">
+                <div class="card">
+                    <h4>Hyperscale Data Centers</h4>
+                    <p style="font-size: 0.88rem;">Google (24/7 CFE by 2030), Microsoft (100% CFE by 2030), and Amazon (net-zero operations by 2040) collectively consume &gt;50 TWh/year in the US &mdash; roughly equivalent to a mid-sized utility. Their hourly matching commitments create direct demand for clean firm resources in PJM (Virginia data center corridor), ERCOT (Texas), and CAISO. Microsoft&rsquo;s 20-year PPA with Constellation for the Crane Clean Energy Center nuclear restart demonstrates the scale of demand-side pull.</p>
+                </div>
+                <div class="card">
+                    <h4>Large Industrial Loads</h4>
+                    <p style="font-size: 0.88rem;">SBTi&rsquo;s phased hourly matching requirement (&ge;10 GWh in a single region) will initially capture approximately 500&ndash;1,000 large C&amp;I consumers across the US. These companies have steady baseload demand profiles that can&rsquo;t be fully matched with variable renewables alone. Their procurement of hourly-matched clean energy creates a market for CCS, advanced geothermal, and long-duration storage that doesn&rsquo;t exist under annual accounting.</p>
+                </div>
+                <div class="card">
+                    <h4>Federal Facilities</h4>
+                    <p style="font-size: 0.88rem;">The US government joined the UN 24/7 CFE Compact at COP28 (Dec 2023). Federal facilities consume ~55 TWh/year. As the largest single buyer of electricity in the country, a federal shift to hourly matching would create immediate demand for clean firm generation across multiple ISOs &mdash; particularly in PJM (DoD installations in Virginia/Maryland) and ERCOT (military bases in Texas).</p>
+                </div>
+            </div>
+
+            <div class="callout" style="margin-top: 16px;">
+                <p><strong>CCS deployment scale needed:</strong> If hourly matching targets drive even 10&ndash;15 GW of CCS-CCGT deployment by 2035, this would represent a transformative scaling of carbon capture technology. The learning-rate effects alone could reduce CCS costs by 20&ndash;30% (based on analogous 15% learning rates for solar and wind), making CCS competitive for broader grid applications beyond corporate procurement.<sup class="ref">7,15</sup></p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- RPS/CES and EAC Markets -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>State RPS &amp; CES Policies: Creating Competitive EAC Markets</h2>
+            <p>State Renewable Portfolio Standards (RPS) and Clean Energy Standards (CES) create the regulatory floor for clean energy deployment &mdash; and in doing so, they create competitive markets for Energy Attribute Certificates (EACs) that directly affect generator economics.</p>
+        </div>
+
+        <div class="stat-row">
+            <div class="stat-tile">
+                <div class="stat-value" style="font-size: 1.6rem;">29 + DC</div>
+                <div class="stat-label">States with Binding RPS/CES</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value" style="font-size: 1.6rem;">63%</div>
+                <div class="stat-label">US Retail Sales Under RPS</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value" style="font-size: 1.6rem;">14</div>
+                <div class="stat-label">States with 100% Clean Laws</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value" style="font-size: 1.6rem;">1,700 TWh</div>
+                <div class="stat-label">Projected RPS/CES Demand by 2050</div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 24px;">How RPS/CES Creates EAC Market Value</h3>
+        <p style="font-size: 0.92rem;">
+            State RPS mandates force load-serving entities (utilities, competitive suppliers) to procure Renewable Energy Certificates (RECs) or similar EACs to demonstrate compliance. This creates a competitive market where clean generators earn revenue not just from energy sales, but from the environmental attribute value of their generation. In regions with aggressive state targets and limited supply, EAC prices can reach $20&ndash;50/MWh &mdash; transforming the economics of clean energy projects.
+        </p>
+
+        <div class="card-grid" style="margin-top: 20px;">
+            <div class="card" style="border-left: 4px solid #0EA5E9;">
+                <h4>ISO-NE (New England)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Limited presence among top 15 (Vistra, partial Constellation)</p>
+                <p style="font-size: 0.88rem;">Some of the most aggressive state RPS mandates in the country. Massachusetts (50% by 2030, 100% clean by 2050), Connecticut (zero-carbon by 2040), Rhode Island (100% renewable by 2033), Vermont (100% by 2035). These overlapping mandates create strong EAC demand in a transmission-constrained region with limited land for new renewables.</p>
+                <p style="font-size: 0.88rem;"><strong>REC prices:</strong> Massachusetts Class I RECs traded at $30&ndash;55/MWh in recent years &mdash; among the highest in the nation. This premium makes offshore wind, new solar, and existing clean generation highly competitive.</p>
+                <p style="font-size: 0.88rem;"><strong>Implication:</strong> Clean generators in New England earn substantial REC revenue that improves project economics. Nuclear (Millstone, Seabrook) receives state-level zero-emission credits in CT and NH that keep these plants economically viable.</p>
+            </div>
+            <div class="card" style="border-left: 4px solid #7C3AED;">
+                <h4>PJM (Mid-Atlantic / Midwest)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Constellation, AEP, Dominion, PPL, Vistra</p>
+                <p style="font-size: 0.88rem;">The largest US wholesale market spans 13 states with varying RPS ambitions. Virginia (VCEA: 100% by 2045), New Jersey (50% by 2030, moving to 100%), Maryland (50% RPS by 2030), and Illinois (100% by 2045) create strong clean energy demand. Pennsylvania has no binding RPS target beyond 2020.</p>
+                <p style="font-size: 0.88rem;"><strong>EAC dynamics:</strong> PJM RECs trade at lower prices ($5&ndash;20/MWh) than New England because the region has more diverse supply. However, state-specific carve-outs (IL zero-emission credits, NJ offshore wind RECs) create segmented premium markets.</p>
+
+                <div class="callout warning" style="margin-top: 12px;">
+                    <p><strong>The PJM interconnection queue crisis:</strong> PJM&rsquo;s queue is the most congested in the nation, with <strong>&gt;800 GW of capacity waiting</strong> for interconnection studies &mdash; over 3x the region&rsquo;s installed capacity. Median time from application to commercial operation exceeds <strong>4 years</strong>, with a 77% withdrawal rate for projects submitted 2000&ndash;2019. In 2024, gas capacity in the PJM queue rose 72% year-over-year while solar and storage applications actually declined.</p>
+                    <p style="margin-top: 8px;"><strong>Impact on generators:</strong> Constellation&rsquo;s existing nuclear fleet in PJM has a structural advantage &mdash; it&rsquo;s already interconnected and producing clean energy that earns EAC value. New competitors face years-long queues and uncertain interconnection costs (averaging $240/kW for PJM completed projects). This &ldquo;incumbency premium&rdquo; benefits existing clean generators but throttles new entrants, potentially constraining the pace at which PJM can achieve state clean energy targets.</p>
+                    <p style="margin-top: 8px;">FERC Order 1920 (2024) requires proactive long-range transmission planning, and PJM is transitioning to a &ldquo;first-ready, first-served&rdquo; cluster study model. But implementation will take years. In the interim, <strong>the queue bottleneck is the single largest constraint on PJM decarbonization.</strong></p>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid #F59E0B;">
+                <h4>CAISO (California)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Constellation (Geysers geothermal + gas), NextEra, AES</p>
+                <p style="font-size: 0.88rem;">California&rsquo;s SB 100 mandates 100% carbon-free retail electricity by 2045, with interim targets of 60% RPS by 2030. The state also has a cap-and-trade carbon market ($25&ndash;35/tonne) and aggressive procurement mandates for storage, offshore wind, and clean firm resources.</p>
+                <p style="font-size: 0.88rem;"><strong>EAC dynamics:</strong> CA RPS compliance costs average ~$15&ndash;25/MWh. The state&rsquo;s &ldquo;portfolio content categories&rdquo; tiering system creates premium value for in-state or directly-delivered clean energy (Category 1) vs. unbundled RECs (Category 3, which CPUC is phasing out).</p>
+                <p style="font-size: 0.88rem;"><strong>CCS opportunity:</strong> Constellation&rsquo;s 725 MW Geysers geothermal complex in California is the world&rsquo;s largest geothermal facility &mdash; a clean firm anchor. Constellation&rsquo;s California gas fleet (~6 GW) could be a candidate for CCS retrofit, particularly with 45Q credits and California&rsquo;s own CCS incentives. The state&rsquo;s SB 905 (2022) establishes a framework for carbon capture and storage permitting.</p>
+            </div>
+            <div class="card" style="border-left: 4px solid #22C55E;">
+                <h4>ERCOT (Texas) &amp; MISO/SPP (Central US)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Constellation, Vistra, AEP (ERCOT); Xcel, Evergy, DTE, WEC, Entergy (MISO/SPP)</p>
+                <p style="font-size: 0.88rem;"><strong>ERCOT:</strong> No state RPS (Texas repealed its 2005 RPS after exceeding targets). Competitive energy-only market. Clean energy deployment is driven entirely by economics and voluntary corporate procurement &mdash; making Texas the purest test of demand-side pull. Corporate PPAs (Google, Amazon, Meta) account for a large share of recent solar+storage buildout.</p>
+                <p style="font-size: 0.88rem;"><strong>MISO/SPP:</strong> Mixed RPS landscape. Minnesota (100% by 2040), Colorado (100% by 2040), Illinois (100% by 2045) create strong demand. Kansas, Missouri, and Indiana have weaker or no targets. Transmission constraints limit export of Great Plains wind to load centers &mdash; a bottleneck for wind-rich generators like Evergy and Xcel.</p>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 32px;">The Interaction: Hourly Matching + RPS/CES</h3>
+        <p style="font-size: 0.92rem;">
+            Currently, all state RPS/CES policies use <strong>annual</strong> REC compliance. No state requires hourly matching. But the convergence of three forces will reshape EAC markets:
+        </p>
+        <ol style="margin-left: 20px; font-size: 0.92rem; color: var(--text-secondary);">
+            <li style="margin-bottom: 8px;"><strong>GHG Protocol Scope 2 revision</strong> (expected 2027) will likely require hourly matching for corporate emissions reporting, creating a parallel demand channel for hourly EACs that runs alongside state RPS compliance.</li>
+            <li style="margin-bottom: 8px;"><strong>SBTi hourly matching requirements</strong> (starting 2030) will force ~8,000 companies with validated targets to procure time-matched clean energy &mdash; generating massive new demand for hourly EACs, particularly during high-demand, low-renewable hours.</li>
+            <li style="margin-bottom: 8px;"><strong>EU CBAM</strong> (binding from Jan 2026) requires time-matched clean electricity documentation for embedded emissions in goods exported to the EU. US manufacturers in energy-intensive industries will need hourly clean energy certification to maintain EU market access.</li>
+        </ol>
+
+        <div class="callout" style="margin-top: 16px;">
+            <p><strong>The dual-market future:</strong> Generators will increasingly earn revenue from two overlapping EAC streams: (1) annual RECs for state RPS compliance, and (2) hourly granular certificates (GCs) for corporate/international hourly matching requirements. Clean firm generators &mdash; nuclear, geothermal, CCS-CCGT &mdash; earn premium hourly EAC revenue because they produce during hours when variable renewables cannot. This creates a natural revenue premium for the very technologies needed for deep decarbonization.</p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Barriers -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Barriers: What Makes Targets Difficult or Too Costly</h2>
+        </div>
+
+        <div class="card-grid">
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Stranded Asset Risk</h4>
+                <p style="font-size: 0.88rem;">Coal and gas plants with remaining book value create financial pressure to continue operating. Regulated utilities recover capital through rate base — early retirement means writing off undepreciated assets, which requires regulatory approval and may increase rates. <strong>Estimated stranded asset exposure for the 15 generators: $50&ndash;80 billion.</strong></p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Reliability Mandates</h4>
+                <p style="font-size: 0.88rem;">NERC&rsquo;s 2025 Long-Term Reliability Assessment finds <strong>13 of 23 assessment areas</strong> face elevated or high resource adequacy risk over 5 years, including MISO, PJM, and ERCOT. Summer peak demand could surge by <strong>224 GW</strong> (69% more than prior projection). Meanwhile, <strong>122,000 MW of dispatchable generation</strong> is retiring over the next decade. Winter Storm Uri (2021) and Elliott (2022) reinforce the political case for retaining gas plants.<sup class="ref">21</sup></p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Load Growth</h4>
+                <p style="font-size: 0.88rem;">After two decades of flat electricity demand, the US is experiencing unprecedented load growth from data centers, AI computing, EVs, and industrial electrification. Some utilities project 4&ndash;6% annual growth. <strong>Growth means generators must decarbonize a moving target — absolute reductions are harder when the denominator is growing.</strong></p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Political & Regulatory Headwinds</h4>
+                <p style="font-size: 0.88rem;">Coal communities resist plant closures. State legislatures in fossil-fuel-dependent states pass laws restricting early retirement. EPA regulations face legal challenges. IRA tax credit repeal risk creates investment uncertainty. Permitting reform stalls in Congress.</p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Rate Impact Concerns</h4>
+                <p style="font-size: 0.88rem;">Regulated utilities must demonstrate that capital investments are prudent and in ratepayers' interest. Large-scale clean energy investment can increase rate base and, temporarily, customer bills. Affordability is a political constraint even when long-term economics favor transition.</p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Supply Chain & Workforce</h4>
+                <p style="font-size: 0.88rem;">Solar panel manufacturing is concentrated in China (with tariff and trade policy implications). Transformer and grid equipment lead times are 2&ndash;4 years. Skilled workforce for clean energy construction is constrained. These practical bottlenecks slow deployment even when economics are favorable.</p>
+            </div>
+        </div>
+
+        <div class="callout warning" style="margin-top: 24px;">
+            <p><strong>The planning regression (RMI Q4 2025):</strong> Utility integrated resource plans are moving in the <strong>wrong direction</strong>. Planned wind+solar by 2035 has <em>declined</em> from 280 GW (end 2023) to 226 GW (end 2025). Planned new gas has <em>risen</em> from 60 GW to 100 GW. The projected 2035 CO₂ reduction (vs 2005) has deteriorated from &minus;60% to <strong>&minus;45%</strong>&mdash;a 15 percentage-point regression in just two years. Battery storage is the sole bright spot: 68 GW planned, up 7 GW year-over-year.</p>
+        </div>
+
+        <div style="overflow-x: auto; margin-top: 16px;">
+            <table class="company-table" style="max-width: 700px; margin: 0 auto;">
+                <thead>
+                    <tr>
+                        <th>Metric (by 2035)</th>
+                        <th>End 2023</th>
+                        <th>End 2024</th>
+                        <th>End 2025</th>
+                        <th>Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Wind + Solar</strong></td><td>~280 GW</td><td>~244 GW</td><td>226 GW</td><td style="color:#DC2626;">&darr; Declining</td></tr>
+                    <tr><td><strong>New Gas</strong></td><td>~60 GW</td><td>~74 GW</td><td>100 GW</td><td style="color:#DC2626;">&uarr; Rising</td></tr>
+                    <tr><td><strong>Coal Retirements</strong></td><td>~68 GW</td><td>~68 GW</td><td>73 GW</td><td style="color:var(--text-muted);">&asymp; Slight increase</td></tr>
+                    <tr><td><strong>Battery Storage</strong></td><td>&mdash;</td><td>~61 GW</td><td>68 GW</td><td style="color:#22C55E;">&uarr; Growing</td></tr>
+                    <tr><td><strong>CO₂ Reduction vs 2005</strong></td><td>&minus;60%</td><td>&minus;56%</td><td>&minus;45%</td><td style="color:#DC2626;">&darr; Deteriorating</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="citation" style="margin-top: 8px;">Source: Rocky Mountain Institute, State of Utility Planning, Q4 2025.</p>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Catalytic Policy Positions -->
+    <section class="story-section fade-in">
+        <span class="story-badge sky">Strategic Recommendations</span>
+        <div class="story-content">
+            <h2>Catalytic Policy Positions: What Should Generators Advocate For?</h2>
+            <p>If power generators want to take policy positions that accelerate least-cost decarbonization — benefiting both their bottom line and the climate — here's what the analysis suggests by fleet archetype:</p>
+        </div>
+
+        <div class="card-grid" style="margin-top: 24px;">
+            <div class="card">
+                <h4 style="color: #374151;">Coal-Heavy Generators Should Advocate For:</h4>
+                <ul style="font-size: 0.88rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>Securitization legislation</strong> — Allows utilities to issue low-cost bonds to pay off stranded coal assets, reducing ratepayer impact of early retirement</li>
+                    <li><strong>Transmission buildout</strong> — Connects wind/solar-rich regions to load centers, enabling coal replacement</li>
+                    <li><strong>Community transition funding</strong> — Reduces political opposition to coal plant closures</li>
+                    <li><strong>IRA credit preservation</strong> — 45Y/48E credits make replacement renewables cheaper than coal operations</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4 style="color: #EF4444;">Gas-Dominant Generators Should Advocate For:</h4>
+                <ul style="font-size: 0.88rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>45Q CCS credit enhancement</strong> — Higher or extended CCS credits make gas+capture competitive</li>
+                    <li><strong>Clean firm technology R&D</strong> — Geothermal, advanced nuclear (SMR), long-duration storage development</li>
+                    <li><strong>Dispatchable clean energy recognition</strong> — Capacity market reforms that value clean dispatchable resources</li>
+                    <li><strong>Methane reduction rules</strong> — Reduces upstream Scope 3 and demonstrates credibility</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4 style="color: #7C3AED;">Nuclear-Led Generators Should Advocate For:</h4>
+                <ul style="font-size: 0.88rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>45U nuclear PTC preservation</strong> — Ensures existing fleet economics remain strong</li>
+                    <li><strong>License extension beyond 80 years</strong> — NRC framework for extended operation</li>
+                    <li><strong>Nuclear in clean energy standards</strong> — Recognition as zero-emission baseload in CES/RPS</li>
+                    <li><strong>SMR permitting reform</strong> — Streamlined NRC review for standardized designs</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4 style="color: #22C55E;">All Generators Should Advocate For:</h4>
+                <ul style="font-size: 0.88rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>Permitting reform</strong> — Faster NEPA review, transmission siting authority for federal corridors</li>
+                    <li><strong>Interconnection queue reform</strong> — FERC action on serial study process, "first-ready, first-served" models</li>
+                    <li><strong>Technology-neutral clean energy standard</strong> — Rewards all zero-emission generation equally</li>
+                    <li><strong>Long-term policy certainty</strong> — 10&ndash;15 year credit horizons to de-risk capital deployment</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Executive Summary</a>
+        <a href="dashboard.html">Company Dashboard</a>
+        <a href="fleet-analysis.html">Fleet Analysis</a>
+        <a href="targets.html">Targets & Feasibility</a>
+        <a href="policy.html">Policy & Conditions</a>
+        <a href="methodology.html">Methodology</a>
+        <a href="../../dashboard/index.html">&#8592; 8,760 Problem</a>
+    </div>
+    <div class="footer-note">&copy; 2026</div>
+</footer>
+<div class="bottom-bar"></div>
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Social Cost of Carbon Comparison
+new Chart(document.getElementById('sccChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['RGGI\n(actual)', 'EU ETS\n(actual)', 'EPA IWG\n(social cost)', 'Rennert et al.\n(social cost)'],
+        datasets: [{
+            label: '$/tonne CO₂',
+            data: [15, 90, 51, 185],
+            backgroundColor: ['#9CA3AF', '#0EA5E9', '#F59E0B', '#DC2626'],
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => `$${ctx.raw}/tonne CO₂` } }
+        },
+        scales: {
+            x: { title: { display: true, text: '$/tonne CO₂', font: { size: 11 } }, grid: { display: false }, border: { display: true },
+                 ticks: { callback: v => `$${v}` } },
+            y: { grid: { display: false }, border: { display: true }, ticks: { font: { size: 10 } } }
+        }
+    }
+});
+
+// IRA Impact Chart
+new Chart(document.getElementById('iraChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['Solar', 'Wind', 'Battery (4hr)', 'Nuclear (existing)', 'CCS-CCGT'],
+        datasets: [
+            { label: 'Without IRA', data: [45, 40, 85, 30, 130], backgroundColor: '#E5E7EB', borderRadius: 4 },
+            { label: 'With IRA', data: [28, 25, 65, 22, 90], backgroundColor: '#22C55E', borderRadius: 4 }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true, padding: 8 } } },
+        scales: {
+            y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } },
+            x: { grid: { display: false }, border: { display: true }, ticks: { font: { size: 9 } } }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
