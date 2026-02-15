@@ -1237,3 +1237,40 @@ Applied to cached optimizer results via `postprocess_results.py`. Raw cache pres
 **Decision**: Retain $69/MWh. ERCOT is genuinely the lowest-cost US market for battery deployment. Lazard's national unsubsidized range ($115-$254) reflects high-cost assumptions (80% equity at 12% return) and diverse geographies. ERCOT-specific conditions (non-ERCOT interconnection queue, streamlined permitting, LFP oversupply benefiting Texas ports) justify costs below national averages. The Low case explicitly represents an optimistic-but-plausible scenario.
 
 **Mitigation**: Document in research paper that regional battery cost differentiation is based on qualitative assessment of market conditions, not published regional cost studies. Note that all Low-case costs represent aggressive forward trajectories.
+
+### 22.6 Post-Processing Peer Review Fixes (Feb 15, 2026)
+
+**Findings from third-party code review:**
+
+1. **`costs_detail` sync** — `fix_45q_offset()` was updating `scenario['costs']` but not `scenario['costs_detail']` for Medium scenarios (MMM_M_M), causing a data inconsistency where the dashboard's detail views showed stale pre-correction numbers. **Fixed**: Now syncs `effective_cost_per_useful_mwh`, `total_cost_per_demand_mwh`, `incremental_above_baseline`, and `baseline_wholesale_cost` between both dicts.
+
+2. **Crossover edge-case comment** — When `rhs ≤ 0` (LDES variable cost alone exceeds LDES cost), the comment incorrectly stated "CCS always cheaper." **Fixed**: Corrected to "LDES always cheaper."
+
+3. **Dead import** — `import copy` was unused. **Removed.**
+
+4. **CCS CF estimation floor** (documented limitation) — The 0.20 minimum CF floor in `ccs_lcoe_dispatchable()` may understate no-45Q costs for small CCS shares (where actual CF might be 0.08-0.15). Without hourly dispatch data in the results JSON, we can't improve this in post-processing. Documented as a conservative (cost-understating) assumption.
+
+5. **No-45Q mix bias** (documented limitation) — The no-45Q overlay reprices the same resource mix that was co-optimized WITH 45Q. This mix over-represents CCS, making the no-45Q cost a conservative upper bound. A true no-45Q re-optimization would substitute LDES/renewables for CCS, yielding lower costs.
+
+### 22.7 100% Hourly Match Asymptote — Literature Review & Procurement Bounds
+
+**Key literature findings:**
+- NREL (Cole et al., 2021, Joule): Marginal abatement cost 99%→100% = **$930/ton** — 15× the average cost of the full 100% target. Nonlinear in all 22 sensitivities tested.
+- Riepin & Brown (2024, Energy Strategy Reviews): 98% CFE = 54% premium over annual matching. 100% doubles costs again. With clean firm + LDES, 100% premium drops to just 15%.
+- Peninsula Clean Energy MATCH Model (2023): 99%→100% requires **34% more supply**, +10% portfolio cost. 0%→99% costs only +2%.
+- Budischak et al. (2013, J. Power Sources): Cost-optimal 99.9% requires ~280% nameplate capacity. "Least cost solutions yield seemingly-excessive generation capacity."
+- WattTime: 100% hourly matching may require PPAs for **up to 400%** of annual consumption.
+
+**Granularity consensus:** The 90-100% zone needs 2.5% resolution minimum. Our threshold set (90, 92.5, 95, 97.5, 99, 100) is well-aligned with literature practice.
+
+**Procurement bound assessment:**
+- Current bound: 200% of demand
+- Actual usage at 99%: max 135% (CAISO), 130% (NYISO), 125% (NEISO), 123% (PJM), 118% (ERCOT)
+- 100% threshold: 0 feasible scenarios found (all ISOs)
+- Max hourly match achieved: 99.6% (PJM at 123% procurement)
+- **Decision**: If rerunning for 100%, increase upper bound to **250%** based on literature support (Budischak 280%, WattTime 400%). The 200% bound is sufficient for ≤99% targets.
+
+**Archetype diversity in cache:**
+- 46–70 unique resource mix archetypes per ISO across all thresholds
+- Only 4–14 unique mixes per threshold (massive redundancy across 324 scenarios)
+- Cache comprehensively covers the feasible solution space — new constraint runs can seed from existing archetypes rather than cold-start

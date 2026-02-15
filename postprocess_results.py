@@ -21,7 +21,6 @@ See SPEC.md §22 for methodology documentation.
 import json
 import os
 import sys
-import copy
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_PATH = os.path.join(SCRIPT_DIR, 'data', 'optimizer_cache.json')
@@ -403,6 +402,15 @@ def fix_45q_offset(data):
 
                 # Update simplified costs dict
                 scenario['costs'] = costs
+
+                # Also update costs_detail if present (Medium scenario has both)
+                if 'costs_detail' in scenario:
+                    detail = scenario['costs_detail']
+                    detail['effective_cost_per_useful_mwh'] = costs['effective_cost']
+                    detail['total_cost_per_demand_mwh'] = costs['total_cost']
+                    detail['incremental_above_baseline'] = costs['incremental']
+                    detail['baseline_wholesale_cost'] = costs['wholesale']
+
                 corrections += 1
 
     print(f"      {corrections} scenario costs recalculated with corrected 45Q")
@@ -455,7 +463,7 @@ def add_no45q_overlay(data):
                         crossover_cf = ccs_no45q_base * 0.63 * 0.85 / rhs
                         crossover_cf = round(min(1.0, max(0.0, crossover_cf)), 3)
                     else:
-                        crossover_cf = 0.0  # CCS always cheaper (unlikely)
+                        crossover_cf = 0.0  # LDES always cheaper (CCS variable costs alone exceed LDES)
 
                     scenario['no_45q_costs']['ccs_vs_ldes'] = {
                         'ccs_no45q_baseload': round(ccs_no45q_base + ccs_tx, 2),
