@@ -753,13 +753,13 @@ body {
     };
 
     const MIX_COLORS = {
-        clean_firm: { fill: 'rgba(30,58,95,0.50)',  border: '#1E3A5F' },
-        solar:      { fill: 'rgba(245,158,11,0.50)', border: '#F59E0B' },
+        clean_firm: { fill: 'rgba(30,58,95,0.50)',    border: '#1E3A5F' },
+        ccs_ccgt:   { fill: 'rgba(13,148,136,0.50)',  border: '#0D9488' },
+        solar:      { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
         wind:       { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },
         hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
-        storage:    { fill: 'rgba(239,68,68,0.50)',   border: '#EF4444' },
-        battery:    { fill: 'rgba(239,68,68,0.50)',   border: '#EF4444' },
-        ldes:       { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' }
+        battery:    { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' },
+        ldes:       { fill: 'rgba(236,72,153,0.50)',  border: '#EC4899' }
     };
 
     const EMISSION_RATES = { CAISO: 0.37, ERCOT: 0.41, PJM: 0.55, NYISO: 0.37, NEISO: 0.40 }; // EPA eGRID 2022 [4]
@@ -840,7 +840,7 @@ body {
         document.getElementById('headerSubtitle').textContent = meta.name + ' — exploring the cost trajectory, optimal resource mix, storage needs, and abatement economics for this region.';
 
         // Extract threshold data
-        const costData = [], mixData = { clean_firm: [], solar: [], wind: [], hydro: [] };
+        const costData = [], mixData = { clean_firm: [], ccs_ccgt: [], solar: [], wind: [], hydro: [], battery: [], ldes: [] };
         const storageData = [], matchScores = [];
 
         thresholds.forEach(t => {
@@ -850,10 +850,12 @@ body {
                 const uc = getUnifiedCosts(td);
                 costData.push(uc.effective_cost_per_useful_mwh);
                 matchScores.push(td.hourly_match_score);
-                storageData.push(td.battery_dispatch_pct || td.storage_dispatch_pct || 0);
-                for (const res of ['clean_firm', 'solar', 'wind', 'hydro']) {
-                    mixData[res].push(td.resource_mix[res] || 0);
+                storageData.push((td.battery_dispatch_pct || 0) + (td.ldes_dispatch_pct || 0));
+                for (const res of ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro']) {
+                    mixData[res].push(td.resource_mix?.[res] || 0);
                 }
+                mixData.battery.push(td.battery_dispatch_pct || 0);
+                mixData.ldes.push(td.ldes_dispatch_pct || 0);
             }
         });
 
@@ -1077,24 +1079,16 @@ body {
 
         // ========== CHART 3: Resource Mix Evolution (with storage, LDES, curtailment) ==========
         destroyChart('mixEvolutionChart');
-        const mixResources = ['clean_firm', 'solar', 'wind', 'hydro'];
-        const mixLabels = { clean_firm: 'Clean Firm', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', curtailment: 'Curtailment' };
+        const mixResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro'];
+        const mixLabels = { clean_firm: 'Clean Firm', ccs_ccgt: 'CCS-CCGT', solar: 'Solar', wind: 'Wind', hydro: 'Hydro', battery: 'Battery (4hr)', ldes: 'LDES (100hr)', curtailment: 'Curtailment' };
 
-        // Compute battery/LDES/curtailment arrays
-        const batteryPcts = [], ldesPcts = [], curtailmentPcts = [];
+        // Use actual battery/LDES dispatch from optimizer results
+        const batteryPcts = mixData.battery;
+        const ldesPcts = mixData.ldes;
+        const curtailmentPcts = [];
         thresholds.forEach((t, i) => {
             const td = regionData.thresholds[String(t)];
-            const total = storageData[i] || 0;
-            if (t >= 95) {
-                const ldesShare = Math.min(total, total * ((t - 90) / 15));
-                ldesPcts.push(parseFloat(ldesShare.toFixed(1)));
-                batteryPcts.push(parseFloat((total - ldesShare).toFixed(1)));
-            } else {
-                batteryPcts.push(total);
-                ldesPcts.push(0);
-            }
-            // Curtailment = procurement above 100%
-            const procPct = td ? (td.procurement_pct || 100) : 100;
+            const procPct = td ? (resolveScenario(td)?.procurement_pct || 100) : 100;
             curtailmentPcts.push(Math.max(0, procPct - 100));
         });
 
@@ -1110,7 +1104,7 @@ body {
                 stack: 'mix'
             })),
             {
-                label: 'Battery',
+                label: mixLabels.battery || 'Battery (4hr)',
                 data: batteryPcts,
                 backgroundColor: MIX_COLORS.battery.fill,
                 borderColor: MIX_COLORS.battery.border,
@@ -1119,7 +1113,7 @@ body {
                 stack: 'mix'
             },
             {
-                label: 'LDES',
+                label: mixLabels.ldes || 'LDES (100hr)',
                 data: ldesPcts,
                 backgroundColor: MIX_COLORS.ldes.fill,
                 borderColor: MIX_COLORS.ldes.border,
@@ -1222,25 +1216,46 @@ body {
         // ========== CHART 4: What You Need Depends on What You Have ==========
         destroyChart('newVsExistingChart');
         const existingData = {}, newData = {};
-        const nvResources = ['clean_firm', 'solar', 'wind', 'hydro'];
+        const nvResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
         nvResources.forEach(r => { existingData[r] = []; newData[r] = []; });
 
         thresholds.forEach(t => {
-            const td = regionData.thresholds[String(t)];
+            const tData = regionData.thresholds[String(t)];
+            const td = tData ? resolveScenario(tData) : null;
             if (!td) { nvResources.forEach(r => { existingData[r].push(0); newData[r].push(0); }); return; }
             const procPct = td.procurement_pct || 100;
+            const uc = getUnifiedCosts(td);
+            const rc = uc.resource_costs || {};
             nvResources.forEach(r => {
-                const totalOfDemand = (td.resource_mix[r] || 0) * procPct / 100;
-                const existingPct = gridMix[r] || 0;
-                const existing = Math.min(totalOfDemand, existingPct);
-                existingData[r].push(parseFloat(existing.toFixed(1)));
-                newData[r].push(parseFloat((totalOfDemand - existing).toFixed(1)));
+                if (r === 'battery' || r === 'ldes') {
+                    // Storage: all new build, dispatch_pct from costs_detail
+                    const dispatchPct = rc[r]?.dispatch_pct || (r === 'battery' ? (td.battery_dispatch_pct || 0) : (td.ldes_dispatch_pct || 0));
+                    existingData[r].push(0);
+                    newData[r].push(parseFloat(dispatchPct.toFixed(1)));
+                } else {
+                    // Generation: split existing vs new using costs_detail if available, else resource_mix
+                    const rdDetail = rc[r];
+                    if (rdDetail && (rdDetail.existing_pct != null || rdDetail.new_pct != null || rdDetail.existing_share != null)) {
+                        const existPct = rdDetail.existing_pct || rdDetail.existing_share || 0;
+                        const newPct = rdDetail.new_pct || rdDetail.new_share || 0;
+                        existingData[r].push(parseFloat(existPct.toFixed(1)));
+                        newData[r].push(parseFloat(newPct.toFixed(1)));
+                    } else {
+                        const totalOfDemand = (td.resource_mix?.[r] || 0) * procPct / 100;
+                        const existingPct = gridMix[r] || 0;
+                        const existing = Math.min(totalOfDemand, existingPct);
+                        existingData[r].push(parseFloat(existing.toFixed(1)));
+                        newData[r].push(parseFloat((totalOfDemand - existing).toFixed(1)));
+                    }
+                }
             });
         });
 
         const nvDatasets = [];
         // Existing resources (solid, lower opacity)
-        nvResources.forEach(r => {
+        const nvExistingOrder = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+        nvExistingOrder.forEach(r => {
+            if (!MIX_COLORS[r]) return;
             nvDatasets.push({
                 label: mixLabels[r] + ' (Existing)',
                 data: existingData[r],
@@ -1252,7 +1267,9 @@ body {
             });
         });
         // New resources (saturated)
-        nvResources.forEach(r => {
+        const nvNewOrder = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
+        nvNewOrder.forEach(r => {
+            if (!MIX_COLORS[r]) return;
             nvDatasets.push({
                 label: mixLabels[r] + ' (New)',
                 data: newData[r],
@@ -1267,7 +1284,7 @@ body {
         // Boundary line between existing and new
         const existingTotals = thresholds.map((_, i) => {
             let sum = 0;
-            nvResources.forEach(r => sum += existingData[r][i]);
+            nvExistingOrder.forEach(r => sum += existingData[r][i]);
             return sum;
         });
 
