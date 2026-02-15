@@ -3875,10 +3875,10 @@ function cfAdjust(entry, iso) {
     const simpleCosts = getScenarioCosts(entry) || entry?.costs || {};
     // Only use costs_detail aggregate values when showing 45Q costs (detail reflects WITH 45Q)
     const useDetail = show45Q;
-    const getTotal = () => (useDetail ? detail.total_cost_per_demand_mwh : null) ?? simpleCosts.total_cost ?? 0;
-    const getEffective = () => (useDetail ? detail.effective_cost_per_useful_mwh : null) ?? simpleCosts.effective_cost ?? 0;
-    const getIncremental = () => (useDetail ? detail.incremental_above_baseline : null) ?? simpleCosts.incremental ?? 0;
-    const getWholesale = () => (useDetail ? detail.baseline_wholesale_cost : null) ?? simpleCosts.wholesale ?? 0;
+    const getTotal = () => (useDetail ? detail.total_cost_per_demand_mwh : null) ?? simpleCosts.total_cost ?? simpleCosts.total_cost_per_demand_mwh ?? 0;
+    const getEffective = () => (useDetail ? detail.effective_cost_per_useful_mwh : null) ?? simpleCosts.effective_cost ?? simpleCosts.effective_cost_per_useful_mwh ?? 0;
+    const getIncremental = () => (useDetail ? detail.incremental_above_baseline : null) ?? simpleCosts.incremental ?? simpleCosts.incremental_above_baseline ?? 0;
+    const getWholesale = () => (useDetail ? detail.baseline_wholesale_cost : null) ?? simpleCosts.wholesale ?? simpleCosts.baseline_wholesale_cost ?? 0;
 
     if (selectedCfCost === 90 || !detail?.resource_costs?.clean_firm) {
         return {
@@ -4032,7 +4032,7 @@ function getActiveEntry(region) {
             if (longtermEntry) return { entry: longtermEntry, threshold: longtermThreshold };
         }
     }
-    return { entry: interimEntry, threshold: interimThreshold, thresholdData: interimThresholdData };
+    return { entry: interimEntry, threshold: interimThreshold };
 }
 
 // ---- Update everything ----
@@ -6469,10 +6469,10 @@ function getUnifiedCosts(entry) {
     const useDetail = show45Q;
     return {
         resource_costs: detail.resource_costs || null,
-        effective_cost_per_useful_mwh: (useDetail ? detail.effective_cost_per_useful_mwh : null) ?? costs.effective_cost ?? null,
-        total_cost_per_demand_mwh: (useDetail ? detail.total_cost_per_demand_mwh : null) ?? costs.total_cost ?? null,
-        incremental_above_baseline: (useDetail ? detail.incremental_above_baseline : null) ?? costs.incremental ?? null,
-        baseline_wholesale_cost: (useDetail ? detail.baseline_wholesale_cost : null) ?? costs.wholesale ?? null,
+        effective_cost_per_useful_mwh: (useDetail ? detail.effective_cost_per_useful_mwh : null) ?? costs.effective_cost ?? costs.effective_cost_per_useful_mwh ?? null,
+        total_cost_per_demand_mwh: (useDetail ? detail.total_cost_per_demand_mwh : null) ?? costs.total_cost ?? costs.total_cost_per_demand_mwh ?? null,
+        incremental_above_baseline: (useDetail ? detail.incremental_above_baseline : null) ?? costs.incremental ?? costs.incremental_above_baseline ?? null,
+        baseline_wholesale_cost: (useDetail ? detail.baseline_wholesale_cost : null) ?? costs.wholesale ?? costs.baseline_wholesale_cost ?? null,
         curtailment_pct: detail.curtailment_pct ?? null,
     };
 }
