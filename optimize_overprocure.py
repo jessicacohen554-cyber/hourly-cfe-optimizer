@@ -2356,6 +2356,50 @@ REPRESENTATIVE_SCENARIOS = _build_representative_scenarios()
 
 CHECKPOINT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'checkpoints')
 
+# Module-level state for incremental dashboard saves
+_dashboard_config = None  # Set by main() before ISO loop
+_output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard', 'overprocure_results.json')
+
+
+def save_results_incremental(iso, iso_results):
+    """Merge current ISO results into dashboard JSON, preserving other ISOs.
+
+    Loads existing overprocure_results.json (if any), updates/inserts this ISO's
+    data, and saves back. Old ISO results are kept until overridden by new data.
+    """
+    global _dashboard_config, _output_path
+
+    if _dashboard_config is None:
+        return  # Config not yet initialized — skip
+
+    # Load existing results file (preserve other ISOs)
+    existing = None
+    if os.path.exists(_output_path):
+        try:
+            with open(_output_path) as f:
+                existing = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            existing = None
+
+    if existing is None:
+        existing = {'config': _dashboard_config, 'results': {}}
+
+    # Always use latest config
+    existing['config'] = _dashboard_config
+
+    # Merge this ISO's results (overwrites previous data for this ISO)
+    existing['results'][iso] = iso_results
+
+    os.makedirs(os.path.dirname(_output_path), exist_ok=True)
+    with open(_output_path, 'w') as f:
+        json.dump(existing, f)
+
+    n_thresholds = len(iso_results.get('thresholds', {}))
+    print(f"    [dashboard] Updated {_output_path.split('/')[-1]}: {iso} "
+          f"({n_thresholds}/10 thresholds) — "
+          f"{os.path.getsize(_output_path)/1024:.0f} KB total "
+          f"({len(existing['results'])}/{len(ISOS)} ISOs)")
+
 
 def save_score_cache(iso, threshold, score_cache):
     """Persist score cache to disk for warm restart.
@@ -2982,6 +3026,8 @@ def process_iso(args):
         save_checkpoint(iso, iso_results, phase=f'threshold-{threshold}')
         # Persist score cache for warm restart on interruption
         save_score_cache(iso, threshold, score_cache)
+        # Incremental dashboard update — push each threshold to results JSON
+        save_results_incremental(iso, iso_results)
 
         # Update dispatchable floor for next threshold
         if threshold_scenarios:
@@ -3313,6 +3359,9 @@ def process_iso(args):
         else:
             print(f"  All monotonicity violations resolved after {MAX_RESWEEP_ROUNDS + 1} rounds")
 
+    # Final incremental save after monotonicity correction
+    save_results_incremental(iso, iso_results)
+
     # ISO complete — clear checkpoint (full results saved in main())
     clear_checkpoint(iso)
     return iso, iso_results
@@ -3381,8 +3430,24 @@ def main():
     output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard', 'overprocure_results.json')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+    # Set module-level state for incremental per-threshold dashboard saves
+    global _dashboard_config, _output_path
+    _dashboard_config = config
+    _output_path = output_path
+
+    # Load existing results to preserve old ISOs until overridden
+    if os.path.exists(output_path):
+        try:
+            with open(output_path) as f:
+                existing = json.load(f)
+            all_results['results'] = existing.get('results', {})
+            print(f"  Loaded existing results: {len(all_results['results'])} ISOs preserved")
+        except (json.JSONDecodeError, IOError):
+            pass
+
     # Run ISOs sequentially to avoid memory pressure and enable incremental saves.
     # Each ISO does 10 thresholds × 324 scenarios — heavy compute per ISO.
+    # Per-threshold incremental saves happen inside process_iso() via save_results_incremental().
     for iso in ISOS:
         iso_start = time.time()
         args = (iso, demand_data, gen_profiles, emission_rates, fossil_mix)
@@ -3391,10 +3456,10 @@ def main():
         iso_elapsed = time.time() - iso_start
         print(f"\n  {iso_name} completed in {iso_elapsed:.0f}s")
 
-        # Incremental save after each ISO — never lose progress
+        # Final ISO-level save (redundant with per-threshold saves, but ensures completeness)
         with open(output_path, 'w') as f:
             json.dump(all_results, f)
-        print(f"  Saved incrementally: {os.path.getsize(output_path) / 1024:.0f} KB "
+        print(f"  Saved: {os.path.getsize(output_path) / 1024:.0f} KB "
               f"({len(all_results['results'])}/{len(ISOS)} ISOs)")
 
     # Save cached results file (reusable input for future projects)
