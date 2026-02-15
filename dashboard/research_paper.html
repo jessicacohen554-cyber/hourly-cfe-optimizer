@@ -644,8 +644,8 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </p>
     <p>
         This paper <strong>co-optimizes cost and hourly matching</strong> across five U.S. ISO regions,
-        searching simultaneously across procurement levels, resource mixes (clean firm, solar, wind, hydro),
-        and storage dispatch to find the lowest-cost portfolio at each target from 75% to 100%. We quantify
+        searching simultaneously across procurement levels, resource mixes (clean firm, CCS-CCGT, solar, wind, hydro),
+        and storage dispatch (battery and LDES) to find the lowest-cost portfolio at each target from 75% to 100%. We quantify
         the "last mile" cost escalation, reveal clean firm power's critical role, and provide actionable
         procurement data.
     </p>
@@ -856,9 +856,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <h3>4.1 Optimization Framework</h3>
     <p>
         The optimizer simultaneously searches across three dimensions: <strong>procurement level</strong>
-        (70&ndash;300% of annual demand), <strong>resource mix</strong> (clean firm, solar, wind, hydro
-        shares summing to 100%), and <strong>battery storage dispatch</strong> (0&ndash;50% of annual demand).
-        Two complementary strategies ensure both cost-efficiency and matching completeness.
+        (70&ndash;300% of annual demand), <strong>resource mix</strong> (clean firm, CCS-CCGT, solar, wind, hydro
+        shares summing to 100%), and <strong>storage dispatch</strong> (battery 4hr Li-ion and LDES 100hr iron-air,
+        each 0&ndash;50% of annual demand). Two complementary strategies ensure both cost-efficiency and matching completeness.
     </p>
 
     <!-- FIGURE 2: Optimization Framework Flowchart -->
@@ -1047,83 +1047,98 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p>
         The optimal resource mix undergoes a structural transformation as the matching target increases.
         At 75% matching, the cheapest portfolios are dominated by intermittent renewables (solar + wind
-        account for 50&ndash;80% of procurement). By 99&ndash;100%, clean firm power (nuclear, geothermal)
-        constitutes 40&ndash;78% of the portfolio across all regions.
+        account for 50&ndash;60% of procurement). By 97.5&ndash;99%, the portfolio diversifies into seven
+        distinct resources: clean firm power (nuclear, geothermal), CCS-CCGT, solar, wind, hydro,
+        battery storage (4hr Li-ion), and LDES (100hr iron-air). Clean firm constitutes 36&ndash;64% across regions
+        at 99%, while CCS-CCGT emerges as a significant contributor (11% average) at the highest thresholds,
+        particularly in CAISO (37%), NEISO (19%), and NYISO at 97.5% (15%).
     </p>
 
-    <!-- FIGURE 4: Resource Mix Evolution -->
+    <!-- FIGURE 4: Resource Mix Evolution (7 resources) -->
     <div class="figure">
-        <svg width="700" height="320" viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
-            <rect width="700" height="320" fill="#F8F9FC" rx="8"/>
+        <svg width="700" height="350" viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
+            <rect width="700" height="350" fill="#F8F9FC" rx="8"/>
             <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">AVERAGE RESOURCE MIX BY MATCHING TARGET (5-Region Mean)</text>
             <!-- Axes -->
-            <line x1="80" y1="40" x2="80" y2="260" stroke="#D4D8E0" stroke-width="1"/>
-            <line x1="80" y1="260" x2="600" y2="260" stroke="#D4D8E0" stroke-width="1"/>
-            <!-- Y axis -->
-            <text x="75" y="263" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">0%</text>
-            <text x="75" y="208" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">25%</text>
-            <text x="75" y="153" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">50%</text>
-            <text x="75" y="98" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
+            <line x1="80" y1="40" x2="80" y2="270" stroke="#D4D8E0" stroke-width="1"/>
+            <line x1="80" y1="270" x2="600" y2="270" stroke="#D4D8E0" stroke-width="1"/>
+            <!-- Y axis labels -->
+            <text x="75" y="273" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">0%</text>
+            <text x="75" y="216" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">25%</text>
+            <text x="75" y="158" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">50%</text>
+            <text x="75" y="101" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
             <text x="75" y="43" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">100%</text>
-            <!-- Bars: 75%, 80%, 85%, 90%, 95%, 99%, 100% -->
-            <!-- Average mixes (approximate from data): -->
-            <!-- 75%: CF27 S12 W34 H27 => 80%: CF26 S10 W23 H30 => 85%: CF27 S11 W22 H30 => 90%: CF36 S10 W14 H30 => 95%: CF42 S7 W11 H30 => 99%: CF52 S11 W13 H25 => 100%: CF60 S10 W9 H21 -->
-            <!-- Bar width 55, gap 20 -->
-            <!-- Scale: 1% = 2.2px (220px for 100%) -->
-            <!-- 75% bar at x=110 -->
-            <rect x="110" y="201" width="55" height="59" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
-            <rect x="110" y="175" width="55" height="26" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
-            <rect x="110" y="100" width="55" height="75" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
-            <rect x="110" y="41" width="55" height="59" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
-            <text x="137" y="235" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">27%</text>
-            <text x="137" y="140" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#1A1A1A">34%</text>
-            <text x="137" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
-            <!-- 85% bar at x=185 -->
-            <rect x="185" y="201" width="55" height="59" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
-            <rect x="185" y="177" width="55" height="24" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
-            <rect x="185" y="129" width="55" height="48" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
-            <rect x="185" y="41" width="55" height="88" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
-            <text x="212" y="235" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">27%</text>
-            <text x="212" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">85%</text>
-            <!-- 90% bar at x=260 -->
-            <rect x="260" y="181" width="55" height="79" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
-            <rect x="260" y="159" width="55" height="22" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
-            <rect x="260" y="128" width="55" height="31" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
-            <rect x="260" y="41" width="55" height="87" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
-            <text x="287" y="225" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">36%</text>
-            <text x="287" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">90%</text>
-            <!-- 95% bar at x=335 -->
-            <rect x="335" y="168" width="55" height="92" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
-            <rect x="335" y="153" width="55" height="15" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
-            <rect x="335" y="129" width="55" height="24" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
-            <rect x="335" y="41" width="55" height="88" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
-            <text x="362" y="220" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">42%</text>
-            <text x="362" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">95%</text>
-            <!-- 99% bar at x=410 -->
-            <rect x="410" y="146" width="55" height="114" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
-            <rect x="410" y="122" width="55" height="24" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
-            <rect x="410" y="93" width="55" height="29" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
-            <rect x="410" y="41" width="55" height="52" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
-            <text x="437" y="208" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">52%</text>
-            <text x="437" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">99%</text>
-            <!-- 100% bar at x=485 -->
-            <rect x="485" y="128" width="55" height="132" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
-            <rect x="485" y="106" width="55" height="22" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
-            <rect x="485" y="86" width="55" height="20" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
-            <rect x="485" y="41" width="55" height="45" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
-            <text x="512" y="200" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">60%</text>
-            <text x="512" y="275" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">100%</text>
-            <!-- Legend -->
-            <rect x="100" y="296" width="12" height="12" rx="2" fill="rgba(26,39,68,0.50)" stroke="#1A2744" stroke-width="1"/>
-            <text x="117" y="306" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Clean Firm</text>
-            <rect x="200" y="296" width="12" height="12" rx="2" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
-            <text x="217" y="306" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Solar</text>
-            <rect x="270" y="296" width="12" height="12" rx="2" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
-            <text x="287" y="306" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Wind</text>
-            <rect x="330" y="296" width="12" height="12" rx="2" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
-            <text x="347" y="306" font-family="Barlow Semi Condensed, sans-serif" font-size="10" fill="#1A2744">Hydro</text>
+            <!-- Updated data from optimizer (5-region mean, MMM_M_M scenario): -->
+            <!-- 75%: CF34 CCS0 S19 W43 H5 Bat0 LDES0 = ~101% -->
+            <!-- 85%: CF44 CCS6 S15 W30 H5 Bat0 LDES0 = ~100% -->
+            <!-- 90%: CF42 CCS0 S18 W34 H6 Bat1 LDES1 = ~102% -->
+            <!-- 95%: CF43 CCS6 S18 W26 H6 Bat1 LDES1 = ~101% -->
+            <!-- 99%: CF47 CCS11 S19 W17 H6 Bat2 LDES2 = ~104% -->
+            <!-- Bar width=65, gap=25. Scale: 1% = 2.3px (230px for 100%). Base y=270 -->
+            <!-- 75% bar at x=105 -->
+            <rect x="105" y="192" width="65" height="78" fill="rgba(30,58,95,0.50)" stroke="#1E3A5F" stroke-width="1"/>
+            <rect x="105" y="148" width="65" height="44" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="105" y="49" width="65" height="99" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="105" y="37" width="65" height="12" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="137" y="236" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">34%</text>
+            <text x="137" y="100" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#1A1A1A">43%</text>
+            <text x="137" y="285" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
+            <!-- 85% bar at x=195 -->
+            <rect x="195" y="169" width="65" height="101" fill="rgba(30,58,95,0.50)" stroke="#1E3A5F" stroke-width="1"/>
+            <rect x="195" y="155" width="65" height="14" fill="rgba(13,148,136,0.50)" stroke="#0D9488" stroke-width="1"/>
+            <rect x="195" y="121" width="65" height="34" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="195" y="52" width="65" height="69" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="195" y="40" width="65" height="12" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="227" y="225" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">44%</text>
+            <text x="227" y="285" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">85%</text>
+            <!-- 90% bar at x=285 -->
+            <rect x="285" y="173" width="65" height="97" fill="rgba(30,58,95,0.50)" stroke="#1E3A5F" stroke-width="1"/>
+            <rect x="285" y="132" width="65" height="41" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="285" y="54" width="65" height="78" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="285" y="40" width="65" height="14" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <rect x="285" y="36" width="65" height="4" fill="rgba(139,92,246,0.50)" stroke="#8B5CF6" stroke-width="1"/>
+            <rect x="285" y="33" width="65" height="3" fill="rgba(236,72,153,0.50)" stroke="#EC4899" stroke-width="1"/>
+            <text x="317" y="227" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">42%</text>
+            <text x="317" y="90" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#1A1A1A">34%</text>
+            <text x="317" y="285" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">90%</text>
+            <!-- 95% bar at x=375 -->
+            <rect x="375" y="171" width="65" height="99" fill="rgba(30,58,95,0.50)" stroke="#1E3A5F" stroke-width="1"/>
+            <rect x="375" y="157" width="65" height="14" fill="rgba(13,148,136,0.50)" stroke="#0D9488" stroke-width="1"/>
+            <rect x="375" y="116" width="65" height="41" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="375" y="56" width="65" height="60" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="375" y="42" width="65" height="14" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <rect x="375" y="39" width="65" height="3" fill="rgba(139,92,246,0.50)" stroke="#8B5CF6" stroke-width="1"/>
+            <rect x="375" y="36" width="65" height="3" fill="rgba(236,72,153,0.50)" stroke="#EC4899" stroke-width="1"/>
+            <text x="407" y="225" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">43%</text>
+            <text x="407" y="285" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">95%</text>
+            <!-- 99% bar at x=465 -->
+            <rect x="465" y="162" width="65" height="108" fill="rgba(30,58,95,0.50)" stroke="#1E3A5F" stroke-width="1"/>
+            <rect x="465" y="136" width="65" height="26" fill="rgba(13,148,136,0.50)" stroke="#0D9488" stroke-width="1"/>
+            <rect x="465" y="92" width="65" height="44" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <rect x="465" y="53" width="65" height="39" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <rect x="465" y="39" width="65" height="14" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <rect x="465" y="34" width="65" height="5" fill="rgba(139,92,246,0.50)" stroke="#8B5CF6" stroke-width="1"/>
+            <rect x="465" y="29" width="65" height="5" fill="rgba(236,72,153,0.50)" stroke="#EC4899" stroke-width="1"/>
+            <text x="497" y="220" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#FFF">47%</text>
+            <text x="497" y="152" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#FFF">11%</text>
+            <text x="497" y="285" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">99%</text>
+            <!-- Legend (7 resources) -->
+            <rect x="70" y="304" width="10" height="10" rx="2" fill="rgba(30,58,95,0.50)" stroke="#1E3A5F" stroke-width="1"/>
+            <text x="84" y="313" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1A2744">Clean Firm</text>
+            <rect x="150" y="304" width="10" height="10" rx="2" fill="rgba(13,148,136,0.50)" stroke="#0D9488" stroke-width="1"/>
+            <text x="164" y="313" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1A2744">CCS-CCGT</text>
+            <rect x="230" y="304" width="10" height="10" rx="2" fill="rgba(245,158,11,0.50)" stroke="#F59E0B" stroke-width="1"/>
+            <text x="244" y="313" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1A2744">Solar</text>
+            <rect x="285" y="304" width="10" height="10" rx="2" fill="rgba(34,197,94,0.50)" stroke="#22C55E" stroke-width="1"/>
+            <text x="299" y="313" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1A2744">Wind</text>
+            <rect x="340" y="304" width="10" height="10" rx="2" fill="rgba(14,165,233,0.50)" stroke="#0EA5E9" stroke-width="1"/>
+            <text x="354" y="313" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1A2744">Hydro</text>
+            <rect x="400" y="304" width="10" height="10" rx="2" fill="rgba(139,92,246,0.50)" stroke="#8B5CF6" stroke-width="1"/>
+            <text x="414" y="313" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1A2744">Battery</text>
+            <rect x="470" y="304" width="10" height="10" rx="2" fill="rgba(236,72,153,0.50)" stroke="#EC4899" stroke-width="1"/>
+            <text x="484" y="313" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1A2744">LDES</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 4.</span> Average resource mix evolution across matching targets (5-region mean). Clean firm share doubles from 27% at 75% matching to 60% at 100%, while wind drops from 34% to 9%. This structural shift drives the cost escalation &mdash; clean firm at $90/MWh replaces wind at $40&ndash;73/MWh.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 4.</span> Average resource mix evolution across matching targets (5-region mean, all 7 resource types). Clean firm rises from 34% at 75% to 47% at 99%. CCS-CCGT emerges at 85%+ (6% average), reaching 11% at 99% &mdash; driven by CAISO (37%) and NEISO (19%). Battery and LDES storage enter at 90%+ as 4hr daily shifting and 100hr multi-day bridging become essential for the hardest matching hours. Wind drops from 43% to 17% as intermittent resources hit diminishing returns.</div>
     </div>
 
     <h3>5.4 Curtailment Analysis</h3>
