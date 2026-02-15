@@ -3967,7 +3967,7 @@ function initDashboard() {
 
     // Populate threshold dropdown — 10 modeled thresholds only
     const threshSel = document.getElementById('thresholdSelect');
-    const FULL_THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100];
+    const FULL_THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
     FULL_THRESHOLDS.forEach(t => {
         const opt = document.createElement('option');
         opt.value = String(t);
@@ -4761,8 +4761,8 @@ function populateCurtailmentVisual() {
     const container = document.getElementById('curtailmentVisual');
     if (!container || !DATA) return;
     const isos = Object.keys(DATA.results);
-    const thresholds = ['75', '85', '95', '99', '100'];
-    const thresholdLabels = ['75%', '85%', '95%', '99%', '100%'];
+    const thresholds = ['75', '85', '95', '99'];
+    const thresholdLabels = ['75%', '85%', '95%', '99%'];
     let html = '';
     for (let ti = 0; ti < thresholds.length; ti++) {
         const tk = thresholds[ti];
@@ -4915,7 +4915,7 @@ const MIX_REGION_INSIGHTS = {
 };
 
 function getMixDataForRegion(region) {
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
     const isos = Object.keys(DATA.results);
     const labels = [];
     const existingData = {};
@@ -5333,7 +5333,7 @@ const INCREMENTAL_INSIGHTS = {
 };
 
 function getIncrementalData(region) {
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
     const labels = [];
     const existingData = {};
     const newData = {};
@@ -5648,8 +5648,8 @@ function initNarrativeCostChart() {
 
     // Gather cost per threshold for each ISO + average
     // Use NUMERIC x-values so the axis is proportional (99→100 = 1% gap vs 5% gaps)
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99, 100];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdNums = [75, 80, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const xValues = [];     // numeric x positions
     const avgCosts = [];
@@ -5832,8 +5832,8 @@ function initNarrativeCostChart() {
 
 function refreshNarrativeCostChart() {
     if (!narrativeCostChart || !DATA) return;
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99, 100];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdNums = [75, 80, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const dsCount = narrativeCostChart.data.datasets.length;
 
@@ -6038,8 +6038,8 @@ function isMobileScrolly() {
 
 function buildStepChartData() {
     if (!DATA) return null;
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99', '100'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99, 100];
+    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdNums = [75, 80, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const avgCosts = [];
     const isoData = {};

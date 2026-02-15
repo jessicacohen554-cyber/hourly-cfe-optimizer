@@ -1003,7 +1003,7 @@ body {
 
         // Build annotation labels at 75%, 90%, 100% showing High/Med/Low values
         const labelAnnotations = {};
-        [75, 90, 100].forEach(target => {
+        [75, 90, 99].forEach(target => {
             const ti = thresholds.indexOf(target);
             if (ti < 0) return;
             const xLabel = target + '%';
