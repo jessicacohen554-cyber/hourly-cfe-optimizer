@@ -149,6 +149,42 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 
 **Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. 324 scenarios × 10 thresholds × 5 regions = 16,200 independent co-optimizations, with matching score cache shared across cost scenarios (physics reuse, not a shortcut).
 
+### 4.1 Warm-Start Optimization (Trifold Seed Strategy)
+
+**Problem**: Full 3-phase co-optimization (Phase 1 coarse grid → Phase 2 medium refinement → Phase 3 fine-tune) takes 5-10 minutes per scenario. With 44 representative scenarios per threshold × 10 thresholds × 5 ISOs, full Phase 1 for every scenario is prohibitively slow.
+
+**Solution**: Trifold warm-start seeding — run full 3-phase for 3 categories of scenarios, then warm-start the remainder with the discovered mix archetypes:
+
+1. **Medium scenario** (`MMM_M_M`): Full 3-phase. The central cost case — most scenarios converge to similar mixes since physics dominates.
+2. **Extreme archetype scenarios** (7 scenarios): Full 3-phase. These represent opposite corners of the cost space where the optimal mix is most likely to diverge from Medium:
+   - `HLL_L_N` — High renewables, low firm/storage/fuel, no transmission (VRE-dominant)
+   - `LHL_L_M` — High firm, low renewables (firm-dominant)
+   - `LLH_H_M` — High storage, high fuel (storage-dominant)
+   - `HHH_H_H` — All high (maximum cost pressure)
+   - `LLL_L_L` — All low (minimum cost environment)
+   - `HLL_L_H` — High renewables + high transmission (VRE with tx penalty)
+   - `LHL_H_N` — High firm + high fuel, no transmission (fuel-stressed firm)
+3. **All remaining scenarios**: Warm-started from the diverse seed pool discovered in steps 1-2. Skip Phase 1 coarse grid; start with seed mixes + their 5% neighborhoods + edge-case seeds, then run full Phase 2/3 refinement.
+
+**Dynamic archetype discovery**: As warm-started scenarios find new mix archetypes (mixes that differ by >5% in any resource dimension from known archetypes), these are automatically added to the seed pool for subsequent scenarios. This ensures rare-but-valid mixes discovered mid-run are propagated forward.
+
+**Fallback**: If warm-start fails to find any feasible solution for a scenario, it automatically falls back to full Phase 1 coarse grid search.
+
+**Scientific validity**: This approach is equivalent to providing a smarter initial guess, not a shortcut:
+- Hourly matching scores are physics-based and cost-independent. The score cache is shared across all scenarios (same mix + procurement → same physics).
+- Phase 2 (5% neighborhood) and Phase 3 (1% neighborhood) refinement run identically regardless of whether warm-start or full Phase 1 was used.
+- The only difference is the set of candidates entering Phase 2. Warm-start uses the discovered archetype pool + edge seeds instead of the full 270-combo coarse grid. Since most of those 270 combos evaluate to the same few optimal regions anyway (especially at lower thresholds), the archetype pool covers the same solution space more efficiently.
+- Cross-pollination after all scenarios still evaluates every discovered mix against every cost scenario, catching any missed optimizations.
+- Monotonicity re-sweep uses full Phase 1 (resweep=True disables warm-start), providing an additional safety net.
+
+**Expected speedup**: ~3-5× per threshold (estimated reduction from ~5-10 min/scenario to ~1-3 min/scenario for warm-started cases).
+
+**Risks and limitations**:
+1. **Missed global optima at extreme cost corners**: If an extreme cost combination produces an optimal mix radically different from any archetype, warm-start's neighborhood search might not find it. **Mitigation**: The 7 extreme archetype scenarios cover the most divergent cost corners; dynamic archetype discovery catches emergent patterns; cross-pollination provides a second chance; monotonicity re-sweep with full Phase 1 provides a final safety net.
+2. **Phase 2 neighborhood radius**: The 5% step with radius 2 covers ±10% in each resource dimension from the warm-start mix. Optimal mixes more than 10% away in any dimension from all seed archetypes would be missed. **Mitigation**: Edge-case seeds (100% solar, 100% wind, etc.) are always included regardless of warm-start. At observed convergence rates, ≤14 unique mixes typically serve 324 scenarios at lower thresholds, well within the archetype pool's coverage.
+3. **Threshold-dependent risk**: Higher thresholds (95-100%) have more diverse optimal mixes across cost scenarios. **Mitigation**: The archetype pool grows dynamically; extreme scenarios are more likely to diverge at high thresholds, populating the pool with the right seeds.
+4. **Not used during re-sweep**: Monotonicity re-sweep always uses full Phase 1 (warm_start_result is not passed when resweep=True). This is intentional — re-sweep needs the broadest possible search to resolve violations.
+
 ---
 
 ## 5. Complete Cost Tables
