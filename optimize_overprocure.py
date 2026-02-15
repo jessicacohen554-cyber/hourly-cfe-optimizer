@@ -2106,9 +2106,17 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     top = [c for c in candidates if c[0] <= best_cost * phase2_cost_mult][:phase2_top_n]
 
     # ---- Phase 2: 5% refinement around top candidates ----
+    # Early termination: if best_cost hasn't improved after evaluating 3 full
+    # candidate neighborhoods, remaining candidates are unlikely to help.
     phase2 = []
     seen = set()
+    p2_candidates_since_improvement = 0
+    P2_STALE_LIMIT = 4 if not resweep else 8  # More patience during resweep
+    p2_cost_before = best_cost
     for _, combo, _, bp_base, lp_base, proc in top:
+        if p2_candidates_since_improvement >= P2_STALE_LIMIT:
+            break
+        candidate_improved = False
         for p_d in [-5, 0, 5]:
             p = proc + p_d
             if p < proc_min or p > proc_max:
@@ -2163,6 +2171,14 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 if score >= target:
                     cost = update_best(rcombo, p, best_bp, best_lp, score)
                     phase2.append((cost, rcombo, score, best_bp, best_lp, p))
+                    if best_cost < p2_cost_before:
+                        candidate_improved = True
+                        p2_cost_before = best_cost
+
+        if candidate_improved:
+            p2_candidates_since_improvement = 0
+        else:
+            p2_candidates_since_improvement += 1
 
     # ---- Phase 3: Fine-tune (1% mix, 2% procurement, refined storage) ----
     # Re-sweep uses wider filter and more finalists to avoid pruning the true optimum
@@ -2174,7 +2190,13 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
 
     seen2 = set()
     phase3_radius = 2 if resweep else 1
+    p3_finalists_since_improvement = 0
+    P3_STALE_LIMIT = 3 if not resweep else 6
+    p3_cost_before = best_cost
     for _, combo, _, bp_base, lp_base, proc in finalists:
+        if p3_finalists_since_improvement >= P3_STALE_LIMIT:
+            break
+        finalist_improved = False
         for p_d in range(-2, 3):
             p = proc + p_d
             if p < proc_min or p > proc_max:
@@ -2221,6 +2243,14 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
 
                 if best_score_here >= target:
                     update_best(rcombo, p, best_bp, best_lp, best_score_here)
+                    if best_cost < p3_cost_before:
+                        finalist_improved = True
+                        p3_cost_before = best_cost
+
+        if finalist_improved:
+            p3_finalists_since_improvement = 0
+        else:
+            p3_finalists_since_improvement += 1
 
     return best_result
 
@@ -2263,55 +2293,47 @@ COST_SCENARIO_MAP = {key: levels for key, levels in ALL_COST_SCENARIOS}
 PRUNING_THRESHOLD_CUTOFF = 100  # Prune all thresholds — empirically, 44 reps discover all archetypes
 
 def _build_representative_scenarios():
-    """Select 54 representative scenarios covering the cost space extremes + grid."""
+    """Select ~30 representative scenarios covering cost space extremes.
+
+    Reduced from 44 by removing:
+    - Single-vary Medium scenarios (close to MMM_M_M, rarely discover unique archetypes)
+    - Redundant cross-axis Tx variants (corners + Tx group already cover those axes)
+    - Diagonals that overlap with corners
+    Cross-pollination fills the remaining ~294 scenarios from discovered archetypes.
+    """
     reps = set()
-    levels_L, levels_M, levels_H = 'Low', 'Medium', 'High'
     lk = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
-    gen3 = [levels_L, levels_M, levels_H]
-    tx4 = ['None', 'Low', 'Medium', 'High']
 
-    # 1. All 8 corners (L/H for ren/firm/stor × L/H fuel × Med Tx) = 16
-    for r in [levels_L, levels_H]:
-        for f in [levels_L, levels_H]:
-            for s in [levels_L, levels_H]:
-                for fu in [levels_L, levels_H]:
-                    key = f"{lk[r]}{lk[f]}{lk[s]}_{lk[fu]}_M"
-                    reps.add(key)
+    # 1. All 16 corners (L/H for ren/firm/stor × L/H fuel × Med Tx)
+    #    These are the most important — they span the full cost hypercube
+    for r in ['Low', 'High']:
+        for f in ['Low', 'High']:
+            for s in ['Low', 'High']:
+                for fu in ['Low', 'High']:
+                    reps.add(f"{lk[r]}{lk[f]}{lk[s]}_{lk[fu]}_M")
 
-    # 2. All 4 Tx levels at Medium everything else = 4
-    for tx in tx4:
+    # 2. Tx levels at Medium everything else (N/L/M/H) = 4
+    for tx in ['None', 'Low', 'Medium', 'High']:
         reps.add(f"MMM_M_{lk[tx]}")
 
-    # 3. Medium baseline with each toggle at L and H = 10
-    for r in gen3:
-        reps.add(f"{lk[r]}MM_M_M")  # Vary renewables
-    for f in gen3:
-        reps.add(f"M{lk[f]}M_M_M")  # Vary firm
-    for s in gen3:
-        reps.add(f"MM{lk[s]}_M_M")  # Vary storage
-    for fu in gen3:
-        reps.add(f"MMM_{lk[fu]}_M")  # Vary fuel
+    # 3. Key cross-axis extremes at Med Tx only (corners already have L/H combos)
+    reps.add('HLL_L_M')  # High renewables only (already in corners)
+    reps.add('LHL_L_M')  # High firm only (already in corners)
+    reps.add('LLH_L_M')  # High storage only (already in corners)
+    reps.add('LLL_H_M')  # High fuel only
 
-    # 4. Cross-axis extremes: High one, Low others = 10
-    for tx in ['N', 'M', 'H']:
-        reps.add(f"HLL_L_{tx}")  # High renewables only
-        reps.add(f"LHL_L_{tx}")  # High firm only
-        reps.add(f"LLH_L_{tx}")  # High storage only
-    reps.add(f"LLL_H_M")  # High fuel only
+    # 4. Extreme Tx combos with non-Medium cost axes (capture Tx interaction effects)
+    reps.add('HLL_L_N')  # High VRE, no transmission
+    reps.add('HLL_L_H')  # High VRE, high transmission
+    reps.add('LHL_L_N')  # High firm, no transmission
 
-    # 5. Diagonal combos for coverage
-    reps.add('HHH_H_H')
-    reps.add('HHH_H_N')
-    reps.add('LLL_L_N')
-    reps.add('LLL_L_L')
-    reps.add('LLL_L_H')
-    reps.add('HHL_H_M')
-    reps.add('LLH_H_M')
-    reps.add('MLH_M_M')
-    reps.add('HML_M_M')
-    reps.add('LHM_L_M')
-    reps.add('MHL_H_N')
-    reps.add('LMH_M_H')
+    # 5. Key diagonals (non-redundant with corners)
+    reps.add('HHH_H_H')  # All high
+    reps.add('LLL_L_L')  # All low
+    reps.add('HHH_H_N')  # All high, no Tx
+    reps.add('LLL_L_N')  # All low, no Tx
+    reps.add('LMH_M_H')  # Mixed: low ren, high storage, high Tx
+    reps.add('MHL_H_N')  # Mixed: high firm, high fuel, no Tx
 
     return reps
 
@@ -2629,9 +2651,6 @@ def process_iso(args):
             'LHL_L_M',  # Low renewables, high firm, low storage, low fuel, med transmission
             'LLH_H_M',  # Low renewables, low firm, high storage, high fuel, med transmission
             'HHH_H_H',  # All high — maximum cost pressure
-            'LLL_L_L',  # All low — minimum cost environment
-            'HLL_L_H',  # High renewables + high transmission (tests VRE with tx penalty)
-            'LHL_H_N',  # High firm + high fuel, no transmission
         ]
 
         # Run archetypes that haven't been completed yet
