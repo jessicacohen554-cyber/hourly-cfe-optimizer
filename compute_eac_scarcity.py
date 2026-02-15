@@ -73,11 +73,12 @@ SSS_2025 = {
 
 # ── Demand Growth Rates (from dashboard.html) ─────────────────────────────
 DEMAND_GROWTH_RATES = {
+    # Aligned with optimizer dashboard (dashboard.html) researched values
     "CAISO":  {"Low": 0.014, "Medium": 0.019, "High": 0.025},
     "ERCOT":  {"Low": 0.020, "Medium": 0.035, "High": 0.055},
     "PJM":    {"Low": 0.015, "Medium": 0.024, "High": 0.036},
-    "NYISO":  {"Low": 0.012, "Medium": 0.020, "High": 0.032},
-    "NEISO":  {"Low": 0.008, "Medium": 0.014, "High": 0.022},
+    "NYISO":  {"Low": 0.013, "Medium": 0.020, "High": 0.044},
+    "NEISO":  {"Low": 0.009, "Medium": 0.018, "High": 0.029},
 }
 
 # ── RPS / Clean Energy Target Trajectories (% of demand) ─────────────────
@@ -171,6 +172,13 @@ MATCH_TARGETS = [75, 80, 85, 90, 95, 99, 100]
 TIME_HORIZONS = [2025, 2030, 2035, 2040, 2045, 2050]
 GROWTH_LEVELS = ["Low", "Medium", "High"]
 ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
+
+# ── C&I Share of Total Demand ─────────────────────────────────────────────
+# Only commercial & industrial load participates in voluntary EAC procurement.
+# Residential does not. EIA 2024: 38% residential, 36% commercial, 26% industrial.
+# C&I = ~62% nationally. Held flat across demand growth scenarios.
+# (Limitation: data center growth could increase C&I share over time, not modeled.)
+CI_SHARE = 0.62
 
 # ── Optimizer-Derived Data ─────────────────────────────────────────────────
 # Loaded at runtime from overprocure_results.json
@@ -478,7 +486,7 @@ def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
         # Find participation rate where demand exceeds available supply
         inflection_pct = None
         for pct in range(1, 101):
-            corp_demand = demand_twh * (pct / 100) * incremental_need_frac * procurement_mult
+            corp_demand = demand_twh * CI_SHARE * (pct / 100) * incremental_need_frac * procurement_mult
             if corp_demand > available:
                 inflection_pct = pct
                 break
@@ -618,8 +626,8 @@ def main():
                         # Procurement multiplier from optimizer results
                         mult = interp_optimizer(iso, match_target, "procurement_pct") / 100.0
 
-                        # Corporate load participating
-                        corp_load = projected_demand * (participation / 100)
+                        # Corporate load participating (C&I only, not residential)
+                        corp_load = projected_demand * CI_SHARE * (participation / 100)
                         # SSS pro-rata derate: corporations already receive
                         # a pro-rata share of SSS clean energy. Their
                         # incremental EAC need = (target% - sss%) × load
@@ -634,6 +642,7 @@ def main():
                             "participation_pct": participation,
                             "match_target_pct": match_target,
                             "projected_demand_twh": round(projected_demand, 1),
+                            "ci_share_pct": round(CI_SHARE * 100, 1),
                             "corp_load_twh": round(corp_load, 1),
                             "sss_pro_rata_pct": round(sss_share * 100, 1),
                             "incremental_need_pct": round(incremental_need_frac * 100, 1),
