@@ -3126,17 +3126,33 @@ body {
             <label for="interimYear">Interim Year</label>
             <select id="interimYear">
                 <option value="2027">2027</option>
-                <option value="2029" selected>2029</option>
+                <option value="2028">2028</option>
+                <option value="2029">2029</option>
+                <option value="2030">2030</option>
                 <option value="2031">2031</option>
+                <option value="2032" selected>2032</option>
                 <option value="2033">2033</option>
+                <option value="2034">2034</option>
+                <option value="2035">2035</option>
             </select>
         </div>
         <div class="control-group">
             <label for="longtermYear">Long-term Year</label>
             <select id="longtermYear">
-                <option value="2035">2035</option>
+                <option value="2036">2036</option>
+                <option value="2037">2037</option>
                 <option value="2038">2038</option>
-                <option value="2042" selected>2042</option>
+                <option value="2039">2039</option>
+                <option value="2040">2040</option>
+                <option value="2041">2041</option>
+                <option value="2042">2042</option>
+                <option value="2043">2043</option>
+                <option value="2044">2044</option>
+                <option value="2045" selected>2045</option>
+                <option value="2046">2046</option>
+                <option value="2047">2047</option>
+                <option value="2048">2048</option>
+                <option value="2049">2049</option>
                 <option value="2050">2050</option>
             </select>
         </div>
@@ -3634,8 +3650,8 @@ function initDashboard() {
         opt.textContent = `${t}%`;
         threshSel.appendChild(opt);
     });
-    // Default to 99%
-    threshSel.value = '99';
+    // Default to 75% interim
+    threshSel.value = '75';
 
     // Bind events
     regionSel.addEventListener('change', updateAll);
@@ -6741,6 +6757,10 @@ function initPathwayAnalysis() {
 
     if (DATA) {
         populateLongtermOptions();
+        // Default longterm target to 99%
+        if (longtermSel.querySelector('option[value="99"]')) {
+            longtermSel.value = '99';
+        }
         updateDemandGrowthLabel();
     }
 }
