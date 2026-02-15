@@ -6239,30 +6239,64 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         });
     }
 
-    // Compute totals for y-axis
-    let maxTWh = 0;
+    // Compute bar totals and demand at each stage for labels
+    const barTotals = [];
     for (let i = 0; i < labels.length; i++) {
         let barTotal = 0;
         datasets.forEach(ds => { barTotal += ds.data[i] || 0; });
-        if (barTotal > maxTWh) maxTWh = barTotal;
+        barTotals.push(barTotal);
     }
-    const yMax = Math.ceil(maxTWh / 10) * 10 + 5;
+    const demandAtStage = hasLongterm
+        ? [todayTWh, interimTWh, longtermTWh]
+        : [todayTWh, interimTWh];
+    const maxTWh = Math.max(...barTotals, ...demandAtStage);
+    const yMax = Math.ceil(maxTWh / 10) * 10 + 10; // extra room for labels
 
-    // Existing clean line (today's total)
-    let existingCleanTWh = 0;
-    MIX_RESOURCES.forEach(r => { existingCleanTWh += todayData.existing[r]; });
+    // Custom plugin: draw total clean TWh + demand labels above each bar
+    const wynBarTopPlugin = {
+        id: 'wynBarTopLabels',
+        afterDraw(chart) {
+            const { ctx: c, scales: { x, y } } = chart;
+            c.save();
+            const font = "bold 12px 'Barlow Semi Condensed','Arial Narrow',sans-serif";
+            for (let i = 0; i < barTotals.length; i++) {
+                const xPos = x.getPixelForValue(i);
+                // Total clean TWh label above bar
+                const yPos = y.getPixelForValue(barTotals[i]);
+                c.font = font;
+                c.textAlign = 'center';
+                c.fillStyle = '#1A2744';
+                c.fillText(Math.round(barTotals[i]) + ' TWh clean', xPos, yPos - 14);
+                // Demand reference label
+                const demandY = y.getPixelForValue(demandAtStage[i]);
+                c.fillStyle = '#6B7280';
+                c.font = "11px 'Barlow Semi Condensed','Arial Narrow',sans-serif";
+                c.fillText(Math.round(demandAtStage[i]) + ' TWh demand', xPos, demandY - 4);
+                // Demand reference tick mark
+                c.strokeStyle = 'rgba(107,114,128,0.5)';
+                c.lineWidth = 1.5;
+                c.setLineDash([4, 3]);
+                c.beginPath();
+                c.moveTo(xPos - 30, demandY);
+                c.lineTo(xPos + 30, demandY);
+                c.stroke();
+                c.setLineDash([]);
+            }
+            c.restore();
+        }
+    };
 
     if (wynCompareChartInstance) wynCompareChartInstance.destroy();
     const ctx = canvas.getContext('2d');
     wynCompareChartInstance = new Chart(ctx, {
         type: 'bar',
         data: { labels, datasets },
-        plugins: [ChartDataLabels],
+        plugins: [ChartDataLabels, wynBarTopPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: 600, easing: 'easeOutCubic' },
-            layout: { padding: { top: 12, right: 8, bottom: 4, left: 4 } },
+            layout: { padding: { top: 40, right: 8, bottom: 4, left: 4 } },
             plugins: {
                 legend: {
                     display: true,
@@ -6329,28 +6363,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     anchor: 'center',
                     align: 'center',
                 },
-                annotation: {
-                    annotations: {
-                        existingLine: {
-                            type: 'line',
-                            yMin: existingCleanTWh,
-                            yMax: existingCleanTWh,
-                            borderColor: 'rgba(26,39,68,0.5)',
-                            borderWidth: 2,
-                            borderDash: [6, 4],
-                            label: {
-                                display: true,
-                                content: 'Current grid clean: ' + existingCleanTWh.toFixed(1) + ' TWh',
-                                position: 'start',
-                                backgroundColor: 'rgba(26,39,68,0.75)',
-                                color: '#fff',
-                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 600 },
-                                padding: { x: 6, y: 3 },
-                                borderRadius: 4,
-                            }
-                        }
-                    }
-                }
+                annotation: { annotations: {} }
             },
             scales: {
                 x: {
@@ -6462,11 +6475,18 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
         if (pwCarried) pwCarried.textContent = Math.round(carriedPct) + '%';
         if (pwWasted) {
-            if (strandedPerMWh > 0.5) {
-                pwWasted.textContent = '$' + strandedPerMWh.toFixed(1) + '/MWh';
+            if (totalStrandedCostM > 0.5) {
+                // Absolute $ amount bold, $/MWh as subtext
+                pwWasted.innerHTML = '$' + (totalStrandedCostM >= 1000
+                    ? (totalStrandedCostM / 1000).toFixed(1) + 'B'
+                    : Math.round(totalStrandedCostM) + 'M');
+                const wastedSub = pwWasted.closest('.pathway-metric')?.querySelector('.pathway-metric-sub');
+                if (wastedSub) wastedSub.textContent = '$' + strandedPerMWh.toFixed(1) + '/MWh of demand';
                 pwWasted.closest('.pathway-metric')?.classList.add('pathway-metric-warn');
             } else {
                 pwWasted.textContent = '~$0';
+                const wastedSub = pwWasted.closest('.pathway-metric')?.querySelector('.pathway-metric-sub');
+                if (wastedSub) wastedSub.textContent = 'No stranded investment';
                 pwWasted.closest('.pathway-metric')?.classList.remove('pathway-metric-warn');
             }
         }
