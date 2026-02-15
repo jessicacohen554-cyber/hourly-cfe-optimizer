@@ -1421,6 +1421,7 @@ body {
         <a href="abatement_dashboard.html">Abatement Dashboard</a>
         <a href="region_deepdive.html">Regional Deep Dives</a>
         <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
+        <a href="eac_scarcity.html">EAC Scarcity</a>
         <a href="research_paper.html">Methodology &amp; Paper</a>
         <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
     </div>
@@ -1439,7 +1440,7 @@ body {
     <p class="subtitle">
         Annual clean energy targets hide a critical gap: the hours when the sun isn&rsquo;t shining and the wind
         isn&rsquo;t blowing. This analysis models the cost of closing that gap &mdash; hour by hour, across five
-        major US grid regions, under 324 cost scenarios &mdash; to reveal where the real inflection points lie.
+        major US grid regions<sup style="font-size:0.7em;color:#6B7280;">[1]</sup>, under 324 cost scenarios<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup> &mdash; to reveal where the real inflection points lie.
     </p>
 </div>
 
@@ -1448,6 +1449,7 @@ body {
     <a href="dashboard.html" class="nav-btn nav-btn-primary">&#128202; Explore the Dashboard</a>
     <a href="region_deepdive.html" class="nav-btn nav-btn-secondary">Regional Deep Dives</a>
     <a href="abatement_comparison.html" class="nav-btn nav-btn-secondary">CO&#8322; Abatement Analysis</a>
+    <a href="eac_scarcity.html" class="nav-btn nav-btn-secondary">EAC Scarcity</a>
     <a href="research_paper.html" class="nav-btn nav-btn-secondary">&#128196; Methodology &amp; Paper</a>
     <a href="../power-gen-decarbonization/site/index.html" class="nav-btn nav-btn-secondary">&#9889; Generator Analysis</a>
 </div>
@@ -1511,17 +1513,17 @@ body {
 
                 <p>
                     <strong>Short-duration storage alone won&rsquo;t close the gap.</strong> In this analysis (4-hour
-                    Li-ion), battery deployment remains near zero below 95% matching. Four-hour storage can shift
+                    Li-ion, 85% round-trip efficiency<sup style="font-size:0.7em;color:rgba(255,255,255,0.5);">[2]</sup>), battery deployment remains near zero below 95% matching. Four-hour storage can shift
                     solar surplus to evenings but struggles with multi-day wind droughts and long winter nights.
-                    Longer-duration storage technologies (iron-air, compressed air, hydrogen) may expand
+                    Longer-duration storage technologies (iron-air<sup style="font-size:0.7em;color:rgba(255,255,255,0.5);">[12]</sup>, compressed air, hydrogen) may expand
                     storage&rsquo;s role significantly &mdash; but firm, dispatchable generation will remain essential
                     for the hardest hours regardless.
                 </p>
 
                 <p>
                     <strong>Existing clean firm is irreplaceable at any cost.</strong> PJM (32% nuclear), NEISO (24%),
-                    and NYISO (18%) benefit enormously from already-built nuclear fleets that deliver clean baseload
-                    at wholesale prices. Losing these assets to economic shutdown &mdash; as nearly happened in the
+                    and NYISO (18%)<sup style="font-size:0.7em;color:rgba(255,255,255,0.5);">[4]</sup> benefit enormously from already-built nuclear fleets that deliver clean baseload
+                    at wholesale prices.<sup style="font-size:0.7em;color:rgba(255,255,255,0.5);">[13]</sup> Losing these assets to economic shutdown &mdash; as nearly happened in the
                     2010s &mdash; would add $5&ndash;18/MWh to every matching target. These plants should be valued
                     not by today&rsquo;s wholesale price, but by the cost of replacing them.
                 </p>
@@ -1562,8 +1564,8 @@ body {
             <span class="story-badge">The Challenge</span>
             <h2>From Annual Matching to Hourly: The Cost of Precision</h2>
             <p class="story-lead">
-                Proposed GHG Protocol revisions will require matching clean energy supply to demand
-                <strong>every single hour</strong> &mdash; not just annually. This fundamentally changes procurement economics.
+                Proposed GHG Protocol revisions<sup style="font-size:0.7em;color:#6B7280;">[8]</sup> will require matching clean energy supply to demand
+                <strong>every single hour</strong> &mdash; not just annually.<sup style="font-size:0.7em;color:#6B7280;">[7]</sup> This fundamentally changes procurement economics.
             </p>
 
             <!-- Big number hero callout -->
@@ -1622,7 +1624,7 @@ body {
                         demand hourly for a modest premium above wholesale rates.
                     </p>
                     <div class="step-cost-callout step-cost-green">
-                        <strong>Avg Cost:</strong> <span id="stepCost75">~$47/MWh</span> &mdash; within reach for most corporate buyers
+                        <strong>Avg Cost:</strong> <span id="stepCost75">~$47/MWh</span> &mdash; within reach for most corporate buyers<sup style="font-size:0.7em;color:#6B7280;">[9]</sup>
                     </div>
                 </div>
             </div>
@@ -2052,9 +2054,9 @@ body {
                         </svg>
                     </div>
                     <div class="transition-fuel-title">Efficient CCGT</div>
-                    <div class="transition-fuel-desc">60%+ efficiency, fast-ramping, ~350 kg CO&#8322;/MWh (half of coal). Covers the hours renewables cannot.</div>
+                    <div class="transition-fuel-desc">60%+ efficiency, fast-ramping, ~350 kg CO&#8322;/MWh<sup style="font-size:0.7em;color:#6B7280;">[4]</sup> (half of coal). Covers the hours renewables cannot.</div>
                     <div class="transition-fuel-stat" style="color:#D97706;">~350 kg</div>
-                    <div class="curtail-bar-sub">CO&#8322;/MWh (vs 900+ for coal)</div>
+                    <div class="curtail-bar-sub">CO&#8322;/MWh (vs 900+ for coal)<sup style="font-size:0.7em;color:#6B7280;">[4]</sup></div>
                 </div>
                 <div class="transition-fuel-card">
                     <div class="transition-fuel-icon">
@@ -2068,7 +2070,7 @@ body {
                         </svg>
                     </div>
                     <div class="transition-fuel-title">CCGT + CCS</div>
-                    <div class="transition-fuel-desc">Retrofit with 90%+ CO&#8322; capture. Same plant transitions from backup to dispatchable clean firm power.</div>
+                    <div class="transition-fuel-desc">Retrofit with 90%+ CO&#8322; capture.<sup style="font-size:0.7em;color:#6B7280;">[2]</sup> Same plant transitions from backup to dispatchable clean firm power.</div>
                     <div class="transition-fuel-stat" style="color:#16A34A;">85-95%</div>
                     <div class="curtail-bar-sub">CO&#8322; capture rate potential</div>
                 </div>
@@ -2124,27 +2126,27 @@ body {
 
             <p class="story-lead">
                 Existing nuclear and geothermal plants are <strong>the most cost-effective clean firm generation
-                we have</strong>. Unlike new-build options, they carry no upfront capital expenditure or steep
+                we have</strong>.<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup> Unlike new-build options, they carry no upfront capital expenditure or steep
                 financing costs. Keeping these resources online is not just beneficial &mdash; it is
-                <strong>essential to achieving deep decarbonization</strong>.
+                <strong>essential to achieving deep decarbonization</strong>.<sup style="font-size:0.7em;color:#6B7280;">[11]</sup>
             </p>
 
             <p>
-                Yet cheap natural gas and subsidized renewables continue to pressure these plants economically
-                &mdash; the same dynamic that drove several nuclear shutdowns in the 2010s. Once retired,
-                a plant cannot economically restart, and replacing it requires new-build at 2&ndash;3x the cost.
+                Yet cheap natural gas<sup style="font-size:0.7em;color:#6B7280;">[13]</sup> and subsidized renewables continue to pressure these plants economically
+                &mdash; the same dynamic that drove several nuclear shutdowns in the 2010s.<sup style="font-size:0.7em;color:#6B7280;">[14]</sup> Once retired,
+                a plant cannot economically restart, and replacing it requires new-build at 2&ndash;3x the cost.<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup>
                 Our model quantifies this directly:
             </p>
 
             <div class="preservation-panel">
                 <h3>Cost Impact of Losing Existing Clean Firm Resources</h3>
-                <div class="preservation-sub">If existing nuclear/geothermal had to be replaced with new-build at $90/MWh</div>
+                <div class="preservation-sub">If existing nuclear/geothermal had to be replaced with new-build at $90/MWh<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup></div>
 
                 <div class="preservation-grid">
                     <div class="preservation-card">
                         <div class="preservation-card-header">
                             <span class="preservation-card-iso">PJM</span>
-                            <span class="preservation-card-share">32.1% existing clean firm</span>
+                            <span class="preservation-card-share">32.1% existing clean firm<sup style="font-size:0.65em;color:rgba(255,255,255,0.7);">[4]</sup></span>
                         </div>
                         <div class="preservation-card-cost">+$18/MWh (+31&ndash;39%)</div>
                         <div class="preservation-card-desc">
@@ -2156,11 +2158,11 @@ body {
                     <div class="preservation-card">
                         <div class="preservation-card-header">
                             <span class="preservation-card-iso">NEISO</span>
-                            <span class="preservation-card-share">23.8% existing clean firm</span>
+                            <span class="preservation-card-share">23.8% existing clean firm<sup style="font-size:0.65em;color:rgba(255,255,255,0.7);">[4]</sup></span>
                         </div>
                         <div class="preservation-card-cost">+$12/MWh (+17&ndash;21%)</div>
                         <div class="preservation-card-desc">
-                            Millstone and Seabrook anchor New England&rsquo;s clean firm supply.
+                            Millstone and Seabrook<sup style="font-size:0.7em;color:#6B7280;">[4]</sup> anchor New England&rsquo;s clean firm supply.
                             Losing them would push 90% matching costs above $80/MWh.
                         </div>
                         <div class="preservation-bar"><div class="preservation-bar-fill" style="width:64%;"></div></div>
@@ -2168,7 +2170,7 @@ body {
                     <div class="preservation-card">
                         <div class="preservation-card-header">
                             <span class="preservation-card-iso">NYISO</span>
-                            <span class="preservation-card-share">18.4% existing clean firm</span>
+                            <span class="preservation-card-share">18.4% existing clean firm<sup style="font-size:0.65em;color:rgba(255,255,255,0.7);">[4]</sup></span>
                         </div>
                         <div class="preservation-card-cost">+$9/MWh (+14&ndash;16%)</div>
                         <div class="preservation-card-desc">
@@ -2180,7 +2182,7 @@ body {
                     <div class="preservation-card">
                         <div class="preservation-card-header">
                             <span class="preservation-card-iso">ERCOT &amp; CAISO</span>
-                            <span class="preservation-card-share">8&ndash;9% existing clean firm</span>
+                            <span class="preservation-card-share">8&ndash;9% existing clean firm<sup style="font-size:0.65em;color:rgba(255,255,255,0.7);">[4]</sup></span>
                         </div>
                         <div class="preservation-card-cost">+$5/MWh (+9&ndash;15%)</div>
                         <div class="preservation-card-desc">
@@ -2194,15 +2196,15 @@ body {
 
             <p>
                 These assets should be valued not by today&rsquo;s wholesale price, but by the
-                <strong>cost of replacing them</strong>: $90/MWh new-build vs. $27&ndash;42/MWh wholesale.
+                <strong>cost of replacing them</strong>: $90/MWh new-build<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup> vs. $27&ndash;42/MWh wholesale.<sup style="font-size:0.7em;color:#6B7280;">[13]</sup>
                 Where existing plants provide the foundation, <strong>CCS-retrofitted gas plants can build
-                on it</strong>. Current estimates: $70&ndash;100/MWh LCOE before incentives.
+                on it</strong>. Current estimates: $70&ndash;100/MWh LCOE before incentives.<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup>
             </p>
 
             <div class="ccs-economics-row">
                 <div class="ccs-econ-card">
                     <div class="ccs-econ-value">$85/ton</div>
-                    <div class="ccs-econ-label">45Q tax credit per ton of CO&#8322; captured (post-OBBBA)</div>
+                    <div class="ccs-econ-label">45Q tax credit per ton of CO&#8322; captured (post-IRA)</div>
                 </div>
                 <div class="ccs-econ-card">
                     <div class="ccs-econ-value">$15&ndash;25</div>
@@ -2210,12 +2212,12 @@ body {
                 </div>
                 <div class="ccs-econ-card">
                     <div class="ccs-econ-value">$55&ndash;80</div>
-                    <div class="ccs-econ-label">$/MWh net LCOE after 45Q credit (competitive with new nuclear)</div>
+                    <div class="ccs-econ-label">$/MWh net LCOE after 45Q credit (competitive with new nuclear)<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup></div>
                 </div>
             </div>
 
             <p>
-                With 45Q credits, net LCOE falls to <strong>$55&ndash;80/MWh</strong> &mdash; competitive with
+                With 45Q credits, net LCOE falls to <strong>$55&ndash;80/MWh</strong><sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup> &mdash; competitive with
                 new nuclear. To maximize captured CO&#8322; and 45Q value, CCS plants would run at high capacity
                 factors resembling <strong>baseload dispatch</strong>: exactly the role the grid needs filled.
             </p>
@@ -2299,22 +2301,22 @@ body {
                 <div class="ccs-economics-row" style="margin-top:20px;">
                     <div class="ccs-econ-card" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);">
                         <div class="ccs-econ-value" style="color:#D97706;">$15&ndash;40+</div>
-                        <div class="ccs-econ-label">$/MWh added cost for new long-distance transmission (HVDC, regional backbone)</div>
+                        <div class="ccs-econ-label">$/MWh added cost for new long-distance transmission (HVDC, regional backbone)<sup style="font-size:0.7em;color:#6B7280;">[5][6]</sup></div>
                     </div>
                     <div class="ccs-econ-card" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);">
                         <div class="ccs-econ-value" style="color:#D97706;">5&ndash;10+ yrs</div>
-                        <div class="ccs-econ-label">Typical timeline for major transmission permitting and construction</div>
+                        <div class="ccs-econ-label">Typical timeline for major transmission permitting and construction<sup style="font-size:0.7em;color:#6B7280;">[6]</sup></div>
                     </div>
                     <div class="ccs-econ-card" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);">
                         <div class="ccs-econ-value" style="color:#D97706;">2,000+ GW</div>
-                        <div class="ccs-econ-label">of generation stuck in U.S. interconnection queues (mostly wind &amp; solar)</div>
+                        <div class="ccs-econ-label">of generation stuck in U.S. interconnection queues (mostly wind &amp; solar)<sup style="font-size:0.7em;color:#6B7280;">[6]</sup></div>
                     </div>
                 </div>
 
                 <p style="margin-top:18px;font-size:0.95rem;color:var(--text-secondary);line-height:1.7;">
-                    <strong>Remote renewables</strong> face the largest T&amp;D burden: $15&ndash;40+/MWh for new
+                    <strong>Remote renewables</strong> face the largest T&amp;D burden: $15&ndash;40+/MWh<sup style="font-size:0.7em;color:#6B7280;">[5]</sup> for new
                     transmission from resource-rich areas to load centers, plus 5+ year interconnection queue
-                    delays. This hidden cost narrows renewables&rsquo; apparent LCOE advantage over firm resources
+                    delays.<sup style="font-size:0.7em;color:#6B7280;">[6]</sup> This hidden cost narrows renewables&rsquo; apparent LCOE advantage over firm resources
                     sited closer to demand.
                 </p>
 
@@ -2346,8 +2348,8 @@ body {
 
 <!-- FOOTER -->
 <footer class="footer" id="footer" style="display:none;">
-    Analysis based on 8,760-hour dispatch modeling &bull; Storage: 4h duration, 85% round-trip efficiency &bull;
-    CO&#8322; accounting follows hourly matching protocol
+    Analysis based on 8,760-hour dispatch modeling<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> &bull; Storage: 4h duration, 85% round-trip efficiency<sup style="font-size:0.7em;color:#6B7280;">[2]</sup> &bull;
+    CO&#8322; accounting follows hourly matching protocol<sup style="font-size:0.7em;color:#6B7280;">[8]</sup>
 </footer>
 </div>
 
@@ -2357,6 +2359,7 @@ body {
         <a href="dashboard.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Dashboard</a>
         <a href="region_deepdive.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Regional Deep Dives</a>
         <a href="abatement_comparison.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">CO&#8322; Abatement</a>
+        <a href="eac_scarcity.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">EAC Scarcity</a>
         <a href="research_paper.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Methodology &amp; Paper</a>
         <a href="../power-gen-decarbonization/site/index.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Generator Analysis</a>
     </div>
