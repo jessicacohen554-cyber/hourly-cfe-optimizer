@@ -486,6 +486,276 @@
 
     <div class="energy-divider"></div>
 
+    <!-- Scarcity Analysis Methodology -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Methodology: EAC Scarcity Analysis &amp; Clean Premium Curve Derivation</h2>
+            <p>Detailed methodology behind the regional scarcity assessments and clean premium projections above. This section documents data sources, calculation steps, key assumptions, and limitations to support peer review and reproducibility.</p>
+        </div>
+
+        <!-- Step 1: Regional Clean Supply Inventory -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Step 1: Regional Clean Energy Supply Inventory</h3>
+            <p style="font-size: 0.92rem;">For each ISO, we construct an annual clean energy supply inventory from the following data sources:</p>
+
+            <div style="overflow-x: auto; margin-top: 12px;">
+                <table class="company-table" style="max-width: 800px; margin: 0 auto;">
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th>Data Source</th>
+                            <th>Temporal Resolution</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Nuclear</strong></td><td>EIA-923 net generation + NRC power reactor status</td><td>Monthly → annual</td><td>Includes state ZEC program allocations. Individual plant capacity factors from NRC.</td></tr>
+                        <tr><td><strong>Wind</strong></td><td>EIA Hourly Electric Grid Monitor (2021&ndash;2025 avg)</td><td>Hourly → annual</td><td>5-year average smooths interannual variability. EIA reports by BA → mapped to ISO.</td></tr>
+                        <tr><td><strong>Solar</strong></td><td>EIA Hourly Electric Grid Monitor (2021&ndash;2025 avg)</td><td>Hourly → annual</td><td>Includes utility-scale only. Behind-the-meter estimated from SEIA + EIA-861.</td></tr>
+                        <tr><td><strong>Hydro</strong></td><td>EIA-923 net generation + USACE/BPA/NYPA reports</td><td>Monthly → annual</td><td>Conventional hydro only. Pumped storage excluded (not zero-emission). 5-year average for drought normalization.</td></tr>
+                        <tr><td><strong>Geothermal</strong></td><td>EIA-923 net generation</td><td>Monthly → annual</td><td>Material only in CAISO (The Geysers complex ~12 TWh/yr). Negligible in other ISOs.</td></tr>
+                        <tr><td><strong>Biomass/Other</strong></td><td>EIA-923</td><td>Monthly → annual</td><td>Excluded from clean supply inventory. RPS eligibility varies by state; treatment is state-specific.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p style="font-size: 0.88rem; margin-top: 12px; color: var(--text-tertiary);">Total clean supply (TWh/yr) = Nuclear + Wind + Solar + Hydro + Geothermal. This produces the numerator for the SSS clean share calculation.</p>
+        </div>
+
+        <!-- Step 2: SSS Baseline -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Step 2: Standard Supply Service (SSS) Baseline Computation</h3>
+            <p style="font-size: 0.92rem;">The SSS baseline represents the share of clean energy automatically allocated to all consumers before any voluntary corporate procurement. The calculation follows the GHG Protocol Scope 2 revision&rsquo;s proposed &ldquo;standard supply service&rdquo; methodology:</p>
+
+            <div class="callout" style="margin-top: 12px;">
+                <p><strong>SSS Clean Share (annual) = Total Regional Clean Generation &divide; Total Regional Load</strong></p>
+                <p style="margin-top: 8px;">Example: PJM clean supply ~345 TWh &divide; PJM load ~800 TWh = <strong>43.1% SSS baseline</strong></p>
+            </div>
+
+            <p style="font-size: 0.92rem; margin-top: 12px;">The SSS baseline is allocated <strong>hourly</strong>, not annually. Each hour, the SSS contribution equals the actual clean generation in that hour divided by total load in that hour. This means the SSS baseline is <em>not uniform</em> across the day:</p>
+            <ul style="margin-left: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                <li><strong>Midday hours (10 AM&ndash;3 PM):</strong> SSS baseline is highest (solar + wind + nuclear + hydro all producing)</li>
+                <li><strong>Evening hours (5 PM&ndash;10 PM):</strong> SSS baseline drops sharply as solar sets. Only nuclear + wind + hydro contribute.</li>
+                <li><strong>Night hours (10 PM&ndash;6 AM):</strong> SSS baseline is lowest. Primarily nuclear + nighttime wind.</li>
+            </ul>
+            <p style="font-size: 0.92rem; margin-top: 12px;">A corporate buyer&rsquo;s <strong>incremental procurement need</strong> = (Target hourly match % &minus; SSS baseline %) &times; hourly load. This incremental need is largest during evening/night hours when the SSS baseline is lowest.</p>
+
+            <div style="overflow-x: auto; margin-top: 16px;">
+                <table class="company-table" style="max-width: 700px; margin: 0 auto;">
+                    <thead>
+                        <tr>
+                            <th>ISO</th>
+                            <th>Clean Supply (TWh)</th>
+                            <th>Total Load (TWh)</th>
+                            <th>SSS Baseline</th>
+                            <th>Night SSS (est.)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>PJM</strong></td><td>~345</td><td>~800</td><td>43%</td><td>~35% (nuclear only)</td></tr>
+                        <tr><td><strong>ERCOT</strong></td><td>~150</td><td>~470</td><td>32%</td><td>~20% (wind + nuclear)</td></tr>
+                        <tr><td><strong>CAISO</strong></td><td>~130</td><td>~280</td><td>46%</td><td>~25% (geothermal + nuclear + wind)</td></tr>
+                        <tr><td><strong>ISO-NE</strong></td><td>~55</td><td>~120</td><td>46%</td><td>~30% (nuclear + hydro)</td></tr>
+                        <tr><td><strong>NYISO</strong></td><td>~75</td><td>~155</td><td>48%</td><td>~35% (nuclear + hydro)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="citation" style="margin-top: 8px;">Night SSS estimates based on 10 PM&ndash;6 AM average clean generation share. Nuclear assumed ~90% annual CF (NRC fleet average). Hydro seasonal variation captured via 5-year monthly averages.</p>
+        </div>
+
+        <!-- Step 3: RPS Demand Netting -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Step 3: State RPS/CES Demand Netting</h3>
+            <p style="font-size: 0.92rem;">State mandates create <strong>mandatory</strong> demand for EACs that is netted out before assessing voluntary market supply. The netting is applied at the <em>state</em> level, not the ISO level, because RPS compliance operates by state jurisdiction:</p>
+
+            <ul style="margin-left: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                <li><strong>PJM states:</strong> NJ (50% by 2030), VA (VCEA 100% by 2045, ~30% by 2030), MD (50% by 2030), IL (CEJA 100% by 2045, ~40% by 2030), PA (8% Tier I, non-binding beyond 2021). Combined ~120&ndash;150 TWh REC demand by 2030.</li>
+                <li><strong>ISO-NE states:</strong> MA (50% Class I by 2030 + CES 80% by 2040), CT (zero-carbon by 2040, ~45% by 2030), RI (100% renewable by 2033), VT (100% by 2035), ME (80% by 2030). Combined ~50&ndash;60 TWh.</li>
+                <li><strong>CAISO:</strong> SB 100 (60% RPS by 2030, 100% by 2045). ~170 TWh RPS demand by 2030.</li>
+                <li><strong>ERCOT:</strong> No binding RPS (Texas repealed in 2005 after exceeding targets). 0 TWh mandatory demand.</li>
+                <li><strong>NYISO:</strong> CLCPA (70% renewable by 2030, 100% zero-emission by 2040). ~110 TWh by 2030.</li>
+            </ul>
+
+            <p style="font-size: 0.92rem; margin-top: 12px;"><strong>Uncommitted clean supply = Total clean supply &minus; max(SSS allocation, RPS demand)</strong></p>
+            <p style="font-size: 0.88rem; color: var(--text-tertiary);">We use the maximum of SSS and RPS because they draw from overlapping pools: an RPS-obligated utility&rsquo;s clean generation satisfies both its RPS mandate <em>and</em> contributes to the SSS baseline. Double-counting is avoided by ensuring each MWh is only allocated once.</p>
+        </div>
+
+        <!-- Step 4: Corporate Demand Calculation -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Step 4: Corporate Hourly Matching Demand Calculation</h3>
+            <p style="font-size: 0.92rem;">Corporate demand for hourly EACs is modeled as a function of two parameters:</p>
+
+            <div class="card-grid" style="margin-top: 12px;">
+                <div class="card" style="border-left: 4px solid #0EA5E9;">
+                    <h4>Participation Rate (P)</h4>
+                    <p style="font-size: 0.88rem;">Fraction of total ISO load participating in voluntary hourly matching. Modeled at 10% intervals: P = {10%, 20%, 30%, 40%, 50%}. Represents the share of commercial and industrial (C&amp;I) load that adopts hourly matching under GHG Protocol Scope 2 or SBTi requirements.</p>
+                    <p style="font-size: 0.85rem; color: var(--text-tertiary); margin-top: 8px;"><strong>Calibration:</strong> Current voluntary clean energy procurement (CEBA data) represents ~5&ndash;8% of load in PJM, ~10&ndash;15% in ERCOT. P = 10% represents near-term baseline; P = 50% represents full adoption by large C&amp;I customers.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid #7C3AED;">
+                    <h4>Hourly Matching Target (T)</h4>
+                    <p style="font-size: 0.88rem;">The percentage of each hour that participating corporate buyers seek to match with clean energy. Modeled at T = {50%, 75%, 90%, 95%, 100%}. Reflects the progression from SBTi&rsquo;s proposed 50% by 2030 to aspirational 100% 24/7 CFE.</p>
+                    <p style="font-size: 0.85rem; color: var(--text-tertiary); margin-top: 8px;"><strong>Interaction with SSS:</strong> Effective additional procurement need per hour = max(0, T &minus; SSS_baseline_h) &times; load_h &times; P, where SSS_baseline_h is the hourly SSS share and load_h is hourly load.</p>
+                </div>
+            </div>
+
+            <div class="callout" style="margin-top: 16px;">
+                <p><strong>Hourly demand formula:</strong></p>
+                <p style="font-family: monospace; margin-top: 8px;">Corporate_EAC_demand<sub>h</sub> = P &times; Load<sub>h</sub> &times; max(0, T &minus; SSS<sub>h</sub>)</p>
+                <p style="margin-top: 8px;">where h indexes each hour (1&ndash;8,760), P is participation rate, T is hourly matching target, Load<sub>h</sub> is total ISO load at hour h, and SSS<sub>h</sub> is the standard supply service clean share at hour h.</p>
+                <p style="margin-top: 8px;">Annual corporate EAC demand = &Sigma;<sub>h</sub> Corporate_EAC_demand<sub>h</sub></p>
+            </div>
+        </div>
+
+        <!-- Step 5: Scarcity Assessment -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Step 5: Scarcity Assessment &amp; Classification</h3>
+            <p style="font-size: 0.92rem;">For each ISO &times; participation rate &times; target combination, scarcity is assessed by comparing corporate EAC demand against uncommitted clean supply on an <strong>hourly</strong> basis:</p>
+
+            <ol style="margin-left: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                <li style="margin-bottom: 8px;"><strong>Compute hourly surplus/deficit:</strong> Surplus<sub>h</sub> = Uncommitted_clean_supply<sub>h</sub> &minus; Corporate_EAC_demand<sub>h</sub>. Positive = surplus hours (EACs available at low cost). Negative = deficit hours (demand exceeds supply, scarcity pricing).</li>
+                <li style="margin-bottom: 8px;"><strong>Count deficit hours:</strong> Number of hours per year where Surplus<sub>h</sub> &lt; 0. This determines the severity of scarcity.</li>
+                <li style="margin-bottom: 8px;"><strong>Compute deficit volume:</strong> Total MWh of unmet hourly EAC demand = &Sigma; |min(0, Surplus<sub>h</sub>)|. This drives the clean premium magnitude.</li>
+                <li style="margin-bottom: 8px;"><strong>Classify scarcity:</strong></li>
+            </ol>
+
+            <div style="overflow-x: auto; margin-top: 8px;">
+                <table class="company-table" style="max-width: 700px; margin: 0 auto;">
+                    <thead>
+                        <tr>
+                            <th>Classification</th>
+                            <th>Deficit Hours/yr</th>
+                            <th>Deficit Volume</th>
+                            <th>Market Impact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="color: #22C55E;"><strong>Abundant</strong></td><td>&lt; 500</td><td>&lt; 5% of demand</td><td>EAC prices at marginal cost of existing clean. No premium.</td></tr>
+                        <tr><td style="color: #22C55E;"><strong>Surplus</strong></td><td>500&ndash;1,500</td><td>5&ndash;10%</td><td>Mild premium during peak deficit hours only (typically 6&ndash;8 PM).</td></tr>
+                        <tr><td style="color: #F59E0B;"><strong>Tight / Manageable</strong></td><td>1,500&ndash;3,000</td><td>10&ndash;20%</td><td>Premium $5&ndash;15/MWh during evening hours. Storage can partially arbitrage.</td></tr>
+                        <tr><td style="color: #DC2626;"><strong>Scarcity</strong></td><td>3,000&ndash;5,000</td><td>20&ndash;40%</td><td>Premium $15&ndash;40/MWh. Night hours face persistent deficit. New build signaled.</td></tr>
+                        <tr><td style="color: #DC2626;"><strong>Severe Scarcity</strong></td><td>&gt; 5,000</td><td>&gt; 40%</td><td>Premium $30&ndash;55+/MWh. Existing supply exhausted. New clean firm required.</td></tr>
+                        <tr><td style="color: #7C3AED;"><strong>New Build Required</strong></td><td>&gt; 6,500</td><td>&gt; 60%</td><td>Majority of hours in deficit. Corporate targets unachievable without new capacity.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Step 6: Clean Premium Curve Derivation -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Step 6: Clean Premium Curve Derivation</h3>
+            <p style="font-size: 0.92rem;">The clean premium represents the <strong>marginal cost of the next MWh of hourly-matched clean energy</strong> above the wholesale energy price. It is derived from the supply curve of available clean resources, ordered by cost:</p>
+
+            <h4 style="margin-top: 16px;">Supply Stack (Marginal Cost Order)</h4>
+            <div style="overflow-x: auto; margin-top: 8px;">
+                <table class="company-table" style="max-width: 800px; margin: 0 auto;">
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th>Marginal EAC Cost</th>
+                            <th>Availability</th>
+                            <th>Hours Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Existing nuclear (uncommitted)</strong></td><td>$0&ndash;3/MWh</td><td>Baseload, 24/7</td><td>~8,000 hrs/yr</td></tr>
+                        <tr><td><strong>Existing hydro (uncommitted)</strong></td><td>$0&ndash;5/MWh</td><td>Seasonal, dispatchable</td><td>~4,000&ndash;6,000 hrs/yr</td></tr>
+                        <tr><td><strong>Existing wind (uncommitted)</strong></td><td>$2&ndash;8/MWh</td><td>Variable, weather-dependent</td><td>~3,000&ndash;4,500 hrs/yr</td></tr>
+                        <tr><td><strong>Existing solar (uncommitted)</strong></td><td>$2&ndash;6/MWh</td><td>Daytime only</td><td>~2,000&ndash;3,000 hrs/yr</td></tr>
+                        <tr><td><strong>New-build solar + 4hr battery</strong></td><td>$10&ndash;20/MWh</td><td>Shifted solar to evening</td><td>~2,500&ndash;4,000 hrs/yr</td></tr>
+                        <tr><td><strong>New-build wind</strong></td><td>$12&ndash;25/MWh</td><td>Variable, some nighttime</td><td>~3,000&ndash;4,500 hrs/yr</td></tr>
+                        <tr><td><strong>New-build geothermal</strong></td><td>$15&ndash;35/MWh</td><td>Baseload, 24/7 (CAISO only)</td><td>~8,000 hrs/yr</td></tr>
+                        <tr><td><strong>New nuclear (SMR/uprate)</strong></td><td>$25&ndash;50/MWh</td><td>Baseload, 24/7</td><td>~8,000 hrs/yr</td></tr>
+                        <tr><td><strong>CCS-CCGT (new)</strong></td><td>$35&ndash;65/MWh</td><td>Dispatchable</td><td>~6,000&ndash;8,000 hrs/yr</td></tr>
+                        <tr><td><strong>LDES (100hr iron-air)</strong></td><td>$40&ndash;80/MWh</td><td>Multi-day discharge</td><td>~1,000&ndash;3,000 hrs/yr</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="citation" style="margin-top: 8px;">Marginal EAC cost = LCOE &minus; wholesale energy price &minus; applicable tax credits (45Y, 48E, 45Q, 45U). Reflects the <em>incremental</em> cost of the EAC above energy value. NREL ATB 2024, Lazard LCOE v17, LBNL Utility-Scale Solar/Wind reports.</p>
+
+            <h4 style="margin-top: 20px;">Premium Curve Construction</h4>
+            <p style="font-size: 0.92rem;">For each ISO, the clean premium curve is constructed as follows:</p>
+            <ol style="margin-left: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                <li style="margin-bottom: 8px;"><strong>Sort uncommitted supply by marginal EAC cost</strong> (supply stack above).</li>
+                <li style="margin-bottom: 8px;"><strong>For each hour</strong>, compute corporate EAC demand using Step 4 formula.</li>
+                <li style="margin-bottom: 8px;"><strong>Match demand against supply stack</strong>, dispatching lowest-cost available resources first. The marginal resource (last dispatched) sets the hourly clean premium.</li>
+                <li style="margin-bottom: 8px;"><strong>Apply temporal constraints:</strong> Solar only available during daylight hours. Wind follows regional capacity factor profile. Nuclear and geothermal available 24/7. Battery and LDES provide temporal shifting (charge during surplus, discharge during deficit).</li>
+                <li style="margin-bottom: 8px;"><strong>Compute weighted-average premium</strong> across all hours, weighted by hourly EAC volume: Clean Premium = &Sigma;(Premium<sub>h</sub> &times; Volume<sub>h</sub>) &divide; &Sigma;Volume<sub>h</sub>.</li>
+                <li style="margin-bottom: 8px;"><strong>Report daytime vs. nighttime premiums separately</strong> to capture the structural premium for evening/night clean energy.</li>
+            </ol>
+
+            <div class="callout warning" style="margin-top: 16px;">
+                <p><strong>Key driver of premium variation:</strong> The clean premium is fundamentally determined by how far up the supply stack demand reaches. In ISOs with abundant uncommitted supply (ERCOT), demand stays near the bottom of the stack (existing renewables at $0&ndash;8/MWh). In scarcity ISOs (PJM, ISO-NE), demand exhausts cheap existing resources and reaches new-build clean firm ($25&ndash;65/MWh), creating the steep premium. The evening/night premium is always higher than the all-hours average because daytime surplus solar pulls the average down.</p>
+            </div>
+        </div>
+
+        <!-- Step 7: Data Center Demand Adjustment -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Step 7: Data Center &amp; Large Load Demand Adjustment</h3>
+            <p style="font-size: 0.92rem;">Corporate demand is not uniformly distributed across ISOs. Data centers, the largest single category of voluntary clean energy buyers, are concentrated in specific regions:</p>
+
+            <div class="card-grid" style="margin-top: 12px;">
+                <div class="card">
+                    <h4>PJM — Northern Virginia Data Center Corridor</h4>
+                    <p style="font-size: 0.88rem;">~70% of US data center capacity. Dominion Virginia service territory. Announced new capacity: 10&ndash;15 GW through 2030 (AWS, Google, Meta, Microsoft). Each GW = ~7&ndash;8 TWh/yr at 85% utilization. Existing nuclear PPAs (Constellation Crane restart, Talen Susquehanna) consuming 3&ndash;5 GW of nuclear capacity from the uncommitted pool.</p>
+                </div>
+                <div class="card">
+                    <h4>ERCOT — Texas Data Center Growth</h4>
+                    <p style="font-size: 0.88rem;">Second-largest US data center market. ~5 GW announced through 2030. Key advantage: direct access to abundant wind/solar without RPS competition. Corporate PPAs with ERCOT solar+storage are among the cheapest in the US.</p>
+                </div>
+            </div>
+
+            <p style="font-size: 0.92rem; margin-top: 12px;">The scarcity analysis applies a <strong>data center demand overlay</strong> that reduces uncommitted nuclear supply in PJM by 25&ndash;50 TWh (reflecting announced PPAs) before computing the voluntary market balance. This adjustment is the primary reason PJM faces scarcity at lower participation rates than other ISOs.</p>
+        </div>
+
+        <!-- Assumptions & Limitations -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Key Assumptions &amp; Limitations</h3>
+            <div class="card-grid" style="margin-top: 12px;">
+                <div class="card" style="border-left: 4px solid #F59E0B;">
+                    <h4>Assumptions</h4>
+                    <ul style="font-size: 0.85rem; margin-left: 16px; color: var(--text-secondary);">
+                        <li><strong>No incrementality constraint</strong> — buyers can claim existing clean resources. If incrementality is required, scarcity increases dramatically in all ISOs except ERCOT.</li>
+                        <li><strong>ISO-level deliverability</strong> — clean energy must be sourced within the buyer&rsquo;s ISO. No inter-ISO transfer of EACs.</li>
+                        <li><strong>Static supply</strong> — clean energy supply held at 2025 levels. No new capacity additions modeled (conservative for ERCOT, optimistic for PJM queue-constrained regions).</li>
+                        <li><strong>Flat corporate load profile</strong> — corporate participants assumed to have baseload-like profiles (~90% flat). Data centers approximate this well; commercial office loads are more variable.</li>
+                        <li><strong>Annual RPS obligations treated as annual</strong> — state RPS uses annual compliance (even under hourly voluntary matching). This means RPS RECs can be sourced from any hour, while corporate hourly EACs must be time-matched.</li>
+                    </ul>
+                </div>
+                <div class="card" style="border-left: 4px solid #DC2626;">
+                    <h4>Limitations</h4>
+                    <ul style="font-size: 0.85rem; margin-left: 16px; color: var(--text-secondary);">
+                        <li><strong>Price elasticity not modeled</strong> — scarcity-driven price increases would, in reality, stimulate new supply and reduce demand. Our static model overstates scarcity at high participation rates.</li>
+                        <li><strong>Cross-ISO effects ignored</strong> — in practice, PJM scarcity could drive imports from MISO/SPP or shift corporate load placement to ERCOT, reducing pressure on PJM.</li>
+                        <li><strong>Battery arbitrage simplified</strong> — 4hr Li-ion can shift ~20% of daily solar to evening but cannot address multi-day deficits. Our model captures this constraint but may understate the value of 8hr+ storage emerging in 2026&ndash;2028.</li>
+                        <li><strong>GHG Protocol timeline uncertain</strong> — the Scope 2 revision may not require hourly matching until 2028&ndash;2030 at earliest. Our analysis assumes the framework as proposed, not as finally adopted.</li>
+                        <li><strong>State policy evolution</strong> — RPS targets may increase (tightening supply) or new states may adopt mandates. Federal policy changes (IRA repeal risk, new EPA rules) could shift the landscape significantly.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sources -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>Data Sources &amp; References</h3>
+            <ol style="margin-left: 20px; font-size: 0.85rem; color: var(--text-secondary);">
+                <li>EIA Hourly Electric Grid Monitor (2021&ndash;2025) &mdash; generation by fuel type and demand by BA</li>
+                <li>EIA Form 923 (2023&ndash;2024) &mdash; plant-level net generation by fuel and prime mover</li>
+                <li>NRC Power Reactor Status Reports (2024&ndash;2025) &mdash; nuclear plant capacity factors and outage schedules</li>
+                <li>LBNL &ldquo;Queued Up&rdquo; 2025 &mdash; interconnection queue data by ISO</li>
+                <li>DSIRE Database &mdash; state RPS/CES requirements and timelines</li>
+                <li>CEBA Deal Tracker (2024) &mdash; corporate clean energy procurement volumes by ISO</li>
+                <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; LCOE projections for clean resources</li>
+                <li>Lazard LCOE Analysis v17 (2024) &mdash; levelized cost benchmarks</li>
+                <li>GHG Protocol Scope 2 Revision First Consultation Draft (Oct 2025) &mdash; SSS framework and quality criteria</li>
+                <li>SBTi Power Sector v2 Draft (Sep 2025) &mdash; hourly matching requirements</li>
+                <li>EPRI SMARTargets Draft Framework (Jul 2025) &mdash; AT/QT methodology</li>
+                <li>RMI State of Utility Planning Q4 2025 &mdash; IRP trends and planning regression</li>
+            </ol>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
     <!-- Barriers -->
     <section class="section fade-in">
         <div class="section-header">
