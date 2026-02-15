@@ -3528,6 +3528,85 @@ function createStripePattern(ctx, color, bgColor) {
     return ctx.createPattern(patternCanvas, 'repeat');
 }
 
+// ---- Scenario Resolver ----
+// Maps the 5 sensitivity toggle states to a scenario key like "MMM_M_M"
+function buildScenarioKey() {
+    const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
+    const rg = levelMap[sensitivityState.renewable_gen] || 'M';
+    const fg = levelMap[sensitivityState.firm_gen] || 'M';
+    const st = levelMap[sensitivityState.storage] || 'M';
+    const ff = levelMap[sensitivityState.fossil_fuel] || 'M';
+    const tx = levelMap[sensitivityState.transmission] || 'M';
+    return `${rg}${fg}${st}_${ff}_${tx}`;
+}
+
+// Resolves a threshold entry from the new scenario-based data format.
+// Returns a normalized entry compatible with the dashboard's expected field names.
+function resolveEntry(region, thresholdKey) {
+    const thresholdData = region.thresholds?.[thresholdKey];
+    if (!thresholdData) return null;
+
+    // New format: thresholdData.scenarios is a dict keyed by scenario strings
+    if (thresholdData.scenarios) {
+        const key = buildScenarioKey();
+        let scenario = thresholdData.scenarios[key];
+        // Fallback: if the exact key isn't available, try MMM_M_M, then first available
+        if (!scenario) scenario = thresholdData.scenarios['MMM_M_M'];
+        if (!scenario) {
+            const keys = Object.keys(thresholdData.scenarios);
+            if (keys.length > 0) scenario = thresholdData.scenarios[keys[0]];
+        }
+        if (!scenario) return null;
+        return normalizeEntry(scenario);
+    }
+
+    // Legacy flat format (no scenarios dict) — pass through
+    return thresholdData;
+}
+
+// Normalizes a scenario entry so the dashboard can read it uniformly.
+// Merges costs_detail into costs, maps co2 fields, etc.
+function normalizeEntry(raw) {
+    const entry = Object.assign({}, raw);
+
+    // Merge costs_detail into costs for backward compatibility
+    const detail = raw.costs_detail || {};
+    const summary = raw.costs || {};
+
+    // Build resource_costs with merged storage from battery + ldes
+    const rc = detail.resource_costs ? Object.assign({}, detail.resource_costs) : null;
+    if (rc && !rc.storage && (rc.battery || rc.ldes)) {
+        const bat = rc.battery || {};
+        const ldes = rc.ldes || {};
+        rc.storage = {
+            dispatch_pct: (bat.dispatch_pct || 0) + (ldes.dispatch_pct || 0),
+            cost_per_demand_mwh: (bat.cost_per_demand_mwh || 0) + (ldes.cost_per_demand_mwh || 0)
+        };
+    }
+
+    entry.costs = {
+        total_cost_per_demand_mwh: detail.total_cost_per_demand_mwh ?? summary.total_cost ?? null,
+        effective_cost_per_useful_mwh: detail.effective_cost_per_useful_mwh ?? summary.effective_cost ?? null,
+        baseline_wholesale_cost: detail.baseline_wholesale_cost ?? summary.wholesale ?? null,
+        incremental_above_baseline: detail.incremental_above_baseline ?? summary.incremental ?? null,
+        curtailment_pct: detail.curtailment_pct ?? null,
+        resource_costs: rc
+    };
+
+    // Map CO2 data to flat field
+    if (raw.co2_abated && raw.co2_abated.total_co2_abated_tons != null) {
+        entry.co2_abated_tons = raw.co2_abated.total_co2_abated_tons;
+        entry.co2_rate_per_mwh = raw.co2_abated.co2_rate_per_mwh;
+    }
+
+    // Map storage dispatch fields
+    const batDisp = raw.battery_dispatch_pct || 0;
+    const ldesDisp = raw.ldes_dispatch_pct || 0;
+    entry.storage_dispatch_pct = batDisp + ldesDisp;
+
+    return entry;
+}
+
 // ---- Data Loading ----
 async function loadData() {
     try {
@@ -3593,7 +3672,9 @@ function cfAdjust(entry, iso) {
  * Get adjusted effective cost for a threshold across ISOs (for narrative charts)
  */
 function getAdjustedEffectiveCost(iso, thresholdKey) {
-    const t = DATA.results[iso]?.thresholds?.[thresholdKey];
+    const region = DATA.results[iso];
+    if (!region) return null;
+    const t = resolveEntry(region, thresholdKey);
     if (!t?.costs) return null;
     const adj = cfAdjust(t, iso);
     return adj.newEffective;
@@ -3632,7 +3713,7 @@ function initDashboard() {
     const cfg = DATA.config;
     const yearLabel = document.getElementById('dataYearLabel');
     if (yearLabel) yearLabel.textContent =
-        `Data Year: ${cfg.data_year} \u2022 Storage: ${cfg.storage_duration} / ${(cfg.storage_efficiency * 100).toFixed(0)}% RTE \u2022 ${cfg.resource_types.map(r => RESOURCE_LABELS[r] || r).join(', ')}`;
+        `Data Year: ${cfg.data_year} \u2022 Battery: ${cfg.battery_duration || '4h'} / ${((cfg.battery_efficiency || 0.85) * 100).toFixed(0)}% RTE \u2022 LDES: ${cfg.ldes_duration || '100h'} / ${((cfg.ldes_efficiency || 0.5) * 100).toFixed(0)}% RTE \u2022 ${cfg.resource_types.map(r => RESOURCE_LABELS[r] || r).join(', ')}`;
 
     // Populate region dropdown
     const regionSel = document.getElementById('regionSelect');
@@ -3679,10 +3760,17 @@ function initDashboard() {
 
 // ---- Find closest available threshold ----
 function findClosestThreshold(region, requestedThreshold) {
-    const requested = parseInt(requestedThreshold, 10);
-    if (region.thresholds[String(requested)]) return String(requested);
-    // Find the closest available threshold in the data
-    const available = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
+    const requested = parseFloat(requestedThreshold);
+    // Check if the exact threshold exists and has scenario data
+    const td = region.thresholds[String(requested)];
+    if (td && (!td.scenarios || Object.keys(td.scenarios).length > 0)) return String(requested);
+    // Find the closest available threshold that has scenario data
+    const available = Object.keys(region.thresholds)
+        .filter(k => {
+            const d = region.thresholds[k];
+            return !d.scenarios || Object.keys(d.scenarios).length > 0;
+        })
+        .map(Number).sort((a, b) => a - b);
     if (available.length === 0) return requestedThreshold;
     let closest = available[0];
     let minDiff = Math.abs(requested - closest);
@@ -3696,12 +3784,12 @@ function findClosestThreshold(region, requestedThreshold) {
 // ---- Resolve the active entry based on target mode ----
 function getActiveEntry(region) {
     const interimThreshold = findClosestThreshold(region, document.getElementById('thresholdSelect').value);
-    const interimEntry = region.thresholds[interimThreshold];
+    const interimEntry = resolveEntry(region, interimThreshold);
     if (currentTargetMode === 'longterm') {
         const longtermVal = document.getElementById('longtermTarget').value;
         if (longtermVal) {
             const longtermThreshold = findClosestThreshold(region, longtermVal);
-            const longtermEntry = region.thresholds[longtermThreshold];
+            const longtermEntry = resolveEntry(region, longtermThreshold);
             if (longtermEntry) return { entry: longtermEntry, threshold: longtermThreshold };
         }
     }
@@ -3715,7 +3803,7 @@ function updateAll() {
     const region = DATA.results[iso];
     // Fallback to closest available if this threshold isn't in the data
     const interimThreshold = findClosestThreshold(region, requestedThreshold);
-    const interimEntry = region.thresholds[interimThreshold];
+    const interimEntry = resolveEntry(region, interimThreshold);
     if (!interimEntry) return;
 
     // Resolve which entry to show for charts from donut onward
@@ -4443,7 +4531,8 @@ function populateCurtailmentVisual() {
         const tk = thresholds[ti];
         let curtSum = 0, matchSum = 0, count = 0;
         for (const iso of isos) {
-            const t = DATA.results[iso]?.thresholds?.[tk];
+            const region = DATA.results[iso];
+            const t = region ? resolveEntry(region, tk) : null;
             if (t) {
                 const curt = t.costs?.curtailment_pct || Math.max(0, t.procurement_pct - 100);
                 const match = t.hourly_match_score || 0;
@@ -4481,7 +4570,8 @@ function populateReliabilityGauges() {
     let html = '';
     for (let i = 0; i < isos.length; i++) {
         const iso = isos[i];
-        const t99 = DATA.results[iso]?.thresholds?.['99'];
+        const reg99 = DATA.results[iso];
+        const t99 = reg99 ? resolveEntry(reg99, '99') : null;
         if (!t99) continue;
         const peakGapPct = t99.peak_gap_pct || 0;
         const coveragePct = Math.round(100 - peakGapPct);
@@ -4615,7 +4705,8 @@ function getMixDataForRegion(region) {
 
         const regions = region === 'average' ? isos : [region];
         for (const iso of regions) {
-            const t = DATA.results[iso]?.thresholds?.[tk];
+            const reg = DATA.results[iso];
+            const t = reg ? resolveEntry(reg, tk) : null;
             if (!t) continue;
             const rc = t.costs?.resource_costs;
             if (!rc) continue;
@@ -5020,7 +5111,8 @@ function getIncrementalData(region) {
     }
 
     for (const tk of thresholdKeys) {
-        const t = DATA.results[region]?.thresholds?.[tk];
+        const reg = DATA.results[region];
+        const t = reg ? resolveEntry(reg, tk) : null;
         if (!t) continue;
         const rc = t.costs?.resource_costs;
         if (!rc) continue;
@@ -5339,7 +5431,8 @@ function initNarrativeCostChart() {
         let costSum = 0, count = 0;
         let hasData = false;
         for (const iso of isos) {
-            const t = DATA.results[iso]?.thresholds?.[tk];
+            const reg = DATA.results[iso];
+            const t = reg ? resolveEntry(reg, tk) : null;
             if (t && t.costs?.effective_cost_per_useful_mwh) {
                 const cost = t.costs.effective_cost_per_useful_mwh;
                 isoData[iso].push({ x: thresholdNums[ti], y: Math.round(cost) });
@@ -5722,7 +5815,8 @@ function buildStepChartData() {
         const tk = thresholdKeys[ti];
         let costSum = 0, count = 0;
         for (const iso of isos) {
-            const t = DATA.results[iso]?.thresholds?.[tk];
+            const reg = DATA.results[iso];
+            const t = reg ? resolveEntry(reg, tk) : null;
             if (t && t.costs?.effective_cost_per_useful_mwh) {
                 const cost = t.costs.effective_cost_per_useful_mwh;
                 isoData[iso].push({ x: thresholdNums[ti], y: Math.round(cost) });
@@ -5992,7 +6086,7 @@ function updateHeatmapTiles(region, entry, iso) {
     let minAbateCost = Infinity, maxAbateCost = -Infinity;
 
     thresholds.forEach(tk => {
-        const e = region.thresholds[tk];
+        const e = resolveEntry(region, tk);
         if (!e) return;
         const c = e.costs || {};
         const adj = cfAdjust(e, iso);
@@ -6056,7 +6150,7 @@ function updateHeatmapTiles(region, entry, iso) {
         let marginalCost = null;
         if (idx > 0) {
             const prevThresh = sortedThresholds[idx - 1];
-            const prevEntry = region.thresholds[String(prevThresh)];
+            const prevEntry = resolveEntry(region, String(prevThresh));
             if (prevEntry) {
                 const prevAdj = cfAdjust(prevEntry, iso);
                 const prevCO2 = prevEntry.co2_abated_tons || 0;
@@ -6161,7 +6255,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // Long-term target
     const longtermVal = document.getElementById('longtermTarget').value;
     const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
-    const longtermEntry = longtermThreshold ? regionData.thresholds[longtermThreshold] : null;
+    const longtermEntry = longtermThreshold ? resolveEntry(regionData, longtermThreshold) : null;
     const longtermRC = longtermEntry?.costs?.resource_costs;
 
     // Time horizons and demand growth
@@ -6644,7 +6738,7 @@ function initPathwayAnalysis() {
         const region = DATA?.results?.[iso];
         if (!region) return;
         const threshold = document.getElementById('thresholdSelect').value;
-        const entry = region.thresholds[findClosestThreshold(region, threshold)];
+        const entry = resolveEntry(region, findClosestThreshold(region, threshold));
         if (entry) updateWhatYouNeedPanel(region, entry, threshold);
     }
 
