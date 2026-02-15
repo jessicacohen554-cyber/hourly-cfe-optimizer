@@ -99,7 +99,13 @@
                 </div>
             </div>
 
-            <p style="font-size: 0.88rem; margin-top: 16px; color: var(--text-tertiary);">Reference points: EPA social cost of carbon: $51/ton (2020$). Rennert et al. (Nature, 2022): $185/ton. EU ETS: €70&ndash;100/ton ($75&ndash;110). RGGI: ~$15/ton.<sup class="ref">13</sup></p>
+            <p style="font-size: 0.88rem; margin-top: 16px; color: var(--text-tertiary);">Reference points: EPA social cost of carbon: $51/ton (2020$). Rennert et al. (Nature, 2022): $185/ton. EU ETS: &euro;70&ndash;100/ton ($75&ndash;110). RGGI: ~$15/ton.<sup class="ref">13</sup></p>
+
+            <div class="chart-container" style="margin-top: 20px; padding: 20px;">
+                <h4 style="font-size: 0.95rem;">Social Cost of Carbon: How Different Estimates Compare</h4>
+                <div style="height: 220px;"><canvas id="sccChart"></canvas></div>
+                <p class="citation">EPA (2021 IWG), Rennert et al. (Nature 2022), EU ETS (2024 avg), RGGI (2024 auction). Abatement cost thresholds illustrate what becomes economic at each carbon price.<sup class="ref">13</sup></p>
+            </div>
         </div>
 
         <!-- Transmission -->
@@ -135,8 +141,9 @@
                     <div class="stat-label">Battery costs since 2010</div>
                 </div>
                 <div class="stat-tile">
-                    <div class="stat-value" style="font-size: 1.4rem;">TBD</div>
-                    <div class="stat-label">LDES cost trajectory</div>
+                    <div class="stat-value" style="font-size: 1.4rem;">-50%</div>
+                    <div class="stat-label">LDES projected by 2030</div>
+                    <div class="stat-sublabel">Iron-air: ~$50&ndash;80/kWh target</div>
                 </div>
             </div>
         </div>
@@ -248,6 +255,32 @@ const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
 }, { threshold: 0.1 });
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Social Cost of Carbon Comparison
+new Chart(document.getElementById('sccChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['RGGI\n(actual)', 'EU ETS\n(actual)', 'EPA IWG\n(social cost)', 'Rennert et al.\n(social cost)'],
+        datasets: [{
+            label: '$/ton CO₂',
+            data: [15, 90, 51, 185],
+            backgroundColor: ['#9CA3AF', '#0EA5E9', '#F59E0B', '#DC2626'],
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => `$${ctx.raw}/ton CO₂` } }
+        },
+        scales: {
+            x: { title: { display: true, text: '$/ton CO₂', font: { size: 11 } }, grid: { display: false }, border: { display: true },
+                 ticks: { callback: v => `$${v}` } },
+            y: { grid: { display: false }, border: { display: true }, ticks: { font: { size: 10 } } }
+        }
+    }
+});
 
 // IRA Impact Chart
 new Chart(document.getElementById('iraChart').getContext('2d'), {
