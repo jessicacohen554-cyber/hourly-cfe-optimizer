@@ -1,7 +1,7 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-14.
+> Last updated: 2026-02-15.
 
 ## Current Status (Feb 15, 2026)
 
@@ -64,22 +64,27 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 9. User explicitly approves the run
 
 ### Generator Analysis & Policy Page Decisions (Feb 15)
-- [ ] **Tone down Constellation-specific narrative** — make discussion generic about archetypes (nuclear-led, coal-heavy, gas-dominant, mixed fleet). Remove "unfairness" language. Analysis shouldn't sound biased.
-- [ ] **Add GHG Protocol Scope 2 revision context** — hourly accounting proposed in Scope 2 revision creates demand-side pull for deep decarb vs annual accounting
-- [ ] **Add EPRI SMARTargets context** — addresses SBTi criticisms, company-specific targets considering regional constraints
-- [ ] **Add hourly RPS discussion** — how hourly RPS targets could catalyze generator deep decarbonization via demand-side pull
-- [ ] **Policy page: RPS + corporate demand under hourly matching** — projected hourly clean premium cost curves in 5 ISOs
-  - **Standard supply service baseline**: Nuclear, RPS, rate base clean gen, publicly owned assets = "standard supply service" per GHG Protocol Scope 2 revisions. These count toward corporate hourly matching on the front end.
-  - **Corporate voluntary layer**: Corporate buyers add procurement on top of standard supply service baseline. Model at 10% intervals of corporate participation share.
-  - **Corporate buyers compete with state RPS** for existing clean resources — both draw from same pool
-  - Sources: CEBA, RE100, CDP, NREL voluntary procurement, Berkeley National Labs RPS data
-- [ ] **EAC scarcity analysis by ISO** — core question: which ISOs see EAC scarcity that drives up hourly clean premiums?
-  - **Assumption**: Corporate procurement must occur within the ISO where load is (no cross-ISO claims)
-  - **No incrementality constraint assumed** on voluntary Scope 2 claims initially
-  - **PJM**: No renewables left after RPS compliance currently. Excess nuclear after state programs, but data center PPAs (Microsoft-Constellation Crane, etc.) consuming nuclear surplus. If data center demand growth materializes → scarcity → higher EAC prices
-  - **ERCOT**: Abundant wind+solar being added rapidly, no state RPS. May never see scarcity regardless of incrementality requirements
-  - **CAISO, NYISO, NEISO**: Analyze each for supply-demand balance of clean EACs after RPS + data center growth
-  - Key output: projected hourly clean premium cost curve at 10% corporate participation intervals × hourly matching targets
+- [x] **Tone down Constellation-specific narrative** — generic archetypes (nuclear-led, coal-heavy, gas-dominant). Removed "unfairness" language. Applied across targets.html, index.html, fleet-analysis.html, policy.html.
+- [x] **Add GHG Protocol Scope 2 revision context** — deep-dive on targets.html: 4 quality criteria (temporal, deliverability, incrementality, SSS), hourly premium economics, convergence with SBTi.
+- [x] **Add EPRI SMARTargets context** — targets.html: AT/QT framework, Ceres criticism, investor credibility debate, "both/and" resolution.
+- [x] **Add hourly RPS discussion** — targets.html: hourly RPS as policy frontier, convergence with GHG Protocol + SBTi, demand-side pull for clean firm.
+- [x] **Policy page: RPS + corporate demand under hourly matching** — SSS baseline, corporate participation scenario table (10-50% × 5 ISOs), clean premium projections by ISO.
+  - **Standard supply service baseline**: Nuclear, RPS, rate base clean gen, publicly owned assets = "standard supply service" per GHG Protocol Scope 2 revisions.
+  - **Corporate voluntary layer**: Procurement on top of SSS baseline at 10% intervals.
+  - **Clean premium estimates**: PJM $15-40, ISO-NE $20-55, CAISO $10-25, ERCOT $0-15/MWh
+- [x] **EAC scarcity analysis by ISO** — policy.html: SSS-informed analysis with ISO-by-ISO scarcity assessment.
+  - **PJM**: Severe scarcity at 20%+ participation. Nuclear being consumed by data center PPAs. Highest clean premium.
+  - **ERCOT**: Unlikely scarcity. Abundant wind/solar, no state RPS competing. Lowest premium.
+  - **CAISO**: Moderate scarcity, duck curve evening gap. CCS opportunity for gas fleet.
+  - **ISO-NE**: Moderate-to-severe scarcity. Already-high REC prices, transmission-constrained.
+  - **NYISO**: Moderate scarcity. Indian Point closure + CLCPA mandate.
+
+### Timezone / UTC Handling (Feb 15)
+- **EIA hourly data**: Local time (NOT UTC), per EIA documentation. No offset needed during data loading.
+- **Optimizer compressed_day**: New optimizer checkpoint outputs UTC-indexed arrays (h%24 from 0-8759 sequential UTC). Old pre-computed results were local time.
+- **Dashboard fix applied**: CAISO 75%/80% rotated UTC→local (offset 8). All other ISOs were already local.
+- **Future checkpoint merges**: Must apply UTC-8 rotation to CAISO compressed_day data from new optimizer run before merging into results JSON.
+- **All other ISOs verified**: PJM, ERCOT, NYISO, NEISO show local-time profiles (solar 7-19, demand peaks 16-18). Issue was CAISO-specific from checkpoint merge.
 
 ### Open questions
 - Path-dependent MAC visualization: may need alternative to MAC curve format
