@@ -209,7 +209,7 @@ body {
 }
 .sensitivity-toggles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: 16px 28px;
 }
 .sensitivity-toggle-item {
@@ -284,7 +284,7 @@ body {
     line-height: 1.45;
     padding: 10px 14px;
     border-radius: 8px;
-    width: 280px;
+    width: min(280px, 85vw);
     z-index: 100;
     box-shadow: 0 4px 16px rgba(0,0,0,0.18);
     pointer-events: none;
@@ -347,7 +347,7 @@ body {
         padding: 18px 16px;
     }
     .info-tooltip {
-        width: 220px;
+        width: min(220px, 80vw);
         left: 0;
         transform: translateX(-20%);
     }
@@ -373,6 +373,105 @@ body {
 }
 .wyn-insight-box strong {
     color: var(--navy);
+}
+
+/* Stranded Asset Breakdown */
+.stranded-breakdown {
+    margin-bottom: 20px;
+}
+.stranded-breakdown-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+}
+.stranded-bars-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.sbar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sbar-label {
+    flex: 0 0 90px;
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: right;
+    line-height: 1.2;
+}
+.sbar-label.sbar-label-warn {
+    color: #C75B4A;
+}
+.sbar-track {
+    flex: 1;
+    display: flex;
+    height: 26px;
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    background: #f5f5f7;
+    position: relative;
+}
+.sbar-track-stranded {
+    border-color: rgba(239,68,68,0.25);
+    background: rgba(239,68,68,0.04);
+}
+.sbar-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 4px;
+    transition: width 0.5s ease;
+    min-width: 0;
+}
+.sbar-total {
+    flex: 0 0 auto;
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-left: 8px;
+    white-space: nowrap;
+}
+.sbar-total-warn {
+    color: #C75B4A;
+}
+.stranded-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.stranded-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.stranded-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.stranded-legend-item .sl-val {
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 /* ========== WHAT YOU NEED PANEL ========== */
@@ -551,7 +650,7 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6356' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
-    min-width: 220px;
+    min-width: min(220px, 100%);
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -683,11 +782,16 @@ body {
     margin-bottom: 28px;
 }
 
+.charts-row-duo {
+    grid-template-columns: minmax(240px, 1fr) minmax(0, 2.5fr);
+}
+
 .chart-panel {
     background: var(--bg-card);
     border: 1px solid var(--border-light);
     border-radius: 10px;
     padding: 28px;
+    min-width: 0;
 }
 
 .chart-panel.donut-panel {
@@ -695,6 +799,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    max-width: 380px;
 }
 
 .chart-panel h3 {
@@ -709,10 +814,10 @@ body {
 
 .donut-container {
     position: relative;
-    width: 90%;
-    max-width: 280px;
+    width: 100%;
+    max-width: 240px;
     margin: 0 auto;
-    padding: 8px;
+    padding: 4px;
     aspect-ratio: 1 / 1;
 }
 
@@ -745,21 +850,22 @@ body {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px 18px;
-    margin-top: 20px;
-    font-size: 0.85rem;
+    gap: 6px 14px;
+    margin-top: 16px;
+    font-size: 0.82rem;
     color: var(--text-secondary);
 }
 
 .donut-legend-item {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
+    white-space: nowrap;
 }
 
 .donut-legend-swatch {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 3px;
     border: 1.5px solid var(--outline);
     flex-shrink: 0;
@@ -768,6 +874,7 @@ body {
 .compressed-day-container {
     position: relative;
     height: 370px;
+    min-width: 0;
 }
 
 /* ========== COST BREAKDOWN ========== */
@@ -1194,6 +1301,11 @@ body {
     .pathway-ctrl { min-width: auto; }
     .pathway-metrics { grid-template-columns: 1fr; gap: 12px; }
     .pathway-metric-value { font-size: 1.5rem; }
+    .sbar-label { flex: 0 0 70px; font-size: 0.7rem; }
+    .sbar-track { height: 22px; }
+    .sbar-seg { font-size: 0.58rem; }
+    .sbar-total { font-size: 0.7rem; }
+    .stranded-legend { font-size: 0.7rem; gap: 3px 10px; }
 }
 
 .key-findings {
@@ -2091,7 +2203,7 @@ body {
 }
 .transition-fuel-card {
     flex: 1;
-    min-width: 220px;
+    min-width: min(220px, 100%);
     background: rgba(255,255,255,0.92);
     border: 1px solid rgba(221,208,192,0.5);
     border-radius: 14px;
@@ -2173,11 +2285,11 @@ body {
         padding: 0 10px;
     }
     .section-illustration svg {
-        min-width: 340px;
+        min-width: min(340px, 100%);
     }
     .trilemma-svg {
         max-width: 300px !important;
-        min-width: 260px !important;
+        min-width: min(260px, 100%) !important;
     }
     .region-toggle-row, .incremental-region-pills {
         gap: 6px;
@@ -2651,6 +2763,20 @@ body {
     .charts-row {
         grid-template-columns: 1fr !important;
     }
+    .charts-row-duo {
+        grid-template-columns: minmax(0, 320px) minmax(0, 1fr) !important;
+    }
+    .chart-panel.donut-panel {
+        max-width: 100%;
+    }
+}
+@media (max-width: 768px) {
+    .charts-row-duo {
+        grid-template-columns: 1fr !important;
+    }
+    .chart-panel.donut-panel {
+        max-width: 100%;
+    }
 }
 @media (max-width: 1000px) {
     .metrics-row {
@@ -2744,17 +2870,22 @@ body {
         margin-bottom: 12px;
     }
     .donut-container {
-        max-width: 220px;
+        max-width: 210px;
     }
     .donut-center-label .dcl-value {
-        font-size: 1.7rem;
+        font-size: 1.6rem;
     }
     .donut-legend {
-        gap: 6px 12px;
-        font-size: 0.78rem;
+        gap: 4px 10px;
+        font-size: 0.75rem;
+        margin-top: 12px;
+    }
+    .donut-legend-swatch {
+        width: 10px;
+        height: 10px;
     }
     .compressed-day-container {
-        height: 500px;
+        height: 400px;
     }
     .peak-tower-wrap {
         height: 240px;
@@ -2903,13 +3034,22 @@ body {
         font-size: 1rem;
     }
     .donut-container {
-        max-width: 190px;
+        max-width: 170px;
     }
     .donut-center-label .dcl-value {
-        font-size: 1.45rem;
+        font-size: 1.35rem;
+    }
+    .donut-legend {
+        gap: 3px 8px;
+        font-size: 0.72rem;
+        margin-top: 10px;
+    }
+    .donut-legend-swatch {
+        width: 9px;
+        height: 9px;
     }
     .compressed-day-container {
-        height: 440px;
+        height: 380px;
     }
     .peak-tower-wrap {
         height: 200px;
@@ -3002,10 +3142,28 @@ body {
     .header { padding: 28px 12px 24px; }
     .header h1 { font-size: 1.6rem; }
     .header .subtitle { font-size: 0.85rem; }
+    .main-content { padding: 10px 8px 24px; }
     .story-section { padding: 32px 14px; }
     .hero-callout-card { min-width: 70px; padding: 12px 6px; }
     .hero-callout-value { font-size: 1.4rem; }
     .scrolly-chart-wrap { min-height: 250px; }
+    /* Dashboard controls */
+    .control-group select { min-width: 100%; font-size: 0.82rem; }
+    .sensitivity-toggles-grid { gap: 10px 16px; }
+    .toggle-btn-group button { padding: 5px 8px; font-size: 0.72rem; min-width: 38px; }
+    /* Charts */
+    .donut-container { max-width: 150px; }
+    .donut-center-label .dcl-value { font-size: 1.2rem; }
+    .donut-legend { gap: 2px 6px; font-size: 0.68rem; }
+    .compressed-day-container { height: 340px; }
+    /* Cost table */
+    .cost-table { font-size: 0.7rem; }
+    .cost-table th { padding: 5px 3px; font-size: 0.68rem; }
+    .cost-table td { padding: 5px 3px; }
+    .cost-table .resource-dot { width: 8px; height: 8px; margin-right: 3px; }
+    /* Metrics */
+    .metrics-row { grid-template-columns: 1fr; gap: 6px; }
+    .metric-tile .tile-value { font-size: 1.3rem; }
 }
 
 /* Touch-friendly tap targets */
@@ -3382,6 +3540,13 @@ body {
             </div>
         </div>
 
+        <!-- New Build & Stranded Resource Breakdown -->
+        <div class="stranded-breakdown" id="strandedBreakdown" style="display:none;">
+            <h4 class="stranded-breakdown-title">New Build &amp; Stranded Asset Mix</h4>
+            <div class="stranded-bars-wrapper" id="strandedBarsWrapper"></div>
+            <div class="stranded-legend" id="strandedLegend"></div>
+        </div>
+
         <div class="wyn-insight-box" id="wynInsightBox">
             Select a region and matching targets to see the resource pathway comparison.
         </div>
@@ -3439,8 +3604,8 @@ body {
         <p id="keyFindingText"></p>
     </div>
 
-    <!-- DONUT (Resource Mix) -->
-    <div class="charts-row" style="grid-template-columns: 1fr 2fr;">
+    <!-- DONUT (Resource Mix) + COMPRESSED DAY -->
+    <div class="charts-row charts-row-duo">
         <div class="chart-panel donut-panel">
             <h3>How Your Clean Energy is Sourced</h3>
             <div class="donut-container">
@@ -3522,18 +3687,24 @@ if (typeof ChartDataLabels !== 'undefined') {
 // Resource color map
 const COLORS = {
     clean_firm: { base: '#1E3A5F', alpha: 'rgba(30,58,95,0.55)' },
+    ccs_ccgt:   { base: '#0D9488', alpha: 'rgba(13,148,136,0.55)' },
     solar:      { base: '#F59E0B', alpha: 'rgba(245,158,11,0.55)' },
     wind:       { base: '#22C55E', alpha: 'rgba(34,197,94,0.55)' },
     hydro:      { base: '#0EA5E9', alpha: 'rgba(14,165,233,0.55)' },
+    battery:    { base: '#8B5CF6', alpha: 'rgba(139,92,246,0.55)' },
+    ldes:       { base: '#EC4899', alpha: 'rgba(236,72,153,0.55)' },
     storage:    { base: '#EF4444', alpha: 'rgba(239,68,68,0.55)' },
     gap:        { base: '#D1D5DB', alpha: 'rgba(209,213,219,0.55)' }
 };
 
 const RESOURCE_LABELS = {
-    clean_firm: 'Clean Firm',
+    clean_firm: 'Clean Firm (Nuc+Geo)',
+    ccs_ccgt: 'CCS-CCGT',
     solar: 'Solar',
     wind: 'Wind',
     hydro: 'Hydro',
+    battery: 'Battery (4hr)',
+    ldes: 'LDES (100hr)',
     storage: 'Storage'
 };
 
@@ -3583,6 +3754,85 @@ function createStripePattern(ctx, color, bgColor) {
     pctx.lineTo(12, 8);
     pctx.stroke();
     return ctx.createPattern(patternCanvas, 'repeat');
+}
+
+// ---- Scenario Resolver ----
+// Maps the 5 sensitivity toggle states to a scenario key like "MMM_M_M"
+function buildScenarioKey() {
+    const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
+    const rg = levelMap[sensitivityState.renewable_gen] || 'M';
+    const fg = levelMap[sensitivityState.firm_gen] || 'M';
+    const st = levelMap[sensitivityState.storage] || 'M';
+    const ff = levelMap[sensitivityState.fossil_fuel] || 'M';
+    const tx = levelMap[sensitivityState.transmission] || 'M';
+    return `${rg}${fg}${st}_${ff}_${tx}`;
+}
+
+// Resolves a threshold entry from the new scenario-based data format.
+// Returns a normalized entry compatible with the dashboard's expected field names.
+function resolveEntry(region, thresholdKey) {
+    const thresholdData = region.thresholds?.[thresholdKey];
+    if (!thresholdData) return null;
+
+    // New format: thresholdData.scenarios is a dict keyed by scenario strings
+    if (thresholdData.scenarios) {
+        const key = buildScenarioKey();
+        let scenario = thresholdData.scenarios[key];
+        // Fallback: if the exact key isn't available, try MMM_M_M, then first available
+        if (!scenario) scenario = thresholdData.scenarios['MMM_M_M'];
+        if (!scenario) {
+            const keys = Object.keys(thresholdData.scenarios);
+            if (keys.length > 0) scenario = thresholdData.scenarios[keys[0]];
+        }
+        if (!scenario) return null;
+        return normalizeEntry(scenario);
+    }
+
+    // Legacy flat format (no scenarios dict) — pass through
+    return thresholdData;
+}
+
+// Normalizes a scenario entry so the dashboard can read it uniformly.
+// Merges costs_detail into costs, maps co2 fields, etc.
+function normalizeEntry(raw) {
+    const entry = Object.assign({}, raw);
+
+    // Merge costs_detail into costs for backward compatibility
+    const detail = raw.costs_detail || {};
+    const summary = raw.costs || {};
+
+    // Build resource_costs with merged storage from battery + ldes
+    const rc = detail.resource_costs ? Object.assign({}, detail.resource_costs) : null;
+    if (rc && !rc.storage && (rc.battery || rc.ldes)) {
+        const bat = rc.battery || {};
+        const ldes = rc.ldes || {};
+        rc.storage = {
+            dispatch_pct: (bat.dispatch_pct || 0) + (ldes.dispatch_pct || 0),
+            cost_per_demand_mwh: (bat.cost_per_demand_mwh || 0) + (ldes.cost_per_demand_mwh || 0)
+        };
+    }
+
+    entry.costs = {
+        total_cost_per_demand_mwh: detail.total_cost_per_demand_mwh ?? summary.total_cost ?? null,
+        effective_cost_per_useful_mwh: detail.effective_cost_per_useful_mwh ?? summary.effective_cost ?? null,
+        baseline_wholesale_cost: detail.baseline_wholesale_cost ?? summary.wholesale ?? null,
+        incremental_above_baseline: detail.incremental_above_baseline ?? summary.incremental ?? null,
+        curtailment_pct: detail.curtailment_pct ?? null,
+        resource_costs: rc
+    };
+
+    // Map CO2 data to flat field
+    if (raw.co2_abated && raw.co2_abated.total_co2_abated_tons != null) {
+        entry.co2_abated_tons = raw.co2_abated.total_co2_abated_tons;
+        entry.co2_rate_per_mwh = raw.co2_abated.co2_rate_per_mwh;
+    }
+
+    // Map storage dispatch fields
+    const batDisp = raw.battery_dispatch_pct || 0;
+    const ldesDisp = raw.ldes_dispatch_pct || 0;
+    entry.storage_dispatch_pct = batDisp + ldesDisp;
+
+    return entry;
 }
 
 // ---- Data Loading ----
@@ -3660,11 +3910,11 @@ function cfAdjust(entry, iso) {
  * Get adjusted effective cost for a threshold across ISOs (for narrative charts)
  */
 function getAdjustedEffectiveCost(iso, thresholdKey) {
-    const tData = DATA.results[iso]?.thresholds?.[thresholdKey];
-    if (!tData) return null;
-    const sc = resolveScenario(tData);
-    if (!sc) return null;
-    const adj = cfAdjust(sc, iso);
+    const region = DATA.results[iso];
+    if (!region) return null;
+    const t = resolveEntry(region, thresholdKey);
+    if (!t?.costs) return null;
+    const adj = cfAdjust(t, iso);
     return adj.newEffective;
 }
 
@@ -3701,7 +3951,7 @@ function initDashboard() {
     const cfg = DATA.config;
     const yearLabel = document.getElementById('dataYearLabel');
     if (yearLabel) yearLabel.textContent =
-        `Data Year: ${cfg.data_year} \u2022 Storage: ${cfg.storage_duration} / ${(cfg.storage_efficiency * 100).toFixed(0)}% RTE \u2022 ${cfg.resource_types.map(r => RESOURCE_LABELS[r] || r).join(', ')}`;
+        `Data Year: ${cfg.data_year} \u2022 Battery: ${cfg.battery_duration || '4h'} / ${((cfg.battery_efficiency || 0.85) * 100).toFixed(0)}% RTE \u2022 LDES: ${cfg.ldes_duration || '100h'} / ${((cfg.ldes_efficiency || 0.5) * 100).toFixed(0)}% RTE \u2022 ${cfg.resource_types.map(r => RESOURCE_LABELS[r] || r).join(', ')}`;
 
     // Populate region dropdown
     const regionSel = document.getElementById('regionSelect');
@@ -3748,10 +3998,17 @@ function initDashboard() {
 
 // ---- Find closest available threshold ----
 function findClosestThreshold(region, requestedThreshold) {
-    const requested = parseInt(requestedThreshold, 10);
-    if (region.thresholds[String(requested)]) return String(requested);
-    // Find the closest available threshold in the data
-    const available = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
+    const requested = parseFloat(requestedThreshold);
+    // Check if the exact threshold exists and has scenario data
+    const td = region.thresholds[String(requested)];
+    if (td && (!td.scenarios || Object.keys(td.scenarios).length > 0)) return String(requested);
+    // Find the closest available threshold that has scenario data
+    const available = Object.keys(region.thresholds)
+        .filter(k => {
+            const d = region.thresholds[k];
+            return !d.scenarios || Object.keys(d.scenarios).length > 0;
+        })
+        .map(Number).sort((a, b) => a - b);
     if (available.length === 0) return requestedThreshold;
     let closest = available[0];
     let minDiff = Math.abs(requested - closest);
@@ -3766,15 +4023,13 @@ function findClosestThreshold(region, requestedThreshold) {
 // Returns { entry: scenarioData, threshold: string, thresholdData: rawThresholdObj }
 function getActiveEntry(region) {
     const interimThreshold = findClosestThreshold(region, document.getElementById('thresholdSelect').value);
-    const interimThresholdData = region.thresholds[interimThreshold];
-    const interimEntry = resolveScenario(interimThresholdData);
+    const interimEntry = resolveEntry(region, interimThreshold);
     if (currentTargetMode === 'longterm') {
         const longtermVal = document.getElementById('longtermTarget').value;
         if (longtermVal) {
             const longtermThreshold = findClosestThreshold(region, longtermVal);
-            const longtermThresholdData = region.thresholds[longtermThreshold];
-            const longtermEntry = resolveScenario(longtermThresholdData);
-            if (longtermEntry) return { entry: longtermEntry, threshold: longtermThreshold, thresholdData: longtermThresholdData };
+            const longtermEntry = resolveEntry(region, longtermThreshold);
+            if (longtermEntry) return { entry: longtermEntry, threshold: longtermThreshold };
         }
     }
     return { entry: interimEntry, threshold: interimThreshold, thresholdData: interimThresholdData };
@@ -3787,10 +4042,7 @@ function updateAll() {
     const region = DATA.results[iso];
     // Fallback to closest available if this threshold isn't in the data
     const interimThreshold = findClosestThreshold(region, requestedThreshold);
-    const interimThresholdData = region.thresholds[interimThreshold];
-    if (!interimThresholdData) return;
-    // Resolve sensitivity toggles to a specific scenario within the threshold
-    const interimEntry = resolveScenario(interimThresholdData);
+    const interimEntry = resolveEntry(region, interimThreshold);
     if (!interimEntry) return;
 
     // Resolve which entry to show for charts from donut onward
@@ -3803,7 +4055,7 @@ function updateAll() {
     updateMetrics(region, displayEntry);
     updateKeyFinding(iso, displayThreshold, displayEntry, region);
     updateDonut(displayEntry);
-    updateCompressedDay(displayEntry, region);
+    updateCompressedDay(displayEntry, region, iso);
     updatePeakCapacity(displayEntry, region);
     updateCostPanel(displayEntry);
     updateWhatYouNeedPanel(region, interimEntry, interimThreshold);
@@ -3925,20 +4177,28 @@ function updateMetrics(region, entry) {
 // ---- Donut Chart ----
 function updateDonut(entry) {
     const mix = entry.resource_mix;
-    const matchScore = entry.hourly_match_score || 0; // e.g. 75.0
-    const resources = ['clean_firm', 'solar', 'wind', 'hydro'];
+    const matchScore = entry.hourly_match_score || 0;
+    const battPct = entry.battery_dispatch_pct || 0;
+    const ldesPct = entry.ldes_dispatch_pct || 0;
+
+    // All 5 generation resources from resource_mix
+    const genResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro'];
+    const mixTotal = genResources.reduce((s, r) => s + (mix[r] || 0), 0) || 100;
+
+    // Storage dispatch contributes to match score but isn't in resource_mix
+    const storageTotal = battPct + ldesPct;
+    const genMatch = Math.max(0, matchScore - storageTotal);
+
     const labels = [];
     const values = [];
     const bgColors = [];
     const borderColors = [];
 
-    // Scale each resource by matching score so total matched = matchScore%
-    // Mix values sum to 100 (of procurement), scale to share of demand
-    const mixTotal = resources.reduce((s, r) => s + (mix[r] || 0), 0) || 100;
-    resources.forEach(r => {
+    // Scale generation resources to their share of demand matched
+    genResources.forEach(r => {
         const mixPct = mix[r] || 0;
-        const scaledVal = (mixPct / mixTotal) * matchScore;
-        if (scaledVal > 0.5) {
+        const scaledVal = (mixPct / mixTotal) * genMatch;
+        if (scaledVal > 0.3) {
             labels.push(RESOURCE_LABELS[r]);
             values.push(Math.round(scaledVal * 10) / 10);
             bgColors.push(COLORS[r].alpha);
@@ -3946,7 +4206,21 @@ function updateDonut(entry) {
         }
     });
 
-    // Add gap slice
+    // Battery and LDES as separate slices
+    if (battPct > 0.3) {
+        labels.push(RESOURCE_LABELS.battery);
+        values.push(Math.round(battPct * 10) / 10);
+        bgColors.push(COLORS.battery.alpha);
+        borderColors.push(OUTLINE_COLOR);
+    }
+    if (ldesPct > 0.3) {
+        labels.push(RESOURCE_LABELS.ldes);
+        values.push(Math.round(ldesPct * 10) / 10);
+        bgColors.push(COLORS.ldes.alpha);
+        borderColors.push(OUTLINE_COLOR);
+    }
+
+    // Gap slice
     const gapPct = Math.max(0, 100 - matchScore);
     if (gapPct > 0.5) {
         labels.push('Unmatched');
@@ -3955,40 +4229,19 @@ function updateDonut(entry) {
         borderColors.push(OUTLINE_COLOR);
     }
 
-    // Storage dispatch annotation
-    const storPct = entry.storage_dispatch_pct || 0;
-
     // Center label
     document.getElementById('donutCenterValue').textContent = formatPct(matchScore);
 
     // Legend
     const legendEl = document.getElementById('donutLegend');
     let legendHTML = '';
-    resources.forEach(r => {
-        const mixPct = mix[r] || 0;
-        const scaledVal = (mixPct / mixTotal) * matchScore;
-        if (scaledVal > 0.5) {
-            legendHTML += `
-                <div class="donut-legend-item">
-                    <div class="donut-legend-swatch" style="background:${COLORS[r].alpha}"></div>
-                    <span>${RESOURCE_LABELS[r]}: ${Math.round(scaledVal)}%</span>
-                </div>`;
-        }
+    labels.forEach((lbl, i) => {
+        legendHTML += `
+            <div class="donut-legend-item">
+                <div class="donut-legend-swatch" style="background:${bgColors[i]}"></div>
+                <span>${lbl}: ${values[i]}%</span>
+            </div>`;
     });
-    if (storPct > 0) {
-        legendHTML += `
-            <div class="donut-legend-item">
-                <div class="donut-legend-swatch" style="background:${COLORS.storage.alpha}"></div>
-                <span>Storage Dispatch: ${storPct}%</span>
-            </div>`;
-    }
-    if (gapPct > 0.5) {
-        legendHTML += `
-            <div class="donut-legend-item">
-                <div class="donut-legend-swatch" style="background:${COLORS.gap.alpha}"></div>
-                <span>Unmatched: ${Math.round(gapPct)}%</span>
-            </div>`;
-    }
     legendEl.innerHTML = legendHTML;
 
     const ctx = document.getElementById('donutChart').getContext('2d');
@@ -4043,7 +4296,7 @@ function updateDonut(entry) {
 }
 
 // ---- Compressed Day Chart ----
-function updateCompressedDay(entry, region) {
+function updateCompressedDay(entry, region, iso) {
     const cd = entry.compressed_day;
     if (!cd) {
         // No compressed day data
@@ -4060,6 +4313,14 @@ function updateCompressedDay(entry, region) {
         return;
     }
 
+    // UTC offsets: optimizer data is in UTC hour-of-day; rotate to local time
+    // These are standard-time offsets (hours behind UTC). We use a weighted
+    // average that accounts for ~58% of hours being in DST (Mar-Nov).
+    const UTC_OFFSETS = {CAISO: 8, ERCOT: 6, PJM: 5, NYISO: 5, NEISO: 5};
+    const stdOff = UTC_OFFSETS[iso] || 5;
+    // Rotate array left by stdOff positions to convert UTC → local
+    const rotateToLocal = (arr) => [...arr.slice(stdOff), ...arr.slice(0, stdOff)];
+
     const hours = Array.from({length: 24}, (_, i) => i);
     const hourLabels = hours.map(h => {
         if (h === 0) return '12am';
@@ -4074,26 +4335,35 @@ function updateCompressedDay(entry, region) {
     const annualMWh = region.annual_demand_mwh || 1;
     const toMW = (v) => (v / 365) * annualMWh;
 
-    // Calculate stacked matched values (in MW)
-    const matchedCleanFirm = cd.matched.clean_firm.map(v => Math.max(0, toMW(v)));
-    const matchedSolar = cd.matched.solar.map(v => Math.max(0, toMW(v)));
-    const matchedWind = cd.matched.wind.map(v => Math.max(0, toMW(v)));
-    const matchedHydro = cd.matched.hydro.map(v => Math.max(0, toMW(v)));
-    const matchedStorage = cd.matched.storage.map(v => Math.max(0, toMW(v)));
+    // Rotate all compressed-day arrays from UTC to local time, then convert to MW
+    const r = (arr) => rotateToLocal(arr).map(v => Math.max(0, toMW(v)));
+    const rRaw = (arr) => rotateToLocal(arr).map(v => toMW(v));
+    const z24 = new Array(24).fill(0);
 
-    // Storage charging (negative, below x-axis) — in MW
-    const storageCharge = (cd.storage_charge || new Array(24).fill(0)).map(v => toMW(v));
+    // Calculate stacked matched values (in MW, local time) — all 7 resource types
+    const matchedCleanFirm = r(cd.matched.clean_firm || z24);
+    const matchedCCS = r(cd.matched.ccs_ccgt || z24);
+    const matchedSolar = r(cd.matched.solar || z24);
+    const matchedWind = r(cd.matched.wind || z24);
+    const matchedHydro = r(cd.matched.hydro || z24);
+    const matchedBattery = r(cd.matched.battery || cd.matched.storage || z24);
+    const matchedLDES = r(cd.matched.ldes || z24);
 
-    // Per-resource surplus (curtailed) — in MW
-    const surplusSolar = (cd.surplus?.solar || new Array(24).fill(0)).map(v => toMW(v));
-    const surplusWind = (cd.surplus?.wind || new Array(24).fill(0)).map(v => toMW(v));
-    const surplusHydro = (cd.surplus?.hydro || new Array(24).fill(0)).map(v => toMW(v));
-    const surplusCleanFirm = (cd.surplus?.clean_firm || new Array(24).fill(0)).map(v => toMW(v));
+    // Separate charging for battery and LDES (negative, below x-axis) — in MW, local time
+    const batteryCharge = rRaw(cd.battery_charge || z24);
+    const ldesCharge = rRaw(cd.ldes_charge || z24);
 
-    // Gap (unmatched) — in MW
-    const gap = cd.gap.map(v => toMW(v));
+    // Per-resource surplus (curtailed) — in MW, local time
+    const surplusSolar = rRaw(cd.surplus?.solar || z24);
+    const surplusWind = rRaw(cd.surplus?.wind || z24);
+    const surplusHydro = rRaw(cd.surplus?.hydro || z24);
+    const surplusCleanFirm = rRaw(cd.surplus?.clean_firm || z24);
+    const surplusCCS = rRaw(cd.surplus?.ccs_ccgt || z24);
 
-    // Build stacked bottom-up: clean_firm, hydro, wind, solar, storage
+    // Gap (unmatched) — in MW, local time
+    const gap = rRaw(cd.gap);
+
+    // Build stacked bottom-up: clean_firm, ccs_ccgt, hydro, wind, solar, battery, ldes
     // Then per-resource surplus on top (color-coded cross-hatching)
 
     const ctx = document.getElementById('compressedDayChart').getContext('2d');
@@ -4103,103 +4373,63 @@ function updateCompressedDay(entry, region) {
         solar: createStripePattern(ctx, COLORS.solar.base, 'rgba(245,158,11,0.18)'),
         wind: createStripePattern(ctx, COLORS.wind.base, 'rgba(34,197,94,0.18)'),
         hydro: createStripePattern(ctx, COLORS.hydro.base, 'rgba(14,165,233,0.18)'),
-        clean_firm: createStripePattern(ctx, COLORS.clean_firm.base, 'rgba(26,39,68,0.18)')
+        clean_firm: createStripePattern(ctx, COLORS.clean_firm.base, 'rgba(26,39,68,0.18)'),
+        ccs_ccgt: createStripePattern(ctx, COLORS.ccs_ccgt.base, 'rgba(13,148,136,0.18)')
     };
 
-    // Running matched total for stacking
-    const matchedTotal = matchedStorage.map((v, i) => v + matchedSolar[i] + matchedWind[i] + matchedHydro[i] + matchedCleanFirm[i]);
+    // Build cumulative stacking arrays (bottom to top)
+    const stack0 = matchedCleanFirm;
+    const stack1 = stack0.map((v, i) => v + matchedCCS[i]);
+    const stack2 = stack1.map((v, i) => v + matchedHydro[i]);
+    const stack3 = stack2.map((v, i) => v + matchedWind[i]);
+    const stack4 = stack3.map((v, i) => v + matchedSolar[i]);
+    const stack5 = stack4.map((v, i) => v + matchedBattery[i]);
+    const matchedTotal = stack5.map((v, i) => v + matchedLDES[i]);
+
+    const dsBase = { borderColor: OUTLINE_COLOR, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, tension: 0.3 };
 
     const datasets = [
-        {
-            label: 'Clean Firm',
-            data: matchedCleanFirm,
-            backgroundColor: COLORS.clean_firm.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: 'origin',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 9
-        },
-        {
-            label: 'Hydro',
-            data: matchedHydro.map((v, i) => v + matchedCleanFirm[i]),
-            backgroundColor: COLORS.hydro.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: '-1',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 8
-        },
-        {
-            label: 'Wind',
-            data: matchedWind.map((v, i) => v + matchedHydro[i] + matchedCleanFirm[i]),
-            backgroundColor: COLORS.wind.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: '-1',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 7
-        },
-        {
-            label: 'Solar',
-            data: matchedSolar.map((v, i) => v + matchedWind[i] + matchedHydro[i] + matchedCleanFirm[i]),
-            backgroundColor: COLORS.solar.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: '-1',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 6
-        },
-        {
-            label: 'Storage Dispatch',
-            data: matchedTotal.slice(),
-            backgroundColor: COLORS.storage.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: '-1',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 5
-        }
+        { ...dsBase, label: RESOURCE_LABELS.clean_firm, data: stack0, backgroundColor: COLORS.clean_firm.alpha, fill: 'origin', order: 11 },
+        { ...dsBase, label: RESOURCE_LABELS.ccs_ccgt,   data: stack1, backgroundColor: COLORS.ccs_ccgt.alpha,   fill: '-1',     order: 10 },
+        { ...dsBase, label: RESOURCE_LABELS.hydro,      data: stack2, backgroundColor: COLORS.hydro.alpha,      fill: '-1',     order: 9 },
+        { ...dsBase, label: RESOURCE_LABELS.wind,       data: stack3, backgroundColor: COLORS.wind.alpha,       fill: '-1',     order: 8 },
+        { ...dsBase, label: RESOURCE_LABELS.solar,      data: stack4, backgroundColor: COLORS.solar.alpha,      fill: '-1',     order: 7 },
+        { ...dsBase, label: RESOURCE_LABELS.battery,    data: stack5, backgroundColor: COLORS.battery.alpha,    fill: '-1',     order: 6 },
+        { ...dsBase, label: RESOURCE_LABELS.ldes,       data: matchedTotal.slice(), backgroundColor: COLORS.ldes.alpha, fill: '-1', order: 5 }
     ];
 
-    // Remember the index of the Storage Dispatch dataset (top of matched stack)
-    const storageDispatchIdx = datasets.length - 1;
+    // Remember the index of the LDES dataset (top of matched stack)
+    const topMatchedIdx = datasets.length - 1;
 
-    // Storage charging (shown as negative below the x-axis)
-    const hasCharge = storageCharge.some(v => v > 0.001);
-    if (hasCharge) {
+    // Battery charging (shown as negative below the x-axis)
+    const hasBattCharge = batteryCharge.some(v => v > 0.001);
+    if (hasBattCharge) {
         datasets.push({
-            label: 'Storage Charge',
-            data: storageCharge.map(v => -Math.abs(v)),
-            backgroundColor: 'rgba(239,68,68,0.35)',
-            borderColor: COLORS.storage.base,
-            borderWidth: 1.5,
-            fill: 'origin',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 11,
-            _isCharge: true
+            ...dsBase, label: 'Battery Charge', data: batteryCharge.map(v => -Math.abs(v)),
+            backgroundColor: 'rgba(139,92,246,0.30)', borderColor: COLORS.battery.base,
+            fill: 'origin', order: 13, _isCharge: true
         });
     }
 
-    // Curtailment order: solar first, then wind, hydro, clean firm last
-    // Each stacks on top of the matched total + previous surplus layers
-    // IMPORTANT: use explicit dataset index for fill target to avoid cross-hatching the whole chart
-    const curtailOrder = ['solar', 'wind', 'hydro', 'clean_firm'];
-    const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, clean_firm: surplusCleanFirm };
+    // LDES charging (shown as negative below the x-axis, stacked under battery charge)
+    const hasLdesCharge = ldesCharge.some(v => v > 0.001);
+    if (hasLdesCharge) {
+        const ldesChargeData = ldesCharge.map((v, i) => {
+            const battBase = hasBattCharge ? -Math.abs(batteryCharge[i]) : 0;
+            return battBase - Math.abs(v);
+        });
+        datasets.push({
+            ...dsBase, label: 'LDES Charge', data: ldesChargeData,
+            backgroundColor: 'rgba(236,72,153,0.30)', borderColor: COLORS.ldes.base,
+            fill: hasBattCharge ? '-1' : 'origin', order: 14, _isCharge: true
+        });
+    }
+
+    // Curtailment order: solar first, then wind, hydro, ccs, clean firm last
+    const curtailOrder = ['solar', 'wind', 'hydro', 'ccs_ccgt', 'clean_firm'];
+    const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, ccs_ccgt: surplusCCS, clean_firm: surplusCleanFirm };
     let curtailCumulative = matchedTotal.slice();
-    let prevCurtailIdx = storageDispatchIdx; // first curtailed fills to top of matched stack
+    let prevCurtailIdx = topMatchedIdx;
 
     for (const rt of curtailOrder) {
         const surpVals = surplusArrays[rt];
@@ -4213,7 +4443,7 @@ function updateCompressedDay(entry, region) {
 
         const thisIdx = datasets.length;
         datasets.push({
-            label: RESOURCE_LABELS[rt] + ' (Curtailed)',
+            label: (RESOURCE_LABELS[rt] || rt) + ' (Curtailed)',
             data: stackedData,
             backgroundColor: surplusPatterns[rt],
             borderColor: COLORS[rt].base,
@@ -4224,7 +4454,7 @@ function updateCompressedDay(entry, region) {
             pointHoverRadius: 0,
             tension: 0.3,
             order: 4 - curtailOrder.indexOf(rt),
-            _surplusVals: surpVals // stash for tooltip
+            _surplusVals: surpVals
         });
         prevCurtailIdx = thisIdx;
     }
@@ -4232,7 +4462,7 @@ function updateCompressedDay(entry, region) {
     // Demand line on top
     datasets.push({
         label: 'Demand',
-        data: cd.demand.map(v => toMW(v)),
+        data: rRaw(cd.demand),
         backgroundColor: 'transparent',
         borderColor: '#1a1a2e',
         borderWidth: 2.5,
@@ -4244,16 +4474,13 @@ function updateCompressedDay(entry, region) {
         order: -1
     });
 
-    // Add gap dataset if there's any gap
+    // Add gap dataset if there's any gap (tooltip only)
     const hasGap = gap.some(v => v > 0.0001);
     if (hasGap) {
+        const demandLocal = rRaw(cd.demand);
         datasets.push({
             label: 'Unmatched (Gap)',
-            data: cd.demand.map((d, i) => {
-                const demandMW = toMW(d);
-                const matched = matchedTotal[i];
-                return Math.max(0, demandMW - matched);
-            }),
+            data: demandLocal.map((d, i) => Math.max(0, d - matchedTotal[i])),
             backgroundColor: COLORS.gap.alpha,
             borderColor: OUTLINE_COLOR,
             borderWidth: 1.5,
@@ -4261,8 +4488,8 @@ function updateCompressedDay(entry, region) {
             pointRadius: 0,
             pointHoverRadius: 0,
             tension: 0.3,
-            order: 10,
-            hidden: true // shown in tooltip only
+            order: 15,
+            hidden: true
         });
     }
 
@@ -4318,13 +4545,17 @@ function updateCompressedDay(entry, region) {
                         display: true,
                         position: 'bottom',
                         labels: {
-                            font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                            font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10 },
                             color: '#1A1A1A',
                             usePointStyle: true,
                             pointStyle: 'rectRounded',
-                            padding: 14,
+                            padding: 8,
+                            boxWidth: 10,
+                            boxHeight: 10,
                             filter: function(item) {
-                                return item.text !== 'Unmatched (Gap)';
+                                // Hide gap, charging, and curtailed from legend to keep it compact
+                                const t = item.text;
+                                return t !== 'Unmatched (Gap)' && !t.includes('Charge') && !t.includes('Curtailed');
                             }
                         }
                     },
@@ -4346,11 +4577,18 @@ function updateCompressedDay(entry, region) {
                                     return ` Demand: ${fmtMW(context.parsed.y)}`;
                                 }
                                 if (ds.label === 'Unmatched (Gap)') return null;
-                                // Storage charge (negative)
+                                // Storage charge (negative) — show specific label
                                 if (ds._isCharge) {
-                                    const cv = Math.abs(context.parsed.y);
-                                    if (cv < 1) return null;
-                                    return ` Storage Charge: ${fmtMW(cv)}`;
+                                    const idx = context.dataIndex;
+                                    const dsIdx = context.datasetIndex;
+                                    // For stacked LDES charge, subtract battery charge to get LDES-only contribution
+                                    const prevDs = dsIdx > 0 ? compressedDayChart.data.datasets[dsIdx - 1] : null;
+                                    const isStackedOnCharge = prevDs && prevDs._isCharge;
+                                    const val = Math.abs(context.parsed.y);
+                                    const prev = isStackedOnCharge ? Math.abs(prevDs.data?.[idx] || 0) : 0;
+                                    const contrib = isStackedOnCharge ? val - prev : val;
+                                    if (contrib < 1) return null;
+                                    return ` ${ds.label}: ${fmtMW(contrib)}`;
                                 }
                                 // For curtailed datasets, use stashed surplus values
                                 if (ds._surplusVals) {
@@ -4437,34 +4675,44 @@ function updateCostPanel(entry) {
 
     const adj = cfAdjust(entry, iso);
     const rc = costs.resource_costs;
-    const resources = ['clean_firm', 'solar', 'wind', 'hydro', 'storage'];
+    // Generation resources then storage types
+    const genResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro'];
+    const storageResources = ['battery', 'ldes'];
 
     let rows = '';
-    resources.forEach(r => {
+    genResources.forEach(r => {
         const d = rc[r];
         if (!d) return;
+        // CCS has different field names
+        const totalPct = d.total_pct_of_demand ?? (d.new_share != null ? Math.round((d.existing_share || 0) + (d.new_share || 0)) : null);
+        const existPct = d.existing_pct ?? (d.existing_share != null ? Math.round(d.existing_share) : null);
+        const newPct = d.new_pct ?? (d.new_share != null ? Math.round(d.new_share) : null);
+        const costVal = d.cost_per_demand_mwh ?? d.cost ?? null;
+        const displayCost = r === 'clean_firm' ? adj.newCfCostPerMwh : costVal;
+        const isCfAdjusted = r === 'clean_firm' && selectedCfCost !== 90;
+        rows += `
+            <tr>
+                <td><span class="resource-dot" style="background:${COLORS[r].alpha}"></span>${RESOURCE_LABELS[r]}</td>
+                <td>${totalPct != null ? Math.round(totalPct) + '%' : '--'}</td>
+                <td>${existPct != null ? Math.round(existPct) + '%' : '--'}</td>
+                <td>${newPct != null ? Math.round(newPct) + '%' : '--'}</td>
+                <td${isCfAdjusted ? ' style="color:#D97706;font-weight:600;"' : ''}>${displayCost != null ? '$' + formatNum(displayCost) : '--'}${isCfAdjusted ? '*' : ''}</td>
+            </tr>`;
+    });
 
-        if (r === 'storage') {
-            rows += `
-                <tr>
-                    <td><span class="resource-dot" style="background:${COLORS.storage.alpha}"></span>Storage</td>
-                    <td colspan="3" style="text-align:center;color:var(--text-muted);font-style:italic;">
-                        ${d.dispatch_pct != null ? d.dispatch_pct + '% dispatch' : '--'}
-                    </td>
-                    <td>${d.cost_per_demand_mwh != null ? '$' + formatNum(d.cost_per_demand_mwh) : '--'}</td>
-                </tr>`;
-        } else {
-            const displayCost = r === 'clean_firm' ? adj.newCfCostPerMwh : d.cost_per_demand_mwh;
-            const isCfAdjusted = r === 'clean_firm' && selectedCfCost !== 90;
-            rows += `
-                <tr>
-                    <td><span class="resource-dot" style="background:${COLORS[r].alpha}"></span>${RESOURCE_LABELS[r]}</td>
-                    <td>${d.total_pct_of_demand != null ? Math.round(d.total_pct_of_demand) + '%' : '--'}</td>
-                    <td>${d.existing_pct != null ? Math.round(d.existing_pct) + '%' : '--'}</td>
-                    <td>${d.new_pct != null ? Math.round(d.new_pct) + '%' : '--'}</td>
-                    <td${isCfAdjusted ? ' style="color:#D97706;font-weight:600;"' : ''}>${displayCost != null ? '$' + formatNum(displayCost) : '--'}${isCfAdjusted ? '*' : ''}</td>
-                </tr>`;
-        }
+    storageResources.forEach(r => {
+        const d = rc[r];
+        if (!d) return;
+        const color = COLORS[r] ? COLORS[r].alpha : COLORS.storage.alpha;
+        const label = RESOURCE_LABELS[r] || r;
+        rows += `
+            <tr>
+                <td><span class="resource-dot" style="background:${color}"></span>${label}</td>
+                <td colspan="3" style="text-align:center;color:var(--text-muted);font-style:italic;">
+                    ${d.dispatch_pct != null ? d.dispatch_pct + '% dispatch' : '--'}
+                </td>
+                <td>${d.cost_per_demand_mwh != null ? '$' + formatNum(d.cost_per_demand_mwh) : '--'}</td>
+            </tr>`;
     });
 
     const cfNote = selectedCfCost !== 90 ? `<div class="cost-note" style="color:#D97706;">* Clean firm cost adjusted from $90/MWh to $${selectedCfCost}/MWh. New-build portion: ${formatNum(rc.clean_firm?.new_pct || 0)}% of demand &times; $${selectedCfCost}/MWh LCOE. Delta: +$${formatNum(adj.totalDelta)}/MWh.</div>` : '';
@@ -4518,13 +4766,11 @@ function populateCurtailmentVisual() {
         const tk = thresholds[ti];
         let curtSum = 0, matchSum = 0, count = 0;
         for (const iso of isos) {
-            const tData = DATA.results[iso]?.thresholds?.[tk];
-            if (tData) {
-                const sc = resolveScenario(tData);
-                if (!sc) continue;
-                const scCosts = getUnifiedCosts(sc);
-                const curt = scCosts.curtailment_pct || Math.max(0, sc.procurement_pct - 100);
-                const match = sc.hourly_match_score || 0;
+            const region = DATA.results[iso];
+            const t = region ? resolveEntry(region, tk) : null;
+            if (t) {
+                const curt = t.costs?.curtailment_pct || Math.max(0, t.procurement_pct - 100);
+                const match = t.hourly_match_score || 0;
                 curtSum += curt;
                 matchSum += match;
                 count++;
@@ -4559,10 +4805,10 @@ function populateReliabilityGauges() {
     let html = '';
     for (let i = 0; i < isos.length; i++) {
         const iso = isos[i];
-        const t99Data = DATA.results[iso]?.thresholds?.['99'];
-        if (!t99Data) continue;
-        const t99sc = resolveScenario(t99Data);
-        const peakGapPct = t99sc?.peak_gap_pct || 0;
+        const reg99 = DATA.results[iso];
+        const t99 = reg99 ? resolveEntry(reg99, '99') : null;
+        if (!t99) continue;
+        const peakGapPct = t99.peak_gap_pct || 0;
         const coveragePct = Math.round(100 - peakGapPct);
         const color = gaugeColors[i % gaugeColors.length];
         const dashoffset = circumference * (1 - coveragePct / 100);
@@ -4694,12 +4940,10 @@ function getMixDataForRegion(region) {
 
         const regions = region === 'average' ? isos : [region];
         for (const iso of regions) {
-            const tData = DATA.results[iso]?.thresholds?.[tk];
-            if (!tData) continue;
-            const sc = resolveScenario(tData);
-            if (!sc) continue;
-            const scCosts = getUnifiedCosts(sc);
-            const rc = scCosts.resource_costs;
+            const reg = DATA.results[iso];
+            const t = reg ? resolveEntry(reg, tk) : null;
+            if (!t) continue;
+            const rc = t.costs?.resource_costs;
             if (!rc) continue;
 
             MIX_RESOURCES.forEach(r => {
@@ -5102,12 +5346,10 @@ function getIncrementalData(region) {
     }
 
     for (const tk of thresholdKeys) {
-        const tData = DATA.results[region]?.thresholds?.[tk];
-        if (!tData) continue;
-        const sc = resolveScenario(tData);
-        if (!sc) continue;
-        const scCosts = getUnifiedCosts(sc);
-        const rc = scCosts.resource_costs;
+        const reg = DATA.results[region];
+        const t = reg ? resolveEntry(reg, tk) : null;
+        if (!t) continue;
+        const rc = t.costs?.resource_costs;
         if (!rc) continue;
 
         labels.push(tk + '%');
@@ -5424,13 +5666,10 @@ function initNarrativeCostChart() {
         let costSum = 0, count = 0;
         let hasData = false;
         for (const iso of isos) {
-            const tData = DATA.results[iso]?.thresholds?.[tk];
-            if (!tData) { isoData[iso].push({ x: thresholdNums[ti], y: null }); continue; }
-            const sc = resolveScenario(tData);
-            if (!sc) { isoData[iso].push({ x: thresholdNums[ti], y: null }); continue; }
-            const scCosts = getUnifiedCosts(sc);
-            if (scCosts.effective_cost_per_useful_mwh != null) {
-                const cost = scCosts.effective_cost_per_useful_mwh;
+            const reg = DATA.results[iso];
+            const t = reg ? resolveEntry(reg, tk) : null;
+            if (t && t.costs?.effective_cost_per_useful_mwh) {
+                const cost = t.costs.effective_cost_per_useful_mwh;
                 isoData[iso].push({ x: thresholdNums[ti], y: Math.round(cost) });
                 costSum += cost;
                 count++;
@@ -5811,11 +6050,10 @@ function buildStepChartData() {
         const tk = thresholdKeys[ti];
         let costSum = 0, count = 0;
         for (const iso of isos) {
-            const tData = DATA.results[iso]?.thresholds?.[tk];
-            const sc = tData ? resolveScenario(tData) : null;
-            const scCosts = sc ? getUnifiedCosts(sc) : {};
-            if (scCosts.effective_cost_per_useful_mwh != null) {
-                const cost = scCosts.effective_cost_per_useful_mwh;
+            const reg = DATA.results[iso];
+            const t = reg ? resolveEntry(reg, tk) : null;
+            if (t && t.costs?.effective_cost_per_useful_mwh) {
+                const cost = t.costs.effective_cost_per_useful_mwh;
                 isoData[iso].push({ x: thresholdNums[ti], y: Math.round(cost) });
                 costSum += cost; count++;
             } else {
@@ -6083,9 +6321,7 @@ function updateHeatmapTiles(region, entry, iso) {
     let minAbateCost = Infinity, maxAbateCost = -Infinity;
 
     thresholds.forEach(tk => {
-        const tData = region.thresholds[tk];
-        if (!tData) return;
-        const e = resolveScenario(tData);
+        const e = resolveEntry(region, tk);
         if (!e) return;
         const c = getUnifiedCosts(e);
         const adj = cfAdjust(e, iso);
@@ -6149,8 +6385,7 @@ function updateHeatmapTiles(region, entry, iso) {
         let marginalCost = null;
         if (idx > 0) {
             const prevThresh = sortedThresholds[idx - 1];
-            const prevThreshData = region.thresholds[String(prevThresh)];
-            const prevEntry = prevThreshData ? resolveScenario(prevThreshData) : null;
+            const prevEntry = resolveEntry(region, String(prevThresh));
             if (prevEntry) {
                 const prevAdj = cfAdjust(prevEntry, iso);
                 const prevCO2 = getCO2Abated(prevEntry);
@@ -6349,10 +6584,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // Long-term target — resolve scenario within that threshold
     const longtermVal = document.getElementById('longtermTarget').value;
     const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
-    const longtermThresholdData = longtermThreshold ? regionData.thresholds[longtermThreshold] : null;
-    const longtermScenario = longtermThresholdData ? resolveScenario(longtermThresholdData) : null;
-    const longtermDetail = longtermScenario ? getScenarioCostsDetail(longtermScenario) : null;
-    const longtermRC = longtermDetail?.resource_costs;
+    const longtermEntry = longtermThreshold ? resolveEntry(regionData, longtermThreshold) : null;
+    const longtermRC = longtermEntry?.costs?.resource_costs;
 
     // Time horizons and demand growth
     const interimYear = parseInt(document.getElementById('interimYear')?.value || '2029', 10);
@@ -6615,16 +6848,19 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         const allResources = new Set([...Object.keys(interimRC), ...Object.keys(longtermRC)]);
 
         allResources.forEach(r => {
+            if (r === 'storage') return; // skip combined storage; use battery + ldes separately
             const intRes = interimRC[r] || {};
             const ltRes = longtermRC[r] || {};
 
             // Interim procurement at interim demand level, in TWh
-            const interimTotalPct = intRes.total_pct_of_demand || 0;
-            const interimCostPerDemandMWh = intRes.cost_per_demand_mwh || 0;
+            // Storage types (battery, ldes) use dispatch_pct; generation uses total_pct_of_demand
+            const isStorageType = (r === 'battery' || r === 'ldes');
+            const interimTotalPct = isStorageType ? (intRes.dispatch_pct || 0) : (intRes.total_pct_of_demand || 0);
+            const interimCostPerDemandMWh = intRes.cost_per_demand_mwh || intRes.cost || 0;
             const interimProcTWh = interimTotalPct / 100 * interimTWh;
 
             // Long-term needs at long-term demand level, in TWh
-            const longtermTotalPct = ltRes.total_pct_of_demand || 0;
+            const longtermTotalPct = isStorageType ? (ltRes.dispatch_pct || 0) : (ltRes.total_pct_of_demand || 0);
             const longtermNeedTWh = longtermTotalPct / 100 * longtermTWh;
 
             if (interimProcTWh <= 0) return;
@@ -6654,12 +6890,18 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         const strandedPct = 100 - carriedPct;
 
         // Also compute static (no growth) version for demand offset
+        const getPct = (res, key) => {
+            if (key === 'battery' || key === 'ldes') return res?.dispatch_pct || 0;
+            return res?.total_pct_of_demand || 0;
+        };
         const staticInterimTWh_total = Object.keys(interimRC).reduce((s, r) => {
-            return s + (interimRC[r]?.total_pct_of_demand || 0) / 100 * todayTWh;
+            if (r === 'storage') return s;
+            return s + getPct(interimRC[r], r) / 100 * todayTWh;
         }, 0);
         const staticCarriedTWh = Object.keys(interimRC).reduce((s, r) => {
-            const intPct = interimRC[r]?.total_pct_of_demand || 0;
-            const ltPct = (longtermRC[r]?.total_pct_of_demand || 0);
+            if (r === 'storage') return s;
+            const intPct = getPct(interimRC[r], r);
+            const ltPct = getPct(longtermRC[r], r);
             const intT = intPct / 100 * todayTWh;
             const ltT = ltPct / 100 * todayTWh; // no growth
             return s + Math.min(intT, ltT);
@@ -6699,6 +6941,96 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             } else {
                 pwDemand.textContent = 'Minimal';
             }
+        }
+
+        // New-build + stranded resource mix bars
+        const breakdownEl = document.getElementById('strandedBreakdown');
+        const barsWrapper = document.getElementById('strandedBarsWrapper');
+        const legendEl = document.getElementById('strandedLegend');
+        if (breakdownEl && barsWrapper && legendEl) {
+            breakdownEl.style.display = '';
+
+            // Color map keyed by resource_costs key
+            const colorByKey = {};
+            Object.keys(COLORS).forEach(k => { colorByKey[k] = COLORS[k].base; });
+
+            // Collect per-resource new-build TWh at interim and long-term,
+            // and stranded TWh (interim new-build that exceeds long-term need)
+            const RES_ORDER = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+            const interimNew = {};
+            const longtermNew = {};
+            const strandedByRes = {};
+            let totalInterimNew = 0, totalLongtermNew = 0, totalStranded = 0;
+
+            RES_ORDER.forEach(r => {
+                const irc = interimRC[r] || {};
+                const lrc = longtermRC[r] || {};
+                const isStore = (r === 'battery' || r === 'ldes');
+                // New-build TWh at each stage
+                let iNew, lNew;
+                if (isStore) {
+                    iNew = (irc.dispatch_pct || 0) / 100 * interimTWh;
+                    lNew = (lrc.dispatch_pct || 0) / 100 * longtermTWh;
+                } else {
+                    iNew = (irc.new_pct || 0) / 100 * interimTWh;
+                    lNew = (lrc.new_pct || 0) / 100 * longtermTWh;
+                }
+                interimNew[r] = iNew;
+                longtermNew[r] = lNew;
+                totalInterimNew += iNew;
+                totalLongtermNew += lNew;
+                // Stranded = interim new-build that exceeds long-term new-build need
+                const s = Math.max(0, iNew - lNew);
+                strandedByRes[r] = s;
+                totalStranded += s;
+            });
+
+            // Shared scale: max of interim, longterm, stranded totals
+            const maxBarTWh = Math.max(totalInterimNew, totalLongtermNew, totalStranded, 0.1);
+
+            // Helper: build one horizontal bar row
+            function buildBarRow(label, dataByRes, total, warnClass) {
+                const isWarn = warnClass || false;
+                let segsHtml = '';
+                RES_ORDER.forEach(r => {
+                    const val = dataByRes[r] || 0;
+                    if (val < 0.01) return;
+                    const widthPct = (val / maxBarTWh * 100).toFixed(2);
+                    const color = colorByKey[r] || '#888';
+                    const rLabel = RESOURCE_LABELS[r] || r;
+                    const inLabel = val >= maxBarTWh * 0.08
+                        ? (val >= 10 ? Math.round(val) : val.toFixed(1))
+                        : '';
+                    segsHtml += `<div class="sbar-seg" style="width:${widthPct}%;background:${color};" title="${rLabel}: ${val.toFixed(1)} TWh">${inLabel}</div>`;
+                });
+                const totalLabel = total >= 10 ? Math.round(total) + ' TWh' : total.toFixed(1) + ' TWh';
+                return `<div class="sbar-row">
+                    <div class="sbar-label${isWarn ? ' sbar-label-warn' : ''}">${label}</div>
+                    <div class="sbar-track${isWarn ? ' sbar-track-stranded' : ''}">${segsHtml}</div>
+                    <div class="sbar-total${isWarn ? ' sbar-total-warn' : ''}">${totalLabel}</div>
+                </div>`;
+            }
+
+            let html = '';
+            html += buildBarRow('Interim<br>New Build', interimNew, totalInterimNew, false);
+            html += buildBarRow('Long-term<br>New Build', longtermNew, totalLongtermNew, false);
+            if (totalStranded > 0.05) {
+                html += buildBarRow('Stranded', strandedByRes, totalStranded, true);
+            }
+            barsWrapper.innerHTML = html;
+
+            // Legend: show resources that appear in any bar
+            const seenRes = RES_ORDER.filter(r => (interimNew[r] > 0.01 || longtermNew[r] > 0.01 || strandedByRes[r] > 0.01));
+            legendEl.innerHTML = seenRes.map(r => {
+                const color = colorByKey[r] || '#888';
+                const rLabel = RESOURCE_LABELS[r] || r;
+                const stVal = strandedByRes[r];
+                const stNote = stVal > 0.05 ? ` — <span class="sl-val">${stVal.toFixed(1)} TWh stranded</span>` : '';
+                return `<div class="stranded-legend-item">
+                    <div class="stranded-legend-dot" style="background:${color}"></div>
+                    <span>${rLabel}${stNote}</span>
+                </div>`;
+            }).join('');
         }
 
         // Narrative
@@ -6748,6 +7080,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     } else {
         // No long-term target selected — show simpler insight, hide metrics
         if (metricsEl) metricsEl.style.display = 'none';
+        const breakdownElHide = document.getElementById('strandedBreakdown');
+        if (breakdownElHide) breakdownElHide.style.display = 'none';
         if (insightBox) {
             let totalExistingTWh = 0;
             let totalTargetTWh = 0;
@@ -6834,8 +7168,7 @@ function initPathwayAnalysis() {
         const region = DATA?.results?.[iso];
         if (!region) return;
         const threshold = document.getElementById('thresholdSelect').value;
-        const threshData = region.thresholds[findClosestThreshold(region, threshold)];
-        const entry = threshData ? resolveScenario(threshData) : null;
+        const entry = resolveEntry(region, findClosestThreshold(region, threshold));
         if (entry) updateWhatYouNeedPanel(region, entry, threshold);
     }
 
