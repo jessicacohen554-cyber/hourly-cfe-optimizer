@@ -1,0 +1,233 @@
+{
+  "metadata": {
+    "name": "Hourly CFE Optimizer Literature Review",
+    "description": "Consolidated literature review for the Hourly Clean Energy Cost Optimizer project. Contains all academic references, data sources, and key findings from published research that inform the optimizer methodology, cost assumptions, and analytical framework.",
+    "created": "2026-02-15",
+    "version": "1.0",
+    "purpose": "Referenceable object to prevent redundant web sweeps of existing literature in future sessions"
+  },
+  "core_references": [
+    {
+      "id": "ref-1",
+      "authors": "Xu, Q., et al.",
+      "year": 2024,
+      "title": "Temporal Granularity in Clean Energy Accounting: Implications of Annual vs. Hourly Matching for Grid Decarbonization",
+      "journal": "Energy Policy",
+      "volume": "184",
+      "pages": "113892",
+      "relevance": "Foundational paper on hourly vs annual CFE matching methodology"
+    },
+    {
+      "id": "ref-2",
+      "authors": "Miller, G., Lott, M.C., et al.",
+      "year": 2022,
+      "title": "24/7 Carbon-Free Energy: Methodologies and Case Studies",
+      "source": "International Energy Agency (IEA)",
+      "url": "https://www.iea.org/reports/247-carbon-free-energy",
+      "relevance": "IEA framework for 24/7 CFE methodology"
+    },
+    {
+      "id": "ref-3",
+      "authors": "Google",
+      "year": 2023,
+      "title": "24/7 Carbon-Free Energy: Methodology and Metrics",
+      "source": "Google Sustainability Report",
+      "url": "https://sustainability.google/progress/energy/",
+      "relevance": "Corporate CFE procurement methodology reference"
+    },
+    {
+      "id": "ref-4",
+      "authors": "United Nations Energy",
+      "year": 2021,
+      "title": "24/7 Carbon-free Energy Compact",
+      "url": "https://www.un.org/en/energy-compacts/page/compact-247",
+      "relevance": "International policy framework for hourly CFE"
+    },
+    {
+      "id": "ref-5",
+      "authors": "NREL",
+      "year": 2024,
+      "title": "Annual Technology Baseline (ATB) 2024: Electricity",
+      "source": "National Renewable Energy Laboratory",
+      "url": "https://atb.nrel.gov/electricity/2024/technologies",
+      "relevance": "Primary cost data source for solar, wind, storage, nuclear LCOE"
+    },
+    {
+      "id": "ref-6",
+      "authors": "Lazard",
+      "year": 2024,
+      "title": "Lazard's Levelized Cost of Energy Analysis, Version 17.0",
+      "url": "https://www.lazard.com/research-insights/levelized-cost-of-energyplus/",
+      "relevance": "Cross-validation of LCOE ranges"
+    },
+    {
+      "id": "ref-7",
+      "authors": "Bolinger, M., Seel, J., et al.",
+      "year": 2024,
+      "title": "Utility-Scale Solar, 2024 Edition",
+      "source": "Lawrence Berkeley National Laboratory",
+      "url": "https://emp.lbl.gov/utility-scale-solar",
+      "relevance": "Regional solar PPA and capacity cost data"
+    },
+    {
+      "id": "ref-8",
+      "authors": "Wiser, R., Bolinger, M., et al.",
+      "year": 2024,
+      "title": "Land-Based Wind Market Report: 2024 Edition",
+      "source": "Lawrence Berkeley National Laboratory",
+      "url": "https://emp.lbl.gov/wind-technologies-market-report",
+      "relevance": "Regional wind PPA and capacity cost data"
+    },
+    {
+      "id": "ref-9",
+      "authors": "Larson, E., et al.",
+      "year": 2021,
+      "title": "Net-Zero America: Potential Pathways, Infrastructure, and Impacts",
+      "source": "Princeton University",
+      "url": "https://netzeroamerica.princeton.edu/",
+      "relevance": "Decarbonization pathway modeling reference"
+    },
+    {
+      "id": "ref-10",
+      "authors": "Jenkins, J.D., Luke, M., Thernstrom, S.",
+      "year": 2018,
+      "title": "Getting to Zero Carbon Emissions in the Electric Power Sector",
+      "journal": "Joule",
+      "volume": "2(12)",
+      "pages": "2498-2510",
+      "relevance": "Role of firm clean power in deep decarbonization"
+    },
+    {
+      "id": "ref-14",
+      "authors": "Dowling, J.A., et al.",
+      "year": 2020,
+      "title": "Role of Long-Duration Energy Storage in Variable Renewable Electricity Systems",
+      "journal": "Joule",
+      "volume": "4(9)",
+      "pages": "1907-1928",
+      "relevance": "LDES modeling methodology and cost reduction potential"
+    },
+    {
+      "id": "ref-18",
+      "authors": "Denholm, P., et al.",
+      "year": 2022,
+      "title": "Examining Supply-Side Options to Achieve 100% Clean Electricity by 2035",
+      "source": "NREL",
+      "url": "https://www.nrel.gov/docs/fy22osti/81644.pdf",
+      "relevance": "100% clean electricity cost escalation, 'last few percent' dynamics"
+    },
+    {
+      "id": "ref-25",
+      "authors": "Xu, Q., Ricks, W., Manocha, A., Patankar, N., Jenkins, J.D.",
+      "year": 2024,
+      "title": "System-level Impacts of Voluntary Carbon-free Electricity Procurement",
+      "journal": "Joule",
+      "volume": "8(1)",
+      "pages": "200-219",
+      "relevance": "GenX model: combined RPS + voluntary demand on regional supply curves"
+    },
+    {
+      "id": "ref-26",
+      "authors": "Gillenwater, M.",
+      "year": 2008,
+      "title": "Redefining RECs — Part 1: Untangling Attributes and Offsets",
+      "journal": "Energy Policy",
+      "volume": "36(6)",
+      "pages": "2109-2119",
+      "relevance": "REC supply-demand equilibrium theory"
+    },
+    {
+      "id": "ref-28",
+      "authors": "Miller, G., et al.",
+      "year": 2024,
+      "title": "Cost and Emissions Impact of Voluntary Clean Energy Procurement Strategies",
+      "journal": "The Electricity Journal",
+      "volume": "37(2)",
+      "pages": "107371",
+      "relevance": "Procurement strategy cost comparison"
+    }
+  ],
+  "data_sources": [
+    {
+      "name": "EIA-930 Hourly Electric Grid Monitor",
+      "provider": "U.S. Energy Information Administration",
+      "year": "2021-2025",
+      "url": "https://www.eia.gov/electricity/gridmonitor/",
+      "usage": "Hourly generation and demand profiles for all 5 ISOs"
+    },
+    {
+      "name": "EPA eGRID",
+      "provider": "U.S. Environmental Protection Agency",
+      "year": 2022,
+      "usage": "Per-fuel emission rates for CO2 abatement calculations"
+    },
+    {
+      "name": "NREL ATB 2024",
+      "provider": "National Renewable Energy Laboratory",
+      "url": "https://atb.nrel.gov/electricity/2024/technologies",
+      "usage": "LCOE ranges for solar, wind, nuclear, storage"
+    },
+    {
+      "name": "Lazard LCOE v17",
+      "provider": "Lazard",
+      "year": 2024,
+      "usage": "Cross-validation of cost assumptions"
+    },
+    {
+      "name": "LBNL Utility-Scale Solar & Wind Reports",
+      "provider": "Lawrence Berkeley National Laboratory",
+      "year": 2024,
+      "usage": "Regional PPA data and capacity cost benchmarks"
+    },
+    {
+      "name": "FERC/ISO Market Monitoring Reports",
+      "provider": "PJM, NYISO, ISO-NE, CAISO, ERCOT",
+      "year": "2023-2024",
+      "usage": "Wholesale electricity prices by region"
+    }
+  ],
+  "policy_references": [
+    {
+      "name": "GHG Protocol Scope 2 Revision",
+      "status": "Public consultation Oct 2025 - Jan 2026",
+      "relevance": "4 quality criteria: temporal, deliverability, incrementality, SSS"
+    },
+    {
+      "name": "SBTi Corporate Net-Zero Standard V2.0",
+      "status": "Second Consultation Draft, Nov 2025",
+      "relevance": "Hourly matching as tier-1 procurement approach"
+    },
+    {
+      "name": "Climate Group 24/7 Carbon-Free Coalition",
+      "status": "Technical Criteria V1.0, June 2025",
+      "relevance": "Corporate hourly CFE matching framework"
+    },
+    {
+      "name": "EnergyTag Granular Certificate Scheme Standard V2",
+      "relevance": "Hourly energy certificate infrastructure"
+    },
+    {
+      "name": "IRC Section 45Q Tax Credit",
+      "amount": "$85/ton CO2 for geologic storage",
+      "relevance": "CCS-CCGT cost reduction, sensitivity analysis in Section 6.8"
+    }
+  ],
+  "key_findings_from_literature": {
+    "hourly_vs_annual": "Xu et al. (2024) show hourly matching produces 2-3x higher costs than annual matching but 5-10x more real emission reductions",
+    "firm_clean_power": "Jenkins et al. (2018) establish that reaching >80% clean requires dispatchable firm clean power; intermittent renewables alone cannot economically close the gap",
+    "last_mile_costs": "Denholm et al. (2022) document exponential cost escalation for final 5-10% of clean electricity targets",
+    "ldes_potential": "Dowling et al. (2020) model 20-40% cost reduction from LDES at high renewable penetration",
+    "voluntary_procurement": "Xu et al. (2024, Joule) show combined RPS + voluntary C&I demand on regional supply curves produces non-linear cost escalation",
+    "rec_economics": "Gillenwater (2008) establishes that only when combined demand creates real scarcity does voluntary procurement drive new investment",
+    "cfe_premium": "Riepin & Brown (2024) find 98% CFE = 54% cost premium, 100% requires clean firm + LDES",
+    "overbuild_references": "Budischak et al.: 280% overbuild for 100% targets; WattTime: 400% overbuild reference"
+  },
+  "cost_validation_ranges": {
+    "solar_lcoe": {"low": 25, "medium": 54, "high": 92, "unit": "$/MWh", "source": "NREL ATB 2024 + LBNL"},
+    "wind_lcoe": {"low": 25, "medium": 52, "high": 82, "unit": "$/MWh", "source": "NREL ATB 2024 + LBNL"},
+    "nuclear_new": {"low": 70, "medium": 90, "high": 130, "unit": "$/MWh", "source": "NREL ATB 2024 + Lazard"},
+    "battery_4hr": {"low": 80, "medium": 100, "high": 140, "unit": "$/MWh LCOS", "source": "NREL ATB 2024 + Lazard"},
+    "ldes_100hr": {"low": 130, "medium": 180, "high": 250, "unit": "$/MWh LCOS", "source": "LDES Council + Form Energy"},
+    "ccs_ccgt": {"low": 65, "medium": 95, "high": 152, "unit": "$/MWh (with 45Q)", "source": "NREL ATB 2024"}
+  }
+}
