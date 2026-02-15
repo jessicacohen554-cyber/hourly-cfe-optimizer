@@ -1115,8 +1115,8 @@ body {
     border: none;
 }
 .metric-tile.heatmap-5 .tile-label,
-.metric-tile.heatmap-5 .tile-sub { color: rgba(255,255,255,0.85) !important; }
-.metric-tile.heatmap-5 .tile-value { color: #FFFFFF !important; }
+.metric-tile.heatmap-5 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-5 .tile-value { color: #1A2744 !important; }
 
 /* ========== KEY FINDINGS ========== */
 /* ========== PATHWAY PLANNING PANEL ========== */
@@ -2649,7 +2649,7 @@ body {
 /* ========== RESPONSIVE ========== */
 @media (max-width: 1100px) {
     .charts-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
 }
 @media (max-width: 1000px) {
@@ -3625,9 +3625,9 @@ function initDashboard() {
         regionSel.appendChild(opt);
     });
 
-    // Populate threshold dropdown — full 18-value set
+    // Populate threshold dropdown — 10 modeled thresholds only
     const threshSel = document.getElementById('thresholdSelect');
-    const FULL_THRESHOLDS = [75, 80, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100];
+    const FULL_THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100];
     FULL_THRESHOLDS.forEach(t => {
         const opt = document.createElement('option');
         opt.value = String(t);
