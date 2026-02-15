@@ -1176,4 +1176,64 @@ Any post-processing (cost overlays, BECCS, gas constraints, carbon pricing) oper
 - Cost estimate: ~$120-180/MWh LCOE (NREL ATB) — higher than CCS-CCGT but with carbon-negative value
 - **Post-processing approach**: For scenarios with high CCS share (>25%), run a cost overlay replacing a fraction of CCS with BECCS pricing. Include negative emissions credit at SCC values ($51-185/tCO2). This avoids full re-optimization — just re-price cached mixes.
 
-**Decision**: Captured for future iteration. Does not affect current optimizer run.
+**Decision**: Implemented in post-processing (Feb 15, 2026). See §22.
+
+---
+
+## 22. Post-Processing Corrections & Overlays (Feb 15, 2026)
+
+Applied to cached optimizer results via `postprocess_results.py`. Raw cache preserved in `data/optimizer_cache.json`; corrected results written to `dashboard/overprocure_results.json`.
+
+### 22.1 CO₂ Monotonicity Enforcement
+
+**Problem**: CO₂ abatement is non-monotonic across thresholds in 4 of 5 ISOs. Higher hourly match targets can result in LESS CO₂ abated (up to -15.3M tons in ERCOT 90%→92.5%). Root cause: the optimizer minimizes cost, not CO₂. A cheaper mix at a higher threshold may procure less total clean energy (substituting storage for overprocurement), reducing total fossil displacement even as temporal matching improves.
+
+**Fix**: Running-max constraint — `co2_corrected[t] = max(co2[t], co2[t-1])` across thresholds. Ensures abatement narrative never shows "paying more for less CO₂."
+
+### 22.2 45Q Offset Correction
+
+**Problem**: Model calculates 45Q credit as $85/ton × 0.34 tCO₂/MWh = $29/MWh. Correct calculation: $85 × 0.34 × 0.95 (captured only) = $27.5/MWh. Overstated by ~$1.5/MWh.
+
+**Fix**: Adjust CCS LCOE by +$1.5/MWh across all scenarios. Negligible impact on results.
+
+### 22.3 Without-45Q Toggle Layer
+
+**Design**: Dashboard toggle "45Q Credit: On / Off" showing cost impact of removing the 45Q incentive from CCS-CCGT.
+
+**Without-45Q CCS cost model**:
+- Remove $27.5/MWh 45Q offset from CCS LCOE
+- Model CCS as **dispatchable** (not baseload) — without 45Q, there's no perverse incentive to maximize captured CO₂ by running 24/7
+- CCS LCOE becomes **capacity-factor-dependent**: at lower CF, capital recovery per MWh increases
+
+**CCS LCOE decomposition** (from NETL Baseline Rev 4a):
+- Capital recovery: 55% of LCOE (scales inversely with CF)
+- Fixed O&M: 8% of LCOE (scales inversely with CF)
+- Fuel: 30% of LCOE (constant per MWh)
+- Variable O&M + T&S: 7% of LCOE (constant per MWh)
+- Reference CF: 85% (NETL standard)
+
+**CF-dependent formula**: `LCOE(CF) = LCOE_no45q × ((0.63 × 0.85 / CF_actual) + 0.37)`
+
+**CCS vs LDES crossover**: At each region's Medium costs, the CF at which CCS-without-45Q equals LDES cost. Below this CF, LDES is cheaper. This determines whether CCS would ever be built without 45Q.
+
+**Implementation**: For each cached scenario, recalculate costs assuming no 45Q. CCS mix share implies an effective CF that determines the dispatchable LCOE. Compare to what the cost would be if CCS share were replaced by LDES or additional clean firm.
+
+### 22.4 NEISO Winter Gas Pipeline Constraint
+
+**Problem**: NEISO has structural winter gas price spikes due to Algonquin Citygates pipeline congestion. Winter spot prices historically $15-30/MMBtu vs. ~$5-6/MMBtu annual average. The model's flat L/M/H gas sensitivity ($2/$3.50/$6 MMBtu) understates NEISO winter costs by 3-5×.
+
+**Post-processing approach**:
+- Winter months (Dec-Feb, ~25% of year): +$7.50/MMBtu above annual average (midpoint of $5-10 range)
+- CCS fuel impact: 7 MMBtu/MWh heat rate × $7.50 × 0.25 = **+$13.13/MWh annualized CCS adder** for NEISO
+- Wholesale impact: gas-on-margin × winter premium → **+$4/MWh annualized wholesale adder** for NEISO
+- Applied to NEISO results only; all other ISOs unaffected
+
+**Sources**: ISO-NE Operational Fuel Security Analysis (2018), Algonquin Citygates historical basis differentials, 2017-2018 bomb cyclone gas pricing data.
+
+### 22.5 ERCOT Battery LCOS Low ($69/MWh) — Retained
+
+**Finding**: The $69/MWh ERCOT Low battery LCOS lacks a peer-reviewed citation. It was set based on regional qualitative factors (low labor costs, fast permitting, flat terrain, minimal unionization, extensive solar co-location potential).
+
+**Decision**: Retain $69/MWh. ERCOT is genuinely the lowest-cost US market for battery deployment. Lazard's national unsubsidized range ($115-$254) reflects high-cost assumptions (80% equity at 12% return) and diverse geographies. ERCOT-specific conditions (non-ERCOT interconnection queue, streamlined permitting, LFP oversupply benefiting Texas ports) justify costs below national averages. The Low case explicitly represents an optimistic-but-plausible scenario.
+
+**Mitigation**: Document in research paper that regional battery cost differentiation is based on qualitative assessment of market conditions, not published regional cost studies. Note that all Low-case costs represent aggressive forward trajectories.
