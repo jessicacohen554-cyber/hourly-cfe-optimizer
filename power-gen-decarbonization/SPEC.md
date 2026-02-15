@@ -136,37 +136,44 @@ Key outputs from the hourly CFE optimizer that inform this analysis:
 
 ---
 
-## 4. Climate Target Frameworks
+## 4. Climate Target Frameworks (Research-Verified, Session 2)
 
-### SBTi Power Sector v2 (pending finalization from research)
-- Intensity-based pathway: gCO2/kWh declining to [TBD] by 2030, [TBD] by 2035
-- Absolute reduction option
-- Near-term (5-10 year) and long-term (by 2050) targets
-- CCS eligibility: [TBD]
-- Offset eligibility: [TBD]
+### SBTi Power Sector
+- **Methodology**: Sectoral Decarbonization Approach (SDA) — company-specific intensity pathways converging to ~0 gCO₂/kWh
+- **Key requirement**: ~85% intensity reduction by 2035 from base year
+- **Net-zero deadline**: **2040** for power sector (a decade ahead of other sectors)
+- **Offsets**: Carbon offsets **cannot** count toward near-term or long-term targets
+- **CCS**: Facility-level CCS may count as emissions reduction; DAC classified as BVCM (does not count)
+- **New standard (draft Sep 2025)**: Expands scope to entire value chain; shifts from "renewable" to "zero-carbon" (includes nuclear); strict phaseout timelines for unabated coal/oil/gas
+- **Real-world benchmark**: Orsted validated at 96% intensity reduction per kWh by 2030 (to 6 gCO₂e/kWh)
 
 ### IPCC AR6 (1.5°C pathway)
-- Power sector must reach near-zero by 2035-2040 for 1.5°C
-- ~65-80% reduction by 2030 (from 2019 levels) for 1.5°C
-- ~40-70% reduction by 2030 for well-below 2°C
-- CCS has role but limited
+- **1.5°C, no/limited overshoot**: CO₂ must fall ~48% by 2030, ~65% by 2035, ~80% by 2040, ~99% by 2050 (vs 2019)
+- **Climate Action Tracker benchmarks**: 48–80 gCO₂/kWh by 2030; <5 by 2040; 0 by 2050
+- **Coal without CCS**: 67–82% reduction by 2030
+- **Low-carbon electricity share**: 93–97% by 2050
+- **Developed countries**: Net-zero electricity by **2035**
+- **CCS**: Included in models; BECCS enables net-negative emissions. AR6 flags uncertainty around CCS deployment at scale
 
 ### IEA Net Zero by 2050 (NZE)
-- Advanced economies: net-zero electricity by 2035
-- Global: ~130 gCO2/kWh by 2030, near-zero by 2040
-- Coal phase-out by 2030 (advanced economies), 2040 (globally)
-- Unabated gas phase-down by 2035
+- **By 2030**: Power sector CO₂ declines ~60% from 2019; renewables reach 60% of generation; intensity ~140–170 gCO₂/kWh
+- **By 2035**: OECD achieves 100% clean power
+- **By 2040**: **Power sector reaches net-zero** — the only sector to do so a full decade before economy-wide target
+- **2025 update**: Acknowledges slower near-term progress; temperature exceeds 1.5°C ~2030, peaks ~1.65°C ~2050
+- **CCS**: Explicitly included; 7.6 Gt CO₂/yr captured by 2050 economy-wide
 
 ### US Government
-- Biden-era: 100% clean electricity by 2035
-- EPA power plant rules: New NGCC must capture 90% CO2 by 2032; existing coal plants 90% capture or retire by 2032
-- IRA: 45Y/45V/48E clean energy tax credits, 45Q CCS credits
-- Status uncertain under current administration
+- **Biden-era 100% clean by 2035**: Effectively dead
+- **EPA power plant rules**: Proposed for full repeal (June 2025). No binding federal GHG target currently exists
+- **IRA remains law**: $369B in clean energy incentives; projected to drive 60–83% reduction below 2005 levels by 2040 through economics alone
+- **State-level**: CA (100% by 2045), NY (70% by 2030), MI (100% by 2040), etc. continue independently
 
-### Other frameworks
-- **CA100+**: Engagement framework, company-specific asks
-- **RE100**: 100% renewable electricity (demand-side)
-- **GFANZ**: Glasgow Financial Alliance for Net Zero — financing alignment
+### Other Frameworks
+- **CA100+**: World's largest investor engagement ($60T+ AUM). Net-zero by 2040 globally, 2035 in advanced economies. Explicitly: avoid offsets, minimize CCUS. No CA100+ power utility with coal capacity is Paris-aligned (Carbon Tracker)
+- **RE100**: 450+ companies committed to 100% renewable electricity; nuclear does NOT count; starting 2025, only facilities built within 15 years fully credited
+- **GFANZ**: 675+ financial institutions; financing managed phaseout of coal power; major US banks have left under political pressure
+- **24/7 CFE**: Google/Microsoft initiative for hourly matching of consumption with clean generation (directly relevant to our sister project)
+- **Powering Past Coal Alliance (PPCA)**: Government coalition; OECD coal phase-out by 2030, rest by 2040
 
 ---
 
