@@ -208,6 +208,43 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 3. **Threshold-dependent risk**: Higher thresholds (95-100%) have more diverse optimal mixes across cost scenarios. **Mitigation**: The archetype pool grows dynamically; extreme scenarios are more likely to diverge at high thresholds, populating the pool with the right seeds.
 4. **Not used during re-sweep**: Monotonicity re-sweep always uses full Phase 1 (warm_start_result is not passed when resweep=True). This is intentional — re-sweep needs the broadest possible search to resolve violations.
 
+### 4.2 Scenario Pruning & Adaptive Resampling Pipeline
+
+**Problem**: 324 cost scenarios × 10 thresholds × 5 ISOs = 16,200 co-optimizations. Even with warm-start, running all 324 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 324 scenarios.
+
+**Solution**: 5-stage pipeline runs 44 representative scenarios, then fills the remaining 280 via cross-pollination, with adaptive resampling as a safety net.
+
+#### Stage 1: Medium Seed (1 scenario)
+- Run `MMM_M_M` with full 3-phase optimization (no warm-start)
+- Becomes the primary warm-start seed for all subsequent scenarios
+
+#### Stage 2: Extreme Archetypes (7 scenarios)
+- Run 7 corner scenarios with full Phase 1 (no warm-start): `HLL_L_N`, `LHL_L_M`, `LLH_H_M`, `HHH_H_H`, `LLL_L_L`, `HLL_L_H`, `LHL_H_N`
+- These explore the most divergent regions of cost space to discover distinct mix archetypes
+
+#### Stage 3: Remaining Representatives (~36 scenarios, totaling ~44)
+- `_build_representative_scenarios()` generates a set of ~54 keys covering cost space corners, axis sweeps, and diagonals. After dedup, ~44 unique scenarios.
+- The ~36 scenarios not already run as Medium/archetypes are warm-started from Medium + all diverse seed mixes discovered in Stages 1-2
+- New archetypes discovered during this stage are dynamically added to the seed pool
+
+#### Stage 4: Adaptive Resampling (if needed)
+- After Stage 3, count unique resource mix archetypes found across the ~44 scenarios
+- **Uniqueness threshold**: 50% — if unique mixes > 50% of scenarios run (i.e., >22 unique mixes from 44 scenarios), the representative set didn't adequately capture the diversity
+- **Action**: Add midpoint scenarios from the unrun 280, spread evenly across cost space
+- Target: enough additional scenarios to bring the ratio below 50%
+- Up to 5 resampling rounds, each adding scenarios until convergence
+- **If unique mixes ≤ 22**: Proceed directly — the 44 representatives captured the full archetype space
+
+#### Stage 5: Cross-Pollination (fills remaining to 324)
+- Collect all unique mixes discovered across Stages 1-4
+- For ALL 324 scenarios (including the ~280 not directly optimized): evaluate every discovered mix under that scenario's cost function
+- If a mix found optimal for scenario A is cheaper for scenario B than B's current best, assign it
+- Result: all 324 scenarios have cost-optimal assignments, even the ~280 that were never directly optimized
+
+**Why this works**: At lower thresholds, physics strongly constrains the feasible solution space — the same ~10-14 resource mixes are optimal across all 324 cost scenarios, just at different costs. Cross-pollination guarantees every scenario gets the cheapest-for-it mix from the full discovered set. Adaptive resampling is the safety net: if we're seeing more diversity than expected (>22 unique from 44), we add more direct optimizations to make sure we're not missing archetypes.
+
+**Applies to all thresholds**: `PRUNING_THRESHOLD_CUTOFF = 100` — empirically, even at 95-100%, the archetype pool from 44 reps + resampling + cross-pollination captures the full solution space.
+
 ---
 
 ## 5. Complete Cost Tables
