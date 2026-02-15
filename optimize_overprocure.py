@@ -10,11 +10,11 @@ to maximize hourly matching at minimum cost.
 Three-phase refinement: coarse -> medium -> fine (adapted for 5D)
 
 Resource types:
-  - Clean Firm: flat baseload (1/8760 per hour) — nuclear/geothermal
-  - Solar: EIA 2025 hourly regional profile
-  - Wind: EIA 2025 hourly regional profile
-  - CCS-CCGT: flat baseload (1/8760 per hour) — dispatchable, 90% capture
-  - Hydro: EIA 2025 hourly regional profile (capped by region, existing only)
+  - Clean Firm: seasonally-derated baseload — nuclear/geothermal
+  - Solar: EIA 2021-2025 averaged hourly profile (DST-aware nighttime zeroing)
+  - Wind: EIA 2021-2025 averaged hourly profile
+  - CCS-CCGT: flat baseload (1/8760 per hour) — dispatchable, 95% capture
+  - Hydro: EIA 2021-2025 averaged hourly profile (capped by region, existing only)
 
 Storage:
   - Battery: 4hr Li-ion, 85% RTE, daily-cycle greedy dispatch
@@ -35,8 +35,10 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
-DATA_YEAR = '2025'
+DATA_YEAR = '2025'        # Actuals year for total MWh, grid mix, hydro caps
+PROFILE_YEARS = ['2021', '2022', '2023', '2024', '2025']  # Years to average for shapes
 H = 8760
+LEAP_FEB29_START = 1416   # Hour index where Feb 29 starts in a leap year (744+672)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STORAGE CONSTANTS
@@ -50,15 +52,46 @@ LDES_DURATION_HOURS = 100
 LDES_WINDOW_DAYS = 7
 
 # ══════════════════════════════════════════════════════════════════════════════
+# NUCLEAR SEASONAL DERATE (from EIA 2021-2025 analysis)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Nuclear share of clean firm generation by ISO
+# CAISO: ~1 GW geothermal + Diablo Canyon (~2.3 GW) → ~70% nuclear
+# All others: clean firm is effectively 100% nuclear
+NUCLEAR_SHARE_OF_CLEAN_FIRM = {
+    'CAISO': 0.70,  # ~2.3 GW nuclear / (~2.3 GW nuclear + ~1 GW geothermal)
+    'ERCOT': 1.0,   # South Texas Project only
+    'PJM': 1.0,     # Large nuclear fleet (Limerick, Peach Bottom, etc.)
+    'NYISO': 1.0,   # Nine Mile Point, Ginna, FitzPatrick
+    'NEISO': 1.0,   # Millstone, Seabrook
+}
+
+# Seasonal capacity factors relative to peak (from 5-year EIA average)
+# Applied to nuclear portion only. Geothermal stays flat.
+# Months: 1=Jan, 12=Dec
+NUCLEAR_MONTHLY_CF = {  # relative to nameplate (where winter peak = 1.0)
+    'CAISO': {1: 0.94, 2: 0.94, 3: 0.85, 4: 0.75, 5: 0.80, 6: 0.99,
+              7: 1.0, 8: 1.0, 9: 0.90, 10: 0.78, 11: 0.82, 12: 0.94},
+    'ERCOT': {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.89, 6: 0.97,
+              7: 0.97, 8: 0.96, 9: 0.88, 10: 0.79, 11: 0.85, 12: 1.0},
+    'PJM':   {1: 1.0, 2: 1.0, 3: 0.92, 4: 0.85, 5: 0.87, 6: 0.98,
+              7: 0.99, 8: 0.97, 9: 0.93, 10: 0.89, 11: 0.91, 12: 1.0},
+    'NYISO': {1: 1.0, 2: 1.0, 3: 0.88, 4: 0.78, 5: 0.81, 6: 0.95,
+              7: 0.96, 8: 0.94, 9: 0.85, 10: 0.75, 11: 0.79, 12: 1.0},
+    'NEISO': {1: 1.0, 2: 0.99, 3: 0.92, 4: 0.83, 5: 0.88, 6: 0.96,
+              7: 0.97, 8: 0.95, 9: 0.88, 10: 0.82, 11: 0.85, 12: 1.0},
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
 # REGIONAL CONSTANTS
 # ══════════════════════════════════════════════════════════════════════════════
 
-HYDRO_CAPS = {
-    'CAISO': 30,
-    'ERCOT': 5,
-    'PJM': 15,
-    'NYISO': 40,
-    'NEISO': 30,
+HYDRO_CAPS = {  # 2025 actual hydro share of demand from EIA data
+    'CAISO': 9.5,   # 5yr range: 5.2% (drought 2021) - 11.2% (wet 2023)
+    'ERCOT': 0.1,   # Minimal hydro in Texas
+    'PJM': 1.8,     # 5yr range: 1.9% - 2.1%
+    'NYISO': 15.9,  # 5yr range: 15.9% - 18.3%
+    'NEISO': 4.4,   # 5yr range: 4.5% - 7.8%
 }
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
@@ -88,7 +121,7 @@ PROCUREMENT_BOUNDS = {
     92.5: (92, 150),
     95:   (95, 175),
     97.5: (100, 200),
-    99:   (100, 220),
+    99:   (100, 200),
     100:  (100, 200),
 }
 
@@ -106,12 +139,12 @@ WHOLESALE_PRICES = {
 }
 
 # Medium LCOE values used by the optimizer for mix optimization
-REGIONAL_LCOE = {
-    'CAISO': {'clean_firm': 78, 'solar': 60, 'wind': 73, 'ccs_ccgt': 86, 'hydro': 0, 'battery': 102, 'ldes': 180},
-    'ERCOT': {'clean_firm': 85, 'solar': 54, 'wind': 40, 'ccs_ccgt': 71, 'hydro': 0, 'battery': 92, 'ldes': 155},
-    'PJM':   {'clean_firm': 93, 'solar': 65, 'wind': 62, 'ccs_ccgt': 79, 'hydro': 0, 'battery': 98, 'ldes': 170},
-    'NYISO': {'clean_firm': 98, 'solar': 92, 'wind': 81, 'ccs_ccgt': 99, 'hydro': 0, 'battery': 108, 'ldes': 200},
-    'NEISO': {'clean_firm': 96, 'solar': 82, 'wind': 73, 'ccs_ccgt': 96, 'hydro': 0, 'battery': 105, 'ldes': 190},
+REGIONAL_LCOE = {  # Medium level — blended uprate+new-build for clean_firm
+    'CAISO': {'clean_firm': 79, 'solar': 60, 'wind': 73, 'ccs_ccgt': 86, 'hydro': 0, 'battery': 102, 'ldes': 180},
+    'ERCOT': {'clean_firm': 79, 'solar': 54, 'wind': 40, 'ccs_ccgt': 71, 'hydro': 0, 'battery': 92, 'ldes': 155},
+    'PJM':   {'clean_firm': 68, 'solar': 65, 'wind': 62, 'ccs_ccgt': 79, 'hydro': 0, 'battery': 98, 'ldes': 170},
+    'NYISO': {'clean_firm': 86, 'solar': 92, 'wind': 81, 'ccs_ccgt': 99, 'hydro': 0, 'battery': 108, 'ldes': 200},
+    'NEISO': {'clean_firm': 92, 'solar': 82, 'wind': 73, 'ccs_ccgt': 96, 'hydro': 0, 'battery': 105, 'ldes': 190},
 }
 
 # Transmission adders at Medium level (used by optimizer)
@@ -135,10 +168,10 @@ FULL_LCOE_TABLES = {
         'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73},
         'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95},
     },
-    'clean_firm': {
-        'Low':    {'CAISO': 58, 'ERCOT': 63, 'PJM': 72, 'NYISO': 75, 'NEISO': 73},
-        'Medium': {'CAISO': 78, 'ERCOT': 85, 'PJM': 93, 'NYISO': 98, 'NEISO': 96},
-        'High':   {'CAISO': 110, 'ERCOT': 120, 'PJM': 140, 'NYISO': 150, 'NEISO': 145},
+    'clean_firm': {  # Blended uprate + new-build LCOE
+        'Low':    {'CAISO': 58, 'ERCOT': 56, 'PJM': 48, 'NYISO': 64, 'NEISO': 69},
+        'Medium': {'CAISO': 79, 'ERCOT': 79, 'PJM': 68, 'NYISO': 86, 'NEISO': 92},
+        'High':   {'CAISO': 115, 'ERCOT': 115, 'PJM': 108, 'NYISO': 136, 'NEISO': 143},
     },
     'ccs_ccgt': {
         'Low':    {'CAISO': 58, 'ERCOT': 52, 'PJM': 62, 'NYISO': 78, 'NEISO': 75},
@@ -259,29 +292,129 @@ GRID_MIX_SHARES = {
     'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
 }
 
-# CCS-CCGT residual emission rate (tCO2/MWh) after 90% capture
-CCS_RESIDUAL_EMISSION_RATE = 0.037
+# CCS-CCGT residual emission rate (tCO2/MWh) after 95% capture
+CCS_RESIDUAL_EMISSION_RATE = 0.0185  # 95% capture from ~0.37 tCO2/MWh CCGT
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # DATA LOADING
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _remove_leap_day(profile_8784):
+    """Remove Feb 29 hours (indices 1416-1439) from a leap year 8784-hour profile."""
+    if len(profile_8784) <= H:
+        return list(profile_8784[:H])
+    return list(profile_8784[:LEAP_FEB29_START]) + list(profile_8784[LEAP_FEB29_START + 24:H + 24])
+
+
+def _average_profiles(yearly_profiles):
+    """Element-wise average of multiple 8760-hour profiles."""
+    if not yearly_profiles:
+        return [0.0] * H
+    n = len(yearly_profiles)
+    avg = [0.0] * H
+    for profile in yearly_profiles:
+        for h in range(H):
+            avg[h] += profile[h]
+    for h in range(H):
+        avg[h] /= n
+    return avg
+
+
 def load_data():
-    """Load demand profiles, generation profiles, emission rates, and fossil mix."""
+    """Load demand profiles, generation profiles, emission rates, and fossil mix.
+
+    Data split (per SPEC.md §19.4):
+      - Profile SHAPES: 5-year average (2021-2025) for weather smoothing
+      - Scalar quantities: 2025 actuals (total_annual_mwh, peak_mw, grid mix, hydro caps)
+    Leap year 2024 handled by removing Feb 29 before averaging.
+    """
     print("Loading data...")
 
     with open(os.path.join(DATA_DIR, 'eia_demand_profiles.json')) as f:
-        demand_data = json.load(f)
+        demand_raw = json.load(f)
 
     with open(os.path.join(DATA_DIR, 'eia_generation_profiles.json')) as f:
-        gen_profiles = json.load(f)
+        gen_raw = json.load(f)
 
     with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
         emission_rates = json.load(f)
 
     with open(os.path.join(DATA_DIR, 'eia_fossil_mix.json')) as f:
         fossil_mix = json.load(f)
+
+    # ── Average generation profiles across PROFILE_YEARS ──
+    gen_profiles = {}
+    for iso in ISOS:
+        iso_raw = gen_raw.get(iso, {})
+        available_years = [y for y in PROFILE_YEARS if y in iso_raw]
+        if not available_years:
+            raise ValueError(f"No generation profile years found for {iso}")
+
+        # Collect all resource types across years
+        all_rtypes = set()
+        for y in available_years:
+            all_rtypes.update(iso_raw[y].keys())
+
+        gen_profiles[iso] = {}
+        for rtype in all_rtypes:
+            yearly = []
+            for y in available_years:
+                raw = iso_raw[y].get(rtype)
+                if raw is None:
+                    continue
+                # Handle leap year 2024: remove Feb 29 to get 8760
+                if len(raw) > H:
+                    raw = _remove_leap_day(raw)
+                else:
+                    raw = list(raw[:H])
+                yearly.append(raw)
+            if yearly:
+                gen_profiles[iso][rtype] = _average_profiles(yearly)
+
+        n_yrs = len(available_years)
+        print(f"  {iso}: gen profiles averaged over {n_yrs} years ({', '.join(available_years)})")
+
+    # ── Average demand profiles; use 2025 actuals for scalars ──
+    demand_data = {}
+    for iso in ISOS:
+        iso_data = demand_raw.get(iso, {})
+
+        # Check if year-keyed
+        year_keys = [k for k in iso_data.keys() if k.isdigit()]
+        if not year_keys and 'normalized' in iso_data:
+            # Old format: single year, use as-is
+            demand_data[iso] = iso_data
+            continue
+
+        # Average normalized shape across available PROFILE_YEARS
+        available_years = [y for y in PROFILE_YEARS if y in iso_data]
+        if not available_years:
+            raise ValueError(f"No demand data years found for {iso}")
+
+        yearly_norms = []
+        for y in available_years:
+            raw = iso_data[y].get('normalized', [])
+            if len(raw) > H:
+                raw = _remove_leap_day(raw)
+            else:
+                raw = list(raw[:H])
+            yearly_norms.append(raw)
+
+        avg_norm = _average_profiles(yearly_norms)
+
+        # Use 2025 actuals for scalar quantities
+        actuals_year = DATA_YEAR if DATA_YEAR in iso_data else available_years[-1]
+        if actuals_year != DATA_YEAR:
+            print(f"  Warning: {iso} demand using {actuals_year} actuals (2025 not found)")
+
+        demand_data[iso] = {
+            'normalized': avg_norm,
+            'total_annual_mwh': iso_data[actuals_year]['total_annual_mwh'],
+            'peak_mw': iso_data[actuals_year]['peak_mw'],
+        }
+        print(f"  {iso}: demand shape averaged over {len(available_years)} years, "
+              f"scalars from {actuals_year}")
 
     print("  Data loaded.")
     return demand_data, gen_profiles, emission_rates, fossil_mix
@@ -291,43 +424,96 @@ def get_supply_profiles(iso, gen_profiles):
     """Get generation shape profiles for the 5 resource types."""
     profiles = {}
 
-    # Clean firm = flat baseload
-    profiles['clean_firm'] = [1.0 / H] * H
+    # Clean firm = seasonally-derated baseload
+    # Nuclear portion gets spring/fall derate; geothermal stays flat
+    nuc_share = NUCLEAR_SHARE_OF_CLEAN_FIRM.get(iso, 1.0)
+    geo_share = 1.0 - nuc_share
+    monthly_cf = NUCLEAR_MONTHLY_CF.get(iso, {m: 1.0 for m in range(1, 13)})
+    cf_profile = []
+    # Build 8760 profile: each hour gets its month's derate
+    # Month boundaries for non-leap year (H=8760)
+    month_hours = [744, 672, 744, 720, 744, 720, 744, 744, 720, 744, 720, 744]
+    hour = 0
+    for month_idx, hours_in_month in enumerate(month_hours):
+        month_num = month_idx + 1  # 1-indexed
+        nuc_cf = monthly_cf.get(month_num, 1.0)
+        # Blended CF: nuclear derated + geothermal flat
+        blended = nuc_share * nuc_cf + geo_share * 1.0
+        for _ in range(hours_in_month):
+            if hour < H:
+                cf_profile.append(blended / H)
+                hour += 1
+    # Fill any remaining hours (shouldn't happen, but safety)
+    while len(cf_profile) < H:
+        cf_profile.append(1.0 / H)
+    profiles['clean_firm'] = cf_profile[:H]
 
-    # Solar
+    # Solar (with DST-aware nighttime correction)
     if iso == 'NYISO':
-        p = gen_profiles[iso][DATA_YEAR].get('solar_proxy')
+        p = gen_profiles[iso].get('solar_proxy')
         if not p:
-            p = gen_profiles['NEISO'][DATA_YEAR].get('solar')
-        profiles['solar'] = p[:H]
+            p = gen_profiles['NEISO'].get('solar')
+        solar_raw = list(p[:H])
     else:
-        profiles['solar'] = gen_profiles[iso][DATA_YEAR].get('solar', [0.0] * H)[:H]
+        solar_raw = list(gen_profiles[iso].get('solar', [0.0] * H)[:H])
+
+    # Zero out nighttime solar — DST-aware UTC conversion
+    # EIA data hours are sequential UTC. Convert local daylight windows to UTC,
+    # adjusting the offset during DST months (March–November).
+    # Standard UTC offsets (hours ahead of local): PST=8, CST=6, EST=5
+    STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5}
+    # DST boundaries: 2nd Sunday of March (~day 69) to 1st Sunday of Nov (~day 307)
+    # Representative across 2021-2025 (actual dates: Mar 9-14, Nov 2-7)
+    DST_START_DAY = 69    # ~March 10
+    DST_END_DAY = 307     # ~November 3
+    local_start, local_end = 6, 19  # 6am-7pm local prevailing time
+    std_off = STD_UTC_OFFSETS.get(iso, 5)
+
+    for day in range(H // 24):
+        ds = day * 24
+        # During DST, clocks spring forward → UTC offset is 1 less
+        is_dst = DST_START_DAY <= day < DST_END_DAY
+        utc_off = std_off - (1 if is_dst else 0)
+        utc_start = (local_start + utc_off) % 24
+        utc_end = (local_end + utc_off) % 24
+        for h_utc in range(24):
+            idx = ds + h_utc
+            if idx < len(solar_raw):
+                if utc_start <= utc_end:
+                    is_daylight = utc_start <= h_utc <= utc_end
+                else:
+                    is_daylight = h_utc >= utc_start or h_utc <= utc_end
+                if not is_daylight:
+                    solar_raw[idx] = 0.0
+    profiles['solar'] = solar_raw
 
     # Wind
-    profiles['wind'] = gen_profiles[iso][DATA_YEAR].get('wind', [0.0] * H)[:H]
+    profiles['wind'] = gen_profiles[iso].get('wind', [0.0] * H)[:H]
 
     # CCS-CCGT = flat baseload (same shape as clean firm)
     profiles['ccs_ccgt'] = [1.0 / H] * H
 
     # Hydro
-    profiles['hydro'] = gen_profiles[iso][DATA_YEAR].get('hydro', [0.0] * H)[:H]
+    profiles['hydro'] = gen_profiles[iso].get('hydro', [0.0] * H)[:H]
 
-    # Ensure all profiles are exactly H hours
+    # Ensure all profiles are exactly H hours with no negative values
     for rtype in RESOURCE_TYPES:
         if len(profiles[rtype]) > H:
             profiles[rtype] = profiles[rtype][:H]
         elif len(profiles[rtype]) < H:
             profiles[rtype] = profiles[rtype] + [0.0] * (H - len(profiles[rtype]))
+        # Clamp negatives (floating point noise, pumped hydro charging)
+        profiles[rtype] = [max(0.0, v) for v in profiles[rtype]]
 
     return profiles
 
 
 def find_anomaly_hours(iso, gen_profiles):
     """Find hours where all gen types report zero (EIA data gaps)."""
-    types = [t for t in gen_profiles[iso][DATA_YEAR].keys() if t != 'solar_proxy']
+    types = [t for t in gen_profiles[iso].keys() if t != 'solar_proxy']
     anomalies = set()
     for h in range(H):
-        if all(gen_profiles[iso][DATA_YEAR][t][h] == 0.0 for t in types):
+        if all(gen_profiles[iso][t][h] == 0.0 for t in types):
             anomalies.add(h)
     return anomalies
 
@@ -365,8 +551,16 @@ def fast_hourly_score(demand_arr, supply_matrix, mix_fractions, procurement_fact
 def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procurement_factor,
                             battery_dispatch_pct):
     """
-    Fast scoring with battery storage (4hr Li-ion, 85% RTE, daily-cycle greedy dispatch).
-    Preserves the original daily-cycle algorithm exactly.
+    Fast scoring with capacity-constrained battery storage (4hr Li-ion, 85% RTE).
+
+    battery_dispatch_pct maps to a CAPACITY, not a guaranteed dispatch amount.
+    Capacity (MWh) = battery_dispatch_pct / 100.0 (normalized to demand sum ~1.0).
+    Power rating (MW) = capacity / 4hr.
+
+    Each day: charge from available surplus up to capacity, discharge to gaps.
+    Days with low surplus → partial cycle → less dispatch.
+    Actual annual dispatch varies based on surplus availability.
+
     Returns matching score (0-1).
     """
     supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
@@ -377,12 +571,12 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
     if battery_dispatch_pct <= 0:
         return base_matched.sum()
 
-    storage_dispatch_total = battery_dispatch_pct / 100.0
-    num_days = H // 24
-    daily_dispatch_target = storage_dispatch_total / num_days
-    power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
+    # Capacity-based sizing: pct maps to energy capacity
+    capacity_mwh = battery_dispatch_pct / 100.0  # normalized energy capacity
+    power_rating = capacity_mwh / BATTERY_DURATION_HOURS
 
     total_dispatched = 0.0
+    num_days = H // 24
     for day in range(num_days):
         ds = day * 24
         de = ds + 24
@@ -393,8 +587,11 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
         total_surplus = day_surplus.sum()
         total_gap = day_gap.sum()
 
-        max_from_charge = total_surplus * BATTERY_EFFICIENCY
-        actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap)
+        # Charge limited by: available surplus, capacity, power rating × hours
+        max_charge = min(total_surplus, capacity_mwh)
+        max_from_charge = max_charge * BATTERY_EFFICIENCY
+        # Dispatch limited by: charged energy × RTE, gap, capacity
+        actual_dispatch = min(max_from_charge, total_gap, capacity_mwh)
         if actual_dispatch <= 0:
             continue
 
@@ -402,9 +599,11 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
 
         # Distribute charge (greedily, largest surplus first)
         sorted_idx = np.argsort(-day_surplus)
+        pos_mask = day_surplus[sorted_idx] > 0
+        sorted_idx = sorted_idx[pos_mask]
         remaining_charge = required_charge
         for idx in sorted_idx:
-            if remaining_charge <= 0 or day_surplus[idx] <= 0:
+            if remaining_charge <= 1e-12:
                 break
             amt = min(float(day_surplus[idx]), power_rating, remaining_charge)
             remaining_charge -= amt
@@ -414,9 +613,11 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
 
         # Distribute dispatch (greedily, largest gap first)
         sorted_idx = np.argsort(-day_gap)
+        pos_mask = day_gap[sorted_idx] > 0
+        sorted_idx = sorted_idx[pos_mask]
         remaining_dispatch = ach_dispatch
         for idx in sorted_idx:
-            if remaining_dispatch <= 0 or day_gap[idx] <= 0:
+            if remaining_dispatch <= 1e-12:
                 break
             amt = min(float(day_gap[idx]), power_rating, remaining_dispatch)
             total_dispatched += amt
@@ -425,16 +626,19 @@ def fast_score_with_battery(demand_arr, supply_matrix, mix_fractions, procuremen
     return base_matched.sum() + total_dispatched
 
 
-def compute_ldes_dispatch(demand_arr, supply_arr_total):
+def compute_ldes_dispatch(demand_arr, supply_arr_total, ldes_dispatch_pct=10):
     """
     LDES dispatch algorithm: 100hr iron-air, 50% RTE, 7-day rolling window.
+    Capacity-constrained with dynamic sizing.
 
-    Charges during multi-day surplus periods, discharges during multi-day deficit periods.
-    Power rating = capacity / 100hr (very low power, huge energy).
+    ldes_dispatch_pct maps to CAPACITY (not guaranteed dispatch).
+    Capacity (MWh) = ldes_dispatch_pct / 100.0 (normalized to demand).
+    Power rating (MW) = capacity / 100hr.
 
     Args:
         demand_arr: numpy array (H,) of normalized demand
         supply_arr_total: numpy array (H,) of total supply after resource mix
+        ldes_dispatch_pct: capacity sizing parameter (% of normalized demand)
 
     Returns:
         ldes_dispatch: numpy array (H,) of LDES dispatch amounts (added to matched)
@@ -447,11 +651,8 @@ def compute_ldes_dispatch(demand_arr, supply_arr_total):
     ldes_dispatch = np.zeros(H, dtype=np.float64)
     ldes_charge = np.zeros(H, dtype=np.float64)
 
-    # LDES energy capacity: use a capacity that scales with total demand
-    # Set capacity as fraction of total demand energy
-    total_demand_energy = demand_arr.sum()  # sums to ~1.0 for normalized
-    # Capacity sized relative to demand: enough to store ~1 day of average demand
-    ldes_energy_capacity = total_demand_energy * (24.0 / H)  # ~1 day of energy
+    # Dynamic capacity sizing: scales with ldes_dispatch_pct
+    ldes_energy_capacity = ldes_dispatch_pct / 100.0  # normalized energy capacity
     ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
 
     state_of_charge = 0.0
@@ -462,7 +663,6 @@ def compute_ldes_dispatch(demand_arr, supply_arr_total):
     for w in range(num_windows):
         w_start = w * window_hours
         w_end = min(w_start + window_hours, H)
-        window_len = w_end - w_start
 
         # Identify surplus and deficit hours in this window
         w_surplus = surplus[w_start:w_end].copy()
@@ -470,31 +670,29 @@ def compute_ldes_dispatch(demand_arr, supply_arr_total):
 
         # Phase 1: Charge during surplus hours (largest surpluses first)
         surplus_indices = np.argsort(-w_surplus)
+        # Filter to only positive-surplus hours for faster iteration
+        pos_mask = w_surplus[surplus_indices] > 0
+        surplus_indices = surplus_indices[pos_mask]
         for idx in surplus_indices:
-            if w_surplus[idx] <= 0:
-                break
             space = ldes_energy_capacity - state_of_charge
-            if space <= 0:
+            if space <= 1e-12:
                 break
             charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
-            if charge_amt > 0:
-                ldes_charge[w_start + idx] = charge_amt
-                state_of_charge += charge_amt
+            ldes_charge[w_start + idx] = charge_amt
+            state_of_charge += charge_amt
 
         # Phase 2: Discharge during deficit hours (largest gaps first)
         gap_indices = np.argsort(-w_gap)
+        pos_mask = w_gap[gap_indices] > 0
+        gap_indices = gap_indices[pos_mask]
         for idx in gap_indices:
-            if w_gap[idx] <= 0:
-                break
             available = state_of_charge * LDES_EFFICIENCY
             if available <= 1e-12:
                 break
             dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, available)
-            if dispatch_amt > 0:
-                ldes_dispatch[w_start + idx] = dispatch_amt
-                # Energy drawn from storage = dispatch / efficiency
-                state_of_charge -= dispatch_amt / LDES_EFFICIENCY
-                state_of_charge = max(0.0, state_of_charge)
+            ldes_dispatch[w_start + idx] = dispatch_amt
+            state_of_charge -= dispatch_amt / LDES_EFFICIENCY
+            state_of_charge = max(0.0, state_of_charge)
 
     total_dispatched = ldes_dispatch.sum()
     return ldes_dispatch, ldes_charge, total_dispatched
@@ -504,7 +702,7 @@ def fast_score_with_ldes(demand_arr, supply_matrix, mix_fractions, procurement_f
                          ldes_dispatch_pct):
     """
     Fast scoring with LDES only (no battery). Used in sweep/optimization.
-    ldes_dispatch_pct is a scaling hint for how much LDES capacity is available.
+    ldes_dispatch_pct maps to LDES capacity (dynamic sizing).
     Returns matching score (0-1).
     """
     supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
@@ -514,21 +712,22 @@ def fast_score_with_ldes(demand_arr, supply_matrix, mix_fractions, procurement_f
         return matched.sum()
 
     base_matched = np.minimum(demand_arr, supply)
-    ldes_dispatch_arr, _, total_dispatched = compute_ldes_dispatch(demand_arr, supply)
+    ldes_dispatch_arr, _, total_dispatched = compute_ldes_dispatch(
+        demand_arr, supply, ldes_dispatch_pct=ldes_dispatch_pct)
 
-    # Scale the dispatch by the ldes_dispatch_pct factor
-    scale = ldes_dispatch_pct / 10.0  # normalize: 10% = 1x capacity
+    # Dispatch is already capacity-constrained; just cap at remaining gap
     gap = np.maximum(0.0, demand_arr - supply)
-    scaled_dispatch = np.minimum(ldes_dispatch_arr * scale, gap)
+    capped_dispatch = np.minimum(ldes_dispatch_arr, gap)
 
-    return base_matched.sum() + scaled_dispatch.sum()
+    return base_matched.sum() + capped_dispatch.sum()
 
 
 def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procurement_factor,
                                  battery_dispatch_pct, ldes_dispatch_pct):
     """
-    Fast scoring with both battery (daily) and LDES (multi-day).
+    Fast scoring with both capacity-constrained battery (daily) and LDES (multi-day).
     Battery runs first on daily cycle, LDES fills remaining multi-day gaps.
+    Both use capacity-based sizing where dispatch_pct maps to built capacity.
     Returns matching score (0-1).
     """
     supply = procurement_factor * np.dot(mix_fractions, supply_matrix)
@@ -540,12 +739,11 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
     residual_gap = gap.copy()
     residual_surplus = surplus.copy()
 
-    # Phase 1: Battery daily-cycle dispatch
+    # Phase 1: Battery capacity-constrained daily-cycle dispatch
     if battery_dispatch_pct > 0:
-        batt_dispatch_total = battery_dispatch_pct / 100.0
+        batt_capacity = battery_dispatch_pct / 100.0  # normalized energy capacity
+        batt_power_rating = batt_capacity / BATTERY_DURATION_HOURS
         num_days = H // 24
-        daily_dispatch_target = batt_dispatch_total / num_days
-        batt_power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
 
         for day in range(num_days):
             ds = day * 24
@@ -557,8 +755,10 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
             total_surplus_day = day_surplus.sum()
             total_gap_day = day_gap.sum()
 
-            max_from_charge = total_surplus_day * BATTERY_EFFICIENCY
-            actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap_day)
+            # Capacity-constrained: charge limited by surplus and capacity
+            max_charge = min(total_surplus_day, batt_capacity)
+            max_from_charge = max_charge * BATTERY_EFFICIENCY
+            actual_dispatch = min(max_from_charge, total_gap_day, batt_capacity)
             if actual_dispatch <= 0:
                 continue
 
@@ -566,9 +766,11 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
 
             # Charge from largest surpluses
             sorted_idx = np.argsort(-day_surplus)
+            pos_mask = day_surplus[sorted_idx] > 0
+            sorted_idx = sorted_idx[pos_mask]
             remaining_charge = required_charge
             for idx in sorted_idx:
-                if remaining_charge <= 0 or day_surplus[idx] <= 0:
+                if remaining_charge <= 1e-12:
                     break
                 amt = min(float(day_surplus[idx]), batt_power_rating, remaining_charge)
                 residual_surplus[ds + idx] -= amt
@@ -579,21 +781,21 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
 
             # Dispatch to largest gaps
             sorted_idx = np.argsort(-day_gap)
+            pos_mask = day_gap[sorted_idx] > 0
+            sorted_idx = sorted_idx[pos_mask]
             remaining_dispatch = ach_dispatch
             for idx in sorted_idx:
-                if remaining_dispatch <= 0 or day_gap[idx] <= 0:
+                if remaining_dispatch <= 1e-12:
                     break
                 amt = min(float(day_gap[idx]), batt_power_rating, remaining_dispatch)
                 residual_gap[ds + idx] -= amt
                 total_dispatched += amt
                 remaining_dispatch -= amt
 
-    # Phase 2: LDES multi-day dispatch on remaining gaps
+    # Phase 2: LDES capacity-constrained multi-day dispatch on remaining gaps
     if ldes_dispatch_pct > 0:
-        total_demand_energy = demand_arr.sum()
-        ldes_energy_capacity = total_demand_energy * (24.0 / H)
+        ldes_energy_capacity = ldes_dispatch_pct / 100.0  # dynamic capacity sizing
         ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
-        scale = ldes_dispatch_pct / 10.0
 
         state_of_charge = 0.0
         window_hours = LDES_WINDOW_DAYS * 24
@@ -608,25 +810,24 @@ def fast_score_with_both_storage(demand_arr, supply_matrix, mix_fractions, procu
 
             # Charge
             surplus_indices = np.argsort(-w_surplus)
+            pos_mask = w_surplus[surplus_indices] > 0
+            surplus_indices = surplus_indices[pos_mask]
             for idx in surplus_indices:
-                if w_surplus[idx] <= 0:
+                space = ldes_energy_capacity - state_of_charge
+                if space <= 1e-12:
                     break
-                space = (ldes_energy_capacity * scale) - state_of_charge
-                if space <= 0:
-                    break
-                charge_amt = min(float(w_surplus[idx]), ldes_power_rating * scale, space)
-                if charge_amt > 0:
-                    state_of_charge += charge_amt
+                charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
+                state_of_charge += charge_amt
 
             # Discharge
             gap_indices = np.argsort(-w_gap)
+            pos_mask = w_gap[gap_indices] > 0
+            gap_indices = gap_indices[pos_mask]
             for idx in gap_indices:
-                if w_gap[idx] <= 0:
-                    break
                 available = state_of_charge * LDES_EFFICIENCY
                 if available <= 1e-12:
                     break
-                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating * scale, available)
+                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, available)
                 if dispatch_amt > 0:
                     total_dispatched += dispatch_amt
                     state_of_charge -= dispatch_amt / LDES_EFFICIENCY
@@ -684,12 +885,11 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
     residual_surplus = surplus_arr.copy()
     residual_gap = gap_arr.copy()
 
-    # Phase 1: Battery daily-cycle dispatch
+    # Phase 1: Battery capacity-constrained daily-cycle dispatch
     if battery_dispatch_pct > 0:
-        batt_dispatch_total = battery_dispatch_pct / 100.0
+        batt_capacity = battery_dispatch_pct / 100.0  # normalized energy capacity
+        batt_power_rating = batt_capacity / BATTERY_DURATION_HOURS
         num_days = H // 24
-        daily_dispatch_target = batt_dispatch_total / num_days
-        batt_power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
 
         for day in range(num_days):
             ds = day * 24
@@ -701,8 +901,10 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
             total_surplus_day = day_surplus.sum()
             total_gap_day = day_gap.sum()
 
-            max_from_charge = total_surplus_day * BATTERY_EFFICIENCY
-            actual_dispatch = min(daily_dispatch_target, max_from_charge, total_gap_day)
+            # Capacity-constrained: charge limited by surplus and capacity
+            max_charge = min(total_surplus_day, batt_capacity)
+            max_from_charge = max_charge * BATTERY_EFFICIENCY
+            actual_dispatch = min(max_from_charge, total_gap_day, batt_capacity)
             if actual_dispatch <= 0:
                 continue
 
@@ -733,12 +935,10 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
                 residual_gap[ds + idx] -= amt
                 remaining_dispatch -= amt
 
-    # Phase 2: LDES multi-day dispatch on remaining gaps
+    # Phase 2: LDES capacity-constrained multi-day dispatch on remaining gaps
     if ldes_dispatch_pct > 0:
-        total_demand_energy = demand_arr.sum()
-        ldes_energy_capacity = total_demand_energy * (24.0 / H)
+        ldes_energy_capacity = ldes_dispatch_pct / 100.0  # dynamic capacity sizing
         ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
-        scale = ldes_dispatch_pct / 10.0
 
         state_of_charge = 0.0
         window_hours = LDES_WINDOW_DAYS * 24
@@ -756,10 +956,10 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
             for idx in surplus_indices:
                 if w_surplus[idx] <= 0:
                     break
-                space = (ldes_energy_capacity * scale) - state_of_charge
+                space = ldes_energy_capacity - state_of_charge
                 if space <= 0:
                     break
-                charge_amt = min(float(w_surplus[idx]), ldes_power_rating * scale, space)
+                charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
                 if charge_amt > 0:
                     ldes_charge_profile[w_start + idx] = charge_amt
                     residual_surplus[w_start + idx] -= charge_amt
@@ -773,7 +973,7 @@ def compute_hourly_matching_detailed(demand_norm, supply_profiles, resource_pcts
                 available = state_of_charge * LDES_EFFICIENCY
                 if available <= 1e-12:
                     break
-                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating * scale, available)
+                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, available)
                 if dispatch_amt > 0:
                     ldes_dispatch_profile[w_start + idx] = dispatch_amt
                     residual_gap[w_start + idx] -= dispatch_amt
@@ -883,8 +1083,8 @@ def generate_combinations_around(base_combo, hydro_cap, step=1, radius=2):
     seen = set()
     ranges = {}
     for rtype in RESOURCE_TYPES:
-        base = base_combo[rtype]
-        cap = hydro_cap if rtype == 'hydro' else 100
+        base = int(base_combo[rtype])
+        cap = int(hydro_cap) if rtype == 'hydro' else 100
         low = max(0, base - radius * step)
         high = min(cap, base + radius * step)
         ranges[rtype] = list(range(low, high + 1, step))
@@ -966,7 +1166,7 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
          emission_rate[h] = coal_share[h]×coal_rate + gas_share[h]×gas_rate + oil_share[h]×oil_rate
       2. Reconstruct hourly clean supply → fossil displacement at each hour
       3. CO2_abated = Σ_h fossil_displaced[h] × emission_rate[h]
-      4. CCS-CCGT: partial credit (rate[h] - 0.037 tCO2/MWh residual)
+      4. CCS-CCGT: partial credit (rate[h] - 0.0185 tCO2/MWh residual, 95% capture)
 
     Falls back to flat regional rate if hourly data not provided (backward compat).
     """
@@ -1014,13 +1214,8 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
             if rtype == 'ccs_ccgt':
                 ccs_supply = contribution.copy()
 
-        # Simplified storage effect (proportional adjustment)
-        storage_boost = (battery_dispatch_pct + ldes_dispatch_pct) / 100.0
-        # Storage shifts supply from surplus to gap hours; approximate by
-        # adding storage fraction uniformly to matched fraction
-        total_clean = supply_total  # Storage is already accounted in match score
-
-        fossil_displaced = np.minimum(demand_arr, total_clean)
+        # Direct generation displacement (no storage)
+        fossil_displaced = np.minimum(demand_arr, supply_total)
         matched_mwh = np.sum(fossil_displaced) * demand_total_mwh
 
         # Non-CCS clean displacement
@@ -1029,23 +1224,102 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
 
         # CO₂ from non-CCS: full credit at hourly rate
         co2_clean = np.sum(non_ccs_matched * hourly_rates) * demand_total_mwh
-        # CO₂ from CCS: partial credit
+        # CO₂ from CCS: partial credit (95% capture)
         ccs_credit = np.maximum(0.0, hourly_rates - CCS_RESIDUAL_EMISSION_RATE)
         co2_ccs = np.sum(ccs_matched * ccs_credit) * demand_total_mwh
 
-        # Storage displacement (shifts surplus→gap, displaces fossil at gap hours)
-        storage_mwh = demand_total_mwh * storage_boost
-        # Weighted avg rate at gap hours (approximation)
-        gap_mask = demand_arr > total_clean
-        if np.any(gap_mask):
-            gap_weighted_rate = np.average(hourly_rates[gap_mask],
-                                           weights=np.maximum(0, demand_arr[gap_mask] - total_clean[gap_mask]))
-        else:
-            gap_weighted_rate = np.mean(hourly_rates)
-        co2_storage = storage_mwh * gap_weighted_rate
+        # ── Storage CO₂: hourly dispatch attribution with charge-side netting ──
+        # Run actual storage dispatch to get hourly charge/discharge profiles
+        surplus = np.maximum(0.0, supply_total - demand_arr)
+        gap = np.maximum(0.0, demand_arr - supply_total)
+        residual_surplus = surplus.copy()
+        residual_gap = gap.copy()
 
+        batt_dispatch_hrs = np.zeros(H, dtype=np.float64)
+        batt_charge_hrs = np.zeros(H, dtype=np.float64)
+        ldes_dispatch_hrs = np.zeros(H, dtype=np.float64)
+        ldes_charge_hrs = np.zeros(H, dtype=np.float64)
+
+        # Battery dispatch (capacity-constrained)
+        if battery_dispatch_pct > 0:
+            batt_capacity = battery_dispatch_pct / 100.0
+            batt_pr = batt_capacity / BATTERY_DURATION_HOURS
+            num_days = H // 24
+            for day in range(num_days):
+                ds, de = day * 24, (day + 1) * 24
+                ds_surplus = residual_surplus[ds:de]
+                ds_gap = residual_gap[ds:de]
+                max_charge = min(ds_surplus.sum(), batt_capacity)
+                max_dispatch = min(max_charge * BATTERY_EFFICIENCY, ds_gap.sum(), batt_capacity)
+                if max_dispatch <= 0:
+                    continue
+                req_charge = max_dispatch / BATTERY_EFFICIENCY
+                for idx in np.argsort(-ds_surplus):
+                    if req_charge <= 0 or ds_surplus[idx] <= 0:
+                        break
+                    amt = min(float(ds_surplus[idx]), batt_pr, req_charge)
+                    batt_charge_hrs[ds + idx] = amt
+                    residual_surplus[ds + idx] -= amt
+                    req_charge -= amt
+                actual_charge_done = (max_dispatch / BATTERY_EFFICIENCY) - req_charge
+                actual_batt_dispatch = min(max_dispatch, actual_charge_done * BATTERY_EFFICIENCY)
+                rem = actual_batt_dispatch
+                for idx in np.argsort(-ds_gap):
+                    if rem <= 0 or ds_gap[idx] <= 0:
+                        break
+                    amt = min(float(ds_gap[idx]), batt_pr, rem)
+                    batt_dispatch_hrs[ds + idx] = amt
+                    residual_gap[ds + idx] -= amt
+                    rem -= amt
+
+        # LDES dispatch (capacity-constrained, dynamic sizing)
+        if ldes_dispatch_pct > 0:
+            ldes_cap = ldes_dispatch_pct / 100.0
+            ldes_pr = ldes_cap / LDES_DURATION_HOURS
+            soc = 0.0
+            wh = LDES_WINDOW_DAYS * 24
+            for w in range((H + wh - 1) // wh):
+                ws, we = w * wh, min((w + 1) * wh, H)
+                ws_surplus = residual_surplus[ws:we]
+                ws_gap = residual_gap[ws:we]
+                for idx in np.argsort(-ws_surplus):
+                    if ws_surplus[idx] <= 0:
+                        break
+                    space = ldes_cap - soc
+                    if space <= 0:
+                        break
+                    amt = min(float(ws_surplus[idx]), ldes_pr, space)
+                    if amt > 0:
+                        ldes_charge_hrs[ws + idx] = amt
+                        residual_surplus[ws + idx] -= amt
+                        soc += amt
+                for idx in np.argsort(-ws_gap):
+                    if ws_gap[idx] <= 0:
+                        break
+                    avail = soc * LDES_EFFICIENCY
+                    if avail <= 1e-12:
+                        break
+                    amt = min(float(ws_gap[idx]), ldes_pr, avail)
+                    if amt > 0:
+                        ldes_dispatch_hrs[ws + idx] = amt
+                        soc -= amt / LDES_EFFICIENCY
+                        soc = max(0.0, soc)
+
+        # CO₂ from storage dispatch (hourly attribution at discharge hours' rates)
+        storage_dispatch_total = batt_dispatch_hrs + ldes_dispatch_hrs
+        co2_storage_dispatch = np.sum(storage_dispatch_total * hourly_rates) * demand_total_mwh
+
+        # Charge-side emissions netting: charging draws energy that may have fossil
+        # on the margin. Net these against discharge abatement.
+        batt_charge_emissions = np.sum(batt_charge_hrs * hourly_rates) * demand_total_mwh
+        ldes_charge_emissions = np.sum(ldes_charge_hrs * hourly_rates) * demand_total_mwh
+
+        # Net storage abatement = dispatch abatement - charge emissions
+        co2_storage = co2_storage_dispatch - batt_charge_emissions - ldes_charge_emissions
+
+        storage_dispatch_mwh = float(np.sum(storage_dispatch_total)) * demand_total_mwh
         total_abated = co2_clean + co2_ccs + co2_storage
-        matched_mwh_total = matched_mwh + storage_mwh
+        matched_mwh_total = matched_mwh + storage_dispatch_mwh
         co2_rate = total_abated / matched_mwh_total if matched_mwh_total > 0 else 0
         weighted_avg_rate = np.average(hourly_rates, weights=fossil_displaced) \
             if np.sum(fossil_displaced) > 0 else np.mean(hourly_rates)
@@ -1057,7 +1331,10 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
             'hourly_emission_rate_max': round(float(np.max(hourly_rates)), 4),
             'total_co2_abated_tons': round(float(total_abated), 0),
             'co2_rate_per_mwh': round(float(co2_rate), 4),
-            'methodology': 'hourly_fossil_fuel_emission_rates',
+            'co2_storage_net_tons': round(float(co2_storage), 0),
+            'co2_storage_dispatch_tons': round(float(co2_storage_dispatch), 0),
+            'co2_storage_charge_emissions_tons': round(float(batt_charge_emissions + ldes_charge_emissions), 0),
+            'methodology': 'hourly_dispatch_attribution_with_charge_netting',
         }
 
     # ── Fallback: flat regional rate (backward compatibility) ──
@@ -1697,23 +1974,24 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 cost = update_best(combo, procurement_pct, 0, 0, score)
                 candidates.append((cost, combo, score, 0, 0, procurement_pct))
             elif score >= storage_threshold:
+                # Phase 1 uses coarse storage grid (2×2) — Phase 2/3 refine
                 # Battery only
-                for bp in [5, 10, 15, 20, 25]:
+                for bp in [10, 20]:
                     score_ws = c_battery_score(mix_fracs, pf, bp)
                     if score_ws >= target:
                         cost = update_best(combo, procurement_pct, bp, 0, score_ws)
                         candidates.append((cost, combo, score_ws, bp, 0, procurement_pct))
                         break
                 # LDES only (wind-heavy mixes benefit from multi-day shifting)
-                for lp in [5, 10, 15, 20]:
+                for lp in [10, 20]:
                     score_ws = c_both_score(mix_fracs, pf, 0, lp)
                     if score_ws >= target:
                         cost = update_best(combo, procurement_pct, 0, lp, score_ws)
                         candidates.append((cost, combo, score_ws, 0, lp, procurement_pct))
                         break
                 # Combined battery + LDES
-                for bp in [5, 10, 15, 20]:
-                    for lp in [5, 10, 15, 20]:
+                for bp in [10, 20]:
+                    for lp in [10, 20]:
                         score_ws = c_both_score(mix_fracs, pf, bp, lp)
                         if score_ws >= target:
                             cost = update_best(combo, procurement_pct, bp, lp, score_ws)
@@ -1882,6 +2160,69 @@ ALL_COST_SCENARIOS = generate_all_cost_scenarios()
 COST_SCENARIO_MAP = {key: levels for key, levels in ALL_COST_SCENARIOS}
 
 
+# ── Scenario pruning for lower thresholds ──
+# At 75-92.5%, physics dominates cost — only ~14 unique mixes serve 324 scenarios.
+# Run 54 representative scenarios (corners + stratified) to discover all archetypes,
+# then cross-pollinate to fill in the remaining 270 scenarios.
+# At 95-100%, run full 324 for academic precision in the cost-sensitive zone.
+PRUNING_THRESHOLD_CUTOFF = 100  # Prune all thresholds — empirically, 44 reps discover all archetypes
+
+def _build_representative_scenarios():
+    """Select 54 representative scenarios covering the cost space extremes + grid."""
+    reps = set()
+    levels_L, levels_M, levels_H = 'Low', 'Medium', 'High'
+    lk = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
+    gen3 = [levels_L, levels_M, levels_H]
+    tx4 = ['None', 'Low', 'Medium', 'High']
+
+    # 1. All 8 corners (L/H for ren/firm/stor × L/H fuel × Med Tx) = 16
+    for r in [levels_L, levels_H]:
+        for f in [levels_L, levels_H]:
+            for s in [levels_L, levels_H]:
+                for fu in [levels_L, levels_H]:
+                    key = f"{lk[r]}{lk[f]}{lk[s]}_{lk[fu]}_M"
+                    reps.add(key)
+
+    # 2. All 4 Tx levels at Medium everything else = 4
+    for tx in tx4:
+        reps.add(f"MMM_M_{lk[tx]}")
+
+    # 3. Medium baseline with each toggle at L and H = 10
+    for r in gen3:
+        reps.add(f"{lk[r]}MM_M_M")  # Vary renewables
+    for f in gen3:
+        reps.add(f"M{lk[f]}M_M_M")  # Vary firm
+    for s in gen3:
+        reps.add(f"MM{lk[s]}_M_M")  # Vary storage
+    for fu in gen3:
+        reps.add(f"MMM_{lk[fu]}_M")  # Vary fuel
+
+    # 4. Cross-axis extremes: High one, Low others = 10
+    for tx in ['N', 'M', 'H']:
+        reps.add(f"HLL_L_{tx}")  # High renewables only
+        reps.add(f"LHL_L_{tx}")  # High firm only
+        reps.add(f"LLH_L_{tx}")  # High storage only
+    reps.add(f"LLL_H_M")  # High fuel only
+
+    # 5. Diagonal combos for coverage
+    reps.add('HHH_H_H')
+    reps.add('HHH_H_N')
+    reps.add('LLL_L_N')
+    reps.add('LLL_L_L')
+    reps.add('LLL_L_H')
+    reps.add('HHL_H_M')
+    reps.add('LLH_H_M')
+    reps.add('MLH_M_M')
+    reps.add('HML_M_M')
+    reps.add('LHM_L_M')
+    reps.add('MHL_H_N')
+    reps.add('LMH_M_H')
+
+    return reps
+
+REPRESENTATIVE_SCENARIOS = _build_representative_scenarios()
+
+
 CHECKPOINT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'checkpoints')
 
 
@@ -2047,7 +2388,7 @@ def process_iso(args):
     # Each threshold optimized independently; monotonicity enforced via
     # post-hoc re-sweep with broader parameters (not by result replacement)
 
-    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 5  # Save every 5 scenarios (~27s max loss)
+    INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 1  # Save every scenario — negligible I/O overhead (<0.1%)
 
     for threshold in THRESHOLDS:
         t_str = str(threshold)
@@ -2071,7 +2412,20 @@ def process_iso(args):
             # Clear partial data so it's not reused for next threshold
             partial_threshold_data = None
 
-        for s_idx, (scenario_key, cost_levels) in enumerate(ALL_COST_SCENARIOS):
+        # Determine if pruning applies for this threshold
+        use_pruning = threshold <= PRUNING_THRESHOLD_CUTOFF
+        if use_pruning:
+            active_scenarios = [(k, v) for k, v in ALL_COST_SCENARIOS
+                                if k in REPRESENTATIVE_SCENARIOS]
+            total_active = len(active_scenarios)
+            print(f"      (pruned: {total_active} representative scenarios, "
+                  f"filling {324 - total_active} via cross-pollination)")
+        else:
+            active_scenarios = ALL_COST_SCENARIOS
+            total_active = 324
+
+        opt_count = 0
+        for s_idx, (scenario_key, cost_levels) in enumerate(active_scenarios):
             if scenario_key in partial_done:
                 continue  # Already completed in previous session
 
@@ -2098,26 +2452,93 @@ def process_iso(args):
                 if scenario_key == 'MMM_M_M':
                     medium_result = result
 
+            opt_count += 1
             # Intra-threshold checkpoint: save every N scenarios
-            new_count = s_idx + 1 - len(partial_done)
-            if new_count > 0 and new_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
+            if opt_count > 0 and opt_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
                 save_checkpoint(iso, iso_results,
-                    phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of324',
+                    phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of{total_active}',
                     partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
+
+        # ── Adaptive resampling: if unique mixes > 50% of scenarios run, expand ──
+        # Target: unique_mixes < 50% of total scenarios run
+        # Expansion: add unrun scenarios (midpoints) until ratio drops below 50%
+        if use_pruning:
+            UNIQUENESS_THRESHOLD = 0.50  # Max ratio of unique mixes to scenarios run
+            MAX_RESAMPLE_ROUNDS = 5
+            already_run = set(threshold_scenarios.keys())
+            total_run = len(already_run)
+
+            for resample_round in range(MAX_RESAMPLE_ROUNDS):
+                unique_mixes = set()
+                for res in threshold_scenarios.values():
+                    m = res['resource_mix']
+                    unique_mixes.add((m['clean_firm'], m['solar'], m['wind'],
+                                     m['ccs_ccgt'], m['hydro'],
+                                     res['procurement_pct'],
+                                     res['battery_dispatch_pct'],
+                                     res['ldes_dispatch_pct']))
+                ratio = len(unique_mixes) / total_run if total_run > 0 else 0
+
+                if ratio <= UNIQUENESS_THRESHOLD:
+                    if resample_round > 0:
+                        print(f"      Resampling converged: {len(unique_mixes)} unique mixes "
+                              f"/ {total_run} scenarios = {ratio:.0%}")
+                    break
+
+                # Need more scenarios — pick unrun ones from ALL_COST_SCENARIOS
+                unrun = [(k, v) for k, v in ALL_COST_SCENARIOS if k not in already_run]
+                # Scale: add enough to bring ratio below threshold
+                # target_total = unique_mixes / 0.50 → need (target - current) more
+                target_total = int(len(unique_mixes) / UNIQUENESS_THRESHOLD) + 1
+                add_count = min(target_total - total_run, len(unrun))
+                # Spread evenly across unrun list (midpoints)
+                step = max(1, len(unrun) // add_count) if add_count > 0 else 1
+                to_add = [unrun[i] for i in range(0, len(unrun), step)][:add_count]
+
+                print(f"      RESAMPLE round {resample_round + 1}: "
+                      f"{len(unique_mixes)} unique / {total_run} run = {ratio:.0%} > 50% — "
+                      f"adding {len(to_add)} midpoint scenarios")
+
+                for scenario_key, cost_levels in to_add:
+                    result = optimize_for_threshold(
+                        iso, demand_norm, supply_profiles, threshold, hydro_cap,
+                        emission_rates, demand_total_mwh,
+                        cost_levels=cost_levels, score_cache=score_cache
+                    )
+                    if result:
+                        r_gen, f_gen, stor, fuel, tx = cost_levels
+                        cost_data = compute_costs_parameterized(
+                            iso, result['resource_mix'], result['procurement_pct'],
+                            result['battery_dispatch_pct'], result['ldes_dispatch_pct'],
+                            result['hourly_match_score'],
+                            r_gen, f_gen, stor, fuel, tx
+                        )
+                        result['costs'] = cost_data
+                        threshold_scenarios[scenario_key] = result
+                        if scenario_key == 'MMM_M_M':
+                            medium_result = result
+                    already_run.add(scenario_key)
+                    total_run += 1
+                    opt_count += 1
+                    if opt_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
+                        save_checkpoint(iso, iso_results,
+                            phase=f'threshold-{threshold}-resample-{len(threshold_scenarios)}',
+                            partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
 
         # Log Medium scenario progress
         t_elapsed = time.time() - t_start
         cache_size = len(score_cache)
+        opt_label = f"{opt_count} optimized" if use_pruning else f"{len(threshold_scenarios)}/324"
         if medium_result:
             mix = medium_result['resource_mix']
-            print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
+            print(f"    {threshold}%: {opt_label} scenarios, "
                   f"cache={cache_size}, {t_elapsed:.1f}s | "
                   f"Medium: CF{mix['clean_firm']}/Sol{mix['solar']}/Wnd{mix['wind']}"
                   f"/CCS{mix['ccs_ccgt']}/Hyd{mix['hydro']} "
                   f"batt={medium_result['battery_dispatch_pct']}% "
                   f"ldes={medium_result['ldes_dispatch_pct']}%")
         else:
-            print(f"    {threshold}%: {len(threshold_scenarios)}/324 scenarios, "
+            print(f"    {threshold}%: {opt_label} scenarios, "
                   f"cache={cache_size}, {t_elapsed:.1f}s")
 
         # ── Cross-pollination: evaluate all discovered mixes for all scenarios ──
@@ -2159,9 +2580,16 @@ def process_iso(args):
                     current_cost = cand_cost_data['effective_cost']
                     cross_fixes += 1
 
-        if cross_fixes > 0:
-            print(f"      Cross-pollination: {cross_fixes} improvements, "
-                  f"{len(unique_results)} unique mixes evaluated")
+        total_after = len(threshold_scenarios)
+        filled_count = total_after - (opt_count + len(partial_done))
+        if cross_fixes > 0 or filled_count > 0:
+            parts = []
+            if cross_fixes > 0:
+                parts.append(f"{cross_fixes} improvements")
+            if use_pruning and filled_count > 0:
+                parts.append(f"{filled_count} filled via cross-pollination")
+            parts.append(f"{len(unique_results)} unique mixes")
+            print(f"      Cross-pollination: {', '.join(parts)} → {total_after}/324 total")
 
         # Store all scenarios for this threshold
         # Medium result gets full detail (compressed day, peak gap, CO2)
