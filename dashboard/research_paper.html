@@ -1353,6 +1353,64 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         a plausible uncertainty band that procurement planners should account for in their financial modeling.
     </p>
 
+    <!-- ========== 5.8 EAC SCARCITY & SUPPLY STACK ========== -->
+    <h3 id="scarcity-results">5.8 EAC Scarcity and Supply Stack Dynamics</h3>
+
+    <p>
+        Beyond the cost-optimized resource mix, we model the supply-side constraints that determine whether
+        corporate hourly matching is feasible at scale. Our scarcity analysis (32,760 scenarios across 5 ISOs,
+        26 years, 3 demand growth trajectories, 12 participation rates, and 7 match targets) reveals that
+        <strong>regional supply stack competition between state RPS mandates and voluntary corporate procurement
+        is the binding constraint on scalability</strong>&mdash;not technology cost alone.
+    </p>
+
+    <p>
+        The model separates clean supply into three pools: (1) state-supported supply (SSS)&mdash;nuclear ZEC/CMC
+        programs, public hydro, rate-base assets, and RPS-mandated renewables&mdash;which is unavailable for voluntary
+        procurement; (2) existing merchant clean generation, available at near-wholesale prices ($2&ndash;12/MWh REC
+        premium depending on utilization); and (3) new-build capacity on the regional supply stack, priced at LCOE.
+        Both RPS compliance build and voluntary corporate demand compete for finite buildable capacity (tier 3),
+        creating the scarcity dynamics described by Xu et al. (2024) <a href="#ref-25" class="cite">[25]</a>.
+    </p>
+
+    <p>
+        <strong>Key finding: PJM is the most supply-constrained region.</strong> By 2030, state RPS mandates
+        consume 118.8 TWh of PJM&rsquo;s 125 TWh buildable clean capacity, leaving only 6.2 TWh of new-build
+        headroom for voluntary corporate procurement. Combined with 211.9 TWh of existing merchant supply, the
+        total corporate-available pool is 218.1 TWh. At 50% C&amp;I participation with 90% hourly matching,
+        corporate demand reaches 177 TWh (ratio 0.81)&mdash;&ldquo;Scarce&rdquo; classification with a $9/MWh clean
+        premium. At 100% matching, premiums escalate to $79/MWh at 50% participation and exceed $700/MWh at full
+        participation, confirming the &ldquo;last few percent&rdquo; cost escalation documented by
+        Denholm et al. (2021) <a href="#ref-18" class="cite">[18]</a>.
+    </p>
+
+    <p>
+        <strong>ERCOT presents the opposite scenario.</strong> Minimal RPS mandates (113.6 TWh) against 250 TWh
+        of buildable capacity leave 136.4 TWh of new-build headroom for corporate procurement, plus 272.3 TWh
+        of existing merchant supply. ERCOT maintains &ldquo;Adequate&rdquo; scarcity classification through 75%
+        participation at 90% matching ($12/MWh premium). The deregulated market structure, which minimizes
+        state-mandated capacity claims on the supply stack, provides a structural advantage for voluntary
+        procurement&mdash;consistent with Gillenwater&rsquo;s (2008) framework predicting that scarcity emerges
+        only when combined compliance + voluntary demand creates genuine tightness
+        <a href="#ref-26" class="cite">[26]</a>.
+    </p>
+
+    <p>
+        NYISO faces a distinct challenge: aggressive CLCPA targets (62% by 2030) consume all 35 TWh of buildable
+        capacity for RPS compliance, leaving zero new-build headroom. Corporate procurement relies entirely on the
+        14.8 TWh existing merchant pool. At 100% matching, scarcity begins at 45% participation. NEISO and CAISO
+        fall between these extremes, with CAISO benefiting from abundant existing merchant solar and NEISO
+        constrained by limited buildable capacity in New England.
+    </p>
+
+    <p>
+        These results create a policy paradox: <strong>the regions with the most aggressive clean energy mandates
+        are the ones where voluntary corporate hourly matching is most expensive</strong>, because state mandates
+        consume the cheapest supply stack tiers before corporate buyers enter the market. This finding has direct
+        implications for corporate procurement strategy&mdash;regional selection, match target ambition, and
+        timing all interact with the scarcity landscape to determine achievable cost outcomes.
+    </p>
+
     <!-- ========== 6. DISCUSSION ========== -->
     <h2 id="discussion">6. Discussion</h2>
 
