@@ -680,24 +680,9 @@ body {
 </head>
 <body>
 
-<!-- TOP NAVIGATION -->
-<nav class="top-nav">
-    <span class="nav-brand">The 8,760 Problem</span>
-    <button class="nav-hamburger" onclick="document.getElementById('navLinks').classList.toggle('nav-open')">
-        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="top-nav-inner" id="navLinks">
-        <a href="index.html">Home</a>
-        <a href="dashboard.html">Cost Optimizer</a>
-        <a href="abatement_dashboard.html">Abatement Dashboard</a>
-        <a href="region_deepdive.html">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
-        <a href="eac_scarcity.html">EAC Scarcity</a>
-        <a href="research_paper.html">Methodology &amp; Paper</a>
-        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
-        <a href="about.html" class="nav-active">About</a>
-    </div>
-</nav>
+<!-- TOP NAVIGATION (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
 
 <!-- HEADER / BANNER -->
 <header class="header">
