@@ -111,15 +111,32 @@
         <!-- Transmission -->
         <div class="card" style="margin-bottom: 24px;">
             <h3>3. Transmission & Interconnection: The #1 Bottleneck</h3>
-            <p style="font-size: 0.92rem;">The single largest physical constraint on clean energy deployment is the transmission grid. Key facts:<sup class="ref">14</sup></p>
-            <ul style="margin-left: 16px; font-size: 0.9rem; color: var(--text-secondary);">
-                <li><strong>2,600 GW</strong> of generation capacity sits in interconnection queues nationwide (as of 2024) — more than double total US installed capacity.</li>
-                <li><strong>5+ years</strong> average time from interconnection request to commercial operation.</li>
-                <li><strong>Only ~20%</strong> of projects that enter the queue actually reach operation.</li>
-                <li>FERC Order 1920 (2024) requires proactive long-range transmission planning — a step forward but implementation will take years.</li>
-            </ul>
+            <p style="font-size: 0.92rem;">The single largest physical constraint on clean energy deployment is the transmission grid. The LBNL &ldquo;Queued Up&rdquo; 2025 edition paints a stark picture:<sup class="ref">14</sup></p>
+            <div class="stat-row" style="margin-top: 16px;">
+                <div class="stat-tile">
+                    <div class="stat-value danger" style="font-size: 1.4rem;">2,300 GW</div>
+                    <div class="stat-label">In Interconnection Queue</div>
+                    <div class="stat-sublabel">10,300 projects waiting (end 2024)</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value danger" style="font-size: 1.4rem;">77%</div>
+                    <div class="stat-label">Withdrawal Rate</div>
+                    <div class="stat-sublabel">Projects submitted 2000&ndash;2019</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value danger" style="font-size: 1.4rem;">322 mi</div>
+                    <div class="stat-label">HV Lines Built (2024)</div>
+                    <div class="stat-sublabel">vs ~5,000 mi/yr needed</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.4rem;">$240/kW</div>
+                    <div class="stat-label">Avg. Interconnection Cost</div>
+                    <div class="stat-sublabel">PJM completed projects</div>
+                </div>
+            </div>
+            <p style="font-size: 0.88rem; margin-top: 12px; color: var(--text-tertiary);">Median time from request to operation has <strong>doubled from &lt;2 years to &gt;4 years</strong> over the past decade. Only 13% of projects submitted 2000&ndash;2019 reached commercial operation. Gas capacity in queues is up 72% year-over-year while solar, storage, and wind are declining.<sup class="ref">14</sup></p>
             <div class="callout warning" style="margin-top: 12px;">
-                <p><strong>Implication for generators:</strong> Even generators with ambitious clean energy plans face multi-year delays to interconnect new projects. Utilities with existing transmission rights (like vertically integrated utilities in their own service territories) have a structural advantage.</p>
+                <p><strong>Implication for generators:</strong> Even generators with ambitious clean energy plans face multi-year delays to interconnect new projects. Utilities with existing transmission rights (like vertically integrated utilities in their own service territories) have a structural advantage. FERC Order 1920 (2024) requires proactive long-range transmission planning but implementation will take years.</p>
             </div>
         </div>
 
@@ -164,7 +181,7 @@
             </div>
             <div class="card" style="border-left: 4px solid var(--red-accent);">
                 <h4>Reliability Mandates</h4>
-                <p style="font-size: 0.88rem;">NERC assessments identify growing resource adequacy risks as dispatchable fossil plants retire faster than clean firm replacement is built. Winter reliability events (Winter Storm Uri 2021, Winter Storm Elliott 2022) reinforce the political case for retaining gas plants. Grid operators increasingly impose minimum capacity requirements.<sup class="ref">21</sup></p>
+                <p style="font-size: 0.88rem;">NERC&rsquo;s 2025 Long-Term Reliability Assessment finds <strong>13 of 23 assessment areas</strong> face elevated or high resource adequacy risk over 5 years, including MISO, PJM, and ERCOT. Summer peak demand could surge by <strong>224 GW</strong> (69% more than prior projection). Meanwhile, <strong>122,000 MW of dispatchable generation</strong> is retiring over the next decade. Winter Storm Uri (2021) and Elliott (2022) reinforce the political case for retaining gas plants.<sup class="ref">21</sup></p>
             </div>
             <div class="card" style="border-left: 4px solid var(--red-accent);">
                 <h4>Load Growth</h4>
@@ -183,6 +200,32 @@
                 <p style="font-size: 0.88rem;">Solar panel manufacturing is concentrated in China (with tariff and trade policy implications). Transformer and grid equipment lead times are 2&ndash;4 years. Skilled workforce for clean energy construction is constrained. These practical bottlenecks slow deployment even when economics are favorable.</p>
             </div>
         </div>
+
+        <div class="callout warning" style="margin-top: 24px;">
+            <p><strong>The planning regression (RMI Q4 2025):</strong> Utility integrated resource plans are moving in the <strong>wrong direction</strong>. Planned wind+solar by 2035 has <em>declined</em> from 280 GW (end 2023) to 226 GW (end 2025). Planned new gas has <em>risen</em> from 60 GW to 100 GW. The projected 2035 CO₂ reduction (vs 2005) has deteriorated from &minus;60% to <strong>&minus;45%</strong>&mdash;a 15 percentage-point regression in just two years. Battery storage is the sole bright spot: 68 GW planned, up 7 GW year-over-year.</p>
+        </div>
+
+        <div style="overflow-x: auto; margin-top: 16px;">
+            <table class="company-table" style="max-width: 700px; margin: 0 auto;">
+                <thead>
+                    <tr>
+                        <th>Metric (by 2035)</th>
+                        <th>End 2023</th>
+                        <th>End 2024</th>
+                        <th>End 2025</th>
+                        <th>Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Wind + Solar</strong></td><td>~280 GW</td><td>~244 GW</td><td>226 GW</td><td style="color:#DC2626;">&darr; Declining</td></tr>
+                    <tr><td><strong>New Gas</strong></td><td>~60 GW</td><td>~74 GW</td><td>100 GW</td><td style="color:#DC2626;">&uarr; Rising</td></tr>
+                    <tr><td><strong>Coal Retirements</strong></td><td>~68 GW</td><td>~68 GW</td><td>73 GW</td><td style="color:var(--text-muted);">&asymp; Slight increase</td></tr>
+                    <tr><td><strong>Battery Storage</strong></td><td>&mdash;</td><td>~61 GW</td><td>68 GW</td><td style="color:#22C55E;">&uarr; Growing</td></tr>
+                    <tr><td><strong>CO₂ Reduction vs 2005</strong></td><td>&minus;60%</td><td>&minus;56%</td><td>&minus;45%</td><td style="color:#DC2626;">&darr; Deteriorating</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="citation" style="margin-top: 8px;">Source: Rocky Mountain Institute, State of Utility Planning, Q4 2025.</p>
     </section>
 
     <div class="energy-divider"></div>
