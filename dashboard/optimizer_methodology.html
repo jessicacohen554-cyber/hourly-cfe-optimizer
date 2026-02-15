@@ -824,6 +824,16 @@
         and are excluded from peak gap analysis. Demand values below 100 MW are interpolated from nearest
         valid neighbors to prevent spurious results.
     </p>
+    <p>
+        <strong>Outlier detection:</strong> Demand profiles are validated at load time using hour-of-day
+        statistical screening. For each hour-of-day (0&ndash;23), if any single day's value exceeds 100&times;
+        the median for that hour across the year, the entire year is excluded from the multi-year average.
+        This catches EIA data entry errors (e.g., unit conversion errors that inflate individual hours by
+        orders of magnitude). <strong>PJM 2021 was excluded</strong> due to a corrupt observation on October 19,
+        2021 where hours 03:00&ndash;05:00 UTC contained demand values approximately 20,000&times; normal levels.
+        PJM demand shape is averaged over 2022&ndash;2025 (4 years). All other ISO-year combinations pass
+        validation. Raw data is preserved unmodified for auditability.
+    </p>
 
     <!-- ======== SECTION 4: SUPPLY PROFILES ======== -->
     <h2 id="supply-profiles">4. Supply / Generation Profiles</h2>
@@ -1636,7 +1646,7 @@
         <li><strong>Perfect foresight:</strong> The optimizer has perfect knowledge of hourly generation and
             demand profiles for the full year. Real procurement decisions face significant weather uncertainty,
             demand forecast error, and generator outage risk.</li>
-        <li><strong>Single weather year:</strong> Generation profiles are based on 2025 EIA-930 data.
+        <li><strong>Multi-year weather averaging:</strong> Generation and demand profiles are averaged over 2021&ndash;2025 EIA-930 data (with automatic outlier exclusion; see §3.3). While this smooths inter-annual variability, extreme weather events in any single year are diluted rather than captured as scenario variants.
             Year-to-year variability in solar irradiance, wind patterns, and hydro availability could shift
             results by several percentage points. Multi-year analysis would capture extreme weather events
             (e.g., Texas Winter Storm Uri, California heat domes).</li>
