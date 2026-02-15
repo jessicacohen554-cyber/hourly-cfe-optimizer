@@ -554,11 +554,11 @@
             p { font-size: 0.85rem; }
             .formula-box {
                 padding: 12px 10px;
-                font-size: 0.72rem;
+                font-size: 0.82rem;
                 line-height: 1.7;
             }
             .formula-box .label {
-                font-size: 0.7rem;
+                font-size: 0.78rem;
             }
             .note-box {
                 padding: 12px 12px;
@@ -566,11 +566,11 @@
             }
             th {
                 padding: 8px 6px;
-                font-size: 0.72rem;
+                font-size: 0.78rem;
             }
             td {
                 padding: 6px 6px;
-                font-size: 0.78rem;
+                font-size: 0.82rem;
             }
             .back-link {
                 font-size: 0.85rem;
@@ -582,6 +582,13 @@
             }
         }
 
+        /* 375px breakpoint (mid-range phones) */
+        @media (max-width: 375px) {
+            .header { padding: 20px 10px 16px; }
+            .header h1 { font-size: 1.15rem; }
+            .content { padding: 16px 8px 40px; }
+        }
+
         /* Touch-friendly */
         @media (hover: none) and (pointer: coarse) {
             .back-link {
@@ -590,8 +597,10 @@
                 align-items: center;
             }
             .toc a {
-                padding: 4px 0;
-                display: inline-block;
+                padding: 8px 4px;
+                display: flex;
+                align-items: center;
+                min-height: 44px;
             }
         }
 
@@ -622,7 +631,7 @@
         <a href="research_paper.html" class="nav-active">Methodology &amp; Paper</a>
     </div>
 </nav>
-<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <header class="header">
     <h1>The 8,760 Problem</h1>
