@@ -1,0 +1,578 @@
+#!/usr/bin/env python3
+"""
+EAC Scarcity Analysis — Compute SSS baselines, corporate demand scenarios,
+scarcity classifications, and clean premiums per ISO.
+
+Saves results to dashboard/eac_scarcity_results.json with incremental
+checkpointing after each ISO×year combo to avoid losing work.
+
+Based on SPEC.md SSS framework (Feb 15, 2026).
+"""
+
+import json
+import os
+import sys
+import time
+import math
+
+# ── Paths ──────────────────────────────────────────────────────────────────
+RESULTS_PATH = "dashboard/overprocure_results.json"
+OUTPUT_PATH = "dashboard/eac_scarcity_results.json"
+CHECKPOINT_PATH = "data/checkpoints/eac_scarcity_checkpoint.json"
+
+# ── SSS Data from SPEC.md (2025 baseline) ──────────────────────────────────
+# Midpoints of SPEC.md ranges
+SSS_2025 = {
+    "CAISO": {
+        "total_clean_twh": 172,
+        "sss_twh": 147.5,       # midpoint of 140-155
+        "non_sss_twh": 24.5,    # midpoint of 17-32
+        "sss_pct": 0.85,
+        "notes": "High RPS (60% by 2030), Diablo Canyon extension, heavy state mandates"
+    },
+    "ERCOT": {
+        "total_clean_twh": 205,
+        "sss_twh": 22.5,        # midpoint of 20-25
+        "non_sss_twh": 185,     # midpoint of 180-190
+        "sss_pct": 0.12,
+        "notes": "Minimal RPS, mostly merchant renewables, deregulated market"
+    },
+    "PJM": {
+        "total_clean_twh": 280,
+        "sss_twh": 165,         # midpoint of 150-180
+        "non_sss_twh": 115,     # midpoint of 100-130
+        "sss_pct": 0.57,
+        "notes": "Mixed: state RPSs + merchant nuclear (post-NJ ZEC expiry)"
+    },
+    "NYISO": {
+        "total_clean_twh": 60,
+        "sss_twh": 52,          # midpoint of 49-55
+        "non_sss_twh": 8,       # midpoint of 5-11
+        "sss_pct": 0.85,
+        "notes": "NY ZEC extended through 2049, CLCPA 70% by 2030"
+    },
+    "NEISO": {
+        "total_clean_twh": 50,
+        "sss_twh": 27.5,        # midpoint of 25-30
+        "non_sss_twh": 17.5,    # midpoint of 15-20
+        "sss_pct": 0.55,
+        "notes": "CT Millstone PPA, MA/CT CES, some merchant hydro/wind"
+    }
+}
+
+# ── Demand Growth Rates (from dashboard.html) ─────────────────────────────
+DEMAND_GROWTH_RATES = {
+    "CAISO":  {"Low": 0.014, "Medium": 0.019, "High": 0.025},
+    "ERCOT":  {"Low": 0.020, "Medium": 0.035, "High": 0.055},
+    "PJM":    {"Low": 0.015, "Medium": 0.024, "High": 0.036},
+    "NYISO":  {"Low": 0.012, "Medium": 0.020, "High": 0.032},
+    "NEISO":  {"Low": 0.008, "Medium": 0.014, "High": 0.022},
+}
+
+# ── Clean Supply Growth Rates (new build from RPS mandates + market) ──────
+# Annual TWh growth of total clean supply (conservative estimates from
+# state RPS trajectories, interconnection queues, and IRA incentives)
+CLEAN_SUPPLY_GROWTH = {
+    "CAISO":  {"Low": 0.025, "Medium": 0.035, "High": 0.050},
+    "ERCOT":  {"Low": 0.040, "Medium": 0.060, "High": 0.085},
+    "PJM":    {"Low": 0.020, "Medium": 0.030, "High": 0.045},
+    "NYISO":  {"Low": 0.025, "Medium": 0.040, "High": 0.060},
+    "NEISO":  {"Low": 0.015, "Medium": 0.025, "High": 0.040},
+}
+
+# ── SSS Policy Evolution (fraction of NEW supply that becomes SSS) ────────
+# As new clean builds come online, what fraction is SSS vs merchant?
+# Declining over time as RPS mandates saturate and merchant share grows
+SSS_NEW_BUILD_FRACTION = {
+    "CAISO":  {"2025": 0.80, "2030": 0.70, "2035": 0.60, "2040": 0.50, "2045": 0.45, "2050": 0.40},
+    "ERCOT":  {"2025": 0.10, "2030": 0.10, "2035": 0.10, "2040": 0.10, "2045": 0.10, "2050": 0.10},
+    "PJM":    {"2025": 0.55, "2030": 0.50, "2035": 0.45, "2040": 0.40, "2045": 0.35, "2050": 0.30},
+    "NYISO":  {"2025": 0.80, "2030": 0.75, "2035": 0.65, "2040": 0.55, "2045": 0.50, "2050": 0.45},
+    "NEISO":  {"2025": 0.55, "2030": 0.50, "2035": 0.45, "2040": 0.40, "2045": 0.35, "2050": 0.30},
+}
+
+# ── Policy Expirations (SSS TWh that shifts to non-SSS) ──────────────────
+# From SPEC.md: IL ZEC/CMC expires mid-2027, NJ ZEC expired June 2025
+SSS_EXPIRATIONS = {
+    "PJM": [
+        {"year": 2027, "twh_shift": 94, "note": "IL ZEC/CMC expiry — Dresden, Braidwood, Byron, LaSalle, Clinton, Quad Cities"},
+    ],
+    # NJ ZEC already expired (reflected in 2025 baseline)
+    # NY ZEC extended through 2049
+    "CAISO": [
+        {"year": 2030, "twh_shift": 17, "note": "Diablo Canyon extension uncertain post-2030"},
+    ],
+}
+
+# ── Corporate PPA Consumption (TWh already contracted, reducing non-SSS) ──
+# Major data center PPAs already consuming non-SSS supply
+EXISTING_CORPORATE_PPAS = {
+    "PJM":   {"twh": 25, "note": "Amazon-Susquehanna, Meta-Vistra, Microsoft-Crane + others"},
+    "ERCOT": {"twh": 15, "note": "Large corporate solar/wind PPAs in TX"},
+    "CAISO": {"twh": 5,  "note": "Tech company PPAs in CA"},
+    "NYISO": {"twh": 2,  "note": "Limited corporate PPAs"},
+    "NEISO": {"twh": 3,  "note": "Limited corporate PPAs"},
+}
+
+# ── Scenario Parameters ───────────────────────────────────────────────────
+PARTICIPATION_RATES = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100]
+MATCH_TARGETS = [75, 80, 85, 90, 95, 99, 100]
+TIME_HORIZONS = [2025, 2030, 2035, 2040, 2045, 2050]
+GROWTH_LEVELS = ["Low", "Medium", "High"]
+ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
+
+# ── Clean Premium Benchmarks ($/MWh above wholesale) ──────────────────────
+# From optimizer results: incremental cost at various match thresholds
+CLEAN_PREMIUM_ESCALATION = {
+    # How much clean premium increases per 1% tightening of match target
+    # Derived from optimizer cost curves — nonlinear, accelerating above 90%
+    "below_90": 0.5,    # $/MWh per 1% tightening
+    "90_to_95": 1.5,
+    "95_to_99": 4.0,
+    "99_to_100": 15.0,
+}
+
+# ── Scarcity Classification Thresholds ────────────────────────────────────
+SCARCITY_BANDS = {
+    "abundant":   {"max_ratio": 0.3,  "label": "Abundant",   "color": "#22c55e"},
+    "adequate":   {"max_ratio": 0.6,  "label": "Adequate",   "color": "#84cc16"},
+    "tightening": {"max_ratio": 0.8,  "label": "Tightening", "color": "#eab308"},
+    "scarce":     {"max_ratio": 0.95, "label": "Scarce",     "color": "#f97316"},
+    "critical":   {"max_ratio": 999,  "label": "Critical",   "color": "#ef4444"},
+}
+
+
+def classify_scarcity(demand_ratio):
+    """Classify scarcity based on demand/supply ratio."""
+    for band_key, band in SCARCITY_BANDS.items():
+        if demand_ratio <= band["max_ratio"]:
+            return band_key, band["label"], band["color"]
+    return "critical", "Critical", "#ef4444"
+
+
+def get_sss_new_fraction(iso, year):
+    """Interpolate SSS new-build fraction for any year."""
+    fractions = SSS_NEW_BUILD_FRACTION[iso]
+    years = sorted(int(y) for y in fractions.keys())
+    if year <= years[0]:
+        return fractions[str(years[0])]
+    if year >= years[-1]:
+        return fractions[str(years[-1])]
+    for i in range(len(years) - 1):
+        if years[i] <= year <= years[i + 1]:
+            t = (year - years[i]) / (years[i + 1] - years[i])
+            v0 = fractions[str(years[i])]
+            v1 = fractions[str(years[i + 1])]
+            return v0 + t * (v1 - v0)
+    return fractions[str(years[-1])]
+
+
+def compute_clean_premium(match_target, scarcity_ratio):
+    """Estimate clean premium ($/MWh) based on match target and scarcity."""
+    # Base premium from match target
+    base = 0
+    if match_target > 75:
+        below_90_pct = min(match_target, 90) - 75
+        base += below_90_pct * CLEAN_PREMIUM_ESCALATION["below_90"]
+    if match_target > 90:
+        pct_90_95 = min(match_target, 95) - 90
+        base += pct_90_95 * CLEAN_PREMIUM_ESCALATION["90_to_95"]
+    if match_target > 95:
+        pct_95_99 = min(match_target, 99) - 95
+        base += pct_95_99 * CLEAN_PREMIUM_ESCALATION["95_to_99"]
+    if match_target > 99:
+        pct_99_100 = match_target - 99
+        base += pct_99_100 * CLEAN_PREMIUM_ESCALATION["99_to_100"]
+
+    # Scarcity multiplier: as supply tightens, premiums escalate
+    if scarcity_ratio < 0.3:
+        multiplier = 1.0
+    elif scarcity_ratio < 0.6:
+        multiplier = 1.0 + (scarcity_ratio - 0.3) * 1.0  # up to 1.3×
+    elif scarcity_ratio < 0.8:
+        multiplier = 1.3 + (scarcity_ratio - 0.6) * 2.5  # up to 1.8×
+    elif scarcity_ratio < 0.95:
+        multiplier = 1.8 + (scarcity_ratio - 0.8) * 8.0  # up to 3.0×
+    else:
+        multiplier = 3.0 + (scarcity_ratio - 0.95) * 40.0  # exponential
+
+    return round(base * multiplier, 2)
+
+
+def evolve_supply(iso, year, growth_level):
+    """Project clean supply (total, SSS, non-SSS) at a future year."""
+    base = SSS_2025[iso]
+    years_out = year - 2025
+
+    if years_out == 0:
+        total = base["total_clean_twh"]
+        sss = base["sss_twh"]
+        non_sss = base["non_sss_twh"]
+    else:
+        # Grow total clean supply
+        growth_rate = CLEAN_SUPPLY_GROWTH[iso][growth_level]
+        total = base["total_clean_twh"] * (1 + growth_rate) ** years_out
+
+        # New supply added
+        new_supply = total - base["total_clean_twh"]
+
+        # Fraction of new supply that's SSS
+        avg_sss_frac = get_sss_new_fraction(iso, year)
+        new_sss = new_supply * avg_sss_frac
+        new_non_sss = new_supply * (1 - avg_sss_frac)
+
+        sss = base["sss_twh"] + new_sss
+        non_sss = base["non_sss_twh"] + new_non_sss
+
+        # Apply policy expirations
+        if iso in SSS_EXPIRATIONS:
+            for exp in SSS_EXPIRATIONS[iso]:
+                if year >= exp["year"]:
+                    sss -= exp["twh_shift"]
+                    non_sss += exp["twh_shift"]
+
+    # Subtract existing corporate PPAs from available non-SSS
+    existing_ppas = EXISTING_CORPORATE_PPAS.get(iso, {}).get("twh", 0)
+    available_non_sss = max(0, non_sss - existing_ppas)
+
+    return {
+        "total_clean_twh": round(total, 1),
+        "sss_twh": round(max(0, sss), 1),
+        "non_sss_twh": round(non_sss, 1),
+        "available_non_sss_twh": round(available_non_sss, 1),
+        "existing_ppas_twh": existing_ppas,
+    }
+
+
+def load_demand_data():
+    """Load ISO demand from optimizer results."""
+    with open(RESULTS_PATH) as f:
+        data = json.load(f)
+    demands = {}
+    for iso, iso_data in data["results"].items():
+        demands[iso] = iso_data["annual_demand_mwh"] / 1e6  # TWh
+    return demands
+
+
+def load_checkpoint():
+    """Load checkpoint if it exists."""
+    if os.path.exists(CHECKPOINT_PATH):
+        with open(CHECKPOINT_PATH) as f:
+            return json.load(f)
+    return None
+
+
+def save_checkpoint(completed, results):
+    """Save checkpoint with completed combos and partial results."""
+    os.makedirs(os.path.dirname(CHECKPOINT_PATH), exist_ok=True)
+    cp = {
+        "completed": completed,
+        "results": results,
+        "timestamp": time.time(),
+    }
+    # Atomic write
+    tmp = CHECKPOINT_PATH + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(cp, f)
+    os.replace(tmp, CHECKPOINT_PATH)
+
+
+def save_final_results(results):
+    """Save final results JSON."""
+    tmp = OUTPUT_PATH + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(results, f, indent=2)
+    os.replace(tmp, OUTPUT_PATH)
+    print(f"Saved final results to {OUTPUT_PATH}")
+
+
+def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
+    """Find the participation rate at which each match target hits scarcity."""
+    inflections = {}
+    available = supply_data["available_non_sss_twh"]
+
+    for match_target in MATCH_TARGETS:
+        # Effective EAC demand multiplier from match target
+        # Higher match targets require more procurement per MWh of load
+        # because you need to cover more hours (including expensive ones)
+        if match_target <= 80:
+            procurement_mult = 1.0
+        elif match_target <= 90:
+            procurement_mult = 1.0 + (match_target - 80) * 0.01
+        elif match_target <= 95:
+            procurement_mult = 1.1 + (match_target - 90) * 0.03
+        elif match_target <= 99:
+            procurement_mult = 1.25 + (match_target - 95) * 0.05
+        else:
+            procurement_mult = 1.45 + (match_target - 99) * 0.15
+
+        # Find participation rate where demand exceeds available supply
+        inflection_pct = None
+        for pct in range(1, 101):
+            corp_demand = demand_twh * (pct / 100) * procurement_mult
+            if corp_demand > available:
+                inflection_pct = pct
+                break
+
+        inflections[str(match_target)] = {
+            "inflection_participation_pct": inflection_pct,
+            "procurement_multiplier": round(procurement_mult, 3),
+            "max_supportable_twh": round(available / procurement_mult, 1) if procurement_mult > 0 else 0,
+        }
+
+    return inflections
+
+
+def main():
+    print("=" * 60)
+    print("EAC Scarcity Analysis — Computing...")
+    print("=" * 60)
+
+    # Load demand data
+    demands = load_demand_data()
+    print(f"Loaded demand data for {len(demands)} ISOs")
+
+    # Check for checkpoint
+    checkpoint = load_checkpoint()
+    completed_keys = set()
+    results = {
+        "metadata": {
+            "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "description": "EAC scarcity analysis: SSS baselines, corporate demand scenarios, scarcity classifications, clean premiums",
+            "framework": "SSS = mandatory/non-bypassable procurement (RPS/CES, public ownership, rate-base, state nuclear programs)",
+            "parameters": {
+                "participation_rates_pct": PARTICIPATION_RATES,
+                "match_targets_pct": MATCH_TARGETS,
+                "time_horizons": TIME_HORIZONS,
+                "growth_levels": GROWTH_LEVELS,
+                "isos": ISOS,
+            },
+        },
+        "sss_2025_baseline": SSS_2025,
+        "demand_growth_rates": DEMAND_GROWTH_RATES,
+        "scarcity_bands": SCARCITY_BANDS,
+        "clean_premium_benchmarks": {
+            "social_cost_carbon_epa": 51,
+            "social_cost_carbon_rennert": 185,
+            "eu_ets_range": [60, 100],
+        },
+        "supply_projections": {},
+        "scenarios": {},
+        "inflection_points": {},
+        "national_summary": {},
+    }
+
+    if checkpoint:
+        completed_keys = set(checkpoint.get("completed", []))
+        # Restore partial results
+        prev = checkpoint.get("results", {})
+        for section in ["supply_projections", "scenarios", "inflection_points", "national_summary"]:
+            if section in prev:
+                results[section] = prev[section]
+        print(f"Resumed from checkpoint: {len(completed_keys)} combos already done")
+
+    # ── Phase 1: Supply projections ───────────────────────────────────────
+    total_combos = len(ISOS) * len(TIME_HORIZONS) * len(GROWTH_LEVELS)
+    done = 0
+
+    for iso in ISOS:
+        if iso not in results["supply_projections"]:
+            results["supply_projections"][iso] = {}
+
+        for year in TIME_HORIZONS:
+            year_key = str(year)
+            if year_key not in results["supply_projections"][iso]:
+                results["supply_projections"][iso][year_key] = {}
+
+            for growth in GROWTH_LEVELS:
+                combo_key = f"supply_{iso}_{year}_{growth}"
+                if combo_key in completed_keys:
+                    done += 1
+                    continue
+
+                supply = evolve_supply(iso, year, growth)
+                results["supply_projections"][iso][year_key][growth] = supply
+                completed_keys.add(combo_key)
+                done += 1
+
+            # Checkpoint after each ISO×year
+            save_checkpoint(list(completed_keys), results)
+
+    print(f"Phase 1 complete: {done} supply projections")
+
+    # ── Phase 2: Scenario matrix ──────────────────────────────────────────
+    scenario_count = 0
+    total_scenarios = len(ISOS) * len(TIME_HORIZONS) * len(GROWTH_LEVELS) * len(PARTICIPATION_RATES) * len(MATCH_TARGETS)
+    print(f"Phase 2: Computing {total_scenarios} scenarios...")
+
+    for iso in ISOS:
+        demand_twh = demands[iso]
+        if iso not in results["scenarios"]:
+            results["scenarios"][iso] = {}
+
+        for year in TIME_HORIZONS:
+            year_key = str(year)
+            if year_key not in results["scenarios"][iso]:
+                results["scenarios"][iso][year_key] = {}
+
+            # Grow demand
+            for growth in GROWTH_LEVELS:
+                growth_rate = DEMAND_GROWTH_RATES[iso][growth]
+                projected_demand = demand_twh * (1 + growth_rate) ** (year - 2025)
+
+                if growth not in results["scenarios"][iso][year_key]:
+                    results["scenarios"][iso][year_key][growth] = []
+
+                combo_key = f"scenario_{iso}_{year}_{growth}"
+                if combo_key in completed_keys:
+                    scenario_count += len(PARTICIPATION_RATES) * len(MATCH_TARGETS)
+                    continue
+
+                supply = results["supply_projections"][iso][year_key][growth]
+                available = supply["available_non_sss_twh"]
+
+                scenarios_for_combo = []
+
+                for participation in PARTICIPATION_RATES:
+                    for match_target in MATCH_TARGETS:
+                        # Procurement multiplier for match target
+                        if match_target <= 80:
+                            mult = 1.0
+                        elif match_target <= 90:
+                            mult = 1.0 + (match_target - 80) * 0.01
+                        elif match_target <= 95:
+                            mult = 1.1 + (match_target - 90) * 0.03
+                        elif match_target <= 99:
+                            mult = 1.25 + (match_target - 95) * 0.05
+                        else:
+                            mult = 1.45 + (match_target - 99) * 0.15
+
+                        corp_eac_demand = projected_demand * (participation / 100) * mult
+                        demand_ratio = corp_eac_demand / available if available > 0 else 999
+
+                        band_key, label, color = classify_scarcity(demand_ratio)
+                        premium = compute_clean_premium(match_target, min(demand_ratio, 2.0))
+
+                        scenarios_for_combo.append({
+                            "participation_pct": participation,
+                            "match_target_pct": match_target,
+                            "projected_demand_twh": round(projected_demand, 1),
+                            "corp_eac_demand_twh": round(corp_eac_demand, 1),
+                            "available_supply_twh": round(available, 1),
+                            "demand_supply_ratio": round(demand_ratio, 3),
+                            "scarcity_class": band_key,
+                            "scarcity_label": label,
+                            "clean_premium_per_mwh": premium,
+                        })
+                        scenario_count += 1
+
+                results["scenarios"][iso][year_key][growth] = scenarios_for_combo
+                completed_keys.add(combo_key)
+
+            # Checkpoint after each ISO×year
+            save_checkpoint(list(completed_keys), results)
+            print(f"  {iso} {year}: {scenario_count}/{total_scenarios} scenarios", flush=True)
+
+    print(f"Phase 2 complete: {scenario_count} scenarios")
+
+    # ── Phase 3: Inflection points ────────────────────────────────────────
+    print("Phase 3: Computing inflection points...")
+    for iso in ISOS:
+        if iso not in results["inflection_points"]:
+            results["inflection_points"][iso] = {}
+
+        for year in TIME_HORIZONS:
+            year_key = str(year)
+            if year_key not in results["inflection_points"][iso]:
+                results["inflection_points"][iso][year_key] = {}
+
+            for growth in GROWTH_LEVELS:
+                combo_key = f"inflection_{iso}_{year}_{growth}"
+                if combo_key in completed_keys:
+                    continue
+
+                supply = results["supply_projections"][iso][year_key][growth]
+                growth_rate = DEMAND_GROWTH_RATES[iso][growth]
+                projected_demand = demands[iso] * (1 + growth_rate) ** (year - 2025)
+
+                inflections = compute_inflection_points(iso, year, growth, supply, projected_demand)
+                results["inflection_points"][iso][year_key][growth] = inflections
+                completed_keys.add(combo_key)
+
+        save_checkpoint(list(completed_keys), results)
+
+    print("Phase 3 complete")
+
+    # ── Phase 4: National summary ─────────────────────────────────────────
+    print("Phase 4: National summary...")
+    for year in TIME_HORIZONS:
+        year_key = str(year)
+        results["national_summary"][year_key] = {}
+
+        for growth in GROWTH_LEVELS:
+            total_clean = sum(
+                results["supply_projections"][iso][year_key][growth]["total_clean_twh"]
+                for iso in ISOS
+            )
+            total_sss = sum(
+                results["supply_projections"][iso][year_key][growth]["sss_twh"]
+                for iso in ISOS
+            )
+            total_non_sss = sum(
+                results["supply_projections"][iso][year_key][growth]["non_sss_twh"]
+                for iso in ISOS
+            )
+            total_available = sum(
+                results["supply_projections"][iso][year_key][growth]["available_non_sss_twh"]
+                for iso in ISOS
+            )
+            total_demand = sum(
+                demands[iso] * (1 + DEMAND_GROWTH_RATES[iso][growth]) ** (year - 2025)
+                for iso in ISOS
+            )
+
+            results["national_summary"][year_key][growth] = {
+                "total_clean_twh": round(total_clean, 1),
+                "total_sss_twh": round(total_sss, 1),
+                "total_non_sss_twh": round(total_non_sss, 1),
+                "total_available_twh": round(total_available, 1),
+                "total_demand_twh": round(total_demand, 1),
+                "national_sss_pct": round(total_sss / total_clean * 100, 1) if total_clean > 0 else 0,
+            }
+
+    # ── Save final results ────────────────────────────────────────────────
+    save_final_results(results)
+
+    # Clean up checkpoint
+    if os.path.exists(CHECKPOINT_PATH):
+        os.remove(CHECKPOINT_PATH)
+        print("Checkpoint cleaned up")
+
+    # Print summary
+    print("\n" + "=" * 60)
+    print("SUMMARY")
+    print("=" * 60)
+    for iso in ISOS:
+        s2025 = results["supply_projections"][iso]["2025"]["Medium"]
+        s2035 = results["supply_projections"][iso]["2035"]["Medium"]
+        print(f"\n{iso}:")
+        print(f"  2025: {s2025['available_non_sss_twh']} TWh available (of {s2025['total_clean_twh']} total clean)")
+        print(f"  2035: {s2035['available_non_sss_twh']} TWh available (of {s2035['total_clean_twh']} total clean)")
+        inf = results["inflection_points"][iso]["2025"]["Medium"]
+        for mt in ["90", "95", "100"]:
+            ip = inf.get(mt, {}).get("inflection_participation_pct")
+            print(f"  2025 @{mt}% match: scarcity at {ip}% participation" if ip else f"  2025 @{mt}% match: no scarcity at 100% participation")
+
+    nat = results["national_summary"]["2025"]["Medium"]
+    print(f"\nNational 2025 (Medium growth):")
+    print(f"  Total clean: {nat['total_clean_twh']} TWh")
+    print(f"  SSS: {nat['total_sss_twh']} TWh ({nat['national_sss_pct']}%)")
+    print(f"  Available for corporate: {nat['total_available_twh']} TWh")
+    print(f"  Total demand: {nat['total_demand_twh']} TWh")
+
+    print(f"\nTotal scenarios computed: {scenario_count}")
+    print(f"Output: {OUTPUT_PATH}")
+
+
+if __name__ == "__main__":
+    main()
