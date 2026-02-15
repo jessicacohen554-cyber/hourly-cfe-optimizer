@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The 8,760 Problem — Hourly Clean Energy Matching</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -398,7 +399,7 @@ body {
         font-size: 1.6rem;
     }
     .hero-callout-label {
-        font-size: 0.65rem;
+        font-size: 0.75rem;
         letter-spacing: 0.5px;
     }
 }
@@ -1369,7 +1370,7 @@ body {
     .gauge-ring { width: 56px; height: 56px; }
     .gauge-ring svg { width: 56px; height: 56px; }
     .gauge-ring-label { font-size: 0.82rem; }
-    .gauge-name { font-size: 0.68rem; }
+    .gauge-name { font-size: 0.75rem; }
     .transition-fuel-card { padding: 14px 12px; }
     .transition-fuel-title { font-size: 0.95rem; }
     .transition-fuel-desc { font-size: 0.82rem; }
@@ -1377,14 +1378,29 @@ body {
     .section-illustration svg { min-width: 340px; }
     .trilemma-svg { max-width: 260px !important; min-width: 220px !important; }
     .region-toggle-row, .incremental-region-pills { gap: 4px; }
-    .region-toggle-btn, .incremental-pill { padding: 4px 10px; font-size: 0.7rem; }
-    .incremental-chart-container { min-height: 220px; }
+    .region-toggle-btn, .incremental-pill { padding: 8px 12px; font-size: 0.75rem; min-height: 44px; }
+    .incremental-chart-container { min-height: 280px; }
     .incremental-insight { font-size: 0.82rem; padding: 10px 14px; }
     .preservation-panel { padding: 22px 16px; border-radius: 12px; }
     .preservation-panel h3 { font-size: 1.1rem; }
     .preservation-card { padding: 16px 14px; }
     .preservation-card-cost { font-size: 1.2rem; }
     .ccs-econ-value { font-size: 1.3rem; }
+}
+
+/* ========== 375px BREAKPOINT (mid-range phones) ========== */
+@media (max-width: 375px) {
+    .header { padding: 28px 12px 24px; }
+    .header h1 { font-size: 1.6rem; }
+    .header .subtitle { font-size: 0.85rem; }
+    .story-section { padding: 24px 14px; }
+    .hero-callout-card { min-width: 70px; padding: 12px 6px; }
+    .hero-callout-value { font-size: 1.4rem; }
+}
+
+/* Story-section mobile padding (768px) */
+@media (max-width: 768px) {
+    .story-section { padding: 40px 20px; }
 }
 </style>
 </head>

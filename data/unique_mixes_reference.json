@@ -1,0 +1,2234 @@
+{
+  "iso": "CAISO",
+  "threshold": 75,
+  "total_scenarios": 324,
+  "unique_mixes": 14,
+  "analysis_note": "At 75%, Firm Gen cost is the primary driver of mix selection. Physics constrains the feasible mix space; cost selects among feasible options.",
+  "mixes": {
+    "CF18_Sol27_Wnd13_CCS33_Hyd9_B2_L0": {
+      "resource_mix": {
+        "clean_firm": 18,
+        "solar": 27,
+        "wind": 13,
+        "ccs_ccgt": 33,
+        "hydro": 9
+      },
+      "procurement_pct": 78,
+      "battery_dispatch_pct": 2,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 76.3,
+      "cost_range": {
+        "min": 41.89,
+        "max": 66.13
+      },
+      "scenario_count": 55,
+      "scenarios": [
+        {
+          "key": "LLL_L_N",
+          "effective_cost": 41.89,
+          "incremental_cost": 16.89
+        },
+        {
+          "key": "MLL_L_N",
+          "effective_cost": 42.21,
+          "incremental_cost": 17.21
+        },
+        {
+          "key": "LLL_L_L",
+          "effective_cost": 42.38,
+          "incremental_cost": 17.38
+        },
+        {
+          "key": "HLL_L_N",
+          "effective_cost": 42.59,
+          "incremental_cost": 17.59
+        },
+        {
+          "key": "MLL_L_L",
+          "effective_cost": 42.69,
+          "incremental_cost": 17.69
+        },
+        {
+          "key": "MLM_L_N",
+          "effective_cost": 42.86,
+          "incremental_cost": 17.86
+        },
+        {
+          "key": "LLL_L_M",
+          "effective_cost": 42.97,
+          "incremental_cost": 17.97
+        },
+        {
+          "key": "LLM_L_L",
+          "effective_cost": 43.03,
+          "incremental_cost": 18.03
+        },
+        {
+          "key": "HLL_L_L",
+          "effective_cost": 43.08,
+          "incremental_cost": 18.08
+        },
+        {
+          "key": "HLM_L_N",
+          "effective_cost": 43.25,
+          "incremental_cost": 18.25
+        },
+        {
+          "key": "MLL_L_M",
+          "effective_cost": 43.29,
+          "incremental_cost": 18.29
+        },
+        {
+          "key": "MLM_L_L",
+          "effective_cost": 43.35,
+          "incremental_cost": 18.35
+        },
+        {
+          "key": "LLM_L_M",
+          "effective_cost": 43.63,
+          "incremental_cost": 18.63
+        },
+        {
+          "key": "HLL_L_M",
+          "effective_cost": 43.68,
+          "incremental_cost": 18.68
+        },
+        {
+          "key": "HLM_L_L",
+          "effective_cost": 43.74,
+          "incremental_cost": 18.74
+        },
+        {
+          "key": "MLM_L_M",
+          "effective_cost": 43.94,
+          "incremental_cost": 18.94
+        },
+        {
+          "key": "LLL_L_H",
+          "effective_cost": 44.02,
+          "incremental_cost": 19.02
+        },
+        {
+          "key": "MLH_L_L",
+          "effective_cost": 44.16,
+          "incremental_cost": 19.16
+        },
+        {
+          "key": "HLM_L_M",
+          "effective_cost": 44.33,
+          "incremental_cost": 19.33
+        },
+        {
+          "key": "MLL_L_H",
+          "effective_cost": 44.34,
+          "incremental_cost": 19.34
+        },
+        {
+          "key": "LLH_L_M",
+          "effective_cost": 44.44,
+          "incremental_cost": 19.44
+        },
+        {
+          "key": "LLM_L_H",
+          "effective_cost": 44.68,
+          "incremental_cost": 19.68
+        },
+        {
+          "key": "HLL_L_H",
+          "effective_cost": 44.72,
+          "incremental_cost": 19.72
+        },
+        {
+          "key": "LLL_M_N",
+          "effective_cost": 44.82,
+          "incremental_cost": 14.82
+        },
+        {
+          "key": "MLM_L_H",
+          "effective_cost": 44.99,
+          "incremental_cost": 19.99
+        },
+        {
+          "key": "MLL_M_N",
+          "effective_cost": 45.14,
+          "incremental_cost": 15.14
+        },
+        {
+          "key": "LLL_M_L",
+          "effective_cost": 45.31,
+          "incremental_cost": 15.31
+        },
+        {
+          "key": "HLM_L_H",
+          "effective_cost": 45.38,
+          "incremental_cost": 20.38
+        },
+        {
+          "key": "LLH_L_H",
+          "effective_cost": 45.49,
+          "incremental_cost": 20.49
+        },
+        {
+          "key": "HLL_M_N",
+          "effective_cost": 45.53,
+          "incremental_cost": 15.53
+        },
+        {
+          "key": "MLL_M_L",
+          "effective_cost": 45.63,
+          "incremental_cost": 15.63
+        },
+        {
+          "key": "MLM_M_N",
+          "effective_cost": 45.8,
+          "incremental_cost": 15.8
+        },
+        {
+          "key": "LLL_M_M",
+          "effective_cost": 45.91,
+          "incremental_cost": 15.91
+        },
+        {
+          "key": "LLM_M_L",
+          "effective_cost": 45.97,
+          "incremental_cost": 15.97
+        },
+        {
+          "key": "HLL_M_L",
+          "effective_cost": 46.02,
+          "incremental_cost": 16.02
+        },
+        {
+          "key": "HLM_M_N",
+          "effective_cost": 46.18,
+          "incremental_cost": 16.18
+        },
+        {
+          "key": "MLL_M_M",
+          "effective_cost": 46.22,
+          "incremental_cost": 16.22
+        },
+        {
+          "key": "MLM_M_L",
+          "effective_cost": 46.28,
+          "incremental_cost": 16.28
+        },
+        {
+          "key": "LLM_M_M",
+          "effective_cost": 46.56,
+          "incremental_cost": 16.56
+        },
+        {
+          "key": "HLM_M_L",
+          "effective_cost": 46.67,
+          "incremental_cost": 16.67
+        },
+        {
+          "key": "MLM_M_M",
+          "effective_cost": 46.88,
+          "incremental_cost": 16.88
+        },
+        {
+          "key": "LLL_M_H",
+          "effective_cost": 46.96,
+          "incremental_cost": 16.96
+        },
+        {
+          "key": "MLL_M_H",
+          "effective_cost": 47.27,
+          "incremental_cost": 17.27
+        },
+        {
+          "key": "LLM_M_H",
+          "effective_cost": 47.61,
+          "incremental_cost": 17.61
+        },
+        {
+          "key": "MLM_M_H",
+          "effective_cost": 47.93,
+          "incremental_cost": 17.93
+        },
+        {
+          "key": "MLL_H_N",
+          "effective_cost": 51.01,
+          "incremental_cost": 11.01
+        },
+        {
+          "key": "LLL_H_L",
+          "effective_cost": 51.18,
+          "incremental_cost": 11.18
+        },
+        {
+          "key": "MLL_H_L",
+          "effective_cost": 51.5,
+          "incremental_cost": 11.5
+        },
+        {
+          "key": "LLL_H_M",
+          "effective_cost": 51.78,
+          "incremental_cost": 11.78
+        },
+        {
+          "key": "LLM_H_L",
+          "effective_cost": 51.84,
+          "incremental_cost": 11.84
+        },
+        {
+          "key": "LLM_H_M",
+          "effective_cost": 52.43,
+          "incremental_cost": 12.43
+        },
+        {
+          "key": "LLL_H_H",
+          "effective_cost": 52.82,
+          "incremental_cost": 12.82
+        },
+        {
+          "key": "LLM_H_H",
+          "effective_cost": 53.48,
+          "incremental_cost": 13.48
+        },
+        {
+          "key": "MMH_H_H",
+          "effective_cost": 65.74,
+          "incremental_cost": 25.74
+        },
+        {
+          "key": "HMH_H_H",
+          "effective_cost": 66.13,
+          "incremental_cost": 26.13
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 22,
+          "Medium": 20,
+          "High": 13
+        },
+        "firm_gen": {
+          "Low": 53,
+          "Medium": 2
+        },
+        "storage": {
+          "Low": 27,
+          "Medium": 23,
+          "High": 5
+        },
+        "fossil_fuel": {
+          "Low": 26,
+          "Medium": 19,
+          "High": 10
+        },
+        "transmission": {
+          "None": 11,
+          "Low": 16,
+          "Medium": 13,
+          "High": 15
+        }
+      }
+    },
+    "CF10_Sol48_Wnd33_CCS0_Hyd9_B2_L2": {
+      "resource_mix": {
+        "clean_firm": 10,
+        "solar": 48,
+        "wind": 33,
+        "ccs_ccgt": 0,
+        "hydro": 9
+      },
+      "procurement_pct": 78,
+      "battery_dispatch_pct": 2,
+      "ldes_dispatch_pct": 2,
+      "hourly_match_score": 75.3,
+      "cost_range": {
+        "min": 42.3,
+        "max": 65.11
+      },
+      "scenario_count": 48,
+      "scenarios": [
+        {
+          "key": "LML_L_N",
+          "effective_cost": 42.3,
+          "incremental_cost": 17.3
+        },
+        {
+          "key": "LHL_L_N",
+          "effective_cost": 42.3,
+          "incremental_cost": 17.3
+        },
+        {
+          "key": "LML_L_L",
+          "effective_cost": 43.42,
+          "incremental_cost": 18.42
+        },
+        {
+          "key": "LHL_L_L",
+          "effective_cost": 43.42,
+          "incremental_cost": 18.42
+        },
+        {
+          "key": "LHL_L_M",
+          "effective_cost": 44.78,
+          "incremental_cost": 19.78
+        },
+        {
+          "key": "LMM_L_L",
+          "effective_cost": 45.28,
+          "incremental_cost": 20.28
+        },
+        {
+          "key": "LHM_L_L",
+          "effective_cost": 45.28,
+          "incremental_cost": 20.28
+        },
+        {
+          "key": "LML_M_N",
+          "effective_cost": 45.35,
+          "incremental_cost": 15.35
+        },
+        {
+          "key": "LHL_M_N",
+          "effective_cost": 45.35,
+          "incremental_cost": 15.35
+        },
+        {
+          "key": "LML_M_L",
+          "effective_cost": 46.47,
+          "incremental_cost": 16.47
+        },
+        {
+          "key": "LHL_M_L",
+          "effective_cost": 46.47,
+          "incremental_cost": 16.47
+        },
+        {
+          "key": "LHM_L_M",
+          "effective_cost": 46.64,
+          "incremental_cost": 21.64
+        },
+        {
+          "key": "LHL_L_H",
+          "effective_cost": 46.81,
+          "incremental_cost": 21.81
+        },
+        {
+          "key": "LHL_M_M",
+          "effective_cost": 47.83,
+          "incremental_cost": 17.83
+        },
+        {
+          "key": "LHM_M_L",
+          "effective_cost": 48.33,
+          "incremental_cost": 18.33
+        },
+        {
+          "key": "LHM_L_H",
+          "effective_cost": 48.67,
+          "incremental_cost": 23.67
+        },
+        {
+          "key": "MHL_L_N",
+          "effective_cost": 49.36,
+          "incremental_cost": 24.36
+        },
+        {
+          "key": "LHM_M_M",
+          "effective_cost": 49.69,
+          "incremental_cost": 19.69
+        },
+        {
+          "key": "LHL_M_H",
+          "effective_cost": 49.86,
+          "incremental_cost": 19.86
+        },
+        {
+          "key": "MHL_L_L",
+          "effective_cost": 50.49,
+          "incremental_cost": 25.49
+        },
+        {
+          "key": "MHM_L_N",
+          "effective_cost": 51.22,
+          "incremental_cost": 26.22
+        },
+        {
+          "key": "LHM_M_H",
+          "effective_cost": 51.72,
+          "incremental_cost": 21.72
+        },
+        {
+          "key": "MHL_L_M",
+          "effective_cost": 51.85,
+          "incremental_cost": 26.85
+        },
+        {
+          "key": "MHM_L_L",
+          "effective_cost": 52.35,
+          "incremental_cost": 27.35
+        },
+        {
+          "key": "MHL_M_N",
+          "effective_cost": 52.41,
+          "incremental_cost": 22.41
+        },
+        {
+          "key": "LML_H_L",
+          "effective_cost": 52.57,
+          "incremental_cost": 12.57
+        },
+        {
+          "key": "LHL_H_L",
+          "effective_cost": 52.57,
+          "incremental_cost": 12.57
+        },
+        {
+          "key": "MHL_M_L",
+          "effective_cost": 53.54,
+          "incremental_cost": 23.54
+        },
+        {
+          "key": "MHM_L_M",
+          "effective_cost": 53.7,
+          "incremental_cost": 28.7
+        },
+        {
+          "key": "LHL_H_M",
+          "effective_cost": 53.93,
+          "incremental_cost": 13.93
+        },
+        {
+          "key": "MHM_M_N",
+          "effective_cost": 54.27,
+          "incremental_cost": 24.27
+        },
+        {
+          "key": "MHH_L_L",
+          "effective_cost": 54.61,
+          "incremental_cost": 29.61
+        },
+        {
+          "key": "MHL_M_M",
+          "effective_cost": 54.89,
+          "incremental_cost": 24.89
+        },
+        {
+          "key": "MHM_M_L",
+          "effective_cost": 55.4,
+          "incremental_cost": 25.4
+        },
+        {
+          "key": "LHM_H_M",
+          "effective_cost": 55.79,
+          "incremental_cost": 15.79
+        },
+        {
+          "key": "LHL_H_H",
+          "effective_cost": 55.96,
+          "incremental_cost": 15.96
+        },
+        {
+          "key": "MHH_L_M",
+          "effective_cost": 55.96,
+          "incremental_cost": 30.96
+        },
+        {
+          "key": "MHM_M_M",
+          "effective_cost": 56.75,
+          "incremental_cost": 26.75
+        },
+        {
+          "key": "MHH_M_L",
+          "effective_cost": 57.66,
+          "incremental_cost": 27.66
+        },
+        {
+          "key": "LHM_H_H",
+          "effective_cost": 57.82,
+          "incremental_cost": 17.82
+        },
+        {
+          "key": "MHL_H_N",
+          "effective_cost": 58.51,
+          "incremental_cost": 18.51
+        },
+        {
+          "key": "MHH_M_M",
+          "effective_cost": 59.01,
+          "incremental_cost": 29.01
+        },
+        {
+          "key": "MHL_H_L",
+          "effective_cost": 59.64,
+          "incremental_cost": 19.64
+        },
+        {
+          "key": "MHM_H_N",
+          "effective_cost": 60.37,
+          "incremental_cost": 20.37
+        },
+        {
+          "key": "MHL_H_M",
+          "effective_cost": 60.99,
+          "incremental_cost": 20.99
+        },
+        {
+          "key": "MHM_H_L",
+          "effective_cost": 61.5,
+          "incremental_cost": 21.5
+        },
+        {
+          "key": "MHM_H_M",
+          "effective_cost": 62.85,
+          "incremental_cost": 22.85
+        },
+        {
+          "key": "MHH_H_M",
+          "effective_cost": 65.11,
+          "incremental_cost": 25.11
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 25,
+          "Medium": 23
+        },
+        "firm_gen": {
+          "Medium": 6,
+          "High": 42
+        },
+        "storage": {
+          "Low": 25,
+          "Medium": 18,
+          "High": 5
+        },
+        "fossil_fuel": {
+          "Low": 18,
+          "Medium": 17,
+          "High": 13
+        },
+        "transmission": {
+          "None": 10,
+          "Low": 17,
+          "Medium": 15,
+          "High": 6
+        }
+      }
+    },
+    "CF10_Sol54_Wnd24_CCS3_Hyd9_B2_L2": {
+      "resource_mix": {
+        "clean_firm": 10,
+        "solar": 54,
+        "wind": 24,
+        "ccs_ccgt": 3,
+        "hydro": 9
+      },
+      "procurement_pct": 78,
+      "battery_dispatch_pct": 2,
+      "ldes_dispatch_pct": 2,
+      "hourly_match_score": 75.0,
+      "cost_range": {
+        "min": 53.78,
+        "max": 74.77
+      },
+      "scenario_count": 45,
+      "scenarios": [
+        {
+          "key": "MHL_L_H",
+          "effective_cost": 53.78,
+          "incremental_cost": 28.78
+        },
+        {
+          "key": "MHM_L_H",
+          "effective_cost": 55.65,
+          "incremental_cost": 30.65
+        },
+        {
+          "key": "MHL_M_H",
+          "effective_cost": 56.84,
+          "incremental_cost": 26.84
+        },
+        {
+          "key": "HHL_L_N",
+          "effective_cost": 57.73,
+          "incremental_cost": 32.73
+        },
+        {
+          "key": "MHH_L_H",
+          "effective_cost": 57.91,
+          "incremental_cost": 32.91
+        },
+        {
+          "key": "HHL_L_L",
+          "effective_cost": 58.58,
+          "incremental_cost": 33.58
+        },
+        {
+          "key": "MHM_M_H",
+          "effective_cost": 58.71,
+          "incremental_cost": 28.71
+        },
+        {
+          "key": "HHM_L_N",
+          "effective_cost": 59.59,
+          "incremental_cost": 34.59
+        },
+        {
+          "key": "HHL_L_M",
+          "effective_cost": 59.72,
+          "incremental_cost": 34.72
+        },
+        {
+          "key": "HHM_L_L",
+          "effective_cost": 60.44,
+          "incremental_cost": 35.44
+        },
+        {
+          "key": "HHL_M_N",
+          "effective_cost": 60.79,
+          "incremental_cost": 30.79
+        },
+        {
+          "key": "MHH_M_H",
+          "effective_cost": 60.98,
+          "incremental_cost": 30.98
+        },
+        {
+          "key": "HHL_L_H",
+          "effective_cost": 61.45,
+          "incremental_cost": 36.45
+        },
+        {
+          "key": "HHM_L_M",
+          "effective_cost": 61.59,
+          "incremental_cost": 36.59
+        },
+        {
+          "key": "HHL_M_L",
+          "effective_cost": 61.64,
+          "incremental_cost": 31.64
+        },
+        {
+          "key": "HHH_L_N",
+          "effective_cost": 61.86,
+          "incremental_cost": 36.86
+        },
+        {
+          "key": "HHM_M_N",
+          "effective_cost": 62.65,
+          "incremental_cost": 32.65
+        },
+        {
+          "key": "HHH_L_L",
+          "effective_cost": 62.71,
+          "incremental_cost": 37.71
+        },
+        {
+          "key": "HHL_M_M",
+          "effective_cost": 62.78,
+          "incremental_cost": 32.78
+        },
+        {
+          "key": "MHL_H_H",
+          "effective_cost": 62.97,
+          "incremental_cost": 22.97
+        },
+        {
+          "key": "HHM_L_H",
+          "effective_cost": 63.31,
+          "incremental_cost": 38.31
+        },
+        {
+          "key": "HHM_M_L",
+          "effective_cost": 63.51,
+          "incremental_cost": 33.51
+        },
+        {
+          "key": "HHH_L_M",
+          "effective_cost": 63.85,
+          "incremental_cost": 38.85
+        },
+        {
+          "key": "HHL_M_H",
+          "effective_cost": 64.51,
+          "incremental_cost": 34.51
+        },
+        {
+          "key": "HHM_M_M",
+          "effective_cost": 64.65,
+          "incremental_cost": 34.65
+        },
+        {
+          "key": "MHM_H_H",
+          "effective_cost": 64.83,
+          "incremental_cost": 24.83
+        },
+        {
+          "key": "HHH_M_N",
+          "effective_cost": 64.92,
+          "incremental_cost": 34.92
+        },
+        {
+          "key": "HHH_L_H",
+          "effective_cost": 65.58,
+          "incremental_cost": 40.58
+        },
+        {
+          "key": "HHH_M_L",
+          "effective_cost": 65.77,
+          "incremental_cost": 35.77
+        },
+        {
+          "key": "HHM_M_H",
+          "effective_cost": 66.38,
+          "incremental_cost": 36.38
+        },
+        {
+          "key": "HHL_H_N",
+          "effective_cost": 66.91,
+          "incremental_cost": 26.91
+        },
+        {
+          "key": "HHH_M_M",
+          "effective_cost": 66.91,
+          "incremental_cost": 36.91
+        },
+        {
+          "key": "MHH_H_H",
+          "effective_cost": 67.1,
+          "incremental_cost": 27.1
+        },
+        {
+          "key": "HHL_H_L",
+          "effective_cost": 67.76,
+          "incremental_cost": 27.76
+        },
+        {
+          "key": "HHH_M_H",
+          "effective_cost": 68.64,
+          "incremental_cost": 38.64
+        },
+        {
+          "key": "HHM_H_N",
+          "effective_cost": 68.78,
+          "incremental_cost": 28.78
+        },
+        {
+          "key": "HHL_H_M",
+          "effective_cost": 68.9,
+          "incremental_cost": 28.9
+        },
+        {
+          "key": "HHM_H_L",
+          "effective_cost": 69.63,
+          "incremental_cost": 29.63
+        },
+        {
+          "key": "HHL_H_H",
+          "effective_cost": 70.63,
+          "incremental_cost": 30.63
+        },
+        {
+          "key": "HHM_H_M",
+          "effective_cost": 70.77,
+          "incremental_cost": 30.77
+        },
+        {
+          "key": "HHH_H_N",
+          "effective_cost": 71.04,
+          "incremental_cost": 31.04
+        },
+        {
+          "key": "HHH_H_L",
+          "effective_cost": 71.89,
+          "incremental_cost": 31.89
+        },
+        {
+          "key": "HHM_H_H",
+          "effective_cost": 72.5,
+          "incremental_cost": 32.5
+        },
+        {
+          "key": "HHH_H_M",
+          "effective_cost": 73.04,
+          "incremental_cost": 33.04
+        },
+        {
+          "key": "HHH_H_H",
+          "effective_cost": 74.77,
+          "incremental_cost": 34.77
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Medium": 9,
+          "High": 36
+        },
+        "firm_gen": {
+          "High": 45
+        },
+        "storage": {
+          "Low": 15,
+          "Medium": 15,
+          "High": 15
+        },
+        "fossil_fuel": {
+          "Low": 15,
+          "Medium": 15,
+          "High": 15
+        },
+        "transmission": {
+          "High": 18,
+          "None": 9,
+          "Low": 9,
+          "Medium": 9
+        }
+      }
+    },
+    "CF33_Sol27_Wnd13_CCS18_Hyd9_B2_L0": {
+      "resource_mix": {
+        "clean_firm": 33,
+        "solar": 27,
+        "wind": 13,
+        "ccs_ccgt": 18,
+        "hydro": 9
+      },
+      "procurement_pct": 78,
+      "battery_dispatch_pct": 2,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 75.4,
+      "cost_range": {
+        "min": 53.28,
+        "max": 65.32
+      },
+      "scenario_count": 37,
+      "scenarios": [
+        {
+          "key": "HML_L_N",
+          "effective_cost": 53.28,
+          "incremental_cost": 28.28
+        },
+        {
+          "key": "HML_L_L",
+          "effective_cost": 53.78,
+          "incremental_cost": 28.78
+        },
+        {
+          "key": "HMM_L_N",
+          "effective_cost": 53.95,
+          "incremental_cost": 28.95
+        },
+        {
+          "key": "HMM_L_L",
+          "effective_cost": 54.44,
+          "incremental_cost": 29.44
+        },
+        {
+          "key": "HML_L_M",
+          "effective_cost": 54.53,
+          "incremental_cost": 29.53
+        },
+        {
+          "key": "HMH_L_N",
+          "effective_cost": 54.77,
+          "incremental_cost": 29.77
+        },
+        {
+          "key": "HMM_L_M",
+          "effective_cost": 55.2,
+          "incremental_cost": 30.2
+        },
+        {
+          "key": "HMH_L_L",
+          "effective_cost": 55.26,
+          "incremental_cost": 30.26
+        },
+        {
+          "key": "HML_L_H",
+          "effective_cost": 55.75,
+          "incremental_cost": 30.75
+        },
+        {
+          "key": "HMH_L_M",
+          "effective_cost": 56.02,
+          "incremental_cost": 31.02
+        },
+        {
+          "key": "HML_M_N",
+          "effective_cost": 56.25,
+          "incremental_cost": 26.25
+        },
+        {
+          "key": "HMM_L_H",
+          "effective_cost": 56.41,
+          "incremental_cost": 31.41
+        },
+        {
+          "key": "HML_M_L",
+          "effective_cost": 56.75,
+          "incremental_cost": 26.75
+        },
+        {
+          "key": "MMH_L_H",
+          "effective_cost": 56.84,
+          "incremental_cost": 31.84
+        },
+        {
+          "key": "HMM_M_N",
+          "effective_cost": 56.92,
+          "incremental_cost": 26.92
+        },
+        {
+          "key": "HMH_L_H",
+          "effective_cost": 57.24,
+          "incremental_cost": 32.24
+        },
+        {
+          "key": "HMM_M_L",
+          "effective_cost": 57.41,
+          "incremental_cost": 27.41
+        },
+        {
+          "key": "HML_M_M",
+          "effective_cost": 57.5,
+          "incremental_cost": 27.5
+        },
+        {
+          "key": "HMH_M_N",
+          "effective_cost": 57.74,
+          "incremental_cost": 27.74
+        },
+        {
+          "key": "HMM_M_M",
+          "effective_cost": 58.17,
+          "incremental_cost": 28.17
+        },
+        {
+          "key": "HMH_M_L",
+          "effective_cost": 58.23,
+          "incremental_cost": 28.23
+        },
+        {
+          "key": "HML_M_H",
+          "effective_cost": 58.72,
+          "incremental_cost": 28.72
+        },
+        {
+          "key": "HMH_M_M",
+          "effective_cost": 58.99,
+          "incremental_cost": 28.99
+        },
+        {
+          "key": "HMM_M_H",
+          "effective_cost": 59.38,
+          "incremental_cost": 29.38
+        },
+        {
+          "key": "MMH_M_H",
+          "effective_cost": 59.81,
+          "incremental_cost": 29.81
+        },
+        {
+          "key": "HMH_M_H",
+          "effective_cost": 60.21,
+          "incremental_cost": 30.21
+        },
+        {
+          "key": "HML_H_N",
+          "effective_cost": 62.19,
+          "incremental_cost": 22.19
+        },
+        {
+          "key": "HML_H_L",
+          "effective_cost": 62.69,
+          "incremental_cost": 22.69
+        },
+        {
+          "key": "HMM_H_N",
+          "effective_cost": 62.86,
+          "incremental_cost": 22.86
+        },
+        {
+          "key": "HMM_H_L",
+          "effective_cost": 63.35,
+          "incremental_cost": 23.35
+        },
+        {
+          "key": "HML_H_M",
+          "effective_cost": 63.44,
+          "incremental_cost": 23.44
+        },
+        {
+          "key": "HMH_H_N",
+          "effective_cost": 63.68,
+          "incremental_cost": 23.68
+        },
+        {
+          "key": "HMM_H_M",
+          "effective_cost": 64.11,
+          "incremental_cost": 24.11
+        },
+        {
+          "key": "HMH_H_L",
+          "effective_cost": 64.17,
+          "incremental_cost": 24.17
+        },
+        {
+          "key": "HML_H_H",
+          "effective_cost": 64.66,
+          "incremental_cost": 24.66
+        },
+        {
+          "key": "HMH_H_M",
+          "effective_cost": 64.93,
+          "incremental_cost": 24.93
+        },
+        {
+          "key": "HMM_H_H",
+          "effective_cost": 65.32,
+          "incremental_cost": 25.32
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Medium": 2,
+          "High": 35
+        },
+        "firm_gen": {
+          "Medium": 37
+        },
+        "storage": {
+          "High": 13,
+          "Low": 12,
+          "Medium": 12
+        },
+        "fossil_fuel": {
+          "Low": 13,
+          "Medium": 13,
+          "High": 11
+        },
+        "transmission": {
+          "High": 10,
+          "None": 9,
+          "Low": 9,
+          "Medium": 9
+        }
+      }
+    },
+    "CF13_Sol55_Wnd23_CCS0_Hyd9_B2_L2": {
+      "resource_mix": {
+        "clean_firm": 13,
+        "solar": 55,
+        "wind": 23,
+        "ccs_ccgt": 0,
+        "hydro": 9
+      },
+      "procurement_pct": 79,
+      "battery_dispatch_pct": 2,
+      "ldes_dispatch_pct": 2,
+      "hourly_match_score": 75.7,
+      "cost_range": {
+        "min": 44.68,
+        "max": 63.84
+      },
+      "scenario_count": 35,
+      "scenarios": [
+        {
+          "key": "LML_L_M",
+          "effective_cost": 44.68,
+          "incremental_cost": 19.68
+        },
+        {
+          "key": "LML_L_H",
+          "effective_cost": 46.44,
+          "incremental_cost": 21.44
+        },
+        {
+          "key": "LMM_L_M",
+          "effective_cost": 46.53,
+          "incremental_cost": 21.53
+        },
+        {
+          "key": "LML_M_M",
+          "effective_cost": 47.73,
+          "incremental_cost": 17.73
+        },
+        {
+          "key": "LMM_L_H",
+          "effective_cost": 48.29,
+          "incremental_cost": 23.29
+        },
+        {
+          "key": "MML_L_N",
+          "effective_cost": 49.1,
+          "incremental_cost": 24.1
+        },
+        {
+          "key": "LML_M_H",
+          "effective_cost": 49.48,
+          "incremental_cost": 19.48
+        },
+        {
+          "key": "LMM_M_M",
+          "effective_cost": 49.58,
+          "incremental_cost": 19.58
+        },
+        {
+          "key": "MML_L_L",
+          "effective_cost": 49.93,
+          "incremental_cost": 24.93
+        },
+        {
+          "key": "MMM_L_N",
+          "effective_cost": 50.95,
+          "incremental_cost": 25.95
+        },
+        {
+          "key": "MML_L_M",
+          "effective_cost": 51.1,
+          "incremental_cost": 26.1
+        },
+        {
+          "key": "LMM_M_H",
+          "effective_cost": 51.33,
+          "incremental_cost": 21.33
+        },
+        {
+          "key": "MMM_L_L",
+          "effective_cost": 51.78,
+          "incremental_cost": 26.78
+        },
+        {
+          "key": "MML_M_N",
+          "effective_cost": 52.15,
+          "incremental_cost": 22.15
+        },
+        {
+          "key": "MML_L_H",
+          "effective_cost": 52.86,
+          "incremental_cost": 27.86
+        },
+        {
+          "key": "MMM_L_M",
+          "effective_cost": 52.95,
+          "incremental_cost": 27.95
+        },
+        {
+          "key": "MML_M_L",
+          "effective_cost": 52.98,
+          "incremental_cost": 22.98
+        },
+        {
+          "key": "LML_H_M",
+          "effective_cost": 53.82,
+          "incremental_cost": 13.82
+        },
+        {
+          "key": "MMM_M_N",
+          "effective_cost": 54.0,
+          "incremental_cost": 24.0
+        },
+        {
+          "key": "MML_M_M",
+          "effective_cost": 54.15,
+          "incremental_cost": 24.15
+        },
+        {
+          "key": "MMM_L_H",
+          "effective_cost": 54.71,
+          "incremental_cost": 29.71
+        },
+        {
+          "key": "MMM_M_L",
+          "effective_cost": 54.83,
+          "incremental_cost": 24.83
+        },
+        {
+          "key": "MMH_L_M",
+          "effective_cost": 55.2,
+          "incremental_cost": 30.2
+        },
+        {
+          "key": "MML_M_H",
+          "effective_cost": 55.9,
+          "incremental_cost": 25.9
+        },
+        {
+          "key": "MMM_M_M",
+          "effective_cost": 56.0,
+          "incremental_cost": 26.0
+        },
+        {
+          "key": "MMM_M_H",
+          "effective_cost": 57.75,
+          "incremental_cost": 27.75
+        },
+        {
+          "key": "MML_H_N",
+          "effective_cost": 58.24,
+          "incremental_cost": 18.24
+        },
+        {
+          "key": "MMH_M_M",
+          "effective_cost": 58.24,
+          "incremental_cost": 28.24
+        },
+        {
+          "key": "MML_H_L",
+          "effective_cost": 59.07,
+          "incremental_cost": 19.07
+        },
+        {
+          "key": "MMM_H_N",
+          "effective_cost": 60.09,
+          "incremental_cost": 20.09
+        },
+        {
+          "key": "MML_H_M",
+          "effective_cost": 60.24,
+          "incremental_cost": 20.24
+        },
+        {
+          "key": "MMM_H_L",
+          "effective_cost": 60.92,
+          "incremental_cost": 20.92
+        },
+        {
+          "key": "MML_H_H",
+          "effective_cost": 61.99,
+          "incremental_cost": 21.99
+        },
+        {
+          "key": "MMM_H_M",
+          "effective_cost": 62.09,
+          "incremental_cost": 22.09
+        },
+        {
+          "key": "MMM_H_H",
+          "effective_cost": 63.84,
+          "incremental_cost": 23.84
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 9,
+          "Medium": 26
+        },
+        "firm_gen": {
+          "Medium": 35
+        },
+        "storage": {
+          "Low": 17,
+          "Medium": 16,
+          "High": 2
+        },
+        "fossil_fuel": {
+          "Low": 13,
+          "Medium": 13,
+          "High": 9
+        },
+        "transmission": {
+          "Medium": 13,
+          "High": 10,
+          "None": 6,
+          "Low": 6
+        }
+      }
+    },
+    "CF10_Sol25_Wnd10_CCS50_Hyd5_B0_L0": {
+      "resource_mix": {
+        "clean_firm": 10,
+        "solar": 25,
+        "wind": 10,
+        "ccs_ccgt": 50,
+        "hydro": 5
+      },
+      "procurement_pct": 80,
+      "battery_dispatch_pct": 0,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 76.1,
+      "cost_range": {
+        "min": 43.67,
+        "max": 53.65
+      },
+      "scenario_count": 32,
+      "scenarios": [
+        {
+          "key": "MLH_L_N",
+          "effective_cost": 43.67,
+          "incremental_cost": 18.67
+        },
+        {
+          "key": "HLH_L_N",
+          "effective_cost": 43.67,
+          "incremental_cost": 18.67
+        },
+        {
+          "key": "HLH_L_L",
+          "effective_cost": 44.2,
+          "incremental_cost": 19.2
+        },
+        {
+          "key": "MLH_L_M",
+          "effective_cost": 44.73,
+          "incremental_cost": 19.73
+        },
+        {
+          "key": "HLH_L_M",
+          "effective_cost": 44.73,
+          "incremental_cost": 19.73
+        },
+        {
+          "key": "MLH_L_H",
+          "effective_cost": 45.78,
+          "incremental_cost": 20.78
+        },
+        {
+          "key": "HLH_L_H",
+          "effective_cost": 45.78,
+          "incremental_cost": 20.78
+        },
+        {
+          "key": "MLH_M_N",
+          "effective_cost": 46.29,
+          "incremental_cost": 16.29
+        },
+        {
+          "key": "HLH_M_N",
+          "effective_cost": 46.29,
+          "incremental_cost": 16.29
+        },
+        {
+          "key": "MLH_M_L",
+          "effective_cost": 46.82,
+          "incremental_cost": 16.82
+        },
+        {
+          "key": "HLH_M_L",
+          "effective_cost": 46.82,
+          "incremental_cost": 16.82
+        },
+        {
+          "key": "MLH_M_M",
+          "effective_cost": 47.35,
+          "incremental_cost": 17.35
+        },
+        {
+          "key": "HLH_M_M",
+          "effective_cost": 47.35,
+          "incremental_cost": 17.35
+        },
+        {
+          "key": "MLH_M_H",
+          "effective_cost": 48.4,
+          "incremental_cost": 18.4
+        },
+        {
+          "key": "HLH_M_H",
+          "effective_cost": 48.4,
+          "incremental_cost": 18.4
+        },
+        {
+          "key": "MLM_H_N",
+          "effective_cost": 51.53,
+          "incremental_cost": 11.53
+        },
+        {
+          "key": "MLH_H_N",
+          "effective_cost": 51.53,
+          "incremental_cost": 11.53
+        },
+        {
+          "key": "HLM_H_N",
+          "effective_cost": 51.53,
+          "incremental_cost": 11.53
+        },
+        {
+          "key": "HLH_H_N",
+          "effective_cost": 51.53,
+          "incremental_cost": 11.53
+        },
+        {
+          "key": "MLM_H_L",
+          "effective_cost": 52.06,
+          "incremental_cost": 12.06
+        },
+        {
+          "key": "MLH_H_L",
+          "effective_cost": 52.06,
+          "incremental_cost": 12.06
+        },
+        {
+          "key": "HLM_H_L",
+          "effective_cost": 52.06,
+          "incremental_cost": 12.06
+        },
+        {
+          "key": "HLH_H_L",
+          "effective_cost": 52.06,
+          "incremental_cost": 12.06
+        },
+        {
+          "key": "MLM_H_M",
+          "effective_cost": 52.59,
+          "incremental_cost": 12.59
+        },
+        {
+          "key": "MLH_H_M",
+          "effective_cost": 52.59,
+          "incremental_cost": 12.59
+        },
+        {
+          "key": "HLM_H_M",
+          "effective_cost": 52.59,
+          "incremental_cost": 12.59
+        },
+        {
+          "key": "HLH_H_M",
+          "effective_cost": 52.59,
+          "incremental_cost": 12.59
+        },
+        {
+          "key": "LLH_H_H",
+          "effective_cost": 53.65,
+          "incremental_cost": 13.65
+        },
+        {
+          "key": "MLM_H_H",
+          "effective_cost": 53.65,
+          "incremental_cost": 13.65
+        },
+        {
+          "key": "MLH_H_H",
+          "effective_cost": 53.65,
+          "incremental_cost": 13.65
+        },
+        {
+          "key": "HLM_H_H",
+          "effective_cost": 53.65,
+          "incremental_cost": 13.65
+        },
+        {
+          "key": "HLH_H_H",
+          "effective_cost": 53.65,
+          "incremental_cost": 13.65
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 1,
+          "Medium": 15,
+          "High": 16
+        },
+        "firm_gen": {
+          "Low": 32
+        },
+        "storage": {
+          "High": 24,
+          "Medium": 8
+        },
+        "fossil_fuel": {
+          "High": 17,
+          "Low": 7,
+          "Medium": 8
+        },
+        "transmission": {
+          "High": 9,
+          "None": 8,
+          "Low": 7,
+          "Medium": 8
+        }
+      }
+    },
+    "CF10_Sol30_Wnd55_CCS0_Hyd5_B0_L0": {
+      "resource_mix": {
+        "clean_firm": 10,
+        "solar": 30,
+        "wind": 55,
+        "ccs_ccgt": 0,
+        "hydro": 5
+      },
+      "procurement_pct": 85,
+      "battery_dispatch_pct": 0,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 77.4,
+      "cost_range": {
+        "min": 43.41,
+        "max": 63.53
+      },
+      "scenario_count": 21,
+      "scenarios": [
+        {
+          "key": "LMM_L_N",
+          "effective_cost": 43.41,
+          "incremental_cost": 18.41
+        },
+        {
+          "key": "LMH_L_N",
+          "effective_cost": 43.41,
+          "incremental_cost": 18.41
+        },
+        {
+          "key": "LHM_L_N",
+          "effective_cost": 43.69,
+          "incremental_cost": 18.69
+        },
+        {
+          "key": "LHH_L_N",
+          "effective_cost": 43.69,
+          "incremental_cost": 18.69
+        },
+        {
+          "key": "LMH_L_L",
+          "effective_cost": 45.42,
+          "incremental_cost": 20.42
+        },
+        {
+          "key": "LHH_L_L",
+          "effective_cost": 45.7,
+          "incremental_cost": 20.7
+        },
+        {
+          "key": "LMM_M_N",
+          "effective_cost": 46.2,
+          "incremental_cost": 16.2
+        },
+        {
+          "key": "LMH_M_N",
+          "effective_cost": 46.2,
+          "incremental_cost": 16.2
+        },
+        {
+          "key": "LMH_L_M",
+          "effective_cost": 47.48,
+          "incremental_cost": 22.48
+        },
+        {
+          "key": "LHH_L_M",
+          "effective_cost": 47.76,
+          "incremental_cost": 22.76
+        },
+        {
+          "key": "LMM_M_L",
+          "effective_cost": 48.21,
+          "incremental_cost": 18.21
+        },
+        {
+          "key": "LMH_M_L",
+          "effective_cost": 48.21,
+          "incremental_cost": 18.21
+        },
+        {
+          "key": "LHH_M_L",
+          "effective_cost": 48.49,
+          "incremental_cost": 18.49
+        },
+        {
+          "key": "LHH_M_M",
+          "effective_cost": 50.55,
+          "incremental_cost": 20.55
+        },
+        {
+          "key": "LHH_L_H",
+          "effective_cost": 50.85,
+          "incremental_cost": 25.85
+        },
+        {
+          "key": "MHH_L_N",
+          "effective_cost": 53.13,
+          "incremental_cost": 28.13
+        },
+        {
+          "key": "LHH_M_H",
+          "effective_cost": 53.64,
+          "incremental_cost": 23.64
+        },
+        {
+          "key": "MHH_M_N",
+          "effective_cost": 55.93,
+          "incremental_cost": 25.93
+        },
+        {
+          "key": "LHH_H_H",
+          "effective_cost": 59.23,
+          "incremental_cost": 19.23
+        },
+        {
+          "key": "MHH_H_N",
+          "effective_cost": 61.52,
+          "incremental_cost": 21.52
+        },
+        {
+          "key": "MHH_H_L",
+          "effective_cost": 63.53,
+          "incremental_cost": 23.53
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 17,
+          "Medium": 4
+        },
+        "firm_gen": {
+          "Medium": 8,
+          "High": 13
+        },
+        "storage": {
+          "Medium": 4,
+          "High": 17
+        },
+        "fossil_fuel": {
+          "Low": 10,
+          "Medium": 8,
+          "High": 3
+        },
+        "transmission": {
+          "None": 9,
+          "Low": 6,
+          "Medium": 3,
+          "High": 3
+        }
+      }
+    },
+    "CF10_Sol20_Wnd65_CCS0_Hyd5_B0_L0": {
+      "resource_mix": {
+        "clean_firm": 10,
+        "solar": 20,
+        "wind": 65,
+        "ccs_ccgt": 0,
+        "hydro": 5
+      },
+      "procurement_pct": 80,
+      "battery_dispatch_pct": 0,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 75.3,
+      "cost_range": {
+        "min": 46.33,
+        "max": 55.8
+      },
+      "scenario_count": 13,
+      "scenarios": [
+        {
+          "key": "LHM_M_N",
+          "effective_cost": 46.33,
+          "incremental_cost": 16.33
+        },
+        {
+          "key": "LHH_M_N",
+          "effective_cost": 46.33,
+          "incremental_cost": 16.33
+        },
+        {
+          "key": "LML_H_N",
+          "effective_cost": 51.15,
+          "incremental_cost": 11.15
+        },
+        {
+          "key": "LMM_H_N",
+          "effective_cost": 51.15,
+          "incremental_cost": 11.15
+        },
+        {
+          "key": "LMH_H_N",
+          "effective_cost": 51.15,
+          "incremental_cost": 11.15
+        },
+        {
+          "key": "LHL_H_N",
+          "effective_cost": 51.2,
+          "incremental_cost": 11.2
+        },
+        {
+          "key": "LHM_H_N",
+          "effective_cost": 51.2,
+          "incremental_cost": 11.2
+        },
+        {
+          "key": "LHH_H_N",
+          "effective_cost": 51.2,
+          "incremental_cost": 11.2
+        },
+        {
+          "key": "LMM_H_L",
+          "effective_cost": 53.45,
+          "incremental_cost": 13.45
+        },
+        {
+          "key": "LMH_H_L",
+          "effective_cost": 53.45,
+          "incremental_cost": 13.45
+        },
+        {
+          "key": "LHM_H_L",
+          "effective_cost": 53.5,
+          "incremental_cost": 13.5
+        },
+        {
+          "key": "LHH_H_L",
+          "effective_cost": 53.5,
+          "incremental_cost": 13.5
+        },
+        {
+          "key": "LHH_H_M",
+          "effective_cost": 55.8,
+          "incremental_cost": 15.8
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 13
+        },
+        "firm_gen": {
+          "Medium": 5,
+          "High": 8
+        },
+        "storage": {
+          "Low": 2,
+          "Medium": 5,
+          "High": 6
+        },
+        "fossil_fuel": {
+          "High": 11,
+          "Medium": 2
+        },
+        "transmission": {
+          "None": 8,
+          "Low": 4,
+          "Medium": 1
+        }
+      }
+    },
+    "CF15_Sol25_Wnd55_CCS0_Hyd5_B0_L0": {
+      "resource_mix": {
+        "clean_firm": 15,
+        "solar": 25,
+        "wind": 55,
+        "ccs_ccgt": 0,
+        "hydro": 5
+      },
+      "procurement_pct": 80,
+      "battery_dispatch_pct": 0,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 75.1,
+      "cost_range": {
+        "min": 50.26,
+        "max": 64.12
+      },
+      "scenario_count": 12,
+      "scenarios": [
+        {
+          "key": "LMH_M_M",
+          "effective_cost": 50.26,
+          "incremental_cost": 20.26
+        },
+        {
+          "key": "LMH_L_H",
+          "effective_cost": 50.53,
+          "incremental_cost": 25.53
+        },
+        {
+          "key": "MMH_L_N",
+          "effective_cost": 52.08,
+          "incremental_cost": 27.08
+        },
+        {
+          "key": "LMH_M_H",
+          "effective_cost": 53.24,
+          "incremental_cost": 23.24
+        },
+        {
+          "key": "MMH_L_L",
+          "effective_cost": 54.01,
+          "incremental_cost": 29.01
+        },
+        {
+          "key": "MMH_M_N",
+          "effective_cost": 54.79,
+          "incremental_cost": 24.79
+        },
+        {
+          "key": "LMH_H_M",
+          "effective_cost": 55.68,
+          "incremental_cost": 15.68
+        },
+        {
+          "key": "MMH_M_L",
+          "effective_cost": 56.72,
+          "incremental_cost": 26.72
+        },
+        {
+          "key": "LMH_H_H",
+          "effective_cost": 58.66,
+          "incremental_cost": 18.66
+        },
+        {
+          "key": "MMH_H_N",
+          "effective_cost": 60.21,
+          "incremental_cost": 20.21
+        },
+        {
+          "key": "MMH_H_L",
+          "effective_cost": 62.14,
+          "incremental_cost": 22.14
+        },
+        {
+          "key": "MMH_H_M",
+          "effective_cost": 64.12,
+          "incremental_cost": 24.12
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 5,
+          "Medium": 7
+        },
+        "firm_gen": {
+          "Medium": 12
+        },
+        "storage": {
+          "High": 12
+        },
+        "fossil_fuel": {
+          "Low": 3,
+          "Medium": 4,
+          "High": 5
+        },
+        "transmission": {
+          "High": 3,
+          "Medium": 3,
+          "None": 3,
+          "Low": 3
+        }
+      }
+    },
+    "CF13_Sol24_Wnd11_CCS43_Hyd9_B2_L0": {
+      "resource_mix": {
+        "clean_firm": 13,
+        "solar": 24,
+        "wind": 11,
+        "ccs_ccgt": 43,
+        "hydro": 9
+      },
+      "procurement_pct": 78,
+      "battery_dispatch_pct": 2,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 76.7,
+      "cost_range": {
+        "min": 46.57,
+        "max": 53.06
+      },
+      "scenario_count": 10,
+      "scenarios": [
+        {
+          "key": "HLL_M_M",
+          "effective_cost": 46.57,
+          "incremental_cost": 16.57
+        },
+        {
+          "key": "HLM_M_M",
+          "effective_cost": 47.22,
+          "incremental_cost": 17.22
+        },
+        {
+          "key": "HLL_M_H",
+          "effective_cost": 47.55,
+          "incremental_cost": 17.55
+        },
+        {
+          "key": "HLM_M_H",
+          "effective_cost": 48.21,
+          "incremental_cost": 18.21
+        },
+        {
+          "key": "HLL_H_N",
+          "effective_cost": 51.08,
+          "incremental_cost": 11.08
+        },
+        {
+          "key": "HLL_H_L",
+          "effective_cost": 51.55,
+          "incremental_cost": 11.55
+        },
+        {
+          "key": "MLL_H_M",
+          "effective_cost": 52.07,
+          "incremental_cost": 12.07
+        },
+        {
+          "key": "HLL_H_M",
+          "effective_cost": 52.07,
+          "incremental_cost": 12.07
+        },
+        {
+          "key": "MLL_H_H",
+          "effective_cost": 53.06,
+          "incremental_cost": 13.06
+        },
+        {
+          "key": "HLL_H_H",
+          "effective_cost": 53.06,
+          "incremental_cost": 13.06
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Medium": 2,
+          "High": 8
+        },
+        "firm_gen": {
+          "Low": 10
+        },
+        "storage": {
+          "Low": 8,
+          "Medium": 2
+        },
+        "fossil_fuel": {
+          "High": 6,
+          "Medium": 4
+        },
+        "transmission": {
+          "Medium": 4,
+          "High": 4,
+          "None": 1,
+          "Low": 1
+        }
+      }
+    },
+    "CF10_Sol25_Wnd55_CCS5_Hyd5_B0_L0": {
+      "resource_mix": {
+        "clean_firm": 10,
+        "solar": 25,
+        "wind": 55,
+        "ccs_ccgt": 5,
+        "hydro": 5
+      },
+      "procurement_pct": 80,
+      "battery_dispatch_pct": 0,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 75.3,
+      "cost_range": {
+        "min": 42.38,
+        "max": 50.49
+      },
+      "scenario_count": 7,
+      "scenarios": [
+        {
+          "key": "LLM_L_N",
+          "effective_cost": 42.38,
+          "incremental_cost": 17.38
+        },
+        {
+          "key": "LLH_L_N",
+          "effective_cost": 42.38,
+          "incremental_cost": 17.38
+        },
+        {
+          "key": "LLM_M_N",
+          "effective_cost": 45.08,
+          "incremental_cost": 15.08
+        },
+        {
+          "key": "LLH_M_N",
+          "effective_cost": 45.08,
+          "incremental_cost": 15.08
+        },
+        {
+          "key": "LLL_H_N",
+          "effective_cost": 50.49,
+          "incremental_cost": 10.49
+        },
+        {
+          "key": "LLM_H_N",
+          "effective_cost": 50.49,
+          "incremental_cost": 10.49
+        },
+        {
+          "key": "LLH_H_N",
+          "effective_cost": 50.49,
+          "incremental_cost": 10.49
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 7
+        },
+        "firm_gen": {
+          "Low": 7
+        },
+        "storage": {
+          "Low": 1,
+          "Medium": 3,
+          "High": 3
+        },
+        "fossil_fuel": {
+          "High": 3,
+          "Low": 2,
+          "Medium": 2
+        },
+        "transmission": {
+          "None": 7
+        }
+      }
+    },
+    "CF10_Sol25_Wnd15_CCS45_Hyd5_B0_L0": {
+      "resource_mix": {
+        "clean_firm": 10,
+        "solar": 25,
+        "wind": 15,
+        "ccs_ccgt": 45,
+        "hydro": 5
+      },
+      "procurement_pct": 80,
+      "battery_dispatch_pct": 0,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 76.1,
+      "cost_range": {
+        "min": 43.84,
+        "max": 52.51
+      },
+      "scenario_count": 5,
+      "scenarios": [
+        {
+          "key": "LLH_L_L",
+          "effective_cost": 43.84,
+          "incremental_cost": 18.84
+        },
+        {
+          "key": "LLH_M_M",
+          "effective_cost": 47.16,
+          "incremental_cost": 17.16
+        },
+        {
+          "key": "LLH_M_H",
+          "effective_cost": 48.36,
+          "incremental_cost": 18.36
+        },
+        {
+          "key": "LLH_H_L",
+          "effective_cost": 51.86,
+          "incremental_cost": 11.86
+        },
+        {
+          "key": "LLH_H_M",
+          "effective_cost": 52.51,
+          "incremental_cost": 12.51
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 5
+        },
+        "firm_gen": {
+          "Low": 5
+        },
+        "storage": {
+          "High": 5
+        },
+        "fossil_fuel": {
+          "Low": 1,
+          "Medium": 2,
+          "High": 2
+        },
+        "transmission": {
+          "Low": 2,
+          "Medium": 2,
+          "High": 1
+        }
+      }
+    },
+    "CF13_Sol65_Wnd13_CCS0_Hyd9_B2_L2": {
+      "resource_mix": {
+        "clean_firm": 13,
+        "solar": 65,
+        "wind": 13,
+        "ccs_ccgt": 0,
+        "hydro": 9
+      },
+      "procurement_pct": 88,
+      "battery_dispatch_pct": 2,
+      "ldes_dispatch_pct": 2,
+      "hourly_match_score": 82.4,
+      "cost_range": {
+        "min": 55.53,
+        "max": 57.23
+      },
+      "scenario_count": 3,
+      "scenarios": [
+        {
+          "key": "LML_H_H",
+          "effective_cost": 55.53,
+          "incremental_cost": 15.53
+        },
+        {
+          "key": "LMM_H_M",
+          "effective_cost": 55.57,
+          "incremental_cost": 15.57
+        },
+        {
+          "key": "LMM_H_H",
+          "effective_cost": 57.23,
+          "incremental_cost": 17.23
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 3
+        },
+        "firm_gen": {
+          "Medium": 3
+        },
+        "storage": {
+          "Low": 1,
+          "Medium": 2
+        },
+        "fossil_fuel": {
+          "High": 3
+        },
+        "transmission": {
+          "High": 2,
+          "Medium": 1
+        }
+      }
+    },
+    "CF10_Sol25_Wnd20_CCS40_Hyd5_B0_L0": {
+      "resource_mix": {
+        "clean_firm": 10,
+        "solar": 25,
+        "wind": 20,
+        "ccs_ccgt": 40,
+        "hydro": 5
+      },
+      "procurement_pct": 80,
+      "battery_dispatch_pct": 0,
+      "ldes_dispatch_pct": 0,
+      "hourly_match_score": 76.1,
+      "cost_range": {
+        "min": 46.51,
+        "max": 46.51
+      },
+      "scenario_count": 1,
+      "scenarios": [
+        {
+          "key": "LLH_M_L",
+          "effective_cost": 46.51,
+          "incremental_cost": 16.51
+        }
+      ],
+      "toggle_distributions": {
+        "renewable_gen": {
+          "Low": 1
+        },
+        "firm_gen": {
+          "Low": 1
+        },
+        "storage": {
+          "High": 1
+        },
+        "fossil_fuel": {
+          "Medium": 1
+        },
+        "transmission": {
+          "Low": 1
+        }
+      }
+    }
+  }
+}
