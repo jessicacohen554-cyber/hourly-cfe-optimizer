@@ -416,29 +416,46 @@ def walk_supply_stack(iso, year, total_new_demand_twh):
 def compute_clean_premium(iso, year, rps_new_demand_twh, corp_demand_twh, available_existing_twh):
     """Compute clean premium from combined demand on the supply stack.
 
-    1. Existing non-SSS supply serves corp demand at ~$0 premium (already built).
-    2. Remaining corp demand + ALL RPS new demand compete on the new-build stack.
-    3. Marginal premium = LCOE of the tier where COMBINED demand lands - wholesale.
+    Uses a blended approach:
+    1. Existing non-SSS supply serves corp demand at low premium (~$2-8/MWh REC cost).
+    2. Once existing supply is exhausted, new-build tiers set the marginal LCOE.
+    3. RPS mandates consume cheap tiers first; corp demand rides on top.
+    4. Premium is the weighted average: (existing portion × REC premium) +
+       (new-build portion × (LCOE - wholesale)).
     """
     wholesale = WHOLESALE_PRICES[iso]
 
     if corp_demand_twh <= 0:
         return 0.0
 
-    # Phase 1: Serve corporate demand from existing merchant supply (near-zero premium)
+    # REC premium for purchasing existing non-SSS (unbundled REC market cost)
+    base_rec_premium = 5.0  # $/MWh — represents voluntary REC clearing price
+
+    # Phase 1: Portion served by existing merchant supply
+    existing_portion = min(corp_demand_twh, available_existing_twh)
     corp_remaining = max(0, corp_demand_twh - available_existing_twh)
 
     if corp_remaining <= 0:
-        # All corp demand met by existing merchant — minimal premium
+        # All demand met by existing — premium scales with utilization (tighter = costlier RECs)
         utilization = corp_demand_twh / available_existing_twh if available_existing_twh > 0 else 0
-        return round(utilization * 5, 2)  # 0-5 $/MWh based on utilization
+        # Premium: $2/MWh at low utilization, up to $12/MWh at 90%+ utilization (smooth curve)
+        premium = 2 + utilization * utilization * 10  # quadratic: gradual ramp then steep
+        return round(premium, 2)
 
-    # Phase 2: Combined demand on the new-build stack
-    # RPS mandates consume the cheap tiers; corp demand rides on top
+    # Phase 2: Combined demand on the new-build stack (RPS + corp surplus)
     total_new_demand = rps_new_demand_twh + corp_remaining
     marginal_lcoe = walk_supply_stack(iso, year, total_new_demand)
+    newbuild_premium = max(0, marginal_lcoe - wholesale)
 
-    premium = max(0, marginal_lcoe - wholesale)
+    # Blended premium: weighted by how much comes from existing vs new-build
+    # Existing portion gets the REC premium at high-utilization rate
+    existing_premium = base_rec_premium * 2  # $10/MWh — tight existing market when you need new build
+    total = existing_portion + corp_remaining
+    if total > 0:
+        premium = (existing_portion * existing_premium + corp_remaining * newbuild_premium) / total
+    else:
+        premium = 0
+
     return round(premium, 2)
 
 
@@ -447,13 +464,15 @@ def compute_clean_premium(iso, year, rps_new_demand_twh, corp_demand_twh, availa
 # ═══════════════════════════════════════════════════════════════════════════
 
 def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
-    """Find the participation rate at which each match target hits scarcity."""
+    """Find the participation rate at which each match target hits scarcity (>0.8 ratio)."""
     inflections = {}
     available = supply_data["available_non_sss_twh"]
     sss_share = supply_data["sss_share_of_total"]
     rps_mandated = supply_data["rps_mandated_new_twh"]
 
     total_buildable = get_total_buildable(iso, year)
+    remaining_buildable = max(0, total_buildable - rps_mandated)
+    total_for_corp = available + remaining_buildable
 
     for match_target in MATCH_TARGETS:
         procurement_mult = get_procurement_ratio(match_target)
@@ -463,11 +482,10 @@ def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
         for pct in range(1, 101):
             corp_load = demand_twh * CI_SHARE * (pct / 100)
             corp_eac_demand = corp_load * incremental_need_frac * procurement_mult
-            corp_remaining = max(0, corp_eac_demand - available)
 
-            # Combined demand on new-build stack
-            combined_new_demand = rps_mandated + corp_remaining
-            if combined_new_demand > total_buildable:
+            # Corporate-centric ratio: corp demand / total available for corp
+            ratio = corp_eac_demand / total_for_corp if total_for_corp > 0 else 999
+            if ratio > 0.8:  # "Tightening" threshold — scarcity starts here
                 inflection_pct = pct
                 break
 
@@ -476,7 +494,8 @@ def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
             "procurement_multiplier": round(procurement_mult, 3),
             "total_buildable_twh": round(total_buildable, 1),
             "rps_mandated_twh": round(rps_mandated, 1),
-            "remaining_for_voluntary_twh": round(max(0, total_buildable - rps_mandated), 1),
+            "remaining_for_voluntary_twh": round(remaining_buildable, 1),
+            "total_for_corp_twh": round(total_for_corp, 1),
         }
 
     return inflections
@@ -662,10 +681,13 @@ def main():
                         corp_beyond_existing = max(0, corp_eac_demand - available)
                         combined_new_demand = rps_mandated + corp_beyond_existing
 
-                        # Scarcity ratio = combined demand / total buildable
-                        if total_buildable > 0:
-                            demand_ratio = combined_new_demand / total_buildable
-                        elif combined_new_demand > 0:
+                        # Scarcity ratio: corporate-centric
+                        # Total supply available for corporate = existing + remaining buildable after RPS
+                        remaining_buildable = max(0, total_buildable - rps_mandated)
+                        total_for_corp = available + remaining_buildable
+                        if total_for_corp > 0:
+                            demand_ratio = corp_eac_demand / total_for_corp
+                        elif corp_eac_demand > 0:
                             demand_ratio = 999
                         else:
                             demand_ratio = 0
@@ -690,6 +712,8 @@ def main():
                             "rps_mandated_new_twh": round(rps_mandated, 1),
                             "combined_new_demand_twh": round(combined_new_demand, 1),
                             "total_buildable_twh": round(total_buildable, 1),
+                            "remaining_buildable_twh": round(remaining_buildable, 1),
+                            "total_for_corp_twh": round(total_for_corp, 1),
                             "demand_supply_ratio": round(demand_ratio, 3),
                             "scarcity_class": band_key,
                             "scarcity_label": label,
