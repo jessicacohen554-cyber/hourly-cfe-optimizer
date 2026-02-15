@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy & Enabling Conditions — Power Generator Decarbonization</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="index.html" class="nav-brand">Power Generator Decarbonization</a>
+        <button class="nav-hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')">&#9776;</button>
+        <ul class="nav-links">
+            <li><a href="index.html">Executive Summary</a></li>
+            <li><a href="dashboard.html">Company Dashboard</a></li>
+            <li><a href="fleet-analysis.html">Fleet Analysis</a></li>
+            <li><a href="targets.html">Targets & Feasibility</a></li>
+            <li><a href="policy.html" class="active">Policy & Conditions</a></li>
+            <li><a href="methodology.html">Methodology</a></li>
+        </ul>
+    </div>
+</nav>
+
+<header class="hero" style="padding: 48px 24px 40px;">
+    <div class="hero-inner">
+        <p class="tagline">Enabling Conditions & Barriers</p>
+        <h1>What Makes Ambitious Decarbonization Achievable&mdash;or Too Costly?</h1>
+        <p class="subtitle">The policy, market, and technology conditions that determine whether generators can decarbonize affordably, and what they should advocate for.</p>
+    </div>
+</header>
+
+<div class="main-content">
+
+    <!-- The Co-Optimization Imperative -->
+    <section class="story-section fade-in">
+        <span class="story-badge green">Core Principle</span>
+        <div class="story-content">
+            <h2>Affordability and Decarbonization Must Be Co-Optimized</h2>
+            <p>The most durable decarbonization pathways are those that don't require customers to choose between clean energy and affordable bills. The IRA's clean energy tax credits have fundamentally changed this equation: in many markets, clean energy is now the <em>cheapest</em> new generation option, not just the cleanest.<sup class="ref">5,12</sup></p>
+
+            <p>But "cheapest new build" doesn't mean "free transition." Stranded assets, grid integration costs, reliability investments, and community transition all carry real price tags. <strong>The policy question isn't whether to decarbonize — it's how to structure the transition so costs are manageable and fairly distributed.</strong></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Enabling Conditions -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Enabling Conditions: What Unlocks Affordable Ambition</h2>
+        </div>
+
+        <!-- IRA Tax Credits -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>1. IRA Tax Credits: The Single Largest Enabler</h3>
+            <div class="story-two-col" style="margin-top: 16px;">
+                <div>
+                    <p style="font-size: 0.92rem;">The Inflation Reduction Act (2022) provides an estimated <strong>$369 billion</strong> in clean energy tax incentives over 10 years. For power generators, three credits are transformative:<sup class="ref">12</sup></p>
+                    <ul style="margin-left: 16px; font-size: 0.9rem; color: var(--text-secondary);">
+                        <li><strong>Section 45Y (Clean Electricity PTC):</strong> ~$28/MWh for qualifying clean generation (wind, solar, nuclear, geothermal). Reduces LCOE by 30&ndash;40%.</li>
+                        <li><strong>Section 48E (Clean Electricity ITC):</strong> 30% investment tax credit for clean energy projects + 10% bonus for domestic content + 10% for energy communities.</li>
+                        <li><strong>Section 45Q (CCS Credit):</strong> $85/ton CO₂ for geologic storage. Makes CCS economically viable on large CCGTs at ~50&ndash;60% capture rate.</li>
+                    </ul>
+                </div>
+                <div class="chart-container" style="margin: 0; padding: 16px;">
+                    <h4 style="font-size: 0.95rem;">Impact of IRA Credits on LCOE</h4>
+                    <div style="height: 250px;"><canvas id="iraChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="callout success" style="margin-top: 16px;">
+                <p><strong>Who benefits most:</strong> Coal-heavy generators gain the most because replacement renewables receive the full credit, making coal-to-clean substitution economically compelling. Gas+nuclear fleets benefit from 45Q (CCS) and 45Y (nuclear PTC) but face higher marginal costs.</p>
+            </div>
+        </div>
+
+        <!-- Carbon Pricing -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>2. Carbon Pricing: The Missing Accelerant</h3>
+            <p style="font-size: 0.92rem;">No national carbon price exists in the United States. Regional carbon markets (RGGI in the Northeast, WCI in the West) cover only a fraction of the generators analyzed here. A federal carbon price would dramatically accelerate decarbonization economics:<sup class="ref">13</sup></p>
+
+            <div class="card-grid" style="margin-top: 16px;">
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.6rem;">$40&ndash;60</div>
+                    <div class="stat-label">$/ton CO₂</div>
+                    <div class="stat-sublabel">Makes coal retirement economic everywhere. Gas plants remain viable.</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.6rem;">$80&ndash;120</div>
+                    <div class="stat-label">$/ton CO₂</div>
+                    <div class="stat-sublabel">CCS becomes competitive on gas. Nuclear uprates fully economic.</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.6rem;">$150+</div>
+                    <div class="stat-label">$/ton CO₂</div>
+                    <div class="stat-sublabel">Near-100% clean electricity economic. LDES, clean firm competitive.</div>
+                </div>
+            </div>
+
+            <p style="font-size: 0.88rem; margin-top: 16px; color: var(--text-tertiary);">Reference points: EPA social cost of carbon: $51/ton (2020$). Rennert et al. (Nature, 2022): $185/ton. EU ETS: &euro;70&ndash;100/ton ($75&ndash;110). RGGI: ~$15/ton.<sup class="ref">13</sup></p>
+
+            <div class="chart-container" style="margin-top: 20px; padding: 20px;">
+                <h4 style="font-size: 0.95rem;">Social Cost of Carbon: How Different Estimates Compare</h4>
+                <div style="height: 220px;"><canvas id="sccChart"></canvas></div>
+                <p class="citation">EPA (2021 IWG), Rennert et al. (Nature 2022), EU ETS (2024 avg), RGGI (2024 auction). Abatement cost thresholds illustrate what becomes economic at each carbon price.<sup class="ref">13</sup></p>
+            </div>
+        </div>
+
+        <!-- Transmission -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>3. Transmission & Interconnection: The #1 Bottleneck</h3>
+            <p style="font-size: 0.92rem;">The single largest physical constraint on clean energy deployment is the transmission grid. Key facts:<sup class="ref">14</sup></p>
+            <ul style="margin-left: 16px; font-size: 0.9rem; color: var(--text-secondary);">
+                <li><strong>2,600 GW</strong> of generation capacity sits in interconnection queues nationwide (as of 2024) — more than double total US installed capacity.</li>
+                <li><strong>5+ years</strong> average time from interconnection request to commercial operation.</li>
+                <li><strong>Only ~20%</strong> of projects that enter the queue actually reach operation.</li>
+                <li>FERC Order 1920 (2024) requires proactive long-range transmission planning — a step forward but implementation will take years.</li>
+            </ul>
+            <div class="callout warning" style="margin-top: 12px;">
+                <p><strong>Implication for generators:</strong> Even generators with ambitious clean energy plans face multi-year delays to interconnect new projects. Utilities with existing transmission rights (like vertically integrated utilities in their own service territories) have a structural advantage.</p>
+            </div>
+        </div>
+
+        <!-- Technology -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h3>4. Technology Cost Trends: The Tailwind</h3>
+            <p style="font-size: 0.92rem;">Cost declines in clean energy technologies have been the primary driver of power sector decarbonization to date:<sup class="ref">5,15</sup></p>
+            <div class="stat-row" style="margin-top: 16px;">
+                <div class="stat-tile">
+                    <div class="stat-value success" style="font-size: 1.4rem;">-90%</div>
+                    <div class="stat-label">Solar LCOE since 2010</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value success" style="font-size: 1.4rem;">-72%</div>
+                    <div class="stat-label">Wind LCOE since 2010</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value success" style="font-size: 1.4rem;">-90%+</div>
+                    <div class="stat-label">Battery costs since 2010</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value" style="font-size: 1.4rem;">-50%</div>
+                    <div class="stat-label">LDES projected by 2030</div>
+                    <div class="stat-sublabel">Iron-air: ~$50&ndash;80/kWh target</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Barriers -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Barriers: What Makes Targets Difficult or Too Costly</h2>
+        </div>
+
+        <div class="card-grid">
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Stranded Asset Risk</h4>
+                <p style="font-size: 0.88rem;">Coal and gas plants with remaining book value create financial pressure to continue operating. Regulated utilities recover capital through rate base — early retirement means writing off undepreciated assets, which requires regulatory approval and may increase rates. <strong>Estimated stranded asset exposure for the 15 generators: $50&ndash;80 billion.</strong></p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Reliability Mandates</h4>
+                <p style="font-size: 0.88rem;">NERC assessments identify growing resource adequacy risks as dispatchable fossil plants retire faster than clean firm replacement is built. Winter reliability events (Winter Storm Uri 2021, Winter Storm Elliott 2022) reinforce the political case for retaining gas plants. Grid operators increasingly impose minimum capacity requirements.<sup class="ref">21</sup></p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Load Growth</h4>
+                <p style="font-size: 0.88rem;">After two decades of flat electricity demand, the US is experiencing unprecedented load growth from data centers, AI computing, EVs, and industrial electrification. Some utilities project 4&ndash;6% annual growth. <strong>Growth means generators must decarbonize a moving target — absolute reductions are harder when the denominator is growing.</strong></p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Political & Regulatory Headwinds</h4>
+                <p style="font-size: 0.88rem;">Coal communities resist plant closures. State legislatures in fossil-fuel-dependent states pass laws restricting early retirement. EPA regulations face legal challenges. IRA tax credit repeal risk creates investment uncertainty. Permitting reform stalls in Congress.</p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Rate Impact Concerns</h4>
+                <p style="font-size: 0.88rem;">Regulated utilities must demonstrate that capital investments are prudent and in ratepayers' interest. Large-scale clean energy investment can increase rate base and, temporarily, customer bills. Affordability is a political constraint even when long-term economics favor transition.</p>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--red-accent);">
+                <h4>Supply Chain & Workforce</h4>
+                <p style="font-size: 0.88rem;">Solar panel manufacturing is concentrated in China (with tariff and trade policy implications). Transformer and grid equipment lead times are 2&ndash;4 years. Skilled workforce for clean energy construction is constrained. These practical bottlenecks slow deployment even when economics are favorable.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Catalytic Policy Positions -->
+    <section class="story-section fade-in">
+        <span class="story-badge sky">Strategic Recommendations</span>
+        <div class="story-content">
+            <h2>Catalytic Policy Positions: What Should Generators Advocate For?</h2>
+            <p>If power generators want to take policy positions that accelerate least-cost decarbonization — benefiting both their bottom line and the climate — here's what the analysis suggests by fleet archetype:</p>
+        </div>
+
+        <div class="card-grid" style="margin-top: 24px;">
+            <div class="card">
+                <h4 style="color: #374151;">Coal-Heavy Generators Should Advocate For:</h4>
+                <ul style="font-size: 0.88rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>Securitization legislation</strong> — Allows utilities to issue low-cost bonds to pay off stranded coal assets, reducing ratepayer impact of early retirement</li>
+                    <li><strong>Transmission buildout</strong> — Connects wind/solar-rich regions to load centers, enabling coal replacement</li>
+                    <li><strong>Community transition funding</strong> — Reduces political opposition to coal plant closures</li>
+                    <li><strong>IRA credit preservation</strong> — 45Y/48E credits make replacement renewables cheaper than coal operations</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4 style="color: #EF4444;">Gas-Dominant Generators Should Advocate For:</h4>
+                <ul style="font-size: 0.88rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>45Q CCS credit enhancement</strong> — Higher or extended CCS credits make gas+capture competitive</li>
+                    <li><strong>Clean firm technology R&D</strong> — Geothermal, advanced nuclear (SMR), long-duration storage development</li>
+                    <li><strong>Dispatchable clean energy recognition</strong> — Capacity market reforms that value clean dispatchable resources</li>
+                    <li><strong>Methane reduction rules</strong> — Reduces upstream Scope 3 and demonstrates credibility</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4 style="color: #7C3AED;">Nuclear-Led Generators Should Advocate For:</h4>
+                <ul style="font-size: 0.88rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>45U nuclear PTC preservation</strong> — Ensures existing fleet economics remain strong</li>
+                    <li><strong>License extension beyond 80 years</strong> — NRC framework for extended operation</li>
+                    <li><strong>Nuclear in clean energy standards</strong> — Recognition as zero-emission baseload in CES/RPS</li>
+                    <li><strong>SMR permitting reform</strong> — Streamlined NRC review for standardized designs</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4 style="color: #22C55E;">All Generators Should Advocate For:</h4>
+                <ul style="font-size: 0.88rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>Permitting reform</strong> — Faster NEPA review, transmission siting authority for federal corridors</li>
+                    <li><strong>Interconnection queue reform</strong> — FERC action on serial study process, "first-ready, first-served" models</li>
+                    <li><strong>Technology-neutral clean energy standard</strong> — Rewards all zero-emission generation equally</li>
+                    <li><strong>Long-term policy certainty</strong> — 10&ndash;15 year credit horizons to de-risk capital deployment</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Executive Summary</a>
+        <a href="dashboard.html">Company Dashboard</a>
+        <a href="fleet-analysis.html">Fleet Analysis</a>
+        <a href="targets.html">Targets & Feasibility</a>
+        <a href="policy.html">Policy & Conditions</a>
+        <a href="methodology.html">Methodology</a>
+    </div>
+    <div class="footer-note">&copy; 2026</div>
+</footer>
+<div class="bottom-bar"></div>
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Social Cost of Carbon Comparison
+new Chart(document.getElementById('sccChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['RGGI\n(actual)', 'EU ETS\n(actual)', 'EPA IWG\n(social cost)', 'Rennert et al.\n(social cost)'],
+        datasets: [{
+            label: '$/ton CO₂',
+            data: [15, 90, 51, 185],
+            backgroundColor: ['#9CA3AF', '#0EA5E9', '#F59E0B', '#DC2626'],
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => `$${ctx.raw}/ton CO₂` } }
+        },
+        scales: {
+            x: { title: { display: true, text: '$/ton CO₂', font: { size: 11 } }, grid: { display: false }, border: { display: true },
+                 ticks: { callback: v => `$${v}` } },
+            y: { grid: { display: false }, border: { display: true }, ticks: { font: { size: 10 } } }
+        }
+    }
+});
+
+// IRA Impact Chart
+new Chart(document.getElementById('iraChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['Solar', 'Wind', 'Battery (4hr)', 'Nuclear (existing)', 'CCS-CCGT'],
+        datasets: [
+            { label: 'Without IRA', data: [45, 40, 85, 30, 130], backgroundColor: '#E5E7EB', borderRadius: 4 },
+            { label: 'With IRA', data: [28, 25, 65, 22, 90], backgroundColor: '#22C55E', borderRadius: 4 }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true, padding: 8 } } },
+        scales: {
+            y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } },
+            x: { grid: { display: false }, border: { display: true }, ticks: { font: { size: 9 } } }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
