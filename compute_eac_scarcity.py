@@ -172,16 +172,74 @@ TIME_HORIZONS = [2025, 2030, 2035, 2040, 2045, 2050]
 GROWTH_LEVELS = ["Low", "Medium", "High"]
 ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
 
-# ── Clean Premium Benchmarks ($/MWh above wholesale) ──────────────────────
-# From optimizer results: incremental cost at various match thresholds
-CLEAN_PREMIUM_ESCALATION = {
-    # How much clean premium increases per 1% tightening of match target
-    # Derived from optimizer cost curves — nonlinear, accelerating above 90%
-    "below_90": 0.5,    # $/MWh per 1% tightening
-    "90_to_95": 1.5,
-    "95_to_99": 4.0,
-    "99_to_100": 15.0,
-}
+# ── Optimizer-Derived Data ─────────────────────────────────────────────────
+# Loaded at runtime from overprocure_results.json
+# Provides per-ISO procurement_pct and incremental_above_baseline at each threshold
+OPTIMIZER_DATA = {}  # populated by load_optimizer_data()
+
+
+def load_optimizer_data():
+    """Load procurement_pct and incremental_above_baseline per ISO×threshold
+    from the optimizer results JSON.  Populates the global OPTIMIZER_DATA dict.
+
+    Structure: OPTIMIZER_DATA[iso][threshold_int] = {
+        "procurement_pct": float,   # e.g. 143 means 143% of target
+        "incremental_cost": float,  # $/MWh above baseline wholesale
+    }
+    """
+    global OPTIMIZER_DATA
+    with open(RESULTS_PATH) as f:
+        raw = json.load(f)
+
+    for iso in ISOS:
+        OPTIMIZER_DATA[iso] = {}
+        thresholds = raw["results"][iso]["thresholds"]
+        for thr_key, thr_data in thresholds.items():
+            t = int(float(thr_key))
+            OPTIMIZER_DATA[iso][t] = {
+                "procurement_pct": thr_data["procurement_pct"],
+                "incremental_cost": thr_data["costs"]["incremental_above_baseline"],
+            }
+
+
+def interp_optimizer(iso, match_target, field):
+    """Interpolate an optimizer field for any match_target 0-100.
+
+    field: "procurement_pct" or "incremental_cost"
+    For targets below the lowest optimizer threshold, use the lowest value.
+    For targets above the highest, use the highest value.
+    Between thresholds, linear interpolation.
+    """
+    iso_data = OPTIMIZER_DATA.get(iso, {})
+    if not iso_data:
+        # Fallback if optimizer data missing for this ISO
+        return 100.0 if field == "procurement_pct" else 0.0
+
+    thresholds = sorted(iso_data.keys())
+
+    # Exact match
+    if match_target in iso_data:
+        return iso_data[match_target][field]
+
+    # Below lowest
+    if match_target <= thresholds[0]:
+        return iso_data[thresholds[0]][field]
+
+    # Above highest
+    if match_target >= thresholds[-1]:
+        return iso_data[thresholds[-1]][field]
+
+    # Interpolate between bracketing thresholds
+    for i in range(len(thresholds) - 1):
+        lo, hi = thresholds[i], thresholds[i + 1]
+        if lo <= match_target <= hi:
+            t = (match_target - lo) / (hi - lo)
+            v0 = iso_data[lo][field]
+            v1 = iso_data[hi][field]
+            return v0 + t * (v1 - v0)
+
+    return iso_data[thresholds[-1]][field]
+
 
 # ── Scarcity Classification Thresholds ────────────────────────────────────
 SCARCITY_BANDS = {
@@ -218,24 +276,17 @@ def get_sss_new_fraction(iso, year):
     return fractions[str(years[-1])]
 
 
-def compute_clean_premium(match_target, scarcity_ratio):
-    """Estimate clean premium ($/MWh) based on match target and scarcity."""
-    # Base premium from match target
-    base = 0
-    if match_target > 75:
-        below_90_pct = min(match_target, 90) - 75
-        base += below_90_pct * CLEAN_PREMIUM_ESCALATION["below_90"]
-    if match_target > 90:
-        pct_90_95 = min(match_target, 95) - 90
-        base += pct_90_95 * CLEAN_PREMIUM_ESCALATION["90_to_95"]
-    if match_target > 95:
-        pct_95_99 = min(match_target, 99) - 95
-        base += pct_95_99 * CLEAN_PREMIUM_ESCALATION["95_to_99"]
-    if match_target > 99:
-        pct_99_100 = match_target - 99
-        base += pct_99_100 * CLEAN_PREMIUM_ESCALATION["99_to_100"]
+def compute_clean_premium(iso, match_target, scarcity_ratio):
+    """Compute clean premium ($/MWh) from optimizer incremental cost × scarcity.
 
-    # Scarcity multiplier: as supply tightens, premiums escalate
+    Base cost: optimizer's incremental_above_baseline for this ISO × threshold.
+    Scarcity multiplier: as demand/supply ratio rises, premiums escalate
+    above the optimizer's 2025 base cost.
+    """
+    # Base premium from optimizer results (2025 cost curve)
+    base = interp_optimizer(iso, match_target, "incremental_cost")
+
+    # Scarcity multiplier: as supply tightens over time, premiums escalate
     if scarcity_ratio < 0.3:
         multiplier = 1.0
     elif scarcity_ratio < 0.6:
@@ -418,17 +469,8 @@ def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
     sss_share = supply_data["sss_share_of_total"]
 
     for match_target in MATCH_TARGETS:
-        # Effective EAC demand multiplier from match target
-        if match_target <= 80:
-            procurement_mult = 1.0
-        elif match_target <= 90:
-            procurement_mult = 1.0 + (match_target - 80) * 0.01
-        elif match_target <= 95:
-            procurement_mult = 1.1 + (match_target - 90) * 0.03
-        elif match_target <= 99:
-            procurement_mult = 1.25 + (match_target - 95) * 0.05
-        else:
-            procurement_mult = 1.45 + (match_target - 99) * 0.15
+        # Procurement multiplier from optimizer (procurement_pct / 100)
+        procurement_mult = interp_optimizer(iso, match_target, "procurement_pct") / 100.0
 
         # SSS pro-rata derate: incremental need = (target% - sss%) × load
         incremental_need_frac = max(0, match_target / 100 - sss_share)
@@ -454,6 +496,11 @@ def main():
     print("=" * 60)
     print("EAC Scarcity Analysis — Computing...")
     print("=" * 60)
+
+    # Load optimizer data (procurement multipliers + incremental costs per ISO×threshold)
+    load_optimizer_data()
+    print(f"Loaded optimizer data for {len(OPTIMIZER_DATA)} ISOs: "
+          f"{sorted(next(iter(OPTIMIZER_DATA.values())).keys())} thresholds")
 
     # Load demand data
     demands = load_demand_data()
@@ -568,19 +615,8 @@ def main():
 
                 for participation in PARTICIPATION_RATES:
                     for match_target in MATCH_TARGETS:
-                        # Procurement multiplier for match target
-                        # Higher targets need more procurement per MWh due to
-                        # harder hours (evening/night, multi-day low-wind)
-                        if match_target <= 80:
-                            mult = 1.0
-                        elif match_target <= 90:
-                            mult = 1.0 + (match_target - 80) * 0.01
-                        elif match_target <= 95:
-                            mult = 1.1 + (match_target - 90) * 0.03
-                        elif match_target <= 99:
-                            mult = 1.25 + (match_target - 95) * 0.05
-                        else:
-                            mult = 1.45 + (match_target - 99) * 0.15
+                        # Procurement multiplier from optimizer results
+                        mult = interp_optimizer(iso, match_target, "procurement_pct") / 100.0
 
                         # Corporate load participating
                         corp_load = projected_demand * (participation / 100)
@@ -592,7 +628,7 @@ def main():
                         demand_ratio = corp_eac_demand / available if available > 0 else 999
 
                         band_key, label, color = classify_scarcity(demand_ratio)
-                        premium = compute_clean_premium(match_target, min(demand_ratio, 2.0))
+                        premium = compute_clean_premium(iso, match_target, min(demand_ratio, 2.0))
 
                         scenarios_for_combo.append({
                             "participation_pct": participation,
