@@ -1083,40 +1083,40 @@ body {
 
 /* ========== HEATMAP TILE COLORS (5-group red-to-green, solid) ========== */
 .metric-tile.heatmap-1 {
-    background: #22C55E !important;
+    background: #15803D !important;
     border: none;
 }
 .metric-tile.heatmap-1 .tile-label,
-.metric-tile.heatmap-1 .tile-sub { color: #1A2744 !important; }
-.metric-tile.heatmap-1 .tile-value { color: #1A2744 !important; }
+.metric-tile.heatmap-1 .tile-sub { color: #fff !important; }
+.metric-tile.heatmap-1 .tile-value { color: #fff !important; }
 .metric-tile.heatmap-2 {
-    background: #86EFAC !important;
+    background: #3F8F4F !important;
     border: none;
 }
 .metric-tile.heatmap-2 .tile-label,
-.metric-tile.heatmap-2 .tile-sub { color: #1A2744 !important; }
-.metric-tile.heatmap-2 .tile-value { color: #1A2744 !important; }
+.metric-tile.heatmap-2 .tile-sub { color: #fff !important; }
+.metric-tile.heatmap-2 .tile-value { color: #fff !important; }
 .metric-tile.heatmap-3 {
-    background: #FDE68A !important;
+    background: #B8860B !important;
     border: none;
 }
 .metric-tile.heatmap-3 .tile-label,
-.metric-tile.heatmap-3 .tile-sub { color: #1A2744 !important; }
-.metric-tile.heatmap-3 .tile-value { color: #1A2744 !important; }
+.metric-tile.heatmap-3 .tile-sub { color: #fff !important; }
+.metric-tile.heatmap-3 .tile-value { color: #fff !important; }
 .metric-tile.heatmap-4 {
-    background: #F97316 !important;
+    background: #C2410C !important;
     border: none;
 }
 .metric-tile.heatmap-4 .tile-label,
-.metric-tile.heatmap-4 .tile-sub { color: #1A2744 !important; }
-.metric-tile.heatmap-4 .tile-value { color: #1A2744 !important; }
+.metric-tile.heatmap-4 .tile-sub { color: #fff !important; }
+.metric-tile.heatmap-4 .tile-value { color: #fff !important; }
 .metric-tile.heatmap-5 {
-    background: #EF4444 !important;
+    background: #B91C1C !important;
     border: none;
 }
 .metric-tile.heatmap-5 .tile-label,
-.metric-tile.heatmap-5 .tile-sub { color: #1A2744 !important; }
-.metric-tile.heatmap-5 .tile-value { color: #1A2744 !important; }
+.metric-tile.heatmap-5 .tile-sub { color: #fff !important; }
+.metric-tile.heatmap-5 .tile-value { color: #fff !important; }
 
 /* ========== KEY FINDINGS ========== */
 /* ========== PATHWAY PLANNING PANEL ========== */
@@ -5123,15 +5123,15 @@ function initIncrementalMixChart() {
                                 pointStyle: 'rectRounded',
                             }));
                             items.push({
-                                text: 'Existing',
-                                fillStyle: 'rgba(100,100,100,0.7)',
+                                text: 'Saturated = Existing',
+                                fillStyle: 'rgba(100,100,100,0.75)',
                                 strokeStyle: '#666',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             });
                             items.push({
-                                text: 'New Build',
-                                fillStyle: 'rgba(100,100,100,0.3)',
+                                text: 'Faded = New Build',
+                                fillStyle: 'rgba(100,100,100,0.35)',
                                 strokeStyle: '#999',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
@@ -6326,15 +6326,15 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                                 pointStyle: 'rectRounded',
                             }));
                             items.push({
-                                text: 'Existing',
-                                fillStyle: 'rgba(100,100,100,0.7)',
+                                text: 'Saturated = Existing',
+                                fillStyle: 'rgba(100,100,100,0.75)',
                                 strokeStyle: '#666',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             });
                             items.push({
-                                text: 'New Build',
-                                fillStyle: 'rgba(100,100,100,0.3)',
+                                text: 'Faded = New Build',
+                                fillStyle: 'rgba(100,100,100,0.35)',
                                 strokeStyle: '#999',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
