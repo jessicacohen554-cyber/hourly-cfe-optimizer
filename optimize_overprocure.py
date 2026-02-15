@@ -2463,6 +2463,7 @@ def process_iso(args):
             total_active = 324
 
         opt_count = 0
+        cache_saved_this_run = False  # Track whether cache has been saved since start/resume
         for s_idx, (scenario_key, cost_levels) in enumerate(active_scenarios):
             if scenario_key in partial_done:
                 continue  # Already completed in previous session
@@ -2491,14 +2492,15 @@ def process_iso(args):
                     medium_result = result
 
             opt_count += 1
-            # Intra-threshold checkpoint: save every N scenarios
+            # Intra-threshold checkpoint: save every scenario
             if opt_count > 0 and opt_count % INTRA_THRESHOLD_CHECKPOINT_INTERVAL == 0:
                 save_checkpoint(iso, iso_results,
                     phase=f'threshold-{threshold}-partial-{len(threshold_scenarios)}of{total_active}',
                     partial_threshold={'threshold': threshold, 'scenarios': threshold_scenarios})
-                # Persist score cache every 10 scenarios for warm restart
-                if opt_count % 10 == 0:
+                # Score cache save cadence: 1st scenario after start/resume, then every 10
+                if not cache_saved_this_run or opt_count % 10 == 0:
                     save_score_cache(iso, threshold, score_cache)
+                    cache_saved_this_run = True
 
         # ── Adaptive resampling: if unique mixes > 50% of scenarios run, expand ──
         # Target: unique_mixes < 50% of total scenarios run
