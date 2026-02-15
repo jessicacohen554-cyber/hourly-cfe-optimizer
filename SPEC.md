@@ -89,6 +89,15 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 - Corporate participation scenarios
 - Scarcity bands and classification thresholds
 
+### EAC Scarcity: C&I Demand Filter (Feb 15)
+**Decision**: Corporate EAC participation base = C&I (commercial + industrial) share of total demand, not total demand. Residential load does not participate in voluntary EAC procurement.
+
+**C&I share**: ~62% of total demand (EIA 2024 national average: 38% residential, 36% commercial, 26% industrial). Applied as a flat multiplier across all ISOs and demand growth scenarios.
+
+**RPS stays against total demand**: RPS mandates apply to total retail sales (including residential), so RPS/SSS calculations continue to use full demand. Only the voluntary corporate procurement base is filtered to C&I.
+
+**Limitation (noted)**: C&I share held constant across demand growth scenarios. In practice, data center growth (classified as commercial by EIA) could shift C&I share higher over time, particularly in PJM and ERCOT. This simplification is acknowledged but not modeled.
+
 ### Corrected SSS Framework (Feb 15)
 **SSS = mandatory/non-bypassable procurement creating a financial relationship between customers and generation.** Determined by whether a policy acts upon the EAC:
 - **RPS/CES mandates** — state renewable/clean energy standards that retire EACs on behalf of ratepayers
