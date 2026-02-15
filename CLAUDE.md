@@ -101,7 +101,7 @@
 
 ### Change Propagation (Critical)
 - **"Fix something" = fix it everywhere** — any request to fix, update, or change something applies to ALL regions and ALL pages by default, not just the one being discussed
-- Pages to update: `dashboard.html`, `dashboard_standalone.html`, all `region_*.html` pages, `optimizer_methodology.html`, `research_paper.html`
+- Pages to update: `dashboard.html`, all `region_*.html` pages, `optimizer_methodology.html`, `research_paper.html`
 - **Always update the research paper** (`research_paper.html`) when optimizer results, methodology, or findings change
 - **Proactively update narrative text** after new results are generated — don't wait to be asked
 - Only scope a fix to a single page if the user explicitly says so (e.g., "just on CAISO")
@@ -137,7 +137,6 @@
 - **Homepage**: `dashboard/index.html` — scrollytelling landing page with key findings
 - **Regional Page**: `dashboard/region_deepdive.html` — single page with 5 ISO nav buttons (not 5 separate pages)
 - **Abatement**: `dashboard/abatement_comparison.html` — CO2 abatement analysis + `abatement_dashboard.html`
-- **Standalone**: `dashboard/dashboard_standalone.html` — self-contained with inlined assets
 - **Methodology**: `dashboard/optimizer_methodology.html` — technical specs only (trimmed)
 - **Research Paper**: `dashboard/research_paper.html` — full standalone paper with regional deep-dives
 - **Data**: `data/` — EIA hourly profiles, eGRID emission rates, fossil mix data
