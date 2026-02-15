@@ -1,0 +1,505 @@
+  Single-ISO mode: running PJM only
+Loading data...
+  CAISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  ERCOT: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  PJM: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  NYISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  NEISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  CAISO: demand shape averaged over 5 years (2021, 2022, 2023, 2024, 2025), scalars from 2025
+  ERCOT: demand shape averaged over 5 years (2021, 2022, 2023, 2024, 2025), scalars from 2025
+  WARNING: PJM 2021 demand excluded — Hour 3 outlier (0.3116 vs median 0.000019, 16770x)
+  PJM: demand shape averaged over 4 years (2022, 2023, 2024, 2025) (excluded: 2021 — data quality), scalars from 2025
+  NYISO: demand shape averaged over 5 years (2021, 2022, 2023, 2024, 2025), scalars from 2025
+  NEISO: demand shape averaged over 5 years (2021, 2022, 2023, 2024, 2025), scalars from 2025
+  Data loaded.
+
+  QA/QC: Validating profile shapes...
+    CAISO demand: summer=0.000132 winter=0.000106 shoulder=0.000110 (ratio=1.20x)
+    ERCOT demand: summer=0.000137 winter=0.000103 shoulder=0.000109 (ratio=1.26x)
+    PJM demand: summer=0.000128 winter=0.000118 shoulder=0.000103 (ratio=1.24x)
+    NYISO demand: summer=0.000131 winter=0.000115 shoulder=0.000103 (ratio=1.26x)
+    NEISO demand: summer=0.000127 winter=0.000120 shoulder=0.000102 (ratio=1.25x)
+
+  QA/QC Results:
+      WARN: NYISO solar night generation > 10% of daytime
+
+  Loaded existing results: 4 ISOs preserved
+
+======================================================================
+  PJM (Mid-Atlantic)
+======================================================================
+  Sweep: max-matching at key procurement levels...
+    70%: 70.0% match
+    80%: 79.9% match
+    90%: 89.2% match
+    100%: 97.0% match
+    110%: 99.7% match
+    120%: 99.9% match
+    140%: 99.9% match
+    160%: 99.9% match
+    180%: 99.9% match
+    200%: 99.9% match
+    220%: 99.9% match
+    240%: 99.9% match
+    260%: 99.9% match
+    280%: 99.9% match
+    300%: 99.9% match
+    320%: 99.9% match
+    340%: 99.9% match
+    360%: 99.9% match
+    380%: 99.9% match
+    400%: 99.9% match
+    420%: 99.9% match
+    440%: 99.9% match
+    460%: 99.9% match
+    480%: 99.9% match
+    500%: 99.9% match
+    [checkpoint] Saved PJM (sweep) → 34 KB
+
+  Cost-optimizing thresholds (324 scenarios each)... [0 done, 10 remaining]
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-75-partial-1of29) → 34 KB
+    [cache] Saved PJM 75% score cache: 6246 entries (0.4 MB)
+    [checkpoint] Saved PJM (threshold-75-partial-2of29) → 34 KB
+    [checkpoint] Saved PJM (threshold-75-partial-3of29) → 34 KB
+    [checkpoint] Saved PJM (threshold-75-partial-4of29) → 35 KB
+    [checkpoint] Saved PJM (threshold-75-partial-5of29) → 35 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-75-partial-6of29) → 35 KB
+    [checkpoint] Saved PJM (threshold-75-partial-7of29) → 36 KB
+    [checkpoint] Saved PJM (threshold-75-partial-8of29) → 36 KB
+    [checkpoint] Saved PJM (threshold-75-partial-9of29) → 36 KB
+    [checkpoint] Saved PJM (threshold-75-partial-10of29) → 36 KB
+    [cache] Saved PJM 75% score cache: 24383 entries (1.6 MB)
+    [checkpoint] Saved PJM (threshold-75-partial-11of29) → 37 KB
+    [checkpoint] Saved PJM (threshold-75-partial-12of29) → 37 KB
+    [checkpoint] Saved PJM (threshold-75-partial-13of29) → 37 KB
+    [checkpoint] Saved PJM (threshold-75-partial-14of29) → 38 KB
+    [checkpoint] Saved PJM (threshold-75-partial-15of29) → 38 KB
+    [checkpoint] Saved PJM (threshold-75-partial-16of29) → 38 KB
+    [checkpoint] Saved PJM (threshold-75-partial-17of29) → 39 KB
+    [checkpoint] Saved PJM (threshold-75-partial-18of29) → 39 KB
+    [checkpoint] Saved PJM (threshold-75-partial-19of29) → 39 KB
+    [checkpoint] Saved PJM (threshold-75-partial-20of29) → 39 KB
+    [cache] Saved PJM 75% score cache: 29048 entries (1.9 MB)
+    [checkpoint] Saved PJM (threshold-75-partial-21of29) → 40 KB
+    [checkpoint] Saved PJM (threshold-75-partial-22of29) → 40 KB
+    [checkpoint] Saved PJM (threshold-75-partial-23of29) → 40 KB
+    [checkpoint] Saved PJM (threshold-75-partial-24of29) → 41 KB
+    [checkpoint] Saved PJM (threshold-75-partial-25of29) → 41 KB
+    [checkpoint] Saved PJM (threshold-75-partial-26of29) → 41 KB
+    [checkpoint] Saved PJM (threshold-75-partial-27of29) → 41 KB
+    [checkpoint] Saved PJM (threshold-75-partial-28of29) → 42 KB
+    [checkpoint] Saved PJM (threshold-75-partial-29of29) → 42 KB
+    75%: 29 optimized scenarios (warm-start: 24, full: 1), cache=29508, 63.8s | Medium: CF65/Sol10/Wnd25/CCS0/Hyd0 batt=0% ldes=0% | 9 unique archetypes discovered
+      Cross-pollination: 838 improvements, 295 filled via cross-pollination, 9 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-75) → 131 KB
+    [cache] Saved PJM 75% score cache: 29508 entries (2.0 MB)
+    [dashboard] Updated overprocure_results.json: PJM (1/10 thresholds) — 2857 KB total (4/5 ISOs)
+    [floor] Updated dispatchable floor: 30% (min CF+CCS=40% at 75%, minus 10% headroom)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-80-partial-1of29) → 132 KB
+    [cache] Saved PJM 80% score cache: 34620 entries (2.3 MB)
+    [checkpoint] Saved PJM (threshold-80-partial-2of29) → 132 KB
+    [checkpoint] Saved PJM (threshold-80-partial-3of29) → 132 KB
+    [checkpoint] Saved PJM (threshold-80-partial-4of29) → 133 KB
+    [checkpoint] Saved PJM (threshold-80-partial-5of29) → 133 KB
+      Warm-start: 5 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-80-partial-6of29) → 133 KB
+    [checkpoint] Saved PJM (threshold-80-partial-7of29) → 134 KB
+    [checkpoint] Saved PJM (threshold-80-partial-8of29) → 134 KB
+    [checkpoint] Saved PJM (threshold-80-partial-9of29) → 134 KB
+    [checkpoint] Saved PJM (threshold-80-partial-10of29) → 134 KB
+    [cache] Saved PJM 80% score cache: 54997 entries (3.7 MB)
+    [checkpoint] Saved PJM (threshold-80-partial-11of29) → 135 KB
+    [checkpoint] Saved PJM (threshold-80-partial-12of29) → 135 KB
+    [checkpoint] Saved PJM (threshold-80-partial-13of29) → 135 KB
+    [checkpoint] Saved PJM (threshold-80-partial-14of29) → 136 KB
+    [checkpoint] Saved PJM (threshold-80-partial-15of29) → 136 KB
+    [checkpoint] Saved PJM (threshold-80-partial-16of29) → 136 KB
+    [checkpoint] Saved PJM (threshold-80-partial-17of29) → 136 KB
+    [checkpoint] Saved PJM (threshold-80-partial-18of29) → 137 KB
+    [checkpoint] Saved PJM (threshold-80-partial-19of29) → 137 KB
+    [checkpoint] Saved PJM (threshold-80-partial-20of29) → 137 KB
+    [cache] Saved PJM 80% score cache: 60844 entries (4.1 MB)
+    [checkpoint] Saved PJM (threshold-80-partial-21of29) → 138 KB
+    [checkpoint] Saved PJM (threshold-80-partial-22of29) → 138 KB
+    [checkpoint] Saved PJM (threshold-80-partial-23of29) → 138 KB
+    [checkpoint] Saved PJM (threshold-80-partial-24of29) → 139 KB
+    [checkpoint] Saved PJM (threshold-80-partial-25of29) → 139 KB
+    [checkpoint] Saved PJM (threshold-80-partial-26of29) → 139 KB
+    [checkpoint] Saved PJM (threshold-80-partial-27of29) → 139 KB
+    [checkpoint] Saved PJM (threshold-80-partial-28of29) → 140 KB
+    [checkpoint] Saved PJM (threshold-80-partial-29of29) → 140 KB
+    80%: 29 optimized scenarios (warm-start: 24, full: 1), cache=61649, 90.2s | Medium: CF75/Sol5/Wnd20/CCS0/Hyd0 batt=0% ldes=0% | 11 unique archetypes discovered
+      Cross-pollination: 902 improvements, 295 filled via cross-pollination, 11 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-80) → 229 KB
+    [cache] Saved PJM 80% score cache: 61649 entries (4.1 MB)
+    [dashboard] Updated overprocure_results.json: PJM (2/10 thresholds) — 2955 KB total (4/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-85-partial-1of29) → 230 KB
+    [cache] Saved PJM 85% score cache: 72983 entries (4.9 MB)
+    [checkpoint] Saved PJM (threshold-85-partial-2of29) → 230 KB
+    [checkpoint] Saved PJM (threshold-85-partial-3of29) → 230 KB
+    [checkpoint] Saved PJM (threshold-85-partial-4of29) → 231 KB
+    [checkpoint] Saved PJM (threshold-85-partial-5of29) → 231 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-85-partial-6of29) → 231 KB
+    [checkpoint] Saved PJM (threshold-85-partial-7of29) → 231 KB
+    [checkpoint] Saved PJM (threshold-85-partial-8of29) → 232 KB
+    [checkpoint] Saved PJM (threshold-85-partial-9of29) → 232 KB
+    [checkpoint] Saved PJM (threshold-85-partial-10of29) → 232 KB
+    [cache] Saved PJM 85% score cache: 92044 entries (6.2 MB)
+    [checkpoint] Saved PJM (threshold-85-partial-11of29) → 233 KB
+    [checkpoint] Saved PJM (threshold-85-partial-12of29) → 233 KB
+    [checkpoint] Saved PJM (threshold-85-partial-13of29) → 233 KB
+    [checkpoint] Saved PJM (threshold-85-partial-14of29) → 234 KB
+    [checkpoint] Saved PJM (threshold-85-partial-15of29) → 234 KB
+    [checkpoint] Saved PJM (threshold-85-partial-16of29) → 234 KB
+    [checkpoint] Saved PJM (threshold-85-partial-17of29) → 234 KB
+    [checkpoint] Saved PJM (threshold-85-partial-18of29) → 235 KB
+    [checkpoint] Saved PJM (threshold-85-partial-19of29) → 235 KB
+    [checkpoint] Saved PJM (threshold-85-partial-20of29) → 235 KB
+    [cache] Saved PJM 85% score cache: 96346 entries (6.5 MB)
+    [checkpoint] Saved PJM (threshold-85-partial-21of29) → 236 KB
+    [checkpoint] Saved PJM (threshold-85-partial-22of29) → 236 KB
+    [checkpoint] Saved PJM (threshold-85-partial-23of29) → 236 KB
+    [checkpoint] Saved PJM (threshold-85-partial-24of29) → 236 KB
+    [checkpoint] Saved PJM (threshold-85-partial-25of29) → 237 KB
+    [checkpoint] Saved PJM (threshold-85-partial-26of29) → 237 KB
+    [checkpoint] Saved PJM (threshold-85-partial-27of29) → 237 KB
+    [checkpoint] Saved PJM (threshold-85-partial-28of29) → 238 KB
+    [checkpoint] Saved PJM (threshold-85-partial-29of29) → 238 KB
+    85%: 29 optimized scenarios (warm-start: 24, full: 1), cache=98377, 120.8s | Medium: CF80/Sol5/Wnd10/CCS5/Hyd0 batt=0% ldes=0% | 8 unique archetypes discovered
+      Cross-pollination: 820 improvements, 295 filled via cross-pollination, 8 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-85) → 327 KB
+    [cache] Saved PJM 85% score cache: 98377 entries (6.6 MB)
+    [dashboard] Updated overprocure_results.json: PJM (3/10 thresholds) — 3053 KB total (4/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-87.5-partial-1of29) → 328 KB
+    [cache] Saved PJM 87.5% score cache: 104394 entries (7.0 MB)
+    [checkpoint] Saved PJM (threshold-87.5-partial-2of29) → 328 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-3of29) → 328 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-4of29) → 329 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-5of29) → 329 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-87.5-partial-6of29) → 329 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-7of29) → 329 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-8of29) → 330 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-9of29) → 330 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-10of29) → 330 KB
+    [cache] Saved PJM 87.5% score cache: 116755 entries (7.8 MB)
+    [checkpoint] Saved PJM (threshold-87.5-partial-11of29) → 331 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-12of29) → 331 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-13of29) → 331 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-14of29) → 331 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-15of29) → 332 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-16of29) → 332 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-17of29) → 332 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-18of29) → 333 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-19of29) → 333 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-20of29) → 333 KB
+    [cache] Saved PJM 87.5% score cache: 124878 entries (8.4 MB)
+    [checkpoint] Saved PJM (threshold-87.5-partial-21of29) → 334 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-22of29) → 334 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-23of29) → 334 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-24of29) → 334 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-25of29) → 335 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-26of29) → 335 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-27of29) → 335 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-28of29) → 336 KB
+    [checkpoint] Saved PJM (threshold-87.5-partial-29of29) → 336 KB
+    87.5%: 29 optimized scenarios (warm-start: 24, full: 1), cache=129156, 132.7s | Medium: CF85/Sol5/Wnd10/CCS0/Hyd0 batt=0% ldes=0% | 10 unique archetypes discovered
+      Cross-pollination: 882 improvements, 295 filled via cross-pollination, 11 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-87.5) → 425 KB
+    [cache] Saved PJM 87.5% score cache: 129156 entries (8.7 MB)
+    [dashboard] Updated overprocure_results.json: PJM (4/10 thresholds) — 3151 KB total (4/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-90-partial-1of29) → 426 KB
+    [cache] Saved PJM 90% score cache: 133521 entries (9.0 MB)
+    [checkpoint] Saved PJM (threshold-90-partial-2of29) → 426 KB
+    [checkpoint] Saved PJM (threshold-90-partial-3of29) → 426 KB
+    [checkpoint] Saved PJM (threshold-90-partial-4of29) → 427 KB
+    [checkpoint] Saved PJM (threshold-90-partial-5of29) → 427 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-90-partial-6of29) → 427 KB
+    [checkpoint] Saved PJM (threshold-90-partial-7of29) → 427 KB
+    [checkpoint] Saved PJM (threshold-90-partial-8of29) → 428 KB
+    [checkpoint] Saved PJM (threshold-90-partial-9of29) → 428 KB
+    [checkpoint] Saved PJM (threshold-90-partial-10of29) → 428 KB
+    [cache] Saved PJM 90% score cache: 145115 entries (9.7 MB)
+    [checkpoint] Saved PJM (threshold-90-partial-11of29) → 429 KB
+    [checkpoint] Saved PJM (threshold-90-partial-12of29) → 429 KB
+    [checkpoint] Saved PJM (threshold-90-partial-13of29) → 429 KB
+    [checkpoint] Saved PJM (threshold-90-partial-14of29) → 429 KB
+    [checkpoint] Saved PJM (threshold-90-partial-15of29) → 430 KB
+    [checkpoint] Saved PJM (threshold-90-partial-16of29) → 430 KB
+    [checkpoint] Saved PJM (threshold-90-partial-17of29) → 430 KB
+    [checkpoint] Saved PJM (threshold-90-partial-18of29) → 431 KB
+    [checkpoint] Saved PJM (threshold-90-partial-19of29) → 431 KB
+    [checkpoint] Saved PJM (threshold-90-partial-20of29) → 431 KB
+    [cache] Saved PJM 90% score cache: 155757 entries (10.4 MB)
+    [checkpoint] Saved PJM (threshold-90-partial-21of29) → 432 KB
+    [checkpoint] Saved PJM (threshold-90-partial-22of29) → 432 KB
+    [checkpoint] Saved PJM (threshold-90-partial-23of29) → 432 KB
+    [checkpoint] Saved PJM (threshold-90-partial-24of29) → 432 KB
+    [checkpoint] Saved PJM (threshold-90-partial-25of29) → 433 KB
+    [checkpoint] Saved PJM (threshold-90-partial-26of29) → 433 KB
+    [checkpoint] Saved PJM (threshold-90-partial-27of29) → 433 KB
+    [checkpoint] Saved PJM (threshold-90-partial-28of29) → 434 KB
+    [checkpoint] Saved PJM (threshold-90-partial-29of29) → 434 KB
+    90%: 29 optimized scenarios (warm-start: 24, full: 1), cache=157966, 153.6s | Medium: CF85/Sol5/Wnd10/CCS0/Hyd0 batt=0% ldes=0% | 13 unique archetypes discovered
+      Cross-pollination: 1035 improvements, 295 filled via cross-pollination, 14 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-90) → 523 KB
+    [cache] Saved PJM 90% score cache: 157966 entries (10.6 MB)
+    [dashboard] Updated overprocure_results.json: PJM (5/10 thresholds) — 3249 KB total (4/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-92.5-partial-1of29) → 524 KB
+    [cache] Saved PJM 92.5% score cache: 164029 entries (11.0 MB)
+    [checkpoint] Saved PJM (threshold-92.5-partial-2of29) → 524 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-3of29) → 524 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-4of29) → 525 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-5of29) → 525 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-92.5-partial-6of29) → 525 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-7of29) → 526 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-8of29) → 526 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-9of29) → 526 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-10of29) → 526 KB
+    [cache] Saved PJM 92.5% score cache: 172990 entries (11.6 MB)
+    [checkpoint] Saved PJM (threshold-92.5-partial-11of29) → 527 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-12of29) → 527 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-13of29) → 527 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-14of29) → 528 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-15of29) → 528 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-16of29) → 528 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-17of29) → 529 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-18of29) → 529 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-19of29) → 529 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-20of29) → 529 KB
+    [cache] Saved PJM 92.5% score cache: 178180 entries (11.9 MB)
+    [checkpoint] Saved PJM (threshold-92.5-partial-21of29) → 530 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-22of29) → 530 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-23of29) → 530 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-24of29) → 531 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-25of29) → 531 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-26of29) → 531 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-27of29) → 531 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-28of29) → 532 KB
+    [checkpoint] Saved PJM (threshold-92.5-partial-29of29) → 532 KB
+    92.5%: 29 optimized scenarios (warm-start: 24, full: 1), cache=183650, 140.0s | Medium: CF85/Sol5/Wnd10/CCS0/Hyd0 batt=0% ldes=0% | 9 unique archetypes discovered
+      Cross-pollination: 803 improvements, 295 filled via cross-pollination, 10 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-92.5) → 622 KB
+    [cache] Saved PJM 92.5% score cache: 183650 entries (12.3 MB)
+    [dashboard] Updated overprocure_results.json: PJM (6/10 thresholds) — 3347 KB total (4/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-95-partial-1of29) → 622 KB
+    [cache] Saved PJM 95% score cache: 191432 entries (12.8 MB)
+    [checkpoint] Saved PJM (threshold-95-partial-2of29) → 622 KB
+    [checkpoint] Saved PJM (threshold-95-partial-3of29) → 623 KB
+    [checkpoint] Saved PJM (threshold-95-partial-4of29) → 623 KB
+    [checkpoint] Saved PJM (threshold-95-partial-5of29) → 623 KB
+      Warm-start: 5 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-95-partial-6of29) → 624 KB
+    [checkpoint] Saved PJM (threshold-95-partial-7of29) → 624 KB
+    [checkpoint] Saved PJM (threshold-95-partial-8of29) → 624 KB
+    [checkpoint] Saved PJM (threshold-95-partial-9of29) → 624 KB
+    [checkpoint] Saved PJM (threshold-95-partial-10of29) → 625 KB
+    [cache] Saved PJM 95% score cache: 208195 entries (13.9 MB)
+    [checkpoint] Saved PJM (threshold-95-partial-11of29) → 625 KB
+    [checkpoint] Saved PJM (threshold-95-partial-12of29) → 625 KB
+    [checkpoint] Saved PJM (threshold-95-partial-13of29) → 626 KB
+    [checkpoint] Saved PJM (threshold-95-partial-14of29) → 626 KB
+    [checkpoint] Saved PJM (threshold-95-partial-15of29) → 626 KB
+    [checkpoint] Saved PJM (threshold-95-partial-16of29) → 626 KB
+    [checkpoint] Saved PJM (threshold-95-partial-17of29) → 627 KB
+    [checkpoint] Saved PJM (threshold-95-partial-18of29) → 627 KB
+    [checkpoint] Saved PJM (threshold-95-partial-19of29) → 627 KB
+    [checkpoint] Saved PJM (threshold-95-partial-20of29) → 628 KB
+    [cache] Saved PJM 95% score cache: 217930 entries (14.6 MB)
+    [checkpoint] Saved PJM (threshold-95-partial-21of29) → 628 KB
+    [checkpoint] Saved PJM (threshold-95-partial-22of29) → 628 KB
+    [checkpoint] Saved PJM (threshold-95-partial-23of29) → 628 KB
+    [checkpoint] Saved PJM (threshold-95-partial-24of29) → 629 KB
+    [checkpoint] Saved PJM (threshold-95-partial-25of29) → 629 KB
+    [checkpoint] Saved PJM (threshold-95-partial-26of29) → 629 KB
+    [checkpoint] Saved PJM (threshold-95-partial-27of29) → 630 KB
+    [checkpoint] Saved PJM (threshold-95-partial-28of29) → 630 KB
+    [checkpoint] Saved PJM (threshold-95-partial-29of29) → 630 KB
+    95%: 29 optimized scenarios (warm-start: 24, full: 1), cache=220580, 206.7s | Medium: CF75/Sol5/Wnd5/CCS15/Hyd0 batt=0% ldes=0% | 9 unique archetypes discovered
+      Cross-pollination: 1023 improvements, 295 filled via cross-pollination, 13 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-95) → 720 KB
+    [cache] Saved PJM 95% score cache: 220580 entries (14.8 MB)
+    [dashboard] Updated overprocure_results.json: PJM (7/10 thresholds) — 3445 KB total (4/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-97.5-partial-1of29) → 720 KB
+    [cache] Saved PJM 97.5% score cache: 228149 entries (15.3 MB)
+    [checkpoint] Saved PJM (threshold-97.5-partial-2of29) → 721 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-3of29) → 721 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-4of29) → 721 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-5of29) → 722 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-97.5-partial-6of29) → 722 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-7of29) → 722 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-8of29) → 722 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-9of29) → 723 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-10of29) → 723 KB
+    [cache] Saved PJM 97.5% score cache: 249457 entries (16.7 MB)
+    [checkpoint] Saved PJM (threshold-97.5-partial-11of29) → 723 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-12of29) → 724 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-13of29) → 724 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-14of29) → 724 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-15of29) → 724 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-16of29) → 725 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-17of29) → 725 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-18of29) → 725 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-19of29) → 726 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-20of29) → 726 KB
+    [cache] Saved PJM 97.5% score cache: 258758 entries (17.3 MB)
+    [checkpoint] Saved PJM (threshold-97.5-partial-21of29) → 726 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-22of29) → 727 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-23of29) → 727 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-24of29) → 727 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-25of29) → 727 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-26of29) → 728 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-27of29) → 728 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-28of29) → 728 KB
+    [checkpoint] Saved PJM (threshold-97.5-partial-29of29) → 729 KB
+    97.5%: 29 optimized scenarios (warm-start: 24, full: 1), cache=303279, 427.9s | Medium: CF85/Sol5/Wnd10/CCS0/Hyd0 batt=0% ldes=0% | 9 unique archetypes discovered
+      Cross-pollination: 906 improvements, 295 filled via cross-pollination, 14 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-97.5) → 818 KB
+    [cache] Saved PJM 97.5% score cache: 303279 entries (20.3 MB)
+    [dashboard] Updated overprocure_results.json: PJM (8/10 thresholds) — 3544 KB total (4/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-99-partial-1of29) → 819 KB
+    [cache] Saved PJM 99% score cache: 310340 entries (20.7 MB)
+    [checkpoint] Saved PJM (threshold-99-partial-2of29) → 819 KB
+    [checkpoint] Saved PJM (threshold-99-partial-3of29) → 819 KB
+    [checkpoint] Saved PJM (threshold-99-partial-4of29) → 820 KB
+    [checkpoint] Saved PJM (threshold-99-partial-5of29) → 820 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved PJM (threshold-99-partial-6of29) → 820 KB
+    [checkpoint] Saved PJM (threshold-99-partial-7of29) → 821 KB
+    [checkpoint] Saved PJM (threshold-99-partial-8of29) → 821 KB
+    [checkpoint] Saved PJM (threshold-99-partial-9of29) → 821 KB
+    [checkpoint] Saved PJM (threshold-99-partial-10of29) → 821 KB
+    [cache] Saved PJM 99% score cache: 354679 entries (23.7 MB)
+    [checkpoint] Saved PJM (threshold-99-partial-11of29) → 822 KB
+    [checkpoint] Saved PJM (threshold-99-partial-12of29) → 822 KB
+    [checkpoint] Saved PJM (threshold-99-partial-13of29) → 822 KB
+    [checkpoint] Saved PJM (threshold-99-partial-14of29) → 823 KB
+    [checkpoint] Saved PJM (threshold-99-partial-15of29) → 823 KB
+    [checkpoint] Saved PJM (threshold-99-partial-16of29) → 823 KB
+    [checkpoint] Saved PJM (threshold-99-partial-17of29) → 823 KB
+    [checkpoint] Saved PJM (threshold-99-partial-18of29) → 824 KB
+    [checkpoint] Saved PJM (threshold-99-partial-19of29) → 824 KB
+    [checkpoint] Saved PJM (threshold-99-partial-20of29) → 824 KB
+    [cache] Saved PJM 99% score cache: 375035 entries (25.1 MB)
+    [checkpoint] Saved PJM (threshold-99-partial-21of29) → 825 KB
+    [checkpoint] Saved PJM (threshold-99-partial-22of29) → 825 KB
+    [checkpoint] Saved PJM (threshold-99-partial-23of29) → 825 KB
+    [checkpoint] Saved PJM (threshold-99-partial-24of29) → 825 KB
+    [checkpoint] Saved PJM (threshold-99-partial-25of29) → 826 KB
+    [checkpoint] Saved PJM (threshold-99-partial-26of29) → 826 KB
+    [checkpoint] Saved PJM (threshold-99-partial-27of29) → 826 KB
+    [checkpoint] Saved PJM (threshold-99-partial-28of29) → 827 KB
+    [checkpoint] Saved PJM (threshold-99-partial-29of29) → 827 KB
+      RESAMPLE round 1: 21 unique / 29 run = 72% > 50% — adding 14 midpoint scenarios
+    [checkpoint] Saved PJM (threshold-99-resample-30) → 827 KB
+    [checkpoint] Saved PJM (threshold-99-resample-31) → 828 KB
+    [checkpoint] Saved PJM (threshold-99-resample-32) → 828 KB
+    [checkpoint] Saved PJM (threshold-99-resample-33) → 828 KB
+    [checkpoint] Saved PJM (threshold-99-resample-34) → 828 KB
+    [checkpoint] Saved PJM (threshold-99-resample-35) → 829 KB
+    [checkpoint] Saved PJM (threshold-99-resample-36) → 829 KB
+    [checkpoint] Saved PJM (threshold-99-resample-37) → 829 KB
+    [checkpoint] Saved PJM (threshold-99-resample-38) → 830 KB
+    [checkpoint] Saved PJM (threshold-99-resample-39) → 830 KB
+    [checkpoint] Saved PJM (threshold-99-resample-40) → 830 KB
+    [checkpoint] Saved PJM (threshold-99-resample-41) → 830 KB
+    [checkpoint] Saved PJM (threshold-99-resample-42) → 831 KB
+    [checkpoint] Saved PJM (threshold-99-resample-43) → 831 KB
+      RESAMPLE round 2: 26 unique / 43 run = 60% > 50% — adding 10 midpoint scenarios
+    [checkpoint] Saved PJM (threshold-99-resample-44) → 831 KB
+    [checkpoint] Saved PJM (threshold-99-resample-45) → 832 KB
+    [checkpoint] Saved PJM (threshold-99-resample-46) → 832 KB
+    [checkpoint] Saved PJM (threshold-99-resample-47) → 832 KB
+    [checkpoint] Saved PJM (threshold-99-resample-48) → 832 KB
+    [checkpoint] Saved PJM (threshold-99-resample-49) → 833 KB
+    [checkpoint] Saved PJM (threshold-99-resample-50) → 833 KB
+    [checkpoint] Saved PJM (threshold-99-resample-51) → 833 KB
+    [checkpoint] Saved PJM (threshold-99-resample-52) → 834 KB
+    [checkpoint] Saved PJM (threshold-99-resample-53) → 834 KB
+      RESAMPLE round 3: 30 unique / 53 run = 57% > 50% — adding 8 midpoint scenarios
+    [checkpoint] Saved PJM (threshold-99-resample-54) → 834 KB
+    [checkpoint] Saved PJM (threshold-99-resample-55) → 835 KB
+    [checkpoint] Saved PJM (threshold-99-resample-56) → 835 KB
+    [checkpoint] Saved PJM (threshold-99-resample-57) → 835 KB
+    [checkpoint] Saved PJM (threshold-99-resample-58) → 835 KB
+    [checkpoint] Saved PJM (threshold-99-resample-59) → 836 KB
+    [checkpoint] Saved PJM (threshold-99-resample-60) → 836 KB
+    [checkpoint] Saved PJM (threshold-99-resample-61) → 836 KB
+      RESAMPLE round 4: 31 unique / 61 run = 51% > 50% — adding 2 midpoint scenarios
+    [checkpoint] Saved PJM (threshold-99-resample-62) → 837 KB
+    [checkpoint] Saved PJM (threshold-99-resample-63) → 837 KB
+      Resampling converged: 31 unique mixes / 63 scenarios = 49%
+    99%: 63 optimized scenarios (warm-start: 24, full: 1), cache=455276, 754.3s | Medium: CF84/Sol11/Wnd4/CCS0/Hyd1 batt=2% ldes=2% | 14 unique archetypes discovered
+      Cross-pollination: 893 improvements, 261 filled via cross-pollination, 31 unique mixes → 324/324 total
+    [checkpoint] Saved PJM (threshold-99) → 917 KB
+    [cache] Saved PJM 99% score cache: 455276 entries (30.4 MB)
+    [dashboard] Updated overprocure_results.json: PJM (9/10 thresholds) — 3642 KB total (4/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [cache] Saved PJM 100% score cache: 466962 entries (31.2 MB)
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+      Warm-start: 0 diverse seed mixes from Medium + 0 archetypes
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [cache] Saved PJM 100% score cache: 466962 entries (31.2 MB)
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [cache] Saved PJM 100% score cache: 466962 entries (31.2 MB)
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [cache] Saved PJM 100% score cache: 466962 entries (31.2 MB)
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    [checkpoint] Saved PJM (threshold-100-partial-0of29) → 917 KB
+    100%: 33 optimized scenarios, cache=466962, 44.0s
+    [checkpoint] Saved PJM (threshold-100) → 917 KB
+    [cache] Saved PJM 100% score cache: 466962 entries (31.2 MB)
+    [dashboard] Updated overprocure_results.json: PJM (10/10 thresholds) — 3642 KB total (4/5 ISOs)
+  Monotonicity: 76 unique mixes across 10 thresholds
+  Monotonicity round 1: 210 violations, 210 fixed via cross-threshold pollination, 0 remaining
+    [dashboard] Updated overprocure_results.json: PJM (10/10 thresholds) — 3718 KB total (4/5 ISOs)
+
+  PJM completed in 2149s
+  Saved: 3718 KB (4/5 ISOs)
+  Cached results: /home/user/hourly-cfe-optimizer/data/optimizer_cache.json (7570 KB)
+
+======================================================================
+  Complete in 2151s. Saved to: /home/user/hourly-cfe-optimizer/dashboard/overprocure_results.json
+  File size: 3718 KB
+======================================================================
