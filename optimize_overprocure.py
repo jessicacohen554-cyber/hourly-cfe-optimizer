@@ -2101,7 +2101,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     # Select top candidates for refinement — ranked by THIS scenario's cost function
     # Re-sweep uses wider cost filter and more candidates for broader exploration
     phase2_cost_mult = 2.00 if resweep else 1.50
-    phase2_top_n = 30 if resweep else 20
+    phase2_top_n = 30 if resweep else 10
     candidates.sort(key=lambda x: x[0])
     top = [c for c in candidates if c[0] <= best_cost * phase2_cost_mult][:phase2_top_n]
 
@@ -2173,6 +2173,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
     finalists = [c for c in all_phase2 if c[0] <= best_cost * phase3_cost_mult][:phase3_top_n]
 
     seen2 = set()
+    phase3_radius = 2 if resweep else 1
     for _, combo, _, bp_base, lp_base, proc in finalists:
         for p_d in range(-2, 3):
             p = proc + p_d
@@ -2180,7 +2181,7 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
                 continue
             pf = p / 100.0
 
-            fine_combos = generate_combinations_around(combo, hydro_cap, step=1, radius=2)
+            fine_combos = generate_combinations_around(combo, hydro_cap, step=1, radius=phase3_radius)
             for rcombo in fine_combos:
                 key = (rcombo['clean_firm'], rcombo['solar'], rcombo['wind'],
                        rcombo['ccs_ccgt'], rcombo['hydro'], p)
@@ -2522,6 +2523,29 @@ def process_iso(args):
 
     INTRA_THRESHOLD_CHECKPOINT_INTERVAL = 1  # Save every scenario — negligible I/O overhead (<0.1%)
 
+    # ── CROSS-THRESHOLD SCORE CACHE ──
+    # Matching scores are physics-based (cost-independent, threshold-independent).
+    # A score for (mix, procurement, storage) is identical at 75% and 100% thresholds.
+    # Share one cumulative cache across all thresholds to avoid recomputing ~50MB+
+    # of scores per threshold. Load from the highest completed threshold's cache
+    # (largest), then merge any partial cache for the current threshold.
+    cumulative_score_cache = {}
+    for t in reversed(THRESHOLDS):
+        t_cache = load_score_cache(iso, t)
+        if t_cache:
+            cumulative_score_cache.update(t_cache)
+            break  # Highest available has most entries; earlier ones are subsets
+    # Also merge the partial threshold's cache if it exists and differs
+    if partial_threshold_data:
+        partial_t = partial_threshold_data.get('threshold')
+        if partial_t and str(partial_t) not in completed_thresholds:
+            partial_cache = load_score_cache(iso, partial_t)
+            if partial_cache:
+                cumulative_score_cache.update(partial_cache)
+    if cumulative_score_cache:
+        print(f"    [cache] Cumulative score cache: {len(cumulative_score_cache)} entries "
+              f"(shared across thresholds)")
+
     for threshold in THRESHOLDS:
         t_str = str(threshold)
         if t_str in completed_thresholds:
@@ -2529,8 +2553,8 @@ def process_iso(args):
             continue
 
         t_start = time.time()
-        # Load persisted score cache for warm restart (or fresh if none exists)
-        score_cache = load_score_cache(iso, threshold)
+        # Use cumulative cross-threshold cache (scores are physics-based, threshold-independent)
+        score_cache = cumulative_score_cache
         threshold_scenarios = {}
         medium_result = None
 
@@ -2977,8 +3001,8 @@ def process_iso(args):
                   f"{len(seed_mixes_for_resweep)} seed mixes, "
                   f"procurement [{expanded_min}-{expanded_max}%]")
 
-            # Fresh score cache for re-sweep (shared across re-swept scenarios)
-            resweep_cache = {}
+            # Re-sweep uses cumulative cache — scores are physics-based, always reusable
+            resweep_cache = dict(cumulative_score_cache)
             resweep_fixes = 0
             threshold_scenarios = iso_results['thresholds'][t_str]['scenarios']
 
