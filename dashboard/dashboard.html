@@ -1081,42 +1081,41 @@ body {
     color: var(--text-primary);
 }
 
-/* ========== HEATMAP TILE COLORS (5-group red-to-green) ========== */
+/* ========== HEATMAP TILE COLORS (5-group red-to-green, solid) ========== */
 .metric-tile.heatmap-1 {
-    background: linear-gradient(145deg, #22C55E 0%, #16A34A 100%) !important;
+    background: #22C55E !important;
     border: none;
 }
+.metric-tile.heatmap-1 .tile-label,
+.metric-tile.heatmap-1 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-1 .tile-value { color: #1A2744 !important; }
 .metric-tile.heatmap-2 {
-    background: linear-gradient(145deg, #86EFAC 0%, #4ADE80 100%) !important;
+    background: #86EFAC !important;
     border: none;
 }
 .metric-tile.heatmap-2 .tile-label,
-.metric-tile.heatmap-2 .tile-sub { color: rgba(0,0,0,0.65) !important; }
-.metric-tile.heatmap-2 .tile-value { color: #1A1A1A !important; }
+.metric-tile.heatmap-2 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-2 .tile-value { color: #1A2744 !important; }
 .metric-tile.heatmap-3 {
-    background: linear-gradient(145deg, #FDE68A 0%, #FACC15 100%) !important;
+    background: #FDE68A !important;
     border: none;
 }
 .metric-tile.heatmap-3 .tile-label,
-.metric-tile.heatmap-3 .tile-sub { color: rgba(0,0,0,0.65) !important; }
-.metric-tile.heatmap-3 .tile-value { color: #1A1A1A !important; }
+.metric-tile.heatmap-3 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-3 .tile-value { color: #1A2744 !important; }
 .metric-tile.heatmap-4 {
-    background: linear-gradient(145deg, #FDBA74 0%, #F97316 100%) !important;
+    background: #F97316 !important;
     border: none;
 }
-.metric-tile.heatmap-5 {
-    background: linear-gradient(145deg, #F87171 0%, #EF4444 100%) !important;
-    border: none;
-}
-/* heatmap-1 and heatmap-5 keep white text (dark bg) */
-.metric-tile.heatmap-1 .tile-label,
-.metric-tile.heatmap-1 .tile-sub,
 .metric-tile.heatmap-4 .tile-label,
-.metric-tile.heatmap-4 .tile-sub,
+.metric-tile.heatmap-4 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-4 .tile-value { color: #1A2744 !important; }
+.metric-tile.heatmap-5 {
+    background: #EF4444 !important;
+    border: none;
+}
 .metric-tile.heatmap-5 .tile-label,
-.metric-tile.heatmap-5 .tile-sub { color: rgba(255,255,255,0.8) !important; }
-.metric-tile.heatmap-1 .tile-value,
-.metric-tile.heatmap-4 .tile-value,
+.metric-tile.heatmap-5 .tile-sub { color: rgba(255,255,255,0.85) !important; }
 .metric-tile.heatmap-5 .tile-value { color: #FFFFFF !important; }
 
 /* ========== KEY FINDINGS ========== */
@@ -3261,102 +3260,6 @@ body {
         </div>
     </div>
 
-    <!-- TARGET MODE TOGGLE (Interim / Long-term) -->
-    <div class="target-mode-panel" id="targetModePanel">
-        <div class="target-mode-label">Viewing:</div>
-        <div class="target-mode-toggle" id="targetModeToggle">
-            <button data-mode="interim" class="active">Interim Target</button>
-            <button data-mode="longterm">Long-term Target</button>
-        </div>
-        <div class="target-mode-info" id="targetModeInfo">
-            Showing <strong>interim</strong> target results. All charts below reflect the interim matching goal.
-        </div>
-    </div>
-
-    <!-- METRIC TILES -->
-    <div class="metrics-row">
-        <div class="metric-tile" id="tileMatch">
-            <div class="tile-label">Hourly Match Score</div>
-            <div class="tile-value" id="metricMatch">--</div>
-            <div class="tile-sub" id="metricMatchSub">of hours matched</div>
-        </div>
-        <div class="metric-tile" id="tileProcure">
-            <div class="tile-label">Procurement Level</div>
-            <div class="tile-value" id="metricProcure">--</div>
-            <div class="tile-sub" id="metricProcureSub">of annual demand</div>
-        </div>
-        <div class="metric-tile" id="tileCost">
-            <div class="tile-label">Incremental Cost</div>
-            <div class="tile-value" id="metricCost">--</div>
-            <div class="tile-sub" id="metricCostSub"></div>
-        </div>
-        <div class="metric-tile" id="tileCurtail">
-            <div class="tile-label">Curtailment</div>
-            <div class="tile-value" id="metricCurtail">--</div>
-            <div class="tile-sub" id="metricCurtailSub">of procured energy</div>
-        </div>
-        <div class="metric-tile" id="tileCO2">
-            <div class="tile-label">CO&#8322; Abated</div>
-            <div class="tile-value" id="metricCO2Abated">--</div>
-            <div class="tile-sub" id="metricCO2AbatedSub">tons</div>
-        </div>
-        <div class="metric-tile" id="tileAbateCost">
-            <div class="tile-label">Abatement Cost</div>
-            <div class="tile-value" id="metricAbateCost">--</div>
-            <div class="tile-sub" id="metricAbateCostSub">$/ton CO&#8322; avg</div>
-        </div>
-    </div>
-
-    <!-- PATHWAY PLANNING: Interim → Long-term Target with Demand Growth -->
-
-    <!-- KEY FINDING -->
-    <div class="key-findings" id="keyFinding" style="display:none;">
-        <h4>Key Finding</h4>
-        <p id="keyFindingText"></p>
-    </div>
-
-    <!-- DONUT + COST ROW -->
-    <div class="charts-row">
-        <!-- DONUT -->
-        <div class="chart-panel donut-panel">
-            <h3>How Your Clean Energy is Sourced</h3>
-            <div class="donut-container">
-                <canvas id="donutChart"></canvas>
-                <div class="donut-center-label">
-                    <div class="dcl-value" id="donutCenterValue">--</div>
-                    <div class="dcl-label">Hourly Match</div>
-                </div>
-            </div>
-            <div class="donut-legend" id="donutLegend"></div>
-        </div>
-        <!-- COST BREAKDOWN (moved up from peak-cost-row) -->
-        <div class="cost-panel" id="costPanel">
-            <h3>What You Pay: Cost Breakdown by Resource</h3>
-            <div id="costContent"></div>
-        </div>
-    </div>
-
-    <!-- COMPRESSED DAY -->
-    <div class="charts-row" style="grid-template-columns:1fr;">
-        <div class="chart-panel">
-            <h3>A Typical Day: When Clean Energy Meets Demand</h3>
-            <div class="compressed-day-container">
-                <canvas id="compressedDayChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- PEAK CAPACITY ROW -->
-    <div class="peak-cost-row" style="grid-template-columns:1fr;">
-        <!-- PEAK CAPACITY VISUAL -->
-        <div class="peak-capacity-panel" id="peakCapacityPanel">
-            <h3>Peak Hour: How Much Backup Capacity is Needed</h3>
-            <div class="peak-capacity-visual" id="peakCapacityVisual">
-                <!-- Populated by JS -->
-            </div>
-        </div>
-    </div>
-
     <!-- WHAT YOU NEED DEPENDS ON WHAT YOU HAVE AND WHERE YOU'RE GOING -->
     <div class="what-you-need-panel" id="whatYouNeedPanel">
         <h3>What You Need Depends on What You Have &mdash; and Where You're Going</h3>
@@ -3405,6 +3308,98 @@ body {
 
         <div class="wyn-insight-box" id="wynInsightBox">
             Select a region and matching targets to see the resource pathway comparison.
+        </div>
+    </div>
+
+    <!-- TARGET MODE TOGGLE (Interim / Long-term) -->
+    <div class="target-mode-panel" id="targetModePanel">
+        <div class="target-mode-label">Viewing:</div>
+        <div class="target-mode-toggle" id="targetModeToggle">
+            <button data-mode="interim" class="active">Interim Target</button>
+            <button data-mode="longterm">Long-term Target</button>
+        </div>
+        <div class="target-mode-info" id="targetModeInfo">
+            Showing <strong>interim</strong> target results. All charts below reflect the interim matching goal.
+        </div>
+    </div>
+
+    <!-- METRIC TILES -->
+    <div class="metrics-row">
+        <div class="metric-tile" id="tileMatch">
+            <div class="tile-label">Hourly Match Score</div>
+            <div class="tile-value" id="metricMatch">--</div>
+            <div class="tile-sub" id="metricMatchSub">of hours matched</div>
+        </div>
+        <div class="metric-tile" id="tileProcure">
+            <div class="tile-label">Procurement Level</div>
+            <div class="tile-value" id="metricProcure">--</div>
+            <div class="tile-sub" id="metricProcureSub">of annual demand</div>
+        </div>
+        <div class="metric-tile" id="tileCost">
+            <div class="tile-label">Incremental Cost</div>
+            <div class="tile-value" id="metricCost">--</div>
+            <div class="tile-sub" id="metricCostSub"></div>
+        </div>
+        <div class="metric-tile" id="tileCurtail">
+            <div class="tile-label">Curtailment</div>
+            <div class="tile-value" id="metricCurtail">--</div>
+            <div class="tile-sub" id="metricCurtailSub">of procured energy</div>
+        </div>
+        <div class="metric-tile" id="tileCO2">
+            <div class="tile-label">CO&#8322; Abated</div>
+            <div class="tile-value" id="metricCO2Abated">--</div>
+            <div class="tile-sub" id="metricCO2AbatedSub">tons</div>
+        </div>
+        <div class="metric-tile" id="tileAbateCost">
+            <div class="tile-label">Abatement Cost</div>
+            <div class="tile-value" id="metricAbateCost">--</div>
+            <div class="tile-sub" id="metricAbateCostSub">$/ton CO&#8322; avg</div>
+        </div>
+    </div>
+
+    <!-- KEY FINDING -->
+    <div class="key-findings" id="keyFinding" style="display:none;">
+        <h4>Key Finding</h4>
+        <p id="keyFindingText"></p>
+    </div>
+
+    <!-- DONUT (Resource Mix) -->
+    <div class="charts-row" style="grid-template-columns: 1fr 2fr;">
+        <div class="chart-panel donut-panel">
+            <h3>How Your Clean Energy is Sourced</h3>
+            <div class="donut-container">
+                <canvas id="donutChart"></canvas>
+                <div class="donut-center-label">
+                    <div class="dcl-value" id="donutCenterValue">--</div>
+                    <div class="dcl-label">Hourly Match</div>
+                </div>
+            </div>
+            <div class="donut-legend" id="donutLegend"></div>
+        </div>
+        <!-- COMPRESSED DAY -->
+        <div class="chart-panel">
+            <h3>A Typical Day: When Clean Energy Meets Demand</h3>
+            <div class="compressed-day-container">
+                <canvas id="compressedDayChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- COST BREAKDOWN -->
+    <div class="charts-row" style="grid-template-columns:1fr;">
+        <div class="cost-panel" id="costPanel">
+            <h3>What You Pay: Cost Breakdown by Resource</h3>
+            <div id="costContent"></div>
+        </div>
+    </div>
+
+    <!-- PEAK CAPACITY ROW -->
+    <div class="peak-cost-row" style="grid-template-columns:1fr;">
+        <div class="peak-capacity-panel" id="peakCapacityPanel">
+            <h3>Peak Hour: How Much Backup Capacity is Needed</h3>
+            <div class="peak-capacity-visual" id="peakCapacityVisual">
+                <!-- Populated by JS -->
+            </div>
         </div>
     </div>
 </div>
