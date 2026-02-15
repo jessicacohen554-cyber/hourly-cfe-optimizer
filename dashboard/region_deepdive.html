@@ -1343,10 +1343,10 @@ body {
         document.getElementById('insightAbatement').innerHTML =
             '<span class="insight-icon">&#9889;</span><div><strong>Key Insight:</strong> At ' + currentRegion + '\'s emission rate of ' +
             emissionRate.toFixed(2) + ' tCO\u2082/MWh <sup style="font-size:0.7em;color:#6B7280;">[4]</sup>, the average abatement cost at 90% is ~$' + avgAt90.toFixed(0) +
-            '/ton. The marginal cost rises steeply above 95%, reflecting the expense of eliminating the last few hours of fossil generation.</div>';
+            '/ton. The marginal cost rises steeply above 95%, reflecting the expense of eliminating the last few hours of fossil generation. <sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup></div>';
         document.getElementById('narrativeAbatement').textContent =
             'Each clean MWh displaces ' + emissionRate.toFixed(2) + ' metric tons of CO\u2082 (EPA eGRID 2022 [4]) from fossil generation in this region. ' +
-            'The early tons are cheap; the last tons are expensive. Understanding this curve helps set realistic decarbonization budgets.';
+            'The early tons are cheap; the last tons are expensive [8]. Understanding this curve helps set realistic decarbonization budgets.';
     }
 
     /* ===== SCROLL REVEAL ===== */
