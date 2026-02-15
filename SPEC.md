@@ -75,18 +75,29 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 - [x] **Two-component SSS** — fixed-fleet (nuclear, hydro — constant TWh) + RPS (scales with demand)
 - [x] **Diablo Canyon + NY nuclear as permanent fixed SSS** — state-supported indefinitely
 
-### EAC Scarcity: Optimizer Integration (Feb 15)
-**Decision**: Replace hardcoded procurement multipliers and clean premium curves with empirical values from optimizer results (`overprocure_results.json`).
+### EAC Scarcity: Supply Stack / Marginal Cost Model (Feb 15)
+**Decision**: Model clean energy supply as an economics-driven cost stack rather than seeding from optimizer results. New clean capacity only enters when economically viable (LCOE < wholesale + RPS adder). Clean premium = marginal cost of the next MWh on the supply stack to serve corporate demand.
 
-**What changes**:
-- **Procurement multiplier**: Was piecewise linear approximation (1.0× at 80%, 1.1× at 90%, 1.45× at 99%). Now uses actual `procurement_pct` from optimizer per ISO × threshold. Interpolates for non-computed thresholds.
-- **Clean premium ($/MWh)**: Was synthetic escalation rates × scarcity multiplier. Now uses `incremental_above_baseline` from optimizer per ISO × threshold. Scarcity multiplier still applied on top (demand/supply ratio effect).
+**Previous approach (superseded)**: Optimizer-seeded procurement multipliers and clean premiums. This incorrectly assumed the grid decarbonizes automatically per optimizer results.
 
-**What stays independent**:
-- SSS/non-SSS classification (policy-driven)
-- Demand growth projections
-- RPS target trajectories
-- Corporate participation scenarios
+**Current approach**:
+- **Existing clean supply is fixed** at 2025 baselines (SSS + non-SSS)
+- **New clean only enters when economic**: LCOE < wholesale price + RPS demand adder
+- **Supply stack per ISO**: Resources ordered by LCOE (from optimizer config). Each tier has annual buildable capacity (TWh/yr) based on interconnection queue data and resource potential.
+- **RPS adder**: Rises with RPS target over time (option 2-A). Higher mandates → higher compliance premium → more clean becomes economic. Base adder from observed 2025 REC prices.
+- **Clean premium = marginal cost**: Walk up the supply stack starting from cheapest available. RPS compliance demand absorbs cheap supply first. Corporate demand rides on top. Premium = LCOE of marginal tier - wholesale price.
+- **Procurement ratio**: Theoretical curve (not optimizer-derived) reflecting temporal mismatch physics. Higher match targets → more over-procurement needed. National curve: 75%→0.80×, 90%→1.05×, 100%→1.45×.
+
+**Data sources**:
+- LCOEs: Optimizer config `regional_lcoe` (NREL ATB-derived, already researched)
+- Wholesale prices: Optimizer config `wholesale_prices`
+- RPS adder base: Observed REC prices (CAISO $10, ERCOT $2, PJM $8, NYISO $22, NEISO $30)
+- Annual buildable capacity: LBNL "Queued Up" deployment rates, resource potential studies
+- RPS targets: `RPS_TARGET_TRAJECTORIES` (drives adder, not supply volume directly)
+
+**What stays from previous model**:
+- SSS/non-SSS classification, two-component SSS (fixed + RPS), policy expirations
+- C&I demand filter (62%), demand growth rates, participation scenarios
 - Scarcity bands and classification thresholds
 
 ### EAC Scarcity: C&I Demand Filter (Feb 15)
