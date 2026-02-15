@@ -278,7 +278,7 @@ strong { font-weight: 700; color: var(--text-primary); }
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 24px;
 }
 
@@ -738,10 +738,28 @@ sup.ref {
   .company-table th, .company-table td { padding: 8px 10px; }
 }
 
+/* --- COMPARISON MODE --- */
+@media (max-width: 768px) {
+  #comparisonResult > div:first-child {
+    grid-template-columns: 1fr !important;
+  }
+  #comparisonResult > div:first-child > div:nth-child(2) {
+    display: none !important;
+  }
+  .card-grid { grid-template-columns: 1fr; }
+  .story-two-col { gap: 16px; }
+}
+
+@media (max-width: 320px) {
+  .stat-row { grid-template-columns: 1fr; }
+  .pill { font-size: 0.75rem; padding: 6px 12px; }
+}
+
 @media (max-width: 480px) {
   .hero h1 { font-size: 1.7rem; }
   h2 { font-size: 1.5rem; }
   .stat-row { grid-template-columns: 1fr 1fr; }
   .stat-value { font-size: 1.8rem; }
-  .chart-wrapper { height: 250px; }
+  .chart-wrapper { height: 250px !important; }
+  .card-grid { grid-template-columns: 1fr; }
 }
