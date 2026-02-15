@@ -1081,42 +1081,41 @@ body {
     color: var(--text-primary);
 }
 
-/* ========== HEATMAP TILE COLORS (5-group red-to-green) ========== */
+/* ========== HEATMAP TILE COLORS (5-group red-to-green, solid) ========== */
 .metric-tile.heatmap-1 {
-    background: linear-gradient(145deg, #22C55E 0%, #16A34A 100%) !important;
+    background: #22C55E !important;
     border: none;
 }
+.metric-tile.heatmap-1 .tile-label,
+.metric-tile.heatmap-1 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-1 .tile-value { color: #1A2744 !important; }
 .metric-tile.heatmap-2 {
-    background: linear-gradient(145deg, #86EFAC 0%, #4ADE80 100%) !important;
+    background: #86EFAC !important;
     border: none;
 }
 .metric-tile.heatmap-2 .tile-label,
-.metric-tile.heatmap-2 .tile-sub { color: rgba(0,0,0,0.65) !important; }
-.metric-tile.heatmap-2 .tile-value { color: #1A1A1A !important; }
+.metric-tile.heatmap-2 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-2 .tile-value { color: #1A2744 !important; }
 .metric-tile.heatmap-3 {
-    background: linear-gradient(145deg, #FDE68A 0%, #FACC15 100%) !important;
+    background: #FDE68A !important;
     border: none;
 }
 .metric-tile.heatmap-3 .tile-label,
-.metric-tile.heatmap-3 .tile-sub { color: rgba(0,0,0,0.65) !important; }
-.metric-tile.heatmap-3 .tile-value { color: #1A1A1A !important; }
+.metric-tile.heatmap-3 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-3 .tile-value { color: #1A2744 !important; }
 .metric-tile.heatmap-4 {
-    background: linear-gradient(145deg, #FDBA74 0%, #F97316 100%) !important;
+    background: #F97316 !important;
     border: none;
 }
-.metric-tile.heatmap-5 {
-    background: linear-gradient(145deg, #F87171 0%, #EF4444 100%) !important;
-    border: none;
-}
-/* heatmap-1 and heatmap-5 keep white text (dark bg) */
-.metric-tile.heatmap-1 .tile-label,
-.metric-tile.heatmap-1 .tile-sub,
 .metric-tile.heatmap-4 .tile-label,
-.metric-tile.heatmap-4 .tile-sub,
+.metric-tile.heatmap-4 .tile-sub { color: #1A2744 !important; }
+.metric-tile.heatmap-4 .tile-value { color: #1A2744 !important; }
+.metric-tile.heatmap-5 {
+    background: #EF4444 !important;
+    border: none;
+}
 .metric-tile.heatmap-5 .tile-label,
-.metric-tile.heatmap-5 .tile-sub { color: rgba(255,255,255,0.8) !important; }
-.metric-tile.heatmap-1 .tile-value,
-.metric-tile.heatmap-4 .tile-value,
+.metric-tile.heatmap-5 .tile-sub { color: rgba(255,255,255,0.85) !important; }
 .metric-tile.heatmap-5 .tile-value { color: #FFFFFF !important; }
 
 /* ========== KEY FINDINGS ========== */
