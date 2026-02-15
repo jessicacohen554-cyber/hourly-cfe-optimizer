@@ -1,0 +1,309 @@
+{
+  "search_type": "100pct_targeted",
+  "procurement_grid": [
+    100,
+    125,
+    150,
+    175,
+    200,
+    225,
+    250,
+    275,
+    300,
+    325,
+    350,
+    375,
+    400
+  ],
+  "battery_grid": [
+    0,
+    2,
+    4,
+    6,
+    8,
+    10,
+    14,
+    18
+  ],
+  "ldes_grid": [
+    0,
+    2,
+    4,
+    6,
+    8,
+    10,
+    14,
+    18
+  ],
+  "results": {
+    "CAISO": {
+      "best_match": 99.9511,
+      "best_result": {
+        "resource_mix": {
+          "clean_firm": 7,
+          "solar": 43,
+          "wind": 41,
+          "ccs_ccgt": 0,
+          "hydro": 9
+        },
+        "procurement_pct": 250,
+        "battery_dispatch_pct": 0,
+        "ldes_dispatch_pct": 2,
+        "hourly_match_score": 99.9511,
+        "archetype_idx": 2,
+        "source_threshold": "99"
+      },
+      "feasible_100pct": [],
+      "frontier": [
+        {
+          "resource_mix": {
+            "clean_firm": 14,
+            "solar": 10,
+            "wind": 9,
+            "ccs_ccgt": 58,
+            "hydro": 9
+          },
+          "procurement_pct": 100,
+          "battery_dispatch_pct": 2,
+          "ldes_dispatch_pct": 6,
+          "hourly_match_score": 97.5032,
+          "costs": {
+            "effective_cost": 81.94,
+            "incremental": 51.94,
+            "total_cost": 79.89,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 8,
+            "solar": 35,
+            "wind": 10,
+            "ccs_ccgt": 38,
+            "hydro": 9
+          },
+          "procurement_pct": 125,
+          "battery_dispatch_pct": 2,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 80.85,
+            "incremental": 50.85,
+            "total_cost": 80.81,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 6,
+            "solar": 54,
+            "wind": 31,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 150,
+          "battery_dispatch_pct": 2,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 89.91,
+            "incremental": 59.91,
+            "total_cost": 89.87,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 6,
+            "solar": 39,
+            "wind": 46,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 175,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 109.28,
+            "incremental": 79.28,
+            "total_cost": 109.22,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 20,
+            "solar": 35,
+            "wind": 9,
+            "ccs_ccgt": 27,
+            "hydro": 9
+          },
+          "procurement_pct": 200,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 132.15,
+            "incremental": 102.15,
+            "total_cost": 132.08,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 6,
+            "solar": 43,
+            "wind": 43,
+            "ccs_ccgt": 0,
+            "hydro": 8
+          },
+          "procurement_pct": 225,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 143.55,
+            "incremental": 113.55,
+            "total_cost": 143.47,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 7,
+            "solar": 43,
+            "wind": 41,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 250,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 159.61,
+            "incremental": 129.61,
+            "total_cost": 159.53,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 7,
+            "solar": 43,
+            "wind": 41,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 275,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 176.81,
+            "incremental": 146.81,
+            "total_cost": 176.72,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 6,
+            "solar": 39,
+            "wind": 46,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 300,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 196.13,
+            "incremental": 166.13,
+            "total_cost": 196.03,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 6,
+            "solar": 54,
+            "wind": 31,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 325,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 204.72,
+            "incremental": 174.72,
+            "total_cost": 204.62,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 7,
+            "solar": 43,
+            "wind": 41,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 350,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 228.39,
+            "incremental": 198.39,
+            "total_cost": 228.27,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 6,
+            "solar": 39,
+            "wind": 46,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 375,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 248.24,
+            "incremental": 218.24,
+            "total_cost": 248.12,
+            "wholesale": 30
+          }
+        },
+        {
+          "resource_mix": {
+            "clean_firm": 6,
+            "solar": 54,
+            "wind": 31,
+            "ccs_ccgt": 0,
+            "hydro": 9
+          },
+          "procurement_pct": 400,
+          "battery_dispatch_pct": 0,
+          "ldes_dispatch_pct": 2,
+          "hourly_match_score": 99.9511,
+          "costs": {
+            "effective_cost": 254.81,
+            "incremental": 224.81,
+            "total_cost": 254.69,
+            "wholesale": 30
+          }
+        }
+      ]
+    }
+  },
+  "runtime_seconds": 73.6
+}
