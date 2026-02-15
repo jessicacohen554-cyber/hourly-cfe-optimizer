@@ -209,7 +209,7 @@ body {
 }
 .sensitivity-toggles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: 16px 28px;
 }
 .sensitivity-toggle-item {
@@ -284,7 +284,7 @@ body {
     line-height: 1.45;
     padding: 10px 14px;
     border-radius: 8px;
-    width: 280px;
+    width: min(280px, 85vw);
     z-index: 100;
     box-shadow: 0 4px 16px rgba(0,0,0,0.18);
     pointer-events: none;
@@ -347,7 +347,7 @@ body {
         padding: 18px 16px;
     }
     .info-tooltip {
-        width: 220px;
+        width: min(220px, 80vw);
         left: 0;
         transform: translateX(-20%);
     }
@@ -551,7 +551,7 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6356' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
-    min-width: 220px;
+    min-width: min(220px, 100%);
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -710,7 +710,7 @@ body {
 .donut-container {
     position: relative;
     width: 90%;
-    max-width: 280px;
+    max-width: 260px;
     margin: 0 auto;
     padding: 8px;
     aspect-ratio: 1 / 1;
@@ -745,21 +745,22 @@ body {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px 18px;
-    margin-top: 20px;
-    font-size: 0.85rem;
+    gap: 6px 14px;
+    margin-top: 16px;
+    font-size: 0.82rem;
     color: var(--text-secondary);
 }
 
 .donut-legend-item {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
+    white-space: nowrap;
 }
 
 .donut-legend-swatch {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 3px;
     border: 1.5px solid var(--outline);
     flex-shrink: 0;
@@ -768,6 +769,7 @@ body {
 .compressed-day-container {
     position: relative;
     height: 370px;
+    overflow: hidden;
 }
 
 /* ========== COST BREAKDOWN ========== */
@@ -2091,7 +2093,7 @@ body {
 }
 .transition-fuel-card {
     flex: 1;
-    min-width: 220px;
+    min-width: min(220px, 100%);
     background: rgba(255,255,255,0.92);
     border: 1px solid rgba(221,208,192,0.5);
     border-radius: 14px;
@@ -2173,11 +2175,11 @@ body {
         padding: 0 10px;
     }
     .section-illustration svg {
-        min-width: 340px;
+        min-width: min(340px, 100%);
     }
     .trilemma-svg {
         max-width: 300px !important;
-        min-width: 260px !important;
+        min-width: min(260px, 100%) !important;
     }
     .region-toggle-row, .incremental-region-pills {
         gap: 6px;
@@ -2744,17 +2746,22 @@ body {
         margin-bottom: 12px;
     }
     .donut-container {
-        max-width: 220px;
+        max-width: 200px;
     }
     .donut-center-label .dcl-value {
-        font-size: 1.7rem;
+        font-size: 1.6rem;
     }
     .donut-legend {
-        gap: 6px 12px;
-        font-size: 0.78rem;
+        gap: 4px 10px;
+        font-size: 0.75rem;
+        margin-top: 12px;
+    }
+    .donut-legend-swatch {
+        width: 10px;
+        height: 10px;
     }
     .compressed-day-container {
-        height: 500px;
+        height: 420px;
     }
     .peak-tower-wrap {
         height: 240px;
@@ -2903,13 +2910,22 @@ body {
         font-size: 1rem;
     }
     .donut-container {
-        max-width: 190px;
+        max-width: 170px;
     }
     .donut-center-label .dcl-value {
-        font-size: 1.45rem;
+        font-size: 1.35rem;
+    }
+    .donut-legend {
+        gap: 3px 8px;
+        font-size: 0.72rem;
+        margin-top: 10px;
+    }
+    .donut-legend-swatch {
+        width: 9px;
+        height: 9px;
     }
     .compressed-day-container {
-        height: 440px;
+        height: 380px;
     }
     .peak-tower-wrap {
         height: 200px;
@@ -3002,10 +3018,28 @@ body {
     .header { padding: 28px 12px 24px; }
     .header h1 { font-size: 1.6rem; }
     .header .subtitle { font-size: 0.85rem; }
+    .main-content { padding: 10px 8px 24px; }
     .story-section { padding: 32px 14px; }
     .hero-callout-card { min-width: 70px; padding: 12px 6px; }
     .hero-callout-value { font-size: 1.4rem; }
     .scrolly-chart-wrap { min-height: 250px; }
+    /* Dashboard controls */
+    .control-group select { min-width: 100%; font-size: 0.82rem; }
+    .sensitivity-toggles-grid { gap: 10px 16px; }
+    .toggle-btn-group button { padding: 5px 8px; font-size: 0.72rem; min-width: 38px; }
+    /* Charts */
+    .donut-container { max-width: 150px; }
+    .donut-center-label .dcl-value { font-size: 1.2rem; }
+    .donut-legend { gap: 2px 6px; font-size: 0.68rem; }
+    .compressed-day-container { height: 340px; }
+    /* Cost table */
+    .cost-table { font-size: 0.7rem; }
+    .cost-table th { padding: 5px 3px; font-size: 0.68rem; }
+    .cost-table td { padding: 5px 3px; }
+    .cost-table .resource-dot { width: 8px; height: 8px; margin-right: 3px; }
+    /* Metrics */
+    .metrics-row { grid-template-columns: 1fr; gap: 6px; }
+    .metric-tile .tile-value { font-size: 1.3rem; }
 }
 
 /* Touch-friendly tap targets */
@@ -3465,18 +3499,24 @@ if (typeof ChartDataLabels !== 'undefined') {
 // Resource color map
 const COLORS = {
     clean_firm: { base: '#1E3A5F', alpha: 'rgba(30,58,95,0.55)' },
+    ccs_ccgt:   { base: '#0D9488', alpha: 'rgba(13,148,136,0.55)' },
     solar:      { base: '#F59E0B', alpha: 'rgba(245,158,11,0.55)' },
     wind:       { base: '#22C55E', alpha: 'rgba(34,197,94,0.55)' },
     hydro:      { base: '#0EA5E9', alpha: 'rgba(14,165,233,0.55)' },
+    battery:    { base: '#8B5CF6', alpha: 'rgba(139,92,246,0.55)' },
+    ldes:       { base: '#EC4899', alpha: 'rgba(236,72,153,0.55)' },
     storage:    { base: '#EF4444', alpha: 'rgba(239,68,68,0.55)' },
     gap:        { base: '#D1D5DB', alpha: 'rgba(209,213,219,0.55)' }
 };
 
 const RESOURCE_LABELS = {
-    clean_firm: 'Clean Firm',
+    clean_firm: 'Clean Firm (Nuc+Geo)',
+    ccs_ccgt: 'CCS-CCGT',
     solar: 'Solar',
     wind: 'Wind',
     hydro: 'Hydro',
+    battery: 'Battery (4hr)',
+    ldes: 'LDES (100hr)',
     storage: 'Storage'
 };
 
@@ -3938,20 +3978,28 @@ function updateMetrics(region, entry) {
 // ---- Donut Chart ----
 function updateDonut(entry) {
     const mix = entry.resource_mix;
-    const matchScore = entry.hourly_match_score || 0; // e.g. 75.0
-    const resources = ['clean_firm', 'solar', 'wind', 'hydro'];
+    const matchScore = entry.hourly_match_score || 0;
+    const battPct = entry.battery_dispatch_pct || 0;
+    const ldesPct = entry.ldes_dispatch_pct || 0;
+
+    // All 5 generation resources from resource_mix
+    const genResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro'];
+    const mixTotal = genResources.reduce((s, r) => s + (mix[r] || 0), 0) || 100;
+
+    // Storage dispatch contributes to match score but isn't in resource_mix
+    const storageTotal = battPct + ldesPct;
+    const genMatch = Math.max(0, matchScore - storageTotal);
+
     const labels = [];
     const values = [];
     const bgColors = [];
     const borderColors = [];
 
-    // Scale each resource by matching score so total matched = matchScore%
-    // Mix values sum to 100 (of procurement), scale to share of demand
-    const mixTotal = resources.reduce((s, r) => s + (mix[r] || 0), 0) || 100;
-    resources.forEach(r => {
+    // Scale generation resources to their share of demand matched
+    genResources.forEach(r => {
         const mixPct = mix[r] || 0;
-        const scaledVal = (mixPct / mixTotal) * matchScore;
-        if (scaledVal > 0.5) {
+        const scaledVal = (mixPct / mixTotal) * genMatch;
+        if (scaledVal > 0.3) {
             labels.push(RESOURCE_LABELS[r]);
             values.push(Math.round(scaledVal * 10) / 10);
             bgColors.push(COLORS[r].alpha);
@@ -3959,7 +4007,21 @@ function updateDonut(entry) {
         }
     });
 
-    // Add gap slice
+    // Battery and LDES as separate slices
+    if (battPct > 0.3) {
+        labels.push(RESOURCE_LABELS.battery);
+        values.push(Math.round(battPct * 10) / 10);
+        bgColors.push(COLORS.battery.alpha);
+        borderColors.push(OUTLINE_COLOR);
+    }
+    if (ldesPct > 0.3) {
+        labels.push(RESOURCE_LABELS.ldes);
+        values.push(Math.round(ldesPct * 10) / 10);
+        bgColors.push(COLORS.ldes.alpha);
+        borderColors.push(OUTLINE_COLOR);
+    }
+
+    // Gap slice
     const gapPct = Math.max(0, 100 - matchScore);
     if (gapPct > 0.5) {
         labels.push('Unmatched');
@@ -3968,40 +4030,19 @@ function updateDonut(entry) {
         borderColors.push(OUTLINE_COLOR);
     }
 
-    // Storage dispatch annotation
-    const storPct = entry.storage_dispatch_pct || 0;
-
     // Center label
     document.getElementById('donutCenterValue').textContent = formatPct(matchScore);
 
     // Legend
     const legendEl = document.getElementById('donutLegend');
     let legendHTML = '';
-    resources.forEach(r => {
-        const mixPct = mix[r] || 0;
-        const scaledVal = (mixPct / mixTotal) * matchScore;
-        if (scaledVal > 0.5) {
-            legendHTML += `
-                <div class="donut-legend-item">
-                    <div class="donut-legend-swatch" style="background:${COLORS[r].alpha}"></div>
-                    <span>${RESOURCE_LABELS[r]}: ${Math.round(scaledVal)}%</span>
-                </div>`;
-        }
+    labels.forEach((lbl, i) => {
+        legendHTML += `
+            <div class="donut-legend-item">
+                <div class="donut-legend-swatch" style="background:${bgColors[i]}"></div>
+                <span>${lbl}: ${values[i]}%</span>
+            </div>`;
     });
-    if (storPct > 0) {
-        legendHTML += `
-            <div class="donut-legend-item">
-                <div class="donut-legend-swatch" style="background:${COLORS.storage.alpha}"></div>
-                <span>Storage Dispatch: ${storPct}%</span>
-            </div>`;
-    }
-    if (gapPct > 0.5) {
-        legendHTML += `
-            <div class="donut-legend-item">
-                <div class="donut-legend-swatch" style="background:${COLORS.gap.alpha}"></div>
-                <span>Unmatched: ${Math.round(gapPct)}%</span>
-            </div>`;
-    }
     legendEl.innerHTML = legendHTML;
 
     const ctx = document.getElementById('donutChart').getContext('2d');
@@ -4098,35 +4139,32 @@ function updateCompressedDay(entry, region, iso) {
     // Rotate all compressed-day arrays from UTC to local time, then convert to MW
     const r = (arr) => rotateToLocal(arr).map(v => Math.max(0, toMW(v)));
     const rRaw = (arr) => rotateToLocal(arr).map(v => toMW(v));
+    const z24 = new Array(24).fill(0);
 
-    // Calculate stacked matched values (in MW, local time)
-    const matchedCleanFirm = r(cd.matched.clean_firm);
-    const matchedSolar = r(cd.matched.solar);
-    const matchedWind = r(cd.matched.wind);
-    const matchedHydro = r(cd.matched.hydro);
-    // Combine battery + ldes into a single storage series
-    const batArr = cd.matched.battery || cd.matched.storage || new Array(24).fill(0);
-    const ldesArr = cd.matched.ldes || new Array(24).fill(0);
-    const matchedStorage = r(batArr.map((v, i) => v + (ldesArr[i] || 0)));
+    // Calculate stacked matched values (in MW, local time) — all 7 resource types
+    const matchedCleanFirm = r(cd.matched.clean_firm || z24);
+    const matchedCCS = r(cd.matched.ccs_ccgt || z24);
+    const matchedSolar = r(cd.matched.solar || z24);
+    const matchedWind = r(cd.matched.wind || z24);
+    const matchedHydro = r(cd.matched.hydro || z24);
+    const matchedBattery = r(cd.matched.battery || cd.matched.storage || z24);
+    const matchedLDES = r(cd.matched.ldes || z24);
 
-    // Storage charging (negative, below x-axis) — in MW, local time
-    const rawCharge = cd.storage_charge || null;
-    const storageCharge = rawCharge
-        ? rRaw(rawCharge)
-        : rRaw((cd.battery_charge || new Array(24).fill(0)).map((v, i) => {
-            return v + (cd.ldes_charge ? cd.ldes_charge[i] : 0);
-        }));
+    // Separate charging for battery and LDES (negative, below x-axis) — in MW, local time
+    const batteryCharge = rRaw(cd.battery_charge || z24);
+    const ldesCharge = rRaw(cd.ldes_charge || z24);
 
     // Per-resource surplus (curtailed) — in MW, local time
-    const surplusSolar = rRaw(cd.surplus?.solar || new Array(24).fill(0));
-    const surplusWind = rRaw(cd.surplus?.wind || new Array(24).fill(0));
-    const surplusHydro = rRaw(cd.surplus?.hydro || new Array(24).fill(0));
-    const surplusCleanFirm = rRaw(cd.surplus?.clean_firm || new Array(24).fill(0));
+    const surplusSolar = rRaw(cd.surplus?.solar || z24);
+    const surplusWind = rRaw(cd.surplus?.wind || z24);
+    const surplusHydro = rRaw(cd.surplus?.hydro || z24);
+    const surplusCleanFirm = rRaw(cd.surplus?.clean_firm || z24);
+    const surplusCCS = rRaw(cd.surplus?.ccs_ccgt || z24);
 
     // Gap (unmatched) — in MW, local time
     const gap = rRaw(cd.gap);
 
-    // Build stacked bottom-up: clean_firm, hydro, wind, solar, storage
+    // Build stacked bottom-up: clean_firm, ccs_ccgt, hydro, wind, solar, battery, ldes
     // Then per-resource surplus on top (color-coded cross-hatching)
 
     const ctx = document.getElementById('compressedDayChart').getContext('2d');
@@ -4136,103 +4174,63 @@ function updateCompressedDay(entry, region, iso) {
         solar: createStripePattern(ctx, COLORS.solar.base, 'rgba(245,158,11,0.18)'),
         wind: createStripePattern(ctx, COLORS.wind.base, 'rgba(34,197,94,0.18)'),
         hydro: createStripePattern(ctx, COLORS.hydro.base, 'rgba(14,165,233,0.18)'),
-        clean_firm: createStripePattern(ctx, COLORS.clean_firm.base, 'rgba(26,39,68,0.18)')
+        clean_firm: createStripePattern(ctx, COLORS.clean_firm.base, 'rgba(26,39,68,0.18)'),
+        ccs_ccgt: createStripePattern(ctx, COLORS.ccs_ccgt.base, 'rgba(13,148,136,0.18)')
     };
 
-    // Running matched total for stacking
-    const matchedTotal = matchedStorage.map((v, i) => v + matchedSolar[i] + matchedWind[i] + matchedHydro[i] + matchedCleanFirm[i]);
+    // Build cumulative stacking arrays (bottom to top)
+    const stack0 = matchedCleanFirm;
+    const stack1 = stack0.map((v, i) => v + matchedCCS[i]);
+    const stack2 = stack1.map((v, i) => v + matchedHydro[i]);
+    const stack3 = stack2.map((v, i) => v + matchedWind[i]);
+    const stack4 = stack3.map((v, i) => v + matchedSolar[i]);
+    const stack5 = stack4.map((v, i) => v + matchedBattery[i]);
+    const matchedTotal = stack5.map((v, i) => v + matchedLDES[i]);
+
+    const dsBase = { borderColor: OUTLINE_COLOR, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, tension: 0.3 };
 
     const datasets = [
-        {
-            label: 'Clean Firm',
-            data: matchedCleanFirm,
-            backgroundColor: COLORS.clean_firm.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: 'origin',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 9
-        },
-        {
-            label: 'Hydro',
-            data: matchedHydro.map((v, i) => v + matchedCleanFirm[i]),
-            backgroundColor: COLORS.hydro.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: '-1',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 8
-        },
-        {
-            label: 'Wind',
-            data: matchedWind.map((v, i) => v + matchedHydro[i] + matchedCleanFirm[i]),
-            backgroundColor: COLORS.wind.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: '-1',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 7
-        },
-        {
-            label: 'Solar',
-            data: matchedSolar.map((v, i) => v + matchedWind[i] + matchedHydro[i] + matchedCleanFirm[i]),
-            backgroundColor: COLORS.solar.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: '-1',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 6
-        },
-        {
-            label: 'Storage Dispatch',
-            data: matchedTotal.slice(),
-            backgroundColor: COLORS.storage.alpha,
-            borderColor: OUTLINE_COLOR,
-            borderWidth: 1.5,
-            fill: '-1',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 5
-        }
+        { ...dsBase, label: RESOURCE_LABELS.clean_firm, data: stack0, backgroundColor: COLORS.clean_firm.alpha, fill: 'origin', order: 11 },
+        { ...dsBase, label: RESOURCE_LABELS.ccs_ccgt,   data: stack1, backgroundColor: COLORS.ccs_ccgt.alpha,   fill: '-1',     order: 10 },
+        { ...dsBase, label: RESOURCE_LABELS.hydro,      data: stack2, backgroundColor: COLORS.hydro.alpha,      fill: '-1',     order: 9 },
+        { ...dsBase, label: RESOURCE_LABELS.wind,       data: stack3, backgroundColor: COLORS.wind.alpha,       fill: '-1',     order: 8 },
+        { ...dsBase, label: RESOURCE_LABELS.solar,      data: stack4, backgroundColor: COLORS.solar.alpha,      fill: '-1',     order: 7 },
+        { ...dsBase, label: RESOURCE_LABELS.battery,    data: stack5, backgroundColor: COLORS.battery.alpha,    fill: '-1',     order: 6 },
+        { ...dsBase, label: RESOURCE_LABELS.ldes,       data: matchedTotal.slice(), backgroundColor: COLORS.ldes.alpha, fill: '-1', order: 5 }
     ];
 
-    // Remember the index of the Storage Dispatch dataset (top of matched stack)
-    const storageDispatchIdx = datasets.length - 1;
+    // Remember the index of the LDES dataset (top of matched stack)
+    const topMatchedIdx = datasets.length - 1;
 
-    // Storage charging (shown as negative below the x-axis)
-    const hasCharge = storageCharge.some(v => v > 0.001);
-    if (hasCharge) {
+    // Battery charging (shown as negative below the x-axis)
+    const hasBattCharge = batteryCharge.some(v => v > 0.001);
+    if (hasBattCharge) {
         datasets.push({
-            label: 'Storage Charge',
-            data: storageCharge.map(v => -Math.abs(v)),
-            backgroundColor: 'rgba(239,68,68,0.35)',
-            borderColor: COLORS.storage.base,
-            borderWidth: 1.5,
-            fill: 'origin',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-            tension: 0.3,
-            order: 11,
-            _isCharge: true
+            ...dsBase, label: 'Battery Charge', data: batteryCharge.map(v => -Math.abs(v)),
+            backgroundColor: 'rgba(139,92,246,0.30)', borderColor: COLORS.battery.base,
+            fill: 'origin', order: 13, _isCharge: true
         });
     }
 
-    // Curtailment order: solar first, then wind, hydro, clean firm last
-    // Each stacks on top of the matched total + previous surplus layers
-    // IMPORTANT: use explicit dataset index for fill target to avoid cross-hatching the whole chart
-    const curtailOrder = ['solar', 'wind', 'hydro', 'clean_firm'];
-    const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, clean_firm: surplusCleanFirm };
+    // LDES charging (shown as negative below the x-axis, stacked under battery charge)
+    const hasLdesCharge = ldesCharge.some(v => v > 0.001);
+    if (hasLdesCharge) {
+        const ldesChargeData = ldesCharge.map((v, i) => {
+            const battBase = hasBattCharge ? -Math.abs(batteryCharge[i]) : 0;
+            return battBase - Math.abs(v);
+        });
+        datasets.push({
+            ...dsBase, label: 'LDES Charge', data: ldesChargeData,
+            backgroundColor: 'rgba(236,72,153,0.30)', borderColor: COLORS.ldes.base,
+            fill: hasBattCharge ? '-1' : 'origin', order: 14, _isCharge: true
+        });
+    }
+
+    // Curtailment order: solar first, then wind, hydro, ccs, clean firm last
+    const curtailOrder = ['solar', 'wind', 'hydro', 'ccs_ccgt', 'clean_firm'];
+    const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, ccs_ccgt: surplusCCS, clean_firm: surplusCleanFirm };
     let curtailCumulative = matchedTotal.slice();
-    let prevCurtailIdx = storageDispatchIdx; // first curtailed fills to top of matched stack
+    let prevCurtailIdx = topMatchedIdx;
 
     for (const rt of curtailOrder) {
         const surpVals = surplusArrays[rt];
@@ -4246,7 +4244,7 @@ function updateCompressedDay(entry, region, iso) {
 
         const thisIdx = datasets.length;
         datasets.push({
-            label: RESOURCE_LABELS[rt] + ' (Curtailed)',
+            label: (RESOURCE_LABELS[rt] || rt) + ' (Curtailed)',
             data: stackedData,
             backgroundColor: surplusPatterns[rt],
             borderColor: COLORS[rt].base,
@@ -4257,7 +4255,7 @@ function updateCompressedDay(entry, region, iso) {
             pointHoverRadius: 0,
             tension: 0.3,
             order: 4 - curtailOrder.indexOf(rt),
-            _surplusVals: surpVals // stash for tooltip
+            _surplusVals: surpVals
         });
         prevCurtailIdx = thisIdx;
     }
@@ -4277,16 +4275,13 @@ function updateCompressedDay(entry, region, iso) {
         order: -1
     });
 
-    // Add gap dataset if there's any gap
+    // Add gap dataset if there's any gap (tooltip only)
     const hasGap = gap.some(v => v > 0.0001);
     if (hasGap) {
+        const demandLocal = rRaw(cd.demand);
         datasets.push({
             label: 'Unmatched (Gap)',
-            data: cd.demand.map((d, i) => {
-                const demandMW = toMW(d);
-                const matched = matchedTotal[i];
-                return Math.max(0, demandMW - matched);
-            }),
+            data: demandLocal.map((d, i) => Math.max(0, d - matchedTotal[i])),
             backgroundColor: COLORS.gap.alpha,
             borderColor: OUTLINE_COLOR,
             borderWidth: 1.5,
@@ -4294,8 +4289,8 @@ function updateCompressedDay(entry, region, iso) {
             pointRadius: 0,
             pointHoverRadius: 0,
             tension: 0.3,
-            order: 10,
-            hidden: true // shown in tooltip only
+            order: 15,
+            hidden: true
         });
     }
 
@@ -4351,13 +4346,17 @@ function updateCompressedDay(entry, region, iso) {
                         display: true,
                         position: 'bottom',
                         labels: {
-                            font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                            font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10 },
                             color: '#1A1A1A',
                             usePointStyle: true,
                             pointStyle: 'rectRounded',
-                            padding: 14,
+                            padding: 8,
+                            boxWidth: 10,
+                            boxHeight: 10,
                             filter: function(item) {
-                                return item.text !== 'Unmatched (Gap)';
+                                // Hide gap, charging, and curtailed from legend to keep it compact
+                                const t = item.text;
+                                return t !== 'Unmatched (Gap)' && !t.includes('Charge') && !t.includes('Curtailed');
                             }
                         }
                     },
@@ -4379,11 +4378,18 @@ function updateCompressedDay(entry, region, iso) {
                                     return ` Demand: ${fmtMW(context.parsed.y)}`;
                                 }
                                 if (ds.label === 'Unmatched (Gap)') return null;
-                                // Storage charge (negative)
+                                // Storage charge (negative) — show specific label
                                 if (ds._isCharge) {
-                                    const cv = Math.abs(context.parsed.y);
-                                    if (cv < 1) return null;
-                                    return ` Storage Charge: ${fmtMW(cv)}`;
+                                    const idx = context.dataIndex;
+                                    const dsIdx = context.datasetIndex;
+                                    // For stacked LDES charge, subtract battery charge to get LDES-only contribution
+                                    const prevDs = dsIdx > 0 ? compressedDayChart.data.datasets[dsIdx - 1] : null;
+                                    const isStackedOnCharge = prevDs && prevDs._isCharge;
+                                    const val = Math.abs(context.parsed.y);
+                                    const prev = isStackedOnCharge ? Math.abs(prevDs.data?.[idx] || 0) : 0;
+                                    const contrib = isStackedOnCharge ? val - prev : val;
+                                    if (contrib < 1) return null;
+                                    return ` ${ds.label}: ${fmtMW(contrib)}`;
                                 }
                                 // For curtailed datasets, use stashed surplus values
                                 if (ds._surplusVals) {
@@ -4470,34 +4476,44 @@ function updateCostPanel(entry) {
 
     const adj = cfAdjust(entry, iso);
     const rc = costs.resource_costs;
-    const resources = ['clean_firm', 'solar', 'wind', 'hydro', 'storage'];
+    // Generation resources then storage types
+    const genResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro'];
+    const storageResources = ['battery', 'ldes'];
 
     let rows = '';
-    resources.forEach(r => {
+    genResources.forEach(r => {
         const d = rc[r];
         if (!d) return;
+        // CCS has different field names
+        const totalPct = d.total_pct_of_demand ?? (d.new_share != null ? Math.round((d.existing_share || 0) + (d.new_share || 0)) : null);
+        const existPct = d.existing_pct ?? (d.existing_share != null ? Math.round(d.existing_share) : null);
+        const newPct = d.new_pct ?? (d.new_share != null ? Math.round(d.new_share) : null);
+        const costVal = d.cost_per_demand_mwh ?? d.cost ?? null;
+        const displayCost = r === 'clean_firm' ? adj.newCfCostPerMwh : costVal;
+        const isCfAdjusted = r === 'clean_firm' && selectedCfCost !== 90;
+        rows += `
+            <tr>
+                <td><span class="resource-dot" style="background:${COLORS[r].alpha}"></span>${RESOURCE_LABELS[r]}</td>
+                <td>${totalPct != null ? Math.round(totalPct) + '%' : '--'}</td>
+                <td>${existPct != null ? Math.round(existPct) + '%' : '--'}</td>
+                <td>${newPct != null ? Math.round(newPct) + '%' : '--'}</td>
+                <td${isCfAdjusted ? ' style="color:#D97706;font-weight:600;"' : ''}>${displayCost != null ? '$' + formatNum(displayCost) : '--'}${isCfAdjusted ? '*' : ''}</td>
+            </tr>`;
+    });
 
-        if (r === 'storage') {
-            rows += `
-                <tr>
-                    <td><span class="resource-dot" style="background:${COLORS.storage.alpha}"></span>Storage</td>
-                    <td colspan="3" style="text-align:center;color:var(--text-muted);font-style:italic;">
-                        ${d.dispatch_pct != null ? d.dispatch_pct + '% dispatch' : '--'}
-                    </td>
-                    <td>${d.cost_per_demand_mwh != null ? '$' + formatNum(d.cost_per_demand_mwh) : '--'}</td>
-                </tr>`;
-        } else {
-            const displayCost = r === 'clean_firm' ? adj.newCfCostPerMwh : d.cost_per_demand_mwh;
-            const isCfAdjusted = r === 'clean_firm' && selectedCfCost !== 90;
-            rows += `
-                <tr>
-                    <td><span class="resource-dot" style="background:${COLORS[r].alpha}"></span>${RESOURCE_LABELS[r]}</td>
-                    <td>${d.total_pct_of_demand != null ? Math.round(d.total_pct_of_demand) + '%' : '--'}</td>
-                    <td>${d.existing_pct != null ? Math.round(d.existing_pct) + '%' : '--'}</td>
-                    <td>${d.new_pct != null ? Math.round(d.new_pct) + '%' : '--'}</td>
-                    <td${isCfAdjusted ? ' style="color:#D97706;font-weight:600;"' : ''}>${displayCost != null ? '$' + formatNum(displayCost) : '--'}${isCfAdjusted ? '*' : ''}</td>
-                </tr>`;
-        }
+    storageResources.forEach(r => {
+        const d = rc[r];
+        if (!d) return;
+        const color = COLORS[r] ? COLORS[r].alpha : COLORS.storage.alpha;
+        const label = RESOURCE_LABELS[r] || r;
+        rows += `
+            <tr>
+                <td><span class="resource-dot" style="background:${color}"></span>${label}</td>
+                <td colspan="3" style="text-align:center;color:var(--text-muted);font-style:italic;">
+                    ${d.dispatch_pct != null ? d.dispatch_pct + '% dispatch' : '--'}
+                </td>
+                <td>${d.cost_per_demand_mwh != null ? '$' + formatNum(d.cost_per_demand_mwh) : '--'}</td>
+            </tr>`;
     });
 
     const cfNote = selectedCfCost !== 90 ? `<div class="cost-note" style="color:#D97706;">* Clean firm cost adjusted from $90/MWh to $${selectedCfCost}/MWh. New-build portion: ${formatNum(rc.clean_firm?.new_pct || 0)}% of demand &times; $${selectedCfCost}/MWh LCOE. Delta: +$${formatNum(adj.totalDelta)}/MWh.</div>` : '';
