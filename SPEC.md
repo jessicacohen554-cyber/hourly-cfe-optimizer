@@ -24,9 +24,23 @@
 ### Needs work (awaiting optimizer results)
 - [ ] **Dashboard abatement section (`dashboard.html`)** — 5 paired toggles work, 4 core charts work. Abatement cost section has placeholder divs awaiting optimizer results data.
 
-### What's in progress
-- [ ] **Optimizer running** (sequential mode with checkpointing). Incremental saves after each ISO.
-- [ ] Site content gap closure: building out the 3 incomplete pages above
+### Optimizer code — ready for run (all completed)
+- [x] **Hydro caps** — 2025 actuals: CAISO 9.5%, ERCOT 0.1%, PJM 1.8%, NYISO 15.9%, NEISO 4.4%
+- [x] **5-year profile averaging** — gen + demand shapes averaged 2021-2025 (leap year handled)
+- [x] **DST-aware solar nighttime correction** — 6am-7pm local prevailing time, UTC offset adjusts during DST
+- [x] **Nuclear seasonal derate** — monthly CF factors × nuclear share of clean_firm
+- [x] **Nuclear uprate LCOE blending** — regional uprate share blends cheap uprates with new-build
+- [x] **CCS 95% capture rate** — residual 0.0185 tCO2/MWh
+- [x] **Capacity-constrained storage** — battery + LDES dispatch_pct = built capacity
+- [x] **CO2 hourly dispatch attribution** — charge-side emission netting
+- [x] **1-scenario checkpointing** — zero compute loss on interruption
+- [x] **Wholesale fuel adjustments** — documented in §5.9 with per-ISO $/MWh table
+- [x] **SPEC.md ↔ code audit** — 150+ values verified, 0 discrepancies
+
+### Needs work (awaiting optimizer results)
+- [ ] Dashboard abatement section (`dashboard.html`) — placeholder divs awaiting results
+- [ ] Site content gap closure: incomplete pages need optimizer data
+- [ ] Update narratives + research paper with new results
 
 ### Pipeline when optimizer completes
 1. Run `recompute_co2.py` → hourly CO₂ correction
@@ -35,12 +49,19 @@
 4. DAC-VRE analysis, resource mix analysis, path-dependent MAC
 5. Commit + push
 
-### After initial push
-1. Fetch 2021-2025 multi-year EIA data (need API key)
-2. Convert to local time with DST
-3. Average profiles, apply to 2025 totals
-4. Re-run optimizer (Phase 1+3 hybrid)
-5. Update dashboards + narratives, final QA/QC
+### Pre-Run QA/QC Gate (Mandatory Before Every Optimizer Run)
+**This gate exists because**: a previous run wasted 3+ hours of compute due to incorrect hydro caps that weren't caught before launch. Every optimizer run is expensive — never launch without verifying assumptions first.
+
+Before launching `optimize_overprocure.py`, the following must be verified:
+1. All decisions from the current conversation implemented in optimizer code
+2. All decisions captured in SPEC.md
+3. No open questions that could change optimizer logic, cost tables, or methodology
+4. Code passes syntax check (`python -c "import py_compile; py_compile.compile(...)"`)
+5. **Full assumptions audit**: verify ALL key assumptions (hydro caps, cost tables, resource constraints, dispatch logic, procurement bounds, storage parameters) match SPEC.md and real-world data
+6. **Dry-run test**: imports, constants, data loading, checkpoint save/load round-trip
+7. **Checkpoint system verified**: save/load/resume works, interval set appropriately
+8. Present user with summary of verified assumptions before starting
+9. User explicitly approves the run
 
 ### Open questions
 - Path-dependent MAC visualization: may need alternative to MAC curve format
@@ -64,7 +85,7 @@
 
 | # | Resource | Profile Type | New-Build? | Cost Toggle? | Transmission Adder? |
 |---|---|---|---|---|---|
-| 1 | **Clean Firm** (nuclear/geothermal) | Flat baseload (1/8760) | Yes | Low/Med/High (regional) | Yes (regional) |
+| 1 | **Clean Firm** (nuclear/geothermal) | Seasonal-derated baseload | Yes | Low/Med/High (regional) | Yes (regional) |
 | 2 | **Solar** | EIA 2025 hourly regional | Yes | Low/Med/High (regional) | Yes (regional) |
 | 3 | **Wind** | EIA 2025 hourly regional | Yes | Low/Med/High (regional) | Yes (regional) |
 | 4 | **CCS-CCGT** | Dispatchable baseload (flat) | Yes | Low/Med/High (regional) | Yes (regional) |
@@ -74,10 +95,11 @@
 
 ### Key resource decisions:
 - **H2 storage excluded** (explicitly out of scope)
+- **Clean Firm nuclear derate**: Seasonal spring/fall derate applied to nuclear portion only (not geothermal). Reflects staggered refueling outages across the fleet (~18-24 day outages per plant every 18-24 months, distributed across spring/fall shoulders). Summer/winter: ~100% CF (nukes run full during peak demand seasons). Spring/fall: reduced CF based on observed EIA 2021-2025 nuclear generation vs. available capacity. Derive simplified flat seasonal percentages from actual data. Geothermal (relevant in CAISO) stays flat 1/8760.
 - **Hydro**: Existing only, capped at regional capacity, wholesale priced, no new-build tier, $0 transmission
-- **CCS-CCGT**: 90% capture rate, residual ~0.037 tCO2/MWh, 45Q ($85/ton = ~$29/MWh offset) baked into LCOE, fuel cost linked to gas price toggle
-- **LDES**: 100-hour iron-air, 50% round-trip efficiency, new multi-day dispatch algorithm
-- **Battery**: 4-hour Li-ion, 85% round-trip efficiency, existing daily-cycle greedy dispatch preserved
+- **CCS-CCGT**: 95% capture rate, residual ~0.0185 tCO2/MWh, 45Q ($85/ton = ~$29/MWh offset) baked into LCOE, fuel cost linked to gas price toggle. **Modeled as flat baseload (not dispatchable) by design** — while CCS-CCGT is physically dispatchable, the 45Q tax credit ($85/ton for geologic storage) incentivizes running at maximum capacity factor to maximize capture credits. This is an economics-driven decision, not a physical constraint. The perverse policy incentive drives gas demand even when the grid doesn't need it. Not worth the compute to model dispatchability when the economics don't support it today.
+- **LDES**: 100-hour iron-air, 50% round-trip efficiency, capacity-constrained dispatch with dynamic capacity sizing. LCOS reflects actual utilization of built capacity.
+- **Battery**: 4-hour Li-ion, 85% round-trip efficiency, capacity-constrained daily-cycle dispatch. LCOS reflects actual utilization — oversized capacity that sits idle drives cost up.
 
 ---
 
@@ -147,15 +169,47 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 | Medium | $73 | $40 | $62 | $81 | $73 |
 | High | $95 | $52 | $81 | $105 | $95 |
 
-### 5.3 Clean Firm LCOE ($/MWh) — Regionalized by Geothermal Access
+### 5.3 Clean Firm LCOE ($/MWh) — Blended Uprate + New-Build, Regionalized
 
+Clean firm LCOE is a **capacity-weighted blend** of nuclear uprate costs and new-build costs, reflecting that the first incremental clean firm capacity a buyer would procure comes from uprating existing plants (much cheaper) before requiring new-build SMRs.
+
+**Nuclear uprate LCOE** (incremental cost of adding capacity to existing plants):
+| Level | LCOE ($/MWh) | Basis |
+|---|---|---|
+| Low | $15 | MUR-dominated (measurement recapture, minimal capital) |
+| Medium | $30 | Typical EPU blend (extended power uprate) |
+| High | $55 | Large-scope EPU (major equipment replacement) |
+
+*Sources: INL LWRS Program, NRC uprate database, NEI fleet data, Vistra/Meta 2026 PPA filings*
+
+**Regional uprate share** (fraction of new clean firm that comes from uprates vs. new-build):
+| Region | CAISO | ERCOT | PJM | NYISO | NEISO |
+|---|---|---|---|---|---|
+| Uprate share | 15% | 25% | 50% | 30% | 20% |
+
+- **PJM**: 50% — 32 GW nuclear fleet, largest uprate pool (Constellation ~1GW, Vistra/Meta ~433MW announced)
+- **NYISO**: 30% — smaller fleet (3.4 GW) but FitzPatrick, Nine Mile Pt have uprate potential
+- **ERCOT**: 25% — South Texas Project (2.7 GW), MUR/stretch potential
+- **NEISO**: 20% — Millstone + Seabrook, limited fleet
+- **CAISO**: 15% — Diablo Canyon only (2.3 GW), minimal uprate headroom + geothermal is the cheap option
+
+**New-build component LCOE** (SMR/Gen III+ for capacity beyond uprates):
 | Level | CAISO | ERCOT | PJM | NYISO | NEISO |
 |---|---|---|---|---|---|
-| Low | $58 | $63 | $72 | $75 | $73 |
-| Medium | $78 | $85 | $93 | $98 | $96 |
-| High | $110 | $120 | $140 | $150 | $145 |
+| Low | $65 | $70 | $80 | $85 | $82 |
+| Medium | $88 | $95 | $105 | $110 | $108 |
+| High | $125 | $135 | $160 | $170 | $165 |
 
-*CAISO lowest (Salton Sea, Imperial Valley, The Geysers geothermal). NYISO highest (nuclear-only, zero geothermal potential).*
+**Blended clean firm LCOE** (uprate_share × uprate + (1 - uprate_share) × new_build):
+| Level | CAISO | ERCOT | PJM | NYISO | NEISO |
+|---|---|---|---|---|---|
+| Low | $58 | $56 | $48 | $64 | $69 |
+| Medium | $79 | $79 | $68 | $86 | $92 |
+| High | $115 | $115 | $108 | $136 | $143 |
+
+*CAISO benefits from geothermal (lower new-build component). PJM gets the biggest discount due to largest uprate pool. NYISO/NEISO remain expensive due to smaller fleets and higher new-build costs.*
+
+**Why this matters**: Pure new-build clean firm LCOE ($93-150/MWh at Medium) overstates the cost of incremental clean firm capacity because it ignores the ~5 GW of uprate potential available at $15-55/MWh. The blended approach reflects the actual procurement cost curve a buyer would face.
 
 ### 5.4 CCS-CCGT LCOE ($/MWh, net of 45Q)
 
@@ -173,8 +227,8 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 - CO2 storage: $5-15/MWh (regional — geology, well costs)
 - Fuel cost: Heat rate × gas price (responds to gas toggle)
 - 45Q offset: -$29/MWh ($85/ton × 0.34 tCO2/MWh)
-- Capture rate: 90%
-- Residual emissions: ~0.037 tCO2/MWh
+- Capture rate: 95%
+- Residual emissions: ~0.0185 tCO2/MWh (= 0.37 × 0.05)
 
 ### 5.5 Battery LCOS ($/MWh) — Regionalized
 
@@ -234,6 +288,16 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 
 **Wholesale**: Shifts based on regional 2025 fossil fuel mix composition. Uses **hourly wholesale price profiles** from EIA 2025 data (not flat averages).
 
+**Wholesale fuel price adjustments** ($/MWh adder to base wholesale, by fossil fuel toggle level):
+
+| Region | Low | Medium | High | Rationale |
+|--------|-----|--------|------|-----------|
+| CAISO  | -5  |   0    | +10  | ~40% gas generation |
+| ERCOT  | -7  |   0    | +12  | ~50% gas, most sensitive to fuel prices |
+| PJM    | -6  |   0    | +11  | ~40% gas + coal mix |
+| NYISO  | -4  |   0    |  +8  | ~35% gas, more nuclear insulates from fuel |
+| NEISO  | -4  |   0    |  +8  | ~35% gas, more nuclear insulates from fuel |
+
 **Emission rate — Regional fuel-switching elasticity**:
 
 | Region | Coal Fleet Status | Switching Elasticity | Rationale |
@@ -248,20 +312,30 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 
 ## 6. Storage Algorithms
 
-### 6.1 Battery (4hr Li-ion) — EXISTING algorithm, unchanged
-1. Calculate per-day dispatch target from total annual %
-2. Identify daily surplus hours (supply > demand) and gap hours (demand > supply)
-3. Charge from largest surpluses up to power rating (capacity/4hr), up to required charge amount
-4. Discharge to largest gaps up to power rating, up to charged energy × 85% efficiency
-5. Repeat for each of 365 days
+### 6.1 Battery (4hr Li-ion) — CAPACITY-CONSTRAINED dispatch
 
-### 6.2 LDES (100hr iron-air) — NEW algorithm
-1. **Rolling 7-day window** (fine phase: full-year optimization)
-2. Identify sustained multi-day surplus periods (spring wind runs, long sunny stretches)
-3. Charge during surplus periods up to power rating (capacity/100hr), respecting energy capacity
-4. Identify sustained multi-day deficit periods (winter evening doldrums, cloudy windless stretches)
-5. Discharge during deficit periods up to power rating, up to stored energy × 50% efficiency
-6. Seasonal shifting: captures week-to-week and seasonal patterns batteries cannot
+**Key principle**: Cost comes from capacity built. LCOS must reflect actual utilization — can't have huge redundant capacity that's barely used. The optimizer co-optimizes capacity size and dispatch.
+
+1. `battery_dispatch_pct` maps to a **capacity** (MWh) and **power rating** (MW = capacity / 4hr)
+2. Each day: charge from surplus hours up to min(available surplus, capacity), discharge to gap hours up to min(stored energy × 85% RTE, capacity)
+3. Days with insufficient surplus → partial cycle → less dispatch that day
+4. Annual MWh dispatched = sum of actual daily dispatches (variable, not uniform)
+5. **Utilization factor** = actual annual cycles / 365 theoretical max cycles
+6. **LCOS** = annualized capital cost of built capacity / actual MWh dispatched — underutilized capacity drives LCOS up, creating a natural cost penalty for oversizing
+7. Optimizer finds the sweet spot: enough capacity to be useful at the target threshold, not so much that idle capacity inflates cost
+
+### 6.2 LDES (100hr iron-air) — CAPACITY-CONSTRAINED dispatch with dynamic sizing
+
+**Same capacity-constrained principle as battery.**
+
+1. `ldes_dispatch_pct` maps to a **capacity** (MWh) that scales dynamically (not fixed at 1 day of demand) and **power rating** (MW = capacity / 100hr)
+2. **Rolling 7-day window**: identify sustained multi-day surplus periods (spring wind, long sunny stretches) and deficit periods (winter evening doldrums, cloudy windless stretches)
+3. Charge during surplus periods up to min(available surplus, power rating), respecting energy capacity
+4. Discharge during deficit periods up to min(stored energy × 50% RTE, power rating)
+5. State of charge carries over between windows
+6. **Utilization factor** = actual annual energy throughput / (capacity × theoretical max cycles)
+7. **LCOS** = annualized capital cost of built capacity / actual MWh dispatched — same utilization penalty as battery
+8. Seasonal shifting: captures week-to-week and seasonal patterns batteries cannot
 
 ---
 
@@ -291,12 +365,19 @@ This produces a variable hourly emission rate that reflects the actual fossil fu
 - Regional fuel-switching elasticity from Section 5.9 applied as shift factors to coal/gas shares
 - ERCOT: Low elasticity (coal mostly retired); PJM: High elasticity (45GW coal remaining)
 
-**Step 5 — CO₂ abated** (hourly resolution):
+**Step 5 — CO₂ abated** (hourly resolution, with storage dispatch attribution):
 - For each hour h: `fossil_displaced[h] = clean_supply[h] − max(0, clean_supply[h] − demand[h])`
 - `CO₂_abated = Σ_h fossil_displaced[h] × emission_rate[h]`
-- CCS-CCGT gets **partial credit**: 90% capture → residual ~0.037 tCO₂/MWh (vs ~0.37 unabated CCGT)
+- CCS-CCGT gets **partial credit**: 95% capture → residual ~0.0185 tCO₂/MWh (vs ~0.37 unabated CCGT)
 
-**Why this matters**: Flat emission rates overcount abatement during low-emission gas-dominant hours and undercount during high-emission coal-dominant hours. The hourly approach captures the actual carbon intensity of displaced generation.
+**Step 6 — Storage CO₂ attribution** (hourly dispatch tracking):
+- Track exact hours each storage type (battery/LDES) dispatches into → use those hours' specific emission rates for abatement credit
+- **Net against charge-side emissions**: when storage charges during hours with nonzero fossil on the margin, the charging energy carries an emissions cost. `net_storage_abatement = Σ_discharge_hours(dispatch[h] × emission_rate[h]) − Σ_charge_hours(charge[h] × emission_rate[h] / RTE)`
+- This replaces the previous gap-weighted average approximation with exact hourly attribution
+- Storage charging from pure surplus clean energy (no fossil on margin) → charge emissions = 0
+- Storage charging during hours when fossil is still marginal → charge has real emissions that reduce net abatement
+
+**Why this matters**: Flat emission rates overcount abatement during low-emission gas-dominant hours and undercount during high-emission coal-dominant hours. The hourly approach captures the actual carbon intensity of displaced generation. The storage charge-side netting prevents overcounting — a battery that charges from gas-marginal hours and discharges to gas-marginal hours provides less net abatement than one charging from clean surplus hours.
 
 **Data sources**:
 - `data/egrid_emission_rates.json` — 2023 eGRID per-fuel CO₂ rates (lb/MWh) by region
@@ -355,10 +436,13 @@ This produces a variable hourly emission rate that reflects the actual fossil fu
 | Wind | 8.8% | 23.6% | 3.8% | 4.7% | 3.9% |
 | Hydro | 9.5% | 0.1% | 1.8% | 15.9% | 4.4% |
 
-### Hydro Caps (existing capacity):
+### Hydro Caps (2025 actual share of demand, from EIA):
 | Region | CAISO | ERCOT | PJM | NYISO | NEISO |
 |---|---|---|---|---|---|
-| Cap (GW) | 30 | 5 | 15 | 40 | 30 |
+| Cap (%) | 9.5 | 0.1 | 1.8 | 15.9 | 4.4 |
+| 5yr range (%) | 5.2–11.2 | 0.07–0.12 | 1.9–2.1 | 15.9–18.3 | 4.5–7.8 |
+
+**Notes**: Using 2025 actuals (not 5-year average) to match our 2025 snapshot model. CAISO hydro varies enormously by water year (2025 was above average). NYISO imports significant hydro from Quebec/Ontario.
 
 ### Wholesale Market Prices (2025 hourly profiles from EIA, not flat averages):
 - Average reference points: CAISO ~$30, ERCOT ~$27, PJM ~$34, NYISO ~$42, NEISO ~$41
@@ -795,33 +879,35 @@ This section documents known simplifying assumptions for transparency and academ
 
 **Mitigation**: The firm generation cost toggle (Low/Medium/High) provides sensitivity analysis around the LCOE assumption. High firm generation costs can be interpreted as a proxy for reduced capacity factor economics.
 
-### 19.3 UTC Timestamps Without DST Adjustment (To Be Fixed)
+### 19.3 DST-Aware Solar Nighttime Correction (Fixed)
 
-**Current state**: All EIA hourly data is stored in sequential UTC order. Each BA's data starts at its standard-time midnight in UTC (CAISO: T08, ERCOT: T06, PJM/NYISO/NEISO: T05). During DST months (March–November), the hour labels are off by 1 hour from local clock time.
+**Implementation**: Solar nighttime zeroing now accounts for Daylight Saving Time. The optimizer applies a 6am–7pm local prevailing time daylight window, converting to UTC using DST-adjusted offsets:
+- **Standard time** (Nov–Mar): CAISO UTC+8, ERCOT UTC+6, PJM/NYISO/NEISO UTC+5
+- **DST** (Mar–Nov, ~day 69–307): Offsets decrease by 1 (CAISO UTC+7, ERCOT UTC+5, PJM/NYISO/NEISO UTC+4)
+- DST boundaries use representative dates across 2021–2025 (2nd Sunday of March ≈ day 69, 1st Sunday of November ≈ day 307)
 
-**Impact**: The optimizer's hourly matching is unaffected — `demand[h]` and `supply[h]` refer to the same physical UTC hour, so they match correctly. The issue is in `compute_compressed_day()` and any visualization that maps array index to hour-of-day: `h % 24` gives local standard time labels year-round, but during DST months the actual local clock is 1 hour ahead. This means solar peak visualization appears 1 hour early during summer months.
+**Optimizer matching**: Unaffected — `demand[h]` and `supply[h]` refer to the same physical UTC hour. DST adjustment only affects which hours get nighttime solar zeroing.
 
-**Fix (planned)**: Convert all profiles to local prevailing time using each BA's IANA timezone:
-- CAISO → `America/Los_Angeles`
-- ERCOT → `America/Chicago`
-- PJM → `America/New_York`
-- NYISO → `America/New_York`
-- NEISO → `America/New_York`
+**If re-importing EIA data**: The `fetch_all_data.py` script stores all profiles in sequential UTC order. The DST correction is applied at profile loading time in the optimizer, NOT during data import. This means raw data files are always UTC and the DST logic lives only in `get_supply_profiles()`.
 
-This produces the correct local-time alignment and fixes the compressed-day hour labels. DST spring-forward hours (missing in local time) are handled by interpolation; fall-back duplicates are averaged.
+### 19.4 Multi-Year Data Usage (Implemented)
 
-### 19.4 Single-Year Profiles (To Be Fixed)
+**Data split — what comes from where:**
+- **2021-2025 average**: Hourly profile *shapes* for both generation (solar, wind, hydro, nuclear) and demand. Element-wise average across 5 years smooths single-year weather anomalies.
+- **2025 actuals**: Total annual MWh (demand and generation), existing grid mix shares, hydro caps, peak demand. These anchor the model to current-year reality.
+- **Solar nighttime correction**: Solar generation zeroed during nighttime hours using DST-aware local time windows (see §19.3).
 
-**Current state**: Generation and demand profiles use a single year (2025) of EIA 930 data. A single year may have unusual weather patterns (e.g., extended cloudy periods, heat waves, polar vortex events) that skew the hourly profile shapes.
+**Leap year handling**: 2024 (8784 hours) is included by removing Feb 29 hours (indices 1416–1439) before averaging, preserving seasonal alignment with 8760-hour non-leap years.
 
-**Fix (planned)**: Average hourly profiles across 2021-2025 EIA 930 data in local time:
-1. Fetch 5 years of hourly data per BA from EIA API
-2. Convert all to local prevailing time (with DST handling)
-3. For each hour-of-year (1–8760), average the normalized profile across years
-4. Apply averaged profile shapes to **2025 annual totals** — so total MWh and generation shares remain 2025 actuals, but the hourly distribution is smoothed over 5 years
-5. This captures inter-annual weather variation (early/late spring, wind drought years, etc.) while preserving the 2025 snapshot model
+**Implementation in `load_data()`**:
+- `_remove_leap_day(profile)`: Excises Feb 29 from 8784→8760
+- `_average_profiles(yearly_profiles)`: Element-wise mean across years
+- Generation profiles: `gen_profiles[iso][resource_type]` → direct access (no year key)
+- Demand profiles: `demand_data[iso]['normalized']` uses averaged shape; `total_annual_mwh` and `peak_mw` from 2025
 
-**Key constraint**: Do NOT average annual totals — only profile shapes. The proportion of solar across each hour must equate to its appropriate fractional share of 2025 generation totals.
+**Key constraint**: Profile shapes are weather-averaged; absolute quantities are 2025 actuals. This means the optimizer uses realistic hourly patterns (no single-year weather bias) scaled to actual 2025 generation levels.
+
+**If re-importing EIA data**: The `fetch_all_data.py` script stores raw per-year profiles in `eia_generation_profiles.json` and `eia_demand_profiles.json`, each year-keyed. The 5-year averaging happens at optimizer load time, NOT during import. Raw data files preserve full per-year resolution for auditability.
 
 ### 19.5 NYISO Solar Proxy
 
@@ -829,9 +915,56 @@ This produces the correct local-time alignment and fixes the compressed-day hour
 
 ---
 
-## 20. Planned Enhancements
+## 20. Model Alignment and Differentiation vs. Existing Energy Models
 
-### 20.1 Capacity Reserve Margin / ELCC (Under Consideration)
+This section documents how our model compares to established capacity expansion and procurement models, where we align with standard methodology, and where we deliberately diverge with justification.
+
+### 20.1 Alignment with Standard Methodology
+
+| Feature | Our Model | Industry Standard (GenX, ReEDS, SWITCH) | Alignment |
+|---|---|---|---|
+| **Hourly temporal resolution** | 8760 hours | 8760 hours (GenX), representative weeks (ReEDS), 12-288 time slices (SWITCH) | ✓ Matches GenX; exceeds ReEDS/SWITCH |
+| **LCOS at reference utilization** | Static LCOS from NREL ATB/Lazard | Same — static cost inputs without dispatch feedback | ✓ Full alignment |
+| **Solar/wind hourly profiles** | EIA 930 actual generation data, 5-year average | NREL ATB capacity factors, or NSRDB/WIND Toolkit | ✓ Comparable rigor; actual generation vs. modeled resource |
+| **Two-tier pricing** | Existing capacity at wholesale; new-build at LCOE + transmission | Standard in procurement models (LevelTen, 3Degrees) | ✓ Full alignment |
+| **Co-optimization of cost + mix** | Cost drives resource mix selection at every threshold | Standard in all capacity expansion models | ✓ Full alignment |
+| **Regional granularity** | 5 ISOs (CAISO, ERCOT, PJM, NYISO, NEISO) | GenX: zonal; ReEDS: 134 BAs; SWITCH: load zones | ✓ Comparable scope for procurement analysis |
+
+### 20.2 Deliberate Differentiations (with justification)
+
+| Feature | Our Model | Standard Models | Why We Diverge |
+|---|---|---|---|
+| **CCS-CCGT as flat baseload** | Always-on, 100% CF | Dispatchable (ramps with system needs) | **45Q tax credit incentive**: $85/ton for captured CO₂ creates a strong economic incentive to maximize capacity factor regardless of grid need. The policy distortion means CCS would run baseload in practice, not dispatch. Standard models don't account for 45Q's perverse incentive structure. |
+| **Nuclear seasonal derate** | Monthly flat derate from 5-year EIA data (spring/fall refueling) | Flat 90-93% annual CF (NREL ATB) or explicit outage scheduling (PLEXOS) | **Seasonal accuracy matters for hourly matching**: A flat annual CF misses the spring/fall refueling pattern where clean firm availability drops 15-20%. For hourly CFE procurement, this seasonal gap is exactly when storage or CCS must compensate. Our approach uses observed EIA data rather than assumed CF, and preserves high summer/winter availability when clean firm is most valuable. |
+| **Storage capacity-constrained dispatch** | Capacity built = physical limit on daily/weekly dispatch | Varies: some use exogenous capacity, some co-optimize | **Prevents unrealistic dispatch**: The optimizer can't claim more storage dispatch than the built capacity allows. Days with insufficient surplus get partial cycles. This is more conservative than models that assume perfect foresight dispatch or exogenous capacity sizing. |
+| **CO₂ hourly attribution with charge netting** | Track exact dispatch hours + net charge-side emissions | Flat marginal emission rate or annual average | **Prevents CO₂ overcounting**: Storage charging from fossil-marginal hours carries real emissions. Our approach credits storage abatement only for the net emission reduction, not the gross displacement. This is consistent with the GHG Protocol Scope 2 hourly matching framework. |
+| **Hydro as existing-only** | Capped at 5-year average share, wholesale-priced, no new-build | Varies: some allow new-build hydro/pumped storage | **Reflects procurement reality**: New conventional hydro is effectively unavailable in the US (permitting, environmental constraints). Treating it as existing-only matches what a corporate buyer can actually procure. |
+| **Procurement-focused objective** | Minimize $/MWh to achieve target CFE % | Minimize total system cost or maximize welfare | **Different question**: We're asking "what should a buyer procure?" not "what should the system build?" This means we don't model transmission expansion, retirement decisions, or inter-regional trade — we take the grid as-given and optimize the buyer's clean energy portfolio within it. |
+
+### 20.3 Key Assumptions Where We Use Standard Values
+
+- **Battery**: 4hr Li-ion, 85% RTE, daily-cycle dispatch → NREL ATB 2024 reference
+- **LDES**: 100hr iron-air, 50% RTE → Form Energy published specs, NREL ATB storage module
+- **CCS capture rate**: 95% → DOE/NETL reference for next-gen CCGT+CCS (conservative vs. 90% in older literature)
+- **45Q offset**: $85/ton × 95% capture × ~0.37 tCO₂/MWh ≈ $29/MWh LCOE reduction → IRC §45Q(a)(3)(A)
+- **Discount rate**: Implicit in LCOE tables (NREL ATB uses WACC by technology)
+- **Transmission adders**: Regional, based on published interconnection queue data and MISO/PJM/CAISO tariff filings
+
+### 20.4 What Our Model Does NOT Include (Scope Boundaries)
+
+- **Transmission expansion or congestion** — we use existing interconnection costs
+- **Retirement/entry decisions** — we take the existing grid as a given
+- **Inter-regional trade / import-export** — each ISO is modeled as self-contained. Unmatched demand hours are assumed met by fossil generation priced at regional fossil cost sensitivities (coal/gas/oil). We do not consider interconnection or power flows across grid boundaries. This is a meaningful simplification for ISOs that rely on imports (e.g., CAISO imports from Pacific NW hydro, NYISO imports from Quebec/Ontario hydro). The effect is that our model may slightly overstate the difficulty of meeting high CFE thresholds in import-dependent regions.
+- **Demand response or demand flexibility** — demand is fixed hourly profile
+- **Hydrogen storage** — explicitly excluded (immature for grid-scale energy storage)
+- **Multi-year capacity planning** — single 2025 snapshot, not a trajectory
+- **Reliability/adequacy constraints (ELCC)** — under consideration (Section 21.1)
+
+---
+
+## 21. Planned Enhancements
+
+### 21.1 Capacity Reserve Margin / ELCC (Under Consideration)
 
 **Concept**: Layer in a capacity reserve margin constraint using Effective Load Carrying Capability (ELCC) to ensure resource mixes maintain grid reliability.
 
