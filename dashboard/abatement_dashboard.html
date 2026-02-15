@@ -441,25 +441,9 @@ body {
 </head>
 <body>
 
-<!-- TOP NAV -->
-<nav class="top-nav">
-    <span class="nav-brand">The 8,760 Problem</span>
-    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
-        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="top-nav-inner">
-        <a href="index.html">Home</a>
-        <a href="dashboard.html">Cost Optimizer</a>
-        <a href="abatement_dashboard.html" class="nav-active">Abatement Dashboard</a>
-        <a href="region_deepdive.html">Regional Deep Dives</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
-        <a href="eac_scarcity.html">EAC Scarcity</a>
-        <a href="research_paper.html">Methodology &amp; Paper</a>
-        <a href="about.html">About</a>
-        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
-        <a href="about.html">About</a>
-    </div>
-</nav>
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
 <div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER BANNER -->
