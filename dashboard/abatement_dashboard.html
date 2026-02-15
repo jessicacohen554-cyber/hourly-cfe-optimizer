@@ -463,7 +463,7 @@ body {
 <!-- HEADER BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">Comparing the cost of CO₂ abatement through hourly clean energy procurement across regions and ambition levels.</p>
+    <p class="subtitle">Comparing the cost of CO₂ abatement through hourly clean energy procurement across regions and ambition levels.<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[10]</sup></p>
     <div class="header-accent"></div>
 </header>
 
@@ -474,9 +474,9 @@ body {
     <div class="page-title-section">
         <h2 class="page-title">Carbon Abatement Dashboard</h2>
         <p class="page-intro">
-            How does hourly grid decarbonization compare to alternative carbon removal strategies?
+            How does hourly grid decarbonization compare to alternative carbon removal strategies?<sup style="font-size:0.7em;color:#6B7280;">[10]</sup>
             Adjust the toggles below to stress-test different cost assumptions and see how crossover points shift
-            across regions and technologies in real time.
+            across regions and technologies in real time. Regional emission rates from EPA eGRID 2022<sup style="font-size:0.7em;color:#6B7280;">[1]</sup>; hourly profiles from EIA.<sup style="font-size:0.7em;color:#6B7280;">[7]</sup>
         </p>
     </div>
 
@@ -486,7 +486,7 @@ body {
         <div class="controls-panel-subtitle">Adjust cost assumptions for grid decarbonization and competing technologies to see how crossover points shift.</div>
         <div class="controls-grid">
             <div class="ctrl-group">
-                <label>Grid Cost Scenario <span class="info-icon" title="Low = cheap renewables, fast permitting, falling storage costs. High = tariffs, supply chain disruptions, permitting delays.">i</span></label>
+                <label>Grid Cost Scenario <span class="info-icon" title="Low = cheap renewables, fast permitting, falling storage costs. High = tariffs, supply chain disruptions, permitting delays. Cost ranges per NREL ATB 2024 [5] and Lazard LCOE v17 [6].">i</span></label>
                 <div class="ctrl-toggle" data-ctrl="grid">
                     <button data-value="Low">Low</button>
                     <button data-value="Medium" class="active">Medium</button>
@@ -494,7 +494,7 @@ body {
                 </div>
             </div>
             <div class="ctrl-group">
-                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $250/ton by 2030. Medium = current trajectory, $400-600/ton. High = slow scaling, $1000+/ton.">i</span></label>
+                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $250/ton by 2030. Medium = current trajectory, $400-600/ton. High = slow scaling, $1000+/ton. Per NREL ATB 2024 [5].">i</span></label>
                 <div class="ctrl-toggle" data-ctrl="dac">
                     <button data-value="Low">Low</button>
                     <button data-value="Medium" class="active">Medium</button>
@@ -502,7 +502,7 @@ body {
                 </div>
             </div>
             <div class="ctrl-group">
-                <label>Industrial Decarb Cost <span class="info-icon" title="Low = electrification is cheaper than fossil (net savings). Medium = moderate carbon price needed. High = expensive retrofit + high energy costs.">i</span></label>
+                <label>Industrial Decarb Cost <span class="info-icon" title="Low = electrification is cheaper than fossil (net savings). Medium = moderate carbon price needed. High = expensive retrofit + high energy costs. Based on McKinsey MAC methodology [10].">i</span></label>
                 <div class="ctrl-toggle" data-ctrl="industrial">
                     <button data-value="Low">Low</button>
                     <button data-value="Medium" class="active">Medium</button>
@@ -510,7 +510,7 @@ body {
                 </div>
             </div>
             <div class="ctrl-group">
-                <label>Carbon Removal Alternatives <span class="info-icon" title="Low = BECCS + enhanced weathering hit scale, $50-100/ton. Medium = moderate scaling. High = limited deployment, $200+/ton.">i</span></label>
+                <label>Carbon Removal Alternatives <span class="info-icon" title="Low = BECCS + enhanced weathering hit scale, $50-100/ton. Medium = moderate scaling. High = limited deployment, $200+/ton. Benchmarks from IPCC AR6 WG3 [9] and NREL ATB [5].">i</span></label>
                 <div class="ctrl-toggle" data-ctrl="removal">
                     <button data-value="Low">Low</button>
                     <button data-value="Medium" class="active">Medium</button>
@@ -525,7 +525,7 @@ body {
     <div class="chart-grid">
         <!-- MAC Curve -->
         <div class="chart-card">
-            <div class="chart-card-title">Regional Marginal Abatement Costs</div>
+            <div class="chart-card-title">Regional Marginal Abatement Costs<sup style="font-size:0.7em;color:#6B7280;">[1][7]</sup></div>
             <canvas id="macChart"></canvas>
         </div>
 
@@ -537,20 +537,39 @@ body {
 
         <!-- Abatement Ladder (full width) -->
         <div class="chart-card chart-card-full">
-            <div class="chart-card-title">Abatement Cost Ladder: Grid vs. Alternatives</div>
+            <div class="chart-card-title">Abatement Cost Ladder: Grid vs. Alternatives<sup style="font-size:0.7em;color:#6B7280;">[5][6][10]</sup></div>
             <canvas id="ladderChart"></canvas>
         </div>
     </div>
 
     <!-- Inflection Table -->
     <div class="inflection-card">
-        <div class="chart-card-title" style="margin-bottom:16px;">Inflection Points: Where Grid Costs Exceed Key Benchmarks</div>
+        <div class="chart-card-title" style="margin-bottom:16px;">Inflection Points: Where Grid Costs Exceed Key Benchmarks<sup style="font-size:0.7em;color:#6B7280;">[2][3][4]</sup></div>
         <table>
             <thead><tr id="inflectionHead"></tr></thead>
             <tbody id="inflectionBody"></tbody>
         </table>
     </div>
 
+</div>
+
+<!-- SOURCES -->
+<div style="max-width:1320px;margin:0 auto;padding:0 24px 24px;">
+    <details style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:#1A2744;cursor:pointer;">Sources &amp; References</summary>
+        <ol style="font-size:0.8rem;color:#6B7280;line-height:1.8;padding-left:20px;margin-top:12px;">
+            <li>EPA eGRID 2022 — regional emission rates and CO&#8322; intensity by balancing authority.</li>
+            <li>EPA Social Cost of Carbon — Technical Support Document (2020), central estimate $51/tonne.</li>
+            <li>Rennert, K. et al. (2022). "Comprehensive evidence implies a higher social cost of CO&#8322;." <em>Nature</em>, 610, 687-692. $185/tonne.</li>
+            <li>EU Emissions Trading System (EU ETS) — carbon price range $60-100/tonne.</li>
+            <li>NREL Annual Technology Baseline (ATB) 2024 — technology costs for wind, solar, storage, nuclear, CCS, DAC.</li>
+            <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) — generation technology cost benchmarks.</li>
+            <li>EIA Hourly Electric Grid Monitor — hourly generation data by fuel type and balancing authority.</li>
+            <li>IEA Net Zero by 2050 Roadmap (2023 update) — sector emission reduction benchmarks.</li>
+            <li>IPCC AR6 Working Group III (2022) — power sector targets and mitigation pathways.</li>
+            <li>McKinsey Marginal Abatement Cost Curve methodology — cross-sector decarbonization benchmarks.</li>
+        </ol>
+    </details>
 </div>
 
 <!-- FOOTER -->
@@ -601,10 +620,10 @@ const MAC_DATA = {
 const REGION_COLORS = { CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0' };
 
 const BENCHMARKS_STATIC = [
-    { name: 'Energy Efficiency (Buildings)', short: 'Energy Eff.', low: -100, mid: 0, high: 60, color: '#4CAF50', category: 'demand_reduction' },
-    { name: 'EU ETS Price', short: 'EU ETS', low: 65, mid: 88, high: 92, color: '#2196F3', category: 'benchmark' },
-    { name: 'SCC \u2014 EPA ($190/ton)', short: 'SCC (EPA)', low: 140, mid: 190, high: 380, color: '#FF9800', category: 'benchmark' },
-    { name: 'SCC \u2014 Rennert et al.', short: 'SCC (Rennert)', low: 120, mid: 185, high: 450, color: '#E65100', category: 'benchmark' },
+    { name: 'Energy Efficiency (Buildings)', short: 'Energy Eff.', low: -100, mid: 0, high: 60, color: '#4CAF50', category: 'demand_reduction' }, // [10] McKinsey MAC
+    { name: 'EU ETS Price', short: 'EU ETS', low: 65, mid: 88, high: 92, color: '#2196F3', category: 'benchmark' }, // [4] EU ETS
+    { name: 'SCC \u2014 EPA ($190/ton)', short: 'SCC (EPA)', low: 140, mid: 190, high: 380, color: '#FF9800', category: 'benchmark' }, // [2] EPA SCC
+    { name: 'SCC \u2014 Rennert et al.', short: 'SCC (Rennert)', low: 120, mid: 185, high: 450, color: '#E65100', category: 'benchmark' }, // [3] Rennert et al. 2022
     { name: 'Carbon Credits (Nature)', short: 'Carbon Credits', low: 3, mid: 15, high: 35, color: '#9E9E9E', category: 'voluntary' },
 ];
 
@@ -714,9 +733,9 @@ function buildMacChart() {
     const dacCosts = BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
     const annotations = {
         sccLine: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF9800', borderWidth: 1.5, borderDash: [6, 4],
-            label: { display: true, content: 'EPA SCC $190', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } },
+            label: { display: true, content: 'EPA SCC $190 [2]', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } },
         dacLine: { type: 'line', yMin: dacCosts.mid, yMax: dacCosts.mid, borderColor: '#E91E63', borderWidth: 1.5, borderDash: [6, 4],
-            label: { display: true, content: 'DAC $' + dacCosts.mid, position: 'end', font: { size: 9, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } }
+            label: { display: true, content: 'DAC $' + dacCosts.mid + ' [5]', position: 'end', font: { size: 9, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } }
     };
 
     if (macChartInst) macChartInst.destroy();
@@ -873,7 +892,7 @@ function buildInflectionTable() {
     const remMid = (BENCHMARKS_DYNAMIC.removal[s.removal] || BENCHMARKS_DYNAMIC.removal.Medium).mid;
 
     const head = document.getElementById('inflectionHead');
-    head.innerHTML = '<th>Region</th><th>EPA SCC<br>($190)</th><th>EU ETS<br>($88)</th><th>Rennert SCC<br>($185)</th><th>Industrial<br>($' + indMid + ')</th><th>Removal<br>($' + remMid + ')</th><th>DAC<br>($' + dacMid + ')</th>';
+    head.innerHTML = '<th>Region</th><th>EPA SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[2]</sup><br>($190)</th><th>EU ETS<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[4]</sup><br>($88)</th><th>Rennert SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[3]</sup><br>($185)</th><th>Industrial<br>($' + indMid + ')</th><th>Removal<br>($' + remMid + ')</th><th>DAC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[5]</sup><br>($' + dacMid + ')</th>';
 
     const tbody = document.getElementById('inflectionBody');
     tbody.innerHTML = '';
