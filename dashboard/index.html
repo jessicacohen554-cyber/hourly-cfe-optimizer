@@ -1590,7 +1590,7 @@ body {
 
             <p>
                 When every hour counts, intermittency becomes a critical cost driver. The pathway from 75% to
-                100% hourly matching reveals an exponential cost curve that procurement teams need to plan for.
+                100% hourly matching reveals a non-linear cost curve that procurement teams need to plan for &mdash; though the grid backbone holds better than expected.
             </p>
 
             <div class="energy-spectrum-bar"></div>
@@ -1609,11 +1609,12 @@ body {
                 <div class="step-card">
                     <div class="step-inline-chart"><canvas class="step-chart-canvas" data-step-chart="cost-intro"></canvas></div>
                     <span class="story-badge">Key Insight</span>
-                    <h3>The Exponential Cost of Perfection</h3>
+                    <h3>The Cost of Perfection</h3>
                     <p>
                         This chart shows the blended cost per MWh for each hourly matching target, averaged
                         across all five ISO regions. The relationship is <strong>non-linear</strong> &mdash;
-                        the last few percentage points of matching cost dramatically more than the first.
+                        higher targets cost more per MWh, but the average abatement cost per ton CO&#8322; stays
+                        remarkably flat, ranging from $23&ndash;152/ton across regions through 99%.
                     </p>
                 </div>
             </div>
@@ -1635,32 +1636,32 @@ body {
             <div class="scrolly-step story-fade-in" data-step="cost-90">
                 <div class="step-card">
                     <div class="step-inline-chart"><canvas class="step-chart-canvas" data-step-chart="cost-90"></canvas></div>
-                    <span class="story-badge story-badge-orange">Decision Point</span>
-                    <h3>90% Matching: The True Inflection</h3>
+                    <span class="story-badge story-badge-orange">Mix Shift</span>
+                    <h3>90% Matching: The Resource Mix Pivot</h3>
                     <p>
-                        At 90%, the cost-per-percentage-point doubles compared to 85%. This is the real
-                        decision point: beyond here, clean firm power becomes essential and the cost curve
-                        steepens dramatically. Procurement rises to 100&ndash;120% and the mix begins
-                        its pivot toward dispatchable resources.
+                        At 90%, clean firm power becomes essential and the resource mix begins
+                        its pivot toward dispatchable generation. Procurement rises to 100&ndash;120%
+                        of demand. Costs increase steadily, but the average abatement cost per ton CO&#8322;
+                        stays well below the social cost of carbon in all regions.
                     </p>
-                    <div class="step-cost-callout step-cost-red">
-                        <strong>Avg Cost:</strong> <span id="stepCost90">~$67/MWh avg</span> &mdash; costs begin accelerating sharply
+                    <div class="step-cost-callout step-cost-orange">
+                        <strong>Avg Cost:</strong> <span id="stepCost90">~$67/MWh avg</span> &mdash; resource mix shifts toward firm clean power
                     </div>
                 </div>
             </div>
             <div class="scrolly-step story-fade-in" data-step="cost-99">
                 <div class="step-card">
                     <div class="step-inline-chart"><canvas class="step-chart-canvas" data-step-chart="cost-99"></canvas></div>
-                    <span class="story-badge story-badge-red">Premium</span>
-                    <h3>99&ndash;100%: The Steep Climb</h3>
+                    <span class="story-badge story-badge-orange">Premium</span>
+                    <h3>99%: The Backbone Still Holds</h3>
                     <p>
-                        The final percentage points are the most expensive. Costs reach
+                        The final percentage points are the most expensive per MWh. Costs reach
                         <strong>$54&ndash;$96/MWh</strong> across regions &mdash; 1.2&ndash;1.5x the cost of 75% matching.
-                        These last unmatched hours are extreme weather events and overnight wind droughts
-                        that only firm generation can reliably cover.
+                        But the average abatement cost per ton CO&#8322; stays below $152/ton in every region
+                        &mdash; cheaper than DAC, SAF, or the social cost of carbon. The backbone holds.
                     </p>
-                    <div class="step-cost-callout step-cost-red">
-                        <strong>Avg Cost:</strong> <span id="stepCost99">~$76/MWh avg</span> &mdash; extreme weather hours drive the final premium
+                    <div class="step-cost-callout step-cost-orange">
+                        <strong>Avg Cost:</strong> <span id="stepCost99">~$76/MWh avg</span> &mdash; still below all major abatement benchmarks per ton CO&#8322;
                     </div>
                 </div>
             </div>
@@ -3754,7 +3755,7 @@ function highlightCostStep(stepName) {
             };
         }
     } else if (stepName === 'cost-99') {
-        // Highlight 99-100% zone — the steep climb
+        // Highlight 99-100% zone — premium but still cost-effective per ton
         const idx99 = findIdx(99);
         const idx100 = findIdx(100);
         const topIdx = idx100 >= 0 ? idx100 : idx99;
