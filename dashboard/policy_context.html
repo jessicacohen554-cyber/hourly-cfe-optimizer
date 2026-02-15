@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem &mdash; Policy &amp; Research Context</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face {
+    font-family: 'Franklin Gothic Demi';
+    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+</style>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    background: #0F1A2E;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(14,165,233,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+    color: #000000;
+    line-height: 1.55;
+    min-height: 100vh;
+}
+
+:root {
+    --navy: #1A2744;
+    --navy-light: #2D3A52;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F7F8FA;
+    --border: #D4D8E0;
+    --border-light: #E5E7EB;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+    --text-muted: #6B7280;
+    --clean-firm: #1E3A5F;
+    --solar: #F59E0B;
+    --wind: #22C55E;
+    --hydro: #0EA5E9;
+    --storage: #EF4444;
+    --accent-blue: #4a90d9;
+    --accent-warm: #f4a261;
+}
+
+/* ========== TOP NAVIGATION BAR ========== */
+.top-nav {
+    background: #1a1a2e;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+.top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: 1440px;
+    width: 100%;
+    justify-content: center;
+}
+.top-nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 14px 18px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+.top-nav a:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.06);
+}
+.top-nav a.nav-active {
+    color: #ffffff;
+    border-bottom-color: #0EA5E9;
+    background: rgba(14,165,233,0.1);
+}
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+.nav-hamburger svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+@media (max-width: 768px) {
+    .top-nav {
+        flex-wrap: wrap;
+        padding: 0 12px;
+        justify-content: space-between;
+    }
+    .top-nav-inner {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding-bottom: 8px;
+    }
+    .top-nav-inner.nav-open {
+        display: flex;
+    }
+    .top-nav a {
+        padding: 12px 16px;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        width: 100%;
+        text-align: left;
+    }
+    .top-nav a.nav-active {
+        border-left-color: #0EA5E9;
+        border-bottom: none;
+        background: rgba(14,165,233,0.12);
+    }
+    .nav-hamburger {
+        display: flex;
+    }
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        color: #ffffff;
+        font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 12px 0;
+    }
+}
+@media (min-width: 769px) {
+    .nav-brand { display: none; }
+}
+
+/* ========== HEADER ========== */
+.header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
+    color: #ffffff;
+    padding: 72px 24px 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 70% at 12% 75%, rgba(14,165,233,0.4) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 60% at 38% 85%, rgba(34,197,94,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 65% at 62% 80%, rgba(245,158,11,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 55% at 88% 70%, rgba(239,68,68,0.3) 0%, transparent 55%);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+}
+.header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(ellipse 70% 45% at 50% 45%, rgba(5,15,35,0.55) 0%, transparent 100%);
+}
+.header h1 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Lexend', sans-serif;
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 2;
+}
+.header .subtitle {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: rgba(255,255,255,0.85);
+    max-width: 780px;
+    margin: 0 auto;
+    line-height: 1.5;
+    position: relative;
+    z-index: 2;
+}
+.header-accent {
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #0EA5E9, #22C55E, #F59E0B);
+    border-radius: 2px;
+    margin: 20px auto 0;
+    position: relative;
+    z-index: 2;
+}
+@media (max-width: 768px) {
+    .header { padding: 48px 20px 40px; }
+    .header h1 { font-size: 2.2rem; }
+    .header .subtitle { font-size: 1rem; }
+}
+@media (max-width: 480px) {
+    .header { padding: 36px 16px 32px; }
+    .header h1 { font-size: 1.8rem; }
+    .header .subtitle { font-size: 0.9rem; }
+}
+
+/* ========== MAIN CONTENT ========== */
+.content-wrap {
+    background: #F3F4F8;
+    border-radius: 16px;
+    max-width: 1100px;
+    margin: 24px auto 0;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    padding: 48px 40px 64px;
+}
+@media (max-width: 768px) {
+    .content-wrap { padding: 32px 20px 48px; margin: 12px 8px 0; border-radius: 12px; }
+}
+@media (max-width: 480px) {
+    .content-wrap { padding: 24px 14px 36px; }
+}
+
+/* ========== SECTION TYPOGRAPHY ========== */
+.section-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Lexend', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 48px 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #0EA5E9;
+    letter-spacing: -0.01em;
+}
+.section-title:first-child { margin-top: 0; }
+
+.subsection-title {
+    font-family: 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 32px 0 12px;
+}
+
+p {
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    line-height: 1.65;
+}
+
+/* ========== INTRO SECTION ========== */
+.intro-text {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: #374151;
+    max-width: 900px;
+}
+
+/* ========== FRAMEWORK CARDS ========== */
+.framework-card {
+    background: #ffffff;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 28px 28px 24px;
+    margin: 20px 0;
+    transition: box-shadow 0.2s;
+    position: relative;
+}
+.framework-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+.framework-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+.card-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.badge-hourly {
+    background: rgba(34,197,94,0.12);
+    color: #15803d;
+    border: 1px solid rgba(34,197,94,0.3);
+}
+.badge-annual {
+    background: rgba(245,158,11,0.12);
+    color: #b45309;
+    border: 1px solid rgba(245,158,11,0.3);
+}
+.badge-transitioning {
+    background: rgba(14,165,233,0.12);
+    color: #0369a1;
+    border: 1px solid rgba(14,165,233,0.3);
+}
+.badge-infra {
+    background: rgba(139,92,246,0.12);
+    color: #6d28d9;
+    border: 1px solid rgba(139,92,246,0.3);
+}
+.framework-card h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Lexend', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 0;
+}
+.framework-card .card-meta {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+.framework-card ul {
+    margin: 8px 0 12px 20px;
+    line-height: 1.7;
+}
+.framework-card li {
+    margin-bottom: 6px;
+}
+
+/* ========== KEY INSIGHT CALLOUTS ========== */
+.insight-box {
+    background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(34,197,94,0.06) 100%);
+    border-left: 4px solid #0EA5E9;
+    border-radius: 0 10px 10px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+}
+.insight-box.warn {
+    background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(239,68,68,0.06) 100%);
+    border-left-color: #F59E0B;
+}
+.insight-box.critical {
+    background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(245,158,11,0.06) 100%);
+    border-left-color: #EF4444;
+}
+.insight-box strong {
+    color: var(--navy);
+}
+
+/* ========== COMPARISON TABLE ========== */
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 0.9rem;
+}
+.comparison-table th {
+    background: var(--navy);
+    color: #ffffff;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    white-space: nowrap;
+}
+.comparison-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: top;
+}
+.comparison-table tr:nth-child(even) {
+    background: rgba(14,165,233,0.03);
+}
+.comparison-table tr:hover {
+    background: rgba(14,165,233,0.06);
+}
+@media (max-width: 768px) {
+    .comparison-table { font-size: 0.8rem; }
+    .comparison-table th, .comparison-table td { padding: 8px 10px; }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* ========== TIMELINE ========== */
+.timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 24px 0;
+}
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    background: linear-gradient(180deg, #0EA5E9, #22C55E, #F59E0B);
+    border-radius: 2px;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding-left: 16px;
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    background: #0EA5E9;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.2);
+}
+.timeline-item.past::before { background: #22C55E; }
+.timeline-item.current::before { background: #F59E0B; animation: pulse 2s infinite; }
+.timeline-item.future::before { background: #94A3B8; }
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(245,158,11,0.2); }
+    50% { box-shadow: 0 0 0 6px rgba(245,158,11,0.15); }
+}
+.timeline-year {
+    font-family: 'Rajdhani', 'Lexend', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--navy);
+}
+.timeline-desc {
+    font-size: 0.95rem;
+    color: #374151;
+    margin-top: 2px;
+}
+
+/* ========== CONVERGENCE SECTION ========== */
+.convergence-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin: 24px 0;
+}
+.convergence-card {
+    background: #ffffff;
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.convergence-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+.convergence-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    line-height: 1;
+}
+.convergence-card h4 {
+    font-family: 'Lexend', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 8px;
+}
+.convergence-card p {
+    font-size: 0.9rem;
+    color: #374151;
+    margin: 0;
+}
+
+/* ========== STAT COUNTER ========== */
+.stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 28px 0;
+    justify-content: center;
+}
+.stat-card {
+    background: linear-gradient(135deg, var(--navy) 0%, #2D3F5E 100%);
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 24px 28px;
+    min-width: 180px;
+    text-align: center;
+    flex: 1;
+    max-width: 240px;
+}
+.stat-value {
+    font-family: 'Rajdhani', 'Lexend', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+.stat-label {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.03em;
+}
+@media (max-width: 480px) {
+    .stat-card { min-width: 140px; padding: 18px 16px; }
+    .stat-value { font-size: 1.8rem; }
+}
+
+/* ========== SOURCES ========== */
+.sources-section {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 2px solid var(--border-light);
+}
+.sources-section h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.1rem;
+    color: var(--navy);
+    margin-bottom: 12px;
+}
+.source-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    columns: 2;
+    column-gap: 32px;
+}
+@media (max-width: 768px) {
+    .source-list { columns: 1; }
+}
+.source-list li {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    break-inside: avoid;
+    line-height: 1.5;
+}
+.source-list li a {
+    color: #0369a1;
+    text-decoration: none;
+}
+.source-list li a:hover {
+    text-decoration: underline;
+}
+
+/* ========== FOOTER ========== */
+.footer {
+    text-align: center;
+    padding: 32px 24px;
+    color: rgba(255,255,255,0.45);
+    font-size: 0.8rem;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+    <span class="nav-brand">The 8,760 Problem</span>
+    <button class="nav-hamburger" onclick="document.getElementById('navLinks').classList.toggle('nav-open')">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner" id="navLinks">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
+        <a href="policy_context.html" class="nav-active">Policy &amp; Research</a>
+        <a href="research_paper.html">Methodology &amp; Paper</a>
+    </div>
+</nav>
+
+<!-- HEADER / BANNER -->
+<header class="header">
+    <h1>Policy &amp; Research Context</h1>
+    <p class="subtitle">How hourly clean energy matching fits into the global landscape of climate policy, corporate commitments, and academic research on grid decarbonization.</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- MAIN CONTENT -->
+<div class="content-wrap">
+
+<!-- ============================== -->
+<!-- SECTION 1: WHY THIS MATTERS -->
+<!-- ============================== -->
+<h2 class="section-title">Why Hourly Matching Matters Now</h2>
+
+<p class="intro-text">
+    A convergence of policy revisions, corporate commitments, and academic research is transforming how organizations account for clean energy. The shift from annual to hourly matching isn't an incremental refinement &mdash; it's a fundamental change in what "clean energy" means, with direct implications for the resource mix, cost, and emissions impact of corporate procurement.
+</p>
+
+<p>
+    This analysis &mdash; modeling the cost of hourly clean energy matching across 10 thresholds, 5 US grid regions, and 324 cost scenarios &mdash; arrives at a moment when these questions are moving from academic theory to binding policy. The frameworks below define the landscape.
+</p>
+
+<div class="stat-row">
+    <div class="stat-card">
+        <div class="stat-value" data-target="8000">8,000+</div>
+        <div class="stat-label">Companies with SBTi targets</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" data-target="450">450+</div>
+        <div class="stat-label">RE100 member companies</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" data-target="170">170+</div>
+        <div class="stat-label">UN CFE Compact signatories</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">$142T</div>
+        <div class="stat-label">Assets using CDP data</div>
+    </div>
+</div>
+
+<div class="insight-box">
+    <strong>The core question this project answers:</strong> When organizations commit to hourly clean energy matching, what does it actually cost &mdash; and what resource mix does it require? The answer depends on where you are, what technologies are available, and how aggressive your target is. Annual accounting hides these realities; hourly matching reveals them.
+</div>
+
+
+<!-- ============================== -->
+<!-- SECTION 2: THE ACCOUNTING REVOLUTION -->
+<!-- ============================== -->
+<h2 class="section-title">The Accounting Revolution: Annual to Hourly</h2>
+
+<p>
+    The entire policy ecosystem is converging on a single structural change: replacing annual renewable energy certificate (REC) matching with hourly, locational matching. This shift has cascading implications for technology deployment, grid planning, and corporate procurement strategy.
+</p>
+
+<h3 class="subsection-title">The GHG Protocol Scope 2 Revision &mdash; The Linchpin</h3>
+
+<p>
+    Every corporate climate framework ultimately depends on the GHG Protocol for its accounting foundation. The ongoing Scope 2 Guidance revision is the single most consequential policy process for hourly matching:
+</p>
+
+<div class="timeline">
+    <div class="timeline-item past">
+        <div class="timeline-year">Sept 2024</div>
+        <div class="timeline-desc">Scope 2 Technical Working Group convened</div>
+    </div>
+    <div class="timeline-item past">
+        <div class="timeline-year">July 2025</div>
+        <div class="timeline-desc">ISB approves TWG proposals for public consultation</div>
+    </div>
+    <div class="timeline-item past">
+        <div class="timeline-year">Oct 2025 &ndash; Jan 2026</div>
+        <div class="timeline-desc">First public consultation period (now closed)</div>
+    </div>
+    <div class="timeline-item current">
+        <div class="timeline-year">2026</div>
+        <div class="timeline-desc">Phase 2 development + second public consultation</div>
+    </div>
+    <div class="timeline-item future">
+        <div class="timeline-year">2027</div>
+        <div class="timeline-desc">Final Scope 2 standard published</div>
+    </div>
+</div>
+
+<p><strong>Proposed changes:</strong></p>
+<ul>
+    <li><strong>Hourly matching:</strong> All contractual instruments (RECs/GOs) must be issued and redeemed for the same hour as consumption</li>
+    <li><strong>Deliverability:</strong> Instruments must be sourced from the same market boundary as the reporting entity's operations</li>
+    <li><strong>Exemptions:</strong> Companies under ~5 GWh aggregate in a single market boundary exempt from hourly matching; phased implementation for existing contracts</li>
+</ul>
+
+<div class="insight-box warn">
+    <strong>The competing camps:</strong> Google, EnergyTag, and the Climate Group advocate hourly + deliverability as the only credible path. Amazon, Meta, and the Emissions First Partnership prefer "impact accounting" focused on marginal emissions avoided. The Center for Resource Solutions warns hourly requirements could collapse the voluntary REC market that drove $60B+ in clean energy investment.
+</div>
+
+<!-- ============================== -->
+<!-- SECTION 3: CORPORATE FRAMEWORKS -->
+<!-- ============================== -->
+<h2 class="section-title">Corporate &amp; Voluntary Frameworks</h2>
+
+<!-- SBTi -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>Science Based Targets initiative (SBTi)</h3>
+        <span class="card-badge badge-transitioning">Transitioning to Hourly</span>
+    </div>
+    <p class="card-meta">Founded 2015 &bull; Partnership of CDP, UNGC, WRI, WWF &bull; 8,000+ companies with validated targets</p>
+    <p>
+        The most consequential framework because it sets <strong>binding targets with validation and enforcement</strong>. The draft Net-Zero Standard V2.0 (second consultation draft Nov 2025, final expected Spring 2026) introduces a phased hourly matching requirement:
+    </p>
+    <ul>
+        <li><strong>2030:</strong> 50% hourly matching required for large consumers (&ge;10 GWh in a single region)</li>
+        <li><strong>2035:</strong> Intermediate milestone (specific % TBD)</li>
+        <li><strong>2040:</strong> 90% hourly matching required; 100% low-carbon electricity</li>
+        <li><strong>Additionality:</strong> Generation facilities must be commissioned or repowered within 10 years (tightens to 5 years by 2035)</li>
+    </ul>
+    <div class="insight-box">
+        <strong>Why this matters for our analysis:</strong> When SBTi requires hourly matching starting in 2028&ndash;2030, it will force a massive shift in corporate procurement strategy from "buy the cheapest annual RECs" to "build/contract for temporal and locational matching." Our optimizer quantifies exactly what that transition costs across different grid regions and technology scenarios.
+    </div>
+</div>
+
+<!-- RE100 -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>RE100</h3>
+        <span class="card-badge badge-annual">Annual Matching</span>
+    </div>
+    <p class="card-meta">Launched 2014 &bull; Climate Group + CDP &bull; 450+ companies &bull; ~500 TWh collective demand</p>
+    <p>
+        RE100 drove enormous corporate renewable procurement &mdash; an estimated 17&ndash;60% of non-RPS renewable development in the US since 2014. But annual matching allows temporal mismatch: a company can claim "100% renewable" while running on fossil fuels at night.
+    </p>
+    <ul>
+        <li>Matching is annual: RECs purchased anywhere within a broad market boundary during the same calendar year count</li>
+        <li>Starting 2025: only generation facilities built within the last 15 years fully count (additionality push)</li>
+        <li>No announced timeline for RE100 to adopt hourly matching requirements</li>
+        <li>Climate Group launched the 24/7 Coalition as a separate, more ambitious initiative alongside RE100</li>
+    </ul>
+    <p>
+        <strong>The core tension:</strong> RE100 created real demand. The fear is that tightening to hourly matching too fast could collapse this demand. The counterargument: annual matching has become an accounting exercise that lets companies claim clean energy status while grid emissions remain unchanged during peak fossil hours.
+    </p>
+</div>
+
+<!-- UN 24/7 CFE Compact -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>UN 24/7 Carbon-Free Energy Compact</h3>
+        <span class="card-badge badge-hourly">Hourly Matching</span>
+    </div>
+    <p class="card-meta">Launched Sept 2021 &bull; SEforALL + Google &bull; 170+ signatories &bull; US joined at COP28 (Dec 2023)</p>
+    <p>
+        Voluntary commitments to advance 24/7 CFE procurement practices, focusing on the "dirtiest hours" when the most fossil fuel is burned. Signatories include governments (US, Iceland, Kenya), tech companies (Google, Microsoft), and cities (Copenhagen, Paris, London via C40).
+    </p>
+    <ul>
+        <li>Every kWh matched with carbon-free generation in the same hour, on the same grid</li>
+        <li>Annual reporting on progress; no binding enforcement mechanism</li>
+        <li>Emphasis on demand signals for clean firm generation, storage, and demand flexibility</li>
+    </ul>
+</div>
+
+<!-- Climate Group 24/7 Coalition -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>Climate Group 24/7 Carbon-Free Coalition</h3>
+        <span class="card-badge badge-hourly">Hourly Matching</span>
+    </div>
+    <p class="card-meta">Launched Sept 2024 &bull; The Climate Group &bull; Technical Criteria V1.0 published June 2025</p>
+    <p>
+        The most operationally specific corporate framework. Three guiding principles:
+    </p>
+    <ul>
+        <li><strong>Time-matched:</strong> CFE generation matched to consumption each hour</li>
+        <li><strong>Locally-matched:</strong> Procured on the same local grid where consumption occurs</li>
+        <li><strong>Decarbonizing:</strong> Prioritize actions with greatest and fastest decarbonizing impact</li>
+    </ul>
+    <p>
+        Technical Criteria V1.0 is explicitly referenced by SBTi Net-Zero Standard V2.0 for defining "grid region." Intended as the implementation framework for the GHG Protocol Scope 2 revision. Founding partners: Google, Vodafone, AstraZeneca, AirTrunk, Iron Mountain, Shree Cement.
+    </p>
+</div>
+
+<!-- CDP -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>CDP (Carbon Disclosure Project)</h3>
+        <span class="card-badge badge-transitioning">Moving Toward Hourly</span>
+    </div>
+    <p class="card-meta">Founded 2000 &bull; 24,000+ companies disclosing &bull; 740+ financial institutions ($142T AUM) use CDP data</p>
+    <p>
+        CDP's real power is investor pressure. When CDP scoring rewards hourly matching, capital allocation follows. Currently uses annual EAC matching per GHG Protocol, but already encourages temporal and geographic matching as a best practice. Will adopt hourly requirements once GHG Protocol finalizes them (expected post-2027).
+    </p>
+    <p>
+        CDP explicitly references EnergyTag's Granular Certificate Scheme Standard as a mechanism for hourly matching in its current guidance.
+    </p>
+</div>
+
+<!-- EnergyTag -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>EnergyTag &mdash; Granular Certificate Standard</h3>
+        <span class="card-badge badge-infra">Market Infrastructure</span>
+    </div>
+    <p class="card-meta">Founded 2020 &bull; First accredited issuers June 2025 &bull; GC Scheme Standard V2 published</p>
+    <p>
+        EnergyTag is the plumbing that makes all other frameworks operational. Without verifiable hourly certificates, the UN Compact, Climate Group Coalition, SBTi requirements, and GHG Protocol revisions are unenforceable aspirations.
+    </p>
+    <ul>
+        <li>Defines the technical standard for Granular Certificates (GCs) with hourly or sub-hourly resolution</li>
+        <li>First two accredited issuers: Energinet (Danish TSO) and Granular Energy</li>
+        <li>Referenced by CDP, SBTi V2.0 draft, Climate Group, and EU CBAM</li>
+        <li><strong>EU CBAM connection:</strong> From Jan 2026, companies importing goods into the EU must demonstrate time-matched clean electricity supply for embedded emissions</li>
+    </ul>
+</div>
+
+
+<!-- ============================== -->
+<!-- SECTION 4: REGULATORY LANDSCAPE -->
+<!-- ============================== -->
+<h2 class="section-title">Regulatory Landscape: State &amp; National Targets</h2>
+
+<p>
+    US state Renewable Portfolio Standards (RPS) and Clean Energy Standards (CES) represent the binding regulatory floor for clean energy deployment. 29 states plus DC have legally binding standards, covering roughly 63% of US retail electricity sales. Combined RPS/CES demand will grow from ~500 TWh today to ~1,700 TWh by 2050.
+</p>
+
+<h3 class="subsection-title">States with 100% Clean Energy Laws</h3>
+
+<div class="table-scroll">
+<table class="comparison-table">
+    <thead>
+        <tr>
+            <th>State</th>
+            <th>Target</th>
+            <th>Year</th>
+            <th>Key Details</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>Rhode Island</td><td>100% renewable</td><td>2033</td><td>Most aggressive timeline in the nation</td></tr>
+        <tr><td>Vermont</td><td>100% clean/renewable</td><td>2035</td><td>2024 legislation</td></tr>
+        <tr><td>New York</td><td>Zero-emission electricity</td><td>2040</td><td>CLCPA (2019); 70% renewable by 2030</td></tr>
+        <tr><td>Colorado</td><td>100% GHG reduction</td><td>2040</td><td>80% by 2030, 90% by 2035</td></tr>
+        <tr><td>Oregon</td><td>100% emission-free</td><td>2040</td><td>80% by 2030, 90% by 2035</td></tr>
+        <tr><td>Minnesota</td><td>100% carbon-free</td><td>2040</td><td>80% by 2030, 90% by 2035</td></tr>
+        <tr><td>Michigan</td><td>100% clean</td><td>2040</td><td>2023 legislation</td></tr>
+        <tr><td>California</td><td>100% carbon-free retail</td><td>2045</td><td>SB 100 (2018); 60% RPS by 2030</td></tr>
+        <tr><td>Washington</td><td>100% carbon-free</td><td>2045</td><td>Clean Energy Transformation Act (2019)</td></tr>
+        <tr><td>Hawaii</td><td>100% renewable</td><td>2045</td><td>First state to adopt (2015)</td></tr>
+        <tr><td>New Mexico</td><td>100% carbon-free</td><td>2045</td><td>Energy Transition Act (2019)</td></tr>
+        <tr><td>Illinois</td><td>100% carbon-free</td><td>2045</td><td>First Midwest state; CEJA (2021)</td></tr>
+        <tr><td>Virginia</td><td>100% clean energy</td><td>2050</td><td>Virginia Clean Economy Act (2020)</td></tr>
+        <tr><td>Maine</td><td>100% renewable</td><td>2050</td><td>80% by 2030</td></tr>
+    </tbody>
+</table>
+</div>
+
+<p>
+    These states collectively account for more than one-fourth of US total electricity consumption and ~53% of the US population. Critically, <strong>no state RPS currently requires hourly matching</strong> &mdash; all use annual REC compliance. The transition to hourly is being driven by voluntary corporate procurement and anticipated GHG Protocol changes, not by state mandates.
+</p>
+
+<div class="insight-box">
+    <strong>The gap our analysis fills:</strong> State RPS targets tell you <em>how much</em> clean energy is needed. Our optimizer tells you <em>what kind</em> of clean energy, at <em>what cost</em>, when you account for every hour. A state targeting 100% by 2045 faces fundamentally different resource requirements depending on whether that's measured annually or hourly.
+</div>
+
+
+<!-- ============================== -->
+<!-- SECTION 5: ACADEMIC RESEARCH -->
+<!-- ============================== -->
+<h2 class="section-title">Academic &amp; Research Foundations</h2>
+
+<p>
+    This project's methodology and findings are grounded in a substantial body of peer-reviewed research on grid decarbonization, clean firm power, and the system-level impacts of procurement strategies.
+</p>
+
+<!-- Princeton ZERO Lab -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>Princeton ZERO Lab &mdash; Clean Firm Power</h3>
+    </div>
+    <p class="card-meta">Sepulveda, Jenkins, de Sisternes, Lester &bull; <em>Joule</em>, November 2018</p>
+    <p>
+        The foundational paper on clean firm power. Evaluated ~1,000 cases across varying CO&#8322; limits, technology costs, and geographic conditions:
+    </p>
+    <ul>
+        <li>Across <strong>all cases</strong>, least-cost decarbonization includes one or more firm low-carbon resources (nuclear, CCS, bioenergy)</li>
+        <li>Firm resources reduce electricity costs by <strong>10&ndash;62%</strong> in fully decarbonized scenarios</li>
+        <li>Without firm resources, costs rise <strong>steeply and nonlinearly</strong> as CO&#8322; limits approach zero</li>
+        <li>Going "all-in" on wind/solar/batteries means "betting the planet on achieving very low costs for all of these resources" plus continental-scale transmission</li>
+    </ul>
+</div>
+
+<!-- Princeton 24/7 CFE System Impacts -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>Princeton &mdash; System Impacts of 24/7 CFE Procurement</h3>
+    </div>
+    <p class="card-meta">Xu, Manocha, Patankar, Jenkins &bull; 2022&ndash;2024</p>
+    <p>
+        First study to model grid system impacts of hourly CFE using capacity expansion planning. Three procurement strategies compared:
+    </p>
+    <ul>
+        <li><strong>Annual matching achieves zero or negligible</strong> system-level carbon emissions reductions &mdash; it displaces other renewables, not fossil generation</li>
+        <li><strong>Hourly matching does reduce</strong> system-level emissions through both volume and timing effects</li>
+        <li>Cost premium for hourly matching: <strong>$13&ndash;$30/MWh</strong> above annual matching</li>
+        <li>With only current technologies, 24/7 costs <strong>139% more</strong> than annual matching; with a full portfolio (CCS, H&#8322; turbines, advanced geothermal, nuclear), the premium drops to <strong>54%</strong></li>
+        <li>24/7 CFE drives early deployment of advanced clean firm resources and long-duration storage that otherwise lack a market</li>
+    </ul>
+    <div class="insight-box critical">
+        <strong>The critical finding:</strong> Annual matching "almost entirely ineffective" at reducing emissions. It cannibalizes capacity that would have been built anyway. Only hourly matching creates demand signals for the technologies needed to fully decarbonize.
+    </div>
+</div>
+
+<!-- Riepin et al 2025 -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>24/7 CFE Accelerates Advanced Clean Energy Technologies</h3>
+    </div>
+    <p class="card-meta">Riepin, Jenkins, Swezey, Brown &bull; <em>Joule</em>, January 2025 &bull; TU Berlin + Princeton + Google</p>
+    <p>
+        Even a small number of corporate 24/7 CFE buyers can catalyze innovation. Case study (Germany): if companies representing just <strong>3% of C&amp;I electricity demand</strong> committed to 24/7 CFE, it would <strong>quadruple</strong> expected deployment of long-duration iron-air batteries and achieve <strong>25% cost reduction</strong> by 2030.
+    </p>
+</div>
+
+<!-- IPCC -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>IPCC AR6 Working Group III &mdash; Energy Systems</h3>
+    </div>
+    <p class="card-meta">2022 &bull; Chapter 6: Energy Systems</p>
+    <ul>
+        <li>Electricity sector decarbonization is the most cost-effective energy transition pathway (high confidence)</li>
+        <li>Renewable and low-carbon power generation: <strong>74&ndash;82% of electricity by 2050</strong> under 1.5&deg;C pathways</li>
+        <li>Beyond ~80% VRE penetration, storage requirements escalate: <strong>0.2&ndash;6 TWh/yr</strong> in the US</li>
+        <li>Nuclear, CCS, and geothermal identified as important complements, especially for the "last mile"</li>
+        <li>System costs increase <strong>nonlinearly</strong> as clean targets approach 100%</li>
+        <li>Solar PV identified as having the <strong>single greatest impact</strong> of any technology in any sector</li>
+    </ul>
+</div>
+
+<!-- IEA -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>IEA Net Zero by 2050 &amp; World Energy Outlook</h3>
+    </div>
+    <p class="card-meta">Net Zero Roadmap updated 2023 &bull; World Energy Outlook 2025</p>
+    <ul>
+        <li>Global electricity sector must reach <strong>net-zero by 2040</strong></li>
+        <li>Renewables: <strong>&gt;60% of generation by 2030</strong>; annual capacity additions ~1,200 GW</li>
+        <li>Solar PV and batteries alone are <strong>"not sufficient"</strong> &mdash; also required: nuclear, CCS, low-emissions fuels, massive grid expansion</li>
+        <li>2024 global electricity CO&#8322;: ~13.8 Gt; emissions intensity declined a record 3%</li>
+        <li>IEA projects global CO&#8322; emissions may <strong>peak around 2025</strong> under current policies</li>
+        <li>Grid investment and permitting reform identified as the <strong>primary bottleneck</strong></li>
+    </ul>
+</div>
+
+<!-- NREL -->
+<div class="framework-card">
+    <div class="card-header">
+        <h3>NREL &mdash; 100% Clean Electricity by 2035 &amp; LA100</h3>
+    </div>
+    <p class="card-meta">DOE-commissioned study, August 2022 &bull; LA100 Study, March 2021</p>
+    <p><strong>100% Clean by 2035 Study (ReEDS model):</strong></p>
+    <ul>
+        <li>Multiple technically feasible pathways exist; wind and solar provide <strong>60&ndash;80% of generation</strong></li>
+        <li>Additional power system costs: <strong>$330B&ndash;$740B</strong>; health benefits: <strong>$390&ndash;$400B</strong>; climate benefits: <strong>$1.2T+</strong></li>
+        <li>Net societal benefit across all scenarios: <strong>$920B&ndash;$1.2T</strong></li>
+        <li>Up to 5% of 2035 generation still from fossil fuels (offset via negative emissions)</li>
+    </ul>
+    <p><strong>LA100 Study (Los Angeles):</strong></p>
+    <ul>
+        <li>100% renewable achievable by 2035 while maintaining high reliability</li>
+        <li>All scenarios follow a similar trajectory up to 80&ndash;90% renewable</li>
+        <li>Pathways diverge for <strong>the last ~10%</strong> &mdash; this is where the hard problem lives</li>
+        <li>For the final 10%, <strong>all scenarios</strong> rely on some form of dispatchable clean firm power</li>
+    </ul>
+</div>
+
+
+<!-- ============================== -->
+<!-- SECTION 6: FRAMEWORK COMPARISON -->
+<!-- ============================== -->
+<h2 class="section-title">Framework Comparison</h2>
+
+<div class="table-scroll">
+<table class="comparison-table">
+    <thead>
+        <tr>
+            <th>Framework</th>
+            <th>Matching</th>
+            <th>Binding?</th>
+            <th>Hourly Timeline</th>
+            <th>Scope</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>GHG Protocol Scope 2</strong></td>
+            <td>Annual &rarr; Hourly</td>
+            <td>De facto mandatory</td>
+            <td>Final standard 2027</td>
+            <td>Universal reporting</td>
+        </tr>
+        <tr>
+            <td><strong>SBTi</strong></td>
+            <td>Annual &rarr; Hourly</td>
+            <td>Validated targets</td>
+            <td>2030 (50%) &rarr; 2040 (90%)</td>
+            <td>8,000+ companies</td>
+        </tr>
+        <tr>
+            <td><strong>CDP</strong></td>
+            <td>Annual (moving)</td>
+            <td>Disclosure-based</td>
+            <td>Post-2027 (follows GHGP)</td>
+            <td>24,000+ companies</td>
+        </tr>
+        <tr>
+            <td><strong>UN 24/7 CFE Compact</strong></td>
+            <td>Hourly</td>
+            <td>Voluntary</td>
+            <td>Now (aspirational)</td>
+            <td>170+ signatories</td>
+        </tr>
+        <tr>
+            <td><strong>Climate Group 24/7</strong></td>
+            <td>Hourly</td>
+            <td>Voluntary</td>
+            <td>Spring 2026 launch</td>
+            <td>~10 founding partners</td>
+        </tr>
+        <tr>
+            <td><strong>RE100</strong></td>
+            <td>Annual</td>
+            <td>Voluntary</td>
+            <td>No hourly timeline</td>
+            <td>450+ companies</td>
+        </tr>
+        <tr>
+            <td><strong>EnergyTag</strong></td>
+            <td>Hourly/sub-hourly</td>
+            <td>Certification standard</td>
+            <td>Now (2 accredited issuers)</td>
+            <td>Global infrastructure</td>
+        </tr>
+        <tr>
+            <td><strong>US State RPS/CES</strong></td>
+            <td>Annual</td>
+            <td>Legally binding</td>
+            <td>No hourly plans</td>
+            <td>63% of US retail sales</td>
+        </tr>
+        <tr>
+            <td><strong>EU CBAM</strong></td>
+            <td>Hourly (binding phase)</td>
+            <td>Legally binding</td>
+            <td>Jan 2026 (binding)</td>
+            <td>EU imports</td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+
+<!-- ============================== -->
+<!-- SECTION 7: THE CENTRAL DEBATE -->
+<!-- ============================== -->
+<h2 class="section-title">The Central Debate: Three Competing Visions</h2>
+
+<div class="convergence-grid">
+    <div class="convergence-card">
+        <div class="convergence-icon" style="color: #22C55E;">&#9201;</div>
+        <h4>Hourly Matching</h4>
+        <p>Every MWh consumed must be matched with a carbon-free MWh generated in the same hour, on the same grid. Aligns incentives with physical reality. Drives demand for storage, clean firm, and demand flexibility.</p>
+        <p style="margin-top: 8px; font-size: 0.82rem; color: var(--text-muted);"><em>Advocates: Google, EnergyTag, Climate Group, Princeton ZERO Lab</em></p>
+    </div>
+    <div class="convergence-card">
+        <div class="convergence-icon" style="color: #F59E0B;">&#128200;</div>
+        <h4>Emissions First / Impact Accounting</h4>
+        <p>Focus on marginal emissions avoided, not temporal matching. A battery shifting solar from 2pm to 8pm may have more impact than a wind farm producing during surplus hours. Measurement challenge: marginal vs. average emissions.</p>
+        <p style="margin-top: 8px; font-size: 0.82rem; color: var(--text-muted);"><em>Advocates: Amazon, Meta, Intel, Emissions First Partnership</em></p>
+    </div>
+    <div class="convergence-card">
+        <div class="convergence-icon" style="color: #EF4444;">&#9888;</div>
+        <h4>Annual Matching (Status Quo)</h4>
+        <p>Annual RECs drove real investment &mdash; $60B+ in clean energy. Hourly matching dramatically increases costs and could reduce total procurement volume. The perfect may be the enemy of the good.</p>
+        <p style="margin-top: 8px; font-size: 0.82rem; color: var(--text-muted);"><em>Advocates: Center for Resource Solutions, REC market participants</em></p>
+    </div>
+</div>
+
+<div class="insight-box">
+    <strong>What our optimizer reveals about this debate:</strong> The cost data across 16,200 scenarios shows that the "hourly is too expensive" argument depends heavily on the target threshold. At 85&ndash;90% hourly matching, costs remain manageable with modest resource diversification. It's the push from 95% to 100% where costs escalate nonlinearly &mdash; confirming IPCC and Princeton findings on the "last mile" problem. The answer isn't "hourly or annual" but "how many hours, and at what cost?"
+</div>
+
+
+<!-- ============================== -->
+<!-- SECTION 8: CONVERGENCE -->
+<!-- ============================== -->
+<h2 class="section-title">Where It All Converges</h2>
+
+<p>
+    The research converges on several points directly validated by our hourly optimization model:
+</p>
+
+<div class="convergence-grid">
+    <div class="convergence-card">
+        <div class="convergence-icon">&#128200;</div>
+        <h4>The 80&ndash;100% Cost Cliff Is Real</h4>
+        <p>NREL, IPCC, Princeton, and IEA all confirm costs rise nonlinearly as clean targets exceed ~80%. Our optimizer's threshold sweep (75&ndash;100%) captures exactly this inflection zone.</p>
+    </div>
+    <div class="convergence-card">
+        <div class="convergence-icon">&#9889;</div>
+        <h4>Clean Firm Power Is Not Optional</h4>
+        <p>Sepulveda/Jenkins shows 10&ndash;62% cost reduction with firm resources. NREL LA100: every 100% scenario requires clean firm for the last ~10%. IPCC: essential for the "last mile."</p>
+    </div>
+    <div class="convergence-card">
+        <div class="convergence-icon">&#128337;</div>
+        <h4>Hourly ≠ Annual</h4>
+        <p>Princeton proves annual matching achieves zero system-level emissions reductions &mdash; it displaces other renewables, not fossil generation. Hourly matching is categorically different.</p>
+    </div>
+    <div class="convergence-card">
+        <div class="convergence-icon">&#128176;</div>
+        <h4>Portfolio Diversity Cuts Costs</h4>
+        <p>With current tech only, hourly matching costs 139% more. With a full portfolio (CCS, nuclear, geothermal, LDES), the premium drops to 54%. Technology diversity is a cost-reduction strategy.</p>
+    </div>
+</div>
+
+
+<!-- ============================== -->
+<!-- SECTION 9: CORPORATE LEADERS -->
+<!-- ============================== -->
+<h2 class="section-title">Corporate Pioneers in 24/7 CFE</h2>
+
+<div class="framework-card">
+    <h3>Google</h3>
+    <p class="card-meta">Target: 24/7 CFE on every grid by 2030 &bull; Current: 64% global average CFE (2023)</p>
+    <p>
+        Pioneer of the 24/7 CFE concept. Some sites achieve &gt;90% hourly matching. Pursuing next-generation geothermal (Fervo Energy partnership), advanced nuclear agreements, and long-duration storage. Co-founded the UN 24/7 CFE Compact and collaborated with Princeton ZERO Lab on system-level impact research.
+    </p>
+</div>
+
+<div class="framework-card">
+    <h3>Microsoft</h3>
+    <p class="card-meta">Target: 100% CFE by 2030; carbon negative &bull; Pursuing nuclear + LDES</p>
+    <p>
+        Signed landmark nuclear agreement with Constellation Energy (Three Mile Island restart). Deploying hourly matching platform in Virginia. Investing in long-duration storage and advanced grid management technologies.
+    </p>
+</div>
+
+<div class="framework-card">
+    <h3>AES Corporation</h3>
+    <p class="card-meta">Built first 24/7 solution for Google in Virginia</p>
+    <p>
+        Constructed first-of-kind 24/7 clean energy solution combining solar, wind, hydro, and battery storage achieving &gt;90% hourly matching. Demonstrates that near-24/7 matching is technically achievable today with existing technologies.
+    </p>
+</div>
+
+
+<!-- ============================== -->
+<!-- SECTION 10: HOW THIS PROJECT FITS -->
+<!-- ============================== -->
+<h2 class="section-title">How This Project Fits In</h2>
+
+<p>
+    This optimizer sits at the intersection of all these policy frameworks and research streams. It answers the practical question they all raise but none fully quantify:
+</p>
+
+<div class="insight-box" style="font-size: 1.05rem;">
+    <strong>For any given grid region, with any given set of technology cost assumptions, what is the least-cost resource portfolio to achieve a specified level of hourly clean energy matching &mdash; and how does that cost and mix change as you push from 75% to 100%?</strong>
+</div>
+
+<ul>
+    <li><strong>For SBTi-aligned companies:</strong> What will the 2030 (50% hourly) and 2040 (90% hourly) targets actually cost across CAISO, ERCOT, PJM, NYISO, and NEISO?</li>
+    <li><strong>For RE100 members:</strong> What's the cost premium of moving from annual to hourly matching, and how does it vary by region and technology availability?</li>
+    <li><strong>For policymakers:</strong> How do state RPS targets interact with hourly matching requirements? What additional resources are needed beyond what annual RPS compliance provides?</li>
+    <li><strong>For the Emissions First debate:</strong> What resource mixes emerge from hourly cost optimization, and how do they differ from what annual optimization would produce?</li>
+    <li><strong>For grid planners:</strong> Where are the inflection points &mdash; the thresholds where the required resource mix shifts dramatically and costs escalate?</li>
+</ul>
+
+<p>
+    The 16,200-scenario optimization (10 thresholds &times; 5 regions &times; 324 cost scenarios) provides granular, region-specific answers that complement the broader research from IPCC, IEA, NREL, and Princeton with actionable procurement-level data.
+</p>
+
+
+<!-- ============================== -->
+<!-- SOURCES -->
+<!-- ============================== -->
+<div class="sources-section">
+    <h3>Sources &amp; References</h3>
+    <ul class="source-list">
+        <li>IPCC AR6 WGIII, Chapter 6: Energy Systems (2022)</li>
+        <li>IEA Net Zero by 2050 Roadmap (2021, updated 2023)</li>
+        <li>IEA World Energy Outlook 2025</li>
+        <li>IEA Electricity 2025: Emissions</li>
+        <li>Sepulveda, Jenkins, de Sisternes, Lester. "The Role of Firm Low-Carbon Electricity Resources in Deep Decarbonization of Power Generation." <em>Joule</em>, November 2018.</li>
+        <li>Xu, Manocha, Patankar, Jenkins. "System-Level Impacts of 24/7 Carbon-Free Electricity Procurement." Princeton ACEE, 2022&ndash;2024.</li>
+        <li>Riepin, Jenkins, Swezey, Brown. "24/7 Carbon-Free Electricity Matching Accelerates Advanced Clean Energy Technologies." <em>Joule</em>, January 2025.</li>
+        <li>NREL. "Examining Supply-Side Options to Achieve 100% Clean Electricity by 2035." DOE/NREL, August 2022.</li>
+        <li>NREL. "LA100: Los Angeles 100% Renewable Energy Study." March 2021.</li>
+        <li>GHG Protocol Scope 2 Public Consultation (Oct 2025 &ndash; Jan 2026)</li>
+        <li>SBTi Corporate Net-Zero Standard V2.0, Second Consultation Draft (Nov 2025)</li>
+        <li>Climate Group 24/7 Carbon-Free Coalition, Technical Criteria V1.0 (June 2025)</li>
+        <li>RE100 FAQs and Technical Criteria (Jan 2025)</li>
+        <li>CDP Scope 2 Accounting Guidance &amp; 2025 Reporting Guide</li>
+        <li>EnergyTag Granular Certificate Scheme Standard V2</li>
+        <li>UN 24/7 Carbon-Free Energy Compact (Sept 2021)</li>
+        <li>LBNL. "U.S. State Renewables Portfolio &amp; Clean Energy Standards: 2024 Status Update."</li>
+        <li>EPA. "24/7 Hourly Matching of Electricity." Green Power Markets.</li>
+    </ul>
+</div>
+
+</div><!-- end content-wrap -->
+
+<div class="footer">
+    <p>The 8,760 Problem &mdash; Hourly Clean Energy Matching Analysis &mdash; 2025</p>
+</div>
+
+<!-- ANIMATED NUMBER COUNTERS -->
+<script>
+(function() {
+    const statValues = document.querySelectorAll('.stat-value[data-target]');
+    if (!statValues.length) return;
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (!entry.isIntersecting) return;
+            const el = entry.target;
+            if (el.dataset.animated) return;
+            el.dataset.animated = '1';
+            const target = parseInt(el.dataset.target, 10);
+            const suffix = el.textContent.replace(/[\d,]/g, '');
+            const duration = 1800;
+            const start = performance.now();
+            function tick(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = Math.round(eased * target);
+                el.textContent = current.toLocaleString() + suffix;
+                if (progress < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        });
+    }, { threshold: 0.3 });
+
+    statValues.forEach(function(el) { observer.observe(el); });
+})();
+</script>
+
+</body>
+</html>
