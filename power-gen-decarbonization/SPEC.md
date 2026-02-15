@@ -3,9 +3,18 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-02-15.
 
-## Current Status (Feb 15, 2026)
+## Current Status (Feb 15, 2026 — Session 2)
 
-### What was accomplished this session
+### What was accomplished — Session 2
+- [x] **Enriched dashboard.html with sustainability/CDP data** — Each of the 15 companies now has: specific decarbonization target + year, SBTi validation status, CDP disclosure score (2024), interim targets, and 4 key decarbonization milestones. New "Sustainability Targets & CDP" section displays dynamically per company.
+- [x] **Integrated CFE optimizer three-strategy framework into fleet-analysis.html** — Three strategy zones (Renewable-First 75-85%, Nuclear-Plus 85-95%, Regional Portfolio 95-100%) with specific $/MWh cost premiums, mapped to fleet archetypes. New "Hockey Stick" cost curve chart showing 5 ISO cost premiums at 10 thresholds.
+- [x] **Enhanced targets.html** — Traffic-light table enriched with SBTi status, CDP scores, and specific company milestones for all 15. New "Climate Commitment Scorecard" section showing SBTi/CDP landscape (7 SBTi validated, 4 CDP A-list, 1 CDP F).
+- [x] **Enriched index.html** — Updated with optimizer-derived cost data ($10-78/MWh range), SBTi/CDP summary stats, and sister project cross-link.
+- [x] **Enhanced policy.html** — Added social cost of carbon comparison chart (RGGI $15, EPA $51, EU ETS $90, Rennert $185), updated LDES cost trajectory from TBD to -50% projected by 2030.
+- [x] **Added 2 new key findings to fleet analysis** — "Storage alone can't solve the last mile" and "Regional variation is massive" based on optimizer insights.
+- [x] QA verification: all 14 canvas elements across 6 pages have matching JS initialization, no missing tags, Chart.js CDN properly loaded.
+
+### What was accomplished — Session 1
 - [x] Project initialized — repo structure, CLAUDE.md with ported workflow preferences
 - [x] SPEC.md created with comprehensive specification
 - [x] Research launched in parallel (7 agents): MJ Bradley/ERM, top 15 generators, SBTi/IPCC/IEA targets, sustainability/CDP data, CFE optimizer insights, design cues, broader grid decarb context
@@ -22,13 +31,13 @@
 - [x] All work siloed under `power-gen-decarbonization/` — zero modifications to root repo or optimizer
 
 ### Next steps (for future session)
-1. **Incorporate research agent results** — 7 research agents completed extensive data gathering. Their findings (MJ Bradley report data, company-specific sustainability targets, SBTi v2 specifics, NREL/Princeton/Rhodium grid decarb research) need to be integrated into the site narratives and company profiles
-2. **Download and process actual eGRID 2023 data** — Run analysis/fetch_egrid.py after manually downloading the EPA Excel file. Replace research-based estimates with authoritative plant-level aggregations
-3. **Enhance company profiles** — Add specific company targets from sustainability reports and CDP data; add historical emissions trajectories
+1. **Download and process actual eGRID 2023 data** — Run analysis/fetch_egrid.py after manually downloading the EPA Excel file. Replace research-based estimates with authoritative plant-level aggregations
+2. **Add comparison mode to dashboard** — Side-by-side or overlay charts for 2+ selected companies
+3. **Add historical emissions trajectory charts** — Per-company emissions trends over time
 4. **Refine scenario analysis** — Move from illustrative to data-driven scenarios using CFE optimizer cost curves and eGRID-based fleet data
-5. **Add comparison mode to dashboard** — Side-by-side or overlay charts for 2+ selected companies
-6. **Create new private repo** — When outside the proxy sandbox, create `power-gen-decarbonization` as private repo and deploy site via Netlify/Cloudflare Pages
-7. **QA/QC pass** — Mobile testing, console error check, narrative accuracy review
+5. **Create standalone deployment** — When outside the proxy sandbox, set up Netlify/Cloudflare Pages deployment for public site
+6. **Mobile QA** — Full testing at 320px, 375px, 768px viewports
+7. **Cross-link with sister project** — Replace placeholder `#` links with actual CFE optimizer site URL
 
 ### Open questions
 - [ ] Include federal power generators (TVA, BPA) or just investor-owned + merchant?
@@ -300,15 +309,27 @@ Key aspects:
 
 ## 8. Key Insights from CFE Optimizer
 
-(To be populated from research agent exploring optimizer results)
+### Three-Strategy Framework (from optimizer results)
+1. **Renewable-First (75-85% CFE)**: Solar + wind + 4hr battery. Cost premium $10-25/MWh. Best for coal-heavy generators.
+2. **Nuclear-Plus (85-95% CFE)**: Renewables + nuclear life-extension + CCS on select gas. Cost premium $25-50/MWh. Best for diversified fleets.
+3. **Regional Portfolio (95-100% CFE)**: Full stack including LDES + DAC. Cost premium $50-78/MWh. The expensive last mile.
 
-Key findings relevant to generator decarbonization:
-- Cost of achieving high CFE% varies dramatically by region
-- Solar + wind backbone, with storage and firm generation for reliability
-- CCS-CCGT provides baseload clean firm but at higher cost
-- LDES (iron-air) enables high CFE% but adds significant cost
-- Cost inflection zone: 92.5-100% CFE matching is where costs escalate sharply
-- Battery (4hr Li-ion) handles daily cycling; LDES handles multi-day/seasonal
+### Key cost findings
+- Cost inflection zone: 92.5-100% CFE matching is where costs escalate sharply ("hockey stick")
+- Going from 99% to 100% costs an additional $18-31/MWh for 1% more clean energy
+- Storage accounts for <10% of total system cost even at 100% — clean firm is the bottleneck
+- Regional variation: 2-3x cost difference between ERCOT (cheapest) and ISO-NE (most expensive)
+- At 100% CFE, clean firm (nuclear, CCS-CCGT) dominates the resource mix
+
+### SBTi & CDP Landscape (across top 15)
+- **SBTi validated**: AES (1.5°C), AEP, Constellation, NextEra, Xcel (5 companies)
+- **SBTi committed (pending validation)**: Duke, Southern, Dominion, DTE, WEC, PPL (6 companies)
+- **No SBTi commitment**: Vistra, BH Energy, Entergy, Evergy (4 companies)
+- **CDP A- or higher**: AES, Constellation, NextEra, Xcel (4 companies)
+- **CDP B range**: Duke, Southern, AEP, Dominion, Entergy, DTE, WEC (7 companies)
+- **CDP C or below**: Vistra (C), Evergy (C), PPL (B-)
+- **CDP F (non-disclosure)**: BH Energy
+- **Key pattern**: SBTi commitment correlates with fleet cleanliness — generators with clean foundations can afford ambitious commitments
 
 ---
 
