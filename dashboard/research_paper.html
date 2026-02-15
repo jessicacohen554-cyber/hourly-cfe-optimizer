@@ -495,6 +495,27 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     p { font-size: 0.85rem; }
 }
 
+/* 375px breakpoint (mid-range phones) */
+@media (max-width: 375px) {
+    .paper-header { padding: 20px 8px 16px; }
+    .paper-title { font-size: 1.2rem; }
+    .paper-body { padding: 16px 8px 40px; }
+}
+
+/* Touch-friendly */
+@media (hover: none) and (pointer: coarse) {
+    .toc a {
+        padding: 8px 4px;
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+    }
+    .pdf-download-btn {
+        min-height: 44px;
+        padding: 10px 20px;
+    }
+}
+
 /* ========== PRINT ========== */
 @media print {
     body { background: white; font-size: 11pt; line-height: 1.6; }
@@ -528,7 +549,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         <a href="research_paper.html" class="nav-active">Methodology &amp; Paper</a>
     </div>
 </nav>
-<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <header class="paper-header">
     <div class="paper-header-accent"></div>
