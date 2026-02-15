@@ -1,15 +1,27 @@
 Loading data...
+  CAISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  ERCOT: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  PJM: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  NYISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  NEISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  CAISO: demand shape averaged over 5 years, scalars from 2025
+  ERCOT: demand shape averaged over 5 years, scalars from 2025
+  PJM: demand shape averaged over 5 years, scalars from 2025
+  NYISO: demand shape averaged over 5 years, scalars from 2025
+  NEISO: demand shape averaged over 5 years, scalars from 2025
   Data loaded.
 
 ======================================================================
   CAISO (California)
 ======================================================================
-    [checkpoint] Resuming CAISO from threshold-80: 2 thresholds done
-  Resuming from checkpoint: sweep done, 2 thresholds complete
+    [checkpoint] Resuming CAISO from threshold-80-partial-18of44: 1 thresholds done, partial 80% (18/324 scenarios)
+  Resuming from checkpoint: sweep done, 1 thresholds complete
   Sweep: loaded from checkpoint (7 points)
 
-  Cost-optimizing thresholds (324 scenarios each)... [2 done, 8 remaining]
+  Cost-optimizing thresholds (324 scenarios each)... [1 done, 9 remaining]
     75%: loaded from checkpoint — skipping
-    80%: loaded from checkpoint — skipping
-    [checkpoint] Saved CAISO (threshold-85-partial-50of324) → 221 KB
-    [checkpoint] Saved CAISO (threshold-85-partial-100of324) → 235 KB
+    80%: resuming from partial checkpoint (18/324 scenarios done)
+      (pruned: 44 representative scenarios, filling 280 via cross-pollination)
+    [checkpoint] Saved CAISO (threshold-80-partial-19of44) → 114 KB
+    [cache] Saved CAISO 80% score cache: 174673 entries (11.9 MB)
+    [checkpoint] Saved CAISO (threshold-80-partial-20of44) → 114 KB
