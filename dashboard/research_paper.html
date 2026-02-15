@@ -583,12 +583,14 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         portfolio to achieve specified levels of <strong>hourly matching</strong> &mdash; the fraction of
         electricity demand met by contemporaneous clean generation in each of 8,760 annual hours. Analyzing
         five major U.S. Independent System Operator (ISO) regions (CAISO, ERCOT, PJM, NYISO, NEISO) using
-        2025 EIA-930 hourly data, we find that achieving 90% hourly matching costs $47&ndash;70/MWh
-        (effective) &mdash; a result that is robust across sensitivity analyses. Under 4-hour storage
-        constraints, 100% matching requires $83&ndash;120/MWh with 30&ndash;33% curtailment, though
-        long-duration storage technologies could reduce these figures by 20&ndash;40%. The
-        optimal resource mix shifts from solar- and wind-heavy at lower targets to clean-firm-dominant
-        (nuclear, geothermal) above 90%, revealing a fundamental tradeoff between intermittent renewable
+        2025 EIA-930 hourly data, we find that achieving 90% hourly matching costs $44&ndash;83/MWh
+        (effective) &mdash; a result that is robust across sensitivity analyses. At 99% matching,
+        costs rise to $54&ndash;96/MWh with 9&ndash;16% curtailment, driven by CCS-CCGT and
+        clean firm additions. The model co-optimizes across seven resource types: clean firm (nuclear,
+        geothermal), CCS-CCGT, solar, wind, hydro, battery (4hr Li-ion), and LDES (100hr iron-air). The
+        optimal resource mix shifts from wind- and solar-heavy at lower targets to clean-firm-dominant
+        above 90%, with CCS-CCGT emerging as a significant contributor (up to 37&ndash;50% in some regions)
+        at 95%+, revealing a fundamental tradeoff between intermittent renewable
         cost advantages and the temporal reliability premium of dispatchable generation. These findings
         have direct implications for corporate 24/7 CFE procurement, ISO market design, and the economic
         case for preserving existing nuclear capacity.
@@ -1024,7 +1026,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <!-- Y axis title -->
             <text x="20" y="160" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151" transform="rotate(-90,20,160)">Effective $/MWh</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target across five ISO regions. All regions show exponential cost escalation above 95% matching. NEISO exhibits the steepest 99-to-100% premium ($88&rarr;$120/MWh), reflecting limited resource diversity.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target across five ISO regions. All regions show cost escalation above 90% matching. ERCOT maintains the lowest costs throughout ($37&ndash;$54/MWh), while NEISO is most expensive ($74&ndash;$96/MWh), reflecting limited resource diversity and higher regional LCOEs.</div>
     </div>
 
     <h3>5.2 Cross-Regional Cost Comparison</h3>
@@ -1032,12 +1034,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <table>
         <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
         <tbody>
-            <tr><td><strong>75%</strong></td><td>$40/MWh</td><td>$34/MWh</td><td>$47/MWh</td><td>$57/MWh</td><td>$56/MWh</td></tr>
-            <tr><td><strong>85%</strong></td><td>$47/MWh</td><td>$41/MWh</td><td>$54/MWh</td><td>$60/MWh</td><td>$64/MWh</td></tr>
-            <tr><td><strong>90%</strong></td><td>$52/MWh</td><td>$47/MWh</td><td>$59/MWh</td><td>$62/MWh</td><td>$69/MWh</td></tr>
-            <tr><td><strong>95%</strong></td><td>$57/MWh</td><td>$57/MWh</td><td>$66/MWh</td><td>$66/MWh</td><td>$76/MWh</td></tr>
-            <tr><td><strong>99%</strong></td><td>$65/MWh</td><td>$76/MWh</td><td>$76/MWh</td><td>$78/MWh</td><td>$88/MWh</td></tr>
-            <tr><td><strong>100%</strong></td><td>$83/MWh</td><td>$95/MWh</td><td>$94/MWh</td><td>$99/MWh</td><td>$120/MWh</td></tr>
+            <tr><td><strong>75%</strong></td><td>$56/MWh</td><td>$37/MWh</td><td>$56/MWh</td><td>$75/MWh</td><td>$74/MWh</td></tr>
+            <tr><td><strong>85%</strong></td><td>$61/MWh</td><td>$41/MWh</td><td>$58/MWh</td><td>$79/MWh</td><td>$80/MWh</td></tr>
+            <tr><td><strong>90%</strong></td><td>$65/MWh</td><td>$44/MWh</td><td>$61/MWh</td><td>$80/MWh</td><td>$83/MWh</td></tr>
+            <tr><td><strong>95%</strong></td><td>$68/MWh</td><td>$49/MWh</td><td>$64/MWh</td><td>$85/MWh</td><td>$89/MWh</td></tr>
+            <tr><td><strong>99%</strong></td><td>$72/MWh</td><td>$54/MWh</td><td>$69/MWh</td><td>$91/MWh</td><td>$96/MWh</td></tr>
         </tbody>
     </table>
     </div>
@@ -1143,9 +1144,10 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>5.4 Curtailment Analysis</h3>
     <p>
-        Curtailment &mdash; clean energy generated but not matched to demand &mdash; increases dramatically
-        at high matching targets. At 100% matching, all five regions require 30&ndash;33% curtailment,
-        meaning roughly one-third of all procured clean energy goes unused.
+        Curtailment &mdash; clean energy generated but not matched to demand &mdash; increases
+        at high matching targets. At 99% matching, curtailment ranges from 9% (PJM) to 16% (ERCOT),
+        with procurement levels of 109&ndash;118% of demand. The combination of battery and LDES storage
+        with CCS-CCGT helps manage curtailment more effectively than renewables-only portfolios.
     </p>
 
     <!-- FIGURE 5: Curtailment by Region -->
