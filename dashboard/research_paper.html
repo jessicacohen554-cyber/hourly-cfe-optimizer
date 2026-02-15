@@ -596,39 +596,32 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <!-- ========== 1. INTRODUCTION ========== -->
     <h2 id="introduction">1. Introduction</h2>
     <p>
-        The electricity sector's transition to clean energy has historically relied on <strong>annual accounting</strong>:
-        purchasers match total annual consumption with an equivalent volume of renewable energy certificates (RECs),
-        regardless of whether clean generation coincides with actual load
-        <a href="#ref-1" class="cite">[1]</a>. While this approach has successfully
-        driven renewable deployment, it does not ensure that electricity is actually clean in any given hour.
-        A data center running at 2 AM may claim 100% renewable coverage while consuming fossil-generated power,
-        offset by midday solar certificates from a different time and often a different location.
+        The electricity sector's clean energy transition has relied on <strong>annual accounting</strong>:
+        purchasers match total annual consumption with renewable energy certificates (RECs), regardless of
+        whether clean generation coincides with actual load <a href="#ref-1" class="cite">[1]</a>. This has
+        driven renewable deployment, but it doesn't ensure electricity is actually clean in any given hour.
+        A data center at 2 AM can claim 100% renewable while consuming fossil power, offset by midday
+        solar certificates from a different time and location.
     </p>
     <p>
-        The concept of <strong>24/7 carbon-free energy (CFE)</strong> addresses this gap by requiring temporal
-        matching between clean supply and demand <a href="#ref-2" class="cite">[2]</a>.
-        Pioneered by Google's commitment to operate on carbon-free energy "every hour of every day" by 2030
-        <a href="#ref-3" class="cite">[3]</a>, and formalized by the
-        United Nations 24/7 Carbon-free Energy Compact
-        <a href="#ref-4" class="cite">[4]</a>, hourly matching represents a more
-        rigorous standard for clean energy procurement. The Biden administration, Microsoft, and over 130
-        organizations have signed the compact, signaling broad momentum toward hourly accounting.
+        <strong>24/7 carbon-free energy (CFE)</strong> addresses this by requiring temporal matching
+        between clean supply and demand <a href="#ref-2" class="cite">[2]</a>. Google's "every hour of
+        every day" commitment <a href="#ref-3" class="cite">[3]</a>, the UN 24/7 CFE Compact
+        <a href="#ref-4" class="cite">[4]</a>, and over 130 signatory organizations signal broad
+        momentum toward hourly accounting.
     </p>
     <p>
-        However, achieving high levels of hourly matching introduces significant economic complexity.
-        Intermittent resources (solar, wind) produce energy in patterns that do not perfectly align with
-        demand, creating surplus hours and deficit hours. Meeting demand in every hour requires either
-        massive overproduction (with attendant curtailment costs) or dispatchable clean generation that
-        can operate regardless of weather conditions. Understanding this cost-matching tradeoff is essential
-        for organizations designing procurement strategies and for policymakers evaluating the feasibility
-        of hourly clean energy standards.
+        But hourly matching is expensive. Intermittent resources produce energy on nature's schedule,
+        not demand's. Meeting demand every hour requires either massive overproduction (with curtailment)
+        or dispatchable clean generation that runs regardless of weather. The cost-matching tradeoff is
+        the central question for procurement strategists and policymakers alike.
     </p>
     <p>
-        This paper presents an optimization framework that <strong>co-optimizes cost and hourly matching</strong>
-        across five U.S. ISO regions. By simultaneously searching across procurement levels, resource mixes
-        (clean firm, solar, wind, hydro), and battery storage dispatch, we identify the lowest-cost portfolio
-        for each matching target from 75% to 100%. Our results quantify the "last mile" cost escalation,
-        reveal the critical role of clean firm power, and provide actionable data for procurement decision-making.
+        This paper <strong>co-optimizes cost and hourly matching</strong> across five U.S. ISO regions,
+        searching simultaneously across procurement levels, resource mixes (clean firm, solar, wind, hydro),
+        and storage dispatch to find the lowest-cost portfolio at each target from 75% to 100%. We quantify
+        the "last mile" cost escalation, reveal clean firm power's critical role, and provide actionable
+        procurement data.
     </p>
 
     <!-- ========== 2. LITERATURE REVIEW ========== -->
@@ -655,22 +648,15 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>2.2 Clean Energy Cost Benchmarks</h3>
     <p>
-        The cost landscape for clean energy technologies has evolved rapidly. The NREL Annual Technology
-        Baseline (ATB) 2024 reports utility-scale solar PV LCOE of $24&ndash;42/MWh and onshore wind at
-        $26&ndash;50/MWh (depending on resource class), with 4-hour lithium-ion battery storage at
-        $115&ndash;165/MWh (LCOS)
-        <a href="#ref-5" class="cite">[5]</a>. Lazard's Levelized Cost of Energy
-        Analysis (v17.0) provides broadly consistent estimates, reporting unsubsidized solar LCOE of
-        $24&ndash;96/MWh and wind at $24&ndash;75/MWh
-        <a href="#ref-6" class="cite">[6]</a>.
-    </p>
-    <p>
-        Regional cost variation is substantial. LBNL's Utility-Scale Solar report documents PPA prices
-        ranging from $30&ndash;40/MWh in the Southwest to $60&ndash;90/MWh in the Northeast
-        <a href="#ref-7" class="cite">[7]</a>. LBNL's wind market report shows similar
-        geographic spread, with Great Plains wind PPAs at $20&ndash;35/MWh versus $55&ndash;80/MWh in
-        New England <a href="#ref-8" class="cite">[8]</a>. These regional differentials
-        are central to our optimization, as the cost-optimal resource mix varies significantly by ISO region.
+        NREL ATB 2024 reports utility-scale solar at $24&ndash;42/MWh and onshore wind at $26&ndash;50/MWh,
+        with 4-hour Li-ion storage at $115&ndash;165/MWh LCOS
+        <a href="#ref-5" class="cite">[5]</a>. Lazard v17.0 is broadly consistent
+        <a href="#ref-6" class="cite">[6]</a>. Regional variation is substantial:
+        LBNL documents solar PPAs from $30&ndash;40/MWh (Southwest) to $60&ndash;90/MWh (Northeast)
+        <a href="#ref-7" class="cite">[7]</a>, and wind PPAs from $20&ndash;35/MWh
+        (Great Plains) to $55&ndash;80/MWh (New England) <a href="#ref-8" class="cite">[8]</a>.
+        These differentials are central to our optimization&mdash;the cost-optimal mix varies significantly
+        by region.
     </p>
 
     <h3>2.3 The Role of Firm Clean Power</h3>
@@ -1437,125 +1423,87 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <!-- ========== 7. LIMITATIONS ========== -->
     <h2 id="limitations">7. Limitations &amp; Considerations</h2>
     <p>
-        A rigorous assessment of model boundaries is essential for proper interpretation of results.
-        This section provides a comprehensive inventory of limitations organized by category. We emphasize
-        that modeled costs represent a <strong>theoretical floor</strong>&mdash;real-world procurement costs
+        Modeled costs represent a <strong>theoretical floor</strong>&mdash;real-world procurement costs
         will be higher due to the constraints documented below.
     </p>
 
     <h3>7.1 Physical Resource &amp; Supply Chain Constraints</h3>
     <p>
         The optimizer assumes all clean energy technologies can be deployed at their stated LCOE/LCOS without
-        material supply constraints. This assumption is non-trivial: the clean energy transition requires
-        massive quantities of critical minerals, and supply chain concentration creates geopolitical and
-        economic risks that could drive scarcity pricing.
+        material supply constraints. The clean energy transition requires massive quantities of critical minerals,
+        and supply chain concentration creates geopolitical and economic risks that could drive scarcity pricing.
     </p>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2; color: var(--text-secondary);">
-        <li><strong>Uranium supply (Clean Firm / Nuclear):</strong> The model assumes nuclear capacity can be built
-            at LCOE without fuel supply constraints. Real-world uranium availability, enrichment capacity (limited
-            global centrifuge infrastructure), and fuel fabrication bottlenecks could drive scarcity pricing&mdash;particularly
-            if multiple nations pursue simultaneous nuclear buildout. The U.S. currently imports ~93% of its uranium,
-            with significant dependence on Russia and Kazakhstan for enrichment services
+        <li><strong>Uranium supply (Clean Firm / Nuclear):</strong> The U.S. imports ~93% of its uranium,
+            with significant dependence on Russia and Kazakhstan for enrichment services. Simultaneous global
+            nuclear buildout could drive scarcity pricing beyond modeled LCOE
             <a href="#ref-20" class="cite">[20]</a>.</li>
-        <li><strong>Cobalt, lithium, and nickel (Battery Storage):</strong> Battery LCOS assumes stable material
-            prices. Cobalt production is concentrated in the Democratic Republic of Congo (~70% of global supply),
-            lithium processing is dominated by China and Chile, and nickel supply chains face their own geographic
-            concentration. Simultaneous global EV and grid storage buildout could create scarcity pricing that
-            raises battery costs above modeled values
+        <li><strong>Cobalt, lithium, and nickel (Battery Storage):</strong> Cobalt production is concentrated
+            in the DRC (~70% of global supply), lithium processing is dominated by China and Chile, and nickel
+            faces its own geographic concentration. Simultaneous EV and grid storage buildout could push
+            battery costs above modeled values
             <a href="#ref-21" class="cite">[21]</a><a href="#ref-22" class="cite">[22]</a>.</li>
         <li><strong>Rare earth elements (Wind Turbines):</strong> Neodymium and dysprosium for permanent magnets
-            in direct-drive wind turbines face severe supply concentration&mdash;China controls &gt;60% of rare earth
-            mining and ~90% of processing capacity. While geared turbines avoid rare earths, the highest-efficiency
-            offshore and large onshore designs increasingly rely on permanent magnet generators
+            face severe supply concentration&mdash;China controls &gt;60% of mining and ~90% of processing.
+            The highest-efficiency onshore and offshore designs increasingly rely on permanent magnet generators
             <a href="#ref-23" class="cite">[23]</a>.</li>
-        <li><strong>Silicon and silver (Solar PV):</strong> Polysilicon supply chain concentration in China
-            (&gt;80% of global production) and growing silver demand for PV metallization contacts create supply
-            risk. Silver supply is inelastic (primarily a byproduct of copper/zinc mining), creating potential for
-            price spikes as solar deployment scales globally.</li>
-        <li><strong>Iron ore (LDES / Iron-Air):</strong> Iron-air batteries require significant iron, but iron ore
-            is globally abundant with diversified supply (Australia, Brazil, India). This represents a
-            <strong>relative advantage</strong> of iron-air chemistry&mdash;LDES supply chain risk is materially lower
+        <li><strong>Silicon and silver (Solar PV):</strong> Polysilicon supply concentration in China (&gt;80%
+            of global production) and inelastic silver supply (a byproduct of copper/zinc mining) create price
+            spike risk as solar deployment scales.</li>
+        <li><strong>Iron ore (LDES / Iron-Air):</strong> Globally abundant with diversified supply&mdash;a
+            <strong>relative advantage</strong> of iron-air chemistry. LDES supply chain risk is materially lower
             than for lithium-based storage alternatives.</li>
-        <li><strong>Copper (Grid Infrastructure &amp; Transmission):</strong> Transmission buildout and all electrical
-            infrastructure require massive copper quantities. Mining lead times for new deposits are 10&ndash;15 years,
-            and global copper demand from electrification is projected to double by 2035. Copper scarcity could raise
-            transmission costs beyond modeled adders
+        <li><strong>Copper (Grid Infrastructure &amp; Transmission):</strong> Mining lead times of 10&ndash;15
+            years and projected demand doubling by 2035 could raise transmission costs beyond modeled adders
             <a href="#ref-24" class="cite">[24]</a>.</li>
-        <li><strong>Steel and concrete (All Construction):</strong> All energy infrastructure requires steel
-            and concrete, which carry their own embodied emissions (cement alone accounts for ~8% of global
-            CO<sub>2</sub>). The model does not account for embodied emissions or potential carbon pricing on
-            construction materials.</li>
+        <li><strong>Steel and concrete (All Construction):</strong> All energy infrastructure carries embodied
+            emissions (cement alone ~8% of global CO<sub>2</sub>). The model does not account for embodied
+            emissions or potential carbon pricing on construction materials.</li>
     </ul>
 
     <h3>7.2 Modeling &amp; Temporal Limitations</h3>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2; color: var(--text-secondary);">
-        <li><strong>Static 2025 snapshot:</strong> The model captures a single point in time with no dynamic
-            capacity additions, learning curves, or technology evolution. Real-world procurement happens over
-            decades, during which costs decline (solar LCOE has fallen ~90% since 2010), new technologies emerge,
-            and grid conditions change materially.</li>
-        <li><strong>Hourly resolution only:</strong> Sub-hourly grid dynamics including frequency regulation,
-            voltage support, ramping constraints, and system inertia requirements are not captured. These constraints
-            can limit instantaneous renewable penetration and create additional integration costs not reflected
-            in modeled LCOE.</li>
-        <li><strong>Perfect foresight:</strong> The optimizer has perfect knowledge of hourly generation and demand
-            profiles for the full year. Real procurement decisions face significant weather uncertainty, demand
-            forecast error, and generator outage risk&mdash;all of which would increase the cost of achieving a
-            given matching target.</li>
-        <li><strong>Single weather year:</strong> Results use 2025 EIA-930 data only. Multi-year analysis would
-            capture interannual variability in solar irradiance, wind patterns, and hydro availability, as well
-            as extreme weather events (e.g., Texas Winter Storm Uri 2021, California heat domes).</li>
-        <li><strong>Perfect nuclear availability:</strong> Nuclear/geothermal is modeled as perfectly flat baseload.
-            Real nuclear plants have planned outages (refueling ~30 days every 18&ndash;24 months) and occasional
-            forced outages, potentially overstating clean firm's hourly contribution by 2&ndash;5%.</li>
-        <li><strong>Grid-level proxies:</strong> EIA-930 regional generation profiles may not represent specific
-            project-level assets. Actual solar/wind farm output can differ from regional averages due to
-            microclimate, panel orientation, hub height, and turbine technology.</li>
+        <li><strong>Static 2025 snapshot:</strong> No dynamic capacity additions, learning curves, or technology
+            evolution. Real procurement spans decades with declining costs and emerging technologies.</li>
+        <li><strong>Hourly resolution only:</strong> Sub-hourly dynamics (frequency regulation, ramping, inertia)
+            are not captured and could add integration costs beyond modeled LCOE.</li>
+        <li><strong>Perfect foresight:</strong> The optimizer has perfect knowledge of hourly profiles. Real
+            procurement faces weather uncertainty, demand forecast error, and outage risk.</li>
+        <li><strong>5-year averaged profiles:</strong> Results average 2021&ndash;2025 EIA-930 shapes to smooth
+            interannual variability, but extreme events (Winter Storm Uri, heat domes) may be underweighted.</li>
+        <li><strong>Perfect nuclear availability:</strong> Nuclear is modeled as flat baseload. Planned and forced
+            outages could overstate clean firm's hourly contribution by 2&ndash;5%.</li>
     </ul>
 
     <h3>7.3 Grid &amp; Infrastructure Constraints</h3>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2; color: var(--text-secondary);">
-        <li><strong>No physical transmission modeling:</strong> Transmission is modeled as a cost adder ($/MWh)
-            on new-build resources, but physical congestion, curtailment from transmission limits, deliverability
-            requirements, and interconnection queue delays (currently 5+ years in most ISOs) are not modeled
-            <a href="#ref-18" class="cite">[18]</a>. Results assume clean energy can be delivered to load in any
-            hour within the same ISO region.</li>
-        <li><strong>No reliability / adequacy assessment:</strong> Loss-of-load probability (LOLP), reserve
-            margins, and capacity adequacy metrics are not calculated. Real power systems require reliability
-            buffers (typically 15&ndash;20% reserve margin) that add cost beyond what the optimizer computes.</li>
-        <li><strong>No land use constraints:</strong> Solar and wind deployment is assumed unlimited within cost
-            tiers. Real siting faces environmental review (NEPA/CEQA), community opposition, wildlife concerns
-            (avian impacts for wind, habitat disruption for solar), and competing land uses.</li>
-        <li><strong>No construction timeline modeling:</strong> All resources are assumed instantly available.
-            Real construction takes 2&ndash;3 years for solar/wind, 3&ndash;5 years for battery storage at scale,
-            5&ndash;7+ years for nuclear, and 7&ndash;10+ years for new transmission lines.</li>
-        <li><strong>No water constraints:</strong> Nuclear and CCS-CCGT require cooling water. Drought and water
-            scarcity&mdash;particularly in CAISO and ERCOT&mdash;could constrain siting or require expensive dry
-            cooling systems not reflected in modeled LCOE.</li>
-        <li><strong>No workforce availability:</strong> Labor shortages for skilled trades (electricians,
-            ironworkers, nuclear operators, specialized welders) could constrain deployment rates and raise costs.
-            The nuclear industry faces a decades-long workforce gap that may limit new construction.</li>
+        <li><strong>No physical transmission modeling:</strong> Transmission is a cost adder only&mdash;physical
+            congestion, interconnection queues (5+ years in most ISOs), and deliverability constraints are not modeled
+            <a href="#ref-18" class="cite">[18]</a>.</li>
+        <li><strong>No reliability assessment:</strong> Reserve margins (typically 15&ndash;20%) and capacity
+            adequacy metrics are not calculated, understating real system costs.</li>
+        <li><strong>No siting constraints:</strong> Deployment is unlimited within cost tiers. Permitting,
+            community opposition, and environmental review (NEPA/CEQA) are not modeled.</li>
+        <li><strong>Instant construction:</strong> Real timelines range from 2&ndash;3 years (solar/wind) to
+            7&ndash;10+ years (nuclear, transmission).</li>
+        <li><strong>No water or workforce constraints:</strong> Nuclear/CCS cooling water needs and skilled
+            labor shortages could constrain deployment and raise costs beyond modeled values.</li>
     </ul>
 
     <h3>7.4 Economic &amp; Market Limitations</h3>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2; color: var(--text-secondary);">
-        <li><strong>Clean firm cost uncertainty (most impactful):</strong> The Medium clean firm LCOE assumption
-            is at the optimistic end of published ranges. Lazard reports new nuclear at $141&ndash;220/MWh
-            <a href="#ref-6" class="cite">[6]</a>. Results are most sensitive to this assumption in the 95&ndash;100%
-            range where clean firm dominates the portfolio.</li>
-        <li><strong>No financing cost differentiation:</strong> LCOE/LCOS is assumed constant regardless of project
-            size, developer creditworthiness, or interest rate environment. A 200 basis point change in weighted
-            average cost of capital can shift LCOE by 10&ndash;15%.</li>
-        <li><strong>Static pricing:</strong> LCOE and wholesale prices are fixed. Dynamic pricing, merit-order
-            effects, and solar price cannibalization during midday hours are not captured.</li>
-        <li><strong>No grid services revenue:</strong> Clean energy resources can earn ancillary service revenue
-            (frequency regulation, spinning reserves, capacity payments) that offsets procurement costs. The model
-            does not capture this potential revenue offset.</li>
-        <li><strong>No policy risk:</strong> ITC/PTC extension uncertainty, 45Q credit durability, state RPS
-            changes, and potential federal carbon pricing are not modeled. Policy changes could significantly alter
-            relative technology economics.</li>
-        <li><strong>No demand-side flexibility:</strong> Load shifting, demand response, and flexible consumption
-            patterns (EV charging, thermal storage, industrial scheduling) could reduce matching costs significantly.
-            Studies suggest demand flexibility alone could reduce 100% matching costs by 10&ndash;20%.</li>
+        <li><strong>Clean firm cost uncertainty (most impactful):</strong> Medium clean firm LCOE is at the
+            optimistic end of published ranges (Lazard: $141&ndash;220/MWh for new nuclear
+            <a href="#ref-6" class="cite">[6]</a>). Results are most sensitive to this above 95% matching.</li>
+        <li><strong>Static pricing:</strong> LCOE, LCOS, and wholesale prices are fixed. Dynamic pricing,
+            merit-order effects, solar cannibalization, and financing cost variation (200bp WACC shift = 10&ndash;15%
+            LCOE change) are not captured.</li>
+        <li><strong>No grid services revenue:</strong> Ancillary service revenue (frequency regulation, capacity
+            payments) that could offset procurement costs is not modeled.</li>
+        <li><strong>No policy risk:</strong> ITC/PTC extension, 45Q credit durability, and potential carbon pricing
+            are not modeled.</li>
+        <li><strong>No demand-side flexibility:</strong> Load shifting and demand response could reduce 100%
+            matching costs by an estimated 10&ndash;20%.</li>
     </ul>
 
     <h3>7.5 Storage &amp; Emission Limitations</h3>
@@ -1575,26 +1523,16 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             extend to all U.S. balancing authorities for national applicability.</li>
     </ul>
 
-    <h3>7.6 Interpreting Results Given These Limitations</h3>
+    <h3>7.6 Interpreting Results</h3>
     <p>
-        Given the constraints documented above, results should be interpreted as follows:
+        Modeled costs are a <strong>theoretical floor</strong>&mdash;real-world costs will be higher.
+        The <strong>relative ordering</strong> of technologies across regions is more robust than absolute
+        values, since supply constraints tend to affect all projects similarly within a region. Treat results
+        as <strong>directional guidance</strong> for procurement strategy: most reliable in the 75&ndash;90%
+        range, increasingly uncertain above 95% where clean firm and storage assumptions dominate.
+        The L/M/H sensitivity toggles capture cost uncertainty but not physical constraints, permitting risk,
+        or workforce shortages.
     </p>
-    <ul style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2; color: var(--text-secondary);">
-        <li>Modeled costs represent a <strong>cost-optimized theoretical floor</strong> assuming no supply constraints,
-            no siting barriers, and no construction delays.</li>
-        <li>Real-world procurement costs will likely be <strong>higher</strong> due to resource constraints, permitting
-            timelines, supply chain friction, and financing variability.</li>
-        <li>The <strong>relative ordering</strong> of technologies (which is cheapest in each region) is more robust
-            than absolute cost values, because supply constraints tend to affect all projects in a region similarly.</li>
-        <li>Users should treat results as <strong>directional guidance</strong> for procurement strategy, not as precise
-            cost predictions for specific projects.</li>
-        <li>The sensitivity toggles (Low/Medium/High) partially capture cost uncertainty but do not capture all
-            constraint dimensions. Physical resource constraints, permitting risk, and workforce shortages represent
-            additional cost uncertainty beyond the modeled toggle ranges.</li>
-        <li>Results are <strong>most reliable</strong> in the 75&ndash;90% matching range and should be treated
-            as increasingly uncertain above 95%, where small changes in clean firm cost or storage availability
-            produce large cost swings.</li>
-    </ul>
 
     <h3>7.7 Future Work</h3>
     <p>
@@ -1633,32 +1571,13 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <h2 id="appendix">Appendix: Detailed Sensitivity Results &amp; Investment Planning Scenarios</h2>
 
     <p>
-        This appendix provides detailed results from the 324-scenario sensitivity analysis, framed within a
-        <strong>phased procurement planning context</strong> anchored to established decarbonization timelines:
-        <strong>80% hourly clean energy by 2035</strong> (Phase 1), <strong>95% by 2040</strong> (Phase 2),
-        and <strong>99&ndash;100% by 2045</strong> (Phase 3).
+        Detailed results from the 324-scenario sensitivity analysis, framed as a
+        <strong>phased procurement plan</strong>: <strong>80% by 2035</strong> (Phase 1),
+        <strong>95% by 2040</strong> (Phase 2), <strong>99&ndash;100% by 2045</strong> (Phase 3).
+        These milestones align with SBTi power sector pathways, US federal goals, IEA Net Zero,
+        state mandates (CA/NY/MN covering 53% of US population), and corporate 24/7 CFE commitments
+        from 140+ UN Compact signatories.
     </p>
-
-    <p>
-        These milestones are grounded in the convergence of major decarbonization frameworks:
-    </p>
-    <ul style="margin: 10px 0 20px 24px; font-size: 0.92rem; line-height: 2.0; color: var(--text-secondary);">
-        <li><strong>US federal policy</strong> targets 80% clean electricity by 2030 and 100% carbon-free by 2035 (annual matching)</li>
-        <li><strong>IEA Net Zero Scenario</strong> calls for net-zero electricity in advanced economies by 2035</li>
-        <li><strong>SBTi power sector pathways</strong> require 70&ndash;92% emissions reduction by 2035 and near-zero by 2040&ndash;2045</li>
-        <li><strong>State mandates</strong> &mdash; California (100% by 2045), New York (100% by 2040), Minnesota (100% by 2040) &mdash; covering 53% of the US population</li>
-        <li><strong>Corporate 24/7 CFE commitments</strong> from Google, Microsoft, and 140+ UN Compact signatories target hourly matching by 2030&ndash;2040</li>
-    </ul>
-
-    <div class="note-box">
-        <strong>Why these three milestones?</strong> The <strong>80% / 2035</strong> target aligns with the SBTi lower-bound
-        power sector pathway and US federal near-term goals. <strong>95% / 2040</strong> corresponds to the SBTi
-        upper-bound pathway and serves as the critical inflection point where firm generation investment
-        decisions lock in. <strong>99&ndash;100% / 2045</strong> reflects the SBTi "near-zero" endpoint, California's
-        100% zero-carbon mandate, and the practical ceiling where marginal abatement costs remain within
-        range of established carbon pricing benchmarks (EPA social cost of carbon at $51/ton, EU ETS at
-        $60&ndash;100/ton, Rennert et al. $185/ton).
-    </div>
 
     <h3>A.1 LCOE Sensitivity Parameters</h3>
     <p>
