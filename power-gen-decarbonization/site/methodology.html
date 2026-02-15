@@ -34,6 +34,21 @@
 
 <div class="main-content" style="max-width: 900px;">
 
+    <div class="key-insights" style="max-width: 900px;">
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#128202;</span>
+            <div><strong>eGRID + EIA</strong><br>Plant-level data from EPA eGRID 2023 and EIA Form 923, aggregated to parent company level</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#9881;</span>
+            <div><strong>Co-Optimized</strong><br>Cost modeling uses LCOE data from Lazard, NREL ATB, and our hourly CFE optimizer</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#127758;</span>
+            <div><strong>4 Scenarios</strong><br>BAU, Policy-Enabled, SBTi-Aligned, and IEA NZE/1.5°C assessed for each generator</div>
+        </div>
+    </div>
+
     <!-- Section 1: Overview -->
     <section class="section fade-in">
         <div class="section-header">
@@ -114,8 +129,8 @@
         <ol style="margin-left: 20px; color: var(--text-secondary);">
             <li style="margin-bottom: 8px;"><strong>Operator name matching:</strong> eGRID plant operator names (OPRNAME field) are matched to the 15 target parent companies using substring matching with a curated mapping table. Example: "Georgia Power" → Southern Company, "Luminant" → Vistra Energy.</li>
             <li style="margin-bottom: 8px;"><strong>Corporate structure validation:</strong> Matches are validated against SEC filings, S&P Global corporate trees, and EIA-860 ownership data to ensure accuracy, especially for recently merged/acquired entities.</li>
-            <li style="margin-bottom: 8px;"><strong>Constellation + Calpine treatment:</strong> Constellation Energy completed its acquisition of Calpine Corporation in January 2026. We treat the combined entity as one company, aggregating both Constellation and Calpine plant data.<sup class="ref">22</sup></li>
-            <li style="margin-bottom: 8px;"><strong>Metric calculation:</strong> For each parent company, we sum annual net generation (MWh), annual CO₂ emissions (short tons), and compute fleet-weighted average emissions intensity (lbs CO₂/MWh = total CO₂ tons × 2000 / total MWh).</li>
+            <li style="margin-bottom: 8px;"><strong>Constellation Energy:</strong> Constellation Energy&rsquo;s fleet includes both its nuclear plants and gas generation assets (including the former Calpine fleet). All plant data is aggregated under Constellation as a single entity throughout the analysis.<sup class="ref">22</sup></li>
+            <li style="margin-bottom: 8px;"><strong>Metric calculation:</strong> For each parent company, we sum annual net generation (MWh), annual CO₂ emissions (metric tonnes), and compute fleet-weighted average emissions intensity (kg CO₂/MWh = total CO₂ tonnes × 1000 / total MWh).</li>
             <li style="margin-bottom: 8px;"><strong>Fuel mix:</strong> Plant-level generation by primary fuel category is summed and converted to percentage shares.</li>
         </ol>
 
@@ -176,7 +191,7 @@
             <li style="margin-bottom: 8px;"><strong>No demand-side modeling:</strong> We do not model changes in electricity demand, load growth from electrification, or demand response. Load growth could significantly affect both total emissions and the feasibility of decarbonization pathways.</li>
             <li style="margin-bottom: 8px;"><strong>Simplified cost modeling:</strong> LCOE comparisons do not fully capture system integration costs, capacity value differences, or locational pricing. The CFE optimizer provides more rigorous system cost analysis for the 5 ISOs it covers.</li>
             <li style="margin-bottom: 8px;"><strong>Regulatory uncertainty:</strong> Federal and state policy environments are subject to change. IRA tax credit availability, EPA regulations, and state RPS mandates may be modified, expanded, or repealed.</li>
-            <li style="margin-bottom: 8px;"><strong>Corporate structure changes:</strong> Mergers, spin-offs, and divestitures can change company rankings and fleet composition. The Constellation-Calpine merger (Jan 2026) is the most recent major change reflected here.<sup class="ref">22</sup></li>
+            <li style="margin-bottom: 8px;"><strong>Corporate structure:</strong> Company fleet compositions reflect current ownership structures. The analysis treats each company as its current combined entity.</li>
         </ul>
     </section>
 
@@ -209,7 +224,7 @@
             <li style="margin-bottom: 6px;">[19] Princeton University, "Net-Zero America: Potential Pathways, Infrastructure, and Impacts," 2021. <a href="https://netzeroamerica.princeton.edu/" target="_blank">netzeroamerica.princeton.edu</a></li>
             <li style="margin-bottom: 6px;">[20] Rhodium Group, "Taking Stock 2024: US Greenhouse Gas Emissions Outlook." <a href="https://rhg.com/research/taking-stock-2024/" target="_blank">rhg.com</a></li>
             <li style="margin-bottom: 6px;">[21] NERC, "Long-Term Reliability Assessment" and "Seasonal Reliability Assessments," 2024. <a href="https://www.nerc.com/" target="_blank">nerc.com</a></li>
-            <li style="margin-bottom: 6px;">[22] Constellation Energy, "Constellation to Acquire Calpine," press release, January 2025; transaction closed January 2026.</li>
+            <li style="margin-bottom: 6px;">[22] Constellation Energy corporate filings; includes nuclear, geothermal, and gas generation assets.</li>
             <li style="margin-bottom: 6px;">[23] Rocky Mountain Institute, "The State of Utility Planning, Q4 2025." <a href="https://rmi.org/the-state-of-utility-planning-2025-q4/" target="_blank">rmi.org</a></li>
             <li style="margin-bottom: 6px;">[24] McKinsey & Company, "Global Energy Perspective 2025." <a href="https://www.mckinsey.com/industries/energy-and-materials/our-insights/global-energy-perspective" target="_blank">mckinsey.com</a></li>
             <li style="margin-bottom: 6px;">[25] Lazard, "Levelized Cost of Energy+ (v18.0, 2025)." <a href="https://www.lazard.com/research-insights/levelized-cost-of-energyplus-lcoeplus/" target="_blank">lazard.com</a></li>

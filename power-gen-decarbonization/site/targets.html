@@ -35,6 +35,21 @@
 
 <div class="main-content">
 
+    <div class="key-insights">
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#9888;</span>
+            <div><strong>SBTi Equity Gap</strong><br>Same percentage target costs 5–10× more for already-clean generators than coal-heavy ones</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#128202;</span>
+            <div><strong>1 of 15 Validated</strong><br>Only AES has SBTi-validated science-based targets; 8 of 15 stopped CDP reporting in 2024</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#128200;</span>
+            <div><strong>Both Metrics Matter</strong><br>Intensity targets drive efficiency; absolute caps ensure genuine emissions reduction in a growing market</div>
+        </div>
+    </div>
+
     <!-- Framework Overview -->
     <section class="section fade-in">
         <div class="section-header">
@@ -88,7 +103,7 @@
             <div class="chart-wrapper" style="height: 500px;">
                 <canvas id="targetGapChart"></canvas>
             </div>
-            <p class="citation">Current intensity from eGRID 2023 estimates. SBTi target ~305 lbs/MWh by 2030; IEA NZE ~290 lbs/MWh by 2030.<sup class="ref">1,10,11</sup></p>
+            <p class="citation">Current intensity from eGRID 2023 estimates. SBTi target ~138 kg/MWh by 2030; IEA NZE ~132 kg/MWh by 2030.<sup class="ref">1,10,11</sup></p>
         </div>
 
         <!-- Traffic Light Table -->
@@ -97,7 +112,7 @@
                 <thead>
                     <tr>
                         <th>Company</th>
-                        <th>Current (lbs/MWh)</th>
+                        <th>Current (kg/MWh)</th>
                         <th>Stated Target</th>
                         <th>SBTi 2030</th>
                         <th>IEA NZE 2035</th>
@@ -105,21 +120,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td class="company-name">Constellation</td><td>390</td><td>100% clean by 2040<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not formally committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Close</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Stretch</span></td><td>Nuclear backbone makes near-term targets achievable. Post-Calpine merger adds 101 TWh gas &mdash; combined entity targets need reset. Microsoft PPA signals demand-side pull for nuclear.</td></tr>
-                    <tr><td class="company-name">NextEra</td><td>490</td><td>Real Zero by 2045<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Committed (pending) | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Close</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Stretch</span></td><td>World&rsquo;s largest wind+solar generator. 30 GW solar pipeline. FPL gas fleet needs addressing but massive renewable pipeline provides momentum.</td></tr>
-                    <tr><td class="company-name">Duke</td><td>780</td><td>Net-zero by 2050; 50% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td>Retiring 8.4 GW coal by 2035. 30 GW renewables+storage planned. NC SB 266 mandates 70% by 2030. Indiana fleet is the bottleneck.</td></tr>
-                    <tr><td class="company-name">Southern</td><td>795</td><td>Net-zero by 2050; 50% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: A- (2021)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td>Vogtle 3&amp;4 (2.2 GW new nuclear) online. Plant Barry CCS demo. 46% Scope 1 reduction since 2007. Coal retirement pace across AL/GA is the key variable.</td></tr>
-                    <tr><td class="company-name">Vistra</td><td>1,070</td><td>Net-zero by 2050; 60% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: C (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Already closed 6.8 GW coal since 2010. 7.3 GW solar+battery building in ERCOT. Comanche Peak nuclear (2.4 GW) anchors clean baseload. ~4 GW IL/OH coal remains.</td></tr>
-                    <tr><td class="company-name">AEP</td><td>1,100</td><td>Net-zero by 2045; 80% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed (CA100+ aligned) | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Most ambitious interim target among coal-heavy generators. Already retired 13 GW coal. 3.7 GW wind in OK/TX. InfluenceMap D rating &mdash; lobbying contradicts goals.</td></tr>
-                    <tr><td class="company-name">Dominion</td><td>735</td><td>Net-zero by 2050; VCEA 100% by 2045<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: A- (2019)</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Moderate</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td>CVOW 2.6 GW offshore wind (largest US project) under construction. CA100+ rated: aligned with 1.5&deg;C short-term. VCEA mandate provides regulatory certainty.</td></tr>
-                    <tr><td class="company-name">BH Energy</td><td>1,090</td><td>Varies by subsidiary<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: F (non-disclosure)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Split personality: MidAmerican ~100% renewable in Iowa; PacifiCorp has massive coal + wildfire liability. Plans coal through 2049. CDP non-disclosure (F score).</td></tr>
-                    <tr><td class="company-name">Entergy</td><td>770</td><td>Net-zero by 2050; 50% rate reduction by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: B- (2023)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td>4 nuclear units provide clean base. Nearly coal-free (2024). Gas dependence is high and industrial load growth from LNG/petrochemical complicates absolute reduction.</td></tr>
-                    <tr><td class="company-name">AES</td><td>820</td><td>Net-zero by 2040; exit coal by 2025<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: 1.5&deg;C Validated (Nov 2025) | CDP: A-</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td>Most ambitious target (2040 net-zero). Only SBTi 1.5&deg;C validated utility among top 15. Coal exit delayed to 2028 for Indiana. 12+ GW global renewables pipeline.</td></tr>
-                    <tr><td class="company-name">Xcel</td><td>880</td><td>100% carbon-free by 2050; 80% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Aligned (not formally validated) | CDP: A-</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td>First major US utility to pledge 100% clean (2018). 10+ GW wind. 53% Scope 1 reduction since 2005. Closing all CO coal by 2030. First-mover credibility.</td></tr>
-                    <tr><td class="company-name">Evergy</td><td>1,145</td><td>Net-zero by 2045; 70% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Highest intensity among top 15. Kansas has world-class wind resource &mdash; enormous latent opportunity. Wolf Creek nuclear provides clean baseload. 44% reduction achieved.</td></tr>
-                    <tr><td class="company-name">DTE</td><td>980</td><td>Net-zero by 2050; MI law: 100% by 2040<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td>MI Clean Energy Standard (2023) mandates 100% by 2040. CleanVision IRP approved. Fermi 2 nuclear to 2045. Belle River coal retiring 2028&ndash;2029.</td></tr>
-                    <tr><td class="company-name">WEC</td><td>935</td><td>Carbon-neutral by 2050; 80% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed (CA100+ aligned) | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td>Point Beach nuclear (1.2 GW) life-extended. Exceeded original 40% target early &mdash; escalated to 80%. $9.1B clean energy investment 2025&ndash;2029.</td></tr>
-                    <tr><td class="company-name">PPL</td><td>1,260</td><td>Net-zero by 2050; 70% by 2035<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Highest intensity among top 15 &mdash; driven by LG&amp;E/KU Kentucky coal. Ambitious 2035 target faces major execution risk. 1 GW solar in KY IRP by 2030.</td></tr>
+                    <tr><td class="company-name">Constellation</td><td>177</td><td>100% clean by 2040<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not formally committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Close</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Stretch</span></td><td>Nuclear backbone (23 GW) provides clean baseload foundation. Gas CCGT fleet (~130 TWh) is the primary decarbonization challenge. Microsoft PPA signals demand-side pull for nuclear.</td></tr>
+                    <tr><td class="company-name">NextEra</td><td>222</td><td>Real Zero by 2045<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Committed (pending) | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Close</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Stretch</span></td><td>World&rsquo;s largest wind+solar generator. 30 GW solar pipeline. FPL gas fleet needs addressing but massive renewable pipeline provides momentum.</td></tr>
+                    <tr><td class="company-name">Duke</td><td>354</td><td>Net-zero by 2050; 50% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td>Retiring 8.4 GW coal by 2035. 30 GW renewables+storage planned. NC SB 266 mandates 70% by 2030. Indiana fleet is the bottleneck.</td></tr>
+                    <tr><td class="company-name">Southern</td><td>361</td><td>Net-zero by 2050; 50% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: A- (2021)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td>Vogtle 3&amp;4 (2.2 GW new nuclear) online. Plant Barry CCS demo. 46% Scope 1 reduction since 2007. Coal retirement pace across AL/GA is the key variable.</td></tr>
+                    <tr><td class="company-name">Vistra</td><td>486</td><td>Net-zero by 2050; 60% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: C (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Already closed 6.8 GW coal since 2010. 7.3 GW solar+battery building in ERCOT. Comanche Peak nuclear (2.4 GW) anchors clean baseload. ~4 GW IL/OH coal remains.</td></tr>
+                    <tr><td class="company-name">AEP</td><td>499</td><td>Net-zero by 2045; 80% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed (CA100+ aligned) | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Most ambitious interim target among coal-heavy generators. Already retired 13 GW coal. 3.7 GW wind in OK/TX. InfluenceMap D rating &mdash; lobbying contradicts goals.</td></tr>
+                    <tr><td class="company-name">Dominion</td><td>333</td><td>Net-zero by 2050; VCEA 100% by 2045<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: A- (2019)</span></td><td><span class="traffic-light"><span class="traffic-dot yellow"></span> Moderate</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td>CVOW 2.6 GW offshore wind (largest US project) under construction. CA100+ rated: aligned with 1.5&deg;C short-term. VCEA mandate provides regulatory certainty.</td></tr>
+                    <tr><td class="company-name">BH Energy</td><td>494</td><td>Varies by subsidiary<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: F (non-disclosure)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Split personality: MidAmerican ~100% renewable in Iowa; PacifiCorp has massive coal + wildfire liability. Plans coal through 2049. CDP non-disclosure (F score).</td></tr>
+                    <tr><td class="company-name">Entergy</td><td>349</td><td>Net-zero by 2050; 50% rate reduction by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: B- (2023)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td>4 nuclear units provide clean base. Nearly coal-free (2024). Gas dependence is high and industrial load growth from LNG/petrochemical complicates absolute reduction.</td></tr>
+                    <tr><td class="company-name">AES</td><td>372</td><td>Net-zero by 2040; exit coal by 2025<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: 1.5&deg;C Validated (Nov 2025) | CDP: A-</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td>Most ambitious target (2040 net-zero). Only SBTi 1.5&deg;C validated utility among top 15. Coal exit delayed to 2028 for Indiana. 12+ GW global renewables pipeline.</td></tr>
+                    <tr><td class="company-name">Xcel</td><td>399</td><td>100% carbon-free by 2050; 80% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Aligned (not formally validated) | CDP: A-</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td>First major US utility to pledge 100% clean (2018). 10+ GW wind. 53% Scope 1 reduction since 2005. Closing all CO coal by 2030. First-mover credibility.</td></tr>
+                    <tr><td class="company-name">Evergy</td><td>519</td><td>Net-zero by 2045; 70% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Highest intensity among top 15. Kansas has world-class wind resource &mdash; enormous latent opportunity. Wolf Creek nuclear provides clean baseload. 44% reduction achieved.</td></tr>
+                    <tr><td class="company-name">DTE</td><td>445</td><td>Net-zero by 2050; MI law: 100% by 2040<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td>MI Clean Energy Standard (2023) mandates 100% by 2040. CleanVision IRP approved. Fermi 2 nuclear to 2045. Belle River coal retiring 2028&ndash;2029.</td></tr>
+                    <tr><td class="company-name">WEC</td><td>424</td><td>Carbon-neutral by 2050; 80% by 2030<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed (CA100+ aligned) | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Gap</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Large gap</span></td><td>Point Beach nuclear (1.2 GW) life-extended. Exceeded original 40% target early &mdash; escalated to 80%. $9.1B clean energy investment 2025&ndash;2029.</td></tr>
+                    <tr><td class="company-name">PPL</td><td>572</td><td>Net-zero by 2050; 70% by 2035<br><span style="font-size:0.75rem;color:var(--text-muted)">SBTi: Not committed | CDP: N/R (2024)</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td><span class="traffic-light"><span class="traffic-dot red"></span> Very large</span></td><td>Highest intensity among top 15 &mdash; driven by LG&amp;E/KU Kentucky coal. Ambitious 2035 target faces major execution risk. 1 GW solar in KY IRP by 2030.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -191,21 +206,46 @@
 
     <div class="energy-divider"></div>
 
-    <!-- The Intensity vs Absolute Tension -->
+    <!-- The SBTi Trajectory Question -->
     <section class="story-section fade-in">
-        <span class="story-badge amber">The Metrics Debate</span>
+        <span class="story-badge amber">The Trajectory Question</span>
         <div class="story-content">
-            <h2>Intensity vs. Absolute Targets: Which Metric Matters More?</h2>
+            <h2>Same Percentage, Wildly Different Costs: The SBTi Equity Problem</h2>
 
-            <p><strong>Intensity targets</strong> (gCO₂/kWh or lbs/MWh) measure carbon per unit of output. They're useful for comparing efficiency across different-sized generators. SBTi v2 uses intensity as its primary metric for the power sector.</p>
-
-            <p><strong>Absolute targets</strong> (MT CO₂/year) measure total climate impact. A company can improve intensity while increasing absolute emissions if generation grows faster than efficiency improves.</p>
+            <p>SBTi&rsquo;s Sectoral Decarbonization Approach (SDA) requires all power generators to achieve approximately the <strong>same percentage reduction from their baseline intensity</strong> &mdash; roughly 85% by 2035. This creates a fundamental equity problem: the same percentage reduction costs radically different amounts depending on fleet composition.</p>
 
             <div class="callout warning">
-                <p><strong>The load growth complication:</strong> With electricity demand surging from data centers, EVs, and industrial electrification, many generators are growing their output significantly. Constellation's load is projected to grow 15&ndash;20% by 2030. If generation grows 20% but intensity stays flat, absolute emissions increase 20%. Intensity targets alone don't guarantee climate benefit in a growing market.</p>
+                <p><strong>The math that makes this unfair:</strong> Evergy (519 kg CO&#8322;/MWh) needs an 85% reduction, meaning it must reach ~78 kg/MWh. Its path: replace coal with Kansas wind at $25&ndash;35/MWh, undercutting coal operating costs. Marginal abatement cost: ~$17&ndash;28/tonne CO&#8322;. <strong>Economically rational even without a carbon price.</strong></p>
+                <p style="margin-top: 8px;">Constellation (177 kg/MWh) also needs an ~85% reduction, meaning it must reach ~27 kg/MWh. Its remaining emissions are from efficient gas CCGTs &mdash; the cheapest-to-operate fossil plants in the fleet. Replacing them requires CCS ($90&ndash;130/MWh), new nuclear ($120&ndash;180/MWh), or massive renewables+LDES overbuild. Marginal abatement cost: ~$88&ndash;165/tonne CO&#8322;. <strong>Requires either a significant carbon price or extraordinary corporate commitment.</strong></p>
             </div>
 
-            <p>The analysis recommends <strong>both metrics simultaneously</strong>: intensity targets to drive efficiency, absolute caps to ensure genuine emissions reduction. This is consistent with SBTi v2's approach, which requires companies to set both near-term intensity and long-term absolute targets.</p>
+            <p>SBTi doesn&rsquo;t give Constellation &ldquo;credit&rdquo; for already being clean. It demands the same percentage reduction regardless of how expensive each remaining tonne is to abate. A coal-heavy generator achieves 85% reduction cheaply by harvesting low-hanging fruit; an already-clean generator must spend 5&ndash;10&times; more per tonne to achieve the same percentage because it&rsquo;s already done the easy work.</p>
+
+            <p><strong>This is the core paradox of percentage-based targets:</strong> They penalize early movers. A generator that decarbonized proactively over the past two decades faces a steeper marginal abatement curve for its remaining emissions than one that delayed action. The SDA framework was designed for economy-wide fairness (higher-emitting sectors do more), but within the power sector, it creates perverse outcomes where the cleanest generators face the hardest &mdash; and most expensive &mdash; targets.</p>
+
+            <div class="callout">
+                <p><strong>What would be fairer?</strong> An absolute intensity threshold approach (everyone must reach X kg/MWh by year Y) would be more equitable &mdash; already-clean generators are closer to the finish line and spend less. SBTi&rsquo;s v2 draft does include elements of convergence, but the near-term pathway still relies on percentage reductions from company-specific baselines. The question is whether this approach inadvertently penalizes generators that have already invested in clean energy infrastructure.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Intensity vs. Absolute -->
+    <section class="story-section fade-in">
+        <span class="story-badge navy">The Metrics Debate</span>
+        <div class="story-content">
+            <h2>Intensity vs. Absolute Targets: Why Both Metrics Matter</h2>
+
+            <p><strong>Intensity targets</strong> (gCO&#8322;/kWh or kg/MWh) measure carbon per unit of output. SBTi v2 uses intensity as its primary metric for the power sector. But intensity can mask growing absolute emissions.</p>
+
+            <p><strong>Absolute targets</strong> (Mt CO&#8322;/year) measure total climate impact. A company can improve intensity while increasing absolute emissions if generation grows faster than efficiency improves.</p>
+
+            <div class="callout warning">
+                <p><strong>The load growth complication:</strong> With electricity demand surging from data centers, EVs, and industrial electrification, many generators are growing their output significantly. Constellation&rsquo;s load is projected to grow 15&ndash;20% by 2030. If generation grows 20% but intensity stays flat, absolute emissions increase 20%. Intensity targets alone don&rsquo;t guarantee climate benefit in a growing market.</p>
+            </div>
+
+            <p>The analysis recommends <strong>both metrics simultaneously</strong>: intensity targets to drive efficiency, absolute caps to ensure genuine emissions reduction. This is consistent with SBTi v2&rsquo;s approach, which requires companies to set both near-term intensity and long-term absolute targets.</p>
         </div>
     </section>
 
@@ -233,14 +273,14 @@ document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
 // Target Gap Chart
 const companies = [
-    { name: 'Constellation', intensity: 390 }, { name: 'NextEra', intensity: 490 },
-    { name: 'Dominion', intensity: 735 }, { name: 'Entergy', intensity: 770 },
-    { name: 'Duke', intensity: 780 }, { name: 'Southern', intensity: 795 },
-    { name: 'AES', intensity: 820 }, { name: 'Xcel', intensity: 880 },
-    { name: 'WEC', intensity: 935 }, { name: 'DTE', intensity: 980 },
-    { name: 'Vistra', intensity: 1070 }, { name: 'BH Energy', intensity: 1090 },
-    { name: 'AEP', intensity: 1100 }, { name: 'Evergy', intensity: 1145 },
-    { name: 'PPL', intensity: 1260 }
+    { name: 'Constellation', intensity: 177 }, { name: 'NextEra', intensity: 222 },
+    { name: 'Dominion', intensity: 333 }, { name: 'Entergy', intensity: 349 },
+    { name: 'Duke', intensity: 354 }, { name: 'Southern', intensity: 361 },
+    { name: 'AES', intensity: 372 }, { name: 'Xcel', intensity: 399 },
+    { name: 'WEC', intensity: 424 }, { name: 'DTE', intensity: 445 },
+    { name: 'Vistra', intensity: 486 }, { name: 'BH Energy', intensity: 494 },
+    { name: 'AEP', intensity: 499 }, { name: 'Evergy', intensity: 519 },
+    { name: 'PPL', intensity: 572 }
 ];
 
 new Chart(document.getElementById('targetGapChart').getContext('2d'), {
@@ -249,8 +289,8 @@ new Chart(document.getElementById('targetGapChart').getContext('2d'), {
         labels: companies.map(c => c.name),
         datasets: [
             {
-                label: 'SBTi 2030 Target (~305)',
-                data: companies.map(() => 305),
+                label: 'SBTi 2030 Target (~138)',
+                data: companies.map(() => 138),
                 backgroundColor: 'rgba(14,165,233,0.15)',
                 borderColor: '#0EA5E9',
                 borderWidth: 2,
@@ -264,8 +304,8 @@ new Chart(document.getElementById('targetGapChart').getContext('2d'), {
                 label: 'Current Intensity',
                 data: companies.map(c => c.intensity),
                 backgroundColor: companies.map(c => {
-                    if (c.intensity < 500) return '#22C55E';
-                    if (c.intensity < 800) return '#F59E0B';
+                    if (c.intensity < 227) return '#22C55E';
+                    if (c.intensity < 363) return '#F59E0B';
                     return '#DC2626';
                 }),
                 borderRadius: 6,
@@ -280,7 +320,7 @@ new Chart(document.getElementById('targetGapChart').getContext('2d'), {
             legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } }
         },
         scales: {
-            y: { title: { display: true, text: 'lbs CO₂/MWh', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } },
+            y: { title: { display: true, text: 'kg CO₂/MWh', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } },
             x: { grid: { display: false }, border: { display: true }, ticks: { font: { size: 10 }, maxRotation: 45 } }
         }
     }
