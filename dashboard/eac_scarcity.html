@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — EAC Scarcity &amp; Clean Premium Analysis</title>
+<title>The 8,760 Problem — EAC Scarcity &amp; Clean Premium Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,6 +17,8 @@
     font-display: swap;
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
 /* ========== RESET & BASE ========== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,55 +43,36 @@ body {
     --text-secondary: #000000;
     --text-muted: #6B7280;
     --font-heading: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    --abundant: #22c55e;
+    --adequate: #84cc16;
+    --tightening: #eab308;
+    --scarce: #f97316;
+    --critical: #ef4444;
 }
 
 /* ========== TOP NAV ========== */
 .top-nav {
     background: #1a1a2e;
     padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: sticky;
-    top: 0;
-    z-index: 999;
+    display: flex; align-items: center; justify-content: center;
+    position: sticky; top: 0; z-index: 999;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     min-height: 48px;
 }
-.top-nav-inner {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    max-width: 1440px;
-    width: 100%;
-    justify-content: center;
-}
+.top-nav-inner { display: flex; align-items: center; gap: 0; max-width: 1440px; width: 100%; justify-content: center; }
 .top-nav a {
-    color: rgba(255,255,255,0.75);
-    text-decoration: none;
+    color: rgba(255,255,255,0.75); text-decoration: none;
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    padding: 14px 18px;
-    transition: color 0.2s, background 0.2s, border-color 0.2s;
-    border-bottom: 3px solid transparent;
-    white-space: nowrap;
+    font-size: 0.85rem; font-weight: 600; letter-spacing: 0.04em;
+    padding: 14px 18px; transition: color 0.2s, background 0.2s;
+    border-bottom: 3px solid transparent; white-space: nowrap;
 }
 .top-nav a:hover { color: #ffffff; background: rgba(255,255,255,0.06); }
 .top-nav a.nav-active { color: #ffffff; border-bottom-color: #0EA5E9; background: rgba(14,165,233,0.1); }
 .nav-hamburger {
-    display: none;
-    background: none;
-    border: none;
-    color: #ffffff;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 10px;
-    min-width: 44px;
-    min-height: 44px;
-    align-items: center;
-    justify-content: center;
+    display: none; background: none; border: none; color: #ffffff;
+    font-size: 1.5rem; cursor: pointer; padding: 10px; min-width: 44px; min-height: 44px;
+    align-items: center; justify-content: center;
 }
 .nav-hamburger svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; }
 @media (max-width: 768px) {
@@ -104,176 +87,170 @@ body {
 /* ========== HEADER ========== */
 .header {
     background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
-    color: #ffffff;
-    padding: 72px 24px 64px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
+    color: #ffffff; padding: 56px 24px 48px; text-align: center;
+    position: relative; overflow: hidden;
 }
 .header h1 {
     font-family: 'Rajdhani', 'Arial Narrow', sans-serif;
-    font-size: 2.2rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: capitalize;
-    position: relative;
-    z-index: 2;
+    font-size: 2.2rem; font-weight: 700; letter-spacing: 1px;
+    text-transform: capitalize; position: relative; z-index: 2;
 }
 .header .subtitle {
-    font-size: 1.05rem;
-    color: rgba(255,255,255,0.85);
-    max-width: 700px;
-    margin: 12px auto 0;
-    position: relative;
-    z-index: 2;
+    font-size: 1.0rem; color: rgba(255,255,255,0.85);
+    max-width: 720px; margin: 10px auto 0; position: relative; z-index: 2;
 }
 .header-accent {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #22C55E, #84cc16, #eab308, #f97316, #EF4444);
     z-index: 2;
 }
 
-/* ========== CONTENT ========== */
-.content {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 40px 32px 60px;
+/* ========== LAYOUT ========== */
+.dashboard-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 60px; }
+.controls-bar {
+    background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px 24px; margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
 }
-h2 {
-    font-family: var(--font-heading);
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin: 48px 0 16px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid var(--border-light);
+.control-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.control-group label {
+    font-family: var(--font-heading); font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
 }
-h3 {
-    font-family: var(--font-heading);
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: var(--navy);
-    margin: 32px 0 12px;
+.control-group .control-value {
+    font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--navy);
 }
-h4 {
-    font-family: var(--font-heading);
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 20px 0 8px;
+.control-group select, .control-group input[type=range] {
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem;
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: #fff; min-height: 36px; cursor: pointer;
 }
-p { margin: 10px 0; }
-ul, ol { margin: 10px 0 10px 24px; }
-li { margin-bottom: 6px; }
+.control-group input[type=range] { padding: 0; min-height: 28px; accent-color: #1565C0; }
 
-/* Cards */
-.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0; }
-.card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+/* Region pills */
+.region-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.region-pill {
+    font-family: var(--font-heading); font-size: 0.82rem; font-weight: 600;
+    padding: 6px 14px; border-radius: 20px; cursor: pointer; border: 2px solid var(--border);
+    background: #fff; color: var(--navy); transition: all 0.2s; min-height: 36px;
+    display: flex; align-items: center;
 }
+.region-pill:hover { border-color: #1565C0; background: rgba(21,101,192,0.05); }
+.region-pill.active { background: #1565C0; color: #fff; border-color: #1565C0; }
 
-/* Tables */
-.data-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
-.data-table th, .data-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border-light); }
-.data-table th { background: #F0F2F5; font-weight: 600; font-size: 0.85rem; }
-.data-table tr:hover { background: #F7F8FA; }
+/* Growth pills */
+.growth-pills { display: flex; gap: 4px; }
+.growth-pill {
+    font-family: var(--font-heading); font-size: 0.8rem; font-weight: 600;
+    padding: 5px 12px; border-radius: 16px; cursor: pointer; border: 2px solid var(--border);
+    background: #fff; color: var(--navy); transition: all 0.2s; min-height: 34px;
+}
+.growth-pill:hover { border-color: #1565C0; }
+.growth-pill.active { background: var(--navy); color: #fff; border-color: var(--navy); }
 
-/* Callouts */
-.callout {
-    background: #E8F4FD;
-    border-left: 4px solid #0EA5E9;
-    padding: 16px 20px;
-    border-radius: 4px;
-    margin: 16px 0;
-}
-.callout.warning {
-    background: #FEF3C7;
-    border-left-color: #F59E0B;
-}
-.callout.danger {
-    background: #FEE2E2;
-    border-left-color: #DC2626;
-}
-.callout.success {
-    background: #D1FAE5;
-    border-left-color: #22C55E;
-}
-
-/* Stats */
-.stat-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin: 24px 0;
-}
+/* Stats row */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
 .stat-tile {
-    flex: 1;
-    min-width: 140px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    padding: 20px 16px;
-    text-align: center;
+    background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 18px 14px; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; overflow: hidden;
 }
+.stat-tile::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--navy);
+}
+.stat-tile.green::before { background: var(--abundant); }
+.stat-tile.amber::before { background: var(--tightening); }
+.stat-tile.red::before { background: var(--critical); }
+.stat-tile.blue::before { background: #1565C0; }
 .stat-value {
-    font-family: var(--font-heading);
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--navy);
+    font-family: var(--font-heading); font-size: 1.8rem; font-weight: 700; color: var(--navy);
+    line-height: 1.1;
 }
-.stat-label {
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    margin-top: 4px;
+.stat-label { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3; }
+
+/* Chart containers */
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+.chart-card {
+    background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.chart-card h3 {
+    font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700;
+    color: var(--navy); margin-bottom: 4px;
+}
+.chart-card .chart-subtitle { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; }
+.chart-container { position: relative; width: 100%; min-height: 320px; }
+.chart-card-full { grid-column: 1 / -1; }
+
+/* Heatmap */
+.heatmap-grid {
+    display: grid; gap: 2px; width: 100%;
+}
+.heatmap-cell {
+    border-radius: 3px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-heading); font-size: 0.72rem; font-weight: 600;
+    color: #fff; min-height: 36px; cursor: default; transition: transform 0.15s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.heatmap-cell:hover { transform: scale(1.05); z-index: 2; }
+.heatmap-header {
+    font-family: var(--font-heading); font-size: 0.72rem; font-weight: 700;
+    color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+    text-transform: uppercase; letter-spacing: 0.05em;
 }
 
-/* Badge */
-.badge {
-    display: inline-block;
-    font-family: var(--font-heading);
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 4px 12px;
-    border-radius: 20px;
-    margin-bottom: 12px;
-}
-.badge.red { background: #FEE2E2; color: #DC2626; }
-.badge.amber { background: #FEF3C7; color: #D97706; }
-.badge.green { background: #D1FAE5; color: #059669; }
-.badge.blue { background: #DBEAFE; color: #2563EB; }
+/* Scarcity band legend */
+.legend-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--text-muted); }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; }
 
-.accent-bar {
-    height: 4px;
-    background: linear-gradient(90deg, #1A2744, #0EA5E9, #22C55E, #F59E0B, #EF4444);
+/* Insight callout */
+.insight-box {
+    background: linear-gradient(135deg, #EFF6FF 0%, #F0F9FF 100%);
+    border: 1px solid #BFDBFE; border-left: 4px solid #1565C0;
+    border-radius: 8px; padding: 16px 20px; margin: 20px 0;
+}
+.insight-box h4 {
+    font-family: var(--font-heading); font-size: 0.95rem; font-weight: 700;
+    color: #1565C0; margin-bottom: 6px;
+}
+.insight-box p { font-size: 0.88rem; color: #1E3A5F; line-height: 1.5; }
+.insight-box.warning { background: linear-gradient(135deg, #FFFBEB, #FEF3C7); border-color: #FCD34D; border-left-color: #D97706; }
+.insight-box.warning h4 { color: #D97706; }
+.insight-box.danger { background: linear-gradient(135deg, #FEF2F2, #FEE2E2); border-color: #FECACA; border-left-color: #DC2626; }
+.insight-box.danger h4 { color: #DC2626; }
+
+/* Section */
+.section-header {
+    font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: var(--navy);
+    margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-light);
 }
 
-/* TOC */
-.toc {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    padding: 24px 32px;
-    margin-bottom: 32px;
+/* ISO comparison table */
+.iso-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.iso-table th, .iso-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border-light); }
+.iso-table th { background: #F0F2F5; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.iso-table tr:hover { background: #F7F8FA; }
+.scarcity-badge {
+    display: inline-block; font-family: var(--font-heading); font-size: 0.72rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.05em;
 }
-.toc h2 { margin-top: 0; border-bottom: none; font-size: 1.3rem; }
-.toc ol { margin-left: 16px; }
-.toc a { color: #2563EB; text-decoration: none; }
-.toc a:hover { text-decoration: underline; }
 
+.accent-bar { height: 4px; background: linear-gradient(90deg, #22C55E, #84cc16, #eab308, #f97316, #EF4444); }
+
+/* Responsive */
+@media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
 @media (max-width: 768px) {
-    .content { padding: 24px 16px 40px; }
-    .card-grid { grid-template-columns: 1fr; }
-    .stat-row { flex-direction: column; }
-    h2 { font-size: 1.5rem; }
+    .dashboard-wrap { padding: 16px 12px 40px; }
+    .controls-bar { padding: 16px; gap: 14px; }
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .chart-container { min-height: 280px; }
+    .header h1 { font-size: 1.7rem; }
+}
+@media (max-width: 480px) {
+    .stat-row { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -301,349 +278,681 @@ li { margin-bottom: 6px; }
 <div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <header class="header">
-    <h1>EAC Scarcity &amp; Clean Premium Analysis</h1>
-    <p class="subtitle">Which ISOs face Energy Attribute Certificate scarcity under hourly matching &mdash; and what will corporate buyers pay for the clean premium?</p>
+    <h1>EAC Scarcity &amp; Clean Premium Dashboard</h1>
+    <p class="subtitle">How corporate hourly matching demand collides with limited uncommitted clean supply &mdash; and what it costs</p>
     <div class="header-accent"></div>
 </header>
 
-<div class="content">
+<div class="dashboard-wrap">
 
-    <!-- TABLE OF CONTENTS -->
-    <div class="toc">
-        <h2>Contents</h2>
-        <ol>
-            <li><a href="#framing">The Question: What Happens When Corporations Go Hourly?</a></li>
-            <li><a href="#sss">Standard Supply Service: Everyone Starts Above Zero</a></li>
-            <li><a href="#scarcity-by-iso">EAC Scarcity by ISO Region</a></li>
-            <li><a href="#participation">Corporate Participation Scenarios</a></li>
-            <li><a href="#clean-premium">The Clean Premium by ISO</a></li>
-            <li><a href="#investment-signal">The Investment Signal</a></li>
-            <li><a href="#methodology-link">Detailed Methodology</a></li>
-        </ol>
-    </div>
-
-    <!-- ========== SECTION 1: FRAMING ========== -->
-    <h2 id="framing">1. The Question: What Happens When Corporations Go Hourly?</h2>
-
-    <p>
-        The convergence of three forces is about to reshape clean energy markets:
-    </p>
-    <ul>
-        <li><strong>GHG Protocol Scope 2 revision</strong> (expected late 2027) will likely require hourly matching with ISO-level deliverability for corporate emissions reporting<sup style="font-size:0.7em;color:var(--text-muted);">[6]</sup></li>
-        <li><strong>SBTi hourly matching requirements</strong> (starting 2030) will mandate time-matched clean energy procurement for ~8,000 companies with validated targets<sup style="font-size:0.7em;color:var(--text-muted);">[7]</sup></li>
-        <li><strong>Corporate 24/7 CFE commitments</strong> from Google, Microsoft, Amazon, and other hyperscalers are already driving multi-GW procurement of firm clean energy<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup></li>
-    </ul>
-
-    <p>
-        Under annual matching, a corporation buys enough RECs to cover total annual consumption &mdash; timing doesn&rsquo;t matter.
-        Under <strong>hourly matching</strong>, every hour of consumption must be matched with clean generation in that same hour,
-        in the same ISO region. This transforms the problem: daytime solar surplus becomes worthless for matching nighttime demand.
-        The binding constraint shifts to <strong>evening and nighttime hours</strong> where only nuclear, geothermal, wind, storage,
-        or CCS can deliver.
-    </p>
-
-    <div class="stat-row">
-        <div class="stat-tile">
-            <div class="stat-value">10&ndash;25%</div>
-            <div class="stat-label">Realistic corporate participation rate (share of ISO load)</div>
-        </div>
-        <div class="stat-tile">
-            <div class="stat-value">90&ndash;100%</div>
-            <div class="stat-label">Hourly matching targets (SBTi / Google / Microsoft trajectory)</div>
-        </div>
-        <div class="stat-tile">
-            <div class="stat-value">5&ndash;8 PM</div>
-            <div class="stat-label">Peak scarcity hours (solar gone, demand high)</div>
-        </div>
-        <div class="stat-tile">
-            <div class="stat-value">$0&ndash;55/MWh</div>
-            <div class="stat-label">Clean premium range across ISOs</div>
-        </div>
-    </div>
-
-    <div class="callout">
-        <p><strong>Why 10&ndash;25% participation, not 50%?</strong> Current voluntary clean energy procurement (CEBA data) represents ~5&ndash;8% of load in PJM and ~10&ndash;15% in ERCOT.<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup> Even with GHG Protocol<sup style="font-size:0.7em;color:var(--text-muted);">[6]</sup> and SBTi<sup style="font-size:0.7em;color:var(--text-muted);">[7]</sup> driving adoption, realistic near-term participation is 10&ndash;25% of total ISO load. The analysis uses this range because it represents the plausible scenario where price signals emerge &mdash; not a hypothetical maximum.</p>
-    </div>
-
-    <div class="callout warning">
-        <p><strong>Hourly matching ≠ matching every hour equally.</strong> A 90% hourly matching score means 90% of total annual load is matched hour-by-hour &mdash; but the remaining 10% can be concentrated in the hardest hours (winter nights, multi-day low-wind events). A buyer can match 100% during sunny hours and fall short overnight while still hitting 90% overall. This makes 90% more achievable than it first sounds, but it also means the <em>last</em> 10% (getting from 90% to 100%) is disproportionately expensive because it requires firm clean energy during the hardest hours.</p>
-    </div>
-
-    <!-- ========== SECTION 2: SSS ========== -->
-    <h2 id="sss">2. Standard Supply Service: Everyone Starts Above Zero</h2>
-
-    <p>
-        The GHG Protocol Scope 2 revision<sup style="font-size:0.7em;color:var(--text-muted);">[6]</sup> introduces <strong>Standard Supply Service (SSS)</strong> &mdash; the concept that
-        every electricity consumer automatically receives a pro-rata share of their region&rsquo;s existing clean energy.
-        Under SSS, corporate buyers don&rsquo;t start from zero. They start from the regional clean baseline and
-        procure the <em>incremental</em> gap to reach their target.
-    </p>
-
-    <h3>What counts as SSS baseline?</h3>
-    <ul>
-        <li><strong>Nuclear generation</strong> &mdash; allocated pro-rata to all load (where not locked into specific PPAs or state programs)</li>
-        <li><strong>RPS-driven renewables</strong> &mdash; state mandated clean generation credited to the general supply mix<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup></li>
-        <li><strong>Rate-base clean assets</strong> &mdash; utility-owned clean generation in regulated territories</li>
-        <li><strong>Publicly owned assets</strong> &mdash; federal hydropower (BPA, TVA, WAPA), municipal utility generation</li>
-    </ul>
-
-    <h3>SSS Baseline by ISO</h3>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>ISO</th>
-                <th>Clean Supply (TWh/yr)</th>
-                <th>Total Load (TWh/yr)</th>
-                <th>SSS Baseline</th>
-                <th>Night SSS (10 PM&ndash;6 AM)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td><strong>PJM</strong></td><td>~345<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~800<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>43%</td><td>~35% (nuclear dominant)<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup></td></tr>
-            <tr><td><strong>ERCOT</strong></td><td>~150<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~470<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>32%</td><td>~20% (wind + nuclear)<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td></tr>
-            <tr><td><strong>CAISO</strong></td><td>~130<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~280<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>46%</td><td>~25% (geothermal + nuclear + wind)<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td></tr>
-            <tr><td><strong>ISO-NE</strong></td><td>~55<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~120<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>46%</td><td>~30% (nuclear + hydro)<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup></td></tr>
-            <tr><td><strong>NYISO</strong></td><td>~75<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~155<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>48%</td><td>~35% (nuclear + hydro)<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup></td></tr>
-        </tbody>
-    </table>
-    <p style="font-size:0.85rem;color:var(--text-muted);">
-        A PJM buyer targeting 95% hourly matching gets ~43% from SSS during the day and ~35% at night. Their incremental procurement
-        need is ~52% during daytime and ~60% at night &mdash; the nighttime gap is the binding constraint.
-    </p>
-
-    <!-- ========== SECTION 3: SCARCITY BY ISO ========== -->
-    <h2 id="scarcity-by-iso">3. EAC Scarcity by ISO Region</h2>
-
-    <p>
-        After SSS baseline allocation and state RPS demand is netted out, the remaining &ldquo;uncommitted&rdquo; clean
-        supply is the pool available for voluntary corporate procurement. When corporate hourly EAC demand exceeds this pool
-        in specific hours, the region experiences scarcity &mdash; and a clean premium emerges.
-    </p>
-
-    <div class="card-grid">
-        <!-- PJM -->
-        <div class="card" style="border-left: 4px solid #DC2626;">
-            <span class="badge red">Likely Scarcity</span>
-            <h3 style="margin-top:0;">PJM: The Tightest Market in the US</h3>
-            <p><strong>Clean supply:</strong> ~345 TWh/yr (nuclear ~275<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>, wind ~35, solar ~25, hydro ~10) against ~800 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></p>
-            <p><strong>RPS demand:</strong> State mandates in NJ, VA, MD, IL collectively require ~120&ndash;150 TWh of RECs by 2030.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> <strong>Critical nuance: most PJM state RPS programs require <em>renewable</em> energy certificates &mdash; nuclear does not qualify.</strong> Nuclear support comes through separate state programs (IL CEJA, NJ ZEC), several of which are transitioning or rolling off by late 2020s.</p>
-            <p><strong>After SSS + RPS netting:</strong> The renewable-only RPS constraint means ~120&ndash;150 TWh of REC demand competes specifically for wind, solar, and hydro supply (~70 TWh total in PJM).<sup style="font-size:0.7em;color:var(--text-muted);">[9]</sup> This creates a <em>renewable-specific</em> shortfall that state mandates will fill with new build. Meanwhile, nuclear (~275 TWh, ~90% capacity factor<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>) satisfies most of the SSS baseline but is being rapidly consumed by data center PPAs (Constellation Crane restart, Talen Susquehanna). Virtually no uncommitted clean supply remains for voluntary hourly matching.</p>
-
-            <div class="callout danger">
-                <p><strong>The PJM squeeze:</strong> At just 10&ndash;15% corporate participation<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup> with 90%+ hourly matching targets, PJM faces structural nighttime EAC scarcity. Nuclear PPAs lock up the only 24/7 clean supply. State RPS mandates claim all renewables.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> New build faces 3&ndash;5 year interconnection queue delays.<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup> PJM is where hourly matching creates the <strong>strongest price signal for CCS, new nuclear, and LDES</strong>.<sup style="font-size:0.7em;color:var(--text-muted);">[2][3]</sup></p>
-            </div>
-
-            <p><strong>Empirical confirmation:</strong> PJM Tier I REC prices have already reached $37&ndash;40/MWh (historic highs).<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup> PJM capacity market cleared at $333/MW-day in 2025 (10x increase).<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup> These are real-market signals of emerging scarcity before hourly matching is even mandated.</p>
-        </div>
-
-        <!-- ISO-NE -->
-        <div class="card" style="border-left: 4px solid #F59E0B;">
-            <span class="badge amber">Moderate Scarcity</span>
-            <h3 style="margin-top:0;">ISO-NE: Transmission-Constrained, Aggressive Mandates</h3>
-            <p><strong>Clean supply:</strong> ~55 TWh/yr (nuclear ~27<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>, hydro ~8, wind ~10, solar ~10<sup style="font-size:0.7em;color:var(--text-muted);">[12]</sup>) against ~120 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></p>
-            <p><strong>RPS demand:</strong> MA, CT, RI, VT, ME mandates collectively require ~50&ndash;60 TWh<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> &mdash; consuming nearly the entire existing clean supply.</p>
-            <p><strong>After SSS + RPS:</strong> Minimal surplus. Millstone and Seabrook (~27 TWh, ~90% capacity factor<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>) partially committed to state ZEC programs. Aggressive state mandates leave little room for voluntary procurement without new build.</p>
-            <p><strong>Key constraint:</strong> Transmission limitations restrict Canadian hydro imports. Offshore wind faces permitting and interconnection delays<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup> (Vineyard Wind 1 experience). Massachusetts Class I RECs at $39&ndash;40/MWh near ACP ceiling &mdash; empirical scarcity already visible.</p>
-        </div>
-
-        <!-- CAISO -->
-        <div class="card" style="border-left: 4px solid #F59E0B;">
-            <span class="badge amber">Moderate &mdash; Evening Gap</span>
-            <h3 style="margin-top:0;">CAISO: Daytime Abundance, Nighttime Deficit</h3>
-            <p><strong>Clean supply:</strong> ~130 TWh/yr (solar ~55, wind ~20, geothermal ~12, hydro ~25, nuclear ~18<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>) against ~280 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup> Already ~62% clean on annual basis with 15+ GW battery storage deployed.</p>
-            <p><strong>RPS demand:</strong> SB 100 mandates 60% RPS by 2030 = ~170 TWh.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> Current clean supply falls short, driving aggressive procurement.</p>
-            <p><strong>The duck curve problem under hourly matching:</strong> California has abundant daytime clean energy but faces a structural deficit from 5 PM to 8 AM.<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup> Under hourly matching, this evening/night gap is the binding constraint. Even with 12+ GW of battery storage, multi-day low-wind events create persistent deficits requiring clean firm (geothermal, CCS) or imported clean energy.</p>
-            <p><strong>CCS opportunity:</strong> California&rsquo;s ~6 GW gas fleet could provide hourly-matched clean firm if equipped with CCS. With 45Q credits + state SB 905 incentives, this may be the fastest path to filling the evening gap.</p>
-        </div>
-
-        <!-- ERCOT -->
-        <div class="card" style="border-left: 4px solid #22C55E;">
-            <span class="badge green">Unlikely Scarcity</span>
-            <h3 style="margin-top:0;">ERCOT: Abundant and Growing Supply</h3>
-            <p><strong>Clean supply:</strong> ~150 TWh/yr (wind ~95, solar ~35, nuclear ~20<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>) against ~470 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup> Now ~65 GW of wind+solar installed &mdash; growing rapidly (15 GW solar interconnected in 2024 alone).<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup> 14% load growth from data centers and industrial electrification.</p>
-            <p><strong>RPS demand:</strong> Texas has no binding RPS.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> 0 TWh mandatory demand. All corporate procurement is voluntary.<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup></p>
-            <p><strong>After SSS:</strong> Even after pro-rata allocation (~32% baseline), ERCOT&rsquo;s explosive renewable growth means abundant daytime EAC supply at low cost. South Plains wind produces heavily at night, partially filling the evening gap.</p>
-
-            <div class="callout success">
-                <p><strong>ERCOT may never see EAC scarcity for corporate buyers.</strong> No state RPS competing for EACs.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> Rapid deployment driven by favorable economics.<sup style="font-size:0.7em;color:var(--text-muted);">[2][3]</sup> RECs trade at just $1&ndash;15/MWh. The combination makes ERCOT the most cost-effective ISO for corporate hourly matching at the <strong>lowest clean premium</strong>. This is the strongest pull factor for corporate load placement decisions &mdash; and explains why 70% of recent corporate clean energy procurement concentrates in ERCOT/MISO/PJM.<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup></p>
+    <!-- ========== CONTROLS ========== -->
+    <div class="controls-bar">
+        <div class="control-group">
+            <label>Region</label>
+            <div class="region-pills" id="regionPills">
+                <button class="region-pill active" data-iso="ALL">All ISOs</button>
+                <button class="region-pill" data-iso="CAISO">CAISO</button>
+                <button class="region-pill" data-iso="ERCOT">ERCOT</button>
+                <button class="region-pill" data-iso="PJM">PJM</button>
+                <button class="region-pill" data-iso="NYISO">NYISO</button>
+                <button class="region-pill" data-iso="NEISO">NEISO</button>
             </div>
         </div>
-
-        <!-- NYISO -->
-        <div class="card" style="border-left: 4px solid #F59E0B;">
-            <span class="badge amber">Moderate Scarcity</span>
-            <h3 style="margin-top:0;">NYISO: Hydro-Anchored but Post-Indian-Point</h3>
-            <p><strong>Clean supply:</strong> ~75 TWh/yr (hydro ~30, nuclear ~30<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>, wind ~8, solar ~7) against ~155 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></p>
-            <p><strong>RPS demand:</strong> CLCPA mandates 70% renewable by 2030, 100% zero-emission by 2040.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> Current trajectory: ~60% clean by 2030.</p>
-            <p><strong>Key dynamics:</strong> Champlain Hudson Power Express (CHPE) delivers ~10 TWh/yr Canadian hydro to NYC by 2026. But Indian Point closure (2021) removed ~17 TWh of zero-emission nuclear.<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup> NYC load zone (Zone J) faces the tightest supply-demand balance. Offshore wind pipeline critical but faces cost escalation and permitting uncertainty.<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup></p>
+        <div class="control-group" style="min-width:180px;">
+            <label>Time Horizon</label>
+            <select id="yearSelect">
+                <option value="2025" selected>2025 (Current)</option>
+                <option value="2030">2030</option>
+                <option value="2035">2035</option>
+                <option value="2040">2040</option>
+                <option value="2045">2045</option>
+                <option value="2050">2050</option>
+            </select>
+        </div>
+        <div class="control-group" style="min-width:120px;">
+            <label>Demand Growth</label>
+            <div class="growth-pills" id="growthPills">
+                <button class="growth-pill" data-growth="Low">Low</button>
+                <button class="growth-pill active" data-growth="Medium">Med</button>
+                <button class="growth-pill" data-growth="High">High</button>
+            </div>
+        </div>
+        <div class="control-group" style="flex:1;min-width:200px;">
+            <label>Corporate Participation: <span id="participationValue" class="control-value">15%</span></label>
+            <input type="range" id="participationSlider" min="0" max="100" value="15" step="5" style="width:100%;">
+        </div>
+        <div class="control-group" style="flex:1;min-width:200px;">
+            <label>Hourly Match Target: <span id="matchValue" class="control-value">90%</span></label>
+            <input type="range" id="matchSlider" min="75" max="100" value="90" step="1" style="width:100%;">
         </div>
     </div>
 
-    <!-- ========== SECTION 4: PARTICIPATION SCENARIOS ========== -->
-    <h2 id="participation">4. Corporate Participation Scenarios</h2>
-
-    <p>
-        The table below shows scarcity classification at each participation rate, assuming a <strong>90% hourly matching target</strong>.
-        At this target, the binding constraint is evening/night hours where corporate demand exceeds the SSS baseline and
-        uncommitted clean supply is scarce.
-    </p>
-
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Participation</th>
-                <th>PJM</th>
-                <th>ERCOT</th>
-                <th>CAISO</th>
-                <th>ISO-NE</th>
-                <th>NYISO</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>10%</strong></td>
-                <td style="color: #F59E0B;">Tight</td>
-                <td style="color: #22C55E;">Abundant</td>
-                <td style="color: #22C55E;">Manageable</td>
-                <td style="color: #F59E0B;">Tight</td>
-                <td style="color: #F59E0B;">Tight</td>
-            </tr>
-            <tr>
-                <td><strong>15%</strong></td>
-                <td style="color: #DC2626;">Scarcity</td>
-                <td style="color: #22C55E;">Abundant</td>
-                <td style="color: #F59E0B;">Tight</td>
-                <td style="color: #DC2626;">Scarcity</td>
-                <td style="color: #F59E0B;">Tight</td>
-            </tr>
-            <tr>
-                <td><strong>20%</strong></td>
-                <td style="color: #DC2626;">Severe scarcity</td>
-                <td style="color: #22C55E;">Surplus</td>
-                <td style="color: #F59E0B;">Tight</td>
-                <td style="color: #DC2626;">Severe scarcity</td>
-                <td style="color: #DC2626;">Scarcity</td>
-            </tr>
-            <tr>
-                <td><strong>25%</strong></td>
-                <td style="color: #7C3AED;">New build required</td>
-                <td style="color: #22C55E;">Balanced</td>
-                <td style="color: #DC2626;">Scarcity</td>
-                <td style="color: #7C3AED;">New build required</td>
-                <td style="color: #DC2626;">Severe scarcity</td>
-            </tr>
-        </tbody>
-    </table>
-    <p style="font-size:0.85rem;color:var(--text-muted);">
-        Scarcity assessment at 90% hourly matching target. &ldquo;Abundant&rdquo; = surplus EACs even during nighttime.
-        &ldquo;Tight&rdquo; = daytime covered but nighttime EACs scarce. &ldquo;Scarcity&rdquo; = prices above marginal cost of existing clean.
-        &ldquo;New build required&rdquo; = existing clean supply exhausted, new capacity needed.
-    </p>
-
-    <h3>At 95% and 100% targets</h3>
-    <p>
-        Raising the hourly matching target from 90% to 95% or 100% shifts scarcity classifications upward by approximately
-        one tier across all ISOs. The final 5&ndash;10% of matching requires clean firm energy during the absolute hardest hours
-        (multi-day winter doldrums, overnight demand peaks) and carries disproportionate cost. This is the &ldquo;last mile&rdquo;
-        problem that the <a href="dashboard.html">Cost Optimizer</a> quantifies in detail.
-    </p>
-
-    <!-- ========== SECTION 5: CLEAN PREMIUM ========== -->
-    <h2 id="clean-premium">5. The Clean Premium by ISO</h2>
-
-    <p>
-        EAC scarcity translates directly into a <strong>clean premium</strong> &mdash; the additional cost above wholesale
-        energy prices that corporate buyers pay for hourly-matched clean energy. The premium varies by ISO, time of day,
-        and participation level:
-    </p>
-
-    <div class="card-grid">
-        <div class="card">
-            <h4 style="color: #DC2626;">PJM: $15&ndash;40/MWh</h4>
-            <p>Highest clean premium in the US. Evening/night hours face structural deficit. Nuclear PPAs with data centers are removing existing supply from the voluntary market. At 15%+ participation<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup>, PJM buyers need new-build clean firm at premium prices.<sup style="font-size:0.7em;color:var(--text-muted);">[2][3]</sup> <strong>CCS-CCGT and LDES earn their highest revenue in PJM.</strong></p>
-            <p style="font-size:0.85rem;color:var(--text-muted);">Empirical: PJM Tier I RECs already at $37&ndash;40/MWh.<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup> Capacity market at $333/MW-day (10x increase).<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup></p>
+    <!-- ========== STATS ROW ========== -->
+    <div class="stat-row" id="statsRow">
+        <div class="stat-tile blue" id="statDemand">
+            <div class="stat-value" id="statDemandVal">--</div>
+            <div class="stat-label">Corporate EAC Demand (TWh)</div>
         </div>
-        <div class="card">
-            <h4 style="color: #F59E0B;">ISO-NE: $20&ndash;55/MWh</h4>
-            <p>Already-high MA Class I REC prices ($39&ndash;40/MWh near ACP ceiling) indicate existing scarcity. Hourly matching on top of aggressive state mandates<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> pushes premiums higher. Limited land and transmission mean new supply is expensive and slow.<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup></p>
+        <div class="stat-tile green" id="statSupply">
+            <div class="stat-value" id="statSupplyVal">--</div>
+            <div class="stat-label">Available Non-SSS Supply (TWh)</div>
         </div>
-        <div class="card">
-            <h4 style="color: #F59E0B;">CAISO: $10&ndash;25/MWh</h4>
-            <p>Daytime surplus keeps average premium low. Evening/night hours (5 PM&ndash;8 AM) face $20&ndash;40/MWh premiums.<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup> 12+ GW battery storage partially mitigates but cannot cover multi-day events. Geothermal expansion could moderate nighttime premiums.<sup style="font-size:0.7em;color:var(--text-muted);">[2]</sup></p>
+        <div class="stat-tile" id="statRatio">
+            <div class="stat-value" id="statRatioVal">--</div>
+            <div class="stat-label">Demand / Supply Ratio</div>
         </div>
-        <div class="card">
-            <h4 style="color: #22C55E;">ERCOT: $0&ndash;15/MWh</h4>
-            <p>Lowest clean premium. Abundant and growing wind+solar.<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup> No RPS competing for EACs.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> Nighttime wind fills much of the evening gap. RECs at $1&ndash;15/MWh. <strong>Most cost-effective ISO for corporate hourly matching.</strong><sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup></p>
+        <div class="stat-tile" id="statScarcity">
+            <div class="stat-value" id="statScarcityVal">--</div>
+            <div class="stat-label">Scarcity Classification</div>
         </div>
-        <div class="card">
-            <h4 style="color: #F59E0B;">NYISO: $15&ndash;35/MWh</h4>
-            <p>Hydro provides strong daytime/seasonal baseline. Post-Indian Point nuclear gap increases nighttime scarcity.<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup> CHPE Canadian hydro import helps but doesn&rsquo;t fully close the gap. Zone J (NYC) faces the steepest premiums.</p>
+        <div class="stat-tile" id="statPremium">
+            <div class="stat-value" id="statPremiumVal">--</div>
+            <div class="stat-label">Clean Premium ($/MWh)</div>
         </div>
     </div>
 
-    <!-- ========== SECTION 6: INVESTMENT SIGNAL ========== -->
-    <h2 id="investment-signal">6. The Investment Signal</h2>
+    <!-- ========== DYNAMIC INSIGHT ========== -->
+    <div id="insightBox" class="insight-box" style="display:none;">
+        <h4 id="insightTitle"></h4>
+        <p id="insightText"></p>
+    </div>
 
-    <p>
-        The regional variation in clean premiums creates a powerful signal for both corporate load placement and generator investment:
-    </p>
-
-    <div class="card-grid">
-        <div class="card" style="border-left: 4px solid #0EA5E9;">
-            <h4>For Corporate Buyers</h4>
-            <p>Companies choosing where to build data centers or manufacturing plants will factor in hourly matching costs. ERCOT and CAISO offer the lowest clean premiums; PJM and ISO-NE the highest. <strong>The clean premium becomes a location cost comparable to energy prices, tax incentives, and labor costs.</strong></p>
-        </div>
-        <div class="card" style="border-left: 4px solid #22C55E;">
-            <h4>For Generators</h4>
-            <p>Generators in PJM that invest in CCS or clean firm capacity <em>now</em> will capture the premium as corporate demand grows.<sup style="font-size:0.7em;color:var(--text-muted);">[13]</sup> The hourly clean premium is the market mechanism that connects voluntary corporate ambition to physical generator decarbonization investment. <strong>First movers earn the scarcity premium; followers compete it away.</strong></p>
-        </div>
-        <div class="card" style="border-left: 4px solid #F59E0B;">
-            <h4>For Policymakers</h4>
-            <p>The clean premium quantifies the cost of inaction on transmission and interconnection reform. PJM&rsquo;s $15&ndash;40/MWh premium is partly a product of its 800+ GW interconnection queue backlog.<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup> Streamlining permitting and building transmission directly lowers the corporate cost of hourly matching &mdash; and accelerates generator decarbonization.</p>
+    <!-- ========== CHARTS ROW 1 ========== -->
+    <div class="chart-row">
+        <!-- Scarcity heatmap -->
+        <div class="chart-card chart-card-full">
+            <h3>Scarcity Heatmap: All ISOs at Current Settings</h3>
+            <div class="chart-subtitle" id="heatmapSubtitle">Participation vs. Match Target — colored by scarcity classification</div>
+            <div class="legend-row">
+                <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div>Abundant</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#84cc16;"></div>Adequate</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#eab308;"></div>Tightening</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#f97316;"></div>Scarce</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div>Critical</div>
+            </div>
+            <div id="heatmapContainer" style="overflow-x:auto;"></div>
         </div>
     </div>
 
-    <div class="callout">
-        <p><strong>The virtuous cycle:</strong> Corporate hourly matching demand &rarr; EAC scarcity in constrained ISOs &rarr; clean premium signal &rarr; generator investment in clean firm &rarr; new supply reduces scarcity &rarr; lower premiums attract more corporate participation. The clean premium is the market mechanism that makes voluntary corporate ambition translate into physical decarbonization.</p>
+    <!-- ========== CHARTS ROW 2 ========== -->
+    <div class="chart-row">
+        <!-- Clean Premium by ISO -->
+        <div class="chart-card">
+            <h3>Clean Premium Across Match Targets</h3>
+            <div class="chart-subtitle">$/MWh premium at current participation &amp; year</div>
+            <div class="chart-container"><canvas id="premiumChart"></canvas></div>
+        </div>
+        <!-- Supply vs Demand -->
+        <div class="chart-card">
+            <h3>Available Supply vs. Corporate Demand</h3>
+            <div class="chart-subtitle">TWh — non-SSS supply vs. EAC demand by participation</div>
+            <div class="chart-container"><canvas id="supplyDemandChart"></canvas></div>
+        </div>
     </div>
 
-    <!-- ========== SECTION 7: METHODOLOGY LINK ========== -->
-    <h2 id="methodology-link">7. Detailed Methodology</h2>
-    <p>
-        The full analytical methodology &mdash; including regional supply inventory construction, SSS baseline computation,
-        RPS demand netting, corporate demand formula, scarcity classification thresholds, clean premium curve derivation,
-        and data center demand overlays &mdash; is documented in
-        <a href="optimizer_methodology.html#eac-scarcity"><strong>Section 13 of the Methodology &amp; Technical Reference</strong></a>.
-    </p>
-    <p>
-        Key data sources: EIA Hourly Electric Grid Monitor (2021&ndash;2025)<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup>, EIA Form 923<sup style="font-size:0.7em;color:var(--text-muted);">[9]</sup>, NRC Power Reactor Status Reports<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>,
-        DSIRE Database (state RPS/CES)<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup>, CEBA Deal Tracker (corporate procurement volumes)<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup>, NREL ATB 2024<sup style="font-size:0.7em;color:var(--text-muted);">[2]</sup>, Lazard LCOE v17<sup style="font-size:0.7em;color:var(--text-muted);">[3]</sup>,
-        GHG Protocol Scope 2 Revision Draft (Oct 2025)<sup style="font-size:0.7em;color:var(--text-muted);">[6]</sup>, SBTi Power Sector v2 Draft (Sep 2025)<sup style="font-size:0.7em;color:var(--text-muted);">[7]</sup>,
-        LBNL &ldquo;Queued Up&rdquo; 2025<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup>, PJM Independent Market Monitor<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup>, SEIA State Solar Spotlight<sup style="font-size:0.7em;color:var(--text-muted);">[12]</sup>,
-        RMI State of Utility Planning Q4 2025<sup style="font-size:0.7em;color:var(--text-muted);">[13]</sup>, EPRI SMARTargets Draft Framework (Jul 2025)<sup style="font-size:0.7em;color:var(--text-muted);">[14]</sup>.
-    </p>
+    <!-- ========== CHARTS ROW 3 ========== -->
+    <div class="chart-row">
+        <!-- Supply projection timeline -->
+        <div class="chart-card">
+            <h3>Supply Projection: SSS vs. Non-SSS Over Time</h3>
+            <div class="chart-subtitle">How clean supply evolves with new build and policy expirations</div>
+            <div class="chart-container"><canvas id="supplyTimelineChart"></canvas></div>
+        </div>
+        <!-- Inflection point chart -->
+        <div class="chart-card">
+            <h3>Scarcity Inflection Points</h3>
+            <div class="chart-subtitle">Corporate participation % where scarcity begins, by match target</div>
+            <div class="chart-container"><canvas id="inflectionChart"></canvas></div>
+        </div>
+    </div>
 
-    <h3>References</h3>
-    <ol style="font-size:0.85rem;color:var(--text-muted);line-height:1.8;">
-        <li>EIA Hourly Electric Grid Monitor (2021&ndash;2025)</li>
-        <li>NREL Annual Technology Baseline (ATB) 2024</li>
-        <li>Lazard LCOE Analysis v17 (2024)</li>
-        <li>DSIRE Database &mdash; state RPS/CES requirements</li>
-        <li>CEBA Deal Tracker &mdash; corporate procurement volumes (2024)</li>
-        <li>GHG Protocol Scope 2 Revision First Consultation Draft (Oct 2025)</li>
-        <li>SBTi Power Sector v2 Draft (Sep 2025)</li>
-        <li>NRC Power Reactor Status Reports (2024&ndash;2025)</li>
-        <li>EIA Form 923 (2023&ndash;2024)</li>
-        <li>LBNL &ldquo;Queued Up&rdquo; 2025 &mdash; interconnection queue analysis</li>
-        <li>PJM Independent Market Monitor &mdash; capacity market, REC prices</li>
-        <li>SEIA State Solar Spotlight reports</li>
-        <li>RMI State of Utility Planning Q4 2025</li>
-        <li>EPRI SMARTargets Draft Framework (Jul 2025)</li>
-    </ol>
+    <!-- ========== ISO COMPARISON TABLE ========== -->
+    <h2 class="section-header">ISO Comparison at Current Settings</h2>
+    <div class="chart-card" style="overflow-x:auto;">
+        <table class="iso-table" id="isoTable">
+            <thead>
+                <tr>
+                    <th>ISO</th>
+                    <th>Total Clean (TWh)</th>
+                    <th>SSS (TWh)</th>
+                    <th>Available (TWh)</th>
+                    <th>Corp Demand (TWh)</th>
+                    <th>Ratio</th>
+                    <th>Scarcity</th>
+                    <th>Premium ($/MWh)</th>
+                </tr>
+            </thead>
+            <tbody id="isoTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- ========== SOCIAL COST BENCHMARKS ========== -->
+    <div class="insight-box" style="margin-top:24px;">
+        <h4>Carbon Cost Benchmarks</h4>
+        <p>EPA Social Cost of Carbon: <strong>$51/ton</strong> | Rennert et al. (2022): <strong>$185/ton</strong> | EU ETS range: <strong>$60&ndash;100/ton</strong>. When the clean premium exceeds these benchmarks divided by the grid emission rate (~0.4 tCO2/MWh), direct abatement alternatives may be more cost-effective than additional hourly matching.</p>
+    </div>
+
+    <!-- ========== METHODOLOGY SECTION ========== -->
+    <h2 class="section-header">Methodology</h2>
+    <div class="chart-card">
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;">
+            <strong>SSS Framework:</strong> Standard Supply Service = mandatory/non-bypassable procurement creating a financial relationship between customers and generation. Includes RPS/CES mandates, public ownership, vertically integrated rate-base assets, and state nuclear programs (ZEC, CMC, CES). Does <em>not</em> include 45U PTC, merchant generation, or voluntary corporate PPAs.
+        </p>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
+            <strong>Available Supply:</strong> Total non-SSS clean generation minus existing corporate PPAs already contracted. This represents the uncommitted pool available for new voluntary corporate procurement.
+        </p>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
+            <strong>Scarcity Classification:</strong> Based on demand/supply ratio. Abundant (&le;0.3), Adequate (&le;0.6), Tightening (&le;0.8), Scarce (&le;0.95), Critical (&gt;0.95).
+        </p>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
+            <strong>Data Sources:</strong> SSS baselines from EIA Form 923, NRC status reports, DSIRE state RPS database, ISO annual reports. Demand from EIA Hourly Electric Grid Monitor (2021&ndash;2025). Supply growth rates from state RPS trajectories, interconnection queue analysis (LBNL), and IRA incentive modeling.
+        </p>
+        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-top:8px;">
+            Full methodology: <a href="research_paper.html" style="color:#1565C0;">Methodology &amp; Paper</a>
+        </p>
+    </div>
 
 </div>
 
 <div class="accent-bar"></div>
+
+<script>
+// ========== DATA & STATE ==========
+let DATA = null;
+let state = {
+    iso: 'ALL',
+    year: '2025',
+    growth: 'Medium',
+    participation: 15,
+    matchTarget: 90
+};
+
+const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+const ISO_LABELS = { CAISO: 'CAISO', ERCOT: 'ERCOT', PJM: 'PJM', NYISO: 'NYISO', NEISO: 'ISO-NE' };
+const ISO_COLORS = { CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#1565C0', NYISO: '#8B5CF6', NEISO: '#EC4899' };
+const SCARCITY_COLORS = { abundant: '#22c55e', adequate: '#84cc16', tightening: '#eab308', scarce: '#f97316', critical: '#ef4444' };
+const SCARCITY_BG = { abundant: '#D1FAE5', adequate: '#ECFCCB', tightening: '#FEF9C3', scarce: '#FFEDD5', critical: '#FEE2E2' };
+const SCARCITY_TEXT = { abundant: '#059669', adequate: '#65A30D', tightening: '#CA8A04', scarce: '#EA580C', critical: '#DC2626' };
+
+const PARTICIPATION_RATES = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100];
+const MATCH_TARGETS = [75, 80, 85, 90, 95, 99, 100];
+const YEARS = [2025, 2030, 2035, 2040, 2045, 2050];
+
+let charts = {};
+
+// ========== LOAD DATA ==========
+async function loadData() {
+    try {
+        const resp = await fetch('eac_scarcity_results.json');
+        DATA = await resp.json();
+        initControls();
+        updateAll();
+    } catch (e) {
+        console.error('Failed to load scarcity data:', e);
+        document.getElementById('statsRow').innerHTML = '<div class="stat-tile red"><div class="stat-value">Error</div><div class="stat-label">Could not load eac_scarcity_results.json</div></div>';
+    }
+}
+
+// ========== FIND SCENARIO ==========
+function findScenario(iso, year, growth, participation, matchTarget) {
+    const scenarios = DATA.scenarios[iso]?.[year]?.[growth];
+    if (!scenarios) return null;
+    // Find closest participation
+    let closestPart = PARTICIPATION_RATES[0];
+    let minDist = 999;
+    for (const p of PARTICIPATION_RATES) {
+        if (Math.abs(p - participation) < minDist) { minDist = Math.abs(p - participation); closestPart = p; }
+    }
+    // Find closest match target
+    let closestMatch = MATCH_TARGETS[0];
+    minDist = 999;
+    for (const m of MATCH_TARGETS) {
+        if (Math.abs(m - matchTarget) < minDist) { minDist = Math.abs(m - matchTarget); closestMatch = m; }
+    }
+    return scenarios.find(s => s.participation_pct === closestPart && s.match_target_pct === closestMatch) || null;
+}
+
+// ========== CONTROLS ==========
+function initControls() {
+    // Region pills
+    document.querySelectorAll('.region-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.region-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.iso = btn.dataset.iso;
+            updateAll();
+        });
+    });
+    // Growth pills
+    document.querySelectorAll('.growth-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.growth-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.growth = btn.dataset.growth;
+            updateAll();
+        });
+    });
+    // Year
+    document.getElementById('yearSelect').addEventListener('change', e => {
+        state.year = e.target.value;
+        updateAll();
+    });
+    // Participation slider
+    const pSlider = document.getElementById('participationSlider');
+    pSlider.addEventListener('input', e => {
+        state.participation = parseInt(e.target.value);
+        document.getElementById('participationValue').textContent = state.participation + '%';
+        updateAll();
+    });
+    // Match target slider
+    const mSlider = document.getElementById('matchSlider');
+    mSlider.addEventListener('input', e => {
+        state.matchTarget = parseInt(e.target.value);
+        document.getElementById('matchValue').textContent = state.matchTarget + '%';
+        updateAll();
+    });
+}
+
+// ========== UPDATE ALL ==========
+function updateAll() {
+    updateStats();
+    updateInsight();
+    updateHeatmap();
+    updatePremiumChart();
+    updateSupplyDemandChart();
+    updateSupplyTimeline();
+    updateInflectionChart();
+    updateISOTable();
+}
+
+// ========== STATS ==========
+function updateStats() {
+    const isos = state.iso === 'ALL' ? ISOS : [state.iso];
+    let totalDemand = 0, totalSupply = 0, totalPremium = 0, count = 0;
+    let worstScarcity = 'abundant';
+    const scarcityOrder = ['abundant', 'adequate', 'tightening', 'scarce', 'critical'];
+
+    for (const iso of isos) {
+        const sc = findScenario(iso, state.year, state.growth, state.participation, state.matchTarget);
+        if (!sc) continue;
+        totalDemand += sc.corp_eac_demand_twh;
+        const supply = DATA.supply_projections[iso]?.[state.year]?.[state.growth];
+        if (supply) totalSupply += supply.available_non_sss_twh;
+        totalPremium += sc.clean_premium_per_mwh;
+        count++;
+        if (scarcityOrder.indexOf(sc.scarcity_class) > scarcityOrder.indexOf(worstScarcity)) {
+            worstScarcity = sc.scarcity_class;
+        }
+    }
+
+    const ratio = totalSupply > 0 ? totalDemand / totalSupply : (totalDemand > 0 ? 99 : 0);
+    const avgPremium = count > 0 ? totalPremium / count : 0;
+
+    document.getElementById('statDemandVal').textContent = totalDemand.toFixed(1);
+    document.getElementById('statSupplyVal').textContent = totalSupply.toFixed(1);
+    document.getElementById('statRatioVal').textContent = ratio.toFixed(2) + 'x';
+    document.getElementById('statScarcityVal').textContent = worstScarcity.charAt(0).toUpperCase() + worstScarcity.slice(1);
+    document.getElementById('statScarcityVal').style.color = SCARCITY_COLORS[worstScarcity];
+    document.getElementById('statPremiumVal').textContent = '$' + avgPremium.toFixed(1);
+
+    // Color stat tiles
+    const ratioTile = document.getElementById('statRatio');
+    ratioTile.className = 'stat-tile';
+    if (ratio > 0.95) ratioTile.classList.add('red');
+    else if (ratio > 0.6) ratioTile.classList.add('amber');
+    else ratioTile.classList.add('green');
+}
+
+// ========== DYNAMIC INSIGHT ==========
+function updateInsight() {
+    const box = document.getElementById('insightBox');
+    const title = document.getElementById('insightTitle');
+    const text = document.getElementById('insightText');
+
+    if (state.participation === 0) {
+        box.style.display = 'none';
+        return;
+    }
+
+    box.style.display = 'block';
+    const isos = state.iso === 'ALL' ? ISOS : [state.iso];
+    let criticalISOs = [], scarceISOs = [], abundantISOs = [];
+
+    for (const iso of isos) {
+        const sc = findScenario(iso, state.year, state.growth, state.participation, state.matchTarget);
+        if (!sc) continue;
+        if (sc.scarcity_class === 'critical') criticalISOs.push(ISO_LABELS[iso]);
+        else if (sc.scarcity_class === 'scarce') scarceISOs.push(ISO_LABELS[iso]);
+        else if (sc.scarcity_class === 'abundant' || sc.scarcity_class === 'adequate') abundantISOs.push(ISO_LABELS[iso]);
+    }
+
+    if (criticalISOs.length > 0) {
+        box.className = 'insight-box danger';
+        title.textContent = 'Critical EAC Scarcity Detected';
+        text.textContent = `At ${state.participation}% corporate participation with ${state.matchTarget}% hourly matching in ${state.year}: ${criticalISOs.join(', ')} face critical scarcity — corporate EAC demand exceeds available uncommitted clean supply. New clean firm generation (CCS, nuclear, LDES) is required to close the gap.`;
+    } else if (scarceISOs.length > 0) {
+        box.className = 'insight-box warning';
+        title.textContent = 'Scarcity Emerging';
+        text.textContent = `At ${state.participation}% participation with ${state.matchTarget}% matching in ${state.year}: ${scarceISOs.join(', ')} show scarcity — clean premium will rise and drive investment signals for new clean capacity. ${abundantISOs.length > 0 ? abundantISOs.join(', ') + ' remain(s) well-supplied.' : ''}`;
+    } else if (abundantISOs.length > 0) {
+        box.className = 'insight-box';
+        title.textContent = 'Supply Adequate';
+        text.textContent = `At ${state.participation}% participation with ${state.matchTarget}% matching in ${state.year}: All selected ISOs have adequate uncommitted clean supply. Clean premiums remain moderate.`;
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+// ========== HEATMAP ==========
+function updateHeatmap() {
+    const container = document.getElementById('heatmapContainer');
+    const isos = state.iso === 'ALL' ? ISOS : [state.iso];
+    const subtitle = document.getElementById('heatmapSubtitle');
+    subtitle.textContent = `${state.year} | ${state.growth} growth | ${isos.map(i => ISO_LABELS[i]).join(', ')}`;
+
+    // Build grid: rows = participation, cols = match targets, one heatmap per ISO
+    let html = '';
+    for (const iso of isos) {
+        html += `<div style="margin-bottom:16px;">`;
+        html += `<div style="font-family:var(--font-heading);font-size:0.95rem;font-weight:700;color:var(--navy);margin-bottom:6px;">${ISO_LABELS[iso]}</div>`;
+
+        const cols = MATCH_TARGETS.length + 1;
+        html += `<div class="heatmap-grid" style="grid-template-columns: 60px repeat(${MATCH_TARGETS.length}, 1fr);">`;
+
+        // Header row
+        html += `<div class="heatmap-header"></div>`;
+        for (const mt of MATCH_TARGETS) {
+            html += `<div class="heatmap-header">${mt}%</div>`;
+        }
+
+        // Data rows
+        for (const part of PARTICIPATION_RATES) {
+            html += `<div class="heatmap-header" style="justify-content:flex-end;padding-right:8px;">${part}%</div>`;
+            for (const mt of MATCH_TARGETS) {
+                const sc = findScenario(iso, state.year, state.growth, part, mt);
+                if (sc) {
+                    const bg = SCARCITY_COLORS[sc.scarcity_class];
+                    const isSelected = part === state.participation && mt === state.matchTarget;
+                    const border = isSelected ? 'border:2px solid #000;' : '';
+                    html += `<div class="heatmap-cell" style="background:${bg};${border}" title="${ISO_LABELS[iso]} | ${part}% participation | ${mt}% match\nDemand: ${sc.corp_eac_demand_twh} TWh\nRatio: ${sc.demand_supply_ratio}x\nPremium: $${sc.clean_premium_per_mwh}/MWh\nClass: ${sc.scarcity_label}">${sc.demand_supply_ratio > 0 ? sc.demand_supply_ratio.toFixed(1) : '0'}</div>`;
+                } else {
+                    html += `<div class="heatmap-cell" style="background:#e5e7eb;color:#888;">—</div>`;
+                }
+            }
+        }
+        html += '</div></div>';
+    }
+
+    container.innerHTML = html;
+}
+
+// ========== PREMIUM CHART ==========
+function updatePremiumChart() {
+    const ctx = document.getElementById('premiumChart').getContext('2d');
+    const isos = state.iso === 'ALL' ? ISOS : [state.iso];
+
+    const datasets = isos.map(iso => {
+        const data = MATCH_TARGETS.map(mt => {
+            const sc = findScenario(iso, state.year, state.growth, state.participation, mt);
+            return sc ? sc.clean_premium_per_mwh : null;
+        });
+        return {
+            label: ISO_LABELS[iso],
+            data: data,
+            borderColor: ISO_COLORS[iso],
+            backgroundColor: ISO_COLORS[iso] + '20',
+            borderWidth: 2.5,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.3,
+            fill: false,
+        };
+    });
+
+    if (charts.premium) charts.premium.destroy();
+    charts.premium = new Chart(ctx, {
+        type: 'line',
+        data: { labels: MATCH_TARGETS.map(m => m + '%'), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
+                annotation: {
+                    annotations: {
+                        epaLine: {
+                            type: 'line', yMin: 51 / 0.4, yMax: 51 / 0.4,
+                            borderColor: 'rgba(220,38,38,0.4)', borderWidth: 1, borderDash: [6, 3],
+                            label: { display: true, content: 'EPA SCC @ 0.4 tCO2', position: 'start', font: { size: 10 }, backgroundColor: 'rgba(220,38,38,0.1)', color: '#DC2626' }
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y?.toFixed(1)}/MWh` }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Hourly Match Target', font: { size: 12 } } },
+                y: { title: { display: true, text: 'Clean Premium ($/MWh)', font: { size: 12 } }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// ========== SUPPLY VS DEMAND CHART ==========
+function updateSupplyDemandChart() {
+    const ctx = document.getElementById('supplyDemandChart').getContext('2d');
+    const isos = state.iso === 'ALL' ? ISOS : [state.iso];
+
+    // X-axis = participation rates, for each ISO show supply line + demand line
+    const datasets = [];
+    for (const iso of isos) {
+        const supply = DATA.supply_projections[iso]?.[state.year]?.[state.growth];
+        if (!supply) continue;
+
+        // Supply is constant horizontal line
+        datasets.push({
+            label: ISO_LABELS[iso] + ' Supply',
+            data: PARTICIPATION_RATES.map(() => supply.available_non_sss_twh),
+            borderColor: ISO_COLORS[iso],
+            borderWidth: 2, borderDash: [6, 3],
+            pointRadius: 0, fill: false,
+        });
+        // Demand increases with participation
+        datasets.push({
+            label: ISO_LABELS[iso] + ' Demand',
+            data: PARTICIPATION_RATES.map(p => {
+                const sc = findScenario(iso, state.year, state.growth, p, state.matchTarget);
+                return sc ? sc.corp_eac_demand_twh : 0;
+            }),
+            borderColor: ISO_COLORS[iso],
+            backgroundColor: ISO_COLORS[iso] + '15',
+            borderWidth: 2.5,
+            pointRadius: 3, fill: false,
+        });
+    }
+
+    if (charts.supplyDemand) charts.supplyDemand.destroy();
+    charts.supplyDemand = new Chart(ctx, {
+        type: 'line',
+        data: { labels: PARTICIPATION_RATES.map(p => p + '%'), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 10, font: { size: 10 } } },
+                tooltip: {
+                    callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} TWh` }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Corporate Participation (% of ISO load)', font: { size: 12 } } },
+                y: { title: { display: true, text: 'TWh', font: { size: 12 } }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// ========== SUPPLY TIMELINE ==========
+function updateSupplyTimeline() {
+    const ctx = document.getElementById('supplyTimelineChart').getContext('2d');
+    const iso = state.iso === 'ALL' ? 'PJM' : state.iso; // Default to PJM for ALL view
+    const titleEl = ctx.canvas.closest('.chart-card').querySelector('h3');
+    titleEl.textContent = `Supply Projection: ${ISO_LABELS[iso]} — SSS vs. Non-SSS Over Time`;
+
+    const sssData = YEARS.map(y => {
+        const sp = DATA.supply_projections[iso]?.[String(y)]?.[state.growth];
+        return sp ? sp.sss_twh : 0;
+    });
+    const nonSSSData = YEARS.map(y => {
+        const sp = DATA.supply_projections[iso]?.[String(y)]?.[state.growth];
+        return sp ? sp.available_non_sss_twh : 0;
+    });
+    const ppasData = YEARS.map(y => {
+        const sp = DATA.supply_projections[iso]?.[String(y)]?.[state.growth];
+        return sp ? sp.existing_ppas_twh : 0;
+    });
+
+    if (charts.supplyTimeline) charts.supplyTimeline.destroy();
+    charts.supplyTimeline = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: YEARS.map(String),
+            datasets: [
+                {
+                    label: 'SSS (State-Supported)',
+                    data: sssData,
+                    backgroundColor: '#94A3B8',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Existing Corporate PPAs',
+                    data: ppasData,
+                    backgroundColor: '#8B5CF6',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Available for New Corporate',
+                    data: nonSSSData,
+                    backgroundColor: '#22C55E',
+                    borderRadius: 4,
+                },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} TWh` } }
+            },
+            scales: {
+                x: { stacked: true, title: { display: true, text: 'Year', font: { size: 12 } } },
+                y: { stacked: true, title: { display: true, text: 'TWh', font: { size: 12 } }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// ========== INFLECTION CHART ==========
+function updateInflectionChart() {
+    const ctx = document.getElementById('inflectionChart').getContext('2d');
+    const isos = state.iso === 'ALL' ? ISOS : [state.iso];
+
+    const datasets = isos.map(iso => {
+        const inflections = DATA.inflection_points[iso]?.[state.year]?.[state.growth];
+        if (!inflections) return null;
+        const data = MATCH_TARGETS.map(mt => {
+            const ip = inflections[String(mt)];
+            return ip ? ip.inflection_participation_pct : null;
+        });
+        return {
+            label: ISO_LABELS[iso],
+            data: data,
+            backgroundColor: ISO_COLORS[iso] + 'CC',
+            borderColor: ISO_COLORS[iso],
+            borderWidth: 1.5,
+            borderRadius: 4,
+        };
+    }).filter(Boolean);
+
+    if (charts.inflection) charts.inflection.destroy();
+    charts.inflection = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: MATCH_TARGETS.map(m => m + '%'), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: { label: ctx => `${ctx.dataset.label}: scarcity at ${ctx.parsed.y}% participation` }
+                },
+                annotation: {
+                    annotations: {
+                        currentLine: {
+                            type: 'line', yMin: state.participation, yMax: state.participation,
+                            borderColor: 'rgba(220,38,38,0.6)', borderWidth: 2, borderDash: [4, 4],
+                            label: { display: true, content: `Current: ${state.participation}%`, position: 'end', font: { size: 10 }, backgroundColor: 'rgba(220,38,38,0.15)', color: '#DC2626' }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Hourly Match Target', font: { size: 12 } } },
+                y: { title: { display: true, text: 'Participation % at Scarcity Inflection', font: { size: 12 } }, beginAtZero: true, max: 100 }
+            }
+        }
+    });
+}
+
+// ========== ISO TABLE ==========
+function updateISOTable() {
+    const tbody = document.getElementById('isoTableBody');
+    let html = '';
+    for (const iso of ISOS) {
+        const sc = findScenario(iso, state.year, state.growth, state.participation, state.matchTarget);
+        const supply = DATA.supply_projections[iso]?.[state.year]?.[state.growth];
+        if (!sc || !supply) continue;
+
+        const badgeBg = SCARCITY_BG[sc.scarcity_class] || '#E5E7EB';
+        const badgeColor = SCARCITY_TEXT[sc.scarcity_class] || '#666';
+
+        html += `<tr>
+            <td><strong style="color:${ISO_COLORS[iso]}">${ISO_LABELS[iso]}</strong></td>
+            <td>${supply.total_clean_twh.toFixed(1)}</td>
+            <td>${supply.sss_twh.toFixed(1)}</td>
+            <td>${supply.available_non_sss_twh.toFixed(1)}</td>
+            <td>${sc.corp_eac_demand_twh.toFixed(1)}</td>
+            <td>${sc.demand_supply_ratio.toFixed(2)}x</td>
+            <td><span class="scarcity-badge" style="background:${badgeBg};color:${badgeColor}">${sc.scarcity_label}</span></td>
+            <td>$${sc.clean_premium_per_mwh.toFixed(1)}</td>
+        </tr>`;
+    }
+
+    // National totals
+    const natSummary = DATA.national_summary?.[state.year]?.[state.growth];
+    if (natSummary) {
+        let totalDemand = 0, totalPremium = 0;
+        for (const iso of ISOS) {
+            const sc = findScenario(iso, state.year, state.growth, state.participation, state.matchTarget);
+            if (sc) { totalDemand += sc.corp_eac_demand_twh; totalPremium += sc.clean_premium_per_mwh; }
+        }
+        const ratio = natSummary.total_available_twh > 0 ? totalDemand / natSummary.total_available_twh : 0;
+        html += `<tr style="font-weight:600;border-top:2px solid var(--border);">
+            <td>National Total</td>
+            <td>${natSummary.total_clean_twh.toFixed(1)}</td>
+            <td>${natSummary.total_sss_twh.toFixed(1)}</td>
+            <td>${natSummary.total_available_twh.toFixed(1)}</td>
+            <td>${totalDemand.toFixed(1)}</td>
+            <td>${ratio.toFixed(2)}x</td>
+            <td>—</td>
+            <td>$${(totalPremium / 5).toFixed(1)} avg</td>
+        </tr>`;
+    }
+
+    tbody.innerHTML = html;
+}
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
 
 </body>
 </html>
