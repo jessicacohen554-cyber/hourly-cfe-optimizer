@@ -799,6 +799,25 @@ body {
         .then(data => { allData = data; renderAll(data); })
         .catch(err => console.error('Error loading optimizer results:', err));
 
+    /* ===== SCENARIO RESOLVER (always Medium = MMM_M_M) ===== */
+    function resolveScenario(thresholdData) {
+        if (!thresholdData?.scenarios) return null;
+        return thresholdData.scenarios['MMM_M_M'] || null;
+    }
+    function getUnifiedCosts(entry) {
+        if (!entry) return {};
+        const detail = entry.costs_detail || {};
+        const costs = entry.costs || {};
+        return {
+            resource_costs: detail.resource_costs || null,
+            effective_cost_per_useful_mwh: detail.effective_cost_per_useful_mwh ?? costs.effective_cost ?? null,
+            total_cost_per_demand_mwh: detail.total_cost_per_demand_mwh ?? costs.total_cost ?? null,
+            incremental_above_baseline: detail.incremental_above_baseline ?? costs.incremental ?? null,
+            baseline_wholesale_cost: detail.baseline_wholesale_cost ?? costs.wholesale ?? null,
+            curtailment_pct: detail.curtailment_pct ?? null,
+        };
+    }
+
     /* ===== DESTROY CHART HELPER ===== */
     function destroyChart(id) {
         if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
@@ -825,11 +844,13 @@ body {
         const storageData = [], matchScores = [];
 
         thresholds.forEach(t => {
-            const td = regionData.thresholds[String(t)];
+            const tData = regionData.thresholds[String(t)];
+            const td = tData ? resolveScenario(tData) : null;
             if (td) {
-                costData.push(td.costs.effective_cost_per_useful_mwh);
+                const uc = getUnifiedCosts(td);
+                costData.push(uc.effective_cost_per_useful_mwh);
                 matchScores.push(td.hourly_match_score);
-                storageData.push(td.storage_dispatch_pct);
+                storageData.push(td.battery_dispatch_pct || td.storage_dispatch_pct || 0);
                 for (const res of ['clean_firm', 'solar', 'wind', 'hydro']) {
                     mixData[res].push(td.resource_mix[res] || 0);
                 }
@@ -958,7 +979,8 @@ body {
                 totalCostPerDemand += batteryShare * (LCOE_TABLES.battery[storageLevel][region] + getTxAdder('battery', txLevel, region)) / 100;
                 totalCostPerDemand += ldesShare * (LCOE_TABLES.ldes[storageLevel][region] + getTxAdder('ldes', txLevel, region)) / 100;
             }
-            const curtailmentPct = thresholdData.costs.curtailment_pct || 0;
+            const uc = getUnifiedCosts(thresholdData);
+            const curtailmentPct = uc.curtailment_pct || 0;
             const usefulFraction = (100 - curtailmentPct) / 100;
             return usefulFraction > 0 ? totalCostPerDemand / usefulFraction : totalCostPerDemand;
         }
@@ -968,7 +990,8 @@ body {
         const fanMinCosts = [], fanMaxCosts = [], fanMidCosts = [];
 
         thresholds.forEach(t => {
-            const td = regionData.thresholds[String(t)];
+            const tData = regionData.thresholds[String(t)];
+            const td = tData ? resolveScenario(tData) : null;
             if (!td) { fanMinCosts.push(0); fanMaxCosts.push(0); fanMidCosts.push(0); return; }
             let minC = Infinity, maxC = -Infinity;
             for (const rl of LEVELS) for (const fl of LEVELS) for (const sl of LEVELS) for (const fuelL of LEVELS) for (const txL of TX_LEVELS) {
@@ -1302,17 +1325,21 @@ body {
         const avgAbatement = [], margAbatement = [];
 
         thresholds.forEach((t, i) => {
-            const td = regionData.thresholds[String(t)];
+            const tData = regionData.thresholds[String(t)];
+            const td = tData ? resolveScenario(tData) : null;
             if (!td) return;
+            const uc = getUnifiedCosts(td);
             const cleanPct = t / 100;
-            const incrementalCost = td.costs.incremental_above_baseline;
+            const incrementalCost = uc.incremental_above_baseline || 0;
             const tonsAvoided = cleanPct * emissionRate;
             const avg = tonsAvoided > 0 ? incrementalCost / tonsAvoided : 0;
             avgAbatement.push(parseFloat(avg.toFixed(1)));
             if (i > 0) {
-                const prevTd = regionData.thresholds[String(thresholds[i - 1])];
+                const prevTData = regionData.thresholds[String(thresholds[i - 1])];
+                const prevTd = prevTData ? resolveScenario(prevTData) : null;
                 if (prevTd) {
-                    const deltaCost = td.costs.effective_cost_per_useful_mwh - prevTd.costs.effective_cost_per_useful_mwh;
+                    const prevUc = getUnifiedCosts(prevTd);
+                    const deltaCost = (uc.effective_cost_per_useful_mwh || 0) - (prevUc.effective_cost_per_useful_mwh || 0);
                     const deltaPct = (t - thresholds[i - 1]) / 100;
                     const deltaTons = deltaPct * emissionRate;
                     margAbatement.push(deltaTons > 0 ? parseFloat((deltaCost / deltaTons).toFixed(1)) : 0);
