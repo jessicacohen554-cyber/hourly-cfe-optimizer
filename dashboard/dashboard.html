@@ -6162,17 +6162,21 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const interimTWh = annualDemandTWh * interimGrowthFactor;
     const longtermTWh = longtermRC ? annualDemandTWh * longtermGrowthFactor : null;
 
-    // Helper: extract resource data for a resource_costs object, scaled to TWh
-    function getResourceTWh(rc, demandTWh) {
+    // Helper: extract resource data for a resource_costs object
+    // Existing resources are FIXED at today's absolute TWh (2025 actuals).
+    // New build scales with demand growth at the target time horizon.
+    function getResourceTWh(rc, targetDemandTWh) {
         const existing = {};
         const newBuild = {};
         MIX_RESOURCES.forEach(r => {
             if (r === 'storage') {
                 existing[r] = 0;
-                newBuild[r] = (rc.storage?.dispatch_pct || 0) / 100 * demandTWh;
+                newBuild[r] = (rc.storage?.dispatch_pct || 0) / 100 * targetDemandTWh;
             } else {
-                existing[r] = (rc[r]?.existing_pct || 0) / 100 * demandTWh;
-                newBuild[r] = (rc[r]?.new_pct || 0) / 100 * demandTWh;
+                // Existing is always today's absolute TWh — does not grow
+                existing[r] = (rc[r]?.existing_pct || 0) / 100 * todayTWh;
+                // New build scales with demand at the target year
+                newBuild[r] = (rc[r]?.new_pct || 0) / 100 * targetDemandTWh;
             }
         });
         return { existing, newBuild };
@@ -6180,9 +6184,9 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
     // Today: existing clean only (no target, no new build)
     const todayData = getResourceTWh(interimRC, todayTWh);
-    // Interim target
+    // Interim target (new build scaled to interim demand)
     const interimData = getResourceTWh(interimRC, interimTWh);
-    // Long-term target (if selected)
+    // Long-term target (new build scaled to longterm demand)
     const longtermData = longtermRC ? getResourceTWh(longtermRC, longtermTWh) : null;
 
     // Build chart labels — simple: Existing / Interim / Long-term
