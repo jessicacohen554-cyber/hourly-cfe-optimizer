@@ -4092,10 +4092,22 @@ function updateCompressedDay(entry, region) {
     const matchedSolar = cd.matched.solar.map(v => Math.max(0, toMW(v)));
     const matchedWind = cd.matched.wind.map(v => Math.max(0, toMW(v)));
     const matchedHydro = cd.matched.hydro.map(v => Math.max(0, toMW(v)));
-    const matchedStorage = cd.matched.storage.map(v => Math.max(0, toMW(v)));
+    // Combine battery + ldes into a single storage series
+    const matchedStorage = (cd.matched.storage || cd.matched.battery || new Array(24).fill(0)).map((v, i) => {
+        const bat = cd.matched.battery ? cd.matched.battery[i] : (cd.matched.storage ? cd.matched.storage[i] : 0);
+        const ldes = cd.matched.ldes ? cd.matched.ldes[i] : 0;
+        return Math.max(0, toMW(bat + ldes));
+    });
 
     // Storage charging (negative, below x-axis) — in MW
-    const storageCharge = (cd.storage_charge || new Array(24).fill(0)).map(v => toMW(v));
+    // Combine battery_charge + ldes_charge if separate fields exist
+    const rawCharge = cd.storage_charge || null;
+    const storageCharge = rawCharge
+        ? rawCharge.map(v => toMW(v))
+        : (cd.battery_charge || new Array(24).fill(0)).map((v, i) => {
+            const lc = cd.ldes_charge ? cd.ldes_charge[i] : 0;
+            return toMW(v + lc);
+        });
 
     // Per-resource surplus (curtailed) — in MW
     const surplusSolar = (cd.surplus?.solar || new Array(24).fill(0)).map(v => toMW(v));
