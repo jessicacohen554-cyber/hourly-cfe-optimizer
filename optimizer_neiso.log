@@ -1,0 +1,429 @@
+  Single-ISO mode: running NEISO only
+Loading data...
+  CAISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  ERCOT: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  PJM: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  NYISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  NEISO: gen profiles averaged over 5 years (2021, 2022, 2023, 2024, 2025)
+  CAISO: demand shape averaged over 5 years (2021, 2022, 2023, 2024, 2025), scalars from 2025
+  ERCOT: demand shape averaged over 5 years (2021, 2022, 2023, 2024, 2025), scalars from 2025
+  WARNING: PJM 2021 demand excluded — Hour 3 outlier (0.3116 vs median 0.000019, 16770x)
+  PJM: demand shape averaged over 4 years (2022, 2023, 2024, 2025) (excluded: 2021 — data quality), scalars from 2025
+  NYISO: demand shape averaged over 5 years (2021, 2022, 2023, 2024, 2025), scalars from 2025
+  NEISO: demand shape averaged over 5 years (2021, 2022, 2023, 2024, 2025), scalars from 2025
+  Data loaded.
+
+  QA/QC: Validating profile shapes...
+    CAISO demand: summer=0.000132 winter=0.000106 shoulder=0.000110 (ratio=1.20x)
+    ERCOT demand: summer=0.000137 winter=0.000103 shoulder=0.000109 (ratio=1.26x)
+    PJM demand: summer=0.000128 winter=0.000118 shoulder=0.000103 (ratio=1.24x)
+    NYISO demand: summer=0.000131 winter=0.000115 shoulder=0.000103 (ratio=1.26x)
+    NEISO demand: summer=0.000127 winter=0.000120 shoulder=0.000102 (ratio=1.25x)
+
+  QA/QC Results:
+      WARN: NYISO solar night generation > 10% of daytime
+
+  Loaded existing results: 4 ISOs preserved
+
+======================================================================
+  NEISO (New England)
+======================================================================
+    [checkpoint] Resuming NEISO from threshold-87.5-partial-7of29: 3 thresholds done, partial 87.5% (7/324 scenarios)
+  Resuming from checkpoint: sweep done, 3 thresholds complete
+  Sweep: loaded from checkpoint (25 points)
+
+  Cost-optimizing thresholds (324 scenarios each)... [3 done, 7 remaining]
+    [cache] Loaded NEISO 87.5% score cache: 135798 entries
+    [cache] Loaded NEISO 87.5% score cache: 135798 entries
+    [cache] Cumulative score cache: 135798 entries (shared across thresholds)
+    [floor] Dispatchable floor (CF+CCS): 20% (from prior thresholds, with 10% headroom)
+    75%: loaded from checkpoint — skipping
+    80%: loaded from checkpoint — skipping
+    85%: loaded from checkpoint — skipping
+    87.5%: resuming from partial checkpoint (7/324 scenarios done)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+      Warm-start: 6 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved NEISO (threshold-87.5-partial-8of29) → 330 KB
+    [cache] Saved NEISO 87.5% score cache: 143076 entries (9.6 MB)
+    [checkpoint] Saved NEISO (threshold-87.5-partial-9of29) → 331 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-10of29) → 331 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-11of29) → 331 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-12of29) → 332 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-13of29) → 332 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-14of29) → 332 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-15of29) → 332 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-16of29) → 333 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-17of29) → 333 KB
+    [cache] Saved NEISO 87.5% score cache: 159132 entries (10.7 MB)
+    [checkpoint] Saved NEISO (threshold-87.5-partial-18of29) → 333 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-19of29) → 334 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-20of29) → 334 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-21of29) → 334 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-22of29) → 334 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-23of29) → 335 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-24of29) → 335 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-25of29) → 335 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-26of29) → 336 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-27of29) → 336 KB
+    [cache] Saved NEISO 87.5% score cache: 183649 entries (12.4 MB)
+    [checkpoint] Saved NEISO (threshold-87.5-partial-28of29) → 336 KB
+    [checkpoint] Saved NEISO (threshold-87.5-partial-29of29) → 337 KB
+    87.5%: 22 optimized scenarios (warm-start: 22, full: 1), cache=188510, 240.9s | Medium: CF25/Sol5/Wnd45/CCS25/Hyd0 batt=0% ldes=0% | 14 unique archetypes discovered
+      Cross-pollination: 1272 improvements, 295 filled via cross-pollination, 14 unique mixes → 324/324 total
+    [checkpoint] Saved NEISO (threshold-87.5) → 426 KB
+    [cache] Saved NEISO 87.5% score cache: 188510 entries (12.7 MB)
+    [dashboard] Updated overprocure_results.json: NEISO (4/10 thresholds) — 4145 KB total (5/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved NEISO (threshold-90-partial-1of29) → 427 KB
+    [cache] Saved NEISO 90% score cache: 196534 entries (13.3 MB)
+    [checkpoint] Saved NEISO (threshold-90-partial-2of29) → 427 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-3of29) → 427 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-4of29) → 428 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-5of29) → 428 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved NEISO (threshold-90-partial-6of29) → 428 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-7of29) → 429 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-8of29) → 429 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-9of29) → 429 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-10of29) → 429 KB
+    [cache] Saved NEISO 90% score cache: 220124 entries (14.8 MB)
+    [checkpoint] Saved NEISO (threshold-90-partial-11of29) → 430 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-12of29) → 430 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-13of29) → 430 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-14of29) → 431 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-15of29) → 431 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-16of29) → 431 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-17of29) → 431 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-18of29) → 432 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-19of29) → 432 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-20of29) → 432 KB
+    [cache] Saved NEISO 90% score cache: 252272 entries (17.0 MB)
+    [checkpoint] Saved NEISO (threshold-90-partial-21of29) → 433 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-22of29) → 433 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-23of29) → 433 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-24of29) → 434 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-25of29) → 434 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-26of29) → 434 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-27of29) → 434 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-28of29) → 435 KB
+    [checkpoint] Saved NEISO (threshold-90-partial-29of29) → 435 KB
+    90%: 29 optimized scenarios (warm-start: 24, full: 1), cache=260253, 361.3s | Medium: CF25/Sol5/Wnd35/CCS35/Hyd0 batt=0% ldes=0% | 11 unique archetypes discovered
+      Cross-pollination: 1152 improvements, 295 filled via cross-pollination, 13 unique mixes → 324/324 total
+    [checkpoint] Saved NEISO (threshold-90) → 525 KB
+    [cache] Saved NEISO 90% score cache: 260253 entries (17.5 MB)
+    [dashboard] Updated overprocure_results.json: NEISO (5/10 thresholds) — 4243 KB total (5/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved NEISO (threshold-92.5-partial-1of29) → 525 KB
+    [cache] Saved NEISO 92.5% score cache: 269776 entries (18.2 MB)
+    [checkpoint] Saved NEISO (threshold-92.5-partial-2of29) → 526 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-3of29) → 526 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-4of29) → 526 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-5of29) → 527 KB
+      Warm-start: 4 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved NEISO (threshold-92.5-partial-6of29) → 527 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-7of29) → 527 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-8of29) → 527 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-9of29) → 528 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-10of29) → 528 KB
+    [cache] Saved NEISO 92.5% score cache: 320710 entries (21.6 MB)
+    [checkpoint] Saved NEISO (threshold-92.5-partial-11of29) → 528 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-12of29) → 529 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-13of29) → 529 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-14of29) → 529 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-15of29) → 529 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-16of29) → 530 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-17of29) → 530 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-18of29) → 530 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-19of29) → 531 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-20of29) → 531 KB
+    [cache] Saved NEISO 92.5% score cache: 360871 entries (24.3 MB)
+    [checkpoint] Saved NEISO (threshold-92.5-partial-21of29) → 531 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-22of29) → 532 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-23of29) → 532 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-24of29) → 532 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-25of29) → 532 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-26of29) → 533 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-27of29) → 533 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-28of29) → 533 KB
+    [checkpoint] Saved NEISO (threshold-92.5-partial-29of29) → 534 KB
+    92.5%: 29 optimized scenarios (warm-start: 24, full: 1), cache=367386, 551.9s | Medium: CF30/Sol5/Wnd15/CCS50/Hyd0 batt=0% ldes=0% | 11 unique archetypes discovered
+      Cross-pollination: 1290 improvements, 295 filled via cross-pollination, 14 unique mixes → 324/324 total
+    [checkpoint] Saved NEISO (threshold-92.5) → 624 KB
+    [cache] Saved NEISO 92.5% score cache: 367386 entries (24.7 MB)
+    [dashboard] Updated overprocure_results.json: NEISO (6/10 thresholds) — 4342 KB total (5/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved NEISO (threshold-95-partial-1of29) → 624 KB
+    [cache] Saved NEISO 95% score cache: 377421 entries (25.4 MB)
+    [checkpoint] Saved NEISO (threshold-95-partial-2of29) → 625 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-3of29) → 625 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-4of29) → 625 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-5of29) → 625 KB
+      Warm-start: 5 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved NEISO (threshold-95-partial-6of29) → 626 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-7of29) → 626 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-8of29) → 626 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-9of29) → 627 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-10of29) → 627 KB
+    [cache] Saved NEISO 95% score cache: 441646 entries (29.7 MB)
+    [checkpoint] Saved NEISO (threshold-95-partial-11of29) → 627 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-12of29) → 628 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-13of29) → 628 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-14of29) → 628 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-15of29) → 628 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-16of29) → 629 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-17of29) → 629 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-18of29) → 629 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-19of29) → 630 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-20of29) → 630 KB
+    [cache] Saved NEISO 95% score cache: 477384 entries (32.1 MB)
+    [checkpoint] Saved NEISO (threshold-95-partial-21of29) → 630 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-22of29) → 630 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-23of29) → 631 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-24of29) → 631 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-25of29) → 631 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-26of29) → 632 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-27of29) → 632 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-28of29) → 632 KB
+    [checkpoint] Saved NEISO (threshold-95-partial-29of29) → 632 KB
+      RESAMPLE round 1: 17 unique / 29 run = 59% > 50% — adding 6 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-95-resample-30) → 633 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-31) → 633 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-32) → 633 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-33) → 634 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-34) → 634 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-35) → 634 KB
+      RESAMPLE round 2: 19 unique / 35 run = 54% > 50% — adding 4 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-95-resample-36) → 635 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-37) → 635 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-38) → 635 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-39) → 635 KB
+      RESAMPLE round 3: 22 unique / 39 run = 56% > 50% — adding 6 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-95-resample-40) → 636 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-41) → 636 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-42) → 636 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-43) → 637 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-44) → 637 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-45) → 637 KB
+      RESAMPLE round 4: 23 unique / 45 run = 51% > 50% — adding 2 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-95-resample-46) → 637 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-47) → 638 KB
+      RESAMPLE round 5: 24 unique / 47 run = 51% > 50% — adding 2 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-95-resample-48) → 638 KB
+    [checkpoint] Saved NEISO (threshold-95-resample-49) → 638 KB
+    95%: 49 optimized scenarios (warm-start: 24, full: 1), cache=519249, 826.4s | Medium: CF40/Sol5/Wnd20/CCS35/Hyd0 batt=0% ldes=0% | 15 unique archetypes discovered
+      Cross-pollination: 1386 improvements, 275 filled via cross-pollination, 24 unique mixes → 324/324 total
+    [checkpoint] Saved NEISO (threshold-95) → 723 KB
+    [cache] Saved NEISO 95% score cache: 519249 entries (34.9 MB)
+    [dashboard] Updated overprocure_results.json: NEISO (7/10 thresholds) — 4441 KB total (5/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved NEISO (threshold-97.5-partial-1of29) → 723 KB
+    [cache] Saved NEISO 97.5% score cache: 533054 entries (35.8 MB)
+    [checkpoint] Saved NEISO (threshold-97.5-partial-2of29) → 723 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-3of29) → 724 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-4of29) → 724 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-5of29) → 724 KB
+      Warm-start: 5 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved NEISO (threshold-97.5-partial-6of29) → 725 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-7of29) → 725 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-8of29) → 725 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-9of29) → 725 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-10of29) → 726 KB
+    [cache] Saved NEISO 97.5% score cache: 596459 entries (40.1 MB)
+    [checkpoint] Saved NEISO (threshold-97.5-partial-11of29) → 726 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-12of29) → 726 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-13of29) → 727 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-14of29) → 727 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-15of29) → 727 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-16of29) → 728 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-17of29) → 728 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-18of29) → 728 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-19of29) → 728 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-20of29) → 729 KB
+    [cache] Saved NEISO 97.5% score cache: 631244 entries (42.4 MB)
+    [checkpoint] Saved NEISO (threshold-97.5-partial-21of29) → 729 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-22of29) → 729 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-23of29) → 730 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-24of29) → 730 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-25of29) → 730 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-26of29) → 730 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-27of29) → 731 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-28of29) → 731 KB
+    [checkpoint] Saved NEISO (threshold-97.5-partial-29of29) → 731 KB
+      RESAMPLE round 1: 22 unique / 29 run = 76% > 50% — adding 16 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-97.5-resample-30) → 732 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-31) → 732 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-32) → 732 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-33) → 732 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-34) → 733 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-35) → 733 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-36) → 733 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-37) → 734 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-38) → 734 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-39) → 734 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-40) → 735 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-41) → 735 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-42) → 735 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-43) → 735 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-44) → 736 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-45) → 736 KB
+      RESAMPLE round 2: 30 unique / 45 run = 67% > 50% — adding 16 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-97.5-resample-46) → 736 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-47) → 737 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-48) → 737 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-49) → 737 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-50) → 737 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-51) → 738 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-52) → 738 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-53) → 738 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-54) → 739 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-55) → 739 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-56) → 739 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-57) → 740 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-58) → 740 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-59) → 740 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-60) → 740 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-61) → 741 KB
+      RESAMPLE round 3: 33 unique / 61 run = 54% > 50% — adding 6 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-97.5-resample-62) → 741 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-63) → 741 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-64) → 742 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-65) → 742 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-66) → 742 KB
+    [checkpoint] Saved NEISO (threshold-97.5-resample-67) → 742 KB
+      Resampling converged: 33 unique mixes / 67 scenarios = 49%
+    97.5%: 67 optimized scenarios (warm-start: 24, full: 1), cache=806680, 1452.4s | Medium: CF74/Sol4/Wnd14/CCS4/Hyd4 batt=2% ldes=2% | 20 unique archetypes discovered
+      Cross-pollination: 1444 improvements, 257 filled via cross-pollination, 33 unique mixes → 324/324 total
+    [checkpoint] Saved NEISO (threshold-97.5) → 822 KB
+    [cache] Saved NEISO 97.5% score cache: 806680 entries (54.1 MB)
+    [dashboard] Updated overprocure_results.json: NEISO (8/10 thresholds) — 4540 KB total (5/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved NEISO (threshold-99-partial-1of29) → 822 KB
+    [cache] Saved NEISO 99% score cache: 825091 entries (55.4 MB)
+    [checkpoint] Saved NEISO (threshold-99-partial-2of29) → 822 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-3of29) → 823 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-4of29) → 823 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-5of29) → 823 KB
+      Warm-start: 5 diverse seed mixes from Medium + 4 archetypes
+    [checkpoint] Saved NEISO (threshold-99-partial-6of29) → 823 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-7of29) → 824 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-8of29) → 824 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-9of29) → 824 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-10of29) → 825 KB
+    [cache] Saved NEISO 99% score cache: 892764 entries (59.9 MB)
+    [checkpoint] Saved NEISO (threshold-99-partial-11of29) → 825 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-12of29) → 825 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-13of29) → 826 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-14of29) → 826 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-15of29) → 826 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-16of29) → 826 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-17of29) → 827 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-18of29) → 827 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-19of29) → 827 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-20of29) → 828 KB
+    [cache] Saved NEISO 99% score cache: 955787 entries (64.1 MB)
+    [checkpoint] Saved NEISO (threshold-99-partial-21of29) → 828 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-22of29) → 828 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-23of29) → 828 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-24of29) → 829 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-25of29) → 829 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-26of29) → 829 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-27of29) → 830 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-28of29) → 830 KB
+    [checkpoint] Saved NEISO (threshold-99-partial-29of29) → 830 KB
+      RESAMPLE round 1: 16 unique / 29 run = 55% > 50% — adding 4 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-99-resample-30) → 830 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-31) → 831 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-32) → 831 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-33) → 831 KB
+      RESAMPLE round 2: 18 unique / 33 run = 55% > 50% — adding 4 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-99-resample-34) → 832 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-35) → 832 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-36) → 832 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-37) → 833 KB
+      RESAMPLE round 3: 21 unique / 37 run = 57% > 50% — adding 6 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-99-resample-38) → 833 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-39) → 833 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-40) → 833 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-41) → 834 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-42) → 834 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-43) → 834 KB
+      RESAMPLE round 4: 26 unique / 43 run = 60% > 50% — adding 10 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-99-resample-44) → 835 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-45) → 835 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-46) → 835 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-47) → 835 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-48) → 836 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-49) → 836 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-50) → 836 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-51) → 837 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-52) → 837 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-53) → 837 KB
+      RESAMPLE round 5: 30 unique / 53 run = 57% > 50% — adding 8 midpoint scenarios
+    [checkpoint] Saved NEISO (threshold-99-resample-54) → 838 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-55) → 838 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-56) → 838 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-57) → 838 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-58) → 839 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-59) → 839 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-60) → 839 KB
+    [checkpoint] Saved NEISO (threshold-99-resample-61) → 840 KB
+    99%: 61 optimized scenarios (warm-start: 24, full: 1), cache=1128441, 1572.5s | Medium: CF54/Sol9/Wnd14/CCS19/Hyd4 batt=2% ldes=4% | 16 unique archetypes discovered
+      Cross-pollination: 1288 improvements, 263 filled via cross-pollination, 31 unique mixes → 324/324 total
+    [checkpoint] Saved NEISO (threshold-99) → 921 KB
+    [cache] Saved NEISO 99% score cache: 1128441 entries (75.7 MB)
+    [dashboard] Updated overprocure_results.json: NEISO (9/10 thresholds) — 4639 KB total (5/5 ISOs)
+      (pruned: 29 representative scenarios, filling 295 via cross-pollination)
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [cache] Saved NEISO 100% score cache: 1140293 entries (76.4 MB)
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+      Warm-start: 0 diverse seed mixes from Medium + 0 archetypes
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [cache] Saved NEISO 100% score cache: 1140293 entries (76.4 MB)
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [cache] Saved NEISO 100% score cache: 1140293 entries (76.4 MB)
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [cache] Saved NEISO 100% score cache: 1140293 entries (76.4 MB)
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    [checkpoint] Saved NEISO (threshold-100-partial-0of29) → 921 KB
+    100%: 33 optimized scenarios, cache=1140293, 57.1s
+    [checkpoint] Saved NEISO (threshold-100) → 921 KB
+    [cache] Saved NEISO 100% score cache: 1140293 entries (76.4 MB)
+    [dashboard] Updated overprocure_results.json: NEISO (10/10 thresholds) — 4639 KB total (5/5 ISOs)
+  Monotonicity: 74 unique mixes across 10 thresholds
+  Monotonicity round 1: 56 violations, 56 fixed via cross-threshold pollination, 0 remaining
+    [dashboard] Updated overprocure_results.json: NEISO (10/10 thresholds) — 4663 KB total (5/5 ISOs)
+
+  NEISO completed in 5088s
+  Saved: 4663 KB (5/5 ISOs)
+  Cached results: /home/user/hourly-cfe-optimizer/data/optimizer_cache.json (9495 KB)
+
+======================================================================
+  Complete in 5090s. Saved to: /home/user/hourly-cfe-optimizer/dashboard/overprocure_results.json
+  File size: 4663 KB
+======================================================================
