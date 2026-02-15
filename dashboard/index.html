@@ -462,7 +462,7 @@ body {
 
 .scrolly-chart-wrap canvas {
     width: 100% !important;
-    max-height: 420px;
+    max-height: 480px;
 }
 
 .scrolly-steps {
@@ -598,7 +598,8 @@ body {
     }
     .scrolly-sticky {
         width: 100%;
-        height: 50vh;
+        height: auto;
+        min-height: 380px;
         position: relative;
         top: auto;
         padding: 24px 20px;
@@ -617,7 +618,7 @@ body {
         position: sticky;
         top: 0;
         z-index: 10;
-        height: 45vh;
+        min-height: 400px;
     }
 }
 
@@ -1338,7 +1339,8 @@ body {
 /* ========== MISSING COMPONENT RESPONSIVE (768px) ========== */
 @media (max-width: 768px) {
     .chart-container { padding: 16px; }
-    .chart-container canvas { height: 260px !important; }
+    .chart-container canvas { height: 320px !important; }
+    .chart-container canvas.compact-chart { height: 260px !important; }
     .curtail-legend { gap: 12px; font-size: 0.75rem; }
     .reliability-gauge-row { gap: 10px; }
     .reliability-gauge { min-width: 80px; padding: 14px 8px; }
@@ -1353,7 +1355,7 @@ body {
     .trilemma-svg { max-width: 300px !important; min-width: 260px !important; }
     .region-toggle-row, .incremental-region-pills { gap: 6px; }
     .region-toggle-btn, .incremental-pill { padding: 5px 12px; font-size: 0.75rem; }
-    .incremental-chart-container { min-height: 260px; }
+    .incremental-chart-container { min-height: 360px; }
     .preservation-panel { padding: 28px 20px; }
     .preservation-grid { grid-template-columns: 1fr; gap: 14px; }
     .preservation-card-cost { font-size: 1.3rem; }
@@ -1364,7 +1366,8 @@ body {
 /* ========== MISSING COMPONENT RESPONSIVE (480px) ========== */
 @media (max-width: 480px) {
     .chart-container { padding: 12px; }
-    .chart-container canvas { height: 220px !important; }
+    .chart-container canvas { height: 300px !important; }
+    .chart-container canvas.compact-chart { height: 220px !important; }
     .reliability-gauge-row { flex-wrap: wrap; gap: 8px; }
     .reliability-gauge { min-width: 70px; max-width: 80px; padding: 10px 6px; }
     .gauge-ring { width: 56px; height: 56px; }
@@ -1379,7 +1382,7 @@ body {
     .trilemma-svg { max-width: 260px !important; min-width: 220px !important; }
     .region-toggle-row, .incremental-region-pills { gap: 4px; }
     .region-toggle-btn, .incremental-pill { padding: 8px 12px; font-size: 0.75rem; min-height: 44px; }
-    .incremental-chart-container { min-height: 280px; }
+    .incremental-chart-container { min-height: 380px; }
     .incremental-insight { font-size: 0.82rem; padding: 10px 14px; }
     .preservation-panel { padding: 22px 16px; border-radius: 12px; }
     .preservation-panel h3 { font-size: 1.1rem; }
@@ -1688,7 +1691,7 @@ body {
                 <button class="region-toggle-btn" data-region="NYISO">NYISO</button>
                 <button class="region-toggle-btn" data-region="NEISO">NEISO</button>
             </div>
-            <div class="scrolly-chart-wrap" style="margin:12px 0 24px; min-height:280px;">
+            <div class="scrolly-chart-wrap" style="margin:12px 0 24px; min-height:380px;">
                 <canvas id="narrativeMixChart"></canvas>
             </div>
             <div class="story-insight-box">

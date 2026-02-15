@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Analysis — Power Generator Decarbonization</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="index.html" class="nav-brand">Power Generator Decarbonization</a>
+        <button class="nav-hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')">&#9776;</button>
+        <ul class="nav-links">
+            <li><a href="index.html">Executive Summary</a></li>
+            <li><a href="dashboard.html">Company Dashboard</a></li>
+            <li><a href="fleet-analysis.html" class="active">Fleet Analysis</a></li>
+            <li><a href="targets.html">Targets & Feasibility</a></li>
+            <li><a href="policy.html">Policy & Conditions</a></li>
+            <li><a href="methodology.html">Methodology</a></li>
+            <li><a href="../../dashboard/index.html" style="color:#F59E0B;">&#8592; 8,760 Problem</a></li>
+        </ul>
+    </div>
+</nav>
+
+<header class="hero" style="padding: 48px 24px 40px;">
+    <div class="hero-inner">
+        <p class="tagline">The Fleet Composition Paradox</p>
+        <h1>How Fleet Composition Determines Decarbonization Pathway</h1>
+        <p class="subtitle">Coal-heavy generators face different economics than efficient gas+nuclear fleets. Understanding this paradox is essential for realistic target-setting and policy design.</p>
+    </div>
+</header>
+
+<div class="main-content">
+
+    <div class="key-insights">
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#9878;</span>
+            <div><strong>The Paradox</strong><br>The dirtiest generators have the cheapest decarbonization: coal→wind at $15–25/tonne vs. gas→CCS at $80–150/tonne</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#9881;</span>
+            <div><strong>Four Archetypes</strong><br>Coal-heavy, gas-dominant, diversified, and nuclear-led fleets each require fundamentally different strategies</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#128200;</span>
+            <div><strong>The Hockey Stick</strong><br>Going from 90% to 100% clean doubles system cost — the last mile is exponentially expensive</div>
+        </div>
+        <div class="key-insight-item">
+            <span class="key-insight-icon">&#127758;</span>
+            <div><strong>Geography Is Destiny</strong><br>Decarbonization costs vary 2–3× across regions due to solar/wind resources and market structure</div>
+        </div>
+    </div>
+
+    <!-- Archetype Overview -->
+    <section class="story-section fade-in">
+        <span class="story-badge navy">Four Archetypes</span>
+        <div class="story-content">
+            <h2>Every Generator Falls Into One of Four Fleet Archetypes</h2>
+            <p>The decarbonization pathway for a power generator is fundamentally determined by its starting fleet composition. We identify four distinct archetypes among the top 15 generators, each with different economics, opportunities, and constraints.</p>
+        </div>
+
+        <div class="card-grid" style="margin-top: 24px;">
+            <div class="card" style="border-left: 4px solid #374151;">
+                <h3 style="color: #374151;">Coal-Heavy</h3>
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Evergy, AEP, BH Energy, Vistra, PPL</strong></p>
+                <p style="font-size: 0.88rem;">Coal &ge;25% of generation. Highest current emissions intensity (454&ndash;572 kg/MWh). But coal retirement is the cheapest form of abatement: new renewables now undercut coal operating costs in most markets.<sup class="ref">5</sup></p>
+                <div class="stat-tile" style="margin-top: 12px; background: rgba(55,65,81,0.05);">
+                    <div class="stat-value" style="font-size: 1.4rem; color: #374151;">$15&ndash;35</div>
+                    <div class="stat-label">$/tonne CO₂ abatement (coal &rarr; renewables)</div>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid #EF4444;">
+                <h3 style="color: #EF4444;">Gas-Dominant</h3>
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Entergy, Dominion</strong></p>
+                <p style="font-size: 0.88rem;">Gas &ge;45% with nuclear. Moderate intensity (333&ndash;349 kg/MWh). Already past the easy wins of coal retirement. Reducing gas emissions requires CCS, clean firm, or massive renewable overbuild&mdash;all more expensive per tonne.<sup class="ref">6</sup></p>
+                <div class="stat-tile" style="margin-top: 12px; background: rgba(239,68,68,0.05);">
+                    <div class="stat-value" style="font-size: 1.4rem; color: #EF4444;">$80&ndash;150</div>
+                    <div class="stat-label">$/tonne CO₂ abatement (gas &rarr; clean)</div>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid #0EA5E9;">
+                <h3 style="color: #0EA5E9;">Diversified / Transitioning</h3>
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Duke, Southern, Xcel, DTE, WEC, AES</strong></p>
+                <p style="font-size: 0.88rem;">Mix of gas, coal, nuclear, and growing renewables. These generators have the most flexible pathway options: retire remaining coal first (cheap), then build renewables, then address gas (harder).</p>
+                <div class="stat-tile" style="margin-top: 12px; background: rgba(14,165,233,0.05);">
+                    <div class="stat-value" style="font-size: 1.4rem; color: #0EA5E9;">$25&ndash;80</div>
+                    <div class="stat-label">$/tonne CO₂ abatement (blended pathway)</div>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid #7C3AED;">
+                <h3 style="color: #7C3AED;">Nuclear-Led / Renewable-Led</h3>
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Constellation, NextEra</strong></p>
+                <p style="font-size: 0.88rem;">Already below US average intensity. Nuclear or renewable backbone. Challenge is not reducing&mdash;it's maintaining low-carbon status while growing to meet surging demand (data centers, electrification).</p>
+                <div class="stat-tile" style="margin-top: 12px; background: rgba(124,58,237,0.05);">
+                    <div class="stat-value" style="font-size: 1.4rem; color: #7C3AED;">$120+</div>
+                    <div class="stat-label">$/tonne CO₂ for marginal reductions</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Sector Transformation -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>The Sector-Wide Transformation: 2012 to 2024</h2>
+            <p>The U.S. power sector has undergone a remarkable fuel-mix shift in just 12 years, documented by the MJ Bradley/ERM Benchmarking Air Emissions reports.<sup class="ref">4</sup></p>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="company-table" style="max-width: 700px; margin: 0 auto;">
+                <thead>
+                    <tr>
+                        <th>Fuel Source</th>
+                        <th>2012 Share</th>
+                        <th>2024 Share</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Coal</strong></td><td>37%</td><td>~15%</td><td style="color:#22C55E;">&darr; 22 pp</td></tr>
+                    <tr><td><strong>Natural Gas</strong></td><td>30%</td><td>~43%</td><td style="color:#F59E0B;">&uarr; 13 pp</td></tr>
+                    <tr><td><strong>Wind + Solar</strong></td><td>&lt;4%</td><td>~16%</td><td style="color:#22C55E;">&uarr; 12+ pp</td></tr>
+                    <tr><td><strong>Nuclear</strong></td><td>~19%</td><td>~18%</td><td style="color:var(--text-muted);">&asymp; stable</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="stat-row" style="margin-top: 24px;">
+            <div class="stat-tile">
+                <div class="stat-value success" style="font-size: 1.6rem;">&darr;40%</div>
+                <div class="stat-label">CO₂ from 2007 Peak</div>
+                <div class="stat-sublabel">Top 100 producers</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value success" style="font-size: 1.6rem;">&darr;96%</div>
+                <div class="stat-label">SO₂ Since 1990</div>
+                <div class="stat-sublabel">A Clean Air Act success</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value success" style="font-size: 1.6rem;">&darr;90%</div>
+                <div class="stat-label">NOₓ Since 1990</div>
+                <div class="stat-sublabel">Regulation-driven</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value highlight" style="font-size: 1.6rem;">44%</div>
+                <div class="stat-label">Nuclear&rsquo;s Share of Zero-Carbon</div>
+                <div class="stat-sublabel">Still the clean energy backbone</div>
+            </div>
+        </div>
+
+        <div class="callout warning" style="margin-top: 24px;">
+            <p><strong>The stall:</strong> Despite 40% CO₂ reduction from 2007 peak, emissions have been essentially flat since 2020. Power sector CO₂ actually <strong>rose 3.8% in 2025</strong> as higher gas prices drove a coal-generation rebound&mdash;the first consecutive years of emissions growth in over a decade. The fuel switch from coal to gas has delivered most of its emissions benefit; further reductions require deployment of zero-carbon sources at unprecedented scale.<sup class="ref" title="Rhodium Group 2025">20</sup></p>
+        </div>
+
+        <div class="callout" style="margin-top: 16px;">
+            <p><strong>Constellation&rsquo;s unique position:</strong> Constellation holds the largest zero-carbon generation fleet in the U.S., anchored by <strong>23 GW of nuclear capacity</strong> across 14 plants. With the Geysers geothermal complex and significant gas generation, the company spans the full spectrum from ultra-clean nuclear to efficient gas CCGTs &mdash; making it both the cleanest large generator by intensity and a fascinating case study in last-mile decarbonization economics.<sup class="ref">4</sup></p>
+        </div>
+
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Historical Emissions Trajectories -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Historical Emissions Trajectories: 2005&ndash;2024</h2>
+            <p>How have the top generators&rsquo; CO₂ emission rates changed over the past two decades? The trajectories reveal which companies are genuinely decarbonizing and which are stalling.</p>
+        </div>
+
+        <div class="chart-container">
+            <h3>CO₂ Intensity Trajectories by Company (kg CO₂/MWh)</h3>
+            <div class="chart-wrapper" style="height: 450px;">
+                <canvas id="trajectoryChart"></canvas>
+            </div>
+            <p class="citation">Estimated trajectories based on eGRID 2005&ndash;2023 data, EIA Form 923, company sustainability reports, and MJ Bradley/ERM annual benchmarking. Post-2023 values reflect announced retirements and additions.<sup class="ref">1,4</sup></p>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 16px; margin-bottom: 24px;" id="trajectoryLegend">
+            <button class="pill active" data-filter="all" onclick="filterTrajectory('all')">All Companies</button>
+            <button class="pill" data-filter="coal-heavy" onclick="filterTrajectory('coal-heavy')">Coal-Heavy</button>
+            <button class="pill" data-filter="diversified" onclick="filterTrajectory('diversified')">Diversified</button>
+            <button class="pill" data-filter="gas-nuclear" onclick="filterTrajectory('gas-nuclear')">Gas-Nuclear</button>
+            <button class="pill" data-filter="leaders" onclick="filterTrajectory('leaders')">Clean Leaders</button>
+        </div>
+
+        <div class="card-grid" style="margin-top: 24px;">
+            <div class="card">
+                <h4>Fastest Decarbonizers</h4>
+                <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>AEP:</strong> &darr;66% since 2005 (13 GW coal retired)</li>
+                    <li><strong>Xcel:</strong> &darr;57% since 2005 (25 coal units closed)</li>
+                    <li><strong>AES:</strong> Coal 54%&rarr;16% (2017&ndash;2024)</li>
+                    <li><strong>Constellation:</strong> ~58% zero-carbon with nuclear backbone; lowest intensity among diversified generators</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4>Stalled or Rising</h4>
+                <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>BH Energy:</strong> PacifiCorp coal retirement delayed; MidAmerican gains offset</li>
+                    <li><strong>PPL:</strong> KY coal fleet largely intact; highest intensity</li>
+                    <li><strong>Entergy:</strong> Gas dependence + industrial load growth complicates absolute reduction</li>
+                    <li><strong>Constellation:</strong> Gas CCGT fleet maintains moderate intensity; nuclear offsets but doesn&rsquo;t eliminate gas emissions</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="chart-container" style="margin-top: 24px;">
+            <h3>Absolute CO₂ Emissions Trajectory: Top 15 Combined</h3>
+            <div class="chart-wrapper" style="height: 320px;">
+                <canvas id="absoluteTrajectoryChart"></canvas>
+            </div>
+            <p class="citation">Top 15 generators combined annual CO₂ emissions. Based on MJ Bradley/ERM data showing ~40% decline from 2007 peak but flat since 2020.<sup class="ref">4</sup></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- The Paradox Explained -->
+    <section class="story-section fade-in">
+        <span class="story-badge red">The Paradox</span>
+        <div class="story-content">
+            <h2>Why the Dirtiest Generators May Have the Easiest Economics</h2>
+            <p>Consider two generators trying to reduce emissions by 50%:</p>
+        </div>
+
+        <div class="story-two-col" style="margin-top: 24px;">
+            <div class="card" style="border: 2px solid #374151;">
+                <h4>Evergy (Coal-Heavy): 519 &rarr; 260 kg/MWh</h4>
+                <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>Strategy:</strong> Replace coal fleet with Kansas wind + battery storage</li>
+                    <li><strong>Cost:</strong> New wind at $25&ndash;35/MWh undercuts coal operating costs ($35&ndash;50/MWh)</li>
+                    <li><strong>Abatement:</strong> ~$15&ndash;25/tonne CO₂</li>
+                    <li><strong>Barrier:</strong> Coal community transition, stranded assets</li>
+                    <li><strong>Net bill impact:</strong> Potentially <em>negative</em> (lower system costs)</li>
+                </ul>
+                <div class="callout success" style="margin-top: 12px;">
+                    <p><strong>Verdict:</strong> 50% reduction is economically rational even without a carbon price. IRA credits make it a no-brainer.</p>
+                </div>
+            </div>
+            <div class="card" style="border: 2px solid #7C3AED;">
+                <h4>Constellation (Nuclear-Led): 177 &rarr; 88 kg/MWh</h4>
+                <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>Strategy:</strong> Must decarbonize ~130 TWh of gas CCGT generation</li>
+                    <li><strong>Options:</strong> CCS on gas ($90&ndash;130/MWh), new renewables+LDES ($80&ndash;120/MWh for last-mile matching)</li>
+                    <li><strong>Abatement:</strong> ~$80&ndash;150/tonne CO₂</li>
+                    <li><strong>Barrier:</strong> CCS at scale unproven; LDES still expensive</li>
+                    <li><strong>Net bill impact:</strong> Significant cost increase</li>
+                </ul>
+                <div class="callout warning" style="margin-top: 12px;">
+                    <p><strong>Verdict:</strong> 50% reduction requires either CCS breakthrough, massive storage deployment, or carbon price &gt;$80/tonne to be economic.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Marginal Abatement Costs -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Marginal Abatement Cost by Fleet Archetype</h2>
+            <p>The cost of each additional tonne of CO₂ avoided increases as generators pursue deeper decarbonization. The shape of this curve depends entirely on fleet starting composition.</p>
+        </div>
+
+        <div class="chart-container">
+            <h3>CO₂ Abatement Cost Curve: Cheap Early Wins, Expensive Last Mile</h3>
+            <div class="chart-wrapper" style="height: 400px;">
+                <canvas id="macChart"></canvas>
+            </div>
+            <p class="citation">Based on Lazard LCOE 2024, NREL ATB 2024, and hourly CFE optimizer cost curves for storage and firm generation.<sup class="ref">5,6,7</sup></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Regional Factors -->
+    <section class="story-section fade-in">
+        <span class="story-badge sky">Regional Dimension</span>
+        <div class="story-content">
+            <h2>Geography Is Destiny: How Region Shapes the Decarbonization Playbook</h2>
+            <p>The hourly CFE optimizer shows dramatic regional variation in decarbonization costs. A generator's location in the grid determines access to solar and wind resources, transmission capacity, wholesale market structure, and state policy environment.<sup class="ref">7</sup></p>
+        </div>
+
+        <div class="card-grid" style="margin-top: 24px;">
+            <div class="card">
+                <h4>ERCOT (Texas)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Constellation, Vistra, AEP (partial)</p>
+                <p style="font-size: 0.88rem;">Excellent solar+wind resources. Competitive wholesale market. No capacity market (energy-only). Battery+solar economics are strongest here. <strong>But:</strong> reliability concerns post-Winter Storm Uri drive gas retention.</p>
+            </div>
+            <div class="card">
+                <h4>PJM (Mid-Atlantic / Midwest)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Constellation, AEP, Dominion, PPL, Vistra</p>
+                <p style="font-size: 0.88rem;">Largest US wholesale market. Nuclear backbone (Constellation). Capacity market values reliability. Coal-to-gas-to-clean transition underway. <strong>But:</strong> interconnection queue is massive (800+ GW waiting).</p>
+            </div>
+            <div class="card">
+                <h4>Southeast (SERC, non-ISO)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Duke, Southern, Entergy, Dominion (partial)</p>
+                <p style="font-size: 0.88rem;">Vertically integrated, regulated monopolies. No wholesale market competition. IRP-driven planning. Excellent solar resource. <strong>But:</strong> vertically integrated structure means ratepayer impact is direct and politically sensitive.</p>
+            </div>
+            <div class="card">
+                <h4>MISO / SPP (Central US)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Xcel, Evergy, DTE, WEC, Entergy (partial), AES (Indiana)</p>
+                <p style="font-size: 0.88rem;">World-class wind resource (Great Plains). Growing solar. Strong utility RPS compliance activity. <strong>But:</strong> transmission constraints limit exports from wind-rich regions to load centers. Coal retirement pace varies by state politics.</p>
+            </div>
+            <div class="card">
+                <h4>Western US (WECC)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> BH Energy (PacifiCorp, NV Energy)</p>
+                <p style="font-size: 0.88rem;">Exceptional solar and wind. Emerging Western energy market (EDAM). Aggressive state clean energy mandates (CA, OR, WA). <strong>But:</strong> PacifiCorp has massive legacy coal + wildfire liability. Transmission across the West is constrained.</p>
+            </div>
+            <div class="card">
+                <h4>CAISO (California)</h4>
+                <p style="font-size: 0.88rem;"><strong>Generators:</strong> Constellation (Geysers + gas), NextEra, AES</p>
+                <p style="font-size: 0.88rem;">Most aggressive clean energy policy in the nation. SB 100 mandates 100% clean by 2045. Excellent solar but evening ramp challenge. <strong>But:</strong> natural gas still critical for reliability. Constellation&rsquo;s Geysers geothermal is a clean firm anchor.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Three-Strategy Framework from CFE Optimizer -->
+    <section class="story-section fade-in">
+        <span class="story-badge green">Optimizer Insights</span>
+        <div class="story-content">
+            <h2>Three Decarbonization Strategies: What the Hourly CFE Optimizer Reveals</h2>
+            <p>The hourly CFE optimizer &mdash; our sister project modeling 24/7 clean energy matching across five US ISOs &mdash; identifies three distinct strategy zones. Each applies differently depending on a generator&rsquo;s fleet archetype and regional market.<sup class="ref">7</sup></p>
+        </div>
+
+        <div class="card-grid" style="margin-top: 24px;">
+            <div class="card" style="border-top: 4px solid #22C55E;">
+                <h3 style="color: #22C55E; font-size: 1.1rem;">Strategy 1: Renewable-First</h3>
+                <div style="font-size: 2.4rem; font-weight: 800; color: #22C55E; margin: 8px 0;">75&ndash;85%</div>
+                <div style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px;">Clean Energy Target Zone</div>
+                <p style="font-size: 0.9rem;">Solar + wind + 4-hour battery storage. Cost premium: <strong>$10&ndash;25/MWh</strong> above fossil baseline. Economic even without carbon pricing in most regions. This is the sweet spot for <strong>coal-heavy generators</strong>: replace coal with renewables+storage and system costs may actually decrease.</p>
+                <div class="callout success" style="margin-top: 12px; padding: 12px 16px;">
+                    <p style="font-size: 0.85rem;"><strong>Best for:</strong> Evergy, AEP, BH Energy, Vistra, PPL &mdash; coal retirement + renewable build</p>
+                </div>
+            </div>
+            <div class="card" style="border-top: 4px solid #0EA5E9;">
+                <h3 style="color: #0EA5E9; font-size: 1.1rem;">Strategy 2: Nuclear-Plus</h3>
+                <div style="font-size: 2.4rem; font-weight: 800; color: #0EA5E9; margin: 8px 0;">85&ndash;95%</div>
+                <div style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px;">Clean Energy Target Zone</div>
+                <p style="font-size: 0.9rem;">Renewables + nuclear life-extension + CCS on select gas plants. Cost premium: <strong>$25&ndash;50/MWh</strong>. Clean firm (nuclear, geothermal, CCS-CCGT) becomes essential for reliability during low renewable hours. Economic with IRA tax credits and modest carbon pricing ($40&ndash;60/ton).</p>
+                <div class="callout" style="margin-top: 12px; padding: 12px 16px;">
+                    <p style="font-size: 0.85rem;"><strong>Best for:</strong> Duke, Southern, Dominion, Xcel, DTE, WEC &mdash; diversified fleets with nuclear anchors</p>
+                </div>
+            </div>
+            <div class="card" style="border-top: 4px solid #7C3AED;">
+                <h3 style="color: #7C3AED; font-size: 1.1rem;">Strategy 3: Regional Portfolio</h3>
+                <div style="font-size: 2.4rem; font-weight: 800; color: #7C3AED; margin: 8px 0;">95&ndash;100%</div>
+                <div style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px;">Clean Energy Target Zone</div>
+                <p style="font-size: 0.9rem;">Full portfolio: renewables + nuclear + CCS + LDES (iron-air) + DAC offsets. Cost premium: <strong>$50&ndash;78/MWh</strong>. The last 5% costs as much as the first 50%. Long-duration storage and clean firm are non-negotiable at this level. Requires carbon pricing &gt;$100/tonne or strong mandates.</p>
+                <div class="callout warning" style="margin-top: 12px; padding: 12px 16px;">
+                    <p style="font-size: 0.85rem;"><strong>The challenge for:</strong> Constellation, NextEra, Entergy &mdash; already-clean fleets pursuing the expensive last mile</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container" style="margin-top: 32px;">
+            <h3>The Hockey Stick: Cost of Clean Energy Matching by Region</h3>
+            <div class="chart-wrapper" style="height: 380px;">
+                <canvas id="hockeyStickChart"></canvas>
+            </div>
+            <p class="citation">Data from hourly CFE optimizer: cost premium ($/MWh above baseline) for achieving each level of 24/7 clean energy matching, Medium cost assumptions. Regional variation reflects solar/wind resource quality, market structure, and existing fleet composition.<sup class="ref">7</sup></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- Key Findings -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Key Findings from Fleet Analysis</h2>
+        </div>
+
+        <div class="card-grid">
+            <div class="card">
+                <h4>1. Coal Retirement Is Low-Hanging Fruit</h4>
+                <p style="font-size: 0.9rem;">New solar+wind+storage is now cheaper than operating existing coal in most markets. The 5 coal-heavy generators (Evergy, AEP, BHE, Vistra, PPL) account for ~211 Mt CO₂/year. Retiring their coal fleets could reduce total emissions by ~100+ MT CO₂/year at negative or minimal cost.<sup class="ref">5,8</sup></p>
+            </div>
+            <div class="card">
+                <h4>2. Gas Is the Next Frontier &mdash; and Much Harder</h4>
+                <p style="font-size: 0.9rem;">After coal, natural gas is the dominant emitter (~45% of generation across these 15). But gas plants are more efficient, more flexible, and more critical for reliability. Decarbonizing gas requires CCS, clean firm alternatives, or very high storage deployment &mdash; all at 3&ndash;5x the $/tonne of coal retirement.<sup class="ref">6,7</sup></p>
+            </div>
+            <div class="card">
+                <h4>3. Nuclear Is the Cheapest Clean MWh</h4>
+                <p style="font-size: 0.9rem;">Existing nuclear plants produce electricity at $25&ndash;35/MWh &mdash; cheaper than any new clean generation source. Extending nuclear life and pursuing uprates is the single most cost-effective decarbonization strategy. Constellation&rsquo;s 23 GW nuclear fleet is an extraordinary clean energy asset.<sup class="ref">5,6</sup></p>
+            </div>
+            <div class="card">
+                <h4>4. The Last 10&ndash;20% Is Exponentially Expensive</h4>
+                <p style="font-size: 0.9rem;">The CFE optimizer shows that going from 90% to 100% clean energy doubles or triples system cost in most regions. This last-mile problem is where long-duration storage, CCS, or new nuclear become necessary &mdash; and where policy support is most critical. Going from 99% to 100% alone costs an additional <strong>$18&ndash;31/MWh</strong> for just 1% more clean energy.<sup class="ref">7</sup></p>
+            </div>
+            <div class="card">
+                <h4>5. Storage Alone Can&rsquo;t Solve the Last Mile</h4>
+                <p style="font-size: 0.9rem;">Even at 100% clean energy, battery and LDES storage accounts for <strong>less than 10% of total system cost</strong> in the optimizer. The bottleneck isn&rsquo;t storage &mdash; it&rsquo;s the availability and cost of clean firm generation (nuclear, geothermal, CCS-CCGT) to fill multi-day low-renewable periods.<sup class="ref">7</sup></p>
+            </div>
+            <div class="card">
+                <h4>6. Regional Variation Is Massive</h4>
+                <p style="font-size: 0.9rem;">The cost of achieving 95% clean energy varies by <strong>2&ndash;3x across regions</strong>. ERCOT and CAISO benefit from excellent solar resources. PJM and ISO-NE face higher costs due to lower solar capacity factors and greater seasonal variability. Generators&rsquo; regional exposure directly determines their decarbonization economics.<sup class="ref">7</sup></p>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Executive Summary</a>
+        <a href="dashboard.html">Company Dashboard</a>
+        <a href="fleet-analysis.html">Fleet Analysis</a>
+        <a href="targets.html">Targets & Feasibility</a>
+        <a href="policy.html">Policy & Conditions</a>
+        <a href="methodology.html">Methodology</a>
+        <a href="../../dashboard/index.html">&#8592; 8,760 Problem</a>
+    </div>
+    <div class="footer-note">Analysis based on EPA eGRID 2023, EIA data, company filings, and hourly CFE optimizer modeling. &copy; 2026</div>
+</footer>
+<div class="bottom-bar"></div>
+
+<script>
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Hockey Stick Cost Curve (from CFE Optimizer)
+new Chart(document.getElementById('hockeyStickChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: ['75%', '80%', '85%', '87.5%', '90%', '92.5%', '95%', '97.5%', '99%', '100%'],
+        datasets: [
+            { label: 'ERCOT', data: [10, 13, 17, 21, 26, 33, 42, 54, 62, 78], borderColor: '#EF4444', backgroundColor: 'transparent', tension: 0.3, pointRadius: 4, borderWidth: 2.5 },
+            { label: 'CAISO', data: [12, 15, 19, 23, 28, 35, 45, 57, 66, 75], borderColor: '#F59E0B', backgroundColor: 'transparent', tension: 0.3, pointRadius: 4, borderWidth: 2.5 },
+            { label: 'PJM', data: [14, 18, 23, 28, 34, 42, 52, 64, 72, 88], borderColor: '#0EA5E9', backgroundColor: 'transparent', tension: 0.3, pointRadius: 4, borderWidth: 2.5 },
+            { label: 'NYISO', data: [16, 20, 26, 31, 38, 47, 58, 70, 80, 95], borderColor: '#7C3AED', backgroundColor: 'transparent', tension: 0.3, pointRadius: 4, borderWidth: 2.5 },
+            { label: 'ISO-NE', data: [18, 23, 29, 35, 42, 52, 64, 76, 88, 105], borderColor: '#22C55E', backgroundColor: 'transparent', tension: 0.3, pointRadius: 4, borderWidth: 2.5 }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: +$${ctx.raw}/MWh` } }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Clean Energy Target (%)', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: 'Cost Premium ($/MWh above baseline)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } }
+        }
+    }
+});
+
+// ============================================================
+// HISTORICAL EMISSIONS TRAJECTORY CHART
+// ============================================================
+const years = ['2005','2008','2010','2012','2014','2016','2018','2020','2022','2024'];
+
+// Estimated intensity trajectories (kg CO₂/MWh) based on eGRID, company reports, MJ Bradley
+const trajectories = {
+    'Constellation':  { data: [295, 275, 260, 245, 230, 215, 200, 190, 183, 177], color: '#7C3AED', group: 'leaders' },
+    'NextEra':        { data: [372, 340, 318, 295, 272, 254, 240, 231, 227, 222], color: '#22C55E', group: 'leaders' },
+    'Duke':           { data: [499, 476, 454, 431, 408, 395, 381, 368, 358, 354], color: '#0EA5E9', group: 'diversified' },
+    'Southern':       { data: [522, 490, 463, 440, 417, 399, 386, 372, 363, 361], color: '#06B6D4', group: 'diversified' },
+    'Vistra':         { data: [816, 771, 726, 680, 635, 590, 544, 517, 499, 486], color: '#DC2626', group: 'coal-heavy' },
+    'AEP':            { data: [862, 816, 771, 703, 635, 590, 567, 535, 517, 499], color: '#EF4444', group: 'coal-heavy' },
+    'Dominion':       { data: [499, 454, 417, 390, 367, 354, 345, 338, 335, 333], color: '#F59E0B', group: 'gas-nuclear' },
+    'BH Energy':      { data: [635, 626, 613, 590, 567, 544, 522, 504, 497, 494], color: '#9CA3AF', group: 'coal-heavy' },
+    'Entergy':        { data: [408, 399, 390, 381, 372, 363, 358, 354, 352, 349], color: '#84CC16', group: 'gas-nuclear' },
+    'AES':            { data: [635, 590, 544, 499, 476, 454, 431, 399, 386, 372], color: '#10B981', group: 'diversified' },
+    'Xcel':           { data: [680, 635, 590, 544, 499, 476, 454, 427, 413, 399], color: '#8B5CF6', group: 'diversified' },
+    'Evergy':         { data: [726, 703, 680, 658, 626, 599, 572, 544, 531, 519], color: '#374151', group: 'coal-heavy' },
+    'DTE':            { data: [635, 613, 590, 567, 544, 517, 490, 463, 454, 445], color: '#EC4899', group: 'diversified' },
+    'WEC':            { data: [613, 590, 567, 544, 517, 490, 463, 440, 431, 424], color: '#6366F1', group: 'diversified' },
+    'PPL':            { data: [680, 671, 663, 653, 635, 622, 608, 595, 583, 572], color: '#B45309', group: 'coal-heavy' }
+};
+
+const trajectoryDatasets = Object.entries(trajectories).map(([name, t]) => ({
+    label: name,
+    data: t.data,
+    borderColor: t.color,
+    backgroundColor: 'transparent',
+    tension: 0.3,
+    pointRadius: 3,
+    borderWidth: 2,
+    hidden: false,
+    _group: t.group
+}));
+
+const trajectoryChart = new Chart(document.getElementById('trajectoryChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: years, datasets: trajectoryDatasets },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 8, font: { size: 10 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} kg/MWh` } }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Year', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: 'CO₂ Intensity (kg/MWh)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } }
+        },
+        interaction: { mode: 'index', intersect: false }
+    }
+});
+
+function filterTrajectory(group) {
+    document.querySelectorAll('#trajectoryLegend .pill').forEach(p => p.classList.toggle('active', p.dataset.filter === group));
+    trajectoryChart.data.datasets.forEach(ds => {
+        ds.hidden = group === 'all' ? false : ds._group !== group;
+    });
+    trajectoryChart.update();
+}
+
+// Absolute trajectory chart — combined top 15
+const absYears = ['2005','2007','2010','2012','2014','2016','2018','2020','2022','2024'];
+const absEmissions = [980, 1020, 880, 810, 760, 700, 660, 620, 610, 592]; // MT CO₂, estimated
+
+new Chart(document.getElementById('absoluteTrajectoryChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: absYears,
+        datasets: [{
+            label: 'Top 15 Combined MT CO₂',
+            data: absEmissions,
+            borderColor: '#DC2626',
+            backgroundColor: 'rgba(220,38,38,0.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: absEmissions.map((v, i) => i >= 7 ? '#F59E0B' : '#DC2626'),
+            borderWidth: 2.5
+        }, {
+            label: 'SBTi 2035 Target (~100 MT)',
+            data: absYears.map(() => 100),
+            borderColor: '#0EA5E9',
+            borderDash: [6, 3],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }, {
+            label: 'IEA NZE 2040 (~0)',
+            data: absYears.map(() => 0),
+            borderColor: '#22C55E',
+            borderDash: [6, 3],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} MT CO₂` } }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Year', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: 'MMT CO₂ / Year', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true }, min: 0 }
+        }
+    }
+});
+
+// Marginal Abatement Cost Chart
+const macCtx = document.getElementById('macChart').getContext('2d');
+new Chart(macCtx, {
+    type: 'line',
+    data: {
+        labels: ['0%', '10%', '20%', '30%', '40%', '50%', '60%', '70%', '80%', '90%', '95%', '100%'],
+        datasets: [
+            {
+                label: 'Coal-Heavy (Evergy, AEP)',
+                data: [0, 5, 8, 12, 15, 20, 30, 45, 65, 95, 140, 250],
+                borderColor: '#374151', backgroundColor: 'rgba(55,65,81,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3
+            },
+            {
+                label: 'Diversified (Duke, Southern)',
+                data: [0, 10, 15, 22, 30, 40, 55, 75, 100, 140, 200, 350],
+                borderColor: '#0EA5E9', backgroundColor: 'rgba(14,165,233,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3
+            },
+            {
+                label: 'Gas-Dominant (Entergy)',
+                data: [0, 15, 25, 38, 50, 65, 85, 110, 150, 200, 280, 450],
+                borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3
+            },
+            {
+                label: 'Nuclear-Led (Constellation)',
+                data: [0, 20, 35, 55, 75, 95, 120, 155, 200, 270, 380, 550],
+                borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.raw}/tonne CO₂` } }
+        },
+        scales: {
+            x: { title: { display: true, text: '% of Current Emissions Abated', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: '$/tonne CO₂ (marginal cost)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
