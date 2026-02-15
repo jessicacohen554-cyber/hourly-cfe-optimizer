@@ -236,14 +236,9 @@ When facing compute vs. rigor tradeoffs:
 - **Social cost of carbon references**: EPA $51/ton + Rennert et al. $185/ton + EU ETS $60-100/ton range — all three shown on charts
 
 ### Build Process
-- Deploy agents in parallel for non-dependent tasks
-- Push early so user can iterate/review while optimizer builds
-- Standalone HTML must be rebuilt after all changes
-- **After every optimizer run**: Always save a final cached results data file (`data/optimizer_cache.json`) that can be read into future projects as input. Include full co-optimized results for all thresholds × scenarios × ISOs with resource mixes, costs, scores, and metadata.
-### Build Process
 - Deploy agents in parallel for non-dependent tasks (see Workflow Preferences above)
-- Standalone HTML must be rebuilt after all changes (`python dashboard/build_standalone.py`)
 - Push only after feature is complete and QA'd (see Git & Commits above)
+- **After every optimizer run**: Always save a final cached results data file (`data/optimizer_cache.json`) that can be read into future projects as input. Include full co-optimized results for all thresholds × scenarios × ISOs with resource mixes, costs, scores, and metadata.
 
 ### Research & Exploration
 - **Start with a quick survey** — broad scan first, then dive deeper only where the user asks
