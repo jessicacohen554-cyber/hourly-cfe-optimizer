@@ -597,7 +597,7 @@ body {
 /* ========== METRIC TILES ========== */
 .metrics-row {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 18px;
     margin-bottom: 28px;
 }
@@ -657,7 +657,7 @@ body {
 
 .metric-tile .tile-value {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 2.3rem;
+    font-size: 1.9rem;
     font-weight: 700;
     color: #FFFFFF;
     line-height: 1.1;
@@ -1024,6 +1024,101 @@ body {
     50% { transform: translateY(10px); }
 }
 
+/* ========== TARGET MODE TOGGLE (Interim / Long-term) ========== */
+.target-mode-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 18px 28px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+.target-mode-panel .target-mode-label {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+.target-mode-toggle {
+    display: flex;
+    background: #E5E7EB;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+.target-mode-toggle button {
+    padding: 10px 22px;
+    border: none;
+    background: transparent;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    min-height: 44px;
+    min-width: 44px;
+}
+.target-mode-toggle button.active {
+    background: var(--navy);
+    color: #FFFFFF;
+}
+.target-mode-toggle button:hover:not(.active) {
+    background: rgba(26,39,68,0.1);
+    color: var(--text-primary);
+}
+.target-mode-info {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    flex: 1;
+    min-width: 200px;
+}
+.target-mode-info strong {
+    color: var(--text-primary);
+}
+
+/* ========== HEATMAP TILE COLORS (5-group red-to-green) ========== */
+.metric-tile.heatmap-1 {
+    background: linear-gradient(145deg, #22C55E 0%, #16A34A 100%) !important;
+    border: none;
+}
+.metric-tile.heatmap-2 {
+    background: linear-gradient(145deg, #86EFAC 0%, #4ADE80 100%) !important;
+    border: none;
+}
+.metric-tile.heatmap-2 .tile-label,
+.metric-tile.heatmap-2 .tile-sub { color: rgba(0,0,0,0.65) !important; }
+.metric-tile.heatmap-2 .tile-value { color: #1A1A1A !important; }
+.metric-tile.heatmap-3 {
+    background: linear-gradient(145deg, #FDE68A 0%, #FACC15 100%) !important;
+    border: none;
+}
+.metric-tile.heatmap-3 .tile-label,
+.metric-tile.heatmap-3 .tile-sub { color: rgba(0,0,0,0.65) !important; }
+.metric-tile.heatmap-3 .tile-value { color: #1A1A1A !important; }
+.metric-tile.heatmap-4 {
+    background: linear-gradient(145deg, #FDBA74 0%, #F97316 100%) !important;
+    border: none;
+}
+.metric-tile.heatmap-5 {
+    background: linear-gradient(145deg, #F87171 0%, #EF4444 100%) !important;
+    border: none;
+}
+/* heatmap-1 and heatmap-5 keep white text (dark bg) */
+.metric-tile.heatmap-1 .tile-label,
+.metric-tile.heatmap-1 .tile-sub,
+.metric-tile.heatmap-4 .tile-label,
+.metric-tile.heatmap-4 .tile-sub,
+.metric-tile.heatmap-5 .tile-label,
+.metric-tile.heatmap-5 .tile-sub { color: rgba(255,255,255,0.8) !important; }
+.metric-tile.heatmap-1 .tile-value,
+.metric-tile.heatmap-4 .tile-value,
+.metric-tile.heatmap-5 .tile-value { color: #FFFFFF !important; }
+
 /* ========== KEY FINDINGS ========== */
 /* ========== PATHWAY PLANNING PANEL ========== */
 .pathway-controls {
@@ -1239,6 +1334,7 @@ body {
 .metrics-row .metric-tile:nth-child(3) { animation-delay: 0.15s; }
 .metrics-row .metric-tile:nth-child(4) { animation-delay: 0.2s; }
 .metrics-row .metric-tile:nth-child(5) { animation-delay: 0.25s; }
+.metrics-row .metric-tile:nth-child(6) { animation-delay: 0.3s; }
 
 .key-findings {
     animation: slideInLeft 0.5s ease both;
@@ -2751,6 +2847,19 @@ body {
     .scrolly-chart-wrap canvas {
         max-height: 300px;
     }
+    .target-mode-panel {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+    .target-mode-toggle button {
+        padding: 10px 16px;
+        font-size: 0.82rem;
+    }
+    .target-mode-info {
+        font-size: 0.78rem;
+    }
 }
 
 /* Small phone (480px and below) */
@@ -3014,6 +3123,24 @@ body {
                 <option value="">Same as Interim</option>
             </select>
         </div>
+        <div class="control-group">
+            <label for="interimYear">Interim Year</label>
+            <select id="interimYear">
+                <option value="2027">2027</option>
+                <option value="2029" selected>2029</option>
+                <option value="2031">2031</option>
+                <option value="2033">2033</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="longtermYear">Long-term Year</label>
+            <select id="longtermYear">
+                <option value="2035">2035</option>
+                <option value="2038">2038</option>
+                <option value="2042" selected>2042</option>
+                <option value="2050">2050</option>
+            </select>
+        </div>
         <!-- Legacy cfCostSelect hidden for backward compat -->
         <div class="control-group" style="display:none;">
             <label for="cfCostSelect">Clean Firm Cost Assumption</label>
@@ -3134,32 +3261,49 @@ body {
         </div>
     </div>
 
+    <!-- TARGET MODE TOGGLE (Interim / Long-term) -->
+    <div class="target-mode-panel" id="targetModePanel">
+        <div class="target-mode-label">Viewing:</div>
+        <div class="target-mode-toggle" id="targetModeToggle">
+            <button data-mode="interim" class="active">Interim Target</button>
+            <button data-mode="longterm">Long-term Target</button>
+        </div>
+        <div class="target-mode-info" id="targetModeInfo">
+            Showing <strong>interim</strong> target results. All charts below reflect the interim matching goal.
+        </div>
+    </div>
+
     <!-- METRIC TILES -->
     <div class="metrics-row">
-        <div class="metric-tile">
+        <div class="metric-tile" id="tileMatch">
             <div class="tile-label">Hourly Match Score</div>
             <div class="tile-value" id="metricMatch">--</div>
             <div class="tile-sub" id="metricMatchSub">of hours matched</div>
         </div>
-        <div class="metric-tile">
+        <div class="metric-tile" id="tileProcure">
             <div class="tile-label">Procurement Level</div>
             <div class="tile-value" id="metricProcure">--</div>
             <div class="tile-sub" id="metricProcureSub">of annual demand</div>
         </div>
-        <div class="metric-tile">
-            <div class="tile-label">Blended Cost</div>
+        <div class="metric-tile" id="tileCost">
+            <div class="tile-label">Incremental Cost</div>
             <div class="tile-value" id="metricCost">--</div>
             <div class="tile-sub" id="metricCostSub"></div>
         </div>
-        <div class="metric-tile">
+        <div class="metric-tile" id="tileCurtail">
             <div class="tile-label">Curtailment</div>
             <div class="tile-value" id="metricCurtail">--</div>
             <div class="tile-sub" id="metricCurtailSub">of procured energy</div>
         </div>
-        <div class="metric-tile">
-            <div class="tile-label">CO&#8322; Emissions Abated</div>
+        <div class="metric-tile" id="tileCO2">
+            <div class="tile-label">CO&#8322; Abated</div>
             <div class="tile-value" id="metricCO2Abated">--</div>
             <div class="tile-sub" id="metricCO2AbatedSub">tons</div>
+        </div>
+        <div class="metric-tile" id="tileAbateCost">
+            <div class="tile-label">Abatement Cost</div>
+            <div class="tile-value" id="metricAbateCost">--</div>
+            <div class="tile-sub" id="metricAbateCostSub">$/ton CO&#8322; avg</div>
         </div>
     </div>
 
@@ -3171,7 +3315,7 @@ body {
         <p id="keyFindingText"></p>
     </div>
 
-    <!-- CHARTS ROW -->
+    <!-- DONUT + COST ROW -->
     <div class="charts-row">
         <!-- DONUT -->
         <div class="chart-panel donut-panel">
@@ -3185,7 +3329,15 @@ body {
             </div>
             <div class="donut-legend" id="donutLegend"></div>
         </div>
-        <!-- COMPRESSED DAY -->
+        <!-- COST BREAKDOWN (moved up from peak-cost-row) -->
+        <div class="cost-panel" id="costPanel">
+            <h3>What You Pay: Cost Breakdown by Resource</h3>
+            <div id="costContent"></div>
+        </div>
+    </div>
+
+    <!-- COMPRESSED DAY -->
+    <div class="charts-row" style="grid-template-columns:1fr;">
         <div class="chart-panel">
             <h3>A Typical Day: When Clean Energy Meets Demand</h3>
             <div class="compressed-day-container">
@@ -3194,20 +3346,14 @@ body {
         </div>
     </div>
 
-    <!-- PEAK CAPACITY + COST ROW -->
-    <div class="peak-cost-row">
+    <!-- PEAK CAPACITY ROW -->
+    <div class="peak-cost-row" style="grid-template-columns:1fr;">
         <!-- PEAK CAPACITY VISUAL -->
         <div class="peak-capacity-panel" id="peakCapacityPanel">
             <h3>Peak Hour: How Much Backup Capacity is Needed</h3>
             <div class="peak-capacity-visual" id="peakCapacityVisual">
                 <!-- Populated by JS -->
             </div>
-        </div>
-
-        <!-- COST BREAKDOWN -->
-        <div class="cost-panel" id="costPanel">
-            <h3>What You Pay: Cost Breakdown by Resource</h3>
-            <div id="costContent"></div>
         </div>
     </div>
 
@@ -3223,24 +3369,6 @@ body {
         </p>
 
         <div class="pathway-controls">
-            <div class="pathway-ctrl">
-                <label>Interim Year</label>
-                <select id="interimYear">
-                    <option value="2027">2027</option>
-                    <option value="2029" selected>2029</option>
-                    <option value="2031">2031</option>
-                    <option value="2033">2033</option>
-                </select>
-            </div>
-            <div class="pathway-ctrl">
-                <label>Long-term Year</label>
-                <select id="longtermYear">
-                    <option value="2035">2035</option>
-                    <option value="2038">2038</option>
-                    <option value="2042" selected>2042</option>
-                    <option value="2050">2050</option>
-                </select>
-            </div>
             <div class="pathway-ctrl">
                 <label>Demand Growth <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Regional annual demand growth. Higher growth absorbs more interim procurement and reduces stranded investment. Rates are ISO-specific: ERCOT's data-center boom drives highest growth.</span></span></label>
                 <div class="toggle-btn-group" data-toggle="demand_growth" data-default="Medium">
@@ -3344,6 +3472,7 @@ const NAVY = '#1A2744';
 let DATA = null;
 let donutChart = null;
 let compressedDayChart = null;
+let currentTargetMode = 'interim'; // 'interim' or 'longterm'
 
 // ---- Helpers ----
 function formatNum(n, decimals = 0) {
@@ -3522,6 +3651,9 @@ function initDashboard() {
     // Initialize sensitivity toggle buttons
     initSensitivityToggles();
 
+    // Initialize target mode toggle (interim / long-term)
+    initTargetModeToggle();
+
     // Initialize pathway analysis (interim → long-term target with demand growth)
     initPathwayAnalysis();
 
@@ -3547,25 +3679,47 @@ function findClosestThreshold(region, requestedThreshold) {
     return String(closest);
 }
 
+// ---- Resolve the active entry based on target mode ----
+function getActiveEntry(region) {
+    const interimThreshold = findClosestThreshold(region, document.getElementById('thresholdSelect').value);
+    const interimEntry = region.thresholds[interimThreshold];
+    if (currentTargetMode === 'longterm') {
+        const longtermVal = document.getElementById('longtermTarget').value;
+        if (longtermVal) {
+            const longtermThreshold = findClosestThreshold(region, longtermVal);
+            const longtermEntry = region.thresholds[longtermThreshold];
+            if (longtermEntry) return { entry: longtermEntry, threshold: longtermThreshold };
+        }
+    }
+    return { entry: interimEntry, threshold: interimThreshold };
+}
+
 // ---- Update everything ----
 function updateAll() {
     const iso = document.getElementById('regionSelect').value;
     const requestedThreshold = document.getElementById('thresholdSelect').value;
     const region = DATA.results[iso];
     // Fallback to closest available if this threshold isn't in the data
-    const threshold = findClosestThreshold(region, requestedThreshold);
-    const entry = region.thresholds[threshold];
-    if (!entry) return;
+    const interimThreshold = findClosestThreshold(region, requestedThreshold);
+    const interimEntry = region.thresholds[interimThreshold];
+    if (!interimEntry) return;
+
+    // Resolve which entry to show for charts from donut onward
+    const active = getActiveEntry(region);
+    const displayEntry = active.entry;
+    const displayThreshold = active.threshold;
 
     updateRegionContext(region);
-    updateMetrics(region, entry);
-    updateKeyFinding(iso, threshold, entry, region);
-    updateDonut(entry);
-    updateCompressedDay(entry, region);
-    updatePeakCapacity(entry, region);
-    updateCostPanel(entry);
-    updateWhatYouNeedPanel(region, entry, threshold);
-    updateCO2Tile(entry);
+    updateTargetModeInfo();
+    updateMetrics(region, displayEntry);
+    updateKeyFinding(iso, displayThreshold, displayEntry, region);
+    updateDonut(displayEntry);
+    updateCompressedDay(displayEntry, region);
+    updatePeakCapacity(displayEntry, region);
+    updateCostPanel(displayEntry);
+    updateWhatYouNeedPanel(region, interimEntry, interimThreshold);
+    updateCO2Tile(displayEntry);
+    updateHeatmapTiles(region, displayEntry, iso);
     updatePathwayAnalysis();
 }
 
@@ -3642,16 +3796,17 @@ function updateMetrics(region, entry) {
     document.getElementById('metricProcureSub').textContent =
         overAmt > 0 ? `+${overAmt}% above demand` : 'at demand level';
 
-    // Cost (with CF sensitivity adjustment)
+    // Cost tile: bold = incremental, sub = blended
     const costs = entry.costs;
     if (costs && costs.effective_cost_per_useful_mwh != null) {
         const adj = cfAdjust(entry, iso);
-        document.getElementById('metricCost').textContent = '$' + formatNum(adj.newEffective);
         if (costs.incremental_above_baseline != null) {
+            document.getElementById('metricCost').textContent = '+$' + formatNum(adj.newIncremental) + '/MWh';
             document.getElementById('metricCostSub').innerHTML =
-                `<span class="accent">+$${formatNum(adj.newIncremental)}/MWh</span> incremental` +
+                `$${formatNum(adj.newEffective)}/MWh blended` +
                 (selectedCfCost !== 90 ? ` <span style="color:#D97706;font-size:0.78rem;">(CF@$${selectedCfCost})</span>` : '');
         } else {
+            document.getElementById('metricCost').textContent = '$' + formatNum(adj.newEffective);
             document.getElementById('metricCostSub').textContent = 'per MWh (effective)';
         }
     } else {
@@ -5769,6 +5924,150 @@ function initScrollAnimations() {
     }
 }
 
+// ---- Target Mode Toggle (Interim / Long-term) ----
+function initTargetModeToggle() {
+    const togglePanel = document.getElementById('targetModeToggle');
+    if (!togglePanel) return;
+    togglePanel.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            togglePanel.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentTargetMode = this.getAttribute('data-mode');
+            if (DATA) updateAll();
+        });
+    });
+}
+
+function updateTargetModeInfo() {
+    const infoEl = document.getElementById('targetModeInfo');
+    if (!infoEl) return;
+    const interimThresh = document.getElementById('thresholdSelect').value;
+    const longtermVal = document.getElementById('longtermTarget').value;
+    if (currentTargetMode === 'longterm' && longtermVal) {
+        infoEl.innerHTML = `Showing <strong>long-term ${longtermVal}%</strong> target results. All charts below reflect the long-term matching goal.`;
+    } else if (currentTargetMode === 'longterm' && !longtermVal) {
+        infoEl.innerHTML = `Long-term target not set — showing <strong>interim ${interimThresh}%</strong> results. Select a long-term target above.`;
+    } else {
+        infoEl.innerHTML = `Showing <strong>interim ${interimThresh}%</strong> target results. All charts below reflect the interim matching goal.`;
+    }
+}
+
+// ---- Heatmap Tile Coloring (5 groups: green → red) ----
+function getHeatmapClass(value, min, max, invertDirection) {
+    // invertDirection=true means higher is worse (red), false means higher is better (green)
+    if (value == null || isNaN(value) || min === max) return 'heatmap-3';
+    const pct = (value - min) / (max - min); // 0 = min, 1 = max
+    // For inverted (higher = worse): pct 0→green, pct 1→red
+    // For normal (higher = better): pct 0→red, pct 1→green
+    const normalizedPct = invertDirection ? pct : (1 - pct);
+    if (normalizedPct <= 0.2) return 'heatmap-1';      // green (best)
+    if (normalizedPct <= 0.4) return 'heatmap-2';      // yellow-green
+    if (normalizedPct <= 0.6) return 'heatmap-3';      // yellow
+    if (normalizedPct <= 0.8) return 'heatmap-4';      // orange
+    return 'heatmap-5';                                  // red (worst)
+}
+
+function updateHeatmapTiles(region, entry, iso) {
+    // Collect ranges across all thresholds for this ISO
+    const thresholds = Object.keys(region.thresholds);
+    let minIncr = Infinity, maxIncr = -Infinity;
+    let minMatch = Infinity, maxMatch = -Infinity;
+    let minProc = Infinity, maxProc = -Infinity;
+    let minCurt = Infinity, maxCurt = -Infinity;
+    let minCO2 = Infinity, maxCO2 = -Infinity;
+    let minAbateCost = Infinity, maxAbateCost = -Infinity;
+
+    thresholds.forEach(tk => {
+        const e = region.thresholds[tk];
+        if (!e) return;
+        const c = e.costs || {};
+        const adj = cfAdjust(e, iso);
+        const incr = adj.newIncremental;
+        const match = e.hourly_match_score || 0;
+        const proc = e.procurement_pct || 0;
+        const curt = c.curtailment_pct || 0;
+        const co2 = e.co2_abated_tons || 0;
+
+        if (incr != null) { minIncr = Math.min(minIncr, incr); maxIncr = Math.max(maxIncr, incr); }
+        minMatch = Math.min(minMatch, match); maxMatch = Math.max(maxMatch, match);
+        minProc = Math.min(minProc, proc); maxProc = Math.max(maxProc, proc);
+        minCurt = Math.min(minCurt, curt); maxCurt = Math.max(maxCurt, curt);
+        minCO2 = Math.min(minCO2, co2); maxCO2 = Math.max(maxCO2, co2);
+
+        // Abatement cost estimate
+        if (co2 > 0 && incr != null) {
+            const annDemandMWh = region.annual_demand_mwh || 1;
+            const abateCost = (incr * annDemandMWh) / co2;
+            minAbateCost = Math.min(minAbateCost, abateCost);
+            maxAbateCost = Math.max(maxAbateCost, abateCost);
+        }
+    });
+
+    const adj = cfAdjust(entry, iso);
+    const c = entry.costs || {};
+
+    // Apply heatmap classes
+    const heatmapClasses = ['heatmap-1', 'heatmap-2', 'heatmap-3', 'heatmap-4', 'heatmap-5'];
+    function applyHeatmap(tileId, value, min, max, invertDirection) {
+        const tile = document.getElementById(tileId);
+        if (!tile) return;
+        tile.classList.remove(...heatmapClasses, 'tile-negative');
+        tile.classList.add(getHeatmapClass(value, min, max, invertDirection));
+    }
+
+    // Match score: higher = green
+    applyHeatmap('tileMatch', entry.hourly_match_score, minMatch, maxMatch, false);
+    // Procurement: higher = red (more costly)
+    applyHeatmap('tileProcure', entry.procurement_pct, minProc, maxProc, true);
+    // Incremental cost: higher = red
+    applyHeatmap('tileCost', adj.newIncremental, minIncr, maxIncr, true);
+    // Curtailment: higher = red
+    applyHeatmap('tileCurtail', c.curtailment_pct || 0, minCurt, maxCurt, true);
+    // CO2 abated: higher = green
+    applyHeatmap('tileCO2', entry.co2_abated_tons || 0, minCO2, maxCO2, false);
+
+    // Abatement cost tile
+    const co2Tons = entry.co2_abated_tons || 0;
+    const abateCostEl = document.getElementById('metricAbateCost');
+    const abateCostSub = document.getElementById('metricAbateCostSub');
+    if (abateCostEl && co2Tons > 0 && adj.newIncremental != null) {
+        const annDemandMWh = region.annual_demand_mwh || 1;
+        const avgAbateCost = (adj.newIncremental * annDemandMWh) / co2Tons;
+        abateCostEl.textContent = '$' + formatNum(avgAbateCost) + '/ton';
+
+        // Marginal abatement cost: approximate from neighboring threshold
+        const currentThresh = parseFloat(findClosestThreshold(region, document.getElementById('thresholdSelect').value));
+        const sortedThresholds = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
+        const idx = sortedThresholds.indexOf(currentThresh);
+        let marginalCost = null;
+        if (idx > 0) {
+            const prevThresh = sortedThresholds[idx - 1];
+            const prevEntry = region.thresholds[String(prevThresh)];
+            if (prevEntry) {
+                const prevAdj = cfAdjust(prevEntry, iso);
+                const prevCO2 = prevEntry.co2_abated_tons || 0;
+                const deltaCost = (adj.newIncremental - prevAdj.newIncremental) * annDemandMWh;
+                const deltaCO2 = co2Tons - prevCO2;
+                if (deltaCO2 > 0) {
+                    marginalCost = deltaCost / deltaCO2;
+                }
+            }
+        }
+        if (marginalCost != null) {
+            abateCostSub.textContent = `$${formatNum(marginalCost)}/ton marginal`;
+        } else {
+            abateCostSub.textContent = '$/ton CO\u2082 avg';
+        }
+
+        applyHeatmap('tileAbateCost', avgAbateCost, minAbateCost, maxAbateCost, true);
+    } else {
+        if (abateCostEl) abateCostEl.textContent = '--';
+        if (abateCostSub) abateCostSub.textContent = '$/ton CO\u2082';
+        const tile = document.getElementById('tileAbateCost');
+        if (tile) { tile.classList.remove(...heatmapClasses, 'tile-negative'); }
+    }
+}
+
 // ---- Sensitivity Toggle State (5 Paired Groups) ----
 const sensitivityState = {
     renewable_gen: 'Medium',   // Solar + Wind LCOE
@@ -5891,14 +6190,11 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // Long-term target (if selected)
     const longtermData = longtermRC ? getResourceTWh(longtermRC, longtermTWh) : null;
 
-    // Build chart labels
+    // Build chart labels — simple: Existing / Interim / Long-term
     const hasLongterm = longtermData !== null;
     const labels = hasLongterm
-        ? [`Existing Clean\nToday (${Math.round(todayTWh)} TWh demand)`,
-           `${threshold}% Target\n${interimYear} (${Math.round(interimTWh)} TWh)`,
-           `${longtermThreshold}% Target\n${longtermYear} (${Math.round(longtermTWh)} TWh)`]
-        : [`Existing Clean\nToday (${Math.round(todayTWh)} TWh demand)`,
-           `${threshold}% Target\n${interimYear} (${Math.round(interimTWh)} TWh)`];
+        ? ['Existing', 'Interim', 'Long-term']
+        : ['Existing', 'Interim'];
 
     const EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar'];
     const NEW_ORDER = ['solar', 'wind', 'hydro', 'storage', 'clean_firm'];
@@ -6063,8 +6359,10 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     grid: { display: false },
                     border: { display: true, color: '#D4D8E0' },
                     ticks: {
-                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 600 },
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 700 },
                         color: '#1A2744',
+                        maxRotation: 0,
+                        minRotation: 0,
                     }
                 },
                 y: {
@@ -6326,7 +6624,10 @@ function initPathwayAnalysis() {
         populateLongtermOptions();
         triggerRerender();
     });
-    longtermSel.addEventListener('change', triggerRerender);
+    longtermSel.addEventListener('change', () => {
+        triggerRerender();
+        if (DATA) updateAll();
+    });
     document.getElementById('interimYear')?.addEventListener('change', triggerRerender);
     document.getElementById('longtermYear')?.addEventListener('change', triggerRerender);
 
