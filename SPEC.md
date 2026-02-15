@@ -86,6 +86,26 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 - **Future checkpoint merges**: Must apply UTC-8 rotation to CAISO compressed_day data from new optimizer run before merging into results JSON.
 - **All other ISOs verified**: PJM, ERCOT, NYISO, NEISO show local-time profiles (solar 7-19, demand peaks 16-18). Issue was CAISO-specific from checkpoint merge.
 
+### About Page (`about.html`) — Design Direction
+- **Purpose**: Scrollytell explainer of the entire project scope and what it researches & explores
+- **Narrative layers** (in order):
+  1. System-level grid decarb economics (marginal dispatch, last-mile costs, hourly supply gaps)
+  2. Power generation corporate targets and decarbonization efforts (fleet transition, nuclear, CCS, renewables)
+  3. Voluntary corporate clean energy buyers (PPAs, 24/7 CFE, hourly matching, EAC demand)
+  4. State and national policies (RPS, ITC/PTC, 45Q, capacity markets, mandates)
+  5. Interconnected accounting & reporting frameworks (GHG Protocol Scope 2 revision, SBTi, EPRI SMARTargets)
+  6. Global and national goals (Paris, IEA NZE, US targets, EU climate law)
+- **Mind map visualization**: SVG-based infographic showing relationships between all six layers with:
+  - Catalytic links (green dashed) — positive feedback loops accelerating decarbonization
+  - Perverse incentive links (red dashed) — misaligned frameworks channeling dollars to paper compliance
+  - Feedback loops (blue dashed) — systemic interdependencies
+  - Animated node entrance + line drawing on scroll
+- **Key themes**:
+  - How frameworks can catalyze affordable/feasible decarbonization OR create perverse incentives (e.g., 45Q running gas at max CF, annual RECs hiding dirty hours, unbundled cross-region RECs)
+  - Research gaps this project addresses: cost-as-variable co-optimization, regional variation, last-5% inflection zone, EAC scarcity quantification, policies evaluated against physical constraints
+  - Novel insights produced: cost drives mix, inflection zone steeper than expected, region determines strategy, existing clean assets undervalued, 45Q perverse incentive, EAC scarcity already emerging
+- **Standalone page** — no dependencies on other files, avoids merge conflicts with ongoing work on other branches
+
 ### Open questions
 - Path-dependent MAC visualization: may need alternative to MAC curve format
 - ELCC: include in next run? Fixed or penetration-dependent?
