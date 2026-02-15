@@ -1048,8 +1048,11 @@ This section documents known simplifying assumptions for transparency and academ
 
 **Leap year handling**: 2024 (8784 hours) is included by removing Feb 29 hours (indices 1416–1439) before averaging, preserving seasonal alignment with 8760-hour non-leap years.
 
+**Data quality validation**: Demand profiles are validated at load time for statistical outliers using hour-of-day median comparison. Years where any hour-of-day has a maximum value exceeding 100× the median for that hour are excluded from the average. This catches EIA data entry errors (e.g., unit conversion errors that inflate individual hours by orders of magnitude). **Known exclusion**: PJM 2021 is excluded — October 19, 2021 hours 03:00-05:00 UTC contain demand values ~20,000× normal (0.31–0.44 of annual normalized demand concentrated in 3 hours), likely an EIA reporting error. PJM demand shape is averaged over 2022-2025 (4 years). All other ISO-year combinations pass validation. Raw data is preserved unmodified in `eia_demand_profiles.json` for auditability.
+
 **Implementation in `load_data()`**:
 - `_remove_leap_day(profile)`: Excises Feb 29 from 8784→8760
+- `_validate_demand_profile(iso, year, profile)`: Detects corrupt years via hour-of-day outlier check
 - `_average_profiles(yearly_profiles)`: Element-wise mean across years
 - Generation profiles: `gen_profiles[iso][resource_type]` → direct access (no year key)
 - Demand profiles: `demand_data[iso]['normalized']` uses averaged shape; `total_annual_mwh` and `peak_mw` from 2025

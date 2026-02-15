@@ -307,6 +307,103 @@ def _remove_leap_day(profile_8784):
     return list(profile_8784[:LEAP_FEB29_START]) + list(profile_8784[LEAP_FEB29_START + 24:H + 24])
 
 
+def _validate_demand_profile(iso, year, profile):
+    """Detect corrupt demand profiles with statistical outlier detection.
+
+    Returns True if profile is valid, False if it contains anomalous data.
+    Known issue: PJM 2021 has a corrupt day (Oct 19) where hours 3-5 are
+    ~20,000x normal values, likely an EIA unit conversion error.
+    """
+    arr = np.array(profile[:H])
+    for hod in range(24):
+        vals = arr[hod::24]
+        median = np.median(vals)
+        if median > 0 and vals.max() > 100 * median:
+            print(f"  WARNING: {iso} {year} demand excluded — Hour {hod} outlier "
+                  f"({vals.max():.4f} vs median {median:.6f}, "
+                  f"{vals.max()/median:.0f}x)")
+            return False
+    return True
+
+
+def _qa_qc_profiles(demand_data, gen_profiles):
+    """QA/QC checkpoint: validate that all profiles make physical sense.
+
+    Checks run after multi-year averaging, on final profiles used by optimizer.
+    Failures are printed as warnings. Fatal issues raise ValueError.
+    """
+    print("\n  QA/QC: Validating profile shapes...")
+    issues = []
+
+    for iso in ISOS:
+        # ── Demand shape checks ──
+        norm = demand_data[iso]['normalized']
+        arr = np.array(norm[:H])
+
+        # 1. Sum should be ~1.0 (normalized)
+        total = arr.sum()
+        if abs(total - 1.0) > 0.01:
+            issues.append(f"  FAIL: {iso} demand sum = {total:.4f} (expected ~1.0)")
+
+        # 2. No negative values
+        if arr.min() < 0:
+            issues.append(f"  FAIL: {iso} demand has negative values (min={arr.min():.6f})")
+
+        # 3. Diurnal pattern: daytime (hours 8-20) should be higher than nighttime (0-5)
+        day_mean = np.mean([arr[h::24].mean() for h in range(8, 21)])
+        night_mean = np.mean([arr[h::24].mean() for h in range(0, 6)])
+        if night_mean > day_mean * 1.2:
+            issues.append(f"  WARN: {iso} demand night > day by >20% "
+                          f"(night={night_mean:.6f}, day={day_mean:.6f})")
+
+        # 4. No single hour-of-day should exceed 3x the mean (after averaging)
+        hod_sums = [arr[h::24].sum() for h in range(24)]
+        mean_hod = np.mean(hod_sums)
+        for h, s in enumerate(hod_sums):
+            if s > 3 * mean_hod:
+                issues.append(f"  FAIL: {iso} demand hour {h} = {s:.4f} "
+                              f"({s/mean_hod:.1f}x mean — likely corrupt data)")
+
+        # 5. Seasonal variation: summer/winter peaks should exist
+        summer_mean = arr[3624:5832].mean()  # Jun-Aug approx
+        winter_mean = np.concatenate([arr[:1416], arr[7296:]]).mean()  # Jan-Feb + Nov-Dec
+        shoulder_mean = np.concatenate([arr[1416:3624], arr[5832:7296]]).mean()  # Mar-May, Sep-Oct
+        print(f"    {iso} demand: summer={summer_mean:.6f} winter={winter_mean:.6f} "
+              f"shoulder={shoulder_mean:.6f} (ratio={max(summer_mean,winter_mean)/shoulder_mean:.2f}x)")
+
+        # ── Generation profile checks ──
+        iso_gen = gen_profiles.get(iso, {})
+
+        # Solar: should be zero at night (hours 22-5 local, roughly 3-10 UTC for US)
+        solar_key = 'solar' if 'solar' in iso_gen else 'solar_proxy'
+        if solar_key in iso_gen:
+            solar = np.array(iso_gen[solar_key][:H])
+            # Night hours (UTC 4-10 for eastern, 7-13 for pacific) — use conservative check
+            night_total = sum(solar[h::24].sum() for h in range(2, 8))
+            day_total = sum(solar[h::24].sum() for h in range(14, 22))
+            if night_total > day_total * 0.1:
+                issues.append(f"  WARN: {iso} solar night generation > 10% of daytime")
+
+        # Wind: should have non-zero generation across most hours
+        if 'wind' in iso_gen:
+            wind = np.array(iso_gen['wind'][:H])
+            zero_hours = (wind == 0).sum()
+            if zero_hours > H * 0.3:
+                issues.append(f"  WARN: {iso} wind has {zero_hours} zero hours ({zero_hours/H*100:.0f}%)")
+
+    if issues:
+        print("\n  QA/QC Results:")
+        for issue in issues:
+            print(f"    {issue}")
+        # Fatal issues (FAIL) raise; warnings (WARN) continue
+        fatal = [i for i in issues if 'FAIL' in i]
+        if fatal:
+            raise ValueError(f"QA/QC failed with {len(fatal)} fatal issues — fix data before running")
+    else:
+        print("    All profiles passed QA/QC checks")
+    print()
+
+
 def _average_profiles(yearly_profiles):
     """Element-wise average of multiple 8760-hour profiles."""
     if not yearly_profiles:
@@ -388,18 +485,28 @@ def load_data():
             continue
 
         # Average normalized shape across available PROFILE_YEARS
+        # Exclude years with corrupt data (detected via statistical outlier check)
         available_years = [y for y in PROFILE_YEARS if y in iso_data]
         if not available_years:
             raise ValueError(f"No demand data years found for {iso}")
 
         yearly_norms = []
+        valid_years = []
+        excluded_years = []
         for y in available_years:
             raw = iso_data[y].get('normalized', [])
             if len(raw) > H:
                 raw = _remove_leap_day(raw)
             else:
                 raw = list(raw[:H])
-            yearly_norms.append(raw)
+            if _validate_demand_profile(iso, y, raw):
+                yearly_norms.append(raw)
+                valid_years.append(y)
+            else:
+                excluded_years.append(y)
+
+        if not yearly_norms:
+            raise ValueError(f"All demand data years excluded for {iso} — check source data")
 
         avg_norm = _average_profiles(yearly_norms)
 
@@ -413,10 +520,15 @@ def load_data():
             'total_annual_mwh': iso_data[actuals_year]['total_annual_mwh'],
             'peak_mw': iso_data[actuals_year]['peak_mw'],
         }
-        print(f"  {iso}: demand shape averaged over {len(available_years)} years, "
-              f"scalars from {actuals_year}")
+        excluded_msg = f" (excluded: {', '.join(excluded_years)} — data quality)" if excluded_years else ""
+        print(f"  {iso}: demand shape averaged over {len(valid_years)} years "
+              f"({', '.join(valid_years)}){excluded_msg}, scalars from {actuals_year}")
 
     print("  Data loaded.")
+
+    # QA/QC checkpoint: validate all profiles make physical sense
+    _qa_qc_profiles(demand_data, gen_profiles)
+
     return demand_data, gen_profiles, emission_rates, fossil_mix
 
 
@@ -3372,6 +3484,19 @@ def process_iso(args):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main():
+    import sys
+    # Support single-ISO mode: python optimize_overprocure.py --iso PJM
+    target_isos = None
+    if '--iso' in sys.argv:
+        idx = sys.argv.index('--iso')
+        if idx + 1 < len(sys.argv):
+            target_isos = [iso.strip() for iso in sys.argv[idx + 1].split(',')]
+            invalid = [iso for iso in target_isos if iso not in ISOS]
+            if invalid:
+                print(f"ERROR: Unknown ISO(s): {invalid}. Valid: {ISOS}")
+                sys.exit(1)
+            print(f"  Single-ISO mode: running {', '.join(target_isos)} only")
+
     start_time = time.time()
     demand_data, gen_profiles, emission_rates, fossil_mix = load_data()
 
@@ -3448,7 +3573,8 @@ def main():
     # Run ISOs sequentially to avoid memory pressure and enable incremental saves.
     # Each ISO does 10 thresholds × 324 scenarios — heavy compute per ISO.
     # Per-threshold incremental saves happen inside process_iso() via save_results_incremental().
-    for iso in ISOS:
+    run_isos = target_isos if target_isos else ISOS
+    for iso in run_isos:
         iso_start = time.time()
         args = (iso, demand_data, gen_profiles, emission_rates, fossil_mix)
         iso_name, iso_results = process_iso(args)
