@@ -386,48 +386,90 @@ body {
     color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
-.stranded-bar-container {
+.stranded-bars-wrapper {
     display: flex;
-    height: 28px;
-    border-radius: 6px;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.sbar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sbar-label {
+    flex: 0 0 90px;
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: right;
+    line-height: 1.2;
+}
+.sbar-label.sbar-label-warn {
+    color: #C75B4A;
+}
+.sbar-track {
+    flex: 1;
+    display: flex;
+    height: 26px;
+    border-radius: 5px;
     overflow: hidden;
     border: 1px solid var(--border-light);
-    margin-bottom: 10px;
+    background: #f5f5f7;
+    position: relative;
 }
-.stranded-bar-seg {
+.sbar-track-stranded {
+    border-color: rgba(239,68,68,0.25);
+    background: rgba(239,68,68,0.04);
+}
+.sbar-seg {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     font-weight: 600;
     color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding: 0 6px;
-    transition: flex-basis 0.4s ease;
+    padding: 0 4px;
+    transition: width 0.5s ease;
+    min-width: 0;
 }
-.stranded-resource-list {
+.sbar-total {
+    flex: 0 0 auto;
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-left: 8px;
+    white-space: nowrap;
+}
+.sbar-total-warn {
+    color: #C75B4A;
+}
+.stranded-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 16px;
-    font-size: 0.8rem;
+    gap: 4px 14px;
+    font-size: 0.75rem;
     color: var(--text-secondary);
 }
-.stranded-resource-item {
+.stranded-legend-item {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
 }
-.stranded-resource-dot {
+.stranded-legend-dot {
     width: 10px;
     height: 10px;
     border-radius: 3px;
     flex-shrink: 0;
 }
-.stranded-resource-item .stranded-val {
+.stranded-legend-item .sl-val {
     font-weight: 600;
     color: var(--text-primary);
 }
@@ -1259,9 +1301,11 @@ body {
     .pathway-ctrl { min-width: auto; }
     .pathway-metrics { grid-template-columns: 1fr; gap: 12px; }
     .pathway-metric-value { font-size: 1.5rem; }
-    .stranded-bar-container { height: 24px; }
-    .stranded-bar-seg { font-size: 0.6rem; padding: 0 3px; }
-    .stranded-resource-list { font-size: 0.75rem; gap: 4px 10px; }
+    .sbar-label { flex: 0 0 70px; font-size: 0.7rem; }
+    .sbar-track { height: 22px; }
+    .sbar-seg { font-size: 0.58rem; }
+    .sbar-total { font-size: 0.7rem; }
+    .stranded-legend { font-size: 0.7rem; gap: 3px 10px; }
 }
 
 .key-findings {
@@ -3439,11 +3483,11 @@ body {
             </div>
         </div>
 
-        <!-- Stranded Asset Resource Breakdown -->
+        <!-- New Build & Stranded Resource Breakdown -->
         <div class="stranded-breakdown" id="strandedBreakdown" style="display:none;">
-            <h4 class="stranded-breakdown-title">Stranded Asset Breakdown by Resource</h4>
-            <div class="stranded-bar-container" id="strandedBarContainer"></div>
-            <div class="stranded-resource-list" id="strandedResourceList"></div>
+            <h4 class="stranded-breakdown-title">New Build &amp; Stranded Asset Mix</h4>
+            <div class="stranded-bars-wrapper" id="strandedBarsWrapper"></div>
+            <div class="stranded-legend" id="strandedLegend"></div>
         </div>
 
         <div class="wyn-insight-box" id="wynInsightBox">
@@ -6737,53 +6781,94 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             }
         }
 
-        // Stranded asset resource breakdown visualization
+        // New-build + stranded resource mix bars
         const breakdownEl = document.getElementById('strandedBreakdown');
-        const barContainer = document.getElementById('strandedBarContainer');
-        const listContainer = document.getElementById('strandedResourceList');
-        if (breakdownEl && barContainer && listContainer) {
-            if (strandedDetails.length > 0) {
-                breakdownEl.style.display = '';
-                const totalStrandedTWh = strandedDetails.reduce((s, d) => s + d.strandedTWh, 0);
+        const barsWrapper = document.getElementById('strandedBarsWrapper');
+        const legendEl = document.getElementById('strandedLegend');
+        if (breakdownEl && barsWrapper && legendEl) {
+            breakdownEl.style.display = '';
 
-                // Color map for stranded resources
-                const strandedColorMap = {
-                    'Clean Firm': COLORS.clean_firm.base, 'CCS-CCGT': COLORS.ccs_ccgt.base,
-                    'Solar': COLORS.solar.base, 'Wind': COLORS.wind.base,
-                    'Hydro': COLORS.hydro.base, 'Battery': COLORS.battery.base,
-                    'LDES': COLORS.ldes.base, 'Storage': COLORS.storage.base,
-                    'Clean Firm (Nuc+Geo)': COLORS.clean_firm.base
-                };
+            // Color map keyed by resource_costs key
+            const colorByKey = {};
+            Object.keys(COLORS).forEach(k => { colorByKey[k] = COLORS[k].base; });
 
-                // Sort by stranded TWh descending
-                const sorted = strandedDetails.sort((a, b) => b.strandedTWh - a.strandedTWh);
+            // Collect per-resource new-build TWh at interim and long-term,
+            // and stranded TWh (interim new-build that exceeds long-term need)
+            const RES_ORDER = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+            const interimNew = {};
+            const longtermNew = {};
+            const strandedByRes = {};
+            let totalInterimNew = 0, totalLongtermNew = 0, totalStranded = 0;
 
-                // Horizontal stacked bar
-                barContainer.innerHTML = sorted.map(d => {
-                    const pct = (d.strandedTWh / totalStrandedTWh * 100);
-                    const color = strandedColorMap[d.resource] || '#888';
-                    const label = pct > 12 ? `${d.resource} ${d.strandedTWh.toFixed(1)}` : '';
-                    return `<div class="stranded-bar-seg" style="flex-basis:${pct}%;background:${color};" title="${d.resource}: ${d.strandedTWh.toFixed(2)} TWh stranded">${label}</div>`;
-                }).join('');
-
-                // Resource detail list
-                listContainer.innerHTML = sorted.map(d => {
-                    const color = strandedColorMap[d.resource] || '#888';
-                    const pctOfInterim = d.interimTWh > 0 ? Math.round(d.strandedTWh / d.interimTWh * 100) : 0;
-                    return `<div class="stranded-resource-item">
-                        <div class="stranded-resource-dot" style="background:${color}"></div>
-                        <span>${d.resource}:</span>
-                        <span class="stranded-val">${d.strandedTWh.toFixed(1)} TWh</span>
-                        <span>(${pctOfInterim}% of interim)</span>
-                    </div>`;
-                }).join('');
-            } else {
-                breakdownEl.style.display = strandedPct < 1 ? '' : 'none';
-                if (strandedPct < 1) {
-                    barContainer.innerHTML = `<div class="stranded-bar-seg" style="flex-basis:100%;background:#22C55E;">No stranded assets</div>`;
-                    listContainer.innerHTML = '';
+            RES_ORDER.forEach(r => {
+                const irc = interimRC[r] || {};
+                const lrc = longtermRC[r] || {};
+                const isStore = (r === 'battery' || r === 'ldes');
+                // New-build TWh at each stage
+                let iNew, lNew;
+                if (isStore) {
+                    iNew = (irc.dispatch_pct || 0) / 100 * interimTWh;
+                    lNew = (lrc.dispatch_pct || 0) / 100 * longtermTWh;
+                } else {
+                    iNew = (irc.new_pct || 0) / 100 * interimTWh;
+                    lNew = (lrc.new_pct || 0) / 100 * longtermTWh;
                 }
+                interimNew[r] = iNew;
+                longtermNew[r] = lNew;
+                totalInterimNew += iNew;
+                totalLongtermNew += lNew;
+                // Stranded = interim new-build that exceeds long-term new-build need
+                const s = Math.max(0, iNew - lNew);
+                strandedByRes[r] = s;
+                totalStranded += s;
+            });
+
+            // Shared scale: max of interim, longterm, stranded totals
+            const maxBarTWh = Math.max(totalInterimNew, totalLongtermNew, totalStranded, 0.1);
+
+            // Helper: build one horizontal bar row
+            function buildBarRow(label, dataByRes, total, warnClass) {
+                const isWarn = warnClass || false;
+                let segsHtml = '';
+                RES_ORDER.forEach(r => {
+                    const val = dataByRes[r] || 0;
+                    if (val < 0.01) return;
+                    const widthPct = (val / maxBarTWh * 100).toFixed(2);
+                    const color = colorByKey[r] || '#888';
+                    const rLabel = RESOURCE_LABELS[r] || r;
+                    const inLabel = val >= maxBarTWh * 0.08
+                        ? (val >= 10 ? Math.round(val) : val.toFixed(1))
+                        : '';
+                    segsHtml += `<div class="sbar-seg" style="width:${widthPct}%;background:${color};" title="${rLabel}: ${val.toFixed(1)} TWh">${inLabel}</div>`;
+                });
+                const totalLabel = total >= 10 ? Math.round(total) + ' TWh' : total.toFixed(1) + ' TWh';
+                return `<div class="sbar-row">
+                    <div class="sbar-label${isWarn ? ' sbar-label-warn' : ''}">${label}</div>
+                    <div class="sbar-track${isWarn ? ' sbar-track-stranded' : ''}">${segsHtml}</div>
+                    <div class="sbar-total${isWarn ? ' sbar-total-warn' : ''}">${totalLabel}</div>
+                </div>`;
             }
+
+            let html = '';
+            html += buildBarRow('Interim<br>New Build', interimNew, totalInterimNew, false);
+            html += buildBarRow('Long-term<br>New Build', longtermNew, totalLongtermNew, false);
+            if (totalStranded > 0.05) {
+                html += buildBarRow('Stranded', strandedByRes, totalStranded, true);
+            }
+            barsWrapper.innerHTML = html;
+
+            // Legend: show resources that appear in any bar
+            const seenRes = RES_ORDER.filter(r => (interimNew[r] > 0.01 || longtermNew[r] > 0.01 || strandedByRes[r] > 0.01));
+            legendEl.innerHTML = seenRes.map(r => {
+                const color = colorByKey[r] || '#888';
+                const rLabel = RESOURCE_LABELS[r] || r;
+                const stVal = strandedByRes[r];
+                const stNote = stVal > 0.05 ? ` — <span class="sl-val">${stVal.toFixed(1)} TWh stranded</span>` : '';
+                return `<div class="stranded-legend-item">
+                    <div class="stranded-legend-dot" style="background:${color}"></div>
+                    <span>${rLabel}${stNote}</span>
+                </div>`;
+            }).join('');
         }
 
         // Narrative
