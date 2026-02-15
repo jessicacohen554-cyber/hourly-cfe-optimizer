@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The 8,760 Problem — Cost Optimizer Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1516,7 +1517,7 @@ body {
         font-size: 1.6rem;
     }
     .hero-callout-label {
-        font-size: 0.65rem;
+        font-size: 0.75rem;
         letter-spacing: 0.5px;
     }
 }
@@ -1902,8 +1903,10 @@ body {
     margin: 16px 0 8px;
 }
 .region-toggle-btn {
-    display: inline-block;
-    padding: 6px 18px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 18px;
+    min-height: 44px;
     border-radius: 9999px;
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
     font-size: 0.82rem;
@@ -2104,10 +2107,10 @@ body {
         height: 70px;
     }
     .curtail-bar-label {
-        font-size: 0.65rem;
+        font-size: 0.75rem;
     }
     .curtail-bar-value {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
     }
     .curtail-bar-sub {
         font-size: 0.6rem;
@@ -2134,7 +2137,7 @@ body {
         font-size: 0.82rem;
     }
     .gauge-name {
-        font-size: 0.68rem;
+        font-size: 0.75rem;
     }
     .transition-fuel-card {
         padding: 14px 12px;
@@ -2159,11 +2162,12 @@ body {
         gap: 4px;
     }
     .region-toggle-btn, .incremental-pill {
-        padding: 4px 10px;
-        font-size: 0.7rem;
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        min-height: 44px;
     }
     .incremental-chart-container {
-        min-height: 220px;
+        min-height: 280px;
     }
     .incremental-insight {
         font-size: 0.82rem;
@@ -2601,10 +2605,10 @@ body {
         font-size: 1.8rem;
     }
     .metric-tile .tile-label {
-        font-size: 0.73rem;
+        font-size: 0.75rem;
     }
     .metric-tile .tile-sub {
-        font-size: 0.72rem;
+        font-size: 0.75rem;
     }
     .metric-tile:hover {
         transform: none;
@@ -2723,7 +2727,7 @@ body {
         font-size: 1.5rem;
     }
     .story-stat-label {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
     }
     .story-insight-box {
         padding: 18px 16px;
@@ -2778,11 +2782,11 @@ body {
         font-size: 1.55rem;
     }
     .metric-tile .tile-label {
-        font-size: 0.68rem;
+        font-size: 0.75rem;
         margin-bottom: 5px;
     }
     .metric-tile .tile-sub {
-        font-size: 0.66rem;
+        font-size: 0.75rem;
     }
     .chart-panel {
         padding: 14px 10px;
@@ -2880,9 +2884,20 @@ body {
         font-size: 1rem;
     }
     .footer {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         padding: 12px 10px;
     }
+}
+
+/* ========== 375px BREAKPOINT (mid-range phones) ========== */
+@media (max-width: 375px) {
+    .header { padding: 28px 12px 24px; }
+    .header h1 { font-size: 1.6rem; }
+    .header .subtitle { font-size: 0.85rem; }
+    .story-section { padding: 32px 14px; }
+    .hero-callout-card { min-width: 70px; padding: 12px 6px; }
+    .hero-callout-value { font-size: 1.4rem; }
+    .scrolly-chart-wrap { min-height: 250px; }
 }
 
 /* Touch-friendly tap targets */
@@ -2932,7 +2947,7 @@ body {
         <a href="research_paper.html">Methodology &amp; Paper</a>
     </div>
 </nav>
-<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#4a90d9;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;" onmouseover="this.style.color='#1A2744'" onmouseout="this.style.color='#4a90d9'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" class="back-link" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER / BANNER -->
 <header class="header">
