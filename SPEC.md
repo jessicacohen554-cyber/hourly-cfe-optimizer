@@ -109,6 +109,24 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 
 **Limitation (noted)**: C&I share held constant across demand growth scenarios. In practice, data center growth (classified as commercial by EIA) could shift C&I share higher over time, particularly in PJM and ERCOT. This simplification is acknowledged but not modeled.
 
+### EAC Scarcity: Hyperscaler Committed Nuclear PPA Pipeline (Feb 15)
+**Decision**: Model committed hyperscaler nuclear PPAs as a phased supply reduction rather than generic demand growth. Hyperscaler data center demand is disproportionately clean-energy-focused — these PPAs lock up specific clean generation that is no longer available for other corporate procurement.
+
+**PJM committed pipeline**: ~4 GW nuclear PPAs committed by hyperscalers:
+- Amazon-Talen: Susquehanna campus (~960 MW, operational)
+- Microsoft-Constellation: TMI Unit 1 restart (~835 MW, targeting 2028)
+- Other committed deals ramping through 2030
+
+**Phasing** (cumulative GW online → TWh/yr at 90% CF):
+- 2025: 1.0 GW → ~7.9 TWh (Susquehanna campus + early deals)
+- 2027: 2.0 GW → ~15.8 TWh
+- 2028: 3.0 GW → ~23.7 TWh (TMI restart)
+- 2030: 4.0 GW → ~31.5 TWh (full pipeline)
+
+**Implementation**: Subtracted from available non-SSS supply alongside existing corporate PPAs. Modeled as `COMMITTED_CLEAN_PIPELINE` with time-phased GW → TWh conversion. Applies only to PJM currently (can be extended to other ISOs as hyperscaler commitments are announced in those markets).
+
+**Why supply reduction, not demand growth**: Generic demand growth is diluted by the C&I share (62%) and mixed across all electricity sources. Hyperscaler nuclear PPAs specifically target and lock up clean generation — modeling as supply reduction correctly captures that these MWh are spoken for by specific off-takers.
+
 ### Corrected SSS Framework (Feb 15)
 **SSS = mandatory/non-bypassable procurement creating a financial relationship between customers and generation.** Determined by whether a policy acts upon the EAC:
 - **RPS/CES mandates** — state renewable/clean energy standards that retire EACs on behalf of ratepayers
