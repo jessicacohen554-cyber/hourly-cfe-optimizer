@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-EAC Scarcity Analysis — Supply-stack / marginal-cost model.
+EAC Scarcity Analysis — Combined RPS + Voluntary Supply Stack Model (v2).
 
-New clean capacity enters only when economically viable (LCOE < wholesale + RPS adder).
-Clean premium = marginal cost of the next MWh on the supply stack to serve corporate demand.
+Two-track demand model:
+  1. RPS-mandated build is forced regardless of economics
+  2. Voluntary corporate demand rides on top
+Both compete for the same finite buildable capacity on the supply stack.
+Marginal cost set by combined demand (RPS + voluntary).
+
+Validated against Xu et al. (2024 Joule / Princeton ZERO Lab),
+Gillenwater (2008), Denholm et al. (NREL 2021).
 
 Saves results to dashboard/eac_scarcity_results.json with incremental
 checkpointing after each ISO×year combo to avoid losing work.
-
-Based on SPEC.md Supply Stack methodology (Feb 15, 2026).
 """
 
 import json
@@ -83,9 +87,7 @@ DEMAND_GROWTH_RATES = {
 }
 
 # ── RPS / Clean Energy Target Trajectories (% of demand) ─────────────────
-# Used to drive the RPS demand adder — NOT to directly set supply volume.
-# As RPS targets rise, the compliance premium (adder) increases, which
-# determines how much of the supply stack is economic for compliance.
+# Drives MANDATORY new build — RPS compliance build happens regardless of economics.
 RPS_TARGET_TRAJECTORIES = {
     "CAISO": {
         "Low":    {"2025": 0.61, "2030": 0.60, "2035": 0.68, "2040": 0.80, "2045": 0.95, "2050": 1.00},
@@ -124,6 +126,8 @@ SSS_NEW_BUILD_FRACTION = {
 }
 
 # ── Policy Expirations (SSS TWh that shifts to non-SSS) ──────────────────
+# BUG FIX (v2): These TWh TRANSFER to non-SSS — they don't vanish.
+# Plants still generate; they just lost their subsidy and become merchant.
 SSS_EXPIRATIONS = {
     "PJM": [
         {"year": 2027, "twh_shift": 94, "component": "fixed",
@@ -141,13 +145,8 @@ EXISTING_CORPORATE_PPAS = {
 }
 
 # ── Committed Hyperscaler Clean PPA Pipeline ─────────────────────────────
-# Large tech companies have committed to specific nuclear PPAs in PJM that
-# lock up clean generation. This is modeled as a supply reduction (not demand
-# growth) because the demand is disproportionately clean-energy-targeted.
-# Phased in GW → TWh at 90% capacity factor (1 GW ≈ 7.884 TWh/yr).
 COMMITTED_CLEAN_PIPELINE = {
     "PJM": {
-        # {year: cumulative_gw} — interpolated for intermediate years
         "phasing_gw": {
             "2025": 1.0,   # Susquehanna campus + early deals
             "2027": 2.0,   # Additional contracts online
@@ -163,7 +162,7 @@ COMMITTED_CLEAN_PIPELINE = {
 # ── Scenario Parameters ───────────────────────────────────────────────────
 PARTICIPATION_RATES = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100]
 MATCH_TARGETS = [75, 80, 85, 90, 95, 99, 100]
-TIME_HORIZONS = [2025, 2030, 2035, 2040, 2045, 2050]
+TIME_HORIZONS = list(range(2025, 2051))  # Annual: 2025–2050 (26 years)
 GROWTH_LEVELS = ["Low", "Medium", "High"]
 ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
 
@@ -213,21 +212,7 @@ CLEAN_SUPPLY_STACK = {
     ],
 }
 
-# ── RPS Base Adder ($/MWh) — observed 2025 REC prices ─────────────────────
-# The price signal RPS compliance creates above wholesale.
-# New clean is built when LCOE < wholesale + rps_adder.
-RPS_BASE_ADDER = {
-    "CAISO": 10,   # CA SB100 REC ~$5-15/MWh
-    "ERCOT": 2,    # No binding RPS, minimal voluntary REC value
-    "PJM":   8,    # Blended state RPS REC prices ~$5-15/MWh
-    "NYISO": 22,   # NY Tier 1 RECs ~$20-25/MWh
-    "NEISO": 30,   # MA/CT Class I RECs ~$25-35/MWh
-}
-
 # ── Procurement Ratio (MWh clean per MWh matched demand) ──────────────────
-# Accounts for temporal mismatch — higher targets need more over-procurement.
-# Derived from VRE curtailment physics (not optimizer results).
-# National average curve; ISO-specific refinement possible in future.
 PROCUREMENT_RATIO = {
     75: 0.80, 80: 0.85, 85: 0.95,
     90: 1.05, 95: 1.15, 99: 1.30, 100: 1.45
@@ -285,7 +270,6 @@ def get_committed_pipeline_twh(iso, year):
         return 0
     pipeline = COMMITTED_CLEAN_PIPELINE[iso]
     gw = interp_dict(pipeline["phasing_gw"], year)
-    # GW → TWh: GW × 8760 hours × capacity factor / 1000
     return gw * 8.760 * pipeline["capacity_factor"]
 
 
@@ -306,73 +290,26 @@ def get_procurement_ratio(match_target):
     return PROCUREMENT_RATIO[thresholds[-1]]
 
 
-def compute_rps_adder(iso, year, growth_level):
-    """Compute RPS demand adder at a given year.
-
-    Adder rises proportionally with RPS target. As mandates increase,
-    compliance demand rises, pushing REC prices higher.
-    """
-    rps_now = interpolate_rps_target(iso, year, growth_level)
-    rps_2025 = interpolate_rps_target(iso, 2025, growth_level)
-    if rps_2025 <= 0:
-        return RPS_BASE_ADDER[iso]
-    # Convex scaling: adder rises faster-than-linearly as targets approach 100%
-    # ratio^1.3 gives gentle convexity
-    ratio = rps_now / rps_2025
-    return RPS_BASE_ADDER[iso] * (ratio ** 1.3)
+def get_total_buildable(iso, year):
+    """Total new-build capacity available on the supply stack for a given ISO/year."""
+    years_elapsed = max(0, year - 2025)
+    total = 0
+    for tier in CLEAN_SUPPLY_STACK[iso]:
+        total += min(tier["annual_add_twh"] * years_elapsed, tier["max_cumulative_twh"])
+    return total
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Supply-side: economics-driven growth
+# Supply-side: RPS-mandated build (forced) + SSS transfer
 # ═══════════════════════════════════════════════════════════════════════════
-
-def compute_new_economic_supply(iso, year, growth_level):
-    """Compute new clean supply that has been built because it's economic.
-
-    New clean enters when LCOE < wholesale + RPS adder.
-    Returns total new TWh added since 2025, and the supply stack with
-    cumulative capacity at each tier.
-    """
-    if year <= 2025:
-        return 0, []
-
-    wholesale = WHOLESALE_PRICES[iso]
-    rps_adder = compute_rps_adder(iso, year, growth_level)
-    price_signal = wholesale + rps_adder
-    years_elapsed = year - 2025
-
-    stack = CLEAN_SUPPLY_STACK[iso]
-    new_total = 0
-    tier_details = []
-
-    for tier in stack:
-        if tier["lcoe"] <= price_signal:
-            # This tier is economic — capacity has been building
-            added = min(tier["annual_add_twh"] * years_elapsed, tier["max_cumulative_twh"])
-            new_total += added
-            tier_details.append({
-                "resource": tier["resource"],
-                "lcoe": tier["lcoe"],
-                "added_twh": round(added, 1),
-                "economic": True,
-            })
-        else:
-            # Not yet economic — no new build in this tier
-            tier_details.append({
-                "resource": tier["resource"],
-                "lcoe": tier["lcoe"],
-                "added_twh": 0,
-                "economic": False,
-            })
-
-    return new_total, tier_details
-
 
 def evolve_supply(iso, year, growth_level, demand_twh_at_year):
-    """Project clean supply at a future year using economics-driven model.
+    """Project clean supply at a future year.
 
-    Existing clean is fixed. New clean only enters when LCOE < wholesale + RPS adder.
-    New supply split between SSS (RPS compliance) and merchant per SSS_NEW_BUILD_FRACTION.
+    Two-track model:
+    1. Existing supply with SSS policy expirations (transfer, not vanish)
+    2. RPS-mandated new build (forced regardless of economics)
+    New build splits between SSS and merchant per SSS_NEW_BUILD_FRACTION.
     """
     base = SSS_2025[iso]
 
@@ -381,28 +318,35 @@ def evolve_supply(iso, year, growth_level, demand_twh_at_year):
         sss_fixed = base["sss_fixed_twh"]
         sss_rps = base["sss_rps_twh"]
         non_sss = base["non_sss_twh"]
-        rps_adder = RPS_BASE_ADDER[iso]
-        new_economic = 0
+        rps_mandated_new = 0
     else:
-        # ── Fixed-fleet SSS (constant, policy expiry only) ──
+        # ── Fixed-fleet SSS: policy expiry TRANSFERS to non-SSS ──
         sss_fixed = base["sss_fixed_twh"]
+        sss_to_merchant = 0
         if iso in SSS_EXPIRATIONS:
             for exp in SSS_EXPIRATIONS[iso]:
                 if year >= exp["year"] and exp.get("component", "fixed") == "fixed":
                     sss_fixed -= exp["twh_shift"]
+                    sss_to_merchant += exp["twh_shift"]  # BUG FIX: transfer, don't vanish
         sss_fixed = max(0, sss_fixed)
 
-        # ── New economic supply ──
-        new_economic, _ = compute_new_economic_supply(iso, year, growth_level)
-        rps_adder = compute_rps_adder(iso, year, growth_level)
+        # ── RPS-mandated new build (forced regardless of economics) ──
+        rps_target = interpolate_rps_target(iso, year, growth_level)
+        existing_total_clean = base["total_clean_twh"]
+        rps_demand = rps_target * demand_twh_at_year
+        rps_mandated_new = max(0, rps_demand - existing_total_clean)
+
+        # Cap new build at what the supply stack can physically deliver
+        total_buildable = get_total_buildable(iso, year)
+        rps_mandated_new = min(rps_mandated_new, total_buildable)
 
         # Split new supply into SSS (RPS compliance) and merchant
         avg_sss_frac = get_sss_new_fraction(iso, year)
-        new_sss = new_economic * avg_sss_frac
-        new_merchant = new_economic * (1 - avg_sss_frac)
+        new_sss = rps_mandated_new * avg_sss_frac
+        new_merchant = rps_mandated_new * (1 - avg_sss_frac)
 
         sss_rps = base["sss_rps_twh"] + new_sss
-        non_sss = base["non_sss_twh"] + new_merchant
+        non_sss = base["non_sss_twh"] + sss_to_merchant + new_merchant
         total = sss_fixed + sss_rps + non_sss
 
     sss = sss_fixed + sss_rps
@@ -412,6 +356,8 @@ def evolve_supply(iso, year, growth_level, demand_twh_at_year):
     committed_pipeline = get_committed_pipeline_twh(iso, year)
     total_claimed = existing_ppas + committed_pipeline
     available_non_sss = max(0, non_sss - total_claimed)
+
+    total = sss_fixed + sss_rps + non_sss
 
     return {
         "total_clean_twh": round(total, 1),
@@ -423,43 +369,35 @@ def evolve_supply(iso, year, growth_level, demand_twh_at_year):
         "existing_ppas_twh": existing_ppas,
         "committed_pipeline_twh": round(committed_pipeline, 1),
         "sss_share_of_total": round(sss / total, 4) if total > 0 else 0,
-        "rps_adder": round(rps_adder, 1),
-        "new_economic_twh": round(new_economic, 1),
+        "rps_mandated_new_twh": round(rps_mandated_new, 1),
     }
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Clean premium: marginal cost from supply stack
+# Clean premium: COMBINED RPS + voluntary demand on supply stack
 # ═══════════════════════════════════════════════════════════════════════════
 
-def compute_clean_premium(iso, year, growth_level, corp_demand_twh, available_existing_twh):
-    """Walk the supply stack to compute marginal clean premium.
+def walk_supply_stack(iso, year, total_new_demand_twh):
+    """Walk up the supply stack with combined demand, return marginal LCOE.
 
-    1. Existing non-SSS supply is available at ~$0 premium (already built).
-    2. If corp demand exceeds existing, walk up the new-build cost stack.
-    3. Marginal premium = LCOE of the tier being consumed - wholesale.
-    4. If demand exceeds entire stack, scarcity pricing kicks in.
+    Both RPS-mandated build and voluntary corporate demand compete for the
+    same finite buildable capacity. The marginal cost is set by where
+    combined demand lands on the stack.
     """
     wholesale = WHOLESALE_PRICES[iso]
-
-    if corp_demand_twh <= 0:
-        return 0.0
-
-    # Phase 1: Serve from existing supply (near-zero premium)
-    remaining = corp_demand_twh - available_existing_twh
-    if remaining <= 0:
-        # All demand met by existing merchant clean — minimal premium
-        # Still a small premium for the match-target difficulty (temporal value)
-        utilization = corp_demand_twh / available_existing_twh if available_existing_twh > 0 else 0
-        return round(utilization * 5, 2)  # 0-5 $/MWh based on utilization
-
-    # Phase 2: Walk up the new-build supply stack
     years_elapsed = max(1, year - 2025)
+
+    if total_new_demand_twh <= 0:
+        return wholesale  # No new demand — marginal cost = wholesale
+
+    remaining = total_new_demand_twh
+    marginal_lcoe = wholesale
     stack = CLEAN_SUPPLY_STACK[iso]
-    marginal_lcoe = wholesale  # default if no tiers consumed
 
     for tier in stack:
         tier_capacity = min(tier["annual_add_twh"] * years_elapsed, tier["max_cumulative_twh"])
+        if tier_capacity <= 0:
+            continue
         if remaining <= tier_capacity:
             marginal_lcoe = tier["lcoe"]
             remaining = 0
@@ -467,11 +405,38 @@ def compute_clean_premium(iso, year, growth_level, corp_demand_twh, available_ex
         remaining -= tier_capacity
         marginal_lcoe = tier["lcoe"]
 
-    # Phase 3: If demand exceeds all tiers — scarcity pricing
+    # If demand exceeds all tiers — scarcity pricing
     if remaining > 0:
-        # Beyond the buildable stack — exponential scarcity
         scarcity_surcharge = remaining * 3  # $3/MWh per TWh of shortage
         marginal_lcoe = marginal_lcoe + scarcity_surcharge
+
+    return marginal_lcoe
+
+
+def compute_clean_premium(iso, year, rps_new_demand_twh, corp_demand_twh, available_existing_twh):
+    """Compute clean premium from combined demand on the supply stack.
+
+    1. Existing non-SSS supply serves corp demand at ~$0 premium (already built).
+    2. Remaining corp demand + ALL RPS new demand compete on the new-build stack.
+    3. Marginal premium = LCOE of the tier where COMBINED demand lands - wholesale.
+    """
+    wholesale = WHOLESALE_PRICES[iso]
+
+    if corp_demand_twh <= 0:
+        return 0.0
+
+    # Phase 1: Serve corporate demand from existing merchant supply (near-zero premium)
+    corp_remaining = max(0, corp_demand_twh - available_existing_twh)
+
+    if corp_remaining <= 0:
+        # All corp demand met by existing merchant — minimal premium
+        utilization = corp_demand_twh / available_existing_twh if available_existing_twh > 0 else 0
+        return round(utilization * 5, 2)  # 0-5 $/MWh based on utilization
+
+    # Phase 2: Combined demand on the new-build stack
+    # RPS mandates consume the cheap tiers; corp demand rides on top
+    total_new_demand = rps_new_demand_twh + corp_remaining
+    marginal_lcoe = walk_supply_stack(iso, year, total_new_demand)
 
     premium = max(0, marginal_lcoe - wholesale)
     return round(premium, 2)
@@ -486,28 +451,32 @@ def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
     inflections = {}
     available = supply_data["available_non_sss_twh"]
     sss_share = supply_data["sss_share_of_total"]
+    rps_mandated = supply_data["rps_mandated_new_twh"]
+
+    total_buildable = get_total_buildable(iso, year)
 
     for match_target in MATCH_TARGETS:
         procurement_mult = get_procurement_ratio(match_target)
         incremental_need_frac = max(0, match_target / 100 - sss_share)
 
-        # Find participation rate where demand exceeds available + buildable supply
-        total_buildable = available
-        years_elapsed = max(1, year - 2025)
-        for tier in CLEAN_SUPPLY_STACK[iso]:
-            total_buildable += min(tier["annual_add_twh"] * years_elapsed, tier["max_cumulative_twh"])
-
         inflection_pct = None
         for pct in range(1, 101):
-            corp_demand = demand_twh * CI_SHARE * (pct / 100) * incremental_need_frac * procurement_mult
-            if corp_demand > total_buildable:
+            corp_load = demand_twh * CI_SHARE * (pct / 100)
+            corp_eac_demand = corp_load * incremental_need_frac * procurement_mult
+            corp_remaining = max(0, corp_eac_demand - available)
+
+            # Combined demand on new-build stack
+            combined_new_demand = rps_mandated + corp_remaining
+            if combined_new_demand > total_buildable:
                 inflection_pct = pct
                 break
 
         inflections[str(match_target)] = {
             "inflection_participation_pct": inflection_pct,
             "procurement_multiplier": round(procurement_mult, 3),
-            "max_supportable_twh": round(total_buildable / procurement_mult, 1) if procurement_mult > 0 else 0,
+            "total_buildable_twh": round(total_buildable, 1),
+            "rps_mandated_twh": round(rps_mandated, 1),
+            "remaining_for_voluntary_twh": round(max(0, total_buildable - rps_mandated), 1),
         }
 
     return inflections
@@ -557,25 +526,31 @@ def save_final_results(results):
 
 def main():
     print("=" * 60)
-    print("EAC Scarcity Analysis — Supply Stack Model")
+    print("EAC Scarcity Analysis — Combined RPS + Voluntary Model (v2)")
     print("=" * 60)
 
     demands = load_demand_data()
     print(f"Loaded demand data for {len(demands)} ISOs")
+    print(f"Time horizons: {TIME_HORIZONS[0]}-{TIME_HORIZONS[-1]} ({len(TIME_HORIZONS)} years)")
 
     # Print stack summary
     for iso in ISOS:
         ws = WHOLESALE_PRICES[iso]
-        adder = RPS_BASE_ADDER[iso]
-        print(f"  {iso}: wholesale=${ws}, RPS adder=${adder}, threshold=${ws+adder}/MWh")
+        print(f"  {iso}: wholesale=${ws}/MWh, 2025 clean={SSS_2025[iso]['total_clean_twh']} TWh")
 
     checkpoint = load_checkpoint()
     completed_keys = set()
     results = {
         "metadata": {
             "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "description": "EAC scarcity analysis: supply-stack / marginal-cost model",
-            "framework": "New clean enters when LCOE < wholesale + RPS adder. Premium = marginal cost on stack.",
+            "model_version": "v2 — combined RPS + voluntary supply stack",
+            "description": "EAC scarcity: RPS mandated build + voluntary corporate demand compete on same supply stack",
+            "framework": "Two-track: RPS forced build + voluntary on top. Marginal cost = combined demand on stack.",
+            "literature": [
+                "Xu et al. (2024) Joule — GenX combined RPS + voluntary on regional supply curves",
+                "Gillenwater (2008) Energy Policy — REC supply-demand equilibrium",
+                "Denholm et al. (2021) NREL — last few percent cost escalation",
+            ],
             "parameters": {
                 "participation_rates_pct": PARTICIPATION_RATES,
                 "match_targets_pct": MATCH_TARGETS,
@@ -609,6 +584,7 @@ def main():
 
     # ── Phase 1: Supply projections ───────────────────────────────────────
     done = 0
+    total_supply = len(ISOS) * len(TIME_HORIZONS) * len(GROWTH_LEVELS)
     for iso in ISOS:
         demand_twh = demands[iso]
         if iso not in results["supply_projections"]:
@@ -635,7 +611,7 @@ def main():
 
             save_checkpoint(list(completed_keys), results)
 
-    print(f"Phase 1 complete: {done} supply projections")
+    print(f"Phase 1 complete: {done}/{total_supply} supply projections")
 
     # ── Phase 2: Scenario matrix ──────────────────────────────────────────
     scenario_count = 0
@@ -667,6 +643,8 @@ def main():
                 supply = results["supply_projections"][iso][year_key][growth]
                 available = supply["available_non_sss_twh"]
                 sss_share = supply["sss_share_of_total"]
+                rps_mandated = supply["rps_mandated_new_twh"]
+                total_buildable = get_total_buildable(iso, year)
 
                 scenarios_for_combo = []
 
@@ -680,13 +658,23 @@ def main():
                         incremental_need_frac = max(0, match_target / 100 - sss_share)
                         corp_eac_demand = corp_load * incremental_need_frac * mult
 
-                        # Demand ratio against existing available supply
-                        demand_ratio = corp_eac_demand / available if available > 0 else 999
+                        # Combined demand: RPS mandated + corp demand beyond existing
+                        corp_beyond_existing = max(0, corp_eac_demand - available)
+                        combined_new_demand = rps_mandated + corp_beyond_existing
+
+                        # Scarcity ratio = combined demand / total buildable
+                        if total_buildable > 0:
+                            demand_ratio = combined_new_demand / total_buildable
+                        elif combined_new_demand > 0:
+                            demand_ratio = 999
+                        else:
+                            demand_ratio = 0
+
                         band_key, label, color = classify_scarcity(demand_ratio)
 
-                        # Marginal premium from supply stack
+                        # Marginal premium from combined demand on supply stack
                         premium = compute_clean_premium(
-                            iso, year, growth, corp_eac_demand, available)
+                            iso, year, rps_mandated, corp_eac_demand, available)
 
                         scenarios_for_combo.append({
                             "participation_pct": participation,
@@ -699,6 +687,9 @@ def main():
                             "procurement_ratio": round(mult, 3),
                             "corp_eac_demand_twh": round(corp_eac_demand, 1),
                             "available_supply_twh": round(available, 1),
+                            "rps_mandated_new_twh": round(rps_mandated, 1),
+                            "combined_new_demand_twh": round(combined_new_demand, 1),
+                            "total_buildable_twh": round(total_buildable, 1),
                             "demand_supply_ratio": round(demand_ratio, 3),
                             "scarcity_class": band_key,
                             "scarcity_label": label,
@@ -710,7 +701,8 @@ def main():
                 completed_keys.add(combo_key)
 
             save_checkpoint(list(completed_keys), results)
-            print(f"  {iso} {year}: {scenario_count}/{total_scenarios} scenarios", flush=True)
+            if year % 5 == 0:
+                print(f"  {iso} {year}: {scenario_count}/{total_scenarios} scenarios", flush=True)
 
     print(f"Phase 2 complete: {scenario_count} scenarios")
 
@@ -764,6 +756,10 @@ def main():
             total_demand = sum(
                 demands[iso] * (1 + DEMAND_GROWTH_RATES[iso][growth]) ** (year - 2025)
                 for iso in ISOS)
+            total_rps_new = sum(
+                results["supply_projections"][iso][year_key][growth]["rps_mandated_new_twh"]
+                for iso in ISOS)
+            total_buildable = sum(get_total_buildable(iso, year) for iso in ISOS)
 
             results["national_summary"][year_key][growth] = {
                 "total_clean_twh": round(total_clean, 1),
@@ -771,6 +767,8 @@ def main():
                 "total_non_sss_twh": round(total_non_sss, 1),
                 "total_available_twh": round(total_available, 1),
                 "total_demand_twh": round(total_demand, 1),
+                "total_rps_mandated_new_twh": round(total_rps_new, 1),
+                "total_buildable_twh": round(total_buildable, 1),
                 "national_sss_pct": round(total_sss / total_clean * 100, 1) if total_clean > 0 else 0,
             }
 
@@ -786,19 +784,20 @@ def main():
     print("=" * 60)
     for iso in ISOS:
         s2025 = results["supply_projections"][iso]["2025"]["Medium"]
+        s2030 = results["supply_projections"][iso]["2030"]["Medium"]
         s2035 = results["supply_projections"][iso]["2035"]["Medium"]
-        adder_2035 = s2035.get("rps_adder", "?")
         pipeline_2025 = s2025.get("committed_pipeline_twh", 0)
-        pipeline_2035 = s2035.get("committed_pipeline_twh", 0)
         pipeline_note = f" (pipeline: {pipeline_2025} TWh)" if pipeline_2025 else ""
         print(f"\n{iso}:")
-        print(f"  2025: {s2025['available_non_sss_twh']} TWh available{pipeline_note} | RPS adder ${s2025.get('rps_adder', '?')}/MWh")
-        pipeline_note_35 = f" | pipeline: {pipeline_2035} TWh" if pipeline_2035 else ""
-        print(f"  2035: {s2035['available_non_sss_twh']} TWh available ({s2035.get('new_economic_twh', 0)} new){pipeline_note_35} | RPS adder ${adder_2035}/MWh")
+        print(f"  2025: {s2025['available_non_sss_twh']} TWh avail{pipeline_note} | SSS {s2025['sss_twh']} TWh ({round(s2025['sss_share_of_total']*100,1)}%)")
+        print(f"  2030: {s2030['available_non_sss_twh']} TWh avail | RPS new build: {s2030['rps_mandated_new_twh']} TWh | SSS {s2030['sss_twh']} TWh ({round(s2030['sss_share_of_total']*100,1)}%)")
+        print(f"  2035: {s2035['available_non_sss_twh']} TWh avail | RPS new build: {s2035['rps_mandated_new_twh']} TWh | SSS {s2035['sss_twh']} TWh ({round(s2035['sss_share_of_total']*100,1)}%)")
         inf = results["inflection_points"][iso]["2030"]["Medium"]
         for mt in ["90", "95", "100"]:
             ip = inf.get(mt, {}).get("inflection_participation_pct")
-            print(f"  2030 @{mt}% match: scarcity at {ip}% participation" if ip else f"  2030 @{mt}% match: no scarcity at 100% participation")
+            rps = inf.get(mt, {}).get("rps_mandated_twh", 0)
+            remain = inf.get(mt, {}).get("remaining_for_voluntary_twh", 0)
+            print(f"  2030 @{mt}% match: scarcity at {ip}% participation (RPS consumes {rps} TWh, {remain} TWh left for vol)" if ip else f"  2030 @{mt}% match: no scarcity at 100% (RPS: {rps} TWh, remaining: {remain} TWh)")
 
     nat = results["national_summary"]["2025"]["Medium"]
     print(f"\nNational 2025 (Medium growth):")
@@ -806,6 +805,13 @@ def main():
     print(f"  SSS: {nat['total_sss_twh']} TWh ({nat['national_sss_pct']}%)")
     print(f"  Available for corporate: {nat['total_available_twh']} TWh")
     print(f"  Total demand: {nat['total_demand_twh']} TWh")
+
+    nat30 = results["national_summary"]["2030"]["Medium"]
+    print(f"\nNational 2030 (Medium growth):")
+    print(f"  Total clean: {nat30['total_clean_twh']} TWh (RPS new: {nat30['total_rps_mandated_new_twh']} TWh)")
+    print(f"  SSS: {nat30['total_sss_twh']} TWh ({nat30['national_sss_pct']}%)")
+    print(f"  Available for corporate: {nat30['total_available_twh']} TWh")
+    print(f"  Total buildable: {nat30['total_buildable_twh']} TWh")
     print(f"\nTotal scenarios: {scenario_count}")
 
 
