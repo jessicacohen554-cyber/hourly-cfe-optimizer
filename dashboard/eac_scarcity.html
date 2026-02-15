@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — EAC Scarcity &amp; Clean Premium Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face {
+    font-family: 'Franklin Gothic Demi';
+    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+</style>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body {
+    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    background: #F3F4F8;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(245,158,11,0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(239,68,68,0.03) 0%, transparent 50%);
+    background-attachment: fixed;
+    color: #000000;
+    line-height: 1.7;
+}
+:root {
+    --navy: #1A2744;
+    --navy-light: #2D3A52;
+    --bg-card: #FFFFFF;
+    --border: #D4D8E0;
+    --border-light: #E5E7EB;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+    --text-muted: #6B7280;
+    --font-heading: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+}
+
+/* ========== TOP NAV ========== */
+.top-nav {
+    background: #1a1a2e;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+.top-nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    max-width: 1440px;
+    width: 100%;
+    justify-content: center;
+}
+.top-nav a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 14px 18px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+.top-nav a:hover { color: #ffffff; background: rgba(255,255,255,0.06); }
+.top-nav a.nav-active { color: #ffffff; border-bottom-color: #0EA5E9; background: rgba(14,165,233,0.1); }
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+.nav-hamburger svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; }
+@media (max-width: 768px) {
+    .top-nav { flex-wrap: wrap; padding: 0 12px; justify-content: space-between; }
+    .top-nav-inner { display: none; flex-direction: column; width: 100%; padding-bottom: 8px; }
+    .top-nav-inner.nav-open { display: flex; }
+    .top-nav a { padding: 12px 16px; border-bottom: none; border-left: 3px solid transparent; width: 100%; text-align: left; }
+    .top-nav a.nav-active { border-left-color: #0EA5E9; border-bottom: none; background: rgba(14,165,233,0.12); }
+    .nav-hamburger { display: flex; }
+}
+
+/* ========== HEADER ========== */
+.header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
+    color: #ffffff;
+    padding: 72px 24px 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.header h1 {
+    font-family: 'Rajdhani', 'Arial Narrow', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: capitalize;
+    position: relative;
+    z-index: 2;
+}
+.header .subtitle {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.85);
+    max-width: 700px;
+    margin: 12px auto 0;
+    position: relative;
+    z-index: 2;
+}
+.header-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    z-index: 2;
+}
+
+/* ========== CONTENT ========== */
+.content {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 32px 60px;
+}
+h2 {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 48px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border-light);
+}
+h3 {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 32px 0 12px;
+}
+h4 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 20px 0 8px;
+}
+p { margin: 10px 0; }
+ul, ol { margin: 10px 0 10px 24px; }
+li { margin-bottom: 6px; }
+
+/* Cards */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0; }
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* Tables */
+.data-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
+.data-table th, .data-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border-light); }
+.data-table th { background: #F0F2F5; font-weight: 600; font-size: 0.85rem; }
+.data-table tr:hover { background: #F7F8FA; }
+
+/* Callouts */
+.callout {
+    background: #E8F4FD;
+    border-left: 4px solid #0EA5E9;
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 16px 0;
+}
+.callout.warning {
+    background: #FEF3C7;
+    border-left-color: #F59E0B;
+}
+.callout.danger {
+    background: #FEE2E2;
+    border-left-color: #DC2626;
+}
+.callout.success {
+    background: #D1FAE5;
+    border-left-color: #22C55E;
+}
+
+/* Stats */
+.stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 24px 0;
+}
+.stat-tile {
+    flex: 1;
+    min-width: 140px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 20px 16px;
+    text-align: center;
+}
+.stat-value {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--navy);
+}
+.stat-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* Badge */
+.badge {
+    display: inline-block;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+}
+.badge.red { background: #FEE2E2; color: #DC2626; }
+.badge.amber { background: #FEF3C7; color: #D97706; }
+.badge.green { background: #D1FAE5; color: #059669; }
+.badge.blue { background: #DBEAFE; color: #2563EB; }
+
+.accent-bar {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744, #0EA5E9, #22C55E, #F59E0B, #EF4444);
+}
+
+/* TOC */
+.toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 24px 32px;
+    margin-bottom: 32px;
+}
+.toc h2 { margin-top: 0; border-bottom: none; font-size: 1.3rem; }
+.toc ol { margin-left: 16px; }
+.toc a { color: #2563EB; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+@media (max-width: 768px) {
+    .content { padding: 24px 16px 40px; }
+    .card-grid { grid-template-columns: 1fr; }
+    .stat-row { flex-direction: column; }
+    h2 { font-size: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== TOP NAVIGATION ========== -->
+<nav class="top-nav">
+    <span class="nav-brand" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-weight:600;color:#fff;font-size:0.9rem;white-space:nowrap;padding:14px 18px;">The 8,760 Problem</span>
+    <button class="nav-hamburger" onclick="document.querySelector('.top-nav-inner').classList.toggle('nav-open')" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="top-nav-inner">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Dashboard</a>
+        <a href="region_deepdive.html">Regional Deep Dives</a>
+        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
+        <a href="eac_scarcity.html" class="nav-active">EAC Scarcity</a>
+        <a href="research_paper.html">Methodology &amp; Paper</a>
+        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
+    </div>
+</nav>
+<div style="background:#F3F4F8;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:#1A2744;text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+
+<header class="header">
+    <h1>EAC Scarcity &amp; Clean Premium Analysis</h1>
+    <p class="subtitle">Which ISOs face Energy Attribute Certificate scarcity under hourly matching &mdash; and what will corporate buyers pay for the clean premium?</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="content">
+
+    <!-- TABLE OF CONTENTS -->
+    <div class="toc">
+        <h2>Contents</h2>
+        <ol>
+            <li><a href="#framing">The Question: What Happens When Corporations Go Hourly?</a></li>
+            <li><a href="#sss">Standard Supply Service: Everyone Starts Above Zero</a></li>
+            <li><a href="#scarcity-by-iso">EAC Scarcity by ISO Region</a></li>
+            <li><a href="#participation">Corporate Participation Scenarios</a></li>
+            <li><a href="#clean-premium">The Clean Premium by ISO</a></li>
+            <li><a href="#investment-signal">The Investment Signal</a></li>
+            <li><a href="#methodology-link">Detailed Methodology</a></li>
+        </ol>
+    </div>
+
+    <!-- ========== SECTION 1: FRAMING ========== -->
+    <h2 id="framing">1. The Question: What Happens When Corporations Go Hourly?</h2>
+
+    <p>
+        The convergence of three forces is about to reshape clean energy markets:
+    </p>
+    <ul>
+        <li><strong>GHG Protocol Scope 2 revision</strong> (expected late 2027) will likely require hourly matching with ISO-level deliverability for corporate emissions reporting<sup style="font-size:0.7em;color:var(--text-muted);">[6]</sup></li>
+        <li><strong>SBTi hourly matching requirements</strong> (starting 2030) will mandate time-matched clean energy procurement for ~8,000 companies with validated targets<sup style="font-size:0.7em;color:var(--text-muted);">[7]</sup></li>
+        <li><strong>Corporate 24/7 CFE commitments</strong> from Google, Microsoft, Amazon, and other hyperscalers are already driving multi-GW procurement of firm clean energy<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup></li>
+    </ul>
+
+    <p>
+        Under annual matching, a corporation buys enough RECs to cover total annual consumption &mdash; timing doesn&rsquo;t matter.
+        Under <strong>hourly matching</strong>, every hour of consumption must be matched with clean generation in that same hour,
+        in the same ISO region. This transforms the problem: daytime solar surplus becomes worthless for matching nighttime demand.
+        The binding constraint shifts to <strong>evening and nighttime hours</strong> where only nuclear, geothermal, wind, storage,
+        or CCS can deliver.
+    </p>
+
+    <div class="stat-row">
+        <div class="stat-tile">
+            <div class="stat-value">10&ndash;25%</div>
+            <div class="stat-label">Realistic corporate participation rate (share of ISO load)</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value">90&ndash;100%</div>
+            <div class="stat-label">Hourly matching targets (SBTi / Google / Microsoft trajectory)</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value">5&ndash;8 PM</div>
+            <div class="stat-label">Peak scarcity hours (solar gone, demand high)</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value">$0&ndash;55/MWh</div>
+            <div class="stat-label">Clean premium range across ISOs</div>
+        </div>
+    </div>
+
+    <div class="callout">
+        <p><strong>Why 10&ndash;25% participation, not 50%?</strong> Current voluntary clean energy procurement (CEBA data) represents ~5&ndash;8% of load in PJM and ~10&ndash;15% in ERCOT.<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup> Even with GHG Protocol<sup style="font-size:0.7em;color:var(--text-muted);">[6]</sup> and SBTi<sup style="font-size:0.7em;color:var(--text-muted);">[7]</sup> driving adoption, realistic near-term participation is 10&ndash;25% of total ISO load. The analysis uses this range because it represents the plausible scenario where price signals emerge &mdash; not a hypothetical maximum.</p>
+    </div>
+
+    <div class="callout warning">
+        <p><strong>Hourly matching ≠ matching every hour equally.</strong> A 90% hourly matching score means 90% of total annual load is matched hour-by-hour &mdash; but the remaining 10% can be concentrated in the hardest hours (winter nights, multi-day low-wind events). A buyer can match 100% during sunny hours and fall short overnight while still hitting 90% overall. This makes 90% more achievable than it first sounds, but it also means the <em>last</em> 10% (getting from 90% to 100%) is disproportionately expensive because it requires firm clean energy during the hardest hours.</p>
+    </div>
+
+    <!-- ========== SECTION 2: SSS ========== -->
+    <h2 id="sss">2. Standard Supply Service: Everyone Starts Above Zero</h2>
+
+    <p>
+        The GHG Protocol Scope 2 revision<sup style="font-size:0.7em;color:var(--text-muted);">[6]</sup> introduces <strong>Standard Supply Service (SSS)</strong> &mdash; the concept that
+        every electricity consumer automatically receives a pro-rata share of their region&rsquo;s existing clean energy.
+        Under SSS, corporate buyers don&rsquo;t start from zero. They start from the regional clean baseline and
+        procure the <em>incremental</em> gap to reach their target.
+    </p>
+
+    <h3>What counts as SSS baseline?</h3>
+    <ul>
+        <li><strong>Nuclear generation</strong> &mdash; allocated pro-rata to all load (where not locked into specific PPAs or state programs)</li>
+        <li><strong>RPS-driven renewables</strong> &mdash; state mandated clean generation credited to the general supply mix<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup></li>
+        <li><strong>Rate-base clean assets</strong> &mdash; utility-owned clean generation in regulated territories</li>
+        <li><strong>Publicly owned assets</strong> &mdash; federal hydropower (BPA, TVA, WAPA), municipal utility generation</li>
+    </ul>
+
+    <h3>SSS Baseline by ISO</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ISO</th>
+                <th>Clean Supply (TWh/yr)</th>
+                <th>Total Load (TWh/yr)</th>
+                <th>SSS Baseline</th>
+                <th>Night SSS (10 PM&ndash;6 AM)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>PJM</strong></td><td>~345<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~800<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>43%</td><td>~35% (nuclear dominant)<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup></td></tr>
+            <tr><td><strong>ERCOT</strong></td><td>~150<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~470<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>32%</td><td>~20% (wind + nuclear)<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td></tr>
+            <tr><td><strong>CAISO</strong></td><td>~130<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~280<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>46%</td><td>~25% (geothermal + nuclear + wind)<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td></tr>
+            <tr><td><strong>ISO-NE</strong></td><td>~55<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~120<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>46%</td><td>~30% (nuclear + hydro)<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup></td></tr>
+            <tr><td><strong>NYISO</strong></td><td>~75<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></td><td>~155<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup></td><td>48%</td><td>~35% (nuclear + hydro)<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup></td></tr>
+        </tbody>
+    </table>
+    <p style="font-size:0.85rem;color:var(--text-muted);">
+        A PJM buyer targeting 95% hourly matching gets ~43% from SSS during the day and ~35% at night. Their incremental procurement
+        need is ~52% during daytime and ~60% at night &mdash; the nighttime gap is the binding constraint.
+    </p>
+
+    <!-- ========== SECTION 3: SCARCITY BY ISO ========== -->
+    <h2 id="scarcity-by-iso">3. EAC Scarcity by ISO Region</h2>
+
+    <p>
+        After SSS baseline allocation and state RPS demand is netted out, the remaining &ldquo;uncommitted&rdquo; clean
+        supply is the pool available for voluntary corporate procurement. When corporate hourly EAC demand exceeds this pool
+        in specific hours, the region experiences scarcity &mdash; and a clean premium emerges.
+    </p>
+
+    <div class="card-grid">
+        <!-- PJM -->
+        <div class="card" style="border-left: 4px solid #DC2626;">
+            <span class="badge red">Likely Scarcity</span>
+            <h3 style="margin-top:0;">PJM: The Tightest Market in the US</h3>
+            <p><strong>Clean supply:</strong> ~345 TWh/yr (nuclear ~275<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>, wind ~35, solar ~25, hydro ~10) against ~800 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></p>
+            <p><strong>RPS demand:</strong> State mandates in NJ, VA, MD, IL collectively require ~120&ndash;150 TWh of RECs by 2030.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> <strong>Critical nuance: most PJM state RPS programs require <em>renewable</em> energy certificates &mdash; nuclear does not qualify.</strong> Nuclear support comes through separate state programs (IL CEJA, NJ ZEC), several of which are transitioning or rolling off by late 2020s.</p>
+            <p><strong>After SSS + RPS netting:</strong> The renewable-only RPS constraint means ~120&ndash;150 TWh of REC demand competes specifically for wind, solar, and hydro supply (~70 TWh total in PJM).<sup style="font-size:0.7em;color:var(--text-muted);">[9]</sup> This creates a <em>renewable-specific</em> shortfall that state mandates will fill with new build. Meanwhile, nuclear (~275 TWh, ~90% capacity factor<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>) satisfies most of the SSS baseline but is being rapidly consumed by data center PPAs (Constellation Crane restart, Talen Susquehanna). Virtually no uncommitted clean supply remains for voluntary hourly matching.</p>
+
+            <div class="callout danger">
+                <p><strong>The PJM squeeze:</strong> At just 10&ndash;15% corporate participation<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup> with 90%+ hourly matching targets, PJM faces structural nighttime EAC scarcity. Nuclear PPAs lock up the only 24/7 clean supply. State RPS mandates claim all renewables.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> New build faces 3&ndash;5 year interconnection queue delays.<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup> PJM is where hourly matching creates the <strong>strongest price signal for CCS, new nuclear, and LDES</strong>.<sup style="font-size:0.7em;color:var(--text-muted);">[2][3]</sup></p>
+            </div>
+
+            <p><strong>Empirical confirmation:</strong> PJM Tier I REC prices have already reached $37&ndash;40/MWh (historic highs).<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup> PJM capacity market cleared at $333/MW-day in 2025 (10x increase).<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup> These are real-market signals of emerging scarcity before hourly matching is even mandated.</p>
+        </div>
+
+        <!-- ISO-NE -->
+        <div class="card" style="border-left: 4px solid #F59E0B;">
+            <span class="badge amber">Moderate Scarcity</span>
+            <h3 style="margin-top:0;">ISO-NE: Transmission-Constrained, Aggressive Mandates</h3>
+            <p><strong>Clean supply:</strong> ~55 TWh/yr (nuclear ~27<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>, hydro ~8, wind ~10, solar ~10<sup style="font-size:0.7em;color:var(--text-muted);">[12]</sup>) against ~120 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></p>
+            <p><strong>RPS demand:</strong> MA, CT, RI, VT, ME mandates collectively require ~50&ndash;60 TWh<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> &mdash; consuming nearly the entire existing clean supply.</p>
+            <p><strong>After SSS + RPS:</strong> Minimal surplus. Millstone and Seabrook (~27 TWh, ~90% capacity factor<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>) partially committed to state ZEC programs. Aggressive state mandates leave little room for voluntary procurement without new build.</p>
+            <p><strong>Key constraint:</strong> Transmission limitations restrict Canadian hydro imports. Offshore wind faces permitting and interconnection delays<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup> (Vineyard Wind 1 experience). Massachusetts Class I RECs at $39&ndash;40/MWh near ACP ceiling &mdash; empirical scarcity already visible.</p>
+        </div>
+
+        <!-- CAISO -->
+        <div class="card" style="border-left: 4px solid #F59E0B;">
+            <span class="badge amber">Moderate &mdash; Evening Gap</span>
+            <h3 style="margin-top:0;">CAISO: Daytime Abundance, Nighttime Deficit</h3>
+            <p><strong>Clean supply:</strong> ~130 TWh/yr (solar ~55, wind ~20, geothermal ~12, hydro ~25, nuclear ~18<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>) against ~280 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup> Already ~62% clean on annual basis with 15+ GW battery storage deployed.</p>
+            <p><strong>RPS demand:</strong> SB 100 mandates 60% RPS by 2030 = ~170 TWh.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> Current clean supply falls short, driving aggressive procurement.</p>
+            <p><strong>The duck curve problem under hourly matching:</strong> California has abundant daytime clean energy but faces a structural deficit from 5 PM to 8 AM.<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup> Under hourly matching, this evening/night gap is the binding constraint. Even with 12+ GW of battery storage, multi-day low-wind events create persistent deficits requiring clean firm (geothermal, CCS) or imported clean energy.</p>
+            <p><strong>CCS opportunity:</strong> California&rsquo;s ~6 GW gas fleet could provide hourly-matched clean firm if equipped with CCS. With 45Q credits + state SB 905 incentives, this may be the fastest path to filling the evening gap.</p>
+        </div>
+
+        <!-- ERCOT -->
+        <div class="card" style="border-left: 4px solid #22C55E;">
+            <span class="badge green">Unlikely Scarcity</span>
+            <h3 style="margin-top:0;">ERCOT: Abundant and Growing Supply</h3>
+            <p><strong>Clean supply:</strong> ~150 TWh/yr (wind ~95, solar ~35, nuclear ~20<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>) against ~470 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup> Now ~65 GW of wind+solar installed &mdash; growing rapidly (15 GW solar interconnected in 2024 alone).<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup> 14% load growth from data centers and industrial electrification.</p>
+            <p><strong>RPS demand:</strong> Texas has no binding RPS.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> 0 TWh mandatory demand. All corporate procurement is voluntary.<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup></p>
+            <p><strong>After SSS:</strong> Even after pro-rata allocation (~32% baseline), ERCOT&rsquo;s explosive renewable growth means abundant daytime EAC supply at low cost. South Plains wind produces heavily at night, partially filling the evening gap.</p>
+
+            <div class="callout success">
+                <p><strong>ERCOT may never see EAC scarcity for corporate buyers.</strong> No state RPS competing for EACs.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> Rapid deployment driven by favorable economics.<sup style="font-size:0.7em;color:var(--text-muted);">[2][3]</sup> RECs trade at just $1&ndash;15/MWh. The combination makes ERCOT the most cost-effective ISO for corporate hourly matching at the <strong>lowest clean premium</strong>. This is the strongest pull factor for corporate load placement decisions &mdash; and explains why 70% of recent corporate clean energy procurement concentrates in ERCOT/MISO/PJM.<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup></p>
+            </div>
+        </div>
+
+        <!-- NYISO -->
+        <div class="card" style="border-left: 4px solid #F59E0B;">
+            <span class="badge amber">Moderate Scarcity</span>
+            <h3 style="margin-top:0;">NYISO: Hydro-Anchored but Post-Indian-Point</h3>
+            <p><strong>Clean supply:</strong> ~75 TWh/yr (hydro ~30, nuclear ~30<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup>, wind ~8, solar ~7) against ~155 TWh load.<sup style="font-size:0.7em;color:var(--text-muted);">[1][9]</sup></p>
+            <p><strong>RPS demand:</strong> CLCPA mandates 70% renewable by 2030, 100% zero-emission by 2040.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> Current trajectory: ~60% clean by 2030.</p>
+            <p><strong>Key dynamics:</strong> Champlain Hudson Power Express (CHPE) delivers ~10 TWh/yr Canadian hydro to NYC by 2026. But Indian Point closure (2021) removed ~17 TWh of zero-emission nuclear.<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup> NYC load zone (Zone J) faces the tightest supply-demand balance. Offshore wind pipeline critical but faces cost escalation and permitting uncertainty.<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup></p>
+        </div>
+    </div>
+
+    <!-- ========== SECTION 4: PARTICIPATION SCENARIOS ========== -->
+    <h2 id="participation">4. Corporate Participation Scenarios</h2>
+
+    <p>
+        The table below shows scarcity classification at each participation rate, assuming a <strong>90% hourly matching target</strong>.
+        At this target, the binding constraint is evening/night hours where corporate demand exceeds the SSS baseline and
+        uncommitted clean supply is scarce.
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Participation</th>
+                <th>PJM</th>
+                <th>ERCOT</th>
+                <th>CAISO</th>
+                <th>ISO-NE</th>
+                <th>NYISO</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>10%</strong></td>
+                <td style="color: #F59E0B;">Tight</td>
+                <td style="color: #22C55E;">Abundant</td>
+                <td style="color: #22C55E;">Manageable</td>
+                <td style="color: #F59E0B;">Tight</td>
+                <td style="color: #F59E0B;">Tight</td>
+            </tr>
+            <tr>
+                <td><strong>15%</strong></td>
+                <td style="color: #DC2626;">Scarcity</td>
+                <td style="color: #22C55E;">Abundant</td>
+                <td style="color: #F59E0B;">Tight</td>
+                <td style="color: #DC2626;">Scarcity</td>
+                <td style="color: #F59E0B;">Tight</td>
+            </tr>
+            <tr>
+                <td><strong>20%</strong></td>
+                <td style="color: #DC2626;">Severe scarcity</td>
+                <td style="color: #22C55E;">Surplus</td>
+                <td style="color: #F59E0B;">Tight</td>
+                <td style="color: #DC2626;">Severe scarcity</td>
+                <td style="color: #DC2626;">Scarcity</td>
+            </tr>
+            <tr>
+                <td><strong>25%</strong></td>
+                <td style="color: #7C3AED;">New build required</td>
+                <td style="color: #22C55E;">Balanced</td>
+                <td style="color: #DC2626;">Scarcity</td>
+                <td style="color: #7C3AED;">New build required</td>
+                <td style="color: #DC2626;">Severe scarcity</td>
+            </tr>
+        </tbody>
+    </table>
+    <p style="font-size:0.85rem;color:var(--text-muted);">
+        Scarcity assessment at 90% hourly matching target. &ldquo;Abundant&rdquo; = surplus EACs even during nighttime.
+        &ldquo;Tight&rdquo; = daytime covered but nighttime EACs scarce. &ldquo;Scarcity&rdquo; = prices above marginal cost of existing clean.
+        &ldquo;New build required&rdquo; = existing clean supply exhausted, new capacity needed.
+    </p>
+
+    <h3>At 95% and 100% targets</h3>
+    <p>
+        Raising the hourly matching target from 90% to 95% or 100% shifts scarcity classifications upward by approximately
+        one tier across all ISOs. The final 5&ndash;10% of matching requires clean firm energy during the absolute hardest hours
+        (multi-day winter doldrums, overnight demand peaks) and carries disproportionate cost. This is the &ldquo;last mile&rdquo;
+        problem that the <a href="dashboard.html">Cost Optimizer</a> quantifies in detail.
+    </p>
+
+    <!-- ========== SECTION 5: CLEAN PREMIUM ========== -->
+    <h2 id="clean-premium">5. The Clean Premium by ISO</h2>
+
+    <p>
+        EAC scarcity translates directly into a <strong>clean premium</strong> &mdash; the additional cost above wholesale
+        energy prices that corporate buyers pay for hourly-matched clean energy. The premium varies by ISO, time of day,
+        and participation level:
+    </p>
+
+    <div class="card-grid">
+        <div class="card">
+            <h4 style="color: #DC2626;">PJM: $15&ndash;40/MWh</h4>
+            <p>Highest clean premium in the US. Evening/night hours face structural deficit. Nuclear PPAs with data centers are removing existing supply from the voluntary market. At 15%+ participation<sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup>, PJM buyers need new-build clean firm at premium prices.<sup style="font-size:0.7em;color:var(--text-muted);">[2][3]</sup> <strong>CCS-CCGT and LDES earn their highest revenue in PJM.</strong></p>
+            <p style="font-size:0.85rem;color:var(--text-muted);">Empirical: PJM Tier I RECs already at $37&ndash;40/MWh.<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup> Capacity market at $333/MW-day (10x increase).<sup style="font-size:0.7em;color:var(--text-muted);">[11]</sup></p>
+        </div>
+        <div class="card">
+            <h4 style="color: #F59E0B;">ISO-NE: $20&ndash;55/MWh</h4>
+            <p>Already-high MA Class I REC prices ($39&ndash;40/MWh near ACP ceiling) indicate existing scarcity. Hourly matching on top of aggressive state mandates<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> pushes premiums higher. Limited land and transmission mean new supply is expensive and slow.<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup></p>
+        </div>
+        <div class="card">
+            <h4 style="color: #F59E0B;">CAISO: $10&ndash;25/MWh</h4>
+            <p>Daytime surplus keeps average premium low. Evening/night hours (5 PM&ndash;8 AM) face $20&ndash;40/MWh premiums.<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup> 12+ GW battery storage partially mitigates but cannot cover multi-day events. Geothermal expansion could moderate nighttime premiums.<sup style="font-size:0.7em;color:var(--text-muted);">[2]</sup></p>
+        </div>
+        <div class="card">
+            <h4 style="color: #22C55E;">ERCOT: $0&ndash;15/MWh</h4>
+            <p>Lowest clean premium. Abundant and growing wind+solar.<sup style="font-size:0.7em;color:var(--text-muted);">[1]</sup> No RPS competing for EACs.<sup style="font-size:0.7em;color:var(--text-muted);">[4]</sup> Nighttime wind fills much of the evening gap. RECs at $1&ndash;15/MWh. <strong>Most cost-effective ISO for corporate hourly matching.</strong><sup style="font-size:0.7em;color:var(--text-muted);">[5]</sup></p>
+        </div>
+        <div class="card">
+            <h4 style="color: #F59E0B;">NYISO: $15&ndash;35/MWh</h4>
+            <p>Hydro provides strong daytime/seasonal baseline. Post-Indian Point nuclear gap increases nighttime scarcity.<sup style="font-size:0.7em;color:var(--text-muted);">[8]</sup> CHPE Canadian hydro import helps but doesn&rsquo;t fully close the gap. Zone J (NYC) faces the steepest premiums.</p>
+        </div>
+    </div>
+
+    <!-- ========== SECTION 6: INVESTMENT SIGNAL ========== -->
+    <h2 id="investment-signal">6. The Investment Signal</h2>
+
+    <p>
+        The regional variation in clean premiums creates a powerful signal for both corporate load placement and generator investment:
+    </p>
+
+    <div class="card-grid">
+        <div class="card" style="border-left: 4px solid #0EA5E9;">
+            <h4>For Corporate Buyers</h4>
+            <p>Companies choosing where to build data centers or manufacturing plants will factor in hourly matching costs. ERCOT and CAISO offer the lowest clean premiums; PJM and ISO-NE the highest. <strong>The clean premium becomes a location cost comparable to energy prices, tax incentives, and labor costs.</strong></p>
+        </div>
+        <div class="card" style="border-left: 4px solid #22C55E;">
+            <h4>For Generators</h4>
+            <p>Generators in PJM that invest in CCS or clean firm capacity <em>now</em> will capture the premium as corporate demand grows.<sup style="font-size:0.7em;color:var(--text-muted);">[13]</sup> The hourly clean premium is the market mechanism that connects voluntary corporate ambition to physical generator decarbonization investment. <strong>First movers earn the scarcity premium; followers compete it away.</strong></p>
+        </div>
+        <div class="card" style="border-left: 4px solid #F59E0B;">
+            <h4>For Policymakers</h4>
+            <p>The clean premium quantifies the cost of inaction on transmission and interconnection reform. PJM&rsquo;s $15&ndash;40/MWh premium is partly a product of its 800+ GW interconnection queue backlog.<sup style="font-size:0.7em;color:var(--text-muted);">[10]</sup> Streamlining permitting and building transmission directly lowers the corporate cost of hourly matching &mdash; and accelerates generator decarbonization.</p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <p><strong>The virtuous cycle:</strong> Corporate hourly matching demand &rarr; EAC scarcity in constrained ISOs &rarr; clean premium signal &rarr; generator investment in clean firm &rarr; new supply reduces scarcity &rarr; lower premiums attract more corporate participation. The clean premium is the market mechanism that makes voluntary corporate ambition translate into physical decarbonization.</p>
+    </div>
+
+    <!-- ========== SECTION 7: METHODOLOGY LINK ========== -->
+    <h2 id="methodology-link">7. Detailed Methodology</h2>
+    <p>
+        The full analytical methodology &mdash; including regional supply inventory construction, SSS baseline computation,
+        RPS demand netting, corporate demand formula, scarcity classification thresholds, clean premium curve derivation,
+        and data center demand overlays &mdash; is documented in
+        <a href="optimizer_methodology.html#eac-scarcity"><strong>Section 13 of the Methodology &amp; Technical Reference</strong></a>.
+    </p>
+    <p>
+        Key data sources: EIA Hourly Electric Grid Monitor (2021&ndash;2025), EIA Form 923, NRC Power Reactor Status Reports,
+        DSIRE Database (state RPS/CES), CEBA Deal Tracker (corporate procurement volumes), NREL ATB 2024, Lazard LCOE v17,
+        GHG Protocol Scope 2 Revision Draft (Oct 2025), SBTi Power Sector v2 Draft (Sep 2025).
+    </p>
+
+</div>
+
+<div class="accent-bar"></div>
+
+</body>
+</html>

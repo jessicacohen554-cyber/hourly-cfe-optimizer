@@ -951,6 +951,7 @@ body {
         <a href="abatement_dashboard.html">Abatement Dashboard</a>
         <a href="region_deepdive.html">Regional Deep Dives</a>
         <a href="abatement_comparison.html" class="nav-active">CO&#8322; Abatement Summary</a>
+        <a href="eac_scarcity.html">EAC Scarcity</a>
         <a href="research_paper.html">Methodology &amp; Paper</a>
         <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
     </div>
@@ -975,8 +976,8 @@ body {
     <p style="font-size:0.98rem;color:#1A1A1A;line-height:1.75;max-width:800px;">
         How does hourly grid decarbonization compare to alternative carbon removal strategies? This analysis
         benchmarks the marginal cost of avoiding CO&#8322; through clean energy procurement against direct air capture (DAC),
-        sustainable aviation fuel (SAF), BECCS, and other pathways &mdash; revealing where grid investment delivers
-        the most cost-effective abatement and where diminishing returns set in.
+        sustainable aviation fuel (SAF), BECCS, and other pathways<sup style="font-size:0.7em;color:#6B7280;">[10]</sup> &mdash; revealing where grid investment delivers
+        the most cost-effective abatement and where diminishing returns set in. Regional emission rates are derived from EPA eGRID 2022 data<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> and hourly generation profiles from the EIA Hourly Electric Grid Monitor.<sup style="font-size:0.7em;color:#6B7280;">[7]</sup>
     </p>
 </div>
 
@@ -1036,7 +1037,7 @@ body {
             <p style="font-size:0.88rem;color:#1A1A1A;line-height:1.65;margin-bottom:10px;">The dominant narrative in climate policy assumes that pushing the grid to 100% clean energy is both necessary and sufficient. This analysis challenges that assumption on three fronts:</p>
             <ol style="font-size:0.86rem;color:#1A1A1A;line-height:1.65;padding-left:20px;margin-bottom:10px;">
                 <li style="margin-bottom:8px;"><strong>Physics creates a hard cost floor.</strong> Multi-day intermittency (cloudy, windless stretches) requires either massive overbuilding or long-duration storage. These costs reflect physical constraints, not immature technology &mdash; they won&rsquo;t follow the same learning curves that made solar and wind cheap. The last 5&ndash;10% of grid clean energy costs 3&ndash;8&times; more per ton than the first 90%.</li>
-                <li style="margin-bottom:8px;"><strong>Alternatives are on steep learning curves.</strong> DAC ($400&ndash;600/ton today) is expected to reach $150&ndash;250/ton by 2035. Enhanced weathering, BECCS, and industrial electrification are all declining in cost. The rational strategy is to push the grid backbone as far as it&rsquo;s efficient <em>now</em>, then shift marginal dollars to alternatives as their costs fall.</li>
+                <li style="margin-bottom:8px;"><strong>Alternatives are on steep learning curves.</strong> DAC ($400&ndash;600/ton today)<sup style="font-size:0.7em;color:#6B7280;">[5]</sup> is expected to reach $150&ndash;250/ton by 2035. Enhanced weathering, BECCS, and industrial electrification are all declining in cost.<sup style="font-size:0.7em;color:#6B7280;">[6]</sup> The rational strategy is to push the grid backbone as far as it&rsquo;s efficient <em>now</em>, then shift marginal dollars to alternatives as their costs fall.</li>
                 <li><strong>The grid enables everything else.</strong> A cleaner grid amplifies the carbon impact of EVs, heat pumps, green hydrogen, and even DAC itself. A grid at 90% clean makes every downstream electrification strategy 30&ndash;50% more effective per dollar. Stopping at the efficient frontier and investing the savings in demand-side electrification may deliver more total abatement than brute-forcing the grid to 100%.</li>
             </ol>
         </div>
@@ -1052,7 +1053,7 @@ body {
         <span class="section-number">Section 1</span>
         <h2 class="section-title">The Grid Is the Backbone: But Does It Hold Under Pressure?</h2>
         <div class="section-narrative">
-            <p>Grid decarbonization is not just one climate strategy among many -- it is the <strong>backbone</strong> that enables nearly every other decarbonization pathway. A cleaner grid makes electric vehicles more impactful. It makes industrial heat pumps more effective. It makes green hydrogen greener. Every dollar spent on grid decarbonization compounds across sectors -- which is why it has been the consensus foundation of every credible net-zero roadmap.</p>
+            <p>Grid decarbonization is not just one climate strategy among many -- it is the <strong>backbone</strong> that enables nearly every other decarbonization pathway. A cleaner grid makes electric vehicles more impactful. It makes industrial heat pumps more effective. It makes green hydrogen greener. Every dollar spent on grid decarbonization compounds across sectors -- which is why it has been the consensus foundation of every credible net-zero roadmap.<sup style="font-size:0.7em;color:#6B7280;">[8]</sup><sup style="font-size:0.7em;color:#6B7280;">[9]</sup></p>
 
             <p>But foundations have load limits. This page pressure-tests that backbone by asking: <strong>under what conditions does grid decarbonization remain the highest-value investment -- and when does the marginal dollar start delivering more impact through alternatives like direct air capture, industrial electrification, or sustainable aviation fuel?</strong></p>
 
@@ -1161,9 +1162,9 @@ body {
                 <thead>
                     <tr>
                         <th>Region</th>
-                        <th>EPA SCC<br>($51/ton)</th>
-                        <th>EU ETS Range<br>($60-100/ton)</th>
-                        <th>Rennert et al. SCC<br>($185/ton)</th>
+                        <th>EPA SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[2]</sup><br>($51/ton)</th>
+                        <th>EU ETS Range<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[4]</sup><br>($60-100/ton)</th>
+                        <th>Rennert et al. SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[3]</sup><br>($185/ton)</th>
                         <th>SAF Range<br>($150-400/ton)</th>
                         <th>DAC Range<br>($250-600/ton)</th>
                         <th>Exceeds $500/ton<br>(Extreme cost)</th>
@@ -1224,11 +1225,11 @@ body {
         <div class="section-narrative">
             <p>Consider the dynamics:</p>
 
-            <p><strong>Electric vehicles:</strong> An EV on today's average US grid avoids ~0.2 tons CO&#8322; per year compared to an efficient ICE car. On a 90% clean grid, that jumps to ~0.6 tons. On a 95% clean grid, ~0.7 tons. The grid's cleanliness determines the EV's climate value -- and there are 280 million vehicles in the US fleet.</p>
+            <p><strong>Electric vehicles:</strong> An EV on today's average US grid avoids ~0.2 tons CO&#8322; per year compared to an efficient ICE car.<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> On a 90% clean grid, that jumps to ~0.6 tons. On a 95% clean grid, ~0.7 tons. The grid's cleanliness determines the EV's climate value -- and there are 280 million vehicles in the US fleet.</p>
 
-            <p><strong>Industrial heat pumps:</strong> At $60-160/ton CO&#8322; avoided, industrial electrification is one of the cheapest decarbonization options -- <em>but only if the electricity is clean.</em> A heat pump running on a coal-heavy grid can actually increase emissions. The grid backbone must be strong before industrial electrification delivers its full potential.</p>
+            <p><strong>Industrial heat pumps:</strong> At $60-160/ton CO&#8322; avoided,<sup style="font-size:0.7em;color:#6B7280;">[10]</sup> industrial electrification is one of the cheapest decarbonization options -- <em>but only if the electricity is clean.</em> A heat pump running on a coal-heavy grid can actually increase emissions.<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> The grid backbone must be strong before industrial electrification delivers its full potential.</p>
 
-            <p><strong>Direct air capture:</strong> DAC requires enormous amounts of energy (~1.5-2.5 MWh per ton CO&#8322; captured). On a dirty grid, DAC's net removal is significantly reduced by the emissions from its own electricity consumption. A cleaner grid makes DAC more effective per dollar spent.</p>
+            <p><strong>Direct air capture:</strong> DAC requires enormous amounts of energy (~1.5-2.5 MWh per ton CO&#8322; captured).<sup style="font-size:0.7em;color:#6B7280;">[5]</sup> On a dirty grid, DAC's net removal is significantly reduced by the emissions from its own electricity consumption.<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> A cleaner grid makes DAC more effective per dollar spent.</p>
 
             <p>This creates a <strong>sequencing imperative:</strong> grid decarbonization should generally come first, because it makes everything that follows cheaper and more impactful. The question is not whether to invest in the backbone -- it's how far to push it before the multiplier effect plateaus and direct alternatives become more efficient.</p>
         </div>
@@ -1272,8 +1273,8 @@ body {
                     <div class="region-card-dot" style="background: #22C55E;"></div>
                     <div class="region-card-name">ERCOT (Texas)</div>
                 </div>
-                <p>Texas is the cost leader in grid decarbonization, and it is not particularly close. ERCOT's marginal abatement curve stays below $100/ton through 93% and below $200/ton through 96%. The reasons: the nation's cheapest wind ($40/MWh at Medium), favorable CCS-CCGT geology along the Gulf Coast ($71/MWh), and the lowest storage costs in the country due to fast permitting and low labor costs.</p>
-                <p>ERCOT also benefits from a unique CO&#8322; intensity story. Its remaining fossil fleet is almost entirely natural gas (coal is largely retired), which means each displaced MWh avoids moderate emissions -- neither as high as PJM's coal-heavy grid nor as low as CAISO's already-clean fleet.</p>
+                <p>Texas is the cost leader in grid decarbonization, and it is not particularly close. ERCOT's marginal abatement curve stays below $100/ton through 93% and below $200/ton through 96%. The reasons: the nation's cheapest wind ($40/MWh at Medium),<sup style="font-size:0.7em;color:#6B7280;">[5]</sup> favorable CCS-CCGT geology along the Gulf Coast ($71/MWh),<sup style="font-size:0.7em;color:#6B7280;">[6]</sup> and the lowest storage costs in the country due to fast permitting and low labor costs.</p>
+                <p>ERCOT also benefits from a unique CO&#8322; intensity story. Its remaining fossil fleet is almost entirely natural gas (coal is largely retired), which means each displaced MWh avoids moderate emissions<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> -- neither as high as PJM's coal-heavy grid nor as low as CAISO's already-clean fleet.</p>
                 <p><strong>Strategy:</strong> ERCOT is the one region where pushing to 97% grid clean energy may be cheaper than most alternatives. Gulf Coast DAC potential (1PointFive, Carbon Engineering) could handle the last 3% at declining costs as the industry scales.</p>
             </div>
 
@@ -1283,7 +1284,7 @@ body {
                     <div class="region-card-dot" style="background: #4a90d9;"></div>
                     <div class="region-card-name">PJM (Mid-Atlantic)</div>
                 </div>
-                <p>PJM presents a paradox: its grid is one of the dirtiest (substantial remaining coal fleet), which means each clean MWh displaces more carbon than in any other region. This drives down the per-ton cost of abatement even when per-MWh procurement costs are higher. PJM's marginal abatement cost stays below the EU ETS price through 94%.</p>
+                <p>PJM presents a paradox: its grid is one of the dirtiest (substantial remaining coal fleet),<sup style="font-size:0.7em;color:#6B7280;">[1]</sup> which means each clean MWh displaces more carbon than in any other region. This drives down the per-ton cost of abatement even when per-MWh procurement costs are higher.<sup style="font-size:0.7em;color:#6B7280;">[5]</sup> PJM's marginal abatement cost stays below the EU ETS price<sup style="font-size:0.7em;color:#6B7280;">[4]</sup> through 94%.</p>
                 <p>The coal-switching dynamic creates a non-linear curve. As natural gas prices rise, coal generation increases, pushing up emission rates -- which paradoxically makes clean energy procurement more cost-effective per ton. Under high gas price scenarios, PJM's grid decarbonization remains competitive against DAC through 96%.</p>
                 <p><strong>Strategy:</strong> PJM's high carbon intensity makes grid investment highly efficient per ton. Push to 94-96%, then complement with industrial electrification credits in the region's heavy manufacturing corridor.</p>
             </div>
@@ -1294,8 +1295,8 @@ body {
                     <div class="region-card-dot" style="background: #E91E63;"></div>
                     <div class="region-card-name">NYISO (New York)</div>
                 </div>
-                <p>New York has the most expensive path to high grid decarbonization. Constrained siting (dense population, environmental review requirements), the highest wholesale prices in the study ($42/MWh average), and no CCS sequestration geology drive costs up faster than any other region. NYISO crosses the $250/ton DAC floor at just 93%.</p>
-                <p>The silver lining is NYISO's existing nuclear and hydro fleet. With 18% nuclear and 16% hydro already on the grid, the starting point is strong -- roughly 39% clean energy before adding any new resources. But expanding beyond this baseload advantage requires expensive wind (largely offshore) and clean firm resources at the highest costs in the country ($98/MWh nuclear at Medium).</p>
+                <p>New York has the most expensive path to high grid decarbonization. Constrained siting (dense population, environmental review requirements), the highest wholesale prices in the study ($42/MWh average),<sup style="font-size:0.7em;color:#6B7280;">[7]</sup> and no CCS sequestration geology drive costs up faster than any other region. NYISO crosses the $250/ton DAC floor at just 93%.</p>
+                <p>The silver lining is NYISO's existing nuclear and hydro fleet. With 18% nuclear and 16% hydro already on the grid,<sup style="font-size:0.7em;color:#6B7280;">[7]</sup> the starting point is strong -- roughly 39% clean energy before adding any new resources. But expanding beyond this baseload advantage requires expensive wind (largely offshore) and clean firm resources at the highest costs in the country ($98/MWh nuclear at Medium).<sup style="font-size:0.7em;color:#6B7280;">[5]</sup><sup style="font-size:0.7em;color:#6B7280;">[6]</sup></p>
                 <p><strong>Strategy:</strong> The 90/10 rule applies most forcefully here. Push grid to 90-92%, then invest heavily in high-quality carbon removal and cross-sector abatement. New York's climate leadership position could pioneer "portfolio decarbonization" as a procurement model.</p>
             </div>
 
@@ -1305,8 +1306,8 @@ body {
                     <div class="region-card-dot" style="background: #9C27B0;"></div>
                     <div class="region-card-name">NEISO (New England)</div>
                 </div>
-                <p>New England occupies a middle position, but with unusually wide uncertainty bands. The region's decarbonization future hinges heavily on offshore wind, which offers enormous potential but at costs that remain uncertain ($73/MWh at Medium, but with high-scenario estimates reaching $95/MWh after the recent PPA renegotiations).</p>
-                <p>NEISO's existing nuclear fleet (24% of generation) provides a strong foundation, and its moderate hydro resources (4.4%) add seasonal flexibility. But limited solar potential (New England's latitude and cloud cover) and expensive onshore siting mean the region leans heavily on offshore wind and clean firm for incremental clean energy.</p>
+                <p>New England occupies a middle position, but with unusually wide uncertainty bands. The region's decarbonization future hinges heavily on offshore wind, which offers enormous potential but at costs that remain uncertain ($73/MWh at Medium, but with high-scenario estimates reaching $95/MWh after the recent PPA renegotiations).<sup style="font-size:0.7em;color:#6B7280;">[5]</sup></p>
+                <p>NEISO's existing nuclear fleet (24% of generation) provides a strong foundation, and its moderate hydro resources (4.4%) add seasonal flexibility.<sup style="font-size:0.7em;color:#6B7280;">[7]</sup> But limited solar potential (New England's latitude and cloud cover) and expensive onshore siting mean the region leans heavily on offshore wind and clean firm for incremental clean energy.</p>
                 <p><strong>Strategy:</strong> NEISO's optimal crossover depends heavily on offshore wind cost outcomes. Under optimistic scenarios, push to 94%; under pessimistic scenarios, diversify at 91%. Monitor Vineyard Wind and other projects for cost signals before committing to targets above 93%.</p>
             </div>
         </div>
@@ -1336,10 +1337,10 @@ body {
                 <strong>The grid enables everything &mdash; so pure cost comparison understates its value.</strong> The system-level multiplier means grid investment compounds across EVs, industrial heat pumps, and even DAC itself. A grid at 90% clean makes every downstream electrification strategy 30&ndash;50% more effective per dollar. This multiplier effect is the strongest argument for pushing the backbone as far as it's efficient.
             </li>
             <li style="counter-increment:takeaway;">
-                <strong>Alternatives are on steep learning curves; grid physics costs are not.</strong> DAC ($400&ndash;600/ton today) is expected to reach $150&ndash;250/ton by 2035. Enhanced weathering, BECCS, and industrial electrification costs are all declining. Grid costs above 95% are structurally flat because they reflect physics, not technology maturity. The rational strategy: push the backbone hard now while DAC is expensive, then reassess as removal costs decline.
+                <strong>Alternatives are on steep learning curves; grid physics costs are not.</strong> DAC ($400&ndash;600/ton today)<sup style="font-size:0.7em;color:#6B7280;">[5]</sup> is expected to reach $150&ndash;250/ton by 2035. Enhanced weathering, BECCS, and industrial electrification costs are all declining.<sup style="font-size:0.7em;color:#6B7280;">[6]</sup> Grid costs above 95% are structurally flat because they reflect physics, not technology maturity. The rational strategy: push the backbone hard now while DAC is expensive, then reassess as removal costs decline.
             </li>
             <li style="counter-increment:takeaway;">
-                <strong>The social cost of carbon ($185&ndash;190/ton) provides the floor test.</strong> The EPA's 2023 central estimate ($190/ton) and Rennert et al.'s ($185/ton) bracket the modern scientific consensus. Grid decarbonization is unambiguously justified at any target where marginal costs remain below this level. For most regions at medium costs, this holds through 92&ndash;95%. The EU ETS ($65&ndash;92/ton) provides an additional market-revealed benchmark.
+                <strong>The social cost of carbon ($185&ndash;190/ton) provides the floor test.</strong> The EPA's 2023 central estimate ($190/ton)<sup style="font-size:0.7em;color:#6B7280;">[2]</sup> and Rennert et al.'s ($185/ton)<sup style="font-size:0.7em;color:#6B7280;">[3]</sup> bracket the modern scientific consensus. Grid decarbonization is unambiguously justified at any target where marginal costs remain below this level. For most regions at medium costs, this holds through 92&ndash;95%. The EU ETS ($65&ndash;92/ton)<sup style="font-size:0.7em;color:#6B7280;">[4]</sup> provides an additional market-revealed benchmark.
             </li>
             <li style="counter-increment:takeaway;">
                 <strong>The optimal target is region-specific and time-dependent.</strong> There is no universal "right" grid clean energy target. The efficient frontier ranges from ~91% (NYISO) to ~96% (ERCOT), shaped by resource quality, siting constraints, and CCS geology. The organizations that will lead on climate are those that push each region's backbone to its efficient inflection point, then deploy the savings into a diversified portfolio of carbon removal, industrial electrification, and cross-sector abatement.
