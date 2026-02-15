@@ -69,7 +69,25 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 - [x] **Add EPRI SMARTargets context** — targets.html: AT/QT framework, Ceres criticism, investor credibility debate, "both/and" resolution.
 - [x] **Add hourly RPS discussion** — targets.html: hourly RPS as policy frontier, convergence with GHG Protocol + SBTi, demand-side pull for clean firm.
 - [x] **Policy page: RPS + corporate demand under hourly matching** — SSS baseline, corporate participation scenario table (10-50% × 5 ISOs), clean premium projections by ISO.
-- [ ] **EAC scarcity analysis REWRITE (Feb 15)** — corrected SSS framework + interactive dashboard
+- [x] **EAC scarcity analysis REWRITE (Feb 15)** — corrected SSS framework + interactive dashboard
+- [x] **SSS pro-rata derate** — corporate EAC demand is incremental above SSS baseline allocation, not gross
+- [x] **Demand-proportional RPS** — clean supply = RPS target % × projected demand (not independent growth rate)
+- [x] **Two-component SSS** — fixed-fleet (nuclear, hydro — constant TWh) + RPS (scales with demand)
+- [x] **Diablo Canyon + NY nuclear as permanent fixed SSS** — state-supported indefinitely
+
+### EAC Scarcity: Optimizer Integration (Feb 15)
+**Decision**: Replace hardcoded procurement multipliers and clean premium curves with empirical values from optimizer results (`overprocure_results.json`).
+
+**What changes**:
+- **Procurement multiplier**: Was piecewise linear approximation (1.0× at 80%, 1.1× at 90%, 1.45× at 99%). Now uses actual `procurement_pct` from optimizer per ISO × threshold. Interpolates for non-computed thresholds.
+- **Clean premium ($/MWh)**: Was synthetic escalation rates × scarcity multiplier. Now uses `incremental_above_baseline` from optimizer per ISO × threshold. Scarcity multiplier still applied on top (demand/supply ratio effect).
+
+**What stays independent**:
+- SSS/non-SSS classification (policy-driven)
+- Demand growth projections
+- RPS target trajectories
+- Corporate participation scenarios
+- Scarcity bands and classification thresholds
 
 ### Corrected SSS Framework (Feb 15)
 **SSS = mandatory/non-bypassable procurement creating a financial relationship between customers and generation.** Determined by whether a policy acts upon the EAC:
