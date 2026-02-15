@@ -21,40 +21,51 @@ OUTPUT_PATH = "dashboard/eac_scarcity_results.json"
 CHECKPOINT_PATH = "data/checkpoints/eac_scarcity_checkpoint.json"
 
 # ── SSS Data from SPEC.md (2025 baseline) ──────────────────────────────────
-# Midpoints of SPEC.md ranges
+# SSS split into two components:
+#   1. Fixed-fleet SSS (nuclear ZEC/CMC, public hydro, rate-base assets)
+#      — absolute TWh, does NOT scale with demand, only changes on policy expiry
+#   2. RPS SSS (state renewable/clean mandates)
+#      — scales proportionally with demand (RPS is % of retail sales)
+#
+# non_sss = merchant generation available for voluntary corporate procurement
 SSS_2025 = {
     "CAISO": {
         "total_clean_twh": 172,
-        "sss_twh": 147.5,       # midpoint of 140-155
-        "non_sss_twh": 24.5,    # midpoint of 17-32
+        "sss_fixed_twh": 55,     # Diablo Canyon (~17), public hydro (~25), rate-base geothermal (~13) — permanent
+        "sss_rps_twh": 92.5,     # SB 100 RPS-driven renewables
+        "non_sss_twh": 24.5,     # midpoint of 17-32 (merchant wind/solar)
         "sss_pct": 0.85,
-        "notes": "High RPS (60% by 2030), Diablo Canyon extension, heavy state mandates"
+        "notes": "Diablo Canyon is fixed SSS (state-supported indefinitely). SB 100 RPS drives renewable growth."
     },
     "ERCOT": {
         "total_clean_twh": 205,
-        "sss_twh": 22.5,        # midpoint of 20-25
-        "non_sss_twh": 185,     # midpoint of 180-190
+        "sss_fixed_twh": 20,     # STP nuclear (~20 TWh)
+        "sss_rps_twh": 2.5,      # Minimal RPS requirement
+        "non_sss_twh": 185,      # midpoint of 180-190 (merchant wind/solar)
         "sss_pct": 0.12,
         "notes": "Minimal RPS, mostly merchant renewables, deregulated market"
     },
     "PJM": {
         "total_clean_twh": 280,
-        "sss_twh": 165,         # midpoint of 150-180
-        "non_sss_twh": 115,     # midpoint of 100-130
+        "sss_fixed_twh": 95,     # Nuclear ZEC/CMC programs (~94 IL + NJ expired), rate-base hydro (~1)
+        "sss_rps_twh": 70,       # State RPS-driven renewables (NJ/MD/VA/IL/PA)
+        "non_sss_twh": 115,      # midpoint of 100-130 (merchant nuclear + renewables)
         "sss_pct": 0.57,
         "notes": "Mixed: state RPSs + merchant nuclear (post-NJ ZEC expiry)"
     },
     "NYISO": {
         "total_clean_twh": 60,
-        "sss_twh": 52,          # midpoint of 49-55
-        "non_sss_twh": 8,       # midpoint of 5-11
+        "sss_fixed_twh": 35,     # NY ZEC nuclear (~30), NYPA hydro (~5)
+        "sss_rps_twh": 17,       # CLCPA/CES-driven renewables
+        "non_sss_twh": 8,        # midpoint of 5-11 (limited merchant)
         "sss_pct": 0.85,
         "notes": "NY ZEC extended through 2049, CLCPA 70% by 2030"
     },
     "NEISO": {
         "total_clean_twh": 50,
-        "sss_twh": 27.5,        # midpoint of 25-30
-        "non_sss_twh": 17.5,    # midpoint of 15-20
+        "sss_fixed_twh": 15,     # Millstone ZEC (~14), public hydro (~1)
+        "sss_rps_twh": 12.5,     # MA/CT/RI/VT RPS mandates
+        "non_sss_twh": 17.5,     # midpoint of 15-20 (merchant wind/solar/hydro)
         "sss_pct": 0.55,
         "notes": "CT Millstone PPA, MA/CT CES, some merchant hydro/wind"
     }
@@ -69,15 +80,55 @@ DEMAND_GROWTH_RATES = {
     "NEISO":  {"Low": 0.008, "Medium": 0.014, "High": 0.022},
 }
 
-# ── Clean Supply Growth Rates (new build from RPS mandates + market) ──────
-# Annual TWh growth of total clean supply (conservative estimates from
-# state RPS trajectories, interconnection queues, and IRA incentives)
-CLEAN_SUPPLY_GROWTH = {
-    "CAISO":  {"Low": 0.025, "Medium": 0.035, "High": 0.050},
-    "ERCOT":  {"Low": 0.040, "Medium": 0.060, "High": 0.085},
-    "PJM":    {"Low": 0.020, "Medium": 0.030, "High": 0.045},
-    "NYISO":  {"Low": 0.025, "Medium": 0.040, "High": 0.060},
-    "NEISO":  {"Low": 0.015, "Medium": 0.025, "High": 0.040},
+# ── RPS / Clean Energy Target Trajectories (% of demand) ─────────────────
+# Clean supply modeled as target % of projected demand, per state RPS/CES
+# mandates. As demand grows, absolute TWh of required clean generation grows
+# proportionally. Sources: DSIRE, state legislation, LBNL deployment data.
+#
+# Low = legislative mandate only (minimum compliance)
+# Medium = mandate + market economics + IRA incentives
+# High = accelerated deployment (favorable interconnection, policy expansion)
+RPS_TARGET_TRAJECTORIES = {
+    "CAISO": {
+        # SB 100: 60% RPS by 2030, 100% clean by 2045
+        # 2025 actual: ~61% clean (172 TWh / 280 TWh equiv load basis)
+        "Low":    {"2025": 0.61, "2030": 0.60, "2035": 0.68, "2040": 0.80, "2045": 0.95, "2050": 1.00},
+        "Medium": {"2025": 0.61, "2030": 0.65, "2035": 0.75, "2040": 0.88, "2045": 1.00, "2050": 1.00},
+        "High":   {"2025": 0.61, "2030": 0.72, "2035": 0.85, "2040": 0.95, "2045": 1.00, "2050": 1.00},
+    },
+    "ERCOT": {
+        # No binding RPS. Growth driven by economics (cheapest wind/solar in US)
+        # 2025 actual: ~42% clean (205 TWh / 488 TWh)
+        # LBNL data: 31 GW solar added nationally in 2024; ERCOT 30.6 GW solar operational
+        "Low":    {"2025": 0.42, "2030": 0.48, "2035": 0.52, "2040": 0.55, "2045": 0.58, "2050": 0.60},
+        "Medium": {"2025": 0.42, "2030": 0.55, "2035": 0.62, "2040": 0.68, "2045": 0.72, "2050": 0.75},
+        "High":   {"2025": 0.42, "2030": 0.62, "2035": 0.72, "2040": 0.80, "2045": 0.85, "2050": 0.88},
+    },
+    "PJM": {
+        # Blended state RPSs: NJ 50% by 2030, VA VCEA 100% by 2050,
+        # MD 50% by 2030, IL 50% by 2040, PA ~8% AEPS
+        # 2025 actual: ~33% clean (280 TWh / 843 TWh)
+        # LBNL: PJM hit 11.7 GW solar peak Apr 2025 (73% YoY increase)
+        "Low":    {"2025": 0.33, "2030": 0.38, "2035": 0.43, "2040": 0.48, "2045": 0.55, "2050": 0.62},
+        "Medium": {"2025": 0.33, "2030": 0.42, "2035": 0.50, "2040": 0.58, "2045": 0.66, "2050": 0.75},
+        "High":   {"2025": 0.33, "2030": 0.48, "2035": 0.58, "2040": 0.68, "2045": 0.78, "2050": 0.85},
+    },
+    "NYISO": {
+        # CLCPA: 70% renewable by 2030, 100% zero-emission by 2040
+        # 2025 actual: ~40% clean (60 TWh / 152 TWh)
+        # Aggressive offshore wind pipeline but permitting delays
+        "Low":    {"2025": 0.40, "2030": 0.55, "2035": 0.65, "2040": 0.80, "2045": 0.90, "2050": 0.95},
+        "Medium": {"2025": 0.40, "2030": 0.62, "2035": 0.78, "2040": 0.92, "2045": 1.00, "2050": 1.00},
+        "High":   {"2025": 0.40, "2030": 0.70, "2035": 0.88, "2040": 1.00, "2045": 1.00, "2050": 1.00},
+    },
+    "NEISO": {
+        # MA CES 80% by 2040, CT 100% by 2040, RI 100% by 2033
+        # 2025 actual: ~43% clean (50 TWh / 115 TWh)
+        # Constrained by transmission + offshore wind delays
+        "Low":    {"2025": 0.43, "2030": 0.48, "2035": 0.55, "2040": 0.65, "2045": 0.72, "2050": 0.78},
+        "Medium": {"2025": 0.43, "2030": 0.55, "2035": 0.65, "2040": 0.78, "2045": 0.85, "2050": 0.90},
+        "High":   {"2025": 0.43, "2030": 0.62, "2035": 0.75, "2040": 0.88, "2045": 0.95, "2050": 1.00},
+    },
 }
 
 # ── SSS Policy Evolution (fraction of NEW supply that becomes SSS) ────────
@@ -93,15 +144,15 @@ SSS_NEW_BUILD_FRACTION = {
 
 # ── Policy Expirations (SSS TWh that shifts to non-SSS) ──────────────────
 # From SPEC.md: IL ZEC/CMC expires mid-2027, NJ ZEC expired June 2025
+# "component" field: "fixed" = nuclear/hydro fixed fleet, "rps" = RPS-eligible
 SSS_EXPIRATIONS = {
     "PJM": [
-        {"year": 2027, "twh_shift": 94, "note": "IL ZEC/CMC expiry — Dresden, Braidwood, Byron, LaSalle, Clinton, Quad Cities"},
+        {"year": 2027, "twh_shift": 94, "component": "fixed",
+         "note": "IL ZEC/CMC expiry — Dresden, Braidwood, Byron, LaSalle, Clinton, Quad Cities"},
     ],
     # NJ ZEC already expired (reflected in 2025 baseline)
     # NY ZEC extended through 2049
-    "CAISO": [
-        {"year": 2030, "twh_shift": 17, "note": "Diablo Canyon extension uncertain post-2030"},
-    ],
+    # Diablo Canyon: fixed SSS indefinitely (state-supported)
 }
 
 # ── Corporate PPA Consumption (TWh already contracted, reducing non-SSS) ──
@@ -199,37 +250,106 @@ def compute_clean_premium(match_target, scarcity_ratio):
     return round(base * multiplier, 2)
 
 
-def evolve_supply(iso, year, growth_level):
-    """Project clean supply (total, SSS, non-SSS) at a future year."""
-    base = SSS_2025[iso]
-    years_out = year - 2025
+def interpolate_rps_target(iso, year, growth_level):
+    """Interpolate RPS clean energy target % for a given ISO/year/growth."""
+    targets = RPS_TARGET_TRAJECTORIES[iso][growth_level]
+    years = sorted(int(y) for y in targets.keys())
+    if year <= years[0]:
+        return targets[str(years[0])]
+    if year >= years[-1]:
+        return targets[str(years[-1])]
+    for i in range(len(years) - 1):
+        if years[i] <= year <= years[i + 1]:
+            t = (year - years[i]) / (years[i + 1] - years[i])
+            v0 = targets[str(years[i])]
+            v1 = targets[str(years[i + 1])]
+            return v0 + t * (v1 - v0)
+    return targets[str(years[-1])]
 
-    if years_out == 0:
+
+def evolve_supply(iso, year, growth_level, demand_twh_at_year):
+    """Project clean supply (total, SSS, non-SSS) at a future year.
+
+    Two-component SSS model:
+    1. Fixed-fleet SSS (nuclear, public hydro, rate-base) — constant TWh,
+       only changes on policy expiry. Does NOT scale with demand.
+    2. RPS SSS — scales proportionally with demand (RPS = % of retail sales).
+
+    Total clean supply = RPS target % × demand (demand-proportional).
+    New supply above 2025 baseline split into SSS vs merchant per
+    SSS_NEW_BUILD_FRACTION.
+    """
+    base = SSS_2025[iso]
+
+    if year == 2025:
         total = base["total_clean_twh"]
-        sss = base["sss_twh"]
+        sss_fixed = base["sss_fixed_twh"]
+        sss_rps = base["sss_rps_twh"]
         non_sss = base["non_sss_twh"]
     else:
-        # Grow total clean supply
-        growth_rate = CLEAN_SUPPLY_GROWTH[iso][growth_level]
-        total = base["total_clean_twh"] * (1 + growth_rate) ** years_out
-
-        # New supply added
-        new_supply = total - base["total_clean_twh"]
-
-        # Fraction of new supply that's SSS
-        avg_sss_frac = get_sss_new_fraction(iso, year)
-        new_sss = new_supply * avg_sss_frac
-        new_non_sss = new_supply * (1 - avg_sss_frac)
-
-        sss = base["sss_twh"] + new_sss
-        non_sss = base["non_sss_twh"] + new_non_sss
-
-        # Apply policy expirations
+        # ── Step 1: Fixed-fleet SSS (public hydro, rate-base assets) ──
+        # Constant TWh — does NOT scale with demand.
+        # Only changes on policy expiry of fixed-fleet components.
+        sss_fixed = base["sss_fixed_twh"]
+        rps_expiry_reduction = 0
         if iso in SSS_EXPIRATIONS:
             for exp in SSS_EXPIRATIONS[iso]:
                 if year >= exp["year"]:
-                    sss -= exp["twh_shift"]
-                    non_sss += exp["twh_shift"]
+                    if exp.get("component", "fixed") == "fixed":
+                        sss_fixed -= exp["twh_shift"]
+                    else:
+                        # RPS-eligible expiry (e.g. Diablo Canyon in CAISO CES)
+                        rps_expiry_reduction += exp["twh_shift"]
+        sss_fixed = max(0, sss_fixed)
+
+        # ── Step 2: Total clean supply = RPS target % × demand ──
+        rps_target = interpolate_rps_target(iso, year, growth_level)
+        total = demand_twh_at_year * rps_target
+        total = max(total, base["total_clean_twh"])  # never below 2025
+
+        # ── Step 3: RPS demand (what state mandates require) ──
+        # RPS mandates require a % of retail sales from renewables/clean.
+        # This demand is satisfied FIRST by existing clean supply (both
+        # existing SSS renewables AND existing merchant renewables),
+        # then new build covers the shortfall.
+        #
+        # RPS demand grows with load. Non-nuclear clean available for RPS:
+        non_nuclear_clean_2025 = base["sss_rps_twh"] + base["non_sss_twh"]
+
+        # Total RPS-eligible supply needed at this year
+        # (total clean minus what fixed fleet provides)
+        rps_eligible_needed = total - sss_fixed
+
+        if rps_eligible_needed <= non_nuclear_clean_2025:
+            # Existing supply covers RPS. Split between SSS and merchant
+            # using same ratio as 2025 baseline.
+            base_rps_share = base["sss_rps_twh"] / non_nuclear_clean_2025 if non_nuclear_clean_2025 > 0 else 0.5
+            sss_rps = rps_eligible_needed * base_rps_share
+            non_sss = rps_eligible_needed * (1 - base_rps_share)
+        else:
+            # Need new build. Existing supply fully consumed.
+            # New build beyond existing is split per SSS_NEW_BUILD_FRACTION.
+            new_build = rps_eligible_needed - non_nuclear_clean_2025
+            avg_sss_frac = get_sss_new_fraction(iso, year)
+
+            # RPS SSS = existing RPS SSS + new SSS portion of new build
+            sss_rps = base["sss_rps_twh"] + new_build * avg_sss_frac
+            # Non-SSS = existing merchant + new merchant portion
+            non_sss = base["non_sss_twh"] + new_build * (1 - avg_sss_frac)
+
+            # As RPS grows, it can claim existing merchant renewables.
+            # RPS demand that exceeds (existing SSS RPS + new SSS build)
+            # must be met by pulling from merchant pool.
+            total_rps_mandate = rps_eligible_needed * avg_sss_frac + base["sss_rps_twh"]
+            # This is already captured above since new build fraction
+            # determines the SSS/merchant split of incremental supply.
+
+    # Apply RPS-component expirations (e.g. Diablo Canyon leaving CES pool)
+    if year > 2025 and rps_expiry_reduction > 0:
+        sss_rps = max(0, sss_rps - rps_expiry_reduction)
+        non_sss += rps_expiry_reduction  # shifts to merchant pool
+
+    sss = sss_fixed + sss_rps
 
     # Subtract existing corporate PPAs from available non-SSS
     existing_ppas = EXISTING_CORPORATE_PPAS.get(iso, {}).get("twh", 0)
@@ -237,10 +357,15 @@ def evolve_supply(iso, year, growth_level):
 
     return {
         "total_clean_twh": round(total, 1),
-        "sss_twh": round(max(0, sss), 1),
+        "sss_twh": round(sss, 1),
+        "sss_fixed_twh": round(max(0, sss_fixed), 1),
+        "sss_rps_twh": round(sss_rps, 1),
         "non_sss_twh": round(non_sss, 1),
         "available_non_sss_twh": round(available_non_sss, 1),
         "existing_ppas_twh": existing_ppas,
+        # SSS pro-rata share: fraction of load covered by total SSS allocation
+        # Used to derate corporate EAC demand (they don't start from zero)
+        "sss_share_of_total": round(sss / total, 4) if total > 0 else 0,
     }
 
 
@@ -290,11 +415,10 @@ def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
     """Find the participation rate at which each match target hits scarcity."""
     inflections = {}
     available = supply_data["available_non_sss_twh"]
+    sss_share = supply_data["sss_share_of_total"]
 
     for match_target in MATCH_TARGETS:
         # Effective EAC demand multiplier from match target
-        # Higher match targets require more procurement per MWh of load
-        # because you need to cover more hours (including expensive ones)
         if match_target <= 80:
             procurement_mult = 1.0
         elif match_target <= 90:
@@ -306,10 +430,13 @@ def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
         else:
             procurement_mult = 1.45 + (match_target - 99) * 0.15
 
+        # SSS pro-rata derate: incremental need = (target% - sss%) × load
+        incremental_need_frac = max(0, match_target / 100 - sss_share)
+
         # Find participation rate where demand exceeds available supply
         inflection_pct = None
         for pct in range(1, 101):
-            corp_demand = demand_twh * (pct / 100) * procurement_mult
+            corp_demand = demand_twh * (pct / 100) * incremental_need_frac * procurement_mult
             if corp_demand > available:
                 inflection_pct = pct
                 break
@@ -376,6 +503,7 @@ def main():
     done = 0
 
     for iso in ISOS:
+        demand_twh = demands[iso]
         if iso not in results["supply_projections"]:
             results["supply_projections"][iso] = {}
 
@@ -390,7 +518,11 @@ def main():
                     done += 1
                     continue
 
-                supply = evolve_supply(iso, year, growth)
+                # Project demand at this year/growth
+                growth_rate = DEMAND_GROWTH_RATES[iso][growth]
+                projected_demand = demand_twh * (1 + growth_rate) ** (year - 2025)
+
+                supply = evolve_supply(iso, year, growth, projected_demand)
                 results["supply_projections"][iso][year_key][growth] = supply
                 completed_keys.add(combo_key)
                 done += 1
@@ -430,12 +562,15 @@ def main():
 
                 supply = results["supply_projections"][iso][year_key][growth]
                 available = supply["available_non_sss_twh"]
+                sss_share = supply["sss_share_of_total"]
 
                 scenarios_for_combo = []
 
                 for participation in PARTICIPATION_RATES:
                     for match_target in MATCH_TARGETS:
                         # Procurement multiplier for match target
+                        # Higher targets need more procurement per MWh due to
+                        # harder hours (evening/night, multi-day low-wind)
                         if match_target <= 80:
                             mult = 1.0
                         elif match_target <= 90:
@@ -447,7 +582,13 @@ def main():
                         else:
                             mult = 1.45 + (match_target - 99) * 0.15
 
-                        corp_eac_demand = projected_demand * (participation / 100) * mult
+                        # Corporate load participating
+                        corp_load = projected_demand * (participation / 100)
+                        # SSS pro-rata derate: corporations already receive
+                        # a pro-rata share of SSS clean energy. Their
+                        # incremental EAC need = (target% - sss%) × load
+                        incremental_need_frac = max(0, match_target / 100 - sss_share)
+                        corp_eac_demand = corp_load * incremental_need_frac * mult
                         demand_ratio = corp_eac_demand / available if available > 0 else 999
 
                         band_key, label, color = classify_scarcity(demand_ratio)
@@ -457,6 +598,9 @@ def main():
                             "participation_pct": participation,
                             "match_target_pct": match_target,
                             "projected_demand_twh": round(projected_demand, 1),
+                            "corp_load_twh": round(corp_load, 1),
+                            "sss_pro_rata_pct": round(sss_share * 100, 1),
+                            "incremental_need_pct": round(incremental_need_frac * 100, 1),
                             "corp_eac_demand_twh": round(corp_eac_demand, 1),
                             "available_supply_twh": round(available, 1),
                             "demand_supply_ratio": round(demand_ratio, 3),
