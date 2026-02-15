@@ -1,0 +1,446 @@
+[
+  {
+    "name": "Constellation Energy",
+    "note": "Combined with Calpine (acquired Jan 2026)",
+    "total_generation_twh": 310,
+    "pre_merger_constellation_twh": 210,
+    "calpine_twh": 101,
+    "total_co2_million_tons": 55,
+    "co2_intensity_lbs_per_mwh": 390,
+    "type": "Merchant/IPP",
+    "fuel_mix_pct": {
+      "Nuclear": 45,
+      "Gas": 42,
+      "Geothermal": 3,
+      "Hydro": 3,
+      "Wind": 4,
+      "Solar": 2,
+      "Oil": 1
+    },
+    "capacity_gw": 60,
+    "states": [
+      "IL",
+      "PA",
+      "NY",
+      "TX",
+      "CA",
+      "MD",
+      "NJ"
+    ],
+    "markets": [
+      "PJM",
+      "ERCOT",
+      "CAISO",
+      "NYISO",
+      "ISO-NE"
+    ],
+    "key_notes": "Largest US power generator post-merger. Nuclear fleet is largest in US (~23 GW). Calpine adds ~27 GW gas + 725 MW geothermal."
+  },
+  {
+    "name": "NextEra Energy",
+    "note": "FPL (regulated FL utility) + NextEra Energy Resources (competitive renewables/gas)",
+    "total_generation_twh": 170,
+    "total_co2_million_tons": 38,
+    "co2_intensity_lbs_per_mwh": 490,
+    "type": "Hybrid (utility + merchant)",
+    "fuel_mix_pct": {
+      "Gas": 40,
+      "Nuclear": 14,
+      "Wind": 25,
+      "Solar": 15,
+      "Oil": 3,
+      "Other": 3
+    },
+    "capacity_gw": 72,
+    "states": [
+      "FL",
+      "TX",
+      "IA",
+      "OK",
+      "CA",
+      "CO",
+      "IL"
+    ],
+    "markets": [
+      "Florida (regulated)",
+      "ERCOT",
+      "SPP",
+      "PJM",
+      "CAISO",
+      "MISO"
+    ],
+    "key_notes": "World's largest generator of wind and solar energy. FPL is largest US utility by retail MWh. ~33 GW NEER competitive portfolio."
+  },
+  {
+    "name": "Duke Energy",
+    "note": "Vertically integrated utility serving 8.2M customers",
+    "total_generation_twh": 203,
+    "total_co2_million_tons": 72,
+    "co2_intensity_lbs_per_mwh": 780,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Gas": 48,
+      "Nuclear": 32,
+      "Coal": 13,
+      "Solar": 3,
+      "Hydro": 2,
+      "Wind": 1,
+      "Oil": 1
+    },
+    "capacity_gw": 50,
+    "states": [
+      "NC",
+      "SC",
+      "FL",
+      "IN",
+      "OH",
+      "KY"
+    ],
+    "markets": [
+      "Duke Carolinas (SERC)",
+      "Duke Florida",
+      "Duke Indiana (MISO)"
+    ],
+    "key_notes": "2nd largest US utility by retail customers. Significant remaining coal fleet in Indiana. Nuclear fleet ~11 GW."
+  },
+  {
+    "name": "Southern Company",
+    "note": "Vertically integrated utility in Southeast US",
+    "total_generation_twh": 180,
+    "total_co2_million_tons": 65,
+    "co2_intensity_lbs_per_mwh": 795,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Gas": 50,
+      "Nuclear": 20,
+      "Coal": 18,
+      "Solar": 5,
+      "Hydro": 4,
+      "Wind": 1,
+      "Other": 2
+    },
+    "capacity_gw": 46,
+    "states": [
+      "GA",
+      "AL",
+      "MS"
+    ],
+    "markets": [
+      "Southern (SERC)",
+      "SPP (Southern Power)"
+    ],
+    "key_notes": "Vogtle Units 3&4 (newest US nuclear) operational 2023-2024. Still significant coal. Plant Barry CCS pilot."
+  },
+  {
+    "name": "Vistra Energy",
+    "note": "Largest competitive power generator in Texas",
+    "total_generation_twh": 140,
+    "total_co2_million_tons": 68,
+    "co2_intensity_lbs_per_mwh": 1070,
+    "type": "Merchant/IPP",
+    "fuel_mix_pct": {
+      "Gas": 50,
+      "Coal": 25,
+      "Nuclear": 15,
+      "Solar": 8,
+      "Battery": 2
+    },
+    "capacity_gw": 41,
+    "states": [
+      "TX",
+      "IL",
+      "OH",
+      "PA"
+    ],
+    "markets": [
+      "ERCOT",
+      "PJM",
+      "ISO-NE"
+    ],
+    "key_notes": "Comanche Peak nuclear (2.4 GW). Significant coal in Illinois (pending retirement). Growing solar+battery portfolio in TX."
+  },
+  {
+    "name": "AEP",
+    "note": "American Electric Power \u2014 large regulated utility in Central/Eastern US",
+    "total_generation_twh": 110,
+    "total_co2_million_tons": 55,
+    "co2_intensity_lbs_per_mwh": 1100,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Gas": 42,
+      "Coal": 30,
+      "Wind": 12,
+      "Nuclear": 5,
+      "Solar": 4,
+      "Hydro": 3,
+      "Other": 4
+    },
+    "capacity_gw": 30,
+    "states": [
+      "OH",
+      "TX",
+      "WV",
+      "VA",
+      "IN",
+      "OK",
+      "MI",
+      "KY",
+      "TN",
+      "AR",
+      "LA"
+    ],
+    "markets": [
+      "PJM",
+      "SPP",
+      "ERCOT"
+    ],
+    "key_notes": "One of the highest-emitting US utilities. Significant remaining coal. Large wind portfolio in Oklahoma/Texas. Navigating coal retirement politics in WV/OH."
+  },
+  {
+    "name": "Dominion Energy",
+    "note": "Vertically integrated utility, primarily Virginia",
+    "total_generation_twh": 90,
+    "total_co2_million_tons": 30,
+    "co2_intensity_lbs_per_mwh": 735,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Gas": 48,
+      "Nuclear": 33,
+      "Coal": 8,
+      "Solar": 5,
+      "Hydro": 3,
+      "Wind": 1,
+      "Biomass": 2
+    },
+    "capacity_gw": 30,
+    "states": [
+      "VA",
+      "NC",
+      "SC"
+    ],
+    "markets": [
+      "PJM (Dominion zone)"
+    ],
+    "key_notes": "Virginia Clean Economy Act mandates 100% clean by 2045. North Anna nuclear expansion potential. Offshore wind (CVOW 2.6 GW) under construction."
+  },
+  {
+    "name": "Berkshire Hathaway Energy",
+    "note": "Utility holding company (PacifiCorp, MidAmerican, NV Energy)",
+    "total_generation_twh": 85,
+    "total_co2_million_tons": 42,
+    "co2_intensity_lbs_per_mwh": 1090,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Coal": 30,
+      "Wind": 25,
+      "Gas": 20,
+      "Hydro": 10,
+      "Solar": 10,
+      "Geothermal": 3,
+      "Other": 2
+    },
+    "capacity_gw": 40,
+    "states": [
+      "IA",
+      "UT",
+      "WY",
+      "OR",
+      "WA",
+      "NV",
+      "CA"
+    ],
+    "markets": [
+      "Western EIM",
+      "MISO"
+    ],
+    "key_notes": "MidAmerican nearly 100% renewable in Iowa. PacifiCorp has massive coal exposure (wildfire liability + coal retirement). NV Energy growing solar."
+  },
+  {
+    "name": "Entergy",
+    "note": "Vertically integrated utility in Gulf South",
+    "total_generation_twh": 80,
+    "total_co2_million_tons": 28,
+    "co2_intensity_lbs_per_mwh": 770,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Gas": 55,
+      "Nuclear": 30,
+      "Solar": 3,
+      "Coal": 3,
+      "Hydro": 2,
+      "Other": 7
+    },
+    "capacity_gw": 30,
+    "states": [
+      "LA",
+      "TX",
+      "MS",
+      "AR"
+    ],
+    "markets": [
+      "MISO South"
+    ],
+    "key_notes": "Large nuclear fleet (Grand Gulf, Waterford, River Bend). Gas-heavy. Industrial load growth from LNG exports. Recently retired coal."
+  },
+  {
+    "name": "AES Corporation",
+    "note": "Global power company with US utility (AES Indiana, AES Ohio) and merchant renewables",
+    "total_generation_twh": 75,
+    "total_co2_million_tons": 28,
+    "co2_intensity_lbs_per_mwh": 820,
+    "type": "Hybrid (utility + merchant)",
+    "fuel_mix_pct": {
+      "Gas": 40,
+      "Coal": 15,
+      "Solar": 20,
+      "Wind": 10,
+      "Battery": 8,
+      "Other": 7
+    },
+    "capacity_gw": 35,
+    "states": [
+      "IN",
+      "OH",
+      "CA",
+      "HI",
+      "NY"
+    ],
+    "markets": [
+      "MISO",
+      "PJM",
+      "CAISO"
+    ],
+    "key_notes": "Global renewables developer. AES Indiana still has significant coal (Petersburg). AES Ohio is T&D only. Fluence (JV) is major battery provider."
+  },
+  {
+    "name": "Xcel Energy",
+    "note": "Regulated utility in Upper Midwest and Colorado",
+    "total_generation_twh": 70,
+    "total_co2_million_tons": 28,
+    "co2_intensity_lbs_per_mwh": 880,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Wind": 30,
+      "Gas": 28,
+      "Coal": 20,
+      "Nuclear": 12,
+      "Solar": 7,
+      "Other": 3
+    },
+    "capacity_gw": 21,
+    "states": [
+      "MN",
+      "CO",
+      "WI",
+      "TX",
+      "NM"
+    ],
+    "markets": [
+      "MISO",
+      "SPP"
+    ],
+    "key_notes": "First major US utility to pledge 100% carbon-free by 2050 (2018). Leading wind buildout. Prairie Island nuclear (MN). Colorado coal-to-renewable transition."
+  },
+  {
+    "name": "Evergy",
+    "note": "Regulated utility in Kansas and Missouri",
+    "total_generation_twh": 50,
+    "total_co2_million_tons": 26,
+    "co2_intensity_lbs_per_mwh": 1145,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Coal": 40,
+      "Wind": 25,
+      "Gas": 18,
+      "Nuclear": 10,
+      "Solar": 3,
+      "Other": 4
+    },
+    "capacity_gw": 12,
+    "states": [
+      "KS",
+      "MO"
+    ],
+    "markets": [
+      "SPP"
+    ],
+    "key_notes": "One of the highest-intensity utilities due to coal dependence. Wolf Creek nuclear (1.2 GW). Strong wind resource in Kansas. Coal retirement timeline critical."
+  },
+  {
+    "name": "DTE Energy",
+    "note": "Regulated utility in Michigan",
+    "total_generation_twh": 45,
+    "total_co2_million_tons": 20,
+    "co2_intensity_lbs_per_mwh": 980,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Gas": 40,
+      "Coal": 28,
+      "Nuclear": 15,
+      "Wind": 8,
+      "Solar": 5,
+      "Biomass": 4
+    },
+    "capacity_gw": 12,
+    "states": [
+      "MI"
+    ],
+    "markets": [
+      "MISO"
+    ],
+    "key_notes": "Fermi 2 nuclear plant. Retiring Belle River coal plant. MI clean energy legislation requires 100% clean by 2040. Growing renewables."
+  },
+  {
+    "name": "WEC Energy Group",
+    "note": "Regulated utility in Wisconsin/Michigan/Illinois",
+    "total_generation_twh": 40,
+    "total_co2_million_tons": 17,
+    "co2_intensity_lbs_per_mwh": 935,
+    "type": "Vertically integrated",
+    "fuel_mix_pct": {
+      "Gas": 45,
+      "Coal": 22,
+      "Nuclear": 16,
+      "Wind": 8,
+      "Solar": 5,
+      "Other": 4
+    },
+    "capacity_gw": 9,
+    "states": [
+      "WI",
+      "MI",
+      "IL"
+    ],
+    "markets": [
+      "MISO"
+    ],
+    "key_notes": "Point Beach nuclear (2 units, NextEra-operated). Coal retirement accelerating. Wisconsin energy policy evolving."
+  },
+  {
+    "name": "PPL Corporation",
+    "note": "Primarily T&D utility (KY generation remaining after Talen spinoff)",
+    "total_generation_twh": 35,
+    "total_co2_million_tons": 20,
+    "co2_intensity_lbs_per_mwh": 1260,
+    "type": "Hybrid",
+    "fuel_mix_pct": {
+      "Gas": 50,
+      "Coal": 30,
+      "Nuclear": 0,
+      "Hydro": 8,
+      "Solar": 5,
+      "Other": 7
+    },
+    "capacity_gw": 8,
+    "states": [
+      "PA",
+      "KY",
+      "RI"
+    ],
+    "markets": [
+      "PJM",
+      "SERC"
+    ],
+    "key_notes": "Spun off generation into Talen Energy (2015). Remaining KY generation (Louisville Gas & KY Utilities) is coal/gas heavy. PA and RI are T&D only."
+  }
+]
