@@ -200,30 +200,18 @@ p:last-child { margin-bottom: 0; }
 </section>
 
 <!-- ============================================================ -->
-<!-- SECTION 2: PER-REGION MAC ENVELOPES -->
+<!-- SECTION 2: STEPWISE MARGINAL MAC -->
 <!-- ============================================================ -->
 <section>
     <span class="section-num">Section 1</span>
-    <h2>Average MAC with Uncertainty Bands — By Region</h2>
-    <p>Each panel shows one region's cost envelope. Bold line = monotonic MAC midpoint (Medium scenario).
-       Shaded band = P10–P90 range across 324 cost scenarios. Dashed lines mark SCC ($190/ton) and
-       DAC 2040–2045 midpoint ($<span id="dacMidLabel"></span>/ton). Where bands are wide, cost assumptions drive outcomes.</p>
-    <div class="envelope-grid" id="envelopeGrid"></div>
-    <div class="callout" id="envelopeInsight"></div>
-</section>
+    <h2>Marginal MAC: Where Grid Investment Stops Paying Off</h2>
+    <p>The grid backbone (75→90%) is cheap abatement everywhere. Beyond 90%, marginal costs escalate
+       as the optimizer adds storage, CCS, and LDES to cover the hardest hours.
+       Each bar shows the marginal $/ton for one step. Bars are guaranteed non-decreasing — each step
+       costs at least as much as the previous.</p>
 
-<!-- ============================================================ -->
-<!-- SECTION 3: STEPWISE MARGINAL MAC -->
-<!-- ============================================================ -->
-<section>
-    <span class="section-num">Section 2</span>
-    <h2>Stepwise Marginal MAC: Where Grid Investment Stops Paying Off</h2>
-    <p>Each bar shows the marginal cost of the next threshold step. Horizontal lines mark key
-       benchmarks. When a bar exceeds a benchmark, consider investing in that alternative instead.</p>
-    <div class="chart-wrap" style="height: 440px;">
-        <div class="chart-title">Stepwise Marginal Abatement Cost by Region ($/ton CO₂)</div>
-        <canvas id="marginalChart"></canvas>
-    </div>
+    <!-- Per-region marginal MAC charts (separate, no overlapping) -->
+    <div class="envelope-grid" id="marginalGrid"></div>
     <div class="callout" id="marginalInsight"></div>
 </section>
 
@@ -335,66 +323,58 @@ p:last-child { margin-bottom: 0; }
 <script src="js/mac-stats-data.js"></script>
 <script>
 'use strict';
-// Globals
 const REGIONS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
-const STEP_LABELS = ['75→80','80→85','85→87.5','87.5→90','90→92.5','92.5→95','95→97.5','97.5→99'];
-const REGION_CLR = REGION_COLORS; // from shared-data.js
+const REGION_CLR = REGION_COLORS;
+const REGION_NAMES = { CAISO: 'CAISO (California)', ERCOT: 'ERCOT (Texas)', PJM: 'PJM (Mid-Atlantic)',
+                       NYISO: 'NYISO (New York)', NEISO: 'NEISO (New England)' };
 
-// Helpers
 function $(id) { return document.getElementById(id); }
-function txt(id, v) { const el = $(id); if (el) el.textContent = v; }
 function html(id, v) { const el = $(id); if (el) el.innerHTML = v; }
 
-// ---- Derived data ----
 const mac = MAC_DATA.medium;
 const marg = MARGINAL_MAC_DATA.medium;
+const margLabels = MARGINAL_MAC_LABELS;
 
-// All marginal values (non-null, positive)
+// Derived metrics from shared data
 const allMarg = [];
 REGIONS.forEach(r => {
-    for (let i = 1; i < marg[r].length; i++) {
-        if (marg[r][i] != null && marg[r][i] > 0)
-            allMarg.push({ val: marg[r][i], iso: r, idx: i });
-    }
+    marg[r].forEach((v, i) => { if (v != null && v > 0) allMarg.push({ val: v, iso: r, idx: i }); });
 });
 const margMin = allMarg.reduce((a, b) => a.val < b.val ? a : b);
 const margMax = allMarg.reduce((a, b) => a.val > b.val ? a : b);
-
 const mac99 = REGIONS.map(r => mac[r][8]);
 const mac75 = REGIONS.map(r => mac[r][0]);
 const cheapestISO = REGIONS[mac99.indexOf(Math.min(...mac99))];
 const highestISO  = REGIONS[mac99.indexOf(Math.max(...mac99))];
 
 const dacMed = BENCHMARKS_DYNAMIC.dac.Medium;
-const dacLow = BENCHMARKS_DYNAMIC.dac.Low;
 const dacHigh = BENCHMARKS_DYNAMIC.dac.High;
-const dacThreshold = dacMed.mid; // dynamically from shared-data.js
+const dacThreshold = dacMed.mid;
 
 const regionsExceedingDAC = REGIONS.filter(r =>
-    marg[r].some((v, i) => i > 0 && v != null && v >= dacThreshold)
+    marg[r].some(v => v != null && v >= dacThreshold)
 ).length;
 
 // ============================================================================
 // 1. INTRO NARRATIVE + KEY COUNTERS
 // ============================================================================
 html('introNarrative',
-    `Average abatement costs range from <strong>$${Math.min(...mac75)}–${Math.max(...mac99)}/ton</strong> ` +
-    `across all five ISOs through 99% hourly matching — well below the social cost of carbon ($190/ton). ` +
-    `But the <strong>marginal</strong> MAC reveals critical decision boundaries: individual threshold steps ` +
-    `range from $${margMin.val}/ton (${margMin.iso} ${STEP_LABELS[margMin.idx - 1]}) to ` +
-    `$${margMax.val}/ton (${margMax.iso} ${STEP_LABELS[margMax.idx - 1]}). ` +
+    `Average abatement costs range from <strong>$${Math.min(...mac75)}\u2013${Math.max(...mac99)}/ton</strong> ` +
+    `across all five ISOs through 99% hourly matching \u2014 well below the social cost of carbon ($190/ton). ` +
+    `The grid backbone (75\u219290%) costs $${margMin.val}\u2013${Math.max(...REGIONS.map(r => marg[r][0]))}/ton ` +
+    `across regions. Beyond 90%, marginal costs escalate sharply as storage and CCS enter the mix. ` +
     `${regionsExceedingDAC} region${regionsExceedingDAC !== 1 ? 's have' : ' has'} at least one step ` +
-    `exceeding projected DAC costs ($${dacMed.mid}/ton by 2040–2045).`
+    `exceeding projected DAC costs ($${dacMed.mid}/ton by 2040\u20132045).`
 );
 
 html('keyCounters',
     `<div class="counter-item">` +
-    `  <div class="counter-val">$${margMax.val}</div>` +
-    `  <div class="counter-label">Max marginal MAC/ton<br>${margMax.iso} ${STEP_LABELS[margMax.idx - 1]}</div>` +
+    `  <div class="counter-val">$${Math.max(...REGIONS.map(r => marg[r][0]))}</div>` +
+    `  <div class="counter-label">Max backbone MAC<br>(75\u219290%)</div>` +
     `</div>` +
     `<div class="counter-item">` +
-    `  <div class="counter-val">$${margMin.val}</div>` +
-    `  <div class="counter-label">Min marginal MAC/ton<br>${margMin.iso} ${STEP_LABELS[margMin.idx - 1]}</div>` +
+    `  <div class="counter-val">$${margMax.val >= 1000 ? '1,000+' : margMax.val}</div>` +
+    `  <div class="counter-label">Max last-mile MAC<br>${margMax.iso} ${margLabels[margMax.idx]}</div>` +
     `</div>` +
     `<div class="counter-item">` +
     `  <div class="counter-val">${regionsExceedingDAC}</div>` +
@@ -407,202 +387,95 @@ html('keyCounters',
 );
 
 // ============================================================================
-// 2. PER-REGION ENVELOPE CHARTS (small multiples)
+// 2. PER-REGION MARGINAL MAC CHARTS (separate small multiples — no overlap)
 // ============================================================================
-txt('dacMidLabel', dacMed.mid);
-
-(function buildEnvelopeGrid() {
-    const grid = $('envelopeGrid');
+(function buildMarginalGrid() {
+    const grid = $('marginalGrid');
     if (!grid) return;
-    const thresholds = THRESHOLDS.slice(0, 9);
-    const regionNames = { CAISO: 'CAISO (California)', ERCOT: 'ERCOT (Texas)', PJM: 'PJM (Mid-Atlantic)',
-                          NYISO: 'NYISO (New York)', NEISO: 'NEISO (New England)' };
 
-    // Build cards
+    // Compute shared Y max
+    let yMax = 0;
+    REGIONS.forEach(r => { yMax = Math.max(yMax, ...marg[r].filter(v => v != null)); });
+    yMax = Math.min(Math.ceil(yMax / 100) * 100 + 50, 1100);
+
+    // Build per-region cards
     grid.innerHTML = REGIONS.map(iso => {
         const c = REGION_CLR[iso];
+        const backbone = marg[iso][0];
+        const lastStep = marg[iso][marg[iso].length - 1];
         return `<div class="envelope-card" style="border-top-color:${c}">` +
             `<div class="envelope-card-title">` +
-            `  <span class="region-dot" style="background:${c}"></span>` +
-            `  ${regionNames[iso]}` +
-            `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1.1rem;font-weight:800;color:${c}">$${mac[iso][8]}/ton</span>` +
+            `  <span class="region-dot" style="background:${c}"></span> ${REGION_NAMES[iso]}` +
+            `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1rem;font-weight:800;color:${c}">$${backbone}\u2192$${lastStep >= 1000 ? '1k+' : lastStep}</span>` +
             `</div>` +
-            `<div class="envelope-card-subtitle">Avg MAC at 99% · P10–P90 range: $${Math.round(MAC_FAN_DATA[iso]?.p10?.[8] || 0)}–$${Math.round(MAC_FAN_DATA[iso]?.p90?.[8] || 0)}/ton</div>` +
-            `<canvas id="env_${iso}"></canvas>` +
+            `<div class="envelope-card-subtitle">Backbone \u2192 last step · Avg MAC at 99%: $${mac[iso][8]}/ton</div>` +
+            `<canvas id="marg_${iso}"></canvas>` +
             `</div>`;
     }).join('');
 
-    // Compute shared Y max across all regions for comparable scales
-    let yMax = 0;
+    // Build each bar chart
     REGIONS.forEach(iso => {
-        const fan = MAC_FAN_DATA?.[iso];
-        if (fan) yMax = Math.max(yMax, ...fan.p90.slice(0, 9).filter(v => v != null));
-    });
-    yMax = Math.ceil(yMax / 25) * 25 + 25;
-
-    // Build each chart
-    REGIONS.forEach(iso => {
-        const ctx = document.getElementById('env_' + iso)?.getContext('2d');
+        const ctx = document.getElementById('marg_' + iso)?.getContext('2d');
         if (!ctx) return;
-        const fan = MAC_FAN_DATA?.[iso];
-        const env = MAC_ENVELOPE_DATA?.[iso]?.envelope;
-        if (!fan) return;
-
         const c = REGION_CLR[iso];
-        const p90 = fan.p90.slice(0, 9).map((v, i) => ({ x: thresholds[i], y: v }));
-        const p10 = fan.p10.slice(0, 9).map((v, i) => ({ x: thresholds[i], y: v }));
-        const p50 = (env || fan.p50).slice(0, 9).map((v, i) => ({ x: thresholds[i], y: v }));
+        const vals = marg[iso].map(v => v != null ? Math.min(v, 1050) : 0);
 
         new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
-                datasets: [
-                    { label: 'P90', data: p90, borderColor: 'transparent', backgroundColor: c + '20',
-                        borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3 },
-                    { label: 'P10', data: p10, borderColor: c + '44', backgroundColor: 'transparent',
-                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3 },
-                    { label: 'Midpoint', data: p50, borderColor: c, backgroundColor: c + '18',
-                        borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6, fill: false, tension: 0.3, order: 1 }
-                ]
+                labels: margLabels,
+                datasets: [{
+                    data: vals,
+                    backgroundColor: vals.map((v, i) => i === 0 ? c + '60' : c + 'CC'),
+                    borderColor: c,
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    barPercentage: 0.75
+                }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                interaction: { mode: 'nearest', intersect: false },
-                scales: {
-                    x: {
-                        type: 'linear', min: 74, max: 100,
-                        ticks: { stepSize: 5, callback: v => v + '%', font: { size: 10 } },
-                        grid: { display: false },
-                        border: { display: true, color: '#D4D8E0' }
-                    },
-                    y: {
-                        min: 0, max: yMax,
-                        ticks: { callback: v => '$' + v, font: { size: 10 }, stepSize: 50 },
-                        grid: { color: 'rgba(0,0,0,0.04)' },
-                        border: { display: true, color: '#D4D8E0' }
-                    }
-                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(26,39,68,0.92)',
-                        titleFont: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: '600' },
-                        bodyFont: { family: "'Barlow Semi Condensed', sans-serif", size: 11 },
-                        padding: 10, cornerRadius: 6,
                         callbacks: {
-                            title: items => items[0].raw.x + '% Target',
-                            label: item => {
-                                if (item.dataset.label === 'P90' || item.dataset.label === 'P10') return null;
-                                return 'MAC: $' + Math.round(item.raw.y) + '/ton';
-                            }
+                            label: item => '$' + marg[iso][item.dataIndex] + '/ton CO\u2082'
                         }
                     },
                     annotation: {
                         annotations: {
-                            scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980099', borderWidth: 1.5, borderDash: [5, 3],
-                                label: { display: true, content: 'SCC $190', position: 'start', font: { size: 9 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
-                            },
-                            dac: { type: 'line', yMin: dacMed.mid, yMax: dacMed.mid, borderColor: '#E91E6399', borderWidth: 1.5, borderDash: [5, 3],
-                                label: { display: true, content: 'DAC $' + dacMed.mid, position: 'end', font: { size: 9 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
-                            }
+                            scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980088', borderWidth: 1.5, borderDash: [4, 3],
+                                label: { display: true, content: 'SCC', position: 'start', font: { size: 8 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 } },
+                            dac: { type: 'line', yMin: dacMed.mid, yMax: dacMed.mid, borderColor: '#E91E6388', borderWidth: 1.5, borderDash: [4, 3],
+                                label: { display: true, content: 'DAC', position: 'end', font: { size: 8 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 } }
                         }
                     },
                     datalabels: { display: false }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 30 }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                    y: { min: 0, max: yMax, ticks: { callback: v => '$' + v, font: { size: 9 }, stepSize: 200 },
+                        grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: true, color: '#D4D8E0' } }
                 }
             }
         });
     });
 
-    // Insight callout (range-based conclusion)
-    const p10min = Math.round(Math.min(...REGIONS.map(r => Math.min(...MAC_FAN_DATA[r].p10.filter(v => v != null)))));
-    const p90max = Math.round(Math.max(...REGIONS.map(r => Math.max(...MAC_FAN_DATA[r].p90.filter(v => v != null)))));
-    const allEnvMax = Math.max(...mac99);
-    html('envelopeInsight',
-        `<strong>Midpoint conclusion:</strong> No region's average MAC midpoint exceeds ` +
-        `$${allEnvMax}/ton through 99% — well below both the SCC ($190) and DAC ($${dacMed.mid}). ` +
-        `<strong>Range context:</strong> The P10–P90 uncertainty band spans $${p10min}–${p90max}/ton across ` +
-        `all regions and thresholds. ERCOT has the tightest band (least cost uncertainty), ` +
-        `while ${highestISO} shows the widest — driven by ` +
-        `${Math.round((MAC_ANOVA[highestISO]?.['Firm Gen'] || 0) * 100)}% firm generation cost variance.`
-    );
-})();
-
-// ============================================================================
-// 3. STEPWISE MARGINAL MAC CHART
-// ============================================================================
-(function buildMarginalChart() {
-    const ctx = $('marginalChart')?.getContext('2d');
-    if (!ctx) return;
-
-    const datasets = REGIONS.map(iso => ({
-        label: iso,
-        data: STEP_LABELS.map((_, si) => {
-            const val = marg[iso][si + 1];
-            return (val != null && val > 0) ? Math.min(val, 1000) : null;
-        }),
-        backgroundColor: REGION_CLR[iso] + 'CC',
-        borderColor: REGION_CLR[iso], borderWidth: 1,
-        barPercentage: 0.85, categoryPercentage: 0.82
-    }));
-
-    new Chart(ctx, {
-        type: 'bar',
-        data: { labels: STEP_LABELS, datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top', labels: { font: { size: 12 }, padding: 16, usePointStyle: true, pointStyle: 'rect' } },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => {
-                            const raw = marg[ctx.dataset.label][ctx.dataIndex + 1];
-                            if (raw == null) return ctx.dataset.label + ': CO₂ decreased';
-                            return ctx.dataset.label + ': $' + raw.toLocaleString() + '/ton';
-                        }
-                    }
-                },
-                annotation: {
-                    annotations: {
-                        scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF9800', borderWidth: 2, borderDash: [8, 4],
-                            label: { display: true, content: 'SCC ($190)', position: 'start', backgroundColor: '#FF9800', color: '#fff', font: { size: 11 }, padding: 4 }
-                        },
-                        dacMid: { type: 'line', yMin: dacMed.mid, yMax: dacMed.mid, borderColor: '#E91E63', borderWidth: 2, borderDash: [8, 4],
-                            label: { display: true, content: 'DAC 2040 ($' + dacMed.mid + ')', position: 'start', backgroundColor: '#E91E63', color: '#fff', font: { size: 11 }, padding: 4 }
-                        },
-                        dacHigh: { type: 'line', yMin: dacHigh.mid, yMax: dacHigh.mid, borderColor: '#9C27B0', borderWidth: 1.5, borderDash: [6, 4],
-                            label: { display: true, content: 'DAC High ($' + dacHigh.mid + ')', position: 'end', backgroundColor: '#9C27B0', color: '#fff', font: { size: 10 }, padding: 3 }
-                        },
-                        euEts: { type: 'line', yMin: 88, yMax: 88, borderColor: '#2196F3', borderWidth: 1.5, borderDash: [6, 4],
-                            label: { display: true, content: 'EU ETS ($88)', position: 'end', backgroundColor: '#2196F3', color: '#fff', font: { size: 10 }, padding: 3 }
-                        }
-                    }
-                },
-                datalabels: { display: false }
-            },
-            scales: {
-                y: { beginAtZero: true, max: 800, title: { display: true, text: 'Marginal MAC ($/ton CO₂)', font: { size: 13 } },
-                    ticks: { callback: v => '$' + v, stepSize: 100 } },
-                x: { title: { display: true, text: 'CFE Matching Step (%)', font: { size: 13 } } }
-            }
-        }
-    });
-
-    // Compute zone insights dynamically
-    const effZone = [], volZone = [];
-    REGIONS.forEach(r => {
-        for (let i = 1; i <= 4; i++) if (marg[r][i] != null && marg[r][i] > 0) effZone.push(marg[r][i]);
-        for (let i = 5; i <= 7; i++) if (marg[r][i] != null && marg[r][i] > 0) volZone.push(marg[r][i]);
-    });
+    // Insight
+    const backboneMax = Math.max(...REGIONS.map(r => marg[r][0]));
+    const backboneMin = Math.min(...REGIONS.map(r => marg[r][0]));
+    const lastMileVals = REGIONS.map(r => marg[r][marg[r].length - 1]);
     html('marginalInsight',
-        `<strong>Midpoint:</strong> Median marginal MAC stays under $${Math.max(...effZone)}/ton through 90% (efficient zone). ` +
-        `<strong>Range:</strong> The 90–97.5% zone swings from $${Math.min(...volZone)} to $${Math.max(...volZone)}/ton across regions. ` +
-        `Beyond 97.5%, some regions see diminishing CO₂ returns as resource mix shifts prioritize matching over abatement. ` +
-        `The grid backbone holds through ~90% everywhere. Beyond that, strategy is region-specific.`
+        `<strong>Grid backbone (75\u219290%):</strong> Marginal MAC ranges $${backboneMin}\u2013$${backboneMax}/ton \u2014 ` +
+        `well below SCC ($190) everywhere. Grid decarbonization to 90% is efficient in all regions. ` +
+        `<strong>Last mile (97.5\u219299%):</strong> Costs jump to $${Math.min(...lastMileVals)}\u2013$${Math.max(...lastMileVals) >= 1000 ? '1,000+' : Math.max(...lastMileVals)}/ton. ` +
+        `The 3\u201310\u00D7 escalation from backbone to last mile is where portfolio diversification into DAC, ` +
+        `BECCS, and SAF becomes cost-competitive.`
     );
 })();
 
 // ============================================================================
-// 4. ABATEMENT LADDER (horizontal bar chart)
+// 3. ABATEMENT LADDER
 // ============================================================================
 (function buildLadderChart() {
     const ctx = $('ladderChart')?.getContext('2d');
@@ -615,7 +488,6 @@ txt('dacMidLabel', dacMed.mid);
     const bgColors = benchmarks.map(b => b.color + '40');
     const borderColors = benchmarks.map(b => b.color);
 
-    // Grid reference lines from MAC data
     const i90 = THRESHOLDS.indexOf(90), i95 = THRESHOLDS.indexOf(95), i99 = THRESHOLDS.indexOf(99);
     const annotations = {};
     [{iso:'ERCOT',t:90,i:i90},{iso:'ERCOT',t:95,i:i95},{iso:'ERCOT',t:99,i:i99},
@@ -643,17 +515,13 @@ txt('dacMidLabel', dacMed.mid);
         options: {
             indexAxis: 'y', responsive: true, maintainAspectRatio: false,
             scales: {
-                x: { min: 0, max: 650, title: { display: true, text: '$/ton CO₂', font: { size: 13 } },
+                x: { min: 0, max: 650, title: { display: true, text: '$/ton CO\u2082', font: { size: 13 } },
                     ticks: { stepSize: 50, callback: v => '$' + v }, grid: { display: false } },
                 y: { ticks: { font: { size: 11, weight: 500 } }, grid: { display: false } }
             },
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => Array.isArray(ctx.raw) ? `Range: $${ctx.raw[0]}–$${ctx.raw[1]}/ton` : `Mid: $${ctx.raw}/ton`
-                    }
-                },
+                tooltip: { callbacks: { label: ctx => Array.isArray(ctx.raw) ? `Range: $${ctx.raw[0]}\u2013$${ctx.raw[1]}/ton` : `Mid: $${ctx.raw}/ton` } },
                 annotation: { annotations },
                 datalabels: { display: false }
             }
@@ -662,34 +530,25 @@ txt('dacMidLabel', dacMed.mid);
 })();
 
 // ============================================================================
-// 5. REGIONAL CARDS (fully dynamic)
+// 4. REGIONAL CARDS (fully dynamic from shared data)
 // ============================================================================
 (function buildRegionCards() {
     const container = $('regionCards');
     if (!container) return;
 
-    const colors = { CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0' };
-    const names = { CAISO: 'CAISO (California)', ERCOT: 'ERCOT (Texas)', PJM: 'PJM (Mid-Atlantic)',
-                    NYISO: 'NYISO (New York)', NEISO: 'NEISO (New England)' };
     const stories = {
         CAISO: 'Solar abundance keeps early costs low. Solar saturation above 93% drives battery/LDES overbuilding.',
-        ERCOT: 'The cost leader. Cheap wind ($40/MWh), Gulf Coast CCS geology, and fast permitting.',
-        PJM:   'Coal-heavy grid = more CO₂ displaced per clean MWh. Cheapest per-ton abatement.',
-        NYISO: 'Strong nuclear+hydro base, but constrained siting and no CCS geology drive high marginal costs.',
-        NEISO: 'Most volatile curve. Offshore wind potential is high but uncertain. Nuclear base helps early.'
+        ERCOT: 'The cost leader. Cheap wind, Gulf Coast CCS geology, and fast permitting.',
+        PJM:   'Coal-heavy grid = more CO\u2082 displaced per clean MWh. Cheapest per-ton abatement.',
+        NYISO: 'Strong nuclear+hydro base, but constrained siting drives high marginal costs.',
+        NEISO: 'Most volatile curve. Offshore wind potential is high but uncertain.'
     };
 
     container.innerHTML = REGIONS.map(iso => {
-        const c = colors[iso];
-        const steps = [];
-        for (let i = 1; i < marg[iso].length; i++) {
-            if (marg[iso][i] != null && marg[iso][i] > 0) steps.push({ val: marg[iso][i], idx: i });
-        }
-        const minS = steps.reduce((a, b) => a.val < b.val ? a : b, steps[0]);
-        const maxS = steps.reduce((a, b) => a.val > b.val ? a : b, steps[0]);
-        const dacSteps = steps.filter(s => s.val >= dacThreshold).length;
-
-        // ANOVA top driver
+        const c = REGION_CLR[iso];
+        const backbone = marg[iso][0];
+        const lastStep = marg[iso][marg[iso].length - 1];
+        const dacSteps = marg[iso].filter(v => v != null && v >= dacThreshold).length;
         let topDriver = '', topPct = 0;
         if (typeof MAC_ANOVA !== 'undefined' && MAC_ANOVA[iso]) {
             const sorted = Object.entries(MAC_ANOVA[iso]).sort((a, b) => b[1] - a[1]);
@@ -699,12 +558,11 @@ txt('dacMidLabel', dacMed.mid);
         return `<div class="region-card" style="border-top-color:${c}">` +
             `<div class="region-card-head">` +
             `  <span class="region-dot" style="background:${c}"></span>` +
-            `  <span class="region-name">${names[iso]}</span>` +
+            `  <span class="region-name">${REGION_NAMES[iso]}</span>` +
             `  <span class="region-mac99" style="color:${c}">$${mac[iso][8]}/ton</span>` +
             `</div>` +
-            `<p>Average MAC: $${mac[iso][0]}–${mac[iso][8]}/ton (75–99%). ` +
-            `Marginal range: $${minS.val}/ton (${STEP_LABELS[minS.idx - 1]}) to ` +
-            `$${maxS.val}/ton (${STEP_LABELS[maxS.idx - 1]}). ` +
+            `<p>Average MAC: $${mac[iso][0]}\u2013${mac[iso][8]}/ton (75\u201399%). ` +
+            `Backbone: $${backbone}/ton. Last step: $${lastStep >= 1000 ? '1,000+' : lastStep}/ton. ` +
             `${dacSteps > 0 ? dacSteps + ' step' + (dacSteps > 1 ? 's' : '') + ' exceed DAC.' : 'No steps exceed DAC.'} ` +
             `${topDriver ? topDriver + ' drives ' + topPct + '% of variance.' : ''}</p>` +
             `<p>${stories[iso]}</p>` +
@@ -713,7 +571,7 @@ txt('dacMidLabel', dacMed.mid);
 })();
 
 // ============================================================================
-// 6. INFLECTION TABLE (fully dynamic)
+// 5. INFLECTION TABLE
 // ============================================================================
 (function buildInflectionTable() {
     const headEl = $('inflectionHead');
@@ -736,14 +594,13 @@ txt('dacMidLabel', dacMed.mid);
     bodyEl.innerHTML = REGIONS.map(iso => {
         const cells = benchmarks.map(b => {
             const xo = findCrossover(mac[iso], b.val);
-            const cls = xo === '>100' ? 'cell-green' : parseInt(xo) >= 95 ? 'cell-green' :
+            const cls = xo === '>99' ? 'cell-green' : parseInt(xo) >= 95 ? 'cell-green' :
                 parseInt(xo) >= 90 ? 'cell-orange' : 'cell-red';
-            return `<td class="${cls}">${xo === '>100' ? '>99%' : xo + '%'}</td>`;
+            return `<td class="${cls}">${xo === '>99' ? '>99%' : xo + '%'}</td>`;
         });
         return `<tr><td style="font-weight:700;text-align:left;padding-left:14px;">${iso}</td>${cells.join('')}</tr>`;
     }).join('');
 
-    // Stats row
     if (statsEl) {
         statsEl.innerHTML =
             `<div class="counter-item">` +
@@ -762,7 +619,7 @@ txt('dacMidLabel', dacMed.mid);
 })();
 
 // ============================================================================
-// 7. ANOVA CHART
+// 6. ANOVA CHART
 // ============================================================================
 (function buildAnovaChart() {
     const ctx = $('anovaChart')?.getContext('2d');
@@ -790,59 +647,58 @@ txt('dacMidLabel', dacMed.mid);
                 datalabels: { display: false }
             },
             scales: {
-                y: { beginAtZero: true, max: 70, title: { display: true, text: 'Variance Explained (η²%)', font: { size: 13 } },
+                y: { beginAtZero: true, max: 70, title: { display: true, text: 'Variance Explained (\u03B7\u00B2%)', font: { size: 13 } },
                     ticks: { callback: v => v + '%' } },
                 x: { ticks: { font: { size: 12, weight: 600 } } }
             }
         }
     });
 
-    // Insight
     const ercotRenew = Math.round(MAC_ANOVA.ERCOT['Renewable Gen'] * 100);
     const nyisoFirm = Math.round(MAC_ANOVA.NYISO['Firm Gen'] * 100);
     html('anovaInsight',
         `<strong>Key finding:</strong> MAC uncertainty is driven by different factors in each region. ` +
-        `ERCOT's costs are ${ercotRenew}% driven by renewable costs (cheap wind). ` +
-        `NYISO's are ${nyisoFirm}% driven by firm generation costs (expensive nuclear). ` +
-        `Storage contributes &lt;2% of variance everywhere — it's a small share of total cost.`
+        `ERCOT: ${ercotRenew}% renewable costs (cheap wind). ` +
+        `NYISO: ${nyisoFirm}% firm generation costs (expensive nuclear). ` +
+        `Storage contributes &lt;2% of variance everywhere.`
     );
 })();
 
 // ============================================================================
-// 8. PORTFOLIO NARRATIVE (dynamic)
+// 7. PORTFOLIO NARRATIVE (dynamic from marginal data)
 // ============================================================================
 (function buildPortfolio() {
     const n = $('portfolioNarrative');
     if (!n) return;
 
-    // Find efficient inflection per region
     const inflections = {};
     REGIONS.forEach(r => {
-        for (let i = 1; i < marg[r].length; i++) {
+        for (let i = 0; i < marg[r].length; i++) {
             if (marg[r][i] != null && marg[r][i] >= dacThreshold) {
-                inflections[r] = THRESHOLDS[i - 1];
+                inflections[r] = MARGINAL_THRESHOLDS[i];
                 return;
             }
         }
         inflections[r] = '>99';
     });
 
-    const minInf = Math.min(...Object.values(inflections).filter(v => typeof v === 'number'));
-    const maxInf = Math.max(...Object.values(inflections).filter(v => typeof v === 'number'));
+    const numInf = Object.values(inflections).filter(v => typeof v === 'number');
+    const minInf = numInf.length ? Math.min(...numInf) : 90;
+    const maxInf = numInf.length ? Math.max(...numInf) : 99;
 
     n.innerHTML =
-        `<p>Push the grid backbone as far as it's efficient, then diversify. The optimal pivot point — where ` +
-        `marginal grid cost exceeds DAC ($${dacMed.mid}/ton, 2040–2045 projection) — ranges from ` +
+        `<p>Push the grid backbone as far as it's efficient, then diversify. The optimal pivot point \u2014 where ` +
+        `marginal grid cost exceeds DAC ($${dacMed.mid}/ton, 2040\u20132045 projection) \u2014 ranges from ` +
         `<strong>${minInf}% to ${maxInf === Infinity ? '>99' : maxInf}%</strong> depending on region.</p>` +
 
         `<div class="callout" style="margin: 20px 0;">` +
         `<strong>Regional inflection points (marginal MAC &gt; DAC $${dacMed.mid}/ton):</strong><br>` +
-        REGIONS.map(r => `${r}: <strong>${inflections[r]}%</strong>`).join(' · ') +
+        REGIONS.map(r => `${r}: <strong>${inflections[r]}%</strong>`).join(' \u00B7 ') +
         `</div>` +
 
         `<p><strong>The bottom line:</strong> Grid decarbonization is the most cost-effective abatement tool through ~90% ` +
-        `everywhere. The last 5–10% costs 3–8× more per ton than the first 90%. Push each region to its ` +
-        `inflection point (${minInf}–${maxInf}%), then invest the savings into DAC, BECCS, SAF, and ` +
+        `everywhere. The last 5\u201310% costs 3\u20138\u00D7 more per ton. Push each region to its ` +
+        `inflection point, then invest the savings into DAC, BECCS, SAF, and ` +
         `industrial electrification. More total tons abated, across more sectors, at lower total cost.</p>`;
 })();
 
