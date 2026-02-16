@@ -151,8 +151,9 @@ NEISO_WHOLESALE_ADDER = 4.0    # $/MWh annualized: winter gas on marginal pricin
 
 
 def load_results():
-    """Load optimizer results from cache (preferred) or dashboard file."""
-    for path in [CACHE_PATH, RESULTS_PATH]:
+    """Load optimizer results — prefer dashboard JSON (has Step 2 tranche pricing)
+    over the cache (which is the Step 1 original). Postprocess must run AFTER Step 2."""
+    for path in [RESULTS_PATH, CACHE_PATH]:
         if os.path.exists(path):
             with open(path) as f:
                 data = json.load(f)
@@ -212,13 +213,16 @@ def ccs_lcoe_dispatchable(lcoe_no45q, capacity_factor):
 
 def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
                                 ldes_pct, match_score, scenario_key,
-                                apply_45q=True, neiso_gas_adder=False):
+                                apply_45q=True, neiso_gas_adder=False,
+                                tranche_cf_lcoe=None):
     """
     Recalculate costs for a scenario with optional corrections.
 
     Args:
         apply_45q: If False, remove 45Q offset and use CF-dependent CCS LCOE
         neiso_gas_adder: If True, apply NEISO winter gas pipeline constraint
+        tranche_cf_lcoe: If provided, use this LCOE for clean_firm instead of
+                         blended table lookup (from Step 2 tranche repricing)
     """
     renewable, firm, storage, fuel, tx = decode_scenario_key(scenario_key)
 
@@ -226,7 +230,7 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
     lcoe_map = {
         'solar': FULL_LCOE_TABLES['solar'][renewable][iso],
         'wind': FULL_LCOE_TABLES['wind'][renewable][iso],
-        'clean_firm': FULL_LCOE_TABLES['clean_firm'][firm][iso],
+        'clean_firm': tranche_cf_lcoe if tranche_cf_lcoe is not None else FULL_LCOE_TABLES['clean_firm'][firm][iso],
         'battery': FULL_LCOE_TABLES['battery'][storage][iso],
         'ldes': FULL_LCOE_TABLES['ldes'][storage][iso],
         'hydro': 0,
@@ -328,6 +332,16 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
     }
 
 
+def get_tranche_cf_lcoe(scenario):
+    """Extract tranche-effective clean firm LCOE from Step 2 data, if available."""
+    tc = scenario.get('tranche_costs', {}).get('clean_firm_tranche', {})
+    lcoe = tc.get('effective_cf_lcoe')
+    # Only use if non-zero (zero means no clean firm in the mix)
+    if lcoe and lcoe > 0:
+        return lcoe
+    return None
+
+
 def fix_co2_monotonicity(data):
     """Enforce CO₂ non-decreasing across thresholds (running-max)."""
     print("\n  [1] CO₂ Monotonicity Enforcement")
@@ -389,6 +403,7 @@ def fix_45q_offset(data):
                     continue
 
                 # CCS exists in mix — recalculate costs with corrected 45Q
+                # Use tranche LCOE for clean_firm if Step 2 data exists
                 costs = compute_costs_for_scenario(
                     iso, mix,
                     scenario.get('procurement_pct', 100),
@@ -398,6 +413,7 @@ def fix_45q_offset(data):
                     sk,
                     apply_45q=True,
                     neiso_gas_adder=False,
+                    tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
                 )
 
                 # Update simplified costs dict
@@ -443,6 +459,7 @@ def add_no45q_overlay(data):
                     sk,
                     apply_45q=False,
                     neiso_gas_adder=False,
+                    tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
                 )
 
                 scenario['no_45q_costs'] = no45q_costs
@@ -497,6 +514,7 @@ def add_neiso_gas_constraint(data):
             mix = scenario.get('resource_mix', {})
 
             # Compute NEISO-adjusted costs (with gas constraint)
+            tcl = get_tranche_cf_lcoe(scenario)
             neiso_costs = compute_costs_for_scenario(
                 iso, mix,
                 scenario.get('procurement_pct', 100),
@@ -506,6 +524,7 @@ def add_neiso_gas_constraint(data):
                 sk,
                 apply_45q=True,
                 neiso_gas_adder=True,
+                tranche_cf_lcoe=tcl,
             )
 
             # Also compute no-45Q + gas constraint
@@ -518,10 +537,26 @@ def add_neiso_gas_constraint(data):
                 sk,
                 apply_45q=False,
                 neiso_gas_adder=True,
+                tranche_cf_lcoe=tcl,
             )
 
             scenario['neiso_gas_adjusted'] = neiso_costs
             scenario['neiso_gas_no45q'] = neiso_no45q_costs
+
+            # Overwrite main costs with gas-adjusted values so dashboard displays them
+            scenario['costs'] = neiso_costs
+
+            # Also update costs_detail if present
+            if 'costs_detail' in scenario:
+                detail = scenario['costs_detail']
+                detail['effective_cost_per_useful_mwh'] = neiso_costs['effective_cost']
+                detail['total_cost_per_demand_mwh'] = neiso_costs['total_cost']
+                detail['incremental_above_baseline'] = neiso_costs['incremental']
+                detail['baseline_wholesale_cost'] = neiso_costs['wholesale']
+
+            # Overwrite no_45q_costs with gas-adjusted version too
+            scenario['no_45q_costs'] = neiso_no45q_costs
+
             adjustments += 1
 
     print(f"      {adjustments} NEISO scenarios adjusted for gas pipeline constraint")
