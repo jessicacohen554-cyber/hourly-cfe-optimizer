@@ -2,7 +2,7 @@
 // SHARED DATA MODULE — Single source of truth for all dashboard pages
 // ============================================================================
 // RULE: No data constants defined in HTML files. Change here, propagates everywhere.
-// Updated: 2026-02-15 from optimizer results (overprocure_results.json)
+// Updated: 2026-02-16 from tranche-repriced results (Step 2 + Step 3 pipeline)
 // ============================================================================
 
 // --- Thresholds (from optimizer) ---
@@ -15,25 +15,25 @@ const THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
 // Low/High = P10/P90 from 324-scenario factorial experiment
 const MAC_DATA = {
     medium: {
-        CAISO:  [93,  96,  104, 104, 107, 107, 109, 116, 118],
+        CAISO:  [94,  96,  104, 104, 107, 107, 109, 116, 118],
         ERCOT:  [24,  26,  31,  35,  36,  40,  43,  46,  50],
-        PJM:    [49,  49,  49,  50,  52,  53,  56,  63,  63],
-        NYISO:  [104, 108, 108, 108, 108, 108, 108, 120, 120],
-        NEISO:  [115, 115, 122, 123, 125, 129, 137, 146, 146]
+        PJM:    [74,  80,  90,  90,  90,  91,  91,  94,  94],
+        NYISO:  [126, 126, 135, 135, 135, 135, 141, 141, 150],
+        NEISO:  [115, 115, 122, 122, 125, 129, 134, 146, 146]
     },
     low: {
         CAISO:  [46,  48,  50,  52,  53,  56,  59,  65,  66],
         ERCOT:  [5,   6,   10,  13,  14,  17,  20,  23,  25],
-        PJM:    [12,  13,  14,  16,  17,  18,  20,  24,  27],
-        NYISO:  [50,  49,  50,  51,  51,  55,  57,  70,  75],
-        NEISO:  [52,  58,  61,  61,  63,  67,  72,  76,  84]
+        PJM:    [29,  34,  34,  38,  38,  42,  42,  49,  56],
+        NYISO:  [61,  64,  76,  79,  84,  84,  91,  91,  103],
+        NEISO:  [52,  57,  61,  61,  66,  67,  78,  88,  88]
     },
     high: {
-        CAISO:  [110, 120, 122, 127, 126, 132, 139, 147, 153],
-        ERCOT:  [39,  41,  46,  49,  52,  54,  59,  63,  68],
-        PJM:    [65,  68,  72,  74,  75,  78,  79,  87,  92],
-        NYISO:  [139, 146, 148, 150, 153, 160, 166, 175, 182],
-        NEISO:  [145, 145, 147, 147, 150, 153, 165, 175, 183]
+        CAISO:  [110, 120, 122, 127, 127, 132, 139, 147, 153],
+        ERCOT:  [39,  41,  46,  49,  51,  54,  59,  63,  68],
+        PJM:    [91,  91,  93,  94,  95,  98,  98,  104, 107],
+        NYISO:  [149, 149, 149, 149, 153, 160, 166, 175, 182],
+        NEISO:  [145, 145, 146, 147, 156, 156, 165, 175, 183]
     }
 };
 
@@ -139,16 +139,16 @@ const MARGINAL_MAC_LABELS = ['75→90%', '90→92.5%', '92.5→95%', '95→97.5%
 const MARGINAL_MAC_DATA = {
     medium: {
         CAISO:  [187, 187, 187, 1000, 1000],
-        ERCOT:  [137, 137, 174, 207, 290],
+        ERCOT:  [136, 136, 174, 207, 290],
         PJM:    [65,  162, 414, 414, 435],
-        NYISO:  [73,  77,  137, 143, 177],
-        NEISO:  [181, 320, 894, 894, 894]
+        NYISO:  [73,  76,  137, 143, 177],
+        NEISO:  [180, 320, 894, 894, 894]
     },
     low: {
         CAISO:  [86,  129, 166, 203, 238],
         ERCOT:  [72,  110, 135, 154, 202],
         PJM:    [28,  84,  168, 222, 269],
-        NYISO:  [47,  70,  103, 108, 183],
+        NYISO:  [47,  70,  102, 108, 183],
         NEISO:  [59,  62,  102, 141, 518]
     },
     high: {
@@ -161,16 +161,17 @@ const MARGINAL_MAC_DATA = {
 };
 
 // --- Effective Cost per Useful MWh ($/MWh) ---
-// Source: Step 2 cost optimization (tranche-repriced MMM_M_M scenario)
+// Source: Step 2 cost optimization (tranche-repriced MMM_M_M scenario) + Step 3 postprocess
 // Merit-order tranche pricing: nuclear uprates (5% of fleet, capped) filled first,
 // then regional new-build (geothermal CAISO, SMR elsewhere)
+// Monotonicity enforced via running max (45Q correction can create artifacts)
 // Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
 const EFFECTIVE_COST_DATA = {
-    CAISO:  [56.2, 57.1, 61.2, 63.0, 65.1, 66.2, 68.7, 70.3, 71.5],
-    ERCOT:  [37.0, 38.2, 41.2, 43.7, 44.3, 46.6, 48.8, 50.9, 53.5],
-    PJM:    [66.6, 71.6, 78.4, 80.4, 81.5, 82.3, 82.4, 86.2, 86.2],
-    NYISO:  [82.2, 81.9, 93.0, 93.4, 94.3, 91.9, 98.6, 99.1, 103.3],
-    NEISO:  [73.7, 75.2, 80.0, 81.1, 83.3, 84.9, 87.9, 93.2, 101.4]
+    CAISO:  [56.2, 57.2, 61.3, 63.0, 65.1, 65.3, 67.9, 70.4, 71.7],
+    ERCOT:  [37.0, 38.2, 41.2, 43.6, 44.3, 46.6, 48.8, 50.9, 53.5],
+    PJM:    [66.6, 71.6, 78.4, 80.4, 81.5, 82.3, 82.3, 86.2, 86.2],
+    NYISO:  [82.2, 82.2, 93.0, 93.4, 94.3, 94.3, 98.6, 98.6, 103.3],
+    NEISO:  [73.7, 75.4, 80.1, 81.1, 83.3, 85.5, 87.9, 93.2, 96.0]
 };
 
 // --- Nuclear Uprate Caps (TWh/yr) — 5% of existing nuclear at 90% CF ---

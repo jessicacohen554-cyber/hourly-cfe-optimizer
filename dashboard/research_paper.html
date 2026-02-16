@@ -1014,25 +1014,17 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <!-- Y axis title -->
             <text x="20" y="160" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151" transform="rotate(-90,20,160)">Effective $/MWh</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target (75&ndash;99%) across five ISO regions at Medium cost assumptions with merit-order clean firm pricing. ERCOT maintains the lowest costs ($37&ndash;$54/MWh). PJM and NYISO show the steepest escalation ($67&ndash;$86 and $82&ndash;$103/MWh respectively) as the tranche model exposes the high marginal cost of new-build nuclear beyond the limited uprate pool.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target (75&ndash;99%) across five ISO regions at Medium cost assumptions with merit-order clean firm pricing. ERCOT maintains the lowest costs (<span id="rp-ercot-range"></span>). PJM and NYISO show the steepest escalation (<span id="rp-pjm-range"></span> and <span id="rp-nyiso-range"></span> respectively) as the tranche model exposes the high marginal cost of new-build nuclear beyond the limited uprate pool.</div>
     </div>
 
     <h3>5.2 Cross-Regional Cost Comparison</h3>
     <div class="table-wrap">
-    <table>
+    <table id="rp-cost-table">
         <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
-        <tbody>
-            <tr><td><strong>75%</strong></td><td>$56/MWh</td><td>$37/MWh</td><td>$67/MWh</td><td>$82/MWh</td><td>$74/MWh</td></tr>
-            <tr><td><strong>85%</strong></td><td>$61/MWh</td><td>$41/MWh</td><td>$78/MWh</td><td>$93/MWh</td><td>$80/MWh</td></tr>
-            <tr><td><strong>90%</strong></td><td>$65/MWh</td><td>$44/MWh</td><td>$82/MWh</td><td>$94/MWh</td><td>$83/MWh</td></tr>
-            <tr><td><strong>92.5%</strong></td><td>$66/MWh</td><td>$47/MWh</td><td>$82/MWh</td><td>$92/MWh</td><td>$85/MWh</td></tr>
-            <tr><td><strong>95%</strong></td><td>$69/MWh</td><td>$49/MWh</td><td>$82/MWh</td><td>$99/MWh</td><td>$88/MWh</td></tr>
-            <tr><td><strong>97.5%</strong></td><td>$70/MWh</td><td>$51/MWh</td><td>$86/MWh</td><td>$99/MWh</td><td>$93/MWh</td></tr>
-            <tr><td><strong>99%</strong></td><td>$72/MWh</td><td>$54/MWh</td><td>$86/MWh</td><td>$103/MWh</td><td>$101/MWh</td></tr>
-        </tbody>
+        <tbody></tbody>
     </table>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-muted);">All values are effective cost per useful MWh (total procurement cost divided by matched fraction of demand).</p>
+    <p style="font-size:0.82rem;color:var(--text-muted);">All values are effective cost per useful MWh (total procurement cost divided by matched fraction of demand). Source: shared-data.js EFFECTIVE_COST_DATA.</p>
 
     <h3>5.3 Resource Mix Evolution</h3>
     <p>
@@ -2379,6 +2371,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const marg = MARGINAL_MAC_DATA.medium;
     const margLabels = MARGINAL_MAC_LABELS;
     function s(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+    // --- Populate effective cost table from shared data ---
+    const costTable = document.querySelector('#rp-cost-table tbody');
+    if (costTable && typeof EFFECTIVE_COST_DATA !== 'undefined') {
+        const showIdx = [0, 2, 4, 5, 6, 7, 8]; // 75,85,90,92.5,95,97.5,99
+        showIdx.forEach(i => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = '<td><strong>' + THRESHOLDS[i] + '%</strong></td>' +
+                regions.map(r => '<td>$' + Math.round(EFFECTIVE_COST_DATA[r][i]) + '/MWh</td>').join('');
+            costTable.appendChild(tr);
+        });
+    }
+
+    // --- Populate Figure 3 caption cost ranges ---
+    function costRange(iso) {
+        const d = EFFECTIVE_COST_DATA[iso];
+        return '$' + Math.round(d[0]) + '\u2013$' + Math.round(d[8]) + '/MWh';
+    }
+    s('rp-ercot-range', costRange('ERCOT'));
+    s('rp-pjm-range', costRange('PJM'));
+    s('rp-nyiso-range', costRange('NYISO'));
 
     // Global MAC range at 99%
     const allMac99 = regions.map(r => mac[r][8]);
