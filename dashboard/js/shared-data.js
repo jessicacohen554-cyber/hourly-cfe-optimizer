@@ -88,10 +88,11 @@ const BENCHMARKS_DYNAMIC = {
     dac: {
         name: 'Direct Air Capture (DAC)', short: 'DAC', color: '#E91E63', category: 'carbon_removal', confidence: 'low',
         trajectory: 'declining_steep',
-        Low:    { low: 250,  mid: 400,  high: 600 },
-        Medium: { low: 400,  mid: 600,  high: 1500 },
-        High:   { low: 600,  mid: 1000, high: 1500 },
-        sources: 'ETH Zurich 2024, Climeworks, Belfer Center'
+        // 2040-2045 projected costs (IEAGHG NOAK, Climeworks roadmap, Belfer Center, Sievert/McQueen Joule 2024)
+        Low:    { low: 100,  mid: 150,  high: 250 },
+        Medium: { low: 150,  mid: 250,  high: 400 },
+        High:   { low: 250,  mid: 400,  high: 600 },
+        sources: 'IEAGHG NOAK 2024, Climeworks roadmap, Belfer Center, Sievert/McQueen (Joule 2024), DOE Carbon Negative Shot'
     },
     industrial: {
         name: 'Industrial Electrification', short: 'Ind. Electrification', color: '#8BC34A', category: 'industrial_decarb', confidence: 'medium',
@@ -138,13 +139,14 @@ const MARGINAL_MAC_DATA = {
 };
 
 // --- Crossover Summary (from stepwise MAC P50) ---
+// DAC benchmarks use 2040-2045 projected costs (IEAGHG NOAK, Sievert/McQueen Joule 2024)
 const CROSSOVER_SUMMARY = {
     // Threshold at which stepwise marginal MAC first exceeds SCC ($190/ton)
-    scc_190: { CAISO: 75, ERCOT: 95, PJM: 95, NYISO: 87.5, NEISO: 80 },
-    // Threshold at which stepwise marginal MAC first exceeds DAC low ($400/ton)
-    dac_400: { CAISO: 85, ERCOT: '>99', PJM: 97.5, NYISO: 95, NEISO: 92.5 },
-    // Threshold at which stepwise marginal MAC first exceeds DAC high ($600/ton)
-    dac_600: { CAISO: '>99', ERCOT: '>99', PJM: 99, NYISO: '>99', NEISO: 95 }
+    scc_190: { CAISO: 75, ERCOT: 92.5, PJM: 92.5, NYISO: 90, NEISO: 90 },
+    // Threshold at which stepwise marginal MAC first exceeds DAC Medium mid ($250/ton)
+    dac_250: { CAISO: 85, ERCOT: 97.5, PJM: 92.5, NYISO: 90, NEISO: 90 },
+    // Threshold at which stepwise marginal MAC first exceeds DAC High mid ($400/ton)
+    dac_400: { CAISO: 85, ERCOT: '>99', PJM: 97.5, NYISO: 95, NEISO: 92.5 }
 };
 
 // ============================================================================
