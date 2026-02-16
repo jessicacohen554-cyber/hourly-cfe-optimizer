@@ -88,11 +88,15 @@ const BENCHMARKS_DYNAMIC = {
     dac: {
         name: 'Direct Air Capture (DAC)', short: 'DAC', color: '#E91E63', category: 'carbon_removal', confidence: 'low',
         trajectory: 'declining_steep',
-        // 2040-2045 projected costs (IEAGHG NOAK, Climeworks roadmap, Belfer Center, Sievert/McQueen Joule 2024)
-        Low:    { low: 100,  mid: 150,  high: 250 },
-        Medium: { low: 150,  mid: 250,  high: 400 },
-        High:   { low: 250,  mid: 400,  high: 600 },
-        sources: 'IEAGHG NOAK 2024, Climeworks roadmap, Belfer Center, Sievert/McQueen (Joule 2024), DOE Carbon Negative Shot'
+        // 2040-2045 projected costs with learning curves
+        // Sources: DOE Liftoff NOAK, IEAGHG 2021, Fasihi et al. (2019), Sievert/McQueen (Joule 2024),
+        //          Climeworks Gen 3 roadmap, DOE Carbon Negative Shot, Kanyako & Craig (Earth's Future 2025)
+        // Low = DOE NOAK + aggressive learning (12-15% LR); Mid = IEAGHG NOAK + moderate learning (8-10% LR);
+        // High = Sievert et al. multi-component curves + slow deployment (5-8% LR)
+        Low:    { low: 65,   mid: 100,  high: 175 },
+        Medium: { low: 100,  mid: 175,  high: 300 },
+        High:   { low: 175,  mid: 300,  high: 500 },
+        sources: 'DOE Liftoff NOAK, IEAGHG 2021, Fasihi et al. (J. Cleaner Prod. 2019), Sievert et al. (Joule 2024), Climeworks Gen 3 roadmap, DOE Carbon Negative Shot, Kanyako & Craig (Earth\'s Future 2025)'
     },
     industrial: {
         name: 'Industrial Electrification', short: 'Ind. Electrification', color: '#8BC34A', category: 'industrial_decarb', confidence: 'medium',
@@ -139,14 +143,14 @@ const MARGINAL_MAC_DATA = {
 };
 
 // --- Crossover Summary (from stepwise MAC P50) ---
-// DAC benchmarks use 2040-2045 projected costs (IEAGHG NOAK, Sievert/McQueen Joule 2024)
+// DAC benchmarks use 2040-2045 learning-curve-weighted projections
 const CROSSOVER_SUMMARY = {
     // Threshold at which stepwise marginal MAC first exceeds SCC ($190/ton)
     scc_190: { CAISO: 75, ERCOT: 92.5, PJM: 92.5, NYISO: 90, NEISO: 90 },
-    // Threshold at which stepwise marginal MAC first exceeds DAC Medium mid ($250/ton)
-    dac_250: { CAISO: 85, ERCOT: 97.5, PJM: 92.5, NYISO: 90, NEISO: 90 },
-    // Threshold at which stepwise marginal MAC first exceeds DAC High mid ($400/ton)
-    dac_400: { CAISO: 85, ERCOT: '>99', PJM: 97.5, NYISO: 95, NEISO: 92.5 }
+    // Threshold at which stepwise marginal MAC first exceeds DAC Medium mid ($175/ton)
+    dac_175: { CAISO: 75, ERCOT: 92.5, PJM: 92.5, NYISO: 90, NEISO: 90 },
+    // Threshold at which stepwise marginal MAC first exceeds DAC High mid ($300/ton)
+    dac_300: { CAISO: 85, ERCOT: '>99', PJM: 92.5, NYISO: 92.5, NEISO: 90 }
 };
 
 // ============================================================================
