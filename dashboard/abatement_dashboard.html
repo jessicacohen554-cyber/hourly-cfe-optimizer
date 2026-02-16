@@ -545,9 +545,9 @@ body {
             <canvas id="anovaChart"></canvas>
         </div>
 
-        <!-- Portfolio Mix -->
+        <!-- Marginal MAC by Region (toggle-responsive) -->
         <div class="chart-card">
-            <div class="chart-card-title">Optimal Decarbonization Portfolio</div>
+            <div class="chart-card-title">Marginal MAC by Region — Two-Zone View</div>
             <canvas id="portfolioChart"></canvas>
         </div>
 
@@ -794,42 +794,56 @@ function buildAnovaChart() {
 }
 
 // ============================================================================
-// CHART: Portfolio
+// CHART: Marginal MAC by Region (toggle-responsive, two-zone view)
 // ============================================================================
 let portfolioInst = null;
 function buildPortfolio() {
     const ctx = document.getElementById('portfolioChart').getContext('2d');
-    const targets = [75, 80, 85, 88, 90, 92, 94, 95, 96, 97, 98, 99, 100];
-    const gridShare =       [95, 92, 88, 85, 80, 72, 62, 55, 45, 35, 25, 18, 10];
-    const efficiencyShare = [3,  5,  7,  8,  10, 12, 14, 15, 16, 16, 15, 14, 12];
-    const crossSector =     [1.5,2,  3,  4,  5,  8,  12, 15, 18, 22, 26, 28, 30];
-    const removal =         [0.5,1,  2,  3,  5,  8,  12, 15, 21, 27, 34, 40, 48];
+    const s = getState();
+    const gridLevel = s.grid.toLowerCase();
+    const margData = MARGINAL_MAC_DATA[gridLevel] || MARGINAL_MAC_DATA.medium;
+    const dacCosts = BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+
+    const datasets = regions.map(iso => ({
+        label: iso,
+        data: margData[iso].map(v => v != null ? Math.min(v, 1050) : 0),
+        backgroundColor: REGION_COLORS[iso] + 'AA',
+        borderColor: REGION_COLORS[iso],
+        borderWidth: 1.5,
+        borderRadius: 4,
+        barPercentage: 0.75,
+        categoryPercentage: 0.85
+    }));
 
     if (portfolioInst) portfolioInst.destroy();
     portfolioInst = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: targets.map(t => t + '%'),
-            datasets: [
-                { label: 'Grid Decarbonization', data: gridShare, backgroundColor: 'rgba(74,144,217,0.7)', borderColor: '#4a90d9', borderWidth: 2, fill: 'origin', tension: 0.4, pointRadius: 0 },
-                { label: 'Efficiency & Electrification', data: efficiencyShare, backgroundColor: 'rgba(34,197,94,0.7)', borderColor: '#22C55E', borderWidth: 2, fill: 'origin', tension: 0.4, pointRadius: 0 },
-                { label: 'Cross-Sector (SAF, H\u2082)', data: crossSector, backgroundColor: 'rgba(255,152,0,0.7)', borderColor: '#FF9800', borderWidth: 2, fill: 'origin', tension: 0.4, pointRadius: 0 },
-                { label: 'Carbon Removal (DAC, BECCS)', data: removal, backgroundColor: 'rgba(233,30,99,0.7)', borderColor: '#E91E63', borderWidth: 2, fill: 'origin', tension: 0.4, pointRadius: 0 }
-            ]
-        },
+        type: 'bar',
+        data: { labels: MARGINAL_MAC_LABELS, datasets },
         options: {
             responsive: true, maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             scales: {
-                x: { title: { display: true, text: 'Grid Clean Energy Target', font: { size: 12, weight: 600 } }, ticks: { font: { size: 10 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
-                y: { stacked: true, min: 0, max: 100, title: { display: true, text: 'Budget Share (%)', font: { size: 12, weight: 600 } }, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
+                x: { title: { display: true, text: 'CFE Matching Step', font: { size: 11, weight: 600 } },
+                    ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 20 },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                y: { min: 0, max: 1100,
+                    title: { display: true, text: 'Marginal MAC ($/ton CO\u2082)', font: { size: 11, weight: 600 } },
+                    ticks: { callback: v => '$' + v, font: { size: 10 }, stepSize: 200 },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
             },
             plugins: {
                 legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10, weight: 600 } } },
-                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + '%' } },
+                tooltip: { callbacks: { label: item => item.dataset.label + ': $' + margData[item.dataset.label][item.dataIndex] + '/ton' } },
                 datalabels: { display: false },
-                annotation: { annotations: { inflection: { type: 'line', xMin: 4, xMax: 4, borderColor: 'rgba(0,0,0,0.2)', borderWidth: 2, borderDash: [6,4],
-                    label: { display: true, content: '90% Inflection', position: 'start', font: { size: 10, weight: 600 }, color: 'rgba(0,0,0,0.45)', backgroundColor: 'rgba(255,255,255,0.8)', padding: 3 } } } }
+                annotation: {
+                    annotations: {
+                        scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980088', borderWidth: 2, borderDash: [6, 4],
+                            label: { display: true, content: 'SCC $190', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } },
+                        dac: { type: 'line', yMin: dacCosts.mid, yMax: dacCosts.mid, borderColor: '#E91E6388', borderWidth: 2, borderDash: [6, 4],
+                            label: { display: true, content: 'DAC $' + dacCosts.mid, position: 'end', font: { size: 9, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
+                    }
+                }
             }
         }
     });
@@ -931,7 +945,7 @@ function buildInflectionTable() {
             findCrossover(macData[region], remMid),
             findCrossover(macData[region], dacMid)
         ];
-        row.innerHTML = '<td>' + region + '</td>' + vals.map(v => '<td class="' + cellClass(v) + '">' + (v === '>100' ? '>100%' : v + '%') + '</td>').join('');
+        row.innerHTML = '<td>' + region + '</td>' + vals.map(v => '<td class="' + cellClass(v) + '">' + (v === '>99' || v === '>100' ? '>99%' : v + '%') + '</td>').join('');
         tbody.appendChild(row);
     });
 }
@@ -948,20 +962,20 @@ function updateSummary() {
     const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
     const insights = regions.map(r => ({ region: r, dacCross: findCrossover(data[r], dacMid) }));
     const best = insights.reduce((a, b) => {
-        const aVal = a.dacCross === '>100' ? 101 : a.dacCross;
-        const bVal = b.dacCross === '>100' ? 101 : b.dacCross;
+        const aVal = a.dacCross === '>99' ? 101 : a.dacCross;
+        const bVal = b.dacCross === '>99' ? 101 : b.dacCross;
         return aVal > bVal ? a : b;
     });
     const worst = insights.reduce((a, b) => {
-        const aVal = a.dacCross === '>100' ? 101 : a.dacCross;
-        const bVal = b.dacCross === '>100' ? 101 : b.dacCross;
+        const aVal = a.dacCross === '>99' ? 101 : a.dacCross;
+        const bVal = b.dacCross === '>99' ? 101 : b.dacCross;
         return aVal < bVal ? a : b;
     });
 
     const el = document.getElementById('crossoverSummary');
     let html = '<strong>Under these assumptions:</strong> Grid decarbonization beats DAC through <strong>' +
-        (best.dacCross === '>100' ? '>100%' : best.dacCross + '%') + '</strong> in ' + best.region +
-        ' (best) and through <strong>' + (worst.dacCross === '>100' ? '>100%' : worst.dacCross + '%') +
+        (best.dacCross === '>99' ? '>99%' : best.dacCross + '%') + '</strong> in ' + best.region +
+        ' (best) and through <strong>' + (worst.dacCross === '>99' ? '>99%' : worst.dacCross + '%') +
         '</strong> in ' + worst.region + ' (worst).';
     if (s.dac === 'Low') html += ' With aggressive DAC cost declines, crossovers shift 2\u20134 points earlier.';
     if (s.grid === 'High') html += ' High grid costs accelerate the crossover \u2014 tariffs and permitting delays weaken the backbone.';
