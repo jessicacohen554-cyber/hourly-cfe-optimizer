@@ -2120,10 +2120,12 @@ function populateMacNarrativeValues() {
         s('hp-renew-pct-ercot', Math.round(MAC_ANOVA.ERCOT['Renewable Gen'] * 100));
     }
 
-    // Stepwise marginal at 97.5→99 step (index 8)
-    const lastStep = regions.map(r => marg[r][8]).filter(v => v !== null && v > 0);
+    // Last-mile marginal step (97.5→99%, index 4 in new two-zone format)
+    const lastStep = regions.map(r => marg[r][marg[r].length - 1]).filter(v => v !== null && v > 0);
     if (lastStep.length) {
-        s('hp-marg-last-step', Math.min(...lastStep) + '–' + Math.max(...lastStep));
+        const lo = Math.min(...lastStep);
+        const hi = Math.max(...lastStep);
+        s('hp-marg-last-step', lo + '\u2013' + (hi >= 1000 ? '1,000+' : hi));
     }
 }
 
