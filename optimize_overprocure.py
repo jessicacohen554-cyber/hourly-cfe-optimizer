@@ -1258,7 +1258,7 @@ def find_optimal_storage(demand_arr, supply_matrix, mix_fractions, procurement_f
                 best_batt = bp
                 best_ldes = lp
 
-    # Fine sweep around best
+    # Medium sweep (2% steps in ±4% window)
     fine_best_score = best_score
     fine_best_batt = best_batt
     fine_best_ldes = best_ldes
@@ -1272,7 +1272,24 @@ def find_optimal_storage(demand_arr, supply_matrix, mix_fractions, procurement_f
                 fine_best_batt = bp
                 fine_best_ldes = lp
 
-    return fine_best_score, fine_best_batt, fine_best_ldes
+    # Ultra-fine sweep (0.5% steps in ±2% window around best)
+    ultra_best_score = fine_best_score
+    ultra_best_batt = fine_best_batt
+    ultra_best_ldes = fine_best_ldes
+    # Generate 0.5% step values: e.g. for best=10, window is [8.0, 8.5, 9.0, ..., 12.0]
+    bp_vals = [max(0, fine_best_batt + d * 0.5) for d in range(-4, 5)]
+    lp_vals = [max(0, fine_best_ldes + d * 0.5) for d in range(-4, 5)]
+    for bp in bp_vals:
+        for lp in lp_vals:
+            score = fast_score_with_both_storage(
+                demand_arr, supply_matrix, mix_fractions, procurement_factor, bp, lp
+            )
+            if score > ultra_best_score:
+                ultra_best_score = score
+                ultra_best_batt = bp
+                ultra_best_ldes = lp
+
+    return ultra_best_score, ultra_best_batt, ultra_best_ldes
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2379,6 +2396,78 @@ def optimize_for_threshold(iso, demand_norm, supply_profiles, threshold, hydro_c
             p3_finalists_since_improvement = 0
         else:
             p3_finalists_since_improvement += 1
+
+    # ---- Phase 4: Ultra-fine storage sweep (0.5% steps) ----
+    # Triggered when storage (battery or LDES) is in the best result or in any
+    # mix within $4/MWh of the global optimum. Reduces storage sub-optimality
+    # from ~$3.64/MWh (2% steps) to <$0.5/MWh (0.5% steps).
+    # Cost: ~81 evaluations × ~0.3ms = ~25ms per candidate. Negligible.
+    if best_result:
+        p4_threshold = best_cost + 4.0  # $4/MWh window
+        # Collect mixes to refine: best result + any Phase 3 finalists within $4
+        p4_candidates = []
+        if best_result['battery_dispatch_pct'] > 0 or best_result['ldes_dispatch_pct'] > 0:
+            p4_candidates.append(best_result)
+
+        # Scan all phase2 + phase3 results for storage-containing mixes within $4
+        all_results = (phase2 if phase2 else []) + (top if top else [])
+        for cand_cost, cand_combo, cand_score, cand_bp, cand_lp, cand_proc in all_results:
+            if cand_cost <= p4_threshold and (cand_bp > 0 or cand_lp > 0):
+                p4_candidates.append({
+                    'resource_mix': dict(cand_combo),
+                    'procurement_pct': cand_proc,
+                    'battery_dispatch_pct': cand_bp,
+                    'ldes_dispatch_pct': cand_lp,
+                    'hourly_match_score': round(cand_score * 100, 1),
+                })
+
+        # Deduplicate by (mix, procurement)
+        p4_seen = set()
+        p4_unique = []
+        for cand in p4_candidates:
+            mix = cand['resource_mix']
+            key = (mix.get('clean_firm', 0), mix.get('solar', 0), mix.get('wind', 0),
+                   mix.get('ccs_ccgt', 0), mix.get('hydro', 0), cand['procurement_pct'])
+            if key not in p4_seen:
+                p4_seen.add(key)
+                p4_unique.append(cand)
+
+        for cand in p4_unique:
+            mix = cand['resource_mix']
+            proc = cand['procurement_pct']
+            bp_base = cand['battery_dispatch_pct']
+            lp_base = cand['ldes_dispatch_pct']
+            pf = proc / 100.0
+            mix_fracs = tuple(mix[rt] / 100.0 for rt in RESOURCE_TYPES)
+
+            # Sweep 0.5% steps in a ±3% window around current storage levels
+            bp_vals = [max(0, bp_base + d * 0.5) for d in range(-6, 7)]
+            lp_vals = [max(0, lp_base + d * 0.5) for d in range(-6, 7)]
+
+            # Combined battery + LDES
+            for bp in bp_vals:
+                for lp in lp_vals:
+                    if bp == 0 and lp == 0:
+                        continue
+                    score = c_both_score(mix_fracs, pf, bp, lp)
+                    if score >= target:
+                        update_best(mix, proc, bp, lp, score)
+
+            # Battery-only at 0.5% steps
+            for bp in bp_vals:
+                if bp == 0:
+                    continue
+                score = c_battery_score(mix_fracs, pf, bp)
+                if score >= target:
+                    update_best(mix, proc, bp, 0, score)
+
+            # LDES-only at 0.5% steps
+            for lp in lp_vals:
+                if lp == 0:
+                    continue
+                score = c_both_score(mix_fracs, pf, 0, lp)
+                if score >= target:
+                    update_best(mix, proc, 0, lp, score)
 
     return best_result
 
