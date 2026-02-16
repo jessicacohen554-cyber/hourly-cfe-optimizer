@@ -325,6 +325,27 @@ body {
 }
 .summary-strip strong { color: var(--navy); }
 
+/* ========== PER-REGION ENVELOPE GRID ========== */
+.envelope-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px; margin: 8px 0;
+}
+.envelope-card {
+    background: #F8F9FB; border: 1px solid var(--border-light); border-radius: 10px;
+    padding: 14px; border-top: 3px solid #ccc; position: relative;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.envelope-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.envelope-card-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.88rem; font-weight: 700; color: var(--navy); margin-bottom: 2px;
+    display: flex; align-items: center; gap: 6px;
+}
+.envelope-card-subtitle {
+    font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;
+}
+.envelope-card canvas { width: 100% !important; height: 180px !important; }
+
 /* ========== CHART GRID ========== */
 .chart-grid {
     display: grid;
@@ -423,8 +444,11 @@ body {
 @media (max-width: 900px) {
     .chart-grid { grid-template-columns: 1fr; }
     .controls-grid { grid-template-columns: 1fr 1fr; }
+    .envelope-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 }
 @media (max-width: 600px) {
+    .envelope-grid { grid-template-columns: 1fr; }
+    .envelope-card canvas { height: 160px !important; }
     .dashboard-wrap { padding: 20px 14px 36px; }
     .controls-panel { padding: 20px 16px; }
     .controls-grid { grid-template-columns: 1fr; }
@@ -507,14 +531,14 @@ body {
         <div class="summary-strip" id="crossoverSummary"></div>
     </div>
 
+    <!-- Per-Region Envelope Grid -->
+    <div class="chart-card chart-card-full" style="margin-bottom:24px;">
+        <div class="chart-card-title">Abatement Cost by Region — P10/P90 Uncertainty Envelopes<sup style="font-size:0.7em;color:#6B7280;">[1][7]</sup></div>
+        <div class="envelope-grid" id="macEnvelopeGrid"></div>
+    </div>
+
     <!-- Chart Grid -->
     <div class="chart-grid">
-        <!-- MAC Fan Chart (full width) -->
-        <div class="chart-card chart-card-full">
-            <div class="chart-card-title">Abatement Cost by Region — P10/P90 Uncertainty Fan across 324 Cost Scenarios<sup style="font-size:0.7em;color:#6B7280;">[1][7]</sup></div>
-            <canvas id="macChart"></canvas>
-        </div>
-
         <!-- ANOVA Sensitivity -->
         <div class="chart-card">
             <div class="chart-card-title">What Drives MAC Uncertainty? (ANOVA Decomposition)</div>
@@ -607,114 +631,120 @@ const CHART_DEFAULTS = {
 };
 
 // ============================================================================
-// CHART: MAC Fan Chart — P10/P90 bands from 324 scenario factorial experiment
+// CHART: Per-Region MAC Envelope Charts (small multiples)
 // ============================================================================
-let macChartInst = null;
+let macChartInstances = {};
 function buildMacChart() {
     const s = getState();
-    const ctx = document.getElementById('macChart').getContext('2d');
-    const thresholds9 = THRESHOLDS; // [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
+    const grid = document.getElementById('macEnvelopeGrid');
+    if (!grid) return;
 
-    const datasets = [];
     const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const regionNames = { CAISO: 'CAISO (California)', ERCOT: 'ERCOT (Texas)', PJM: 'PJM (Mid-Atlantic)',
+                          NYISO: 'NYISO (New York)', NEISO: 'NEISO (New England)' };
+    const thresholds9 = THRESHOLDS;
+    const gridLevel = s.grid.toLowerCase();
+    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
+    const dacCosts = BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
 
-    regions.forEach(region => {
-        const fan = MAC_FAN_DATA[region];
+    // Destroy old instances
+    Object.values(macChartInstances).forEach(c => c.destroy());
+    macChartInstances = {};
+
+    // Compute shared Y max
+    let yMax = 0;
+    regions.forEach(iso => {
+        const fan = MAC_FAN_DATA?.[iso];
+        if (fan) yMax = Math.max(yMax, ...fan.p90.filter(v => v != null));
+    });
+    yMax = Math.ceil(yMax / 25) * 25 + 25;
+
+    // Build card HTML
+    grid.innerHTML = regions.map(iso => {
+        const c = REGION_COLORS[iso];
+        const mac99 = macData[iso]?.[8] || 0;
+        const p10_99 = Math.round(MAC_FAN_DATA[iso]?.p10?.[8] || 0);
+        const p90_99 = Math.round(MAC_FAN_DATA[iso]?.p90?.[8] || 0);
+        return `<div class="envelope-card" style="border-top-color:${c}">` +
+            `<div class="envelope-card-title">` +
+            `  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c}"></span>` +
+            `  ${regionNames[iso]}` +
+            `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1rem;font-weight:800;color:${c}">$${mac99}/ton</span>` +
+            `</div>` +
+            `<div class="envelope-card-subtitle">At 99% · Range: $${p10_99}–$${p90_99}/ton</div>` +
+            `<canvas id="macEnv_${iso}"></canvas>` +
+            `</div>`;
+    }).join('');
+
+    // Build each chart
+    regions.forEach(iso => {
+        const ctx = document.getElementById('macEnv_' + iso)?.getContext('2d');
+        if (!ctx) return;
+        const fan = MAC_FAN_DATA?.[iso];
+        const env = MAC_ENVELOPE_DATA?.[iso]?.envelope;
         if (!fan) return;
 
-        // P10-P90 band (light fill)
-        datasets.push({
-            label: region + ' P90',
-            data: thresholds9.map((t, i) => ({ x: t, y: fan.p90[i] })),
-            borderColor: 'transparent',
-            backgroundColor: REGION_COLORS[region] + '15',
-            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3
-        });
-        datasets.push({
-            label: region + ' P10',
-            data: thresholds9.map((t, i) => ({ x: t, y: fan.p10[i] })),
-            borderColor: REGION_COLORS[region] + '40',
-            backgroundColor: 'transparent',
-            borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3
-        });
+        const c = REGION_COLORS[iso];
+        const p90 = fan.p90.map((v, i) => ({ x: thresholds9[i], y: v }));
+        const p10 = fan.p10.map((v, i) => ({ x: thresholds9[i], y: v }));
+        const p50 = (env || fan.p50).map((v, i) => ({ x: thresholds9[i], y: v }));
 
-        // P25-P75 band (medium fill)
-        datasets.push({
-            label: region + ' P75',
-            data: thresholds9.map((t, i) => ({ x: t, y: fan.p75[i] })),
-            borderColor: 'transparent',
-            backgroundColor: REGION_COLORS[region] + '20',
-            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 2
-        });
-        datasets.push({
-            label: region + ' P25',
-            data: thresholds9.map((t, i) => ({ x: t, y: fan.p25[i] })),
-            borderColor: 'transparent',
-            backgroundColor: 'transparent',
-            borderWidth: 0, pointRadius: 0, fill: false, tension: 0.3, order: 2
-        });
-
-        // Envelope median line (bold)
-        const env = MAC_ENVELOPE_DATA[region];
-        const envLine = env ? env.envelope : fan.p50;
-        datasets.push({
-            label: region,
-            data: thresholds9.map((t, i) => ({ x: t, y: envLine[i] })),
-            borderColor: REGION_COLORS[region],
-            backgroundColor: REGION_COLORS[region] + '18',
-            borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6, fill: false, tension: 0.3, order: 1
-        });
-    });
-
-    // Benchmark annotation lines
-    const dacCosts = BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
-    const annotations = {
-        sccLine: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF9800', borderWidth: 1.5, borderDash: [6, 4],
-            label: { display: true, content: 'EPA SCC $190', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } },
-        rennertLine: { type: 'line', yMin: 185, yMax: 185, borderColor: '#E65100', borderWidth: 1.5, borderDash: [6, 4],
-            label: { display: true, content: 'Rennert SCC $185', position: 'end', font: { size: 9, weight: 600 }, color: '#E65100', backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 } },
-        dacLabel: { type: 'label', xValue: 99, yValue: 242, content: ['\u2191 DAC: $' + dacCosts.mid + '/ton'], font: { size: 9, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 }
-    };
-
-    if (macChartInst) macChartInst.destroy();
-    macChartInst = new Chart(ctx, {
-        type: 'line',
-        data: { datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'nearest', intersect: false },
-            scales: {
-                x: { type: 'linear', min: 74, max: 101,
-                    title: { display: true, text: 'Hourly Clean Energy Target (%)', font: { size: 12, weight: 600 } },
-                    ticks: { stepSize: 5, callback: v => v + '%', font: { size: 10 } },
-                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
-                },
-                y: { type: 'linear', min: 0, max: 250,
-                    title: { display: true, text: 'Average Abatement Cost ($/ton CO\u2082)', font: { size: 12, weight: 600 } },
-                    ticks: { stepSize: 50, callback: v => '$'+v.toLocaleString(), font: { size: 10 } },
-                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
-                }
+        macChartInstances[iso] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    { label: 'P90', data: p90, borderColor: 'transparent', backgroundColor: c + '20',
+                        borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3 },
+                    { label: 'P10', data: p10, borderColor: c + '44', backgroundColor: 'transparent',
+                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3 },
+                    { label: 'Midpoint', data: p50, borderColor: c, backgroundColor: c + '18',
+                        borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, fill: false, tension: 0.3, order: 1 }
+                ]
             },
-            plugins: {
-                legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11, weight: 600 },
-                    filter: item => !item.text.includes('P') && !item.text.includes('band') } },
-                tooltip: {
-                    callbacks: {
-                        title: items => items[0].raw.x + '% Target',
-                        label: item => {
-                            if (item.dataset.label.includes('P')) return null;
-                            const region = item.dataset.label;
-                            const idx = THRESHOLDS.indexOf(item.raw.x);
-                            const fan = MAC_FAN_DATA[region];
-                            if (!fan || idx < 0) return region + ': $' + Math.round(item.raw.y) + '/ton';
-                            return region + ': $' + Math.round(item.raw.y) + '/ton (P10: $' + Math.round(fan.p10[idx]) + ', P90: $' + Math.round(fan.p90[idx]) + ')';
-                        }
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'nearest', intersect: false },
+                scales: {
+                    x: { type: 'linear', min: 74, max: 100,
+                        ticks: { stepSize: 5, callback: v => v + '%', font: { size: 9 } },
+                        grid: { display: false }, border: { display: true, color: '#D4D8E0' }
+                    },
+                    y: { min: 0, max: yMax,
+                        ticks: { callback: v => '$' + v, font: { size: 9 }, stepSize: 50 },
+                        grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: true, color: '#D4D8E0' }
                     }
                 },
-                annotation: { annotations },
-                datalabels: { display: false }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(26,39,68,0.92)',
+                        titleFont: { family: "'Barlow Semi Condensed', sans-serif", size: 11, weight: '600' },
+                        bodyFont: { family: "'Barlow Semi Condensed', sans-serif", size: 10 },
+                        padding: 8, cornerRadius: 6,
+                        callbacks: {
+                            title: items => items[0].raw.x + '% Target',
+                            label: item => {
+                                if (item.dataset.label !== 'Midpoint') return null;
+                                const idx = THRESHOLDS.indexOf(item.raw.x);
+                                return 'MAC: $' + Math.round(item.raw.y) + '/ton' +
+                                    (idx >= 0 ? ' (P10: $' + Math.round(fan.p10[idx]) + ', P90: $' + Math.round(fan.p90[idx]) + ')' : '');
+                            }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980099', borderWidth: 1.5, borderDash: [5, 3],
+                                label: { display: true, content: 'SCC $190', position: 'start', font: { size: 8 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
+                            },
+                            dac: { type: 'line', yMin: dacCosts.mid, yMax: dacCosts.mid, borderColor: '#E91E6399', borderWidth: 1.5, borderDash: [5, 3],
+                                label: { display: true, content: 'DAC $' + dacCosts.mid, position: 'end', font: { size: 8 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
+                            }
+                        }
+                    },
+                    datalabels: { display: false }
+                }
             }
-        }
+        });
     });
 }
 
