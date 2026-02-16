@@ -139,6 +139,29 @@ p:last-child { margin-bottom: 0; }
 .page-footer a { color: rgba(255,255,255,0.7); text-decoration: none; margin: 0 12px; }
 .page-footer a:hover { color: #fff; }
 
+/* ===== PER-REGION ENVELOPE GRID ===== */
+.envelope-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px; margin: 24px 0;
+}
+.envelope-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; border-top: 3px solid #ccc; position: relative;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.envelope-card:hover {
+    border-color: var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.envelope-card-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+}
+.envelope-card-subtitle {
+    font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;
+}
+.envelope-card canvas { width: 100% !important; height: 200px; }
+
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
     .header h1 { font-size: 2rem; }
@@ -146,6 +169,8 @@ p:last-child { margin-bottom: 0; }
     h2 { font-size: 1.4rem; }
     .counter-row { flex-direction: column; }
     .chart-wrap { padding: 14px; }
+    .envelope-grid { grid-template-columns: 1fr; }
+    .envelope-card canvas { height: 180px; }
 }
 </style>
 </head>
@@ -175,17 +200,15 @@ p:last-child { margin-bottom: 0; }
 </section>
 
 <!-- ============================================================ -->
-<!-- SECTION 2: MAC ENVELOPE + FAN CHART -->
+<!-- SECTION 2: PER-REGION MAC ENVELOPES -->
 <!-- ============================================================ -->
 <section>
     <span class="section-num">Section 1</span>
-    <h2>Average MAC with Uncertainty Bands</h2>
-    <p>The bold lines show the monotonic cost envelope (Medium scenario). Shaded bands show P10–P90
-       uncertainty across 324 cost scenarios. Where bands are wide, cost assumptions drive outcomes.</p>
-    <div class="chart-wrap" style="height: 420px;">
-        <div class="chart-title">Average Abatement Cost Envelope ($/ton CO₂) — P10/P90 Uncertainty</div>
-        <canvas id="envelopeChart"></canvas>
-    </div>
+    <h2>Average MAC with Uncertainty Bands — By Region</h2>
+    <p>Each panel shows one region's cost envelope. Bold line = monotonic MAC midpoint (Medium scenario).
+       Shaded band = P10–P90 range across 324 cost scenarios. Dashed lines mark SCC ($190/ton) and
+       DAC 2040–2045 midpoint ($<span id="dacMidLabel"></span>/ton). Where bands are wide, cost assumptions drive outcomes.</p>
+    <div class="envelope-grid" id="envelopeGrid"></div>
     <div class="callout" id="envelopeInsight"></div>
 </section>
 
@@ -345,7 +368,7 @@ const highestISO  = REGIONS[mac99.indexOf(Math.max(...mac99))];
 const dacMed = BENCHMARKS_DYNAMIC.dac.Medium;
 const dacLow = BENCHMARKS_DYNAMIC.dac.Low;
 const dacHigh = BENCHMARKS_DYNAMIC.dac.High;
-const dacThreshold = dacMed.mid; // $250/ton for 2040-2045
+const dacThreshold = dacMed.mid; // dynamically from shared-data.js
 
 const regionsExceedingDAC = REGIONS.filter(r =>
     marg[r].some((v, i) => i > 0 && v != null && v >= dacThreshold)
@@ -384,103 +407,123 @@ html('keyCounters',
 );
 
 // ============================================================================
-// 2. ENVELOPE + FAN CHART
+// 2. PER-REGION ENVELOPE CHARTS (small multiples)
 // ============================================================================
-(function buildEnvelopeChart() {
-    const ctx = $('envelopeChart')?.getContext('2d');
-    if (!ctx) return;
-    const thresholds = THRESHOLDS.slice(0, 9); // exclude 100%
-    const datasets = [];
+txt('dacMidLabel', dacMed.mid);
 
+(function buildEnvelopeGrid() {
+    const grid = $('envelopeGrid');
+    if (!grid) return;
+    const thresholds = THRESHOLDS.slice(0, 9);
+    const regionNames = { CAISO: 'CAISO (California)', ERCOT: 'ERCOT (Texas)', PJM: 'PJM (Mid-Atlantic)',
+                          NYISO: 'NYISO (New York)', NEISO: 'NEISO (New England)' };
+
+    // Build cards
+    grid.innerHTML = REGIONS.map(iso => {
+        const c = REGION_CLR[iso];
+        return `<div class="envelope-card" style="border-top-color:${c}">` +
+            `<div class="envelope-card-title">` +
+            `  <span class="region-dot" style="background:${c}"></span>` +
+            `  ${regionNames[iso]}` +
+            `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1.1rem;font-weight:800;color:${c}">$${mac[iso][8]}/ton</span>` +
+            `</div>` +
+            `<div class="envelope-card-subtitle">Avg MAC at 99% · P10–P90 range: $${Math.round(MAC_FAN_DATA[iso]?.p10?.[8] || 0)}–$${Math.round(MAC_FAN_DATA[iso]?.p90?.[8] || 0)}/ton</div>` +
+            `<canvas id="env_${iso}"></canvas>` +
+            `</div>`;
+    }).join('');
+
+    // Compute shared Y max across all regions for comparable scales
+    let yMax = 0;
     REGIONS.forEach(iso => {
-        const env = MAC_ENVELOPE_DATA?.[iso]?.envelope;
         const fan = MAC_FAN_DATA?.[iso];
+        if (fan) yMax = Math.max(yMax, ...fan.p90.slice(0, 9).filter(v => v != null));
+    });
+    yMax = Math.ceil(yMax / 25) * 25 + 25;
+
+    // Build each chart
+    REGIONS.forEach(iso => {
+        const ctx = document.getElementById('env_' + iso)?.getContext('2d');
+        if (!ctx) return;
+        const fan = MAC_FAN_DATA?.[iso];
+        const env = MAC_ENVELOPE_DATA?.[iso]?.envelope;
         if (!fan) return;
 
-        // P10-P90 fill
+        const c = REGION_CLR[iso];
         const p90 = fan.p90.slice(0, 9).map((v, i) => ({ x: thresholds[i], y: v }));
         const p10 = fan.p10.slice(0, 9).map((v, i) => ({ x: thresholds[i], y: v }));
-        datasets.push({
-            label: iso + ' P90', data: p90,
-            borderColor: 'transparent', backgroundColor: REGION_CLR[iso] + '18',
-            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3
-        });
-        datasets.push({
-            label: iso + ' P10', data: p10,
-            borderColor: REGION_CLR[iso] + '44', backgroundColor: 'transparent',
-            borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3
-        });
+        const p50 = (env || fan.p50).slice(0, 9).map((v, i) => ({ x: thresholds[i], y: v }));
 
-        // Envelope (bold)
-        const envData = (env || fan.p50).slice(0, 9).map((v, i) => ({ x: thresholds[i], y: v }));
-        datasets.push({
-            label: iso, data: envData,
-            borderColor: REGION_CLR[iso], backgroundColor: REGION_CLR[iso] + '18',
-            borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6,
-            fill: false, tension: 0.3, order: 1
-        });
-    });
-
-    new Chart(ctx, {
-        type: 'line',
-        data: { datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'nearest', intersect: false },
-            scales: {
-                x: {
-                    type: 'linear', min: 74, max: 100,
-                    title: { display: true, text: 'Hourly Clean Energy Target (%)', font: { size: 13, weight: 600 } },
-                    ticks: { stepSize: 5, callback: v => v + '%' },
-                    grid: { display: false }
-                },
-                y: {
-                    min: 0, max: 200,
-                    title: { display: true, text: 'Average MAC ($/ton CO₂)', font: { size: 13, weight: 600 } },
-                    ticks: { callback: v => '$' + v },
-                    grid: { display: false }
-                }
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    { label: 'P90', data: p90, borderColor: 'transparent', backgroundColor: c + '20',
+                        borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3 },
+                    { label: 'P10', data: p10, borderColor: c + '44', backgroundColor: 'transparent',
+                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3 },
+                    { label: 'Midpoint', data: p50, borderColor: c, backgroundColor: c + '18',
+                        borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6, fill: false, tension: 0.3, order: 1 }
+                ]
             },
-            plugins: {
-                legend: {
-                    labels: {
-                        filter: item => !item.text.includes('P90') && !item.text.includes('P10'),
-                        usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12, weight: 600 }
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'nearest', intersect: false },
+                scales: {
+                    x: {
+                        type: 'linear', min: 74, max: 100,
+                        ticks: { stepSize: 5, callback: v => v + '%', font: { size: 10 } },
+                        grid: { display: false },
+                        border: { display: true, color: '#D4D8E0' }
+                    },
+                    y: {
+                        min: 0, max: yMax,
+                        ticks: { callback: v => '$' + v, font: { size: 10 }, stepSize: 50 },
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                        border: { display: true, color: '#D4D8E0' }
                     }
                 },
-                tooltip: {
-                    callbacks: {
-                        title: items => items[0].raw.x + '% Target',
-                        label: item => {
-                            if (item.dataset.label.includes('P')) return null;
-                            return item.dataset.label + ': $' + Math.round(item.raw.y) + '/ton';
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(26,39,68,0.92)',
+                        titleFont: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: '600' },
+                        bodyFont: { family: "'Barlow Semi Condensed', sans-serif", size: 11 },
+                        padding: 10, cornerRadius: 6,
+                        callbacks: {
+                            title: items => items[0].raw.x + '% Target',
+                            label: item => {
+                                if (item.dataset.label === 'P90' || item.dataset.label === 'P10') return null;
+                                return 'MAC: $' + Math.round(item.raw.y) + '/ton';
+                            }
                         }
-                    }
-                },
-                annotation: {
-                    annotations: {
-                        scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF9800', borderWidth: 1.5, borderDash: [6, 4],
-                            label: { display: true, content: 'SCC ($190/ton)', position: 'start', font: { size: 10 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
-                        },
-                        euEts: { type: 'box', yMin: 65, yMax: 92, backgroundColor: 'rgba(33,150,243,0.06)', borderColor: 'rgba(33,150,243,0.2)', borderWidth: 1,
-                            label: { display: true, content: 'EU ETS ($65-92)', position: 'end', font: { size: 10 }, color: '#2196F3', backgroundColor: 'rgba(255,255,255,0.85)', padding: 3 }
+                    },
+                    annotation: {
+                        annotations: {
+                            scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980099', borderWidth: 1.5, borderDash: [5, 3],
+                                label: { display: true, content: 'SCC $190', position: 'start', font: { size: 9 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
+                            },
+                            dac: { type: 'line', yMin: dacMed.mid, yMax: dacMed.mid, borderColor: '#E91E6399', borderWidth: 1.5, borderDash: [5, 3],
+                                label: { display: true, content: 'DAC $' + dacMed.mid, position: 'end', font: { size: 9 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
+                            }
                         }
-                    }
-                },
-                datalabels: { display: false }
+                    },
+                    datalabels: { display: false }
+                }
             }
-        }
+        });
     });
 
-    // Insight callout
+    // Insight callout (range-based conclusion)
     const p10min = Math.round(Math.min(...REGIONS.map(r => Math.min(...MAC_FAN_DATA[r].p10.filter(v => v != null)))));
     const p90max = Math.round(Math.max(...REGIONS.map(r => Math.max(...MAC_FAN_DATA[r].p90.filter(v => v != null)))));
+    const allEnvMax = Math.max(...mac99);
     html('envelopeInsight',
-        `<strong>The envelope tells the story:</strong> Under Medium cost assumptions, no region's average MAC ` +
-        `exceeds $${Math.max(...mac99)}/ton through 99%. The P10–P90 uncertainty band spans ` +
-        `$${p10min}–${p90max}/ton — driven primarily by ` +
-        `${Math.round(MAC_ANOVA.ERCOT['Renewable Gen'] * 100)}% renewable costs in ERCOT and ` +
-        `${Math.round(MAC_ANOVA.NYISO['Firm Gen'] * 100)}% firm generation costs in NYISO.`
+        `<strong>Midpoint conclusion:</strong> No region's average MAC midpoint exceeds ` +
+        `$${allEnvMax}/ton through 99% — well below both the SCC ($190) and DAC ($${dacMed.mid}). ` +
+        `<strong>Range context:</strong> The P10–P90 uncertainty band spans $${p10min}–${p90max}/ton across ` +
+        `all regions and thresholds. ERCOT has the tightest band (least cost uncertainty), ` +
+        `while ${highestISO} shows the widest — driven by ` +
+        `${Math.round((MAC_ANOVA[highestISO]?.['Firm Gen'] || 0) * 100)}% firm generation cost variance.`
     );
 })();
 
@@ -551,10 +594,9 @@ html('keyCounters',
         for (let i = 5; i <= 7; i++) if (marg[r][i] != null && marg[r][i] > 0) volZone.push(marg[r][i]);
     });
     html('marginalInsight',
-        `<strong>Three zones emerge:</strong> ` +
-        `<strong>Efficient (75–90%):</strong> Marginal MAC stays under $${Math.max(...effZone)}/ton. ` +
-        `<strong>Volatile (90–97.5%):</strong> Swings from $${Math.min(...volZone)} to $${Math.max(...volZone)}/ton. ` +
-        `<strong>Diminishing (&gt;97.5%):</strong> Some regions see CO₂ decrease (resource mix shifts prioritize matching over abatement). ` +
+        `<strong>Midpoint:</strong> Median marginal MAC stays under $${Math.max(...effZone)}/ton through 90% (efficient zone). ` +
+        `<strong>Range:</strong> The 90–97.5% zone swings from $${Math.min(...volZone)} to $${Math.max(...volZone)}/ton across regions. ` +
+        `Beyond 97.5%, some regions see diminishing CO₂ returns as resource mix shifts prioritize matching over abatement. ` +
         `The grid backbone holds through ~90% everywhere. Beyond that, strategy is region-specific.`
     );
 })();
