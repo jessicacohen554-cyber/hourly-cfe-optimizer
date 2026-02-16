@@ -5,6 +5,20 @@
 
 ## Current Status (Feb 16, 2026)
 
+### Three-Step Pipeline Architecture
+
+The optimizer operates as a three-step pipeline. Steps are independent — only re-run the step whose inputs changed.
+
+| Step | Name | What It Does | When to Re-run |
+|------|------|-------------|---------------|
+| **Step 1** | **Physics Optimization** | Hourly match optimization: sweeps resource mixes, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces 324 scenarios × 10 thresholds × 5 regions = 16,200 physics-validated resource mixes. | Only if dispatch logic, generation curves, or demand curves change. |
+| **Step 2** | **Cost Optimization** | Applies cost model to cached physics results. Merit-order tranche pricing for clean firm (uprate → new-build). NEISO gas constraint and other post-processing that may shift global optima. Re-ranks scenarios to find lowest-cost physics-valid mix per threshold/region. | When cost assumptions, tranche caps, LCOE tables, or constraints change. No physics re-run needed. |
+| **Step 3** | **Post-Processing** | CO₂ calculations, MAC calculations, statistical analysis (P10/P50/P90, ANOVA), monotonicity enforcement. Produces final results for site. | When Step 2 outputs change, or when CO₂ methodology changes. |
+
+**Key principle**: Step 1 is expensive (hours of compute). Steps 2-3 are cheap (seconds). Changing cost assumptions only requires Steps 2-3.
+
+**Data contract**: Step 2 must NOT change existing columns in shared-data.js or overprocure_results.json. Add new columns/fields as needed. This prevents recoding existing figures and dashboards.
+
 ### What was accomplished
 - [x] Homepage (`index.html`) — 4 charts rendering with real data, region toggle pills, narrative sections
 - [x] Carbon Abatement Dashboard (`abatement_dashboard.html`) — 3 charts (MAC, portfolio, ladder) fully rendering with hardcoded illustrative data + 4 stress-test toggles
@@ -470,47 +484,72 @@ The 10 individual cost toggles are **paired into 5 groups** where related variab
 | Medium | $73 | $40 | $62 | $81 | $73 |
 | High | $95 | $52 | $81 | $105 | $95 |
 
-### 5.3 Clean Firm LCOE ($/MWh) — Blended Uprate + New-Build, Regionalized
+### 5.3 Clean Firm LCOE ($/MWh) — Merit-Order Tranche Model (Step 2)
 
-Clean firm LCOE is a **capacity-weighted blend** of nuclear uprate costs and new-build costs, reflecting that the first incremental clean firm capacity a buyer would procure comes from uprating existing plants (much cheaper) before requiring new-build SMRs.
+Clean firm cost uses a **merit-order supply curve** with two tranches, filled cheapest-first. The effective LCOE depends on how much clean firm a scenario requires — small amounts are cheap (all uprates), large amounts are expensive (hitting new-build tranche). This is a Step 2 cost calculation applied to cached Step 1 physics results.
 
-**Nuclear uprate LCOE** (incremental cost of adding capacity to existing plants):
+#### Tranche 1: Nuclear Uprates (Cheapest, Capped)
+
+**Uprate LCOE** (incremental cost of adding capacity to existing plants):
 | Level | LCOE ($/MWh) | Basis |
 |---|---|---|
 | Low | $15 | MUR-dominated (measurement recapture, minimal capital) |
-| Medium | $30 | Typical EPU blend (extended power uprate) |
-| High | $55 | Large-scope EPU (major equipment replacement) |
+| Medium | $25 | Typical MUR + stretch blend |
+| High | $40 | Stretch/small EPU with equipment replacement |
 
-*Sources: INL LWRS Program, NRC uprate database, NEI fleet data, Vistra/Meta 2026 PPA filings*
+*Sources: INL LWRS Program, NRC uprate database, NEI fleet data, Thunder Said Energy capex analysis, IRA §45Y PTC*
 
-**Regional uprate share** (fraction of new clean firm that comes from uprates vs. new-build):
-| Region | CAISO | ERCOT | PJM | NYISO | NEISO |
-|---|---|---|---|---|---|
-| Uprate share | 15% | 25% | 50% | 30% | 20% |
+**Uprate cap** — 5% of existing nuclear capacity (midpoint estimate accounting for partial exhaustion of MUR/stretch potential; EPU potential remains but is higher-cost):
 
-- **PJM**: 50% — 32 GW nuclear fleet, largest uprate pool (Constellation ~1GW, Vistra/Meta ~433MW announced)
-- **NYISO**: 30% — smaller fleet (3.4 GW) but FitzPatrick, Nine Mile Pt have uprate potential
-- **ERCOT**: 25% — South Texas Project (2.7 GW), MUR/stretch potential
-- **NEISO**: 20% — Millstone + Seabrook, limited fleet
-- **CAISO**: 15% — Diablo Canyon only (2.3 GW), minimal uprate headroom + geothermal is the cheap option
+| Region | Existing Nuclear (GW) | Uprate Cap (GW) | Uprate Cap (TWh/yr @ 90% CF) |
+|---|---|---|---|
+| **CAISO** | 2.3 (Diablo Canyon) | 0.12 | 0.9 |
+| **ERCOT** | 2.7 (South Texas Project) | 0.14 | 1.1 |
+| **PJM** | 32.0 (largest US fleet) | 1.60 | 12.6 |
+| **NYISO** | 3.4 (Nine Mile, FitzPatrick, Ginna) | 0.17 | 1.3 |
+| **NEISO** | 3.5 (Millstone, Seabrook) | 0.18 | 1.4 |
 
-**New-build component LCOE** (SMR/Gen III+ for capacity beyond uprates):
+*5% chosen as midpoint: NRC has approved ~8% fleet-wide historically, but MUR/stretch largely exhausted. Remaining potential is primarily EPU on ~27 of 94 reactors. DOE executive order targets ~3-5 GW; INL LWRS estimates 3-8% remaining. 5% balances optimism with exhaustion.*
+
+#### Tranche 2: Regional New-Build (Uncapped)
+
+New-build LCOE reflects the cheapest available firm clean option per region — geothermal in CAISO, SMR/advanced nuclear elsewhere. No need to separately differentiate geothermal vs SMR because geothermal competes at SMR-equivalent pricing to be prioritized.
+
 | Level | CAISO | ERCOT | PJM | NYISO | NEISO |
 |---|---|---|---|---|---|
 | Low | $65 | $70 | $80 | $85 | $82 |
 | Medium | $88 | $95 | $105 | $110 | $108 |
 | High | $125 | $135 | $160 | $170 | $165 |
 
-**Blended clean firm LCOE** (uprate_share × uprate + (1 - uprate_share) × new_build):
+*CAISO lowest due to geothermal (Salton Sea, Imperial Valley). ERCOT benefits from favorable siting/permitting. PJM mid-range. NYISO/NEISO highest due to siting constraints, labor costs, limited development pipeline.*
+
+#### Merit-Order Cost Calculation (Step 2 Pipeline)
+
+For each cached scenario's new clean firm demand (above existing grid share):
+```
+new_cf_twh = max(0, total_cf_pct - existing_cf_pct) / 100 × demand_twh
+uprate_twh = min(new_cf_twh, uprate_cap_twh)
+newbuild_twh = max(0, new_cf_twh - uprate_cap_twh)
+clean_firm_cost = uprate_twh × uprate_lcoe + newbuild_twh × newbuild_lcoe
+effective_cf_lcoe = clean_firm_cost / new_cf_twh  (if new_cf_twh > 0)
+```
+
+At low clean firm demand → effective LCOE approaches uprate price ($25/MWh Medium).
+At high clean firm demand → effective LCOE approaches new-build price ($88-110/MWh Medium).
+The transition point (where uprate cap is exhausted) varies by region — PJM has the most uprate headroom.
+
+**Replaces**: The previous fixed-blend model (§5.3 legacy: `uprate_share × uprate + (1-uprate_share) × new_build`) which applied the same effective LCOE regardless of quantity demanded. The tranche model makes clean firm cost quantity-dependent, which shifts optimal resource mixes at high thresholds.
+
+#### Legacy Blended Values (Preserved for Reference)
+
+Previous blended LCOE (still used in Step 1 physics optimization cache):
 | Level | CAISO | ERCOT | PJM | NYISO | NEISO |
 |---|---|---|---|---|---|
 | Low | $58 | $56 | $48 | $64 | $69 |
 | Medium | $79 | $79 | $68 | $86 | $92 |
 | High | $115 | $115 | $108 | $136 | $143 |
 
-*CAISO benefits from geothermal (lower new-build component). PJM gets the biggest discount due to largest uprate pool. NYISO/NEISO remain expensive due to smaller fleets and higher new-build costs.*
-
-**Why this matters**: Pure new-build clean firm LCOE ($93-150/MWh at Medium) overstates the cost of incremental clean firm capacity because it ignores the ~5 GW of uprate potential available at $15-55/MWh. The blended approach reflects the actual procurement cost curve a buyer would face.
+*These are what the Step 1 optimizer used. Step 2 reprices using the tranche model above.*
 
 ### 5.4 CCS-CCGT LCOE ($/MWh, net of 45Q)
 
