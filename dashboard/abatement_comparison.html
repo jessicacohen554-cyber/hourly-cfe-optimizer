@@ -971,7 +971,7 @@ body {
 <div style="max-width:960px;margin:0 auto;padding:0 48px 28px;background:#F3F4F8;">
     <div style="background:linear-gradient(135deg,rgba(14,165,233,0.06),rgba(233,30,99,0.04));border:2px solid rgba(14,165,233,0.15);border-radius:16px;padding:28px 32px;">
         <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.3rem;color:#0D9488;margin-bottom:8px;letter-spacing:-0.3px;">Key Insights: Where the Grid Gives Way</h3>
-        <p style="font-size:0.92rem;color:#1A1A1A;line-height:1.65;margin-bottom:20px;">Average MAC tells a reassuring story &mdash; $23&ndash;141/ton through 99%. But the <strong>marginal</strong> MAC reveals the real decision boundary. Individual threshold steps vary wildly: some cost $50/ton, others exceed DAC ($400&ndash;600/ton). The stepwise marginal analysis pinpoints exactly where each region should pivot from grid investment to alternative decarb pathways.</p>
+        <p style="font-size:0.92rem;color:#1A1A1A;line-height:1.65;margin-bottom:20px;">Average MAC tells a reassuring story &mdash; $<span id="nv-avg-min-75">...</span>&ndash;<span id="nv-avg-max-99">...</span>/ton through 99%. But the <strong>marginal</strong> MAC reveals the real decision boundary. Individual threshold steps vary wildly: some cost $<span id="nv-marg-global-min">...</span>/ton, others exceed DAC ($400&ndash;600/ton). The stepwise marginal analysis pinpoints exactly where each region should pivot from grid investment to alternative decarb pathways.</p>
 
         <!-- Regional Cost Cards -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px;">
@@ -979,41 +979,41 @@ body {
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                     <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block;"></span>
                     <span style="font-family:'Franklin Gothic Demi',sans-serif;font-size:0.95rem;font-weight:700;color:#1A2744;">CAISO</span>
-                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#F59E0B;margin-left:auto;">$109/ton</span>
+                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#F59E0B;margin-left:auto;">$<span id="nv-caiso-mac99">...</span>/ton</span>
                 </div>
-                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">Average MAC: $87&ndash;109/ton (75&ndash;99%). Solar abundance keeps costs stable. Marginal steps range from $60/ton (75&rarr;80%) to $348/ton (95&rarr;97.5%). Never exceeds DAC &mdash; grid investment stays competitive through the full range in this region.</div>
+                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">Average MAC: $<span id="nv-caiso-mac75">...</span>&ndash;<span id="nv-caiso-mac99b">...</span>/ton (75&ndash;99%). Solar abundance keeps costs stable. Marginal steps range from $<span id="nv-caiso-marg-min">...</span>/ton (<span id="nv-caiso-marg-min-step">...</span>) to $<span id="nv-caiso-marg-max">...</span>/ton (<span id="nv-caiso-marg-max-step">...</span>). <span id="nv-caiso-dac-count">...</span> step exceeds DAC &mdash; firm generation costs drive <span id="nv-caiso-top-driver-pct">...</span>% of MAC variance here.</div>
             </div>
             <div style="padding:16px;background:rgba(255,255,255,0.7);border-radius:10px;border-left:4px solid #22C55E;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                     <span style="width:10px;height:10px;border-radius:50%;background:#22C55E;display:inline-block;"></span>
                     <span style="font-family:'Franklin Gothic Demi',sans-serif;font-size:0.95rem;font-weight:700;color:#1A2744;">ERCOT</span>
-                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#22C55E;margin-left:auto;">$47/ton</span>
+                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#22C55E;margin-left:auto;">$<span id="nv-ercot-mac99">...</span>/ton</span>
                 </div>
-                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">The cost leader. Average MAC just $23&ndash;47/ton. Marginal costs stay under $100/ton through 92.5%, but the 92.5&rarr;95% step jumps to $412/ton &mdash; exceeding DAC. Cheap wind gets you far, but the last miles get expensive.</div>
+                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">The cost leader. Average MAC just $<span id="nv-ercot-mac75">...</span>&ndash;<span id="nv-ercot-mac99b">...</span>/ton. Marginal costs stay under $<span id="nv-ercot-marg-925">...</span>/ton through 92.5%. Cheap wind gets you far; renewable costs drive <span id="nv-ercot-renew-pct">...</span>% of MAC variance and fossil fuel prices another <span id="nv-ercot-fossil-pct">...</span>%.</div>
             </div>
             <div style="padding:16px;background:rgba(255,255,255,0.7);border-radius:10px;border-left:4px solid #4a90d9;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                     <span style="width:10px;height:10px;border-radius:50%;background:#4a90d9;display:inline-block;"></span>
                     <span style="font-family:'Franklin Gothic Demi',sans-serif;font-size:0.95rem;font-weight:700;color:#1A2744;">PJM</span>
-                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#4a90d9;margin-left:auto;">$60/ton</span>
+                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#4a90d9;margin-left:auto;">$<span id="nv-pjm-mac99">...</span>/ton</span>
                 </div>
-                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">The high-carbon advantage: PJM&rsquo;s coal-heavy grid means each clean MWh displaces more CO&#8322;. Average MAC flat at $50&ndash;60/ton. Marginal steps stay under $130/ton through 92.5% and the 95&rarr;97.5% step yields massive CO&#8322; gains at just $114/ton. The dirtiest grid is the cheapest to abate.</div>
+                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">The high-carbon advantage: PJM&rsquo;s coal-heavy grid means each clean MWh displaces more CO&#8322;. Average MAC flat at $<span id="nv-pjm-mac75">...</span>&ndash;<span id="nv-pjm-mac99b">...</span>/ton. Marginal steps stay under $<span id="nv-pjm-marg-925">...</span>/ton through 92.5%. The dirtiest grid is the cheapest to abate &mdash; firm gen (<span id="nv-pjm-firm-pct">...</span>%) and fossil fuel prices (<span id="nv-pjm-fossil-pct">...</span>%) drive cost uncertainty.</div>
             </div>
             <div style="padding:16px;background:rgba(255,255,255,0.7);border-radius:10px;border-left:4px solid #E91E63;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                     <span style="width:10px;height:10px;border-radius:50%;background:#E91E63;display:inline-block;"></span>
                     <span style="font-family:'Franklin Gothic Demi',sans-serif;font-size:0.95rem;font-weight:700;color:#1A2744;">NYISO</span>
-                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#E91E63;margin-left:auto;">$119/ton</span>
+                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#E91E63;margin-left:auto;">$<span id="nv-nyiso-mac99">...</span>/ton</span>
                 </div>
-                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">Average MAC $107&ndash;119/ton. Efficient through 90% (marginal steps under $113/ton). But the 95&rarr;97.5% step hits $887/ton &mdash; the single most expensive marginal step in our analysis, far above DAC. Strong nuclear+hydro base means remaining hours are genuinely hard.</div>
+                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">Average MAC $<span id="nv-nyiso-mac75">...</span>&ndash;<span id="nv-nyiso-mac99b">...</span>/ton. Efficient through 90% (marginal steps under $<span id="nv-nyiso-marg-90max">...</span>/ton). But the <span id="nv-nyiso-marg-max-step">...</span> step hits $<span id="nv-nyiso-marg-max">...</span>/ton &mdash; the single most expensive marginal step in our analysis, far above DAC. Strong nuclear+hydro base means remaining hours are genuinely hard.</div>
             </div>
             <div style="padding:16px;background:rgba(255,255,255,0.7);border-radius:10px;border-left:4px solid #9C27B0;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                     <span style="width:10px;height:10px;border-radius:50%;background:#9C27B0;display:inline-block;"></span>
                     <span style="font-family:'Franklin Gothic Demi',sans-serif;font-size:0.95rem;font-weight:700;color:#1A2744;">NEISO</span>
-                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#9C27B0;margin-left:auto;">$141/ton</span>
+                    <span style="font-family:'Barlow Semi Condensed',sans-serif;font-size:1.3rem;font-weight:800;color:#9C27B0;margin-left:auto;">$<span id="nv-neiso-mac99">...</span>/ton</span>
                 </div>
-                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">The most volatile marginal curve. Average MAC $110&ndash;141/ton. The 90&rarr;92.5% step costs $443/ton (above DAC), making NEISO the first region where pivoting to alternative decarb makes economic sense. Nuclear base helps, but constrained wind siting drives marginal costs up fast.</div>
+                <div style="font-size:0.84rem;color:#1A1A1A;line-height:1.5;">The most volatile marginal curve. Average MAC $<span id="nv-neiso-mac75">...</span>&ndash;<span id="nv-neiso-mac99b">...</span>/ton. The <span id="nv-neiso-marg-max-step">...</span> step costs $<span id="nv-neiso-marg-max">...</span>/ton (above DAC), making NEISO the first region where pivoting to alternative decarb makes economic sense. Nuclear base helps, but constrained wind siting drives marginal costs up fast.</div>
             </div>
         </div>
 
@@ -1022,8 +1022,8 @@ body {
             <h4 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.05rem;color:#1A2744;margin-bottom:10px;">Average vs. Marginal: Two Different Stories</h4>
             <p style="font-size:0.88rem;color:#1A1A1A;line-height:1.65;margin-bottom:10px;">Average MAC masks the real decision boundary. The stepwise marginal analysis reveals three distinct zones:</p>
             <ol style="font-size:0.86rem;color:#1A1A1A;line-height:1.65;padding-left:20px;margin-bottom:10px;">
-                <li style="margin-bottom:8px;"><strong>Efficient zone (75&ndash;90%):</strong> Marginal MAC stays under $160/ton in most regions, often under $100/ton. Grid investment is unambiguously the best use of decarbonization dollars. PJM stays efficient through 92.5%.</li>
-                <li style="margin-bottom:8px;"><strong>Volatile zone (90&ndash;97.5%):</strong> Marginal MAC swings wildly between $50/ton and $887/ton depending on region and threshold. Some steps are bargains (ERCOT 90&rarr;92.5%: $50/ton), others exceed DAC (NEISO 90&rarr;92.5%: $443/ton, NYISO 95&rarr;97.5%: $887/ton). This is where portfolio diversification into alternative decarb pathways becomes region-specific.</li>
+                <li style="margin-bottom:8px;"><strong>Efficient zone (75&ndash;90%):</strong> Marginal MAC stays under $<span id="nv-eff-zone-max">...</span>/ton in most regions, often under $<span id="nv-eff-zone-low">...</span>/ton. Grid investment is unambiguously the best use of decarbonization dollars. PJM stays efficient through 92.5%.</li>
+                <li style="margin-bottom:8px;"><strong>Volatile zone (90&ndash;97.5%):</strong> Marginal MAC swings wildly between $<span id="nv-vol-zone-min">...</span>/ton and $<span id="nv-vol-zone-max">...</span>/ton depending on region and threshold. Some steps are bargains (ERCOT 90&rarr;92.5%: $<span id="nv-ercot-marg-925b">...</span>/ton), others exceed DAC (NEISO <span id="nv-neiso-worst-step">...</span>: $<span id="nv-neiso-worst-val">...</span>/ton, NYISO <span id="nv-nyiso-worst-step">...</span>: $<span id="nv-nyiso-worst-val">...</span>/ton). This is where portfolio diversification into alternative decarb pathways becomes region-specific.</li>
                 <li><strong>Diminishing returns (&gt;97.5%):</strong> Some regions see CO&#8322; actually decrease at the highest steps (resource mix shifts that prioritize matching over abatement). The marginal dollar is buying hourly shape compliance, not emission reductions. This is where DAC, BECCS, and SAF deliver more CO&#8322; per dollar.</li>
             </ol>
         </div>
@@ -1041,22 +1041,22 @@ body {
         <div class="section-narrative">
             <p>Grid decarbonization enables nearly every other decarbonization pathway &mdash; cleaner grids make EVs, heat pumps, and green hydrogen more impactful. Every dollar spent compounds across sectors. But <strong>how far should you push grid investment before pivoting to alternatives?</strong><sup style="font-size:0.7em;color:#6B7280;">[8]</sup><sup style="font-size:0.7em;color:#6B7280;">[9]</sup></p>
 
-            <p>The stepwise marginal analysis reveals the answer is <strong>region-specific and non-monotonic</strong>. Individual threshold steps range from $50/ton (cheaper than afforestation) to $887/ton (more expensive than DAC). The pattern varies because each step triggers a different resource mix &mdash; adding LDES has different marginal economics than adding solar.</p>
+            <p>The stepwise marginal analysis reveals the answer is <strong>region-specific and non-monotonic</strong>. Individual threshold steps range from $<span id="nv-marg-global-min2">...</span>/ton (cheaper than afforestation) to $<span id="nv-marg-global-max">...</span>/ton (more expensive than DAC). The pattern varies because each step triggers a different resource mix &mdash; adding LDES has different marginal economics than adding solar.</p>
 
             <p><strong>The decision-relevant metric is the marginal MAC at the next step, not the program average.</strong> A buyer at 90% considering whether to push to 92.5% should compare the marginal cost of that specific step against DAC, SAF, or BECCS &mdash; not the average cost of the whole 75&ndash;92.5% program.</p>
         </div>
 
         <div class="counter-row">
             <div class="counter-item">
-                <div class="counter-value" data-target="887" data-prefix="$" data-suffix="">$887</div>
-                <div class="counter-unit">Max marginal MAC/ton<br>(NYISO 95&rarr;97.5%)</div>
+                <div class="counter-value" id="nv-counter-max-marg" data-target="0" data-prefix="$" data-suffix="">$0</div>
+                <div class="counter-unit">Max marginal MAC/ton<br><span id="nv-counter-max-marg-label">...</span></div>
             </div>
             <div class="counter-item">
-                <div class="counter-value" data-target="50" data-prefix="$" data-suffix="">$50</div>
-                <div class="counter-unit">Min marginal MAC/ton<br>(ERCOT 90&rarr;92.5%)</div>
+                <div class="counter-value" id="nv-counter-min-marg" data-target="0" data-prefix="$" data-suffix="">$0</div>
+                <div class="counter-unit">Min marginal MAC/ton<br><span id="nv-counter-min-marg-label">...</span></div>
             </div>
             <div class="counter-item">
-                <div class="counter-value" data-target="3" data-suffix="">3</div>
+                <div class="counter-value" id="nv-counter-dac-regions" data-target="0" data-suffix="">0</div>
                 <div class="counter-unit">Regions with steps<br>exceeding DAC ($400+)</div>
             </div>
         </div>
@@ -1145,7 +1145,7 @@ body {
         </div>
 
         <div class="callout-box">
-            <strong>The portfolio mindset:</strong> Push grid procurement until the marginal cost exceeds the best alternative. Average MAC of $47&ndash;141/ton at 99% masks the reality that some individual steps exceed $400/ton. The grid backbone is strong through ~90% everywhere, but beyond that, the right strategy depends on your region and the cost of alternatives available to you.
+            <strong>The portfolio mindset:</strong> Push grid procurement until the marginal cost exceeds the best alternative. Average MAC of $<span id="nv-min-mac99">...</span>&ndash;<span id="nv-max-mac99">...</span>/ton at 99% masks the reality that some individual steps exceed $400/ton. The grid backbone is strong through ~90% everywhere, but beyond that, the right strategy depends on your region and the cost of alternatives available to you.
         </div>
     </section>
 
@@ -1180,7 +1180,7 @@ body {
         </div>
 
         <div class="callout-box">
-            <strong>Reading the table:</strong> The optimizer shows grid decarbonization beats DAC in all five regions through 99%. ERCOT&rsquo;s average MAC never exceeds $52/ton &mdash; below even the EPA SCC. PJM&rsquo;s coal-heavy grid produces the cheapest abatement per ton because each clean MWh displaces more CO&#8322;. The regional differences are meaningful for procurement strategy, but the headline is universal: the grid backbone is the most cost-effective abatement tool available through very high clean energy targets.
+            <strong>Reading the table:</strong> The optimizer shows grid decarbonization beats DAC in all five regions through 99%. ERCOT&rsquo;s average MAC never exceeds $<span id="nv-ercot-mac99c">...</span>/ton &mdash; below even the EPA SCC. PJM&rsquo;s coal-heavy grid produces the cheapest abatement per ton because each clean MWh displaces more CO&#8322;. The regional differences are meaningful for procurement strategy, but the headline is universal: the grid backbone is the most cost-effective abatement tool available through very high clean energy targets.
         </div>
 
         <div class="stat-callout">
@@ -1189,12 +1189,12 @@ body {
                 <div class="stat-label">All regions stay<br>below DAC cost</div>
             </div>
             <div class="stat-box">
-                <div class="stat-value">$52</div>
-                <div class="stat-label">ERCOT avg MAC<br>at 99% (cheapest)</div>
+                <div class="stat-value">$<span id="nv-stat-cheapest-99">...</span></div>
+                <div class="stat-label"><span id="nv-stat-cheapest-region">...</span> avg MAC<br>at 99% (cheapest)</div>
             </div>
             <div class="stat-box">
-                <div class="stat-value">$152</div>
-                <div class="stat-label">NEISO avg MAC<br>at 99% (highest)</div>
+                <div class="stat-value">$<span id="nv-stat-highest-99">...</span></div>
+                <div class="stat-label"><span id="nv-stat-highest-region">...</span> avg MAC<br>at 99% (highest)</div>
             </div>
         </div>
     </section>
@@ -1399,6 +1399,7 @@ body {
 <!-- JAVASCRIPT: Data, Charts, Visualizations                                  -->
 <!-- ========================================================================= -->
 <script src="js/shared-data.js"></script>
+<script src="js/mac-stats-data.js"></script>
 <script>
 // ============================================================================
 // CHART 1: Regional MAC Curves (Section 2)
@@ -1655,12 +1656,13 @@ function buildLadder() {
 
     // Grid threshold marker lines
     markersContainer.innerHTML = '';
+    const i90 = THRESHOLDS.indexOf(90), i95 = THRESHOLDS.indexOf(95), i99 = THRESHOLDS.indexOf(99);
     const gridMarkers = [
-        { label: 'Grid 90% (ERCOT)', cost: 34, color: REGION_COLORS.ERCOT },
-        { label: 'Grid 90% (NYISO)', cost: 103, color: REGION_COLORS.NYISO },
-        { label: 'Grid 95% (ERCOT)', cost: 43, color: REGION_COLORS.ERCOT },
-        { label: 'Grid 95% (NYISO)', cost: 108, color: REGION_COLORS.NYISO },
-        { label: 'Grid 99% (ERCOT)', cost: 52, color: REGION_COLORS.ERCOT },
+        { label: 'Grid 90% (ERCOT)', cost: MAC_DATA.medium.ERCOT[i90], color: REGION_COLORS.ERCOT },
+        { label: 'Grid 90% (NYISO)', cost: MAC_DATA.medium.NYISO[i90], color: REGION_COLORS.NYISO },
+        { label: 'Grid 95% (ERCOT)', cost: MAC_DATA.medium.ERCOT[i95], color: REGION_COLORS.ERCOT },
+        { label: 'Grid 95% (NYISO)', cost: MAC_DATA.medium.NYISO[i95], color: REGION_COLORS.NYISO },
+        { label: 'Grid 99% (ERCOT)', cost: MAC_DATA.medium.ERCOT[i99], color: REGION_COLORS.ERCOT },
     ];
 
     gridMarkers.forEach(m => {
@@ -2079,10 +2081,188 @@ function buildPortfolioChart() {
 }
 
 // ============================================================================
+// DYNAMIC NARRATIVE VALUES — computed from shared-data.js + mac-stats-data.js
+// ============================================================================
+
+function populateNarrativeValues() {
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const mac = MAC_DATA.medium;
+    const marg = MARGINAL_MAC_DATA.medium;
+    const stepLabels = ['75→80','80→85','85→87.5','87.5→90','90→92.5','92.5→95','95→97.5','97.5→99'];
+
+    // Helper: set text content by ID (safe if element missing)
+    function s(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+    // --- Global aggregates ---
+    const allMac75 = regions.map(r => mac[r][0]);
+    const allMac99 = regions.map(r => mac[r][8]);
+    s('nv-avg-min-75', Math.min(...allMac75));
+    s('nv-avg-max-99', Math.max(...allMac99));
+
+    // All non-null marginal values
+    const allMarg = [];
+    regions.forEach(r => {
+        for (let i = 1; i < marg[r].length; i++) {
+            if (marg[r][i] !== null && marg[r][i] > 0) allMarg.push({ val: marg[r][i], region: r, idx: i });
+        }
+    });
+    const globalMargMin = allMarg.reduce((a, b) => a.val < b.val ? a : b);
+    const globalMargMax = allMarg.reduce((a, b) => a.val > b.val ? a : b);
+    s('nv-marg-global-min', globalMargMin.val);
+    s('nv-marg-global-min2', globalMargMin.val);
+    s('nv-marg-global-max', globalMargMax.val);
+
+    // Min/max MAC at 99%
+    const cheapest99 = regions.reduce((a, b) => mac[a][8] < mac[b][8] ? a : b);
+    const highest99 = regions.reduce((a, b) => mac[a][8] > mac[b][8] ? a : b);
+    s('nv-min-mac99', Math.min(...allMac99));
+    s('nv-max-mac99', Math.max(...allMac99));
+    s('nv-stat-cheapest-99', mac[cheapest99][8]);
+    s('nv-stat-cheapest-region', cheapest99);
+    s('nv-stat-highest-99', mac[highest99][8]);
+    s('nv-stat-highest-region', highest99);
+
+    // Regions with steps exceeding DAC ($400+)
+    const dacThresh = 400;
+    const regionsExceedingDac = regions.filter(r =>
+        marg[r].some((v, i) => i > 0 && v !== null && v >= dacThresh)
+    ).length;
+
+    // --- Per-region cards ---
+    function regionCard(iso) {
+        const lc = iso.toLowerCase();
+        s('nv-' + lc + '-mac99', mac[iso][8]);
+        s('nv-' + lc + '-mac99b', mac[iso][8]);
+        s('nv-' + lc + '-mac99c', mac[iso][8]);
+        s('nv-' + lc + '-mac75', mac[iso][0]);
+
+        // Min/max marginal steps for this region
+        const steps = [];
+        for (let i = 1; i < marg[iso].length; i++) {
+            if (marg[iso][i] !== null && marg[iso][i] > 0) steps.push({ val: marg[iso][i], idx: i });
+        }
+        if (steps.length > 0) {
+            const minStep = steps.reduce((a, b) => a.val < b.val ? a : b);
+            const maxStep = steps.reduce((a, b) => a.val > b.val ? a : b);
+            s('nv-' + lc + '-marg-min', minStep.val);
+            s('nv-' + lc + '-marg-min-step', stepLabels[minStep.idx - 1]);
+            s('nv-' + lc + '-marg-max', maxStep.val);
+            s('nv-' + lc + '-marg-max-step', stepLabels[maxStep.idx - 1]);
+            s('nv-' + lc + '-marg-max-step2', stepLabels[maxStep.idx - 1]);
+
+            // DAC count for this region
+            const dacSteps = steps.filter(st => st.val >= dacThresh).length;
+            s('nv-' + lc + '-dac-count', dacSteps === 0 ? 'No steps exceed' : dacSteps === 1 ? 'One step exceeds' : dacSteps + ' steps exceed');
+        }
+
+        // Max marginal through 90% (indices 1-4, steps 75→80 through 87.5→90)
+        const through90 = [];
+        for (let i = 1; i <= 4 && i < marg[iso].length; i++) {
+            if (marg[iso][i] !== null && marg[iso][i] > 0) through90.push(marg[iso][i]);
+        }
+        if (through90.length > 0) {
+            s('nv-' + lc + '-marg-90max', Math.max(...through90));
+        }
+
+        // Marginal at 92.5% step (index 5)
+        if (marg[iso][5] !== null) s('nv-' + lc + '-marg-925', marg[iso][5]);
+        s('nv-' + lc + '-marg-925b', marg[iso][5] !== null ? marg[iso][5] : '—');
+    }
+    regions.forEach(regionCard);
+
+    // --- ANOVA percentages (from mac-stats-data.js) ---
+    if (typeof MAC_ANOVA !== 'undefined') {
+        // CAISO: top driver
+        const caisoAnova = MAC_ANOVA.CAISO;
+        const caisoTop = Object.entries(caisoAnova).sort((a, b) => b[1] - a[1])[0];
+        s('nv-caiso-top-driver-pct', Math.round(caisoTop[1] * 100));
+
+        // ERCOT: renewable + fossil
+        s('nv-ercot-renew-pct', Math.round(MAC_ANOVA.ERCOT['Renewable Gen'] * 100));
+        s('nv-ercot-fossil-pct', Math.round(MAC_ANOVA.ERCOT['Fossil Fuel'] * 100));
+
+        // PJM: firm gen + fossil
+        s('nv-pjm-firm-pct', Math.round(MAC_ANOVA.PJM['Firm Gen'] * 100));
+        s('nv-pjm-fossil-pct', Math.round(MAC_ANOVA.PJM['Fossil Fuel'] * 100));
+    }
+
+    // --- Volatile zone values (90-97.5%) ---
+    // Marginal values in the 90→92.5 through 95→97.5 range (indices 5-7)
+    const volZone = [];
+    regions.forEach(r => {
+        for (let i = 5; i <= 7; i++) {
+            if (marg[r][i] !== null && marg[r][i] > 0) volZone.push({ val: marg[r][i], region: r, idx: i });
+        }
+    });
+    if (volZone.length > 0) {
+        s('nv-vol-zone-min', Math.min(...volZone.map(v => v.val)));
+        s('nv-vol-zone-max', Math.max(...volZone.map(v => v.val)));
+    }
+
+    // Efficient zone (75-90%): indices 1-4
+    const effZone = [];
+    regions.forEach(r => {
+        for (let i = 1; i <= 4; i++) {
+            if (marg[r][i] !== null && marg[r][i] > 0) effZone.push(marg[r][i]);
+        }
+    });
+    if (effZone.length > 0) {
+        s('nv-eff-zone-max', Math.max(...effZone));
+        s('nv-eff-zone-low', Math.round(effZone.reduce((a, b) => a + b, 0) / effZone.length / 10) * 10);
+    }
+
+    // NEISO worst step in volatile zone
+    const neisoVol = [];
+    for (let i = 5; i <= 8; i++) {
+        if (marg.NEISO[i] !== null && marg.NEISO[i] > 0) neisoVol.push({ val: marg.NEISO[i], idx: i });
+    }
+    if (neisoVol.length > 0) {
+        const neisoWorst = neisoVol.reduce((a, b) => a.val > b.val ? a : b);
+        s('nv-neiso-worst-step', stepLabels[neisoWorst.idx - 1]);
+        s('nv-neiso-worst-val', neisoWorst.val);
+        s('nv-neiso-marg-max-step', stepLabels[neisoWorst.idx - 1]);
+    }
+
+    // NYISO worst step
+    const nyisoAll = [];
+    for (let i = 1; i < marg.NYISO.length; i++) {
+        if (marg.NYISO[i] !== null && marg.NYISO[i] > 0) nyisoAll.push({ val: marg.NYISO[i], idx: i });
+    }
+    if (nyisoAll.length > 0) {
+        const nyisoWorst = nyisoAll.reduce((a, b) => a.val > b.val ? a : b);
+        s('nv-nyiso-worst-step', stepLabels[nyisoWorst.idx - 1]);
+        s('nv-nyiso-worst-val', nyisoWorst.val);
+        s('nv-nyiso-marg-max-step', stepLabels[nyisoWorst.idx - 1]);
+    }
+
+    // --- Counter card data-targets (for animation) ---
+    const maxMargEl = document.getElementById('nv-counter-max-marg');
+    if (maxMargEl) {
+        maxMargEl.dataset.target = globalMargMax.val;
+        maxMargEl.textContent = '$' + globalMargMax.val;
+    }
+    s('nv-counter-max-marg-label', globalMargMax.region + ' ' + stepLabels[globalMargMax.idx - 1]);
+
+    const minMargEl = document.getElementById('nv-counter-min-marg');
+    if (minMargEl) {
+        minMargEl.dataset.target = globalMargMin.val;
+        minMargEl.textContent = '$' + globalMargMin.val;
+    }
+    s('nv-counter-min-marg-label', globalMargMin.region + ' ' + stepLabels[globalMargMin.idx - 1]);
+
+    const dacRegEl = document.getElementById('nv-counter-dac-regions');
+    if (dacRegEl) {
+        dacRegEl.dataset.target = regionsExceedingDac;
+        dacRegEl.textContent = regionsExceedingDac;
+    }
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    populateNarrativeValues();
     if (document.getElementById('macCurveChart')) buildMacChart('medium');
     buildLadder();
     buildBandChart();

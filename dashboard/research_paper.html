@@ -732,10 +732,10 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         The &ldquo;last few percent&rdquo; phenomenon is well-documented in the literature: Denholm et al. (2021) show that
         costs increase non-linearly as clean electricity targets approach 100% <a href="#ref-18" class="cite">[18]</a>.
         However, our optimizer results show a more nuanced picture. <strong>Average abatement costs range from
-        $23&ndash;141/tCO&#8322; across all five ISOs through 99% hourly matching</strong> &mdash; well below the Rennert social
+        $<span class="rp-mac" id="rp-avg-range">...</span>/tCO&#8322; across all five ISOs through 99% hourly matching</strong> &mdash; well below the Rennert social
         cost of carbon ($185/ton). But the stepwise marginal analysis reveals critical decision boundaries:
-        individual threshold steps range from $50/ton (ERCOT 90&rarr;92.5%) to $887/ton (NYISO 95&rarr;97.5%).
-        Three regions (ERCOT, NYISO, NEISO) have at least one step exceeding DAC costs ($400&ndash;600/ton).
+        individual threshold steps range from $<span class="rp-mac" id="rp-marg-min">...</span>/ton (<span id="rp-marg-min-step">...</span>) to $<span class="rp-mac" id="rp-marg-max">...</span>/ton (<span id="rp-marg-max-step">...</span>).
+        <span id="rp-dac-count">...</span> regions have at least one step exceeding DAC costs ($400&ndash;600/ton).
         The cost escalation is non-monotonic and region-specific, driven by resource mix transitions at each threshold.
     </p>
     <p>
@@ -1878,7 +1878,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         its share (from ~25% to ~40%), battery storage enters the mix, and curtailment approximately doubles.
         This is the key planning window where firm generation investment decisions must be locked in &mdash;
         organizations that have not secured clean firm procurement contracts by 2035 will face supply constraints
-        and cost premiums at this stage. Costs rise steadily on average (MAC stays below $141/ton
+        and cost premiums at this stage. Costs rise steadily on average (MAC stays below $<span class="rp-mac" id="rp-mac-max-99">...</span>/ton
         through 99%), but stepwise marginal costs become volatile &mdash; some steps exceed $400/ton while others remain bargains.
     </p>
 
@@ -2021,9 +2021,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             $13&ndash;48/MWh, comparable to the entire 75%&ndash;90% range. Curtailment jumps to 30&ndash;33%, meaning one-third
             of procured energy generates no matching credit. Under High cost assumptions, 100% matching in NEISO
             reaches $168/MWh &mdash; <strong>4&times; wholesale electricity prices</strong>. However, even at these elevated
-            per-MWh costs, the average abatement cost per ton CO&#8322; remains below $141/ton in all regions through 99%.
+            per-MWh costs, the average abatement cost per ton CO&#8322; remains below $<span class="rp-mac" id="rp-mac-max-99b">...</span>/ton in all regions through 99%.
             However, stepwise marginal analysis reveals that individual threshold steps can exceed DAC costs ($400&ndash;600/ton)
-            in three regions (ERCOT at 92.5&rarr;95%, NYISO at 95&rarr;97.5%, NEISO at 90&rarr;92.5%). The optimal stopping
+            in <span id="rp-dac-count2">...</span> regions. The optimal stopping
             point for grid investment &mdash; before pivoting to alternative decarb &mdash; is region-specific.</li>
     </ol>
 
@@ -2366,6 +2366,45 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 </div>
 
 <div class="accent-bar"></div>
+
+<script src="js/shared-data.js"></script>
+<script src="js/mac-stats-data.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const mac = MAC_DATA.medium;
+    const marg = MARGINAL_MAC_DATA.medium;
+    const stepLabels = ['75→80','80→85','85→87.5','87.5→90','90→92.5','92.5→95','95→97.5','97.5→99'];
+    function s(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+    // Global MAC range at 99%
+    const allMac99 = regions.map(r => mac[r][8]);
+    const allMac75 = regions.map(r => mac[r][0]);
+    const maxMac99 = Math.max(...allMac99);
+    s('rp-avg-range', Math.min(...allMac75) + '–' + maxMac99);
+    s('rp-mac-max-99', maxMac99);
+    s('rp-mac-max-99b', maxMac99);
+
+    // Global marginal min/max
+    const allMarg = [];
+    regions.forEach(r => {
+        for (let i = 1; i < marg[r].length; i++) {
+            if (marg[r][i] !== null && marg[r][i] > 0) allMarg.push({ val: marg[r][i], region: r, idx: i });
+        }
+    });
+    const globalMin = allMarg.reduce((a, b) => a.val < b.val ? a : b);
+    const globalMax = allMarg.reduce((a, b) => a.val > b.val ? a : b);
+    s('rp-marg-min', globalMin.val);
+    s('rp-marg-min-step', globalMin.region + ' ' + stepLabels[globalMin.idx - 1]);
+    s('rp-marg-max', globalMax.val);
+    s('rp-marg-max-step', globalMax.region + ' ' + stepLabels[globalMax.idx - 1]);
+
+    // Regions with steps exceeding DAC ($400+)
+    const dacCount = regions.filter(r => marg[r].some((v, i) => i > 0 && v !== null && v >= 400)).length;
+    s('rp-dac-count', dacCount === 3 ? 'Three' : dacCount);
+    s('rp-dac-count2', dacCount === 3 ? 'three' : dacCount);
+});
+</script>
 
 </body>
 </html>
