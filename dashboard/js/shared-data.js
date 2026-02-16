@@ -128,29 +128,36 @@ const BENCHMARKS_EXTRA = [
       trajectory: 'declining_steep', confidence: 'medium', sources: 'Argonne Labs, Penn Wharton, RFF' }
 ];
 
-// --- Stepwise Marginal MAC ($/ton CO2) — median (P50) across 324 scenarios ---
-// Source: compute_mac_stats.py — P50 of (delta_cost × demand) / delta_co2 per scenario
-// CO2 varies by scenario (fuel-switching elasticity on marginal emission rates)
-// Index 0 = 75% level (no prior step), indices 1-9 = steps 75→80, ..., 99→100
+// --- Two-Zone Marginal MAC ($/ton CO2) ---
+// Zone 1 (75→90%): single aggregate MAC — grid backbone cost per ton
+// Zone 2 (90→99%): granular steps with enforced monotonicity (non-decreasing)
+// Medium = MMM_M_M scenario with convex hull correction
+// Low/High = P10/P90 across 324 scenarios with monotonicity enforcement
+// Cap: $1000/ton (NREL literature max for sub-100% steps)
+const MARGINAL_MAC_LABELS = ['75→90%', '90→92.5%', '92.5→95%', '95→97.5%', '97.5→99%'];
+
 const MARGINAL_MAC_DATA = {
     medium: {
-        CAISO:  [null, 214, 116, 475, 138, 290, 305, 347, 340],
-        ERCOT:  [null,  78, 112, 118, 110, 154, 192, 208, 266],
-        PJM:    [null,  62,  63,  82, 105, 150, 339, 215, 514],
-        NYISO:  [null, 117,  74,  98, 155, 260, 310, 449, 399],
-        NEISO:  [null, 141, 166, 108, 170, 329, 536, 491, 677]
+        CAISO:  [187, 187, 187, 1000, 1000],
+        ERCOT:  [137, 137, 174, 207, 290],
+        PJM:    [65,  162, 414, 414, 435],
+        NYISO:  [73,  77,  137, 143, 177],
+        NEISO:  [181, 320, 894, 894, 894]
+    },
+    low: {
+        CAISO:  [86,  129, 166, 203, 238],
+        ERCOT:  [72,  110, 135, 154, 202],
+        PJM:    [28,  84,  168, 222, 269],
+        NYISO:  [47,  70,  103, 108, 183],
+        NEISO:  [59,  62,  102, 141, 518]
+    },
+    high: {
+        CAISO:  [242, 535, 591, 1000, 1000],
+        ERCOT:  [159, 206, 265, 291, 386],
+        PJM:    [171, 500, 524, 524, 1000],
+        NYISO:  [227, 654, 654, 784, 990],
+        NEISO:  [209, 485, 953, 999, 1000]
     }
-};
-
-// --- Crossover Summary (from stepwise MAC P50) ---
-// DAC benchmarks use 2040-2045 learning-curve-weighted projections
-const CROSSOVER_SUMMARY = {
-    // Threshold at which stepwise marginal MAC first exceeds SCC ($190/ton)
-    scc_190: { CAISO: 75, ERCOT: 92.5, PJM: 92.5, NYISO: 90, NEISO: 90 },
-    // Threshold at which stepwise marginal MAC first exceeds DAC Medium mid ($175/ton)
-    dac_175: { CAISO: 75, ERCOT: 92.5, PJM: 92.5, NYISO: 90, NEISO: 90 },
-    // Threshold at which stepwise marginal MAC first exceeds DAC High mid ($300/ton)
-    dac_300: { CAISO: 85, ERCOT: '>99', PJM: 92.5, NYISO: 92.5, NEISO: 90 }
 };
 
 // ============================================================================
@@ -172,13 +179,14 @@ function findCrossover(regionData, costLevel) {
 
 /**
  * Find the threshold step at which MARGINAL MAC first exceeds a benchmark cost.
+ * Uses two-zone format: index 0 = 75→90%, indices 1-4 = zone 2 steps.
  * Returns the "from" threshold of that step, or '>99' if never exceeded.
- * Skips null entries (CO2 decreased or no change at that step).
  */
+const MARGINAL_THRESHOLDS = [75, 90, 92.5, 95, 97.5];
 function findMarginalCrossover(regionMarginals, costLevel) {
-    for (let i = 1; i < regionMarginals.length; i++) {
+    for (let i = 0; i < regionMarginals.length; i++) {
         if (regionMarginals[i] !== null && regionMarginals[i] > costLevel) {
-            return THRESHOLDS[i - 1]; // "from" threshold of this step
+            return MARGINAL_THRESHOLDS[i];
         }
     }
     return '>99';
