@@ -2,7 +2,7 @@
 // SHARED DATA MODULE — Single source of truth for all dashboard pages
 // ============================================================================
 // RULE: No data constants defined in HTML files. Change here, propagates everywhere.
-// Generated: 2026-02-16 17:16 by generate_shared_data.py
+// Generated: 2026-02-16 17:48 by generate_shared_data.py
 // Source: overprocure_results.json (Step 2 tranche-repriced + postprocess + CO2)
 // ============================================================================
 
@@ -14,25 +14,25 @@ const THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100];
 // Low/High = P10/P90 from 324-scenario factorial experiment
 const MAC_DATA = {
     medium: {
-        CAISO:  [93, 95, 103, 104, 106, 110, 113, 115, 118, null],
-        ERCOT:  [24, 26, 31, 35, 36, 40, 43, 46, 50, null],
-        PJM:  [67, 77, 89, 91, 93, 95, 98, 100, 100, null],
-        NYISO:  [123, 123, 138, 138, 139, 139, 148, 156, 156, null],
-        NEISO:  [106, 111, 116, 116, 118, 122, 128, 157, 169, null]
+        CAISO:  [null, null, null, null, null, null, null, null, null, null],
+        ERCOT:  [null, null, null, null, null, null, null, null, null, null],
+        PJM:  [null, null, null, null, null, null, null, null, null, null],
+        NYISO:  [null, null, null, null, null, null, null, null, null, null],
+        NEISO:  [null, null, null, null, null, null, null, null, null, null]
     },
     low: {
-        CAISO:  [46, 47, 50, 52, 53, 56, 60, 68, 66, null],
-        ERCOT:  [5, 6, 10, 13, 14, 17, 20, 22, 25, null],
-        PJM:  [24, 30, 32, 36, 38, 41, 42, 49, 53, null],
-        NYISO:  [60, 67, 74, 75, 78, 83, 86, 94, 101, null],
-        NEISO:  [44, 52, 55, 59, 61, 65, 70, 80, 88, null]
+        CAISO:  [null, null, null, null, null, null, null, null, null, null],
+        ERCOT:  [null, null, null, null, null, null, null, null, null, null],
+        PJM:  [null, null, null, null, null, null, null, null, null, null],
+        NYISO:  [null, null, null, null, null, null, null, null, null, null],
+        NEISO:  [null, null, null, null, null, null, null, null, null, null]
     },
     high: {
-        CAISO:  [114, 120, 123, 127, 128, 135, 138, 146, 153, null],
-        ERCOT:  [39, 41, 46, 49, 52, 55, 59, 63, 69, null],
-        PJM:  [86, 89, 93, 96, 98, 102, 107, 112, 113, null],
-        NYISO:  [149, 146, 151, 151, 152, 159, 165, 177, 182, null],
-        NEISO:  [153, 151, 157, 158, 160, 166, 169, 181, 189, null]
+        CAISO:  [null, null, null, null, null, null, null, null, null, null],
+        ERCOT:  [null, null, null, null, null, null, null, null, null, null],
+        PJM:  [null, null, null, null, null, null, null, null, null, null],
+        NYISO:  [null, null, null, null, null, null, null, null, null, null],
+        NEISO:  [null, null, null, null, null, null, null, null, null, null]
     }
 };
 
@@ -130,25 +130,25 @@ const MARGINAL_MAC_LABELS = ['75→90%', '90→92.5%', '92.5→95%', '95→97.5%
 
 const MARGINAL_MAC_DATA = {
     medium: {
-        CAISO:  [239, 517, 517, 1000, 1000],
-        ERCOT:  [162, 208, 208, 208, 302],
-        PJM:  [270, 281, 512, 512, 512],
-        NYISO:  [215, 257, 336, 336, 336],
-        NEISO:  [223, 369, 683, 1000, 1000]
+        CAISO:  [0, 0, 0, 0, 0],
+        ERCOT:  [0, 0, 0, 0, 0],
+        PJM:  [0, 0, 0, 0, 0],
+        NYISO:  [0, 0, 0, 0, 0],
+        NEISO:  [0, 0, 0, 0, 0]
     },
     low: {
-        CAISO:  [65, 81, 135, 160, 236],
-        ERCOT:  [63, 94, 114, 115, 198],
-        PJM:  [68, 145, 149, 149, 233],
-        NYISO:  [89, 250, 178, 204, 149],
-        NEISO:  [60, 270, 99, 311, 390]
+        CAISO:  [null, null, null, null, null],
+        ERCOT:  [null, null, null, null, null],
+        PJM:  [null, null, null, null, null],
+        NYISO:  [null, null, null, null, null],
+        NEISO:  [null, null, null, null, null]
     },
     high: {
-        CAISO:  [1000, 1000, 496, 1000, 493],
-        ERCOT:  [185, 210, 265, 272, 388],
-        PJM:  [254, 538, 898, 416, 865],
-        NYISO:  [417, 772, 462, 659, 834],
-        NEISO:  [398, 557, 738, 1000, 1000]
+        CAISO:  [null, null, null, null, null],
+        ERCOT:  [null, null, null, null, null],
+        PJM:  [null, null, null, null, null],
+        NYISO:  [null, null, null, null, null],
+        NEISO:  [null, null, null, null, null]
     }
 };
 
@@ -157,11 +157,11 @@ const MARGINAL_MAC_DATA = {
 // Monotonicity enforced (lower thresholds <= higher thresholds)
 // Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 const EFFECTIVE_COST_DATA = {
-    CAISO:  [55.9, 57.0, 61.3, 63.0, 64.9, 66.6, 69.2, 70.2, 71.7, null],
-    ERCOT:  [36.9, 38.1, 41.1, 43.7, 44.4, 46.6, 48.8, 50.8, 53.5, null],
-    PJM:  [63.6, 69.9, 78.0, 81.4, 83.1, 84.4, 86.8, 89.1, 89.1, null],
-    NYISO:  [81.2, 82.2, 94.1, 94.7, 95.2, 95.2, 101.3, 104.1, 105.7, null],
-    NEISO:  [75.1, 78.9, 82.2, 83.5, 84.9, 87.2, 89.8, 101.3, 108.8, null]
+    CAISO:  [56.1, 57.0, 61.2, 63.8, 64.9, 66.6, 68.4, 70.2, 71.7, null],
+    ERCOT:  [36.9, 38.1, 41.1, 43.7, 44.4, 46.5, 48.8, 50.8, 53.5, null],
+    PJM:  [56.1, 57.7, 61.5, 63.5, 64.4, 67.7, 68.7, 71.4, 74.7, null],
+    NYISO:  [75.9, 78.5, 81.2, 81.9, 82.9, 86.3, 88.5, 92.8, 96.2, null],
+    NEISO:  [75.1, 78.9, 82.2, 84.8, 85.0, 87.2, 89.8, 101.3, 105.4, null]
 };
 
 // --- Nuclear Uprate Caps (TWh/yr) — 5% of existing nuclear at 90% CF ---
@@ -222,19 +222,19 @@ function getAllBenchmarks(state) {
 // battery/ldes = dispatch % of demand; procurement = over-procurement %
 const RESOURCE_MIX_DATA = {
     CAISO: {
-        clean_firm:  [13, 10, 9, 8, 8, 20, 20, 8, 9, 0],
-        solar:       [55, 58, 47, 47, 50, 42, 35, 35, 36, 0],
-        wind:        [23, 20, 10, 23, 33, 9, 9, 8, 9, 0],
-        ccs_ccgt:    [0, 3, 25, 13, 0, 20, 27, 40, 37, 0],
+        clean_firm:  [10, 10, 9, 9, 8, 20, 8, 8, 9, 0],
+        solar:       [54, 58, 47, 37, 50, 42, 35, 35, 36, 0],
+        wind:        [24, 20, 11, 10, 33, 9, 10, 8, 9, 0],
+        ccs_ccgt:    [3, 3, 24, 35, 0, 20, 38, 40, 37, 0],
         hydro:       [9, 9, 9, 9, 9, 9, 9, 9, 9, 0],
         battery:     [2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
         ldes:        [2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
-        procurement: [79, 85, 89, 95, 103, 100, 103, 107, 111, 100]
+        procurement: [78, 85, 89, 91, 103, 100, 103, 107, 111, 100]
     },
     ERCOT: {
-        clean_firm:  [10, 10, 10, 10, 9, 8, 7, 8, 7, 0],
+        clean_firm:  [10, 10, 10, 10, 9, 9, 7, 8, 7, 0],
         solar:       [20, 15, 15, 20, 15, 21, 23, 31, 30, 0],
-        wind:        [70, 75, 75, 65, 76, 71, 70, 61, 63, 0],
+        wind:        [70, 75, 75, 65, 76, 70, 70, 61, 63, 0],
         ccs_ccgt:    [0, 0, 0, 5, 0, 0, 0, 0, 0, 0],
         hydro:       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         battery:     [0, 0, 0, 0, 0, 2, 2, 2, 2, 0],
@@ -242,34 +242,34 @@ const RESOURCE_MIX_DATA = {
         procurement: [80, 85, 95, 97, 105, 100, 106, 111, 118, 100]
     },
     PJM: {
-        clean_firm:  [65, 75, 90, 90, 90, 90, 85, 83, 83, 0],
-        solar:       [10, 5, 5, 5, 5, 5, 5, 12, 12, 0],
-        wind:        [25, 20, 5, 5, 5, 5, 5, 4, 4, 0],
-        ccs_ccgt:    [0, 0, 0, 0, 0, 0, 5, 0, 0, 0],
-        hydro:       [0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
-        battery:     [0, 0, 0, 0, 0, 0, 0, 2, 2, 0],
-        ldes:        [0, 0, 0, 0, 0, 0, 0, 2, 2, 0],
-        procurement: [80, 85, 90, 97, 100, 102, 105, 109, 109, 100]
+        clean_firm:  [40, 40, 40, 35, 35, 35, 30, 33, 31, 0],
+        solar:       [15, 15, 10, 10, 5, 10, 39, 17, 19, 0],
+        wind:        [45, 40, 30, 15, 15, 20, 30, 6, 14, 0],
+        ccs_ccgt:    [0, 5, 20, 40, 45, 35, 0, 43, 35, 0],
+        hydro:       [0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+        battery:     [0, 0, 0, 0, 0, 0, 2, 2, 2, 0],
+        ldes:        [0, 0, 0, 0, 0, 0, 2, 2, 2, 0],
+        procurement: [80, 85, 90, 92, 95, 102, 105, 104, 111, 100]
     },
     NYISO: {
-        clean_firm:  [50, 40, 80, 80, 80, 60, 80, 60, 72, 0],
-        solar:       [5, 5, 0, 0, 0, 0, 0, 5, 9, 0],
-        wind:        [30, 30, 5, 5, 5, 5, 5, 5, 4, 0],
-        ccs_ccgt:    [0, 10, 0, 0, 0, 20, 0, 15, 0, 0],
+        clean_firm:  [25, 25, 20, 20, 20, 19, 20, 19, 19, 0],
+        solar:       [5, 5, 5, 5, 5, 5, 5, 10, 11, 0],
+        wind:        [55, 40, 30, 15, 10, 21, 10, 6, 5, 0],
+        ccs_ccgt:    [0, 15, 30, 45, 50, 40, 50, 50, 50, 0],
         hydro:       [15, 15, 15, 15, 15, 15, 15, 15, 15, 0],
-        battery:     [0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
-        ldes:        [0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
-        procurement: [80, 85, 95, 97, 100, 102, 110, 115, 113, 100]
+        battery:     [0, 0, 0, 0, 0, 0, 0, 2, 2, 0],
+        ldes:        [0, 0, 0, 0, 0, 0, 0, 2, 2, 0],
+        procurement: [80, 85, 90, 92, 95, 102, 105, 105, 110, 100]
     },
     NEISO: {
-        clean_firm:  [30, 29, 30, 25, 24, 27, 25, 23, 64, 0],
-        solar:       [5, 4, 8, 13, 19, 22, 29, 10, 9, 0],
-        wind:        [65, 44, 54, 58, 53, 42, 42, 13, 4, 0],
-        ccs_ccgt:    [0, 19, 5, 0, 0, 5, 0, 50, 19, 0],
+        clean_firm:  [30, 29, 30, 25, 24, 27, 25, 23, 23, 0],
+        solar:       [5, 4, 8, 8, 16, 22, 29, 10, 10, 0],
+        wind:        [65, 44, 54, 58, 56, 42, 42, 13, 10, 0],
+        ccs_ccgt:    [0, 19, 5, 5, 0, 5, 0, 50, 53, 0],
         hydro:       [0, 4, 3, 4, 4, 4, 4, 4, 4, 0],
-        battery:     [0, 0, 0, 2, 2, 2, 2, 2, 2, 0],
-        ldes:        [0, 0, 0, 2, 2, 2, 2, 2, 2, 0],
-        procurement: [80, 85, 95, 95, 98, 101, 108, 107, 112, 100]
+        battery:     [0, 0, 0, 0, 2, 2, 2, 2, 2, 0],
+        ldes:        [0, 0, 0, 0, 2, 2, 2, 2, 4, 0],
+        procurement: [80, 85, 95, 102, 98, 101, 108, 107, 108, 100]
     }
 };
 
@@ -964,44 +964,44 @@ const COMPRESSED_DAY_DATA = {
 // Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 const CF_TRANCHE_DATA = {
     CAISO: {
-        new_cf_twh:        [5.31, 1.344, 0.246, 0, 0.762, 27.109, 28.453, 1.479, 4.682, 0],
-        uprate_twh:        [0.907, 0.907, 0.2464, 0, 0.7617, 0.907, 0.907, 0.907, 0.907, 0],
-        newbuild_twh:      [4.403, 0.437, 0, 0, 0, 26.202, 27.546, 0.572, 3.775, 0],
-        uprate_price:      [25, 25, 25, 0, 25, 25, 25, 25, 25, 0],
-        newbuild_price:    [91, 91, 91, 0, 91, 91, 91, 91, 91, 0],
-        effective_cf_lcoe: [79.7, 46.5, 25.0, 0, 25.0, 88.8, 88.9, 50.5, 78.2, 0]
+        new_cf_twh:        [0.0, 1.344, 0.246, 0.65, 0.762, 27.109, 0.762, 1.479, 4.682, 0],
+        uprate_twh:        [0, 0.907, 0.2464, 0.6497, 0.7617, 0.907, 0.7617, 0.907, 0.907, 0],
+        newbuild_twh:      [0, 0.437, 0, 0, 0, 26.202, 0, 0.572, 3.775, 0],
+        uprate_price:      [25, 25, 25, 25, 25, 25, 25, 25, 25, 0],
+        newbuild_price:    [91, 91, 91, 91, 91, 91, 91, 91, 91, 0],
+        effective_cf_lcoe: [0, 46.5, 25.0, 25.0, 25.0, 88.8, 25.0, 50.5, 78.2, 0]
     },
     ERCOT: {
-        new_cf_twh:        [0, 0, 4.392, 5.368, 4.148, 0, 0, 1.367, 0, 0],
-        uprate_twh:        [0, 0, 1.064, 1.064, 1.064, 0, 0, 1.064, 0, 0],
-        newbuild_twh:      [0, 0, 3.328, 4.304, 3.084, 0, 0, 0.302, 0, 0],
-        uprate_price:      [0, 0, 25, 25, 25, 0, 0, 25, 0, 0],
-        newbuild_price:    [0, 0, 97, 97, 97, 0, 0, 97, 0, 0],
-        effective_cf_lcoe: [0, 0, 79.6, 82.7, 78.5, 0, 0, 40.9, 0, 0]
+        new_cf_twh:        [0.0, 0.0, 4.392, 5.368, 4.148, 1.952, 0.0, 1.366, 0.0, 0],
+        uprate_twh:        [0, 0, 1.064, 1.064, 1.064, 1.064, 0, 1.064, 0, 0],
+        newbuild_twh:      [0, 0, 3.328, 4.304, 3.084, 0.888, 0, 0.302, 0, 0],
+        uprate_price:      [25, 25, 25, 25, 25, 25, 25, 25, 25, 0],
+        newbuild_price:    [97, 97, 97, 97, 97, 97, 97, 97, 97, 0],
+        effective_cf_lcoe: [0, 0, 79.6, 82.7, 78.5, 57.8, 0, 40.9, 0, 0]
     },
     PJM: {
-        new_cf_twh:        [167.823, 266.914, 412.389, 465.519, 488.289, 503.469, 481.964, 492.252, 492.252, 0],
-        uprate_twh:        [12.614, 12.614, 12.614, 12.614, 12.614, 12.614, 12.614, 12.614, 12.614, 0],
-        newbuild_twh:      [155.209, 254.3, 399.775, 452.905, 475.675, 490.855, 469.35, 479.638, 479.638, 0],
+        new_cf_twh:        [0.0, 16.023, 32.89, 0.843, 9.698, 30.36, 0.0, 18.722, 19.481, 0],
+        uprate_twh:        [0, 12.614, 12.614, 0.8433, 9.6983, 12.614, 0, 12.614, 12.614, 0],
+        newbuild_twh:      [0, 3.409, 20.276, 0, 0, 17.746, 0, 6.108, 6.867, 0],
         uprate_price:      [25, 25, 25, 25, 25, 25, 25, 25, 25, 0],
         newbuild_price:    [108, 108, 108, 108, 108, 108, 108, 108, 108, 0],
-        effective_cf_lcoe: [101.8, 104.1, 105.5, 105.8, 105.9, 105.9, 105.8, 105.9, 105.9, 0]
+        effective_cf_lcoe: [0, 42.7, 76.2, 25.0, 25.0, 73.5, 0, 52.1, 54.3, 0]
     },
     NYISO: {
-        new_cf_twh:        [32.745, 23.649, 87.321, 89.747, 93.385, 64.885, 105.513, 76.709, 95.447, 0],
-        uprate_twh:        [1.34, 1.34, 1.34, 1.34, 1.34, 1.34, 1.34, 1.34, 1.34, 0],
-        newbuild_twh:      [31.405, 22.309, 85.981, 88.407, 92.045, 63.544, 104.173, 75.369, 94.107, 0],
+        new_cf_twh:        [2.426, 4.321, 0.0, 0.0, 0.91, 1.486, 3.942, 2.35, 3.79, 0],
+        uprate_twh:        [1.34, 1.34, 0, 0.0, 0.9096, 1.34, 1.34, 1.34, 1.34, 0],
+        newbuild_twh:      [1.086, 2.981, 0, 0, 0, 0.146, 2.602, 1.01, 2.45, 0],
         uprate_price:      [25, 25, 25, 25, 25, 25, 25, 25, 25, 0],
         newbuild_price:    [115, 115, 115, 115, 115, 115, 115, 115, 115, 0],
-        effective_cf_lcoe: [111.3, 109.9, 113.6, 113.7, 113.7, 113.1, 113.9, 113.4, 113.7, 0]
+        effective_cf_lcoe: [65.3, 87.1, 0, 25.0, 25.0, 33.8, 84.4, 63.7, 83.2, 0]
     },
     NEISO: {
-        new_cf_twh:        [0.231, 0.98, 5.421, 0, 0, 4.002, 3.691, 0.934, 55.223, 0],
-        uprate_twh:        [0.2307, 0.9804, 1.38, 0, 0, 1.38, 1.38, 0.9342, 1.38, 0],
-        newbuild_twh:      [0, 0, 4.041, 0, 0, 2.622, 2.311, 0, 53.843, 0],
-        uprate_price:      [25, 25, 25, 0, 0, 25, 25, 25, 25, 0],
-        newbuild_price:    [112, 112, 112, 0, 0, 112, 112, 112, 112, 0],
-        effective_cf_lcoe: [25.0, 25.0, 89.8, 0, 0, 82.0, 79.5, 25.0, 109.8, 0]
+        new_cf_twh:        [0.231, 0.98, 5.421, 1.961, 0.0, 4.002, 3.691, 0.934, 1.199, 0],
+        uprate_twh:        [0.2307, 0.9804, 1.38, 1.38, 0, 1.38, 1.38, 0.9342, 1.1995, 0],
+        newbuild_twh:      [0, 0, 4.041, 0.581, 0, 2.622, 2.311, 0, 0, 0],
+        uprate_price:      [25, 25, 25, 25, 25, 25, 25, 25, 25, 0],
+        newbuild_price:    [112, 112, 112, 112, 112, 112, 112, 112, 112, 0],
+        effective_cf_lcoe: [25.0, 25.0, 89.9, 50.8, 0, 82.0, 79.5, 25.0, 25.0, 0]
     }
 };
 
@@ -1010,13 +1010,13 @@ const CF_TRANCHE_DATA = {
 // Array of 10 objects per ISO (one per threshold in THRESHOLDS order)
 const WYN_RESOURCE_COSTS = {
     CAISO: [
-        {clean_firm:{e:7.9,n:2.4,c:4.26}, solar:{e:22.3,n:21.2,c:20.01}, wind:{e:8.8,n:9.4,c:10.23}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:7.1,n:0,c:2.13}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
+        {clean_firm:{e:7.8,n:0,c:2.34}, solar:{e:22.3,n:19.8,c:19.18}, wind:{e:8.8,n:9.9,c:10.68}, ccs_ccgt:{e:0,n:2.3,c:2.06}, hydro:{e:7.0,n:0,c:2.11}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
         {clean_firm:{e:7.9,n:0.6,c:2.65}, solar:{e:22.3,n:27.0,c:23.7}, wind:{e:8.8,n:8.2,c:9.28}, ccs_ccgt:{e:0,n:2.5,c:2.24}, hydro:{e:7.6,n:0,c:2.29}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
-        {clean_firm:{e:7.9,n:0.1,c:2.4}, solar:{e:22.3,n:19.5,c:18.99}, wind:{e:8.8,n:0.1,c:2.72}, ccs_ccgt:{e:0,n:22.2,c:19.58}, hydro:{e:8.0,n:0,c:2.4}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
-        {clean_firm:{e:7.6,n:0,c:2.28}, solar:{e:22.3,n:22.3,c:20.77}, wind:{e:8.8,n:13.1,c:13.21}, ccs_ccgt:{e:0,n:12.3,c:10.87}, hydro:{e:8.5,n:0,c:2.56}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
+        {clean_firm:{e:7.9,n:0.1,c:2.4}, solar:{e:22.3,n:19.5,c:18.99}, wind:{e:8.8,n:1.0,c:3.44}, ccs_ccgt:{e:0,n:21.4,c:18.8}, hydro:{e:8.0,n:0,c:2.4}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
+        {clean_firm:{e:7.9,n:0.3,c:2.44}, solar:{e:22.3,n:11.4,c:13.85}, wind:{e:8.8,n:0.3,c:2.88}, ccs_ccgt:{e:0,n:31.9,c:28.03}, hydro:{e:8.2,n:0,c:2.46}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
         {clean_firm:{e:7.9,n:0.3,c:2.46}, solar:{e:22.3,n:29.2,c:25.09}, wind:{e:8.8,n:25.2,c:23.04}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:9.3,n:0,c:2.78}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
         {clean_firm:{e:7.9,n:12.1,c:13.11}, solar:{e:22.3,n:19.7,c:19.1}, wind:{e:8.8,n:0.2,c:2.8}, ccs_ccgt:{e:0,n:20.0,c:17.6}, hydro:{e:9.0,n:0,c:2.7}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
-        {clean_firm:{e:7.9,n:12.7,c:13.66}, solar:{e:22.3,n:13.7,c:15.35}, wind:{e:8.8,n:0.5,c:3.02}, ccs_ccgt:{e:0,n:27.8,c:24.47}, hydro:{e:9.3,n:0,c:2.78}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
+        {clean_firm:{e:7.9,n:0.3,c:2.46}, solar:{e:22.3,n:13.7,c:15.35}, wind:{e:8.8,n:1.5,c:3.85}, ccs_ccgt:{e:0,n:39.1,c:34.44}, hydro:{e:9.3,n:0,c:2.78}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
         {clean_firm:{e:7.9,n:0.7,c:2.7}, solar:{e:22.3,n:15.2,c:16.23}, wind:{e:8.6,n:0,c:2.57}, ccs_ccgt:{e:0,n:42.8,c:37.66}, hydro:{e:9.5,n:0.1,c:2.89}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
         {clean_firm:{e:7.9,n:2.1,c:4.0}, solar:{e:22.3,n:17.7,c:17.82}, wind:{e:8.8,n:1.2,c:3.6}, ccs_ccgt:{e:0,n:41.1,c:36.14}, hydro:{e:9.5,n:0.5,c:3.0}, battery:{d:2,c:2.06}, ldes:{d:2,c:3.64}},
         {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
@@ -1027,46 +1027,46 @@ const WYN_RESOURCE_COSTS = {
         {clean_firm:{e:8.6,n:0.9,c:3.04}, solar:{e:13.8,n:0.4,c:3.98}, wind:{e:23.6,n:47.6,c:28.29}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
         {clean_firm:{e:8.6,n:1.1,c:3.23}, solar:{e:13.8,n:5.6,c:6.92}, wind:{e:23.6,n:39.4,c:24.52}, ccs_ccgt:{e:0,n:4.9,c:3.54}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
         {clean_firm:{e:8.6,n:0.8,c:2.99}, solar:{e:13.8,n:1.9,c:4.84}, wind:{e:23.6,n:56.2,c:32.22}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:8.0,n:0,c:2.16}, solar:{e:13.8,n:7.2,c:7.83}, wind:{e:23.6,n:47.4,c:28.18}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:2,c:1.86}, ldes:{d:2,c:3.14}},
+        {clean_firm:{e:8.6,n:0.4,c:2.55}, solar:{e:13.8,n:7.2,c:7.83}, wind:{e:23.6,n:46.4,c:27.72}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:2,c:1.86}, ldes:{d:2,c:3.14}},
         {clean_firm:{e:7.4,n:0,c:2.0}, solar:{e:13.8,n:10.6,c:9.76}, wind:{e:23.6,n:50.6,c:29.65}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:2,c:1.86}, ldes:{d:2,c:3.14}},
         {clean_firm:{e:8.6,n:0.3,c:2.44}, solar:{e:13.8,n:20.6,c:15.47}, wind:{e:23.6,n:44.1,c:26.66}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:2,c:1.86}, ldes:{d:2,c:3.14}},
         {clean_firm:{e:8.3,n:0,c:2.23}, solar:{e:13.8,n:21.6,c:16.04}, wind:{e:23.6,n:50.7,c:29.71}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:2,c:1.86}, ldes:{d:2,c:3.14}},
         {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
     ],
     PJM: [
-        {clean_firm:{e:32.1,n:19.9,c:31.16}, solar:{e:2.9,n:5.1,c:4.56}, wind:{e:3.8,n:16.2,c:12.96}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:32.1,n:31.6,c:43.85}, solar:{e:2.9,n:1.4,c:1.93}, wind:{e:3.8,n:13.2,c:10.8}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:32.1,n:48.9,c:62.48}, solar:{e:2.9,n:1.6,c:2.11}, wind:{e:3.8,n:0.7,c:1.8}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:32.1,n:55.2,c:69.29}, solar:{e:2.9,n:2.0,c:2.35}, wind:{e:3.8,n:1.1,c:2.05}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:32.1,n:57.9,c:72.2}, solar:{e:2.9,n:2.1,c:2.46}, wind:{e:3.8,n:1.2,c:2.16}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:32.1,n:59.7,c:74.15}, solar:{e:2.9,n:2.2,c:2.53}, wind:{e:3.8,n:1.3,c:2.23}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:32.1,n:57.1,c:71.39}, solar:{e:2.9,n:2.4,c:2.63}, wind:{e:3.8,n:1.5,c:2.34}, ccs_ccgt:{e:0,n:5.3,c:4.31}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:32.1,n:58.4,c:72.71}, solar:{e:2.9,n:10.2,c:8.11}, wind:{e:3.8,n:0.6,c:1.7}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:1.1,n:0,c:0.37}, battery:{d:2,c:1.98}, ldes:{d:2,c:3.46}},
-        {clean_firm:{e:32.1,n:58.4,c:72.71}, solar:{e:2.9,n:10.2,c:8.11}, wind:{e:3.8,n:0.6,c:1.7}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:1.1,n:0,c:0.37}, battery:{d:2,c:1.98}, ldes:{d:2,c:3.46}},
+        {clean_firm:{e:32.0,n:0,c:10.88}, solar:{e:2.9,n:9.1,c:7.36}, wind:{e:3.8,n:32.2,c:24.48}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:32.1,n:1.9,c:11.72}, solar:{e:2.9,n:9.8,c:7.88}, wind:{e:3.8,n:30.2,c:23.04}, ccs_ccgt:{e:0,n:4.2,c:3.49}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:32.1,n:3.9,c:13.88}, solar:{e:2.9,n:6.1,c:5.26}, wind:{e:3.8,n:23.2,c:18.0}, ccs_ccgt:{e:0,n:18.0,c:14.76}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:32.1,n:0.1,c:10.94}, solar:{e:2.9,n:6.3,c:5.4}, wind:{e:3.8,n:10.0,c:8.49}, ccs_ccgt:{e:0,n:36.8,c:30.18}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:32.1,n:1.1,c:11.2}, solar:{e:2.9,n:1.9,c:2.28}, wind:{e:3.8,n:10.4,c:8.82}, ccs_ccgt:{e:0,n:42.8,c:35.05}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:32.1,n:3.6,c:13.56}, solar:{e:2.9,n:7.3,c:6.1}, wind:{e:3.8,n:16.6,c:13.24}, ccs_ccgt:{e:0,n:35.7,c:29.27}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:31.5,n:0,c:10.71}, solar:{e:2.9,n:38.1,c:27.62}, wind:{e:3.8,n:27.7,c:21.24}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:1.1,n:0,c:0.36}, battery:{d:2,c:1.98}, ldes:{d:2,c:3.46}},
+        {clean_firm:{e:32.1,n:2.2,c:12.07}, solar:{e:2.9,n:14.8,c:11.33}, wind:{e:3.8,n:2.4,c:3.05}, ccs_ccgt:{e:0,n:44.7,c:36.67}, hydro:{e:1.0,n:0,c:0.35}, battery:{d:2,c:1.98}, ldes:{d:2,c:3.46}},
+        {clean_firm:{e:32.1,n:2.3,c:12.17}, solar:{e:2.9,n:18.2,c:13.72}, wind:{e:3.8,n:11.7,c:9.74}, ccs_ccgt:{e:0,n:38.9,c:31.86}, hydro:{e:1.1,n:0,c:0.38}, battery:{d:2,c:1.98}, ldes:{d:2,c:3.46}},
         {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
     ],
     NYISO: [
-        {clean_firm:{e:18.4,n:21.6,c:31.77}, solar:{e:0.0,n:4.0,c:3.96}, wind:{e:4.7,n:19.3,c:20.31}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:12.0,n:0,c:5.04}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:18.4,n:15.6,c:24.87}, solar:{e:0.0,n:4.2,c:4.21}, wind:{e:4.7,n:20.8,c:21.73}, ccs_ccgt:{e:0,n:8.5,c:8.76}, hydro:{e:12.8,n:0,c:5.36}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:18.4,n:57.6,c:73.17}, solar:{e:0,n:0,c:0}, wind:{e:4.7,n:0.0,c:2.02}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:14.2,n:0,c:5.98}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:18.4,n:59.2,c:75.01}, solar:{e:0,n:0,c:0}, wind:{e:4.7,n:0.2,c:2.12}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:14.5,n:0,c:6.11}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:18.4,n:61.6,c:77.77}, solar:{e:0,n:0,c:0}, wind:{e:4.7,n:0.3,c:2.26}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:15.0,n:0,c:6.3}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:18.4,n:42.8,c:56.15}, solar:{e:0,n:0,c:0}, wind:{e:4.7,n:0.4,c:2.35}, ccs_ccgt:{e:0,n:20.4,c:21.01}, hydro:{e:15.3,n:0,c:6.43}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:18.4,n:69.6,c:86.97}, solar:{e:0,n:0,c:0}, wind:{e:4.7,n:0.8,c:2.73}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:15.9,n:0.6,c:6.93}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:18.4,n:50.6,c:65.12}, solar:{e:0.0,n:5.8,c:5.69}, wind:{e:4.7,n:1.0,c:2.97}, ccs_ccgt:{e:0,n:17.2,c:17.77}, hydro:{e:15.9,n:1.3,c:7.24}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:18.4,n:63.0,c:79.34}, solar:{e:0.0,n:10.2,c:10.07}, wind:{e:4.5,n:0,c:1.9}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:15.9,n:1.0,c:7.12}, battery:{d:2,c:2.2}, ldes:{d:2,c:4.08}},
+        {clean_firm:{e:18.4,n:1.6,c:8.77}, solar:{e:0.0,n:4.0,c:3.96}, wind:{e:4.7,n:39.3,c:39.31}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:12.0,n:0,c:5.04}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:18.4,n:2.9,c:10.21}, solar:{e:0.0,n:4.2,c:4.21}, wind:{e:4.7,n:29.3,c:29.81}, ccs_ccgt:{e:0,n:12.8,c:13.13}, hydro:{e:12.8,n:0,c:5.36}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:18.0,n:0,c:7.56}, solar:{e:0.0,n:4.5,c:4.46}, wind:{e:4.7,n:22.3,c:23.16}, ccs_ccgt:{e:0,n:27.0,c:27.81}, hydro:{e:13.5,n:0,c:5.67}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:18.4,n:0.0,c:7.73}, solar:{e:0.0,n:4.6,c:4.55}, wind:{e:4.7,n:9.1,c:10.62}, ccs_ccgt:{e:0,n:41.4,c:42.64}, hydro:{e:13.8,n:0,c:5.8}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:18.4,n:0.6,c:7.88}, solar:{e:0.0,n:4.8,c:4.7}, wind:{e:4.7,n:4.8,c:6.53}, ccs_ccgt:{e:0,n:47.5,c:48.92}, hydro:{e:14.2,n:0,c:5.98}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:18.4,n:1.0,c:8.06}, solar:{e:0.0,n:5.1,c:5.05}, wind:{e:4.7,n:16.7,c:17.86}, ccs_ccgt:{e:0,n:40.8,c:42.02}, hydro:{e:15.3,n:0,c:6.43}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:18.4,n:2.6,c:9.92}, solar:{e:0.0,n:5.3,c:5.2}, wind:{e:4.7,n:5.8,c:7.48}, ccs_ccgt:{e:0,n:52.5,c:54.08}, hydro:{e:15.8,n:0,c:6.62}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:18.4,n:1.6,c:8.71}, solar:{e:0.0,n:10.5,c:10.4}, wind:{e:4.7,n:1.6,c:3.49}, ccs_ccgt:{e:0,n:52.5,c:54.08}, hydro:{e:15.8,n:0,c:6.62}, battery:{d:2,c:2.2}, ldes:{d:2,c:4.08}},
+        {clean_firm:{e:18.4,n:2.5,c:9.81}, solar:{e:0.0,n:12.1,c:11.98}, wind:{e:4.7,n:0.8,c:2.73}, ccs_ccgt:{e:0,n:55.0,c:56.65}, hydro:{e:15.9,n:0.6,c:6.93}, battery:{d:2,c:2.2}, ldes:{d:2,c:4.08}},
         {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
     ],
     NEISO: [
         {clean_firm:{e:23.8,n:0.2,c:9.81}, solar:{e:1.4,n:2.6,c:2.86}, wind:{e:3.9,n:48.1,c:42.48}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
         {clean_firm:{e:23.8,n:0.8,c:9.97}, solar:{e:1.4,n:2.0,c:2.33}, wind:{e:3.9,n:33.5,c:30.07}, ccs_ccgt:{e:0,n:16.2,c:15.99}, hydro:{e:3.4,n:0,c:1.39}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
         {clean_firm:{e:23.8,n:4.7,c:13.98}, solar:{e:1.4,n:6.2,c:6.03}, wind:{e:3.9,n:47.4,c:41.89}, ccs_ccgt:{e:0,n:4.8,c:4.7}, hydro:{e:2.8,n:0,c:1.17}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
-        {clean_firm:{e:23.8,n:0,c:9.74}, solar:{e:1.4,n:10.9,c:10.21}, wind:{e:3.9,n:51.2,c:45.12}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:3.8,n:0,c:1.56}, battery:{d:2,c:2.14}, ldes:{d:2,c:3.86}},
-        {clean_firm:{e:23.5,n:0,c:9.64}, solar:{e:1.4,n:17.2,c:15.73}, wind:{e:3.9,n:48.0,c:42.43}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:3.9,n:0,c:1.61}, battery:{d:2,c:2.14}, ldes:{d:2,c:3.86}},
+        {clean_firm:{e:23.8,n:1.7,c:10.62}, solar:{e:1.4,n:6.8,c:6.52}, wind:{e:3.9,n:55.3,c:48.57}, ccs_ccgt:{e:0,n:5.1,c:5.05}, hydro:{e:4.1,n:0,c:1.67}, battery:{d:0,c:0.0}, ldes:{d:0,c:0.0}},
+        {clean_firm:{e:23.5,n:0,c:9.64}, solar:{e:1.4,n:14.3,c:13.14}, wind:{e:3.9,n:51.0,c:44.93}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:3.9,n:0,c:1.61}, battery:{d:2,c:2.14}, ldes:{d:2,c:3.86}},
         {clean_firm:{e:23.8,n:3.5,c:12.6}, solar:{e:1.4,n:20.8,c:18.9}, wind:{e:3.9,n:38.5,c:34.34}, ccs_ccgt:{e:0,n:5.1,c:5.0}, hydro:{e:4.0,n:0,c:1.66}, battery:{d:2,c:2.14}, ldes:{d:2,c:3.86}},
         {clean_firm:{e:23.8,n:3.2,c:12.3}, solar:{e:1.4,n:29.9,c:26.9}, wind:{e:3.9,n:41.5,c:36.84}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:4.3,n:0,c:1.77}, battery:{d:2,c:2.14}, ldes:{d:2,c:3.86}},
         {clean_firm:{e:23.8,n:0.8,c:9.96}, solar:{e:1.4,n:9.3,c:8.76}, wind:{e:3.9,n:10.0,c:10.11}, ccs_ccgt:{e:0,n:53.5,c:52.97}, hydro:{e:4.3,n:0,c:1.75}, battery:{d:2,c:2.14}, ldes:{d:2,c:3.86}},
-        {clean_firm:{e:23.8,n:47.9,c:62.34}, solar:{e:1.4,n:8.7,c:8.21}, wind:{e:3.9,n:0.6,c:2.09}, ccs_ccgt:{e:0,n:21.3,c:21.07}, hydro:{e:4.4,n:0.1,c:1.84}, battery:{d:2,c:2.14}, ldes:{d:2,c:3.86}},
+        {clean_firm:{e:23.8,n:1.0,c:10.02}, solar:{e:1.4,n:9.4,c:8.85}, wind:{e:3.9,n:6.9,c:7.46}, ccs_ccgt:{e:0,n:57.2,c:56.67}, hydro:{e:4.3,n:0,c:1.77}, battery:{d:2,c:2.14}, ldes:{d:4,c:7.72}},
         {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
     ]
 };
