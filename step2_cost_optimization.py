@@ -177,8 +177,6 @@ for iso in ISOS:
 
         best_key = None
         best_cost = float('inf')
-        old_best_key = None
-        old_best_cost = float('inf')
 
         for skey, sc in scenarios.items():
             stats[iso]['scenarios'] += 1
@@ -207,67 +205,68 @@ for iso in ISOS:
             new_effective = old_costs.get('effective_cost', 0) + cost_delta_per_mwh
             new_incremental = old_costs.get('incremental', 0) + cost_delta_per_mwh
 
-            # Store tranche data as NEW fields (don't modify existing)
+            # Override costs with tranche pricing (tranche IS the cost model now)
+            sc['costs']['total_cost'] = round(new_total, 2)
+            sc['costs']['effective_cost'] = round(new_effective, 2)
+            sc['costs']['incremental'] = round(new_incremental, 2)
+            # wholesale unchanged
+
+            # Store tranche breakdown for transparency
             sc['tranche_costs'] = {
-                'total_cost': round(new_total, 2),
-                'effective_cost': round(new_effective, 2),
-                'incremental': round(new_incremental, 2),
-                'wholesale': old_costs.get('wholesale', 0),
                 'cost_delta_per_mwh': round(cost_delta_per_mwh, 2),
                 'clean_firm_tranche': tranche,
                 'new_cf_pct': round(new_cf_pct, 1),
                 'new_cf_twh': round(new_cf_twh, 3),
             }
 
-            # Track old and new optimal
-            if old_total < old_best_cost:
-                old_best_cost = old_total
-                old_best_key = skey
+            # Update costs_detail for MMM_M_M (the only scenario with full breakdown)
+            if skey == 'MMM_M_M' and sc.get('costs_detail'):
+                cd = sc['costs_detail']
+                cd['total_cost_per_demand_mwh'] = round(
+                    cd.get('total_cost_per_demand_mwh', 0) + cost_delta_per_mwh, 2)
+                cd['effective_cost_per_useful_mwh'] = round(
+                    cd.get('effective_cost_per_useful_mwh', 0) + cost_delta_per_mwh, 2)
+                cd['incremental_above_baseline'] = round(
+                    cd.get('incremental_above_baseline', 0) + cost_delta_per_mwh, 2)
+                # Update clean_firm cost_per_demand_mwh in resource_costs
+                rc = cd.get('resource_costs', {}).get('clean_firm', {})
+                if rc and new_cf_twh > 0:
+                    rc['cost_per_demand_mwh'] = round(
+                        tranche['total_cf_cost'] / demand_twh, 2)
+                    rc['tranche_effective_lcoe'] = tranche['effective_cf_lcoe']
+                    rc['uprate_pct_of_new'] = tranche['uprate_pct_of_new']
+
+            # Track optimal
             if new_total < best_cost:
                 best_cost = new_total
                 best_key = skey
 
-        # Record new optimal
         new_optimal_results[iso][threshold_key] = {
-            'old_optimal': old_best_key,
-            'new_optimal': best_key,
-            'changed': old_best_key != best_key,
-            'old_best_cost': round(old_best_cost, 2),
-            'new_best_cost': round(best_cost, 2),
+            'optimal': best_key,
+            'cost': round(best_cost, 2),
         }
-
-        if old_best_key != best_key:
-            stats[iso]['optimal_changed'] += 1
 
 # ============================================================================
 # SUMMARY
 # ============================================================================
 
 print("\n" + "=" * 70)
-print("STEP 2 COST OPTIMIZATION — RESULTS SUMMARY")
+print("STEP 2 COST OPTIMIZATION — RESULTS")
 print("=" * 70)
 
 for iso in ISOS:
-    n_thresholds = len(new_optimal_results[iso])
-    n_changed = stats[iso]['optimal_changed']
-    print(f"\n{iso}: {stats[iso]['scenarios']} scenarios repriced, "
-          f"{n_changed}/{n_thresholds} thresholds changed optimal scenario")
-
+    print(f"\n{iso}: {stats[iso]['scenarios']} scenarios repriced")
     for t in sorted(new_optimal_results[iso].keys(), key=lambda x: float(x)):
         r = new_optimal_results[iso][t]
-        marker = " *** CHANGED" if r['changed'] else ""
-        old_sc = data['results'][iso]['thresholds'][t]['scenarios'][r['old_optimal']]
-        new_sc = data['results'][iso]['thresholds'][t]['scenarios'][r['new_optimal']]
-        old_cf = old_sc.get('resource_mix', {}).get('clean_firm', 0)
-        new_cf = new_sc.get('resource_mix', {}).get('clean_firm', 0)
-        print(f"  {t:>5}%: {r['old_optimal']} (${r['old_best_cost']:.1f}, CF={old_cf}%) → "
-              f"{r['new_optimal']} (${r['new_best_cost']:.1f}, CF={new_cf}%){marker}")
+        sc = data['results'][iso]['thresholds'][t]['scenarios'][r['optimal']]
+        cf = sc.get('resource_mix', {}).get('clean_firm', 0)
+        print(f"  {t:>5}%: {r['optimal']} — ${r['cost']:.1f}/MWh, CF={cf}%")
 
 # ============================================================================
 # SAVE RESULTS
 # ============================================================================
 
-# Add tranche metadata to config
+# Update config with tranche model metadata
 data['config']['tranche_model'] = {
     'uprate_pct': UPRATE_PCT,
     'uprate_cf': UPRATE_CF,
@@ -278,9 +277,18 @@ data['config']['tranche_model'] = {
     'description': 'Merit-order two-tranche clean firm pricing. Uprates filled first (capped), then regional new-build.',
 }
 
-# Add new optimal scenario mapping
+# Update LCOE tables — clean_firm now shows the effective tranche LCOE at MMM_M_M's CF level
+# (This is informational — actual pricing is quantity-dependent via tranche model)
+# Keep the new-build LCOE as the displayed "clean firm" cost since that's the marginal resource
+data['config']['lcoe_tables']['clean_firm'] = {
+    'Low':    NEWBUILD_LCOE['L'],
+    'Medium': NEWBUILD_LCOE['M'],
+    'High':   NEWBUILD_LCOE['H'],
+}
+
+# Store optimal scenarios
 data['postprocessing'] = data.get('postprocessing', {})
-data['postprocessing']['step2_tranche_optimal'] = new_optimal_results
+data['postprocessing']['optimal_scenarios'] = new_optimal_results
 
 # Save (preserves all existing fields, only adds new ones)
 output_path = RESULTS_PATH
@@ -294,27 +302,28 @@ print(f"\nSaved to {output_path} ({file_size_mb:.1f} MB)")
 # GENERATE SHARED DATA ADDITIONS
 # ============================================================================
 
-# Build EFFECTIVE_COST_TRANCHE data for shared-data.js
-# For each ISO, at each threshold, use the new optimal scenario's tranche cost
-print("\n\nEFFECTIVE_COST_TRANCHE (new optimal, $/MWh effective cost):")
+# Build effective cost data for shared-data.js
+print("\n\nEFFECTIVE_COST_DATA ($/MWh effective cost at optimal scenario):")
 for iso in ISOS:
     parts = []
     thresholds = sorted(new_optimal_results[iso].keys(), key=lambda x: float(x))
     for t in thresholds:
-        best = new_optimal_results[iso][t]['new_optimal']
+        best = new_optimal_results[iso][t]['optimal']
         sc = data['results'][iso]['thresholds'][t]['scenarios'][best]
-        tc = sc.get('tranche_costs', {})
-        cost = tc.get('effective_cost', sc['costs']['effective_cost'])
+        cost = sc['costs']['effective_cost']
         parts.append(f"{cost:.1f}")
     print(f"    {iso}: [{', '.join(parts)}],")
 
-print("\n\nTRANCHE_OPTIMAL_SCENARIOS (scenario key per threshold):")
+# Also output MMM_M_M effective costs (what the dashboard shows at all-Medium toggles)
+print("\n\nMMM_M_M effective costs (dashboard default view):")
 for iso in ISOS:
     parts = []
-    thresholds = sorted(new_optimal_results[iso].keys(), key=lambda x: float(x))
+    thresholds = sorted(data['results'][iso]['thresholds'].keys(), key=lambda x: float(x))
     for t in thresholds:
-        best = new_optimal_results[iso][t]['new_optimal']
-        parts.append(f"'{best}'")
+        sc = data['results'][iso]['thresholds'][t]['scenarios'].get('MMM_M_M')
+        if sc:
+            cost = sc['costs']['effective_cost']
+            parts.append(f"{cost:.1f}")
     print(f"    {iso}: [{', '.join(parts)}],")
 
 print("\nStep 2 complete.")
