@@ -1574,7 +1574,7 @@ body {
 
             <p>
                 When every hour counts, intermittency becomes a critical cost driver. The pathway from 75% to
-                100% hourly matching reveals a non-linear cost curve that procurement teams need to plan for &mdash; though the grid backbone holds better than expected.
+                100% hourly matching reveals a non-linear cost curve that procurement teams need to plan for &mdash; with region-specific crossover points where alternatives become cheaper per ton.
             </p>
 
             <div class="energy-spectrum-bar"></div>
@@ -1598,7 +1598,8 @@ body {
                         This chart shows the blended cost per MWh for each hourly matching target, averaged
                         across all five ISO regions. The relationship is <strong>non-linear</strong> &mdash;
                         higher targets cost more per MWh, but the average abatement cost per ton CO&#8322; stays
-                        remarkably flat, ranging from $23&ndash;152/ton across regions through 99%.
+                        flat at $23&ndash;141/ton across regions through 99%. The real story is in the stepwise
+                        marginal cost &mdash; individual steps range from $50/ton to $887/ton.
                     </p>
                 </div>
             </div>
@@ -1637,12 +1638,13 @@ body {
                 <div class="step-card">
                     <div class="step-inline-chart"><canvas class="step-chart-canvas" data-step-chart="cost-99"></canvas></div>
                     <span class="story-badge story-badge-orange">Premium</span>
-                    <h3>99%: The Backbone Still Holds</h3>
+                    <h3>99%: Where to Pivot?</h3>
                     <p>
                         The final percentage points are the most expensive per MWh. Costs reach
-                        <strong>$54&ndash;$96/MWh</strong> across regions &mdash; 1.2&ndash;1.5x the cost of 75% matching.
-                        But the average abatement cost per ton CO&#8322; stays below $152/ton in every region
-                        &mdash; cheaper than DAC, SAF, or the social cost of carbon. The backbone holds.
+                        <strong>$54&ndash;$96/MWh</strong> across regions. Average MAC stays below $141/ton,
+                        but marginal steps above 90% range from $50 to $887/ton. Three regions have steps
+                        exceeding DAC &mdash; the question is no longer &ldquo;can we?&rdquo; but
+                        &ldquo;should we push grid further or invest in alternatives?&rdquo;
                     </p>
                     <div class="step-cost-callout step-cost-orange">
                         <strong>Avg Cost:</strong> <span id="stepCost99">~$76/MWh avg</span> &mdash; still below all major abatement benchmarks per ton CO&#8322;

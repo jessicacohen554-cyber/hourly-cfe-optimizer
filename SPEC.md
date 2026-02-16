@@ -617,6 +617,8 @@ This produces a variable hourly emission rate that reflects the actual fossil fu
 
 **Implementation note**: CO₂ calculation is post-hoc (doesn't affect cost/matching optimization). The optimizer's resource mix and cost results are unaffected. CO₂ values can be recomputed on cached results.
 
+**Bug fix (2026-02-16)**: The optimizer was applying marginal fossil emission rates to ALL storage charging hours, including hours with clean surplus (curtailment). Since storage in this model only charges from surplus clean energy, this incorrectly inflated charge emissions to ~21M tons (ERCOT 92.5%), making storage appear CO₂-neutral or negative. Fix: `charge_emission_rate = np.where(surplus > 0, 0.0, hourly_rates)` — zero rate when curtailment is occurring, marginal fossil rate otherwise. Post-processed `overprocure_results.json` and updated `MAC_DATA` in `shared-data.js`. CAISO MAC at 90% dropped from $122 to $98/ton; other regions with storage deployment similarly affected.
+
 ### 7.2 Abatement Cost Curves (2 new charts)
 - **Average Cost of Abatement**: Total incremental cost / Total CO2 abated = **$/ton CO2**
 - **Marginal Cost of Abatement**: (Cost_{X+1%} − Cost_{X%}) / (CO2_{X+1%} − CO2_{X%}) = **$/ton CO2**
