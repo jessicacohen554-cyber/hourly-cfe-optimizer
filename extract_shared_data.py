@@ -177,6 +177,112 @@ for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    }}{iso_comma}')
 lines.append('};')
 
+# ============================================================================
+# CF_TRANCHE_DATA — uprate vs new-build split for WYN panel
+# ============================================================================
+# Structure: { ISO: { uprate_twh: [9], newbuild_twh: [9], uprate_price: [9],
+#              newbuild_price: [9], effective_cf_lcoe: [9], new_cf_twh: [9] } }
+
+cf_tranche_data = {}
+for iso in ISOS:
+    iso_tr = {
+        'new_cf_twh': [],
+        'uprate_twh': [],
+        'newbuild_twh': [],
+        'uprate_price': [],
+        'newbuild_price': [],
+        'effective_cf_lcoe': [],
+    }
+    for t in THRESHOLDS:
+        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        tc = sc.get('tranche_costs', {}) if sc else {}
+        iso_tr['new_cf_twh'].append(round(tc.get('new_cf_twh', 0), 3))
+        iso_tr['uprate_twh'].append(round(tc.get('uprate_twh', 0), 4))
+        iso_tr['newbuild_twh'].append(round(tc.get('newbuild_twh', 0), 3))
+        iso_tr['uprate_price'].append(tc.get('uprate_price', 0))
+        iso_tr['newbuild_price'].append(round(tc.get('newbuild_price', 0), 1))
+        iso_tr['effective_cf_lcoe'].append(round(tc.get('effective_new_cf_lcoe', 0), 1))
+    cf_tranche_data[iso] = iso_tr
+
+# ============================================================================
+# WYN_RESOURCE_COSTS — per-resource existing/new/cost for WYN panel
+# ============================================================================
+# Structure: { ISO: [ {resource: {existing_pct, new_pct, cost_per_demand_mwh}} × 9 thresholds ] }
+
+wyn_resource_costs = {}
+WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
+for iso in ISOS:
+    iso_wyn = []
+    for t in THRESHOLDS:
+        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        rc = sc.get('costs_detail', {}).get('resource_costs', {}) if sc else {}
+        entry = {}
+        for res in WYN_RESOURCES:
+            rd = rc.get(res, {})
+            if res in ('battery', 'ldes'):
+                entry[res] = {
+                    'dispatch_pct': rd.get('dispatch_pct', 0),
+                    'cost': round(rd.get('cost_per_demand_mwh', 0), 2),
+                }
+            else:
+                entry[res] = {
+                    'existing_pct': round(rd.get('existing_pct', rd.get('existing_share', 0)), 1),
+                    'new_pct': round(rd.get('new_pct', rd.get('new_share', 0)), 1),
+                    'cost': round(rd.get('cost_per_demand_mwh', 0), 2),
+                }
+        iso_wyn.append(entry)
+    wyn_resource_costs[iso] = iso_wyn
+
+# ============================================================================
+# FORMAT CF_TRANCHE_DATA
+# ============================================================================
+
+lines.append('')
+lines.append('// --- CF Tranche Split (uprate vs new-build) — MMM_M_M scenario ---')
+lines.append('// Source: overprocure_results.json tranche_costs field')
+lines.append('// Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]')
+lines.append('// uprate_twh capped at 5% of existing nuclear; newbuild = remainder')
+lines.append('// Prices: uprate = nuclear uprate LCOE; newbuild = geothermal (CAISO) or SMR + tx')
+lines.append('const CF_TRANCHE_DATA = {')
+for iso_idx, iso in enumerate(ISOS):
+    tr = cf_tranche_data[iso]
+    lines.append(f'    {iso}: {{')
+    fields = ['new_cf_twh', 'uprate_twh', 'newbuild_twh', 'uprate_price', 'newbuild_price', 'effective_cf_lcoe']
+    for fi, field in enumerate(fields):
+        comma = ',' if fi < len(fields) - 1 else ''
+        padding = ' ' * max(0, 18 - len(field))
+        lines.append(f'        {field}:{padding}{fmt_array(tr[field])}{comma}')
+    iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    }}{iso_comma}')
+lines.append('};')
+
+# ============================================================================
+# FORMAT WYN_RESOURCE_COSTS
+# ============================================================================
+
+lines.append('')
+lines.append('// --- WYN Resource Costs (existing/new/cost per resource) — MMM_M_M scenario ---')
+lines.append('// Source: overprocure_results.json costs_detail.resource_costs')
+lines.append('// Array of 9 objects per ISO (one per threshold in THRESHOLDS order)')
+lines.append('// Generation resources: {existing_pct, new_pct, cost} = % of demand + $/MWh-demand')
+lines.append('// Storage resources: {dispatch_pct, cost} = dispatch % of demand + $/MWh-demand')
+lines.append('const WYN_RESOURCE_COSTS = {')
+for iso_idx, iso in enumerate(ISOS):
+    lines.append(f'    {iso}: [')
+    for ti, entry in enumerate(wyn_resource_costs[iso]):
+        parts = []
+        for res in WYN_RESOURCES:
+            rd = entry[res]
+            if 'dispatch_pct' in rd:
+                parts.append(f'{res}:{{d:{rd["dispatch_pct"]},c:{rd["cost"]}}}')
+            else:
+                parts.append(f'{res}:{{e:{rd["existing_pct"]},n:{rd["new_pct"]},c:{rd["cost"]}}}')
+        comma = ',' if ti < len(wyn_resource_costs[iso]) - 1 else ''
+        lines.append(f'        {{{", ".join(parts)}}}{comma}')
+    iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    ]{iso_comma}')
+lines.append('};')
+
 js_block = '\n'.join(lines)
 
 # Write to file
