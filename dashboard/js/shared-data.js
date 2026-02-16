@@ -172,6 +172,44 @@ const EFFECTIVE_COST_DATA = {
     NEISO:  [73.7, 75.4, 80.1, 82.0, 83.4, 85.5, 88.8, 93.2, 96.0]
 };
 
+// --- Tranche-Repriced Effective Cost ($/MWh) — Step 2 Output ---
+// Merit-order tranche pricing: nuclear uprates (5% of fleet, capped) filled first,
+// then regional new-build (geothermal CAISO, SMR elsewhere). Scenarios re-ranked
+// to find lowest-cost physics-valid mix under tranche pricing.
+// Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
+const EFFECTIVE_COST_TRANCHE = {
+    CAISO:  [42.2, 42.6, 44.7, 46.0, 47.8, 48.3, 49.1, 50.2, 51.1],
+    ERCOT:  [25.6, 26.3, 28.2, 29.8, 30.2, 32.1, 33.7, 35.4, 37.1],
+    PJM:    [41.5, 42.7, 44.3, 46.3, 46.9, 49.4, 49.4, 53.4, 54.9],
+    NYISO:  [55.2, 57.6, 61.2, 62.2, 63.8, 66.6, 67.6, 71.8, 74.1],
+    NEISO:  [52.0, 54.6, 57.1, 57.5, 59.2, 61.1, 63.5, 67.2, 70.3]
+};
+
+// --- Tranche-Optimal Scenario Keys per threshold ---
+// The lowest-cost scenario at each threshold under tranche pricing
+const TRANCHE_OPTIMAL_SCENARIOS = {
+    CAISO:  ['LML_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LML_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N'],
+    ERCOT:  ['LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LHL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N'],
+    PJM:    ['LHL_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N', 'LHL_L_N', 'LML_L_N', 'LML_L_N'],
+    NYISO:  ['LHL_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N'],
+    NEISO:  ['LLL_L_N', 'LHL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N']
+};
+
+// --- Tranche-Optimal Clean Firm % of Demand ---
+// How much clean firm the tranche-optimal scenario uses at each threshold
+const TRANCHE_CF_PCT = {
+    CAISO:  [10, 10, 9, 9, 8, 20, 8, 8, 9],
+    ERCOT:  [10, 10, 10, 5, 9, 9, 7, 8, 7],
+    PJM:    [40, 35, 35, 31, 33, 30, 30, 29, 31],
+    NYISO:  [20, 20, 20, 19, 19, 17, 17, 16, 15],
+    NEISO:  [30, 25, 30, 25, 24, 23, 22, 20, 19]
+};
+
+// --- Nuclear Uprate Caps (TWh/yr) — 5% of existing nuclear at 90% CF ---
+const UPRATE_CAPS_TWH = {
+    CAISO: 0.907, ERCOT: 1.064, PJM: 12.614, NYISO: 1.340, NEISO: 1.380
+};
+
 // ============================================================================
 // SHARED UTILITY FUNCTIONS
 // ============================================================================
