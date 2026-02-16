@@ -1574,11 +1574,11 @@ def compute_costs(iso, resource_pcts, procurement_pct, battery_dispatch_pct, lde
         resource_pct_of_demand = resource_fraction * 100.0
 
         existing_share = grid_shares.get(rtype, 0)
-        existing_pct = min(resource_pct_of_demand, existing_share)
-        new_pct = max(0, resource_pct_of_demand - existing_share)
 
         if rtype == 'hydro':
-            # Hydro: always at wholesale, no new-build, no transmission adder
+            # Hydro: always existing-only, all at wholesale, no new-build ever
+            existing_pct = resource_pct_of_demand  # ALL hydro is existing
+            new_pct = 0
             cost_per_demand = resource_pct_of_demand / 100.0 * wholesale
         else:
             # Existing portion at wholesale, new-build at LCOE + transmission
@@ -1688,12 +1688,13 @@ def compute_costs_parameterized(iso, resource_pcts, procurement_pct, battery_dis
         resource_pct_of_demand = resource_fraction * 100.0
 
         existing_share = grid_shares.get(rtype, 0)
-        existing_pct = min(resource_pct_of_demand, existing_share)
-        new_pct = max(0, resource_pct_of_demand - existing_share)
 
         if rtype == 'hydro':
+            # Hydro: always existing-only, all at wholesale
             cost_per_demand = resource_pct_of_demand / 100.0 * wholesale
         else:
+            existing_pct = min(resource_pct_of_demand, existing_share)
+            new_pct = max(0, resource_pct_of_demand - existing_share)
             new_build_cost = lcoe_map.get(rtype, 0) + tx_map.get(rtype, 0)
             cost_per_demand = (existing_pct / 100.0 * wholesale) + (new_pct / 100.0 * new_build_cost)
 
