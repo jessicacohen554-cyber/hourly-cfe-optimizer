@@ -517,16 +517,9 @@ def main():
         json.dump(results_data, f)
     print(f"\n  Updated: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
 
-    # Update cache if it exists
-    if os.path.exists(CACHE_PATH):
-        with open(CACHE_PATH) as f:
-            cache_data = json.load(f)
-        cache_data['results'] = results_data['results']
-        cache_data['metadata']['co2_recomputed'] = True
-        cache_data['metadata']['co2_methodology'] = 'hourly_fossil_fuel_emission_rates'
-        with open(CACHE_PATH, 'w') as f:
-            json.dump(cache_data, f, indent=2)
-        print(f"  Updated: {CACHE_PATH} ({os.path.getsize(CACHE_PATH) / 1024:.0f} KB)")
+    # Cache is LOCKED — do not modify
+    # CO2 data is only written to the dashboard results file
+    print(f"  Cache ({CACHE_PATH}) is locked — skipped")
 
     print(f"\n{'='*70}")
     print("  CO₂ RECOMPUTATION COMPLETE")
