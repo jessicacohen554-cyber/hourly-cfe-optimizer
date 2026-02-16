@@ -3150,7 +3150,7 @@ body {
     /* Dashboard controls */
     .control-group select { min-width: 100%; font-size: 0.82rem; }
     .sensitivity-toggles-grid { gap: 10px 16px; }
-    .toggle-btn-group button { padding: 5px 8px; font-size: 0.72rem; min-width: 38px; }
+    .toggle-btn-group button { padding: 6px 10px; font-size: 0.74rem; min-width: 44px; min-height: 44px; }
     /* Charts */
     .donut-container { max-width: 150px; }
     .donut-center-label .dcl-value { font-size: 1.2rem; }
@@ -3171,6 +3171,11 @@ body {
     .control-group select {
         min-height: 48px;
         font-size: 16px; /* prevent iOS zoom on focus */
+    }
+    .toggle-btn-group button {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 8px 12px;
     }
     .metric-tile:hover {
         transform: none;
@@ -6580,7 +6585,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const longtermVal = document.getElementById('longtermTarget').value;
     const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
     const longtermEntry = longtermThreshold ? resolveEntry(regionData, longtermThreshold) : null;
-    const longtermRC = longtermEntry?.costs?.resource_costs;
+    const longtermRC = getScenarioCostsDetail(longtermEntry)?.resource_costs || longtermEntry?.costs?.resource_costs;
 
     // Time horizons and demand growth
     const interimYear = parseInt(document.getElementById('interimYear')?.value || '2029', 10);

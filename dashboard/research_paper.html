@@ -984,36 +984,37 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <line x1="80" y1="184" x2="660" y2="184" stroke="#E8EBF0" stroke-width="0.5"/>
             <line x1="80" y1="136" x2="660" y2="136" stroke="#E8EBF0" stroke-width="0.5"/>
             <line x1="80" y1="88" x2="660" y2="88" stroke="#E8EBF0" stroke-width="0.5"/>
-            <!-- X axis labels: 75,80,85,90,95,99,100 -->
+            <!-- X axis labels: 75,80,85,90,92.5,95,97.5,99 -->
             <text x="130" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
-            <text x="213" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">80%</text>
-            <text x="296" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">85%</text>
-            <text x="379" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">90%</text>
-            <text x="462" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">95%</text>
-            <text x="578" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">99%</text>
-            <text x="627" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">100%</text>
-            <!-- Scale: y = 280 - (cost-30)*2.4 -->
-            <!-- CAISO: 40.4, 43.2, 46.8, 51.6, 57.3, 64.9, 83.4 -->
-            <polyline points="130,255 213,248 296,240 379,228 462,215 578,196 627,152" fill="none" stroke="#F59E0B" stroke-width="2"/>
-            <text x="637" y="152" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#F59E0B">CA</text>
-            <!-- ERCOT: 34.3, 37.3, 41.0, 47.3, 57.3, 76.0, 94.9 -->
-            <polyline points="130,270 213,263 296,254 379,239 462,215 578,170 627,124" fill="none" stroke="#22C55E" stroke-width="2"/>
-            <text x="637" y="124" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#22C55E">TX</text>
-            <!-- PJM: 46.5, 48.8, 53.7, 58.8, 65.5, 76.4, 94.2 -->
-            <polyline points="130,240 213,235 296,223 379,211 462,195 578,169 627,126" fill="none" stroke="#0EA5E9" stroke-width="2"/>
-            <text x="637" y="132" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#0EA5E9">PJM</text>
-            <!-- NYISO: 56.8, 58.3, 59.9, 61.8, 66.3, 78.0, 98.5 -->
-            <polyline points="130,216 213,212 296,208 379,204 462,193 578,165 627,116" fill="none" stroke="#8B5CF6" stroke-width="2"/>
-            <text x="637" y="112" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#8B5CF6">NY</text>
-            <!-- NEISO: 56.2, 60.3, 64.0, 69.3, 76.3, 88.1, 119.5 -->
-            <polyline points="130,217 213,207 296,198 379,186 462,169 578,141 627,65" fill="none" stroke="#EF4444" stroke-width="2"/>
-            <text x="637" y="61" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#EF4444">NE</text>
+            <text x="236" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">80%</text>
+            <text x="342" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">85%</text>
+            <text x="449" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">90%</text>
+            <text x="502" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">92.5%</text>
+            <text x="555" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">95%</text>
+            <text x="608" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">97.5%</text>
+            <text x="640" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">99%</text>
+            <!-- Scale: y = 280 - (cost-30)*2.4; x linear 130–640 over 75–99% -->
+            <!-- CAISO: 56.0, 57.2, 61.3, 65.1, 65.3, 67.9, 70.4, 71.7 -->
+            <polyline points="130,218 236,215 342,205 449,196 502,195 555,189 608,183 640,180" fill="none" stroke="#F59E0B" stroke-width="2"/>
+            <text x="650" y="180" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#F59E0B">CA</text>
+            <!-- ERCOT: 36.9, 38.1, 41.1, 44.4, 46.6, 48.8, 50.9, 53.5 -->
+            <polyline points="130,263 236,261 342,253 449,245 502,240 555,235 608,230 640,224" fill="none" stroke="#22C55E" stroke-width="2"/>
+            <text x="650" y="224" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#22C55E">TX</text>
+            <!-- PJM: 55.6, 57.0, 58.2, 61.3, 62.1, 64.0, 68.6, 68.6 -->
+            <polyline points="130,219 236,215 342,212 449,205 502,203 555,198 608,187 640,187" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+            <text x="650" y="190" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#0EA5E9">PJM</text>
+            <!-- NYISO: 75.4, 77.5, 79.0, 80.3, 82.7, 84.6, 89.9, 91.2 -->
+            <polyline points="130,171 236,166 342,162 449,159 502,154 555,149 608,136 640,133" fill="none" stroke="#8B5CF6" stroke-width="2"/>
+            <text x="650" y="133" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#8B5CF6">NY</text>
+            <!-- NEISO: 73.7, 75.4, 80.1, 83.4, 85.5, 88.8, 93.2, 96.0 -->
+            <polyline points="130,175 236,171 342,160 449,152 502,147 555,139 608,128 640,122" fill="none" stroke="#EF4444" stroke-width="2"/>
+            <text x="650" y="118" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#EF4444">NE</text>
             <!-- X axis title -->
             <text x="370" y="316" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151">Hourly Matching Target</text>
             <!-- Y axis title -->
             <text x="20" y="160" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151" transform="rotate(-90,20,160)">Effective $/MWh</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target across five ISO regions. All regions show cost escalation above 90% matching. ERCOT maintains the lowest costs throughout ($37&ndash;$54/MWh), while NEISO is most expensive ($74&ndash;$96/MWh), reflecting limited resource diversity and higher regional LCOEs.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target (75&ndash;99%) across five ISO regions at Medium cost assumptions. ERCOT maintains the lowest costs ($37&ndash;$54/MWh), while NEISO is most expensive ($74&ndash;$96/MWh). Note the steepening above 92.5% across all regions as the optimizer deploys progressively more expensive resources to cover the hardest hours.</div>
     </div>
 
     <h3>5.2 Cross-Regional Cost Comparison</h3>
@@ -1024,7 +1025,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <tr><td><strong>75%</strong></td><td>$56/MWh</td><td>$37/MWh</td><td>$56/MWh</td><td>$75/MWh</td><td>$74/MWh</td></tr>
             <tr><td><strong>85%</strong></td><td>$61/MWh</td><td>$41/MWh</td><td>$58/MWh</td><td>$79/MWh</td><td>$80/MWh</td></tr>
             <tr><td><strong>90%</strong></td><td>$65/MWh</td><td>$44/MWh</td><td>$61/MWh</td><td>$80/MWh</td><td>$83/MWh</td></tr>
+            <tr><td><strong>92.5%</strong></td><td>$65/MWh</td><td>$47/MWh</td><td>$62/MWh</td><td>$83/MWh</td><td>$86/MWh</td></tr>
             <tr><td><strong>95%</strong></td><td>$68/MWh</td><td>$49/MWh</td><td>$64/MWh</td><td>$85/MWh</td><td>$89/MWh</td></tr>
+            <tr><td><strong>97.5%</strong></td><td>$70/MWh</td><td>$51/MWh</td><td>$69/MWh</td><td>$90/MWh</td><td>$93/MWh</td></tr>
             <tr><td><strong>99%</strong></td><td>$72/MWh</td><td>$54/MWh</td><td>$69/MWh</td><td>$91/MWh</td><td>$96/MWh</td></tr>
         </tbody>
     </table>

@@ -72,6 +72,8 @@ p:last-child { margin-bottom: 0; }
     background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
     padding: 20px; margin: 24px 0; position: relative;
 }
+.chart-wrap-tall { height: 420px; }
+.chart-wrap-med  { height: 360px; }
 .chart-wrap canvas { width: 100% !important; }
 .chart-title {
     font-family: 'Franklin Gothic Demi', sans-serif; font-size: 1rem;
@@ -169,8 +171,15 @@ p:last-child { margin-bottom: 0; }
     h2 { font-size: 1.4rem; }
     .counter-row { flex-direction: column; }
     .chart-wrap { padding: 14px; }
+    .chart-wrap-tall { height: 320px; }
+    .chart-wrap-med  { height: 280px; }
     .envelope-grid { grid-template-columns: 1fr; }
-    .envelope-card canvas { height: 180px; }
+    .envelope-card canvas { height: 160px; }
+}
+@media (max-width: 480px) {
+    .chart-wrap-tall { height: 260px; }
+    .chart-wrap-med  { height: 240px; }
+    .envelope-card canvas { height: 140px; }
 }
 </style>
 </head>
@@ -223,7 +232,7 @@ p:last-child { margin-bottom: 0; }
     <h2>The Abatement Cost Ladder</h2>
     <p>Grid decarbonization costs compared to alternative pathways. Dashed vertical lines show
        regional average MAC at key thresholds. DAC costs reflect 2040–2045 projections.</p>
-    <div class="chart-wrap" style="height: 420px;">
+    <div class="chart-wrap chart-wrap-tall">
         <div class="chart-title">Abatement Cost Ladder: Grid vs. Alternatives ($/ton CO₂)</div>
         <canvas id="ladderChart"></canvas>
     </div>
@@ -270,7 +279,7 @@ p:last-child { margin-bottom: 0; }
     <h2>What Drives MAC Uncertainty?</h2>
     <p>ANOVA decomposition shows which cost toggle group drives the most variance in MAC
        across 324 scenarios. This tells procurement teams which assumptions to stress-test.</p>
-    <div class="chart-wrap" style="height: 360px;">
+    <div class="chart-wrap chart-wrap-med">
         <div class="chart-title">MAC Variance Attribution by Toggle Group (η² — ANOVA)</div>
         <canvas id="anovaChart"></canvas>
     </div>
