@@ -161,48 +161,16 @@ const MARGINAL_MAC_DATA = {
 };
 
 // --- Effective Cost per Useful MWh ($/MWh) ---
-// Source: overprocure_results.json → costs_detail.effective_cost_per_useful_mwh
-// Total procurement cost / matched fraction of demand at Medium (MMM_M_M) scenario
+// Source: Step 2 cost optimization (tranche-repriced MMM_M_M scenario)
+// Merit-order tranche pricing: nuclear uprates (5% of fleet, capped) filled first,
+// then regional new-build (geothermal CAISO, SMR elsewhere)
 // Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
 const EFFECTIVE_COST_DATA = {
-    CAISO:  [56.0, 57.2, 61.3, 63.0, 65.1, 65.3, 67.9, 70.4, 71.7],
-    ERCOT:  [36.9, 38.1, 41.1, 43.6, 44.4, 46.6, 48.8, 50.9, 53.5],
-    PJM:    [55.6, 57.0, 58.2, 60.2, 61.3, 62.1, 64.0, 68.6, 68.6],
-    NYISO:  [75.4, 77.5, 79.0, 79.4, 80.3, 82.7, 84.6, 89.9, 91.2],
-    NEISO:  [73.7, 75.4, 80.1, 82.0, 83.4, 85.5, 88.8, 93.2, 96.0]
-};
-
-// --- Tranche-Repriced Effective Cost ($/MWh) — Step 2 Output ---
-// Merit-order tranche pricing: nuclear uprates (5% of fleet, capped) filled first,
-// then regional new-build (geothermal CAISO, SMR elsewhere). Scenarios re-ranked
-// to find lowest-cost physics-valid mix under tranche pricing.
-// Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
-const EFFECTIVE_COST_TRANCHE = {
-    CAISO:  [42.2, 42.6, 44.7, 46.0, 47.8, 48.3, 49.1, 50.2, 51.1],
-    ERCOT:  [25.6, 26.3, 28.2, 29.8, 30.2, 32.1, 33.7, 35.4, 37.1],
-    PJM:    [41.5, 42.7, 44.3, 46.3, 46.9, 49.4, 49.4, 53.4, 54.9],
-    NYISO:  [55.2, 57.6, 61.2, 62.2, 63.8, 66.6, 67.6, 71.8, 74.1],
-    NEISO:  [52.0, 54.6, 57.1, 57.5, 59.2, 61.1, 63.5, 67.2, 70.3]
-};
-
-// --- Tranche-Optimal Scenario Keys per threshold ---
-// The lowest-cost scenario at each threshold under tranche pricing
-const TRANCHE_OPTIMAL_SCENARIOS = {
-    CAISO:  ['LML_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LML_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N'],
-    ERCOT:  ['LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LHL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N'],
-    PJM:    ['LHL_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N', 'LHL_L_N', 'LML_L_N', 'LML_L_N'],
-    NYISO:  ['LHL_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N', 'LHL_L_N', 'LML_L_N', 'LHL_L_N'],
-    NEISO:  ['LLL_L_N', 'LHL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N', 'LLL_L_N']
-};
-
-// --- Tranche-Optimal Clean Firm % of Demand ---
-// How much clean firm the tranche-optimal scenario uses at each threshold
-const TRANCHE_CF_PCT = {
-    CAISO:  [10, 10, 9, 9, 8, 20, 8, 8, 9],
-    ERCOT:  [10, 10, 10, 5, 9, 9, 7, 8, 7],
-    PJM:    [40, 35, 35, 31, 33, 30, 30, 29, 31],
-    NYISO:  [20, 20, 20, 19, 19, 17, 17, 16, 15],
-    NEISO:  [30, 25, 30, 25, 24, 23, 22, 20, 19]
+    CAISO:  [56.2, 57.1, 61.2, 63.0, 65.1, 66.2, 68.7, 70.3, 71.5],
+    ERCOT:  [37.0, 38.2, 41.2, 43.7, 44.3, 46.6, 48.8, 50.9, 53.5],
+    PJM:    [66.6, 71.6, 78.4, 80.4, 81.5, 82.3, 82.4, 86.2, 86.2],
+    NYISO:  [82.2, 81.9, 93.0, 93.4, 94.3, 91.9, 98.6, 99.1, 103.3],
+    NEISO:  [73.7, 75.2, 80.0, 81.1, 83.3, 84.9, 87.9, 93.2, 101.4]
 };
 
 // --- Nuclear Uprate Caps (TWh/yr) — 5% of existing nuclear at 90% CF ---

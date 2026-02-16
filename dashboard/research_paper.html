@@ -994,27 +994,27 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <text x="608" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">97.5%</text>
             <text x="640" y="296" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">99%</text>
             <!-- Scale: y = 280 - (cost-30)*2.4; x linear 130–640 over 75–99% -->
-            <!-- CAISO: 56.0, 57.2, 61.3, 65.1, 65.3, 67.9, 70.4, 71.7 -->
-            <polyline points="130,218 236,215 342,205 449,196 502,195 555,189 608,183 640,180" fill="none" stroke="#F59E0B" stroke-width="2"/>
+            <!-- CAISO: 56.2, 57.1, 61.2, 65.1, 66.2, 68.7, 70.3, 71.5 -->
+            <polyline points="130,217 236,215 342,205 449,196 502,193 555,187 608,183 640,180" fill="none" stroke="#F59E0B" stroke-width="2"/>
             <text x="650" y="180" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#F59E0B">CA</text>
-            <!-- ERCOT: 36.9, 38.1, 41.1, 44.4, 46.6, 48.8, 50.9, 53.5 -->
-            <polyline points="130,263 236,261 342,253 449,245 502,240 555,235 608,230 640,224" fill="none" stroke="#22C55E" stroke-width="2"/>
+            <!-- ERCOT: 37.0, 38.2, 41.2, 44.3, 46.6, 48.8, 50.9, 53.5 -->
+            <polyline points="130,263 236,260 342,253 449,246 502,240 555,235 608,230 640,224" fill="none" stroke="#22C55E" stroke-width="2"/>
             <text x="650" y="224" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#22C55E">TX</text>
-            <!-- PJM: 55.6, 57.0, 58.2, 61.3, 62.1, 64.0, 68.6, 68.6 -->
-            <polyline points="130,219 236,215 342,212 449,205 502,203 555,198 608,187 640,187" fill="none" stroke="#0EA5E9" stroke-width="2"/>
-            <text x="650" y="190" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#0EA5E9">PJM</text>
-            <!-- NYISO: 75.4, 77.5, 79.0, 80.3, 82.7, 84.6, 89.9, 91.2 -->
-            <polyline points="130,171 236,166 342,162 449,159 502,154 555,149 608,136 640,133" fill="none" stroke="#8B5CF6" stroke-width="2"/>
-            <text x="650" y="133" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#8B5CF6">NY</text>
-            <!-- NEISO: 73.7, 75.4, 80.1, 83.4, 85.5, 88.8, 93.2, 96.0 -->
-            <polyline points="130,175 236,171 342,160 449,152 502,147 555,139 608,128 640,122" fill="none" stroke="#EF4444" stroke-width="2"/>
-            <text x="650" y="118" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#EF4444">NE</text>
+            <!-- PJM: 66.6, 71.6, 78.4, 81.5, 82.3, 82.4, 86.2, 86.2 -->
+            <polyline points="130,192 236,180 342,164 449,156 502,154 555,154 608,145 640,145" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+            <text x="650" y="148" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#0EA5E9">PJM</text>
+            <!-- NYISO: 82.2, 81.9, 93.0, 94.3, 91.9, 98.6, 99.1, 103.3 -->
+            <polyline points="130,155 236,155 342,129 449,126 502,131 555,115 608,114 640,104" fill="none" stroke="#8B5CF6" stroke-width="2"/>
+            <text x="650" y="100" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#8B5CF6">NY</text>
+            <!-- NEISO: 73.7, 75.2, 80.0, 83.3, 84.9, 87.9, 93.2, 101.4 -->
+            <polyline points="130,175 236,172 342,160 449,152 502,148 555,141 608,128 640,109" fill="none" stroke="#EF4444" stroke-width="2"/>
+            <text x="650" y="105" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#EF4444">NE</text>
             <!-- X axis title -->
             <text x="370" y="316" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151">Hourly Matching Target</text>
             <!-- Y axis title -->
             <text x="20" y="160" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151" transform="rotate(-90,20,160)">Effective $/MWh</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target (75&ndash;99%) across five ISO regions at Medium cost assumptions. ERCOT maintains the lowest costs ($37&ndash;$54/MWh), while NEISO is most expensive ($74&ndash;$96/MWh). Note the steepening above 92.5% across all regions as the optimizer deploys progressively more expensive resources to cover the hardest hours.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target (75&ndash;99%) across five ISO regions at Medium cost assumptions with merit-order clean firm pricing. ERCOT maintains the lowest costs ($37&ndash;$54/MWh). PJM and NYISO show the steepest escalation ($67&ndash;$86 and $82&ndash;$103/MWh respectively) as the tranche model exposes the high marginal cost of new-build nuclear beyond the limited uprate pool.</div>
     </div>
 
     <h3>5.2 Cross-Regional Cost Comparison</h3>
@@ -1022,13 +1022,13 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <table>
         <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
         <tbody>
-            <tr><td><strong>75%</strong></td><td>$56/MWh</td><td>$37/MWh</td><td>$56/MWh</td><td>$75/MWh</td><td>$74/MWh</td></tr>
-            <tr><td><strong>85%</strong></td><td>$61/MWh</td><td>$41/MWh</td><td>$58/MWh</td><td>$79/MWh</td><td>$80/MWh</td></tr>
-            <tr><td><strong>90%</strong></td><td>$65/MWh</td><td>$44/MWh</td><td>$61/MWh</td><td>$80/MWh</td><td>$83/MWh</td></tr>
-            <tr><td><strong>92.5%</strong></td><td>$65/MWh</td><td>$47/MWh</td><td>$62/MWh</td><td>$83/MWh</td><td>$86/MWh</td></tr>
-            <tr><td><strong>95%</strong></td><td>$68/MWh</td><td>$49/MWh</td><td>$64/MWh</td><td>$85/MWh</td><td>$89/MWh</td></tr>
-            <tr><td><strong>97.5%</strong></td><td>$70/MWh</td><td>$51/MWh</td><td>$69/MWh</td><td>$90/MWh</td><td>$93/MWh</td></tr>
-            <tr><td><strong>99%</strong></td><td>$72/MWh</td><td>$54/MWh</td><td>$69/MWh</td><td>$91/MWh</td><td>$96/MWh</td></tr>
+            <tr><td><strong>75%</strong></td><td>$56/MWh</td><td>$37/MWh</td><td>$67/MWh</td><td>$82/MWh</td><td>$74/MWh</td></tr>
+            <tr><td><strong>85%</strong></td><td>$61/MWh</td><td>$41/MWh</td><td>$78/MWh</td><td>$93/MWh</td><td>$80/MWh</td></tr>
+            <tr><td><strong>90%</strong></td><td>$65/MWh</td><td>$44/MWh</td><td>$82/MWh</td><td>$94/MWh</td><td>$83/MWh</td></tr>
+            <tr><td><strong>92.5%</strong></td><td>$66/MWh</td><td>$47/MWh</td><td>$82/MWh</td><td>$92/MWh</td><td>$85/MWh</td></tr>
+            <tr><td><strong>95%</strong></td><td>$69/MWh</td><td>$49/MWh</td><td>$82/MWh</td><td>$99/MWh</td><td>$88/MWh</td></tr>
+            <tr><td><strong>97.5%</strong></td><td>$70/MWh</td><td>$51/MWh</td><td>$86/MWh</td><td>$99/MWh</td><td>$93/MWh</td></tr>
+            <tr><td><strong>99%</strong></td><td>$72/MWh</td><td>$54/MWh</td><td>$86/MWh</td><td>$103/MWh</td><td>$101/MWh</td></tr>
         </tbody>
     </table>
     </div>
