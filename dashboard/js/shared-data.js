@@ -11,8 +11,8 @@ const THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
 // --- Average MAC ($/ton CO2) — from Option B statistical pipeline ---
 // Source: compute_mac_stats.py using per-scenario CO2 (fuel-switching elasticity)
 // CO2 methodology: hourly fossil-fuel emission rates with fuel-switching shifts
-// Medium = monotonic envelope (running max of MMM_M_M scenario)
-// Low/High = P10/P90 from 324-scenario factorial experiment
+// Medium = monotonic envelope (top-down ceiling of MMM_M_M scenario)
+// Low/High = P10/P90 from 324-scenario factorial experiment (ceiling-enforced)
 const MAC_DATA = {
     medium: {
         CAISO:  [93,  95,  103, 104, 106, 110, 113, 115, 118],
@@ -22,7 +22,7 @@ const MAC_DATA = {
         NEISO:  [106, 111, 116, 116, 118, 122, 128, 157, 169]
     },
     low: {
-        CAISO:  [46,  47,  50,  52,  53,  56,  60,  68,  68],
+        CAISO:  [46,  47,  50,  52,  53,  56,  60,  66,  66],
         ERCOT:  [5,   6,   10,  13,  14,  17,  20,  22,  25],
         PJM:    [24,  30,  32,  36,  38,  41,  42,  49,  53],
         NYISO:  [60,  67,  74,  75,  78,  83,  86,  94,  101],
@@ -32,8 +32,8 @@ const MAC_DATA = {
         CAISO:  [114, 120, 123, 127, 128, 135, 138, 146, 153],
         ERCOT:  [39,  41,  46,  49,  52,  55,  59,  63,  69],
         PJM:    [86,  89,  93,  96,  98,  102, 107, 112, 113],
-        NYISO:  [149, 149, 151, 151, 152, 159, 165, 177, 182],
-        NEISO:  [153, 153, 157, 158, 160, 166, 169, 181, 189]
+        NYISO:  [146, 146, 151, 151, 152, 159, 165, 177, 182],
+        NEISO:  [151, 151, 157, 158, 160, 166, 169, 181, 189]
     }
 };
 
@@ -131,8 +131,8 @@ const BENCHMARKS_EXTRA = [
 // --- Two-Zone Marginal MAC ($/ton CO2) ---
 // Zone 1 (75→90%): single aggregate MAC — grid backbone cost per ton
 // Zone 2 (90→99%): granular steps with enforced monotonicity (non-decreasing)
-// Medium = MMM_M_M scenario with convex hull correction
-// Low/High = P10/P90 across 324 scenarios with monotonicity enforcement
+// Medium = MMM_M_M scenario stepwise envelope with top-down ceiling
+// Low/High = P10/P90 across 324 scenarios with top-down ceiling enforcement
 // Cap: $1000/ton (NREL literature max for sub-100% steps)
 const MARGINAL_MAC_LABELS = ['75→90%', '90→92.5%', '92.5→95%', '95→97.5%', '97.5→99%'];
 
@@ -148,14 +148,14 @@ const MARGINAL_MAC_DATA = {
         CAISO:  [65,  81,  135, 160, 236],
         ERCOT:  [63,  94,  114, 115, 198],
         PJM:    [68,  145, 149, 149, 233],
-        NYISO:  [89,  250, 178, 204, 149],
-        NEISO:  [60,  270, 99,  311, 390]
+        NYISO:  [89,  149, 149, 149, 149],
+        NEISO:  [60,  99,  99,  311, 390]
     },
     high: {
-        CAISO:  [1000, 1000, 496, 1000, 493],
+        CAISO:  [493, 493, 493, 493, 493],
         ERCOT:  [185, 210, 265, 272, 388],
-        PJM:    [254, 538, 898, 416, 865],
-        NYISO:  [417, 772, 462, 659, 834],
+        PJM:    [254, 416, 416, 416, 865],
+        NYISO:  [417, 462, 462, 659, 834],
         NEISO:  [398, 557, 738, 1000, 1000]
     }
 };
@@ -164,13 +164,13 @@ const MARGINAL_MAC_DATA = {
 // Source: Step 2 cost optimization (tranche-repriced MMM_M_M scenario) + Step 3 postprocess
 // Merit-order tranche pricing: nuclear uprates (5% of fleet, capped) filled first,
 // then regional new-build (geothermal CAISO, SMR elsewhere)
-// Monotonicity enforced via running max (45Q correction can create artifacts)
+// Monotonicity enforced via top-down ceiling (lower thresholds capped to next higher)
 // Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
 const EFFECTIVE_COST_DATA = {
     CAISO:  [55.9, 57.0, 61.3, 63.0, 64.9, 66.6, 69.2, 70.2, 71.7],
     ERCOT:  [36.9, 38.1, 41.1, 43.7, 44.4, 46.6, 48.8, 50.8, 53.5],
     PJM:    [63.6, 69.9, 78.0, 81.4, 83.1, 84.4, 86.8, 89.1, 89.1],
-    NYISO:  [81.2, 82.2, 94.1, 94.7, 95.8, 95.8, 101.3, 104.1, 105.7],
+    NYISO:  [81.2, 82.2, 94.1, 94.7, 95.2, 95.2, 101.3, 104.1, 105.7],
     NEISO:  [75.1, 78.9, 82.2, 83.5, 84.9, 87.2, 89.8, 101.3, 108.8]
 };
 
