@@ -160,6 +160,18 @@ const MARGINAL_MAC_DATA = {
     }
 };
 
+// --- Effective Cost per Useful MWh ($/MWh) ---
+// Source: overprocure_results.json → costs_detail.effective_cost_per_useful_mwh
+// Total procurement cost / matched fraction of demand at Medium (MMM_M_M) scenario
+// Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
+const EFFECTIVE_COST_DATA = {
+    CAISO:  [56.0, 57.2, 61.3, 63.0, 65.1, 65.3, 67.9, 70.4, 71.7],
+    ERCOT:  [36.9, 38.1, 41.1, 43.6, 44.4, 46.6, 48.8, 50.9, 53.5],
+    PJM:    [55.6, 57.0, 58.2, 60.2, 61.3, 62.1, 64.0, 68.6, 68.6],
+    NYISO:  [75.4, 77.5, 79.0, 79.4, 80.3, 82.7, 84.6, 89.9, 91.2],
+    NEISO:  [73.7, 75.4, 80.1, 82.0, 83.4, 85.5, 88.8, 93.2, 96.0]
+};
+
 // ============================================================================
 // SHARED UTILITY FUNCTIONS
 // ============================================================================
