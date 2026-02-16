@@ -334,9 +334,9 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
 
 def get_tranche_cf_lcoe(scenario):
     """Extract tranche-effective clean firm LCOE from Step 2 data, if available."""
-    tc = scenario.get('tranche_costs', {}).get('clean_firm_tranche', {})
-    lcoe = tc.get('effective_cf_lcoe')
-    # Only use if non-zero (zero means no clean firm in the mix)
+    tc = scenario.get('tranche_costs', {})
+    lcoe = tc.get('effective_new_cf_lcoe')
+    # Only use if non-zero (zero means no new clean firm in the mix)
     if lcoe and lcoe > 0:
         return lcoe
     return None
@@ -397,6 +397,10 @@ def fix_45q_offset(data):
         for t_str in thresholds_data:
             scenarios = thresholds_data[t_str].get('scenarios', {})
             for sk, scenario in scenarios.items():
+                # Use source scenario key for overridden MMM_M_M scenarios
+                # so LCOE lookups match the actual mix origin
+                effective_key = sk
+
                 mix = scenario.get('resource_mix', {})
                 ccs_pct = mix.get('ccs_ccgt', 0)
                 if ccs_pct <= 0:
@@ -410,7 +414,7 @@ def fix_45q_offset(data):
                     scenario.get('battery_dispatch_pct', 0),
                     scenario.get('ldes_dispatch_pct', 0),
                     scenario.get('hourly_match_score', 0),
-                    sk,
+                    effective_key,
                     apply_45q=True,
                     neiso_gas_adder=False,
                     tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
@@ -446,6 +450,7 @@ def add_no45q_overlay(data):
         for t_str in thresholds_data:
             scenarios = thresholds_data[t_str].get('scenarios', {})
             for sk, scenario in scenarios.items():
+                effective_key = sk
                 mix = scenario.get('resource_mix', {})
                 ccs_pct = mix.get('ccs_ccgt', 0)
 
@@ -456,7 +461,7 @@ def add_no45q_overlay(data):
                     scenario.get('battery_dispatch_pct', 0),
                     scenario.get('ldes_dispatch_pct', 0),
                     scenario.get('hourly_match_score', 0),
-                    sk,
+                    effective_key,
                     apply_45q=False,
                     neiso_gas_adder=False,
                     tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
@@ -466,7 +471,7 @@ def add_no45q_overlay(data):
 
                 if ccs_pct > 0:
                     # Also compute the CCS vs LDES crossover info
-                    renewable, firm, storage, fuel, tx = decode_scenario_key(sk)
+                    renewable, firm, storage, fuel, tx = decode_scenario_key(effective_key)
                     ldes_cost = FULL_LCOE_TABLES['ldes'][storage][iso] + \
                                 FULL_TRANSMISSION_TABLES['ldes'][tx][iso]
                     ccs_no45q_base = ccs_lcoe_no45q(iso, firm)
@@ -511,6 +516,7 @@ def add_neiso_gas_constraint(data):
     for t_str in thresholds_data:
         scenarios = thresholds_data[t_str].get('scenarios', {})
         for sk, scenario in scenarios.items():
+            effective_key = scenario.get('tranche_optimal_source', sk)
             mix = scenario.get('resource_mix', {})
 
             # Compute NEISO-adjusted costs (with gas constraint)
@@ -521,7 +527,7 @@ def add_neiso_gas_constraint(data):
                 scenario.get('battery_dispatch_pct', 0),
                 scenario.get('ldes_dispatch_pct', 0),
                 scenario.get('hourly_match_score', 0),
-                sk,
+                effective_key,
                 apply_45q=True,
                 neiso_gas_adder=True,
                 tranche_cf_lcoe=tcl,
@@ -534,7 +540,7 @@ def add_neiso_gas_constraint(data):
                 scenario.get('battery_dispatch_pct', 0),
                 scenario.get('ldes_dispatch_pct', 0),
                 scenario.get('hourly_match_score', 0),
-                sk,
+                effective_key,
                 apply_45q=False,
                 neiso_gas_adder=True,
                 tranche_cf_lcoe=tcl,
