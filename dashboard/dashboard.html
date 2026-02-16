@@ -3646,7 +3646,7 @@ body {
         Our analysis of 8,760 hours across five U.S. power markets reveals that
         <strong>renewables alone cannot achieve high hourly matching targets</strong>.
         Beyond 90% matching, the resource mix pivots toward firm, dispatchable clean generation.
-        Average abatement costs stay below $141/ton CO&#8322; through 99% in all regions. But stepwise
+        Average abatement costs stay below $<span id="db-mac-max-99">...</span>/ton CO&#8322; through 99% in all regions. But stepwise
         marginal costs vary wildly &mdash; some steps are cheaper than carbon offsets, others exceed DAC.
         <strong>The grid backbone holds. Early investment in clean firm power unlocks deep decarbonization
         at remarkably competitive costs.</strong>
@@ -3931,7 +3931,13 @@ function initDashboard() {
     document.getElementById('dashboardContent').style.display = 'block';
     document.getElementById('heroTakeaway').style.display = 'block';
     document.getElementById('footer').style.display = 'block';
-    // Narrative sections moved to index.html
+
+    // Populate dynamic narrative values from shared-data.js
+    const macMax99El = document.getElementById('db-mac-max-99');
+    if (macMax99El && typeof MAC_DATA !== 'undefined') {
+        const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+        macMax99El.textContent = Math.max(...regions.map(r => MAC_DATA.medium[r][8]));
+    }
 
     // Config info
     const cfg = DATA.config;
