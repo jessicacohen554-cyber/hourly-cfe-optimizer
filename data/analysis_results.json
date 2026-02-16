@@ -1,0 +1,3388 @@
+{
+  "monotonicity": {
+    "CAISO": 247,
+    "ERCOT": 0,
+    "PJM": 7,
+    "NYISO": 23,
+    "NEISO": 22
+  },
+  "monotonicity_details": {
+    "CAISO": [
+      {
+        "scenario": "HLH_H_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 65.73,
+        "higher_cost": 65.32,
+        "delta": 0.41
+      },
+      {
+        "scenario": "HLH_H_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 64.25,
+        "higher_cost": 64.04,
+        "delta": 0.21
+      },
+      {
+        "scenario": "HLH_L_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.09,
+        "higher_cost": 49.94,
+        "delta": 1.15
+      },
+      {
+        "scenario": "HLH_L_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 58.34,
+        "higher_cost": 58.08,
+        "delta": 0.26
+      },
+      {
+        "scenario": "HLH_L_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.12,
+        "higher_cost": 48.19,
+        "delta": 0.93
+      },
+      {
+        "scenario": "HLH_L_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.78,
+        "higher_cost": 48.77,
+        "delta": 1.01
+      },
+      {
+        "scenario": "HLH_L_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 56.86,
+        "higher_cost": 56.8,
+        "delta": 0.06
+      },
+      {
+        "scenario": "HLH_L_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 48.47,
+        "higher_cost": 47.6,
+        "delta": 0.87
+      },
+      {
+        "scenario": "HLH_M_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 53.11,
+        "higher_cost": 52.52,
+        "delta": 0.59
+      },
+      {
+        "scenario": "HLH_M_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 60.8,
+        "higher_cost": 60.49,
+        "delta": 0.31
+      },
+      {
+        "scenario": "HLH_M_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.14,
+        "higher_cost": 50.77,
+        "delta": 0.37
+      },
+      {
+        "scenario": "HLH_M_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.8,
+        "higher_cost": 51.35,
+        "delta": 0.45
+      },
+      {
+        "scenario": "HLH_M_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 59.33,
+        "higher_cost": 59.21,
+        "delta": 0.12
+      },
+      {
+        "scenario": "HLH_M_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 50.49,
+        "higher_cost": 50.19,
+        "delta": 0.3
+      },
+      {
+        "scenario": "HLL_H_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 62.58,
+        "higher_cost": 62.19,
+        "delta": 0.39
+      },
+      {
+        "scenario": "HLL_H_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 61.11,
+        "higher_cost": 60.91,
+        "delta": 0.2
+      },
+      {
+        "scenario": "HLL_L_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.09,
+        "higher_cost": 49.94,
+        "delta": 1.15
+      },
+      {
+        "scenario": "HLL_L_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 55.2,
+        "higher_cost": 54.96,
+        "delta": 0.24
+      },
+      {
+        "scenario": "HLL_L_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.12,
+        "higher_cost": 48.19,
+        "delta": 0.93
+      },
+      {
+        "scenario": "HLL_L_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.78,
+        "higher_cost": 48.77,
+        "delta": 1.01
+      },
+      {
+        "scenario": "HLL_L_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 53.72,
+        "higher_cost": 53.68,
+        "delta": 0.04
+      },
+      {
+        "scenario": "HLL_L_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 48.47,
+        "higher_cost": 47.6,
+        "delta": 0.87
+      },
+      {
+        "scenario": "HLL_M_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 53.11,
+        "higher_cost": 52.52,
+        "delta": 0.59
+      },
+      {
+        "scenario": "HLL_M_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 57.66,
+        "higher_cost": 57.37,
+        "delta": 0.29
+      },
+      {
+        "scenario": "HLL_M_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.14,
+        "higher_cost": 50.77,
+        "delta": 0.37
+      },
+      {
+        "scenario": "HLL_M_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.8,
+        "higher_cost": 51.35,
+        "delta": 0.45
+      },
+      {
+        "scenario": "HLL_M_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 56.18,
+        "higher_cost": 56.09,
+        "delta": 0.09
+      },
+      {
+        "scenario": "HLL_M_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 50.49,
+        "higher_cost": 50.19,
+        "delta": 0.3
+      },
+      {
+        "scenario": "HLM_H_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 64.0,
+        "higher_cost": 63.61,
+        "delta": 0.39
+      },
+      {
+        "scenario": "HLM_H_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 62.53,
+        "higher_cost": 62.33,
+        "delta": 0.2
+      },
+      {
+        "scenario": "HLM_L_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.09,
+        "higher_cost": 49.94,
+        "delta": 1.15
+      },
+      {
+        "scenario": "HLM_L_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 56.62,
+        "higher_cost": 56.37,
+        "delta": 0.25
+      },
+      {
+        "scenario": "HLM_L_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.12,
+        "higher_cost": 48.19,
+        "delta": 0.93
+      },
+      {
+        "scenario": "HLM_L_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.78,
+        "higher_cost": 48.77,
+        "delta": 1.01
+      },
+      {
+        "scenario": "HLM_L_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 55.14,
+        "higher_cost": 55.09,
+        "delta": 0.05
+      },
+      {
+        "scenario": "HLM_L_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 48.47,
+        "higher_cost": 47.6,
+        "delta": 0.87
+      },
+      {
+        "scenario": "HLM_M_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 53.11,
+        "higher_cost": 52.52,
+        "delta": 0.59
+      },
+      {
+        "scenario": "HLM_M_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 59.08,
+        "higher_cost": 58.78,
+        "delta": 0.3
+      },
+      {
+        "scenario": "HLM_M_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.14,
+        "higher_cost": 50.77,
+        "delta": 0.37
+      },
+      {
+        "scenario": "HLM_M_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.8,
+        "higher_cost": 51.35,
+        "delta": 0.45
+      },
+      {
+        "scenario": "HLM_M_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 57.6,
+        "higher_cost": 57.5,
+        "delta": 0.1
+      },
+      {
+        "scenario": "HLM_M_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 50.49,
+        "higher_cost": 50.19,
+        "delta": 0.3
+      },
+      {
+        "scenario": "HMH_H_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 74.13,
+        "higher_cost": 74.01,
+        "delta": 0.12
+      },
+      {
+        "scenario": "HMH_H_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 73.67,
+        "higher_cost": 73.52,
+        "delta": 0.15
+      },
+      {
+        "scenario": "HMH_H_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 73.06,
+        "higher_cost": 72.93,
+        "delta": 0.13
+      },
+      {
+        "scenario": "HMH_L_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 66.27,
+        "higher_cost": 65.8,
+        "delta": 0.47
+      },
+      {
+        "scenario": "HMH_L_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 65.66,
+        "higher_cost": 65.21,
+        "delta": 0.45
+      },
+      {
+        "scenario": "HMH_M_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 68.74,
+        "higher_cost": 68.37,
+        "delta": 0.37
+      },
+      {
+        "scenario": "HMH_M_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 68.12,
+        "higher_cost": 67.78,
+        "delta": 0.34
+      },
+      {
+        "scenario": "HML_H_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 74.4,
+        "higher_cost": 73.02,
+        "delta": 1.38
+      },
+      {
+        "scenario": "HML_H_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 71.09,
+        "higher_cost": 70.19,
+        "delta": 0.9
+      },
+      {
+        "scenario": "HML_H_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 72.3,
+        "higher_cost": 71.31,
+        "delta": 0.99
+      },
+      {
+        "scenario": "HML_H_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 70.35,
+        "higher_cost": 69.61,
+        "delta": 0.74
+      },
+      {
+        "scenario": "HML_L_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 66.26,
+        "higher_cost": 65.29,
+        "delta": 0.97
+      },
+      {
+        "scenario": "HML_L_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 63.21,
+        "higher_cost": 62.47,
+        "delta": 0.74
+      },
+      {
+        "scenario": "HML_L_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 64.42,
+        "higher_cost": 63.59,
+        "delta": 0.83
+      },
+      {
+        "scenario": "HML_L_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 62.47,
+        "higher_cost": 61.88,
+        "delta": 0.59
+      },
+      {
+        "scenario": "HML_M_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 68.88,
+        "higher_cost": 67.87,
+        "delta": 1.01
+      },
+      {
+        "scenario": "HML_M_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 65.83,
+        "higher_cost": 65.04,
+        "delta": 0.79
+      },
+      {
+        "scenario": "HML_M_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 67.04,
+        "higher_cost": 66.16,
+        "delta": 0.88
+      },
+      {
+        "scenario": "HML_M_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 65.1,
+        "higher_cost": 64.46,
+        "delta": 0.64
+      },
+      {
+        "scenario": "HMM_H_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 75.54,
+        "higher_cost": 74.52,
+        "delta": 1.02
+      },
+      {
+        "scenario": "HMM_H_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 72.63,
+        "higher_cost": 71.7,
+        "delta": 0.93
+      },
+      {
+        "scenario": "HMM_H_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 74.3,
+        "higher_cost": 72.82,
+        "delta": 1.48
+      },
+      {
+        "scenario": "HMM_H_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 71.89,
+        "higher_cost": 71.11,
+        "delta": 0.78
+      },
+      {
+        "scenario": "HMM_L_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 68.14,
+        "higher_cost": 66.79,
+        "delta": 1.35
+      },
+      {
+        "scenario": "HMM_L_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 64.74,
+        "higher_cost": 63.97,
+        "delta": 0.77
+      },
+      {
+        "scenario": "HMM_L_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 65.96,
+        "higher_cost": 65.09,
+        "delta": 0.87
+      },
+      {
+        "scenario": "HMM_L_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 64.01,
+        "higher_cost": 63.39,
+        "delta": 0.62
+      },
+      {
+        "scenario": "HMM_M_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 70.61,
+        "higher_cost": 69.37,
+        "delta": 1.24
+      },
+      {
+        "scenario": "HMM_M_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 67.37,
+        "higher_cost": 66.55,
+        "delta": 0.82
+      },
+      {
+        "scenario": "HMM_M_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 69.37,
+        "higher_cost": 67.67,
+        "delta": 1.7
+      },
+      {
+        "scenario": "HMM_M_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 66.64,
+        "higher_cost": 65.96,
+        "delta": 0.68
+      },
+      {
+        "scenario": "LHH_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 66.59,
+        "higher_cost": 65.33,
+        "delta": 1.26
+      },
+      {
+        "scenario": "LHH_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 61.54,
+        "higher_cost": 60.83,
+        "delta": 0.71
+      },
+      {
+        "scenario": "LHH_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 63.57,
+        "higher_cost": 62.63,
+        "delta": 0.94
+      },
+      {
+        "scenario": "LHH_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 59.95,
+        "higher_cost": 59.38,
+        "delta": 0.57
+      },
+      {
+        "scenario": "LHH_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 58.99,
+        "higher_cost": 57.38,
+        "delta": 1.61
+      },
+      {
+        "scenario": "LHH_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 54.56,
+        "higher_cost": 52.87,
+        "delta": 1.69
+      },
+      {
+        "scenario": "LHH_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 56.55,
+        "higher_cost": 54.68,
+        "delta": 1.87
+      },
+      {
+        "scenario": "LHH_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 52.97,
+        "higher_cost": 51.42,
+        "delta": 1.55
+      },
+      {
+        "scenario": "LHH_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 61.64,
+        "higher_cost": 60.03,
+        "delta": 1.61
+      },
+      {
+        "scenario": "LHH_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 56.89,
+        "higher_cost": 55.53,
+        "delta": 1.36
+      },
+      {
+        "scenario": "LHH_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 58.92,
+        "higher_cost": 57.33,
+        "delta": 1.59
+      },
+      {
+        "scenario": "LHH_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 55.29,
+        "higher_cost": 54.07,
+        "delta": 1.22
+      },
+      {
+        "scenario": "LHL_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 63.44,
+        "higher_cost": 61.93,
+        "delta": 1.51
+      },
+      {
+        "scenario": "LHL_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 58.39,
+        "higher_cost": 57.42,
+        "delta": 0.97
+      },
+      {
+        "scenario": "LHL_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 60.42,
+        "higher_cost": 59.23,
+        "delta": 1.19
+      },
+      {
+        "scenario": "LHL_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 56.79,
+        "higher_cost": 55.97,
+        "delta": 0.82
+      },
+      {
+        "scenario": "LHL_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 55.95,
+        "higher_cost": 53.97,
+        "delta": 1.98
+      },
+      {
+        "scenario": "LHL_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 51.4,
+        "higher_cost": 49.47,
+        "delta": 1.93
+      },
+      {
+        "scenario": "LHL_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 53.43,
+        "higher_cost": 51.27,
+        "delta": 2.16
+      },
+      {
+        "scenario": "LHL_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 49.81,
+        "higher_cost": 48.01,
+        "delta": 1.8
+      },
+      {
+        "scenario": "LHL_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 58.59,
+        "higher_cost": 56.62,
+        "delta": 1.97
+      },
+      {
+        "scenario": "LHL_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 53.73,
+        "higher_cost": 52.12,
+        "delta": 1.61
+      },
+      {
+        "scenario": "LHL_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 55.76,
+        "higher_cost": 53.92,
+        "delta": 1.84
+      },
+      {
+        "scenario": "LHL_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 52.14,
+        "higher_cost": 50.67,
+        "delta": 1.47
+      },
+      {
+        "scenario": "LHM_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 64.85,
+        "higher_cost": 63.46,
+        "delta": 1.39
+      },
+      {
+        "scenario": "LHM_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 59.8,
+        "higher_cost": 58.96,
+        "delta": 0.84
+      },
+      {
+        "scenario": "LHM_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 61.83,
+        "higher_cost": 60.76,
+        "delta": 1.07
+      },
+      {
+        "scenario": "LHM_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 58.2,
+        "higher_cost": 57.51,
+        "delta": 0.69
+      },
+      {
+        "scenario": "LHM_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 57.31,
+        "higher_cost": 55.51,
+        "delta": 1.8
+      },
+      {
+        "scenario": "LHM_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 52.81,
+        "higher_cost": 51.01,
+        "delta": 1.8
+      },
+      {
+        "scenario": "LHM_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 54.87,
+        "higher_cost": 52.81,
+        "delta": 2.06
+      },
+      {
+        "scenario": "LHM_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 51.22,
+        "higher_cost": 49.55,
+        "delta": 1.67
+      },
+      {
+        "scenario": "LHM_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 59.95,
+        "higher_cost": 58.16,
+        "delta": 1.79
+      },
+      {
+        "scenario": "LHM_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 55.14,
+        "higher_cost": 53.66,
+        "delta": 1.48
+      },
+      {
+        "scenario": "LHM_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 57.17,
+        "higher_cost": 55.46,
+        "delta": 1.71
+      },
+      {
+        "scenario": "LHM_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 53.55,
+        "higher_cost": 52.2,
+        "delta": 1.35
+      },
+      {
+        "scenario": "LLH_L_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.0,
+        "higher_cost": 49.94,
+        "delta": 1.06
+      },
+      {
+        "scenario": "LLH_L_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 48.95,
+        "higher_cost": 48.02,
+        "delta": 0.93
+      },
+      {
+        "scenario": "LLH_L_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.69,
+        "higher_cost": 48.77,
+        "delta": 0.92
+      },
+      {
+        "scenario": "LLH_M_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 53.02,
+        "higher_cost": 52.52,
+        "delta": 0.5
+      },
+      {
+        "scenario": "LLH_M_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 50.97,
+        "higher_cost": 50.61,
+        "delta": 0.36
+      },
+      {
+        "scenario": "LLH_M_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.71,
+        "higher_cost": 51.35,
+        "delta": 0.36
+      },
+      {
+        "scenario": "LLL_H_H",
+        "lower_threshold": 80,
+        "higher_threshold": 85,
+        "lower_cost": 55.72,
+        "higher_cost": 55.69,
+        "delta": 0.03
+      },
+      {
+        "scenario": "LLL_H_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 56.46,
+        "higher_cost": 56.02,
+        "delta": 0.44
+      },
+      {
+        "scenario": "LLL_H_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 57.21,
+        "higher_cost": 56.98,
+        "delta": 0.23
+      },
+      {
+        "scenario": "LLL_H_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 55.73,
+        "higher_cost": 55.44,
+        "delta": 0.29
+      },
+      {
+        "scenario": "LLL_L_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 51.11,
+        "higher_cost": 50.74,
+        "delta": 0.37
+      },
+      {
+        "scenario": "LLL_L_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 49.24,
+        "higher_cost": 48.25,
+        "delta": 0.99
+      },
+      {
+        "scenario": "LLL_L_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 49.87,
+        "higher_cost": 49.2,
+        "delta": 0.67
+      },
+      {
+        "scenario": "LLL_L_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 48.62,
+        "higher_cost": 47.66,
+        "delta": 0.96
+      },
+      {
+        "scenario": "LLL_M_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 53.58,
+        "higher_cost": 53.34,
+        "delta": 0.24
+      },
+      {
+        "scenario": "LLL_M_L",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 51.71,
+        "higher_cost": 50.84,
+        "delta": 0.87
+      },
+      {
+        "scenario": "LLL_M_M",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 52.34,
+        "higher_cost": 51.8,
+        "delta": 0.54
+      },
+      {
+        "scenario": "LLL_M_N",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 51.09,
+        "higher_cost": 50.25,
+        "delta": 0.84
+      },
+      {
+        "scenario": "LMH_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 65.66,
+        "higher_cost": 65.2,
+        "delta": 0.46
+      },
+      {
+        "scenario": "LMH_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 61.58,
+        "higher_cost": 60.7,
+        "delta": 0.88
+      },
+      {
+        "scenario": "LMH_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 63.22,
+        "higher_cost": 62.5,
+        "delta": 0.72
+      },
+      {
+        "scenario": "LMH_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 59.95,
+        "higher_cost": 59.24,
+        "delta": 0.71
+      },
+      {
+        "scenario": "LMH_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 57.8,
+        "higher_cost": 57.24,
+        "delta": 0.56
+      },
+      {
+        "scenario": "LMH_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 53.65,
+        "higher_cost": 52.74,
+        "delta": 0.91
+      },
+      {
+        "scenario": "LMH_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 55.28,
+        "higher_cost": 54.54,
+        "delta": 0.74
+      },
+      {
+        "scenario": "LMH_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 52.5,
+        "higher_cost": 51.29,
+        "delta": 1.21
+      },
+      {
+        "scenario": "LMH_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 60.47,
+        "higher_cost": 59.89,
+        "delta": 0.58
+      },
+      {
+        "scenario": "LMH_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 56.29,
+        "higher_cost": 55.39,
+        "delta": 0.9
+      },
+      {
+        "scenario": "LMH_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 57.93,
+        "higher_cost": 57.19,
+        "delta": 0.74
+      },
+      {
+        "scenario": "LMH_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 55.14,
+        "higher_cost": 53.94,
+        "delta": 1.2
+      },
+      {
+        "scenario": "LML_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 62.32,
+        "higher_cost": 61.79,
+        "delta": 0.53
+      },
+      {
+        "scenario": "LML_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 58.39,
+        "higher_cost": 57.29,
+        "delta": 1.1
+      },
+      {
+        "scenario": "LML_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 60.32,
+        "higher_cost": 59.09,
+        "delta": 1.23
+      },
+      {
+        "scenario": "LML_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 56.79,
+        "higher_cost": 55.84,
+        "delta": 0.95
+      },
+      {
+        "scenario": "LML_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 54.28,
+        "higher_cost": 53.83,
+        "delta": 0.45
+      },
+      {
+        "scenario": "LML_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 50.6,
+        "higher_cost": 49.33,
+        "delta": 1.27
+      },
+      {
+        "scenario": "LML_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 52.28,
+        "higher_cost": 51.13,
+        "delta": 1.15
+      },
+      {
+        "scenario": "LML_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 49.45,
+        "higher_cost": 47.88,
+        "delta": 1.57
+      },
+      {
+        "scenario": "LML_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 56.96,
+        "higher_cost": 56.49,
+        "delta": 0.47
+      },
+      {
+        "scenario": "LML_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 53.25,
+        "higher_cost": 51.99,
+        "delta": 1.26
+      },
+      {
+        "scenario": "LML_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 54.96,
+        "higher_cost": 53.79,
+        "delta": 1.17
+      },
+      {
+        "scenario": "LML_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 52.09,
+        "higher_cost": 50.53,
+        "delta": 1.56
+      },
+      {
+        "scenario": "LMM_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 63.9,
+        "higher_cost": 63.33,
+        "delta": 0.57
+      },
+      {
+        "scenario": "LMM_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 59.8,
+        "higher_cost": 58.83,
+        "delta": 0.97
+      },
+      {
+        "scenario": "LMM_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 61.53,
+        "higher_cost": 60.63,
+        "delta": 0.9
+      },
+      {
+        "scenario": "LMM_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 58.2,
+        "higher_cost": 57.37,
+        "delta": 0.83
+      },
+      {
+        "scenario": "LMM_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 55.87,
+        "higher_cost": 55.37,
+        "delta": 0.5
+      },
+      {
+        "scenario": "LMM_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 51.96,
+        "higher_cost": 50.87,
+        "delta": 1.09
+      },
+      {
+        "scenario": "LMM_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 53.59,
+        "higher_cost": 52.67,
+        "delta": 0.92
+      },
+      {
+        "scenario": "LMM_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 50.81,
+        "higher_cost": 49.42,
+        "delta": 1.39
+      },
+      {
+        "scenario": "LMM_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 58.55,
+        "higher_cost": 58.03,
+        "delta": 0.52
+      },
+      {
+        "scenario": "LMM_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 54.61,
+        "higher_cost": 53.52,
+        "delta": 1.09
+      },
+      {
+        "scenario": "LMM_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 56.24,
+        "higher_cost": 55.32,
+        "delta": 0.92
+      },
+      {
+        "scenario": "LMM_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 53.46,
+        "higher_cost": 52.07,
+        "delta": 1.39
+      },
+      {
+        "scenario": "MHH_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 76.36,
+        "higher_cost": 75.13,
+        "delta": 1.23
+      },
+      {
+        "scenario": "MHH_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 72.27,
+        "higher_cost": 70.63,
+        "delta": 1.64
+      },
+      {
+        "scenario": "MHH_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 73.9,
+        "higher_cost": 72.43,
+        "delta": 1.47
+      },
+      {
+        "scenario": "MHH_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 71.12,
+        "higher_cost": 69.17,
+        "delta": 1.95
+      },
+      {
+        "scenario": "MHH_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 68.32,
+        "higher_cost": 67.17,
+        "delta": 1.15
+      },
+      {
+        "scenario": "MHH_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 64.33,
+        "higher_cost": 62.67,
+        "delta": 1.66
+      },
+      {
+        "scenario": "MHH_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 65.96,
+        "higher_cost": 64.47,
+        "delta": 1.49
+      },
+      {
+        "scenario": "MHH_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 63.18,
+        "higher_cost": 61.22,
+        "delta": 1.96
+      },
+      {
+        "scenario": "MHH_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 71.0,
+        "higher_cost": 69.82,
+        "delta": 1.18
+      },
+      {
+        "scenario": "MHH_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 66.98,
+        "higher_cost": 65.32,
+        "delta": 1.66
+      },
+      {
+        "scenario": "MHH_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 68.61,
+        "higher_cost": 67.12,
+        "delta": 1.49
+      },
+      {
+        "scenario": "MHH_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 65.82,
+        "higher_cost": 63.87,
+        "delta": 1.95
+      },
+      {
+        "scenario": "MHL_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 72.84,
+        "higher_cost": 71.72,
+        "delta": 1.12
+      },
+      {
+        "scenario": "MHL_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 69.22,
+        "higher_cost": 67.22,
+        "delta": 2.0
+      },
+      {
+        "scenario": "MHL_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 70.85,
+        "higher_cost": 69.02,
+        "delta": 1.83
+      },
+      {
+        "scenario": "MHL_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 67.97,
+        "higher_cost": 65.77,
+        "delta": 2.2
+      },
+      {
+        "scenario": "MHL_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 64.81,
+        "higher_cost": 63.77,
+        "delta": 1.04
+      },
+      {
+        "scenario": "MHL_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 61.28,
+        "higher_cost": 59.26,
+        "delta": 2.02
+      },
+      {
+        "scenario": "MHL_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 62.81,
+        "higher_cost": 61.06,
+        "delta": 1.75
+      },
+      {
+        "scenario": "MHL_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 60.13,
+        "higher_cost": 57.81,
+        "delta": 2.32
+      },
+      {
+        "scenario": "MHL_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 67.48,
+        "higher_cost": 66.42,
+        "delta": 1.06
+      },
+      {
+        "scenario": "MHL_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 63.93,
+        "higher_cost": 61.92,
+        "delta": 2.01
+      },
+      {
+        "scenario": "MHL_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 65.49,
+        "higher_cost": 63.72,
+        "delta": 1.77
+      },
+      {
+        "scenario": "MHL_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 62.78,
+        "higher_cost": 60.46,
+        "delta": 2.32
+      },
+      {
+        "scenario": "MHM_H_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 74.43,
+        "higher_cost": 73.26,
+        "delta": 1.17
+      },
+      {
+        "scenario": "MHM_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 70.58,
+        "higher_cost": 68.76,
+        "delta": 1.82
+      },
+      {
+        "scenario": "MHM_H_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 72.21,
+        "higher_cost": 70.56,
+        "delta": 1.65
+      },
+      {
+        "scenario": "MHM_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 69.43,
+        "higher_cost": 67.31,
+        "delta": 2.12
+      },
+      {
+        "scenario": "MHM_L_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 66.39,
+        "higher_cost": 65.3,
+        "delta": 1.09
+      },
+      {
+        "scenario": "MHM_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 62.64,
+        "higher_cost": 60.8,
+        "delta": 1.84
+      },
+      {
+        "scenario": "MHM_L_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 64.4,
+        "higher_cost": 62.6,
+        "delta": 1.8
+      },
+      {
+        "scenario": "MHM_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 61.49,
+        "higher_cost": 59.35,
+        "delta": 2.14
+      },
+      {
+        "scenario": "MHM_M_H",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 69.07,
+        "higher_cost": 67.96,
+        "delta": 1.11
+      },
+      {
+        "scenario": "MHM_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 65.29,
+        "higher_cost": 63.45,
+        "delta": 1.84
+      },
+      {
+        "scenario": "MHM_M_M",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 67.08,
+        "higher_cost": 65.26,
+        "delta": 1.82
+      },
+      {
+        "scenario": "MHM_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 64.14,
+        "higher_cost": 62.0,
+        "delta": 2.14
+      },
+      {
+        "scenario": "MLH_H_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 65.66,
+        "higher_cost": 65.32,
+        "delta": 0.34
+      },
+      {
+        "scenario": "MLH_H_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 64.18,
+        "higher_cost": 64.04,
+        "delta": 0.14
+      },
+      {
+        "scenario": "MLH_L_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.04,
+        "higher_cost": 49.94,
+        "delta": 1.1
+      },
+      {
+        "scenario": "MLH_L_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 58.27,
+        "higher_cost": 58.08,
+        "delta": 0.19
+      },
+      {
+        "scenario": "MLH_L_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.07,
+        "higher_cost": 48.19,
+        "delta": 0.88
+      },
+      {
+        "scenario": "MLH_L_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.73,
+        "higher_cost": 48.77,
+        "delta": 0.96
+      },
+      {
+        "scenario": "MLH_L_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 48.42,
+        "higher_cost": 47.6,
+        "delta": 0.82
+      },
+      {
+        "scenario": "MLH_M_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 53.06,
+        "higher_cost": 52.52,
+        "delta": 0.54
+      },
+      {
+        "scenario": "MLH_M_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 60.73,
+        "higher_cost": 60.49,
+        "delta": 0.24
+      },
+      {
+        "scenario": "MLH_M_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.09,
+        "higher_cost": 50.77,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MLH_M_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.75,
+        "higher_cost": 51.35,
+        "delta": 0.4
+      },
+      {
+        "scenario": "MLH_M_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 59.26,
+        "higher_cost": 59.21,
+        "delta": 0.05
+      },
+      {
+        "scenario": "MLH_M_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 50.44,
+        "higher_cost": 50.19,
+        "delta": 0.25
+      },
+      {
+        "scenario": "MLL_H_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 62.51,
+        "higher_cost": 62.19,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MLL_H_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 61.04,
+        "higher_cost": 60.91,
+        "delta": 0.13
+      },
+      {
+        "scenario": "MLL_L_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.04,
+        "higher_cost": 49.94,
+        "delta": 1.1
+      },
+      {
+        "scenario": "MLL_L_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 55.13,
+        "higher_cost": 54.96,
+        "delta": 0.17
+      },
+      {
+        "scenario": "MLL_L_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.07,
+        "higher_cost": 48.19,
+        "delta": 0.88
+      },
+      {
+        "scenario": "MLL_L_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.73,
+        "higher_cost": 48.77,
+        "delta": 0.96
+      },
+      {
+        "scenario": "MLL_L_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 48.42,
+        "higher_cost": 47.6,
+        "delta": 0.82
+      },
+      {
+        "scenario": "MLL_M_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 53.06,
+        "higher_cost": 52.52,
+        "delta": 0.54
+      },
+      {
+        "scenario": "MLL_M_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 57.59,
+        "higher_cost": 57.37,
+        "delta": 0.22
+      },
+      {
+        "scenario": "MLL_M_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.09,
+        "higher_cost": 50.77,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MLL_M_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.75,
+        "higher_cost": 51.35,
+        "delta": 0.4
+      },
+      {
+        "scenario": "MLL_M_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 56.11,
+        "higher_cost": 56.09,
+        "delta": 0.02
+      },
+      {
+        "scenario": "MLL_M_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 50.44,
+        "higher_cost": 50.19,
+        "delta": 0.25
+      },
+      {
+        "scenario": "MLM_H_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 63.93,
+        "higher_cost": 63.61,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MLM_H_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 62.46,
+        "higher_cost": 62.33,
+        "delta": 0.13
+      },
+      {
+        "scenario": "MLM_L_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.04,
+        "higher_cost": 49.94,
+        "delta": 1.1
+      },
+      {
+        "scenario": "MLM_L_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 56.55,
+        "higher_cost": 56.37,
+        "delta": 0.18
+      },
+      {
+        "scenario": "MLM_L_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.07,
+        "higher_cost": 48.19,
+        "delta": 0.88
+      },
+      {
+        "scenario": "MLM_L_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 49.73,
+        "higher_cost": 48.77,
+        "delta": 0.96
+      },
+      {
+        "scenario": "MLM_L_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 48.42,
+        "higher_cost": 47.6,
+        "delta": 0.82
+      },
+      {
+        "scenario": "MLM_M_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 53.06,
+        "higher_cost": 52.52,
+        "delta": 0.54
+      },
+      {
+        "scenario": "MLM_M_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 59.01,
+        "higher_cost": 58.78,
+        "delta": 0.23
+      },
+      {
+        "scenario": "MLM_M_L",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.09,
+        "higher_cost": 50.77,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MLM_M_M",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 51.75,
+        "higher_cost": 51.35,
+        "delta": 0.4
+      },
+      {
+        "scenario": "MLM_M_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 57.53,
+        "higher_cost": 57.5,
+        "delta": 0.03
+      },
+      {
+        "scenario": "MLM_M_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 50.44,
+        "higher_cost": 50.19,
+        "delta": 0.25
+      },
+      {
+        "scenario": "MMH_H_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 74.18,
+        "higher_cost": 73.89,
+        "delta": 0.29
+      },
+      {
+        "scenario": "MMH_L_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 66.29,
+        "higher_cost": 66.11,
+        "delta": 0.18
+      },
+      {
+        "scenario": "MMH_M_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 68.92,
+        "higher_cost": 68.71,
+        "delta": 0.21
+      },
+      {
+        "scenario": "MML_H_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 70.77,
+        "higher_cost": 70.54,
+        "delta": 0.23
+      },
+      {
+        "scenario": "MML_L_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 62.89,
+        "higher_cost": 62.77,
+        "delta": 0.12
+      },
+      {
+        "scenario": "MML_M_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 65.51,
+        "higher_cost": 65.36,
+        "delta": 0.15
+      },
+      {
+        "scenario": "MMM_H_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 72.31,
+        "higher_cost": 72.05,
+        "delta": 0.26
+      },
+      {
+        "scenario": "MMM_L_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 64.43,
+        "higher_cost": 64.28,
+        "delta": 0.15
+      },
+      {
+        "scenario": "MMM_M_H",
+        "lower_threshold": 90,
+        "higher_threshold": 92.5,
+        "lower_cost": 67.05,
+        "higher_cost": 66.87,
+        "delta": 0.18
+      }
+    ],
+    "ERCOT": [],
+    "PJM": [
+      {
+        "scenario": "HHH_L_N",
+        "lower_threshold": 92.5,
+        "higher_threshold": 95,
+        "lower_cost": 76.75,
+        "higher_cost": 76.26,
+        "delta": 0.49
+      },
+      {
+        "scenario": "HHH_M_N",
+        "lower_threshold": 92.5,
+        "higher_threshold": 95,
+        "lower_cost": 79.26,
+        "higher_cost": 78.74,
+        "delta": 0.52
+      },
+      {
+        "scenario": "HHL_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 72.28,
+        "higher_cost": 71.68,
+        "delta": 0.6
+      },
+      {
+        "scenario": "HHL_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 74.93,
+        "higher_cost": 74.3,
+        "delta": 0.63
+      },
+      {
+        "scenario": "HHM_H_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 78.5,
+        "higher_cost": 77.98,
+        "delta": 0.52
+      },
+      {
+        "scenario": "HHM_L_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 70.99,
+        "higher_cost": 70.58,
+        "delta": 0.41
+      },
+      {
+        "scenario": "HHM_M_N",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 73.64,
+        "higher_cost": 73.19,
+        "delta": 0.45
+      }
+    ],
+    "NYISO": [
+      {
+        "scenario": "HMH_H_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 85.65,
+        "higher_cost": 85.61,
+        "delta": 0.04
+      },
+      {
+        "scenario": "HML_H_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 85.65,
+        "higher_cost": 85.61,
+        "delta": 0.04
+      },
+      {
+        "scenario": "HML_L_L",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 87.9,
+        "higher_cost": 87.84,
+        "delta": 0.06
+      },
+      {
+        "scenario": "HML_L_N",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 86.26,
+        "higher_cost": 86.23,
+        "delta": 0.03
+      },
+      {
+        "scenario": "HMM_H_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 85.65,
+        "higher_cost": 85.61,
+        "delta": 0.04
+      },
+      {
+        "scenario": "LHL_L_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 62.56,
+        "higher_cost": 62.54,
+        "delta": 0.02
+      },
+      {
+        "scenario": "LHL_M_N",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 64.24,
+        "higher_cost": 64.21,
+        "delta": 0.03
+      },
+      {
+        "scenario": "LLL_H_L",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 74.33,
+        "higher_cost": 74.26,
+        "delta": 0.07
+      },
+      {
+        "scenario": "LLL_H_N",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 72.68,
+        "higher_cost": 72.62,
+        "delta": 0.06
+      },
+      {
+        "scenario": "MMH_H_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 85.65,
+        "higher_cost": 85.57,
+        "delta": 0.08
+      },
+      {
+        "scenario": "MML_H_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 85.65,
+        "higher_cost": 85.57,
+        "delta": 0.08
+      },
+      {
+        "scenario": "MML_H_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 96.16,
+        "higher_cost": 96.02,
+        "delta": 0.14
+      },
+      {
+        "scenario": "MML_H_L",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 90.95,
+        "higher_cost": 90.5,
+        "delta": 0.45
+      },
+      {
+        "scenario": "MML_H_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 93.17,
+        "higher_cost": 92.87,
+        "delta": 0.3
+      },
+      {
+        "scenario": "MML_H_N",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 89.31,
+        "higher_cost": 88.86,
+        "delta": 0.45
+      },
+      {
+        "scenario": "MML_L_L",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 85.99,
+        "higher_cost": 85.67,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MML_L_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 88.21,
+        "higher_cost": 88.04,
+        "delta": 0.17
+      },
+      {
+        "scenario": "MML_L_N",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 84.35,
+        "higher_cost": 84.03,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MML_M_H",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 92.85,
+        "higher_cost": 92.8,
+        "delta": 0.05
+      },
+      {
+        "scenario": "MML_M_L",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 87.65,
+        "higher_cost": 87.28,
+        "delta": 0.37
+      },
+      {
+        "scenario": "MML_M_M",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 89.87,
+        "higher_cost": 89.65,
+        "delta": 0.22
+      },
+      {
+        "scenario": "MML_M_N",
+        "lower_threshold": 97.5,
+        "higher_threshold": 99,
+        "lower_cost": 86.0,
+        "higher_cost": 85.64,
+        "delta": 0.36
+      },
+      {
+        "scenario": "MMM_H_H",
+        "lower_threshold": 85,
+        "higher_threshold": 87.5,
+        "lower_cost": 85.65,
+        "higher_cost": 85.57,
+        "delta": 0.08
+      }
+    ],
+    "NEISO": [
+      {
+        "scenario": "HLH_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 72.58,
+        "higher_cost": 72.24,
+        "delta": 0.34
+      },
+      {
+        "scenario": "HLH_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 68.78,
+        "higher_cost": 68.56,
+        "delta": 0.22
+      },
+      {
+        "scenario": "HLH_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 70.05,
+        "higher_cost": 69.79,
+        "delta": 0.26
+      },
+      {
+        "scenario": "HLL_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 72.58,
+        "higher_cost": 72.24,
+        "delta": 0.34
+      },
+      {
+        "scenario": "HLL_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 68.78,
+        "higher_cost": 68.56,
+        "delta": 0.22
+      },
+      {
+        "scenario": "HLL_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 70.05,
+        "higher_cost": 69.79,
+        "delta": 0.26
+      },
+      {
+        "scenario": "HLM_H_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 72.58,
+        "higher_cost": 72.24,
+        "delta": 0.34
+      },
+      {
+        "scenario": "HLM_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 68.78,
+        "higher_cost": 68.56,
+        "delta": 0.22
+      },
+      {
+        "scenario": "HLM_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 70.05,
+        "higher_cost": 69.79,
+        "delta": 0.26
+      },
+      {
+        "scenario": "HMH_H_N",
+        "lower_threshold": 75,
+        "higher_threshold": 80,
+        "lower_cost": 82.94,
+        "higher_cost": 82.61,
+        "delta": 0.33
+      },
+      {
+        "scenario": "HMH_L_H",
+        "lower_threshold": 95,
+        "higher_threshold": 97.5,
+        "lower_cost": 97.62,
+        "higher_cost": 97.12,
+        "delta": 0.5
+      },
+      {
+        "scenario": "HMH_L_M",
+        "lower_threshold": 95,
+        "higher_threshold": 97.5,
+        "lower_cost": 95.05,
+        "higher_cost": 94.76,
+        "delta": 0.29
+      },
+      {
+        "scenario": "HMH_M_H",
+        "lower_threshold": 95,
+        "higher_threshold": 97.5,
+        "lower_cost": 98.62,
+        "higher_cost": 98.49,
+        "delta": 0.13
+      },
+      {
+        "scenario": "HML_H_N",
+        "lower_threshold": 75,
+        "higher_threshold": 80,
+        "lower_cost": 82.94,
+        "higher_cost": 82.61,
+        "delta": 0.33
+      },
+      {
+        "scenario": "HMM_H_N",
+        "lower_threshold": 75,
+        "higher_threshold": 80,
+        "lower_cost": 82.94,
+        "higher_cost": 82.61,
+        "delta": 0.33
+      },
+      {
+        "scenario": "MHL_M_H",
+        "lower_threshold": 80,
+        "higher_threshold": 85,
+        "lower_cost": 85.21,
+        "higher_cost": 85.17,
+        "delta": 0.04
+      },
+      {
+        "scenario": "MLH_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 68.61,
+        "higher_cost": 68.29,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MLH_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 69.87,
+        "higher_cost": 69.52,
+        "delta": 0.35
+      },
+      {
+        "scenario": "MLL_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 68.61,
+        "higher_cost": 68.29,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MLL_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 69.87,
+        "higher_cost": 69.52,
+        "delta": 0.35
+      },
+      {
+        "scenario": "MLM_L_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 68.61,
+        "higher_cost": 68.29,
+        "delta": 0.32
+      },
+      {
+        "scenario": "MLM_M_L",
+        "lower_threshold": 87.5,
+        "higher_threshold": 90,
+        "lower_cost": 69.87,
+        "higher_cost": 69.52,
+        "delta": 0.35
+      }
+    ]
+  },
+  "literature_warnings": [
+    "CAISO 95%: $67.92 outside [70, 140]",
+    "ERCOT 90%: $44.43 outside [45, 85]",
+    "ERCOT 95%: $48.80 outside [55, 120]",
+    "PJM 95%: $64.04 outside [70, 140]",
+    "NYISO 95%: $84.62 outside [85, 170]"
+  ],
+  "mix_analysis": {
+    "CAISO": {
+      "75": {
+        "mix": {
+          "clean_firm": 13,
+          "solar": 55,
+          "wind": 23,
+          "ccs_ccgt": 0,
+          "hydro": 9
+        },
+        "cost": 56.0,
+        "curtailment_pct": 0,
+        "procurement_pct": 79,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "80": {
+        "mix": {
+          "clean_firm": 10,
+          "solar": 58,
+          "wind": 20,
+          "ccs_ccgt": 3,
+          "hydro": 9
+        },
+        "cost": 57.22,
+        "curtailment_pct": 0,
+        "procurement_pct": 85,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "85": {
+        "mix": {
+          "clean_firm": 9,
+          "solar": 47,
+          "wind": 10,
+          "ccs_ccgt": 25,
+          "hydro": 9
+        },
+        "cost": 61.33,
+        "curtailment_pct": 0,
+        "procurement_pct": 89,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "87.5": {
+        "mix": {
+          "clean_firm": 8,
+          "solar": 47,
+          "wind": 23,
+          "ccs_ccgt": 13,
+          "hydro": 9
+        },
+        "cost": 63.02,
+        "curtailment_pct": 0,
+        "procurement_pct": 95,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "90": {
+        "mix": {
+          "clean_firm": 8,
+          "solar": 50,
+          "wind": 33,
+          "ccs_ccgt": 0,
+          "hydro": 9
+        },
+        "cost": 65.12,
+        "curtailment_pct": 0,
+        "procurement_pct": 103,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "92.5": {
+        "mix": {
+          "clean_firm": 20,
+          "solar": 42,
+          "wind": 9,
+          "ccs_ccgt": 20,
+          "hydro": 9
+        },
+        "cost": 65.33,
+        "curtailment_pct": 0,
+        "procurement_pct": 100,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "95": {
+        "mix": {
+          "clean_firm": 20,
+          "solar": 35,
+          "wind": 9,
+          "ccs_ccgt": 27,
+          "hydro": 9
+        },
+        "cost": 67.92,
+        "curtailment_pct": 0,
+        "procurement_pct": 103,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "97.5": {
+        "mix": {
+          "clean_firm": 8,
+          "solar": 35,
+          "wind": 8,
+          "ccs_ccgt": 40,
+          "hydro": 9
+        },
+        "cost": 70.37,
+        "curtailment_pct": 0,
+        "procurement_pct": 107,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "99": {
+        "mix": {
+          "clean_firm": 9,
+          "solar": 36,
+          "wind": 9,
+          "ccs_ccgt": 37,
+          "hydro": 9
+        },
+        "cost": 71.67,
+        "curtailment_pct": 0,
+        "procurement_pct": 111,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      }
+    },
+    "ERCOT": {
+      "75": {
+        "mix": {
+          "clean_firm": 10,
+          "solar": 20,
+          "wind": 70,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 36.9,
+        "curtailment_pct": 0,
+        "procurement_pct": 80,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "80": {
+        "mix": {
+          "clean_firm": 10,
+          "solar": 15,
+          "wind": 75,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 38.13,
+        "curtailment_pct": 0,
+        "procurement_pct": 85,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "85": {
+        "mix": {
+          "clean_firm": 10,
+          "solar": 15,
+          "wind": 75,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 41.12,
+        "curtailment_pct": 0,
+        "procurement_pct": 95,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "87.5": {
+        "mix": {
+          "clean_firm": 10,
+          "solar": 20,
+          "wind": 65,
+          "ccs_ccgt": 5,
+          "hydro": 0
+        },
+        "cost": 43.63,
+        "curtailment_pct": 0,
+        "procurement_pct": 97,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "90": {
+        "mix": {
+          "clean_firm": 9,
+          "solar": 15,
+          "wind": 76,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 44.43,
+        "curtailment_pct": 0,
+        "procurement_pct": 105,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "92.5": {
+        "mix": {
+          "clean_firm": 8,
+          "solar": 21,
+          "wind": 71,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 46.62,
+        "curtailment_pct": 0,
+        "procurement_pct": 100,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "95": {
+        "mix": {
+          "clean_firm": 7,
+          "solar": 23,
+          "wind": 70,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 48.8,
+        "curtailment_pct": 0,
+        "procurement_pct": 106,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "97.5": {
+        "mix": {
+          "clean_firm": 8,
+          "solar": 31,
+          "wind": 61,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 50.91,
+        "curtailment_pct": 0,
+        "procurement_pct": 111,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "99": {
+        "mix": {
+          "clean_firm": 7,
+          "solar": 30,
+          "wind": 63,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 53.52,
+        "curtailment_pct": 0,
+        "procurement_pct": 118,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      }
+    },
+    "PJM": {
+      "75": {
+        "mix": {
+          "clean_firm": 65,
+          "solar": 10,
+          "wind": 25,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 55.63,
+        "curtailment_pct": 0,
+        "procurement_pct": 80,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "80": {
+        "mix": {
+          "clean_firm": 75,
+          "solar": 5,
+          "wind": 20,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 57.0,
+        "curtailment_pct": 0,
+        "procurement_pct": 85,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "85": {
+        "mix": {
+          "clean_firm": 90,
+          "solar": 5,
+          "wind": 5,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 58.21,
+        "curtailment_pct": 0,
+        "procurement_pct": 90,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "87.5": {
+        "mix": {
+          "clean_firm": 90,
+          "solar": 5,
+          "wind": 5,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 60.23,
+        "curtailment_pct": 0,
+        "procurement_pct": 97,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "90": {
+        "mix": {
+          "clean_firm": 90,
+          "solar": 5,
+          "wind": 5,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 61.29,
+        "curtailment_pct": 0,
+        "procurement_pct": 100,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "92.5": {
+        "mix": {
+          "clean_firm": 90,
+          "solar": 5,
+          "wind": 5,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 62.09,
+        "curtailment_pct": 0,
+        "procurement_pct": 102,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "95": {
+        "mix": {
+          "clean_firm": 85,
+          "solar": 5,
+          "wind": 5,
+          "ccs_ccgt": 5,
+          "hydro": 0
+        },
+        "cost": 64.04,
+        "curtailment_pct": 0,
+        "procurement_pct": 105,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "97.5": {
+        "mix": {
+          "clean_firm": 83,
+          "solar": 12,
+          "wind": 4,
+          "ccs_ccgt": 0,
+          "hydro": 1
+        },
+        "cost": 68.59,
+        "curtailment_pct": 0,
+        "procurement_pct": 109,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "99": {
+        "mix": {
+          "clean_firm": 83,
+          "solar": 12,
+          "wind": 4,
+          "ccs_ccgt": 0,
+          "hydro": 1
+        },
+        "cost": 68.59,
+        "curtailment_pct": 0,
+        "procurement_pct": 109,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      }
+    },
+    "NYISO": {
+      "75": {
+        "mix": {
+          "clean_firm": 50,
+          "solar": 5,
+          "wind": 30,
+          "ccs_ccgt": 0,
+          "hydro": 15
+        },
+        "cost": 75.39,
+        "curtailment_pct": 0,
+        "procurement_pct": 80,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "80": {
+        "mix": {
+          "clean_firm": 40,
+          "solar": 5,
+          "wind": 30,
+          "ccs_ccgt": 10,
+          "hydro": 15
+        },
+        "cost": 77.53,
+        "curtailment_pct": 0,
+        "procurement_pct": 85,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "85": {
+        "mix": {
+          "clean_firm": 80,
+          "solar": 0,
+          "wind": 5,
+          "ccs_ccgt": 0,
+          "hydro": 15
+        },
+        "cost": 78.97,
+        "curtailment_pct": 0,
+        "procurement_pct": 95,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "87.5": {
+        "mix": {
+          "clean_firm": 80,
+          "solar": 0,
+          "wind": 5,
+          "ccs_ccgt": 0,
+          "hydro": 15
+        },
+        "cost": 79.44,
+        "curtailment_pct": 0,
+        "procurement_pct": 97,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "90": {
+        "mix": {
+          "clean_firm": 80,
+          "solar": 0,
+          "wind": 5,
+          "ccs_ccgt": 0,
+          "hydro": 15
+        },
+        "cost": 80.29,
+        "curtailment_pct": 0,
+        "procurement_pct": 100,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "92.5": {
+        "mix": {
+          "clean_firm": 60,
+          "solar": 0,
+          "wind": 5,
+          "ccs_ccgt": 20,
+          "hydro": 15
+        },
+        "cost": 82.73,
+        "curtailment_pct": 0,
+        "procurement_pct": 102,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "95": {
+        "mix": {
+          "clean_firm": 80,
+          "solar": 0,
+          "wind": 5,
+          "ccs_ccgt": 0,
+          "hydro": 15
+        },
+        "cost": 84.62,
+        "curtailment_pct": 0,
+        "procurement_pct": 110,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "97.5": {
+        "mix": {
+          "clean_firm": 60,
+          "solar": 5,
+          "wind": 5,
+          "ccs_ccgt": 15,
+          "hydro": 15
+        },
+        "cost": 89.87,
+        "curtailment_pct": 0,
+        "procurement_pct": 115,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "99": {
+        "mix": {
+          "clean_firm": 72,
+          "solar": 9,
+          "wind": 4,
+          "ccs_ccgt": 0,
+          "hydro": 15
+        },
+        "cost": 91.21,
+        "curtailment_pct": 0,
+        "procurement_pct": 113,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      }
+    },
+    "NEISO": {
+      "75": {
+        "mix": {
+          "clean_firm": 30,
+          "solar": 5,
+          "wind": 65,
+          "ccs_ccgt": 0,
+          "hydro": 0
+        },
+        "cost": 73.73,
+        "curtailment_pct": 0,
+        "procurement_pct": 80,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "80": {
+        "mix": {
+          "clean_firm": 29,
+          "solar": 4,
+          "wind": 44,
+          "ccs_ccgt": 19,
+          "hydro": 4
+        },
+        "cost": 75.38,
+        "curtailment_pct": 0,
+        "procurement_pct": 85,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "85": {
+        "mix": {
+          "clean_firm": 30,
+          "solar": 8,
+          "wind": 54,
+          "ccs_ccgt": 5,
+          "hydro": 3
+        },
+        "cost": 80.06,
+        "curtailment_pct": 0,
+        "procurement_pct": 95,
+        "battery_pct": 0,
+        "ldes_pct": 0
+      },
+      "87.5": {
+        "mix": {
+          "clean_firm": 25,
+          "solar": 13,
+          "wind": 58,
+          "ccs_ccgt": 0,
+          "hydro": 4
+        },
+        "cost": 81.97,
+        "curtailment_pct": 0,
+        "procurement_pct": 95,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "90": {
+        "mix": {
+          "clean_firm": 24,
+          "solar": 19,
+          "wind": 53,
+          "ccs_ccgt": 0,
+          "hydro": 4
+        },
+        "cost": 83.42,
+        "curtailment_pct": 0,
+        "procurement_pct": 98,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "92.5": {
+        "mix": {
+          "clean_firm": 27,
+          "solar": 22,
+          "wind": 42,
+          "ccs_ccgt": 5,
+          "hydro": 4
+        },
+        "cost": 85.47,
+        "curtailment_pct": 0,
+        "procurement_pct": 101,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "95": {
+        "mix": {
+          "clean_firm": 25,
+          "solar": 29,
+          "wind": 42,
+          "ccs_ccgt": 0,
+          "hydro": 4
+        },
+        "cost": 88.78,
+        "curtailment_pct": 0,
+        "procurement_pct": 108,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "97.5": {
+        "mix": {
+          "clean_firm": 23,
+          "solar": 10,
+          "wind": 13,
+          "ccs_ccgt": 50,
+          "hydro": 4
+        },
+        "cost": 93.25,
+        "curtailment_pct": 0,
+        "procurement_pct": 107,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      },
+      "99": {
+        "mix": {
+          "clean_firm": 64,
+          "solar": 9,
+          "wind": 4,
+          "ccs_ccgt": 19,
+          "hydro": 4
+        },
+        "cost": 96.02,
+        "curtailment_pct": 0,
+        "procurement_pct": 112,
+        "battery_pct": 2,
+        "ldes_pct": 2
+      }
+    }
+  },
+  "dac_inputs": {
+    "CAISO": {
+      "75": {
+        "procurement_pct": 79,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "80": {
+        "procurement_pct": 85,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "85": {
+        "procurement_pct": 89,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "87.5": {
+        "procurement_pct": 95,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "90": {
+        "procurement_pct": 103,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "92.5": {
+        "procurement_pct": 100,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "95": {
+        "procurement_pct": 103,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "97.5": {
+        "procurement_pct": 107,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "99": {
+        "procurement_pct": 111,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      }
+    },
+    "ERCOT": {
+      "75": {
+        "procurement_pct": 80,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "80": {
+        "procurement_pct": 85,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "85": {
+        "procurement_pct": 95,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "87.5": {
+        "procurement_pct": 97,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "90": {
+        "procurement_pct": 105,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "92.5": {
+        "procurement_pct": 100,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "95": {
+        "procurement_pct": 106,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "97.5": {
+        "procurement_pct": 111,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "99": {
+        "procurement_pct": 118,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      }
+    },
+    "PJM": {
+      "75": {
+        "procurement_pct": 80,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "80": {
+        "procurement_pct": 85,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "85": {
+        "procurement_pct": 90,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "87.5": {
+        "procurement_pct": 97,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "90": {
+        "procurement_pct": 100,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "92.5": {
+        "procurement_pct": 102,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "95": {
+        "procurement_pct": 105,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "97.5": {
+        "procurement_pct": 109,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "99": {
+        "procurement_pct": 109,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      }
+    },
+    "NYISO": {
+      "75": {
+        "procurement_pct": 80,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "80": {
+        "procurement_pct": 85,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "85": {
+        "procurement_pct": 95,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "87.5": {
+        "procurement_pct": 97,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "90": {
+        "procurement_pct": 100,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "92.5": {
+        "procurement_pct": 102,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "95": {
+        "procurement_pct": 110,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "97.5": {
+        "procurement_pct": 115,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "99": {
+        "procurement_pct": 113,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      }
+    },
+    "NEISO": {
+      "75": {
+        "procurement_pct": 80,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "80": {
+        "procurement_pct": 85,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "85": {
+        "procurement_pct": 95,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "87.5": {
+        "procurement_pct": 95,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "90": {
+        "procurement_pct": 98,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "92.5": {
+        "procurement_pct": 101,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "95": {
+        "procurement_pct": 108,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "97.5": {
+        "procurement_pct": 107,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      },
+      "99": {
+        "procurement_pct": 112,
+        "curtailment_pct": 0,
+        "curtailed_mwh": 0,
+        "dac_potential_tons": 0,
+        "mac_per_ton": 0
+      }
+    }
+  }
+}
