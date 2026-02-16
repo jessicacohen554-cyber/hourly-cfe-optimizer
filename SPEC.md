@@ -63,6 +63,34 @@
 - `research/mac_methodology_lit_review.md` — Full literature review with 17 key citations
 - `research/optimizer_statistical_methodology.md` — Search space analysis, global optimum capture probability
 
+### Marginal MAC Monotonicity Fix (Feb 16, 2026) — Two-Zone Approach
+
+**Problem**: Stepwise marginal MAC (Δcost/ΔCO2 between consecutive thresholds) is wildly non-monotonic due to resource reshuffling. Current data oscillates by 2-10x between adjacent steps (e.g., CAISO P50: 214→116→475→138→290→305→347→340). Root cause: independent threshold optimization produces different optimal portfolios at each threshold — the "delta" between them measures portfolio switching cost, not incremental resource addition cost.
+
+**Key insight**: Grid decarbonization holds to ~92.5% in all regions regardless of cost assumptions. Sub-90% marginal MAC granularity is noise from optimization artifacts, not economically meaningful signals.
+
+**Decision**: Two-zone marginal MAC structure:
+
+**Zone 1 — Grid Backbone (75% → 90%): Single aggregate marginal MAC**
+- One value per (ISO, scenario): `MAC = (cost[90%] - cost[75%]) × demand / (CO2[90%] - CO2[75%])`
+- Represents the cost per ton of grid backbone decarbonization
+- No monotonicity issue (single value)
+
+**Zone 2 — Last Mile (90% → 100%): Granular checkpoints with enforced monotonicity**
+- 5 stepwise values: 90→92.5%, 92.5→95%, 95→97.5%, 97.5→99%, 99→100%
+- Enforced non-decreasing: `step_mac[t] = max(raw_step_mac[t], step_mac[t-1])`
+- Zone 1 aggregate MAC serves as floor for first Zone 2 step
+- Convex hull interpolation for edge cases where ΔCO2 ≤ 0
+
+**Result**: 6-value marginal MAC curve per (ISO, scenario):
+```
+[MAC_75→90, MAC_90→92.5, MAC_92.5→95, MAC_95→97.5, MAC_97.5→99, MAC_99→100]
+```
+
+**Fan chart fix**: Consistent scenario ranking (rank by total cost at 99%, select P10/P50/P90 scenarios, use their full curves) instead of independent per-step percentiles that mix different scenarios.
+
+**Implementation plan**: See `PLAN_marginal_mac_fix.md` for detailed implementation steps and file-by-file changes.
+
 ### Optimizer Statistical Properties (Feb 16, 2026)
 
 **Search architecture**: 3-phase hierarchical grid search (10% → 5% → 1% resolution)
