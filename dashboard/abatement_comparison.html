@@ -162,7 +162,7 @@ p:last-child { margin-bottom: 0; }
 .envelope-card-subtitle {
     font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;
 }
-.envelope-card canvas { width: 100% !important; height: 200px; }
+.envelope-card canvas { width: 100% !important; height: 180px; }
 
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
@@ -171,15 +171,19 @@ p:last-child { margin-bottom: 0; }
     h2 { font-size: 1.4rem; }
     .counter-row { flex-direction: column; }
     .chart-wrap { padding: 14px; }
-    .chart-wrap-tall { height: 320px; }
-    .chart-wrap-med  { height: 280px; }
-    .envelope-grid { grid-template-columns: 1fr; }
-    .envelope-card canvas { height: 160px; }
+    .chart-wrap-tall { height: 280px; }
+    .chart-wrap-med  { height: 240px; }
+    .envelope-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .envelope-card { padding: 10px; }
+    .envelope-card canvas { height: 110px; }
+    .envelope-card-title { font-size: 0.82rem; }
+    .envelope-card-subtitle { font-size: 0.7rem; margin-bottom: 4px; }
 }
 @media (max-width: 480px) {
-    .chart-wrap-tall { height: 260px; }
-    .chart-wrap-med  { height: 240px; }
-    .envelope-card canvas { height: 140px; }
+    .chart-wrap-tall { height: 220px; }
+    .chart-wrap-med  { height: 200px; }
+    .envelope-grid { grid-template-columns: 1fr; gap: 10px; }
+    .envelope-card canvas { height: 100px; }
 }
 </style>
 </head>
