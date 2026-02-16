@@ -1434,10 +1434,12 @@ def compute_co2_abatement(iso, resource_pcts, procurement_pct, hourly_match_scor
         storage_dispatch_total = batt_dispatch_hrs + ldes_dispatch_hrs
         co2_storage_dispatch = np.sum(storage_dispatch_total * hourly_rates) * demand_total_mwh
 
-        # Charge-side emissions netting: charging draws energy that may have fossil
-        # on the margin. Net these against discharge abatement.
-        batt_charge_emissions = np.sum(batt_charge_hrs * hourly_rates) * demand_total_mwh
-        ldes_charge_emissions = np.sum(ldes_charge_hrs * hourly_rates) * demand_total_mwh
+        # Charge-side emissions: only apply marginal fossil rate when charging
+        # from the grid (no curtailment). When curtailment is occurring (surplus > 0),
+        # storage charges from clean surplus → 0 emission rate.
+        charge_emission_rate = np.where(surplus > 0, 0.0, hourly_rates)
+        batt_charge_emissions = np.sum(batt_charge_hrs * charge_emission_rate) * demand_total_mwh
+        ldes_charge_emissions = np.sum(ldes_charge_hrs * charge_emission_rate) * demand_total_mwh
 
         # Net storage abatement = dispatch abatement - charge emissions
         co2_storage = co2_storage_dispatch - batt_charge_emissions - ldes_charge_emissions
