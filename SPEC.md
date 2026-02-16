@@ -1,9 +1,9 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-15.
+> Last updated: 2026-02-16.
 
-## Current Status (Feb 15, 2026)
+## Current Status (Feb 16, 2026)
 
 ### What was accomplished
 - [x] Homepage (`index.html`) — 4 charts rendering with real data, region toggle pills, narrative sections
@@ -42,12 +42,53 @@
 - [ ] Site content gap closure: incomplete pages need optimizer data
 - [ ] Update narratives + research paper with new results
 
+### MAC Methodology Decision (Feb 16, 2026) — Option B: Hybrid Stats + Path-Constrained Reference
+
+**Problem**: Independent threshold optimization produces non-monotonic marginal abatement costs (MACs). Each threshold finds its own globally optimal portfolio; the "marginal cost" between thresholds compares two independently optimized systems, not incremental resource additions. This creates phantom MAC spikes ($887/ton NYISO 95→97.5%) and even negative abatement (NEISO 95→97.5%, ERCOT 97.5→99%) when the optimizer reshuffles the portfolio.
+
+**Decision**: Option B — Hybrid approach combining statistical post-processing of existing 16,200 results with a small set of path-constrained optimization runs.
+
+**Components**:
+1. **Monotonic envelope** (stats): Convex hull of (cost, CO2) per ISO — filters rebalancing noise
+2. **MAC uncertainty fan** (stats): P10/P50/P90 across 324 scenarios at each threshold
+3. **Sensitivity decomposition** (stats): ANOVA on which toggles drive MAC variance
+4. **Path-constrained reference MAC** (50 targeted runs): Force each threshold's mix to build on previous — monotonic by construction. One run per threshold × 5 ISOs at Medium costs.
+5. **Visualization**: Central monotonic reference curve inside P10-P90 fan, with DAC/SCC horizontal bands
+
+**Methodology statement**: "Path-dependent marginal costs (central line) with uncertainty characterized via factorial sensitivity analysis across 324 cost scenarios (shaded band)."
+
+**Literature basis**: Systems MAC / MAC 2.0 (Evolved Energy/EDF 2021), scenario ensemble approach (Deane et al. 2020), conservation supply curve methodology (Meier & Rosenfeld 1982). Full lit review: `research/mac_methodology_lit_review.md`.
+
+**Reference docs**:
+- `research/mac_methodology_lit_review.md` — Full literature review with 17 key citations
+- `research/optimizer_statistical_methodology.md` — Search space analysis, global optimum capture probability
+
+### Optimizer Statistical Properties (Feb 16, 2026)
+
+**Search architecture**: 3-phase hierarchical grid search (10% → 5% → 1% resolution)
+
+**Global optimum capture probability**: >99.9%
+- Phase 1 coarse grid covers all 32 piecewise-linear regions of the cost function
+- P(all regions sampled) ≈ 99.5% from grid alone, >99.9% with edge-case seeds
+- Lipschitz gap bound (Nesterov 2003): <$0.01/MWh in mix dimensions at 1% resolution
+
+**Maximum sub-optimality**: ~$2-4/MWh (~1-3% of typical $50-150/MWh total)
+- Mix dimensions (1% steps): <$0.58/MWh
+- Storage dimensions (2% steps): <$3.64/MWh — dominant error source
+- Procurement (1% steps): <$1.00/MWh
+
+**Why grid search, not LP**: Non-convex problem (hourly min() in matching score, nonlinear storage dispatch). Standard energy models (TIMES, ReEDS, GenX, PyPSA) use LP, but our hourly matching + greedy storage dispatch cannot be linearized without accuracy loss. Grid search is appropriate because evaluations are cheap (~0.1ms vectorized numpy) and dimensionality is low (5-7 DOF).
+
+**Warm-start bias**: Non-Medium scenarios start from Medium optimum + ±17pp reach. 4 extreme archetypes get full exploration. Cross-pollination covers remaining risk.
+
 ### Pipeline when optimizer completes
 1. Run `recompute_co2.py` → hourly CO₂ correction
 2. Run `analyze_results.py` → monotonicity, literature alignment, VRE waste, DAC inputs
 3. Update dashboards with real data, update narratives
-4. DAC-VRE analysis, resource mix analysis, path-dependent MAC
-5. Commit + push
+4. Path-constrained MAC runs (50 targeted optimizations)
+5. Statistical post-processing: envelope, fan, ANOVA
+6. DAC-VRE analysis, resource mix analysis
+7. Commit + push
 
 ### Pre-Run QA/QC Gate (Mandatory Before Every Optimizer Run)
 **This gate exists because**: a previous run wasted 3+ hours of compute due to incorrect hydro caps that weren't caught before launch. Every optimizer run is expensive — never launch without verifying assumptions first.

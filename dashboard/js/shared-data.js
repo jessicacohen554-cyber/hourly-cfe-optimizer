@@ -8,32 +8,32 @@
 // --- Thresholds (from optimizer) ---
 const THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
 
-// --- Average MAC ($/ton CO2) — monotonicity-enforced (running max) ---
-// Source: incremental_above_baseline * demand_mwh / total_co2_abated_tons
-// CO2 methodology: curtailment-aware charge netting (storage charges from clean
-// surplus get 0 emission rate; otherwise marginal fossil rate)
-// Low/High scaled ×0.72/×1.38 from Medium per NREL ATB cost spread
+// --- Average MAC ($/ton CO2) — from Option B statistical pipeline ---
+// Source: compute_mac_stats.py using per-scenario CO2 (fuel-switching elasticity)
+// CO2 methodology: hourly fossil-fuel emission rates with fuel-switching shifts
+// Medium = monotonic envelope (running max of MMM_M_M scenario)
+// Low/High = P10/P90 from 324-scenario factorial experiment
 const MAC_DATA = {
     medium: {
-        CAISO:  [87,  87,  95,  96,  98,  98,  103, 107, 109],
-        ERCOT:  [23,  25,  29,  34,  34,  36,  39,  42,  47],
-        PJM:    [50,  50,  50,  51,  52,  53,  56,  60,  60],
-        NYISO:  [107, 107, 107, 107, 107, 107, 108, 119, 119],
-        NEISO:  [110, 110, 116, 116, 116, 118, 122, 139, 141]
+        CAISO:  [93,  96,  104, 104, 107, 107, 109, 116, 118],
+        ERCOT:  [24,  26,  31,  35,  37,  40,  43,  46,  50],
+        PJM:    [49,  49,  49,  51,  52,  53,  56,  63,  63],
+        NYISO:  [105, 108, 108, 108, 108, 108, 108, 120, 121],
+        NEISO:  [115, 115, 122, 123, 125, 129, 137, 146, 146]
     },
     low: {
-        CAISO:  [63,  63,  68,  69,  71,  71,  74,  77,  79],
-        ERCOT:  [16,  18,  21,  24,  25,  26,  28,  30,  34],
-        PJM:    [36,  36,  36,  37,  37,  38,  40,  43,  43],
-        NYISO:  [77,  77,  77,  77,  77,  77,  78,  86,  86],
-        NEISO:  [79,  79,  83,  83,  83,  85,  88,  100, 102]
+        CAISO:  [46,  48,  50,  52,  53,  56,  59,  65,  66],
+        ERCOT:  [5,   6,   10,  13,  15,  17,  20,  23,  25],
+        PJM:    [12,  13,  14,  16,  17,  18,  20,  24,  27],
+        NYISO:  [50,  49,  50,  51,  51,  55,  57,  70,  75],
+        NEISO:  [52,  58,  61,  61,  63,  68,  72,  77,  84]
     },
     high: {
-        CAISO:  [121, 121, 131, 132, 135, 135, 142, 148, 151],
-        ERCOT:  [31,  34,  40,  47,  47,  49,  54,  58,  65],
-        PJM:    [69,  69,  69,  70,  72,  73,  77,  82,  82],
-        NYISO:  [148, 148, 148, 148, 148, 148, 149, 165, 165],
-        NEISO:  [152, 152, 160, 160, 160, 163, 168, 191, 195]
+        CAISO:  [110, 120, 122, 127, 126, 132, 139, 147, 153],
+        ERCOT:  [39,  41,  46,  49,  52,  55,  59,  63,  69],
+        PJM:    [65,  68,  72,  74,  75,  79,  80,  87,  92],
+        NYISO:  [139, 146, 148, 150, 153, 160, 166, 175, 182],
+        NEISO:  [145, 145, 147, 148, 150, 155, 167, 175, 183]
     }
 };
 
@@ -123,32 +123,28 @@ const BENCHMARKS_EXTRA = [
       trajectory: 'declining_steep', confidence: 'medium', sources: 'Argonne Labs, Penn Wharton, RFF' }
 ];
 
-// --- Stepwise Marginal MAC ($/ton CO2) at each threshold step ---
-// Source: (delta_incremental_cost * demand_mwh) / delta_co2_abated between adjacent thresholds
-// This is the cost of the NEXT increment of CFE matching — the economically meaningful signal
-// for "should I push CFE higher or invest in alternative decarb?"
-// null = CO2 decreased at that step (resource mix shift) or no additional CO2 abated
+// --- Stepwise Marginal MAC ($/ton CO2) — median (P50) across 324 scenarios ---
+// Source: compute_mac_stats.py — P50 of (delta_cost × demand) / delta_co2 per scenario
+// CO2 varies by scenario (fuel-switching elasticity on marginal emission rates)
+// Index 0 = 75% level (no prior step), indices 1-9 = steps 75→80, ..., 99→100
 const MARGINAL_MAC_DATA = {
     medium: {
-        CAISO:  [null,  60, 333, 120, 156,  90, 316, 348, 207],
-        ERCOT:  [null,  69,  96, 285,  55,  50, 412, 137, null],
-        PJM:    [null,  54,  52,  65,  98, 127, 255, 114, null],
-        NYISO:  [null, 113,  53,  73,  94, 324, 131, 887,  56],
-        NEISO:  [null,  92, 222,  67, 256, 443, 211, null, 216]
+        CAISO:  [null, 214, 107, 475, 138, 290, 267, 315, 303],
+        ERCOT:  [null,  78, 112, 118, 110, 154, 192, 208, 266],
+        PJM:    [null,  62,  63,  82, 105, 150, 339, 212, 514],
+        NYISO:  [null, 117,  74,  98, 155, 261, 299, 449, 335],
+        NEISO:  [null, 141, 166, 108, 170, 327, 528, 483, 677]
     }
 };
-// Index 0 = the 75% level itself (no "from" step), indices 1-8 = steps 75→80, 80→85, ..., 97.5→99
 
-// --- Crossover Summary (precomputed from marginal MAC) ---
-// "Last efficient threshold" = highest CFE% where ALL prior steps have marginal MAC < benchmark
-// These are for narrative use — computed from MARGINAL_MAC_DATA
+// --- Crossover Summary (from stepwise MAC P50) ---
 const CROSSOVER_SUMMARY = {
-    // Threshold at which marginal MAC first exceeds SCC ($190/ton)
-    scc_190: { CAISO: 80, ERCOT: 85, PJM: 92.5, NYISO: 90, NEISO: 80 },
-    // Threshold at which marginal MAC first exceeds DAC low ($400/ton)
-    dac_400: { CAISO: '>99', ERCOT: 92.5, PJM: '>99', NYISO: 95, NEISO: 90 },
-    // Threshold at which marginal MAC first exceeds DAC high ($600/ton)
-    dac_600: { CAISO: '>99', ERCOT: '>99', PJM: '>99', NYISO: 95, NEISO: '>99' }
+    // Threshold at which stepwise marginal MAC first exceeds SCC ($190/ton)
+    scc_190: { CAISO: 75, ERCOT: 95, PJM: 95, NYISO: 87.5, NEISO: 80 },
+    // Threshold at which stepwise marginal MAC first exceeds DAC low ($400/ton)
+    dac_400: { CAISO: 85, ERCOT: '>99', PJM: 97.5, NYISO: 95, NEISO: 92.5 },
+    // Threshold at which stepwise marginal MAC first exceeds DAC high ($600/ton)
+    dac_600: { CAISO: '>99', ERCOT: '>99', PJM: 97.5, NYISO: '>99', NEISO: 97.5 }
 };
 
 // ============================================================================
