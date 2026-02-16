@@ -59,13 +59,19 @@ print("Uprate caps (TWh/yr):", UPRATE_CAP_TWH)
 # ============================================================================
 # LOAD CACHED RESULTS
 # ============================================================================
+# Always read from the original Step 1 cache to avoid compounding deltas.
+# The cache has the original physics costs; Step 2 applies tranche pricing on top.
 
+CACHE_PATH = Path('data/optimizer_cache.json')
 RESULTS_PATH = Path('dashboard/overprocure_results.json')
-if not RESULTS_PATH.exists():
-    print(f"ERROR: {RESULTS_PATH} not found")
+
+source_path = CACHE_PATH if CACHE_PATH.exists() else RESULTS_PATH
+if not source_path.exists():
+    print(f"ERROR: Neither {CACHE_PATH} nor {RESULTS_PATH} found")
     sys.exit(1)
 
-with open(RESULTS_PATH) as f:
+print(f"Reading from: {source_path}")
+with open(source_path) as f:
     data = json.load(f)
 
 config = data['config']
@@ -78,18 +84,17 @@ ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 
 
 def parse_scenario_key(key):
-    """Parse scenario key like 'LMH_H_L' into component levels.
-    Returns (solar, wind, storage, firmgen, transmission) levels."""
+    """Parse scenario key like 'RFS_FF_TX' into component levels.
+    Format: R=Renewable, F=Firm, S=Storage _ FF=FossilFuel _ TX=Transmission
+    Returns dict with correct toggle names matching dashboard buildScenarioKey()."""
     parts = key.split('_')
-    sws = parts[0]  # Solar/Wind/Storage
-    fg = parts[1]   # Firm Gen
-    tx = parts[2]   # Transmission
+    gen_part = parts[0]  # 3 chars: Renewable, Firm, Storage
     return {
-        'solar': sws[0],
-        'wind': sws[1],
-        'storage': sws[2],
-        'firmgen': fg,
-        'transmission': tx,
+        'renewable': gen_part[0],     # controls solar, wind LCOEs
+        'firm': gen_part[1],          # controls clean_firm, CCS LCOEs
+        'storage': gen_part[2],       # controls battery, LDES LCOEs
+        'fuel': parts[1],             # controls wholesale/fossil fuel prices
+        'transmission': parts[2],     # controls transmission adders
     }
 
 
@@ -182,38 +187,87 @@ for iso in ISOS:
             stats[iso]['scenarios'] += 1
             levels = parse_scenario_key(skey)
             rm = sc.get('resource_mix', {})
-            old_costs = sc.get('costs', {})
+            proc_pct = sc.get('procurement_pct', 100)
+            match_score = sc.get('hourly_match_score', 0)
+            bat_pct = sc.get('battery_dispatch_pct', 0)
+            ldes_pct = sc.get('ldes_dispatch_pct', 0)
 
-            # Clean firm % of demand from cached mix
+            # Decode toggle levels (correct mapping per dashboard buildScenarioKey)
+            rw_name = get_level_name(levels['renewable'])   # solar, wind LCOEs
+            firm_name = get_level_name(levels['firm'])       # clean_firm, CCS LCOEs
+            st_name = get_level_name(levels['storage'])      # battery, LDES LCOEs
+            fuel_name = get_level_name(levels['fuel'])        # wholesale price adj
+            tx_name = get_level_name(levels['transmission'])  # transmission adders
+
+            # Clean firm tranche pricing
             cf_pct = rm.get('clean_firm', 0)
             new_cf_pct = max(0, cf_pct - existing_cf_pct)
             new_cf_twh = new_cf_pct / 100.0 * demand_twh
-
-            # Compute old and new clean firm costs
-            old_cf_cost = compute_old_cf_cost(
-                iso, new_cf_twh, levels['firmgen'], levels['transmission'])
             tranche = compute_tranche_cost(
-                iso, new_cf_twh, levels['firmgen'], levels['transmission'])
+                iso, new_cf_twh, levels['firm'], levels['transmission'])
 
-            # Cost delta ($/MWh of demand)
-            cost_delta_total = tranche['total_cf_cost'] - old_cf_cost  # TWh * $/MWh
-            cost_delta_per_mwh = cost_delta_total / demand_twh if demand_twh > 0 else 0
+            # Compute total cost from scratch (absolute, not delta-based)
+            # This makes Step 2 idempotent — safe to re-run any number of times
+            procurement_factor = proc_pct / 100.0
+            grid_shares = grid_mix[iso]
+            total_cost_per_demand = 0.0
 
-            # New costs
-            old_total = old_costs.get('total_cost', 0)
-            new_total = old_total + cost_delta_per_mwh
-            new_effective = old_costs.get('effective_cost', 0) + cost_delta_per_mwh
-            new_incremental = old_costs.get('incremental', 0) + cost_delta_per_mwh
+            # Wholesale price with fuel adjustment
+            fuel_adj = config.get('wholesale_fuel_adjustments', {}).get(iso, {}).get(fuel_name, 0)
+            w = wholesale[iso] + fuel_adj
+            w = max(5, w)
 
-            # Override costs with tranche pricing (tranche IS the cost model now)
-            sc['costs']['total_cost'] = round(new_total, 2)
-            sc['costs']['effective_cost'] = round(new_effective, 2)
-            sc['costs']['incremental'] = round(new_incremental, 2)
-            # wholesale unchanged
+            for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+                pct = rm.get(rtype, 0)
+                if pct <= 0:
+                    continue
+                resource_pct_of_demand = procurement_factor * (pct / 100.0) * 100.0
+                existing_share = grid_shares.get(rtype, 0)
+                existing_pct = min(resource_pct_of_demand, existing_share)
+                new_pct = max(0, resource_pct_of_demand - existing_share)
+
+                if rtype == 'hydro':
+                    cost = resource_pct_of_demand / 100.0 * w
+                elif rtype == 'clean_firm':
+                    # Use tranche pricing for clean firm
+                    cost = (existing_pct / 100.0 * w) + \
+                           (tranche['total_cf_cost'] / demand_twh if new_cf_twh > 0 else 0)
+                else:
+                    # Standard LCOE + transmission for other resources
+                    lcoe = old_lcoe_tables[rtype][rw_name if rtype in ('solar', 'wind') else
+                                                  firm_name if rtype == 'ccs_ccgt' else
+                                                  st_name][iso]
+                    tx_add = tx_tables.get(rtype, {}).get(tx_name, {}).get(iso, 0)
+                    cost = (existing_pct / 100.0 * w) + (new_pct / 100.0 * (lcoe + tx_add))
+
+                total_cost_per_demand += cost
+
+            # Battery storage cost
+            bat_lcoe = old_lcoe_tables['battery'][st_name][iso]
+            bat_tx = tx_tables.get('battery', {}).get(tx_name, {}).get(iso, 0)
+            total_cost_per_demand += (bat_pct / 100.0) * (bat_lcoe + bat_tx)
+
+            # LDES storage cost
+            ldes_lcoe = old_lcoe_tables['ldes'][st_name][iso]
+            ldes_tx = tx_tables.get('ldes', {}).get(tx_name, {}).get(iso, 0)
+            total_cost_per_demand += (ldes_pct / 100.0) * (ldes_lcoe + ldes_tx)
+
+            # Effective cost per useful MWh
+            matched_fraction = match_score / 100.0 if match_score > 0 else 1.0
+            new_effective = total_cost_per_demand / matched_fraction
+            new_incremental = new_effective - w
+
+            # Override costs (absolute — idempotent)
+            sc['costs'] = {
+                'total_cost': round(total_cost_per_demand, 2),
+                'effective_cost': round(new_effective, 2),
+                'incremental': round(new_incremental, 2),
+                'wholesale': w,
+            }
 
             # Store tranche breakdown for transparency
             sc['tranche_costs'] = {
-                'cost_delta_per_mwh': round(cost_delta_per_mwh, 2),
+                'cost_delta_per_mwh': round(new_effective - (sc.get('costs', {}).get('effective_cost', new_effective)), 2),
                 'clean_firm_tranche': tranche,
                 'new_cf_pct': round(new_cf_pct, 1),
                 'new_cf_twh': round(new_cf_twh, 3),
@@ -222,12 +276,10 @@ for iso in ISOS:
             # Update costs_detail for MMM_M_M (the only scenario with full breakdown)
             if skey == 'MMM_M_M' and sc.get('costs_detail'):
                 cd = sc['costs_detail']
-                cd['total_cost_per_demand_mwh'] = round(
-                    cd.get('total_cost_per_demand_mwh', 0) + cost_delta_per_mwh, 2)
-                cd['effective_cost_per_useful_mwh'] = round(
-                    cd.get('effective_cost_per_useful_mwh', 0) + cost_delta_per_mwh, 2)
-                cd['incremental_above_baseline'] = round(
-                    cd.get('incremental_above_baseline', 0) + cost_delta_per_mwh, 2)
+                cd['total_cost_per_demand_mwh'] = round(total_cost_per_demand, 2)
+                cd['effective_cost_per_useful_mwh'] = round(new_effective, 2)
+                cd['incremental_above_baseline'] = round(new_incremental, 2)
+                cd['baseline_wholesale_cost'] = w
                 # Update clean_firm cost_per_demand_mwh in resource_costs
                 rc = cd.get('resource_costs', {}).get('clean_firm', {})
                 if rc and new_cf_twh > 0:
@@ -237,8 +289,8 @@ for iso in ISOS:
                     rc['uprate_pct_of_new'] = tranche['uprate_pct_of_new']
 
             # Track optimal
-            if new_total < best_cost:
-                best_cost = new_total
+            if total_cost_per_demand < best_cost:
+                best_cost = total_cost_per_demand
                 best_key = skey
 
         new_optimal_results[iso][threshold_key] = {
