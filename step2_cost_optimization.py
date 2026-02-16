@@ -171,6 +171,28 @@ for iso in ISOS:
                 'wholesale': old_wholesale,
             }
 
+            # Update costs_detail to match tranche-repriced values
+            cd = sc.get('costs_detail')
+            if cd and new_cf_twh > 0:
+                # Update clean_firm cost in resource_costs breakdown
+                rc = cd.get('resource_costs', {})
+                cf_rc = rc.get('clean_firm')
+                if cf_rc:
+                    # Existing CF stays at wholesale; new CF uses tranche blend
+                    existing_cf_cost = existing_cf_twh * old_wholesale
+                    new_cf_cost = tranche_total  # uprate + newbuild
+                    total_cf_cost = existing_cf_cost + new_cf_cost
+                    cf_rc['cost_per_demand_mwh'] = round(total_cf_cost / demand_twh, 2)
+
+                # Recompute totals from all resource costs
+                total_resource_cost = 0
+                for res_name, res_data in rc.items():
+                    c = res_data.get('cost_per_demand_mwh', res_data.get('cost', 0))
+                    total_resource_cost += c
+                cd['total_cost_per_demand_mwh'] = round(total_resource_cost, 2)
+                cd['effective_cost_per_useful_mwh'] = round(total_resource_cost / match, 2) if match > 0 else 0
+                cd['incremental_above_baseline'] = round((total_resource_cost / match if match > 0 else 0) - old_wholesale, 2)
+
             # Track cheapest for this region+threshold
             if new_total < best_cost:
                 best_cost = new_total
