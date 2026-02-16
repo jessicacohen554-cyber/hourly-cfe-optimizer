@@ -3646,7 +3646,7 @@ body {
         Our analysis of 8,760 hours across five U.S. power markets reveals that
         <strong>renewables alone cannot achieve high hourly matching targets</strong>.
         Beyond 90% matching, the resource mix pivots toward firm, dispatchable clean generation.
-        Average abatement costs stay below $141/ton CO&#8322; through 99% in all regions. But stepwise
+        Average abatement costs stay below $<span id="db-mac-max-99">...</span>/ton CO&#8322; through 99% in all regions. But stepwise
         marginal costs vary wildly &mdash; some steps are cheaper than carbon offsets, others exceed DAC.
         <strong>The grid backbone holds. Early investment in clean firm power unlocks deep decarbonization
         at remarkably competitive costs.</strong>
@@ -3931,7 +3931,13 @@ function initDashboard() {
     document.getElementById('dashboardContent').style.display = 'block';
     document.getElementById('heroTakeaway').style.display = 'block';
     document.getElementById('footer').style.display = 'block';
-    // Narrative sections moved to index.html
+
+    // Populate dynamic narrative values from shared-data.js
+    const macMax99El = document.getElementById('db-mac-max-99');
+    if (macMax99El && typeof MAC_DATA !== 'undefined') {
+        const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+        macMax99El.textContent = Math.max(...regions.map(r => MAC_DATA.medium[r][8]));
+    }
 
     // Config info
     const cfg = DATA.config;
@@ -6596,6 +6602,10 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // Helper: extract resource data for a resource_costs object
     // Existing resources are FIXED at today's absolute TWh (2025 actuals).
     // New build scales with demand growth at the target time horizon.
+    // Hydro cap: fixed physical capacity (% of demand), never changes with target
+    const hydroCapPct = (DATA.config?.hydro_caps?.[iso] || 0);
+    const hydroCapTWh = hydroCapPct / 100 * todayTWh;
+
     function getResourceTWh(rc, targetDemandTWh) {
         const existing = {};
         const newBuild = {};
@@ -6606,6 +6616,10 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 // Storage resources: dispatch_pct only (all new build)
                 existing[r] = 0;
                 newBuild[r] = (rd.dispatch_pct || 0) / 100 * targetDemandTWh;
+            } else if (r === 'hydro') {
+                // Hydro: always static at absolute existing capacity, never new build
+                existing[r] = hydroCapTWh;
+                newBuild[r] = 0;
             } else {
                 // Generation resources: existing_pct/new_pct (ccs_ccgt uses existing_share/new_share when zero)
                 existing[r] = (rd.existing_pct || rd.existing_share || 0) / 100 * todayTWh;
@@ -6841,6 +6855,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
         allResources.forEach(r => {
             if (r === 'storage') return; // skip combined storage; use battery + ldes separately
+            if (r === 'hydro') return; // hydro is static existing — never stranded, never new build
             const intRes = interimRC[r] || {};
             const ltRes = longtermRC[r] || {};
 
@@ -6887,11 +6902,11 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             return res?.total_pct_of_demand || 0;
         };
         const staticInterimTWh_total = Object.keys(interimRC).reduce((s, r) => {
-            if (r === 'storage') return s;
+            if (r === 'storage' || r === 'hydro') return s;
             return s + getPct(interimRC[r], r) / 100 * todayTWh;
         }, 0);
         const staticCarriedTWh = Object.keys(interimRC).reduce((s, r) => {
-            if (r === 'storage') return s;
+            if (r === 'storage' || r === 'hydro') return s;
             const intPct = getPct(interimRC[r], r);
             const ltPct = getPct(longtermRC[r], r);
             const intT = intPct / 100 * todayTWh;
@@ -6960,7 +6975,11 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 const isStore = (r === 'battery' || r === 'ldes');
                 // New-build TWh at each stage
                 let iNew, lNew;
-                if (isStore) {
+                if (r === 'hydro') {
+                    // Hydro is always existing-only — never has new build
+                    iNew = 0;
+                    lNew = 0;
+                } else if (isStore) {
                     iNew = (irc.dispatch_pct || 0) / 100 * interimTWh;
                     lNew = (lrc.dispatch_pct || 0) / 100 * longtermTWh;
                 } else {
