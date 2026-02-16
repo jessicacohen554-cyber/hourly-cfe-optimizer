@@ -84,9 +84,16 @@
 - **Batch all related edits into one response** — don't make 6 sequential edits with narration between each. Plan them, execute them all in parallel where possible, report once.
 - **Don't repeat large code blocks back to the user** — if the user can see the file, don't paste it into the response. Reference by file:line instead.
 
+### Three-Step Pipeline Architecture (Critical — Know What You're Changing)
+- **Step 1: Physics Optimization** (`optimize_overprocure.py`) — Hourly match, dispatch, curtailment. Produces 16,200 physics-validated resource mixes. **Only re-run if dispatch logic, generation curves, or demand curves change.**
+- **Step 2: Cost Optimization** (post-processing) — Merit-order tranche pricing for clean firm, NEISO gas constraint, other cost adjustments. Re-ranks cached physics scenarios. **Run when cost assumptions change. No physics re-run needed.**
+- **Step 3: Post-Processing** — CO₂ calculations, MAC calculations, statistical analysis. **Run when Step 2 outputs change.**
+- **Data contract**: Step 2 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields. This prevents recoding existing figures.
+- Steps 2-3 are cheap (seconds). Step 1 is expensive (hours). Default to Steps 2-3 unless physics assumptions change.
+
 ### Optimizer Run Discipline (Critical — Token Budget Protection)
-- **Optimizer runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every optimizer run as a high-value operation that must succeed.
-- **NEVER start an optimizer run while decisions are still being discussed.** The optimizer must reflect ALL decisions made up to the point of launch.
+- **Step 1 (physics) runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every Step 1 run as a high-value operation that must succeed. Steps 2-3 are cheap and can be re-run freely.
+- **NEVER start a Step 1 run while decisions are still being discussed.** The optimizer must reflect ALL decisions made up to the point of launch.
 - **Pre-run gate**: Before launching `optimize_overprocure.py`, explicitly verify:
   1. All decisions from the current conversation have been implemented in the optimizer code
   2. All decisions have been captured in SPEC.md (per Documentation-First rule above)

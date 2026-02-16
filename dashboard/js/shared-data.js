@@ -161,15 +161,21 @@ const MARGINAL_MAC_DATA = {
 };
 
 // --- Effective Cost per Useful MWh ($/MWh) ---
-// Source: overprocure_results.json → costs_detail.effective_cost_per_useful_mwh
-// Total procurement cost / matched fraction of demand at Medium (MMM_M_M) scenario
+// Source: Step 2 cost optimization (tranche-repriced MMM_M_M scenario)
+// Merit-order tranche pricing: nuclear uprates (5% of fleet, capped) filled first,
+// then regional new-build (geothermal CAISO, SMR elsewhere)
 // Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
 const EFFECTIVE_COST_DATA = {
-    CAISO:  [56.0, 57.2, 61.3, 63.0, 65.1, 65.3, 67.9, 70.4, 71.7],
-    ERCOT:  [36.9, 38.1, 41.1, 43.6, 44.4, 46.6, 48.8, 50.9, 53.5],
-    PJM:    [55.6, 57.0, 58.2, 60.2, 61.3, 62.1, 64.0, 68.6, 68.6],
-    NYISO:  [75.4, 77.5, 79.0, 79.4, 80.3, 82.7, 84.6, 89.9, 91.2],
-    NEISO:  [73.7, 75.4, 80.1, 82.0, 83.4, 85.5, 88.8, 93.2, 96.0]
+    CAISO:  [56.2, 57.1, 61.2, 63.0, 65.1, 66.2, 68.7, 70.3, 71.5],
+    ERCOT:  [37.0, 38.2, 41.2, 43.7, 44.3, 46.6, 48.8, 50.9, 53.5],
+    PJM:    [66.6, 71.6, 78.4, 80.4, 81.5, 82.3, 82.4, 86.2, 86.2],
+    NYISO:  [82.2, 81.9, 93.0, 93.4, 94.3, 91.9, 98.6, 99.1, 103.3],
+    NEISO:  [73.7, 75.2, 80.0, 81.1, 83.3, 84.9, 87.9, 93.2, 101.4]
+};
+
+// --- Nuclear Uprate Caps (TWh/yr) — 5% of existing nuclear at 90% CF ---
+const UPRATE_CAPS_TWH = {
+    CAISO: 0.907, ERCOT: 1.064, PJM: 12.614, NYISO: 1.340, NEISO: 1.380
 };
 
 // ============================================================================
