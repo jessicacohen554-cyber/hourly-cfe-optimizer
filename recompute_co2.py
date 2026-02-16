@@ -350,9 +350,17 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
             continue
 
         iso_data = results_data['results'][iso]
-        demand_norm = demand_data[iso]['normalized'][:H]
+        # Get demand from DATA_YEAR, falling back through years
+        iso_demand = demand_data.get(iso, {})
+        year_demand = iso_demand.get(DATA_YEAR, iso_demand.get('2024', {}))
+        if isinstance(year_demand, dict):
+            demand_norm = year_demand.get('normalized', [0.0] * H)[:H]
+            demand_total_mwh_fallback = year_demand.get('total_annual_mwh', 0)
+        else:
+            demand_norm = year_demand[:H] if isinstance(year_demand, list) else [0.0] * H
+            demand_total_mwh_fallback = 0
         supply_profiles = get_supply_profiles(iso, gen_profiles)
-        demand_total_mwh = iso_data.get('annual_demand_mwh', demand_data[iso].get('total_annual_mwh', 0))
+        demand_total_mwh = iso_data.get('annual_demand_mwh', demand_total_mwh_fallback)
 
         # Build hourly emission rates for L/M/H fuel scenarios
         emission_rate_by_fuel = {}

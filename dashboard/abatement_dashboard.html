@@ -509,10 +509,16 @@ body {
 
     <!-- Chart Grid -->
     <div class="chart-grid">
-        <!-- MAC Curve -->
-        <div class="chart-card">
-            <div class="chart-card-title">Regional Average Abatement Costs<sup style="font-size:0.7em;color:#6B7280;">[1][7]</sup></div>
+        <!-- MAC Fan Chart (full width) -->
+        <div class="chart-card chart-card-full">
+            <div class="chart-card-title">Abatement Cost by Region — P10/P90 Uncertainty Fan across 324 Cost Scenarios<sup style="font-size:0.7em;color:#6B7280;">[1][7]</sup></div>
             <canvas id="macChart"></canvas>
+        </div>
+
+        <!-- ANOVA Sensitivity -->
+        <div class="chart-card">
+            <div class="chart-card-title">What Drives MAC Uncertainty? (ANOVA Decomposition)</div>
+            <canvas id="anovaChart"></canvas>
         </div>
 
         <!-- Portfolio Mix -->
@@ -576,6 +582,7 @@ body {
 <div class="bottom-banner"></div>
 
 <script src="js/shared-data.js"></script>
+<script src="js/mac-stats-data.js"></script>
 <script>
 // ============================================================================
 // HELPERS
@@ -600,32 +607,62 @@ const CHART_DEFAULTS = {
 };
 
 // ============================================================================
-// CHART: MAC Curves
+// CHART: MAC Fan Chart — P10/P90 bands from 324 scenario factorial experiment
 // ============================================================================
 let macChartInst = null;
 function buildMacChart() {
     const s = getState();
-    const gridLevel = s.grid.toLowerCase();
-    const data = MAC_DATA[gridLevel] || MAC_DATA.medium;
     const ctx = document.getElementById('macChart').getContext('2d');
+    const thresholds9 = THRESHOLDS; // [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]
 
     const datasets = [];
-    Object.keys(data).forEach(region => {
-        // Confidence band
-        if (MAC_DATA.low[region] && MAC_DATA.high[region]) {
-            datasets.push({
-                label: region + ' band high', data: THRESHOLDS.map((t, i) => ({ x: t, y: MAC_DATA.high[region][i] })),
-                borderColor: 'transparent', backgroundColor: REGION_COLORS[region] + '12', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 2
-            });
-            datasets.push({
-                label: region + ' band low', data: THRESHOLDS.map((t, i) => ({ x: t, y: MAC_DATA.low[region][i] })),
-                borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, fill: false, tension: 0.3, order: 2
-            });
-        }
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+
+    regions.forEach(region => {
+        const fan = MAC_FAN_DATA[region];
+        if (!fan) return;
+
+        // P10-P90 band (light fill)
         datasets.push({
-            label: region, data: THRESHOLDS.map((t, i) => ({ x: t, y: data[region][i] })),
-            borderColor: REGION_COLORS[region], backgroundColor: REGION_COLORS[region] + '18',
-            borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, fill: false, tension: 0.3, order: 1
+            label: region + ' P90',
+            data: thresholds9.map((t, i) => ({ x: t, y: fan.p90[i] })),
+            borderColor: 'transparent',
+            backgroundColor: REGION_COLORS[region] + '15',
+            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3
+        });
+        datasets.push({
+            label: region + ' P10',
+            data: thresholds9.map((t, i) => ({ x: t, y: fan.p10[i] })),
+            borderColor: REGION_COLORS[region] + '40',
+            backgroundColor: 'transparent',
+            borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3
+        });
+
+        // P25-P75 band (medium fill)
+        datasets.push({
+            label: region + ' P75',
+            data: thresholds9.map((t, i) => ({ x: t, y: fan.p75[i] })),
+            borderColor: 'transparent',
+            backgroundColor: REGION_COLORS[region] + '20',
+            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 2
+        });
+        datasets.push({
+            label: region + ' P25',
+            data: thresholds9.map((t, i) => ({ x: t, y: fan.p25[i] })),
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            borderWidth: 0, pointRadius: 0, fill: false, tension: 0.3, order: 2
+        });
+
+        // Envelope median line (bold)
+        const env = MAC_ENVELOPE_DATA[region];
+        const envLine = env ? env.envelope : fan.p50;
+        datasets.push({
+            label: region,
+            data: thresholds9.map((t, i) => ({ x: t, y: envLine[i] })),
+            borderColor: REGION_COLORS[region],
+            backgroundColor: REGION_COLORS[region] + '18',
+            borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6, fill: false, tension: 0.3, order: 1
         });
     });
 
@@ -660,9 +697,66 @@ function buildMacChart() {
             },
             plugins: {
                 legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11, weight: 600 },
-                    filter: item => !item.text.includes('band') } },
-                tooltip: { callbacks: { title: items => items[0].raw.x + '% Target', label: item => item.dataset.label + ': $' + item.raw.y.toLocaleString() + '/ton' } },
+                    filter: item => !item.text.includes('P') && !item.text.includes('band') } },
+                tooltip: {
+                    callbacks: {
+                        title: items => items[0].raw.x + '% Target',
+                        label: item => {
+                            if (item.dataset.label.includes('P')) return null;
+                            const region = item.dataset.label;
+                            const idx = THRESHOLDS.indexOf(item.raw.x);
+                            const fan = MAC_FAN_DATA[region];
+                            if (!fan || idx < 0) return region + ': $' + Math.round(item.raw.y) + '/ton';
+                            return region + ': $' + Math.round(item.raw.y) + '/ton (P10: $' + Math.round(fan.p10[idx]) + ', P90: $' + Math.round(fan.p90[idx]) + ')';
+                        }
+                    }
+                },
                 annotation: { annotations },
+                datalabels: { display: false }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// CHART: ANOVA Sensitivity Decomposition
+// ============================================================================
+let anovaChartInst = null;
+function buildAnovaChart() {
+    const ctx = document.getElementById('anovaChart').getContext('2d');
+    const toggleNames = ['Renewable\nGen', 'Firm\nGen', 'Storage', 'Fossil\nFuel', 'Trans-\nmission'];
+    const toggleColors = ['#22C55E', '#1E3A5F', '#8B5CF6', '#EF4444', '#F59E0B'];
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const anovaKeys = ['Renewable Gen', 'Firm Gen', 'Storage', 'Fossil Fuel', 'Transmission'];
+
+    const datasets = regions.map(region => ({
+        label: region,
+        data: anovaKeys.map(k => Math.round((MAC_ANOVA[region]?.[k] || 0) * 100)),
+        backgroundColor: REGION_COLORS[region] + '90',
+        borderColor: REGION_COLORS[region],
+        borderWidth: 1.5,
+        borderRadius: 4,
+        barPercentage: 0.75,
+        categoryPercentage: 0.85
+    }));
+
+    if (anovaChartInst) anovaChartInst.destroy();
+    anovaChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: toggleNames, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { ticks: { font: { size: 10, weight: 600 }, maxRotation: 0 },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
+                y: { min: 0, max: 70,
+                    title: { display: true, text: '% of MAC Variance Explained', font: { size: 11, weight: 600 } },
+                    ticks: { stepSize: 10, callback: v => v + '%', font: { size: 10 } },
+                    grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10, weight: 600 } } },
+                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + '%' } },
                 datalabels: { display: false }
             }
         }
@@ -849,6 +943,7 @@ function updateSummary() {
 // ============================================================================
 function rebuildAll() {
     buildMacChart();
+    buildAnovaChart();
     buildPortfolio();
     buildLadder();
     buildInflectionTable();
