@@ -318,7 +318,7 @@ body { background: #F3F4F8; }
                 </div>
             </div>
             <div class="ctrl-group">
-                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $250/ton by 2030. Medium = current trajectory, $400-600/ton. High = slow scaling, $1000+/ton. Per NREL ATB 2024 [5].">i</span></label>
+                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $150/ton. Medium = current trajectory, $250/ton. High = slow scaling, $400/ton. Range shown on charts. Per NREL ATB 2024 [5].">i</span></label>
                 <div class="ctrl-toggle" data-ctrl="dac">
                     <button data-value="Low">Low</button>
                     <button data-value="Medium" class="active">Medium</button>
@@ -459,7 +459,9 @@ function buildMacChart() {
     const thresholds9 = THRESHOLDS;
     const gridLevel = s.grid.toLowerCase();
     const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
-    const dacCosts = BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
+    const dacLow = BENCHMARKS_DYNAMIC.dac.Low;
+    const dacMed = BENCHMARKS_DYNAMIC.dac.Medium;
+    const dacHigh = BENCHMARKS_DYNAMIC.dac.High;
     // Threshold index lookup (MAC_DATA arrays match THRESHOLDS order)
     const _TI = {};
     THRESHOLDS.forEach((t, i) => _TI[t] = i);
@@ -563,8 +565,15 @@ function buildMacChart() {
                             scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980099', borderWidth: 1.5, borderDash: [5, 3],
                                 label: { display: true, content: 'SCC $190', position: 'start', font: { size: 8 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
                             },
-                            dac: { type: 'line', yMin: dacCosts.mid, yMax: dacCosts.mid, borderColor: '#E91E6399', borderWidth: 1.5, borderDash: [5, 3],
-                                label: { display: true, content: 'DAC $' + dacCosts.mid, position: 'end', font: { size: 8 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
+                            dacBand: { type: 'box', yMin: dacLow.mid, yMax: dacHigh.mid, backgroundColor: 'rgba(233,30,99,0.07)', borderWidth: 0 },
+                            dacLow: { type: 'line', yMin: dacLow.mid, yMax: dacLow.mid, borderColor: '#E91E6355', borderWidth: 1, borderDash: [3, 3],
+                                label: { display: true, content: 'DAC Low $' + dacLow.mid, position: 'start', font: { size: 7 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
+                            },
+                            dacMed: { type: 'line', yMin: dacMed.mid, yMax: dacMed.mid, borderColor: '#E91E6399', borderWidth: 1.5, borderDash: [5, 3],
+                                label: { display: true, content: 'DAC Med $' + dacMed.mid, position: 'end', font: { size: 8 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
+                            },
+                            dacHigh: { type: 'line', yMin: dacHigh.mid, yMax: dacHigh.mid, borderColor: '#E91E6355', borderWidth: 1, borderDash: [3, 3],
+                                label: { display: true, content: 'DAC High $' + dacHigh.mid, position: 'end', font: { size: 7 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
                             }
                         }
                     },
@@ -629,7 +638,9 @@ function buildPortfolio() {
     const s = getState();
     const gridLevel = s.grid.toLowerCase();
     const margData = MARGINAL_MAC_DATA[gridLevel] || MARGINAL_MAC_DATA.medium;
-    const dacCosts = BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
+    const dacLowP = BENCHMARKS_DYNAMIC.dac.Low;
+    const dacMedP = BENCHMARKS_DYNAMIC.dac.Medium;
+    const dacHighP = BENCHMARKS_DYNAMIC.dac.High;
     const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
 
     const datasets = regions.map(iso => ({
@@ -667,8 +678,13 @@ function buildPortfolio() {
                     annotations: {
                         scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980088', borderWidth: 2, borderDash: [6, 4],
                             label: { display: true, content: 'SCC $190', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } },
-                        dac: { type: 'line', yMin: dacCosts.mid, yMax: dacCosts.mid, borderColor: '#E91E6388', borderWidth: 2, borderDash: [6, 4],
-                            label: { display: true, content: 'DAC $' + dacCosts.mid, position: 'end', font: { size: 9, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
+                        dacBand: { type: 'box', yMin: dacLowP.mid, yMax: dacHighP.mid, backgroundColor: 'rgba(233,30,99,0.07)', borderWidth: 0 },
+                        dacLow: { type: 'line', yMin: dacLowP.mid, yMax: dacLowP.mid, borderColor: '#E91E6344', borderWidth: 1, borderDash: [4, 4],
+                            label: { display: true, content: 'DAC Low $' + dacLowP.mid, position: 'start', font: { size: 8, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } },
+                        dacMed: { type: 'line', yMin: dacMedP.mid, yMax: dacMedP.mid, borderColor: '#E91E6388', borderWidth: 2, borderDash: [6, 4],
+                            label: { display: true, content: 'DAC Med $' + dacMedP.mid, position: 'end', font: { size: 9, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } },
+                        dacHigh: { type: 'line', yMin: dacHighP.mid, yMax: dacHighP.mid, borderColor: '#E91E6344', borderWidth: 1, borderDash: [4, 4],
+                            label: { display: true, content: 'DAC High $' + dacHighP.mid, position: 'end', font: { size: 8, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
                     }
                 }
             }
@@ -753,12 +769,14 @@ function buildInflectionTable() {
     const s = getState();
     const gridLevel = s.grid.toLowerCase();
     const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
-    const dacMid = (BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium).mid;
+    const dacLowMid = BENCHMARKS_DYNAMIC.dac.Low.mid;
+    const dacMedMid = BENCHMARKS_DYNAMIC.dac.Medium.mid;
+    const dacHighMid = BENCHMARKS_DYNAMIC.dac.High.mid;
     const indMid = (BENCHMARKS_DYNAMIC.industrial[s.industrial] || BENCHMARKS_DYNAMIC.industrial.Medium).mid;
     const remMid = (BENCHMARKS_DYNAMIC.removal[s.removal] || BENCHMARKS_DYNAMIC.removal.Medium).mid;
 
     const head = document.getElementById('inflectionHead');
-    head.innerHTML = '<th>Region</th><th>EPA SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[2]</sup><br>($190)</th><th>EU ETS<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[4]</sup><br>($88)</th><th>Rennert SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[3]</sup><br>($185)</th><th>Industrial<br>($' + indMid + ')</th><th>Removal<br>($' + remMid + ')</th><th>DAC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[5]</sup><br>($' + dacMid + ')</th>';
+    head.innerHTML = '<th>Region</th><th>EPA SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[2]</sup><br>($190)</th><th>EU ETS<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[4]</sup><br>($88)</th><th>Rennert SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[3]</sup><br>($185)</th><th>Industrial<br>($' + indMid + ')</th><th>Removal<br>($' + remMid + ')</th><th>DAC Low<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[5]</sup><br>($' + dacLowMid + ')</th><th>DAC Med<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[5]</sup><br>($' + dacMedMid + ')</th><th>DAC High<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[5]</sup><br>($' + dacHighMid + ')</th>';
 
     const tbody = document.getElementById('inflectionBody');
     tbody.innerHTML = '';
@@ -770,7 +788,9 @@ function buildInflectionTable() {
             findCrossover(macData[region], 185),
             findCrossover(macData[region], Math.max(indMid, 10)),
             findCrossover(macData[region], remMid),
-            findCrossover(macData[region], dacMid)
+            findCrossover(macData[region], dacLowMid),
+            findCrossover(macData[region], dacMedMid),
+            findCrossover(macData[region], dacHighMid)
         ];
         row.innerHTML = '<td>' + region + '</td>' + vals.map(v => '<td class="' + cellClass(v) + '">' + (v === '>99' || v === '>100' ? '>99%' : v + '%') + '</td>').join('');
         tbody.appendChild(row);
@@ -784,10 +804,12 @@ function updateSummary() {
     const s = getState();
     const gridLevel = s.grid.toLowerCase();
     const data = MAC_DATA[gridLevel] || MAC_DATA.medium;
-    const dacMid = (BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium).mid;
+    const dacMedVal = BENCHMARKS_DYNAMIC.dac.Medium.mid;
+    const dacLowVal = BENCHMARKS_DYNAMIC.dac.Low.mid;
+    const dacHighVal = BENCHMARKS_DYNAMIC.dac.High.mid;
 
     const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
-    const insights = regions.map(r => ({ region: r, dacCross: findCrossover(data[r], dacMid) }));
+    const insights = regions.map(r => ({ region: r, dacCross: findCrossover(data[r], dacMedVal) }));
     const best = insights.reduce((a, b) => {
         const aVal = a.dacCross === '>99' ? 101 : a.dacCross;
         const bVal = b.dacCross === '>99' ? 101 : b.dacCross;
@@ -800,11 +822,10 @@ function updateSummary() {
     });
 
     const el = document.getElementById('crossoverSummary');
-    let html = '<strong>Under these assumptions:</strong> Grid decarbonization beats DAC through <strong>' +
+    let html = '<strong>Under these assumptions:</strong> Grid decarbonization beats DAC (Medium $' + dacMedVal + '/ton) through <strong>' +
         (best.dacCross === '>99' ? '>99%' : best.dacCross + '%') + '</strong> in ' + best.region +
         ' (best) and through <strong>' + (worst.dacCross === '>99' ? '>99%' : worst.dacCross + '%') +
-        '</strong> in ' + worst.region + ' (worst).';
-    if (s.dac === 'Low') html += ' With aggressive DAC cost declines, crossovers shift 2\u20134 points earlier.';
+        '</strong> in ' + worst.region + ' (worst). DAC range: $' + dacLowVal + ' (Low) \u2013 $' + dacHighVal + ' (High).';
     if (s.grid === 'High') html += ' High grid costs accelerate the crossover \u2014 tariffs and permitting delays weaken the backbone.';
     el.innerHTML = html;
 }
