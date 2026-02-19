@@ -1204,6 +1204,27 @@ const REGIONAL_DEMAND_TWH = {
 
 // --- Feasible Mixes per (ISO, threshold) for client-side repricing ---
 // Each mix: [clean_firm%, solar%, wind%, ccs_ccgt%, hydro%, procurement%, match%, battery%, ldes%]
+// --- Demand Growth Rates (annual, ISO-specific) ---
+// Sources: ISO forecasts, EIA/FERC data, regional load growth studies
+const DEMAND_GROWTH_RATES = {
+    CAISO:  { Low: 0.014, Medium: 0.019, High: 0.025, label: 'CA electrification-driven' },
+    ERCOT:  { Low: 0.020, Medium: 0.035, High: 0.055, label: 'TX data centers + population' },
+    PJM:    { Low: 0.015, Medium: 0.024, High: 0.036, label: 'Data center corridor' },
+    NYISO:  { Low: 0.013, Medium: 0.020, High: 0.044, label: 'CLCPA mandate-driven' },
+    NEISO:  { Low: 0.009, Medium: 0.018, High: 0.029, label: 'Heating electrification' }
+};
+
+// --- Clean Firm Energy Split (nuclear vs geothermal) ---
+// CAISO: 70% nuclear (avg CF 0.893) + 30% geothermal (flat CF 1.0).
+// Energy fraction = capacity_share × CF / blended_CF.  Other ISOs: 100% nuclear.
+const CLEAN_FIRM_ENERGY_SPLIT = {
+    CAISO:  { nuclear: 0.676, geothermal: 0.324 },
+    ERCOT:  { nuclear: 1.0,   geothermal: 0.0 },
+    PJM:    { nuclear: 1.0,   geothermal: 0.0 },
+    NYISO:  { nuclear: 1.0,   geothermal: 0.0 },
+    NEISO:  { nuclear: 1.0,   geothermal: 0.0 }
+};
+
 const FEASIBLE_MIXES = {
     CAISO: {
         "75": [
