@@ -96,10 +96,7 @@
         {
             label: 'Analysis',
             children: [
-                { label: 'CO\u2082 Abatement Summary', href: 'abatement_comparison.html' },
-                { label: 'Abatement Dashboard', href: 'abatement_dashboard.html' },
-                { label: 'EAC Scarcity', href: 'eac_scarcity.html' },
-                { label: 'Regional Deep Dives', href: 'region_deepdive.html' }
+                { label: 'CO\u2082 Abatement Analysis', href: 'abatement_dashboard.html' }
             ]
         },
         {

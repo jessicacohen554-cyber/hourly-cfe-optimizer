@@ -99,7 +99,7 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 | D | Numba JIT (try/fallback) | Compile storage scoring to machine code; fall back to B+C if install fails | 10-50× on storage (if available) |
 | F | Shared memory cache | `multiprocessing.shared_memory` for parallel ISO workers to share data | Enables A |
 
-**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (324 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 21,060 cost-coupled optimizations to 65 physics-only sweeps (13 thresholds × 5 ISOs), each finding the Pareto frontier of feasible mixes.
+**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (5,832 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 21,060 cost-coupled optimizations to 65 physics-only sweeps (13 thresholds × 5 ISOs), each finding the Pareto frontier of feasible mixes.
 
 **Projected runtime**: ~1-3 min with Numba (installed successfully). Down from multi-hour current architecture.
 
@@ -122,7 +122,7 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 |------|--------|------|-------------|---------------|
 | **Step 1** | `step1_pfs_generator.py` | **PFS Generator** | Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces 21.4M physics-validated mixes across 5 ISOs × 13 thresholds. | Only if dispatch logic, generation curves, or demand curves change. |
 | **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** | Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement per allocation, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
-| **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** | Vectorized cross-evaluation of all EF mixes under 324 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios (25 years × 3 growth rates). | When cost assumptions, tranche caps, LCOE tables, or sensitivity toggles change. |
+| **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** | Vectorized cross-evaluation of all EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios (25 years × 3 growth rates). | When cost assumptions, tranche caps, LCOE tables, or sensitivity toggles change. |
 | **Step 4** | `step4_postprocess.py` | **Post-Processing** | NEISO gas constraint, CCS vs LDES crossover analysis, CO₂ calculations, MAC calculations. Produces final corrected results for the dashboard. | When Step 3 outputs change, or when CO₂ methodology changes. |
 
 **Key acronyms**:
@@ -178,12 +178,12 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 **Components**:
 1. **Monotonic envelope** (stats): Convex hull of (cost, CO2) per ISO — filters rebalancing noise
-2. **MAC uncertainty fan** (stats): P10/P50/P90 across 324 scenarios at each threshold
+2. **MAC uncertainty fan** (stats): P10/P50/P90 across 5,832 scenarios at each threshold
 3. **Sensitivity decomposition** (stats): ANOVA on which toggles drive MAC variance
 4. **Path-constrained reference MAC** (50 targeted runs): Force each threshold's mix to build on previous — monotonic by construction. One run per threshold × 5 ISOs at Medium costs.
 5. **Visualization**: Central monotonic reference curve inside P10-P90 fan, with DAC/SCC horizontal bands
 
-**Methodology statement**: "Path-dependent marginal costs (central line) with uncertainty characterized via factorial sensitivity analysis across 324 cost scenarios (shaded band)."
+**Methodology statement**: "Path-dependent marginal costs (central line) with uncertainty characterized via factorial sensitivity analysis across 5,832 cost scenarios (shaded band)."
 
 **Literature basis**: Systems MAC / MAC 2.0 (Evolved Energy/EDF 2021), scenario ensemble approach (Deane et al. 2020), conservation supply curve methodology (Meier & Rosenfeld 1982). Full lit review: `research/mac_methodology_lit_review.md`.
 
@@ -557,15 +557,15 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 
 **Risks and limitations**:
 1. **Missed global optima at extreme cost corners**: If an extreme cost combination produces an optimal mix radically different from any archetype, warm-start's neighborhood search might not find it. **Mitigation**: The 7 extreme archetype scenarios cover the most divergent cost corners; dynamic archetype discovery catches emergent patterns; cross-pollination provides a second chance; monotonicity re-sweep with full Phase 1 provides a final safety net.
-2. **Phase 2 neighborhood radius**: The 5% step with radius 2 covers ±10% in each resource dimension from the warm-start mix. Optimal mixes more than 10% away in any dimension from all seed archetypes would be missed. **Mitigation**: Edge-case seeds (100% solar, 100% wind, etc.) are always included regardless of warm-start. At observed convergence rates, ≤14 unique mixes typically serve 324 scenarios at lower thresholds, well within the archetype pool's coverage.
+2. **Phase 2 neighborhood radius**: The 5% step with radius 2 covers ±10% in each resource dimension from the warm-start mix. Optimal mixes more than 10% away in any dimension from all seed archetypes would be missed. **Mitigation**: Edge-case seeds (100% solar, 100% wind, etc.) are always included regardless of warm-start. At observed convergence rates, ≤14 unique mixes typically serve 5,832 scenarios at lower thresholds, well within the archetype pool's coverage.
 3. **Threshold-dependent risk**: Higher thresholds (95-100%) have more diverse optimal mixes across cost scenarios. **Mitigation**: The archetype pool grows dynamically; extreme scenarios are more likely to diverge at high thresholds, populating the pool with the right seeds.
 4. **Not used during re-sweep**: Monotonicity re-sweep always uses full Phase 1 (warm_start_result is not passed when resweep=True). This is intentional — re-sweep needs the broadest possible search to resolve violations.
 
 ### 4.2 Scenario Pruning & Adaptive Resampling Pipeline
 
-**Problem**: 324 cost scenarios × 10 thresholds × 5 ISOs = 16,200 co-optimizations. Even with warm-start, running all 324 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 324 scenarios.
+**Problem**: 5,832 cost scenarios × 13 thresholds × 5 ISOs = 378,780 co-optimizations. Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
 
-**Solution**: 5-stage pipeline runs 44 representative scenarios, then fills the remaining 280 via cross-pollination, with adaptive resampling as a safety net.
+**Solution**: 5-stage pipeline runs 44 representative scenarios, then fills the remaining ~5,788 via cross-pollination, with adaptive resampling as a safety net.
 
 #### Stage 1: Medium Seed (1 scenario)
 - Run `MMM_M_M` with full 3-phase optimization (no warm-start)
@@ -588,13 +588,13 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 - Up to 5 resampling rounds, each adding scenarios until convergence
 - **If unique mixes ≤ 22**: Proceed directly — the 44 representatives captured the full archetype space
 
-#### Stage 5: Cross-Pollination (fills remaining to 324)
+#### Stage 5: Cross-Pollination (fills remaining to 5,832)
 - Collect all unique mixes discovered across Stages 1-4
-- For ALL 324 scenarios (including the ~280 not directly optimized): evaluate every discovered mix under that scenario's cost function
+- For ALL 5,832 scenarios (including the ~5,788 not directly optimized): evaluate every discovered mix under that scenario's cost function
 - If a mix found optimal for scenario A is cheaper for scenario B than B's current best, assign it
-- Result: all 324 scenarios have cost-optimal assignments, even the ~280 that were never directly optimized
+- Result: all 5,832 scenarios have cost-optimal assignments, even the ~5,788 that were never directly optimized
 
-**Why this works**: At lower thresholds, physics strongly constrains the feasible solution space — the same ~10-14 resource mixes are optimal across all 324 cost scenarios, just at different costs. Cross-pollination guarantees every scenario gets the cheapest-for-it mix from the full discovered set. Adaptive resampling is the safety net: if we're seeing more diversity than expected (>22 unique from 44), we add more direct optimizations to make sure we're not missing archetypes.
+**Why this works**: At lower thresholds, physics strongly constrains the feasible solution space — the same ~10-14 resource mixes are optimal across all 5,832 cost scenarios, just at different costs. Cross-pollination guarantees every scenario gets the cheapest-for-it mix from the full discovered set. Adaptive resampling is the safety net: if we're seeing more diversity than expected (>22 unique from 44), we add more direct optimizations to make sure we're not missing archetypes.
 
 **Applies to all thresholds**: `PRUNING_THRESHOLD_CUTOFF = 100` — empirically, even at 95-100%, the archetype pool from 44 reps + resampling + cross-pollination captures the full solution space.
 
@@ -939,6 +939,30 @@ else:
 
 **Why this matters**: The previous uniform model assumed the fossil fleet composition stays constant as clean energy grows. In reality, coal plants are the first to retire (most expensive, most regulated, dirtiest). The dispatch-stack model correctly captures decreasing marginal emission reductions as the grid gets cleaner — the "easy" high-emission tons are abated first, and the last tons (displacing efficient gas) are the hardest.
 
+**Absolute coal/oil caps — no new fossil build (Decision: Feb 19, 2026)**:
+
+No new coal or oil capacity is built. Coal and oil generation are capped at their 2025 absolute TWh levels. As demand grows, only gas CCGT fills the gap — so coal/oil's share of total generation naturally declines, and the average fossil emission rate trends toward gas-only.
+
+2025 caps (from EIA hourly data):
+
+| ISO | Coal TWh | Oil TWh | Gas TWh | Coal Peak MW | Oil Peak MW |
+|-----|----------|---------|---------|-------------|-------------|
+| CAISO | 0.00 | 0.60 | 114.8 | 15 | 470 |
+| ERCOT | 67.58 | 0.00 | 195.5 | 14,379 | 0 |
+| PJM | 139.09 | 4.59 | 357.3 | 29,861 | 5,608 |
+| NYISO | 0.00 | 0.15 | 92.3 | 0 | 1,948 |
+| NEISO | 0.31 | 1.29 | 75.1 | 653 | 6,554 |
+
+Effect: At 2025 base demand, caps equal actual generation (no change). Under demand growth scenarios, fossil fleet composition shifts:
+```
+grown_demand_twh = base_demand_twh × (1 + annual_rate)^(target_year − 2025)
+grown_fossil_twh = grown_demand_twh × (1 − clean_pct/100)
+coal_twh = min(COAL_CAP_TWH[iso], coal_cap)  # capped at 2025 level
+oil_twh = min(OIL_CAP_TWH[iso], oil_cap)    # capped at 2025 level
+gas_twh = grown_fossil_twh − coal_twh − oil_twh  # gas absorbs all growth
+```
+This means the merit-order retirement stack uses absolute TWh internally, not fixed percentages. PJM's 139 TWh of coal stays at 139 TWh even if demand doubles — its share of fossil drops from 28% to ~16%, pulling the average fossil rate toward gas.
+
 **Data sources**:
 - `data/egrid_emission_rates.json` — 2023 eGRID per-fuel CO₂ rates (lb/MWh) by region
 - `data/eia_fossil_mix.json` — EIA hourly fossil fuel mix shares (coal/gas/oil) by ISO
@@ -1080,9 +1104,9 @@ For each resource:
 - **Batch mix evaluation (C)**: Grid search evaluates all combos in a single matrix multiply: `(N, 4) @ (4, 8760) = (N, 8760)`. Eliminates Python loop over individual mixes.
 - **Numba JIT with fallback (D)**: Storage scoring functions compiled to machine code via Numba. If Numba unavailable, falls back to B+C (vectorized NumPy).
 - **Checkpointing**: Saves after each threshold (13 per ISO); resumes from checkpoint on restart
-- **Score caching**: Matching scores cached across 324 cost scenarios per threshold (physics reuse — cost-independent)
+- **Score caching**: Matching scores cached across 5,832 cost scenarios per threshold (physics reuse — cost-independent)
 - **Cross-pollination**: After representative scenarios run per threshold, every unique mix re-evaluated against all scenarios
-- **13 thresholds × 5 regions × 324 scenarios** — incremental saves essential for reliability
+- **13 thresholds × 5 regions × 5,832 scenarios** — incremental saves essential for reliability
 
 ### 11.1 Adaptive Procurement Bounds (v4.0 — Decision 3C: Threshold-Adaptive)
 
@@ -1184,10 +1208,7 @@ The methodology page must include:
 All 5 regions covered in a single scrollytelling page with region selector.
 
 ### Structure
-- **File**: `dashboard/region_deepdive.html` (single combined page)
-- **Navigation**: Top nav "Regional Deep Dives" links here; region selector within the page
-- **Format**: Scrollytelling narrative matching main dashboard visual identity
-- **Content**: In-depth exploration of what deep decarbonization looks like for each region under different sensitivity scenarios
+- **Status**: DELETED (Feb 19, 2026). Regional deep-dive content consolidated into research paper and homepage scrollytell.
 
 ### Default Cost Scenario for Static Pages
 - **Homepage (index.html)** and **Regional Deep-Dive pages**: All figures and narrative use **Medium cost sensitivities** (all 5 toggle groups at Medium) unless a figure is explicitly designed to show Low/Medium/High ranges for comparison purposes.
@@ -1243,7 +1264,7 @@ All 5 regions covered in a single scrollytelling page with region selector.
 ### Concept
 A "Liebreich ladder for grid decarbonization" — analyzing when/where/under what conditions pushing grid decarbonization % is no longer cost-effective compared to alternative mitigation and carbon removal options. Linked from dashboard navigation.
 
-**File**: `dashboard/abatement_comparison.html`
+**Status**: DELETED (Feb 19, 2026). Consolidated into `abatement_dashboard.html` (now "CO₂ Abatement Analysis").
 
 **Core Question**: "Should we focus the next marginal dollar on the last 5% of PJM grid decarbonization, sustainable aviation fuel, or direct air capture?"
 
@@ -1381,13 +1402,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 |---|---|---|
 | Homepage (index.html) | The 8,760 Problem | Most climate solutions depend on a clean grid. But how clean is clean enough? |
 | Cost Optimizer (dashboard.html) | Hourly CFE Optimizer | Advanced Sensitivity Model |
-| Abatement Dashboard (abatement_dashboard.html) | Carbon Abatement Dashboard | Interactive Abatement Cost & Portfolio Analysis |
-| CO₂ Abatement Summary (abatement_comparison.html) | CO₂ Abatement Summary | Comparing Grid Decarbonization to Alternative Pathways |
-| CAISO Deep Dive | CAISO Deep Dive | California's Path to 24/7 Clean Energy |
-| ERCOT Deep Dive | ERCOT Deep Dive | Texas Grid Decarbonization Analysis |
-| PJM Deep Dive | PJM Deep Dive | Mid-Atlantic Clean Energy Transition |
-| NYISO Deep Dive | NYISO Deep Dive | New York's Hourly Matching Challenge |
-| NEISO Deep Dive | NEISO Deep Dive | New England's Decarbonization Pathway |
+| CO₂ Abatement Analysis (abatement_dashboard.html) | CO₂ Abatement Analysis | Comparing Grid Decarbonization to Alternative Pathways |
 | Methodology & Paper (research_paper.html) | Technical Methodology & Research Paper | Full Paper with Appendix B Cost Tables |
 
 ### Navigation (Updated Feb 14)
@@ -1754,5 +1769,5 @@ Applied to Step 3 cost optimization results via `step4_postprocess.py`. Correcte
 
 **Archetype diversity in cache:**
 - 46–70 unique resource mix archetypes per ISO across all thresholds
-- Only 4–14 unique mixes per threshold (massive redundancy across 324 scenarios)
+- Only 4–14 unique mixes per threshold (massive redundancy across 5,832 scenarios)
 - Cache comprehensively covers the feasible solution space — new constraint runs can seed from existing archetypes rather than cold-start
