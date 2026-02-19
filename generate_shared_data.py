@@ -15,8 +15,8 @@ import os
 from datetime import datetime
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
-THRESHOLDS = ['75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
-THRESHOLDS_NUM = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS = ['50', '60', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
+THRESHOLDS_NUM = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
 SCENARIO_KEY = 'MMM_M_M'
@@ -55,45 +55,52 @@ for iso in ISOS:
     print(f"  {iso} medium: {mac_data['medium'][iso]}")
 
 # ============================================================================
-# EXTRACT MARGINAL_MAC_DATA (5-zone stepwise — medium/low/high)
+# EXTRACT MARGINAL_MAC_DATA (6-zone stepwise — medium/low/high)
 # ============================================================================
+# With 13 thresholds [50,60,70,75,80,85,87.5,90,92.5,95,97.5,99,100]:
+#   stepwise_envelope indices: 0=None, 1=50→60, 2=60→70, 3=70→75,
+#     4=75→80, 5=80→85, 6=85→87.5, 7=87.5→90,
+#     8=90→92.5, 9=92.5→95, 10=95→97.5, 11=97.5→99, 12=99→100
+# Zones:
+#   Zone 0: 50→75%  (aggregate steps 1-3)
+#   Zone 1: 75→90%  (aggregate steps 4-7)
+#   Zone 2-5: 90→92.5, 92.5→95, 95→97.5, 97.5→99 (steps 8-11)
 
 print("\nExtracting MARGINAL_MAC_DATA...")
 marginal_mac_data = {'medium': {}, 'low': {}, 'high': {}}
 
+def aggregate_zone(sw, start, end):
+    """Average non-None stepwise MAC values in [start, end) range, capped at MAC_CAP."""
+    steps = [sw[i] for i in range(start, end) if i < len(sw) and sw[i] is not None]
+    if not steps:
+        return None
+    avg = round(sum(steps) / len(steps))
+    return min(avg, MAC_CAP)
+
 for iso in ISOS:
     # Medium: use stepwise_envelope (monotonic)
     sw_env = mac_stats['envelope'][iso]['stepwise_envelope']
-    # Steps 1-4 = 75→80, 80→85, 85→87.5, 87.5→90 → Zone 0 (backbone)
-    backbone_steps = [sw_env[i] for i in range(1, 5) if sw_env[i] is not None]
-    zone0 = round(sum(backbone_steps) / len(backbone_steps)) if backbone_steps else None
-    zone0 = min(zone0, MAC_CAP) if zone0 is not None else None
-
-    zones = [zone0]
-    # Steps 5-8 = 90→92.5, 92.5→95, 95→97.5, 97.5→99 → Zones 1-4
-    for step_idx in range(5, 9):
+    zone_entry = aggregate_zone(sw_env, 1, 4)   # 50→75% (steps 1-3)
+    zone_backbone = aggregate_zone(sw_env, 4, 8)  # 75→90% (steps 4-7)
+    zones = [zone_entry, zone_backbone]
+    # Zones 2-5: granular steps 90→92.5, 92.5→95, 95→97.5, 97.5→99
+    for step_idx in range(8, 12):
         v = sw_env[step_idx] if step_idx < len(sw_env) else None
         zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['medium'][iso] = zones
 
     # Low: use stepwise_fan P10
     sw_lo = mac_stats['stepwise_fan'][iso]['p10']
-    backbone_lo = [sw_lo[i] for i in range(1, 5) if sw_lo[i] is not None]
-    zone0_lo = round(sum(backbone_lo) / len(backbone_lo)) if backbone_lo else None
-    zone0_lo = min(zone0_lo, MAC_CAP) if zone0_lo is not None else None
-    lo_zones = [zone0_lo]
-    for step_idx in range(5, 9):
+    lo_zones = [aggregate_zone(sw_lo, 1, 4), aggregate_zone(sw_lo, 4, 8)]
+    for step_idx in range(8, 12):
         v = sw_lo[step_idx] if step_idx < len(sw_lo) else None
         lo_zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['low'][iso] = lo_zones
 
     # High: use stepwise_fan P90
     sw_hi = mac_stats['stepwise_fan'][iso]['p90']
-    backbone_hi = [sw_hi[i] for i in range(1, 5) if sw_hi[i] is not None]
-    zone0_hi = round(sum(backbone_hi) / len(backbone_hi)) if backbone_hi else None
-    zone0_hi = min(zone0_hi, MAC_CAP) if zone0_hi is not None else None
-    hi_zones = [zone0_hi]
-    for step_idx in range(5, 9):
+    hi_zones = [aggregate_zone(sw_hi, 1, 4), aggregate_zone(sw_hi, 4, 8)]
+    for step_idx in range(8, 12):
         v = sw_hi[step_idx] if step_idx < len(sw_hi) else None
         hi_zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['high'][iso] = hi_zones
@@ -157,10 +164,19 @@ for iso in ISOS:
     print(f"  {iso} clean_firm: {iso_data['clean_firm']}")
 
 # ============================================================================
-# EXTRACT COMPRESSED_DAY_DATA
+# EXTRACT COMPRESSED_DAY_DATA (from compressed_day_profiles.json)
 # ============================================================================
 
 print("\nExtracting COMPRESSED_DAY_DATA...")
+cd_profiles_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard', 'compressed_day_profiles.json')
+cd_profiles = {}
+if os.path.exists(cd_profiles_path):
+    with open(cd_profiles_path) as f:
+        cd_profiles = json.load(f)
+    print(f"  Loaded compressed_day_profiles.json ({os.path.getsize(cd_profiles_path) / 1024 / 1024:.1f} MB)")
+else:
+    print("  WARNING: compressed_day_profiles.json not found — compressed day will be zeros")
+
 compressed_day_data = {}
 for iso in ISOS:
     iso_cd = {
@@ -171,16 +187,27 @@ for iso in ISOS:
         'ldes_charge': [],
     }
 
+    iso_profiles = cd_profiles.get(iso, {}).get('profiles', {})
+
     for t in THRESHOLDS:
+        # Build the mix_key for Medium scenario at this threshold
         sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
-        if sc and 'compressed_day' in sc:
-            cd = sc['compressed_day']
-            iso_cd['demand'].append([round(v, 5) for v in cd['demand']])
-            iso_cd['gap'].append([round(v, 5) for v in cd['gap']])
-            iso_cd['battery_charge'].append([round(v, 5) for v in cd.get('battery_charge', [0]*24)])
-            iso_cd['ldes_charge'].append([round(v, 5) for v in cd.get('ldes_charge', [0]*24)])
+        profile = None
+        if sc and iso_profiles:
+            rm = sc.get('resource_mix', {})
+            proc = sc.get('procurement_pct', 0)
+            batt = sc.get('battery_dispatch_pct', 0)
+            ldes = sc.get('ldes_dispatch_pct', 0)
+            mk = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_{proc}_{batt}_{ldes}"
+            profile = iso_profiles.get(mk)
+
+        if profile:
+            iso_cd['demand'].append([round(v, 5) for v in profile['demand']])
+            iso_cd['gap'].append([round(v, 5) for v in profile['gap']])
+            iso_cd['battery_charge'].append([round(v, 5) for v in profile.get('battery_charge', [0]*24)])
+            iso_cd['ldes_charge'].append([round(v, 5) for v in profile.get('ldes_charge', [0]*24)])
             for res in MATCHED_RESOURCES:
-                vals = cd.get('matched', {}).get(res, [0]*24)
+                vals = profile.get('matched', {}).get(res, [0]*24)
                 iso_cd['matched'][res].append([round(v, 5) for v in vals])
         else:
             iso_cd['demand'].append([0]*24)
@@ -191,7 +218,8 @@ for iso in ISOS:
                 iso_cd['matched'][res].append([0]*24)
 
     compressed_day_data[iso] = iso_cd
-    print(f"  {iso}: {len(iso_cd['demand'])} thresholds × 24h")
+    filled = sum(1 for d in iso_cd['demand'] if any(v > 0 for v in d))
+    print(f"  {iso}: {filled}/{len(iso_cd['demand'])} thresholds with profile data")
 
 # ============================================================================
 # EXTRACT CF_TRANCHE_DATA
@@ -383,11 +411,12 @@ lines.append('];')
 lines.append('')
 
 # MARGINAL_MAC_LABELS + MARGINAL_MAC_DATA
-lines.append("// --- Two-Zone Marginal MAC ($/ton CO2) ---")
-lines.append("// Zone 0 (75→90%): aggregate backbone MAC")
-lines.append("// Zones 1-4 (90→99%): granular steps with monotonicity enforcement")
+lines.append("// --- Six-Zone Marginal MAC ($/ton CO2) ---")
+lines.append("// Zone 0 (50→75%): entry-level aggregate MAC")
+lines.append("// Zone 1 (75→90%): backbone aggregate MAC")
+lines.append("// Zones 2-5 (90→99%): granular steps with monotonicity enforcement")
 lines.append("// Cap: $1000/ton (NREL literature max)")
-lines.append("const MARGINAL_MAC_LABELS = ['75→90%', '90→92.5%', '92.5→95%', '95→97.5%', '97.5→99%'];")
+lines.append("const MARGINAL_MAC_LABELS = ['50→75%', '75→90%', '90→92.5%', '92.5→95%', '95→97.5%', '97.5→99%'];")
 lines.append('')
 lines.append('const MARGINAL_MAC_DATA = {')
 for sens in ['medium', 'low', 'high']:
@@ -436,7 +465,7 @@ lines.append('    }')
 lines.append("    return '>99';")
 lines.append('}')
 lines.append('')
-lines.append('const MARGINAL_THRESHOLDS = [75, 90, 92.5, 95, 97.5];')
+lines.append('const MARGINAL_THRESHOLDS = [50, 75, 90, 92.5, 95, 97.5];')
 lines.append('function findMarginalCrossover(regionMarginals, costLevel) {')
 lines.append('    for (let i = 0; i < regionMarginals.length; i++) {')
 lines.append('        if (regionMarginals[i] !== null && regionMarginals[i] > costLevel) {')
@@ -692,7 +721,10 @@ for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'batte
     tx_levels = ['None', 'Low', 'Medium', 'High']
     for lev_idx, lev in enumerate(tx_levels):
         vals = rt.get(lev, {})
-        parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
+        if isinstance(vals, (int, float)):
+            parts = [f'{iso}: {vals}' for iso in ISOS]
+        else:
+            parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
         comma = ',' if lev_idx < len(tx_levels) - 1 else ''
         lines.append(f'        {lev}: {{ {", ".join(parts)} }}{comma}')
     res_comma = ',' if res_idx < 5 else ''
