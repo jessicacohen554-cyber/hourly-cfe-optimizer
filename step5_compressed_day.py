@@ -4,7 +4,7 @@ Step 5: Compressed Day Profile Generator
 =========================================
 Generates 24-hour representative day profiles for every unique resource mix
 in the dashboard. Replays the 8760-hour physics (demand, generation, storage
-dispatch) and compresses to hour-of-day averages.
+dispatch) and compresses to hour-of-day annualized sums.
 
 Pipeline position: Step 5 of 5
   Step 1 — PFS Generator (physics)
@@ -498,20 +498,41 @@ def main():
 
         # Collect ALL unique mixes from feasible_mixes (not just scenario-selected)
         # These are the mixes that findOptimalMix can select under any cost/growth combo
+        # Supports both columnar format (new: {col: [vals...]}) and row format (old: [{col: val}...])
         unique_mixes = {}  # mix_key → (mix_dict, proc, batt, ldes)
 
         thresholds = iso_results.get('thresholds', {})
         for t_str in DASHBOARD_THRESHOLDS:
             t_data = thresholds.get(t_str, {})
-            fmixes = t_data.get('feasible_mixes', [])
-            for fm in fmixes:
-                rm = fm['resource_mix']
-                proc = fm['procurement_pct']
-                batt = fm.get('battery_dispatch_pct', 0)
-                ldes = fm.get('ldes_dispatch_pct', 0)
-                mk = mix_key(rm, proc, batt, ldes)
-                if mk not in unique_mixes:
-                    unique_mixes[mk] = (rm, proc, batt, ldes)
+            fmixes = t_data.get('feasible_mixes', {})
+
+            if isinstance(fmixes, dict) and 'clean_firm' in fmixes:
+                # Columnar format: {clean_firm: [...], solar: [...], ...}
+                n_mixes = len(fmixes['clean_firm'])
+                for i in range(n_mixes):
+                    rm = {
+                        'clean_firm': fmixes['clean_firm'][i],
+                        'solar': fmixes['solar'][i],
+                        'wind': fmixes['wind'][i],
+                        'ccs_ccgt': fmixes['ccs_ccgt'][i],
+                        'hydro': fmixes['hydro'][i],
+                    }
+                    proc = fmixes['procurement_pct'][i]
+                    batt = fmixes.get('battery_dispatch_pct', [0] * n_mixes)[i]
+                    ldes = fmixes.get('ldes_dispatch_pct', [0] * n_mixes)[i]
+                    mk = mix_key(rm, proc, batt, ldes)
+                    if mk not in unique_mixes:
+                        unique_mixes[mk] = (rm, proc, batt, ldes)
+            elif isinstance(fmixes, list):
+                # Legacy row format: [{resource_mix: {...}, ...}, ...]
+                for fm in fmixes:
+                    rm = fm['resource_mix']
+                    proc = fm['procurement_pct']
+                    batt = fm.get('battery_dispatch_pct', 0)
+                    ldes = fm.get('ldes_dispatch_pct', 0)
+                    mk = mix_key(rm, proc, batt, ldes)
+                    if mk not in unique_mixes:
+                        unique_mixes[mk] = (rm, proc, batt, ldes)
 
         n_unique = len(unique_mixes)
         total_mixes += n_unique
