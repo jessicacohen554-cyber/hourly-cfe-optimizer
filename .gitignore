@@ -23,4 +23,10 @@ desktop.ini
 # Environment
 .env
 .env.local
+
+# Optimizer generated data (large binary files)
 data/checkpoints/CAISO_cache_*.json
+data/checkpoints_v4/
+data/physics_cache_v4.parquet
+dashboard/physics_results_v4.parquet
+dashboard/physics_results_v4.json
