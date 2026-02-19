@@ -532,9 +532,9 @@ function buildMacChart() {
                     { label: 'DAC Optimistic', data: dacOptData, borderColor: '#E91E6366',
                         borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 5 },
                     { label: 'DAC Central', data: dacCenData, borderColor: '#E91E6388',
-                        borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.10)', tension: 0.3, order: 4 },
+                        borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(255,193,7,0.13)', tension: 0.3, order: 4 },
                     { label: 'DAC Conservative', data: dacConData, borderColor: '#E91E6333',
-                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 5 }
+                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.10)', tension: 0.3, order: 5 }
                 ]
             },
             options: {
@@ -686,10 +686,10 @@ function buildPortfolio() {
             pointRadius: 0, fill: false, tension: 0.3, order: -1 },
         { label: 'DAC Central', type: 'line', data: dacCenZone,
             borderColor: '#E91E6388', borderWidth: 2, borderDash: [6, 4],
-            pointRadius: 2, pointBackgroundColor: '#E91E63', fill: '-1', backgroundColor: 'rgba(233,30,99,0.10)', tension: 0.3, order: -1 },
+            pointRadius: 2, pointBackgroundColor: '#E91E63', fill: '-1', backgroundColor: 'rgba(255,193,7,0.13)', tension: 0.3, order: -1 },
         { label: 'DAC Conservative', type: 'line', data: dacConZone,
             borderColor: '#E91E6333', borderWidth: 1, borderDash: [3, 3],
-            pointRadius: 0, fill: false, tension: 0.3, order: -1 }
+            pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.10)', tension: 0.3, order: -1 }
     ];
 
     if (portfolioInst) portfolioInst.destroy();
