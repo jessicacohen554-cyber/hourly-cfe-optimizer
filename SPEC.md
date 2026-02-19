@@ -17,6 +17,23 @@ Three new Step 2 cost model changes — no Step 1 physics re-run needed:
 
 **Sensitivity space expanded**: 324 → 5,832 (non-CAISO) / 17,496 (CAISO) combos. All Step 2 arithmetic — minutes, not hours.
 
+### Demand Growth in Resource Mix Pricing (Feb 19, 2026)
+
+**Decision**: Demand growth dynamically scales resource mix pricing. Existing generation stays flat in absolute TWh — as demand grows, existing's share of grown demand shrinks, requiring more new-build.
+
+**Approach**: 1C (affects real pricing) + 2C (target year + growth rate as parameters) + 3C (client-side repricing handles it).
+
+**Mechanics**:
+- `grownDemandTwh = baseDemandTwh × (1 + annualRate)^(targetYear − 2025)`
+- Existing share rescaled: `existingPctGrown = existingPct × (baseDemandTwh / grownDemandTwh)`
+- More new-build fills the gap → higher costs at longer horizons / higher growth rates
+- Growth rates per ISO from DEMAND_GROWTH_RATES (L/M/H): CAISO 1.4-2.5%, ERCOT 2.0-5.5%, PJM 1.5-3.6%, NYISO 1.3-4.4%, NEISO 0.9-2.9%
+- Target year from dashboard selectors (interim: 2027-2035, longterm: 2036-2050)
+- `priceMix()` accepts optional `targetYear` and `growthRate` parameters; defaults to 2025/0 (no growth = current behavior)
+- Base year fixed at 2025 (snapshot year)
+
+**Implication**: Same physical feasible mix can cost significantly more at a 2040 target than at 2028, because more of the mix must be new-build to replace the shrunken existing share. This is correct — the resource mix needs to adapt dynamically to absolute TWh.
+
 ### v4.0 Fresh Rebuild — Decisions Locked (Feb 19, 2026)
 
 Complete optimizer rebuild with new architecture. All 9 design decisions + 5 efficiency optimizations locked below.
