@@ -563,7 +563,7 @@ def main():
             N = len(arrays['clean_firm'])
 
             t_str = str(thr)
-            threshold_data = {'scenarios': {}, 'feasible_mixes': []}
+            threshold_data = {'scenarios': {}, 'feasible_mixes': {}}
             arch_set = set()
 
             # For each old-format scenario key, find the cheapest mix
@@ -633,17 +633,34 @@ def main():
 
                 threshold_data['scenarios'][old_key] = scenario
 
-            # Store feasible mixes for client-side repricing
-            # (limit to a reasonable number — all unique allocations)
+            # Store feasible mixes in columnar format for client-side repricing
+            # Columnar: {col: [values...]} instead of [{col: val}, ...] — ~8× smaller JSON
             max_feasible = min(N, 500)
             step = max(1, N // max_feasible)
-            for i in range(0, N, step):
-                threshold_data['feasible_mixes'].append(arrays_to_mix_dict(arrays, i))
-            # Ensure all archetypes are in feasible_mixes
+            sample_indices = list(range(0, N, step))
+            # Ensure all archetypes are included
             for aidx in arch_set:
-                mix_d = arrays_to_mix_dict(arrays, aidx)
-                if mix_d not in threshold_data['feasible_mixes']:
-                    threshold_data['feasible_mixes'].append(mix_d)
+                if aidx not in sample_indices:
+                    sample_indices.append(aidx)
+            sample_indices.sort()
+
+            # Build columnar arrays
+            idx_arr = np.array(sample_indices)
+            ccs_pct = np.maximum(0, 100 - (arrays['clean_firm'][idx_arr].astype(int) +
+                                            arrays['solar'][idx_arr].astype(int) +
+                                            arrays['wind'][idx_arr].astype(int) +
+                                            arrays['hydro'][idx_arr].astype(int)))
+            threshold_data['feasible_mixes'] = {
+                'clean_firm': arrays['clean_firm'][idx_arr].astype(int).tolist(),
+                'solar': arrays['solar'][idx_arr].astype(int).tolist(),
+                'wind': arrays['wind'][idx_arr].astype(int).tolist(),
+                'ccs_ccgt': ccs_pct.tolist(),
+                'hydro': arrays['hydro'][idx_arr].astype(int).tolist(),
+                'procurement_pct': arrays['procurement_pct'][idx_arr].astype(int).tolist(),
+                'hourly_match_score': np.round(arrays['hourly_match_score'][idx_arr], 4).tolist(),
+                'battery_dispatch_pct': arrays['battery_dispatch_pct'][idx_arr].astype(int).tolist(),
+                'ldes_dispatch_pct': arrays['ldes_dispatch_pct'][idx_arr].astype(int).tolist(),
+            }
 
             archetypes[key] = arch_set
             output['results'][iso]['thresholds'][t_str] = threshold_data
