@@ -122,6 +122,50 @@ const BENCHMARKS_EXTRA = [
       trajectory: 'declining_steep', confidence: 'medium', sources: 'Argonne Labs, Penn Wharton, RFF' }
 ];
 
+// --- 2040 Projected Benchmarks (learning-curve adjusted) ---
+// DAC: from DAC_TRAJECTORY (optimistic/central/conservative 2040 values)
+// Industrial Electrification: ~30% cost reduction (IEA ETP 2023, McKinsey)
+// Carbon Removal: ~35% reduction (IPCC AR6 WG3, Nature 2024)
+// Sources: IEA Net Zero by 2050, IRENA World Energy Transitions 2023,
+//   BloombergNEF H2 Outlook 2024, RMI SAF Roadmap, IPCC AR6 WG3 Ch12
+const BENCHMARKS_DYNAMIC_2040 = {
+    dac: {
+        name: 'Direct Air Capture (DAC)', short: 'DAC', color: '#E91E63', category: 'carbon_removal', confidence: 'medium',
+        trajectory: 'declining_steep',
+        Low:    { low: 75,  mid: 115, high: 150 },
+        Medium: { low: 150, mid: 225, high: 300 },
+        High:   { low: 275, mid: 375, high: 500 },
+        sources: 'DAC_TRAJECTORY 2040 (DOE Liftoff, Sievert et al. Joule 2024, IEA DACCS 2022)'
+    },
+    industrial: {
+        name: 'Industrial Electrification', short: 'Ind. Electrification', color: '#8BC34A', category: 'industrial_decarb', confidence: 'medium',
+        trajectory: 'declining',
+        Low:    { low: -75, mid: 0,  high: 30 },
+        Medium: { low: -25, mid: 40, high: 110 },
+        High:   { low: 30,  mid: 80, high: 175 },
+        sources: 'IEA ETP 2023, McKinsey Decarbonization Pathways, Rewiring America'
+    },
+    removal: {
+        name: 'Carbon Removal (BECCS + Enhanced Weathering)', short: 'Carbon Removal\u00B9', color: '#009688', category: 'carbon_removal', confidence: 'low',
+        trajectory: 'declining',
+        Low:    { low: 10,  mid: 50,  high: 100 },
+        Medium: { low: 30,  mid: 100, high: 200 },
+        High:   { low: 60,  mid: 140, high: 250 },
+        sources: 'IPCC AR6 WG3 Ch12, Nature 2024, Smith et al. (Nature Comms 2025)'
+    }
+};
+
+const BENCHMARKS_EXTRA_2040 = [
+    { name: 'Green Hydrogen (Industrial)',  short: 'Green H\u2082', low: 50, mid: 175, high: 500, color: '#00BCD4', category: 'industrial_decarb',
+      trajectory: 'declining', confidence: 'medium', sources: 'IRENA Green H2 2023, BloombergNEF H2 Outlook 2024' },
+    { name: 'Sustainable Aviation Fuel',    short: 'SAF', low: 80, mid: 175, high: 300,  color: '#FF5722', category: 'transport',
+      trajectory: 'declining', confidence: 'medium', sources: 'RMI SAF Roadmap 2024, ICCT, IEA Net Zero 2023' },
+    { name: 'CDR Credits (Engineered)',     short: 'CDR Credits', low: 100, mid: 200, high: 400,  color: '#7C4DFF', category: 'voluntary',
+      trajectory: 'declining', confidence: 'medium', sources: 'Frontier Climate, Microsoft CDR portfolio' },
+    { name: 'EVs vs ICE (Fleet)',           short: 'EVs vs ICE', low: -200, mid: 50, high: 400,  color: '#FF6F00', category: 'transport',
+      trajectory: 'declining_steep', confidence: 'high', sources: 'BloombergNEF EVO 2024, ICCT, RFF' }
+];
+
 // --- Six-Zone Marginal MAC ($/ton CO2) ---
 // Zone 0 (50→75%): entry-level aggregate MAC
 // Zone 1 (75→90%): backbone aggregate MAC
@@ -240,6 +284,19 @@ function getAllBenchmarks(state) {
                  color: b.color, category: b.category, confidence: b.confidence, trajectory: b.trajectory, sources: b.sources };
     });
     return [...BENCHMARKS_STATIC, ...dynamic, ...BENCHMARKS_EXTRA]
+        .filter(b => b.mid >= 0)
+        .sort((a, b) => a.mid - b.mid);
+}
+
+function getAllBenchmarks2040(state) {
+    state = state || { dac: 'Medium', industrial: 'Medium', removal: 'Medium' };
+    const dynamic = Object.keys(BENCHMARKS_DYNAMIC_2040).map(key => {
+        const b = BENCHMARKS_DYNAMIC_2040[key];
+        const costs = b[state[key]] || b.Medium;
+        return { name: b.name, short: b.short || b.name, low: costs.low, mid: costs.mid, high: costs.high,
+                 color: b.color, category: b.category, confidence: b.confidence, trajectory: b.trajectory, sources: b.sources };
+    });
+    return [...BENCHMARKS_STATIC, ...dynamic, ...BENCHMARKS_EXTRA_2040]
         .filter(b => b.mid >= 0)
         .sort((a, b) => a.mid - b.mid);
 }
