@@ -914,6 +914,55 @@ This produces a variable hourly emission rate that reflects the actual fossil fu
 
 **Bug fix (2026-02-16)**: The optimizer was applying marginal fossil emission rates to ALL storage charging hours, including hours with clean surplus (curtailment). Since storage in this model only charges from surplus clean energy, this incorrectly inflated charge emissions to ~21M tons (ERCOT 92.5%), making storage appear CO₂-neutral or negative. Fix: `charge_emission_rate = np.where(surplus > 0, 0.0, hourly_rates)` — zero rate when curtailment is occurring, marginal fossil rate otherwise. Post-processed `overprocure_results.json` and updated `MAC_DATA` in `shared-data.js`. CAISO MAC at 90% dropped from $122 to $98/ton; other regions with storage deployment similarly affected.
 
+### 7.2 Demand Growth Counterfactual — New Gas at 350 kg/MWh (Decision: Feb 19, 2026)
+
+**Problem**: Current CO₂ abatement only counts displaced existing grid emissions. But demand growth MWh that aren't served by clean energy would be met by new gas-fired generation. The counterfactual is that without clean procurement, those MWh produce emissions at **350 kg/MWh (0.35 tCO₂/MWh)** — the emission rate of a new CCGT.
+
+**Formula**:
+```
+growth_mwh = base_demand × ((1 + annual_growth_rate)^(target_year − 2025) − 1) × 1,000,000
+counterfactual_growth_emissions = growth_mwh × 0.35
+total_co2_abated = existing_grid_displacement + counterfactual_growth_emissions
+```
+
+**Implementation**: Add growth counterfactual to `recompute_co2.py`. Growth rates from `step3_cost_optimization.py` DEMAND_GROWTH_RATES (CAISO 1.4–2.5%, ERCOT 2.0–5.5%, PJM 1.5–3.6%, NYISO 1.3–4.4%, NEISO 0.9–2.9%). New gas rate is 350 kg/MWh (representative CCGT heat rate ~6,400 BTU/kWh, pipeline gas). This is a post-hoc calculation — doesn't change resource mix or cost optimization.
+
+### 7.3 SBTi Timeline-Indexed DAC Learning Curve (Decision: Feb 19, 2026)
+
+**Approach**: Piecewise linear DAC cost projections from literature anchor points, overlaid on abatement charts where x-axis maps both clean energy threshold AND SBTi target year.
+
+**SBTi Threshold-to-Year Mapping**:
+| Year | SBTi Requirement | Optimizer Threshold |
+|------|------------------|--------------------|
+| 2025 | (today)          | Baseline           |
+| 2030 | 50% hourly       | 50%                |
+| 2035 | ~70% (interpolated) | 70%             |
+| 2040 | 90% hourly       | 90%                |
+| 2045 | ~95% (interpolated) | 95%             |
+| 2050 | 100% (net-zero)  | 100%               |
+
+**DAC Cost Trajectories ($/ton CO₂, net DACCS)**:
+
+| Year | Optimistic | Central | Conservative |
+|------|-----------|---------|-------------|
+| 2025 | $400      | $600    | $800        |
+| 2030 | $200      | $350    | $550        |
+| 2035 | $150      | $275    | $450        |
+| 2040 | $115      | $225    | $375        |
+| 2045 | $90       | $200    | $325        |
+| 2050 | $75       | $180    | $300        |
+
+**Sources**: DOE Liftoff (2023), Sievert et al. (Joule 2024), IEA DAC (2022/2024), Fasihi et al. (J. Cleaner Prod. 2019), IEAGHG (2021/2024), Climeworks Gen 3, DOE Carbon Negative Shot, Kanyako & Craig (Earth's Future 2025), NAS (2019), Young et al. (One Earth 2023), Keith et al. (Joule 2018), Shayegh et al. (Frontiers in Climate 2021), Belfer Center (2023).
+
+**Key assumptions by trajectory**:
+- **Optimistic**: 15–20% learning rate, R&D breakthroughs, $<20/MWh renewables, 1+ GtCO₂/yr deployment by 2050
+- **Central**: 10–12% learning rate, moderate policy support, $30–40/MWh renewables, 100–500 MtCO₂/yr by 2050
+- **Conservative**: 5–8% learning rate, limited policy support, $40–60/MWh renewables, <100 MtCO₂/yr by 2050
+
+**Visualization**: Abatement charts get dual x-axis (threshold % bottom, SBTi year top). DAC trajectory shown as 3 declining curves with shaded band. MAC curve intersections with DAC curves show the crossover points where grid decarbonization becomes more/less expensive than DAC at each milestone year.
+
+All values are 2024 USD, net tons CO₂ removed (accounting for 5–12% lifecycle emissions). Full DACCS (capture + transport + storage + MRV).
+
 ### 7.2 Abatement Cost Curves (2 new charts)
 - **Average Cost of Abatement**: Total incremental cost / Total CO2 abated = **$/ton CO2**
 - **Marginal Cost of Abatement**: (Cost_{X+1%} − Cost_{X%}) / (CO2_{X+1%} − CO2_{X%}) = **$/ton CO2**
