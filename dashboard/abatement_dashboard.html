@@ -476,13 +476,19 @@ function buildMacChart() {
     // MAC_STEPWISE_FAN has P10/P50/P90 of marginal cost per step (not cumulative average)
     const useFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : MAC_FAN_DATA;
 
-    // Compute shared Y max from stepwise data (cap at 1200 for readability)
-    let yMax = 0;
+    // Compute shared Y max/min from stepwise data (with fallback to average fan)
+    const avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
+    let yMax = 0, yMin = 0;
     regions.forEach(iso => {
         const fan = useFan?.[iso];
-        if (fan) yMax = Math.max(yMax, ...fan.p90.filter(v => v != null && v < 2000));
+        const fb = avgFan?.[iso];
+        const p90vals = (fan?.p90 || []).map((v, i) => v ?? fb?.p90?.[i] ?? null).filter(v => v != null && v < 2000);
+        const p10vals = (fan?.p10 || []).map((v, i) => v ?? fb?.p10?.[i] ?? null).filter(v => v != null);
+        if (p90vals.length) yMax = Math.max(yMax, ...p90vals);
+        if (p10vals.length) yMin = Math.min(yMin, ...p10vals);
     });
     yMax = Math.min(Math.ceil(yMax / 50) * 50 + 50, 1200);
+    if (yMin < 0) yMin = Math.floor(yMin / 50) * 50 - 25;
 
     // Build card HTML — show marginal MAC at 99% step
     grid.innerHTML = regions.map(iso => {
@@ -503,7 +509,8 @@ function buildMacChart() {
             `</div>`;
     }).join('');
 
-    // Build each chart — using stepwise (marginal) MAC data
+    // Build each chart — using stepwise (marginal) MAC data, falling back to
+    // average MAC fan data where stepwise values are null (e.g. NEISO/PJM early thresholds)
     regions.forEach(iso => {
         const ctx = document.getElementById('macEnv_' + iso)?.getContext('2d');
         if (!ctx) return;
@@ -512,11 +519,20 @@ function buildMacChart() {
         if (!fan) return;
 
         const c = REGION_COLORS[iso];
-        // Filter null values (first 2 thresholds have no stepwise data)
-        const p90 = fan.p90.map((v, i) => ({ x: thresholds9[i], y: v != null ? Math.min(v, 1200) : null })).filter(d => d.y != null);
-        const p10 = fan.p10.map((v, i) => ({ x: thresholds9[i], y: v != null ? v : null })).filter(d => d.y != null);
+        const fb = avgFan?.[iso]; // fallback average fan for null-filling
+        const p90 = fan.p90.map((v, i) => {
+            const val = v ?? fb?.p90?.[i] ?? null;
+            return { x: thresholds9[i], y: val != null ? Math.min(val, 1200) : null };
+        }).filter(d => d.y != null);
+        const p10 = fan.p10.map((v, i) => {
+            const val = v ?? fb?.p10?.[i] ?? null;
+            return { x: thresholds9[i], y: val };
+        }).filter(d => d.y != null);
         const midSrc = env || fan.p50;
-        const p50 = midSrc.map((v, i) => ({ x: thresholds9[i], y: v != null ? Math.min(v, 1200) : null })).filter(d => d.y != null);
+        const p50 = midSrc.map((v, i) => {
+            const val = v ?? fb?.p50?.[i] ?? null;
+            return { x: thresholds9[i], y: val != null ? Math.min(val, 1200) : null };
+        }).filter(d => d.y != null);
 
         macChartInstances[iso] = new Chart(ctx, {
             type: 'line',
@@ -553,7 +569,7 @@ function buildMacChart() {
                         },
                         grid: { display: false }, border: { display: true, color: '#D4D8E0' }
                     },
-                    y: { min: 0, max: yMax,
+                    y: { ...(yMin < 0 ? { min: yMin } : {}), max: yMax,
                         ticks: { callback: v => '$' + v, font: { size: 9 }, stepSize: 50 },
                         grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: true, color: '#D4D8E0' }
                     }
