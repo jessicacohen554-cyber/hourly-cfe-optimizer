@@ -683,6 +683,177 @@ def analyze_crossover(data):
     return analysis
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# GAS CAPACITY BACKUP & RESOURCE ADEQUACY
+# ══════════════════════════════════════════════════════════════════════════════
+# Resource adequacy margin: 15% above peak demand (PJM/ERCOT standard)
+# New-build CCGT LCOE: $55-75/MWh depending on region and utilization
+# Existing gas: priced at wholesale (already operating)
+
+RESOURCE_ADEQUACY_MARGIN = 0.15  # 15% reserve margin
+
+# Peak demand (MW) from EIA data — updated from eia_demand_profiles.json
+PEAK_DEMAND_MW = {
+    'CAISO': 43860, 'ERCOT': 83597, 'PJM': 160560, 'NYISO': 31857, 'NEISO': 25898,
+}
+
+# Existing gas capacity (MW) — approximated from fossil fleet share × peak
+# Source: EIA-860 2023 (existing operable gas capacity in each ISO)
+EXISTING_GAS_CAPACITY_MW = {
+    'CAISO': 37000,   # ~37 GW gas fleet
+    'ERCOT': 55000,   # ~55 GW gas fleet
+    'PJM': 75000,     # ~75 GW gas fleet
+    'NYISO': 18000,   # ~18 GW gas fleet
+    'NEISO': 14000,   # ~14 GW gas fleet
+}
+
+# New-build CCGT annualized capacity cost ($/kW-yr)
+# Source: Lazard LCOE v16.0 — CCGT overnight $700-1,100/kW
+# Annualized: midpoint $900/kW × 9.4% CRF (25yr, 8% WACC) + $14/kW-yr FOM ≈ $99/kW-yr
+# Regional adjustment ±10-15% for construction costs
+NEW_CCGT_COST_KW_YR = {
+    'CAISO': 112,   # +13% (CA permitting, labor, seismic)
+    'ERCOT': 89,    # -10% (TX lower permitting, established gas infra)
+    'PJM': 99,      # Baseline (Lazard mid)
+    'NYISO': 114,   # +15% (NY permitting, density, interconnection)
+    'NEISO': 105,   # +6% (NE construction costs)
+}
+
+# Existing gas fixed O&M to maintain capacity ($/kW-yr)
+# Source: Lazard LCOE v16.0 — existing CCGT FOM $11.5-$16.5/kW-yr
+EXISTING_GAS_FOM_KW_YR = {
+    'CAISO': 16, 'ERCOT': 13, 'PJM': 14, 'NYISO': 17, 'NEISO': 15,
+}
+
+# Capacity credit for variable resources at system peak
+PEAK_CAPACITY_CREDITS = {
+    'clean_firm': 1.0,    # Nuclear/geothermal: dispatchable, full credit
+    'solar': 0.30,        # ~30% average at system peak (summer afternoons for most ISOs)
+    'wind': 0.10,         # ~10% at system peak (often low correlation)
+    'ccs_ccgt': 0.90,     # Dispatchable but planned outage risk
+    'hydro': 0.50,        # Limited by water availability/reservoir
+    'battery': 0.95,      # 4hr battery near-full credit for peak events
+    'ldes': 0.90,         # 100hr iron-air, high duration = high credit
+}
+
+
+def compute_gas_capacity_and_ra(data):
+    """
+    For each scenario, compute:
+    1. Peak demand with RA margin: peak_demand × (1 + 15%)
+    2. Clean firm capacity at peak: sum of (resource MW × capacity credit)
+    3. Gas backup needed: RA requirement - clean capacity at peak
+    4. Gas cost: existing gas at wholesale, new-build at CCGT LCOE
+    5. Total system cost: clean procurement cost + gas backup cost
+    """
+    print("\n  [6] Gas Capacity Backup & Resource Adequacy")
+
+    total_computed = 0
+    for iso in ISOS:
+        if iso not in data.get('results', {}):
+            continue
+
+        iso_data = data['results'][iso]
+        peak_mw = PEAK_DEMAND_MW.get(iso, iso_data.get('peak_demand_mw', 0))
+        demand_mwh = iso_data.get('annual_demand_mwh', 0)
+        existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+        wholesale = WHOLESALE_PRICES[iso]
+
+        # Peak demand with resource adequacy margin
+        ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+
+        # Capacity factor for converting % of demand to MW
+        # avg_demand_mw = demand_mwh / 8760
+        avg_demand_mw = demand_mwh / 8760
+
+        thresholds_data = iso_data.get('thresholds', {})
+        for t_str, t_data in thresholds_data.items():
+            scenarios = t_data.get('scenarios', {})
+            for sk, scenario in scenarios.items():
+                mix = scenario.get('resource_mix', {})
+                proc = scenario.get('procurement_pct', 100)
+                batt = scenario.get('battery_dispatch_pct', 0)
+                ldes = scenario.get('ldes_dispatch_pct', 0)
+
+                # Calculate clean capacity contribution at peak (MW)
+                clean_peak_mw = 0
+                for rtype in RESOURCE_TYPES:
+                    pct = mix.get(rtype, 0)
+                    # Resource MW = procurement_factor × mix_share × avg_demand (as proxy for nameplate)
+                    resource_mw = (proc / 100.0) * (pct / 100.0) * avg_demand_mw
+                    credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
+                    clean_peak_mw += resource_mw * credit
+
+                # Add battery/LDES peak capacity
+                batt_mw = (batt / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
+                ldes_mw = (ldes / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+                clean_peak_mw += batt_mw + ldes_mw
+
+                # Gas backup needed = RA requirement - clean peak capacity
+                gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw)
+
+                # Cost bifurcation: existing gas at wholesale, new-build at CCGT LCOE
+                existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
+                new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
+
+                # Annualized gas backup cost ($/MWh of demand)
+                # Use $/kW-yr capacity cost, NOT energy LCOE — gas backup is a capacity product
+                # Existing gas: just fixed O&M to maintain availability (already built)
+                # New-build CCGT: full annualized capital + FOM
+                existing_gas_cost_annual = existing_gas_used_mw * 1000 * EXISTING_GAS_FOM_KW_YR[iso] / 1000  # MW→kW→$
+                new_gas_cost_annual = new_gas_mw * 1000 * NEW_CCGT_COST_KW_YR[iso] / 1000  # MW→kW→$
+                # Note: MW * 1000 = kW; * $/kW-yr / 1000 simplifies to MW * $/kW-yr
+                # Actually: cost = MW × $/kW-yr × 1000 kW/MW → annual $
+                existing_gas_cost_annual = existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000  # $/yr
+                new_gas_cost_annual = new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000  # $/yr
+                gas_backup_cost_annual = existing_gas_cost_annual + new_gas_cost_annual
+                gas_backup_cost_per_mwh = gas_backup_cost_annual / demand_mwh if demand_mwh > 0 else 0
+
+                # Split out: new-build gas cost only (for incremental cost tile)
+                new_gas_cost_per_mwh = new_gas_cost_annual / demand_mwh if demand_mwh > 0 else 0
+                # Existing gas cost only
+                existing_gas_cost_per_mwh = existing_gas_cost_annual / demand_mwh if demand_mwh > 0 else 0
+
+                # Total system cost = clean cost + ALL gas backup cost (existing + new)
+                clean_cost = scenario.get('costs', {}).get('effective_cost', 0)
+                total_system_cost = clean_cost + gas_backup_cost_per_mwh
+
+                # Incremental cost = clean cost + new-build gas only (not existing wholesale)
+                incremental_with_new_gas = clean_cost + new_gas_cost_per_mwh
+
+                scenario['gas_backup'] = {
+                    'peak_demand_mw': round(peak_mw),
+                    'ra_peak_mw': round(ra_peak_mw),
+                    'clean_peak_capacity_mw': round(clean_peak_mw),
+                    'gas_backup_needed_mw': round(gas_needed_mw),
+                    'existing_gas_used_mw': round(existing_gas_used_mw),
+                    'new_gas_build_mw': round(new_gas_mw),
+                    'existing_gas_cost_per_mwh': round(existing_gas_cost_per_mwh, 2),
+                    'new_gas_cost_per_mwh': round(new_gas_cost_per_mwh, 2),
+                    'gas_backup_cost_per_mwh': round(gas_backup_cost_per_mwh, 2),
+                    'total_system_cost_per_mwh': round(total_system_cost, 2),
+                    'incremental_with_new_gas': round(incremental_with_new_gas, 2),
+                    'clean_coverage_pct': round(clean_peak_mw / ra_peak_mw * 100, 1) if ra_peak_mw > 0 else 0,
+                    'resource_adequacy_margin': RESOURCE_ADEQUACY_MARGIN,
+                }
+
+                total_computed += 1
+
+        # Log summary for Medium scenario at key thresholds
+        for t in ['75', '90', '95', '99']:
+            sc = thresholds_data.get(t, {}).get('scenarios', {}).get('MMM_M_M')
+            if sc and 'gas_backup' in sc:
+                gb = sc['gas_backup']
+                print(f"      {iso} {t:>3}%: peak={gb['ra_peak_mw']:,} MW(+RA), "
+                      f"clean={gb['clean_peak_capacity_mw']:,} MW, "
+                      f"gas={gb['gas_backup_needed_mw']:,} MW "
+                      f"(existing={gb['existing_gas_used_mw']:,}, new={gb['new_gas_build_mw']:,}), "
+                      f"coverage={gb['clean_coverage_pct']}%")
+
+    print(f"      Computed gas backup for {total_computed:,} scenarios")
+    return total_computed
+
+
 def main():
     print("=" * 70)
     print("  POST-PROCESSING CORRECTIONS & OVERLAYS")
@@ -704,6 +875,7 @@ def main():
     co2_fixes = 0
     neiso_count = add_neiso_gas_constraint(data)
     analysis = analyze_crossover(data)
+    gas_count = compute_gas_capacity_and_ra(data)
 
     # Add metadata
     data['postprocessing'] = {
