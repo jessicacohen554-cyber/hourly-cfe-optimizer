@@ -1405,6 +1405,49 @@ body {
         </div>
     </section>
 
+    <!-- SECTION: NO REGRETS RESOURCES -->
+    <section class="story-section story-fade-in">
+        <div class="story-content">
+            <span class="story-badge story-badge-green">Risk Analysis</span>
+            <h2>&ldquo;No Regrets&rdquo; New Build: What&rsquo;s Safe Regardless of Assumptions?</h2>
+
+            <p class="story-lead">
+                We tested <strong>324 sensitivity combinations</strong> per threshold &mdash; varying renewable costs,
+                firm generation costs, storage costs, fossil fuel prices, and transmission costs from Low to High.
+                The <strong>floor</strong> (minimum across all scenarios) reveals what you&rsquo;d build even
+                under the worst-case cost assumptions.
+            </p>
+
+            <div class="incremental-region-pills" id="noRegretsRegionPills">
+                <button class="incremental-pill active" data-region="CAISO">CAISO</button>
+                <button class="incremental-pill" data-region="ERCOT">ERCOT</button>
+                <button class="incremental-pill" data-region="PJM">PJM</button>
+                <button class="incremental-pill" data-region="NYISO">NYISO</button>
+                <button class="incremental-pill" data-region="NEISO">NEISO</button>
+            </div>
+
+            <div class="incremental-chart-container" style="min-height:370px;">
+                <canvas id="noRegretsChart"></canvas>
+            </div>
+
+            <div class="story-insight-box" id="noRegretsInsight" style="margin-top:16px;">
+                <div class="insight-icon"></div>
+                <div id="noRegretsInsightText">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <p style="margin-top:20px;">
+                <strong>Clean firm power is the most robust &ldquo;no regrets&rdquo; investment</strong> &mdash;
+                it appears in every optimal mix at every threshold in PJM, NYISO, and NEISO.
+                Wind has a guaranteed floor only in ERCOT at moderate targets.
+                Solar has <em>no</em> guaranteed new-build floor anywhere &mdash; its role is entirely
+                contingent on relative cost assumptions. The firm generation cost toggle alone
+                explains <strong>48%</strong> of total cost variation.
+            </p>
+        </div>
+    </section>
+
     <!-- SECTION: PRESERVING EXISTING CLEAN FIRM -->
     <section class="story-section story-fade-in">
         <div class="story-content">
@@ -1767,6 +1810,7 @@ function initHomepage() {
     if (document.getElementById('narrativeMixChart')) initNarrativeMixChart();
     if (document.getElementById('incrementalMixChart')) initIncrementalMixChart();
     if (document.getElementById('homepage90CostChart')) initHomepage90CostChart();
+    if (document.getElementById('noRegretsChart')) initNoRegretsChart('CAISO');
     // Trigger scroll animations
     setupScrollObserver();
 }
@@ -3475,6 +3519,343 @@ function initHomepage90CostChart() {
         },
         plugins: [ChartDataLabels]
     });
+}
+
+// ---- No Regrets Chart ----
+// Shows min/median/max new-build % across all 324 sensitivity scenarios
+const NO_REGRETS_DATA = {
+    CAISO: { demand_twh: 224.0, existing: { clean_firm: 7.9, solar: 22.3, wind: 8.8 },
+        thresholds: {
+            "75":  { clean_firm: {min:14,max:64,median:15,existing:7.9}, solar: {min:16,max:58,median:31,existing:22.3}, wind: {min:9,max:60,median:19,existing:8.8} },
+            "80":  { clean_firm: {min:13,max:68,median:13,existing:7.9}, solar: {min:15,max:39,median:39,existing:22.3}, wind: {min:9,max:40,median:40,existing:8.8} },
+            "85":  { clean_firm: {min:15,max:70,median:37,existing:7.9}, solar: {min:13,max:55,median:46,existing:22.3}, wind: {min:5,max:35,median:9,existing:8.8} },
+            "90":  { clean_firm: {min:5,max:67,median:10,existing:7.9}, solar: {min:16,max:85,median:75,existing:22.3}, wind: {min:5,max:22,median:10,existing:8.8} },
+            "95":  { clean_firm: {min:5,max:65,median:20,existing:7.9}, solar: {min:19,max:85,median:65,existing:22.3}, wind: {min:5,max:10,median:8,existing:8.8} },
+            "100": { clean_firm: {min:73,max:79,median:73,existing:7.9}, solar: {min:8,max:8,median:8,existing:22.3}, wind: {min:5,max:11,median:11,existing:8.8} },
+        }
+    },
+    ERCOT: { demand_twh: 488.0, existing: { clean_firm: 8.6, solar: 13.8, wind: 23.6 },
+        thresholds: {
+            "75":  { clean_firm: {min:4,max:12,median:12,existing:8.6}, solar: {min:14,max:15,median:15,existing:13.8}, wind: {min:73,max:82,median:73,existing:23.6} },
+            "80":  { clean_firm: {min:3,max:34,median:30,existing:8.6}, solar: {min:13,max:54,median:13,existing:13.8}, wind: {min:40,max:57,median:53,existing:23.6} },
+            "85":  { clean_firm: {min:3,max:66,median:20,existing:8.6}, solar: {min:8,max:39,median:21,existing:13.8}, wind: {min:26,max:75,median:59,existing:23.6} },
+            "90":  { clean_firm: {min:5,max:68,median:5,existing:8.6}, solar: {min:9,max:25,median:20,existing:13.8}, wind: {min:23,max:75,median:75,existing:23.6} },
+            "95":  { clean_firm: {min:5,max:71,median:25,existing:8.6}, solar: {min:10,max:50,median:20,existing:13.8}, wind: {min:19,max:75,median:25,existing:23.6} },
+            "100": { clean_firm: {min:75,max:80,median:75,existing:8.6}, solar: {min:3,max:7,median:3,existing:13.8}, wind: {min:13,max:22,median:22,existing:23.6} },
+        }
+    },
+    PJM: { demand_twh: 843.3, existing: { clean_firm: 32.1, solar: 2.9, wind: 3.8 },
+        thresholds: {
+            "75":  { clean_firm: {min:16,max:92,median:58,existing:32.1}, solar: {min:3,max:51,median:4,existing:2.9}, wind: {min:4,max:47,median:36,existing:3.8} },
+            "80":  { clean_firm: {min:37,max:92,median:69,existing:32.1}, solar: {min:2,max:44,median:4,existing:2.9}, wind: {min:3,max:26,median:18,existing:3.8} },
+            "85":  { clean_firm: {min:40,max:92,median:80,existing:32.1}, solar: {min:2,max:37,median:4,existing:2.9}, wind: {min:5,max:22,median:15,existing:3.8} },
+            "90":  { clean_firm: {min:34,max:95,median:87,existing:32.1}, solar: {min:2,max:38,median:3,existing:2.9}, wind: {min:3,max:27,median:9,existing:3.8} },
+            "95":  { clean_firm: {min:26,max:94,median:91,existing:32.1}, solar: {min:2,max:47,median:3,existing:2.9}, wind: {min:3,max:27,median:5,existing:3.8} },
+            "100": { clean_firm: {min:86,max:95,median:86,existing:32.1}, solar: {min:2,max:7,median:2,existing:2.9}, wind: {min:2,max:11,median:10,existing:3.8} },
+        }
+    },
+    NYISO: { demand_twh: 151.6, existing: { clean_firm: 18.4, solar: 0.0, wind: 4.7 },
+        thresholds: {
+            "75":  { clean_firm: {min:24,max:72,median:24,existing:18.4}, solar: {min:0,max:21,median:0,existing:0}, wind: {min:13,max:61,median:60,existing:4.7} },
+            "80":  { clean_firm: {min:22,max:80,median:23,existing:18.4}, solar: {min:0,max:14,median:4,existing:0}, wind: {min:5,max:59,median:58,existing:4.7} },
+            "85":  { clean_firm: {min:20,max:80,median:21,existing:18.4}, solar: {min:0,max:18,median:3,existing:0}, wind: {min:5,max:61,median:61,existing:4.7} },
+            "90":  { clean_firm: {min:19,max:80,median:44,existing:18.4}, solar: {min:0,max:35,median:6,existing:0}, wind: {min:5,max:53,median:35,existing:4.7} },
+            "95":  { clean_firm: {min:17,max:81,median:56,existing:18.4}, solar: {min:0,max:37,median:10,existing:0}, wind: {min:4,max:43,median:23,existing:4.7} },
+            "100": { clean_firm: {min:73,max:82,median:73,existing:18.4}, solar: {min:0,max:6,median:1,existing:0}, wind: {min:3,max:11,median:11,existing:4.7} },
+        }
+    },
+    NEISO: { demand_twh: 115.3, existing: { clean_firm: 23.8, solar: 1.4, wind: 3.9 },
+        thresholds: {
+            "75":  { clean_firm: {min:22,max:86,median:47,existing:23.8}, solar: {min:2,max:5,median:2,existing:1.4}, wind: {min:9,max:73,median:45,existing:3.9} },
+            "80":  { clean_firm: {min:30,max:87,median:46.5,existing:23.8}, solar: {min:2,max:17,median:10,existing:1.4}, wind: {min:5,max:52,median:40.5,existing:3.9} },
+            "85":  { clean_firm: {min:10,max:85,median:67,existing:23.8}, solar: {min:2,max:42,median:3,existing:1.4}, wind: {min:10,max:45,median:27,existing:3.9} },
+            "90":  { clean_firm: {min:33,max:93,median:85,existing:23.8}, solar: {min:1,max:41,median:2,existing:1.4}, wind: {min:3,max:27,median:10,existing:3.9} },
+            "95":  { clean_firm: {min:31,max:91,median:91,existing:23.8}, solar: {min:2,max:40,median:2,existing:1.4}, wind: {min:4,max:27,median:4,existing:3.9} },
+            "100": { clean_firm: {min:88,max:94,median:88,existing:23.8}, solar: {min:1,max:1,median:1,existing:1.4}, wind: {min:2,max:8,median:8,existing:3.9} },
+        }
+    },
+};
+
+let noRegretsChartInstance = null;
+
+function initNoRegretsChart(iso) {
+    const regionData = NO_REGRETS_DATA[iso];
+    if (!regionData) return;
+    const canvas = document.getElementById('noRegretsChart');
+    if (!canvas) return;
+
+    const threshKeys = ['75', '80', '85', '90', '95', '100'];
+    const labels = threshKeys.map(t => t + '%');
+
+    const resources = [
+        { key: 'clean_firm', label: 'Clean Firm', color: '#1E3A5F', colorLight: 'rgba(30,58,95,0.15)' },
+        { key: 'wind',       label: 'Wind',       color: '#22C55E', colorLight: 'rgba(34,197,94,0.15)' },
+        { key: 'solar',      label: 'Solar',      color: '#F59E0B', colorLight: 'rgba(245,158,11,0.15)' },
+    ];
+
+    const datasets = [];
+
+    resources.forEach((res, ri) => {
+        const minData = [];
+        const maxData = [];
+        const medData = [];
+        const existData = [];
+
+        threshKeys.forEach(t => {
+            const d = regionData.thresholds[t]?.[res.key];
+            if (!d) { minData.push(0); maxData.push(0); medData.push(0); existData.push(0); return; }
+            const newFloor = Math.max(0, d.min - d.existing);
+            const newCeil  = Math.max(0, d.max - d.existing);
+            const newMed   = Math.max(0, d.median - d.existing);
+            minData.push(newFloor);
+            maxData.push(newCeil);
+            medData.push(newMed);
+            existData.push(d.existing);
+        });
+
+        // Range band (min to max) — draw as floating bar
+        const rangeData = minData.map((mn, i) => [mn, maxData[i]]);
+
+        // Range bar (min–max band)
+        datasets.push({
+            label: res.label + ' range',
+            data: rangeData,
+            backgroundColor: res.colorLight,
+            borderColor: res.color,
+            borderWidth: 1,
+            borderRadius: 4,
+            borderSkipped: false,
+            barPercentage: 0.75,
+            categoryPercentage: 0.85,
+            _resKey: res.key,
+            _type: 'range',
+            order: 2,
+        });
+
+        // Floor marker (min) — thin bar
+        datasets.push({
+            label: res.label + ' floor',
+            data: minData.map(v => v > 0 ? [v - 0.3, v + 0.3] : [0, 0]),
+            backgroundColor: res.color,
+            borderColor: res.color,
+            borderWidth: 0,
+            barPercentage: 0.75,
+            categoryPercentage: 0.85,
+            borderRadius: 2,
+            _resKey: res.key,
+            _type: 'floor',
+            order: 1,
+        });
+
+        // Median diamond — using point scatter overlay
+        datasets.push({
+            label: res.label + ' median',
+            type: 'line',
+            data: medData,
+            borderColor: res.color,
+            backgroundColor: res.color,
+            borderWidth: 0,
+            pointStyle: 'rectRot',
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            showLine: false,
+            _resKey: res.key,
+            _type: 'median',
+            order: 0,
+        });
+    });
+
+    const barTopPlugin = {
+        id: 'noRegretsFloorLabels',
+        afterDraw(chart) {
+            const { ctx, scales: { x, y } } = chart;
+            ctx.save();
+            ctx.font = "bold 10px 'Barlow Semi Condensed','Arial Narrow',sans-serif";
+            ctx.textAlign = 'center';
+
+            chart.data.datasets.forEach((ds, di) => {
+                if (ds._type !== 'range') return;
+                const meta = chart.getDatasetMeta(di);
+                meta.data.forEach((bar, i) => {
+                    const rawData = ds.data[i];
+                    const floor = Array.isArray(rawData) ? rawData[0] : 0;
+                    if (floor > 0) {
+                        const xPos = bar.x;
+                        const yPos = y.getPixelForValue(floor);
+                        ctx.fillStyle = ds.borderColor;
+                        ctx.fillText(Math.round(floor) + '%', xPos, yPos + 14);
+                    }
+                });
+            });
+            ctx.restore();
+        }
+    };
+
+    if (noRegretsChartInstance) noRegretsChartInstance.destroy();
+    const ctx = canvas.getContext('2d');
+
+    noRegretsChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        plugins: [barTopPlugin],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 500, easing: 'easeOutCubic' },
+            layout: { padding: { top: 20, right: 12, bottom: 4, left: 4 } },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        color: '#1A1A1A',
+                        padding: 14,
+                        filter: function(item) {
+                            return item.text.includes('range');
+                        },
+                        generateLabels: function(chart) {
+                            const res = [
+                                { text: 'Clean Firm', fillStyle: 'rgba(30,58,95,0.15)', strokeStyle: '#1E3A5F', lineWidth: 2, pointStyle: 'rectRounded' },
+                                { text: 'Wind',       fillStyle: 'rgba(34,197,94,0.15)', strokeStyle: '#22C55E', lineWidth: 2, pointStyle: 'rectRounded' },
+                                { text: 'Solar',      fillStyle: 'rgba(245,158,11,0.15)', strokeStyle: '#F59E0B', lineWidth: 2, pointStyle: 'rectRounded' },
+                            ];
+                            res.push({ text: 'Band = min\u2013max new build', fillStyle: 'rgba(150,150,150,0.15)', strokeStyle: '#999', lineWidth: 1, pointStyle: 'rectRounded' });
+                            res.push({ text: '\u25C6 = median',              fillStyle: '#666', strokeStyle: '#666', lineWidth: 0, pointStyle: 'rectRot' });
+                            return res;
+                        }
+                    },
+                    onClick: () => {}
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                    bodyFont:  { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) {
+                            return iso + ' at ' + items[0].label + ' hourly matching';
+                        },
+                        label: function(ctx) {
+                            const ds = ctx.dataset;
+                            const raw = ctx.raw;
+                            const demandTwh = regionData.demand_twh;
+                            if (ds._type === 'range') {
+                                const lo = Array.isArray(raw) ? raw[0] : 0;
+                                const hi = Array.isArray(raw) ? raw[1] : 0;
+                                const loTwh = (lo / 100 * demandTwh).toFixed(0);
+                                const hiTwh = (hi / 100 * demandTwh).toFixed(0);
+                                return ` ${ds._resKey === 'clean_firm' ? 'Clean Firm' : ds._resKey.charAt(0).toUpperCase() + ds._resKey.slice(1)}: ${Math.round(lo)}%\u2013${Math.round(hi)}% new (${loTwh}\u2013${hiTwh} TWh)`;
+                            }
+                            if (ds._type === 'median') {
+                                const twh = (raw / 100 * demandTwh).toFixed(0);
+                                return ` Median new: ${Math.round(raw)}% (${twh} TWh)`;
+                            }
+                            return '';
+                        },
+                        afterBody: function(items) {
+                            const idx = items[0]?.dataIndex;
+                            if (idx == null) return '';
+                            const threshKey = threshKeys[idx];
+                            const td = regionData.thresholds[threshKey];
+                            if (!td) return '';
+                            const lines = ['\n  Floors (\"no regrets\" new build):'];
+                            ['clean_firm', 'wind', 'solar'].forEach(r => {
+                                const d = td[r];
+                                if (!d) return;
+                                const floor = Math.max(0, d.min - d.existing);
+                                const label = r === 'clean_firm' ? 'Clean Firm' : r.charAt(0).toUpperCase() + r.slice(1);
+                                const twh = (floor / 100 * regionData.demand_twh).toFixed(0);
+                                lines.push(floor > 0
+                                    ? `  \u2705 ${label}: ${Math.round(floor)}% (${twh} TWh)`
+                                    : `  \u274C ${label}: no guaranteed floor`);
+                            });
+                            return lines;
+                        }
+                    }
+                },
+                datalabels: { display: false },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
+                    title: {
+                        display: true,
+                        text: 'Hourly Matching Target',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    ticks: {
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#1A2744',
+                    }
+                },
+                y: {
+                    min: 0,
+                    title: {
+                        display: true,
+                        text: 'New Build (% of Demand)',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#4A4540',
+                    },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    border: { display: true, color: '#D4D8E0' },
+                    ticks: {
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        color: '#6B6356',
+                        callback: function(v) { return v + '%'; }
+                    }
+                }
+            }
+        }
+    });
+
+    // Insight text
+    const insightEl = document.getElementById('noRegretsInsightText');
+    if (insightEl) {
+        // Find resources with guaranteed floor at 90%
+        const t90 = regionData.thresholds['90'];
+        const safeAt90 = [];
+        if (t90) {
+            ['clean_firm', 'wind', 'solar'].forEach(r => {
+                const d = t90[r];
+                if (d) {
+                    const floor = Math.max(0, d.min - d.existing);
+                    const label = r === 'clean_firm' ? 'Clean Firm' : r.charAt(0).toUpperCase() + r.slice(1);
+                    if (floor > 0) {
+                        const twh = (floor / 100 * regionData.demand_twh).toFixed(0);
+                        safeAt90.push(`<strong>${label}</strong> (${Math.round(floor)}% = ${twh} TWh)`);
+                    }
+                }
+            });
+        }
+
+        if (safeAt90.length > 0) {
+            insightEl.innerHTML = `<strong>At 90% matching in ${iso}:</strong> ${safeAt90.join(', ')}
+                ${safeAt90.length === 1 ? 'is a' : 'are'} &ldquo;no regrets&rdquo; new build${safeAt90.length === 1 ? '' : 's'} &mdash;
+                present in every optimal mix regardless of cost assumptions. The shaded bands show the full range across 324 scenarios.`;
+        } else {
+            insightEl.innerHTML = `<strong>At 90% matching in ${iso}:</strong> No resource has a guaranteed new-build floor &mdash;
+                the optimal mix shifts dramatically depending on cost assumptions. The wide bands show how sensitive the resource choice is
+                to the Firm Gen and Renewable Gen cost toggles.`;
+        }
+    }
+
+    // Bind region pills
+    const pills = document.getElementById('noRegretsRegionPills');
+    if (pills && !pills._bound) {
+        pills._bound = true;
+        pills.addEventListener('click', function(e) {
+            const btn = e.target.closest('.incremental-pill');
+            if (!btn) return;
+            pills.querySelectorAll('.incremental-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            initNoRegretsChart(btn.dataset.region);
+        });
+    }
 }
 
 // Scroll observer for fade-in animations
