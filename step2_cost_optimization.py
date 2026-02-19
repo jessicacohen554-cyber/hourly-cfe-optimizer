@@ -83,6 +83,19 @@ UPRATE_CAP_TWH = {
 }
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+
+# Demand growth rates by ISO (annual, from EIA/NREL projections)
+DEMAND_GROWTH_RATES = {
+    'CAISO':  {'Low': 0.014, 'Medium': 0.019, 'High': 0.025},
+    'ERCOT':  {'Low': 0.020, 'Medium': 0.035, 'High': 0.055},
+    'PJM':    {'Low': 0.015, 'Medium': 0.024, 'High': 0.036},
+    'NYISO':  {'Low': 0.013, 'Medium': 0.020, 'High': 0.044},
+    'NEISO':  {'Low': 0.009, 'Medium': 0.018, 'High': 0.029},
+}
+
+# Full year range for demand growth scenarios (2026-2050)
+DEMAND_GROWTH_YEARS = list(range(2026, 2051))
+DEMAND_GROWTH_LEVELS = ['Low', 'Medium', 'High']
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 LEVEL_NAME = {'L': 'Low', 'M': 'Medium', 'H': 'High', 'N': 'None'}
 LEVEL_CODE = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
@@ -523,6 +536,17 @@ for iso in ISOS:
                 'resource_costs': best_result['resource_costs'],
             }
 
+            # Also compute no-45Q costs using same winning mix + tranche pricing
+            no45q_key = old_to_new_key(sens_key, ccs_level=firm_lev, q45='0', geo_level=geo)
+            no45q_result = price_mix(iso, best_mix, no45q_key, demand_twh)
+            sens_sc['no_45q_costs'] = {
+                'total_cost': no45q_result['total_cost'],
+                'effective_cost': no45q_result['effective_cost'],
+                'incremental': no45q_result['incremental'],
+                'wholesale': no45q_result['wholesale'],
+            }
+            sens_sc['no_45q_tranche_costs'] = no45q_result['tranche_costs']
+
             stats['scenarios_updated'] += 1
 
             # Track global optimum
@@ -569,6 +593,114 @@ elapsed = time.time() - start_time
 print(f"\nCross-evaluation complete in {elapsed:.1f}s")
 print(f"  Total evaluations: {stats['total_evals']:,}")
 print(f"  Mix swaps (scenario got a different mix): {stats['mix_swaps']:,}")
+
+# ============================================================================
+# FULL FACTORIAL DEMAND GROWTH SWEEP
+# ============================================================================
+# For each (ISO, threshold), evaluate all feasible mixes under the full
+# sensitivity factorial (324 × 3 CCS × 2 45Q × [3 geo CAISO]) × 3 demand
+# growth levels × 25 years (2026-2050). Output: compact separate JSON file.
+
+print("\nRunning full factorial demand growth sweep (2026-2050)...")
+print(f"  Years: {len(DEMAND_GROWTH_YEARS)} ({DEMAND_GROWTH_YEARS[0]}-{DEMAND_GROWTH_YEARS[-1]})")
+print(f"  Growth levels: {DEMAND_GROWTH_LEVELS}")
+dg_start = time.time()
+dg_stats = {'total_evals': 0}
+
+# Compact output: {iso: {threshold: {sens_key: {year: {growth: [mix_idx, tc, ec, ic]}}}}}
+demand_growth_data = {
+    'meta': {
+        'years': DEMAND_GROWTH_YEARS,
+        'growth_levels': DEMAND_GROWTH_LEVELS,
+        'growth_rates': DEMAND_GROWTH_RATES,
+        'fields': ['mix_idx', 'total_cost', 'effective_cost', 'incremental'],
+        'base_year': 2025,
+    },
+    'results': {},
+}
+
+for iso in ISOS:
+    demand_growth_data['results'][iso] = {}
+    base_demand_twh = data['results'][iso]['annual_demand_mwh'] / 1e6
+    iso_rates = DEMAND_GROWTH_RATES[iso]
+
+    # Build full sensitivity key set for this ISO
+    # CCS levels × 45Q states × [geo levels for CAISO]
+    ccs_levels = LMH
+    q45_states = ['1', '0']
+    geo_levels = LMH if iso == 'CAISO' else [None]
+
+    for t_key, t_data in data['results'][iso]['thresholds'].items():
+        scenarios = t_data['scenarios']
+        mix_list = extract_unique_mixes(scenarios)
+        if not mix_list:
+            continue
+
+        threshold_results = {}
+
+        for sens_key in scenarios:
+            parts = sens_key.split('_')
+            firm_lev = parts[0][1]
+
+            # Full factorial over CCS × 45Q × geo
+            for ccs_lev in ccs_levels:
+                for q45 in q45_states:
+                    for geo_lev in geo_levels:
+                        new_key = old_to_new_key(sens_key, ccs_level=ccs_lev,
+                                                  q45=q45, geo_level=geo_lev)
+                        # Build compound key for storage
+                        extra = f"_C{ccs_lev}_Q{q45}"
+                        if geo_lev:
+                            extra += f"_G{geo_lev}"
+                        compound_key = sens_key + extra
+
+                        year_results = {}
+                        for year in DEMAND_GROWTH_YEARS:
+                            growth_results = {}
+                            for g_level in DEMAND_GROWTH_LEVELS:
+                                g_rate = iso_rates[g_level]
+
+                                best_idx = 0
+                                best_cost = float('inf')
+                                best_result = None
+
+                                for idx, mx in enumerate(mix_list):
+                                    r = price_mix(iso, mx, new_key, base_demand_twh,
+                                                  target_year=year, growth_rate=g_rate)
+                                    dg_stats['total_evals'] += 1
+
+                                    if r['total_cost'] < best_cost:
+                                        best_cost = r['total_cost']
+                                        best_idx = idx
+                                        best_result = r
+
+                                # Store compact: [mix_idx, total_cost, effective_cost, incremental]
+                                growth_results[g_level] = [
+                                    best_idx,
+                                    round(best_result['total_cost'], 2),
+                                    round(best_result['effective_cost'], 2),
+                                    round(best_result['incremental'], 2),
+                                ]
+
+                            year_results[str(year)] = growth_results
+
+                        threshold_results[compound_key] = year_results
+
+        demand_growth_data['results'][iso][str(t_key)] = threshold_results
+        n_keys = len(threshold_results)
+        print(f"  {iso} {t_key:>5}%: {n_keys} sensitivity combos × {len(DEMAND_GROWTH_YEARS)} years × "
+              f"{len(DEMAND_GROWTH_LEVELS)} growth = {n_keys * len(DEMAND_GROWTH_YEARS) * len(DEMAND_GROWTH_LEVELS)} entries")
+
+dg_elapsed = time.time() - dg_start
+print(f"\nDemand growth sweep complete in {dg_elapsed:.1f}s")
+print(f"  Total evaluations: {dg_stats['total_evals']:,}")
+
+# Save demand growth results separately (compact JSON)
+DG_RESULTS_PATH = Path('dashboard/demand_growth_results.json')
+with open(DG_RESULTS_PATH, 'w') as f:
+    json.dump(demand_growth_data, f, separators=(',', ':'))
+dg_size_mb = os.path.getsize(DG_RESULTS_PATH) / (1024 * 1024)
+print(f"  Saved {DG_RESULTS_PATH} ({dg_size_mb:.1f} MB)")
 
 # ============================================================================
 # EMBED COST TABLES FOR CLIENT-SIDE REPRICING
