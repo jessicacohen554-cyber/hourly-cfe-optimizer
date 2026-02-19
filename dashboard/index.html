@@ -1409,11 +1409,11 @@ body {
     <section class="story-section story-fade-in" id="costCurveSection">
         <div class="story-content">
             <span class="story-badge" style="background:rgba(239,68,68,0.12);color:#DC2626;">Cost Inflection</span>
-            <h2>The Hockey Stick: Where Decarbonization Costs Accelerate</h2>
+            <h2>The Hockey Stick: Where System Costs Accelerate</h2>
 
             <p class="story-lead">
-                Moving from 50% to 90% hourly carbon-free matching is relatively affordable &mdash; incremental costs
-                stay modest as cheap renewables do the heavy lifting. But beyond 90%, costs accelerate sharply.
+                Moving from 50% to 90% hourly carbon-free matching is relatively affordable &mdash; average system
+                costs stay flat as cheap renewables do the heavy lifting. But beyond 90%, costs accelerate sharply.
                 Closing the last few percentage points requires expensive firm generation, long-duration storage,
                 and over-procurement to cover every hour &mdash; creating the classic <strong>hockey stick</strong> cost curve.
             </p>
@@ -1435,19 +1435,19 @@ body {
             <div class="cost-curve-narrative" style="margin-top:1.5rem;">
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
                     <div style="background:#F0FDF4;border-radius:10px;padding:1rem 1.1rem;">
-                        <div style="font-weight:700;color:#166534;font-size:0.9rem;margin-bottom:0.3rem;">50%&ndash;85%: The Easy Wins</div>
-                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">Renewables dominate. Costs grow slowly because wind and solar are
-                            the cheapest generation sources. Modest over-procurement handles variability.</div>
+                        <div style="font-weight:700;color:#166534;font-size:0.9rem;margin-bottom:0.3rem;">50%&ndash;85%: The Flat Zone</div>
+                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">System costs barely rise. Cheap renewables do the heavy lifting, and modest
+                            over-procurement handles variability without expensive firm resources.</div>
                     </div>
                     <div style="background:#FEF9C3;border-radius:10px;padding:1rem 1.1rem;">
                         <div style="font-weight:700;color:#854D0E;font-size:0.9rem;margin-bottom:0.3rem;">85%&ndash;95%: The Inflection Zone</div>
                         <div style="font-size:0.85rem;color:#374151;line-height:1.5;">Firm generation and storage enter the mix to cover nights and low-wind periods.
-                            Each additional percentage point costs more than the last.</div>
+                            System cost per MWh begins to climb as the resource mix shifts toward costlier options.</div>
                     </div>
                     <div style="background:#FEF2F2;border-radius:10px;padding:1rem 1.1rem;">
                         <div style="font-weight:700;color:#991B1B;font-size:0.9rem;margin-bottom:0.3rem;">95%&ndash;100%: The Last Mile</div>
-                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">The most expensive hours to decarbonize. Costs spike as the system
-                            must cover rare weather extremes with premium firm capacity and massive over-procurement.</div>
+                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">System costs spike as the portfolio must cover rare weather extremes
+                            with premium firm capacity, long-duration storage, and massive over-procurement.</div>
                     </div>
                 </div>
             </div>
@@ -3629,32 +3629,32 @@ const NO_REGRETS_DATA = {
 };
 
 // ============================================================================
-// CHART: Hockey Stick Cost Curve (Average MAC by threshold)
+// CHART: Hockey Stick Cost Curve (Average System Cost $/MWh by threshold)
 // ============================================================================
 let costCurveChartInstance = null;
 
 function initCostCurveChart(iso) {
     const canvas = document.getElementById('costCurveChart');
     if (!canvas) return;
-    if (typeof MAC_DATA === 'undefined') return;
+    if (typeof SYSTEM_COST_DATA === 'undefined') return;
 
-    const medData = MAC_DATA.medium?.[iso];
-    const lowData = MAC_DATA.low?.[iso];
-    const highData = MAC_DATA.high?.[iso];
+    const medData = SYSTEM_COST_DATA.medium?.[iso];
+    const lowData = SYSTEM_COST_DATA.low?.[iso];
+    const highData = SYSTEM_COST_DATA.high?.[iso];
     if (!medData) return;
 
-    // Build {x, y} point arrays using THRESHOLDS
+    // Build {x, y} point arrays using THRESHOLDS — skip nulls
     const thresholds = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50,60,70,75,80,85,87.5,90,92.5,95,97.5,99,100];
-    const medPoints = thresholds.map((t, i) => ({ x: t, y: medData[i] }));
-    const lowPoints = lowData ? thresholds.map((t, i) => ({ x: t, y: lowData[i] })) : [];
-    const highPoints = highData ? thresholds.map((t, i) => ({ x: t, y: highData[i] })) : [];
+    const medPoints = thresholds.map((t, i) => medData[i] != null ? { x: t, y: medData[i] } : null).filter(Boolean);
+    const lowPoints = lowData ? thresholds.map((t, i) => lowData[i] != null ? { x: t, y: lowData[i] } : null).filter(Boolean) : [];
+    const highPoints = highData ? thresholds.map((t, i) => highData[i] != null ? { x: t, y: highData[i] } : null).filter(Boolean) : [];
 
-    // Y-axis max: rounded up from high data, capped at 600 for readability
-    const rawMax = highData ? Math.max(...highData.filter(v => v != null)) : Math.max(...medData);
-    const yMax = Math.min(Math.ceil(rawMax / 50) * 50 + 50, 600);
-
-    // DAC reference at $250/mtCO₂ (Medium mid)
-    const dacRef = 250;
+    // Y-axis: auto-scale from data
+    const allVals = [...(highData || medData)].filter(v => v != null);
+    const rawMax = Math.max(...allVals);
+    const rawMin = Math.min(...[...(lowData || medData)].filter(v => v != null));
+    const yMax = Math.ceil(rawMax / 20) * 20 + 20;
+    const yMin = Math.max(0, Math.floor(rawMin / 20) * 20 - 20);
 
     // Region color
     const regionColors = typeof REGION_COLORS !== 'undefined' ? REGION_COLORS : {
@@ -3681,9 +3681,9 @@ function initCostCurveChart(iso) {
                     tension: 0.35,
                     order: 3
                 },
-                // Medium (midpoint line)
+                // Medium (median line)
                 {
-                    label: 'Medium cost scenario',
+                    label: 'Median cost scenario',
                     data: medPoints,
                     borderColor: c,
                     backgroundColor: c + '10',
@@ -3739,13 +3739,13 @@ function initCostCurveChart(iso) {
                     }
                 },
                 y: {
-                    min: 0,
+                    min: yMin,
                     max: yMax,
                     grid: { color: 'rgba(0,0,0,0.06)' },
                     border: { display: true, color: '#D4D8E0' },
                     title: {
                         display: true,
-                        text: 'Average Abatement Cost ($/mtCO\u2082)',
+                        text: 'Average System Cost ($/MWh)',
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
                         color: '#4A4540'
                     },
@@ -3767,9 +3767,8 @@ function initCostCurveChart(iso) {
                         padding: 14,
                         generateLabels: function() {
                             return [
-                                { text: 'Medium scenario', fillStyle: c, strokeStyle: c, lineWidth: 2, pointStyle: 'circle' },
-                                { text: 'Low\u2013High range', fillStyle: c + '20', strokeStyle: c + '44', lineWidth: 1, pointStyle: 'rectRounded' },
-                                { text: 'DAC $' + dacRef + '/mtCO\u2082', fillStyle: '#E91E6330', strokeStyle: '#E91E63', lineWidth: 1.5, pointStyle: 'line', lineDash: [5, 3] }
+                                { text: 'Median scenario', fillStyle: c, strokeStyle: c, lineWidth: 2, pointStyle: 'circle' },
+                                { text: 'P10\u2013P90 range', fillStyle: c + '20', strokeStyle: c + '44', lineWidth: 1, pointStyle: 'rectRounded' }
                             ];
                         }
                     },
@@ -3792,46 +3791,16 @@ function initCostCurveChart(iso) {
                             const lo = ti >= 0 && lowData ? lowData[ti] : null;
                             const hi = ti >= 0 && highData ? highData[ti] : null;
                             if (item.datasetIndex === 1) {
-                                let line = 'Avg MAC: $' + Math.round(med) + '/mtCO\u2082';
-                                if (lo != null && hi != null) line += ' (Low: $' + Math.round(lo) + ', High: $' + Math.round(hi) + ')';
+                                let line = 'System Cost: $' + Math.round(med) + '/MWh';
+                                if (lo != null && hi != null) line += ' (P10: $' + Math.round(lo) + ', P90: $' + Math.round(hi) + ')';
                                 return line;
                             }
                             return null;
-                        },
-                        afterBody: function(items) {
-                            const x = items[0]?.raw?.x;
-                            if (x == null) return '';
-                            const ti = thresholds.indexOf(x);
-                            const med = ti >= 0 ? medData[ti] : 0;
-                            if (med > dacRef) {
-                                return '\n  \u26A0 Above DAC reference ($' + dacRef + '/mtCO\u2082)';
-                            } else if (med > dacRef * 0.8) {
-                                return '\n  Approaching DAC reference';
-                            }
-                            return '';
                         }
                     }
                 },
                 annotation: {
                     annotations: {
-                        dacLine: {
-                            type: 'line',
-                            yMin: dacRef,
-                            yMax: dacRef,
-                            borderColor: '#E91E6388',
-                            borderWidth: 2,
-                            borderDash: [6, 4],
-                            label: {
-                                display: true,
-                                content: 'DAC $' + dacRef + '/mtCO\u2082',
-                                position: 'end',
-                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 600 },
-                                color: '#E91E63',
-                                backgroundColor: 'rgba(255,255,255,0.9)',
-                                borderRadius: 4,
-                                padding: { top: 2, bottom: 2, left: 6, right: 6 }
-                            }
-                        },
                         inflectionZone: {
                             type: 'box',
                             xMin: 90,
@@ -3849,30 +3818,19 @@ function initCostCurveChart(iso) {
     // Dynamic insight text
     const insightEl = document.getElementById('costCurveInsightText');
     if (insightEl) {
-        const mac75 = medData[thresholds.indexOf(75)] || 0;
-        const mac90 = medData[thresholds.indexOf(90)] || 0;
-        const mac95 = medData[thresholds.indexOf(95)] || 0;
-        const mac99 = medData[thresholds.indexOf(99)] || 0;
-        const mac100 = medData[thresholds.indexOf(100)] || 0;
-
-        // Find where MAC crosses DAC reference
-        let crossoverThresh = null;
-        for (let i = 0; i < thresholds.length; i++) {
-            if (medData[i] >= dacRef) { crossoverThresh = thresholds[i]; break; }
-        }
+        const cost75 = medData[thresholds.indexOf(75)];
+        const cost90 = medData[thresholds.indexOf(90)];
+        const cost100 = medData[thresholds.indexOf(100)];
 
         let html = `<strong>${iso}:</strong> `;
-        if (mac90 > 0 && mac75 > 0) {
-            const ratio = (mac100 / mac75).toFixed(1);
-            html += `At 75% matching, average abatement costs just <strong>$${Math.round(mac75)}/mtCO\u2082</strong>. `;
-            html += `By 90% it rises to <strong>$${Math.round(mac90)}/mtCO\u2082</strong>, `;
-            html += `and at 100% it reaches <strong>$${Math.round(mac100)}/mtCO\u2082</strong> &mdash; `;
-            html += `<strong>${ratio}&times;</strong> the cost at 75%. `;
-        }
-        if (crossoverThresh != null && crossoverThresh <= 100) {
-            html += `Costs exceed the DAC reference ($${dacRef}/mtCO\u2082) at <strong>${crossoverThresh}%</strong> matching.`;
-        } else {
-            html += `Costs stay below the DAC reference ($${dacRef}/mtCO\u2082) across all thresholds.`;
+        if (cost90 != null && cost75 != null) {
+            const increase90 = cost90 - cost75;
+            const increase100 = cost100 - cost75;
+            html += `At 75% matching, average system cost is <strong>$${Math.round(cost75)}/MWh</strong>. `;
+            html += `By 90% it's <strong>$${Math.round(cost90)}/MWh</strong> `;
+            html += `(+$${Math.round(increase90)}), `;
+            html += `and at 100% it jumps to <strong>$${Math.round(cost100)}/MWh</strong> &mdash; `;
+            html += `<strong>+$${Math.round(increase100)}/MWh</strong> above the 75% level.`;
         }
         insightEl.innerHTML = html;
     }

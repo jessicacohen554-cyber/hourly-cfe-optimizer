@@ -3952,7 +3952,7 @@ function getCompressedDayProfile(iso, entry) {
         const cd = COMPRESSED_DAY_DATA[iso];
         const tIdx = THRESHOLDS.indexOf(parseFloat(String(entry.threshold || '')));
         if (tIdx >= 0 && cd.demand[tIdx] && cd.demand[tIdx].some(v => v > 0)) {
-            return {
+            const result = {
                 demand: cd.demand[tIdx],
                 gap: cd.gap[tIdx],
                 battery_charge: cd.battery_charge[tIdx],
@@ -3963,8 +3963,21 @@ function getCompressedDayProfile(iso, entry) {
                     wind: cd.matched.wind[tIdx],
                     ccs_ccgt: cd.matched.ccs_ccgt[tIdx],
                     hydro: cd.matched.hydro[tIdx],
+                    battery: cd.matched.battery?.[tIdx] || new Array(24).fill(0),
+                    ldes: cd.matched.ldes?.[tIdx] || new Array(24).fill(0),
                 },
             };
+            // Include surplus if available
+            if (cd.surplus) {
+                result.surplus = {
+                    clean_firm: cd.surplus.clean_firm?.[tIdx] || new Array(24).fill(0),
+                    solar: cd.surplus.solar?.[tIdx] || new Array(24).fill(0),
+                    wind: cd.surplus.wind?.[tIdx] || new Array(24).fill(0),
+                    ccs_ccgt: cd.surplus.ccs_ccgt?.[tIdx] || new Array(24).fill(0),
+                    hydro: cd.surplus.hydro?.[tIdx] || new Array(24).fill(0),
+                };
+            }
+            return result;
         }
     }
 
@@ -4563,7 +4576,7 @@ function updateCompressedDay(entry, region, iso) {
     const rRaw = (arr) => rotateToLocal(arr).map(v => toMWh(v));
     const z24 = new Array(24).fill(0);
 
-    // Calculate stacked matched values (in MW, local time) — all 7 resource types
+    // Calculate stacked matched values (in MWh, local time) — all 7 resource types
     // Split clean_firm into nuclear + geothermal using threshold-aware tranche data
     const matchedCleanFirmRaw = r(cd.matched.clean_firm || z24);
     // Compute geo fraction from tranche data for this threshold
@@ -4595,11 +4608,11 @@ function updateCompressedDay(entry, region, iso) {
     const matchedBattery = r(cd.matched.battery || cd.matched.storage || z24);
     const matchedLDES = r(cd.matched.ldes || z24);
 
-    // Separate charging for battery and LDES (negative, below x-axis) — in MW, local time
+    // Separate charging for battery and LDES (negative, below x-axis) — in MWh, local time
     const batteryCharge = rRaw(cd.battery_charge || z24);
     const ldesCharge = rRaw(cd.ldes_charge || z24);
 
-    // Per-resource surplus (curtailed) — in MW, local time
+    // Per-resource surplus (curtailed) — in MWh, local time
     const surplusSolar = rRaw(cd.surplus?.solar || z24);
     const surplusWind = rRaw(cd.surplus?.wind || z24);
     const surplusHydro = rRaw(cd.surplus?.hydro || z24);
@@ -4608,7 +4621,7 @@ function updateCompressedDay(entry, region, iso) {
     const surplusGeothermal = surplusCleanFirmRaw.map(v => v * cfGeoFrac);
     const surplusCCS = rRaw(cd.surplus?.ccs_ccgt || z24);
 
-    // Gap (unmatched) — in MW, local time
+    // Gap (unmatched) — in MWh, local time
     const gap = rRaw(cd.gap);
 
     // Build stacked bottom-up: clean_firm, ccs_ccgt, hydro, wind, solar, battery, ldes
