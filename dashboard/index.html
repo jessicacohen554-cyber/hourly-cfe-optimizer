@@ -1179,16 +1179,14 @@ body {
     <p class="subtitle">
         Annual clean energy targets hide a critical gap: the hours when the sun isn&rsquo;t shining and the wind
         isn&rsquo;t blowing. This analysis models the cost of closing that gap &mdash; hour by hour, across five
-        major US grid regions<sup style="font-size:0.7em;color:#6B7280;">[1]</sup>, under 324 cost scenarios<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup> &mdash; to reveal where the real inflection points lie.
+        major US grid regions<sup style="font-size:0.7em;color:#6B7280;">[1]</sup>, under 5,832+ cost scenarios<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup> &mdash; to reveal where the real inflection points lie.
     </p>
 </div>
 
 <!-- NAV BUTTONS -->
 <div class="nav-buttons">
     <a href="dashboard.html" class="nav-btn nav-btn-primary">&#128202; Explore the Dashboard</a>
-    <a href="region_deepdive.html" class="nav-btn nav-btn-secondary">Regional Deep Dives</a>
-    <a href="abatement_comparison.html" class="nav-btn nav-btn-secondary">CO&#8322; Abatement Analysis</a>
-    <a href="eac_scarcity.html" class="nav-btn nav-btn-secondary">EAC Scarcity</a>
+    <a href="abatement_dashboard.html" class="nav-btn nav-btn-secondary">CO&#8322; Abatement Analysis</a>
     <a href="research_paper.html" class="nav-btn nav-btn-secondary">&#128196; Methodology &amp; Paper</a>
     <a href="about.html" class="nav-btn nav-btn-secondary">About</a>
     <a href="../power-gen-decarbonization/site/index.html" class="nav-btn nav-btn-secondary">&#9889; Generator Analysis</a>
@@ -1277,7 +1275,7 @@ body {
                 </p>
 
                 <p>
-                    <strong>Uncertainty is asymmetric and region-specific.</strong> Statistical analysis across 324
+                    <strong>Uncertainty is asymmetric and region-specific.</strong> Statistical analysis across 5,832+
                     cost scenarios reveals that MAC uncertainty is driven by different factors in each region: firm
                     generation costs dominate in nuclear-heavy NYISO (58% of variance) and PJM (44%), while
                     renewable costs drive ERCOT (48%) and fossil fuel prices matter most in coal-heavy PJM (28%).
@@ -1461,7 +1459,7 @@ body {
             <h2>&ldquo;No Regrets&rdquo; New Build: What&rsquo;s Safe Regardless of Assumptions?</h2>
 
             <p class="story-lead">
-                We tested <strong>324 sensitivity combinations</strong> per threshold &mdash; varying renewable costs,
+                We tested <strong>5,832+ sensitivity combinations</strong> per threshold &mdash; varying renewable costs,
                 firm generation costs, storage costs, fossil fuel prices, and transmission costs from Low to High.
                 The <strong>floor</strong> (minimum across all scenarios) reveals what you&rsquo;d build even
                 under the worst-case cost assumptions.
@@ -1685,9 +1683,7 @@ body {
 <footer style="background:#1a1a2e;padding:24px;text-align:center;">
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-bottom:12px;">
         <a href="dashboard.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Dashboard</a>
-        <a href="region_deepdive.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Regional Deep Dives</a>
-        <a href="abatement_comparison.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">CO&#8322; Abatement</a>
-        <a href="eac_scarcity.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">EAC Scarcity</a>
+        <a href="abatement_dashboard.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">CO&#8322; Abatement</a>
         <a href="research_paper.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Methodology &amp; Paper</a>
         <a href="about.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">About</a>
         <a href="../power-gen-decarbonization/site/index.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Generator Analysis</a>
@@ -3574,7 +3570,7 @@ function initHomepage90CostChart() {
 }
 
 // ---- No Regrets Chart ----
-// Shows min/median/max new-build % across all 324 sensitivity scenarios
+// Shows min/median/max new-build % across all 5,832+ sensitivity scenarios
 const NO_REGRETS_DATA = {
     CAISO: { demand_twh: 224.0, existing: { clean_firm: 7.9, solar: 22.3, wind: 8.8 },
         thresholds: {
@@ -4109,7 +4105,7 @@ function initNoRegretsChart(iso) {
         if (safeAt90.length > 0) {
             insightEl.innerHTML = `<strong>At 90% matching in ${iso}:</strong> ${safeAt90.join(', ')}
                 ${safeAt90.length === 1 ? 'is a' : 'are'} &ldquo;no regrets&rdquo; new build${safeAt90.length === 1 ? '' : 's'} &mdash;
-                present in every optimal mix regardless of cost assumptions. The shaded bands show the full range across 324 scenarios.`;
+                present in every optimal mix regardless of cost assumptions. The shaded bands show the full range across 5,832+ scenarios.`;
         } else {
             insightEl.innerHTML = `<strong>At 90% matching in ${iso}:</strong> No resource has a guaranteed new-build floor &mdash;
                 the optimal mix shifts dramatically depending on cost assumptions. The wide bands show how sensitive the resource choice is
