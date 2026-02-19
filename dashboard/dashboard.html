@@ -3331,7 +3331,7 @@ body {
         <div class="metric-tile" id="tileTotalCost">
             <div class="tile-label">Full System Cost</div>
             <div class="tile-value" id="metricTotalCost">--</div>
-            <div class="tile-sub" id="metricTotalCostSub">clean + gas backup $/MWh</div>
+            <div class="tile-sub" id="metricTotalCostSub">clean + gas backup annual</div>
         </div>
         <div class="metric-tile" id="tileGasBackup">
             <div class="tile-label">Gas Backup Needed</div>
@@ -3460,22 +3460,40 @@ const RESOURCE_LABELS = {
 // CLEAN_FIRM_ENERGY_SPLIT now lives in shared-data.js (single source of truth)
 
 // Split a clean_firm value into nuclear + geothermal portions.
-// For new build, uses cost-model tranche data if available;
-// otherwise falls back to existing energy split ratios.
-function splitCleanFirm(iso, value, resourceCostEntry) {
-    if (!value || value <= 0) return { nuclear: 0, geothermal: 0 };
-    // If cost-model tranche data available (new build), use it
-    if (resourceCostEntry) {
-        const geoTwh = resourceCostEntry.geo_twh || 0;
-        const nucTwh = (resourceCostEntry.uprate_twh || 0) + (resourceCostEntry.nuclear_newbuild_twh || 0);
-        const total = geoTwh + nucTwh;
+// Uses CF_TRANCHE_DATA (threshold-aware) when available; falls back to static ratios.
+// thresholdIdx: index into THRESHOLDS array (optional — uses current selection if omitted)
+function splitCleanFirm(iso, value, thresholdIdx) {
+    if (!value || value <= 0) return { nuclear: 0, geothermal: 0, ccs: 0 };
+    // Resolve threshold index from current selection if not passed
+    if (thresholdIdx == null) {
+        const sel = document.getElementById('thresholdSelect');
+        const tv = sel ? parseFloat(sel.value) : -1;
+        thresholdIdx = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.indexOf(tv) : -1;
+    }
+    // Use CF_TRANCHE_DATA for threshold-aware split
+    const tr = (typeof CF_TRANCHE_DATA !== 'undefined') ? CF_TRANCHE_DATA[iso] : null;
+    if (tr && thresholdIdx >= 0 && thresholdIdx < (tr.geo_twh || []).length) {
+        const existTwh = tr.cf_existing_twh[thresholdIdx] || 0;
+        const uprateTwh = tr.uprate_twh[thresholdIdx] || 0;
+        const geoTwh = tr.geo_twh[thresholdIdx] || 0;
+        const nucNewTwh = tr.nuclear_newbuild_twh[thresholdIdx] || 0;
+        // Existing clean firm contains some geo in CAISO
+        const existSplit = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
+        const existGeoTwh = existTwh * existSplit.geothermal;
+        const totalGeoTwh = existGeoTwh + geoTwh;
+        const totalNucTwh = (existTwh - existGeoTwh) + uprateTwh + nucNewTwh;
+        const total = totalNucTwh + totalGeoTwh;
         if (total > 0) {
-            return { nuclear: value * nucTwh / total, geothermal: value * geoTwh / total };
+            return {
+                nuclear: value * totalNucTwh / total,
+                geothermal: value * totalGeoTwh / total,
+                ccs: 0  // CCS is separate in resource_mix
+            };
         }
     }
-    // Fall back to energy split ratios (for existing capacity or when tranche data unavailable)
+    // Fall back to energy split ratios
     const split = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
-    return { nuclear: value * split.nuclear, geothermal: value * split.geothermal };
+    return { nuclear: value * split.nuclear, geothermal: value * split.geothermal, ccs: 0 };
 }
 
 const OUTLINE_COLOR = '#374151';
@@ -3537,8 +3555,21 @@ if (typeof MIX_LABELS_MAP !== 'undefined') {
     MIX_LABELS_MAP.geothermal = 'Geothermal';
 }
 
+// ---- Gas Backup Capacity Constants (Lazard v16.0 CCGT) ----
+const GAS_CAPACITY_CONSTANTS = {
+    RESOURCE_ADEQUACY_MARGIN: 0.15,
+    PEAK_DEMAND_MW: { CAISO: 43860, ERCOT: 83597, PJM: 160560, NYISO: 31857, NEISO: 25898 },
+    EXISTING_GAS_CAPACITY_MW: { CAISO: 37000, ERCOT: 55000, PJM: 75000, NYISO: 18000, NEISO: 14000 },
+    NEW_CCGT_COST_KW_YR: { CAISO: 112, ERCOT: 89, PJM: 99, NYISO: 114, NEISO: 105 },
+    EXISTING_GAS_FOM_KW_YR: { CAISO: 16, ERCOT: 13, PJM: 14, NYISO: 17, NEISO: 15 },
+    PEAK_CAPACITY_CREDITS: {
+        clean_firm: 1.0, solar: 0.30, wind: 0.10, ccs_ccgt: 0.90,
+        hydro: 0.50, battery: 0.95, ldes: 0.90
+    }
+};
+
 // ---- Client-Side Repricing Engine ----
-// Mirrors Python step2_cost_optimization.price_mix() for 40k+ sensitivity combos
+// Mirrors Python step3_cost_optimization.price_mix_batch() for sensitivity combos
 // Uses FEASIBLE_MIXES + cost tables from shared-data.js
 // targetYear & growthRate: optional demand growth params. Existing generation stays
 // flat in absolute TWh; its share of grown demand shrinks, requiring more new-build.
@@ -3682,6 +3713,32 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     resourceCosts.ldes = { dispatch_pct: ldesPct, cost_per_demand_mwh: ldesCost };
     totalCost += ldesCost;
 
+    // ---- Gas Backup Capacity Cost (mirrors step 3 objective) ----
+    const gc = GAS_CAPACITY_CONSTANTS;
+    const peakMw = gc.PEAK_DEMAND_MW[iso] || 0;
+    const raPeakMw = peakMw * (1 + gc.RESOURCE_ADEQUACY_MARGIN);
+    const avgDemandMw = demandTwh * 1e6 / 8760;
+    const cc = gc.PEAK_CAPACITY_CREDITS;
+    // Clean peak capacity from all resources
+    const cleanPeakMw =
+        (proc * (rm.clean_firm || 0) / 100 * avgDemandMw * cc.clean_firm) +
+        (proc * (rm.solar || 0) / 100 * avgDemandMw * cc.solar) +
+        (proc * (rm.wind || 0) / 100 * avgDemandMw * cc.wind) +
+        (proc * (rm.ccs_ccgt || 0) / 100 * avgDemandMw * cc.ccs_ccgt) +
+        (proc * (rm.hydro || 0) / 100 * avgDemandMw * cc.hydro) +
+        (batPct / 100 * avgDemandMw * cc.battery) +
+        (ldesPct / 100 * avgDemandMw * cc.ldes);
+    const gasNeededMw = Math.max(0, raPeakMw - cleanPeakMw);
+    const existingGasMw = gc.EXISTING_GAS_CAPACITY_MW[iso] || 0;
+    const existingGasUsedMw = Math.min(gasNeededMw, existingGasMw);
+    const newGasMw = Math.max(0, gasNeededMw - existingGasUsedMw);
+    const demandMwh = demandTwh * 1e6;
+    const gasCostPerMwh = demandMwh > 0
+        ? (existingGasUsedMw * (gc.EXISTING_GAS_FOM_KW_YR[iso] || 15) * 1000 +
+           newGasMw * (gc.NEW_CCGT_COST_KW_YR[iso] || 100) * 1000) / demandMwh
+        : 0;
+    totalCost += gasCostPerMwh;
+
     const effectiveCost = matchFrac > 0 ? totalCost / matchFrac : 0;
 
     return {
@@ -3690,6 +3747,14 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
         incremental: effectiveCost - wholesale,
         wholesale: wholesale,
         resource_costs: resourceCosts,
+        gas_backup: {
+            gas_backup_needed_mw: gasNeededMw,
+            existing_gas_used_mw: existingGasUsedMw,
+            new_gas_build_mw: newGasMw,
+            gas_cost_per_mwh: gasCostPerMwh,
+            clean_peak_capacity_mw: cleanPeakMw,
+            clean_coverage_pct: raPeakMw > 0 ? cleanPeakMw / raPeakMw * 100 : 0
+        },
         // Preserve mix info for normalizeEntry
         resource_mix: rm,
         procurement_pct: mixArr[5],
@@ -3781,6 +3846,11 @@ function resolveEntry(region, thresholdKey) {
                     resource_costs: optimal.resource_costs
                 }
             };
+
+            // Carry over gas_backup from repricing
+            if (optimal.gas_backup) {
+                entry.gas_backup = optimal.gas_backup;
+            }
 
             // Carry over CO2 data from the pre-computed MMM_M_M scenario if available
             if (thresholdData.scenarios) {
@@ -4491,11 +4561,30 @@ function updateCompressedDay(entry, region, iso) {
     const z24 = new Array(24).fill(0);
 
     // Calculate stacked matched values (in MW, local time) — all 7 resource types
-    // Split clean_firm into nuclear + geothermal using energy split ratios
+    // Split clean_firm into nuclear + geothermal using threshold-aware tranche data
     const matchedCleanFirmRaw = r(cd.matched.clean_firm || z24);
-    const cfSplit = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
-    const matchedNuclear = matchedCleanFirmRaw.map(v => v * cfSplit.nuclear);
-    const matchedGeothermal = matchedCleanFirmRaw.map(v => v * cfSplit.geothermal);
+    // Compute geo fraction from tranche data for this threshold
+    const cdThreshVal = parseFloat(findClosestThreshold(region, document.getElementById('thresholdSelect')?.value));
+    const cdThreshIdx = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.indexOf(cdThreshVal) : -1;
+    const cdTr = (typeof CF_TRANCHE_DATA !== 'undefined') ? CF_TRANCHE_DATA[iso] : null;
+    let cfGeoFrac = 0;
+    if (cdTr && cdThreshIdx >= 0) {
+        const existTwh = cdTr.cf_existing_twh[cdThreshIdx] || 0;
+        const uprateTwh = cdTr.uprate_twh[cdThreshIdx] || 0;
+        const geoTwh = cdTr.geo_twh[cdThreshIdx] || 0;
+        const nucNewTwh = cdTr.nuclear_newbuild_twh[cdThreshIdx] || 0;
+        const existSplit = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
+        const existGeoTwh = existTwh * existSplit.geothermal;
+        const totalGeo = existGeoTwh + geoTwh;
+        const totalNuc = (existTwh - existGeoTwh) + uprateTwh + nucNewTwh;
+        const total = totalNuc + totalGeo;
+        if (total > 0) cfGeoFrac = totalGeo / total;
+    } else {
+        const fallback = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
+        cfGeoFrac = fallback.geothermal;
+    }
+    const matchedNuclear = matchedCleanFirmRaw.map(v => v * (1 - cfGeoFrac));
+    const matchedGeothermal = matchedCleanFirmRaw.map(v => v * cfGeoFrac);
     const matchedCCS = r(cd.matched.ccs_ccgt || z24);
     const matchedSolar = r(cd.matched.solar || z24);
     const matchedWind = r(cd.matched.wind || z24);
@@ -4512,8 +4601,8 @@ function updateCompressedDay(entry, region, iso) {
     const surplusWind = rRaw(cd.surplus?.wind || z24);
     const surplusHydro = rRaw(cd.surplus?.hydro || z24);
     const surplusCleanFirmRaw = rRaw(cd.surplus?.clean_firm || z24);
-    const surplusNuclear = surplusCleanFirmRaw.map(v => v * cfSplit.nuclear);
-    const surplusGeothermal = surplusCleanFirmRaw.map(v => v * cfSplit.geothermal);
+    const surplusNuclear = surplusCleanFirmRaw.map(v => v * (1 - cfGeoFrac));
+    const surplusGeothermal = surplusCleanFirmRaw.map(v => v * cfGeoFrac);
     const surplusCCS = rRaw(cd.surplus?.ccs_ccgt || z24);
 
     // Gap (unmatched) — in MW, local time
@@ -4536,7 +4625,7 @@ function updateCompressedDay(entry, region, iso) {
 
     // Build cumulative stacking arrays (bottom to top)
     // nuclear → geothermal → ccs_ccgt → hydro → wind → solar → battery → ldes
-    const hasGeo = cfSplit.geothermal > 0;
+    const hasGeo = cfGeoFrac > 0;
     const stack0 = matchedNuclear;
     const stack0b = hasGeo ? stack0.map((v, i) => v + matchedGeothermal[i]) : stack0;
     const stack1 = stack0b.map((v, i) => v + matchedCCS[i]);
@@ -6649,32 +6738,61 @@ function updateHeatmapTiles(region, entry, iso) {
     }
 
     // ---- Full System Cost & Gas Backup tiles ----
-    // Look up gas backup data from GAS_BACKUP_DATA by threshold index
+    // Use entry.gas_backup from repricing if available; else pre-computed GAS_BACKUP_DATA
     const currentThreshVal = parseFloat(findClosestThreshold(region, document.getElementById('thresholdSelect')?.value));
     const gbIdx = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(currentThreshVal) : -1;
-    const gbData = (typeof GAS_BACKUP_DATA !== 'undefined' && GAS_BACKUP_DATA[iso]) ? GAS_BACKUP_DATA[iso] : null;
+    const gbPrecomp = (typeof GAS_BACKUP_DATA !== 'undefined' && GAS_BACKUP_DATA[iso]) ? GAS_BACKUP_DATA[iso] : null;
+    const entryGb = entry.gas_backup || null;
 
-    // Collect min/max for new tiles across all thresholds
+    // Collect min/max for heatmap scaling across all thresholds
     let minTotalCost = Infinity, maxTotalCost = -Infinity;
     let minGasBackup = Infinity, maxGasBackup = -Infinity;
-    if (gbData) {
-        for (let gi = 0; gi < (gbData.total_system_cost || []).length; gi++) {
-            const tc = gbData.total_system_cost[gi];
-            const gb = gbData.gas_backup_mw[gi];
+    if (gbPrecomp) {
+        for (let gi = 0; gi < (gbPrecomp.total_system_cost || []).length; gi++) {
+            const tc = gbPrecomp.total_system_cost[gi];
+            const gb = gbPrecomp.gas_backup_mw[gi];
             if (tc > 0) { minTotalCost = Math.min(minTotalCost, tc); maxTotalCost = Math.max(maxTotalCost, tc); }
             if (gb >= 0) { minGasBackup = Math.min(minGasBackup, gb); maxGasBackup = Math.max(maxGasBackup, gb); }
         }
     }
 
-    // Full System Cost tile (clean + ALL gas backup $/kW-yr → $/MWh)
+    // Resolve current gas values — repriced entry takes priority
+    const demandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined') ? (REGIONAL_DEMAND_TWH[iso] || 0) : 0;
+    let curTotalCostPerMwh = null, curGasCostPerMwh = null;
+    let curGasMw = null, curNewGasMw = null, curCoverage = null, curNewGasCost = null;
+
+    if (entryGb) {
+        // From client-side repricing — total_cost already includes gas
+        const cleanCost = (entry.costs_detail?.total_cost_per_demand_mwh || entry.costs?.total_cost_per_demand_mwh || 0);
+        curTotalCostPerMwh = cleanCost;  // gas already baked into total_cost from priceMix
+        curGasCostPerMwh = entryGb.gas_cost_per_mwh || 0;
+        curGasMw = entryGb.gas_backup_needed_mw || 0;
+        curNewGasMw = entryGb.new_gas_build_mw || 0;
+        curCoverage = entryGb.clean_coverage_pct || 0;
+        // New gas cost per MWh for incremental tile
+        const newGasCostKwYr = (GAS_CAPACITY_CONSTANTS.NEW_CCGT_COST_KW_YR[iso] || 100);
+        curNewGasCost = demandTWh > 0 ? curNewGasMw * newGasCostKwYr * 1000 / (demandTWh * 1e6) : 0;
+    } else if (gbPrecomp && gbIdx >= 0) {
+        curTotalCostPerMwh = gbPrecomp.total_system_cost[gbIdx];
+        curGasCostPerMwh = gbPrecomp.gas_backup_cost[gbIdx];
+        curGasMw = gbPrecomp.gas_backup_mw[gbIdx];
+        curNewGasMw = gbPrecomp.new_gas_build_mw[gbIdx];
+        curCoverage = gbPrecomp.clean_coverage_pct[gbIdx];
+        curNewGasCost = gbPrecomp.new_gas_cost[gbIdx];
+    }
+
+    // Full System Cost tile — absolute $ (annual, billions)
     const totalCostEl = document.getElementById('metricTotalCost');
     const totalCostSub = document.getElementById('metricTotalCostSub');
-    if (totalCostEl && gbData && gbIdx >= 0) {
-        const totalSysCost = gbData.total_system_cost[gbIdx];
-        const gasCostPart = gbData.gas_backup_cost[gbIdx];
-        totalCostEl.textContent = '$' + formatNum(totalSysCost) + '/MWh';
-        totalCostSub.textContent = `incl. $${formatNum(gasCostPart)}/MWh gas capacity`;
-        applyHeatmap('tileTotalCost', totalSysCost, minTotalCost, maxTotalCost, true);
+    if (totalCostEl && curTotalCostPerMwh != null && demandTWh > 0) {
+        // $/MWh × TWh × 1e6 MWh/TWh = $ → /1e9 = $B
+        const totalAnnualB = curTotalCostPerMwh * demandTWh * 1e6 / 1e9;
+        const gasAnnualB = curGasCostPerMwh * demandTWh * 1e6 / 1e9;
+        totalCostEl.textContent = '$' + formatNum(totalAnnualB, 1) + 'B/yr';
+        totalCostSub.textContent = `incl. $${formatNum(gasAnnualB, 1)}B gas capacity`;
+        const minB = minTotalCost * demandTWh * 1e6 / 1e9;
+        const maxB = maxTotalCost * demandTWh * 1e6 / 1e9;
+        applyHeatmap('tileTotalCost', totalAnnualB, minB, maxB, true);
     } else if (totalCostEl) {
         totalCostEl.textContent = '--';
     }
@@ -6682,12 +6800,11 @@ function updateHeatmapTiles(region, entry, iso) {
     // Incremental Cost tile: add new-build gas cost to existing value
     const incrCostEl = document.getElementById('metricCost');
     const incrCostSub = document.getElementById('metricCostSub');
-    if (incrCostEl && gbData && gbIdx >= 0 && adj.newIncremental != null) {
-        const newGasCost = gbData.new_gas_cost[gbIdx];
-        const incrWithGas = adj.newIncremental + newGasCost;
+    if (incrCostEl && curNewGasCost != null && adj.newIncremental != null) {
+        const incrWithGas = adj.newIncremental + curNewGasCost;
         incrCostEl.textContent = '$' + formatNum(incrWithGas) + '/MWh';
-        if (newGasCost > 0) {
-            incrCostSub.textContent = `+$${formatNum(newGasCost)}/MWh new CCGT capacity`;
+        if (curNewGasCost > 0) {
+            incrCostSub.textContent = `+$${formatNum(curNewGasCost)}/MWh new CCGT capacity`;
         } else {
             incrCostSub.textContent = 'no new gas capacity needed';
         }
@@ -6696,17 +6813,14 @@ function updateHeatmapTiles(region, entry, iso) {
     // Gas Backup tile (MW needed for resource adequacy)
     const gasBackupEl = document.getElementById('metricGasBackup');
     const gasBackupSub = document.getElementById('metricGasBackupSub');
-    if (gasBackupEl && gbData && gbIdx >= 0) {
-        const gasMw = gbData.gas_backup_mw[gbIdx];
-        const newGasMw = gbData.new_gas_build_mw[gbIdx];
-        const coverage = gbData.clean_coverage_pct[gbIdx];
-        gasBackupEl.textContent = formatNum(gasMw / 1000, 1) + ' GW';
-        if (newGasMw > 0) {
-            gasBackupSub.textContent = `${formatNum(newGasMw / 1000, 1)} GW new-build | ${coverage}% clean coverage`;
+    if (gasBackupEl && curGasMw != null) {
+        gasBackupEl.textContent = formatNum(curGasMw / 1000, 1) + ' GW';
+        if (curNewGasMw > 0) {
+            gasBackupSub.textContent = `${formatNum(curNewGasMw / 1000, 1)} GW new-build | ${formatNum(curCoverage)}% clean coverage`;
         } else {
-            gasBackupSub.textContent = `existing fleet sufficient | ${coverage}% clean coverage`;
+            gasBackupSub.textContent = `existing fleet sufficient | ${formatNum(curCoverage)}% clean coverage`;
         }
-        applyHeatmap('tileGasBackup', gasMw, minGasBackup, maxGasBackup, true);
+        applyHeatmap('tileGasBackup', curGasMw, minGasBackup, maxGasBackup, true);
     } else if (gasBackupEl) {
         gasBackupEl.textContent = '--';
     }
@@ -6970,15 +7084,13 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 newBuild[r] = Math.max(0, totalResourceTWh - existing[r]);
             }
         });
-        // Split clean_firm into nuclear + geothermal
+        // Split clean_firm into nuclear + geothermal using threshold-aware tranche data
         const existCF = existing.clean_firm || 0;
         const { nuclear: exNuc, geothermal: exGeo } = splitCleanFirm(iso, existCF);
         existing.nuclear = exNuc;
         existing.geothermal = exGeo;
-        // For new build, use cost-model tranche data if available
-        const cfRD = rc.clean_firm || {};
         const newCF = newBuild.clean_firm || 0;
-        const { nuclear: nbNuc, geothermal: nbGeo } = splitCleanFirm(iso, newCF, cfRD);
+        const { nuclear: nbNuc, geothermal: nbGeo } = splitCleanFirm(iso, newCF);
         newBuild.nuclear = nbNuc;
         newBuild.geothermal = nbGeo;
         return { existing, newBuild };
