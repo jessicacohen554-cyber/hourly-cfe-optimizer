@@ -1,9 +1,50 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-16.
+> Last updated: 2026-02-19.
 
-## Current Status (Feb 16, 2026)
+## Current Status (Feb 19, 2026)
+
+### v4.0 Fresh Rebuild — Decisions Locked (Feb 19, 2026)
+
+Complete optimizer rebuild with new architecture. All 9 design decisions + 5 efficiency optimizations locked below.
+
+#### Design Decisions
+
+| # | Decision | Choice | Detail |
+|---|----------|--------|--------|
+| 1 | Grid search strategy | **1C — Adaptive** | Start at 5% step, identify promising regions, refine to 1%. Replaces 3-phase 10%→5%→1%. |
+| 2 | Solution output | **2B — Pareto frontier** | 3-5 points per mix along procurement/storage tradeoff (not single-point optimal). |
+| 3 | Procurement bounds | **3C — Threshold-adaptive** | Narrow bounds at low thresholds (e.g., 100-110% at 50%), wider at high (100-150% at 99-100%). |
+| 4 | min_dispatchable constraint | **4B — Drop it** | No dispatchable floor. Let physics prove/disprove — constraint was potentially biasing results. |
+| 5 | Thresholds | **5D — 13 total** | Current 10 + 50%, 60%, 70%. Full list: 50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100. |
+| 6 | CCS-CCGT resource | **6D — Collapse into Clean Firm** | Merge CCS into Clean Firm allocation. Reduces resource space from 5D to 4D. CCS retains its own cost profile and dispatch characteristics within the merged allocation — the optimizer determines sub-allocation internally. |
+| 7 | Storage parameters | **7A — Keep current** | Battery: 4hr Li-ion, 85% RT, daily cycle. LDES: 100hr iron-air, 50% RT, 7-day window. |
+| 8 | Output format | **8C — Both** | JSON (backward compat) + Parquet (analytics). |
+| 9 | Numba acceleration | **9C — Optional** | Try Numba JIT, fall back to NumPy if install fails. |
+
+#### Efficiency Architecture (Fresh Rebuild)
+
+| ID | Optimization | Description | Expected Speedup |
+|----|-------------|-------------|-----------------|
+| A | ISO parallelism | Run all 5 ISOs in parallel on 16 cores (3 cores/ISO) | 4-5× |
+| B | Vectorized battery dispatch | Replace Python `for day in range(365)` with NumPy reshape + vectorized ops | 3-5× on storage scoring |
+| C | Batch mix evaluation | Evaluate batches of mixes simultaneously via matrix ops: `(N,4) @ (4,8760)` | 5-10× on grid search |
+| D | Numba JIT (try/fallback) | Compile storage scoring to machine code; fall back to B+C if install fails | 10-50× on storage (if available) |
+| F | Shared memory cache | `multiprocessing.shared_memory` for parallel ISO workers to share data | Enables A |
+
+**Projected runtime**: 15-25 min (NumPy fallback), 5-10 min (with Numba). Down from multi-hour current architecture.
+
+#### What needs building (fresh rebuild)
+- [ ] New optimizer with 4D resource space (Clean Firm absorbs CCS)
+- [ ] ISO parallel execution with shared memory (A+F)
+- [ ] Vectorized scoring functions (B+C)
+- [ ] Numba JIT with fallback (D)
+- [ ] Pareto frontier output (3-5 points per scenario)
+- [ ] 13-threshold sweep with adaptive procurement bounds
+- [ ] JSON + Parquet dual output
+- [ ] Updated dashboard to consume new results format
+- [ ] Updated research paper with new methodology
 
 ### Three-Step Pipeline Architecture
 
@@ -11,7 +52,7 @@ The optimizer operates as a three-step pipeline. Steps are independent — only 
 
 | Step | Name | What It Does | When to Re-run |
 |------|------|-------------|---------------|
-| **Step 1** | **Physics Optimization** | Hourly match optimization: sweeps resource mixes, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces 324 scenarios × 10 thresholds × 5 regions = 16,200 physics-validated resource mixes. | Only if dispatch logic, generation curves, or demand curves change. |
+| **Step 1** | **Physics Optimization** | Hourly match optimization: sweeps resource mixes (4D), evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces 324 scenarios × 13 thresholds × 5 regions = 21,060 physics-validated resource mixes, each with 3-5 Pareto-optimal points. | Only if dispatch logic, generation curves, or demand curves change. |
 | **Step 2** | **Cost Optimization** | Applies cost model to cached physics results. Merit-order tranche pricing for clean firm (uprate → new-build). NEISO gas constraint and other post-processing that may shift global optima. Re-ranks scenarios to find lowest-cost physics-valid mix per threshold/region. | When cost assumptions, tranche caps, LCOE tables, or constraints change. No physics re-run needed. |
 | **Step 3** | **Post-Processing** | CO₂ calculations, MAC calculations, statistical analysis (P10/P50/P90, ANOVA), monotonicity enforcement. Produces final results for site. | When Step 2 outputs change, or when CO₂ methodology changes. |
 
@@ -319,42 +360,47 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 - **Grid mix baseline** = actual 2025 regional shares, priced at wholesale, selectable as reference scenario (fixed, not adjustable by user)
 - **Regions**: CAISO, ERCOT, PJM, NYISO, NEISO
 - **Repo**: `jessicacohen554-cyber/hourly-cfe-optimizer`
-- **Dev branch**: `claude/enhance-optimizer-pairing-k0h9h`
+- **Dev branch**: `claude/add-status-feature-7Jhew` (v4.0 rebuild)
 
 ---
 
-## 2. Resources (7 total)
+## 2. Resources (6 total — v4.0 rebuild: CCS merged into Clean Firm)
 
 | # | Resource | Profile Type | New-Build? | Cost Toggle? | Transmission Adder? |
 |---|---|---|---|---|---|
-| 1 | **Clean Firm** (nuclear/geothermal) | Seasonal-derated baseload | Yes | Low/Med/High (regional) | Yes (regional) |
+| 1 | **Clean Firm** (nuclear/geothermal/CCS-CCGT) | Blended: seasonal-derated baseload (nuclear/geo) + flat baseload (CCS) | Yes | Low/Med/High (regional) | Yes (regional) |
 | 2 | **Solar** | EIA 2025 hourly regional | Yes | Low/Med/High (regional) | Yes (regional) |
 | 3 | **Wind** | EIA 2025 hourly regional | Yes | Low/Med/High (regional) | Yes (regional) |
-| 4 | **CCS-CCGT** | Dispatchable baseload (flat) | Yes | Low/Med/High (regional) | Yes (regional) |
-| 5 | **Hydro** | EIA 2025 hourly regional | **No** — capped at existing | **No** — wholesale only | **No** — always $0 |
-| 6 | **Battery** (4hr Li-ion) | Daily cycle dispatch | Yes | Low/Med/High (regional) | Yes (regional) |
-| 7 | **LDES** (100hr iron-air) | Multi-day/seasonal dispatch | Yes | Low/Med/High (regional) | Yes (regional) |
+| 4 | **Hydro** | EIA 2025 hourly regional | **No** — capped at existing | **No** — wholesale only | **No** — always $0 |
+| 5 | **Battery** (4hr Li-ion) | Daily cycle dispatch | Yes | Low/Med/High (regional) | Yes (regional) |
+| 6 | **LDES** (100hr iron-air) | Multi-day/seasonal dispatch | Yes | Low/Med/High (regional) | Yes (regional) |
+
+### v4.0 Change: CCS-CCGT merged into Clean Firm (Decision 6D)
+- **Rationale**: Reduces resource mix search space from 5D to 4D, dramatically cutting grid search combinatorics (~40-60% fewer combos). Both nuclear and CCS-CCGT are modeled as baseload (CCS runs flat due to 45Q incentives), making them functionally similar for dispatch purposes.
+- **Implementation**: The optimizer allocates a single `clean_firm` percentage. Within that allocation, the sub-split between nuclear/geothermal and CCS-CCGT is determined by cost optimization — the cost model evaluates different sub-allocations and picks the cheapest blend. CCS retains its distinct cost profile (LCOE, 45Q offset, fuel linkage) and emission characteristics (95% capture, residual 0.0185 tCO2/MWh).
+- **Dispatch profile**: Weighted blend of nuclear seasonal-derated profile and CCS flat profile, based on sub-allocation ratio.
+- **Dashboard impact**: Results still report the nuclear/CCS sub-split for transparency.
 
 ### Key resource decisions:
 - **H2 storage excluded** (explicitly out of scope)
-- **Clean Firm nuclear derate**: Seasonal spring/fall derate applied to nuclear portion only (not geothermal). Reflects staggered refueling outages across the fleet (~18-24 day outages per plant every 18-24 months, distributed across spring/fall shoulders). Summer/winter: ~100% CF (nukes run full during peak demand seasons). Spring/fall: reduced CF based on observed EIA 2021-2025 nuclear generation vs. available capacity. Derive simplified flat seasonal percentages from actual data. Geothermal (relevant in CAISO) stays flat 1/8760.
+- **Clean Firm nuclear derate**: Seasonal spring/fall derate applied to nuclear portion only (not geothermal or CCS). Reflects staggered refueling outages across the fleet (~18-24 day outages per plant every 18-24 months, distributed across spring/fall shoulders). Summer/winter: ~100% CF (nukes run full during peak demand seasons). Spring/fall: reduced CF based on observed EIA 2021-2025 nuclear generation vs. available capacity. Derive simplified flat seasonal percentages from actual data. Geothermal (relevant in CAISO) stays flat 1/8760.
 - **Hydro**: Existing only, capped at regional capacity, wholesale priced, no new-build tier, $0 transmission
-- **CCS-CCGT**: 95% capture rate, residual ~0.0185 tCO2/MWh, 45Q ($85/ton = ~$29/MWh offset) baked into LCOE, fuel cost linked to gas price toggle. **Modeled as flat baseload (not dispatchable) by design** — while CCS-CCGT is physically dispatchable, the 45Q tax credit ($85/ton for geologic storage) incentivizes running at maximum capacity factor to maximize capture credits. This is an economics-driven decision, not a physical constraint. The perverse policy incentive drives gas demand even when the grid doesn't need it. Not worth the compute to model dispatchability when the economics don't support it today.
-- **LDES**: 100-hour iron-air, 50% round-trip efficiency, capacity-constrained dispatch with dynamic capacity sizing. LCOS reflects actual utilization of built capacity.
-- **Battery**: 4-hour Li-ion, 85% round-trip efficiency, capacity-constrained daily-cycle dispatch. LCOS reflects actual utilization — oversized capacity that sits idle drives cost up.
+- **CCS-CCGT** (within Clean Firm): 95% capture rate, residual ~0.0185 tCO2/MWh, 45Q ($85/ton = ~$27.5/MWh offset) baked into LCOE, fuel cost linked to gas price toggle. **Modeled as flat baseload (not dispatchable) by design** — while CCS-CCGT is physically dispatchable, the 45Q tax credit ($85/ton for geologic storage) incentivizes running at maximum capacity factor to maximize capture credits. This is an economics-driven decision, not a physical constraint.
+- **LDES**: 100-hour iron-air, 50% round-trip efficiency, capacity-constrained dispatch with dynamic capacity sizing. LCOS reflects actual utilization of built capacity. (Decision 7A — kept current.)
+- **Battery**: 4-hour Li-ion, 85% round-trip efficiency, capacity-constrained daily-cycle dispatch. LCOS reflects actual utilization — oversized capacity that sits idle drives cost up. (Decision 7A — kept current.)
 
 ---
 
-## 3. Thresholds (10 total — reduced from 18)
+## 3. Thresholds (13 total — v4.0 rebuild: expanded from 10)
 
 ```
-75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
+50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
 ```
 
+- **50%, 60%, 70%** (v4.0 addition): Captures the easy-to-achieve baseline region where most mixes succeed. Provides context for "how cheap is partial decarbonization" and anchors the cost curve left side. These thresholds run fast (most mixes hit target, narrow procurement bounds).
 - 5% intervals from 75-85 (captures broad trend)
 - 2.5% intervals from 87.5-97.5 (captures steep cost inflection zone)
 - 99% and 100% anchor the extreme end
-- Reduced from 18 to 10 while adding granularity in the inflection zone
 - Key inflection behavior (CCS/LDES entering mix, storage costs spiking) captured at 90-97.5
 - Dashboard interpolates smoothly between these anchor points for abatement curves
 
@@ -798,48 +844,55 @@ For each resource:
 - **Existing share** (up to grid mix %) → priced at wholesale
 - **New-build share** (above grid mix %) → priced at LCOE + transmission adder
 - **Hydro**: Always wholesale (existing only, no new-build tier)
-- **CCS-CCGT**: No existing share (new resource) → all new-build priced
+- **CCS-CCGT** (within Clean Firm): No existing share (new resource) → all new-build priced
 
 ---
 
-## 11. Performance Optimizations
+## 11. Performance Optimizations (v4.0 Rebuild)
 
-- **Sequential ISO processing**: ISOs run one at a time to avoid OOM; results saved incrementally after each ISO
-- **Checkpointing**: Saves after each threshold (10 per ISO); resumes from checkpoint on restart — never loses more than one threshold's work
-- **Caching**: Matching scores cached across 324 cost scenarios per threshold (physics reuse — cost-independent)
-- **Cross-pollination**: After all 324 scenarios run per threshold, every unique mix re-evaluated against all scenarios
-- **10 thresholds × 5 regions × 324 scenarios × 3 phases** — incremental saves essential for reliability
+### v4.0 Architecture (replaces v3.x sequential architecture)
 
-### 11.1 Adaptive Procurement Bounds
+- **Parallel ISO processing (A+F)**: All 5 ISOs run in parallel on 16 cores (~3 cores/ISO). Shared memory for cross-ISO data coordination. Replaces sequential processing.
+- **Vectorized storage dispatch (B)**: Battery and LDES scoring use NumPy reshape/vectorized ops instead of Python day-loops. `surplus.reshape(365, 24)` for battery, vectorized rolling windows for LDES.
+- **Batch mix evaluation (C)**: Grid search evaluates all combos in a single matrix multiply: `(N, 4) @ (4, 8760) = (N, 8760)`. Eliminates Python loop over individual mixes.
+- **Numba JIT with fallback (D)**: Storage scoring functions compiled to machine code via Numba. If Numba unavailable, falls back to B+C (vectorized NumPy).
+- **Checkpointing**: Saves after each threshold (13 per ISO); resumes from checkpoint on restart
+- **Score caching**: Matching scores cached across 324 cost scenarios per threshold (physics reuse — cost-independent)
+- **Cross-pollination**: After representative scenarios run per threshold, every unique mix re-evaluated against all scenarios
+- **13 thresholds × 5 regions × 324 scenarios** — incremental saves essential for reliability
 
-Compressed procurement sweep ranges per threshold to avoid wasting compute on levels that can't be optimal:
+### 11.1 Adaptive Procurement Bounds (v4.0 — Decision 3C: Threshold-Adaptive)
+
+Narrower bounds at low thresholds where targets are easily met; wider at high thresholds where procurement drives cost:
 
 | Threshold | Min% | Max% | Rationale |
 |-----------|------|------|-----------|
-| 75% | 75 | 105 | Easy target, minimal overprocurement needed |
-| 80% | 75 | 110 | Slight headroom |
-| 85% | 80 | 110 | Still achievable without heavy overprocurement |
+| 50% | 50 | 105 | Trivially achievable |
+| 60% | 60 | 105 | Trivially achievable |
+| 70% | 70 | 110 | Easy target |
+| 75% | 75 | 110 | Easy target, minimal overprocurement needed |
+| 80% | 80 | 115 | Slight headroom |
+| 85% | 85 | 120 | Still achievable without heavy overprocurement |
 | 87.5% | 87 | 130 | Storage helps close gap, not raw procurement |
 | 90% | 90 | 140 | Moderate overprocurement + storage |
 | 92.5% | 92 | 150 | Entering inflection zone |
-| 95% | 95 | 175 | Significant overprocurement may be needed |
+| 95% | 95 | 170 | Significant overprocurement may be needed |
 | 97.5% | 100 | 200 | Heavy overprocurement territory |
-| 99% | 100 | 220 | Near-perfect matching |
+| 99% | 100 | 200 | Near-perfect matching |
 | 100% | 100 | 200 | If 2× procurement can't hit 100%, it's not cost-viable |
 
 ### 11.2 Edge Case Seed Mixes
 
-17 forced seed mixes injected into Phase 1 coarse scan to guarantee extreme-but-potentially-optimal mixes survive pruning. Categories:
+Forced seed mixes injected into initial grid scan to guarantee extreme-but-potentially-optimal mixes survive pruning. Updated for 4D resource space (v4.0):
 
 - **Solar-dominant** (70-75%): captures low-cost renewable scenarios where massive solar + storage is cheapest
 - **Wind-dominant** (70-75%): captures ERCOT-like regions where wind + LDES dominates
 - **Balanced renewable** (40/40 solar/wind): diversified variable generation
-- **Clean firm dominant** (60-80%): captures low-cost nuclear/geothermal scenarios
-- **Combined firm** (CF 30-40% + CCS 30-40%): dual-firm strategy
-- **CCS-dominant** (50-60%): regions with favorable geology (ERCOT Gulf Coast)
+- **Clean firm dominant** (60-80%): captures scenarios where nuclear/CCS is cheapest (CCS now within clean_firm allocation)
 - **High-hydro** (40% hydro): NYISO, CAISO, NEISO where existing hydro fleet is large
+- **Minimal firm** (5-10% clean_firm): tests whether renewables + storage can carry nearly all load
 
-Seeds filtered at runtime by regional hydro cap. Adds ~10-15 combos to the ~280 coarse grid combos per region — negligible compute cost, significant coverage improvement.
+Seeds filtered at runtime by regional hydro cap. Adds ~10-15 combos to the ~500 adaptive grid combos per region — negligible compute cost, significant coverage improvement.
 
 ### 11.3 Monotonicity Re-Sweep Mechanism
 
@@ -1176,24 +1229,24 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 ---
 
-## 18. Summary Counts
+## 18. Summary Counts (v4.0)
 
 | Item | Count |
 |---|---|
-| Resources | 7 |
-| Thresholds | 10 (reduced from 18) |
+| Resources (optimization dimensions) | 4 (clean_firm, solar, wind, hydro) — CCS merged into clean_firm |
+| Resources (total modeled) | 6 (clean_firm incl. CCS, solar, wind, hydro, battery, LDES) |
+| Thresholds | 13 (expanded from 10: added 50%, 60%, 70%) |
 | Regions | 5 |
 | Dashboard controls | 7 (2 existing + 5 paired toggles) |
 | Paired toggle groups | 5 (from 10 individual toggles) |
 | Cost scenarios per region/threshold | 324 (3×3×3×3×4) — each independently co-optimized |
-| New chart types | 2 (average + marginal abatement curves) |
-| New panels | 1 ("What You Need" panel) |
-| New metric tiles | 1 (CO2 abated) |
-| Cost tables in methodology | ~15 |
+| Total optimizations | 21,060 (13 × 324 × 5) |
+| Pareto points per scenario | 3-5 (procurement/storage tradeoff frontier) |
 | Sensitivity toggles | 10 (all Low/Medium/High except Transmission which adds None) |
 | Regional deep-dive pages | 1 (combined, with region selector) |
 | Research paper sections | 8 (including 5 regional deep-dives) |
 | QA checkpoints | 3 (optimizer, HTML, mobile) |
+| Output formats | 2 (JSON + Parquet) |
 
 ---
 
