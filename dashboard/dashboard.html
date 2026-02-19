@@ -4478,11 +4478,12 @@ function updateCompressedDay(entry, region, iso) {
     const annualMWh = region.annual_demand_mwh || 1;
     const toMW = (v) => (v / 365) * annualMWh;
 
-    // Demand growth: when in long-term mode, scale the demand curve up
-    const { targetYear, growthRate } = getRepricingGrowthParams();
-    const growthYears = (targetYear && targetYear > 2025) ? (targetYear - 2025) : 0;
-    const demandGrowthFactor = growthYears > 0 ? Math.pow(1 + growthRate, growthYears) : 1;
-    const toDemandMW = (v) => toMW(v) * demandGrowthFactor;
+    // NOTE: The compressed day profile was simulated at base-year (2025) demand.
+    // All arrays (demand, matched, surplus, gap) are in the same normalized space.
+    // Do NOT apply demand growth factor here — it would break the relationship:
+    //   demand = matchedTotal + gap (must hold at every hour)
+    // Growth factor already affects which MIX is selected via findOptimalMix,
+    // but the dispatch visualization shows that mix at the demand level it was simulated against.
 
     // Rotate all compressed-day arrays from UTC to local time, then convert to MW
     const r = (arr) => rotateToLocal(arr).map(v => Math.max(0, toMW(v)));
@@ -4591,13 +4592,35 @@ function updateCompressedDay(entry, region, iso) {
         });
     }
 
-    // Curtailment order: solar first, then wind, hydro, ccs, nuclear, geothermal last
+    // Demand line FIRST — serves as the visual boundary between consumption and curtailment
+    // Must be computed before curtailment so curtailment can stack from demand upward
+    const demandLocal = rotateToLocal(cd.demand).map(v => toMW(v));
+    const demandDsIdx = datasets.length;
+    datasets.push({
+        label: 'Demand',
+        data: demandLocal,
+        backgroundColor: 'transparent',
+        borderColor: '#1a1a2e',
+        borderWidth: 2.5,
+        borderDash: [6, 4],
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0.3,
+        order: -1
+    });
+
+    // Curtailment: stacked from the demand line UPWARD
+    // In the physics: demand = matched + gap, and surplus sits above generation.
+    // In the compressed (averaged) view, gap and surplus can coexist at the same hour-of-day.
+    // We anchor curtailment to the demand line so it visually represents "excess above demand".
     const curtailOrder = hasGeo
         ? ['solar', 'wind', 'hydro', 'ccs_ccgt', 'nuclear', 'geothermal']
         : ['solar', 'wind', 'hydro', 'ccs_ccgt', 'nuclear'];
     const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, ccs_ccgt: surplusCCS, nuclear: surplusNuclear, geothermal: surplusGeothermal };
-    let curtailCumulative = matchedTotal.slice();
-    let prevCurtailIdx = topMatchedIdx;
+    // Start curtailment cumulative from the demand line (not from matchedTotal)
+    let curtailCumulative = demandLocal.slice();
+    let prevCurtailIdx = demandDsIdx;
 
     for (const rt of curtailOrder) {
         const surpVals = surplusArrays[rt];
@@ -4626,22 +4649,6 @@ function updateCompressedDay(entry, region, iso) {
         });
         prevCurtailIdx = thisIdx;
     }
-
-    // Demand line on top (scaled by demand growth factor for long-term mode)
-    const demandLocal = rotateToLocal(cd.demand).map(v => toDemandMW(v));
-    datasets.push({
-        label: 'Demand',
-        data: demandLocal,
-        backgroundColor: 'transparent',
-        borderColor: '#1a1a2e',
-        borderWidth: 2.5,
-        borderDash: [6, 4],
-        fill: false,
-        pointRadius: 0,
-        pointHoverRadius: 0,
-        tension: 0.3,
-        order: -1
-    });
 
     // Add gap dataset if there's any gap (tooltip only)
     const hasGap = gap.some(v => v > 0.0001);
