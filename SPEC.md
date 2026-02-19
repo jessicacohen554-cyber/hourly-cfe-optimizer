@@ -871,17 +871,17 @@ Narrower bounds at low thresholds where targets are easily met; wider at high th
 |-----------|------|------|-----------|
 | 50% | 50 | 150 | Easy target, modest headroom |
 | 60% | 60 | 150 | Easy target |
-| 70% | 70 | 200 | Moderate headroom |
+| 70% | 70 | 175 | Moderate headroom |
 | 75% | 75 | 200 | Allow 2× procurement for renewable-heavy mixes |
 | 80% | 80 | 200 | Allow 2× procurement |
-| 85% | 85 | 300 | 3× procurement for extreme renewables |
-| 87.5% | 87 | 350 | 3.5× procurement |
-| 90% | 90 | 400 | 4× procurement |
-| 92.5% | 92 | 500 | 5× procurement for extreme solar+storage |
-| 95% | 95 | 600 | 6× procurement territory |
-| 97.5% | 100 | 700 | 7× procurement for near-perfect matching |
-| 99% | 100 | 800 | 8× procurement |
-| 100% | 100 | 800 | 8× procurement for perfect hourly matching |
+| 85% | 85 | 225 | Growing overprocurement for extreme renewables |
+| 87.5% | 87 | 250 | 2.5× procurement |
+| 90% | 90 | 250 | 2.5× procurement — cap for 90-99% per user direction |
+| 92.5% | 92 | 250 | 2.5× procurement |
+| 95% | 95 | 250 | 2.5× procurement |
+| 97.5% | 100 | 250 | 2.5× procurement |
+| 99% | 100 | 250 | 2.5× procurement |
+| 100% | 100 | 500 | 5× procurement for perfect hourly matching |
 
 **Resource ceiling**: `max_single=100` — any single resource can be up to 100% of the mix allocation. Combined with high procurement, this enables outcomes like 200% of demand from solar alone (100% solar mix at 200% procurement). This captures extreme solar+storage and wind+storage scenarios that may be cost-optimal at lower thresholds.
 

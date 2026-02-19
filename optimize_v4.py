@@ -105,22 +105,22 @@ HYDRO_CAPS = {
 THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 
 # Threshold-adaptive procurement bounds (Decision 3C, expanded)
-# Upper bounds pushed aggressively — early stopping per-mix means the ceiling
-# is just a safety bound. Most mixes will hit the target well before the ceiling.
+# 90-99%: capped at 250% per user direction (high enough for extreme renewables,
+# but not wastefully wide). 100%: pushed to 500% for perfect hourly matching.
 PROCUREMENT_BOUNDS = {
     50:   (50, 150),
     60:   (60, 150),
-    70:   (70, 200),
+    70:   (70, 175),
     75:   (75, 200),
     80:   (80, 200),
-    85:   (85, 300),
-    87.5: (87, 350),
-    90:   (90, 400),
-    92.5: (92, 500),
-    95:   (95, 600),
-    97.5: (100, 700),
-    99:   (100, 800),
-    100:  (100, 800),
+    85:   (85, 225),
+    87.5: (87, 250),
+    90:   (90, 250),
+    92.5: (92, 250),
+    95:   (95, 250),
+    97.5: (100, 250),
+    99:   (100, 250),
+    100:  (100, 500),
 }
 
 # Nuclear seasonal derate
