@@ -868,43 +868,76 @@ CCS cost is controlled by two independent toggles: **CCS Cost** (L/M/H maturity)
 
 ## 7. CO2 & Abatement
 
-### 7.1 CO2 Emissions Abated — Hourly Fossil-Fuel Emission Rates
+### 7.1 CO2 Emissions Abated — Dispatch-Stack Retirement Model
 
-**Methodology**: Build hourly variable emission rates from eGRID 2023 per-fuel emission factors × EIA hourly fossil fuel mix shares.
+**Core assumption (Decision: Feb 19, 2026)**: As clean energy percentage grows, fossil fuels retire in merit order — coal first (dirtiest, most expensive), then oil, then gas. **Above 70% clean, all coal and oil have retired; only gas CCGT + clean remains.** This replaces the previous uniform hourly fossil mix model where coal/gas/oil shares were constant regardless of clean energy percentage.
 
-**Step 1 — Per-fuel emission rates** (from eGRID, static per region):
+**Validated by regional data**: Coal exhausts well before 70% clean in every ISO:
+- CAISO: 0.0% coal (already gone at any threshold)
+- ERCOT: 13.9% coal → exhausted at ~60% clean
+- PJM: 16.5% coal → exhausted at ~57% clean
+- NYISO: 0.0% coal (already gone)
+- NEISO: 0.3% coal → exhausted at ~34% clean
+
+**Merit-order retirement stack** (per ISO):
+1. **Coal retires first** — highest emitter (~1.0-1.05 tCO₂/MWh). As clean % grows from baseline, each additional MWh of clean displaces coal until the regional coal fleet is fully retired.
+2. **Oil retires second** — mid emitter (~0.82-1.31 tCO₂/MWh). After coal is gone, clean MWh displace oil. Oil shares are tiny (<1.1% of total gen in all ISOs), so this band is narrow.
+3. **Gas retires last** — lowest fossil emitter (~0.38-0.41 tCO₂/MWh). Once coal and oil are gone (at or before 70% clean), all remaining fossil is gas CCGT. Every additional MWh of clean energy above this point displaces gas only.
+
+**Calculation for a given clean energy threshold T%**:
+```
+baseline_clean = sum of existing clean shares (GRID_MIX_SHARES)
+fossil_total = 100% - baseline_clean
+coal_total = coal_share_of_fossil × fossil_total  (from EIA fossil mix data)
+oil_total = oil_share_of_fossil × fossil_total
+gas_total = gas_share_of_fossil × fossil_total
+
+additional_clean = T% - baseline_clean  (new clean energy added)
+
+# Merit-order displacement:
+coal_displaced = min(additional_clean, coal_total)
+remaining = additional_clean - coal_displaced
+oil_displaced = min(remaining, oil_total)
+remaining = remaining - oil_displaced
+gas_displaced = min(remaining, gas_total)
+
+# Emission rate of remaining fossil fleet at threshold T:
+coal_remaining = coal_total - coal_displaced
+oil_remaining = oil_total - oil_displaced
+gas_remaining = gas_total - gas_displaced
+fossil_remaining = coal_remaining + oil_remaining + gas_remaining
+
+if fossil_remaining > 0:
+    emission_rate = (coal_remaining × coal_rate + oil_remaining × oil_rate + gas_remaining × gas_rate) / fossil_remaining
+else:
+    emission_rate = 0  (100% clean)
+```
+
+**Above 70% clean**: Forced to gas-only emission rate regardless of stack calculation (simplifying assumption). `emission_rate = gas_rate` (~0.39 tCO₂/MWh). Fuel-switching elasticity (Section 5.9) is zeroed out above 70% — no coal to switch with.
+
+**Per-fuel emission rates** (from eGRID 2023, static per region):
 - `coal_rate[iso]` = eGRID coal CO₂ lb/MWh (e.g., ERCOT: 2325, PJM: 2216)
 - `gas_rate[iso]` = eGRID gas CO₂ lb/MWh (e.g., ERCOT: 867, PJM: 867)
 - `oil_rate[iso]` = eGRID oil CO₂ lb/MWh (e.g., ERCOT: 2894, PJM: 1919)
 
-**Step 2 — Hourly fossil mix** (from EIA hourly data, 8760 values per ISO):
-- `coal_share[h]`, `gas_share[h]`, `oil_share[h]` — fraction of fossil generation from each fuel at hour h
-
-**Step 3 — Hourly emission rate**:
-```
-emission_rate[h] = coal_share[h] × coal_rate + gas_share[h] × gas_rate + oil_share[h] × oil_rate
-```
-This produces a variable hourly emission rate that reflects the actual fossil fuel mix dispatched at each hour (coal-heavy night hours vs. gas-peaker daytime hours, seasonal variation, etc.)
-
-**Step 4 — Fuel price sensitivity** (shifts fossil mix):
-- **Low gas price** → more gas dispatch, less coal → lower emission rate
-- **High gas price** → coal resurgence (where coal capacity exists) → higher emission rate
-- Regional fuel-switching elasticity from Section 5.9 applied as shift factors to coal/gas shares
-- ERCOT: Low elasticity (coal mostly retired); PJM: High elasticity (45GW coal remaining)
-
-**Step 5 — CO₂ abated** (hourly resolution, with storage dispatch attribution):
+**CO₂ abated** (hourly resolution):
 - For each hour h: `fossil_displaced[h] = clean_supply[h] − max(0, clean_supply[h] − demand[h])`
-- `CO₂_abated = Σ_h fossil_displaced[h] × emission_rate[h]`
-- CCS-CCGT gets **partial credit**: 95% capture → residual ~0.0185 tCO₂/MWh (vs ~0.37 unabated CCGT)
+- `CO₂_abated = Σ_h fossil_displaced[h] × emission_rate_at_threshold`
+- The emission rate is threshold-dependent (not hourly-variable anymore): at a given clean %, the fossil fleet composition is fixed by the retirement stack
+- CCS-CCGT gets **partial credit**: 90% capture → residual ~0.037 tCO₂/MWh (vs ~0.39 unabated CCGT)
 
-**Step 6 — Storage CO₂ attribution** (hourly dispatch tracking):
-- Track exact hours each storage type (battery/LDES) dispatches into → use those hours' specific emission rates for abatement credit
-- **Net against charge-side emissions**: when storage charges during hours with nonzero fossil on the margin, the charging energy carries an emissions cost. `net_storage_abatement = Σ_discharge_hours(dispatch[h] × emission_rate[h]) − Σ_charge_hours(charge[h] × emission_rate[h] / RTE)`
-- This replaces the previous gap-weighted average approximation with exact hourly attribution
-- Storage charging from pure surplus clean energy (no fossil on margin) → charge emissions = 0
+**Storage CO₂ attribution** (hourly dispatch tracking):
+- Track exact hours each storage type (battery/LDES) dispatches into → use threshold-level emission rate for abatement credit
+- Storage charging from surplus clean energy → charge emissions = 0
 - Storage charging during hours when fossil is still marginal → charge has real emissions that reduce net abatement
 
-**Why this matters**: Flat emission rates overcount abatement during low-emission gas-dominant hours and undercount during high-emission coal-dominant hours. The hourly approach captures the actual carbon intensity of displaced generation. The storage charge-side netting prevents overcounting — a battery that charges from gas-marginal hours and discharges to gas-marginal hours provides less net abatement than one charging from clean surplus hours.
+**Impact vs previous model**:
+- **Low thresholds (50-70%)**: Higher CO₂ abatement — first MWh of clean displaces coal (~1.0 tCO₂/MWh), not a blended average (~0.5 tCO₂/MWh)
+- **High thresholds (>70%)**: Lower marginal CO₂ abatement — displacing gas only (~0.39 tCO₂/MWh), not a blended average
+- **MAC at high thresholds increases** — same cost but less CO₂ per MWh displaced
+- Fuel-switching elasticity irrelevant above 70% (no coal/oil to switch)
+
+**Why this matters**: The previous uniform model assumed the fossil fleet composition stays constant as clean energy grows. In reality, coal plants are the first to retire (most expensive, most regulated, dirtiest). The dispatch-stack model correctly captures decreasing marginal emission reductions as the grid gets cleaner — the "easy" high-emission tons are abated first, and the last tons (displacing efficient gas) are the hardest.
 
 **Data sources**:
 - `data/egrid_emission_rates.json` — 2023 eGRID per-fuel CO₂ rates (lb/MWh) by region
