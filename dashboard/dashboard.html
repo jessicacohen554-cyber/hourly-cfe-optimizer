@@ -2984,7 +2984,7 @@ body {
         This interactive dashboard models the cost of matching clean energy supply to electricity demand
         on an <strong>hourly basis</strong> across five major U.S. grid regions. Use the sensitivity controls
         below to explore how changes in renewable, storage, and firm generation costs reshape the optimal
-        procurement portfolio at every matching threshold from 75% to 100%. The optimizer co-optimizes
+        procurement portfolio at every matching threshold from 50% to 100%. The optimizer co-optimizes
         resource mix and cost simultaneously &mdash; different cost assumptions produce fundamentally different
         optimal strategies.
     </p>
@@ -3010,7 +3010,7 @@ body {
         <p class="dashboard-intro-text">
             Use the controls below to explore how clean energy procurement costs and resource mixes change
             across five major U.S. power markets. Select a <strong>region</strong> to see its unique grid profile,
-            then adjust the <strong>hourly match target</strong> to compare portfolios from 75% to 100% matching.
+            then adjust the <strong>hourly match target</strong> to compare portfolios from 50% to 100% matching.
             The dashboard updates in real time &mdash; showing the optimal resource mix, cost breakdown,
             peak capacity needs, and curtailment for each scenario. Scroll past the dashboard to read the
             full narrative analysis.
@@ -3875,22 +3875,41 @@ function normalizeEntry(raw) {
 // ---- Compressed Day Profile Lookup ----
 // Builds the same mix_key as step5_compressed_day.py to look up pre-computed profiles
 function getCompressedDayProfile(iso, entry) {
-    if (!COMPRESSED_DAY_PROFILES || !entry) return null;
-    const isoData = COMPRESSED_DAY_PROFILES[iso];
-    if (!isoData) return null;
+    if (!entry) return null;
 
-    const rm = entry.resource_mix || {};
-    const cf = rm.clean_firm || 0;
-    const s = rm.solar || 0;
-    const w = rm.wind || 0;
-    const c = rm.ccs_ccgt || 0;
-    const h = rm.hydro || 0;
-    const proc = entry.procurement_pct || 0;
-    const batt = entry.battery_dispatch_pct || 0;
-    const ldes = entry.ldes_dispatch_pct || 0;
-    const mk = `${cf}_${s}_${w}_${c}_${h}_${proc}_${batt}_${ldes}`;
+    // Primary: look up exact mix in external profiles JSON
+    if (COMPRESSED_DAY_PROFILES) {
+        const isoData = COMPRESSED_DAY_PROFILES[iso];
+        if (isoData) {
+            const rm = entry.resource_mix || {};
+            const mk = `${rm.clean_firm||0}_${rm.solar||0}_${rm.wind||0}_${rm.ccs_ccgt||0}_${rm.hydro||0}_${entry.procurement_pct||0}_${entry.battery_dispatch_pct||0}_${entry.ldes_dispatch_pct||0}`;
+            const profile = isoData.profiles?.[mk];
+            if (profile) return profile;
+        }
+    }
 
-    return isoData.profiles?.[mk] || null;
+    // Fallback: use inline COMPRESSED_DAY_DATA from shared-data.js (Medium scenario)
+    if (typeof COMPRESSED_DAY_DATA !== 'undefined' && COMPRESSED_DAY_DATA[iso]) {
+        const cd = COMPRESSED_DAY_DATA[iso];
+        const tIdx = THRESHOLDS.indexOf(parseFloat(String(entry.threshold || '')));
+        if (tIdx >= 0 && cd.demand[tIdx] && cd.demand[tIdx].some(v => v > 0)) {
+            return {
+                demand: cd.demand[tIdx],
+                gap: cd.gap[tIdx],
+                battery_charge: cd.battery_charge[tIdx],
+                ldes_charge: cd.ldes_charge[tIdx],
+                matched: {
+                    clean_firm: cd.matched.clean_firm[tIdx],
+                    solar: cd.matched.solar[tIdx],
+                    wind: cd.matched.wind[tIdx],
+                    ccs_ccgt: cd.matched.ccs_ccgt[tIdx],
+                    hydro: cd.matched.hydro[tIdx],
+                },
+            };
+        }
+    }
+
+    return null;
 }
 
 // ---- Data Loading ----
@@ -4069,9 +4088,9 @@ function initDashboard() {
         regionSel.appendChild(opt);
     });
 
-    // Populate threshold dropdown — 10 modeled thresholds only
+    // Populate threshold dropdown — 13 modeled thresholds (50-100%)
     const threshSel = document.getElementById('thresholdSelect');
-    const FULL_THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
+    const FULL_THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
     FULL_THRESHOLDS.forEach(t => {
         const opt = document.createElement('option');
         opt.value = String(t);
@@ -5062,7 +5081,7 @@ const MIX_REGION_INSIGHTS = {
 };
 
 function getMixDataForRegion(region) {
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
     const isos = Object.keys(DATA.results);
     const labels = [];
     const existingData = {};
@@ -5503,7 +5522,7 @@ const INCREMENTAL_INSIGHTS = {
 };
 
 function getIncrementalData(region) {
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
     const labels = [];
     const existingData = {};
     const newData = {};
@@ -5836,8 +5855,8 @@ function initNarrativeCostChart() {
 
     // Gather cost per threshold for each ISO + average
     // Use NUMERIC x-values so the axis is proportional (99→100 = 1% gap vs 5% gaps)
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
+    const thresholdNums = [50, 70, 75, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const xValues = [];     // numeric x positions
     const avgCosts = [];
@@ -6020,8 +6039,8 @@ function initNarrativeCostChart() {
 
 function refreshNarrativeCostChart() {
     if (!narrativeCostChart || !DATA) return;
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
+    const thresholdNums = [50, 70, 75, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const dsCount = narrativeCostChart.data.datasets.length;
 
@@ -6226,8 +6245,8 @@ function isMobileScrolly() {
 
 function buildStepChartData() {
     if (!DATA) return null;
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
+    const thresholdNums = [50, 70, 75, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const avgCosts = [];
     const isoData = {};
