@@ -694,9 +694,10 @@ def main():
     print(f"  ISOs: {isos_present}")
 
     # Apply corrections in order
+    # NOTE: 45Q offset correction and no-45Q overlay are now handled in Step 2
+    # cost model (step2_cost_optimization.py) using full tranche pricing with
+    # CCS_LCOE_45Q_ON/OFF tables. No longer done here as a flat-offset hack.
     co2_fixes = fix_co2_monotonicity(data)
-    offset_fixes = fix_45q_offset(data)
-    overlay_count = add_no45q_overlay(data)
     neiso_count = add_neiso_gas_constraint(data)
     analysis = analyze_crossover(data)
 
@@ -705,17 +706,11 @@ def main():
         'applied': True,
         'corrections': {
             'co2_monotonicity_fixes': co2_fixes,
-            '45q_offset_corrections': offset_fixes,
-            'no_45q_overlays': overlay_count,
             'neiso_gas_adjustments': neiso_count,
         },
         'parameters': {
-            '45q_offset_original': FOURTY_FIVE_Q_OFFSET_ORIGINAL,
-            '45q_offset_corrected': FOURTY_FIVE_Q_OFFSET_CORRECTED,
             'neiso_ccs_gas_adder': NEISO_CCS_GAS_ADDER,
             'neiso_wholesale_adder': NEISO_WHOLESALE_ADDER,
-            'ccs_capital_share': CCS_CAPITAL_SHARE,
-            'ccs_reference_cf': CCS_REFERENCE_CF,
         },
     }
 
