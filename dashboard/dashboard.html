@@ -3742,16 +3742,7 @@ const RESOURCE_LABELS = {
 };
 
 // Nuclear/Geothermal energy split for existing clean firm capacity.
-// CAISO: 70% nuclear (avg CF 0.893) + 30% geothermal (flat CF 1.0).
-// Energy fraction = capacity_share × CF / blended_CF.
-// Other ISOs: 100% nuclear.
-const CLEAN_FIRM_ENERGY_SPLIT = {
-    CAISO:  { nuclear: 0.676, geothermal: 0.324 },
-    ERCOT:  { nuclear: 1.0,   geothermal: 0.0 },
-    PJM:    { nuclear: 1.0,   geothermal: 0.0 },
-    NYISO:  { nuclear: 1.0,   geothermal: 0.0 },
-    NEISO:  { nuclear: 1.0,   geothermal: 0.0 }
-};
+// CLEAN_FIRM_ENERGY_SPLIT now lives in shared-data.js (single source of truth)
 
 // Split a clean_firm value into nuclear + geothermal portions.
 // For new build, uses cost-model tranche data if available;
@@ -4181,18 +4172,51 @@ function getCompressedDayProfile(iso, entry) {
 }
 
 // ---- Data Loading ----
+// Build DATA from shared-data.js constants (no overprocure_results.json needed)
+function buildDashboardData() {
+    const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const results = {};
+    for (const iso of ISOS) {
+        const thresholds = {};
+        for (let ti = 0; ti < THRESHOLDS.length; ti++) {
+            const tk = String(THRESHOLDS[ti]);
+            // Stub thresholds — resolveEntry() uses client-side repricing via FEASIBLE_MIXES
+            thresholds[tk] = {};
+        }
+        const demandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH[iso] : 200) || 200;
+        results[iso] = {
+            thresholds,
+            annual_demand_mwh: demandTWh * 1e6,
+            label: iso
+        };
+    }
+    return {
+        results,
+        config: {
+            data_year: 2025,
+            battery_duration: '4h',
+            battery_efficiency: 0.85,
+            ldes_duration: '100h',
+            ldes_efficiency: 0.5,
+            resource_types: ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'],
+            grid_mix_shares: typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES : {},
+            hydro_caps: {}
+        }
+    };
+}
+
 async function loadData() {
     try {
-        const [mainResp, cdResp] = await Promise.all([
-            fetch('overprocure_results.json'),
-            fetch('compressed_day_profiles.json').catch(() => null)
-        ]);
-        if (!mainResp.ok) throw new Error(`HTTP ${mainResp.status}`);
-        DATA = await mainResp.json();
-        if (cdResp && cdResp.ok) {
-            COMPRESSED_DAY_PROFILES = await cdResp.json();
-            console.log('Compressed day profiles loaded');
-        }
+        // Build DATA from shared-data.js
+        DATA = buildDashboardData();
+        // Load compressed day profiles (optional)
+        try {
+            const cdResp = await fetch('compressed_day_profiles.json');
+            if (cdResp.ok) {
+                COMPRESSED_DAY_PROFILES = await cdResp.json();
+                console.log('Compressed day profiles loaded');
+            }
+        } catch (e) { /* optional */ }
         initDashboard();
     } catch (err) {
         showError(err);
@@ -7619,19 +7643,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
 // ---- Pathway Analysis: demand growth + stranded investment ----
 
-// ISO-specific annual demand growth rates (based on ISO forecasts and EIA/FERC data)
-const DEMAND_GROWTH_RATES = {
-    CAISO:  { Low: 0.014, Medium: 0.019, High: 0.025,
-              label: 'CA electrification-driven' },
-    ERCOT:  { Low: 0.020, Medium: 0.035, High: 0.055,
-              label: 'TX data centers + population' },
-    PJM:    { Low: 0.015, Medium: 0.024, High: 0.036,
-              label: 'Data center corridor' },
-    NYISO:  { Low: 0.013, Medium: 0.020, High: 0.044,
-              label: 'CLCPA mandate-driven' },
-    NEISO:  { Low: 0.009, Medium: 0.018, High: 0.029,
-              label: 'Heating electrification' }
-};
+// DEMAND_GROWTH_RATES now lives in shared-data.js (single source of truth)
 
 const RESOURCE_DISPLAY_NAMES = {
     clean_firm: 'Clean Firm',
