@@ -1460,7 +1460,7 @@ body {
                 <p>
                     This analysis reveals a fundamental strategic insight: <strong>the resource mix that is cheapest
                     at lower matching targets is not the resource mix you need at higher ones</strong>. As hourly
-                    matching ambitions rise from 75% to 90% to 99%, the optimal portfolio undergoes a dramatic
+                    matching ambitions rise from 50% to 90% to 99%, the optimal portfolio undergoes a dramatic
                     transformation &mdash; from wind and solar dominance to an increasingly critical role for clean
                     firm power (nuclear, geothermal, and CCS-equipped gas).
                 </p>
@@ -2310,7 +2310,7 @@ const MIX_REGION_INSIGHTS = {
 };
 
 function getMixDataForRegion(region) {
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
     const isos = Object.keys(DATA.results);
     const labels = [];
     const existingData = {};
@@ -2726,7 +2726,7 @@ const INCREMENTAL_INSIGHTS = {
 };
 
 function getIncrementalData(region) {
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
     const labels = [];
     const existingData = {};
     const newData = {};
@@ -3042,8 +3042,8 @@ function initNarrativeCostChart() {
 
     // Gather cost per threshold for each ISO + average
     // Use NUMERIC x-values so the axis is proportional (99→100 = 1% gap vs 5% gaps)
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
+    const thresholdNums = [50, 70, 75, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const xValues = [];     // numeric x positions
     const avgCosts = [];
@@ -3229,8 +3229,8 @@ function initNarrativeCostChart() {
 
 function refreshNarrativeCostChart() {
     if (!narrativeCostChart || !DATA) return;
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
+    const thresholdNums = [50, 70, 75, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const dsCount = narrativeCostChart.data.datasets.length;
 
@@ -3435,8 +3435,8 @@ function isMobileScrolly() {
 
 function buildStepChartData() {
     if (!DATA) return null;
-    const thresholdKeys = ['75', '80', '85', '90', '95', '99'];
-    const thresholdNums = [75, 80, 85, 90, 95, 99];
+    const thresholdKeys = ['50', '70', '75', '85', '90', '95', '99'];
+    const thresholdNums = [50, 70, 75, 85, 90, 95, 99];
     const isos = Object.keys(DATA.results);
     const avgCosts = [];
     const isoData = {};
