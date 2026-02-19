@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """
-Post-Processing Corrections & Overlays
-========================================
-Applies corrections to cached optimizer results without re-running the optimizer.
+Step 4: Post-Processing — Corrections & Overlays
+==================================================
+Applies corrections to Step 3 cost optimization results.
+
+Pipeline position: Step 4 of 4
+  Step 1 — PFS Generator (step1_pfs_generator.py)
+  Step 2 — Efficient Frontier extraction (step2_efficient_frontier.py)
+  Step 3 — Cost optimization (step3_cost_optimization.py)
+  Step 4 — Post-processing (this file)
 
 Corrections:
-  1. CO₂ monotonicity enforcement (running-max across thresholds)
-  2. 45Q offset correction ($29 → $27.5, +$1.5/MWh to CCS LCOE)
-  3. Without-45Q toggle layer (CCS cost without 45Q, CF-dependent dispatchable LCOE)
-  4. NEISO winter gas pipeline constraint (+$13/MWh CCS, +$4/MWh wholesale)
-  5. CCS vs LDES crossover analysis
+  1. NEISO winter gas pipeline constraint (+$13/MWh CCS, +$4/MWh wholesale)
+  2. CCS vs LDES crossover analysis
+  3. CO₂ calculations, MAC calculations
 
-Reads:  data/optimizer_cache.json (canonical) or dashboard/overprocure_results.json
+Reads:  dashboard/overprocure_results.json (from Step 3)
 Writes: dashboard/overprocure_results.json (corrected)
         data/postprocess_analysis.json (analysis output)
 
-See SPEC.md §22 for methodology documentation.
+See SPEC.md for methodology documentation.
 """
 
 import json
@@ -23,7 +27,6 @@ import os
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_PATH = os.path.join(SCRIPT_DIR, 'data', 'optimizer_cache.json')
 RESULTS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 ANALYSIS_PATH = os.path.join(SCRIPT_DIR, 'data', 'postprocess_analysis.json')
 
@@ -151,15 +154,13 @@ NEISO_WHOLESALE_ADDER = 4.0    # $/MWh annualized: winter gas on marginal pricin
 
 
 def load_results():
-    """Load optimizer results — prefer dashboard JSON (has Step 2 tranche pricing)
-    over the cache (which is the Step 1 original). Postprocess must run AFTER Step 2."""
-    for path in [RESULTS_PATH, CACHE_PATH]:
-        if os.path.exists(path):
-            with open(path) as f:
-                data = json.load(f)
-            print(f"  Loaded: {path} ({os.path.getsize(path) / 1024:.0f} KB)")
-            return data
-    print("ERROR: No results file found!")
+    """Load Step 2 results from dashboard JSON. Postprocess runs AFTER Step 2."""
+    if os.path.exists(RESULTS_PATH):
+        with open(RESULTS_PATH) as f:
+            data = json.load(f)
+        print(f"  Loaded: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
+        return data
+    print("ERROR: No results file found! Run Step 2 first.")
     sys.exit(1)
 
 
@@ -697,7 +698,10 @@ def main():
     # NOTE: 45Q offset correction and no-45Q overlay are now handled in Step 2
     # cost model (step2_cost_optimization.py) using full tranche pricing with
     # CCS_LCOE_45Q_ON/OFF tables. No longer done here as a flat-offset hack.
-    co2_fixes = fix_co2_monotonicity(data)
+    # NOTE: CO2 monotonicity enforcement removed — CO2 data should reflect
+    # actual physics results, not forced monotonicity. If non-monotonic CO2
+    # appears, it reflects real trade-offs at that threshold, not an error.
+    co2_fixes = 0
     neiso_count = add_neiso_gas_constraint(data)
     analysis = analyze_crossover(data)
 

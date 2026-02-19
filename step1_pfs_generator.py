@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """
-v4.0 Physics Optimizer — Fresh Rebuild
-=======================================
-Generates the feasible solution space for hourly CFE matching.
-Physics only — no cost model. Cost sensitivities applied in Step 2.
+Step 1: Physics Feasible Space (PFS) Generator
+===============================================
+Generates the Physical Feasibility Space (PFS) for hourly CFE matching.
+Physics only — no cost model. Cost sensitivities applied in Step 3.
 
-Key changes from v3.x:
+Pipeline position: Step 1 of 4
+  Step 1 — PFS Generator (this file)
+  Step 2 — Efficient Frontier (EF) extraction
+  Step 3 — Cost optimization
+  Step 4 — Post-processing
+
+Key features:
   - 4D resource space: clean_firm (absorbs CCS), solar, wind, hydro
   - 13 thresholds: 50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
   - Adaptive grid search: 5% → 1% refinement
@@ -13,11 +19,12 @@ Key changes from v3.x:
   - Numba JIT-compiled scoring functions
   - Parallel ISO execution (multiprocessing)
   - Vectorized batch mix evaluation
-  - Output: JSON + Parquet
+
+Output: data/physics_cache_v4.parquet  (21.4M rows — the PFS)
 
 Resource types (4D optimization):
   - Clean Firm: nuclear (seasonal-derated) + CCS-CCGT (flat baseload)
-    Sub-allocation determined by cost model in Step 2.
+    Sub-allocation determined by cost model in Step 3.
     Physics uses nuclear-derated profile (conservative — CCS only improves matching).
   - Solar: EIA 2021-2025 averaged hourly profile (DST-aware)
   - Wind: EIA 2021-2025 averaged hourly profile

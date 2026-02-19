@@ -1,27 +1,33 @@
 #!/usr/bin/env python3
 """
-Step 2.1: Efficient Frontier Extraction from Physics Feasible Space (PFS)
-=========================================================================
-Reads the v4 PFS parquet (21.4M rows) and applies a 4-step reduction:
+Step 2: Efficient Frontier (EF) Extraction from Physics Feasible Space (PFS)
+=============================================================================
+Reads the PFS parquet (21.4M rows) and applies a 4-phase reduction:
 
-  Step 0: Existing generation filter — remove mixes that don't fully utilize
-          existing clean generation (even at 2050 high demand growth). Any mix
-          that allocates less than the minimum existing share for a resource
-          (where min = existing / growth_factor_2050_high) wastes free/cheap
-          generation and will never be cost-optimal.
-  Step 1: Threshold gate — keep only target thresholds (50-100%)
-  Step 2: Procurement minimization — for each unique resource allocation
-          (CF/Sol/Wnd/CCS/Hyd/Bat/LDES), keep only the lowest procurement
-          level that achieves the threshold.
-  Step 3: Strict dominance removal — remove mixes where another mix is ≤
-          on ALL dimensions (procurement, battery, LDES) while achieving
-          the same or better match score. Skip for groups > 50K.
+  Phase 0: Existing generation filter — remove mixes that don't fully utilize
+           existing clean generation (even at 2050 high demand growth). Any mix
+           that allocates less than the minimum existing share for a resource
+           (where min = existing / growth_factor_2050_high) wastes free/cheap
+           generation and will never be cost-optimal.
+  Phase 1: Threshold gate — keep only target thresholds (50-100%)
+  Phase 2: Procurement minimization — for each unique resource allocation
+           (CF/Sol/Wnd/CCS/Hyd/Bat/LDES), keep only the lowest procurement
+           level that achieves the threshold.
+  Phase 3: Strict dominance removal — remove mixes where another mix is ≤
+           on ALL dimensions (procurement, battery, LDES) while achieving
+           the same or better match score. Skip for groups > 50K.
 
-Input:  data/physics_cache_v4.parquet  (21.4M rows, v4 PFS)
-Output: data/pfs_post_ef.parquet       (PFS post Efficient Frontier)
+Pipeline position: Step 2 of 4
+  Step 1 — PFS Generator (step1_pfs_generator.py)
+  Step 2 — Efficient Frontier extraction (this file)
+  Step 3 — Cost optimization (step3_cost_optimization.py)
+  Step 4 — Post-processing (step4_postprocess.py)
+
+Input:  data/physics_cache_v4.parquet  (21.4M rows — the PFS)
+Output: data/pfs_post_ef.parquet       (PFS post-EF)
 
 The output preserves all mixes that could be optimal under ANY cost assumption,
-ensuring no true optimum is lost during cost evaluation in Step 2.
+ensuring no true optimum is lost during cost evaluation in Step 3.
 """
 
 import os
@@ -117,14 +123,18 @@ def step0_existing_generation_filter(table):
     # Or: procurement * pct >= min_share * 100
     keep = np.ones(len(cf), dtype=np.bool_)
 
+    # Materiality threshold: only filter on resources with >1% min existing share
+    # This avoids filtering on negligible existing generation (e.g., ERCOT hydro 0.03%)
+    MATERIALITY_THRESHOLD = 1.0  # % of demand at 2050 high growth
+
     for r_pct, r_min in [(cf, min_cf), (sol, min_sol), (wnd, min_wnd), (hyd, min_hyd)]:
         # Look up min share for each row's ISO
         row_min = r_min[iso_indices]  # min share as % of demand
         # Mix's demand fraction in %: proc * pct / 100
         mix_demand_pct = proc * r_pct / 100.0
-        # Only filter if min share > 0 (i.e., existing generation exists for this resource)
-        has_existing = row_min > 0.01
-        fails = has_existing & (mix_demand_pct < row_min)
+        # Only filter if min share is material (>1% of demand at 2050 high)
+        has_material_existing = row_min > MATERIALITY_THRESHOLD
+        fails = has_material_existing & (mix_demand_pct < row_min)
         keep &= ~fails
 
     filtered = table.filter(pa.array(keep))
@@ -279,7 +289,7 @@ def process_iso_threshold(table, iso, threshold):
 
 def main():
     print("=" * 70)
-    print("  STEP 2.1: EFFICIENT FRONTIER EXTRACTION")
+    print("  STEP 2: EFFICIENT FRONTIER (EF) EXTRACTION")
     print("  PFS → PFS post-EF")
     print("=" * 70)
 
@@ -335,7 +345,7 @@ def main():
     print(f"  Total time: {elapsed_total:.0f}s")
 
     print("\n" + "=" * 70)
-    print("  STEP 2.1 COMPLETE — PFS post-EF ready for Step 2 cost optimization")
+    print("  STEP 2 COMPLETE — PFS post-EF ready for Step 3 cost optimization")
     print("=" * 70)
 
 
