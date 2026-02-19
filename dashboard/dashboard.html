@@ -4715,17 +4715,18 @@ function updateCompressedDay(entry, region, iso) {
         order: -1
     });
 
-    // Curtailment: stacked from the demand line UPWARD
-    // In the physics: demand = matched + gap, and surplus sits above generation.
-    // In the compressed (averaged) view, gap and surplus can coexist at the same hour-of-day.
-    // We anchor curtailment to the demand line so it visually represents "excess above demand".
+    // Curtailment: stacked from the top of matched generation UPWARD
+    // In the physics: total_gen = matched + surplus, so curtailment sits flush on top of generation.
+    // The demand line cuts through showing where demand sits — area above demand = true curtailment,
+    // area between matchedTotal and demand = unmatched gap. This keeps curtailment visually
+    // contiguous with the generation stack it belongs to.
     const curtailOrder = hasGeo
         ? ['solar', 'wind', 'hydro', 'ccs_ccgt', 'nuclear', 'geothermal']
         : ['solar', 'wind', 'hydro', 'ccs_ccgt', 'nuclear'];
     const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, ccs_ccgt: surplusCCS, nuclear: surplusNuclear, geothermal: surplusGeothermal };
-    // Start curtailment cumulative from the demand line (not from matchedTotal)
-    let curtailCumulative = demandLocal.slice();
-    let prevCurtailIdx = demandDsIdx;
+    // Start curtailment cumulative from the top of matched stack (flush against generation)
+    let curtailCumulative = matchedTotal.slice();
+    let prevCurtailIdx = topMatchedIdx;
 
     for (const rt of curtailOrder) {
         const surpVals = surplusArrays[rt];
