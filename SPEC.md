@@ -5,6 +5,18 @@
 
 ## Current Status (Feb 19, 2026)
 
+### New Toggle Architecture Decisions (Feb 19, 2026)
+
+Three new Step 2 cost model changes — no Step 1 physics re-run needed:
+
+1. **CCS separated from Firm Gen toggle** — CCS gets its own L/M/H toggle (maturity-based: L=mature/low capex, H=immature/high capex) plus a binary 45Q On/Off switch. 6 CCS cost states total (3×2).
+2. **Geothermal toggle (CAISO only)** — L/M/H based on published data (NREL ATB, USGS, Lazard). 5 GW cap (~39 TWh/yr) from USGS identified hydrothermal. After cap, remaining clean firm filled by cheapest of nuclear new-build vs CCS (toggle-dependent). Non-CAISO ISOs have zero geothermal resource — toggle hidden.
+3. **Nuclear new-build Low target = $70/MWh** — nth-of-a-kind SMR deployment target. Regional variation: $68-75/MWh at Low.
+4. **CAISO clean firm merit order**: Existing → uprates → geothermal (capped) → cheapest of nuclear/CCS (toggle-dependent)
+5. **Non-CAISO clean firm merit order**: Existing → uprates → cheapest of nuclear/CCS (toggle-dependent)
+
+**Sensitivity space expanded**: 324 → 5,832 (non-CAISO) / 17,496 (CAISO) combos. All Step 2 arithmetic — minutes, not hours.
+
 ### v4.0 Fresh Rebuild — Decisions Locked (Feb 19, 2026)
 
 Complete optimizer rebuild with new architecture. All 9 design decisions + 5 efficiency optimizations locked below.
@@ -414,30 +426,45 @@ Before launching `optimize_overprocure.py`, the following must be verified:
 1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
 2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100)
 
-### Paired sensitivity toggles (5 groups replacing 10 individual):
+### Sensitivity toggles (7 toggles + 1 binary switch):
 
-The 10 individual cost toggles are **paired into 5 groups** where related variables move in lockstep (all Low, all Medium, or all High together). This reduces dashboard complexity and scenario count while preserving meaningful sensitivity analysis.
+Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binary policy switch (45Q). CCS and Geothermal are separated from Firm Gen to allow independent sensitivity analysis of these distinct technologies.
 
-| # | Paired Toggle | Options | Member Variables | Affects |
+| # | Toggle | Options | Controls | Affects |
 |---|---|---|---|---|
 | 3 | **Renewable Generation Cost** | Low / Medium / High | Solar LCOE + Wind LCOE | Both solar and wind generation costs (regional) |
-| 4 | **Firm Generation Cost** | Low / Medium / High | Clean Firm LCOE + CCS-CCGT LCOE | Both firm dispatchable resource costs (regional) |
+| 4 | **Firm Generation Cost** | Low / Medium / High | Clean Firm (nuclear) LCOE — uprate + new-build | Nuclear uprate and new-build costs (regional) |
 | 5 | **Storage Cost** | Low / Medium / High | Battery LCOS + LDES LCOS | Both storage technology costs (regional) |
-| 6 | **Fossil Fuel Price** | Low / Medium / High | Gas + Coal + Oil prices | Wholesale electricity price + CCS fuel cost + emission rates |
-| 7 | **Transmission Cost** | None / Low / Medium / High | All resource transmission adders | Transmission adders on all new-build resources (regional) |
+| 6 | **CCS Cost** | Low / Medium / High | CCS-CCGT underlying cost (capex, transport, storage) | CCS technology maturity — L=mature/low capex, H=immature/high capex |
+| 7 | **45Q Credit** | On / Off | $29/MWh 45Q tax credit offset on CCS LCOE | Binary policy switch — On=full 45Q offset, Off=no offset |
+| 8 | **Fossil Fuel Price** | Low / Medium / High | Gas + Coal + Oil prices | Wholesale electricity price + CCS fuel cost + emission rates |
+| 9 | **Transmission Cost** | None / Low / Medium / High | All resource transmission adders | Transmission adders on all new-build resources (regional) |
+| 10 | **Geothermal Cost** | Low / Medium / High | Geothermal LCOE (CAISO only) | **CAISO only** — no geothermal resource in other ISOs |
 
-**Pairing rationale**:
-- **Renewable Gen**: Solar and wind costs are driven by similar factors (manufacturing scale, supply chain, installation labor) — they tend to move together directionally
-- **Firm Gen**: Clean firm (nuclear/geothermal) and CCS-CCGT share capital-intensive, long-lead-time cost structures
-- **Storage**: Battery and LDES costs share manufacturing/materials cost drivers (lithium, iron, electrolyte supply chains)
-- **Fossil Fuel**: Gas, coal, and oil prices are correlated through energy commodity markets and macro conditions
-- **Transmission**: Infrastructure costs affect all new-build resources similarly within a region
+**Toggle separation rationale**:
+- **CCS separated from Firm Gen**: CCS has a distinct cost structure (capture + transport + storage + fuel) and policy dependency (45Q) that makes it independently variable from nuclear. Pairing them hides the 45Q sensitivity.
+- **Geothermal separated and CAISO-only**: Geothermal is a regionally constrained resource — only CAISO has meaningful hydrothermal potential (5 GW cap from USGS identified resources). Other ISOs have zero geothermal potential for power generation. Toggle is hidden/disabled for non-CAISO regions.
+- **45Q as binary switch**: The 45Q credit is a policy decision (exists or doesn't), not a cost spectrum. Keeping it binary allows clean analysis of "what if 45Q expires/isn't renewed."
 
-**Scenario count**: 3 × 3 × 3 × 3 × 4 = **324 cost scenarios** per region per threshold (vs 59,049 if all 10 toggles independent)
+**L/M/H maturity mapping for CCS**:
+- **Low**: Mature CCS deployment — nth-of-a-kind plants, established Class VI wells, optimized CO₂ transport networks, low capex
+- **Medium**: Mid-range — some learning curve benefits, moderate infrastructure availability
+- **High**: Immature/early deployment — first-of-a-kind plants, new well permitting, long transport distances, high capex
 
-**NOTE**: All toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
+**Scenario count**:
+- Non-CAISO: 3×3×3×3×2×3×4 = **5,832 cost scenarios** per region per threshold
+- CAISO: 5,832 × 3 = **17,496 cost scenarios** per threshold (includes geothermal toggle)
+- Total: 17,496 + 5,832×4 = **40,824 scenarios** per threshold set
+- All Step 2 (arithmetic on cached physics) — runs in minutes, not hours
 
-**Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. 324 scenarios × 10 thresholds × 5 regions = 16,200 independent co-optimizations, with matching score cache shared across cost scenarios (physics reuse, not a shortcut).
+**Sensitivity key format**:
+- Non-CAISO: `RFSC_QFF_TX` (e.g., `MMMM_1M_M` = all Medium, 45Q on)
+- CAISO: `RFSC_QFF_TX_G` (e.g., `MMMM_1M_M_M` = all Medium, 45Q on, Medium geo)
+- Q = `1` (45Q on) or `0` (45Q off)
+
+**NOTE**: All graduated toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
+
+**Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. Physics cached from Step 1; Step 2 cross-evaluates all feasible mixes under each sensitivity combo to find the cheapest valid mix.
 
 ### 4.1 Warm-Start Optimization (Trifold Seed Strategy)
 
@@ -559,27 +586,59 @@ Clean firm cost uses a **merit-order supply curve** with two tranches, filled ch
 
 *5% chosen as midpoint: NRC has approved ~8% fleet-wide historically, but MUR/stretch largely exhausted. Remaining potential is primarily EPU on ~27 of 94 reactors. DOE executive order targets ~3-5 GW; INL LWRS estimates 3-8% remaining. 5% balances optimism with exhaustion.*
 
-#### Tranche 2: Regional New-Build (Uncapped)
+#### Tranche 2: Geothermal (CAISO Only, Capped at 5 GW)
 
-New-build LCOE reflects the cheapest available firm clean option per region — geothermal in CAISO, SMR/advanced nuclear elsewhere. No need to separately differentiate geothermal vs SMR because geothermal competes at SMR-equivalent pricing to be prioritized.
+**CAISO only.** Geothermal fills before nuclear new-build, capped at 5 GW (~39 TWh/yr at 90% CF). Based on USGS identified hydrothermal resources (Salton Sea, Imperial Valley, The Geysers). Non-CAISO ISOs have zero geothermal potential for power generation (temperature gradients too low — see §5.4.3).
+
+Geothermal LCOE controlled by **Geothermal Cost** toggle (CAISO only):
+
+| Level | CAISO | Basis |
+|---|---|---|
+| Low | $63 | Mature hydrothermal flash (Lazard low-end, NREL ATB) |
+| Medium | $88 | Blended hydrothermal flash + binary (NREL 2025 Market Report) |
+| High | $110 | Binary plants + early EGS (NREL ATB conservative) |
+
+*Sources: NREL ATB 2024, NREL 2025 US Geothermal Market Report, Lazard LCOE+ v18, USGS 2008 Assessment (FS 2008-3082), USGS 2025 Great Basin EGS Assessment.*
+
+**Geothermal cap**: 5 GW = ~39 TWh/yr at 90% CF. Conservative bound using USGS identified hydrothermal only (excludes undiscovered and EGS). After geothermal cap is filled, remaining CAISO clean firm demand falls to Tranche 3 (nuclear new-build) or CCS, whichever is cheaper.
+
+**Non-CAISO geothermal**: Zero. ERCOT has nascent EGS demos (Sage Geosystems) but no operating capacity. PJM/NYISO/NEISO have temperature gradients of 20-25°C/km — far below power generation thresholds. Toggle hidden/disabled for non-CAISO regions.
+
+#### Tranche 3: Nuclear New-Build (Uncapped)
+
+Nuclear new-build LCOE reflects advanced SMR/Gen IV technology. Controlled by **Firm Generation Cost** toggle. For CAISO, this tranche fills after geothermal cap is exhausted. For all other ISOs, this is the first new-build tranche after uprates.
 
 | Level | CAISO | ERCOT | PJM | NYISO | NEISO |
 |---|---|---|---|---|---|
-| Low | $65 | $70 | $80 | $85 | $82 |
-| Medium | $88 | $95 | $105 | $110 | $108 |
-| High | $125 | $135 | $160 | $170 | $165 |
+| Low | $70 | $68 | $72 | $75 | $73 |
+| Medium | $95 | $90 | $105 | $110 | $108 |
+| High | $140 | $135 | $160 | $170 | $165 |
 
-*CAISO lowest due to geothermal (Salton Sea, Imperial Valley). ERCOT benefits from favorable siting/permitting. PJM mid-range. NYISO/NEISO highest due to siting constraints, labor costs, limited development pipeline.*
+*Low = nth-of-a-kind SMR deployment target ($70/MWh). Regional variation at Low is minimal (mature deployment compresses cost differences). Medium/High retain larger regional spreads reflecting siting, permitting, and labor differentials. ERCOT lowest (favorable siting/permitting). NYISO highest (siting constraints, labor costs).*
 
 #### Merit-Order Cost Calculation (Step 2 Pipeline)
 
-For each cached scenario's new clean firm demand (above existing grid share):
+For each cached scenario's new clean firm demand (above existing grid share), the merit order fills cheapest-first. **CAISO has 4 tranches; other ISOs have 3.**
+
+**Non-CAISO merit order:**
 ```
 new_cf_twh = max(0, total_cf_pct - existing_cf_pct) / 100 × demand_twh
 uprate_twh = min(new_cf_twh, uprate_cap_twh)
-newbuild_twh = max(0, new_cf_twh - uprate_cap_twh)
-clean_firm_cost = uprate_twh × uprate_lcoe + newbuild_twh × newbuild_lcoe
-effective_cf_lcoe = clean_firm_cost / new_cf_twh  (if new_cf_twh > 0)
+remaining = max(0, new_cf_twh - uprate_twh)
+# Remaining filled by cheapest of: nuclear new-build vs CCS (toggle-dependent)
+nuclear_price = NEWBUILD_LCOE[firm_level][iso] + tx_adder
+ccs_price = CCS_LCOE[ccs_level][45q_state][iso] + tx_adder
+# Each MWh goes to whichever is cheaper
+```
+
+**CAISO merit order (includes geothermal tranche):**
+```
+new_cf_twh = max(0, total_cf_pct - existing_cf_pct) / 100 × demand_twh
+uprate_twh = min(new_cf_twh, uprate_cap_twh)
+remaining_after_uprate = max(0, new_cf_twh - uprate_twh)
+geo_twh = min(remaining_after_uprate, GEO_CAP_TWH)  # 39 TWh cap
+remaining_after_geo = max(0, remaining_after_uprate - geo_twh)
+# Remaining filled by cheapest of: nuclear new-build vs CCS (toggle-dependent)
 ```
 
 At low clean firm demand → effective LCOE approaches uprate price ($25/MWh Medium).
@@ -599,7 +658,11 @@ Previous blended LCOE (still used in Step 1 physics optimization cache):
 
 *These are what the Step 1 optimizer used. Step 2 reprices using the tranche model above.*
 
-### 5.4 CCS-CCGT LCOE ($/MWh, net of 45Q)
+### 5.4 CCS-CCGT LCOE ($/MWh) — Separate Toggle with 45Q Switch
+
+CCS cost is controlled by two independent toggles: **CCS Cost** (L/M/H maturity) and **45Q Credit** (On/Off).
+
+#### 5.4.1 CCS LCOE with 45Q ON ($/MWh)
 
 | Level | CAISO | ERCOT | PJM | NYISO | NEISO |
 |---|---|---|---|---|---|
@@ -607,16 +670,33 @@ Previous blended LCOE (still used in Step 1 physics optimization cache):
 | Medium | $86 | $71 | $79 | $99 | $96 |
 | High | $115 | $92 | $102 | $128 | $122 |
 
+#### 5.4.2 CCS LCOE with 45Q OFF ($/MWh)
+
+45Q OFF = add back $29/MWh offset. Same underlying capex/transport/storage assumptions.
+
+| Level | CAISO | ERCOT | PJM | NYISO | NEISO |
+|---|---|---|---|---|---|
+| Low | $87 | $81 | $91 | $107 | $104 |
+| Medium | $115 | $100 | $108 | $128 | $125 |
+| High | $144 | $121 | $131 | $157 | $151 |
+
 *ERCOT lowest (Gulf Coast Class VI wells, abundant geology, cheap gas, shortest CO2 transport). NYISO highest (no suitable sequestration geology, longest transport, highest permitting burden).*
+
+**L/M/H maturity mapping**:
+- **Low**: Mature nth-of-a-kind CCS, established CO₂ infrastructure, low capex
+- **Medium**: Mid-range deployment maturity
+- **High**: Immature/early deployment, first-of-a-kind, high capex
 
 **CCS-CCGT cost buildup**:
 - Capture cost: ~$30-40/MWh (technology-dependent, relatively uniform)
 - CO2 transport: $2-20/MWh (regional — distance to Class VI well)
 - CO2 storage: $5-15/MWh (regional — geology, well costs)
 - Fuel cost: Heat rate × gas price (responds to gas toggle)
-- 45Q offset: -$29/MWh ($85/ton × 0.34 tCO2/MWh)
+- 45Q offset (when ON): -$29/MWh ($85/ton × 0.34 tCO2/MWh × 95% capture)
 - Capture rate: 95%
 - Residual emissions: ~0.0185 tCO2/MWh (= 0.37 × 0.05)
+
+**45Q behavioral note**: With 45Q ON, CCS modeled as flat baseload (45Q incentivizes max CF to maximize capture credits). With 45Q OFF, CCS dispatch assumption unchanged in Step 2 (same cached physics), but the cost premium reflects the absence of the policy subsidy.
 
 ### 5.5 Battery LCOS ($/MWh) — Regionalized
 
@@ -1251,12 +1331,13 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 | Resources (total modeled) | 6 (clean_firm incl. CCS, solar, wind, hydro, battery, LDES) |
 | Thresholds | 13 (expanded from 10: added 50%, 60%, 70%) |
 | Regions | 5 |
-| Dashboard controls | 7 (2 existing + 5 paired toggles) |
-| Paired toggle groups | 5 (from 10 individual toggles) |
-| Cost scenarios per region/threshold | 324 (3×3×3×3×4) — each independently co-optimized |
-| Total optimizations | 21,060 (13 × 324 × 5) |
+| Dashboard controls | 12 (2 existing + 7 graduated toggles + 1 binary + 2 region-conditional) |
+| Sensitivity toggles | 7 graduated (L/M/H) + 1 binary (45Q On/Off) + 1 CAISO-only (Geothermal L/M/H) |
+| Step 1 physics scenarios per region/threshold | 324 (3×3×3×3×4) — each independently co-optimized |
+| Step 2 cost scenarios (non-CAISO) | 5,832 (3×3×3×3×2×3×4) per region/threshold |
+| Step 2 cost scenarios (CAISO) | 17,496 (5,832 × 3 geothermal) per threshold |
+| Total Step 2 evaluations | ~40,824 sensitivity combos × unique mixes per (region, threshold) |
 | Pareto points per scenario | 3-5 (procurement/storage tradeoff frontier) |
-| Sensitivity toggles | 10 (all Low/Medium/High except Transmission which adds None) |
 | Regional deep-dive pages | 1 (combined, with region selector) |
 | Research paper sections | 8 (including 5 regional deep-dives) |
 | QA checkpoints | 3 (optimizer, HTML, mobile) |
