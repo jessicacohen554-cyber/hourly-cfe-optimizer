@@ -3929,6 +3929,10 @@ function buildDashboardData() {
 
 async function loadData() {
     try {
+        // Verify shared-data.js loaded successfully
+        if (typeof FEASIBLE_MIXES === 'undefined' || typeof DEMAND_GROWTH_RATES === 'undefined') {
+            throw new Error('shared-data.js failed to load. If using file:// protocol, use a local HTTP server instead.');
+        }
         // Build DATA from shared-data.js
         DATA = buildDashboardData();
         // Load compressed day profiles (optional)
@@ -3951,9 +3955,10 @@ function showError(err) {
     el.style.display = 'block';
     el.innerHTML = `
         <div class="error-message">
-            <h2>Results Not Yet Available</h2>
-            <p>Could not load <code>overprocure_results.json</code>.</p>
-            <p style="margin-top:8px;">Run <code>optimize_overprocure.py</code> first to generate the analysis results.</p>
+            <h2>Dashboard Error</h2>
+            <p>Could not initialize dashboard. Ensure <code>js/shared-data.js</code> is accessible.</p>
+            <p style="margin-top:8px;">If opening via <code>file://</code>, use a local server instead:<br>
+            <code style="font-size:0.85rem;">python -m http.server 8000</code> from the <code>dashboard/</code> directory.</p>
             <p style="margin-top:12px;font-size:0.8rem;color:#997a00;">${err.message || err}</p>
         </div>
     `;
@@ -6768,7 +6773,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const yearsToLongterm = Math.max(1, longtermYear - 2025);
 
     const growthLevel = getDemandGrowthLevel();
-    const rates = DEMAND_GROWTH_RATES[iso] || DEMAND_GROWTH_RATES.CAISO;
+    const rates = (typeof DEMAND_GROWTH_RATES !== 'undefined' ? DEMAND_GROWTH_RATES[iso] || DEMAND_GROWTH_RATES.CAISO : {Medium: 0.02});
     const annualRate = rates[growthLevel] || rates.Medium;
     const interimGrowthFactor = Math.pow(1 + annualRate, yearsToInterim);
     const longtermGrowthFactor = Math.pow(1 + annualRate, yearsToLongterm);
@@ -7459,6 +7464,7 @@ function updateDemandGrowthLabel() {
     const iso = document.getElementById('regionSelect').value;
     const display = document.getElementById('demandRateDisplay');
     if (!display || !iso) return;
+    if (typeof DEMAND_GROWTH_RATES === 'undefined') { display.textContent = ''; return; }
     const rates = DEMAND_GROWTH_RATES[iso];
     if (!rates) { display.textContent = ''; return; }
     const level = getDemandGrowthLevel();
