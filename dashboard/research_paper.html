@@ -1028,7 +1028,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3 id="sensitivity-envelope">5.6 Cost Sensitivity Envelope</h3>
     <p>
-        To assess the robustness of our cost estimates, we evaluate 324 sensitivity scenarios per threshold
+        To assess the robustness of our cost estimates, we evaluate 5,832 sensitivity scenarios per threshold
         per region, varying five paired toggle groups: renewable generation costs (Low/Medium/High), firm
         generation costs (Low/Medium/High), storage costs (Low/Medium/High), fossil fuel prices
         (Low/Medium/High), and transmission costs (None/Low/Medium/High). This produces a cost
@@ -1037,8 +1037,8 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </p>
 
     <div class="note-box">
-        <strong>324 Scenarios:</strong> 3 (renewable) &times; 3 (firm) &times; 3 (storage) &times; 3 (fuel) &times; 4 (transmission)
-        = 324 independent cost evaluations per threshold per region. Resource mixes are co-optimized at
+        <strong>5,832 Scenarios:</strong> 3 (renewable) &times; 3 (firm) &times; 3 (storage) &times; 3 (fuel) &times; 2 (CCS) &times; 3 (45Q) &times; 4 (transmission)
+        = 5,832 independent cost evaluations per threshold per region. Resource mixes are co-optimized at
         Medium costs; sensitivity toggles recalculate costs on the optimized mixes, preserving the physical
         optimization while varying economic assumptions.
     </div>
@@ -1047,7 +1047,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <div class="figure">
         <svg width="700" height="380" viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg">
             <rect width="700" height="380" fill="#F8F9FC" rx="8"/>
-            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">COST SENSITIVITY ENVELOPE: LOW-TO-HIGH RANGE ACROSS 324 SCENARIOS</text>
+            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">COST SENSITIVITY ENVELOPE: LOW-TO-HIGH RANGE ACROSS 5,832 SCENARIOS</text>
             <text x="350" y="38" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280">Shaded band = min to max cost; solid line = midpoint; all five regions shown</text>
             <!-- Axes -->
             <line x1="80" y1="55" x2="80" y2="310" stroke="#D4D8E0" stroke-width="1"/>
@@ -1104,7 +1104,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <line x1="370" y1="364" x2="400" y2="364" stroke="rgba(34,197,94,0.6)" stroke-width="1.5" stroke-dasharray="4,3"/>
             <text x="405" y="368" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#374151">Low / High Bound</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 6.</span> Cost sensitivity envelope across 324 scenarios for selected regions. The shaded band shows the range from most optimistic (all Low costs, no transmission) to most pessimistic (all High costs, High transmission). The envelope widens at higher thresholds because marginal resources (CCS-CCGT, LDES, clean firm) carry the widest cost uncertainty. ERCOT's narrower band reflects its lower-cost resource base; NEISO shows the widest spread due to higher baseline costs and greater sensitivity to firm generation pricing.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 6.</span> Cost sensitivity envelope across 5,832 scenarios for selected regions. The shaded band shows the range from most optimistic (all Low costs, no transmission) to most pessimistic (all High costs, High transmission). The envelope widens at higher thresholds because marginal resources (CCS-CCGT, LDES, clean firm) carry the widest cost uncertainty. ERCOT's narrower band reflects its lower-cost resource base; NEISO shows the widest spread due to higher baseline costs and greater sensitivity to firm generation pricing.</div>
     </div>
 
     <h3 id="sensitivity-mix">5.7 Sensitivity Drivers and Resource Mix Implications</h3>
@@ -1160,7 +1160,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         </tbody>
     </table>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-muted);">Low/Midpoint/High effective costs at the 90% hourly matching target across 324 sensitivity scenarios. Spread shown as absolute difference and as percentage of midpoint. Toggle labels: Renew = Renewable Generation, Firm = Firm Generation, Stor = Storage, Fuel = Fossil Fuel Price, Tx = Transmission.</p>
+    <p style="font-size:0.82rem;color:var(--text-muted);">Low/Midpoint/High effective costs at the 90% hourly matching target across 5,832 sensitivity scenarios. Spread shown as absolute difference and as percentage of midpoint. Toggle labels: Renew = Renewable Generation, Firm = Firm Generation, Stor = Storage, Fuel = Fossil Fuel Price, Tx = Transmission.</p>
 
     <p>
         The cost sensitivity analysis reveals several important patterns. First, the spread widens at higher
@@ -1617,7 +1617,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <h2 id="appendix">Appendix: Detailed Sensitivity Results &amp; Investment Planning Scenarios</h2>
 
     <p>
-        Detailed results from the 324-scenario sensitivity analysis, framed as a
+        Detailed results from the 5,832-scenario sensitivity analysis, framed as a
         <strong>phased procurement plan</strong>: <strong>80% by 2035</strong> (Phase 1),
         <strong>95% by 2040</strong> (Phase 2), <strong>99&ndash;100% by 2045</strong> (Phase 3).
         These milestones align with SBTi power sector pathways, US federal goals, IEA Net Zero,
@@ -1627,7 +1627,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>A.1 LCOE Sensitivity Parameters</h3>
     <p>
-        The five paired toggle groups define the 324-scenario sensitivity space. Each group moves member
+        The five paired toggle groups define the 5,832-scenario sensitivity space. Each group moves member
         variables in lockstep (all Low, all Medium, or all High), reflecting real-world cost correlations.
     </p>
     <div class="table-wrap">
@@ -2018,7 +2018,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         The model uses <strong>5 paired sensitivity toggle groups</strong> (3 levels each, except Transmission with 4):
         Renewable Generation (Solar + Wind), Firm Generation (Clean Firm + CCS-CCGT), Storage (Battery + LDES),
         Fossil Fuel Price (Gas + Coal + Oil), and Transmission (all adders). This produces 3 &times; 3 &times; 3
-        &times; 3 &times; 4 = <strong>324 scenarios per region per threshold</strong>, a 182&times; reduction from
+        &times; 3 &times; 4 = <strong>5,832 scenarios per region per threshold</strong>, a 10&times; reduction from
         59,049 independent toggle combinations while preserving the ability to explore all major cost sensitivities.
     </p>
 
