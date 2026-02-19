@@ -3321,12 +3321,12 @@ body {
         <div class="metric-tile" id="tileCO2">
             <div class="tile-label">CO&#8322; Abated</div>
             <div class="tile-value" id="metricCO2Abated">--</div>
-            <div class="tile-sub" id="metricCO2AbatedSub">tons</div>
+            <div class="tile-sub" id="metricCO2AbatedSub">mtCO<sub>2</sub></div>
         </div>
         <div class="metric-tile" id="tileAbateCost">
             <div class="tile-label">Abatement Cost</div>
             <div class="tile-value" id="metricAbateCost">--</div>
-            <div class="tile-sub" id="metricAbateCostSub">$/ton CO&#8322; avg</div>
+            <div class="tile-sub" id="metricAbateCostSub">$/mtCO<sub>2</sub></div>
         </div>
         <div class="metric-tile" id="tileTotalCost">
             <div class="tile-label">Full System Cost</div>
@@ -3404,7 +3404,7 @@ body {
         Our analysis of 8,760 hours across five U.S. power markets reveals that
         <strong>renewables alone cannot achieve high hourly matching targets</strong>.
         Beyond 90% matching, the resource mix pivots toward firm, dispatchable clean generation.
-        Average abatement costs stay below $<span id="db-mac-max-99">...</span>/ton CO&#8322; through 99% in all regions. But stepwise
+        Average abatement costs stay below $<span id="db-mac-max-99">...</span>/mtCO<sub>2</sub> through 99% in all regions. But stepwise
         marginal costs vary wildly &mdash; some steps are cheaper than carbon offsets, others exceed DAC.
         <strong>The grid backbone holds. Early investment in clean firm power unlocks deep decarbonization
         at remarkably competitive costs.</strong>
@@ -4195,7 +4195,13 @@ function updateKeyFinding(iso, threshold, entry, region) {
     const incr = adj.newIncremental > 0 ? Math.round(adj.newIncremental) : null;
     const costs = getUnifiedCosts(entry);
     const curt = costs.curtailment_pct ? Math.round(costs.curtailment_pct) : 0;
-    const peak = Math.round(entry.peak_gap_pct || 0);
+    // Get clean coverage % from GAS_BACKUP_DATA
+    const kfThreshVal = parseFloat(threshold);
+    const kfGbIdx = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(kfThreshVal) : -1;
+    const kfGbData = (typeof GAS_BACKUP_DATA !== 'undefined' && GAS_BACKUP_DATA[iso]) ? GAS_BACKUP_DATA[iso] : null;
+    const cleanCovPct = (kfGbData && kfGbIdx >= 0) ? (kfGbData.clean_coverage_pct[kfGbIdx] || 0) : 0;
+    const gasBackupPct = (kfGbData && kfGbIdx >= 0) ? Math.round(100 - cleanCovPct) : 0;
+
     const mix = entry.resource_mix || {};
     const dominant = Object.entries(mix).sort((a,b) => b[1] - a[1])[0];
     const dominantName = dominant[0].replace('clean_firm', 'clean firm');
@@ -4221,9 +4227,8 @@ function updateKeyFinding(iso, threshold, entry, region) {
             text += ` About <span class="kf-accent">${curt}%</span> of procured energy is curtailed.`;
         }
     }
-    if (peak > 0) {
-        text += ` Even at this level, the worst single hour still has a ` +
-            `<span class="kf-value">${peak}%</span> backup capacity requirement.`;
+    if (gasBackupPct > 0) {
+        text += ` At peak, <span class="kf-value">${gasBackupPct}%</span> of capacity still requires gas backup (${formatPct(cleanCovPct)} clean coverage).`;
     }
     kfText.innerHTML = text;
 }
@@ -4781,40 +4786,57 @@ function updatePeakCapacity(entry, region) {
     const container = document.getElementById('peakCapacityVisual');
     if (!container) return;
 
-    const peakGapPct = entry.peak_gap_pct || 0;
-    const peakDemandMW = region.peak_demand_mw || 0;
-    const gapMW = Math.round(peakDemandMW * peakGapPct / 100);
-    const coveredMW = peakDemandMW - gapMW;
+    const iso = document.getElementById('regionSelect').value;
     const procPct = entry.procurement_pct || 0;
+
+    // Pull peak capacity data from GAS_BACKUP_DATA (shared-data.js) indexed by threshold
+    const currentThreshVal = parseFloat(findClosestThreshold(region, document.getElementById('thresholdSelect').value));
+    const gbIdx = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(currentThreshVal) : -1;
+    const gbData = (typeof GAS_BACKUP_DATA !== 'undefined' && GAS_BACKUP_DATA[iso]) ? GAS_BACKUP_DATA[iso] : null;
+
+    let peakDemandMW = 0;
+    let cleanCoverageMW = 0;
+    let gasBackupMW = 0;
+    let cleanCoveragePct = 0;
+
+    if (gbData && gbIdx >= 0) {
+        peakDemandMW = gbData.ra_peak_mw[gbIdx] || 0;
+        gasBackupMW = gbData.gas_backup_mw[gbIdx] || 0;
+        cleanCoveragePct = gbData.clean_coverage_pct[gbIdx] || 0;
+        cleanCoverageMW = peakDemandMW - gasBackupMW;
+    }
+
+    const peakGapPct = peakDemandMW > 0 ? ((gasBackupMW / peakDemandMW) * 100) : 0;
 
     // Bar heights proportional to MW
     const maxBarH = 150;
     const demandH = maxBarH;
-    const coveredH = peakDemandMW > 0 ? Math.max(8, (coveredMW / peakDemandMW) * maxBarH) : 8;
-    const gapH = peakDemandMW > 0 ? Math.max(4, (gapMW / peakDemandMW) * maxBarH) : 4;
+    const coveredH = peakDemandMW > 0 ? Math.max(8, (cleanCoverageMW / peakDemandMW) * maxBarH) : 8;
+    const gapH = peakDemandMW > 0 ? Math.max(4, (gasBackupMW / peakDemandMW) * maxBarH) : 4;
 
     container.innerHTML = `
         <div class="peak-capacity-note">
             At <strong style="color:#0EA5E9;">${procPct}%</strong> procurement and
-            <strong style="color:#0EA5E9;">${document.getElementById('thresholdSelect').value}%</strong> hourly match across the year,
-            the worst single hour still needs
-            <strong style="color:#EF4444;">${formatPct(peakGapPct)}</strong> of peak demand from backup sources.
+            <strong style="color:#0EA5E9;">${currentThreshVal}%</strong> hourly match,
+            <strong style="color:#22C55E;">${formatPct(cleanCoveragePct)}</strong> of peak demand is covered by clean capacity.
+            Gas backup provides the remaining
+            <strong style="color:#EF4444;">${formatPct(peakGapPct, 1)}</strong>.
         </div>
         <div class="peak-tower-wrap">
             <div class="peak-tower">
                 <div class="peak-tower-value" style="color:#F59E0B;">${formatCommas(peakDemandMW)} MW</div>
                 <div class="peak-tower-bar" style="height:${demandH}px; background: rgba(245,158,11,0.4); border: 2px solid #F59E0B;"></div>
-                <div class="peak-tower-label">Peak<br>Demand</div>
+                <div class="peak-tower-label">RA Peak<br>Demand</div>
             </div>
             <div class="peak-tower">
-                <div class="peak-tower-value" style="color:#0EA5E9;">${formatCommas(coveredMW)} MW</div>
-                <div class="peak-tower-bar" style="height:${coveredH}px; background: rgba(14,165,233,0.4); border: 2px solid #0EA5E9;"></div>
+                <div class="peak-tower-value" style="color:#22C55E;">${formatCommas(cleanCoverageMW)} MW</div>
+                <div class="peak-tower-bar" style="height:${coveredH}px; background: rgba(34,197,94,0.4); border: 2px solid #22C55E;"></div>
                 <div class="peak-tower-label">Clean<br>Coverage</div>
             </div>
             <div class="peak-tower">
-                <div class="peak-tower-value" style="color:#EF4444;">${formatCommas(gapMW)} MW</div>
+                <div class="peak-tower-value" style="color:#EF4444;">${formatCommas(gasBackupMW)} MW</div>
                 <div class="peak-tower-bar" style="height:${gapH}px; background: rgba(239,68,68,0.4); border: 2px solid #EF4444;"></div>
-                <div class="peak-tower-label">Backup<br>Needed</div>
+                <div class="peak-tower-label">Gas<br>Backup</div>
             </div>
         </div>
     `;
@@ -4971,8 +4993,10 @@ function populateReliabilityGauges() {
         const reg99 = DATA.results[iso];
         const t99 = reg99 ? resolveEntry(reg99, '99') : null;
         if (!t99) continue;
-        const peakGapPct = t99.peak_gap_pct || 0;
-        const coveragePct = Math.round(100 - peakGapPct);
+        // Get clean coverage from GAS_BACKUP_DATA at 99% threshold
+        const gbIdx99 = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(99) : -1;
+        const gbIso99 = (typeof GAS_BACKUP_DATA !== 'undefined' && GAS_BACKUP_DATA[iso]) ? GAS_BACKUP_DATA[iso] : null;
+        const coveragePct = (gbIso99 && gbIdx99 >= 0) ? Math.round(gbIso99.clean_coverage_pct[gbIdx99] || 0) : 0;
         const color = gaugeColors[i % gaugeColors.length];
         const dashoffset = circumference * (1 - coveragePct / 100);
         html += `<div class="reliability-gauge">
@@ -6536,7 +6560,7 @@ function updateHeatmapTiles(region, entry, iso) {
         const match = e.hourly_match_score || 0;
         const proc = e.procurement_pct || 0;
         const curt = c.curtailment_pct || 0;
-        const co2 = getCO2Abated(e);
+        const co2 = getCO2Abated(e, iso);
 
         if (incr != null) { minIncr = Math.min(minIncr, incr); maxIncr = Math.max(maxIncr, incr); }
         minMatch = Math.min(minMatch, match); maxMatch = Math.max(maxMatch, match);
@@ -6574,16 +6598,16 @@ function updateHeatmapTiles(region, entry, iso) {
     // Curtailment: higher = red
     applyHeatmap('tileCurtail', c.curtailment_pct || 0, minCurt, maxCurt, true);
     // CO2 abated: higher = green
-    applyHeatmap('tileCO2', getCO2Abated(entry), minCO2, maxCO2, false);
+    applyHeatmap('tileCO2', getCO2Abated(entry, iso), minCO2, maxCO2, false);
 
     // Abatement cost tile
-    const co2Tons = getCO2Abated(entry);
+    const co2Tons = getCO2Abated(entry, iso);
     const abateCostEl = document.getElementById('metricAbateCost');
     const abateCostSub = document.getElementById('metricAbateCostSub');
     if (abateCostEl && co2Tons > 0 && adj.newIncremental != null) {
         const annDemandMWh = region.annual_demand_mwh || 1;
         const avgAbateCost = (adj.newIncremental * annDemandMWh) / co2Tons;
-        abateCostEl.textContent = '$' + formatNum(avgAbateCost) + '/ton';
+        abateCostEl.innerHTML = '$' + formatNum(avgAbateCost) + '/mtCO<sub>2</sub>';
 
         // Marginal abatement cost: approximate from neighboring threshold
         const currentThresh = parseFloat(findClosestThreshold(region, document.getElementById('thresholdSelect').value));
@@ -6595,7 +6619,7 @@ function updateHeatmapTiles(region, entry, iso) {
             const prevEntry = resolveEntry(region, String(prevThresh));
             if (prevEntry) {
                 const prevAdj = cfAdjust(prevEntry, iso);
-                const prevCO2 = getCO2Abated(prevEntry);
+                const prevCO2 = getCO2Abated(prevEntry, iso);
                 const deltaCost = (adj.newIncremental - prevAdj.newIncremental) * annDemandMWh;
                 const deltaCO2 = co2Tons - prevCO2;
                 if (deltaCO2 > 0) {
@@ -6604,15 +6628,15 @@ function updateHeatmapTiles(region, entry, iso) {
             }
         }
         if (marginalCost != null) {
-            abateCostSub.textContent = `$${formatNum(marginalCost)}/ton marginal`;
+            abateCostSub.innerHTML = `$${formatNum(marginalCost)}/mtCO<sub>2</sub> marginal`;
         } else {
-            abateCostSub.textContent = '$/ton CO\u2082 avg';
+            abateCostSub.innerHTML = 'avg MAC ($/mtCO<sub>2</sub>)';
         }
 
         applyHeatmap('tileAbateCost', avgAbateCost, minAbateCost, maxAbateCost, true);
     } else {
         if (abateCostEl) abateCostEl.textContent = '--';
-        if (abateCostSub) abateCostSub.textContent = '$/ton CO\u2082';
+        if (abateCostSub) abateCostSub.innerHTML = '$/mtCO<sub>2</sub>';
         const tile = document.getElementById('tileAbateCost');
         if (tile) { tile.classList.remove(...heatmapClasses, 'tile-negative'); }
     }
@@ -6740,11 +6764,23 @@ function getUnifiedCosts(entry) {
     };
 }
 
-// Extract CO2 abated tons from scenario (handles nested structure)
-function getCO2Abated(entry) {
+// CCGT emission rate: 350 kg CO2/MWh = 0.350 metric tons CO2/MWh
+// Assumes all displaced generation would have been gas CCGT
+const CCGT_CO2_RATE = 0.350; // metric tons CO2 per MWh
+
+// Calculate CO2 abated (metric tons): matched clean MWh × CCGT emission rate
+// co2_abated_mt = (match_score/100 × annual_demand_mwh) × 0.350
+function computeCO2Abated(entry, iso) {
     if (!entry) return 0;
-    if (entry.co2_abated_tons != null) return entry.co2_abated_tons;
-    if (entry.co2_abated?.total_co2_abated_tons != null) return entry.co2_abated.total_co2_abated_tons;
+    const matchScore = entry.hourly_match_score || 0;
+    const annualDemand = (typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH[iso] : 0) * 1e6;
+    return (matchScore / 100) * annualDemand * CCGT_CO2_RATE;
+}
+
+// Get CO2 abated in metric tons — always recalculate from match score × CCGT rate
+function getCO2Abated(entry, iso) {
+    if (!entry) return 0;
+    if (iso) return computeCO2Abated(entry, iso);
     return 0;
 }
 
@@ -6807,14 +6843,20 @@ function updateCO2Tile(entry) {
     const el = document.getElementById('metricCO2Abated');
     const sub = document.getElementById('metricCO2AbatedSub');
     if (!el) return;
-    // Check if CO2 data exists in the entry
-    const co2Val = getCO2Abated(entry);
+    const iso = document.getElementById('regionSelect').value;
+    const co2Val = getCO2Abated(entry, iso);
     if (entry && co2Val > 0) {
-        el.textContent = formatCommas(Math.round(co2Val));
-        sub.textContent = 'tons';
+        // Show in millions of metric tons for readability
+        const millionMt = co2Val / 1e6;
+        if (millionMt >= 1) {
+            el.textContent = formatNum(millionMt, 1) + 'M';
+        } else {
+            el.textContent = formatCommas(Math.round(co2Val));
+        }
+        sub.innerHTML = 'mtCO<sub>2</sub> abated';
     } else {
         el.textContent = '--';
-        sub.textContent = 'tons';
+        sub.innerHTML = 'mtCO<sub>2</sub>';
     }
 }
 
