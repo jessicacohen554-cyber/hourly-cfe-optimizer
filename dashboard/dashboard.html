@@ -3741,6 +3741,7 @@ const OUTLINE_COLOR = '#374151';
 const NAVY = '#1A2744';
 
 let DATA = null;
+let COMPRESSED_DAY_PROFILES = null;
 let donutChart = null;
 let compressedDayChart = null;
 let currentTargetMode = 'interim'; // 'interim' or 'longterm'
@@ -4043,6 +4044,9 @@ function resolveEntry(region, thresholdKey) {
                 }
             }
 
+            // Attach compressed day profile from Step 5 pre-computed data
+            entry.compressed_day = getCompressedDayProfile(iso, entry);
+
             return entry;
         }
     }
@@ -4057,7 +4061,10 @@ function resolveEntry(region, thresholdKey) {
             if (keys.length > 0) scenario = thresholdData.scenarios[keys[0]];
         }
         if (!scenario) return null;
-        return normalizeEntry(scenario);
+        const normalized = normalizeEntry(scenario);
+        // Attach compressed day profile from Step 5 pre-computed data
+        normalized.compressed_day = getCompressedDayProfile(iso, normalized);
+        return normalized;
     }
 
     // Legacy flat format
@@ -4107,12 +4114,40 @@ function normalizeEntry(raw) {
     return entry;
 }
 
+// ---- Compressed Day Profile Lookup ----
+// Builds the same mix_key as step5_compressed_day.py to look up pre-computed profiles
+function getCompressedDayProfile(iso, entry) {
+    if (!COMPRESSED_DAY_PROFILES || !entry) return null;
+    const isoData = COMPRESSED_DAY_PROFILES[iso];
+    if (!isoData) return null;
+
+    const rm = entry.resource_mix || {};
+    const cf = rm.clean_firm || 0;
+    const s = rm.solar || 0;
+    const w = rm.wind || 0;
+    const c = rm.ccs_ccgt || 0;
+    const h = rm.hydro || 0;
+    const proc = entry.procurement_pct || 0;
+    const batt = entry.battery_dispatch_pct || 0;
+    const ldes = entry.ldes_dispatch_pct || 0;
+    const mk = `${cf}_${s}_${w}_${c}_${h}_${proc}_${batt}_${ldes}`;
+
+    return isoData.profiles?.[mk] || null;
+}
+
 // ---- Data Loading ----
 async function loadData() {
     try {
-        const resp = await fetch('overprocure_results.json');
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        DATA = await resp.json();
+        const [mainResp, cdResp] = await Promise.all([
+            fetch('overprocure_results.json'),
+            fetch('compressed_day_profiles.json').catch(() => null)
+        ]);
+        if (!mainResp.ok) throw new Error(`HTTP ${mainResp.status}`);
+        DATA = await mainResp.json();
+        if (cdResp && cdResp.ok) {
+            COMPRESSED_DAY_PROFILES = await cdResp.json();
+            console.log('Compressed day profiles loaded');
+        }
         initDashboard();
     } catch (err) {
         showError(err);
