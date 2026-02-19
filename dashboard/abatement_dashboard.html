@@ -481,71 +481,73 @@ body { background: #F3F4F8; }
         <!-- Scrolly narrative steps -->
         <div class="hero-scrolly-steps">
 
-            <!-- Step 1: The big picture -->
+            <!-- Step 1: The framing -->
             <div class="hero-scrolly-step" data-hero-step="overview">
                 <div class="hero-step-card">
-                    <h3>The marginal cost of the next percent of clean energy tells the real story</h3>
-                    <p>Average abatement costs hide the escalating price of each additional increment. The marginal cost of going from 90% to 92.5% clean can be 3&times; higher than going from 80% to 85%. This is where DAC becomes relevant — not as a replacement for grid decarbonization, but as a ceiling on how far to push it.</p>
-                    <span class="step-stat step-stat-blue">324 cost scenarios &times; 5 ISOs &times; 10 thresholds = 16,200 marginal cost points</span>
+                    <h3>Today's investment decisions determine where grid decarb outcompetes DAC</h3>
+                    <p>The marginal cost of each additional percent of clean energy — not the average — determines when DAC becomes the cheaper path. Across 324 sensitivity scenarios per region, the crossover point shifts by 10–25 percentage points depending on which technologies get investment today. Early bets on nuclear, geothermal, or renewables have catalytic effects on how deep grid decarbonization can go before DAC wins.</p>
+                    <span class="step-stat step-stat-blue">324 cost scenarios &times; 5 ISOs: crossover shifts 10–25 points on policy choices</span>
                 </div>
             </div>
 
-            <!-- Step 2: ERCOT -->
+            <!-- Step 2: ERCOT — renewable tax credits story -->
             <div class="hero-scrolly-step" data-hero-step="ercot">
                 <div class="hero-step-card">
                     <span class="region-tag" style="background:rgba(34,197,94,0.15);color:#22C55E;">ERCOT</span>
-                    <h3>ERCOT: Grid wins through 90% under all scenarios, even vs. optimistic DAC</h3>
-                    <p>At 90%, ERCOT's marginal P90 is $141/ton — still below central DAC at $225. But marginal costs spike unpredictably at 92.5% (P90 hits $1,370/ton) before falling back. At 95%, median marginal cost ($141) exceeds optimistic DAC ($90) but stays well below central ($200).</p>
-                    <span class="step-stat step-stat-green">Marginal P90 at 90%: $141/ton vs. DAC central $225/ton</span>
+                    <h3>Renewable tax credits make ERCOT a no-regrets bet to 97.5%</h3>
+                    <p>At medium costs, ERCOT's grid decarb beats central DAC through 97.5%. With low renewable costs — the trajectory sustained by IRA tax credits — the crossover extends to 99%. Even under all-high cost assumptions, grid investment wins to 97.5%. ERCOT is the strongest case for continued grid investment: deep solar/wind resources mean no plausible future where DAC is cheaper before ~95%.</p>
+                    <span class="step-stat step-stat-green">Low renewables: grid wins to 99% &middot; All High: still wins to 97.5%</span>
                 </div>
             </div>
 
-            <!-- Step 3: PJM -->
+            <!-- Step 3: PJM — firm gen cliff -->
             <div class="hero-scrolly-step" data-hero-step="pjm">
                 <div class="hero-step-card">
                     <span class="region-tag" style="background:rgba(74,144,217,0.15);color:#4a90d9;">PJM</span>
-                    <h3>PJM: Cheap marginal costs through 92.5%, then a cliff at 95%</h3>
-                    <p>PJM has remarkably low marginal costs through 92.5% — P90 stays below $285/ton, well under conservative DAC. But at 95%, the marginal P50 jumps to $197/ton, exceeding optimistic DAC ($90) and nearly matching central ($200). By 99%, even the P10 (best-case) is $120/ton — DAC central at $184 is within reach.</p>
-                    <span class="step-stat step-stat-amber">95% cliff: marginal P50 jumps from $101 to $197/ton</span>
+                    <h3>PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points</h3>
+                    <p>At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs (achieved nuclear/geothermal) extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. The policy signal: PJM's path past 90% depends entirely on whether clean firm generation achieves cost learning — renewables alone aren't enough at these penetration levels.</p>
+                    <span class="step-stat step-stat-amber">Low firm gen: grid wins to 92.5% &middot; High firm + high RE: only 87.5%</span>
                 </div>
             </div>
 
-            <!-- Step 4: CAISO -->
+            <!-- Step 4: CAISO — firm gen as catalytic -->
             <div class="hero-scrolly-step" data-hero-step="caiso">
                 <div class="hero-step-card">
                     <span class="region-tag" style="background:rgba(245,158,11,0.15);color:#F59E0B;">CAISO</span>
-                    <h3>CAISO: High variance makes the grid-vs-DAC call uncertain from 75% on</h3>
-                    <p>CAISO's marginal costs are among the most volatile. At 75%, the P50 ($152) already exceeds optimistic DAC ($141). The median stays below central DAC through ~92.5%, but the P90 is extreme — $619/ton at 85%, $709 at 87.5%. Firm generation cost (48% of variance) drives this spread. Under favorable costs, grid wins to 95%+; under unfavorable, DAC is cheaper from 75%.</p>
-                    <span class="step-stat step-stat-red">P90 marginal MAC at 85%: $619/ton vs. DAC central $238</span>
+                    <h3>CAISO: High marginal cost volatility, but grid still wins deep under medium costs</h3>
+                    <p>CAISO shows extreme marginal cost swings — $738/ton at 75% under medium costs, yet grid still beats DAC central through 99% because later steps are cheap. The variance is driven by how clean firm resources dispatch. Low firm + low renewable costs extend the crossover to 97.5%. High firm + high renewable costs mean grid never beats even optimistic DAC. The lesson: CAISO's path past 90% is a bet on firm generation, not more solar.</p>
+                    <span class="step-stat step-stat-red">High firm + high RE: grid never beats optimistic DAC &middot; Low combo: wins to 97.5%</span>
                 </div>
             </div>
 
-            <!-- Step 5: Northeast -->
+            <!-- Step 5: Northeast — the catalytic case for nuclear/geo -->
             <div class="hero-scrolly-step" data-hero-step="northeast">
                 <div class="hero-step-card">
                     <span class="region-tag" style="background:rgba(233,30,99,0.15);color:#E91E63;">NYISO</span>
                     <span class="region-tag" style="background:rgba(156,39,176,0.15);color:#9C27B0;margin-left:6px;">NEISO</span>
-                    <h3>Northeast: DAC wins the marginal dollar above 92.5% in most scenarios</h3>
-                    <p>At 95%, NYISO's marginal P50 is $307/ton and NEISO's is $352/ton — both far exceeding central DAC at $200. By 99%, NYISO P50 hits $1,032/ton and NEISO $906/ton. Even NEISO's P90 exceeds conservative DAC ($431) as early as 75%. The last 5–10% of decarbonization costs 3–5&times; more per ton than DAC.</p>
-                    <span class="step-stat step-stat-red">NEISO marginal P50 at 95%: $352/ton vs. DAC central $200</span>
+                    <h3>The Northeast makes the strongest case for early nuclear and geothermal investment</h3>
+                    <p>NEISO's grid decarb only beats DAC central through 70% at medium costs — the lowest of any region. But low firm + low renewable costs extend this to 85%. In NYISO, low firm generation alone pushes the crossover from 85% to 85% — limited gains, but high firm + high RE gets a surprising 92.5% via resource rebalancing. The catalytic effect of cheap firm generation is 10–15 points of additional no-regrets decarbonization.</p>
+                    <span class="step-stat step-stat-red">NEISO: 70% at Medium &rarr; 85% with low firm + low RE (15-point gain)</span>
                 </div>
             </div>
 
-            <!-- Step 6: The swing factor -->
+            <!-- Step 6: Policy synthesis -->
             <div class="hero-scrolly-step" data-hero-step="drivers">
                 <div class="hero-step-card">
-                    <h3>The swing factor: Clean firm generation, not storage</h3>
-                    <p>Storage costs contribute less than 1% of marginal cost variance in every region. The grid-vs-DAC question is decided by firm generation costs (nuclear, geothermal) in CAISO/NYISO/NEISO (39–58% of variance), and fossil fuel prices in ERCOT/PJM (43%). If clean firm achieves cost learning, the marginal crossover point pushes higher. If it doesn't, DAC wins the marginal dollar earlier.</p>
-                    <span class="step-stat step-stat-blue">Storage: &lt;1% of variance &middot; Firm Gen: 39–58%</span>
+                    <h3>Three policy levers, three different effects</h3>
+                    <p><strong>Renewable tax credits</strong> (IRA/PTC/ITC) are most catalytic in ERCOT, extending grid competitiveness to 99%. Moderate effect in PJM/CAISO. Minimal impact in the Northeast where the constraint is firm generation, not renewables.<br><br>
+                    <strong>Nuclear/geothermal investment</strong> (NRC licensing, DOE LPO loans, HALEU supply) is decisive in NYISO/NEISO/CAISO. Cheap firm generation shifts the DAC crossover 10–15 percentage points higher.<br><br>
+                    <strong>Storage costs</strong> contribute &lt;1% of variance in every region — battery/LDES prices are not the bottleneck.</p>
+                    <span class="step-stat step-stat-blue">RE credits: +2–5 pts &middot; Firm gen: +10–15 pts &middot; Storage: ~0 pts</span>
                 </div>
             </div>
 
             <!-- Step 7: Bottom line -->
             <div class="hero-scrolly-step" data-hero-step="conclusion">
                 <div class="hero-step-card">
-                    <h3>Bottom line: Grid to ~90%, then ask the DAC question</h3>
-                    <p>In every region, the marginal cost of grid decarbonization stays below central DAC through ~90%. Beyond that, the answer depends on where you are and what clean firm resources cost. ERCOT and PJM can push to 92.5% confidently. CAISO, NYISO, and NEISO hit marginal cost walls between 90–95% where DAC becomes the cheaper abatement path — unless firm generation costs fall.</p>
-                    <span class="step-stat step-stat-green">Grid wins to ~90% in all regions, all scenarios</span>
+                    <h3>The optimal strategy: grid to the crossover, DAC for the rest</h3>
+                    <p>Grid decarbonization is the cheaper abatement path to at least 85–90% in every region under any cost scenario. Past that, the right answer depends on today's policy choices. Investment in firm clean generation (nuclear, enhanced geothermal, CCS) has the largest catalytic effect — buying 10–15 additional points of grid decarb that outcompetes DAC. Renewable tax credits are necessary but not sufficient in high-cost regions. The optimal portfolio: push grid decarb to its natural crossover point, then let DAC close the gap.</p>
+                    <span class="step-stat step-stat-green">Grid to 85–97.5% (region-dependent) &middot; DAC for the final stretch</span>
                 </div>
             </div>
 
