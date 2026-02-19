@@ -912,17 +912,36 @@ for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    {iso}: {{')
     for t_idx, t in enumerate(THRESHOLDS):
         t_data = data['results'][iso]['thresholds'].get(t, {})
-        mixes = t_data.get('feasible_mixes', [])
+        fmixes = t_data.get('feasible_mixes', {})
+
+        # Support both columnar format (new: {col: [vals...]}) and row format (old: [{col: val}...])
+        mix_rows = []
+        if isinstance(fmixes, dict) and 'clean_firm' in fmixes:
+            # Columnar format
+            n_mixes = len(fmixes['clean_firm'])
+            for i in range(n_mixes):
+                mix_rows.append([
+                    fmixes['clean_firm'][i], fmixes['solar'][i], fmixes['wind'][i],
+                    fmixes['ccs_ccgt'][i], fmixes['hydro'][i],
+                    fmixes['procurement_pct'][i],
+                    round(fmixes['hourly_match_score'][i], 1),
+                    fmixes.get('battery_dispatch_pct', [0] * n_mixes)[i],
+                    fmixes.get('ldes_dispatch_pct', [0] * n_mixes)[i],
+                ])
+        elif isinstance(fmixes, list):
+            # Legacy row format
+            for m in fmixes:
+                rm = m.get('resource_mix', {})
+                mix_rows.append([
+                    rm.get('clean_firm', 0), rm.get('solar', 0), rm.get('wind', 0),
+                    rm.get('ccs_ccgt', 0), rm.get('hydro', 0),
+                    m.get('procurement_pct', 100), round(m.get('hourly_match_score', 0), 1),
+                    m.get('battery_dispatch_pct', 0), m.get('ldes_dispatch_pct', 0),
+                ])
+
         lines.append(f'        "{t}": [')
-        for m_idx, m in enumerate(mixes):
-            rm = m.get('resource_mix', {})
-            arr = [
-                rm.get('clean_firm', 0), rm.get('solar', 0), rm.get('wind', 0),
-                rm.get('ccs_ccgt', 0), rm.get('hydro', 0),
-                m.get('procurement_pct', 100), round(m.get('hourly_match_score', 0), 1),
-                m.get('battery_dispatch_pct', 0), m.get('ldes_dispatch_pct', 0),
-            ]
-            comma = ',' if m_idx < len(mixes) - 1 else ''
+        for m_idx, arr in enumerate(mix_rows):
+            comma = ',' if m_idx < len(mix_rows) - 1 else ''
             lines.append(f'            [{",".join(str(v) for v in arr)}]{comma}')
         t_comma = ',' if t_idx < len(THRESHOLDS) - 1 else ''
         lines.append(f'        ]{t_comma}')
