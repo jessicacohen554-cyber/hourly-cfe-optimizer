@@ -539,7 +539,6 @@ function buildMacChart() {
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                interaction: { mode: 'nearest', intersect: false },
                 scales: {
                     x: { type: 'linear', min: 48, max: 100,
                         afterBuildTicks: function(axis) {
@@ -561,43 +560,7 @@ function buildMacChart() {
                 },
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(26,39,68,0.92)',
-                        titleFont: { family: "'Barlow Semi Condensed', sans-serif", size: 11, weight: '600' },
-                        bodyFont: { family: "'Barlow Semi Condensed', sans-serif", size: 10 },
-                        padding: 8, cornerRadius: 6,
-                        filter: item => !item.dataset.label.startsWith('DAC') && item.dataset.label !== 'P90' && item.dataset.label !== 'P10',
-                        callbacks: {
-                            title: items => {
-                                const x = items[0].raw.x;
-                                // Find SBTi year for this threshold
-                                const ms = SBTI_MILESTONES;
-                                let yr = '';
-                                for (let i = 0; i < ms.length - 1; i++) {
-                                    if (x >= ms[i].threshold && x <= ms[i+1].threshold) {
-                                        const frac = (x - ms[i].threshold) / (ms[i+1].threshold - ms[i].threshold);
-                                        yr = ' (~' + Math.round(ms[i].year + frac * (ms[i+1].year - ms[i].year)) + ')';
-                                        break;
-                                    }
-                                }
-                                return x + '% Step' + yr;
-                            },
-                            label: item => {
-                                if (item.dataset.label !== 'Midpoint') return null;
-                                const idx = THRESHOLDS.indexOf(item.raw.x);
-                                const p10v = idx >= 0 && fan.p10[idx] != null ? Math.round(fan.p10[idx]) : '--';
-                                const p90v = idx >= 0 && fan.p90[idx] != null ? Math.round(Math.min(fan.p90[idx], 2000)) : '--';
-                                const dacC = dacCostAtThreshold(item.raw.x, 'central');
-                                return ['Marginal MAC: $' + Math.round(item.raw.y) + '/tCO\u2082 (P10: $' + p10v + ', P90: $' + p90v + ')',
-                                        'DAC at this year: $' + dacC + '/tCO\u2082 (central)'];
-                            },
-                            afterLabel: item => {
-                                if (item.dataset.label !== 'Midpoint') return null;
-                                const dacC = dacCostAtThreshold(item.raw.x, 'central');
-                                return item.raw.y > dacC ? '\u26A0 Exceeds projected DAC cost' : '\u2713 Below projected DAC cost';
-                            }
-                        }
-                    },
+                    tooltip: { enabled: false },
                     annotation: { annotations: {} },
                     datalabels: { display: false }
                 }
@@ -728,27 +691,7 @@ function buildPortfolio() {
                     usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10, weight: 600 },
                     filter: item => !item.text.startsWith('DAC')
                 } },
-                tooltip: { callbacks: {
-                    title: items => {
-                        const idx = items[0].dataIndex;
-                        const yr = Math.round(2025 + (zoneEndThresholds[idx] - 0) / 100 * 25);
-                        const sbtiYr = zoneEndThresholds.map(t => {
-                            const ms = SBTI_MILESTONES;
-                            for (let i = 0; i < ms.length - 1; i++) {
-                                if (t >= ms[i].threshold && t <= ms[i+1].threshold) {
-                                    return Math.round(ms[i].year + ((t - ms[i].threshold) / (ms[i+1].threshold - ms[i].threshold)) * (ms[i+1].year - ms[i].year));
-                                }
-                            }
-                            return 2050;
-                        });
-                        return MARGINAL_MAC_LABELS[idx] + ' (~' + sbtiYr[idx] + ')';
-                    },
-                    label: item => {
-                        if (item.dataset.label === 'DAC Central') return 'DAC Central: $' + Math.round(item.raw) + '/ton';
-                        if (item.dataset.label.startsWith('DAC')) return item.dataset.label + ': $' + Math.round(item.raw) + '/ton';
-                        return item.dataset.label + ': $' + margData[item.dataset.label]?.[item.dataIndex] + '/ton';
-                    }
-                } },
+                tooltip: { enabled: false },
                 datalabels: { display: false },
                 annotation: { annotations: {} }
             }
