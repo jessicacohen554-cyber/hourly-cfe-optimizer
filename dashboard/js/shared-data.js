@@ -87,8 +87,8 @@ const BENCHMARKS_DYNAMIC = {
     dac: {
         name: 'Direct Air Capture (DAC)', short: 'DAC', color: '#E91E63', category: 'carbon_removal', confidence: 'low',
         trajectory: 'declining_steep',
-        Low:    { low: 65,   mid: 100,  high: 175 },
-        Medium: { low: 100,  mid: 175,  high: 300 },
+        Low:    { low: 100,  mid: 150,  high: 225 },
+        Medium: { low: 125,  mid: 200,  high: 300 },
         High:   { low: 175,  mid: 300,  high: 500 },
         sources: 'DOE Liftoff NOAK, IEAGHG 2021, Fasihi et al. (J. Cleaner Prod. 2019), Sievert et al. (Joule 2024), Climeworks Gen 3 roadmap, DOE Carbon Negative Shot, Kanyako & Craig (Earth\'s Future 2025)'
     },
