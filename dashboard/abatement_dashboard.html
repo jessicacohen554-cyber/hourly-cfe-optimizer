@@ -459,9 +459,6 @@ function buildMacChart() {
     const thresholds9 = THRESHOLDS;
     const gridLevel = s.grid.toLowerCase();
     const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
-    const dacLow = BENCHMARKS_DYNAMIC.dac.Low;
-    const dacMed = BENCHMARKS_DYNAMIC.dac.Medium;
-    const dacHigh = BENCHMARKS_DYNAMIC.dac.High;
     // Build declining DAC trajectory datasets (one value per threshold via SBTi year mapping)
     const dacCurveThresholds = THRESHOLDS.filter(t => t >= 50);
     const dacOptData = dacCurveThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'optimistic') }));
@@ -532,11 +529,11 @@ function buildMacChart() {
                     { label: 'Midpoint', data: p50, borderColor: c, backgroundColor: c + '18',
                         borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, fill: false, tension: 0.3, order: 1 },
                     // DAC declining trajectory curves (SBTi year-indexed)
-                    { label: 'DAC Optimistic', data: dacOptData.filter(d => d.x >= 74), borderColor: '#E91E6333',
+                    { label: 'DAC Optimistic', data: dacOptData, borderColor: '#E91E6333',
                         borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 5 },
-                    { label: 'DAC Central', data: dacCenData.filter(d => d.x >= 74), borderColor: '#E91E6388',
+                    { label: 'DAC Central', data: dacCenData, borderColor: '#E91E6388',
                         borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, fill: false, tension: 0.3, order: 4 },
-                    { label: 'DAC Conservative', data: dacConData.filter(d => d.x >= 74), borderColor: '#E91E6333',
+                    { label: 'DAC Conservative', data: dacConData, borderColor: '#E91E6333',
                         borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.05)', tension: 0.3, order: 5 }
                 ]
             },
@@ -544,8 +541,17 @@ function buildMacChart() {
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'nearest', intersect: false },
                 scales: {
-                    x: { type: 'linear', min: 74, max: 100,
-                        ticks: { stepSize: 5, callback: v => v + '%', font: { size: 9 } },
+                    x: { type: 'linear', min: 48, max: 100,
+                        afterBuildTicks: function(axis) {
+                            axis.ticks = [50, 60, 70, 80, 90, 95, 100].map(v => ({ value: v }));
+                        },
+                        ticks: {
+                            callback: function(v) {
+                                const yearMap = { 50: "'30", 60: "'32", 70: "'35", 80: "'37", 90: "'40", 95: "'45", 100: "'50" };
+                                return v + '% (' + (yearMap[v] || '') + ')';
+                            },
+                            font: { size: 8 }, maxRotation: 0
+                        },
                         grid: { display: false }, border: { display: true, color: '#D4D8E0' }
                     },
                     y: { min: 0, max: yMax,
@@ -596,16 +602,6 @@ function buildMacChart() {
                         annotations: {
                             scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980099', borderWidth: 1.5, borderDash: [5, 3],
                                 label: { display: true, content: 'SCC $190', position: 'start', font: { size: 8 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
-                            },
-                            dacBand: { type: 'box', yMin: dacLow.mid, yMax: dacHigh.mid, backgroundColor: 'rgba(233,30,99,0.07)', borderWidth: 0 },
-                            dacLow: { type: 'line', yMin: dacLow.mid, yMax: dacLow.mid, borderColor: '#E91E6355', borderWidth: 1, borderDash: [3, 3],
-                                label: { display: true, content: 'DAC Low $' + dacLow.mid, position: 'start', font: { size: 7 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
-                            },
-                            dacMed: { type: 'line', yMin: dacMed.mid, yMax: dacMed.mid, borderColor: '#E91E6399', borderWidth: 1.5, borderDash: [5, 3],
-                                label: { display: true, content: 'DAC Med $' + dacMed.mid, position: 'end', font: { size: 8 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
-                            },
-                            dacHigh: { type: 'line', yMin: dacHigh.mid, yMax: dacHigh.mid, borderColor: '#E91E6355', borderWidth: 1, borderDash: [3, 3],
-                                label: { display: true, content: 'DAC High $' + dacHigh.mid, position: 'end', font: { size: 7 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
                             }
                         }
                     },
@@ -670,9 +666,6 @@ function buildPortfolio() {
     const s = getState();
     const gridLevel = s.grid.toLowerCase();
     const margData = MARGINAL_MAC_DATA[gridLevel] || MARGINAL_MAC_DATA.medium;
-    const dacLowP = BENCHMARKS_DYNAMIC.dac.Low;
-    const dacMedP = BENCHMARKS_DYNAMIC.dac.Medium;
-    const dacHighP = BENCHMARKS_DYNAMIC.dac.High;
     const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
 
     // DAC cost at each zone's end-threshold (declining via SBTi year)
@@ -766,14 +759,7 @@ function buildPortfolio() {
                 annotation: {
                     annotations: {
                         scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980088', borderWidth: 2, borderDash: [6, 4],
-                            label: { display: true, content: 'SCC $190', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } },
-                        dacBand: { type: 'box', yMin: dacLowP.mid, yMax: dacHighP.mid, backgroundColor: 'rgba(233,30,99,0.07)', borderWidth: 0 },
-                        dacLow: { type: 'line', yMin: dacLowP.mid, yMax: dacLowP.mid, borderColor: '#E91E6344', borderWidth: 1, borderDash: [4, 4],
-                            label: { display: true, content: 'DAC Low $' + dacLowP.mid, position: 'start', font: { size: 8, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } },
-                        dacMed: { type: 'line', yMin: dacMedP.mid, yMax: dacMedP.mid, borderColor: '#E91E6388', borderWidth: 2, borderDash: [6, 4],
-                            label: { display: true, content: 'DAC Med $' + dacMedP.mid, position: 'end', font: { size: 9, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } },
-                        dacHigh: { type: 'line', yMin: dacHighP.mid, yMax: dacHighP.mid, borderColor: '#E91E6344', borderWidth: 1, borderDash: [4, 4],
-                            label: { display: true, content: 'DAC High $' + dacHighP.mid, position: 'end', font: { size: 8, weight: 600 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
+                            label: { display: true, content: 'SCC $190', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
                     }
                 }
             }
