@@ -468,43 +468,51 @@ function buildMacChart() {
     Object.values(macChartInstances).forEach(c => c.destroy());
     macChartInstances = {};
 
-    // Compute shared Y max
+    // Use stepwise (marginal) MAC data for cost curves — matches horizontal bar methodology
+    // MAC_STEPWISE_FAN has P10/P50/P90 of marginal cost per step (not cumulative average)
+    const useFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : MAC_FAN_DATA;
+
+    // Compute shared Y max from stepwise data (cap at 1200 for readability)
     let yMax = 0;
     regions.forEach(iso => {
-        const fan = MAC_FAN_DATA?.[iso];
-        if (fan) yMax = Math.max(yMax, ...fan.p90.filter(v => v != null));
+        const fan = useFan?.[iso];
+        if (fan) yMax = Math.max(yMax, ...fan.p90.filter(v => v != null && v < 2000));
     });
-    yMax = Math.ceil(yMax / 25) * 25 + 25;
+    yMax = Math.min(Math.ceil(yMax / 50) * 50 + 50, 1200);
 
-    // Build card HTML
+    // Build card HTML — show marginal MAC at 99% step
     grid.innerHTML = regions.map(iso => {
         const c = REGION_COLORS[iso];
-        const mac99 = macData[iso]?.[_TI[99]] || 0;
-        const p10_99 = Math.round(MAC_FAN_DATA[iso]?.p10?.[_TI[99]] || 0);
-        const p90_99 = Math.round(MAC_FAN_DATA[iso]?.p90?.[_TI[99]] || 0);
+        const margMac = MARGINAL_MAC_DATA?.medium?.[iso];
+        const lastStep = margMac ? margMac[margMac.length - 1] : 0;
+        const fan = useFan[iso];
+        const p10_99 = fan?.p10?.[_TI[99]] != null ? Math.round(fan.p10[_TI[99]]) : '--';
+        const p90_99 = fan?.p90?.[_TI[99]] != null ? Math.round(fan.p90[_TI[99]]) : '--';
         return `<div class="envelope-card" style="border-top-color:${c}">` +
             `<div class="envelope-card-title">` +
             `  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c}"></span>` +
             `  ${regionNames[iso]}` +
-            `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1rem;font-weight:800;color:${c}">$${mac99}/ton</span>` +
+            `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1rem;font-weight:800;color:${c}">$${lastStep}/ton</span>` +
             `</div>` +
-            `<div class="envelope-card-subtitle">At 99% · Range: $${p10_99}–$${p90_99}/ton</div>` +
+            `<div class="envelope-card-subtitle">Marginal MAC at 97.5→99% step · Range: $${p10_99}–$${p90_99}/ton</div>` +
             `<canvas id="macEnv_${iso}"></canvas>` +
             `</div>`;
     }).join('');
 
-    // Build each chart
+    // Build each chart — using stepwise (marginal) MAC data
     regions.forEach(iso => {
         const ctx = document.getElementById('macEnv_' + iso)?.getContext('2d');
         if (!ctx) return;
-        const fan = MAC_FAN_DATA?.[iso];
-        const env = MAC_ENVELOPE_DATA?.[iso]?.envelope;
+        const fan = useFan?.[iso];
+        const env = MAC_ENVELOPE_DATA?.[iso]?.stepwise_envelope;
         if (!fan) return;
 
         const c = REGION_COLORS[iso];
-        const p90 = fan.p90.map((v, i) => ({ x: thresholds9[i], y: v }));
-        const p10 = fan.p10.map((v, i) => ({ x: thresholds9[i], y: v }));
-        const p50 = (env || fan.p50).map((v, i) => ({ x: thresholds9[i], y: v }));
+        // Filter null values (first 2 thresholds have no stepwise data)
+        const p90 = fan.p90.map((v, i) => ({ x: thresholds9[i], y: v != null ? Math.min(v, 1200) : null })).filter(d => d.y != null);
+        const p10 = fan.p10.map((v, i) => ({ x: thresholds9[i], y: v != null ? v : null })).filter(d => d.y != null);
+        const midSrc = env || fan.p50;
+        const p50 = midSrc.map((v, i) => ({ x: thresholds9[i], y: v != null ? Math.min(v, 1200) : null })).filter(d => d.y != null);
 
         macChartInstances[iso] = new Chart(ctx, {
             type: 'line',
@@ -539,12 +547,14 @@ function buildMacChart() {
                         bodyFont: { family: "'Barlow Semi Condensed', sans-serif", size: 10 },
                         padding: 8, cornerRadius: 6,
                         callbacks: {
-                            title: items => items[0].raw.x + '% Target',
+                            title: items => items[0].raw.x + '% Step',
                             label: item => {
                                 if (item.dataset.label !== 'Midpoint') return null;
                                 const idx = THRESHOLDS.indexOf(item.raw.x);
-                                return 'MAC: $' + Math.round(item.raw.y) + '/ton' +
-                                    (idx >= 0 ? ' (P10: $' + Math.round(fan.p10[idx]) + ', P90: $' + Math.round(fan.p90[idx]) + ')' : '');
+                                const p10v = idx >= 0 && fan.p10[idx] != null ? Math.round(fan.p10[idx]) : '--';
+                                const p90v = idx >= 0 && fan.p90[idx] != null ? Math.round(Math.min(fan.p90[idx], 2000)) : '--';
+                                return 'Marginal MAC: $' + Math.round(item.raw.y) + '/mtCO\u2082' +
+                                    (idx >= 0 ? ' (P10: $' + p10v + ', P90: $' + p90v + ')' : '');
                             }
                         }
                     },

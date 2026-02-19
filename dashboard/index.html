@@ -1405,6 +1405,55 @@ body {
         </div>
     </section>
 
+    <!-- SECTION: COST CURVE — HOCKEY STICK -->
+    <section class="story-section story-fade-in" id="costCurveSection">
+        <div class="story-content">
+            <span class="story-badge" style="background:rgba(239,68,68,0.12);color:#DC2626;">Cost Inflection</span>
+            <h2>The Hockey Stick: Where Decarbonization Costs Accelerate</h2>
+
+            <p class="story-lead">
+                Moving from 50% to 90% hourly carbon-free matching is relatively affordable &mdash; incremental costs
+                stay modest as cheap renewables do the heavy lifting. But beyond 90%, costs accelerate sharply.
+                Closing the last few percentage points requires expensive firm generation, long-duration storage,
+                and over-procurement to cover every hour &mdash; creating the classic <strong>hockey stick</strong> cost curve.
+            </p>
+
+            <div class="incremental-region-pills" id="costCurveRegionPills">
+                <button class="incremental-pill active" data-region="CAISO">CAISO</button>
+                <button class="incremental-pill" data-region="ERCOT">ERCOT</button>
+                <button class="incremental-pill" data-region="PJM">PJM</button>
+                <button class="incremental-pill" data-region="NYISO">NYISO</button>
+                <button class="incremental-pill" data-region="NEISO">NEISO</button>
+            </div>
+
+            <div class="incremental-chart-container" style="min-height:400px;">
+                <canvas id="costCurveChart"></canvas>
+            </div>
+
+            <p id="costCurveInsightText" style="font-size:0.97rem;color:#4A4540;line-height:1.7;margin-top:1rem;"></p>
+
+            <div class="cost-curve-narrative" style="margin-top:1.5rem;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+                    <div style="background:#F0FDF4;border-radius:10px;padding:1rem 1.1rem;">
+                        <div style="font-weight:700;color:#166534;font-size:0.9rem;margin-bottom:0.3rem;">50%&ndash;85%: The Easy Wins</div>
+                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">Renewables dominate. Costs grow slowly because wind and solar are
+                            the cheapest generation sources. Modest over-procurement handles variability.</div>
+                    </div>
+                    <div style="background:#FEF9C3;border-radius:10px;padding:1rem 1.1rem;">
+                        <div style="font-weight:700;color:#854D0E;font-size:0.9rem;margin-bottom:0.3rem;">85%&ndash;95%: The Inflection Zone</div>
+                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">Firm generation and storage enter the mix to cover nights and low-wind periods.
+                            Each additional percentage point costs more than the last.</div>
+                    </div>
+                    <div style="background:#FEF2F2;border-radius:10px;padding:1rem 1.1rem;">
+                        <div style="font-weight:700;color:#991B1B;font-size:0.9rem;margin-bottom:0.3rem;">95%&ndash;100%: The Last Mile</div>
+                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">The most expensive hours to decarbonize. Costs spike as the system
+                            must cover rare weather extremes with premium firm capacity and massive over-procurement.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- SECTION: NO REGRETS RESOURCES -->
     <section class="story-section story-fade-in">
         <div class="story-content">
@@ -1811,6 +1860,7 @@ function initHomepage() {
     if (document.getElementById('incrementalMixChart')) initIncrementalMixChart();
     if (document.getElementById('homepage90CostChart')) initHomepage90CostChart();
     if (document.getElementById('noRegretsChart')) initNoRegretsChart('CAISO');
+    if (document.getElementById('costCurveChart')) initCostCurveChart('CAISO');
     // Trigger scroll animations
     setupScrollObserver();
 }
@@ -2499,31 +2549,33 @@ function getIncrementalData(region) {
     MIX_RESOURCES.forEach(r => { existingData[r] = []; newData[r] = []; });
     let existingCleanTotal = 0;
 
-    // Get total existing clean for the region
-    const gridMix = DATA.config?.grid_mix_shares?.[region];
+    // Get existing grid shares and resource mix data directly from shared-data.js
+    const gridMix = (typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES[region] : null) ||
+                    DATA.config?.grid_mix_shares?.[region];
+    const mixData = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[region] : null;
     if (gridMix) {
         existingCleanTotal = Object.values(gridMix).reduce((s, v) => s + v, 0);
     }
 
     for (const tk of thresholdKeys) {
-        const tData = DATA.results[region]?.thresholds?.[tk];
-        if (!tData) continue;
-        const sc = resolveScenario(tData);
-        if (!sc) continue;
-        const scCosts = getUnifiedCosts(sc);
-        const rc = scCosts.resource_costs;
-        if (!rc) continue;
+        const ti = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(parseFloat(tk)) : -1;
+        if (ti < 0) continue;
+        if (!mixData) continue;
 
+        // Compute procurement-scaled % of demand for each resource
+        const proc = mixData.procurement?.[ti] || 100;
         labels.push(tk + '%');
         MIX_RESOURCES.forEach(r => {
-            const rd = rc[r];
-            if (!rd) { existingData[r].push(0); newData[r].push(0); return; }
             if (r === 'battery' || r === 'ldes') {
                 existingData[r].push(0);
-                newData[r].push(rd.dispatch_pct || 0);
+                newData[r].push(mixData[r]?.[ti] || 0);
             } else {
-                existingData[r].push(rd.existing_pct || rd.existing_share || 0);
-                newData[r].push(rd.new_pct || rd.new_share || 0);
+                const totalPct = (mixData[r]?.[ti] || 0) * proc / 100;
+                const existPct = gridMix?.[r] || 0;
+                const newPct = Math.max(0, totalPct - existPct);
+                const cappedExist = Math.min(existPct, totalPct);
+                existingData[r].push(Math.round(cappedExist * 10) / 10);
+                newData[r].push(Math.round(newPct * 10) / 10);
             }
         });
     }
@@ -3575,6 +3627,269 @@ const NO_REGRETS_DATA = {
         }
     },
 };
+
+// ============================================================================
+// CHART: Hockey Stick Cost Curve (Average MAC by threshold)
+// ============================================================================
+let costCurveChartInstance = null;
+
+function initCostCurveChart(iso) {
+    const canvas = document.getElementById('costCurveChart');
+    if (!canvas) return;
+    if (typeof MAC_DATA === 'undefined') return;
+
+    const medData = MAC_DATA.medium?.[iso];
+    const lowData = MAC_DATA.low?.[iso];
+    const highData = MAC_DATA.high?.[iso];
+    if (!medData) return;
+
+    // Build {x, y} point arrays using THRESHOLDS
+    const thresholds = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50,60,70,75,80,85,87.5,90,92.5,95,97.5,99,100];
+    const medPoints = thresholds.map((t, i) => ({ x: t, y: medData[i] }));
+    const lowPoints = lowData ? thresholds.map((t, i) => ({ x: t, y: lowData[i] })) : [];
+    const highPoints = highData ? thresholds.map((t, i) => ({ x: t, y: highData[i] })) : [];
+
+    // Y-axis max: rounded up from high data, capped at 600 for readability
+    const rawMax = highData ? Math.max(...highData.filter(v => v != null)) : Math.max(...medData);
+    const yMax = Math.min(Math.ceil(rawMax / 50) * 50 + 50, 600);
+
+    // DAC reference at $250/mtCO₂ (Medium mid)
+    const dacRef = 250;
+
+    // Region color
+    const regionColors = typeof REGION_COLORS !== 'undefined' ? REGION_COLORS : {
+        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0'
+    };
+    const c = regionColors[iso] || '#4a90d9';
+
+    if (costCurveChartInstance) costCurveChartInstance.destroy();
+    const ctx = canvas.getContext('2d');
+
+    costCurveChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                // High bound (P90) — fills down to low bound
+                {
+                    label: 'High cost scenario',
+                    data: highPoints,
+                    borderColor: 'transparent',
+                    backgroundColor: c + '18',
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    fill: '+2',
+                    tension: 0.35,
+                    order: 3
+                },
+                // Medium (midpoint line)
+                {
+                    label: 'Medium cost scenario',
+                    data: medPoints,
+                    borderColor: c,
+                    backgroundColor: c + '10',
+                    borderWidth: 3,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: c,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5,
+                    fill: false,
+                    tension: 0.35,
+                    order: 1
+                },
+                // Low bound (P10) — target for fill from high
+                {
+                    label: 'Low cost scenario',
+                    data: lowPoints,
+                    borderColor: c + '44',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1,
+                    borderDash: [4, 3],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.35,
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutCubic' },
+            interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+            layout: { padding: { top: 20, right: 16, bottom: 4, left: 4 } },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 48,
+                    max: 101,
+                    grid: { display: false },
+                    border: { display: true, color: '#D4D8E0' },
+                    title: {
+                        display: true,
+                        text: 'Hourly CFE Matching Target',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                        color: '#4A4540'
+                    },
+                    ticks: {
+                        stepSize: 10,
+                        callback: v => v + '%',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
+                        color: '#1A2744'
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: yMax,
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    border: { display: true, color: '#D4D8E0' },
+                    title: {
+                        display: true,
+                        text: 'Average Abatement Cost ($/mtCO\u2082)',
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                        color: '#4A4540'
+                    },
+                    ticks: {
+                        callback: v => '$' + v,
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        color: '#6B6356'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        color: '#1A1A1A',
+                        padding: 14,
+                        generateLabels: function() {
+                            return [
+                                { text: 'Medium scenario', fillStyle: c, strokeStyle: c, lineWidth: 2, pointStyle: 'circle' },
+                                { text: 'Low\u2013High range', fillStyle: c + '20', strokeStyle: c + '44', lineWidth: 1, pointStyle: 'rectRounded' },
+                                { text: 'DAC $' + dacRef + '/mtCO\u2082', fillStyle: '#E91E6330', strokeStyle: '#E91E63', lineWidth: 1.5, pointStyle: 'line', lineDash: [5, 3] }
+                            ];
+                        }
+                    },
+                    onClick: () => {}
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                    bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) {
+                            return iso + ' at ' + Math.round(items[0].raw.x) + '% hourly matching';
+                        },
+                        label: function(item) {
+                            const x = item.raw.x;
+                            const ti = thresholds.indexOf(x);
+                            const med = ti >= 0 ? medData[ti] : item.raw.y;
+                            const lo = ti >= 0 && lowData ? lowData[ti] : null;
+                            const hi = ti >= 0 && highData ? highData[ti] : null;
+                            if (item.datasetIndex === 1) {
+                                let line = 'Avg MAC: $' + Math.round(med) + '/mtCO\u2082';
+                                if (lo != null && hi != null) line += ' (Low: $' + Math.round(lo) + ', High: $' + Math.round(hi) + ')';
+                                return line;
+                            }
+                            return null;
+                        },
+                        afterBody: function(items) {
+                            const x = items[0]?.raw?.x;
+                            if (x == null) return '';
+                            const ti = thresholds.indexOf(x);
+                            const med = ti >= 0 ? medData[ti] : 0;
+                            if (med > dacRef) {
+                                return '\n  \u26A0 Above DAC reference ($' + dacRef + '/mtCO\u2082)';
+                            } else if (med > dacRef * 0.8) {
+                                return '\n  Approaching DAC reference';
+                            }
+                            return '';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        dacLine: {
+                            type: 'line',
+                            yMin: dacRef,
+                            yMax: dacRef,
+                            borderColor: '#E91E6388',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: 'DAC $' + dacRef + '/mtCO\u2082',
+                                position: 'end',
+                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 600 },
+                                color: '#E91E63',
+                                backgroundColor: 'rgba(255,255,255,0.9)',
+                                borderRadius: 4,
+                                padding: { top: 2, bottom: 2, left: 6, right: 6 }
+                            }
+                        },
+                        inflectionZone: {
+                            type: 'box',
+                            xMin: 90,
+                            xMax: 101,
+                            backgroundColor: 'rgba(239,68,68,0.04)',
+                            borderColor: 'transparent'
+                        }
+                    }
+                },
+                datalabels: { display: false }
+            }
+        }
+    });
+
+    // Dynamic insight text
+    const insightEl = document.getElementById('costCurveInsightText');
+    if (insightEl) {
+        const mac75 = medData[thresholds.indexOf(75)] || 0;
+        const mac90 = medData[thresholds.indexOf(90)] || 0;
+        const mac95 = medData[thresholds.indexOf(95)] || 0;
+        const mac99 = medData[thresholds.indexOf(99)] || 0;
+        const mac100 = medData[thresholds.indexOf(100)] || 0;
+
+        // Find where MAC crosses DAC reference
+        let crossoverThresh = null;
+        for (let i = 0; i < thresholds.length; i++) {
+            if (medData[i] >= dacRef) { crossoverThresh = thresholds[i]; break; }
+        }
+
+        let html = `<strong>${iso}:</strong> `;
+        if (mac90 > 0 && mac75 > 0) {
+            const ratio = (mac100 / mac75).toFixed(1);
+            html += `At 75% matching, average abatement costs just <strong>$${Math.round(mac75)}/mtCO\u2082</strong>. `;
+            html += `By 90% it rises to <strong>$${Math.round(mac90)}/mtCO\u2082</strong>, `;
+            html += `and at 100% it reaches <strong>$${Math.round(mac100)}/mtCO\u2082</strong> &mdash; `;
+            html += `<strong>${ratio}&times;</strong> the cost at 75%. `;
+        }
+        if (crossoverThresh != null && crossoverThresh <= 100) {
+            html += `Costs exceed the DAC reference ($${dacRef}/mtCO\u2082) at <strong>${crossoverThresh}%</strong> matching.`;
+        } else {
+            html += `Costs stay below the DAC reference ($${dacRef}/mtCO\u2082) across all thresholds.`;
+        }
+        insightEl.innerHTML = html;
+    }
+
+    // Bind region pills (once)
+    const pills = document.getElementById('costCurveRegionPills');
+    if (pills && !pills._bound) {
+        pills._bound = true;
+        pills.addEventListener('click', function(e) {
+            const btn = e.target.closest('.incremental-pill');
+            if (!btn) return;
+            pills.querySelectorAll('.incremental-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            initCostCurveChart(btn.dataset.region);
+        });
+    }
+}
 
 let noRegretsChartInstance = null;
 
