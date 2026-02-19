@@ -11,42 +11,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<link rel="stylesheet" href="styles/shared.css">
 <style>
-@font-face {
-    font-family: 'Franklin Gothic Demi';
-    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi');
-    font-weight: 600; font-style: normal; font-display: swap;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 17px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
-body {
-    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
-    background: #F3F4F8; color: #1A1A1A; line-height: 1.6; min-height: 100vh;
-}
-:root {
-    --navy: #1A2744; --navy-light: #2D3A52;
-    --accent-blue: #4a90d9; --accent-warm: #f4a261;
-    --bg-card: #FFFFFF; --border: #D4D8E0; --text-muted: #6B7280;
-}
-
-/* ===== HEADER ===== */
-.header {
-    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
-    color: #fff; padding: 72px 24px 64px; text-align: center; position: relative; overflow: hidden;
-}
-.header::after {
-    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, #1A2744, #0EA5E9, #22C55E, #F59E0B, #EF4444);
-}
-.header h1 {
-    font-family: 'Franklin Gothic Demi', 'Lexend', sans-serif;
-    font-size: 3rem; font-weight: 700; margin-bottom: 14px; position: relative; z-index: 2;
-    text-shadow: 0 2px 20px rgba(0,0,0,0.5);
-}
-.header .subtitle {
-    font-size: 1.1rem; opacity: 0.92; max-width: 660px; margin: 0 auto;
-    position: relative; z-index: 2;
-}
+body { background: #F3F4F8; color: #1A1A1A; line-height: 1.6; }
 
 /* ===== LAYOUT ===== */
 .page-wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
@@ -57,8 +24,7 @@ h2 {
     font-size: 1.8rem; color: var(--navy); margin-bottom: 12px; letter-spacing: -0.3px;
 }
 h3 {
-    font-family: 'Franklin Gothic Demi', sans-serif;
-    font-size: 1.15rem; color: var(--navy); margin-bottom: 8px;
+    font-size: 1.15rem; margin-bottom: 8px;
 }
 .section-num {
     display: inline-block; font-size: 0.78rem; font-weight: 700; color: #0EA5E9;
@@ -133,14 +99,6 @@ p:last-child { margin-bottom: 0; }
 .cell-orange { color: #FBBF24; }
 .cell-red { color: #F87171; }
 
-/* ===== FOOTER ===== */
-.page-footer {
-    background: var(--navy); color: rgba(255,255,255,0.6); text-align: center;
-    padding: 32px 24px; font-size: 0.82rem;
-}
-.page-footer a { color: rgba(255,255,255,0.7); text-decoration: none; margin: 0 12px; }
-.page-footer a:hover { color: #fff; }
-
 /* ===== PER-REGION ENVELOPE GRID ===== */
 .envelope-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -164,9 +122,34 @@ p:last-child { margin-bottom: 0; }
 }
 .envelope-card canvas { width: 100% !important; height: 160px; }
 
+/* ===== CSS BAR CHART (replaces Chart.js for mobile perf) ===== */
+.css-bar-chart { position: relative; padding: 6px 0; }
+.css-bar-row {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 5px;
+    font-family: 'Barlow Semi Condensed', sans-serif; font-size: 0.78rem;
+}
+.css-bar-label {
+    width: 72px; min-width: 72px; text-align: right; color: var(--text-muted);
+    font-size: 0.72rem; white-space: nowrap;
+}
+.css-bar-track {
+    flex: 1; height: 22px; background: rgba(0,0,0,0.03); border-radius: 4px;
+    position: relative; overflow: visible;
+}
+.css-bar-fill {
+    height: 100%; border-radius: 4px; transition: width 0.6s ease;
+    position: relative; min-width: 2px;
+}
+.css-bar-val {
+    position: absolute; right: -4px; top: 50%; transform: translate(100%, -50%);
+    font-size: 0.7rem; font-weight: 600; white-space: nowrap; padding-left: 5px;
+}
+.css-bar-val.inside {
+    right: 6px; transform: translateY(-50%); color: #fff; padding-left: 0;
+}
+
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
-    .header h1 { font-size: 2rem; }
     .page-wrap { padding: 0 16px; }
     h2 { font-size: 1.4rem; }
     .counter-row { flex-direction: column; }
@@ -178,12 +161,23 @@ p:last-child { margin-bottom: 0; }
     .envelope-card canvas { height: 100px; }
     .envelope-card-title { font-size: 0.82rem; }
     .envelope-card-subtitle { font-size: 0.7rem; margin-bottom: 4px; }
+    .css-bar-label { width: 56px; min-width: 56px; font-size: 0.65rem; }
+    .css-bar-track { height: 18px; }
+    .css-bar-val { font-size: 0.62rem; }
+    .css-bar-row { margin-bottom: 3px; }
 }
 @media (max-width: 480px) {
     .chart-wrap-tall { height: 220px; }
     .chart-wrap-med  { height: 200px; }
-    .envelope-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .envelope-grid { grid-template-columns: 1fr; gap: 10px; }
     .envelope-card canvas { height: 80px; }
+    .css-bar-label { width: 52px; min-width: 52px; font-size: 0.65rem; }
+    .css-bar-track { height: 18px; }
+    .css-bar-val { font-size: 0.62rem; }
+    .counter-item { min-width: 100%; }
+    .region-cards { grid-template-columns: 1fr; }
+    .inflection-table { font-size: 0.72rem; }
+    .inflection-table th, .inflection-table td { padding: 6px 4px; }
 }
 </style>
 </head>
@@ -194,8 +188,9 @@ p:last-child { margin-bottom: 0; }
 
 <!-- HEADER -->
 <header class="header">
-    <h1>Marginal Carbon Abatement</h1>
+    <h1>The 8,760 Problem</h1>
     <p class="subtitle">Where grid decarbonization beats alternatives — and where it doesn't.</p>
+    <div class="header-accent"></div>
 </header>
 
 <div id="scrollProgress" style="position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent-blue),#22C55E);width:0%;z-index:10001;transition:width 0.1s linear;"></div>
@@ -218,10 +213,10 @@ p:last-child { margin-bottom: 0; }
 <section>
     <span class="section-num">Section 1</span>
     <h2>Marginal MAC: Where Grid Investment Stops Paying Off</h2>
-    <p>The entry zone (50→75%) is the cheapest abatement, followed by the grid backbone (75→90%).
-       Beyond 90%, marginal costs escalate as the optimizer adds storage, CCS, and LDES to cover the hardest hours.
-       Each bar shows the marginal $/ton for one step. Bars are guaranteed non-decreasing — each step
-       costs at least as much as the previous.</p>
+    <p>The grid backbone (75→90%) is cheap abatement everywhere. Beyond 90%, marginal costs escalate
+       as the optimizer adds storage, CCS, and LDES to cover the hardest hours.
+       Each bar shows the marginal $/ton for one step — green means cheaper than the social cost of carbon,
+       amber sits between SCC and DAC, and red exceeds projected DAC costs.</p>
 
     <!-- Per-region marginal MAC charts (separate, no overlapping) -->
     <div class="envelope-grid" id="marginalGrid"></div>
@@ -405,79 +400,67 @@ html('keyCounters',
 );
 
 // ============================================================================
-// 2. PER-REGION MARGINAL MAC CHARTS (separate small multiples — no overlap)
+// 2. PER-REGION MARGINAL MAC CHARTS (CSS bars — no canvas, mobile-safe)
 // ============================================================================
 (function buildMarginalGrid() {
     const grid = $('marginalGrid');
     if (!grid) return;
 
-    // Compute shared Y max
+    // Shared scale max across all regions
     let yMax = 0;
     REGIONS.forEach(r => { yMax = Math.max(yMax, ...marg[r].filter(v => v != null)); });
     yMax = Math.min(Math.ceil(yMax / 100) * 100 + 50, 1100);
 
-    // Build per-region cards
+    const sccVal = 190;
+    const dacVal = dacMed.mid;
+
+    // Color thresholds: green < SCC, amber SCC–DAC, red > DAC
+    function barColor(val) {
+        if (val <= sccVal) return { bg: '#22C55E', border: '#16A34A' }; // green
+        if (val <= dacVal) return { bg: '#F59E0B', border: '#D97706' }; // amber
+        return { bg: '#EF4444', border: '#DC2626' }; // red
+    }
+
     grid.innerHTML = REGIONS.map(iso => {
         const c = REGION_CLR[iso];
         const backbone = marg[iso][0];
         const lastStep = marg[iso][marg[iso].length - 1];
+
+        // Build CSS horizontal bars with threshold coloring
+        const bars = margLabels.map((label, i) => {
+            const raw = marg[iso][i];
+            const val = raw != null ? Math.min(raw, 1050) : 0;
+            const pct = Math.max((val / yMax) * 100, 0.5);
+            const bc = barColor(raw != null ? raw : 0);
+            const displayVal = raw >= 1000 ? '$1k+' : '$' + raw;
+            const isWide = pct > 35;
+            return `<div class="css-bar-row">` +
+                `<div class="css-bar-label">${label}</div>` +
+                `<div class="css-bar-track">` +
+                `  <div class="css-bar-fill" style="width:${pct}%;background:${bc.bg};border:1.5px solid ${bc.border}">` +
+                `    ${isWide ? `<span class="css-bar-val inside">${displayVal}</span>` : ''}` +
+                `  </div>` +
+                `  ${!isWide ? `<span class="css-bar-val" style="position:absolute;left:${pct}%;top:50%;transform:translateY(-50%);color:${bc.border};padding-left:5px;font-size:0.7rem;font-weight:600;white-space:nowrap">${displayVal}</span>` : ''}` +
+                `</div>` +
+                `</div>`;
+        }).join('');
+
+        // Compact legend
+        const legend = `<div style="display:flex;gap:10px;margin-top:4px;font-size:0.62rem;color:var(--text-muted)">` +
+            `<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#22C55E;vertical-align:middle;margin-right:2px"></span>&lt;SCC ($${sccVal})</span>` +
+            `<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#F59E0B;vertical-align:middle;margin-right:2px"></span>SCC\u2013DAC</span>` +
+            `<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#EF4444;vertical-align:middle;margin-right:2px"></span>&gt;DAC ($${dacVal})</span>` +
+            `</div>`;
+
         return `<div class="envelope-card" style="border-top-color:${c}">` +
             `<div class="envelope-card-title">` +
             `  <span class="region-dot" style="background:${c}"></span> ${REGION_NAMES[iso]}` +
             `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1rem;font-weight:800;color:${c}">$${backbone}\u2192$${lastStep >= 1000 ? '1k+' : lastStep}</span>` +
             `</div>` +
-            `<div class="envelope-card-subtitle">Backbone \u2192 last step · Avg MAC at 99%: $${mac[iso][T_IDX[99]]}/ton</div>` +
-            `<canvas id="marg_${iso}"></canvas>` +
+            `<div class="envelope-card-subtitle">Backbone \u2192 last step · Avg MAC at 99%: $${mac[iso][8]}/ton</div>` +
+            `<div class="css-bar-chart">${bars}${legend}</div>` +
             `</div>`;
     }).join('');
-
-    // Build each bar chart
-    REGIONS.forEach(iso => {
-        const ctx = document.getElementById('marg_' + iso)?.getContext('2d');
-        if (!ctx) return;
-        const c = REGION_CLR[iso];
-        const vals = marg[iso].map(v => v != null ? Math.min(v, 1050) : 0);
-
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: margLabels,
-                datasets: [{
-                    data: vals,
-                    backgroundColor: vals.map((v, i) => i === 0 ? c + '60' : c + 'CC'),
-                    borderColor: c,
-                    borderWidth: 1.5,
-                    borderRadius: 4,
-                    barPercentage: 0.75
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: item => '$' + marg[iso][item.dataIndex] + '/ton CO\u2082'
-                        }
-                    },
-                    annotation: {
-                        annotations: {
-                            scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980088', borderWidth: 1.5, borderDash: [4, 3],
-                                label: { display: true, content: 'SCC', position: 'start', font: { size: 8 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 } },
-                            dac: { type: 'line', yMin: dacMed.mid, yMax: dacMed.mid, borderColor: '#E91E6388', borderWidth: 1.5, borderDash: [4, 3],
-                                label: { display: true, content: 'DAC', position: 'end', font: { size: 8 }, color: '#E91E63', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 } }
-                        }
-                    },
-                    datalabels: { display: false }
-                },
-                scales: {
-                    x: { ticks: { font: { size: window.innerWidth < 480 ? 7 : 9 }, maxRotation: window.innerWidth < 480 ? 30 : 45, minRotation: window.innerWidth < 480 ? 15 : 30 }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
-                    y: { min: 0, max: yMax, ticks: { callback: v => '$' + v, font: { size: window.innerWidth < 480 ? 7 : 9 }, stepSize: yMax > 600 ? 300 : 200, maxTicksLimit: 4 },
-                        grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: true, color: '#D4D8E0' } }
-                }
-            }
-        });
-    });
 
     // Insight
     const entryVals = REGIONS.map(r => marg[r][0]).filter(v => v != null);
@@ -533,10 +516,11 @@ html('keyCounters',
         },
         options: {
             indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            animation: window.innerWidth < 768 ? false : undefined,
             scales: {
-                x: { min: 0, max: 650, title: { display: true, text: '$/ton CO\u2082', font: { size: 13 } },
-                    ticks: { stepSize: 50, callback: v => '$' + v }, grid: { display: false } },
-                y: { ticks: { font: { size: 11, weight: 500 } }, grid: { display: false } }
+                x: { min: 0, max: 650, title: { display: window.innerWidth >= 480, text: '$/ton CO\u2082', font: { size: 13 } },
+                    ticks: { stepSize: window.innerWidth < 480 ? 100 : 50, callback: v => '$' + v, font: { size: window.innerWidth < 480 ? 9 : 11 } }, grid: { display: false } },
+                y: { ticks: { font: { size: window.innerWidth < 480 ? 9 : 11, weight: 500 } }, grid: { display: false } }
             },
             plugins: {
                 legend: { display: false },
@@ -660,15 +644,16 @@ html('keyCounters',
         data: { labels: REGIONS, datasets },
         options: {
             responsive: true, maintainAspectRatio: false,
+            animation: window.innerWidth < 768 ? false : undefined,
             plugins: {
-                legend: { position: 'top', labels: { font: { size: 11 }, padding: 14, usePointStyle: true, pointStyle: 'rect' } },
+                legend: { position: 'top', labels: { font: { size: window.innerWidth < 480 ? 9 : 11 }, padding: window.innerWidth < 480 ? 8 : 14, usePointStyle: true, pointStyle: 'rect' } },
                 tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + '% of variance' } },
                 datalabels: { display: false }
             },
             scales: {
-                y: { beginAtZero: true, max: 70, title: { display: true, text: 'Variance Explained (\u03B7\u00B2%)', font: { size: 13 } },
-                    ticks: { callback: v => v + '%' } },
-                x: { ticks: { font: { size: 12, weight: 600 } } }
+                y: { beginAtZero: true, max: 70, title: { display: window.innerWidth >= 480, text: 'Variance Explained (\u03B7\u00B2%)', font: { size: 13 } },
+                    ticks: { callback: v => v + '%', font: { size: window.innerWidth < 480 ? 9 : 11 } } },
+                x: { ticks: { font: { size: window.innerWidth < 480 ? 10 : 12, weight: 600 } } }
             }
         }
     });
