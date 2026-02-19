@@ -400,9 +400,10 @@
     <h2 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed','Arial Narrow',sans-serif;font-size:2.4rem;font-weight:800;color:#DC2626;margin-bottom:16px;letter-spacing:-0.5px;line-height:1.2;">Methodology & Technical Reference</h2>
     <p style="font-size:0.98rem;color:#1A1A1A;line-height:1.75;max-width:800px;">
         This document details the optimization model, data sources, cost assumptions, and dispatch algorithms
-        that power the analysis. The optimizer uses a three-phase sweep across 16,200 scenarios to co-optimize
-        resource mix and cost at every threshold. All inputs are grounded in published data from NREL ATB, EIA,
-        eGRID, and Lazard.
+        that power the analysis. The optimizer uses a four-step pipeline&mdash;physics feasible space generation,
+        efficient frontier extraction, cost optimization across up to 5,832 sensitivity scenarios per region per threshold,
+        and post-processing&mdash;to co-optimize resource mix and cost at every threshold. All inputs are grounded in
+        published data from NREL ATB, EIA, eGRID, and Lazard.
     </p>
 </div>
 
@@ -469,8 +470,9 @@
     </p>
     <p>
         The tool <strong>co-optimizes cost and hourly matching</strong> simultaneously. For each target
-        threshold (75%, 80%, 85%, 90%, 95%, 99%), the model searches across procurement levels (70% to 300%
-        of annual demand), resource mix combinations (clean firm, solar, wind, hydro), and battery storage
+        threshold (50%, 60%, 70%, 75%, 80%, 85%, 87.5%, 90%, 92.5%, 95%, 97.5%, 99%, 100%&mdash;13 thresholds
+        with 2.5% granularity in the inflection zone), the model searches across procurement levels (70% to 300%
+        of annual demand), resource mix combinations (clean firm, solar, wind, hydro), and battery + LDES storage
         dispatch levels to find the <strong>lowest-cost portfolio</strong> that meets or exceeds the target.
     </p>
     <p>
@@ -600,9 +602,9 @@
         <tbody>
             <tr>
                 <td><span class="color-swatch" style="background:#1A2744;"></span> Clean Firm</td>
-                <td>Nuclear + Geothermal</td>
+                <td>Nuclear + Geothermal + CCS-CCGT</td>
                 <td>Flat baseload (1/8760 per hour)</td>
-                <td>Dispatchable 24/7, no hourly variation</td>
+                <td>Dispatchable 24/7, no hourly variation. CCS-CCGT merged into clean firm for physics (also flat baseload); split out in cost model via tranche pricing (see &sect;7.2.4)</td>
             </tr>
             <tr>
                 <td><span class="color-swatch" style="background:#F59E0B;"></span> Solar</td>
@@ -678,9 +680,10 @@
     <!-- ======== SECTION 5: OPTIMIZATION MODEL ======== -->
     <h2 id="optimization-model">5. Optimization Model</h2>
     <p>
-        The optimizer searches simultaneously across <strong>three dimensions</strong>: procurement level
-        (70%&ndash;300% of annual demand), resource mix (clean firm / solar / wind / hydro percentages
-        summing to 100%), and storage dispatch level, using two complementary strategies.
+        The optimizer searches simultaneously across <strong>multiple dimensions</strong>: a 4D resource mix
+        (clean firm / solar / wind / hydro percentages summing to 100%), procurement level
+        (70%&ndash;300% of annual demand), and independently optimized battery and LDES storage dispatch
+        levels, using two complementary strategies.
     </p>
 
     <h3>5.1 Dual Optimization Approach</h3>
@@ -691,8 +694,8 @@
         the matching frontier&mdash;the best possible matching at each procurement level.
     </p>
 
-    <p><strong>Strategy B &mdash; Threshold (Min-Cost):</strong> For each target threshold (75%, 80%, 85%,
-        90%, 95%, 99%), the model searches simultaneously across procurement levels AND resource mixes to find
+    <p><strong>Strategy B &mdash; Threshold (Min-Cost):</strong> For each of the 13 target thresholds (50%
+        through 100%, with 2.5% granularity from 87.5%&ndash;100%), the model searches simultaneously across procurement levels AND resource mixes to find
         the <strong>cheapest combination</strong> that meets or exceeds the target. This produces the
         threshold-specific results with cost estimates.
     </p>
@@ -765,7 +768,7 @@
     <h3>5.2.2 MAC Uncertainty Characterization (Option B)</h3>
     <p>
         Marginal abatement costs are characterized using a hybrid approach combining statistical post-processing
-        of the full 16,200-scenario factorial experiment with a monotonic envelope reference:
+        of the full factorial experiment (up to 5,832 scenarios per region per threshold) with a monotonic envelope reference:
     </p>
     <ul>
         <li><strong>Fan chart (P10/P25/P50/P75/P90):</strong> Percentile bands across 5,832 cost scenarios at each
@@ -1087,7 +1090,36 @@
         NYISO highest (nuclear-only, zero geothermal potential, highest construction labor costs).
     </p>
 
-    <h3 id="ccs-ccgt-buildup">7.2.4 CCS-CCGT LCOE ($/MWh, Net of 45Q)</h3>
+    <h3>7.2.4 Clean Firm Merit-Order Tranche Pricing</h3>
+    <p>
+        New clean firm capacity is not priced at a single blended LCOE. Instead, the cost model uses a
+        <strong>merit-order tranche system</strong> that prices each incremental unit of clean firm at the
+        cheapest available option, filling tranches in order:
+    </p>
+    <ol style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
+        <li><strong>Tranche 1: Nuclear Uprate</strong> (cheapest, capped per ISO at 5% of existing nuclear capacity).
+            LCOE: $15/$25/$40 per MWh (L/M/H). Represents capacity uprates and efficiency improvements at
+            existing nuclear plants&mdash;the lowest-cost clean firm resource.</li>
+        <li><strong>Tranche 2: Geothermal</strong> (CAISO only, capped at 39 TWh).
+            LCOE varies by Geothermal toggle (L/M/H). Fills after uprate capacity is exhausted.
+            Only material in CAISO due to Salton Sea, Imperial Valley, and Geysers resources.</li>
+        <li><strong>Tranche 3: Cheapest of Nuclear New-Build OR CCS-CCGT</strong> (toggle-dependent, uncapped).
+            The model compares nuclear new-build LCOE + transmission to CCS-CCGT LCOE + transmission at the
+            current toggle settings and selects whichever is cheaper. This tranche fills all remaining clean firm
+            demand above the uprate and geothermal caps.</li>
+    </ol>
+
+    <div class="note-box">
+        <strong>Why tranche pricing matters:</strong> A buyer&rsquo;s first units of clean firm capacity are cheap
+        (nuclear uprates at $15&ndash;40/MWh), but as procurement increases, they exhaust these limited tranches and
+        move to expensive new-build ($75&ndash;150/MWh). This creates a convex cost curve for clean firm that the
+        optimizer must navigate&mdash;small amounts are cheap, large amounts are expensive. Research by the
+        <a href="https://www.catf.us/resource/clean-firm-electricity-technologies-why-what-how/" target="_blank">Clean Air Task Force (CATF)</a>
+        confirms that clean firm resources (nuclear, geothermal, CCS) lower overall system costs and reduce
+        required transmission buildout by approximately 50%.
+    </div>
+
+    <h3 id="ccs-ccgt-buildup">7.2.5 CCS-CCGT LCOE ($/MWh, Net of 45Q)</h3>
     <p>
         CCS-CCGT (Carbon Capture and Storage on Combined Cycle Gas Turbine) is a dispatchable baseload resource
         with 90% CO<sub>2</sub> capture. The LCOE is presented net of the Section 45Q tax credit.
@@ -1511,11 +1543,12 @@
 
     <h3>9.5 Emission Accounting Limitations</h3>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.93rem; line-height: 2;">
-        <li><strong>CO<sub>2</sub> hourly methodology:</strong> CO<sub>2</sub> displacement uses hourly
-            variable emission rates built from EPA eGRID 2023 per-fuel factors (coal, gas, oil) weighted by
-            EIA-930 hourly fossil fuel mix shares. This captures hour-by-hour variation in carbon intensity
-            as the fossil dispatch mix changes. Under fuel price sensitivity scenarios, coal/gas shares shift
-            via regional fuel-switching elasticity.</li>
+        <li><strong>CO<sub>2</sub> merit-order retirement model:</strong> CO<sub>2</sub> displacement uses
+            a merit-order fuel retirement approach: as clean energy displaces fossil generation, coal retires
+            first, then oil, then gas. Coal and oil are capped at 2025 absolute TWh (no new coal/oil built).
+            Above 70% clean, all coal and oil are forced retired. The model returns the <em>displaced</em>
+            fossil rate (weighted average of retired fuels), not the remaining fleet rate. Per-fuel factors
+            from EPA eGRID 2023 (coal, gas, oil) are used for the weighted calculation.</li>
         <li><strong>No embodied emissions:</strong> Life-cycle emissions from manufacturing, construction,
             and decommissioning of clean energy infrastructure are not included. Solar panels, wind turbines,
             and batteries all have embodied carbon from mining, manufacturing, and transport.</li>
@@ -1605,11 +1638,11 @@
         </tbody>
     </table>
     <p style="font-size:0.85rem; color:var(--text-muted);">
-        <strong>Note:</strong> These growth rates are used exclusively in the pathway analysis to estimate
-        how demand growth affects the economic efficiency of interim procurement decisions. The core
-        optimization model uses 2023 actual hourly demand profiles and does not project future demand.
-        Growth rates represent compound annual growth and are applied to estimate total demand at
-        the long-term target year.
+        <strong>Note:</strong> These growth rates are used in a demand growth sweep covering 25 years
+        (2026&ndash;2050) at all 3 growth rates per ISO. For each (year, growth rate) pair, the optimizer
+        re-evaluates all archetype resource mixes to find the cheapest combination under grown demand.
+        The core optimization model uses 2025 actual hourly demand profiles; growth rates are applied as
+        compound annual multipliers to estimate total demand at each target year.
     </p>
 
     <!-- ======== SECTION 10: TOGGLE PAIRING ======== -->
@@ -1617,11 +1650,12 @@
 
     <h3>10.1 Overview</h3>
     <p>
-        The model uses <strong>5 paired sensitivity toggle groups</strong> instead of 10 individual toggles.
-        Related cost variables are grouped so they move in lockstep (all Low, all Medium, or all High),
-        reducing dashboard complexity while preserving meaningful sensitivity analysis. Each toggle group
-        controls two or more underlying cost parameters that share structural cost drivers, ensuring that
-        the paired movement reflects real-world correlation rather than an arbitrary simplification.
+        The model uses <strong>5 paired sensitivity toggle groups</strong> plus <strong>3 additional independent
+        toggles</strong> (CCS cost, 45Q on/off, and Geothermal cost for CAISO). Related cost variables are
+        grouped so they move in lockstep (all Low, all Medium, or all High), reducing dashboard complexity
+        while preserving meaningful sensitivity analysis. Each toggle group controls two or more underlying
+        cost parameters that share structural cost drivers, ensuring that the paired movement reflects
+        real-world correlation rather than an arbitrary simplification.
     </p>
 
     <h3>10.2 The 5 Paired Groups</h3>
@@ -1713,6 +1747,39 @@
     </table>
     </div>
 
+    <h3>10.3.1 Additional Independent Toggles</h3>
+    <p>
+        Beyond the 5 paired groups, the model includes three additional toggles that vary independently:
+    </p>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Toggle</th>
+                <th>Levels</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>CCS Cost</td>
+                <td>Low / Medium / High</td>
+                <td>CCS-CCGT LCOE varies independently of the Firm Generation toggle, reflecting different capture cost trajectories</td>
+            </tr>
+            <tr>
+                <td>45Q Tax Credit</td>
+                <td>On / Off</td>
+                <td>Section 45Q ($85/ton) offset applied to CCS-CCGT costs. &ldquo;Off&rdquo; models a scenario where 45Q expires or is repealed</td>
+            </tr>
+            <tr>
+                <td>Geothermal Cost (CAISO only)</td>
+                <td>Low / Medium / High</td>
+                <td>Geothermal LCOE toggle for CAISO, where geothermal is a material clean firm tranche (capped at 39 TWh). Not applicable to other ISOs</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
     <h3>10.4 Scenario Count Reduction</h3>
     <p>
         With 5 paired groups (3 levels each, except Transmission with 4 levels including None), the total
@@ -1721,15 +1788,21 @@
 
     <div class="formula-box">
         <span class="label">Scenario Space Comparison</span>
-        Paired toggles:     3 &times; 3 &times; 3 &times; 3 &times; 2 &times; 3 &times; 4 = 5,832 scenarios per region per threshold
-        Independent toggles: 3<sup>10</sup> = 59,049 scenarios per region per threshold
+        Non-CAISO per region per threshold:
+          Ren(3) &times; Firm(3) &times; Stor(3) &times; Fuel(3) &times; Tx(4) &times; CCS(3) &times; 45Q(2) = 1,944
 
-        Reduction factor: 10&times; fewer scenarios
+        CAISO per threshold (adds Geothermal toggle):
+          1,944 &times; Geo(3) = 5,832
+
+        Independent toggles: 3<sup>10</sup> = 59,049 per region per threshold
     </div>
 
     <p>
-        This reduction from 59,049 to 5,832 scenarios makes real-time dashboard interaction feasible while
-        preserving the ability to explore meaningful cost sensitivities across all major cost categories.
+        This reduction from 59,049 to 1,944&ndash;5,832 scenarios per region per threshold makes real-time
+        dashboard interaction feasible while preserving the ability to explore meaningful cost sensitivities
+        across all major cost categories. In practice, 324 base scenarios (the 5 paired groups) are stored
+        server-side, with CCS level, 45Q on/off, and Geothermal toggles repriced client-side for instant
+        dashboard response.
     </p>
 
     <h3>10.5 Optimization Approach</h3>
@@ -1749,37 +1822,92 @@
         mix and procurement level remain valid across all cost scenarios&mdash;only the cost metric shifts.
     </div>
 
+    <!-- ======== SECTION 10.6: POST-PROCESSING ======== -->
+    <h3>10.6 Post-Processing (Step 4)</h3>
+    <p>
+        After cost optimization (Step 3), a post-processing step applies corrections and additional analysis
+        that depend on the full cost results:
+    </p>
+    <ol style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
+        <li><strong>45Q Offset Correction:</strong> Adjusts the Section 45Q tax credit calculation on CCS-CCGT
+            costs and computes the &ldquo;without-45Q&rdquo; cost overlay for each scenario, enabling the
+            dashboard to toggle 45Q on/off without re-running the optimizer.</li>
+        <li><strong>NEISO Winter Gas Pipeline Constraint:</strong> Applies a $13.13/MWh annualized adder to
+            CCS-CCGT costs in NEISO (reflecting Algonquin Citygates winter gas premium: 7 heat rate &times;
+            $7.50 premium &times; 25% winter fraction) plus a $4/MWh wholesale adder for gas-on-margin pricing.</li>
+        <li><strong>Gas Resource Adequacy (RA) Backup:</strong> Computes gas backup capacity needed for system
+            reliability (15% reserve margin above peak demand). Existing gas capacity is priced at wholesale;
+            any shortfall requires new gas peakers at region-specific capacity costs. This gas backup cost is
+            added to the total system cost for each scenario.</li>
+        <li><strong>CCS vs LDES Crossover Analysis:</strong> For each scenario, computes the capacity factor
+            at which CCS-CCGT (without 45Q) becomes cheaper than LDES, identifying the technology switchover
+            point that informs clean firm procurement strategy.</li>
+    </ol>
+
     <!-- ======== SECTION 11: CO2 EMISSION FACTOR METHODOLOGY ======== -->
     <h2 id="co2-methodology">11. CO<sub>2</sub> Emission Factor Methodology</h2>
 
-    <h3>11.1 Marginal Emission Rates</h3>
+    <h3>11.1 Merit-Order Fuel Retirement Model</h3>
     <p>
-        Each MWh of clean energy procured displaces fossil generation at the <strong>regional marginal
-        emission rate</strong> derived from EPA eGRID data. The marginal rate represents the CO<sub>2</sub>
-        intensity of the generation that would otherwise serve load&mdash;typically natural gas combined
-        cycle or coal units at the margin of the dispatch stack.
+        The CO<sub>2</sub> model uses a <strong>merit-order fuel retirement</strong> approach rather than a single
+        static marginal emission rate. As clean energy displaces fossil generation, the model retires fuels in order
+        of carbon intensity: <strong>coal first, then oil, then gas</strong>.
     </p>
 
+    <h3>11.1.1 Key Constraints</h3>
+    <ul style="margin: 10px 0 16px 24px; font-size: 0.95rem;">
+        <li><strong>Coal and oil capped at 2025 absolute TWh:</strong> No new coal or oil capacity is built.
+            As demand grows, coal and oil stay at their 2025 absolute generation levels; only gas expands to meet
+            incremental fossil demand.</li>
+        <li><strong>Above 70% clean threshold:</strong> All coal and oil are forced retired&mdash;only gas CCGT remains
+            in the fossil fleet.</li>
+        <li><strong>Displaced rate (not remaining fleet rate):</strong> The model returns the <em>weighted average
+            emission rate of the displaced fossil fuels</em>, which is the correct metric for CO<sub>2</sub> abatement
+            calculations. This differs from the remaining fleet average rate.</li>
+    </ul>
+
+    <div class="formula-box">
+        <span class="label">Displaced Emission Rate Calculation</span>
+        For a given clean energy penetration level:
+
+          1. Compute fossil fleet: coal_TWh = min(coal_cap, fossil_TWh)
+                                   oil_TWh  = min(oil_cap, remaining_fossil)
+                                   gas_TWh  = fossil_TWh &minus; coal_TWh &minus; oil_TWh
+
+          2. Merit-order displacement: retire coal first, then oil, then gas
+             coal_displaced = min(additional_clean_TWh, coal_TWh)
+             oil_displaced  = min(remaining_clean, oil_TWh)
+             gas_displaced  = remaining_clean after coal + oil
+
+          3. Displaced rate = (coal_displaced &times; coal_rate + oil_displaced &times; oil_rate
+                             + gas_displaced &times; gas_rate) / total_displaced
+    </div>
+
+    <h3>11.1.2 Per-Fuel Emission Factors</h3>
+    <p>
+        Per-fuel emission rates are derived from EPA eGRID 2023 data:
+    </p>
     <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Region</th><th>Marginal Emission Rate (tCO<sub>2</sub>/MWh)</th><th>Dominant Marginal Fuel</th><th>Source</th></tr>
+            <tr><th>Region</th><th>Coal (tCO<sub>2</sub>/MWh)</th><th>Gas (tCO<sub>2</sub>/MWh)</th><th>Oil (tCO<sub>2</sub>/MWh)</th><th>Source</th></tr>
         </thead>
         <tbody>
-            <tr><td>CAISO</td><td>~0.39</td><td>Natural gas (CCGT/peakers)</td><td>EPA eGRID 2022</td></tr>
-            <tr><td>ERCOT</td><td>~0.42</td><td>Natural gas (CCGT) + some coal</td><td>EPA eGRID 2022</td></tr>
-            <tr><td>PJM</td><td>~0.55</td><td>Natural gas + coal (significant coal fleet)</td><td>EPA eGRID 2022</td></tr>
-            <tr><td>NYISO</td><td>~0.37</td><td>Natural gas (CCGT/peakers)</td><td>EPA eGRID 2022</td></tr>
-            <tr><td>NEISO</td><td>~0.38</td><td>Natural gas (CCGT)</td><td>EPA eGRID 2022</td></tr>
+            <tr><td>CAISO</td><td>~1.00</td><td>~0.39</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
+            <tr><td>ERCOT</td><td>~0.95</td><td>~0.42</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
+            <tr><td>PJM</td><td>~0.95</td><td>~0.44</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
+            <tr><td>NYISO</td><td>~0.95</td><td>~0.37</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
+            <tr><td>NEISO</td><td>~0.95</td><td>~0.38</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
         </tbody>
     </table>
     </div>
 
     <div class="note-box">
-        <strong>Emission rate sensitivity:</strong> These rates shift with the Fossil Fuel Price toggle through
-        fuel-switching dynamics (see Section 7.5.1). When gas prices rise in PJM, coal dispatch increases and
-        the marginal emission rate climbs. In CAISO and NEISO, where coal has largely retired, the emission
-        rate is less sensitive to gas price changes.
+        <strong>Why displaced rate matters:</strong> At low clean penetration levels (~50&ndash;70%), coal is the first
+        fuel retired, so the displaced rate is high (~0.9+ tCO<sub>2</sub>/MWh). At high penetration (&gt;70%),
+        only gas remains, and the displaced rate drops to ~0.37&ndash;0.44 tCO<sub>2</sub>/MWh. This creates a
+        naturally declining marginal CO<sub>2</sub> benefit per additional MWh of clean energy, which directly
+        affects the marginal abatement cost curve shape.
     </div>
 
     <h3>11.2 CCS-CCGT Partial Credit</h3>
@@ -1805,25 +1933,42 @@
 
     <h3>11.3 Abatement Cost Formulas</h3>
     <p>
-        The model calculates two abatement cost metrics for each threshold and scenario:
+        The model calculates three abatement cost metrics for each threshold and scenario:
     </p>
 
     <div class="formula-box">
-        <span class="label">Average Cost of Abatement</span>
-        Average $/ton CO<sub>2</sub> = Total Incremental Cost / Total CO<sub>2</sub> Abated
+        <span class="label">Average MAC</span>
+        Average $/ton CO<sub>2</sub> = Incremental Cost / CO<sub>2</sub> Abated
 
         Where:
-          Total Incremental Cost = (Effective $/MWh &minus; Wholesale $/MWh) &times; Annual Demand (MWh)
-          Total CO<sub>2</sub> Abated = SUM(Clean MWh<sub>type</sub> &times; Displacement Rate<sub>type</sub>)
+          Incremental Cost = (Effective $/MWh &minus; Wholesale $/MWh) &times; Annual Demand (MWh)
+          CO<sub>2</sub> Abated = SUM(Clean MWh<sub>type</sub> &times; Displaced Rate<sub>type</sub>)
+          (Displaced rate is threshold-dependent per the merit-order retirement model above)
     </div>
 
     <div class="formula-box">
-        <span class="label">Marginal Cost of Abatement</span>
-        Marginal $/ton CO<sub>2</sub> = (Cost<sub>X+1%</sub> &minus; Cost<sub>X%</sub>) / (CO&#8322;<sub>X+1%</sub> &minus; CO&#8322;<sub>X%</sub>)
+        <span class="label">Stepwise Marginal MAC</span>
+        Marginal $/ton CO<sub>2</sub> = &Delta;Cost / &Delta;CO<sub>2</sub> between adjacent thresholds
+
+        = (Cost<sub>X+1</sub> &minus; Cost<sub>X</sub>) / (CO&#8322;<sub>X+1</sub> &minus; CO&#8322;<sub>X</sub>)
 
         Represents the cost of the <em>next</em> ton of CO<sub>2</sub> abated at each threshold step.
         Exhibits hockey-stick behavior: cheap early tons, exponentially expensive last tons.
     </div>
+
+    <div class="formula-box">
+        <span class="label">Monotonic Envelope MAC</span>
+        Envelope MAC at threshold X = max(Stepwise MAC at all thresholds &le; X)
+
+        Running maximum of the Medium-scenario stepwise MAC, which smooths portfolio
+        rebalancing artifacts that cause non-monotonic average MACs between independently
+        optimized thresholds. Represents the true marginal cost floor at each threshold.
+    </div>
+
+    <p>
+        MAC variance is decomposed using <strong>ANOVA (eta-squared)</strong> attribution across the sensitivity
+        toggle groups, identifying which cost driver most influences abatement cost uncertainty in each region.
+    </p>
 
     <!-- ======== SECTION 12: HYDRO TREATMENT ======== -->
     <h2 id="hydro-treatment">12. Hydro Treatment Rationale</h2>
@@ -1923,9 +2068,10 @@
             Natural gas (Henry Hub), coal, and oil price scenarios for Low/Medium/High fuel price toggles.
         </li>
         <li>
-            <strong>EPA eGRID (2022)</strong> &mdash; Regional marginal CO<sub>2</sub> emission rates<br>
+            <strong>EPA eGRID (2023)</strong> &mdash; Regional per-fuel CO<sub>2</sub> emission factors<br>
             <a href="https://www.epa.gov/egrid" target="_blank">https://www.epa.gov/egrid</a><br>
-            Subregion non-baseload output emission rates used for marginal displacement calculations.
+            Per-fuel emission factors (coal, gas, oil) used in the merit-order fuel retirement model for
+            displacement calculations. Subregion data mapped to ISO regions.
         </li>
         <li>
             <strong>FERC / ISO Market Reports (2023&ndash;2025)</strong> &mdash; Regional wholesale electricity prices<br>
@@ -1943,6 +2089,12 @@
         <li>
             <strong>EIA Today in Energy</strong> &mdash; Battery storage and pumped hydro efficiency data<br>
             <a href="https://www.eia.gov/todayinenergy/detail.php?id=46756" target="_blank">https://www.eia.gov/todayinenergy/detail.php?id=46756</a>
+        </li>
+        <li>
+            <strong>CATF (Clean Air Task Force)</strong> &mdash; &ldquo;Clean Firm Electricity Technologies: What, Why, How&rdquo; (2024)<br>
+            <a href="https://www.catf.us/resource/clean-firm-electricity-technologies-why-what-how/" target="_blank">https://www.catf.us/resource/clean-firm-electricity-technologies-why-what-how/</a><br>
+            Documents how clean firm resources (nuclear, geothermal, CCS) lower system costs and reduce required
+            transmission buildout by approximately 50%. Supports the merit-order tranche pricing approach for clean firm.
         </li>
     </ul>
 
@@ -2196,7 +2348,7 @@
     </ol>
 
     <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--border-light);font-size:0.82rem;color:var(--text-muted);text-align:center;">
-        Hourly Clean Energy Cost Optimizer &mdash; Methodology Document v2.1 &mdash; Advanced Sensitivity Model + EAC Scarcity Analysis
+        Hourly Clean Energy Cost Optimizer &mdash; Methodology Document v2.2 &mdash; Advanced Sensitivity Model + EAC Scarcity Analysis
     </p>
 </div>
 
