@@ -6885,12 +6885,13 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     }
 
     // Helper: extract resource data for a resource_costs object.
-    // existing_pct and new_pct from priceMix are expressed as % of the target
-    // year's demand (priceMix already accounts for demand growth shrinking the
-    // existing share). Both get multiplied by targetDemandTWh.
-    // Hydro is always static at 2025 absolute capacity.
+    // FIX: Cap existing TWh at actual physical capacity from GRID_MIX_SHARES.
+    // existing_pct from priceMix may be expressed as % of either 2025 or grown demand
+    // depending on code path (client-side repricing vs pre-computed). To avoid
+    // inflation/deflation bugs, we cap existing at actual grid capacity regardless.
     const hydroCapPct = (DATA.config?.hydro_caps?.[iso] || 0);
     const hydroCapTWh = hydroCapPct / 100 * todayTWh;
+    const gridMix = (typeof GRID_MIX_SHARES !== 'undefined') ? (GRID_MIX_SHARES[iso] || {}) : {};
 
     function getResourceTWh(rc, targetDemandTWh) {
         const existing = {};
@@ -6907,11 +6908,11 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 existing[r] = hydroCapTWh;
                 newBuild[r] = 0;
             } else {
-                // existing_pct and new_pct are BOTH expressed as % of the target
-                // year's demand. Multiplying by targetDemandTWh gives absolute TWh.
-                // (existing_pct shrinks as demand grows; the absolute TWh stays constant)
-                existing[r] = (rd.existing_pct || rd.existing_share || 0) / 100 * targetDemandTWh;
-                newBuild[r] = (rd.new_pct || rd.new_share || 0) / 100 * targetDemandTWh;
+                // Cap existing at actual grid capacity (constant TWh regardless of growth)
+                const actualExistingTWh = (gridMix[r] || 0) / 100 * todayTWh;
+                const totalResourceTWh = ((rd.existing_pct || rd.existing_share || 0) + (rd.new_pct || rd.new_share || 0)) / 100 * targetDemandTWh;
+                existing[r] = Math.min(actualExistingTWh, totalResourceTWh);
+                newBuild[r] = Math.max(0, totalResourceTWh - existing[r]);
             }
         });
         // Split clean_firm into nuclear + geothermal
