@@ -228,14 +228,18 @@ for iso in ISOS:
 print("\nExtracting CF_TRANCHE_DATA...")
 cf_tranche_data = {}
 for iso in ISOS:
-    iso_tr = {k: [] for k in ['new_cf_twh', 'uprate_twh', 'newbuild_twh',
+    iso_tr = {k: [] for k in ['new_cf_twh', 'cf_existing_twh', 'uprate_twh',
+                               'geo_twh', 'nuclear_newbuild_twh', 'ccs_tranche_twh',
                                'uprate_price', 'newbuild_price', 'effective_cf_lcoe']}
     for t in THRESHOLDS:
         sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
         tc = sc.get('tranche_costs', {}) if sc else {}
         iso_tr['new_cf_twh'].append(round(tc.get('new_cf_twh', 0), 3))
+        iso_tr['cf_existing_twh'].append(round(tc.get('cf_existing_twh', 0), 3))
         iso_tr['uprate_twh'].append(round(tc.get('uprate_twh', 0), 4))
-        iso_tr['newbuild_twh'].append(round(tc.get('newbuild_twh', 0), 3))
+        iso_tr['geo_twh'].append(round(tc.get('geo_twh', 0), 3))
+        iso_tr['nuclear_newbuild_twh'].append(round(tc.get('nuclear_newbuild_twh', 0), 3))
+        iso_tr['ccs_tranche_twh'].append(round(tc.get('ccs_tranche_twh', 0), 3))
         iso_tr['uprate_price'].append(tc.get('uprate_price', 0))
         iso_tr['newbuild_price'].append(round(tc.get('newbuild_price', 0), 1))
         iso_tr['effective_cf_lcoe'].append(round(tc.get('effective_new_cf_lcoe', 0), 1))
@@ -616,7 +620,9 @@ lines.append('const CF_TRANCHE_DATA = {')
 for iso_idx, iso in enumerate(ISOS):
     tr = cf_tranche_data[iso]
     lines.append(f'    {iso}: {{')
-    fields = ['new_cf_twh', 'uprate_twh', 'newbuild_twh', 'uprate_price', 'newbuild_price', 'effective_cf_lcoe']
+    fields = ['new_cf_twh', 'cf_existing_twh', 'uprate_twh', 'geo_twh',
+              'nuclear_newbuild_twh', 'ccs_tranche_twh',
+              'uprate_price', 'newbuild_price', 'effective_cf_lcoe']
     for fi, field in enumerate(fields):
         comma = ',' if fi < len(fields) - 1 else ''
         padding = ' ' * max(0, 18 - len(field))
