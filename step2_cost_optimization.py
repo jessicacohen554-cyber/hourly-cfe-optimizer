@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """
-Step 2: Cross-Evaluation Tranche Repricing
-============================================
+Step 2: Cross-Evaluation Tranche Repricing (v2)
+=================================================
 For each (region, threshold):
-  1. Collect ALL physically feasible mixes from Step 1's 324 scenarios
+  1. Collect ALL physically feasible mixes from Step 1 (old 324-key or PFS)
   2. For each sensitivity combo: price EVERY feasible mix with that combo's
      cost assumptions + tranche CF pricing
   3. Select the cheapest mix → that becomes the scenario result
 
-This is an N-mixes × N-sensitivities cross-evaluation. With tranche pricing,
-mixes with less new CF become much cheaper (existing CF at wholesale vs
-new CF at $105+/MWh), so the optimal mix shifts dramatically from Step 1.
+v2 changes:
+  - Separate CCS toggle (L/M/H) from Firm Gen toggle
+  - 45Q credit as binary On/Off switch
+  - Geothermal tranche for CAISO (capped at 5 GW / ~39 TWh/yr)
+  - Nuclear new-build Low target = $70/MWh (nth-of-a-kind)
+  - Merit order: existing → uprates → geothermal (CAISO) → cheapest of nuclear/CCS
+  - Output: backward-compat 324-key results + cost tables for client-side repricing
 
 Tranche model for clean firm:
   - Existing CF: priced at wholesale (already on grid)
-  - New CF tranche 1: nuclear uprates (capped at 5% of existing fleet)
-  - New CF tranche 2: regional new-build (geothermal CAISO, SMR elsewhere)
+  - Tranche 1: nuclear uprates (capped at 5% of existing fleet)
+  - Tranche 2 (CAISO only): geothermal (capped at 5 GW / ~39 TWh/yr)
+  - Tranche 3: cheapest of nuclear new-build vs CCS-CCGT (toggle-dependent)
 
 Input:  data/optimizer_cache.json  (LOCKED — read-only, never modified)
 Output: dashboard/overprocure_results.json  (cross-evaluated repriced copy)
@@ -27,20 +32,45 @@ import copy
 import os
 import time
 from pathlib import Path
+from itertools import product
 
 # ============================================================================
-# TRANCHE PARAMETERS
+# COST TABLES — NEW ARCHITECTURE (Feb 2026)
 # ============================================================================
 
 # Nuclear uprate LCOE by firm gen sensitivity level ($/MWh)
 UPRATE_LCOE = {'L': 15, 'M': 25, 'H': 40}
 
-# Regional new-build LCOE by firm gen sensitivity level ($/MWh)
-# CAISO = geothermal; all others = SMR
-NEWBUILD_LCOE = {
-    'L': {'CAISO': 65, 'ERCOT': 70, 'PJM': 80, 'NYISO': 85, 'NEISO': 82},
-    'M': {'CAISO': 88, 'ERCOT': 95, 'PJM': 105, 'NYISO': 110, 'NEISO': 108},
-    'H': {'CAISO': 125, 'ERCOT': 135, 'PJM': 160, 'NYISO': 170, 'NEISO': 165},
+# Nuclear new-build LCOE by firm gen sensitivity level ($/MWh)
+# Low = nth-of-a-kind SMR target ($70/MWh)
+NUCLEAR_NEWBUILD_LCOE = {
+    'L': {'CAISO': 70, 'ERCOT': 68, 'PJM': 72, 'NYISO': 75, 'NEISO': 73},
+    'M': {'CAISO': 95, 'ERCOT': 90, 'PJM': 105, 'NYISO': 110, 'NEISO': 108},
+    'H': {'CAISO': 140, 'ERCOT': 135, 'PJM': 160, 'NYISO': 170, 'NEISO': 165},
+}
+
+# Geothermal LCOE (CAISO only) by geothermal sensitivity level ($/MWh)
+GEOTHERMAL_LCOE = {
+    'L': {'CAISO': 63},
+    'M': {'CAISO': 88},
+    'H': {'CAISO': 110},
+}
+
+# Geothermal cap: 5 GW at 90% CF = ~39 TWh/yr (CAISO only)
+GEO_CAP_TWH = 39.0
+
+# CCS-CCGT LCOE by CCS sensitivity level ($/MWh)
+# 45Q ON: $29/MWh offset baked in (current tables)
+CCS_LCOE_45Q_ON = {
+    'L': {'CAISO': 58, 'ERCOT': 52, 'PJM': 62, 'NYISO': 78, 'NEISO': 75},
+    'M': {'CAISO': 86, 'ERCOT': 71, 'PJM': 79, 'NYISO': 99, 'NEISO': 96},
+    'H': {'CAISO': 115, 'ERCOT': 92, 'PJM': 102, 'NYISO': 128, 'NEISO': 122},
+}
+# 45Q OFF: add back $29/MWh
+CCS_LCOE_45Q_OFF = {
+    'L': {'CAISO': 87, 'ERCOT': 81, 'PJM': 91, 'NYISO': 107, 'NEISO': 104},
+    'M': {'CAISO': 115, 'ERCOT': 100, 'PJM': 108, 'NYISO': 128, 'NEISO': 125},
+    'H': {'CAISO': 144, 'ERCOT': 121, 'PJM': 131, 'NYISO': 157, 'NEISO': 151},
 }
 
 # Uprate cap: 5% of existing nuclear × 90% CF → TWh/yr
@@ -56,8 +86,66 @@ ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 LEVEL_NAME = {'L': 'Low', 'M': 'Medium', 'H': 'High', 'N': 'None'}
 LEVEL_CODE = {'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N'}
+LMH = ['L', 'M', 'H']
 
 print("Uprate caps (TWh/yr):", UPRATE_CAP_TWH)
+print(f"Geothermal cap (CAISO): {GEO_CAP_TWH} TWh/yr")
+
+# ============================================================================
+# SENSITIVITY KEY ARCHITECTURE
+# ============================================================================
+# Old format: RFS_FF_TX (e.g., MMM_M_M) — 324 combos
+# New format: RFSC_QFF_TX[_G] — 5,832 (non-CAISO) / 17,496 (CAISO)
+#   R = Renewable L/M/H
+#   F = Firm Gen (nuclear) L/M/H
+#   S = Storage L/M/H
+#   C = CCS L/M/H
+#   Q = 45Q 1/0
+#   FF = Fossil Fuel L/M/H
+#   TX = Transmission N/L/M/H
+#   G = Geothermal L/M/H (CAISO only)
+
+def old_to_new_key(old_key, ccs_level='M', q45='1', geo_level=None):
+    """Map old RFS_FF_TX key to new RFSC_QFF_TX[_G] format."""
+    parts = old_key.split('_')
+    r, f, s = parts[0][0], parts[0][1], parts[0][2]
+    ff, tx = parts[1], parts[2]
+    new_key = f"{r}{f}{s}{ccs_level}_{q45}{ff}_{tx}"
+    if geo_level is not None:
+        new_key += f"_{geo_level}"
+    return new_key
+
+
+def parse_new_key(new_key):
+    """Parse new-format sensitivity key into component levels."""
+    parts = new_key.split('_')
+    rfsc = parts[0]  # 4 chars: R, F, S, C
+    qff = parts[1]   # Q + FF (e.g., '1M')
+    tx = parts[2]    # TX level
+
+    result = {
+        'ren_level': rfsc[0],
+        'firm_level': rfsc[1],
+        'stor_level': rfsc[2],
+        'ccs_level': rfsc[3],
+        'q45': qff[0],           # '1' or '0'
+        'fuel_level': qff[1],
+        'tx_level': tx,
+    }
+
+    if len(parts) > 3:
+        result['geo_level'] = parts[3]
+    else:
+        result['geo_level'] = None
+
+    return result
+
+
+def new_to_old_key(new_key):
+    """Map new-format key back to old RFS_FF_TX format (dropping CCS/45Q/geo)."""
+    p = parse_new_key(new_key)
+    return f"{p['ren_level']}{p['firm_level']}{p['stor_level']}_{p['fuel_level']}_{p['tx_level']}"
+
 
 # ============================================================================
 # LOAD CACHE (read-only) → deep copy for output
@@ -84,32 +172,37 @@ fuel_adjustments = config.get('fuel_prices', {})
 # COST FUNCTION: price any mix under any sensitivity with tranche CF
 # ============================================================================
 
-def price_mix(iso, mix_data, sens_key, demand_twh):
+def price_mix(iso, mix_data, new_sens_key, demand_twh):
     """
     Price a physical mix under a given sensitivity's cost assumptions.
-    Uses tranche pricing for clean firm (existing at wholesale, uprate, newbuild).
+    Uses tranche pricing for clean firm with merit-order dispatch:
+      1. Existing CF at wholesale
+      2. Nuclear uprates (capped)
+      3. Geothermal (CAISO only, capped at 39 TWh/yr)
+      4. Cheapest of nuclear new-build vs CCS (toggle-dependent)
 
     Args:
         iso: region
         mix_data: dict with resource_mix, procurement_pct, hourly_match_score,
                   battery_dispatch_pct, ldes_dispatch_pct
-        sens_key: e.g. 'MMM_M_M' — determines cost assumptions
+        new_sens_key: new-format key (e.g., 'MMMM_1M_M' or 'MMMM_1M_M_M')
         demand_twh: regional annual demand
 
     Returns:
         dict with total_cost, effective_cost, incremental, wholesale,
              tranche_costs, resource_costs_detail
     """
-    # Parse sensitivity key
-    parts = sens_key.split('_')
-    ren_level = parts[0][0]   # R in RFS
-    firm_level = parts[0][1]  # F in RFS
-    stor_level = parts[0][2]  # S in RFS
-    fuel_level = parts[1]     # FF
-    tx_level = parts[2]       # TX
+    p = parse_new_key(new_sens_key)
+    ren_level = p['ren_level']
+    firm_level = p['firm_level']
+    stor_level = p['stor_level']
+    ccs_level = p['ccs_level']
+    q45 = p['q45']
+    fuel_level = p['fuel_level']
+    tx_level = p['tx_level']
+    geo_level = p['geo_level']
 
     ren_name = LEVEL_NAME[ren_level]
-    firm_name = LEVEL_NAME[firm_level]
     stor_name = LEVEL_NAME[stor_level]
     fuel_name = LEVEL_NAME[fuel_level]
     tx_name = LEVEL_NAME[tx_level]
@@ -144,51 +237,78 @@ def price_mix(iso, mix_data, sens_key, demand_twh):
         existing_pct = min(resource_pct_of_demand, existing_share)
         new_pct = max(0, resource_pct_of_demand - existing_share)
 
-        # Get LCOE for this resource under this sensitivity
         if rtype == 'clean_firm':
-            # TRANCHE PRICING — don't use blended LCOE
+            # MERIT-ORDER TRANCHE PRICING for clean firm
             new_cf_twh = new_pct / 100.0 * demand_twh
-            existing_cf_twh = existing_pct / 100.0 * demand_twh
-
-            # Existing CF at wholesale
             existing_cost = existing_pct / 100.0 * wholesale
+
+            uprate_twh = 0
+            geo_twh = 0
+            nuclear_newbuild_twh = 0
+            ccs_newbuild_twh = 0
+            uprate_cost_m = 0
+            geo_cost_m = 0
+            nuclear_cost_m = 0
+            ccs_cost_m = 0
 
             if new_cf_twh > 0:
                 uprate_cap = UPRATE_CAP_TWH[iso]
-                tx_add = tx_tables.get('clean_firm', {}).get(tx_name, {}).get(iso, 0)
+                tx_add_cf = tx_tables.get('clean_firm', {}).get(tx_name, {}).get(iso, 0)
+                tx_add_ccs = tx_tables.get('ccs_ccgt', {}).get(tx_name, {}).get(iso, 0)
 
-                # Tranche 1: uprate (no tx, capped)
+                # Tranche 1: Nuclear uprates (no tx, capped)
                 uprate_twh = min(new_cf_twh, uprate_cap)
                 uprate_cost_m = uprate_twh * UPRATE_LCOE[firm_level]
+                remaining = max(0, new_cf_twh - uprate_twh)
 
-                # Tranche 2: newbuild (with tx, uncapped)
-                newbuild_twh = max(0, new_cf_twh - uprate_twh)
-                newbuild_cost_m = newbuild_twh * (NEWBUILD_LCOE[firm_level][iso] + tx_add)
+                # Tranche 2: Geothermal (CAISO only, capped)
+                if iso == 'CAISO' and geo_level and remaining > 0:
+                    geo_price = GEOTHERMAL_LCOE[geo_level]['CAISO'] + tx_add_cf
+                    geo_twh = min(remaining, GEO_CAP_TWH)
+                    geo_cost_m = geo_twh * geo_price
+                    remaining = max(0, remaining - geo_twh)
 
-                tranche_total_m = uprate_cost_m + newbuild_cost_m
+                # Tranche 3: Cheapest of nuclear new-build vs CCS
+                if remaining > 0:
+                    nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_level][iso] + tx_add_cf
+                    ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
+                    ccs_price = ccs_table[ccs_level][iso] + tx_add_ccs
+
+                    if nuclear_price <= ccs_price:
+                        nuclear_newbuild_twh = remaining
+                        nuclear_cost_m = nuclear_newbuild_twh * nuclear_price
+                    else:
+                        ccs_newbuild_twh = remaining
+                        ccs_cost_m = ccs_newbuild_twh * ccs_price
+
+                tranche_total_m = uprate_cost_m + geo_cost_m + nuclear_cost_m + ccs_cost_m
                 new_cf_cost_per_demand = tranche_total_m / demand_twh
-                effective_new_lcoe = tranche_total_m / new_cf_twh
+                effective_new_lcoe = tranche_total_m / new_cf_twh if new_cf_twh > 0 else 0
             else:
-                uprate_twh = 0
-                newbuild_twh = 0
-                uprate_cost_m = 0
-                newbuild_cost_m = 0
                 tranche_total_m = 0
                 new_cf_cost_per_demand = 0
                 effective_new_lcoe = 0
 
             cost_per_demand = existing_cost + new_cf_cost_per_demand
+
+            # Build tranche detail
+            ccs_table_ref = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
             resource_costs[rtype] = {
                 'existing_pct': round(existing_pct, 1),
                 'new_pct': round(new_pct, 1),
                 'cost_per_demand_mwh': round(cost_per_demand, 2),
                 'new_cf_twh': round(new_cf_twh, 3),
                 'uprate_twh': round(uprate_twh, 4),
-                'newbuild_twh': round(newbuild_twh, 3),
                 'uprate_price': UPRATE_LCOE[firm_level],
-                'newbuild_price': NEWBUILD_LCOE[firm_level][iso] + tx_tables.get('clean_firm', {}).get(tx_name, {}).get(iso, 0),
+                'geo_twh': round(geo_twh, 3),
+                'geo_price': GEOTHERMAL_LCOE.get(geo_level or 'M', {}).get(iso, 0) + tx_tables.get('clean_firm', {}).get(tx_name, {}).get(iso, 0) if iso == 'CAISO' and geo_level else 0,
+                'nuclear_newbuild_twh': round(nuclear_newbuild_twh, 3),
+                'nuclear_price': NUCLEAR_NEWBUILD_LCOE[firm_level][iso] + tx_tables.get('clean_firm', {}).get(tx_name, {}).get(iso, 0),
+                'ccs_newbuild_twh': round(ccs_newbuild_twh, 3),
+                'ccs_price': ccs_table_ref[ccs_level][iso] + tx_tables.get('ccs_ccgt', {}).get(tx_name, {}).get(iso, 0),
                 'effective_new_lcoe': round(effective_new_lcoe, 1),
             }
+
         elif rtype == 'hydro':
             # Hydro: always existing, wholesale-priced, $0 tx
             cost_per_demand = resource_pct_of_demand / 100.0 * wholesale
@@ -197,15 +317,25 @@ def price_mix(iso, mix_data, sens_key, demand_twh):
                 'new_pct': round(new_pct, 1),
                 'cost_per_demand_mwh': round(cost_per_demand, 2),
             }
-        else:
-            # Solar, wind, CCS: standard LCOE + tx pricing
-            if rtype in ('solar', 'wind'):
-                lcoe = lcoe_tables[rtype][ren_name][iso]
-            elif rtype == 'ccs_ccgt':
-                lcoe = lcoe_tables['ccs_ccgt'][firm_name][iso]
-            else:
-                lcoe = 0
 
+        elif rtype == 'ccs_ccgt':
+            # CCS as a separate resource type in the mix
+            # Use CCS toggle level + 45Q switch for pricing
+            ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
+            lcoe = ccs_table[ccs_level][iso]
+            tx_add = tx_tables.get(rtype, {}).get(tx_name, {}).get(iso, 0)
+            new_build_cost = lcoe + tx_add
+            cost_per_demand = (existing_pct / 100.0 * wholesale) + \
+                              (new_pct / 100.0 * new_build_cost)
+            resource_costs[rtype] = {
+                'existing_pct': round(existing_pct, 1),
+                'new_pct': round(new_pct, 1),
+                'cost_per_demand_mwh': round(cost_per_demand, 2),
+            }
+
+        else:
+            # Solar, wind: standard LCOE + tx pricing
+            lcoe = lcoe_tables[rtype][ren_name][iso]
             tx_add = tx_tables.get(rtype, {}).get(tx_name, {}).get(iso, 0)
             new_build_cost = lcoe + tx_add
             cost_per_demand = (existing_pct / 100.0 * wholesale) + \
@@ -245,8 +375,12 @@ def price_mix(iso, mix_data, sens_key, demand_twh):
         'new_cf_twh': cf_rc.get('new_cf_twh', 0),
         'uprate_twh': cf_rc.get('uprate_twh', 0),
         'uprate_price': cf_rc.get('uprate_price', 0),
-        'newbuild_twh': cf_rc.get('newbuild_twh', 0),
-        'newbuild_price': cf_rc.get('newbuild_price', 0),
+        'geo_twh': cf_rc.get('geo_twh', 0),
+        'geo_price': cf_rc.get('geo_price', 0),
+        'nuclear_newbuild_twh': cf_rc.get('nuclear_newbuild_twh', 0),
+        'nuclear_price': cf_rc.get('nuclear_price', 0),
+        'ccs_newbuild_twh': cf_rc.get('ccs_newbuild_twh', 0),
+        'ccs_price': cf_rc.get('ccs_price', 0),
         'effective_new_cf_lcoe': cf_rc.get('effective_new_lcoe', 0),
     }
 
@@ -261,14 +395,49 @@ def price_mix(iso, mix_data, sens_key, demand_twh):
 
 
 # ============================================================================
+# EXTRACT UNIQUE PHYSICS MIXES (from old 324-key cache or future PFS)
+# ============================================================================
+
+def extract_unique_mixes(scenarios):
+    """Extract all unique physical mixes from a set of scenarios.
+    Works with both old 324-key format and future PFS format."""
+    unique_mixes = {}
+    for sk, sc in scenarios.items():
+        rm = sc['resource_mix']
+        # Include storage dispatch in mix key since it affects costs
+        mix_key = (
+            tuple(sorted(rm.items())),
+            sc.get('procurement_pct', 100),
+            sc.get('battery_dispatch_pct', 0),
+            sc.get('ldes_dispatch_pct', 0),
+        )
+        if mix_key not in unique_mixes:
+            unique_mixes[mix_key] = {
+                'resource_mix': rm,
+                'procurement_pct': sc['procurement_pct'],
+                'hourly_match_score': sc['hourly_match_score'],
+                'battery_dispatch_pct': sc.get('battery_dispatch_pct', 0),
+                'ldes_dispatch_pct': sc.get('ldes_dispatch_pct', 0),
+                'source_key': sk,
+            }
+    return list(unique_mixes.values())
+
+
+# ============================================================================
 # CROSS-EVALUATE: all mixes × all sensitivities per (region, threshold)
 # ============================================================================
 
 print("\nCross-evaluating all mixes × all sensitivities with tranche pricing...")
+print("  New architecture: separate CCS/45Q/geothermal toggles")
 start_time = time.time()
 
 cf_split_table = []
 stats = {'total_evals': 0, 'mix_swaps': 0, 'scenarios_updated': 0}
+
+# For backward compat, we reprice the original 324 scenario keys
+# using the new cost model. CCS defaults to same level as firm gen,
+# 45Q defaults to ON, geo defaults to Medium (for CAISO).
+# This ensures MMM_M_M and all other old keys get repriced correctly.
 
 for iso in ISOS:
     demand_twh = data['results'][iso]['annual_demand_mwh'] / 1e6
@@ -276,35 +445,29 @@ for iso in ISOS:
     for t_key, t_data in data['results'][iso]['thresholds'].items():
         scenarios = t_data['scenarios']
 
-        # 1. Collect all unique physically feasible mixes at this threshold
-        unique_mixes = {}  # mix_key → mix_data (from one representative scenario)
-        for sk, sc in scenarios.items():
-            rm = sc['resource_mix']
-            mix_key = tuple(sorted(rm.items()))
-            if mix_key not in unique_mixes:
-                unique_mixes[mix_key] = {
-                    'resource_mix': rm,
-                    'procurement_pct': sc['procurement_pct'],
-                    'hourly_match_score': sc['hourly_match_score'],
-                    'battery_dispatch_pct': sc.get('battery_dispatch_pct', 0),
-                    'ldes_dispatch_pct': sc.get('ldes_dispatch_pct', 0),
-                    'source_key': sk,  # track which scenario this mix came from
-                }
-
-        mix_list = list(unique_mixes.values())
+        # 1. Collect all unique physically feasible mixes
+        mix_list = extract_unique_mixes(scenarios)
         n_mixes = len(mix_list)
 
-        # 2. For each sensitivity combo, price every mix and pick cheapest
+        # 2. For each old scenario key, reprice using new cost model
         best_key_for_thresh = None
         best_cost_for_thresh = float('inf')
 
         for sens_key, sens_sc in scenarios.items():
+            # Map old key to new format:
+            # CCS level = same as firm gen level (backward compat)
+            # 45Q = ON, Geo = Medium (for CAISO)
+            parts = sens_key.split('_')
+            firm_lev = parts[0][1]  # F from RFS
+            geo = 'M' if iso == 'CAISO' else None
+            new_key = old_to_new_key(sens_key, ccs_level=firm_lev, q45='1', geo_level=geo)
+
             best_mix = None
             best_cost = float('inf')
             best_result = None
 
             for mix_data in mix_list:
-                result = price_mix(iso, mix_data, sens_key, demand_twh)
+                result = price_mix(iso, mix_data, new_key, demand_twh)
                 stats['total_evals'] += 1
 
                 if result['total_cost'] < best_cost:
@@ -312,22 +475,22 @@ for iso in ISOS:
                     best_mix = mix_data
                     best_result = result
 
-            # Check if the winning mix is different from the scenario's own mix
+            # Check for mix swap
             own_mix_key = tuple(sorted(sens_sc['resource_mix'].items()))
             winning_mix_key = tuple(sorted(best_mix['resource_mix'].items()))
             if own_mix_key != winning_mix_key:
                 stats['mix_swaps'] += 1
 
-            # 3. Update this scenario with the winning mix + new costs
-            # Replace resource_mix with the winning mix
+            # 3. Update scenario with winning mix + new costs
             sens_sc['resource_mix'] = best_mix['resource_mix']
             sens_sc['procurement_pct'] = best_mix['procurement_pct']
             sens_sc['hourly_match_score'] = best_mix['hourly_match_score']
             sens_sc['battery_dispatch_pct'] = best_mix.get('battery_dispatch_pct', 0)
             sens_sc['ldes_dispatch_pct'] = best_mix.get('ldes_dispatch_pct', 0)
             sens_sc['mix_source'] = best_mix['source_key']
+            sens_sc['new_sens_key'] = new_key  # Track the new-format key
 
-            # Copy compressed_day from the source scenario if available
+            # Copy compressed_day from source
             source_sc = scenarios.get(best_mix['source_key'])
             if source_sc and 'compressed_day' in source_sc:
                 sens_sc['compressed_day'] = source_sc['compressed_day']
@@ -352,7 +515,7 @@ for iso in ISOS:
 
             stats['scenarios_updated'] += 1
 
-            # Track global optimum for this threshold
+            # Track global optimum
             if best_result['total_cost'] < best_cost_for_thresh:
                 best_cost_for_thresh = best_result['total_cost']
                 best_key_for_thresh = sens_key
@@ -362,12 +525,27 @@ for iso in ISOS:
             if tc.get('new_cf_twh', 0) > 0:
                 cf_split_table.append({
                     'iso': iso, 'threshold': t_key, 'scenario': sens_key,
+                    'new_sens_key': new_key,
                     'cf_pct': best_mix['resource_mix'].get('clean_firm', 0),
                     'new_cf_twh': tc['new_cf_twh'],
                     'uprate_twh': tc['uprate_twh'],
-                    'newbuild_twh': tc['newbuild_twh'],
+                    'geo_twh': tc.get('geo_twh', 0),
+                    'nuclear_newbuild_twh': tc.get('nuclear_newbuild_twh', 0),
+                    'ccs_newbuild_twh': tc.get('ccs_newbuild_twh', 0),
                     'effective_new_cf_lcoe': tc['effective_new_cf_lcoe'],
                 })
+
+        # Store feasible mixes for client-side repricing
+        t_data['feasible_mixes'] = [
+            {
+                'resource_mix': m['resource_mix'],
+                'procurement_pct': m['procurement_pct'],
+                'hourly_match_score': m['hourly_match_score'],
+                'battery_dispatch_pct': m['battery_dispatch_pct'],
+                'ldes_dispatch_pct': m['ldes_dispatch_pct'],
+            }
+            for m in mix_list
+        ]
 
         # Mark global optimum
         if best_key_for_thresh:
@@ -383,18 +561,34 @@ print(f"  Total evaluations: {stats['total_evals']:,}")
 print(f"  Mix swaps (scenario got a different mix): {stats['mix_swaps']:,}")
 
 # ============================================================================
-# SAVE
+# EMBED COST TABLES FOR CLIENT-SIDE REPRICING
 # ============================================================================
 
 data['config']['tranche_model'] = {
     'uprate_caps_twh': UPRATE_CAP_TWH,
     'uprate_lcoe': UPRATE_LCOE,
-    'newbuild_lcoe': NEWBUILD_LCOE,
+    'nuclear_newbuild_lcoe': NUCLEAR_NEWBUILD_LCOE,
+    'geothermal_lcoe': GEOTHERMAL_LCOE,
+    'geothermal_cap_twh': GEO_CAP_TWH,
+    'ccs_lcoe_45q_on': CCS_LCOE_45Q_ON,
+    'ccs_lcoe_45q_off': CCS_LCOE_45Q_OFF,
     'existing_nuclear_gw': EXISTING_NUCLEAR_GW,
-    'method': 'cross_evaluation',
-    'description': 'Cross-evaluated: all physically feasible mixes priced under each '
-                   'sensitivity combo with tranche CF pricing. Cheapest mix wins.',
+    'method': 'cross_evaluation_v2',
+    'description': (
+        'v2: Separate CCS/45Q/geothermal toggles. '
+        'Merit order: existing → uprates → geothermal (CAISO) → cheapest of nuclear/CCS. '
+        'Backward-compat 324-key output + feasible_mixes for client-side repricing.'
+    ),
+    'sensitivity_key_format': {
+        'old': 'RFS_FF_TX (324 combos)',
+        'new': 'RFSC_QFF_TX[_G] (5832 non-CAISO / 17496 CAISO)',
+        'default_new': 'MMMM_1M_M' + ('_M' if True else ''),
+    },
 }
+
+# ============================================================================
+# SAVE
+# ============================================================================
 
 RESULTS_PATH = Path('dashboard/overprocure_results.json')
 with open(RESULTS_PATH, 'w') as f:
@@ -413,6 +607,7 @@ print(f"Saved data/cf_split_table.json ({len(cf_split_table)} rows)")
 
 print("\n" + "=" * 70)
 print("MMM_M_M (all-Medium toggles — dashboard default)")
+print("New key: MMMM_1M_M (CCS=M, 45Q=ON) / MMMM_1M_M_M (CAISO + geo=M)")
 print("=" * 70)
 for iso in ISOS:
     print(f"\n{iso} (existing CF: {grid_mix[iso]['clean_firm']}% of demand):")
@@ -427,9 +622,12 @@ for iso in ISOS:
             src = sc.get('mix_source', 'self')
             tc = sc.get('tranche_costs', {})
             new_cf = tc.get('new_cf_twh', 0)
+            geo = tc.get('geo_twh', 0)
+            nuc = tc.get('nuclear_newbuild_twh', 0)
+            ccs = tc.get('ccs_newbuild_twh', 0)
             print(f"  {t:>5}%: CF={cf:>2}% (of demand:{cf_demand:>5.1f}%) "
                   f"eff=${eff:.1f}/MWh match={match}% "
-                  f"new_cf={new_cf:.1f}TWh src={src}")
+                  f"new_cf={new_cf:.1f}TWh geo={geo:.1f} nuc={nuc:.1f} ccs={ccs:.1f}")
 
 print("\n" + "=" * 70)
 print("GLOBAL OPTIMA (cheapest scenario per region+threshold)")
