@@ -32,7 +32,7 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 |------|--------|-------------|---------------|
 | **Step 1** | `step1_pfs_generator.py` | **PFS Generator** — Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes (clean firm, solar, wind, hydro) × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores. Produces 21.4M physics-validated mixes. | Only if dispatch logic, generation profiles, or demand curves change. |
 | **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** — Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
-| **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** — Vectorized cross-evaluation of all EF mixes under 324 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios. | When cost assumptions, LCOE tables, or sensitivity toggles change. |
+| **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** — Vectorized cross-evaluation of all EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios. | When cost assumptions, LCOE tables, or sensitivity toggles change. |
 | **Step 4** | `step4_postprocess.py` | **Post-Processing** — NEISO gas constraint, CCS vs LDES crossover analysis, CO₂/MAC calculations. Produces final corrected results. | When Step 3 outputs change. |
 
 **Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 are cheap (minutes). Changing cost assumptions only requires Steps 3–4.
@@ -80,8 +80,7 @@ hourly-cfe-optimizer/
 ├── dashboard/
 │   ├── index.html                # Homepage (scrollytelling)
 │   ├── dashboard.html            # Interactive cost optimizer
-│   ├── region_deepdive.html      # Regional deep dives
-│   ├── abatement_dashboard.html  # CO₂ abatement analysis
+│   ├── abatement_dashboard.html  # CO₂ Abatement Analysis
 │   ├── research_paper.html       # Standalone research paper
 │   ├── optimizer_methodology.html # Methodology documentation
 │   ├── overprocure_results.json  # Step 3 output (optimization results)
@@ -99,7 +98,7 @@ hourly-cfe-optimizer/
 - **Battery**: 4hr Li-ion, 85% round-trip efficiency, daily-cycle dispatch
 - **LDES**: 100hr iron-air, 50% round-trip efficiency, 7-day rolling window dispatch
 
-## Sensitivity Toggles (324 combos)
+## Sensitivity Toggles (5,832 combos)
 
 | Toggle | Options | Description |
 |--------|---------|-------------|

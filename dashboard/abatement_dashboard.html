@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — Carbon Abatement Dashboard</title>
+<title>The 8,760 Problem — CO₂ Abatement Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -436,18 +436,21 @@ body { background: #F3F4F8; }
 
 @media (max-width: 900px) {
     .hero-scrolly-container { flex-direction: column; }
-    .hero-scrolly-sticky { width: 100%; height: 50vh; min-height: 380px; position: sticky; top: 0; padding: 16px; }
+    .hero-scrolly-sticky { width: 100%; height: 40vh; min-height: 300px; position: sticky; top: 0; padding: 16px; }
+    .hero-scrolly-chart-wrap { min-height: 260px; }
+    .hero-scrolly-chart-wrap canvas { min-height: 220px; }
     .hero-scrolly-steps { width: 100%; }
     .hero-scrolly-step { min-height: auto; padding: 40px 20px; }
     .hero-step-card { padding: 24px 20px; }
     .hero-step-card h3 { font-size: 1.25rem; }
 }
 @media (max-width: 600px) {
-    .hero-scrolly-sticky { height: 45vh; min-height: 300px; padding: 12px; }
-    .hero-scrolly-chart-wrap { padding: 16px 12px; min-height: 280px; }
-    .hero-scrolly-step { padding: 32px 14px; }
-    .hero-step-card { padding: 20px 16px; }
-    .hero-step-card h3 { font-size: 1.1rem; }
+    .hero-scrolly-sticky { height: 35vh; min-height: 250px; padding: 10px; }
+    .hero-scrolly-chart-wrap { padding: 12px 10px; min-height: 220px; }
+    .hero-scrolly-chart-wrap canvas { min-height: 180px; }
+    .hero-scrolly-step { padding: 28px 14px; }
+    .hero-step-card { padding: 18px 14px; }
+    .hero-step-card h3 { font-size: 1.05rem; }
     .hero-step-card p { font-size: 0.85rem; }
 }
 </style>
@@ -462,7 +465,7 @@ body { background: #F3F4F8; }
 <!-- HEADER BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">Comparing the cost of CO₂ abatement through hourly clean energy procurement across regions and ambition levels.<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[10]</sup></p>
+    <p class="subtitle">Comparing the cost of CO₂ abatement through hourly clean energy procurement across regions and ambition levels</p>
     <div class="header-accent"></div>
 </header>
 
@@ -474,7 +477,7 @@ body { background: #F3F4F8; }
             <div class="hero-scrolly-chart-wrap">
                 <div class="hero-chart-title" id="heroChartTitle">Marginal Abatement Cost vs. Projected DAC — All Regions</div>
                 <canvas id="heroScrollyChart"></canvas>
-                <div class="hero-chart-subtitle">Solid line = stepwise envelope (Medium cost) &middot; Shaded band = P10–P90 across 324 scenarios &middot; Dashed = DAC projections</div>
+                <div class="hero-chart-subtitle">Solid line = stepwise envelope (Medium cost) &middot; Shaded band = P10–P90 across 5,832+ scenarios &middot; Dashed = DAC projections</div>
             </div>
         </div>
 
@@ -485,8 +488,8 @@ body { background: #F3F4F8; }
             <div class="hero-scrolly-step" data-hero-step="overview">
                 <div class="hero-step-card">
                     <h3>Today's investment decisions determine where grid decarb outcompetes DAC</h3>
-                    <p>The marginal cost of each additional percent of clean energy — not the average — determines when DAC becomes the cheaper path. Across 324 sensitivity scenarios per region, the crossover point shifts by 10–25 percentage points depending on which technologies get investment today. Early bets on nuclear, geothermal, or renewables have catalytic effects on how deep grid decarbonization can go before DAC wins.</p>
-                    <span class="step-stat step-stat-blue">324 cost scenarios &times; 5 ISOs: crossover shifts 10–25 points on policy choices</span>
+                    <p>The marginal cost of each additional percent of clean energy — not the average — determines when DAC becomes the cheaper path. Across thousands of sensitivity scenarios per region, the crossover point shifts by 10–25 percentage points depending on which technologies get investment today. Early bets on nuclear, geothermal, or renewables have catalytic effects on how deep grid decarbonization can go before DAC wins.</p>
+                    <span class="step-stat step-stat-blue">5,832+ cost scenarios &times; 5 ISOs: crossover shifts 10–25 points on policy choices</span>
                 </div>
             </div>
 
@@ -555,96 +558,17 @@ body { background: #F3F4F8; }
     </div>
 </section>
 
-<!-- MAIN DASHBOARD -->
+<!-- PER-REGION COST ENVELOPES (static, Medium cost) -->
 <div class="dashboard-wrap">
-
-    <!-- Title + Intro -->
     <div class="page-title-section">
-        <h2 class="page-title">Carbon Abatement Dashboard</h2>
+        <h2 class="page-title">Regional Cost Envelopes</h2>
         <p class="page-intro">
-            How does hourly grid decarbonization compare to alternative carbon removal strategies?<sup style="font-size:0.7em;color:#6B7280;">[10]</sup>
-            Adjust the toggles below to stress-test different cost assumptions and see how crossover points shift
-            across regions and technologies in real time. Regional emission rates from EPA eGRID 2022<sup style="font-size:0.7em;color:#6B7280;">[1]</sup>; hourly profiles from EIA.<sup style="font-size:0.7em;color:#6B7280;">[7]</sup>
+            Marginal abatement cost curves for each ISO at Medium cost assumptions.
+            Solid line = stepwise envelope. Shaded band = P10–P90 across 5,832+ sensitivity scenarios.
+            Dashed lines = projected DAC cost trajectories.
         </p>
     </div>
-
-    <!-- Controls Panel -->
-    <div class="controls-panel">
-        <div class="controls-panel-title">Stress-Test Assumptions</div>
-        <div class="controls-panel-subtitle">Adjust cost assumptions for grid decarbonization and competing technologies to see how crossover points shift.</div>
-        <div class="controls-grid">
-            <div class="ctrl-group">
-                <label>Grid Cost Scenario <span class="info-icon" title="Low = cheap renewables, fast permitting, falling storage costs. High = tariffs, supply chain disruptions, permitting delays. Cost ranges per NREL ATB 2024 [5] and Lazard LCOE v17 [6].">i</span></label>
-                <div class="ctrl-toggle" data-ctrl="grid">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <label>DAC Cost Trajectory <span class="info-icon" title="Low = aggressive learning curves, $150/ton. Medium = current trajectory, $250/ton. High = slow scaling, $400/ton. Range shown on charts. Per NREL ATB 2024 [5].">i</span></label>
-                <div class="ctrl-toggle" data-ctrl="dac">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <label>Industrial Decarb Cost <span class="info-icon" title="Low = electrification is cheaper than fossil (net savings). Medium = moderate carbon price needed. High = expensive retrofit + high energy costs. Based on McKinsey MAC methodology [10].">i</span></label>
-                <div class="ctrl-toggle" data-ctrl="industrial">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-            <div class="ctrl-group">
-                <label>Carbon Removal Alternatives <span class="info-icon" title="Low = BECCS + enhanced weathering hit scale, $50-100/ton. Medium = moderate scaling. High = limited deployment, $200+/ton. Benchmarks from IPCC AR6 WG3 [9] and NREL ATB [5].">i</span></label>
-                <div class="ctrl-toggle" data-ctrl="removal">
-                    <button data-value="Low">Low</button>
-                    <button data-value="Medium" class="active">Medium</button>
-                    <button data-value="High">High</button>
-                </div>
-            </div>
-        </div>
-        <div class="summary-strip" id="crossoverSummary"></div>
-    </div>
-
-    <!-- Per-Region Envelope Grid -->
-    <div class="chart-card chart-card-full" style="margin-bottom:24px;">
-        <div class="chart-card-title">Abatement Cost by Region — P10/P90 Uncertainty Envelopes<sup style="font-size:0.7em;color:#6B7280;">[1][7]</sup></div>
-        <div class="envelope-grid" id="macEnvelopeGrid"></div>
-    </div>
-
-    <!-- Chart Grid -->
-    <div class="chart-grid">
-        <!-- ANOVA Sensitivity -->
-        <div class="chart-card">
-            <div class="chart-card-title">What Drives MAC Uncertainty? (ANOVA Decomposition)</div>
-            <canvas id="anovaChart"></canvas>
-        </div>
-
-        <!-- Marginal MAC by Region (toggle-responsive) -->
-        <div class="chart-card">
-            <div class="chart-card-title">Marginal MAC by Region — Six-Zone Stepwise View</div>
-            <canvas id="portfolioChart"></canvas>
-        </div>
-
-        <!-- Abatement Ladder (full width) -->
-        <div class="chart-card chart-card-full">
-            <div class="chart-card-title">Abatement Cost Ladder: Grid vs. Alternatives — 2040 Projected<sup style="font-size:0.7em;color:#6B7280;">[5][6][10]</sup></div>
-            <canvas id="ladderChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Inflection Table -->
-    <div class="inflection-card">
-        <div class="chart-card-title" style="margin-bottom:16px;">Cost Crossover Analysis: Where Grid Average MAC Exceeds Benchmarks<sup style="font-size:0.7em;color:#6B7280;">[2][3][4]</sup></div>
-        <table>
-            <thead><tr id="inflectionHead"></tr></thead>
-            <tbody id="inflectionBody"></tbody>
-        </table>
-    </div>
-
+    <div class="envelope-grid" id="macEnvelopeGrid"></div>
 </div>
 
 <!-- SOURCES -->
@@ -671,13 +595,10 @@ body { background: #F3F4F8; }
     <div class="footer-links">
         <a href="index.html">Home</a>
         <a href="dashboard.html">Cost Optimizer</a>
-        <a href="abatement_comparison.html">CO&#8322; Abatement Summary</a>
-        <a href="eac_scarcity.html">EAC Scarcity</a>
-        <a href="region_deepdive.html">Regional Deep Dives</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
         <a href="research_paper.html">Methodology &amp; Paper</a>
         <a href="about.html">About</a>
         <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
-        <a href="about.html">About</a>
     </div>
     <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
 </footer>
@@ -690,7 +611,7 @@ body { background: #F3F4F8; }
 // HERO SCROLLYTELL CHART
 // ============================================================================
 let heroChart = null;
-const yMaxHero = 700; // cap for readability in hero chart
+const yMaxHero = 700;
 
 function initHeroScrolly() {
     const ctx = document.getElementById('heroScrollyChart')?.getContext('2d');
@@ -923,34 +844,12 @@ function updateHeroChart(step) {
     heroChart.update('default');
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-function getState() {
-    const state = { grid: 'Medium', dac: 'Medium', industrial: 'Medium', removal: 'Medium' };
-    document.querySelectorAll('.ctrl-toggle').forEach(toggle => {
-        const ctrl = toggle.dataset.ctrl;
-        const active = toggle.querySelector('button.active');
-        if (active && ctrl) state[ctrl] = active.dataset.value;
-    });
-    return state;
-}
-
-// findCrossover(), cellClass(), getAllBenchmarks() provided by shared-data.js
-
-// Shared chart defaults: rounded bars, no grid lines, keep axes
-const CHART_DEFAULTS = {
-    borderRadius: 6,
-    grid: { display: false },
-    axisStyle: { grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
-};
 
 // ============================================================================
-// CHART: Per-Region MAC Envelope Charts (small multiples)
+// STATIC PER-REGION ENVELOPE CHARTS (Medium cost, no toggles)
 // ============================================================================
 let macChartInstances = {};
-function buildMacChart() {
-    const s = getState();
+function buildEnvelopeCharts() {
     const grid = document.getElementById('macEnvelopeGrid');
     if (!grid) return;
 
@@ -958,27 +857,23 @@ function buildMacChart() {
     const regionNames = { CAISO: 'CAISO (California)', ERCOT: 'ERCOT (Texas)', PJM: 'PJM (Mid-Atlantic)',
                           NYISO: 'NYISO (New York)', NEISO: 'NEISO (New England)' };
     const thresholds9 = THRESHOLDS;
-    const gridLevel = s.grid.toLowerCase();
-    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
-    // Build declining DAC trajectory datasets (one value per threshold via SBTi year mapping)
+
+    // DAC trajectories (static)
     const dacCurveThresholds = THRESHOLDS.filter(t => t >= 50);
     const dacOptData = dacCurveThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'optimistic') }));
     const dacCenData = dacCurveThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'central') }));
     const dacConData = dacCurveThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'conservative') }));
-    // Threshold index lookup (MAC_DATA arrays match THRESHOLDS order)
+
     const _TI = {};
     THRESHOLDS.forEach((t, i) => _TI[t] = i);
 
-    // Destroy old instances
     Object.values(macChartInstances).forEach(c => c.destroy());
     macChartInstances = {};
 
-    // Use stepwise (marginal) MAC data for cost curves — matches horizontal bar methodology
-    // MAC_STEPWISE_FAN has P10/P50/P90 of marginal cost per step (not cumulative average)
     const useFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : MAC_FAN_DATA;
-
-    // Compute shared Y max/min from stepwise data (with fallback to average fan)
     const avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
+
+    // Shared Y scale
     let yMax = 0, yMin = 0;
     regions.forEach(iso => {
         const fan = useFan?.[iso];
@@ -991,7 +886,6 @@ function buildMacChart() {
     yMax = Math.min(Math.ceil(yMax / 50) * 50 + 50, 1200);
     if (yMin < 0) yMin = Math.floor(yMin / 50) * 50 - 25;
 
-    // Build card HTML — show marginal MAC at 99% step
     grid.innerHTML = regions.map(iso => {
         const c = REGION_COLORS[iso];
         const margMac = MARGINAL_MAC_DATA?.medium?.[iso];
@@ -1005,13 +899,11 @@ function buildMacChart() {
             `  ${regionNames[iso]}` +
             `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1rem;font-weight:800;color:${c}">$${lastStep}/ton</span>` +
             `</div>` +
-            `<div class="envelope-card-subtitle">Marginal MAC at 97.5→99% step · Range: $${p10_99}–$${p90_99}/ton</div>` +
+            `<div class="envelope-card-subtitle">Marginal MAC at 97.5\u219299% step \u00b7 Range: $${p10_99}\u2013$${p90_99}/ton</div>` +
             `<canvas id="macEnv_${iso}"></canvas>` +
             `</div>`;
     }).join('');
 
-    // Build each chart — using stepwise (marginal) MAC data, falling back to
-    // average MAC fan data where stepwise values are null (e.g. NEISO/PJM early thresholds)
     regions.forEach(iso => {
         const ctx = document.getElementById('macEnv_' + iso)?.getContext('2d');
         if (!ctx) return;
@@ -1020,7 +912,7 @@ function buildMacChart() {
         if (!fan) return;
 
         const c = REGION_COLORS[iso];
-        const fb = avgFan?.[iso]; // fallback average fan for null-filling
+        const fb = avgFan?.[iso];
         const p90 = fan.p90.map((v, i) => {
             const val = v ?? fb?.p90?.[i] ?? null;
             return { x: thresholds9[i], y: val != null ? Math.min(val, 1200) : null };
@@ -1045,7 +937,6 @@ function buildMacChart() {
                         borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3 },
                     { label: 'Midpoint', data: p50, borderColor: c, backgroundColor: c + '18',
                         borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, fill: false, tension: 0.3, order: 1 },
-                    // DAC declining trajectory curves (SBTi year-indexed)
                     { label: 'DAC Optimistic', data: dacOptData, borderColor: '#E91E6366',
                         borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 5 },
                     { label: 'DAC Central', data: dacCenData, borderColor: '#E91E6388',
@@ -1087,313 +978,11 @@ function buildMacChart() {
 }
 
 // ============================================================================
-// CHART: ANOVA Sensitivity Decomposition
-// ============================================================================
-let anovaChartInst = null;
-function buildAnovaChart() {
-    const ctx = document.getElementById('anovaChart').getContext('2d');
-    const toggleNames = ['Renewable\nGen', 'Firm\nGen', 'Storage', 'Fossil\nFuel', 'Trans-\nmission'];
-    const toggleColors = ['#22C55E', '#1E3A5F', '#8B5CF6', '#EF4444', '#F59E0B'];
-    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
-    const anovaKeys = ['Renewable Gen', 'Firm Gen', 'Storage', 'Fossil Fuel', 'Transmission'];
-
-    const datasets = regions.map(region => ({
-        label: region,
-        data: anovaKeys.map(k => Math.round((MAC_ANOVA[region]?.[k] || 0) * 100)),
-        backgroundColor: REGION_COLORS[region] + '90',
-        borderColor: REGION_COLORS[region],
-        borderWidth: 1.5,
-        borderRadius: 4,
-        barPercentage: 0.75,
-        categoryPercentage: 0.85
-    }));
-
-    if (anovaChartInst) anovaChartInst.destroy();
-    anovaChartInst = new Chart(ctx, {
-        type: 'bar',
-        data: { labels: toggleNames, datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                x: { ticks: { font: { size: 10, weight: 600 }, maxRotation: 0 },
-                    grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
-                y: { min: 0, max: 70,
-                    title: { display: true, text: '% of MAC Variance Explained', font: { size: 11, weight: 600 } },
-                    ticks: { stepSize: 10, callback: v => v + '%', font: { size: 10 } },
-                    grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
-            },
-            plugins: {
-                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10, weight: 600 } } },
-                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + '%' } },
-                datalabels: { display: false }
-            }
-        }
-    });
-}
-
-// ============================================================================
-// CHART: Marginal MAC by Region (toggle-responsive, two-zone view)
-// ============================================================================
-let portfolioInst = null;
-function buildPortfolio() {
-    const ctx = document.getElementById('portfolioChart').getContext('2d');
-    const s = getState();
-    const gridLevel = s.grid.toLowerCase();
-    const margData = MARGINAL_MAC_DATA[gridLevel] || MARGINAL_MAC_DATA.medium;
-    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
-
-    // DAC cost at each zone's end-threshold (declining via SBTi year)
-    const zoneEndThresholds = [75, 90, 92.5, 95, 97.5, 99];
-    const dacOptZone = zoneEndThresholds.map(t => dacCostAtThreshold(t, 'optimistic'));
-    const dacCenZone = zoneEndThresholds.map(t => dacCostAtThreshold(t, 'central'));
-    const dacConZone = zoneEndThresholds.map(t => dacCostAtThreshold(t, 'conservative'));
-
-    const datasets = [
-        ...regions.map(iso => ({
-            label: iso,
-            data: margData[iso].map(v => v != null ? Math.min(v, 1050) : 0),
-            backgroundColor: REGION_COLORS[iso] + 'AA',
-            borderColor: REGION_COLORS[iso],
-            borderWidth: 1.5,
-            borderRadius: 4,
-            barPercentage: 0.75,
-            categoryPercentage: 0.85,
-            type: 'bar'
-        })),
-        // DAC declining trajectories as line overlays
-        { label: 'DAC Optimistic', type: 'line', data: dacOptZone,
-            borderColor: '#E91E6366', borderWidth: 1, borderDash: [3, 3],
-            pointRadius: 0, fill: false, tension: 0.3, order: -1 },
-        { label: 'DAC Central', type: 'line', data: dacCenZone,
-            borderColor: '#E91E6388', borderWidth: 2, borderDash: [6, 4],
-            pointRadius: 2, pointBackgroundColor: '#E91E63', fill: '-1', backgroundColor: 'rgba(255,193,7,0.13)', tension: 0.3, order: -1 },
-        { label: 'DAC Conservative', type: 'line', data: dacConZone,
-            borderColor: '#E91E6333', borderWidth: 1, borderDash: [3, 3],
-            pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.10)', tension: 0.3, order: -1 }
-    ];
-
-    if (portfolioInst) portfolioInst.destroy();
-    portfolioInst = new Chart(ctx, {
-        type: 'bar',
-        data: { labels: MARGINAL_MAC_LABELS, datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                x: { title: { display: true, text: 'CFE Matching Step (SBTi Year)', font: { size: 11, weight: 600 } },
-                    ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 20,
-                        callback: function(value, index) {
-                            const labels = MARGINAL_MAC_LABELS;
-                            const years = zoneEndThresholds.map(t => {
-                                const ms = SBTI_MILESTONES;
-                                for (let i = 0; i < ms.length - 1; i++) {
-                                    if (t >= ms[i].threshold && t <= ms[i+1].threshold) {
-                                        const frac = (t - ms[i].threshold) / (ms[i+1].threshold - ms[i].threshold);
-                                        return Math.round(ms[i].year + frac * (ms[i+1].year - ms[i].year));
-                                    }
-                                }
-                                return t >= 100 ? 2050 : 2025;
-                            });
-                            return labels[index] + '\n~' + years[index];
-                        }
-                    },
-                    grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
-                y: { min: 0, max: 1100,
-                    title: { display: true, text: 'Marginal MAC ($/ton CO\u2082)', font: { size: 11, weight: 600 } },
-                    ticks: { callback: v => '$' + v, font: { size: 10 }, stepSize: 200 },
-                    grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
-            },
-            plugins: {
-                legend: { position: 'bottom', labels: {
-                    usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10, weight: 600 },
-                    filter: item => !item.text.startsWith('DAC')
-                } },
-                tooltip: { enabled: false },
-                datalabels: { display: false },
-                annotation: { annotations: {} }
-            }
-        }
-    });
-}
-
-// ============================================================================
-// CHART: Abatement Ladder (horizontal bar)
-// ============================================================================
-let ladderInst = null;
-function buildLadder() {
-    const ctx = document.getElementById('ladderChart').getContext('2d');
-    const s = getState();
-    const benchmarks = getAllBenchmarks2040(s);
-    const gridLevel = s.grid.toLowerCase();
-    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
-
-    const labels = benchmarks.map(b => b.short || b.name);
-    const barData = benchmarks.map(b => [Math.max(b.low, 0), Math.min(b.high, 650)]);
-    const bgColors = benchmarks.map(b => b.color + '40');
-    const borderColors = benchmarks.map(b => b.color);
-
-    // Grid crossover annotations
-    const annotations = {};
-    const markerPairs = [
-        { label: 'ERCOT 90%', cost: macData.ERCOT[THRESHOLDS.indexOf(90)], color: REGION_COLORS.ERCOT },
-        { label: 'CAISO 95%', cost: macData.CAISO[THRESHOLDS.indexOf(95)], color: REGION_COLORS.CAISO },
-        { label: 'NYISO 99%', cost: macData.NYISO[THRESHOLDS.indexOf(99)], color: REGION_COLORS.NYISO },
-        { label: 'NEISO 99%', cost: macData.NEISO[THRESHOLDS.indexOf(99)], color: REGION_COLORS.NEISO }
-    ];
-    markerPairs.forEach((m, i) => {
-        annotations['grid' + i] = {
-            type: 'line', xMin: m.cost, xMax: m.cost,
-            borderColor: m.color + 'aa', borderWidth: 2, borderDash: [4, 3],
-            label: { display: true, content: m.label, position: i % 2 === 0 ? 'start' : 'end',
-                font: { size: 9 }, color: m.color, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 }
-        };
-    });
-
-    if (ladderInst) ladderInst.destroy();
-    ladderInst = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Cost Range',
-                data: barData,
-                backgroundColor: bgColors,
-                borderColor: borderColors,
-                borderWidth: 2,
-                borderRadius: 6,
-                borderSkipped: false,
-                barPercentage: 0.65
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                x: { min: 0, max: 650,
-                    title: { display: true, text: '$/ton CO\u2082', font: { size: 12, weight: 600 } },
-                    ticks: { stepSize: 50, callback: v => '$' + v, font: { size: 10 } },
-                    grid: { display: false }, border: { display: true, color: '#D4D8E0' }
-                },
-                y: { ticks: { font: { size: 11, weight: 500 } }, grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: ctx => Array.isArray(ctx.raw) ? 'Range: $' + ctx.raw[0] + ' \u2013 $' + ctx.raw[1] + '/ton' : '' } },
-                datalabels: { display: false },
-                annotation: { annotations }
-            }
-        }
-    });
-}
-
-// ============================================================================
-// TABLE: Inflection Points
-// ============================================================================
-function buildInflectionTable() {
-    const s = getState();
-    const gridLevel = s.grid.toLowerCase();
-    const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
-    const dacLowMid = BENCHMARKS_DYNAMIC.dac.Low.mid;
-    const dacMedMid = BENCHMARKS_DYNAMIC.dac.Medium.mid;
-    const dacHighMid = BENCHMARKS_DYNAMIC.dac.High.mid;
-    const indMid = (BENCHMARKS_DYNAMIC.industrial[s.industrial] || BENCHMARKS_DYNAMIC.industrial.Medium).mid;
-    const remMid = (BENCHMARKS_DYNAMIC.removal[s.removal] || BENCHMARKS_DYNAMIC.removal.Medium).mid;
-
-    const head = document.getElementById('inflectionHead');
-    head.innerHTML = '<th>Region</th><th>EPA SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[2]</sup><br>($190)</th><th>EU ETS<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[4]</sup><br>($88)</th><th>Rennert SCC<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[3]</sup><br>($185)</th><th>Industrial<br>($' + indMid + ')</th><th>Removal<br>($' + remMid + ')</th><th>DAC Low<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[5]</sup><br>($' + dacLowMid + ')</th><th>DAC Med<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[5]</sup><br>($' + dacMedMid + ')</th><th>DAC High<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[5]</sup><br>($' + dacHighMid + ')</th>';
-
-    const tbody = document.getElementById('inflectionBody');
-    tbody.innerHTML = '';
-    ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'].forEach(region => {
-        const row = document.createElement('tr');
-        const vals = [
-            findCrossover(macData[region], 190),
-            findCrossover(macData[region], 88),
-            findCrossover(macData[region], 185),
-            findCrossover(macData[region], Math.max(indMid, 10)),
-            findCrossover(macData[region], remMid),
-            findCrossover(macData[region], dacLowMid),
-            findCrossover(macData[region], dacMedMid),
-            findCrossover(macData[region], dacHighMid)
-        ];
-        row.innerHTML = '<td>' + region + '</td>' + vals.map(v => '<td class="' + cellClass(v) + '">' + (v === '>99' || v === '>100' ? '>99%' : v + '%') + '</td>').join('');
-        tbody.appendChild(row);
-    });
-}
-
-// ============================================================================
-// SUMMARY
-// ============================================================================
-// Find threshold where MAC exceeds the SBTi-year-indexed DAC trajectory
-function findDacTrajectoryIntersection(regionMacArray, trajectory) {
-    trajectory = trajectory || 'central';
-    for (let i = 0; i < THRESHOLDS.length; i++) {
-        const t = THRESHOLDS[i];
-        const mac = regionMacArray[i];
-        if (mac == null) continue;
-        const dacAtYear = dacCostAtThreshold(t, trajectory);
-        if (mac >= dacAtYear) return t;
-    }
-    return '>99';
-}
-
-function updateSummary() {
-    const s = getState();
-    const gridLevel = s.grid.toLowerCase();
-    const data = MAC_DATA[gridLevel] || MAC_DATA.medium;
-    const dacMedVal = BENCHMARKS_DYNAMIC.dac.Medium.mid;
-    const dacLowVal = BENCHMARKS_DYNAMIC.dac.Low.mid;
-    const dacHighVal = BENCHMARKS_DYNAMIC.dac.High.mid;
-
-    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
-    const insights = regions.map(r => ({ region: r, dacCross: findCrossover(data[r], dacMedVal) }));
-    const best = insights.reduce((a, b) => {
-        const aVal = a.dacCross === '>99' ? 101 : a.dacCross;
-        const bVal = b.dacCross === '>99' ? 101 : b.dacCross;
-        return aVal > bVal ? a : b;
-    });
-    const worst = insights.reduce((a, b) => {
-        const aVal = a.dacCross === '>99' ? 101 : a.dacCross;
-        const bVal = b.dacCross === '>99' ? 101 : b.dacCross;
-        return aVal < bVal ? a : b;
-    });
-
-    const el = document.getElementById('crossoverSummary');
-    let html = '<strong>Under these assumptions:</strong> Grid decarbonization beats DAC (Medium $' + dacMedVal + '/ton) through <strong>' +
-        (best.dacCross === '>99' ? '>99%' : best.dacCross + '%') + '</strong> in ' + best.region +
-        ' (best) and through <strong>' + (worst.dacCross === '>99' ? '>99%' : worst.dacCross + '%') +
-        '</strong> in ' + worst.region + ' (worst). DAC range: $' + dacLowVal + ' (Low) \u2013 $' + dacHighVal + ' (High).';
-    if (s.grid === 'High') html += ' High grid costs accelerate the crossover \u2014 tariffs and permitting delays weaken the backbone.';
-    el.innerHTML = html;
-}
-
-// ============================================================================
-// REBUILD ALL
-// ============================================================================
-function rebuildAll() {
-    buildMacChart();
-    buildAnovaChart();
-    buildPortfolio();
-    buildLadder();
-    buildInflectionTable();
-    updateSummary();
-}
-
-// ============================================================================
 // INIT
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    rebuildAll();
+    buildEnvelopeCharts();
     initHeroScrolly();
-
-    // Wire toggle buttons
-    document.querySelectorAll('.ctrl-toggle button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            btn.closest('.ctrl-toggle').querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            rebuildAll();
-        });
-    });
 });
 </script>
 </body>
