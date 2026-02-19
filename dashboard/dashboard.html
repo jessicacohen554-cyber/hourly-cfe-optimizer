@@ -4473,6 +4473,12 @@ function updateCompressedDay(entry, region, iso) {
     const annualMWh = region.annual_demand_mwh || 1;
     const toMW = (v) => (v / 365) * annualMWh;
 
+    // Demand growth: when in long-term mode, scale the demand curve up
+    const { targetYear, growthRate } = getRepricingGrowthParams();
+    const growthYears = (targetYear && targetYear > 2025) ? (targetYear - 2025) : 0;
+    const demandGrowthFactor = growthYears > 0 ? Math.pow(1 + growthRate, growthYears) : 1;
+    const toDemandMW = (v) => toMW(v) * demandGrowthFactor;
+
     // Rotate all compressed-day arrays from UTC to local time, then convert to MW
     const r = (arr) => rotateToLocal(arr).map(v => Math.max(0, toMW(v)));
     const rRaw = (arr) => rotateToLocal(arr).map(v => toMW(v));
@@ -4616,10 +4622,11 @@ function updateCompressedDay(entry, region, iso) {
         prevCurtailIdx = thisIdx;
     }
 
-    // Demand line on top
+    // Demand line on top (scaled by demand growth factor for long-term mode)
+    const demandLocal = rotateToLocal(cd.demand).map(v => toDemandMW(v));
     datasets.push({
         label: 'Demand',
-        data: rRaw(cd.demand),
+        data: demandLocal,
         backgroundColor: 'transparent',
         borderColor: '#1a1a2e',
         borderWidth: 2.5,
@@ -4634,7 +4641,6 @@ function updateCompressedDay(entry, region, iso) {
     // Add gap dataset if there's any gap (tooltip only)
     const hasGap = gap.some(v => v > 0.0001);
     if (hasGap) {
-        const demandLocal = rRaw(cd.demand);
         datasets.push({
             label: 'Unmatched (Gap)',
             data: demandLocal.map((d, i) => Math.max(0, d - matchedTotal[i])),
