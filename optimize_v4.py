@@ -104,21 +104,23 @@ HYDRO_CAPS = {
 # 13 thresholds (v4.0: added 50, 60, 70)
 THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 
-# Threshold-adaptive procurement bounds (Decision 3C)
+# Threshold-adaptive procurement bounds (Decision 3C, expanded)
+# Upper bounds pushed aggressively — early stopping per-mix means the ceiling
+# is just a safety bound. Most mixes will hit the target well before the ceiling.
 PROCUREMENT_BOUNDS = {
-    50:   (50, 105),
-    60:   (60, 105),
-    70:   (70, 110),
-    75:   (75, 110),
-    80:   (80, 115),
-    85:   (85, 120),
-    87.5: (87, 130),
-    90:   (90, 140),
-    92.5: (92, 150),
-    95:   (95, 170),
-    97.5: (100, 200),
-    99:   (100, 200),
-    100:  (100, 200),
+    50:   (50, 150),
+    60:   (60, 150),
+    70:   (70, 200),
+    75:   (75, 200),
+    80:   (80, 200),
+    85:   (85, 300),
+    87.5: (87, 350),
+    90:   (90, 400),
+    92.5: (92, 500),
+    95:   (95, 600),
+    97.5: (100, 700),
+    99:   (100, 800),
+    100:  (100, 800),
 }
 
 # Nuclear seasonal derate
@@ -541,8 +543,12 @@ def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, procurement):
 # GRID SEARCH — 4D adaptive (Decision 1C)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_4d_combos(hydro_cap, step=5, max_single=80):
+def generate_4d_combos(hydro_cap, step=5, max_single=100):
     """Generate all 4D resource mixes summing to 100% with constraints.
+
+    max_single=100 allows any single resource up to 100% of the mix,
+    enabling extreme solar-only or wind-only portfolios (which at high
+    procurement can reach 200%+ of demand).
 
     Returns numpy array of shape (N, 4) where columns are
     [clean_firm, solar, wind, hydro] as percentages.
@@ -559,7 +565,7 @@ def generate_4d_combos(hydro_cap, step=5, max_single=80):
     return np.array(combos, dtype=np.float64)
 
 
-def generate_4d_combos_around(base_combo, hydro_cap, step=1, radius=2, max_single=80):
+def generate_4d_combos_around(base_combo, hydro_cap, step=1, radius=2, max_single=100):
     """Generate 4D combos in neighborhood of base_combo."""
     combos = []
     seen = set()
@@ -587,21 +593,49 @@ def generate_4d_combos_around(base_combo, hydro_cap, step=1, radius=2, max_singl
 
 
 # Edge case seed mixes (4D: clean_firm, solar, wind, hydro)
+# Includes extreme single-resource mixes to capture solar+storage, wind+storage outcomes
 EDGE_CASE_SEEDS = [
-    [5, 70, 20, 5],    # Solar-dominant
+    # Extreme solar (at high procurement, 100% solar = 200%+ of demand from solar alone)
+    [0, 100, 0, 0],    # Pure solar
+    [0, 95, 5, 0],     # Near-pure solar + wind
+    [0, 95, 0, 5],     # Near-pure solar + hydro
+    [0, 90, 10, 0],
+    [0, 90, 5, 5],
+    [5, 90, 5, 0],
+    [5, 85, 10, 0],
+    # Extreme wind
+    [0, 0, 100, 0],    # Pure wind
+    [0, 5, 95, 0],     # Near-pure wind + solar
+    [0, 0, 95, 5],     # Near-pure wind + hydro
+    [0, 10, 90, 0],
+    [5, 5, 90, 0],
+    [5, 10, 85, 0],
+    # Solar-dominant
+    [5, 70, 20, 5],
     [5, 75, 15, 5],
-    [5, 20, 70, 5],    # Wind-dominant
+    [10, 80, 10, 0],
+    # Wind-dominant
+    [5, 20, 70, 5],
     [5, 15, 75, 5],
-    [5, 40, 40, 15],   # Balanced renewable + hydro
-    [10, 45, 45, 0],   # Balanced renewable
-    [60, 15, 15, 10],  # Clean firm dominant
+    [10, 10, 80, 0],
+    # Balanced renewable + hydro
+    [5, 40, 40, 15],
+    [10, 45, 45, 0],
+    # Clean firm dominant
+    [60, 15, 15, 10],
     [70, 10, 10, 10],
     [80, 10, 10, 0],
-    [50, 25, 25, 0],   # Moderate firm + renewables
+    [90, 5, 5, 0],
+    [100, 0, 0, 0],    # Pure clean firm
+    [95, 5, 0, 0],
+    # Moderate firm + renewables
+    [50, 25, 25, 0],
     [40, 30, 30, 0],
     [30, 35, 35, 0],
-    [20, 40, 40, 0],   # Minimal firm
+    # Minimal firm
+    [20, 40, 40, 0],
     [10, 45, 45, 0],
+    [0, 50, 50, 0],    # Zero firm — pure renewables
 ]
 
 
@@ -623,12 +657,23 @@ def get_seed_combos(hydro_cap):
 # OPTIMIZER CORE — per-threshold sweep
 # ══════════════════════════════════════════════════════════════════════════════
 
-def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap):
-    """Find feasible solutions for a single threshold × ISO.
+def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
+                       prev_pruning=None):
+    """Find ALL feasible solutions for a single threshold × ISO.
 
-    Returns list of candidate dicts, each with:
-      resource_mix, procurement_pct, battery_dispatch_pct, ldes_dispatch_pct,
-      hourly_match_score, pareto_type
+    Uses cross-threshold pruning: mixes that were infeasible at a lower threshold
+    are skipped. Each mix's min-feasible procurement from the previous threshold
+    becomes the floor for the procurement sweep.
+
+    Args:
+        prev_pruning: dict from previous threshold with:
+            - 'feasible_mixes': set of mix tuples that were feasible
+            - 'min_proc': dict mapping mix_tuple -> minimum procurement that worked
+            - 'all_mixes': set of all mix tuples tested
+            If None, no pruning (first threshold).
+
+    Returns:
+        (candidates, pruning_info) where pruning_info can be passed to next threshold
     """
     target = threshold / 100.0
     proc_min, proc_max = PROCUREMENT_BOUNDS.get(threshold, (70, 200))
@@ -638,19 +683,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap):
     ldes_eff = LDES_EFFICIENCY
     ldes_window_hours = LDES_WINDOW_DAYS * 24
 
-    # Adaptive storage levels based on threshold difficulty
-    if threshold <= 70:
-        batt_levels = [2, 5, 10]
-        ldes_levels = [2, 5]
-        storage_proc_step = 3  # Only sweep every 3rd procurement for storage
-    elif threshold <= 90:
-        batt_levels = [2, 5, 10, 15]
-        ldes_levels = [2, 5, 10]
-        storage_proc_step = 2
-    else:
-        batt_levels = [2, 5, 8, 10, 15, 20]
-        ldes_levels = [2, 5, 8, 10, 15, 20]
-        storage_proc_step = 1
+    # Storage levels to sweep (all thresholds get full sweep — no pruning)
+    batt_levels = [0, 2, 5, 8, 10, 15, 20]
+    ldes_levels = [0, 2, 5, 8, 10, 15, 20]
 
     # ── Phase 1: Coarse grid at 5% step ──
     combos_5 = generate_4d_combos(hydro_cap, step=5)
@@ -659,139 +694,198 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap):
         combos_5 = np.vstack([combos_5, seeds])
         combos_5 = np.unique(combos_5, axis=0)
 
+    # Cross-threshold pruning: eliminate mixes that were infeasible at previous threshold
+    if prev_pruning is not None:
+        feasible_prev = prev_pruning.get('feasible_mixes', set())
+        all_prev = prev_pruning.get('all_mixes', set())
+        if feasible_prev and all_prev:
+            # Only keep mixes that were either feasible before or weren't tested
+            keep_mask = []
+            for row in combos_5:
+                key = (int(row[0]), int(row[1]), int(row[2]), int(row[3]))
+                # Keep if: was feasible at lower threshold, or is a new mix we haven't tested
+                if key in feasible_prev or key not in all_prev:
+                    keep_mask.append(True)
+                else:
+                    keep_mask.append(False)
+            keep_mask = np.array(keep_mask)
+            n_before = len(combos_5)
+            combos_5 = combos_5[keep_mask]
+            n_pruned = n_before - len(combos_5)
+            if n_pruned > 0:
+                print(f"      Pruned {n_pruned} infeasible mixes from previous threshold")
+
     n_combos = len(combos_5)
     mix_fracs = combos_5 / 100.0
 
     # Pre-compute supply_row for each mix: (N, 8760)
     supply_rows = mix_fracs @ supply_matrix
 
-    # Procurement levels
-    proc_step = 5 if (proc_max - proc_min) > 30 else 2
+    # Procurement levels — adaptive step based on range width
+    proc_range = proc_max - proc_min
+    if proc_range > 200:
+        proc_step = 10  # Very wide range (300%+): coarse sweep
+    elif proc_range > 100:
+        proc_step = 5   # Wide range (100-200%): medium sweep
+    else:
+        proc_step = 2   # Narrow range: fine sweep
     proc_levels = list(range(proc_min, proc_max + 1, proc_step))
     if proc_max not in proc_levels:
         proc_levels.append(proc_max)
 
     candidates = []
-    passed_indices = set()    # Mixes that achieved target WITHOUT storage
-    near_indices = set()      # Mixes that are close but need storage
+    seen = set()  # Dedup key: (mix_tuple, proc, bp, lp)
 
-    # Phase 1a: Batch hourly scores (no storage) — fast vectorized scan
-    for proc in proc_levels:
-        pf = proc / 100.0
-        scores = batch_hourly_scores(demand_arr, supply_matrix, mix_fracs, pf)
-        for i in range(n_combos):
-            if scores[i] >= target:
-                mix = combos_5[i]
-                candidates.append({
-                    'resource_mix': {rt: int(mix[j]) for j, rt in enumerate(RESOURCE_TYPES)},
-                    'procurement_pct': proc,
-                    'battery_dispatch_pct': 0,
-                    'ldes_dispatch_pct': 0,
-                    'hourly_match_score': round(scores[i] * 100, 2),
-                })
-                passed_indices.add(i)
-            elif scores[i] >= target - 0.15:
-                near_indices.add(i)
+    def add_candidate(mix_arr, proc, bp, lp, score):
+        """Add candidate if not already seen."""
+        mix_key = (int(mix_arr[0]), int(mix_arr[1]), int(mix_arr[2]), int(mix_arr[3]))
+        key = (mix_key, proc, bp, lp)
+        if key not in seen:
+            seen.add(key)
+            candidates.append({
+                'resource_mix': {rt: mix_key[j] for j, rt in enumerate(RESOURCE_TYPES)},
+                'procurement_pct': proc,
+                'battery_dispatch_pct': bp,
+                'ldes_dispatch_pct': lp,
+                'hourly_match_score': round(score * 100, 2),
+            })
 
-    # Phase 1b: Storage sweep — ONLY on near-miss mixes (not ones that already passed)
-    needs_storage = near_indices - passed_indices
-    for i in needs_storage:
+    # Build per-mix procurement floors from previous threshold
+    prev_min_proc = {}
+    if prev_pruning is not None:
+        prev_min_proc = prev_pruning.get('min_proc', {})
+
+    # Phase 1a: No-storage sweep — per-mix procurement early stopping
+    # For each mix, sweep procurement upward from the floor (previous threshold's
+    # min-feasible procurement). Once target is met, stop.
+    near_miss_mixes = {}  # mix_index -> best_score (for storage sweep)
+    mix_min_proc = {}     # mix_tuple -> min procurement that achieved this threshold
+    all_mix_keys = set()  # All mixes tested (for cross-threshold pruning)
+    feasible_mix_keys = set()  # Mixes that achieved this threshold
+
+    for i in range(n_combos):
+        mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
+                   int(combos_5[i][2]), int(combos_5[i][3]))
+        all_mix_keys.add(mix_key)
+
+        # Start procurement at previous threshold's min-feasible (if known)
+        floor = prev_min_proc.get(mix_key, proc_min)
+        floor = max(floor, proc_min)  # Never go below this threshold's min
+
+        for proc in proc_levels:
+            if proc < floor:
+                continue  # Skip below floor
+            pf = proc / 100.0
+            supply_scaled = supply_rows[i] * pf
+            score = np.sum(np.minimum(supply_scaled / demand_arr, 1.0)) / H
+            if score >= target:
+                add_candidate(combos_5[i], proc, 0, 0, score)
+                mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
+                feasible_mix_keys.add(mix_key)
+                break  # Early stop: higher procurement only adds cost
+            elif score >= target - 0.15:
+                near_miss_mixes[i] = max(near_miss_mixes.get(i, 0), score)
+
+    # Phase 1b: Storage sweep on near-miss mixes
+    # For each (mix, storage_config), sweep procurement upward with early stopping.
+    # Near-miss mixes that achieve target with storage are also marked feasible.
+    for i in near_miss_mixes:
         supply_row = supply_rows[i]
         mix = combos_5[i]
+        mix_key = (int(mix[0]), int(mix[1]), int(mix[2]), int(mix[3]))
 
-        # Only sweep a subset of procurement levels for storage
-        storage_procs = proc_levels[::storage_proc_step]
-        if proc_levels[-1] not in storage_procs:
-            storage_procs.append(proc_levels[-1])
-
-        for proc in storage_procs:
-            pf = proc / 100.0
-
-            # Battery only — find minimum battery that works
-            for bp in batt_levels:
-                batt_cap = bp / 100.0
-                batt_pow = batt_cap / BATTERY_DURATION_HOURS
+        # Battery only — for each battery level, sweep procurement with early stop
+        for bp in batt_levels:
+            if bp == 0:
+                continue
+            batt_cap = bp / 100.0
+            batt_pow = batt_cap / BATTERY_DURATION_HOURS
+            for proc in proc_levels:
+                pf = proc / 100.0
                 score = _score_with_battery(demand_arr, supply_row, pf,
                                             batt_cap, batt_pow, batt_eff)
                 if score >= target:
-                    candidates.append({
-                        'resource_mix': {rt: int(mix[j]) for j, rt in enumerate(RESOURCE_TYPES)},
-                        'procurement_pct': proc,
-                        'battery_dispatch_pct': bp,
-                        'ldes_dispatch_pct': 0,
-                        'hourly_match_score': round(score * 100, 2),
-                    })
-                    break
+                    add_candidate(mix, proc, bp, 0, score)
+                    mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
+                    feasible_mix_keys.add(mix_key)
+                    break  # Early stop per (mix, battery_level)
 
-            # Battery + LDES combo — try one efficient combo
-            if threshold >= 90:
-                for bp in [5, 10]:
-                    batt_cap = bp / 100.0
-                    batt_pow = batt_cap / BATTERY_DURATION_HOURS
-                    for lp in [5, 10]:
-                        ldes_cap = lp / 100.0
-                        ldes_pow = ldes_cap / LDES_DURATION_HOURS
-                        score = _score_with_both_storage(
-                            demand_arr, supply_row, pf,
-                            batt_cap, batt_pow, batt_eff,
-                            ldes_cap, ldes_pow, ldes_eff, ldes_window_hours)
-                        if score >= target:
-                            candidates.append({
-                                'resource_mix': {rt: int(mix[j]) for j, rt in enumerate(RESOURCE_TYPES)},
-                                'procurement_pct': proc,
-                                'battery_dispatch_pct': bp,
-                                'ldes_dispatch_pct': lp,
-                                'hourly_match_score': round(score * 100, 2),
-                            })
-                            break
-                    else:
-                        continue
-                    break
+        # Battery + LDES combos — early stop per (mix, battery, ldes) combo
+        for bp in batt_levels:
+            batt_cap = bp / 100.0
+            batt_pow = batt_cap / BATTERY_DURATION_HOURS
+            for lp in ldes_levels:
+                if lp == 0 and bp == 0:
+                    continue
+                if lp == 0:
+                    continue  # Battery-only already covered above
+                ldes_cap = lp / 100.0
+                ldes_pow = ldes_cap / LDES_DURATION_HOURS
+                for proc in proc_levels:
+                    pf = proc / 100.0
+                    score = _score_with_both_storage(
+                        demand_arr, supply_row, pf,
+                        batt_cap, batt_pow, batt_eff,
+                        ldes_cap, ldes_pow, ldes_eff, ldes_window_hours)
+                    if score >= target:
+                        add_candidate(mix, proc, bp, lp, score)
+                        mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
+                        feasible_mix_keys.add(mix_key)
+                        break  # Early stop per (mix, batt, ldes)
 
-    # ── Phase 2: Refine top candidates to 1% resolution ──
+    # ── Phase 2: Refine feasible archetypes to 1% resolution ──
+    # Same early-stop logic: per-mix, stop procurement once target is met
     if candidates:
-        # Group by mix archetype (rounded to 5%), find best
-        mix_groups = {}
+        mix_archetypes = set()
         for c in candidates:
             m = tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES)
-            total = c['procurement_pct'] + c['battery_dispatch_pct'] + c['ldes_dispatch_pct']
-            if m not in mix_groups or total < mix_groups[m]['total']:
-                mix_groups[m] = {'candidate': c, 'total': total}
+            mix_archetypes.add(m)
 
-        # Refine top 15 archetypes
-        sorted_mixes = sorted(mix_groups.items(), key=lambda x: x[1]['total'])[:15]
-
-        for mix_tuple, info in sorted_mixes:
+        for mix_tuple in mix_archetypes:
             base = np.array(mix_tuple, dtype=np.float64)
             fine_combos = generate_4d_combos_around(base, hydro_cap, step=1, radius=3)
             if len(fine_combos) == 0:
                 continue
 
             fine_fracs = fine_combos / 100.0
-            best_proc = info['candidate']['procurement_pct']
+            fine_supply = fine_fracs @ supply_matrix
+            n_fine = len(fine_combos)
 
-            # Sweep narrow procurement window around best
-            for proc_d in range(-3, 4):
-                proc = best_proc + proc_d
-                if proc < proc_min or proc > proc_max:
-                    continue
-                pf = proc / 100.0
-                scores = batch_hourly_scores(demand_arr, supply_matrix, fine_fracs, pf)
-                for j in range(len(fine_combos)):
-                    if scores[j] >= target:
-                        mix = fine_combos[j]
-                        candidates.append({
-                            'resource_mix': {rt: int(mix[k]) for k, rt in enumerate(RESOURCE_TYPES)},
-                            'procurement_pct': proc,
-                            'battery_dispatch_pct': 0,
-                            'ldes_dispatch_pct': 0,
-                            'hourly_match_score': round(scores[j] * 100, 2),
-                        })
+            # No-storage: per-mix procurement early stop
+            for j in range(n_fine):
+                for proc in proc_levels:
+                    pf = proc / 100.0
+                    supply_scaled = fine_supply[j] * pf
+                    score = np.sum(np.minimum(supply_scaled / demand_arr, 1.0)) / H
+                    if score >= target:
+                        add_candidate(fine_combos[j], proc, 0, 0, score)
+                        break  # Early stop
+                    elif score >= target - 0.10:
+                        # Near-miss: try storage with early stop per (mix, batt)
+                        supply_row_j = fine_supply[j]
+                        for bp in [2, 5, 10]:
+                            batt_cap = bp / 100.0
+                            batt_pow = batt_cap / BATTERY_DURATION_HOURS
+                            sc = _score_with_battery(demand_arr, supply_row_j, pf,
+                                                     batt_cap, batt_pow, batt_eff)
+                            if sc >= target:
+                                add_candidate(fine_combos[j], proc, bp, 0, sc)
 
-    # ── Extract Pareto frontier (3-5 points) ──
-    pareto = extract_pareto(candidates, target)
+    # Build pruning info for next threshold
+    # Phase 2 fine combos also contribute to feasibility (update from candidates)
+    for c in candidates:
+        mk = tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES)
+        feasible_mix_keys.add(mk)
+        if mk not in mix_min_proc or c['procurement_pct'] < mix_min_proc[mk]:
+            mix_min_proc[mk] = c['procurement_pct']
 
-    return pareto
+    pruning_info = {
+        'feasible_mixes': feasible_mix_keys,
+        'min_proc': mix_min_proc,
+        'all_mixes': all_mix_keys,
+    }
+
+    return candidates, pruning_info
 
 
 def extract_pareto(candidates, target):
@@ -898,6 +992,7 @@ def process_iso(args):
         'thresholds': checkpoint.get('thresholds', {}),
     }
 
+    prev_pruning = None  # Cross-threshold pruning state
     for threshold in THRESHOLDS:
         t_str = str(threshold)
         if t_str in completed_thresholds:
@@ -905,15 +1000,25 @@ def process_iso(args):
             continue
 
         t_start = time.time()
-        pareto = optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap)
+        feasible, pruning_info = optimize_threshold(
+            iso, threshold, demand_arr, supply_matrix, hydro_cap,
+            prev_pruning=prev_pruning)
+        prev_pruning = pruning_info  # Pass to next threshold
         t_elapsed = time.time() - t_start
 
+        # Count unique mix archetypes
+        archetypes = set()
+        for c in feasible:
+            archetypes.add(tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES))
+
         iso_results['thresholds'][t_str] = {
-            'candidates': pareto,
-            'candidate_count': len(pareto),
+            'candidates': feasible,
+            'candidate_count': len(feasible),
+            'mix_archetypes': len(archetypes),
             'elapsed_seconds': round(t_elapsed, 2),
         }
-        print(f"    {iso} {threshold}%: {len(pareto)} Pareto points, {t_elapsed:.1f}s")
+        print(f"    {iso} {threshold}%: {len(feasible)} solutions "
+              f"({len(archetypes)} mix archetypes), {t_elapsed:.1f}s")
 
         # Checkpoint after each threshold
         save_checkpoint(iso, iso_results, t_str)
@@ -1056,6 +1161,104 @@ def save_results_parquet(all_results, output_path):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# PERSISTENT SOLUTION CACHE — never lose feasible solutions across runs
+# ══════════════════════════════════════════════════════════════════════════════
+
+def merge_with_persistent_cache(new_results, cache_path):
+    """Merge new results with existing cache, keeping ALL unique solutions.
+
+    Each run may explore different parameter spaces (different procurement bounds,
+    different max_single, etc.). The persistent cache accumulates ALL feasible
+    solutions ever found, so refining parameters never loses previous work.
+    """
+    # Load existing cache
+    existing = {}
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path) as f:
+                cache = json.load(f)
+            existing = cache.get('results', {})
+            print(f"\n  Persistent cache loaded: {cache_path}")
+        except (json.JSONDecodeError, IOError):
+            print(f"\n  Warning: Could not read cache at {cache_path}, starting fresh")
+
+    if not existing:
+        print(f"  No previous cache — all {_count_solutions(new_results)} solutions are new")
+        return new_results
+
+    # Merge: for each ISO × threshold, union the candidate sets (dedup by key)
+    merged = {}
+    total_new = 0
+    total_existing = 0
+    total_merged = 0
+
+    all_isos = set(list(new_results.keys()) + list(existing.keys()))
+    for iso in all_isos:
+        new_iso = new_results.get(iso, {})
+        old_iso = existing.get(iso, {})
+
+        # Start with new results as base (has fresh metadata)
+        merged[iso] = dict(new_iso) if new_iso else dict(old_iso)
+        merged[iso]['thresholds'] = {}
+
+        all_thresholds = set(
+            list(new_iso.get('thresholds', {}).keys()) +
+            list(old_iso.get('thresholds', {}).keys())
+        )
+
+        for t_str in all_thresholds:
+            new_t = new_iso.get('thresholds', {}).get(t_str, {})
+            old_t = old_iso.get('thresholds', {}).get(t_str, {})
+
+            new_cands = new_t.get('candidates', [])
+            old_cands = old_t.get('candidates', [])
+
+            # Dedup by (mix, procurement, battery, ldes)
+            seen = set()
+            merged_cands = []
+            for c in new_cands + old_cands:
+                m = c['resource_mix']
+                key = (m.get('clean_firm', 0), m.get('solar', 0),
+                       m.get('wind', 0), m.get('hydro', 0),
+                       c['procurement_pct'],
+                       c['battery_dispatch_pct'],
+                       c['ldes_dispatch_pct'])
+                if key not in seen:
+                    seen.add(key)
+                    merged_cands.append(c)
+
+            total_new += len(new_cands)
+            total_existing += len(old_cands)
+            total_merged += len(merged_cands)
+
+            # Count archetypes
+            archetypes = set()
+            for c in merged_cands:
+                archetypes.add(tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES))
+
+            merged[iso]['thresholds'][t_str] = {
+                'candidates': merged_cands,
+                'candidate_count': len(merged_cands),
+                'mix_archetypes': len(archetypes),
+                'elapsed_seconds': new_t.get('elapsed_seconds', old_t.get('elapsed_seconds', 0)),
+            }
+
+    net_new = total_merged - total_existing
+    print(f"  Cache merge: {total_existing} existing + {total_new} new run → "
+          f"{total_merged} merged ({net_new:+d} net new solutions)")
+    return merged
+
+
+def _count_solutions(results):
+    """Count total solutions across all ISOs × thresholds."""
+    total = 0
+    for iso_data in results.values():
+        for t_data in iso_data.get('thresholds', {}).values():
+            total += len(t_data.get('candidates', []))
+    return total
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1110,8 +1313,12 @@ def main():
             iso_name, iso_results = process_iso(args)
             all_results[iso_name] = iso_results
 
-    # Save results
+    # Merge with persistent cache — never lose previously found solutions
     elapsed = time.time() - start_time
+    cache_path = os.path.join(DATA_DIR, 'physics_cache_v4.json')
+    all_results = merge_with_persistent_cache(all_results, cache_path)
+
+    # Save results
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard')
     os.makedirs(output_dir, exist_ok=True)
 
@@ -1121,8 +1328,7 @@ def main():
     parquet_path = os.path.join(output_dir, 'physics_results_v4.parquet')
     save_results_parquet(all_results, parquet_path)
 
-    # Also save to data/ as cache
-    cache_path = os.path.join(DATA_DIR, 'physics_cache_v4.json')
+    # Also save merged results to data/ as persistent cache
     save_results_json(all_results, cache_path, elapsed)
 
     print(f"\n{'=' * 70}")

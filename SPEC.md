@@ -865,36 +865,48 @@ For each resource:
 
 ### 11.1 Adaptive Procurement Bounds (v4.0 — Decision 3C: Threshold-Adaptive)
 
-Narrower bounds at low thresholds where targets are easily met; wider at high thresholds where procurement drives cost:
+Narrower bounds at low thresholds where targets are easily met; wider at high thresholds to allow extreme solar+storage or wind+storage outcomes:
 
 | Threshold | Min% | Max% | Rationale |
 |-----------|------|------|-----------|
-| 50% | 50 | 105 | Trivially achievable |
-| 60% | 60 | 105 | Trivially achievable |
-| 70% | 70 | 110 | Easy target |
-| 75% | 75 | 110 | Easy target, minimal overprocurement needed |
-| 80% | 80 | 115 | Slight headroom |
-| 85% | 85 | 120 | Still achievable without heavy overprocurement |
-| 87.5% | 87 | 130 | Storage helps close gap, not raw procurement |
-| 90% | 90 | 140 | Moderate overprocurement + storage |
-| 92.5% | 92 | 150 | Entering inflection zone |
-| 95% | 95 | 170 | Significant overprocurement may be needed |
-| 97.5% | 100 | 200 | Heavy overprocurement territory |
-| 99% | 100 | 200 | Near-perfect matching |
-| 100% | 100 | 200 | If 2× procurement can't hit 100%, it's not cost-viable |
+| 50% | 50 | 150 | Easy target, modest headroom |
+| 60% | 60 | 150 | Easy target |
+| 70% | 70 | 200 | Moderate headroom |
+| 75% | 75 | 200 | Allow 2× procurement for renewable-heavy mixes |
+| 80% | 80 | 200 | Allow 2× procurement |
+| 85% | 85 | 300 | 3× procurement for extreme renewables |
+| 87.5% | 87 | 350 | 3.5× procurement |
+| 90% | 90 | 400 | 4× procurement |
+| 92.5% | 92 | 500 | 5× procurement for extreme solar+storage |
+| 95% | 95 | 600 | 6× procurement territory |
+| 97.5% | 100 | 700 | 7× procurement for near-perfect matching |
+| 99% | 100 | 800 | 8× procurement |
+| 100% | 100 | 800 | 8× procurement for perfect hourly matching |
+
+**Resource ceiling**: `max_single=100` — any single resource can be up to 100% of the mix allocation. Combined with high procurement, this enables outcomes like 200% of demand from solar alone (100% solar mix at 200% procurement). This captures extreme solar+storage and wind+storage scenarios that may be cost-optimal at lower thresholds.
+
+**Procurement step**: Adaptive based on range width — 2% step for narrow ranges (<100%), 5% for medium (100-200%), 10% for wide (>200%). Keeps runtime bounded while preserving resolution where it matters.
+
+**Per-mix early stopping**: For each (mix, storage_config) combination, procurement is swept low→high and stops at the first level that clears the target. Lower procurement = lower cost, so the first-feasible procurement is always the cost-optimal choice for that mix. This prevents exploring the vast upper range of procurement bounds for mixes that achieve feasibility early.
+
+**Cross-threshold pruning**: Thresholds are processed in ascending order (50% → 100%). After each threshold, the optimizer records which mixes were infeasible even at maximum procurement. These mixes are eliminated from all higher thresholds (if it can't hit 50%, it can't hit 85%). Additionally, each mix's minimum-feasible procurement from the previous threshold becomes the floor for the next threshold (no point starting below the level needed for a lower target). This dramatically narrows the search space for high thresholds.
+
+**Persistent solution cache**: Results are accumulated in `data/physics_cache_v4.json` across runs. Each run merges new solutions with the existing cache — deduplicating by (mix, procurement, battery, ldes) key but never deleting previously found solutions. This means iterating on parameter bounds, procurement ceilings, or grid resolution adds to the feasible solution space without losing work from prior runs. The cost model in Step 2 always operates on the full accumulated cache.
 
 ### 11.2 Edge Case Seed Mixes
 
-Forced seed mixes injected into initial grid scan to guarantee extreme-but-potentially-optimal mixes survive pruning. Updated for 4D resource space (v4.0):
+Forced seed mixes injected into initial grid scan to guarantee extreme-but-potentially-optimal mixes survive pruning. Updated for 4D resource space (v4.0) with expanded extremes:
 
-- **Solar-dominant** (70-75%): captures low-cost renewable scenarios where massive solar + storage is cheapest
-- **Wind-dominant** (70-75%): captures ERCOT-like regions where wind + LDES dominates
-- **Balanced renewable** (40/40 solar/wind): diversified variable generation
-- **Clean firm dominant** (60-80%): captures scenarios where nuclear/CCS is cheapest (CCS now within clean_firm allocation)
-- **High-hydro** (40% hydro): NYISO, CAISO, NEISO where existing hydro fleet is large
-- **Minimal firm** (5-10% clean_firm): tests whether renewables + storage can carry nearly all load
+- **Pure solar** (95-100%): captures extreme solar+storage outcomes at high procurement. At 200%+ procurement, a 100% solar mix delivers 200%+ of demand from solar alone — paired with storage, this may be cost-optimal at lower thresholds.
+- **Pure wind** (95-100%): same logic for wind-dominant regions (ERCOT)
+- **Solar-dominant** (70-90%): traditional solar-heavy scenarios
+- **Wind-dominant** (70-90%): traditional wind-heavy scenarios
+- **Balanced renewable** (40/40 to 50/50 solar/wind): diversified variable generation
+- **Clean firm dominant** (60-100%): captures scenarios where nuclear/CCS is cheapest, including pure-nuclear
+- **Minimal/zero firm** (0-10% clean_firm): tests whether renewables + storage can carry all load
+- **Zero-firm pure renewables** (0% clean_firm, 50/50 solar/wind): extreme test case
 
-Seeds filtered at runtime by regional hydro cap. Adds ~10-15 combos to the ~500 adaptive grid combos per region — negligible compute cost, significant coverage improvement.
+Seeds filtered at runtime by regional hydro cap. Adds ~30 combos to the ~441 adaptive grid combos per region — negligible compute cost, significant coverage improvement.
 
 ### 11.3 Monotonicity Re-Sweep Mechanism
 
