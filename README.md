@@ -2,7 +2,7 @@
 
 An interactive dashboard and optimization engine for analyzing **hourly clean energy procurement strategies** across five major US ISO regions.
 
-The optimizer finds the least-cost mix of clean firm (nuclear/geothermal), solar, wind, hydro, and battery storage to meet hourly demand at various Clean Energy Matching (CEM) targets (75%--100%), then visualizes the results in a scrollytelling dashboard.
+The optimizer finds the least-cost mix of clean firm (nuclear/geothermal), solar, wind, hydro, CCS-CCGT, battery, and LDES to meet hourly demand at various Clean Energy Matching (CEM) targets (50%–100%), then visualizes the results in a scrollytelling dashboard.
 
 ## Regions Covered
 
@@ -24,82 +24,101 @@ python -m http.server 8000
 # Open http://localhost:8000/index.html
 ```
 
+## 4-Step Optimizer Pipeline
+
+The optimizer runs as a 4-step pipeline. Each step is independent — only re-run the step whose inputs changed.
+
+| Step | Script | What It Does | When to Re-run |
+|------|--------|-------------|---------------|
+| **Step 1** | `step1_pfs_generator.py` | **PFS Generator** — Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes (clean firm, solar, wind, hydro) × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores. Produces 21.4M physics-validated mixes. | Only if dispatch logic, generation profiles, or demand curves change. |
+| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** — Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
+| **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** — Vectorized cross-evaluation of all EF mixes under 324 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios. | When cost assumptions, LCOE tables, or sensitivity toggles change. |
+| **Step 4** | `step4_postprocess.py` | **Post-Processing** — NEISO gas constraint, CCS vs LDES crossover analysis, CO₂/MAC calculations. Produces final corrected results. | When Step 3 outputs change. |
+
+**Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 are cheap (minutes). Changing cost assumptions only requires Steps 3–4.
+
+### Running the Pipeline
+
+```bash
+# Requires Python 3.10+, numpy, pyarrow
+pip install numpy pyarrow
+
+# Step 1: Generate PFS (expensive — only if physics change)
+python step1_pfs_generator.py
+
+# Step 2: Extract efficient frontier (~40s)
+python step2_efficient_frontier.py
+
+# Step 3: Cost optimization (~3 min)
+python step3_cost_optimization.py
+
+# Step 4: Post-processing (~seconds)
+python step4_postprocess.py
+```
+
+### Key Acronyms
+
+- **PFS** — Physics Feasible Space: the full set of physically valid resource mixes (Step 1 output)
+- **EF** — Efficient Frontier: the reduced set of non-dominated mixes that could be optimal under any cost assumption (Step 2 output)
+
 ## Project Structure
 
 ```
 hourly-cfe-optimizer/
-+-- optimize_overprocure.py       # Optimization engine
-+-- data/                          # EIA hourly generation & demand profiles
-|   +-- eia_demand_profiles.json
-|   +-- eia_generation_profiles.json
-|   +-- eia_hourly_*.json          # Per-ISO hourly data (2024-2025)
-|   +-- egrid_emission_rates.json
-|   +-- ...
-+-- dashboard/
-    +-- dashboard.html             # Interactive dashboard
-    +-- overprocure_results.json   # Pre-computed optimization results
-    +-- optimizer_methodology.html # Detailed methodology documentation
-    +-- build_standalone.py        # Builds standalone from dashboard.html
+├── step1_pfs_generator.py        # Step 1: PFS generator (physics)
+├── step2_efficient_frontier.py   # Step 2: Efficient frontier extraction
+├── step3_cost_optimization.py    # Step 3: Cost optimization
+├── step4_postprocess.py          # Step 4: Post-processing
+├── data/
+│   ├── physics_cache_v4.parquet  # PFS (21.4M rows, Step 1 output)
+│   ├── pfs_post_ef.parquet       # PFS post-EF (1.8M rows, Step 2 output)
+│   ├── eia_demand_profiles.json
+│   ├── eia_generation_profiles.json
+│   ├── eia_hourly_*.json         # Per-ISO hourly data (2024-2025)
+│   ├── egrid_emission_rates.json
+│   └── ...
+├── dashboard/
+│   ├── index.html                # Homepage (scrollytelling)
+│   ├── dashboard.html            # Interactive cost optimizer
+│   ├── region_deepdive.html      # Regional deep dives
+│   ├── abatement_dashboard.html  # CO₂ abatement analysis
+│   ├── research_paper.html       # Standalone research paper
+│   ├── optimizer_methodology.html # Methodology documentation
+│   ├── overprocure_results.json  # Step 3 output (optimization results)
+│   └── demand_growth_results.json # Step 3 output (demand growth sweep)
+└── README.md
 ```
 
-## Running the Optimizer
+## Resource Types
 
-To regenerate results from scratch (requires Python 3.10+ and NumPy):
+- **Clean Firm**: Nuclear (seasonal-derated) + geothermal (CAISO only, capped at 5 GW)
+- **Solar**: EIA regional hourly profile
+- **Wind**: EIA regional hourly profile
+- **Hydro**: EIA regional hourly profile (capped by region, existing only, wholesale-priced)
+- **CCS-CCGT**: Implicit 5th resource (100% − sum of above four), flat baseload profile
+- **Battery**: 4hr Li-ion, 85% round-trip efficiency, daily-cycle dispatch
+- **LDES**: 100hr iron-air, 50% round-trip efficiency, 7-day rolling window dispatch
 
-```bash
-pip install numpy
-python optimize_overprocure.py
-```
+## Sensitivity Toggles (324 combos)
 
-This runs a three-phase sweep (coarse -> medium -> fine) across procurement levels for each ISO, finding optimal resource mixes at each CEM threshold. Results are written to `dashboard/overprocure_results.json`.
+| Toggle | Options | Description |
+|--------|---------|-------------|
+| Renewable Gen | Low / Medium / High | Solar + wind LCOE |
+| Firm Gen | Low / Medium / High | Nuclear + geothermal LCOE |
+| Storage | Low / Medium / High | Battery + LDES cost |
+| Fossil Fuel | Low / Medium / High | Gas prices (affects wholesale + CCS) |
+| Transmission | None / Low / Medium / High | Interconnection costs |
 
-Runtime is typically 2-5 minutes depending on hardware.
-
-## How It Works
-
-### Optimization Engine
-
-For each ISO region, the engine:
-
-1. Loads real hourly demand shapes and generation profiles from EIA data
-2. Sweeps over-procurement levels from 100% to 200%+ of annual demand
-3. At each level, finds the optimal mix of 4 resource types + storage that maximizes hourly matching score
-4. Uses three-phase refinement (20% coarse, 5% medium, 1% fine grid) for efficiency
-5. Applies regional LCOE pricing with wholesale/new-build cost tiers
-
-### Resource Types
-
-- **Clean Firm**: Flat baseload profile (nuclear, geothermal) -- $90/MWh new-build
-- **Solar**: EIA regional hourly profile -- $54-92/MWh by region
-- **Wind**: EIA regional hourly profile -- $40-81/MWh by region
-- **Hydro**: EIA regional hourly profile (capped by region) -- priced at wholesale
-- **Storage**: 4-hour Li-ion, 85% round-trip efficiency -- $100/MWh LCOS
-
-### Dashboard Features
-
-- **Compressed Day Profile**: 24-hour average pattern showing how each resource contributes
-- **Resource Procurement Mix**: Donut chart of optimal resource allocation
-- **Peak Hour Capacity Need**: Visual comparison of demand, clean coverage, and backup needs
-- **Cost Breakdown**: Per-resource cost analysis with wholesale vs. new-build tiers
-- **Scrollytelling Narrative**: Guided story exploring how optimal mixes evolve across matching targets
+Plus client-side toggles: CCS L/M/H, 45Q On/Off, Geothermal L/M/H (CAISO only), Demand Growth (year + rate).
 
 ## Data Sources
 
 - **EIA-930**: Hourly grid generation data (2024-2025)
-- **LBNL**: Utility-Scale Solar 2024, Wind Market Report 2024 (LCOE estimates)
+- **NREL ATB 2024**: LCOE estimates for solar, wind, nuclear, battery, LDES
+- **LBNL**: Utility-Scale Solar 2024, Wind Market Report 2024
 - **FERC/ISO**: Wholesale electricity price averages (2023-2024)
 - **eGRID**: Emission rate data
-
-## Rebuilding the Standalone
-
-After modifying `dashboard.html`, regenerate the self-contained version:
-
-```bash
-cd dashboard
-python build_standalone.py
-```
-
-This inlines Chart.js, the annotation plugin, and the JSON data into a single HTML file. If the existing standalone is present, it extracts the libraries from it; otherwise it downloads them from CDN.
+- **USGS**: Geothermal resource assessments
 
 ## License
 
