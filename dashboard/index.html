@@ -2499,31 +2499,33 @@ function getIncrementalData(region) {
     MIX_RESOURCES.forEach(r => { existingData[r] = []; newData[r] = []; });
     let existingCleanTotal = 0;
 
-    // Get total existing clean for the region
-    const gridMix = DATA.config?.grid_mix_shares?.[region];
+    // Get existing grid shares and resource mix data directly from shared-data.js
+    const gridMix = (typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES[region] : null) ||
+                    DATA.config?.grid_mix_shares?.[region];
+    const mixData = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[region] : null;
     if (gridMix) {
         existingCleanTotal = Object.values(gridMix).reduce((s, v) => s + v, 0);
     }
 
     for (const tk of thresholdKeys) {
-        const tData = DATA.results[region]?.thresholds?.[tk];
-        if (!tData) continue;
-        const sc = resolveScenario(tData);
-        if (!sc) continue;
-        const scCosts = getUnifiedCosts(sc);
-        const rc = scCosts.resource_costs;
-        if (!rc) continue;
+        const ti = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(parseFloat(tk)) : -1;
+        if (ti < 0) continue;
+        if (!mixData) continue;
 
+        // Compute procurement-scaled % of demand for each resource
+        const proc = mixData.procurement?.[ti] || 100;
         labels.push(tk + '%');
         MIX_RESOURCES.forEach(r => {
-            const rd = rc[r];
-            if (!rd) { existingData[r].push(0); newData[r].push(0); return; }
             if (r === 'battery' || r === 'ldes') {
                 existingData[r].push(0);
-                newData[r].push(rd.dispatch_pct || 0);
+                newData[r].push(mixData[r]?.[ti] || 0);
             } else {
-                existingData[r].push(rd.existing_pct || rd.existing_share || 0);
-                newData[r].push(rd.new_pct || rd.new_share || 0);
+                const totalPct = (mixData[r]?.[ti] || 0) * proc / 100;
+                const existPct = gridMix?.[r] || 0;
+                const newPct = Math.max(0, totalPct - existPct);
+                const cappedExist = Math.min(existPct, totalPct);
+                existingData[r].push(Math.round(cappedExist * 10) / 10);
+                newData[r].push(Math.round(newPct * 10) / 10);
             }
         });
     }
