@@ -382,7 +382,7 @@ html('introNarrative',
     `the grid backbone (75\u219290%) costs $${Math.min(...REGIONS.map(r => marg[r][1]).filter(v=>v!=null))}\u2013${Math.max(...REGIONS.map(r => marg[r][1]).filter(v=>v!=null))}/ton. ` +
     `Beyond 90%, marginal costs escalate sharply as storage and CCS enter the mix. ` +
     `${regionsExceedingDAC} region${regionsExceedingDAC !== 1 ? 's have' : ' has'} at least one step ` +
-    `exceeding projected DAC costs (Central trajectory: $${dacCostAtThreshold(75, 'central')}/ton at 75% \u2192 $${dacCostAtThreshold(99, 'central')}/ton at 99%).`
+    `exceeding projected DAC costs ($${dacLow.mid}\u2013$${dacHigh.mid}/ton range).`
 );
 
 html('keyCounters',
@@ -396,7 +396,7 @@ html('keyCounters',
     `</div>` +
     `<div class="counter-item">` +
     `  <div class="counter-val">${regionsExceedingDAC}</div>` +
-    `  <div class="counter-label">Regions with steps<br>exceeding DAC Central trajectory</div>` +
+    `  <div class="counter-label">Regions with steps<br>exceeding DAC Med ($${dacMed.mid}+)</div>` +
     `</div>` +
     `<div class="counter-item">` +
     `  <div class="counter-val">$${Math.min(...mac99)}</div>` +
@@ -454,7 +454,7 @@ html('keyCounters',
         const legend = `<div style="display:flex;gap:10px;margin-top:4px;font-size:0.62rem;color:var(--text-muted)">` +
             `<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#22C55E;vertical-align:middle;margin-right:2px"></span>&lt;SCC ($${sccVal})</span>` +
             `<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#F59E0B;vertical-align:middle;margin-right:2px"></span>SCC\u2013DAC</span>` +
-            `<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#EF4444;vertical-align:middle;margin-right:2px"></span>&gt;DAC Central (declining)</span>` +
+            `<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#EF4444;vertical-align:middle;margin-right:2px"></span>&gt;DAC Med ($${dacVal})</span>` +
             `</div>`;
 
         return `<div class="envelope-card" style="border-top-color:${c}">` +
@@ -591,13 +591,10 @@ html('keyCounters',
     const staticBenchmarks = [
         { name: 'EU ETS', val: 88 },
         { name: 'SCC (EPA)', val: 190 },
-        { name: 'SCC (Rennert)', val: 185 }
-    ];
-    // DAC trajectory benchmarks (declining with SBTi year)
-    const dacTrajectories = [
-        { name: 'DAC Opt.', traj: 'optimistic' },
-        { name: 'DAC Central', traj: 'central' },
-        { name: 'DAC Cons.', traj: 'conservative' }
+        { name: 'SCC (Rennert)', val: 185 },
+        { name: 'DAC Low', val: dacLow.mid },
+        { name: 'DAC Med', val: dacMed.mid },
+        { name: 'DAC High', val: dacHigh.mid }
     ];
 
     headEl.innerHTML = '<th>Region</th>' +
@@ -636,7 +633,7 @@ html('keyCounters',
         statsEl.innerHTML =
             `<div class="counter-item">` +
             `  <div class="counter-val" style="color:#4ADE80;">&gt;99%</div>` +
-            `  <div class="counter-label">All regions stay below<br>DAC Central trajectory</div>` +
+            `  <div class="counter-label">All regions stay below<br>DAC Med ($${dacMed.mid}/ton)</div>` +
             `</div>` +
             `<div class="counter-item">` +
             `  <div class="counter-val">$${mac[cheapestISO][8]}</div>` +
@@ -724,12 +721,11 @@ html('keyCounters',
 
     n.innerHTML =
         `<p>Push the grid backbone as far as it's efficient, then diversify. The optimal pivot point \u2014 where ` +
-        `marginal grid cost exceeds the projected DAC cost for that SBTi milestone year \u2014 ranges from ` +
-        `<strong>${minInf}% to ${maxInf === Infinity ? '>99' : maxInf}%</strong> depending on region. ` +
-        `DAC Central trajectory: $${dacCostAtThreshold(75, 'central')}/ton at 75% (~2033) declining to $${dacCostAtThreshold(99, 'central')}/ton at 99% (~2048).</p>` +
+        `marginal grid cost exceeds DAC (Med $${dacMed.mid}/ton; range $${dacLow.mid}\u2013$${dacHigh.mid}) \u2014 ranges from ` +
+        `<strong>${minInf}% to ${maxInf === Infinity ? '>99' : maxInf}%</strong> depending on region.</p>` +
 
         `<div class="callout" style="margin: 20px 0;">` +
-        `<strong>Regional inflection points (marginal MAC &gt; DAC Central trajectory):</strong><br>` +
+        `<strong>Regional inflection points (marginal MAC &gt; DAC Med $${dacMed.mid}/ton):</strong><br>` +
         REGIONS.map(r => `${r}: <strong>${inflections[r]}%</strong>`).join(' \u00B7 ') +
         `</div>` +
 
