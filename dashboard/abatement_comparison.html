@@ -362,10 +362,14 @@ const highestISO  = REGIONS[REGIONS.map(r => mac[r][T_IDX[99]]).indexOf(Math.max
 const dacLow = BENCHMARKS_DYNAMIC.dac.Low;
 const dacMed = BENCHMARKS_DYNAMIC.dac.Medium;
 const dacHigh = BENCHMARKS_DYNAMIC.dac.High;
-const dacThreshold = dacMed.mid;
 
+// Find regions where any step's marginal MAC exceeds the SBTi-year-indexed DAC Central cost
 const regionsExceedingDAC = REGIONS.filter(r =>
-    marg[r].some(v => v != null && v >= dacThreshold)
+    marg[r].some((v, i) => {
+        if (v == null) return false;
+        const dacAtYear = dacCostAtThreshold(MARGINAL_THRESHOLDS[i], 'central');
+        return v >= dacAtYear;
+    })
 ).length;
 
 // ============================================================================
@@ -413,12 +417,12 @@ html('keyCounters',
     yMax = Math.min(Math.ceil(yMax / 100) * 100 + 50, 1100);
 
     const sccVal = 190;
-    const dacVal = dacMed.mid;
 
-    // Color thresholds: green < SCC, amber SCC–DAC, red > DAC
-    function barColor(val) {
+    // Color thresholds: green < SCC, amber SCC–DAC(central at that year), red > DAC(central)
+    function barColor(val, stepIdx) {
         if (val <= sccVal) return { bg: '#22C55E', border: '#16A34A' }; // green
-        if (val <= dacVal) return { bg: '#F59E0B', border: '#D97706' }; // amber
+        const dacAtYear = dacCostAtThreshold(MARGINAL_THRESHOLDS[stepIdx], 'central');
+        if (val <= dacAtYear) return { bg: '#F59E0B', border: '#D97706' }; // amber
         return { bg: '#EF4444', border: '#DC2626' }; // red
     }
 
@@ -432,7 +436,7 @@ html('keyCounters',
             const raw = marg[iso][i];
             const val = raw != null ? Math.min(raw, 1050) : 0;
             const pct = Math.max((val / yMax) * 100, 0.5);
-            const bc = barColor(raw != null ? raw : 0);
+            const bc = barColor(raw != null ? raw : 0, i);
             const displayVal = raw >= 1000 ? '$1k+' : '$' + raw;
             const isWide = pct > 35;
             return `<div class="css-bar-row">` +
@@ -552,7 +556,7 @@ html('keyCounters',
         const c = REGION_CLR[iso];
         const backbone = marg[iso][0];
         const lastStep = marg[iso][marg[iso].length - 1];
-        const dacSteps = marg[iso].filter(v => v != null && v >= dacThreshold).length;
+        const dacSteps = marg[iso].filter((v, i) => v != null && v >= dacCostAtThreshold(MARGINAL_THRESHOLDS[i], 'central')).length;
         let topDriver = '', topPct = 0;
         if (typeof MAC_ANOVA !== 'undefined' && MAC_ANOVA[iso]) {
             const sorted = Object.entries(MAC_ANOVA[iso]).sort((a, b) => b[1] - a[1]);
@@ -583,7 +587,8 @@ html('keyCounters',
     const statsEl = $('inflectionStats');
     if (!headEl || !bodyEl) return;
 
-    const benchmarks = [
+    // Static benchmarks (fixed $/ton crossover)
+    const staticBenchmarks = [
         { name: 'EU ETS', val: 88 },
         { name: 'SCC (EPA)', val: 190 },
         { name: 'SCC (Rennert)', val: 185 },
@@ -592,18 +597,36 @@ html('keyCounters',
         { name: 'DAC High', val: dacHigh.mid }
     ];
 
-    headEl.innerHTML = '<th>Region</th>' + benchmarks.map(b =>
-        `<th>${b.name}<br>($${b.val}/ton)</th>`
-    ).join('');
+    headEl.innerHTML = '<th>Region</th>' +
+        staticBenchmarks.map(b => `<th>${b.name}<br>($${b.val}/ton)</th>`).join('') +
+        dacTrajectories.map(d => `<th>${d.name}<br>(SBTi trajectory)</th>`).join('');
+
+    // Helper: find where MAC exceeds trajectory-indexed DAC
+    function findDacTrajectoryXO(regionMacArray, trajectory) {
+        for (let i = 0; i < THRESHOLDS.length; i++) {
+            const t = THRESHOLDS[i];
+            const macVal = regionMacArray[i];
+            if (macVal == null) continue;
+            const dacAtYear = dacCostAtThreshold(t, trajectory);
+            if (macVal >= dacAtYear) return t;
+        }
+        return '>99';
+    }
 
     bodyEl.innerHTML = REGIONS.map(iso => {
-        const cells = benchmarks.map(b => {
+        const staticCells = staticBenchmarks.map(b => {
             const xo = findCrossover(mac[iso], b.val);
             const cls = xo === '>99' ? 'cell-green' : parseInt(xo) >= 95 ? 'cell-green' :
                 parseInt(xo) >= 90 ? 'cell-orange' : 'cell-red';
             return `<td class="${cls}">${xo === '>99' ? '>99%' : xo + '%'}</td>`;
         });
-        return `<tr><td style="font-weight:700;text-align:left;padding-left:14px;">${iso}</td>${cells.join('')}</tr>`;
+        const dacCells = dacTrajectories.map(d => {
+            const xo = findDacTrajectoryXO(mac[iso], d.traj);
+            const cls = xo === '>99' ? 'cell-green' : parseInt(xo) >= 95 ? 'cell-green' :
+                parseInt(xo) >= 90 ? 'cell-orange' : 'cell-red';
+            return `<td class="${cls}">${xo === '>99' ? '>99%' : xo + '%'}</td>`;
+        });
+        return `<tr><td style="font-weight:700;text-align:left;padding-left:14px;">${iso}</td>${staticCells.join('')}${dacCells.join('')}</tr>`;
     }).join('');
 
     if (statsEl) {
@@ -677,12 +700,16 @@ html('keyCounters',
     const n = $('portfolioNarrative');
     if (!n) return;
 
+    // Find inflection using SBTi-year-indexed DAC Central trajectory
     const inflections = {};
     REGIONS.forEach(r => {
         for (let i = 0; i < marg[r].length; i++) {
-            if (marg[r][i] != null && marg[r][i] >= dacThreshold) {
-                inflections[r] = MARGINAL_THRESHOLDS[i];
-                return;
+            if (marg[r][i] != null) {
+                const dacAtYear = dacCostAtThreshold(MARGINAL_THRESHOLDS[i], 'central');
+                if (marg[r][i] >= dacAtYear) {
+                    inflections[r] = MARGINAL_THRESHOLDS[i];
+                    return;
+                }
             }
         }
         inflections[r] = '>99';
@@ -703,8 +730,9 @@ html('keyCounters',
         `</div>` +
 
         `<p><strong>The bottom line:</strong> Grid decarbonization is the most cost-effective abatement tool through ~90% ` +
-        `everywhere. The last 5\u201310% costs 3\u20138\u00D7 more per ton. Push each region to its ` +
-        `inflection point, then invest the savings into DAC, BECCS, SAF, and ` +
+        `everywhere. The last 5\u201310% costs 3\u20138\u00D7 more per ton. But DAC costs are declining too \u2014 ` +
+        `by the time SBTi requires 90%+ matching (~2040), DAC Central projections drop to $${dacCostAtThreshold(90, 'central')}/ton. ` +
+        `Push each region to its inflection point, then invest the savings into DAC, BECCS, SAF, and ` +
         `industrial electrification. More total tons abated, across more sectors, at lower total cost.</p>`;
 })();
 

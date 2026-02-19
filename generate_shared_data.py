@@ -904,6 +904,164 @@ lines.append("    NEISO:  { nuclear: 1.0,   geothermal: 0.0 }")
 lines.append('};')
 lines.append('')
 
+# ============================================================================
+# SBTi TIMELINE + DAC LEARNING CURVE
+# ============================================================================
+
+print("\nGenerating SBTi timeline + DAC trajectory data...")
+
+# SBTi threshold-to-year mapping (from policy_context.html + SPEC.md §7.3)
+SBTI_MILESTONES = [
+    {'year': 2025, 'threshold': 0,   'label': 'Today'},
+    {'year': 2030, 'threshold': 50,  'label': 'SBTi 50%'},
+    {'year': 2035, 'threshold': 70,  'label': 'SBTi ~70%'},
+    {'year': 2040, 'threshold': 90,  'label': 'SBTi 90%'},
+    {'year': 2045, 'threshold': 95,  'label': 'SBTi ~95%'},
+    {'year': 2050, 'threshold': 100, 'label': 'Net-Zero'},
+]
+
+# DAC cost projections: piecewise linear from 15+ literature sources (SPEC.md §7.3)
+# $/ton CO₂ net DACCS (capture + transport + storage + MRV), 2024 USD
+DAC_TRAJECTORY = {
+    'optimistic': {2025: 400, 2030: 200, 2035: 150, 2040: 115, 2045: 90,  2050: 75},
+    'central':    {2025: 600, 2030: 350, 2035: 275, 2040: 225, 2045: 200, 2050: 180},
+    'conservative': {2025: 800, 2030: 550, 2035: 450, 2040: 375, 2045: 325, 2050: 300},
+}
+
+lines.append('// ============================================================================')
+lines.append('// SBTi TIMELINE + DAC LEARNING CURVE (SPEC.md §7.3)')
+lines.append('// ============================================================================')
+lines.append('// Maps clean energy thresholds to SBTi target years, with projected DAC costs')
+lines.append('// declining along literature-sourced learning curves.')
+lines.append('// Sources: DOE Liftoff (2023), Sievert et al. (Joule 2024), IEA (2022/2024),')
+lines.append('//   Fasihi et al. (2019), IEAGHG (2021/2024), Climeworks Gen 3, DOE Carbon')
+lines.append('//   Negative Shot, Kanyako & Craig (2025), NAS (2019), Young et al. (2023),')
+lines.append('//   Keith et al. (2018), Shayegh et al. (2021), Belfer Center (2023).')
+lines.append('')
+lines.append('const SBTI_MILESTONES = [')
+for ms in SBTI_MILESTONES:
+    lines.append(f"    {{ year: {ms['year']}, threshold: {ms['threshold']}, label: '{ms['label']}' }},")
+lines.append('];')
+lines.append('')
+lines.append('// DAC cost trajectories ($/ton CO₂ net DACCS, 2024 USD)')
+lines.append('// Optimistic: 15-20% learning rate, R&D breakthroughs, <$20/MWh renewables')
+lines.append('// Central: 10-12% learning rate, moderate policy, $30-40/MWh renewables')
+lines.append('// Conservative: 5-8% learning rate, limited policy, $40-60/MWh renewables')
+lines.append('const DAC_TRAJECTORY = {')
+for traj_name, traj_data in DAC_TRAJECTORY.items():
+    years = sorted(traj_data.keys())
+    year_parts = [f'{y}: {traj_data[y]}' for y in years]
+    comma = ',' if traj_name != 'conservative' else ''
+    lines.append(f'    {traj_name}: {{ {", ".join(year_parts)} }}{comma}')
+lines.append('};')
+lines.append('')
+
+# Interpolation helper: given a threshold, find the corresponding SBTi year and DAC cost
+# For thresholds between milestones, linearly interpolate year, then lookup DAC cost
+lines.append('// Interpolate DAC cost for any threshold via SBTi year mapping')
+lines.append('function dacCostAtThreshold(threshold, trajectory) {')
+lines.append('    trajectory = trajectory || "central";')
+lines.append('    const traj = DAC_TRAJECTORY[trajectory];')
+lines.append('    const ms = SBTI_MILESTONES;')
+lines.append('    // Find bounding milestones')
+lines.append('    let year;')
+lines.append('    if (threshold <= ms[0].threshold) year = ms[0].year;')
+lines.append('    else if (threshold >= ms[ms.length-1].threshold) year = ms[ms.length-1].year;')
+lines.append('    else {')
+lines.append('        for (let i = 0; i < ms.length - 1; i++) {')
+lines.append('            if (threshold >= ms[i].threshold && threshold <= ms[i+1].threshold) {')
+lines.append('                const frac = (threshold - ms[i].threshold) / (ms[i+1].threshold - ms[i].threshold);')
+lines.append('                year = ms[i].year + frac * (ms[i+1].year - ms[i].year);')
+lines.append('                break;')
+lines.append('            }')
+lines.append('        }')
+lines.append('    }')
+lines.append('    // Interpolate DAC cost at that year')
+lines.append('    const years = Object.keys(traj).map(Number).sort((a,b) => a-b);')
+lines.append('    if (year <= years[0]) return traj[years[0]];')
+lines.append('    if (year >= years[years.length-1]) return traj[years[years.length-1]];')
+lines.append('    for (let i = 0; i < years.length - 1; i++) {')
+lines.append('        if (year >= years[i] && year <= years[i+1]) {')
+lines.append('            const frac = (year - years[i]) / (years[i+1] - years[i]);')
+lines.append('            return Math.round(traj[years[i]] + frac * (traj[years[i+1]] - traj[years[i]]));')
+lines.append('        }')
+lines.append('    }')
+lines.append('    return traj[years[years.length-1]];')
+lines.append('}')
+lines.append('')
+
+# ============================================================================
+# DEMAND GROWTH COUNTERFACTUAL MAC (SPEC.md §7.2)
+# ============================================================================
+
+print("\nComputing demand growth counterfactual MAC...")
+
+# Regional demand (TWh) and growth rates (from step3)
+REGIONAL_DEMAND_TWH_PY = {
+    'CAISO': 224.039, 'ERCOT': 488.020, 'PJM': 843.331,
+    'NYISO': 151.599, 'NEISO': 115.336,
+}
+DEMAND_GROWTH_RATES_PY = {
+    'CAISO':  {'Low': 0.014, 'Medium': 0.019, 'High': 0.025},
+    'ERCOT':  {'Low': 0.020, 'Medium': 0.035, 'High': 0.055},
+    'PJM':    {'Low': 0.015, 'Medium': 0.024, 'High': 0.036},
+    'NYISO':  {'Low': 0.013, 'Medium': 0.020, 'High': 0.044},
+    'NEISO':  {'Low': 0.009, 'Medium': 0.018, 'High': 0.029},
+}
+NEW_GAS_EMISSION_RATE = 0.35  # tCO₂/MWh (new CCGT counterfactual)
+
+# For each SBTi milestone year, compute growth MWh and counterfactual emissions
+growth_counterfactual = {}
+for iso in ISOS:
+    iso_cf = {}
+    base_twh = REGIONAL_DEMAND_TWH_PY[iso]
+    for ms in SBTI_MILESTONES:
+        year = ms['year']
+        t = ms['threshold']
+        level_data = {}
+        for level in ['Low', 'Medium', 'High']:
+            rate = DEMAND_GROWTH_RATES_PY[iso][level]
+            years_from_base = year - 2025
+            if years_from_base <= 0:
+                growth_twh = 0
+            else:
+                grown_twh = base_twh * ((1 + rate) ** years_from_base)
+                growth_twh = grown_twh - base_twh
+            growth_mwh = growth_twh * 1e6
+            cf_tons = growth_mwh * NEW_GAS_EMISSION_RATE
+            level_data[level] = {
+                'growth_twh': round(growth_twh, 1),
+                'counterfactual_mt': round(cf_tons / 1e6, 2),  # megatons
+            }
+        iso_cf[str(year)] = level_data
+    growth_counterfactual[iso] = iso_cf
+    med_2040 = iso_cf['2040']['Medium']
+    print(f"  {iso}: 2040 Medium growth={med_2040['growth_twh']} TWh, counterfactual={med_2040['counterfactual_mt']} MtCO₂")
+
+lines.append('// ============================================================================')
+lines.append('// DEMAND GROWTH COUNTERFACTUAL (SPEC.md §7.2)')
+lines.append('// ============================================================================')
+lines.append('// Without clean procurement, demand growth MWh would be met by new gas at')
+lines.append('// 350 kg/MWh (0.35 tCO₂/MWh) — standard new CCGT emission rate.')
+lines.append('// growth_twh = baseTWh × ((1 + rate)^(year-2025) - 1)')
+lines.append('// counterfactual_mt = growth_twh × 1e6 × 0.35 / 1e6 (megatons)')
+lines.append(f'const NEW_GAS_EMISSION_RATE = {NEW_GAS_EMISSION_RATE}; // tCO₂/MWh')
+lines.append('')
+lines.append('const GROWTH_COUNTERFACTUAL = {')
+for iso_idx, iso in enumerate(ISOS):
+    lines.append(f'    {iso}: {{')
+    for ms_idx, ms in enumerate(SBTI_MILESTONES):
+        y = str(ms['year'])
+        yd = growth_counterfactual[iso][y]
+        ms_comma = ',' if ms_idx < len(SBTI_MILESTONES) - 1 else ''
+        lines.append(f'        {y}: {{ Low: {{ twh: {yd["Low"]["growth_twh"]}, mt: {yd["Low"]["counterfactual_mt"]} }}, '
+                     f'Medium: {{ twh: {yd["Medium"]["growth_twh"]}, mt: {yd["Medium"]["counterfactual_mt"]} }}, '
+                     f'High: {{ twh: {yd["High"]["growth_twh"]}, mt: {yd["High"]["counterfactual_mt"]} }} }}{ms_comma}')
+    iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    }}{iso_comma}')
+lines.append('};')
+lines.append('')
+
 print("Extracting FEASIBLE_MIXES...")
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
 lines.append('// Each mix: [clean_firm%, solar%, wind%, ccs_ccgt%, hydro%, procurement%, match%, battery%, ldes%]')
