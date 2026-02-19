@@ -275,6 +275,181 @@ body { background: #F3F4F8; }
     .inflection-card th { font-size: 0.75rem; padding: 8px 6px; }
     .inflection-card td { padding: 8px 6px; }
 }
+
+/* ========== HERO SCROLLYTELL ========== */
+.hero-scrolly {
+    background: linear-gradient(180deg, #0B1120 0%, #13203D 100%);
+    position: relative;
+    overflow: hidden;
+}
+.hero-scrolly::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(233,30,99,0.06) 0%, transparent 60%);
+    pointer-events: none;
+}
+.hero-scrolly-container {
+    position: relative;
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+.hero-scrolly-sticky {
+    position: sticky;
+    top: 0;
+    width: 55%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    z-index: 1;
+}
+.hero-scrolly-chart-wrap {
+    background: rgba(15,26,46,0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    width: 100%;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+}
+.hero-scrolly-chart-wrap canvas {
+    width: 100% !important;
+    flex: 1;
+    min-height: 350px;
+}
+.hero-chart-title {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+    transition: opacity 0.4s;
+}
+.hero-chart-subtitle {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    margin-top: 6px;
+}
+.hero-scrolly-steps {
+    width: 45%;
+    position: relative;
+    z-index: 2;
+}
+.hero-scrolly-step {
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    padding: 80px 48px 80px 40px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hero-scrolly-step:first-child { padding-top: 120px; }
+.hero-scrolly-step:last-child { padding-bottom: 120px; }
+.hero-scrolly-step.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.hero-step-card {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 32px;
+    transition: border-color 0.4s, box-shadow 0.4s, transform 0.4s;
+}
+.hero-scrolly-step.active .hero-step-card {
+    border-color: rgba(14,165,233,0.4);
+    box-shadow: 0 10px 30px rgba(14,165,233,0.1);
+    transform: translateY(-2px);
+}
+.hero-step-card h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+}
+.hero-step-card p {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.75;
+    margin-bottom: 0;
+}
+.hero-step-card .step-stat {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+.step-stat-green {
+    background: rgba(34,197,94,0.12);
+    border: 1px solid rgba(34,197,94,0.25);
+    color: #4ade80;
+}
+.step-stat-amber {
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.25);
+    color: #fbbf24;
+}
+.step-stat-red {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.25);
+    color: #f87171;
+}
+.step-stat-blue {
+    background: rgba(14,165,233,0.12);
+    border: 1px solid rgba(14,165,233,0.25);
+    color: #38bdf8;
+}
+/* Region color accent bars */
+.hero-step-card .region-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+    .hero-scrolly-container { flex-direction: column; }
+    .hero-scrolly-sticky { width: 100%; height: 50vh; min-height: 380px; position: sticky; top: 0; padding: 16px; }
+    .hero-scrolly-steps { width: 100%; }
+    .hero-scrolly-step { min-height: auto; padding: 40px 20px; }
+    .hero-step-card { padding: 24px 20px; }
+    .hero-step-card h3 { font-size: 1.25rem; }
+}
+@media (max-width: 600px) {
+    .hero-scrolly-sticky { height: 45vh; min-height: 300px; padding: 12px; }
+    .hero-scrolly-chart-wrap { padding: 16px 12px; min-height: 280px; }
+    .hero-scrolly-step { padding: 32px 14px; }
+    .hero-step-card { padding: 20px 16px; }
+    .hero-step-card h3 { font-size: 1.1rem; }
+    .hero-step-card p { font-size: 0.85rem; }
+}
 </style>
 </head>
 <body>
@@ -290,6 +465,95 @@ body { background: #F3F4F8; }
     <p class="subtitle">Comparing the cost of CO₂ abatement through hourly clean energy procurement across regions and ambition levels.<sup style="font-size:0.7em;color:rgba(255,255,255,0.7);">[10]</sup></p>
     <div class="header-accent"></div>
 </header>
+
+<!-- HERO SCROLLYTELL: Key Conclusions -->
+<section class="hero-scrolly">
+    <div class="hero-scrolly-container">
+        <!-- Sticky chart panel -->
+        <div class="hero-scrolly-sticky">
+            <div class="hero-scrolly-chart-wrap">
+                <div class="hero-chart-title" id="heroChartTitle">Marginal Abatement Cost vs. Projected DAC — All Regions</div>
+                <canvas id="heroScrollyChart"></canvas>
+                <div class="hero-chart-subtitle">Solid line = stepwise envelope (Medium cost) &middot; Shaded band = P10–P90 across 324 scenarios &middot; Dashed = DAC projections</div>
+            </div>
+        </div>
+
+        <!-- Scrolly narrative steps -->
+        <div class="hero-scrolly-steps">
+
+            <!-- Step 1: The framing -->
+            <div class="hero-scrolly-step" data-hero-step="overview">
+                <div class="hero-step-card">
+                    <h3>Today's investment decisions determine where grid decarb outcompetes DAC</h3>
+                    <p>The marginal cost of each additional percent of clean energy — not the average — determines when DAC becomes the cheaper path. Across 324 sensitivity scenarios per region, the crossover point shifts by 10–25 percentage points depending on which technologies get investment today. Early bets on nuclear, geothermal, or renewables have catalytic effects on how deep grid decarbonization can go before DAC wins.</p>
+                    <span class="step-stat step-stat-blue">324 cost scenarios &times; 5 ISOs: crossover shifts 10–25 points on policy choices</span>
+                </div>
+            </div>
+
+            <!-- Step 2: ERCOT — renewable tax credits story -->
+            <div class="hero-scrolly-step" data-hero-step="ercot">
+                <div class="hero-step-card">
+                    <span class="region-tag" style="background:rgba(34,197,94,0.15);color:#22C55E;">ERCOT</span>
+                    <h3>Renewable tax credits make ERCOT a no-regrets bet to 97.5%</h3>
+                    <p>At medium costs, ERCOT's grid decarb beats central DAC through 97.5%. With low renewable costs — the trajectory sustained by IRA tax credits — the crossover extends to 99%. Even under all-high cost assumptions, grid investment wins to 97.5%. ERCOT is the strongest case for continued grid investment: deep solar/wind resources mean no plausible future where DAC is cheaper before ~95%.</p>
+                    <span class="step-stat step-stat-green">Low renewables: grid wins to 99% &middot; All High: still wins to 97.5%</span>
+                </div>
+            </div>
+
+            <!-- Step 3: PJM — firm gen cliff -->
+            <div class="hero-scrolly-step" data-hero-step="pjm">
+                <div class="hero-step-card">
+                    <span class="region-tag" style="background:rgba(74,144,217,0.15);color:#4a90d9;">PJM</span>
+                    <h3>PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points</h3>
+                    <p>At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs (achieved nuclear/geothermal) extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. The policy signal: PJM's path past 90% depends entirely on whether clean firm generation achieves cost learning — renewables alone aren't enough at these penetration levels.</p>
+                    <span class="step-stat step-stat-amber">Low firm gen: grid wins to 92.5% &middot; High firm + high RE: only 87.5%</span>
+                </div>
+            </div>
+
+            <!-- Step 4: CAISO — firm gen as catalytic -->
+            <div class="hero-scrolly-step" data-hero-step="caiso">
+                <div class="hero-step-card">
+                    <span class="region-tag" style="background:rgba(245,158,11,0.15);color:#F59E0B;">CAISO</span>
+                    <h3>CAISO: High marginal cost volatility, but grid still wins deep under medium costs</h3>
+                    <p>CAISO shows extreme marginal cost swings — $738/ton at 75% under medium costs, yet grid still beats DAC central through 99% because later steps are cheap. The variance is driven by how clean firm resources dispatch. Low firm + low renewable costs extend the crossover to 97.5%. High firm + high renewable costs mean grid never beats even optimistic DAC. The lesson: CAISO's path past 90% is a bet on firm generation, not more solar.</p>
+                    <span class="step-stat step-stat-red">High firm + high RE: grid never beats optimistic DAC &middot; Low combo: wins to 97.5%</span>
+                </div>
+            </div>
+
+            <!-- Step 5: Northeast — the catalytic case for nuclear/geo -->
+            <div class="hero-scrolly-step" data-hero-step="northeast">
+                <div class="hero-step-card">
+                    <span class="region-tag" style="background:rgba(233,30,99,0.15);color:#E91E63;">NYISO</span>
+                    <span class="region-tag" style="background:rgba(156,39,176,0.15);color:#9C27B0;margin-left:6px;">NEISO</span>
+                    <h3>The Northeast makes the strongest case for early nuclear and geothermal investment</h3>
+                    <p>NEISO's grid decarb only beats DAC central through 70% at medium costs — the lowest of any region. But low firm + low renewable costs extend this to 85%. In NYISO, low firm generation alone pushes the crossover from 85% to 85% — limited gains, but high firm + high RE gets a surprising 92.5% via resource rebalancing. The catalytic effect of cheap firm generation is 10–15 points of additional no-regrets decarbonization.</p>
+                    <span class="step-stat step-stat-red">NEISO: 70% at Medium &rarr; 85% with low firm + low RE (15-point gain)</span>
+                </div>
+            </div>
+
+            <!-- Step 6: Policy synthesis -->
+            <div class="hero-scrolly-step" data-hero-step="drivers">
+                <div class="hero-step-card">
+                    <h3>Three policy levers, three different effects</h3>
+                    <p><strong>Renewable tax credits</strong> (IRA/PTC/ITC) are most catalytic in ERCOT, extending grid competitiveness to 99%. Moderate effect in PJM/CAISO. Minimal impact in the Northeast where the constraint is firm generation, not renewables.<br><br>
+                    <strong>Nuclear/geothermal investment</strong> (NRC licensing, DOE LPO loans, HALEU supply) is decisive in NYISO/NEISO/CAISO. Cheap firm generation shifts the DAC crossover 10–15 percentage points higher.<br><br>
+                    <strong>Storage costs</strong> contribute &lt;1% of variance in every region — battery/LDES prices are not the bottleneck.</p>
+                    <span class="step-stat step-stat-blue">RE credits: +2–5 pts &middot; Firm gen: +10–15 pts &middot; Storage: ~0 pts</span>
+                </div>
+            </div>
+
+            <!-- Step 7: Bottom line -->
+            <div class="hero-scrolly-step" data-hero-step="conclusion">
+                <div class="hero-step-card">
+                    <h3>The optimal strategy: grid to the crossover, DAC for the rest</h3>
+                    <p>Grid decarbonization is the cheaper abatement path to at least 85–90% in every region under any cost scenario. Past that, the right answer depends on today's policy choices. Investment in firm clean generation (nuclear, enhanced geothermal, CCS) has the largest catalytic effect — buying 10–15 additional points of grid decarb that outcompetes DAC. Renewable tax credits are necessary but not sufficient in high-cost regions. The optimal portfolio: push grid decarb to its natural crossover point, then let DAC close the gap.</p>
+                    <span class="step-stat step-stat-green">Grid to 85–97.5% (region-dependent) &middot; DAC for the final stretch</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
 
 <!-- MAIN DASHBOARD -->
 <div class="dashboard-wrap">
@@ -422,6 +686,243 @@ body { background: #F3F4F8; }
 <script src="js/shared-data.js"></script>
 <script src="js/mac-stats-data.js"></script>
 <script>
+// ============================================================================
+// HERO SCROLLYTELL CHART
+// ============================================================================
+let heroChart = null;
+const yMaxHero = 700; // cap for readability in hero chart
+
+function initHeroScrolly() {
+    const ctx = document.getElementById('heroScrollyChart')?.getContext('2d');
+    if (!ctx) return;
+
+    const regions = ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
+    const colors = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0' };
+
+    // Use stepwise (marginal) MAC data — same data feeding the dashboard envelope charts
+    const stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
+    const stepEnv = typeof MAC_ENVELOPE_DATA !== 'undefined' ? MAC_ENVELOPE_DATA : null;
+    const avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
+
+    // Build datasets: envelope line + P10-P90 band per region, plus 3 DAC lines
+    const datasets = [];
+    regions.forEach(iso => {
+        const fan = stepFan?.[iso];
+        const env = stepEnv?.[iso]?.stepwise_envelope;
+        const fb = avgFan?.[iso]; // fallback for null-filling
+        if (!fan && !env) return;
+        const c = colors[iso];
+
+        // P90 band (fills to P10) — stepwise fan with fallback
+        const p90pts = (fan?.p90 || []).map((v, i) => {
+            const val = v ?? fb?.p90?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
+        }).filter(d => d.y != null);
+        const p10pts = (fan?.p10 || []).map((v, i) => {
+            const val = v ?? fb?.p10?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
+        }).filter(d => d.y != null);
+
+        // Envelope line (monotonic marginal MAC at Medium cost)
+        const envPts = (env || fan?.p50 || []).map((v, i) => {
+            const val = v ?? fb?.p50?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
+        }).filter(d => d.y != null);
+
+        datasets.push({
+            label: iso + ' P90', data: p90pts, borderColor: 'transparent', backgroundColor: c + '15',
+            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 10,
+            _region: iso, _type: 'band'
+        });
+        datasets.push({
+            label: iso + ' P10', data: p10pts, borderColor: c + '30', backgroundColor: 'transparent',
+            borderWidth: 0.5, borderDash: [2, 2], pointRadius: 0, fill: false, tension: 0.3, order: 10,
+            _region: iso, _type: 'band'
+        });
+        datasets.push({
+            label: iso, data: envPts, borderColor: c, backgroundColor: c + '10',
+            borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.3, order: 5,
+            _region: iso, _type: 'line'
+        });
+    });
+
+    // DAC trajectories
+    const dacThresholds = [];
+    for (let t = 50; t <= 100; t += 2.5) dacThresholds.push(t);
+    const dacOpt = dacThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'optimistic') }));
+    const dacCen = dacThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'central') }));
+    const dacCon = dacThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'conservative') }));
+
+    datasets.push({
+        label: 'DAC Optimistic', data: dacOpt, borderColor: '#E91E6366',
+        borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: false, tension: 0.3, order: 2, _type: 'dac'
+    });
+    datasets.push({
+        label: 'DAC Central', data: dacCen, borderColor: '#E91E6399',
+        borderWidth: 2, borderDash: [6, 4], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(255,193,7,0.10)', tension: 0.3, order: 2, _type: 'dac'
+    });
+    datasets.push({
+        label: 'DAC Conservative', data: dacCon, borderColor: '#E91E6344',
+        borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.08)', tension: 0.3, order: 2, _type: 'dac'
+    });
+
+    heroChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeInOutQuart' },
+            scales: {
+                x: {
+                    type: 'linear', min: 48, max: 100,
+                    afterBuildTicks: axis => { axis.ticks = [50, 60, 70, 80, 90, 95, 100].map(v => ({ value: v })); },
+                    ticks: {
+                        callback: v => {
+                            const yearMap = { 50: "'30", 60: "'32", 70: "'35", 80: "'37", 90: "'40", 95: "'45", 100: "'50" };
+                            return [v + '%', yearMap[v] || ''];
+                        },
+                        font: { size: 9 }, color: 'rgba(255,255,255,0.5)', maxRotation: 0
+                    },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { display: true, color: 'rgba(255,255,255,0.15)' }
+                },
+                y: {
+                    min: 0, max: yMaxHero,
+                    ticks: { callback: v => '$' + v, font: { size: 9 }, color: 'rgba(255,255,255,0.5)', stepSize: 100 },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { display: true, color: 'rgba(255,255,255,0.15)' }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false },
+                datalabels: { display: false },
+                annotation: { annotations: {} }
+            }
+        }
+    });
+
+    // Scroll observer for steps
+    const steps = document.querySelectorAll('.hero-scrolly-step');
+    const fadeObs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    let activeHeroStep = null;
+    const stepObs = new IntersectionObserver(entries => {
+        let best = null;
+        entries.forEach(e => {
+            if (e.isIntersecting && (!best || e.intersectionRatio > best.intersectionRatio)) best = e;
+        });
+        if (best) {
+            const stepName = best.target.getAttribute('data-hero-step');
+            if (stepName !== activeHeroStep) {
+                activeHeroStep = stepName;
+                steps.forEach(s => s.classList.remove('active'));
+                best.target.classList.add('active');
+                updateHeroChart(stepName);
+            }
+        }
+    }, { threshold: [0.1, 0.3, 0.5, 0.7, 0.9], rootMargin: '-20% 0px -30% 0px' });
+
+    steps.forEach(s => { fadeObs.observe(s); stepObs.observe(s); });
+
+    // Initialize chart
+    const initObs = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+            updateHeroChart('overview');
+            initObs.disconnect();
+        }
+    }, { threshold: 0.05 });
+    initObs.observe(document.querySelector('.hero-scrolly'));
+}
+
+function updateHeroChart(step) {
+    if (!heroChart) return;
+    const regions = ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
+    const titleEl = document.getElementById('heroChartTitle');
+
+    // Highlight config per step
+    const highlights = {
+        overview:   { show: regions, title: 'Marginal Abatement Cost vs. Projected DAC — All Regions' },
+        ercot:      { show: ['ERCOT'], title: 'ERCOT: Marginal Grid Cost vs. DAC Projections' },
+        pjm:        { show: ['PJM'], title: 'PJM: Marginal Grid Cost vs. DAC Projections' },
+        caiso:      { show: ['CAISO'], title: 'CAISO: Marginal Grid Cost vs. DAC Projections' },
+        northeast:  { show: ['NYISO', 'NEISO'], title: 'Northeast: NYISO & NEISO Marginal Cost vs. DAC' },
+        drivers:    { show: regions, title: 'What Drives the Marginal Cost P10–P90 Spread?' },
+        conclusion: { show: regions, title: 'Grid Wins the Marginal Dollar to ~90% Everywhere' }
+    };
+
+    const cfg = highlights[step] || highlights.overview;
+    if (titleEl) titleEl.textContent = cfg.title;
+
+    const showSet = new Set(cfg.show);
+    const emphasizeBands = (step === 'drivers');
+
+    heroChart.data.datasets.forEach(ds => {
+        if (ds._type === 'dac') {
+            // Always show DAC lines
+            ds.borderWidth = (step === 'drivers') ? 1 : (ds.label === 'DAC Central' ? 2 : 1.5);
+            return;
+        }
+        const visible = showSet.has(ds._region);
+        // Look up the base color from REGION_COLORS
+        const baseC = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0' }[ds._region] || '#888';
+        if (ds._type === 'band') {
+            if (visible) {
+                ds.backgroundColor = ds.label.includes('P90') ? baseC + (emphasizeBands ? '30' : '15') : 'transparent';
+                ds.borderWidth = ds.label.includes('P10') ? (emphasizeBands ? 1.5 : 0.5) : 0;
+                if (ds.label.includes('P10')) ds.borderColor = baseC + (emphasizeBands ? '80' : '30');
+            } else {
+                ds.backgroundColor = 'transparent';
+                ds.borderWidth = 0;
+                ds.borderColor = 'transparent';
+            }
+        } else if (ds._type === 'line') {
+            ds.borderWidth = visible ? 2.5 : 0.5;
+            ds.borderColor = visible ? baseC : baseC + '18';
+        }
+    });
+
+    // Add annotation for crossover zone per step
+    const annotations = {};
+    if (step === 'ercot') {
+        annotations.crossover = {
+            type: 'box', xMin: 92.5, xMax: 100, yMin: 0, yMax: yMaxHero,
+            backgroundColor: 'rgba(34,197,94,0.04)', borderColor: 'rgba(34,197,94,0.15)',
+            borderWidth: 1, borderDash: [4, 4],
+            label: { display: true, content: 'Marginal spike zone', position: 'start',
+                font: { size: 10, weight: 600 }, color: 'rgba(34,197,94,0.6)', padding: 4 }
+        };
+    } else if (step === 'pjm') {
+        annotations.crossover = {
+            type: 'box', xMin: 95, xMax: 100, yMin: 0, yMax: yMaxHero,
+            backgroundColor: 'rgba(74,144,217,0.06)', borderColor: 'rgba(74,144,217,0.2)',
+            borderWidth: 1, borderDash: [4, 4],
+            label: { display: true, content: '95% cliff', position: 'start',
+                font: { size: 10, weight: 600 }, color: 'rgba(74,144,217,0.7)', padding: 4 }
+        };
+    } else if (step === 'caiso') {
+        annotations.crossover = {
+            type: 'box', xMin: 75, xMax: 99, yMin: 0, yMax: yMaxHero,
+            backgroundColor: 'rgba(245,158,11,0.05)', borderColor: 'rgba(245,158,11,0.2)',
+            borderWidth: 1, borderDash: [4, 4],
+            label: { display: true, content: 'High-variance zone', position: 'start',
+                font: { size: 10, weight: 600 }, color: 'rgba(245,158,11,0.7)', padding: 4 }
+        };
+    } else if (step === 'northeast') {
+        annotations.crossover = {
+            type: 'box', xMin: 92.5, xMax: 99, yMin: 0, yMax: yMaxHero,
+            backgroundColor: 'rgba(233,30,99,0.06)', borderColor: 'rgba(233,30,99,0.2)',
+            borderWidth: 1, borderDash: [4, 4],
+            label: { display: true, content: 'DAC wins marginal $', position: 'start',
+                font: { size: 10, weight: 600 }, color: 'rgba(233,30,99,0.7)', padding: 4 }
+        };
+    }
+    heroChart.options.plugins.annotation.annotations = annotations;
+    heroChart.update('default');
+}
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -883,6 +1384,7 @@ function rebuildAll() {
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
     rebuildAll();
+    initHeroScrolly();
 
     // Wire toggle buttons
     document.querySelectorAll('.ctrl-toggle button').forEach(btn => {
