@@ -562,7 +562,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         $<span class="rp-mac" id="rp-avg-range">...</span>/tCO&#8322; across all five ISOs through 99% hourly matching</strong> &mdash; well below the Rennert social
         cost of carbon ($185/ton). But the stepwise marginal analysis reveals critical decision boundaries:
         individual threshold steps range from $<span class="rp-mac" id="rp-marg-min">...</span>/ton (<span id="rp-marg-min-step">...</span>) to $<span class="rp-mac" id="rp-marg-max">...</span>/ton (<span id="rp-marg-max-step">...</span>).
-        <span id="rp-dac-count">...</span> regions have at least one step exceeding DAC costs ($400&ndash;600/ton).
+        <span id="rp-dac-count">...</span> regions have at least one step exceeding DAC costs ($150&ndash;$400/ton range).
         The cost escalation is non-monotonic and region-specific, driven by resource mix transitions at each threshold.
     </p>
     <p>
@@ -1844,7 +1844,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             of procured energy generates no matching credit. Under High cost assumptions, 100% matching in NEISO
             reaches $168/MWh &mdash; <strong>4&times; wholesale electricity prices</strong>. However, even at these elevated
             per-MWh costs, the average abatement cost per ton CO&#8322; remains below $<span class="rp-mac" id="rp-mac-max-99b">...</span>/ton in all regions through 99%.
-            However, stepwise marginal analysis reveals that individual threshold steps can exceed DAC costs ($400&ndash;600/ton)
+            However, stepwise marginal analysis reveals that individual threshold steps can exceed DAC costs ($150&ndash;$400/ton range)
             in <span id="rp-dac-count2">...</span> regions. The optimal stopping
             point for grid investment &mdash; before pivoting to alternative decarb &mdash; is region-specific.</li>
     </ol>
@@ -2240,8 +2240,8 @@ document.addEventListener('DOMContentLoaded', () => {
     s('rp-marg-max', globalMax.val >= 1000 ? '1,000+' : globalMax.val);
     s('rp-marg-max-step', globalMax.region + ' ' + margLabels[globalMax.idx]);
 
-    // Regions with steps exceeding DAC ($400+)
-    const dacCount = regions.filter(r => marg[r].some(v => v !== null && v >= 400)).length;
+    // Regions with steps exceeding DAC Medium ($250+)
+    const dacCount = regions.filter(r => marg[r].some(v => v !== null && v >= 250)).length;
     s('rp-dac-count', dacCount === 3 ? 'Three' : dacCount);
     s('rp-dac-count2', dacCount === 3 ? 'three' : dacCount);
 });
