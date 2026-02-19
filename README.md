@@ -35,7 +35,15 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 | **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** — Vectorized cross-evaluation of all EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios. | When cost assumptions, LCOE tables, or sensitivity toggles change. |
 | **Step 4** | `step4_postprocess.py` | **Post-Processing** — NEISO gas constraint, CCS vs LDES crossover analysis, CO₂/MAC calculations. Produces final corrected results. | When Step 3 outputs change. |
 
-**Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 are cheap (minutes). Changing cost assumptions only requires Steps 3–4.
+**Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 + post-processing are cheap (minutes). Changing cost assumptions only requires Steps 3–4 + post-processing.
+
+### Post-Processing Scripts
+
+| Script | What It Does |
+|--------|-------------|
+| `recompute_co2.py` | Dispatch-stack emission model. Merit-order fuel retirement (coal→oil→gas). Coal/oil capped at 2025 absolute TWh. |
+| `compute_mac_stats.py` | MAC statistics: P10/P50/P90 fan, stepwise marginal, ANOVA decomposition, crossover analysis. |
+| `generate_shared_data.py` | Generates `dashboard/js/shared-data.js` with all dashboard data constants. |
 
 ### Running the Pipeline
 
@@ -54,6 +62,11 @@ python step3_cost_optimization.py
 
 # Step 4: Post-processing (~seconds)
 python step4_postprocess.py
+
+# Post-processing: CO₂, MAC stats, dashboard data
+python recompute_co2.py
+python compute_mac_stats.py
+python generate_shared_data.py
 ```
 
 ### Key Acronyms
@@ -103,10 +116,15 @@ hourly-cfe-optimizer/
 | Toggle | Options | Description |
 |--------|---------|-------------|
 | Renewable Gen | Low / Medium / High | Solar + wind LCOE |
-| Firm Gen | Low / Medium / High | Nuclear + geothermal LCOE |
+| Firm Gen | Low / Medium / High | Nuclear new-build + uprate LCOE |
 | Storage | Low / Medium / High | Battery + LDES cost |
-| Fossil Fuel | Low / Medium / High | Gas prices (affects wholesale + CCS) |
-| Transmission | None / Low / Medium / High | Interconnection costs |
+| Fossil Fuel | Low / Medium / High | Gas prices (affects wholesale + CCS fuel) |
+| Transmission | None / Low / Medium / High | Interconnection costs per resource |
+| CCS | Low / Medium / High | CCS-CCGT LCOE (default: follows Firm Gen) |
+| 45Q | On / Off | Federal 45Q tax credit ($27.5/MWh offset) |
+| Geothermal | Low / Medium / High | CAISO-only, capped at 39 TWh |
+
+**Total**: 3×3×3×3×4×3×2 = 1,944 (non-CAISO base) × 3 (geothermal, CAISO) = 5,832 / 17,496
 
 Plus client-side toggles: CCS L/M/H, 45Q On/Off, Geothermal L/M/H (CAISO only), Demand Growth (year + rate).
 
