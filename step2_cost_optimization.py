@@ -172,7 +172,7 @@ fuel_adjustments = config.get('fuel_prices', {})
 # COST FUNCTION: price any mix under any sensitivity with tranche CF
 # ============================================================================
 
-def price_mix(iso, mix_data, new_sens_key, demand_twh):
+def price_mix(iso, mix_data, new_sens_key, demand_twh, target_year=None, growth_rate=None):
     """
     Price a physical mix under a given sensitivity's cost assumptions.
     Uses tranche pricing for clean firm with merit-order dispatch:
@@ -186,7 +186,9 @@ def price_mix(iso, mix_data, new_sens_key, demand_twh):
         mix_data: dict with resource_mix, procurement_pct, hourly_match_score,
                   battery_dispatch_pct, ldes_dispatch_pct
         new_sens_key: new-format key (e.g., 'MMMM_1M_M' or 'MMMM_1M_M_M')
-        demand_twh: regional annual demand
+        demand_twh: regional annual demand (base year 2025)
+        target_year: optional target year for demand growth (e.g. 2035)
+        growth_rate: optional annual demand growth rate (e.g. 0.019)
 
     Returns:
         dict with total_cost, effective_cost, incremental, wholesale,
@@ -201,6 +203,13 @@ def price_mix(iso, mix_data, new_sens_key, demand_twh):
     fuel_level = p['fuel_level']
     tx_level = p['tx_level']
     geo_level = p['geo_level']
+
+    # Demand growth: existing generation stays flat in absolute TWh,
+    # its share of grown demand shrinks, requiring more new-build
+    years = max(0, (target_year or 2025) - 2025)
+    growth_factor = (1 + (growth_rate or 0)) ** years if years > 0 else 1.0
+    demand_twh = demand_twh * growth_factor
+    existing_scale = 1.0 / growth_factor  # scale existing shares down
 
     ren_name = LEVEL_NAME[ren_level]
     stor_name = LEVEL_NAME[stor_level]
@@ -233,7 +242,8 @@ def price_mix(iso, mix_data, new_sens_key, demand_twh):
 
         resource_frac = proc * (pct / 100.0)
         resource_pct_of_demand = resource_frac * 100.0
-        existing_share = existing.get(rtype, 0)
+        # Existing stays flat in absolute TWh; scale share for grown demand
+        existing_share = existing.get(rtype, 0) * existing_scale
         existing_pct = min(resource_pct_of_demand, existing_share)
         new_pct = max(0, resource_pct_of_demand - existing_share)
 
