@@ -3148,25 +3148,6 @@ body {
                 </div>
             </div>
 
-            <!-- 4. Fossil Fuel Price -->
-            <div class="sensitivity-toggle-item" data-toggle-group="fossil_fuel">
-                <div class="toggle-label-area">
-                    <div class="toggle-label-main">
-                        Fossil Fuel Price
-                        <span class="info-icon-wrapper" tabindex="0">
-                            <span class="info-icon" aria-label="Info">i</span>
-                            <span class="info-tooltip">Controls the price of natural gas, coal, and oil -- which together determine the wholesale electricity price you're comparing against. <strong>Low</strong> = cheap fossil fuels make grid power inexpensive (harder for clean energy to compete). <strong>Medium</strong> = current market prices. <strong>High</strong> = supply constraints or carbon pricing raise fossil costs (clean energy looks better by comparison).</span>
-                        </span>
-                    </div>
-                    <div class="toggle-label-sub">Affects wholesale electricity price</div>
-                </div>
-                <div class="toggle-btn-group" data-toggle="fossil_fuel" data-default="Medium">
-                    <button data-value="Low" data-toggle-group="fossil_fuel" data-level="Low">Low</button>
-                    <button data-value="Medium" data-toggle-group="fossil_fuel" data-level="Medium" class="active">Medium</button>
-                    <button data-value="High" data-toggle-group="fossil_fuel" data-level="High">High</button>
-                </div>
-            </div>
-
             <!-- 5. Transmission Cost -->
             <div class="sensitivity-toggle-item" data-toggle-group="transmission">
                 <div class="toggle-label-area">
@@ -3568,7 +3549,6 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     const firm = levelMap[sensitivityState.firm_gen] || 'M';
     const stor = levelMap[sensitivityState.storage] || 'M';
     const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
-    const fuel = sensitivityState.fossil_fuel || 'Medium';
     const tx = sensitivityState.transmission || 'Medium';
     const geo = levelMap[sensitivityState.geothermal_cost] || 'M';
 
@@ -3588,8 +3568,6 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
 
     const baseExisting = GRID_MIX_SHARES[iso] || {};
     let wholesale = WHOLESALE_PRICES[iso] || 30;
-    const fuelAdj = (FUEL_ADJUSTMENTS[iso] || {})[fuel] || 0;
-    wholesale = Math.max(5, wholesale + fuelAdj);
 
     let totalCost = 0;
     const resourceCosts = {};
@@ -3751,9 +3729,8 @@ function buildScenarioKey() {
     const rg = levelMap[sensitivityState.renewable_gen] || 'M';
     const fg = levelMap[sensitivityState.firm_gen] || 'M';
     const st = levelMap[sensitivityState.storage] || 'M';
-    const ff = levelMap[sensitivityState.fossil_fuel] || 'M';
     const tx = levelMap[sensitivityState.transmission] || 'M';
-    return `${rg}${fg}${st}_${ff}_${tx}`;
+    return `${rg}${fg}${st}_M_${tx}`;
 }
 
 // Get the current target year and demand growth rate from dashboard controls
@@ -6703,7 +6680,6 @@ const sensitivityState = {
     renewable_gen: 'Medium',   // Solar + Wind LCOE
     firm_gen: 'Medium',        // Nuclear uprate + new-build LCOE
     storage: 'Medium',         // Battery (4hr) + LDES (100hr) LCOS
-    fossil_fuel: 'Medium',     // Wholesale electricity price driver
     transmission: 'Medium',    // All resource transmission adders
     ccs_cost: 'Medium',        // CCS-CCGT technology maturity
     geothermal_cost: 'Medium'  // Geothermal LCOE (CAISO only)
@@ -6720,9 +6696,8 @@ function getScenarioKey() {
     const r = levelMap[sensitivityState.renewable_gen] || 'M';
     const f = levelMap[sensitivityState.firm_gen] || 'M';
     const s = levelMap[sensitivityState.storage] || 'M';
-    const fu = levelMap[sensitivityState.fossil_fuel] || 'M';
     const tx = levelMap[sensitivityState.transmission] || 'M';
-    return `${r}${f}${s}_${fu}_${tx}`;
+    return `${r}${f}${s}_M_${tx}`;
 }
 
 function resolveScenario(thresholdData) {

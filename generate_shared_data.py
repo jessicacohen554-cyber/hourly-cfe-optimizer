@@ -746,16 +746,6 @@ parts = [f'{iso}: {wp.get(iso, 0)}' for iso in ISOS]
 lines.append(f'const WHOLESALE_PRICES = {{ {", ".join(parts)} }};')
 lines.append('')
 
-fp = data['config'].get('fuel_prices', {})
-lines.append('const FUEL_ADJUSTMENTS = {')
-for iso_idx, iso in enumerate(ISOS):
-    adj = fp.get(iso, {})
-    parts = [f'{lev}: {adj.get(lev, 0)}' for lev in ['Low', 'Medium', 'High']]
-    comma = ',' if iso_idx < len(ISOS) - 1 else ''
-    lines.append(f'    {iso}: {{ {", ".join(parts)} }}{comma}')
-lines.append('};')
-lines.append('')
-
 # LCOE tables (solar, wind, battery, LDES)
 lines.append('// --- LCOE Tables ($/MWh) for client-side repricing ---')
 lines.append('const LCOE_TABLES = {')
