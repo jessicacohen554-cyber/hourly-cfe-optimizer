@@ -431,6 +431,7 @@ html('keyCounters',
         const c = REGION_CLR[iso];
         const backbone = marg[iso][0];
         const lastStep = marg[iso][marg[iso].length - 1];
+        const dacVal = dacMed.mid;
 
         // Build CSS horizontal bars with threshold coloring
         const bars = margLabels.map((label, i) => {
@@ -596,6 +597,13 @@ html('keyCounters',
         { name: 'DAC Low', val: dacLow.mid },
         { name: 'DAC Med', val: dacMed.mid },
         { name: 'DAC High', val: dacHigh.mid }
+    ];
+
+    // Dynamic DAC benchmarks (SBTi-year-indexed declining costs)
+    const dacTrajectories = [
+        { name: 'DAC Optimistic', traj: 'optimistic' },
+        { name: 'DAC Central', traj: 'central' },
+        { name: 'DAC Conservative', traj: 'conservative' }
     ];
 
     headEl.innerHTML = '<th>Region</th>' +
