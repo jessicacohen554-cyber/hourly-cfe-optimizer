@@ -7,7 +7,7 @@
 
 ### New Toggle Architecture Decisions (Feb 19, 2026)
 
-Three new Step 2 cost model changes — no Step 1 physics re-run needed:
+Three new Step 3 cost model changes — no Step 1 physics re-run needed:
 
 1. **CCS separated from Firm Gen toggle** — CCS gets its own L/M/H toggle (maturity-based: L=mature/low capex, H=immature/high capex) plus a binary 45Q On/Off switch. 6 CCS cost states total (3×2).
 2. **Geothermal toggle (CAISO only)** — L/M/H based on published data (NREL ATB, USGS, Lazard). 5 GW cap (~39 TWh/yr) from USGS identified hydrothermal. After cap, remaining clean firm filled by cheapest of nuclear new-build vs CCS (toggle-dependent). Non-CAISO ISOs have zero geothermal resource — toggle hidden.
@@ -15,7 +15,7 @@ Three new Step 2 cost model changes — no Step 1 physics re-run needed:
 4. **CAISO clean firm merit order**: Existing → uprates → geothermal (capped) → cheapest of nuclear/CCS (toggle-dependent)
 5. **Non-CAISO clean firm merit order**: Existing → uprates → cheapest of nuclear/CCS (toggle-dependent)
 
-**Sensitivity space expanded**: 324 → 5,832 (non-CAISO) / 17,496 (CAISO) combos. All Step 2 arithmetic — minutes, not hours.
+**Sensitivity space expanded**: 324 → 5,832 (non-CAISO) / 17,496 (CAISO) combos. All Step 3 arithmetic — minutes, not hours.
 
 ### Demand Growth in Resource Mix Pricing (Feb 19, 2026)
 
@@ -62,7 +62,7 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 | D | Numba JIT (try/fallback) | Compile storage scoring to machine code; fall back to B+C if install fails | 10-50× on storage (if available) |
 | F | Shared memory cache | `multiprocessing.shared_memory` for parallel ISO workers to share data | Enables A |
 
-**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (324 paired-toggle scenarios) applied in Step 2 post-processing. This reduces from 21,060 cost-coupled optimizations to 65 physics-only sweeps (13 thresholds × 5 ISOs), each finding the Pareto frontier of feasible mixes.
+**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (324 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 21,060 cost-coupled optimizations to 65 physics-only sweeps (13 thresholds × 5 ISOs), each finding the Pareto frontier of feasible mixes.
 
 **Projected runtime**: ~1-3 min with Numba (installed successfully). Down from multi-hour current architecture.
 
@@ -77,19 +77,24 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 - [ ] 13-threshold sweep with adaptive procurement bounds
 - [ ] JSON + Parquet dual output of feasible solution space
 
-### Three-Step Pipeline Architecture
+### 4-Step Pipeline Architecture
 
-The optimizer operates as a three-step pipeline. Steps are independent — only re-run the step whose inputs changed.
+The optimizer runs as a 4-step pipeline. Each step is independent — only re-run the step whose inputs changed.
 
-| Step | Name | What It Does | When to Re-run |
-|------|------|-------------|---------------|
-| **Step 1** | **Physics Optimization** | Hourly match optimization: sweeps resource mixes (4D), evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces 324 scenarios × 13 thresholds × 5 regions = 21,060 physics-validated resource mixes, each with 3-5 Pareto-optimal points. | Only if dispatch logic, generation curves, or demand curves change. |
-| **Step 2** | **Cost Optimization** | Applies cost model to cached physics results. Merit-order tranche pricing for clean firm (uprate → new-build). NEISO gas constraint and other post-processing that may shift global optima. Re-ranks scenarios to find lowest-cost physics-valid mix per threshold/region. | When cost assumptions, tranche caps, LCOE tables, or constraints change. No physics re-run needed. |
-| **Step 3** | **Post-Processing** | CO₂ calculations, MAC calculations, statistical analysis (P10/P50/P90, ANOVA), monotonicity enforcement. Produces final results for site. | When Step 2 outputs change, or when CO₂ methodology changes. |
+| Step | Script | Name | What It Does | When to Re-run |
+|------|--------|------|-------------|---------------|
+| **Step 1** | `step1_pfs_generator.py` | **PFS Generator** | Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces 21.4M physics-validated mixes across 5 ISOs × 13 thresholds. | Only if dispatch logic, generation curves, or demand curves change. |
+| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** | Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement per allocation, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
+| **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** | Vectorized cross-evaluation of all EF mixes under 324 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios (25 years × 3 growth rates). | When cost assumptions, tranche caps, LCOE tables, or sensitivity toggles change. |
+| **Step 4** | `step4_postprocess.py` | **Post-Processing** | NEISO gas constraint, CCS vs LDES crossover analysis, CO₂ calculations, MAC calculations. Produces final corrected results for the dashboard. | When Step 3 outputs change, or when CO₂ methodology changes. |
 
-**Key principle**: Step 1 is expensive (hours of compute). Steps 2-3 are cheap (seconds). Changing cost assumptions only requires Steps 2-3.
+**Key acronyms**:
+- **PFS** — Physics Feasible Space: the full set of physically valid resource mixes (Step 1 output, `data/physics_cache_v4.parquet`)
+- **EF** — Efficient Frontier: the reduced set of non-dominated mixes (Step 2 output, `data/pfs_post_ef.parquet`)
 
-**Data contract**: Step 2 must NOT change existing columns in shared-data.js or overprocure_results.json. Add new columns/fields as needed. This prevents recoding existing figures and dashboards.
+**Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 are cheap (minutes). Changing cost assumptions only requires Steps 3–4.
+
+**Data contract**: Step 3 must NOT change existing columns in shared-data.js or overprocure_results.json. Add new columns/fields as needed. This prevents recoding existing figures and dashboards.
 
 ### What was accomplished
 - [x] Homepage (`index.html`) — 4 charts rendering with real data, region toggle pills, narrative sections
@@ -207,7 +212,7 @@ The optimizer operates as a three-step pipeline. Steps are independent — only 
 ### Pre-Run QA/QC Gate (Mandatory Before Every Optimizer Run)
 **This gate exists because**: a previous run wasted 3+ hours of compute due to incorrect hydro caps that weren't caught before launch. Every optimizer run is expensive — never launch without verifying assumptions first.
 
-Before launching `optimize_overprocure.py`, the following must be verified:
+Before launching `step1_pfs_generator.py`, the following must be verified:
 1. All decisions from the current conversation implemented in optimizer code
 2. All decisions captured in SPEC.md
 3. No open questions that could change optimizer logic, cost tables, or methodology
@@ -472,7 +477,7 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 - Non-CAISO: 3×3×3×3×2×3×4 = **5,832 cost scenarios** per region per threshold
 - CAISO: 5,832 × 3 = **17,496 cost scenarios** per threshold (includes geothermal toggle)
 - Total: 17,496 + 5,832×4 = **40,824 scenarios** per threshold set
-- All Step 2 (arithmetic on cached physics) — runs in minutes, not hours
+- All Step 3 (arithmetic on cached physics) — runs in minutes, not hours
 
 **Sensitivity key format**:
 - Non-CAISO: `RFSC_QFF_TX` (e.g., `MMMM_1M_M` = all Medium, 45Q on)
@@ -481,7 +486,7 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 
 **NOTE**: All graduated toggles use **Low / Medium / High** naming consistently (never "Base" or "Baseline").
 
-**Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. Physics cached from Step 1; Step 2 cross-evaluates all feasible mixes under each sensitivity combo to find the cheapest valid mix.
+**Optimizer approach**: Resource mix co-optimized with costs for EVERY scenario. Different cost assumptions produce different optimal resource mixes — this is the core scientific contribution. Physics cached from Step 1; Step 3 cross-evaluates all EF mixes under each sensitivity combo to find the cheapest valid mix.
 
 ### 4.1 Warm-Start Optimization (Trifold Seed Strategy)
 
@@ -576,9 +581,9 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 | Medium | $73 | $40 | $62 | $81 | $73 |
 | High | $95 | $52 | $81 | $105 | $95 |
 
-### 5.3 Clean Firm LCOE ($/MWh) — Merit-Order Tranche Model (Step 2)
+### 5.3 Clean Firm LCOE ($/MWh) — Merit-Order Tranche Model (Step 3)
 
-Clean firm cost uses a **merit-order supply curve** with two tranches, filled cheapest-first. The effective LCOE depends on how much clean firm a scenario requires — small amounts are cheap (all uprates), large amounts are expensive (hitting new-build tranche). This is a Step 2 cost calculation applied to cached Step 1 physics results.
+Clean firm cost uses a **merit-order supply curve** with two tranches, filled cheapest-first. The effective LCOE depends on how much clean firm a scenario requires — small amounts are cheap (all uprates), large amounts are expensive (hitting new-build tranche). This is a Step 3 cost calculation applied to the Step 2 efficient frontier.
 
 #### Tranche 1: Nuclear Uprates (Cheapest, Capped)
 
@@ -633,7 +638,7 @@ Nuclear new-build LCOE reflects advanced SMR/Gen IV technology. Controlled by **
 
 *Low = nth-of-a-kind SMR deployment target ($70/MWh). Regional variation at Low is minimal (mature deployment compresses cost differences). Medium/High retain larger regional spreads reflecting siting, permitting, and labor differentials. ERCOT lowest (favorable siting/permitting). NYISO highest (siting constraints, labor costs).*
 
-#### Merit-Order Cost Calculation (Step 2 Pipeline)
+#### Merit-Order Cost Calculation (Step 3 Pipeline)
 
 For each cached scenario's new clean firm demand (above existing grid share), the merit order fills cheapest-first. **CAISO has 4 tranches; other ISOs have 3.**
 
@@ -673,7 +678,7 @@ Previous blended LCOE (still used in Step 1 physics optimization cache):
 | Medium | $79 | $79 | $68 | $86 | $92 |
 | High | $115 | $115 | $108 | $136 | $143 |
 
-*These are what the Step 1 optimizer used. Step 2 reprices using the tranche model above.*
+*These are what the Step 1 optimizer used. Step 3 reprices using the tranche model above.*
 
 ### 5.4 CCS-CCGT LCOE ($/MWh) — Separate Toggle with 45Q Switch
 
@@ -713,7 +718,7 @@ CCS cost is controlled by two independent toggles: **CCS Cost** (L/M/H maturity)
 - Capture rate: 95%
 - Residual emissions: ~0.0185 tCO2/MWh (= 0.37 × 0.05)
 
-**45Q behavioral note**: With 45Q ON, CCS modeled as flat baseload (45Q incentivizes max CF to maximize capture credits). With 45Q OFF, CCS dispatch assumption unchanged in Step 2 (same cached physics), but the cost premium reflects the absence of the policy subsidy.
+**45Q behavioral note**: With 45Q ON, CCS modeled as flat baseload (45Q incentivizes max CF to maximize capture credits). With 45Q OFF, CCS dispatch assumption unchanged in Step 3 (same cached physics), but the cost premium reflects the absence of the policy subsidy.
 
 ### 5.5 Battery LCOS ($/MWh) — Regionalized
 
@@ -988,7 +993,7 @@ Narrower bounds at low thresholds where targets are easily met; wider at high th
 
 **Cross-threshold pruning**: Thresholds are processed in ascending order (50% → 100%). After each threshold, the optimizer records which mixes were infeasible even at maximum procurement. These mixes are eliminated from all higher thresholds (if it can't hit 50%, it can't hit 85%). Additionally, each mix's minimum-feasible procurement from the previous threshold becomes the floor for the next threshold (no point starting below the level needed for a lower target). This dramatically narrows the search space for high thresholds.
 
-**Persistent solution cache**: Results are accumulated in `data/physics_cache_v4.json` across runs. Each run merges new solutions with the existing cache — deduplicating by (mix, procurement, battery, ldes) key but never deleting previously found solutions. This means iterating on parameter bounds, procurement ceilings, or grid resolution adds to the feasible solution space without losing work from prior runs. The cost model in Step 2 always operates on the full accumulated cache.
+**Persistent solution cache**: Results are accumulated in `data/physics_cache_v4.json` across runs. Each run merges new solutions with the existing cache — deduplicating by (mix, procurement, battery, ldes) key but never deleting previously found solutions. This means iterating on parameter bounds, procurement ceilings, or grid resolution adds to the feasible solution space without losing work from prior runs. The cost model in Step 3 always operates on the EF extracted in Step 2.
 
 ### 11.2 Edge Case Seed Mixes
 
@@ -1351,9 +1356,9 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 | Dashboard controls | 12 (2 existing + 7 graduated toggles + 1 binary + 2 region-conditional) |
 | Sensitivity toggles | 7 graduated (L/M/H) + 1 binary (45Q On/Off) + 1 CAISO-only (Geothermal L/M/H) |
 | Step 1 physics scenarios per region/threshold | 324 (3×3×3×3×4) — each independently co-optimized |
-| Step 2 cost scenarios (non-CAISO) | 5,832 (3×3×3×3×2×3×4) per region/threshold |
-| Step 2 cost scenarios (CAISO) | 17,496 (5,832 × 3 geothermal) per threshold |
-| Total Step 2 evaluations | ~40,824 sensitivity combos × unique mixes per (region, threshold) |
+| Step 3 cost scenarios (non-CAISO) | 5,832 (3×3×3×3×2×3×4) per region/threshold |
+| Step 3 cost scenarios (CAISO) | 17,496 (5,832 × 3 geothermal) per threshold |
+| Total Step 3 evaluations | ~40,824 sensitivity combos × unique mixes per (region, threshold) |
 | Pareto points per scenario | 3-5 (procurement/storage tradeoff frontier) |
 | Regional deep-dive pages | 1 (combined, with region selector) |
 | Research paper sections | 8 (including 5 regional deep-dives) |
@@ -1540,7 +1545,7 @@ Any post-processing (cost overlays, BECCS, gas constraints, carbon pricing) oper
 
 ## 22. Post-Processing Corrections & Overlays (Feb 15, 2026)
 
-Applied to cached optimizer results via `postprocess_results.py`. Raw cache preserved in `data/optimizer_cache.json`; corrected results written to `dashboard/overprocure_results.json`.
+Applied to Step 3 cost optimization results via `step4_postprocess.py`. Corrected results written to `dashboard/overprocure_results.json`.
 
 ### 22.1 CO₂ Monotonicity Enforcement
 
