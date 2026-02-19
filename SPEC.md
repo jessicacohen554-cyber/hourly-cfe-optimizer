@@ -5,6 +5,43 @@
 
 ## Current Status (Feb 19, 2026)
 
+### Columnar JSON Format for Feasible Mixes (Feb 19, 2026)
+
+**Problem**: `feasible_mixes` in `overprocure_results.json` stored as array of dicts — each mix repeated key names (`resource_mix`, `clean_firm`, `solar`, etc.) across potentially 1.78M entries, inflating JSON from ~40 MB to ~312 MB.
+
+**Decision**: Option 2 — Columnar format. Store as `{col_name: [values...]}` instead of `[{col_name: val}, ...]`.
+
+**Format**:
+```json
+"feasible_mixes": {
+  "clean_firm": [50, 60, ...],
+  "solar": [25, 20, ...],
+  "wind": [...],
+  "ccs_ccgt": [...],
+  "hydro": [...],
+  "procurement_pct": [...],
+  "hourly_match_score": [...],
+  "battery_dispatch_pct": [...],
+  "ldes_dispatch_pct": [...]
+}
+```
+
+**Measured savings**: 81% reduction per threshold group (98K → 18K bytes for 510 mixes). Projected ~312 MB → ~40 MB at full 1.78M mix scale.
+
+**Files changed**:
+- `step3_cost_optimization.py` — writes columnar format
+- `step5_compressed_day.py` — reads both columnar (new) and row (legacy) formats
+- `generate_shared_data.py` — reads both columnar (new) and row (legacy) formats
+- Dashboard JS (`shared-data.js`) — already used compact arrays `[cf, sol, wnd, ccs, hyd, proc, match, bat, ldes]`; no change needed
+
+**Backward compat**: Step 5 and generate_shared_data both auto-detect format (`isinstance(fmixes, dict)` vs `isinstance(fmixes, list)`).
+
+### Compressed Day Chart: Curtailment Stacking Fix (Feb 19, 2026)
+
+**Problem**: Curtailment was anchored to the demand line and stacked upward, creating a visual gap between the top of matched generation and the bottom of curtailment. On mobile, this made it look like curtailment was floating disconnected from the generation it belongs to.
+
+**Fix**: Curtailment now stacks from `matchedTotal` (top of generation stack) upward, keeping it flush against the generation area. The demand line cuts through as a visual boundary — area above demand = true curtailment, area between matchedTotal and demand = unmatched gap.
+
 ### New Toggle Architecture Decisions (Feb 19, 2026)
 
 Three new Step 3 cost model changes — no Step 1 physics re-run needed:
