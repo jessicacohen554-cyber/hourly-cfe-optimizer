@@ -4153,22 +4153,41 @@ function normalizeEntry(raw) {
 // ---- Compressed Day Profile Lookup ----
 // Builds the same mix_key as step5_compressed_day.py to look up pre-computed profiles
 function getCompressedDayProfile(iso, entry) {
-    if (!COMPRESSED_DAY_PROFILES || !entry) return null;
-    const isoData = COMPRESSED_DAY_PROFILES[iso];
-    if (!isoData) return null;
+    if (!entry) return null;
 
-    const rm = entry.resource_mix || {};
-    const cf = rm.clean_firm || 0;
-    const s = rm.solar || 0;
-    const w = rm.wind || 0;
-    const c = rm.ccs_ccgt || 0;
-    const h = rm.hydro || 0;
-    const proc = entry.procurement_pct || 0;
-    const batt = entry.battery_dispatch_pct || 0;
-    const ldes = entry.ldes_dispatch_pct || 0;
-    const mk = `${cf}_${s}_${w}_${c}_${h}_${proc}_${batt}_${ldes}`;
+    // Primary: look up exact mix in external profiles JSON
+    if (COMPRESSED_DAY_PROFILES) {
+        const isoData = COMPRESSED_DAY_PROFILES[iso];
+        if (isoData) {
+            const rm = entry.resource_mix || {};
+            const mk = `${rm.clean_firm||0}_${rm.solar||0}_${rm.wind||0}_${rm.ccs_ccgt||0}_${rm.hydro||0}_${entry.procurement_pct||0}_${entry.battery_dispatch_pct||0}_${entry.ldes_dispatch_pct||0}`;
+            const profile = isoData.profiles?.[mk];
+            if (profile) return profile;
+        }
+    }
 
-    return isoData.profiles?.[mk] || null;
+    // Fallback: use inline COMPRESSED_DAY_DATA from shared-data.js (Medium scenario)
+    if (typeof COMPRESSED_DAY_DATA !== 'undefined' && COMPRESSED_DAY_DATA[iso]) {
+        const cd = COMPRESSED_DAY_DATA[iso];
+        const tIdx = THRESHOLDS.indexOf(parseFloat(String(entry.threshold || '')));
+        if (tIdx >= 0 && cd.demand[tIdx] && cd.demand[tIdx].some(v => v > 0)) {
+            return {
+                demand: cd.demand[tIdx],
+                gap: cd.gap[tIdx],
+                battery_charge: cd.battery_charge[tIdx],
+                ldes_charge: cd.ldes_charge[tIdx],
+                matched: {
+                    clean_firm: cd.matched.clean_firm[tIdx],
+                    solar: cd.matched.solar[tIdx],
+                    wind: cd.matched.wind[tIdx],
+                    ccs_ccgt: cd.matched.ccs_ccgt[tIdx],
+                    hydro: cd.matched.hydro[tIdx],
+                },
+            };
+        }
+    }
+
+    return null;
 }
 
 // ---- Data Loading ----

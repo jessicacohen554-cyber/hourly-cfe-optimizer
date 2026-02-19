@@ -164,10 +164,19 @@ for iso in ISOS:
     print(f"  {iso} clean_firm: {iso_data['clean_firm']}")
 
 # ============================================================================
-# EXTRACT COMPRESSED_DAY_DATA
+# EXTRACT COMPRESSED_DAY_DATA (from compressed_day_profiles.json)
 # ============================================================================
 
 print("\nExtracting COMPRESSED_DAY_DATA...")
+cd_profiles_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard', 'compressed_day_profiles.json')
+cd_profiles = {}
+if os.path.exists(cd_profiles_path):
+    with open(cd_profiles_path) as f:
+        cd_profiles = json.load(f)
+    print(f"  Loaded compressed_day_profiles.json ({os.path.getsize(cd_profiles_path) / 1024 / 1024:.1f} MB)")
+else:
+    print("  WARNING: compressed_day_profiles.json not found — compressed day will be zeros")
+
 compressed_day_data = {}
 for iso in ISOS:
     iso_cd = {
@@ -178,16 +187,27 @@ for iso in ISOS:
         'ldes_charge': [],
     }
 
+    iso_profiles = cd_profiles.get(iso, {}).get('profiles', {})
+
     for t in THRESHOLDS:
+        # Build the mix_key for Medium scenario at this threshold
         sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
-        if sc and 'compressed_day' in sc:
-            cd = sc['compressed_day']
-            iso_cd['demand'].append([round(v, 5) for v in cd['demand']])
-            iso_cd['gap'].append([round(v, 5) for v in cd['gap']])
-            iso_cd['battery_charge'].append([round(v, 5) for v in cd.get('battery_charge', [0]*24)])
-            iso_cd['ldes_charge'].append([round(v, 5) for v in cd.get('ldes_charge', [0]*24)])
+        profile = None
+        if sc and iso_profiles:
+            rm = sc.get('resource_mix', {})
+            proc = sc.get('procurement_pct', 0)
+            batt = sc.get('battery_dispatch_pct', 0)
+            ldes = sc.get('ldes_dispatch_pct', 0)
+            mk = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_{proc}_{batt}_{ldes}"
+            profile = iso_profiles.get(mk)
+
+        if profile:
+            iso_cd['demand'].append([round(v, 5) for v in profile['demand']])
+            iso_cd['gap'].append([round(v, 5) for v in profile['gap']])
+            iso_cd['battery_charge'].append([round(v, 5) for v in profile.get('battery_charge', [0]*24)])
+            iso_cd['ldes_charge'].append([round(v, 5) for v in profile.get('ldes_charge', [0]*24)])
             for res in MATCHED_RESOURCES:
-                vals = cd.get('matched', {}).get(res, [0]*24)
+                vals = profile.get('matched', {}).get(res, [0]*24)
                 iso_cd['matched'][res].append([round(v, 5) for v in vals])
         else:
             iso_cd['demand'].append([0]*24)
@@ -198,7 +218,8 @@ for iso in ISOS:
                 iso_cd['matched'][res].append([0]*24)
 
     compressed_day_data[iso] = iso_cd
-    print(f"  {iso}: {len(iso_cd['demand'])} thresholds × 24h")
+    filled = sum(1 for d in iso_cd['demand'] if any(v > 0 for v in d))
+    print(f"  {iso}: {filled}/{len(iso_cd['demand'])} thresholds with profile data")
 
 # ============================================================================
 # EXTRACT CF_TRANCHE_DATA
