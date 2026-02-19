@@ -3108,17 +3108,17 @@ body {
                 </div>
             </div>
 
-            <!-- 2. Firm Generation Cost -->
+            <!-- 2. Firm Generation Cost (Nuclear) -->
             <div class="sensitivity-toggle-item" data-toggle-group="firm_gen">
                 <div class="toggle-label-area">
                     <div class="toggle-label-main">
                         Firm Generation Cost
                         <span class="info-icon-wrapper" tabindex="0">
                             <span class="info-icon" aria-label="Info">i</span>
-                            <span class="info-tooltip">Controls the assumed cost of "always-on" clean power sources -- advanced nuclear and gas plants with carbon capture (CCS-CCGT). These resources run 24/7 regardless of weather. <strong>Low</strong> = favorable construction and policy support. <strong>Medium</strong> = current best estimates. <strong>High</strong> = project overruns or regulatory delays. Firm generation fills the gaps when sun and wind are unavailable.</span>
+                            <span class="info-tooltip">Controls the assumed cost of advanced nuclear (SMR) new-build and nuclear uprates. These "always-on" clean power sources run 24/7 regardless of weather. <strong>Low</strong> = nth-of-a-kind SMR deployment (~$70/MWh). <strong>Medium</strong> = current best estimates. <strong>High</strong> = first-of-a-kind project costs. CCS-CCGT has its own toggle below.</span>
                         </span>
                     </div>
-                    <div class="toggle-label-sub">Clean Firm + CCS-CCGT LCOE</div>
+                    <div class="toggle-label-sub">Nuclear uprate + new-build LCOE</div>
                 </div>
                 <div class="toggle-btn-group" data-toggle="firm_gen" data-default="Medium">
                     <button data-value="Low" data-toggle-group="firm_gen" data-level="Low">Low</button>
@@ -3185,14 +3185,33 @@ body {
                 </div>
             </div>
 
+            <!-- 6. CCS-CCGT Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="ccs_cost" style="border-top: 2px solid rgba(14,165,233,0.3); padding-top: 12px; margin-top: 8px;">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        CCS-CCGT Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of natural gas plants with carbon capture and storage (CCS-CCGT). <strong>Low</strong> = mature deployment with low capex (nth-of-a-kind). <strong>Medium</strong> = current best estimates. <strong>High</strong> = immature technology with high capex (first-of-a-kind). Interacts with the 45Q tax credit toggle below.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">CCS-CCGT technology maturity</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="ccs_cost" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="ccs_cost" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="ccs_cost" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="ccs_cost" data-level="High">High</button>
+                </div>
+            </div>
+
             <!-- 45Q Tax Credit Toggle -->
-            <div class="sensitivity-toggle-item" data-toggle-group="45q" style="border-top: 2px solid rgba(14,165,233,0.3); padding-top: 12px; margin-top: 8px;">
+            <div class="sensitivity-toggle-item" data-toggle-group="45q">
                 <div class="toggle-label-area">
                     <div class="toggle-label-main">
                         45Q Tax Credit
                         <span class="info-icon-wrapper" tabindex="0">
                             <span class="info-icon" aria-label="Info">i</span>
-                            <span class="info-tooltip">The 45Q tax credit provides $85/ton CO₂ for carbon capture and storage, reducing CCS-CCGT costs by ~$33/MWh. <strong>With 45Q</strong> reflects current policy (default). <strong>Without 45Q</strong> shows what happens if the credit expires or is repealed — CCS-CCGT becomes significantly more expensive, potentially changing optimal resource mixes.</span>
+                            <span class="info-tooltip">The 45Q tax credit provides $85/ton CO₂ for carbon capture and storage, reducing CCS-CCGT costs by ~$29/MWh. <strong>With 45Q</strong> reflects current policy (default). <strong>Without 45Q</strong> shows what happens if the credit expires or is repealed — CCS becomes significantly more expensive.</span>
                         </span>
                     </div>
                     <div class="toggle-label-sub">CCS-CCGT cost offset ($85/ton CO₂)</div>
@@ -3200,6 +3219,25 @@ body {
                 <div class="toggle-btn-group" id="toggle45Q">
                     <button data-value="with" class="active" style="min-width: 80px;">With 45Q</button>
                     <button data-value="without" style="min-width: 80px;">Without 45Q</button>
+                </div>
+            </div>
+
+            <!-- 7. Geothermal Cost (CAISO only) -->
+            <div class="sensitivity-toggle-item" data-toggle-group="geothermal_cost" id="geoToggleItem" style="display:none;">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Geothermal Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of geothermal power in CAISO. California has ~5 GW of identified hydrothermal resources (USGS). Geothermal fills clean firm demand before nuclear/CCS up to a 39 TWh/yr cap. <strong>Low</strong> = $63/MWh (best sites). <strong>Medium</strong> = $88/MWh (typical). <strong>High</strong> = $110/MWh (EGS-like). Only available in CAISO.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">CAISO hydrothermal (capped at 39 TWh/yr)</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="geothermal_cost" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="geothermal_cost" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="geothermal_cost" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="geothermal_cost" data-level="High">High</button>
                 </div>
             </div>
         </div>
@@ -3469,8 +3507,196 @@ function createStripePattern(ctx, color, bgColor) {
     return ctx.createPattern(patternCanvas, 'repeat');
 }
 
+// ---- Client-Side Repricing Engine ----
+// Mirrors Python step2_cost_optimization.price_mix() for 40k+ sensitivity combos
+// Uses FEASIBLE_MIXES + cost tables from shared-data.js
+// targetYear & growthRate: optional demand growth params. Existing generation stays
+// flat in absolute TWh; its share of grown demand shrinks, requiring more new-build.
+function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
+    // mixArr: [cf%, solar%, wind%, ccs%, hydro%, procurement%, match%, battery%, ldes%]
+    const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
+    const ren = levelMap[sensitivityState.renewable_gen] || 'M';
+    const firm = levelMap[sensitivityState.firm_gen] || 'M';
+    const stor = levelMap[sensitivityState.storage] || 'M';
+    const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
+    const fuel = sensitivityState.fossil_fuel || 'Medium';
+    const tx = sensitivityState.transmission || 'Medium';
+    const geo = levelMap[sensitivityState.geothermal_cost] || 'M';
+
+    // Demand growth: scale demand up, existing stays flat in absolute TWh
+    const years = (targetYear && targetYear > 2025) ? (targetYear - 2025) : 0;
+    const rate = growthRate || 0;
+    const growthFactor = years > 0 ? Math.pow(1 + rate, years) : 1;
+    const demandTwh = baseDemandTwh * growthFactor;
+    // Existing shares are % of 2025 demand — scale down to % of grown demand
+    const existingScaleFactor = 1 / growthFactor;
+
+    const rm = { clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2], ccs_ccgt: mixArr[3], hydro: mixArr[4] };
+    const proc = mixArr[5] / 100.0;
+    const matchFrac = mixArr[6] / 100.0;
+    const batPct = mixArr[7] || 0;
+    const ldesPct = mixArr[8] || 0;
+
+    const baseExisting = GRID_MIX_SHARES[iso] || {};
+    let wholesale = WHOLESALE_PRICES[iso] || 30;
+    const fuelAdj = (FUEL_ADJUSTMENTS[iso] || {})[fuel] || 0;
+    wholesale = Math.max(5, wholesale + fuelAdj);
+
+    let totalCost = 0;
+    const resourceCosts = {};
+    const RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'];
+
+    for (const rtype of RESOURCE_TYPES) {
+        const pct = rm[rtype] || 0;
+        if (pct <= 0) {
+            resourceCosts[rtype] = { existing_pct: 0, new_pct: 0, cost_per_demand_mwh: 0 };
+            continue;
+        }
+
+        const resourcePctOfDemand = proc * pct;
+        // Existing stays flat in absolute TWh; scale share down as demand grows
+        const existingShare = (baseExisting[rtype] || 0) * existingScaleFactor;
+        const existingPct = Math.min(resourcePctOfDemand, existingShare);
+        const newPct = Math.max(0, resourcePctOfDemand - existingShare);
+
+        let costPerDemand = 0;
+
+        if (rtype === 'clean_firm') {
+            // Merit-order tranche pricing
+            const newCfTwh = (newPct / 100.0) * demandTwh;
+            const existingCost = (existingPct / 100.0) * wholesale;
+            const txAddCf = ((TX_TABLES.clean_firm || {})[tx] || {})[iso] || 0;
+            const txAddCcs = ((TX_TABLES.ccs_ccgt || {})[tx] || {})[iso] || 0;
+
+            let uprateTwh = 0, geoTwh = 0, nuclearTwh = 0, ccsTwh = 0;
+            let uprateCostM = 0, geoCostM = 0, nuclearCostM = 0, ccsCostM = 0;
+
+            if (newCfTwh > 0) {
+                const uprateCap = (UPRATE_CAPS_TWH || {})[iso] || 0;
+                // Tranche 1: Nuclear uprates (no tx, capped)
+                uprateTwh = Math.min(newCfTwh, uprateCap);
+                uprateCostM = uprateTwh * (UPRATE_LCOE[firm] || 25);
+                let remaining = Math.max(0, newCfTwh - uprateTwh);
+
+                // Tranche 2: Geothermal (CAISO only, capped)
+                if (iso === 'CAISO' && remaining > 0) {
+                    const geoPrice = ((GEOTHERMAL_LCOE[geo] || {}).CAISO || 88) + txAddCf;
+                    geoTwh = Math.min(remaining, GEOTHERMAL_CAP_TWH || 39);
+                    geoCostM = geoTwh * geoPrice;
+                    remaining = Math.max(0, remaining - geoTwh);
+                }
+
+                // Tranche 3: Cheapest of nuclear new-build vs CCS
+                if (remaining > 0) {
+                    const nuclearPrice = ((NUCLEAR_NEWBUILD_LCOE[firm] || {})[iso] || 95) + txAddCf;
+                    const ccsTable = show45Q ? CCS_LCOE_45Q_ON : CCS_LCOE_45Q_OFF;
+                    const ccsPrice = ((ccsTable[ccs] || {})[iso] || 86) + txAddCcs;
+
+                    if (nuclearPrice <= ccsPrice) {
+                        nuclearTwh = remaining;
+                        nuclearCostM = nuclearTwh * nuclearPrice;
+                    } else {
+                        ccsTwh = remaining;
+                        ccsCostM = ccsTwh * ccsPrice;
+                    }
+                }
+            }
+
+            const trancheTotalM = uprateCostM + geoCostM + nuclearCostM + ccsCostM;
+            costPerDemand = (existingPct / 100.0) * wholesale + trancheTotalM / demandTwh;
+
+            resourceCosts[rtype] = {
+                existing_pct: existingPct, new_pct: newPct,
+                cost_per_demand_mwh: costPerDemand,
+                new_cf_twh: newCfTwh, uprate_twh: uprateTwh,
+                uprate_price: UPRATE_LCOE[firm] || 25,
+                geo_twh: geoTwh, geo_price: iso === 'CAISO' ? ((GEOTHERMAL_LCOE[geo] || {}).CAISO || 88) + txAddCf : 0,
+                nuclear_newbuild_twh: nuclearTwh,
+                nuclear_price: ((NUCLEAR_NEWBUILD_LCOE[firm] || {})[iso] || 95) + txAddCf,
+                ccs_newbuild_twh: ccsTwh,
+                ccs_price: ((show45Q ? CCS_LCOE_45Q_ON : CCS_LCOE_45Q_OFF)[ccs] || {})[iso] || 86,
+                effective_new_lcoe: newCfTwh > 0 ? trancheTotalM / newCfTwh : 0
+            };
+
+        } else if (rtype === 'hydro') {
+            costPerDemand = (resourcePctOfDemand / 100.0) * wholesale;
+            resourceCosts[rtype] = { existing_pct: existingPct, new_pct: newPct, cost_per_demand_mwh: costPerDemand };
+
+        } else if (rtype === 'ccs_ccgt') {
+            const ccsTable = show45Q ? CCS_LCOE_45Q_ON : CCS_LCOE_45Q_OFF;
+            const lcoe = ((ccsTable[ccs] || {})[iso] || 86);
+            const txAdd = ((TX_TABLES.ccs_ccgt || {})[tx] || {})[iso] || 0;
+            costPerDemand = (existingPct / 100.0) * wholesale + (newPct / 100.0) * (lcoe + txAdd);
+            resourceCosts[rtype] = { existing_pct: existingPct, new_pct: newPct, cost_per_demand_mwh: costPerDemand };
+
+        } else {
+            // Solar, wind
+            const renName = { L: 'Low', M: 'Medium', H: 'High' }[ren] || 'Medium';
+            const lcoe = ((LCOE_TABLES[rtype] || {})[renName] || {})[iso] || 60;
+            const txAdd = ((TX_TABLES[rtype] || {})[tx] || {})[iso] || 0;
+            costPerDemand = (existingPct / 100.0) * wholesale + (newPct / 100.0) * (lcoe + txAdd);
+            resourceCosts[rtype] = { existing_pct: existingPct, new_pct: newPct, cost_per_demand_mwh: costPerDemand };
+        }
+
+        totalCost += costPerDemand;
+    }
+
+    // Storage costs
+    const storName = { L: 'Low', M: 'Medium', H: 'High' }[stor] || 'Medium';
+    const batLcoe = ((LCOE_TABLES.battery || {})[storName] || {})[iso] || 102;
+    const batTx = ((TX_TABLES.battery || {})[tx] || {})[iso] || 0;
+    const batCost = (batPct / 100.0) * (batLcoe + batTx);
+    resourceCosts.battery = { dispatch_pct: batPct, cost_per_demand_mwh: batCost };
+    totalCost += batCost;
+
+    const ldesLcoe = ((LCOE_TABLES.ldes || {})[storName] || {})[iso] || 180;
+    const ldesTx = ((TX_TABLES.ldes || {})[tx] || {})[iso] || 0;
+    const ldesCost = (ldesPct / 100.0) * (ldesLcoe + ldesTx);
+    resourceCosts.ldes = { dispatch_pct: ldesPct, cost_per_demand_mwh: ldesCost };
+    totalCost += ldesCost;
+
+    const effectiveCost = matchFrac > 0 ? totalCost / matchFrac : 0;
+
+    return {
+        total_cost: totalCost,
+        effective_cost: effectiveCost,
+        incremental: effectiveCost - wholesale,
+        wholesale: wholesale,
+        resource_costs: resourceCosts,
+        // Preserve mix info for normalizeEntry
+        resource_mix: rm,
+        procurement_pct: mixArr[5],
+        hourly_match_score: mixArr[6],
+        battery_dispatch_pct: batPct,
+        ldes_dispatch_pct: ldesPct
+    };
+}
+
+// Find the optimal (cheapest) feasible mix for the current toggles
+// targetYear & growthRate flow through to priceMix for demand scaling
+function findOptimalMix(iso, thresholdKey, targetYear, growthRate) {
+    const mixes = (FEASIBLE_MIXES || {})[iso];
+    if (!mixes) return null;
+    const mixArr = mixes[String(thresholdKey)];
+    if (!mixArr || mixArr.length === 0) return null;
+
+    const baseDemandTwh = (REGIONAL_DEMAND_TWH || {})[iso] || 200;
+    let bestCost = Infinity;
+    let bestResult = null;
+
+    for (const m of mixArr) {
+        const result = priceMix(iso, m, baseDemandTwh, targetYear, growthRate);
+        if (result.total_cost < bestCost) {
+            bestCost = result.total_cost;
+            bestResult = result;
+        }
+    }
+    return bestResult;
+}
+
 // ---- Scenario Resolver ----
-// Maps the 5 sensitivity toggle states to a scenario key like "MMM_M_M"
+// Maps the 5 core sensitivity toggle states to a scenario key like "MMM_M_M"
+// (used for pre-computed lookup fallback)
 function buildScenarioKey() {
     const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
     const rg = levelMap[sensitivityState.renewable_gen] || 'M';
@@ -3481,17 +3707,72 @@ function buildScenarioKey() {
     return `${rg}${fg}${st}_${ff}_${tx}`;
 }
 
-// Resolves a threshold entry from the new scenario-based data format.
-// Returns a normalized entry compatible with the dashboard's expected field names.
+// Get the current target year and demand growth rate from dashboard controls
+function getRepricingGrowthParams() {
+    const iso = document.getElementById('regionSelect').value;
+    const mode = typeof currentTargetMode !== 'undefined' ? currentTargetMode : 'interim';
+    const yearSel = mode === 'longterm' ? 'longtermYear' : 'interimYear';
+    const targetYear = parseInt(document.getElementById(yearSel)?.value || '2025', 10);
+    const growthLevel = typeof getDemandGrowthLevel === 'function' ? getDemandGrowthLevel() : 'Medium';
+    const rates = (typeof DEMAND_GROWTH_RATES !== 'undefined' ? DEMAND_GROWTH_RATES[iso] : null) || {};
+    const growthRate = rates[growthLevel] || 0;
+    return { targetYear, growthRate };
+}
+
+// Resolves a threshold entry using client-side repricing when FEASIBLE_MIXES is available,
+// falling back to pre-computed scenario lookup otherwise.
 function resolveEntry(region, thresholdKey) {
     const thresholdData = region.thresholds?.[thresholdKey];
     if (!thresholdData) return null;
 
-    // New format: thresholdData.scenarios is a dict keyed by scenario strings
+    const iso = document.getElementById('regionSelect').value;
+
+    // Client-side repricing path: use FEASIBLE_MIXES to find optimal mix
+    if (typeof FEASIBLE_MIXES !== 'undefined' && FEASIBLE_MIXES[iso]) {
+        const { targetYear, growthRate } = getRepricingGrowthParams();
+        const optimal = findOptimalMix(iso, thresholdKey, targetYear, growthRate);
+        if (optimal) {
+            // Build a normalized entry from repricing result
+            const entry = {
+                resource_mix: optimal.resource_mix,
+                procurement_pct: optimal.procurement_pct,
+                hourly_match_score: optimal.hourly_match_score,
+                battery_dispatch_pct: optimal.battery_dispatch_pct,
+                ldes_dispatch_pct: optimal.ldes_dispatch_pct,
+                storage_dispatch_pct: (optimal.battery_dispatch_pct || 0) + (optimal.ldes_dispatch_pct || 0),
+                costs: {
+                    total_cost_per_demand_mwh: optimal.total_cost,
+                    effective_cost_per_useful_mwh: optimal.effective_cost,
+                    baseline_wholesale_cost: optimal.wholesale,
+                    incremental_above_baseline: optimal.incremental,
+                    resource_costs: optimal.resource_costs
+                },
+                costs_detail: {
+                    total_cost_per_demand_mwh: optimal.total_cost,
+                    effective_cost_per_useful_mwh: optimal.effective_cost,
+                    baseline_wholesale_cost: optimal.wholesale,
+                    incremental_above_baseline: optimal.incremental,
+                    resource_costs: optimal.resource_costs
+                }
+            };
+
+            // Carry over CO2 data from the pre-computed MMM_M_M scenario if available
+            if (thresholdData.scenarios) {
+                const refScenario = thresholdData.scenarios['MMM_M_M'] || thresholdData.scenarios[Object.keys(thresholdData.scenarios)[0]];
+                if (refScenario?.co2_abated) {
+                    entry.co2_abated = refScenario.co2_abated;
+                    entry.co2_abated_tons = refScenario.co2_abated?.total_co2_abated_tons;
+                }
+            }
+
+            return entry;
+        }
+    }
+
+    // Fallback: pre-computed scenario lookup
     if (thresholdData.scenarios) {
         const key = buildScenarioKey();
         let scenario = thresholdData.scenarios[key];
-        // Fallback: if the exact key isn't available, try MMM_M_M, then first available
         if (!scenario) scenario = thresholdData.scenarios['MMM_M_M'];
         if (!scenario) {
             const keys = Object.keys(thresholdData.scenarios);
@@ -3501,7 +3782,7 @@ function resolveEntry(region, thresholdKey) {
         return normalizeEntry(scenario);
     }
 
-    // Legacy flat format (no scenarios dict) — pass through
+    // Legacy flat format
     return thresholdData;
 }
 
@@ -3582,16 +3863,13 @@ let selectedCfCost = 90; // baseline
  * Returns { totalDelta, effectiveDelta, newTotal, newEffective, newIncremental, cfCostDelta }
  */
 function cfAdjust(entry, iso) {
-    // entry is a resolved scenario object with costs (short names) and costs_detail (long names)
-    // When show45Q=false, aggregate values come from no_45q_costs, not costs_detail
+    // entry is a resolved scenario object with costs and costs_detail (both set by repricing)
     const detail = entry?.costs_detail || {};
-    const simpleCosts = getScenarioCosts(entry) || entry?.costs || {};
-    // Only use costs_detail aggregate values when showing 45Q costs (detail reflects WITH 45Q)
-    const useDetail = show45Q;
-    const getTotal = () => (useDetail ? detail.total_cost_per_demand_mwh : null) ?? simpleCosts.total_cost ?? simpleCosts.total_cost_per_demand_mwh ?? 0;
-    const getEffective = () => (useDetail ? detail.effective_cost_per_useful_mwh : null) ?? simpleCosts.effective_cost ?? simpleCosts.effective_cost_per_useful_mwh ?? 0;
-    const getIncremental = () => (useDetail ? detail.incremental_above_baseline : null) ?? simpleCosts.incremental ?? simpleCosts.incremental_above_baseline ?? 0;
-    const getWholesale = () => (useDetail ? detail.baseline_wholesale_cost : null) ?? simpleCosts.wholesale ?? simpleCosts.baseline_wholesale_cost ?? 0;
+    const simpleCosts = entry?.costs || {};
+    const getTotal = () => detail.total_cost_per_demand_mwh ?? simpleCosts.total_cost ?? simpleCosts.total_cost_per_demand_mwh ?? 0;
+    const getEffective = () => detail.effective_cost_per_useful_mwh ?? simpleCosts.effective_cost ?? simpleCosts.effective_cost_per_useful_mwh ?? 0;
+    const getIncremental = () => detail.incremental_above_baseline ?? simpleCosts.incremental ?? simpleCosts.incremental_above_baseline ?? 0;
+    const getWholesale = () => detail.baseline_wholesale_cost ?? simpleCosts.wholesale ?? simpleCosts.baseline_wholesale_cost ?? 0;
 
     if (selectedCfCost === 90 || !detail?.resource_costs?.clean_firm) {
         return {
@@ -3759,6 +4037,11 @@ function updateAll() {
     const iso = document.getElementById('regionSelect').value;
     const requestedThreshold = document.getElementById('thresholdSelect').value;
     const region = DATA.results[iso];
+
+    // Show/hide geothermal toggle (CAISO only)
+    const geoItem = document.getElementById('geoToggleItem');
+    if (geoItem) geoItem.style.display = (iso === 'CAISO') ? '' : 'none';
+
     // Fallback to closest available if this threshold isn't in the data
     const interimThreshold = findClosestThreshold(region, requestedThreshold);
     const interimEntry = resolveEntry(region, interimThreshold);
@@ -6133,13 +6416,15 @@ function updateHeatmapTiles(region, entry, iso) {
     }
 }
 
-// ---- Sensitivity Toggle State (5 Paired Groups) ----
+// ---- Sensitivity Toggle State (7 Graduated + 1 Binary) ----
 const sensitivityState = {
     renewable_gen: 'Medium',   // Solar + Wind LCOE
-    firm_gen: 'Medium',        // Clean Firm + CCS-CCGT LCOE
+    firm_gen: 'Medium',        // Nuclear uprate + new-build LCOE
     storage: 'Medium',         // Battery (4hr) + LDES (100hr) LCOS
     fossil_fuel: 'Medium',     // Wholesale electricity price driver
-    transmission: 'Medium'     // All resource transmission adders
+    transmission: 'Medium',    // All resource transmission adders
+    ccs_cost: 'Medium',        // CCS-CCGT technology maturity
+    geothermal_cost: 'Medium'  // Geothermal LCOE (CAISO only)
 };
 
 // ---- 45Q Toggle State ----
@@ -6165,11 +6450,8 @@ function resolveScenario(thresholdData) {
 }
 
 function getScenarioCosts(scenario) {
-    // Returns the appropriate cost dict based on 45Q toggle
+    // With client-side repricing, 45Q is handled in priceMix() directly
     if (!scenario) return null;
-    if (!show45Q && scenario.no_45q_costs) {
-        return scenario.no_45q_costs;
-    }
     return scenario.costs || null;
 }
 
@@ -6179,22 +6461,18 @@ function getScenarioCostsDetail(scenario) {
     return scenario.costs_detail || null;
 }
 
-// Unified cost accessor: merges costs_detail (Medium only) with costs (all scenarios)
-// Returns object with canonical long key names for backward compat
-// When show45Q=false, aggregate costs come from no_45q_costs, not costs_detail
+// Unified cost accessor: merges costs_detail with costs for backward compat.
+// With client-side repricing, costs_detail and costs are set directly on the entry.
 function getUnifiedCosts(entry) {
     if (!entry) return {};
     const detail = entry.costs_detail || {};
-    const costs = show45Q ? (entry.costs || {}) : (entry.no_45q_costs || entry.costs || {});
-    // Resource breakdown is always from costs_detail (mix doesn't change with 45Q)
-    // Aggregate cost values: prefer costs_detail ONLY when show45Q is true
-    const useDetail = show45Q;
+    const costs = entry.costs || {};
     return {
-        resource_costs: detail.resource_costs || null,
-        effective_cost_per_useful_mwh: (useDetail ? detail.effective_cost_per_useful_mwh : null) ?? costs.effective_cost ?? costs.effective_cost_per_useful_mwh ?? null,
-        total_cost_per_demand_mwh: (useDetail ? detail.total_cost_per_demand_mwh : null) ?? costs.total_cost ?? costs.total_cost_per_demand_mwh ?? null,
-        incremental_above_baseline: (useDetail ? detail.incremental_above_baseline : null) ?? costs.incremental ?? costs.incremental_above_baseline ?? null,
-        baseline_wholesale_cost: (useDetail ? detail.baseline_wholesale_cost : null) ?? costs.wholesale ?? costs.baseline_wholesale_cost ?? null,
+        resource_costs: detail.resource_costs || costs.resource_costs || null,
+        effective_cost_per_useful_mwh: detail.effective_cost_per_useful_mwh ?? costs.effective_cost ?? costs.effective_cost_per_useful_mwh ?? null,
+        total_cost_per_demand_mwh: detail.total_cost_per_demand_mwh ?? costs.total_cost ?? costs.total_cost_per_demand_mwh ?? null,
+        incremental_above_baseline: detail.incremental_above_baseline ?? costs.incremental ?? costs.incremental_above_baseline ?? null,
+        baseline_wholesale_cost: detail.baseline_wholesale_cost ?? costs.wholesale ?? costs.baseline_wholesale_cost ?? null,
         curtailment_pct: detail.curtailment_pct ?? null,
     };
 }
@@ -6898,16 +7176,11 @@ function initPathwayAnalysis() {
         }
     }
 
-    // Re-render the unified panel when pathway controls change
+    // Re-render when pathway controls change — demand growth now affects pricing
     function triggerRerender() {
         updateDemandGrowthLabel();
-        // Call the main dashboard update to re-render the WYN chart
-        const iso = regionSel.value;
-        const region = DATA?.results?.[iso];
-        if (!region) return;
-        const threshold = document.getElementById('thresholdSelect').value;
-        const entry = resolveEntry(region, findClosestThreshold(region, threshold));
-        if (entry) updateWhatYouNeedPanel(region, entry, threshold);
+        // Full updateAll because demand growth affects priceMix() via resolveEntry()
+        if (DATA) updateAll();
     }
 
     interimSel.addEventListener('change', () => {
