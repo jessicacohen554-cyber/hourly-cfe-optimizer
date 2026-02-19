@@ -271,6 +271,45 @@ for iso in ISOS:
     wyn_resource_costs[iso] = iso_wyn
 
 # ============================================================================
+# EXTRACT GAS_BACKUP_DATA (from step4 postprocess gas_backup fields)
+# ============================================================================
+
+print("\nExtracting GAS_BACKUP_DATA...")
+gas_backup_data = {}
+for iso in ISOS:
+    iso_gb = {
+        'total_system_cost': [],
+        'incremental_with_new_gas': [],
+        'gas_backup_mw': [],
+        'new_gas_build_mw': [],
+        'existing_gas_used_mw': [],
+        'clean_coverage_pct': [],
+        'ra_peak_mw': [],
+        'gas_backup_cost': [],
+        'new_gas_cost': [],
+        'existing_gas_cost': [],
+    }
+    for t in THRESHOLDS:
+        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        if sc and 'gas_backup' in sc:
+            gb = sc['gas_backup']
+            iso_gb['total_system_cost'].append(round(gb.get('total_system_cost_per_mwh', 0), 2))
+            iso_gb['incremental_with_new_gas'].append(round(gb.get('incremental_with_new_gas', 0), 2))
+            iso_gb['gas_backup_mw'].append(gb.get('gas_backup_needed_mw', 0))
+            iso_gb['new_gas_build_mw'].append(gb.get('new_gas_build_mw', 0))
+            iso_gb['existing_gas_used_mw'].append(gb.get('existing_gas_used_mw', 0))
+            iso_gb['clean_coverage_pct'].append(gb.get('clean_coverage_pct', 0))
+            iso_gb['ra_peak_mw'].append(gb.get('ra_peak_mw', 0))
+            iso_gb['gas_backup_cost'].append(round(gb.get('gas_backup_cost_per_mwh', 0), 2))
+            iso_gb['new_gas_cost'].append(round(gb.get('new_gas_cost_per_mwh', 0), 2))
+            iso_gb['existing_gas_cost'].append(round(gb.get('existing_gas_cost_per_mwh', 0), 2))
+        else:
+            for key in iso_gb:
+                iso_gb[key].append(0)
+    gas_backup_data[iso] = iso_gb
+    print(f"  {iso}: total_sys_cost={iso_gb['total_system_cost'][:3]}... gas_mw={iso_gb['gas_backup_mw'][:3]}...")
+
+# ============================================================================
 # FORMAT AS JAVASCRIPT
 # ============================================================================
 
@@ -608,6 +647,28 @@ for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    ]{iso_comma}')
 lines.append('};')
 
+# GAS_BACKUP_DATA
+lines.append('')
+lines.append('// --- Gas Capacity Backup & Resource Adequacy --- ')
+lines.append('// Source: step4_postprocess.py compute_gas_capacity_and_ra()')
+lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
+lines.append('// total_system_cost = clean_cost + gas_backup_cost (existing+new)')
+lines.append('// incremental_with_new_gas = clean_cost + new-build gas cost only')
+lines.append('const GAS_BACKUP_DATA = {')
+gb_fields = ['total_system_cost', 'incremental_with_new_gas', 'gas_backup_mw',
+             'new_gas_build_mw', 'existing_gas_used_mw', 'clean_coverage_pct',
+             'ra_peak_mw', 'gas_backup_cost', 'new_gas_cost', 'existing_gas_cost']
+for iso_idx, iso in enumerate(ISOS):
+    gb = gas_backup_data[iso]
+    lines.append(f'    {iso}: {{')
+    for fi, field in enumerate(gb_fields):
+        comma = ',' if fi < len(gb_fields) - 1 else ''
+        padding = ' ' * max(0, 26 - len(field))
+        lines.append(f'        {field}:{padding}{fmt_array(gb[field])}{comma}')
+    iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    }}{iso_comma}')
+lines.append('};')
+
 # ============================================================================
 # COST TABLES FOR CLIENT-SIDE REPRICING (new toggles: CCS/45Q/Geothermal)
 # ============================================================================
@@ -683,16 +744,6 @@ lines.append('// --- Wholesale Prices ($/MWh) ---')
 wp = data['config'].get('wholesale_prices', {})
 parts = [f'{iso}: {wp.get(iso, 0)}' for iso in ISOS]
 lines.append(f'const WHOLESALE_PRICES = {{ {", ".join(parts)} }};')
-lines.append('')
-
-fp = data['config'].get('fuel_prices', {})
-lines.append('const FUEL_ADJUSTMENTS = {')
-for iso_idx, iso in enumerate(ISOS):
-    adj = fp.get(iso, {})
-    parts = [f'{lev}: {adj.get(lev, 0)}' for lev in ['Low', 'Medium', 'High']]
-    comma = ',' if iso_idx < len(ISOS) - 1 else ''
-    lines.append(f'    {iso}: {{ {", ".join(parts)} }}{comma}')
-lines.append('};')
 lines.append('')
 
 # LCOE tables (solar, wind, battery, LDES)

@@ -452,7 +452,7 @@ body {
 /* ========== METRIC TILES ========== */
 .metrics-row {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 18px;
     margin-bottom: 28px;
 }
@@ -1202,6 +1202,8 @@ body {
 .metrics-row .metric-tile:nth-child(4) { animation-delay: 0.2s; }
 .metrics-row .metric-tile:nth-child(5) { animation-delay: 0.25s; }
 .metrics-row .metric-tile:nth-child(6) { animation-delay: 0.3s; }
+.metrics-row .metric-tile:nth-child(7) { animation-delay: 0.35s; }
+.metrics-row .metric-tile:nth-child(8) { animation-delay: 0.4s; }
 
 .key-findings {
     animation: slideInLeft 0.5s ease both;
@@ -3146,25 +3148,6 @@ body {
                 </div>
             </div>
 
-            <!-- 4. Fossil Fuel Price -->
-            <div class="sensitivity-toggle-item" data-toggle-group="fossil_fuel">
-                <div class="toggle-label-area">
-                    <div class="toggle-label-main">
-                        Fossil Fuel Price
-                        <span class="info-icon-wrapper" tabindex="0">
-                            <span class="info-icon" aria-label="Info">i</span>
-                            <span class="info-tooltip">Controls the price of natural gas, coal, and oil -- which together determine the wholesale electricity price you're comparing against. <strong>Low</strong> = cheap fossil fuels make grid power inexpensive (harder for clean energy to compete). <strong>Medium</strong> = current market prices. <strong>High</strong> = supply constraints or carbon pricing raise fossil costs (clean energy looks better by comparison).</span>
-                        </span>
-                    </div>
-                    <div class="toggle-label-sub">Affects wholesale electricity price</div>
-                </div>
-                <div class="toggle-btn-group" data-toggle="fossil_fuel" data-default="Medium">
-                    <button data-value="Low" data-toggle-group="fossil_fuel" data-level="Low">Low</button>
-                    <button data-value="Medium" data-toggle-group="fossil_fuel" data-level="Medium" class="active">Medium</button>
-                    <button data-value="High" data-toggle-group="fossil_fuel" data-level="High">High</button>
-                </div>
-            </div>
-
             <!-- 5. Transmission Cost -->
             <div class="sensitivity-toggle-item" data-toggle-group="transmission">
                 <div class="toggle-label-area">
@@ -3344,6 +3327,16 @@ body {
             <div class="tile-label">Abatement Cost</div>
             <div class="tile-value" id="metricAbateCost">--</div>
             <div class="tile-sub" id="metricAbateCostSub">$/ton CO&#8322; avg</div>
+        </div>
+        <div class="metric-tile" id="tileTotalCost">
+            <div class="tile-label">Full System Cost</div>
+            <div class="tile-value" id="metricTotalCost">--</div>
+            <div class="tile-sub" id="metricTotalCostSub">clean + gas backup $/MWh</div>
+        </div>
+        <div class="metric-tile" id="tileGasBackup">
+            <div class="tile-label">Gas Backup Needed</div>
+            <div class="tile-value" id="metricGasBackup">--</div>
+            <div class="tile-sub" id="metricGasBackupSub">MW needed for RA</div>
         </div>
     </div>
 
@@ -3556,7 +3549,6 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     const firm = levelMap[sensitivityState.firm_gen] || 'M';
     const stor = levelMap[sensitivityState.storage] || 'M';
     const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
-    const fuel = sensitivityState.fossil_fuel || 'Medium';
     const tx = sensitivityState.transmission || 'Medium';
     const geo = levelMap[sensitivityState.geothermal_cost] || 'M';
 
@@ -3576,8 +3568,6 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
 
     const baseExisting = GRID_MIX_SHARES[iso] || {};
     let wholesale = WHOLESALE_PRICES[iso] || 30;
-    const fuelAdj = (FUEL_ADJUSTMENTS[iso] || {})[fuel] || 0;
-    wholesale = Math.max(5, wholesale + fuelAdj);
 
     let totalCost = 0;
     const resourceCosts = {};
@@ -3739,9 +3729,8 @@ function buildScenarioKey() {
     const rg = levelMap[sensitivityState.renewable_gen] || 'M';
     const fg = levelMap[sensitivityState.firm_gen] || 'M';
     const st = levelMap[sensitivityState.storage] || 'M';
-    const ff = levelMap[sensitivityState.fossil_fuel] || 'M';
     const tx = levelMap[sensitivityState.transmission] || 'M';
-    return `${rg}${fg}${st}_${ff}_${tx}`;
+    return `${rg}${fg}${st}_M_${tx}`;
 }
 
 // Get the current target year and demand growth rate from dashboard controls
@@ -6621,6 +6610,69 @@ function updateHeatmapTiles(region, entry, iso) {
         const tile = document.getElementById('tileAbateCost');
         if (tile) { tile.classList.remove(...heatmapClasses, 'tile-negative'); }
     }
+
+    // ---- Full System Cost & Gas Backup tiles ----
+    // Look up gas backup data from GAS_BACKUP_DATA by threshold index
+    const currentThreshVal = parseFloat(findClosestThreshold(region, document.getElementById('thresholdSelect')?.value));
+    const gbIdx = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(currentThreshVal) : -1;
+    const gbData = (typeof GAS_BACKUP_DATA !== 'undefined' && GAS_BACKUP_DATA[iso]) ? GAS_BACKUP_DATA[iso] : null;
+
+    // Collect min/max for new tiles across all thresholds
+    let minTotalCost = Infinity, maxTotalCost = -Infinity;
+    let minGasBackup = Infinity, maxGasBackup = -Infinity;
+    if (gbData) {
+        for (let gi = 0; gi < (gbData.total_system_cost || []).length; gi++) {
+            const tc = gbData.total_system_cost[gi];
+            const gb = gbData.gas_backup_mw[gi];
+            if (tc > 0) { minTotalCost = Math.min(minTotalCost, tc); maxTotalCost = Math.max(maxTotalCost, tc); }
+            if (gb >= 0) { minGasBackup = Math.min(minGasBackup, gb); maxGasBackup = Math.max(maxGasBackup, gb); }
+        }
+    }
+
+    // Full System Cost tile (clean + ALL gas backup $/kW-yr → $/MWh)
+    const totalCostEl = document.getElementById('metricTotalCost');
+    const totalCostSub = document.getElementById('metricTotalCostSub');
+    if (totalCostEl && gbData && gbIdx >= 0) {
+        const totalSysCost = gbData.total_system_cost[gbIdx];
+        const gasCostPart = gbData.gas_backup_cost[gbIdx];
+        totalCostEl.textContent = '$' + formatNum(totalSysCost) + '/MWh';
+        totalCostSub.textContent = `incl. $${formatNum(gasCostPart)}/MWh gas capacity`;
+        applyHeatmap('tileTotalCost', totalSysCost, minTotalCost, maxTotalCost, true);
+    } else if (totalCostEl) {
+        totalCostEl.textContent = '--';
+    }
+
+    // Incremental Cost tile: add new-build gas cost to existing value
+    const incrCostEl = document.getElementById('metricCost');
+    const incrCostSub = document.getElementById('metricCostSub');
+    if (incrCostEl && gbData && gbIdx >= 0 && adj.newIncremental != null) {
+        const newGasCost = gbData.new_gas_cost[gbIdx];
+        const incrWithGas = adj.newIncremental + newGasCost;
+        incrCostEl.textContent = '$' + formatNum(incrWithGas) + '/MWh';
+        if (newGasCost > 0) {
+            incrCostSub.textContent = `+$${formatNum(newGasCost)}/MWh new CCGT capacity`;
+        } else {
+            incrCostSub.textContent = 'no new gas capacity needed';
+        }
+    }
+
+    // Gas Backup tile (MW needed for resource adequacy)
+    const gasBackupEl = document.getElementById('metricGasBackup');
+    const gasBackupSub = document.getElementById('metricGasBackupSub');
+    if (gasBackupEl && gbData && gbIdx >= 0) {
+        const gasMw = gbData.gas_backup_mw[gbIdx];
+        const newGasMw = gbData.new_gas_build_mw[gbIdx];
+        const coverage = gbData.clean_coverage_pct[gbIdx];
+        gasBackupEl.textContent = formatNum(gasMw / 1000, 1) + ' GW';
+        if (newGasMw > 0) {
+            gasBackupSub.textContent = `${formatNum(newGasMw / 1000, 1)} GW new-build | ${coverage}% clean coverage`;
+        } else {
+            gasBackupSub.textContent = `existing fleet sufficient | ${coverage}% clean coverage`;
+        }
+        applyHeatmap('tileGasBackup', gasMw, minGasBackup, maxGasBackup, true);
+    } else if (gasBackupEl) {
+        gasBackupEl.textContent = '--';
+    }
 }
 
 // ---- Sensitivity Toggle State (7 Graduated + 1 Binary) ----
@@ -6628,7 +6680,6 @@ const sensitivityState = {
     renewable_gen: 'Medium',   // Solar + Wind LCOE
     firm_gen: 'Medium',        // Nuclear uprate + new-build LCOE
     storage: 'Medium',         // Battery (4hr) + LDES (100hr) LCOS
-    fossil_fuel: 'Medium',     // Wholesale electricity price driver
     transmission: 'Medium',    // All resource transmission adders
     ccs_cost: 'Medium',        // CCS-CCGT technology maturity
     geothermal_cost: 'Medium'  // Geothermal LCOE (CAISO only)
@@ -6645,9 +6696,8 @@ function getScenarioKey() {
     const r = levelMap[sensitivityState.renewable_gen] || 'M';
     const f = levelMap[sensitivityState.firm_gen] || 'M';
     const s = levelMap[sensitivityState.storage] || 'M';
-    const fu = levelMap[sensitivityState.fossil_fuel] || 'M';
     const tx = levelMap[sensitivityState.transmission] || 'M';
-    return `${r}${f}${s}_${fu}_${tx}`;
+    return `${r}${f}${s}_M_${tx}`;
 }
 
 function resolveScenario(thresholdData) {
@@ -6835,12 +6885,13 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     }
 
     // Helper: extract resource data for a resource_costs object.
-    // existing_pct and new_pct from priceMix are expressed as % of the target
-    // year's demand (priceMix already accounts for demand growth shrinking the
-    // existing share). Both get multiplied by targetDemandTWh.
-    // Hydro is always static at 2025 absolute capacity.
+    // FIX: Cap existing TWh at actual physical capacity from GRID_MIX_SHARES.
+    // existing_pct from priceMix may be expressed as % of either 2025 or grown demand
+    // depending on code path (client-side repricing vs pre-computed). To avoid
+    // inflation/deflation bugs, we cap existing at actual grid capacity regardless.
     const hydroCapPct = (DATA.config?.hydro_caps?.[iso] || 0);
     const hydroCapTWh = hydroCapPct / 100 * todayTWh;
+    const gridMix = (typeof GRID_MIX_SHARES !== 'undefined') ? (GRID_MIX_SHARES[iso] || {}) : {};
 
     function getResourceTWh(rc, targetDemandTWh) {
         const existing = {};
@@ -6857,11 +6908,11 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 existing[r] = hydroCapTWh;
                 newBuild[r] = 0;
             } else {
-                // existing_pct and new_pct are BOTH expressed as % of the target
-                // year's demand. Multiplying by targetDemandTWh gives absolute TWh.
-                // (existing_pct shrinks as demand grows; the absolute TWh stays constant)
-                existing[r] = (rd.existing_pct || rd.existing_share || 0) / 100 * targetDemandTWh;
-                newBuild[r] = (rd.new_pct || rd.new_share || 0) / 100 * targetDemandTWh;
+                // Cap existing at actual grid capacity (constant TWh regardless of growth)
+                const actualExistingTWh = (gridMix[r] || 0) / 100 * todayTWh;
+                const totalResourceTWh = ((rd.existing_pct || rd.existing_share || 0) + (rd.new_pct || rd.new_share || 0)) / 100 * targetDemandTWh;
+                existing[r] = Math.min(actualExistingTWh, totalResourceTWh);
+                newBuild[r] = Math.max(0, totalResourceTWh - existing[r]);
             }
         });
         // Split clean_firm into nuclear + geothermal
