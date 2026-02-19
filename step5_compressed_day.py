@@ -462,16 +462,21 @@ def main():
     print("=" * 70)
     print("Step 5: Compressed Day Profile Generator")
     print("=" * 70)
+    print("Generates profiles for ALL feasible mixes (not just base-year optimal).")
+    print("The client-side repricing can select different mixes as demand grows,")
+    print("so all feasible_mixes need pre-computed profiles.\n")
 
     # Load hourly profiles
     demand_data, gen_profiles = load_data()
 
-    # Load scenarios to find all unique mixes
+    # Load results to get ALL feasible mixes
     print("\nLoading overprocure_results.json...")
     with open('dashboard/overprocure_results.json') as f:
         results = json.load(f)
 
-    # Collect unique mixes per ISO
+    # Dashboard thresholds (same as shared-data.js FEASIBLE_MIXES)
+    DASHBOARD_THRESHOLDS = ['75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
+
     output = {}
     total_mixes = 0
     total_computed = 0
@@ -490,28 +495,26 @@ def main():
         profiles = get_supply_profiles(iso, gen_profiles)
         demand_norm = demand_data[iso]['normalized']
 
-        # Collect unique mixes across all thresholds
+        # Collect ALL unique mixes from feasible_mixes (not just scenario-selected)
+        # These are the mixes that findOptimalMix can select under any cost/growth combo
         unique_mixes = {}  # mix_key → (mix_dict, proc, batt, ldes)
-        threshold_mix_map = {}  # threshold → set of mix_keys
 
         thresholds = iso_results.get('thresholds', {})
-        for t_str, t_data in thresholds.items():
-            scenarios = t_data.get('scenarios', {})
-            t_keys = set()
-            for sc_key, sc_data in scenarios.items():
-                rm = sc_data['resource_mix']
-                proc = sc_data['procurement_pct']
-                batt = sc_data.get('battery_dispatch_pct', 0)
-                ldes = sc_data.get('ldes_dispatch_pct', 0)
+        for t_str in DASHBOARD_THRESHOLDS:
+            t_data = thresholds.get(t_str, {})
+            fmixes = t_data.get('feasible_mixes', [])
+            for fm in fmixes:
+                rm = fm['resource_mix']
+                proc = fm['procurement_pct']
+                batt = fm.get('battery_dispatch_pct', 0)
+                ldes = fm.get('ldes_dispatch_pct', 0)
                 mk = mix_key(rm, proc, batt, ldes)
                 if mk not in unique_mixes:
                     unique_mixes[mk] = (rm, proc, batt, ldes)
-                t_keys.add(mk)
-            threshold_mix_map[t_str] = t_keys
 
         n_unique = len(unique_mixes)
         total_mixes += n_unique
-        print(f"  {n_unique} unique mixes across {len(thresholds)} thresholds")
+        print(f"  {n_unique} unique mixes from feasible_mixes")
 
         # Simulate and compress each unique mix
         iso_profiles = {}
@@ -522,30 +525,11 @@ def main():
             compressed = compress_to_24h(result)
             iso_profiles[mk] = round_arrays(compressed)
 
-            if (i + 1) % 50 == 0 or i == n_unique - 1:
+            if (i + 1) % 500 == 0 or i == n_unique - 1:
                 print(f"    Computed {i+1}/{n_unique} profiles")
             total_computed += 1
 
-        # Build output structure: ISO → threshold → scenario_key → mix_key
-        # (so the dashboard can look up by scenario key directly)
-        iso_output = {
-            'profiles': iso_profiles,
-            'scenario_map': {},
-        }
-
-        for t_str, t_data in thresholds.items():
-            scenarios = t_data.get('scenarios', {})
-            t_map = {}
-            for sc_key, sc_data in scenarios.items():
-                rm = sc_data['resource_mix']
-                proc = sc_data['procurement_pct']
-                batt = sc_data.get('battery_dispatch_pct', 0)
-                ldes = sc_data.get('ldes_dispatch_pct', 0)
-                mk = mix_key(rm, proc, batt, ldes)
-                t_map[sc_key] = mk
-            iso_output['scenario_map'][t_str] = t_map
-
-        output[iso] = iso_output
+        output[iso] = {'profiles': iso_profiles}
 
     # Write output
     out_path = 'dashboard/compressed_day_profiles.json'
