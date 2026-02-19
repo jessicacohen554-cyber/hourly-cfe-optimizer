@@ -462,6 +462,11 @@ function buildMacChart() {
     const dacLow = BENCHMARKS_DYNAMIC.dac.Low;
     const dacMed = BENCHMARKS_DYNAMIC.dac.Medium;
     const dacHigh = BENCHMARKS_DYNAMIC.dac.High;
+    // Build declining DAC trajectory datasets (one value per threshold via SBTi year mapping)
+    const dacCurveThresholds = THRESHOLDS.filter(t => t >= 50);
+    const dacOptData = dacCurveThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'optimistic') }));
+    const dacCenData = dacCurveThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'central') }));
+    const dacConData = dacCurveThresholds.map(t => ({ x: t, y: dacCostAtThreshold(t, 'conservative') }));
     // Threshold index lookup (MAC_DATA arrays match THRESHOLDS order)
     const _TI = {};
     THRESHOLDS.forEach((t, i) => _TI[t] = i);
