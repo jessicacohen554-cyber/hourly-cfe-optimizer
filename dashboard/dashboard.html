@@ -3788,7 +3788,9 @@ function createStripePattern(ctx, color, bgColor) {
 // ---- Client-Side Repricing Engine ----
 // Mirrors Python step2_cost_optimization.price_mix() for 40k+ sensitivity combos
 // Uses FEASIBLE_MIXES + cost tables from shared-data.js
-function priceMix(iso, mixArr, demandTwh) {
+// targetYear & growthRate: optional demand growth params. Existing generation stays
+// flat in absolute TWh; its share of grown demand shrinks, requiring more new-build.
+function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     // mixArr: [cf%, solar%, wind%, ccs%, hydro%, procurement%, match%, battery%, ldes%]
     const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
     const ren = levelMap[sensitivityState.renewable_gen] || 'M';
@@ -3799,13 +3801,21 @@ function priceMix(iso, mixArr, demandTwh) {
     const tx = sensitivityState.transmission || 'Medium';
     const geo = levelMap[sensitivityState.geothermal_cost] || 'M';
 
+    // Demand growth: scale demand up, existing stays flat in absolute TWh
+    const years = (targetYear && targetYear > 2025) ? (targetYear - 2025) : 0;
+    const rate = growthRate || 0;
+    const growthFactor = years > 0 ? Math.pow(1 + rate, years) : 1;
+    const demandTwh = baseDemandTwh * growthFactor;
+    // Existing shares are % of 2025 demand — scale down to % of grown demand
+    const existingScaleFactor = 1 / growthFactor;
+
     const rm = { clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2], ccs_ccgt: mixArr[3], hydro: mixArr[4] };
     const proc = mixArr[5] / 100.0;
     const matchFrac = mixArr[6] / 100.0;
     const batPct = mixArr[7] || 0;
     const ldesPct = mixArr[8] || 0;
 
-    const existing = GRID_MIX_SHARES[iso] || {};
+    const baseExisting = GRID_MIX_SHARES[iso] || {};
     let wholesale = WHOLESALE_PRICES[iso] || 30;
     const fuelAdj = (FUEL_ADJUSTMENTS[iso] || {})[fuel] || 0;
     wholesale = Math.max(5, wholesale + fuelAdj);
@@ -3822,7 +3832,8 @@ function priceMix(iso, mixArr, demandTwh) {
         }
 
         const resourcePctOfDemand = proc * pct;
-        const existingShare = existing[rtype] || 0;
+        // Existing stays flat in absolute TWh; scale share down as demand grows
+        const existingShare = (baseExisting[rtype] || 0) * existingScaleFactor;
         const existingPct = Math.min(resourcePctOfDemand, existingShare);
         const newPct = Math.max(0, resourcePctOfDemand - existingShare);
 
@@ -3940,18 +3951,19 @@ function priceMix(iso, mixArr, demandTwh) {
 }
 
 // Find the optimal (cheapest) feasible mix for the current toggles
-function findOptimalMix(iso, thresholdKey) {
+// targetYear & growthRate flow through to priceMix for demand scaling
+function findOptimalMix(iso, thresholdKey, targetYear, growthRate) {
     const mixes = (FEASIBLE_MIXES || {})[iso];
     if (!mixes) return null;
     const mixArr = mixes[String(thresholdKey)];
     if (!mixArr || mixArr.length === 0) return null;
 
-    const demandTwh = (REGIONAL_DEMAND_TWH || {})[iso] || 200;
+    const baseDemandTwh = (REGIONAL_DEMAND_TWH || {})[iso] || 200;
     let bestCost = Infinity;
     let bestResult = null;
 
     for (const m of mixArr) {
-        const result = priceMix(iso, m, demandTwh);
+        const result = priceMix(iso, m, baseDemandTwh, targetYear, growthRate);
         if (result.total_cost < bestCost) {
             bestCost = result.total_cost;
             bestResult = result;
@@ -3973,6 +3985,18 @@ function buildScenarioKey() {
     return `${rg}${fg}${st}_${ff}_${tx}`;
 }
 
+// Get the current target year and demand growth rate from dashboard controls
+function getRepricingGrowthParams() {
+    const iso = document.getElementById('regionSelect').value;
+    const mode = typeof currentTargetMode !== 'undefined' ? currentTargetMode : 'interim';
+    const yearSel = mode === 'longterm' ? 'longtermYear' : 'interimYear';
+    const targetYear = parseInt(document.getElementById(yearSel)?.value || '2025', 10);
+    const growthLevel = typeof getDemandGrowthLevel === 'function' ? getDemandGrowthLevel() : 'Medium';
+    const rates = (typeof DEMAND_GROWTH_RATES !== 'undefined' ? DEMAND_GROWTH_RATES[iso] : null) || {};
+    const growthRate = rates[growthLevel] || 0;
+    return { targetYear, growthRate };
+}
+
 // Resolves a threshold entry using client-side repricing when FEASIBLE_MIXES is available,
 // falling back to pre-computed scenario lookup otherwise.
 function resolveEntry(region, thresholdKey) {
@@ -3983,7 +4007,8 @@ function resolveEntry(region, thresholdKey) {
 
     // Client-side repricing path: use FEASIBLE_MIXES to find optimal mix
     if (typeof FEASIBLE_MIXES !== 'undefined' && FEASIBLE_MIXES[iso]) {
-        const optimal = findOptimalMix(iso, thresholdKey);
+        const { targetYear, growthRate } = getRepricingGrowthParams();
+        const optimal = findOptimalMix(iso, thresholdKey, targetYear, growthRate);
         if (optimal) {
             // Build a normalized entry from repricing result
             const entry = {
@@ -7429,16 +7454,11 @@ function initPathwayAnalysis() {
         }
     }
 
-    // Re-render the unified panel when pathway controls change
+    // Re-render when pathway controls change — demand growth now affects pricing
     function triggerRerender() {
         updateDemandGrowthLabel();
-        // Call the main dashboard update to re-render the WYN chart
-        const iso = regionSel.value;
-        const region = DATA?.results?.[iso];
-        if (!region) return;
-        const threshold = document.getElementById('thresholdSelect').value;
-        const entry = resolveEntry(region, findClosestThreshold(region, threshold));
-        if (entry) updateWhatYouNeedPanel(region, entry, threshold);
+        // Full updateAll because demand growth affects priceMix() via resolveEntry()
+        if (DATA) updateAll();
     }
 
     interimSel.addEventListener('change', () => {
