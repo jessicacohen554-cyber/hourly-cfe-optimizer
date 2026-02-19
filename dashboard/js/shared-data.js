@@ -2,7 +2,7 @@
 // SHARED DATA MODULE — Single source of truth for all dashboard pages
 // ============================================================================
 // RULE: No data constants defined in HTML files. Change here, propagates everywhere.
-// Generated: 2026-02-19 17:22 by generate_shared_data.py
+// Generated: 2026-02-19 19:46 by generate_shared_data.py
 // Source: overprocure_results.json (Step 2 tranche-repriced + postprocess + CO2)
 // ============================================================================
 
@@ -87,9 +87,9 @@ const BENCHMARKS_DYNAMIC = {
     dac: {
         name: 'Direct Air Capture (DAC)', short: 'DAC', color: '#E91E63', category: 'carbon_removal', confidence: 'low',
         trajectory: 'declining_steep',
-        Low:    { low: 65,   mid: 100,  high: 175 },
-        Medium: { low: 100,  mid: 175,  high: 300 },
-        High:   { low: 175,  mid: 300,  high: 500 },
+        Low:    { low: 100,  mid: 150,  high: 200 },
+        Medium: { low: 150,  mid: 250,  high: 350 },
+        High:   { low: 250,  mid: 400,  high: 550 },
         sources: 'DOE Liftoff NOAK, IEAGHG 2021, Fasihi et al. (J. Cleaner Prod. 2019), Sievert et al. (Joule 2024), Climeworks Gen 3 roadmap, DOE Carbon Negative Shot, Kanyako & Craig (Earth\'s Future 2025)'
     },
     industrial: {
@@ -1890,6 +1890,118 @@ const CLEAN_FIRM_ENERGY_SPLIT = {
     PJM:    { nuclear: 1.0,   geothermal: 0.0 },
     NYISO:  { nuclear: 1.0,   geothermal: 0.0 },
     NEISO:  { nuclear: 1.0,   geothermal: 0.0 }
+};
+
+// ============================================================================
+// SBTi TIMELINE + DAC LEARNING CURVE (SPEC.md §7.3)
+// ============================================================================
+// Maps clean energy thresholds to SBTi target years, with projected DAC costs
+// declining along literature-sourced learning curves.
+// Sources: DOE Liftoff (2023), Sievert et al. (Joule 2024), IEA (2022/2024),
+//   Fasihi et al. (2019), IEAGHG (2021/2024), Climeworks Gen 3, DOE Carbon
+//   Negative Shot, Kanyako & Craig (2025), NAS (2019), Young et al. (2023),
+//   Keith et al. (2018), Shayegh et al. (2021), Belfer Center (2023).
+
+const SBTI_MILESTONES = [
+    { year: 2025, threshold: 0, label: 'Today' },
+    { year: 2030, threshold: 50, label: 'SBTi 50%' },
+    { year: 2035, threshold: 70, label: 'SBTi ~70%' },
+    { year: 2040, threshold: 90, label: 'SBTi 90%' },
+    { year: 2045, threshold: 95, label: 'SBTi ~95%' },
+    { year: 2050, threshold: 100, label: 'Net-Zero' },
+];
+
+// DAC cost trajectories ($/ton CO₂ net DACCS, 2024 USD)
+// Optimistic: 15-20% learning rate, R&D breakthroughs, <$20/MWh renewables
+// Central: 10-12% learning rate, moderate policy, $30-40/MWh renewables
+// Conservative: 5-8% learning rate, limited policy, $40-60/MWh renewables
+const DAC_TRAJECTORY = {
+    optimistic: { 2025: 400, 2030: 200, 2035: 150, 2040: 115, 2045: 90, 2050: 75 },
+    central: { 2025: 600, 2030: 350, 2035: 275, 2040: 225, 2045: 200, 2050: 180 },
+    conservative: { 2025: 800, 2030: 550, 2035: 450, 2040: 375, 2045: 325, 2050: 300 }
+};
+
+// Interpolate DAC cost for any threshold via SBTi year mapping
+function dacCostAtThreshold(threshold, trajectory) {
+    trajectory = trajectory || "central";
+    const traj = DAC_TRAJECTORY[trajectory];
+    const ms = SBTI_MILESTONES;
+    // Find bounding milestones
+    let year;
+    if (threshold <= ms[0].threshold) year = ms[0].year;
+    else if (threshold >= ms[ms.length-1].threshold) year = ms[ms.length-1].year;
+    else {
+        for (let i = 0; i < ms.length - 1; i++) {
+            if (threshold >= ms[i].threshold && threshold <= ms[i+1].threshold) {
+                const frac = (threshold - ms[i].threshold) / (ms[i+1].threshold - ms[i].threshold);
+                year = ms[i].year + frac * (ms[i+1].year - ms[i].year);
+                break;
+            }
+        }
+    }
+    // Interpolate DAC cost at that year
+    const years = Object.keys(traj).map(Number).sort((a,b) => a-b);
+    if (year <= years[0]) return traj[years[0]];
+    if (year >= years[years.length-1]) return traj[years[years.length-1]];
+    for (let i = 0; i < years.length - 1; i++) {
+        if (year >= years[i] && year <= years[i+1]) {
+            const frac = (year - years[i]) / (years[i+1] - years[i]);
+            return Math.round(traj[years[i]] + frac * (traj[years[i+1]] - traj[years[i]]));
+        }
+    }
+    return traj[years[years.length-1]];
+}
+
+// ============================================================================
+// DEMAND GROWTH COUNTERFACTUAL (SPEC.md §7.2)
+// ============================================================================
+// Without clean procurement, demand growth MWh would be met by new gas at
+// 350 kg/MWh (0.35 tCO₂/MWh) — standard new CCGT emission rate.
+// growth_twh = baseTWh × ((1 + rate)^(year-2025) - 1)
+// counterfactual_mt = growth_twh × 1e6 × 0.35 / 1e6 (megatons)
+const NEW_GAS_EMISSION_RATE = 0.35; // tCO₂/MWh
+
+const GROWTH_COUNTERFACTUAL = {
+    CAISO: {
+        2025: { Low: { twh: 0, mt: 0.0 }, Medium: { twh: 0, mt: 0.0 }, High: { twh: 0, mt: 0.0 } },
+        2030: { Low: { twh: 16.1, mt: 5.64 }, Medium: { twh: 22.1, mt: 7.74 }, High: { twh: 29.4, mt: 10.3 } },
+        2035: { Low: { twh: 33.4, mt: 11.7 }, Medium: { twh: 46.4, mt: 16.24 }, High: { twh: 62.7, mt: 21.96 } },
+        2040: { Low: { twh: 52.0, mt: 18.18 }, Medium: { twh: 73.1, mt: 25.58 }, High: { twh: 100.4, mt: 35.15 } },
+        2045: { Low: { twh: 71.8, mt: 25.14 }, Medium: { twh: 102.4, mt: 35.84 }, High: { twh: 143.1, mt: 50.08 } },
+        2050: { Low: { twh: 93.1, mt: 32.59 }, Medium: { twh: 134.6, mt: 47.12 }, High: { twh: 191.3, mt: 66.96 } }
+    },
+    ERCOT: {
+        2025: { Low: { twh: 0, mt: 0.0 }, Medium: { twh: 0, mt: 0.0 }, High: { twh: 0, mt: 0.0 } },
+        2030: { Low: { twh: 50.8, mt: 17.78 }, Medium: { twh: 91.6, mt: 32.06 }, High: { twh: 149.8, mt: 52.43 } },
+        2035: { Low: { twh: 106.9, mt: 37.41 }, Medium: { twh: 200.4, mt: 70.13 }, High: { twh: 345.6, mt: 120.96 } },
+        2040: { Low: { twh: 168.8, mt: 59.08 }, Medium: { twh: 329.6, mt: 115.35 }, High: { twh: 601.5, mt: 210.52 } },
+        2045: { Low: { twh: 237.2, mt: 83.0 }, Medium: { twh: 483.0, mt: 169.06 }, High: { twh: 935.9, mt: 327.57 } },
+        2050: { Low: { twh: 312.6, mt: 109.42 }, Medium: { twh: 665.3, mt: 232.85 }, High: { twh: 1373.0, mt: 480.55 } }
+    },
+    PJM: {
+        2025: { Low: { twh: 0, mt: 0.0 }, Medium: { twh: 0, mt: 0.0 }, High: { twh: 0, mt: 0.0 } },
+        2030: { Low: { twh: 65.2, mt: 22.81 }, Medium: { twh: 106.2, mt: 37.16 }, High: { twh: 163.1, mt: 57.1 } },
+        2035: { Low: { twh: 135.4, mt: 47.39 }, Medium: { twh: 225.7, mt: 79.0 }, High: { twh: 357.8, mt: 125.24 } },
+        2040: { Low: { twh: 211.0, mt: 73.86 }, Medium: { twh: 360.3, mt: 126.11 }, High: { twh: 590.2, mt: 206.56 } },
+        2045: { Low: { twh: 292.5, mt: 102.38 }, Medium: { twh: 511.8, mt: 179.15 }, High: { twh: 867.4, mt: 303.61 } },
+        2050: { Low: { twh: 380.3, mt: 133.1 }, Medium: { twh: 682.5, mt: 238.86 }, High: { twh: 1198.4, mt: 419.43 } }
+    },
+    NYISO: {
+        2025: { Low: { twh: 0, mt: 0.0 }, Medium: { twh: 0, mt: 0.0 }, High: { twh: 0, mt: 0.0 } },
+        2030: { Low: { twh: 10.1, mt: 3.54 }, Medium: { twh: 15.8, mt: 5.52 }, High: { twh: 36.4, mt: 12.75 } },
+        2035: { Low: { twh: 20.9, mt: 7.32 }, Medium: { twh: 33.2, mt: 11.62 }, High: { twh: 81.6, mt: 28.56 } },
+        2040: { Low: { twh: 32.4, mt: 11.34 }, Medium: { twh: 52.4, mt: 18.35 }, High: { twh: 137.6, mt: 48.16 } },
+        2045: { Low: { twh: 44.7, mt: 15.64 }, Medium: { twh: 73.7, mt: 25.78 }, High: { twh: 207.1, mt: 72.48 } },
+        2050: { Low: { twh: 57.8, mt: 20.22 }, Medium: { twh: 97.1, mt: 33.99 }, High: { twh: 293.2, mt: 102.64 } }
+    },
+    NEISO: {
+        2025: { Low: { twh: 0, mt: 0.0 }, Medium: { twh: 0, mt: 0.0 }, High: { twh: 0, mt: 0.0 } },
+        2030: { Low: { twh: 5.3, mt: 1.85 }, Medium: { twh: 10.8, mt: 3.77 }, High: { twh: 17.7, mt: 6.2 } },
+        2035: { Low: { twh: 10.8, mt: 3.78 }, Medium: { twh: 22.5, mt: 7.88 }, High: { twh: 38.2, mt: 13.36 } },
+        2040: { Low: { twh: 16.6, mt: 5.81 }, Medium: { twh: 35.4, mt: 12.39 }, High: { twh: 61.8, mt: 21.61 } },
+        2045: { Low: { twh: 22.6, mt: 7.92 }, Medium: { twh: 49.5, mt: 17.31 }, High: { twh: 89.0, mt: 31.14 } },
+        2050: { Low: { twh: 29.0, mt: 10.13 }, Medium: { twh: 64.8, mt: 22.69 }, High: { twh: 120.4, mt: 42.13 } }
+    }
 };
 
 // --- Feasible Mixes per (ISO, threshold) for client-side repricing ---
