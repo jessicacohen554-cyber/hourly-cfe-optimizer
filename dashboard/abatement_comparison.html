@@ -218,8 +218,8 @@ p:last-child { margin-bottom: 0; }
 <section>
     <span class="section-num">Section 1</span>
     <h2>Marginal MAC: Where Grid Investment Stops Paying Off</h2>
-    <p>The grid backbone (75→90%) is cheap abatement everywhere. Beyond 90%, marginal costs escalate
-       as the optimizer adds storage, CCS, and LDES to cover the hardest hours.
+    <p>The entry zone (50→75%) is the cheapest abatement, followed by the grid backbone (75→90%).
+       Beyond 90%, marginal costs escalate as the optimizer adds storage, CCS, and LDES to cover the hardest hours.
        Each bar shows the marginal $/ton for one step. Bars are guaranteed non-decreasing — each step
        costs at least as much as the previous.</p>
 
@@ -348,6 +348,10 @@ const mac = MAC_DATA.medium;
 const marg = MARGINAL_MAC_DATA.medium;
 const margLabels = MARGINAL_MAC_LABELS;
 
+// Threshold index helpers (MAC_DATA arrays match THRESHOLDS order)
+const T_IDX = {};  // e.g. T_IDX[75] = 3, T_IDX[99] = 11
+THRESHOLDS.forEach((t, i) => T_IDX[t] = i);
+
 // Derived metrics from shared data
 const allMarg = [];
 REGIONS.forEach(r => {
@@ -355,10 +359,10 @@ REGIONS.forEach(r => {
 });
 const margMin = allMarg.reduce((a, b) => a.val < b.val ? a : b);
 const margMax = allMarg.reduce((a, b) => a.val > b.val ? a : b);
-const mac99 = REGIONS.map(r => mac[r][8]);
-const mac75 = REGIONS.map(r => mac[r][0]);
-const cheapestISO = REGIONS[mac99.indexOf(Math.min(...mac99))];
-const highestISO  = REGIONS[mac99.indexOf(Math.max(...mac99))];
+const mac99 = REGIONS.map(r => mac[r][T_IDX[99]]).filter(v => v != null);
+const mac50 = REGIONS.map(r => mac[r][T_IDX[50]]).filter(v => v != null);
+const cheapestISO = REGIONS[REGIONS.map(r => mac[r][T_IDX[99]]).indexOf(Math.min(...mac99))];
+const highestISO  = REGIONS[REGIONS.map(r => mac[r][T_IDX[99]]).indexOf(Math.max(...mac99))];
 
 const dacMed = BENCHMARKS_DYNAMIC.dac.Medium;
 const dacHigh = BENCHMARKS_DYNAMIC.dac.High;
@@ -372,18 +376,19 @@ const regionsExceedingDAC = REGIONS.filter(r =>
 // 1. INTRO NARRATIVE + KEY COUNTERS
 // ============================================================================
 html('introNarrative',
-    `Average abatement costs range from <strong>$${Math.min(...mac75)}\u2013${Math.max(...mac99)}/ton</strong> ` +
+    `Average abatement costs range from <strong>$${Math.min(...mac50)}\u2013${Math.max(...mac99)}/ton</strong> ` +
     `across all five ISOs through 99% hourly matching \u2014 well below the social cost of carbon ($190/ton). ` +
-    `The grid backbone (75\u219290%) costs $${margMin.val}\u2013${Math.max(...REGIONS.map(r => marg[r][0]))}/ton ` +
-    `across regions. Beyond 90%, marginal costs escalate sharply as storage and CCS enter the mix. ` +
+    `The entry zone (50\u219275%) costs $${Math.min(...REGIONS.map(r => marg[r][0]).filter(v=>v!=null))}\u2013${Math.max(...REGIONS.map(r => marg[r][0]).filter(v=>v!=null))}/ton; ` +
+    `the grid backbone (75\u219290%) costs $${Math.min(...REGIONS.map(r => marg[r][1]).filter(v=>v!=null))}\u2013${Math.max(...REGIONS.map(r => marg[r][1]).filter(v=>v!=null))}/ton. ` +
+    `Beyond 90%, marginal costs escalate sharply as storage and CCS enter the mix. ` +
     `${regionsExceedingDAC} region${regionsExceedingDAC !== 1 ? 's have' : ' has'} at least one step ` +
     `exceeding projected DAC costs ($${dacMed.mid}/ton by 2040\u20132045).`
 );
 
 html('keyCounters',
     `<div class="counter-item">` +
-    `  <div class="counter-val">$${Math.max(...REGIONS.map(r => marg[r][0]))}</div>` +
-    `  <div class="counter-label">Max backbone MAC<br>(75\u219290%)</div>` +
+    `  <div class="counter-val">$${Math.max(...REGIONS.map(r => marg[r][0]).filter(v=>v!=null))}</div>` +
+    `  <div class="counter-label">Max entry MAC<br>(50\u219275%)</div>` +
     `</div>` +
     `<div class="counter-item">` +
     `  <div class="counter-val">$${margMax.val >= 1000 ? '1,000+' : margMax.val}</div>` +
@@ -421,7 +426,7 @@ html('keyCounters',
             `  <span class="region-dot" style="background:${c}"></span> ${REGION_NAMES[iso]}` +
             `  <span style="margin-left:auto;font-family:'Barlow Semi Condensed',sans-serif;font-size:1rem;font-weight:800;color:${c}">$${backbone}\u2192$${lastStep >= 1000 ? '1k+' : lastStep}</span>` +
             `</div>` +
-            `<div class="envelope-card-subtitle">Backbone \u2192 last step · Avg MAC at 99%: $${mac[iso][8]}/ton</div>` +
+            `<div class="envelope-card-subtitle">Backbone \u2192 last step · Avg MAC at 99%: $${mac[iso][T_IDX[99]]}/ton</div>` +
             `<canvas id="marg_${iso}"></canvas>` +
             `</div>`;
     }).join('');
@@ -475,14 +480,15 @@ html('keyCounters',
     });
 
     // Insight
-    const backboneMax = Math.max(...REGIONS.map(r => marg[r][0]));
-    const backboneMin = Math.min(...REGIONS.map(r => marg[r][0]));
+    const entryVals = REGIONS.map(r => marg[r][0]).filter(v => v != null);
+    const backboneVals = REGIONS.map(r => marg[r][1]).filter(v => v != null);
     const lastMileVals = REGIONS.map(r => marg[r][marg[r].length - 1]);
     html('marginalInsight',
-        `<strong>Grid backbone (75\u219290%):</strong> Marginal MAC ranges $${backboneMin}\u2013$${backboneMax}/ton \u2014 ` +
-        `well below SCC ($190) everywhere. Grid decarbonization to 90% is efficient in all regions. ` +
+        `<strong>Entry zone (50\u219275%):</strong> Marginal MAC ranges $${Math.min(...entryVals)}\u2013$${Math.max(...entryVals)}/ton \u2014 ` +
+        `the cheapest abatement. <strong>Grid backbone (75\u219290%):</strong> $${Math.min(...backboneVals)}\u2013$${Math.max(...backboneVals)}/ton \u2014 ` +
+        `still well below SCC ($190). ` +
         `<strong>Last mile (97.5\u219299%):</strong> Costs jump to $${Math.min(...lastMileVals)}\u2013$${Math.max(...lastMileVals) >= 1000 ? '1,000+' : Math.max(...lastMileVals)}/ton. ` +
-        `The 3\u201310\u00D7 escalation from backbone to last mile is where portfolio diversification into DAC, ` +
+        `The escalation from entry zone to last mile is where portfolio diversification into DAC, ` +
         `BECCS, and SAF becomes cost-competitive.`
     );
 })();
@@ -572,9 +578,9 @@ html('keyCounters',
             `<div class="region-card-head">` +
             `  <span class="region-dot" style="background:${c}"></span>` +
             `  <span class="region-name">${REGION_NAMES[iso]}</span>` +
-            `  <span class="region-mac99" style="color:${c}">$${mac[iso][8]}/ton</span>` +
+            `  <span class="region-mac99" style="color:${c}">$${mac[iso][T_IDX[99]]}/ton</span>` +
             `</div>` +
-            `<p>Average MAC: $${mac[iso][0]}\u2013${mac[iso][8]}/ton (75\u201399%). ` +
+            `<p>Average MAC: $${mac[iso][T_IDX[50]] || mac[iso][T_IDX[60]]}\u2013${mac[iso][T_IDX[99]]}/ton (50\u201399%). ` +
             `Backbone: $${backbone}/ton. Last step: $${lastStep >= 1000 ? '1,000+' : lastStep}/ton. ` +
             `${dacSteps > 0 ? dacSteps + ' step' + (dacSteps > 1 ? 's' : '') + ' exceed DAC.' : 'No steps exceed DAC.'} ` +
             `${topDriver ? topDriver + ' drives ' + topPct + '% of variance.' : ''}</p>` +
