@@ -11,42 +11,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<link rel="stylesheet" href="styles/shared.css">
 <style>
-@font-face {
-    font-family: 'Franklin Gothic Demi';
-    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi');
-    font-weight: 600; font-style: normal; font-display: swap;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 17px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
-body {
-    font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
-    background: #F3F4F8; color: #1A1A1A; line-height: 1.6; min-height: 100vh;
-}
-:root {
-    --navy: #1A2744; --navy-light: #2D3A52;
-    --accent-blue: #4a90d9; --accent-warm: #f4a261;
-    --bg-card: #FFFFFF; --border: #D4D8E0; --text-muted: #6B7280;
-}
-
-/* ===== HEADER ===== */
-.header {
-    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
-    color: #fff; padding: 72px 24px 64px; text-align: center; position: relative; overflow: hidden;
-}
-.header::after {
-    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, #1A2744, #0EA5E9, #22C55E, #F59E0B, #EF4444);
-}
-.header h1 {
-    font-family: 'Franklin Gothic Demi', 'Lexend', sans-serif;
-    font-size: 3rem; font-weight: 700; margin-bottom: 14px; position: relative; z-index: 2;
-    text-shadow: 0 2px 20px rgba(0,0,0,0.5);
-}
-.header .subtitle {
-    font-size: 1.1rem; opacity: 0.92; max-width: 660px; margin: 0 auto;
-    position: relative; z-index: 2;
-}
+body { background: #F3F4F8; color: #1A1A1A; line-height: 1.6; }
 
 /* ===== LAYOUT ===== */
 .page-wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
@@ -57,8 +24,7 @@ h2 {
     font-size: 1.8rem; color: var(--navy); margin-bottom: 12px; letter-spacing: -0.3px;
 }
 h3 {
-    font-family: 'Franklin Gothic Demi', sans-serif;
-    font-size: 1.15rem; color: var(--navy); margin-bottom: 8px;
+    font-size: 1.15rem; margin-bottom: 8px;
 }
 .section-num {
     display: inline-block; font-size: 0.78rem; font-weight: 700; color: #0EA5E9;
@@ -133,14 +99,6 @@ p:last-child { margin-bottom: 0; }
 .cell-orange { color: #FBBF24; }
 .cell-red { color: #F87171; }
 
-/* ===== FOOTER ===== */
-.page-footer {
-    background: var(--navy); color: rgba(255,255,255,0.6); text-align: center;
-    padding: 32px 24px; font-size: 0.82rem;
-}
-.page-footer a { color: rgba(255,255,255,0.7); text-decoration: none; margin: 0 12px; }
-.page-footer a:hover { color: #fff; }
-
 /* ===== PER-REGION ENVELOPE GRID ===== */
 .envelope-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -166,7 +124,6 @@ p:last-child { margin-bottom: 0; }
 
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
-    .header h1 { font-size: 2rem; }
     .page-wrap { padding: 0 16px; }
     h2 { font-size: 1.4rem; }
     .counter-row { flex-direction: column; }
@@ -194,8 +151,9 @@ p:last-child { margin-bottom: 0; }
 
 <!-- HEADER -->
 <header class="header">
-    <h1>Marginal Carbon Abatement</h1>
+    <h1>The 8,760 Problem</h1>
     <p class="subtitle">Where grid decarbonization beats alternatives — and where it doesn't.</p>
+    <div class="header-accent"></div>
 </header>
 
 <div id="scrollProgress" style="position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent-blue),#22C55E);width:0%;z-index:10001;transition:width 0.1s linear;"></div>
