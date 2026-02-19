@@ -525,7 +525,14 @@ function buildMacChart() {
                     { label: 'P10', data: p10, borderColor: c + '44', backgroundColor: 'transparent',
                         borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3 },
                     { label: 'Midpoint', data: p50, borderColor: c, backgroundColor: c + '18',
-                        borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, fill: false, tension: 0.3, order: 1 }
+                        borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, fill: false, tension: 0.3, order: 1 },
+                    // DAC declining trajectory curves (SBTi year-indexed)
+                    { label: 'DAC Optimistic', data: dacOptData.filter(d => d.x >= 74), borderColor: '#E91E6333',
+                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 5 },
+                    { label: 'DAC Central', data: dacCenData.filter(d => d.x >= 74), borderColor: '#E91E6388',
+                        borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, fill: false, tension: 0.3, order: 4 },
+                    { label: 'DAC Conservative', data: dacConData.filter(d => d.x >= 74), borderColor: '#E91E6333',
+                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.05)', tension: 0.3, order: 5 }
                 ]
             },
             options: {
@@ -548,15 +555,35 @@ function buildMacChart() {
                         titleFont: { family: "'Barlow Semi Condensed', sans-serif", size: 11, weight: '600' },
                         bodyFont: { family: "'Barlow Semi Condensed', sans-serif", size: 10 },
                         padding: 8, cornerRadius: 6,
+                        filter: item => !item.dataset.label.startsWith('DAC') && item.dataset.label !== 'P90' && item.dataset.label !== 'P10',
                         callbacks: {
-                            title: items => items[0].raw.x + '% Step',
+                            title: items => {
+                                const x = items[0].raw.x;
+                                // Find SBTi year for this threshold
+                                const ms = SBTI_MILESTONES;
+                                let yr = '';
+                                for (let i = 0; i < ms.length - 1; i++) {
+                                    if (x >= ms[i].threshold && x <= ms[i+1].threshold) {
+                                        const frac = (x - ms[i].threshold) / (ms[i+1].threshold - ms[i].threshold);
+                                        yr = ' (~' + Math.round(ms[i].year + frac * (ms[i+1].year - ms[i].year)) + ')';
+                                        break;
+                                    }
+                                }
+                                return x + '% Step' + yr;
+                            },
                             label: item => {
                                 if (item.dataset.label !== 'Midpoint') return null;
                                 const idx = THRESHOLDS.indexOf(item.raw.x);
                                 const p10v = idx >= 0 && fan.p10[idx] != null ? Math.round(fan.p10[idx]) : '--';
                                 const p90v = idx >= 0 && fan.p90[idx] != null ? Math.round(Math.min(fan.p90[idx], 2000)) : '--';
-                                return 'Marginal MAC: $' + Math.round(item.raw.y) + '/mtCO\u2082' +
-                                    (idx >= 0 ? ' (P10: $' + p10v + ', P90: $' + p90v + ')' : '');
+                                const dacC = dacCostAtThreshold(item.raw.x, 'central');
+                                return ['Marginal MAC: $' + Math.round(item.raw.y) + '/tCO\u2082 (P10: $' + p10v + ', P90: $' + p90v + ')',
+                                        'DAC at this year: $' + dacC + '/tCO\u2082 (central)'];
+                            },
+                            afterLabel: item => {
+                                if (item.dataset.label !== 'Midpoint') return null;
+                                const dacC = dacCostAtThreshold(item.raw.x, 'central');
+                                return item.raw.y > dacC ? '\u26A0 Exceeds projected DAC cost' : '\u2713 Below projected DAC cost';
                             }
                         }
                     },
@@ -643,16 +670,35 @@ function buildPortfolio() {
     const dacHighP = BENCHMARKS_DYNAMIC.dac.High;
     const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
 
-    const datasets = regions.map(iso => ({
-        label: iso,
-        data: margData[iso].map(v => v != null ? Math.min(v, 1050) : 0),
-        backgroundColor: REGION_COLORS[iso] + 'AA',
-        borderColor: REGION_COLORS[iso],
-        borderWidth: 1.5,
-        borderRadius: 4,
-        barPercentage: 0.75,
-        categoryPercentage: 0.85
-    }));
+    // DAC cost at each zone's end-threshold (declining via SBTi year)
+    const zoneEndThresholds = [75, 90, 92.5, 95, 97.5, 99];
+    const dacOptZone = zoneEndThresholds.map(t => dacCostAtThreshold(t, 'optimistic'));
+    const dacCenZone = zoneEndThresholds.map(t => dacCostAtThreshold(t, 'central'));
+    const dacConZone = zoneEndThresholds.map(t => dacCostAtThreshold(t, 'conservative'));
+
+    const datasets = [
+        ...regions.map(iso => ({
+            label: iso,
+            data: margData[iso].map(v => v != null ? Math.min(v, 1050) : 0),
+            backgroundColor: REGION_COLORS[iso] + 'AA',
+            borderColor: REGION_COLORS[iso],
+            borderWidth: 1.5,
+            borderRadius: 4,
+            barPercentage: 0.75,
+            categoryPercentage: 0.85,
+            type: 'bar'
+        })),
+        // DAC declining trajectories as line overlays
+        { label: 'DAC Optimistic', type: 'line', data: dacOptZone,
+            borderColor: '#E91E6333', borderWidth: 1, borderDash: [3, 3],
+            pointRadius: 0, fill: false, tension: 0.3, order: -1 },
+        { label: 'DAC Central', type: 'line', data: dacCenZone,
+            borderColor: '#E91E6388', borderWidth: 2, borderDash: [6, 4],
+            pointRadius: 2, pointBackgroundColor: '#E91E63', fill: '-1', backgroundColor: 'rgba(233,30,99,0.05)', tension: 0.3, order: -1 },
+        { label: 'DAC Conservative', type: 'line', data: dacConZone,
+            borderColor: '#E91E6333', borderWidth: 1, borderDash: [3, 3],
+            pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.05)', tension: 0.3, order: -1 }
+    ];
 
     if (portfolioInst) portfolioInst.destroy();
     portfolioInst = new Chart(ctx, {
@@ -662,8 +708,23 @@ function buildPortfolio() {
             responsive: true, maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             scales: {
-                x: { title: { display: true, text: 'CFE Matching Step', font: { size: 11, weight: 600 } },
-                    ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 20 },
+                x: { title: { display: true, text: 'CFE Matching Step (SBTi Year)', font: { size: 11, weight: 600 } },
+                    ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 20,
+                        callback: function(value, index) {
+                            const labels = MARGINAL_MAC_LABELS;
+                            const years = zoneEndThresholds.map(t => {
+                                const ms = SBTI_MILESTONES;
+                                for (let i = 0; i < ms.length - 1; i++) {
+                                    if (t >= ms[i].threshold && t <= ms[i+1].threshold) {
+                                        const frac = (t - ms[i].threshold) / (ms[i+1].threshold - ms[i].threshold);
+                                        return Math.round(ms[i].year + frac * (ms[i+1].year - ms[i].year));
+                                    }
+                                }
+                                return t >= 100 ? 2050 : 2025;
+                            });
+                            return labels[index] + '\n~' + years[index];
+                        }
+                    },
                     grid: { display: false }, border: { display: true, color: '#D4D8E0' } },
                 y: { min: 0, max: 1100,
                     title: { display: true, text: 'Marginal MAC ($/ton CO\u2082)', font: { size: 11, weight: 600 } },
@@ -671,8 +732,31 @@ function buildPortfolio() {
                     grid: { display: false }, border: { display: true, color: '#D4D8E0' } }
             },
             plugins: {
-                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10, weight: 600 } } },
-                tooltip: { callbacks: { label: item => item.dataset.label + ': $' + margData[item.dataset.label][item.dataIndex] + '/ton' } },
+                legend: { position: 'bottom', labels: {
+                    usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10, weight: 600 },
+                    filter: item => !item.text.startsWith('DAC')
+                } },
+                tooltip: { callbacks: {
+                    title: items => {
+                        const idx = items[0].dataIndex;
+                        const yr = Math.round(2025 + (zoneEndThresholds[idx] - 0) / 100 * 25);
+                        const sbtiYr = zoneEndThresholds.map(t => {
+                            const ms = SBTI_MILESTONES;
+                            for (let i = 0; i < ms.length - 1; i++) {
+                                if (t >= ms[i].threshold && t <= ms[i+1].threshold) {
+                                    return Math.round(ms[i].year + ((t - ms[i].threshold) / (ms[i+1].threshold - ms[i].threshold)) * (ms[i+1].year - ms[i].year));
+                                }
+                            }
+                            return 2050;
+                        });
+                        return MARGINAL_MAC_LABELS[idx] + ' (~' + sbtiYr[idx] + ')';
+                    },
+                    label: item => {
+                        if (item.dataset.label === 'DAC Central') return 'DAC Central: $' + Math.round(item.raw) + '/ton';
+                        if (item.dataset.label.startsWith('DAC')) return item.dataset.label + ': $' + Math.round(item.raw) + '/ton';
+                        return item.dataset.label + ': $' + margData[item.dataset.label]?.[item.dataIndex] + '/ton';
+                    }
+                } },
                 datalabels: { display: false },
                 annotation: {
                     annotations: {
@@ -800,6 +884,19 @@ function buildInflectionTable() {
 // ============================================================================
 // SUMMARY
 // ============================================================================
+// Find threshold where MAC exceeds the SBTi-year-indexed DAC trajectory
+function findDacTrajectoryIntersection(regionMacArray, trajectory) {
+    trajectory = trajectory || 'central';
+    for (let i = 0; i < THRESHOLDS.length; i++) {
+        const t = THRESHOLDS[i];
+        const mac = regionMacArray[i];
+        if (mac == null) continue;
+        const dacAtYear = dacCostAtThreshold(t, trajectory);
+        if (mac >= dacAtYear) return t;
+    }
+    return '>99';
+}
+
 function updateSummary() {
     const s = getState();
     const gridLevel = s.grid.toLowerCase();
