@@ -22,6 +22,7 @@ Output:
   - dashboard/compressed_day_profiles.json
     Keyed by ISO → threshold → mix_key → {demand, matched, surplus, charges, gap}
     Each array is 24 values in UTC (hour-of-day sums across 365 days, normalized)
+    Chart displays as MWh (annual sum) = value * annual_demand_mwh
 """
 
 import json
@@ -393,8 +394,8 @@ def compress_to_24h(result):
     Compress 8760-hour dispatch result to 24 hour-of-day sums.
 
     Output values are normalized: each value is the sum across 365 days
-    for that hour-of-day. The chart converts to MW via:
-        MW = (value / 365) * annual_demand_mwh
+    for that hour-of-day. The chart converts to MWh (annual sum) via:
+        MWh = value * annual_demand_mwh
 
     All arrays in UTC (chart handles UTC → local rotation).
     """
@@ -475,7 +476,7 @@ def main():
         results = json.load(f)
 
     # Dashboard thresholds (same as shared-data.js FEASIBLE_MIXES)
-    DASHBOARD_THRESHOLDS = ['75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
+    DASHBOARD_THRESHOLDS = ['50', '60', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
 
     output = {}
     total_mixes = 0

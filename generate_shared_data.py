@@ -133,6 +133,36 @@ for iso in ISOS:
             arr[i] = arr[i + 1]
 
 # ============================================================================
+# EXTRACT SYSTEM_COST_DATA (P10/Median/P90 of total_system_cost across 324 scenarios)
+# ============================================================================
+
+print("\nExtracting SYSTEM_COST_DATA (P10/Median/P90)...")
+import numpy as np_sc
+
+system_cost_data = {'medium': {}, 'low': {}, 'high': {}}
+for iso in ISOS:
+    med_line, lo_line, hi_line = [], [], []
+    for t in THRESHOLDS:
+        scenarios = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {})
+        costs = []
+        for sc_key, sc in scenarios.items():
+            tsc = sc.get('gas_backup', {}).get('total_system_cost_per_mwh')
+            if tsc is not None and tsc > 0:
+                costs.append(tsc)
+        if costs:
+            med_line.append(round(float(np_sc.median(costs)), 2))
+            lo_line.append(round(float(np_sc.percentile(costs, 10)), 2))
+            hi_line.append(round(float(np_sc.percentile(costs, 90)), 2))
+        else:
+            med_line.append(None)
+            lo_line.append(None)
+            hi_line.append(None)
+    system_cost_data['medium'][iso] = med_line
+    system_cost_data['low'][iso] = lo_line
+    system_cost_data['high'][iso] = hi_line
+    print(f"  {iso} med: {med_line}")
+
+# ============================================================================
 # EXTRACT RESOURCE_MIX_DATA
 # ============================================================================
 
@@ -182,6 +212,7 @@ for iso in ISOS:
     iso_cd = {
         'demand': [],
         'matched': {r: [] for r in MATCHED_RESOURCES},
+        'surplus': {r: [] for r in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']},
         'gap': [],
         'battery_charge': [],
         'ldes_charge': [],
@@ -209,6 +240,9 @@ for iso in ISOS:
             for res in MATCHED_RESOURCES:
                 vals = profile.get('matched', {}).get(res, [0]*24)
                 iso_cd['matched'][res].append([round(v, 5) for v in vals])
+            for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+                vals = profile.get('surplus', {}).get(res, [0]*24)
+                iso_cd['surplus'][res].append([round(v, 5) for v in vals])
         else:
             iso_cd['demand'].append([0]*24)
             iso_cd['gap'].append([0]*24)
@@ -216,6 +250,8 @@ for iso in ISOS:
             iso_cd['ldes_charge'].append([0]*24)
             for res in MATCHED_RESOURCES:
                 iso_cd['matched'][res].append([0]*24)
+            for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+                iso_cd['surplus'][res].append([0]*24)
 
     compressed_day_data[iso] = iso_cd
     filled = sum(1 for d in iso_cd['demand'] if any(v > 0 for v in d))
@@ -485,6 +521,22 @@ for iso_idx, iso in enumerate(ISOS):
 lines.append('};')
 lines.append('')
 
+# SYSTEM_COST_DATA
+lines.append('// --- Average System Cost ($/MWh) by threshold ---')
+lines.append('// Source: P10/Median/P90 of total_system_cost_per_mwh across 324 sensitivity scenarios')
+lines.append('// Includes clean procurement + gas backup (existing + new-build)')
+lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
+lines.append('const SYSTEM_COST_DATA = {')
+for sens in ['medium', 'low', 'high']:
+    lines.append(f'    {sens}: {{')
+    for iso_idx, iso in enumerate(ISOS):
+        comma = ',' if iso_idx < len(ISOS) - 1 else ''
+        lines.append(f'        {iso}: {" " * (6-len(iso))}{fmt_array(system_cost_data[sens][iso])}{comma}')
+    comma = ',' if sens != 'high' else ''
+    lines.append(f'    }}{comma}')
+lines.append('};')
+lines.append('')
+
 # UPRATE_CAPS_TWH
 uprate_caps = data['config'].get('tranche_model', {}).get('uprate_caps_twh', {})
 if not uprate_caps:
@@ -582,6 +634,18 @@ for iso_idx, iso in enumerate(ISOS):
         lines.append(f'            {res}: [')
         for i, arr in enumerate(cd['matched'][res]):
             comma = ',' if i < len(cd['matched'][res]) - 1 else ''
+            lines.append(f'                {fmt_24h_array(arr)}{comma}')
+        lines.append(f'            ]{res_comma}')
+    lines.append('        },')
+
+    # surplus
+    surplus_resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+    lines.append('        surplus: {')
+    for res_idx, res in enumerate(surplus_resources):
+        res_comma = ',' if res_idx < len(surplus_resources) - 1 else ''
+        lines.append(f'            {res}: [')
+        for i, arr in enumerate(cd['surplus'][res]):
+            comma = ',' if i < len(cd['surplus'][res]) - 1 else ''
             lines.append(f'                {fmt_24h_array(arr)}{comma}')
         lines.append(f'            ]{res_comma}')
     lines.append('        },')
