@@ -361,7 +361,7 @@ body { background: #F3F4F8; }
 
         <!-- Marginal MAC by Region (toggle-responsive) -->
         <div class="chart-card">
-            <div class="chart-card-title">Marginal MAC by Region — Two-Zone View</div>
+            <div class="chart-card-title">Marginal MAC by Region — Six-Zone Stepwise View</div>
             <canvas id="portfolioChart"></canvas>
         </div>
 
@@ -460,6 +460,9 @@ function buildMacChart() {
     const gridLevel = s.grid.toLowerCase();
     const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
     const dacCosts = BENCHMARKS_DYNAMIC.dac[s.dac] || BENCHMARKS_DYNAMIC.dac.Medium;
+    // Threshold index lookup (MAC_DATA arrays match THRESHOLDS order)
+    const _TI = {};
+    THRESHOLDS.forEach((t, i) => _TI[t] = i);
 
     // Destroy old instances
     Object.values(macChartInstances).forEach(c => c.destroy());
@@ -476,9 +479,9 @@ function buildMacChart() {
     // Build card HTML
     grid.innerHTML = regions.map(iso => {
         const c = REGION_COLORS[iso];
-        const mac99 = macData[iso]?.[8] || 0;
-        const p10_99 = Math.round(MAC_FAN_DATA[iso]?.p10?.[8] || 0);
-        const p90_99 = Math.round(MAC_FAN_DATA[iso]?.p90?.[8] || 0);
+        const mac99 = macData[iso]?.[_TI[99]] || 0;
+        const p10_99 = Math.round(MAC_FAN_DATA[iso]?.p10?.[_TI[99]] || 0);
+        const p90_99 = Math.round(MAC_FAN_DATA[iso]?.p90?.[_TI[99]] || 0);
         return `<div class="envelope-card" style="border-top-color:${c}">` +
             `<div class="envelope-card-title">` +
             `  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c}"></span>` +
