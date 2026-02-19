@@ -1879,9 +1879,9 @@ const selectedCfCost = 90;  // Medium cost
 function updateAll() {}
 function getSelectedISO() { return 'CAISO'; }
 
-// Scenario resolver: homepage always uses Medium (MMM_M_M) scenario
+// Scenario resolver: returns the synthetic MMM_M_M scenario from DATA
 function resolveScenario(thresholdData) {
-    if (!thresholdData?.scenarios) return null;
+    if (!thresholdData?.scenarios) return thresholdData; // synthetic entry
     return thresholdData.scenarios['MMM_M_M'] || null;
 }
 
@@ -1891,8 +1891,8 @@ function getUnifiedCosts(entry) {
     const detail = entry.costs_detail || {};
     const costs = entry.costs || {};
     return {
-        resource_costs: detail.resource_costs || null,
-        effective_cost_per_useful_mwh: detail.effective_cost_per_useful_mwh ?? costs.effective_cost ?? null,
+        resource_costs: detail.resource_costs || costs.resource_costs || null,
+        effective_cost_per_useful_mwh: detail.effective_cost_per_useful_mwh ?? costs.effective_cost_per_useful_mwh ?? costs.effective_cost ?? null,
         total_cost_per_demand_mwh: detail.total_cost_per_demand_mwh ?? costs.total_cost ?? null,
         incremental_above_baseline: detail.incremental_above_baseline ?? costs.incremental ?? null,
         baseline_wholesale_cost: detail.baseline_wholesale_cost ?? costs.wholesale ?? null,
@@ -1908,20 +1908,100 @@ function getCO2Abated(entry) {
     return 0;
 }
 
-// Load data
-fetch('overprocure_results.json')
-    .then(r => r.json())
-    .then(data => {
-        DATA = data;
-        initHomepage();
-    })
-    .catch(e => {
-        console.warn('Results not loaded yet:', e);
-        // Still show narrative sections without charts
-        document.querySelectorAll('.story-section, .scrolly-step').forEach(el => {
-            el.classList.add('visible');
-        });
-    });
+// Build synthetic DATA object from shared-data.js constants.
+// This replaces the overprocure_results.json fetch — all data comes from shared-data.js.
+function buildDataFromSharedData() {
+    const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const results = {};
+
+    for (const iso of ISOS) {
+        const thresholds = {};
+        const wholesale = (typeof WHOLESALE_PRICES !== 'undefined' ? WHOLESALE_PRICES[iso] : 30) || 30;
+        const demandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH[iso] : 200) || 200;
+
+        for (let ti = 0; ti < THRESHOLDS.length; ti++) {
+            const tk = String(THRESHOLDS[ti]);
+            const effCost = EFFECTIVE_COST_DATA[iso]?.[ti];
+            const mixData = RESOURCE_MIX_DATA[iso];
+            const wynRC = WYN_RESOURCE_COSTS[iso]?.[ti];
+            const procurement = mixData?.procurement?.[ti] || 100;
+
+            // Build resource_costs from WYN_RESOURCE_COSTS
+            const resource_costs = {};
+            if (wynRC) {
+                for (const r of MIX_RESOURCES) {
+                    const rd = wynRC[r];
+                    if (!rd) continue;
+                    if (r === 'battery' || r === 'ldes') {
+                        resource_costs[r] = {
+                            dispatch_pct: rd.d || 0,
+                            cost_per_demand_mwh: rd.c || 0
+                        };
+                    } else {
+                        resource_costs[r] = {
+                            existing_pct: rd.e || 0,
+                            new_pct: rd.n || 0,
+                            cost_per_demand_mwh: rd.c || 0
+                        };
+                    }
+                }
+            }
+
+            // Estimate total cost from effective cost
+            const matchScore = THRESHOLDS[ti] <= 99 ? THRESHOLDS[ti] : 99;
+            const totalCost = effCost != null ? effCost * matchScore / 100 / (procurement / 100) : null;
+
+            thresholds[tk] = {
+                procurement_pct: procurement,
+                hourly_match_score: matchScore,
+                resource_mix: {},
+                costs: {
+                    effective_cost_per_useful_mwh: effCost,
+                    total_cost_per_demand_mwh: totalCost,
+                    incremental_above_baseline: effCost != null ? effCost - wholesale : null,
+                    baseline_wholesale_cost: wholesale,
+                    resource_costs: resource_costs
+                },
+                costs_detail: {
+                    effective_cost_per_useful_mwh: effCost,
+                    total_cost_per_demand_mwh: totalCost,
+                    incremental_above_baseline: effCost != null ? effCost - wholesale : null,
+                    baseline_wholesale_cost: wholesale,
+                    resource_costs: resource_costs
+                }
+            };
+
+            // Populate resource_mix from RESOURCE_MIX_DATA
+            if (mixData) {
+                for (const r of MIX_RESOURCES) {
+                    if (r === 'battery' || r === 'ldes') continue;
+                    thresholds[tk].resource_mix[r] = mixData[r]?.[ti] || 0;
+                }
+            }
+        }
+
+        results[iso] = {
+            thresholds: thresholds,
+            annual_demand_mwh: demandTWh * 1e6,
+            label: iso
+        };
+    }
+
+    return {
+        results: results,
+        config: {
+            grid_mix_shares: typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES : {},
+            hydro_caps: {}
+        }
+    };
+}
+
+// Build DATA from shared-data.js (no fetch needed)
+DATA = buildDataFromSharedData();
+// Initialize immediately
+document.addEventListener('DOMContentLoaded', function() {
+    if (DATA) initHomepage();
+});
 
 function initHomepage() {
     // Show all narrative content
@@ -3581,10 +3661,14 @@ function initHomepage90CostChart() {
     isos.forEach(iso => {
         const td = DATA.results[iso]?.thresholds?.['90'];
         if (td) {
-            labels.push(iso);
-            costs.push(td.costs.effective_cost_per_useful_mwh);
-            fills.push(REGION_COLORS[iso].fill);
-            borders.push(REGION_COLORS[iso].border);
+            const uc = getUnifiedCosts(td);
+            const cost = uc.effective_cost_per_useful_mwh;
+            if (cost != null) {
+                labels.push(iso);
+                costs.push(cost);
+                fills.push(REGION_COLORS[iso].fill);
+                borders.push(REGION_COLORS[iso].border);
+            }
         }
     });
 
