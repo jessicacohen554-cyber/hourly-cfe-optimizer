@@ -287,8 +287,13 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     # Tranche 3: Cheapest of nuclear new-build vs CCS
     nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + tx_cf
     ccs_tranche_price = ccs_table[ccs_lev][iso] + tx_ccs_cf
+    tranche3_is_nuclear = nuclear_price <= ccs_tranche_price
     tranche3_price = min(nuclear_price, ccs_tranche_price)
     tranche3_cost = remaining * tranche3_price
+
+    # Tranche 3 split: nuclear new-build vs CCS-CCGT
+    nuclear_newbuild_twh = remaining if tranche3_is_nuclear else np.zeros(N)
+    ccs_tranche_twh = np.zeros(N) if tranche3_is_nuclear else remaining
 
     cf_total_new_cost = uprate_cost + geo_cost + tranche3_cost
     cf_cost_per_demand = cf_total_new_cost / demand
@@ -302,7 +307,17 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     # Effective cost
     effective_cost = np.where(match_frac > 0, total_cost / match_frac, 0)
 
-    return total_cost, effective_cost
+    # Build tranche breakdown (per-mix arrays, shape N)
+    tranche_data = {
+        'cf_existing_twh': cf_existing_pct / 100.0 * demand,
+        'uprate_twh': uprate_twh,
+        'geo_twh': geo_twh if (iso == 'CAISO' and geo_lev) else np.zeros(N),
+        'nuclear_newbuild_twh': nuclear_newbuild_twh,
+        'ccs_tranche_twh': ccs_tranche_twh,
+        'new_cf_twh': new_cf_twh,
+    }
+
+    return total_cost, effective_cost, tranche_data
 
 
 # ============================================================================
@@ -504,7 +519,7 @@ def main():
                     'geo': 'M' if iso == 'CAISO' else None,
                 }
 
-                tc, ec = price_mix_batch(iso, arrays, sens, demand_twh)
+                tc, ec, tranche = price_mix_batch(iso, arrays, sens, demand_twh)
                 best_idx = int(np.argmin(tc))
                 arch_set.add(best_idx)
 
@@ -524,12 +539,20 @@ def main():
                         'incremental': round(float(ec[best_idx]) - wholesale, 2),
                         'wholesale': wholesale,
                     },
+                    'tranche_costs': {
+                        'cf_existing_twh': round(float(tranche['cf_existing_twh'][best_idx]), 3),
+                        'uprate_twh': round(float(tranche['uprate_twh'][best_idx]), 3),
+                        'geo_twh': round(float(tranche['geo_twh'][best_idx]), 3),
+                        'nuclear_newbuild_twh': round(float(tranche['nuclear_newbuild_twh'][best_idx]), 3),
+                        'ccs_tranche_twh': round(float(tranche['ccs_tranche_twh'][best_idx]), 3),
+                        'new_cf_twh': round(float(tranche['new_cf_twh'][best_idx]), 3),
+                    },
                 }
 
                 # Also compute no-45Q costs
                 no45q_sens = dict(sens)
                 no45q_sens['q45'] = '0'
-                tc_no45q, ec_no45q = price_mix_batch(iso, arrays, no45q_sens, demand_twh)
+                tc_no45q, ec_no45q, _ = price_mix_batch(iso, arrays, no45q_sens, demand_twh)
                 scenario['no_45q_costs'] = {
                     'total_cost': round(float(tc_no45q[best_idx]), 2),
                     'effective_cost': round(float(ec_no45q[best_idx]), 2),
@@ -624,7 +647,7 @@ def main():
                             growth_results = {}
                             for g_level in DEMAND_GROWTH_LEVELS:
                                 g_rate = iso_rates[g_level]
-                                tc, ec = price_mix_batch(
+                                tc, ec, _ = price_mix_batch(
                                     iso, arch_arrays, sens, demand_twh,
                                     target_year=year, growth_rate=g_rate
                                 )
