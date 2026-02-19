@@ -87,7 +87,7 @@
 ### 4-Step Pipeline Architecture (Critical — Know What You're Changing)
 - **Step 1: PFS Generator** (`step1_pfs_generator.py`) — Generates the Physics Feasible Space (PFS). Hourly match, dispatch, curtailment. Produces 21.4M physics-validated resource mixes. **Only re-run if dispatch logic, generation curves, or demand curves change.**
 - **Step 2: Efficient Frontier** (`step2_efficient_frontier.py`) — Extracts the Efficient Frontier (EF) from PFS. Filters existing gen utilization, procurement minimization, dominance removal. 21.4M → ~1.8M rows. **Only re-run if PFS changes or filtering criteria change.**
-- **Step 3: Cost Optimization** (`step3_cost_optimization.py`) — Vectorized cross-evaluation of EF mixes under 324 sensitivity combos. Merit-order tranche pricing, demand growth sweep. **Run when cost assumptions change. No physics re-run needed.**
+- **Step 3: Cost Optimization** (`step3_cost_optimization.py`) — Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing, demand growth sweep. **Run when cost assumptions change. No physics re-run needed.**
 - **Step 4: Post-Processing** (`step4_postprocess.py`) — NEISO gas constraint, CO₂ calculations, MAC calculations. **Run when Step 3 outputs change.**
 - **Data contract**: Step 3 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields. This prevents recoding existing figures.
 - Steps 2–4 are cheap (seconds to minutes). Step 1 is expensive (hours). Default to Steps 3–4 unless physics assumptions change.
@@ -110,7 +110,7 @@
 
 ### Change Propagation (Critical)
 - **"Fix something" = fix it everywhere** — any request to fix, update, or change something applies to ALL regions and ALL pages by default, not just the one being discussed
-- Pages to update: `dashboard.html`, all `region_*.html` pages, `optimizer_methodology.html`, `research_paper.html`
+- Pages to update: `dashboard.html`, `abatement_dashboard.html`, `optimizer_methodology.html`, `research_paper.html`
 - **Always update the research paper** (`research_paper.html`) when optimizer results, methodology, or findings change
 - **Proactively update narrative text** after new results are generated — don't wait to be asked
 - Only scope a fix to a single page if the user explicitly says so (e.g., "just on CAISO")
@@ -144,8 +144,7 @@
 - **Optimizer**: `optimize_overprocure.py` — Python, numpy-accelerated 3-phase sweep
 - **Dashboard**: `dashboard/dashboard.html` — interactive cost optimizer with all 5 sensitivity toggles
 - **Homepage**: `dashboard/index.html` — scrollytelling landing page with key findings
-- **Regional Page**: `dashboard/region_deepdive.html` — single page with 5 ISO nav buttons (not 5 separate pages)
-- **Abatement**: `dashboard/abatement_comparison.html` — CO2 abatement analysis + `abatement_dashboard.html`
+- **Abatement**: `dashboard/abatement_dashboard.html` — CO2 Abatement Analysis (scrollytell + static cost envelopes)
 - **Methodology**: `dashboard/optimizer_methodology.html` — technical specs only (trimmed)
 - **Research Paper**: `dashboard/research_paper.html` — full standalone paper with regional deep-dives
 - **Data**: `data/` — EIA hourly profiles, eGRID emission rates, fossil mix data
@@ -157,7 +156,7 @@
 - **Interactive site** (all other pages): Scrollytelling/interactive mode of the same research. Pages reference each other and build a narrative journey. Cut duplicate content BETWEEN these pages (but not between them and the paper).
 - **Homepage** (`index.html`): Entry point with scrollytell narrative and key conclusions. Emphasis on "what you need depends on what you have and where you're going" — this framing is intentional and should appear on both homepage and dashboard.
 - **Dashboard** (`dashboard.html`): Interactive optimizer with all parametric toggles. The "what you need depends on what you have" framing is reinforced here too.
-- **Regional page**: Single page with ISO selector buttons, not 5 separate files. Content updates dynamically per ISO selection.
+- **Regional content**: Lives in research paper and homepage scrollytell (standalone regional page deleted Feb 2026).
 
 ## Key Design Principles
 
@@ -167,7 +166,7 @@
 - **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
 - **5 paired toggle groups** replace 10 individual toggles (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission)
 - **10 thresholds** (75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100) — reduced from 18, with 2.5% granularity in inflection zone
-- **16,200 total scenarios** (10 thresholds × 5 regions × 324 paired toggle combos) — each with its own co-optimized resource mix and cost
+- **16,200 total scenarios** (10 thresholds × 5 regions × 5,832+ paired toggle combos) — each with its own co-optimized resource mix and cost
 - Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached mixes
 - Hydro is always existing-only, wholesale-priced, $0 transmission
 - H2 storage explicitly excluded
@@ -197,11 +196,11 @@ When facing compute vs. rigor tradeoffs:
 ### Visual & UX
 - Banner goes ABOVE intro text on main page (not below)
 - ALL pages share same header banner styling — only title and tagline vary per page
-- Top navigation bar on ALL pages: Home | Dashboard | Regional Deep Dives | CO2 Abatement | Methodology | Paper
+- Top navigation bar on ALL pages: Home | Cost Optimizer | Analysis (dropdown) | Research (dropdown)
 - Current page highlighted in nav; mobile gets hamburger/collapsible nav
-- Scrollytelling format for regional deep-dive pages, matching main dashboard style
+- Scrollytelling format for abatement analysis page, matching main dashboard style
 - **Homepage (index.html)** is the landing page with scrollytell narrative and key conclusions; dashboard.html is the interactive optimizer
-- **Static pages default to Medium cost sensitivities** — homepage and regional deep dives use all-Medium toggle data unless a figure is explicitly designed to show L/M/H comparison ranges
+- **Static pages default to Medium cost sensitivities** — homepage and abatement page use all-Medium toggle data unless a figure is explicitly designed to show L/M/H comparison ranges
 - Layer in explanations for model elements — assume reader has minimal energy domain knowledge
 - Clean, crisp visual identity — no clutter
 - Both mobile and desktop compatible (44px min tap targets, responsive charts, no horizontal overflow)
@@ -210,7 +209,7 @@ When facing compute vs. rigor tradeoffs:
 - Dashboard audience: Business professionals, minimal energy sector knowledge
 - Tooltips/info icons on controls explaining what each toggle does and why it matters
 - Chart titles should tell the story, not just label axes
-- Regional pages: Build understanding progressively, lead with "so what" before "how"
+- Abatement page: Build understanding progressively, lead with "so what" before "how"
 - Research paper: Academic rigor, withstand scrutiny, but still accessible to new readers
 - Methodology HTML: Technical specs only (detailed narrative lives in PDF paper)
 
@@ -234,7 +233,7 @@ When facing compute vs. rigor tradeoffs:
 - **Mobile tap targets**: Touch targets on charts/controls must be 44px minimum
 
 ### Animations & Interactivity
-- Regional deep-dive pages should be illustrative and dynamic with animations
+- Abatement analysis page should be illustrative and dynamic with animations
 - Abatement comparison page: creative animations, animated number counters, scroll-triggered transitions
 - Use CSS animations, scroll-based triggers, Chart.js animation options
 - Keep it professional (Bloomberg/McKinsey quality) but engaging
