@@ -84,13 +84,21 @@
 - **Batch all related edits into one response** — don't make 6 sequential edits with narration between each. Plan them, execute them all in parallel where possible, report once.
 - **Don't repeat large code blocks back to the user** — if the user can see the file, don't paste it into the response. Reference by file:line instead.
 
-### 4-Step Pipeline Architecture (Critical — Know What You're Changing)
-- **Step 1: PFS Generator** (`step1_pfs_generator.py`) — Generates the Physics Feasible Space (PFS). Hourly match, dispatch, curtailment. Produces 21.4M physics-validated resource mixes. **Only re-run if dispatch logic, generation curves, or demand curves change.**
-- **Step 2: Efficient Frontier** (`step2_efficient_frontier.py`) — Extracts the Efficient Frontier (EF) from PFS. Filters existing gen utilization, procurement minimization, dominance removal. 21.4M → ~1.8M rows. **Only re-run if PFS changes or filtering criteria change.**
-- **Step 3: Cost Optimization** (`step3_cost_optimization.py`) — Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing, demand growth sweep. **Run when cost assumptions change. No physics re-run needed.**
-- **Step 4: Post-Processing** (`step4_postprocess.py`) — NEISO gas constraint, CO₂ calculations, MAC calculations. **Run when Step 3 outputs change.**
-- **Data contract**: Step 3 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields. This prevents recoding existing figures.
-- Steps 2–4 are cheap (seconds to minutes). Step 1 is expensive (hours). Default to Steps 3–4 unless physics assumptions change.
+### Pipeline Architecture (Critical — Know What You're Changing)
+
+**Core pipeline (Steps 1–4):**
+- **Step 1: PFS Generator** (`step1_pfs_generator.py`) — Generates the Physics Feasible Space (PFS). 4D adaptive grid search (clean_firm, solar, wind, hydro) with procurement sweep, battery daily-cycle dispatch (4hr, 85% RTE), LDES multi-day dispatch (100hr, 50% RTE). Produces 21.4M physics-validated resource mixes across 13 thresholds × 5 ISOs. **Only re-run if dispatch logic, generation curves, or demand curves change.**
+- **Step 2: Efficient Frontier** (`step2_efficient_frontier.py`) — Extracts the Efficient Frontier (EF) from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. 21.4M → ~1.8M rows. **Only re-run if PFS changes or filtering criteria change.**
+- **Step 3: Cost Optimization** (`step3_cost_optimization.py`) — Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos (non-CAISO; 17,496 for CAISO). Merit-order tranche pricing for clean firm (uprate → geothermal → cheapest of nuclear/CCS). Demand growth sweep (25 years × 3 growth rates). **Run when cost assumptions change. No physics re-run needed.**
+- **Step 4: Post-Processing** (`step4_postprocess.py`) — NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh), without-45Q overlay, gas capacity backup & resource adequacy (15% RA margin), CCS vs LDES crossover analysis. **Run when Step 3 outputs change.**
+
+**Post-processing scripts (run after Step 4):**
+- **`recompute_co2.py`** — Dispatch-stack emission model. Merit-order retirement: coal first, then oil, then gas. Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average rate of DISPLACED fossil (not remaining fleet) for CO₂ abated calculation. Demand-growth-aware.
+- **`compute_mac_stats.py`** — Computes 6 MAC metrics: average MAC fan (P10/P50/P90), stepwise marginal MAC, monotonic envelope, path-constrained MAC. ANOVA sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS benchmarks.
+- **`generate_shared_data.py`** — Extracts all results into `dashboard/js/shared-data.js` for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing.
+
+**Data contract**: Step 3 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields.
+- Steps 2–4 + post-processing scripts are cheap (seconds to minutes). Step 1 is expensive (hours). Default to Steps 3–4 unless physics assumptions change.
 
 ### Optimizer Run Discipline (Critical — Token Budget Protection)
 - **Step 1 (physics) runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every Step 1 run as a high-value operation that must succeed. Steps 2–4 are cheap and can be re-run freely.
@@ -164,10 +172,11 @@
 - All sensitivity toggles use Low/Medium/High naming (never "Base" or "Baseline")
 - All new features layered on top of existing — never remove existing visuals or controls
 - **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
-- **5 paired toggle groups** replace 10 individual toggles (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission)
-- **10 thresholds** (75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100) — reduced from 18, with 2.5% granularity in inflection zone
-- **16,200 total scenarios** (10 thresholds × 5 regions × 5,832+ paired toggle combos) — each with its own co-optimized resource mix and cost
-- Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached mixes
+- **7 toggle groups**: 5 paired (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission) + CCS (L/M/H) + 45Q (On/Off) + Geothermal (CAISO-only, L/M/H)
+- **13 thresholds** (50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100) — expanded from 10, with 2.5% granularity in inflection zone
+- **5,832 cost scenarios per region/threshold** (3×3×3×3×2×3×4 = non-CAISO; 17,496 for CAISO with geothermal toggle)
+- **~379,080 total evaluations** (13 thresholds × 5 regions × 5,832 combos)
+- Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached physics
 - Hydro is always existing-only, wholesale-priced, $0 transmission
 - H2 storage explicitly excluded
 - CCS-CCGT includes 45Q offset in LCOE
@@ -182,7 +191,7 @@ When facing compute vs. rigor tradeoffs:
 1. **Always discuss the tradeoff with the user first** — don't unilaterally choose minimal compute
 2. **Find the best middle ground** that balances rigor with feasibility
 3. **Pairing variables** (e.g., 5 paired toggles vs. 10 individual) is an acceptable rigor-compute tradeoff because it reflects real-world cost correlations
-4. **Reducing thresholds** from 18 to 7 is acceptable because it preserves key inflection points
+4. **13 thresholds** (expanded from 10 to include 50%, 60%, 70%) preserves inflection points while covering the full range
 5. **Never decouple cost from optimization** — the co-optimization of cost + resource mix is the whole point
 6. **Never re-rank cached results as a shortcut** when full optimization is needed — if costs change the cost function, the optimization must use that cost function
 

@@ -506,7 +506,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         <a href="#ref-9" class="cite">[9]</a>. Jenkins et al. (2018) demonstrate
         that removing firm low-carbon resources from the generation portfolio increases electricity system
         costs by 10&ndash;62% under high decarbonization scenarios
-        <a href="#ref-10" class="cite">[10]</a>.
+        <a href="#ref-10" class="cite">[10]</a>. The Clean Air Task Force (2024) reinforces
+        this finding, showing that clean firm technologies (nuclear, geothermal, CCS, and fusion) lower
+        overall system costs, reduce required transmission buildout by approximately 50%, and mitigate
+        the speed and scale risks inherent in an all-renewables decarbonization pathway
+        <a href="#ref-29" class="cite">[29]</a>.
     </p>
     <p>
         Nuclear power, the largest existing source of firm clean generation, faces economic pressure from
@@ -671,17 +675,27 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>4.1 Optimization Framework</h3>
     <p>
-        The optimizer simultaneously searches across three dimensions: <strong>procurement level</strong>
-        (70&ndash;300% of annual demand), <strong>resource mix</strong> (clean firm, CCS-CCGT, solar, wind, hydro
-        shares summing to 100%), and <strong>storage dispatch</strong> (battery 4hr Li-ion and LDES 100hr iron-air,
-        each 0&ndash;50% of annual demand). Two complementary strategies ensure both cost-efficiency and matching completeness.
+        The optimizer uses a four-step pipeline. <strong>Step 1 (Physics Feasible Space)</strong> performs a 4D
+        adaptive grid search across clean firm, solar, wind, and hydro shares, combined with a procurement
+        sweep and storage dispatch optimization (battery 4hr Li-ion daily-cycle + LDES 100hr iron-air 7-day
+        rolling), producing ~21.4 million physics-validated resource mixes across 13 thresholds
+        [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100%].
+        <strong>Step 2 (Efficient Frontier)</strong> applies existing utilization filters, procurement
+        minimization, and strict dominance removal to reduce 21.4M mixes to ~1.8M Pareto-optimal candidates.
+        <strong>Step 3 (Cost Optimization)</strong> performs vectorized cross-evaluation of all frontier mixes
+        under 1,944 sensitivity scenarios per non-CAISO region (5,832 for CAISO, which adds 3 geothermal
+        cost levels), using merit-order tranche pricing for clean firm and a 25-year demand growth sweep
+        at 3 growth rates.
+        <strong>Step 4 (Post-Processing)</strong> applies the NEISO winter gas pipeline constraint
+        (+$13.13/MWh CCS adder), corrected 45Q offset ($27.5/MWh), without-45Q cost overlays,
+        gas resource adequacy backup (15% reserve margin), and CCS-vs-LDES crossover analysis.
     </p>
 
     <!-- FIGURE 2: Optimization Framework Flowchart -->
     <div class="figure">
         <svg width="700" height="300" viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
             <rect width="700" height="300" fill="#F8F9FC" rx="8"/>
-            <text x="350" y="24" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">DUAL OPTIMIZATION FRAMEWORK</text>
+            <text x="350" y="24" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">FOUR-STEP OPTIMIZATION PIPELINE</text>
             <!-- Strategy A Box -->
             <rect x="40" y="48" width="280" height="85" rx="10" fill="rgba(14,165,233,0.08)" stroke="#0EA5E9" stroke-width="1.5"/>
             <text x="180" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#0284C7">STRATEGY A: SWEEP</text>
@@ -691,7 +705,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <!-- Strategy B Box -->
             <rect x="380" y="48" width="280" height="85" rx="10" fill="rgba(239,68,68,0.08)" stroke="#EF4444" stroke-width="1.5"/>
             <text x="520" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#DC2626">STRATEGY B: THRESHOLD</text>
-            <text x="520" y="86" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">For each target (75-100%):</text>
+            <text x="520" y="86" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">For each target (50-100%, 13 thresholds):</text>
             <text x="520" y="102" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">Find portfolio that MINIMIZES cost</text>
             <text x="520" y="122" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">Output: Cost-Optimal Portfolios</text>
             <!-- Arrow down from both -->
@@ -726,7 +740,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
                 <marker id="arrowGreen" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#22C55E"/></marker>
             </defs>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 2.</span> Dual optimization framework. Strategy A (sweep) produces the matching frontier; Strategy B (threshold) produces cost-optimal portfolios. Both use three-phase refinement from coarse numpy-accelerated screening to fine-grained precision optimization.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 2.</span> Simplified optimization framework. Step 1 (PFS) performs a 4D adaptive grid search to generate ~21.4M physics-feasible resource mixes. Step 2 (Efficient Frontier) applies dominance removal to extract ~1.8M Pareto-optimal candidates. Step 3 (Cost) evaluates all frontier mixes under 1,944&ndash;5,832 sensitivity scenarios with merit-order tranche pricing. Step 4 (Post-Processing) adds regional constraints and policy overlays.</div>
     </div>
 
     <h3>4.2 Hourly Matching Calculation</h3>
@@ -747,6 +761,15 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         reflecting contract or market-rate procurement of already-operating capacity. Any procurement
         above the existing share triggers new-build LCOE pricing
         <a href="#ref-5" class="cite">[5]</a><a href="#ref-6" class="cite">[6]</a>.
+    </p>
+    <p>
+        Clean firm generation uses <strong>merit-order tranche pricing</strong> to reflect the supply stack
+        realistically. The model dispatches clean firm in three tranches: (1) <strong>nuclear uprates</strong>
+        at the cheapest tier, capped at regionally available TWh; (2) <strong>geothermal</strong> (CAISO only,
+        capped at 39 TWh reflecting the regional resource base); and (3) the <strong>cheapest of nuclear
+        new-build or CCS-CCGT</strong> for remaining clean firm demand. This tranche structure means that the
+        marginal cost of clean firm rises as demand increases, consistent with real-world supply constraints
+        <a href="#ref-29" class="cite">[29]</a>.
     </p>
 
     <h3>4.4 Regional New-Build LCOE</h3>
@@ -774,12 +797,13 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>4.5 Storage Model</h3>
     <p>
-        Battery storage is modeled as 4-hour lithium-ion with 85% round-trip efficiency
-        <a href="#ref-5" class="cite">[5]</a>, operating on daily charge/discharge
-        cycles. The storage dispatch level (as a percentage of annual demand) is itself optimized,
-        with the model testing levels from 0% to 50%. Storage charges exclusively from clean surplus
-        and discharges only into demand gaps, using a greedy dispatch algorithm that prioritizes
-        the largest imbalances first.
+        Two storage technologies are modeled. <strong>Battery storage</strong> (4-hour lithium-ion, 85%
+        round-trip efficiency <a href="#ref-5" class="cite">[5]</a>) operates on daily
+        charge/discharge cycles, charging exclusively from clean surplus and discharging into demand gaps.
+        <strong>LDES</strong> (100-hour iron-air, 50% round-trip efficiency) uses a 7-day rolling dispatch
+        window, enabling multi-day energy shifting that captures weekly weather patterns.
+        Both storage dispatch levels (as a percentage of annual demand) are co-optimized from 0% to 50%
+        within the physics feasible space search.
     </p>
 
     <!-- ========== 5. RESULTS ========== -->
@@ -1028,17 +1052,19 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3 id="sensitivity-envelope">5.6 Cost Sensitivity Envelope</h3>
     <p>
-        To assess the robustness of our cost estimates, we evaluate 5,832 sensitivity scenarios per threshold
-        per region, varying five paired toggle groups: renewable generation costs (Low/Medium/High), firm
-        generation costs (Low/Medium/High), storage costs (Low/Medium/High), fossil fuel prices
-        (Low/Medium/High), and transmission costs (None/Low/Medium/High). This produces a cost
-        "envelope" at each matching target — spanning the most optimistic to the most pessimistic
-        technology and market assumptions.
+        To assess the robustness of our cost estimates, we evaluate sensitivity scenarios per threshold
+        per region, varying seven graduated toggles and one binary toggle: renewable generation costs
+        (Low/Medium/High), firm generation costs (Low/Medium/High), storage costs (Low/Medium/High),
+        fossil fuel prices (Low/Medium/High), CCS costs (Low/Medium/High), geothermal costs
+        (Low/Medium/High, CAISO only), transmission costs (None/Low/Medium/High), and 45Q tax credit
+        (On/Off). This produces a cost "envelope" at each matching target &mdash; spanning the most
+        optimistic to the most pessimistic technology and market assumptions.
     </p>
 
     <div class="note-box">
-        <strong>5,832 Scenarios:</strong> 3 (renewable) &times; 3 (firm) &times; 3 (storage) &times; 3 (fuel) &times; 2 (CCS) &times; 3 (45Q) &times; 4 (transmission)
-        = 5,832 independent cost evaluations per threshold per region. Resource mixes are co-optimized at
+        <strong>Scenario Counts:</strong> 3 (renewable) &times; 3 (firm) &times; 3 (storage) &times; 3 (fuel) &times; 3 (CCS) &times; 2 (45Q) &times; 4 (transmission)
+        = <strong>1,944 scenarios</strong> per threshold for non-CAISO regions. CAISO adds &times; 3 (geothermal)
+        = <strong>5,832 scenarios</strong> per threshold. Resource mixes are co-optimized at
         Medium costs; sensitivity toggles recalculate costs on the optimized mixes, preserving the physical
         optimization while varying economic assumptions.
     </div>
@@ -1047,7 +1073,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <div class="figure">
         <svg width="700" height="380" viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg">
             <rect width="700" height="380" fill="#F8F9FC" rx="8"/>
-            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">COST SENSITIVITY ENVELOPE: LOW-TO-HIGH RANGE ACROSS 5,832 SCENARIOS</text>
+            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">COST SENSITIVITY ENVELOPE: LOW-TO-HIGH RANGE ACROSS ALL SENSITIVITY SCENARIOS</text>
             <text x="350" y="38" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280">Shaded band = min to max cost; solid line = midpoint; all five regions shown</text>
             <!-- Axes -->
             <line x1="80" y1="55" x2="80" y2="310" stroke="#D4D8E0" stroke-width="1"/>
@@ -1104,7 +1130,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <line x1="370" y1="364" x2="400" y2="364" stroke="rgba(34,197,94,0.6)" stroke-width="1.5" stroke-dasharray="4,3"/>
             <text x="405" y="368" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="#374151">Low / High Bound</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 6.</span> Cost sensitivity envelope across 5,832 scenarios for selected regions. The shaded band shows the range from most optimistic (all Low costs, no transmission) to most pessimistic (all High costs, High transmission). The envelope widens at higher thresholds because marginal resources (CCS-CCGT, LDES, clean firm) carry the widest cost uncertainty. ERCOT's narrower band reflects its lower-cost resource base; NEISO shows the widest spread due to higher baseline costs and greater sensitivity to firm generation pricing.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 6.</span> Cost sensitivity envelope across all sensitivity scenarios (1,944 per non-CAISO region, 5,832 for CAISO) for selected regions. The shaded band shows the range from most optimistic (all Low costs, no transmission) to most pessimistic (all High costs, High transmission). The envelope widens at higher thresholds because marginal resources (CCS-CCGT, LDES, clean firm) carry the widest cost uncertainty. ERCOT's narrower band reflects its lower-cost resource base; NEISO shows the widest spread due to higher baseline costs and greater sensitivity to firm generation pricing.</div>
     </div>
 
     <h3 id="sensitivity-mix">5.7 Sensitivity Drivers and Resource Mix Implications</h3>
@@ -1160,7 +1186,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         </tbody>
     </table>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-muted);">Low/Midpoint/High effective costs at the 90% hourly matching target across 5,832 sensitivity scenarios. Spread shown as absolute difference and as percentage of midpoint. Toggle labels: Renew = Renewable Generation, Firm = Firm Generation, Stor = Storage, Fuel = Fossil Fuel Price, Tx = Transmission.</p>
+    <p style="font-size:0.82rem;color:var(--text-muted);">Low/Midpoint/High effective costs at the 90% hourly matching target across all sensitivity scenarios (1,944 per non-CAISO region, 5,832 for CAISO). Spread shown as absolute difference and as percentage of midpoint. Toggle labels: Renew = Renewable Generation, Firm = Firm Generation, CCS = CCS-CCGT, Stor = Storage, Fuel = Fossil Fuel Price, Geo = Geothermal (CAISO only), Tx = Transmission, 45Q = 45Q Tax Credit (On/Off).</p>
 
     <p>
         The cost sensitivity analysis reveals several important patterns. First, the spread widens at higher
@@ -1368,7 +1394,8 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <h3 id="45q-sensitivity">6.8 45Q Tax Credit: A Make-or-Break Policy Lever</h3>
     <p>
         Our baseline analysis includes the Section 45Q tax credit ($85/ton CO&#8322; for geologic storage),
-        which reduces CCS-CCGT levelized cost by approximately $33/MWh. This credit is embedded in our
+        which reduces CCS-CCGT levelized cost by approximately $27.5/MWh ($85/ton &times; 0.323 tCO&#8322;/MWh
+        captured). This credit is embedded in our
         Low/Medium/High CCS cost ranges. Removing 45Q fundamentally changes CCS competitiveness and,
         where CCS enters the optimal mix, dramatically increases portfolio costs.
     </p>
@@ -1559,12 +1586,13 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             additional flexibility. Long-duration storage at 8&ndash;100+ hours could reduce 100% matching costs by
             20&ndash;40% and curtailment from 30% to 5&ndash;15%
             <a href="#ref-14" class="cite">[14]</a><a href="#ref-19" class="cite">[19]</a>.</li>
-        <li><strong>Emission rate methodology:</strong> CO<sub>2</sub> displacement uses hourly variable
-            emission rates built from EPA eGRID 2023 per-fuel factors (coal, gas, oil) weighted by EIA hourly
-            fossil fuel mix shares. This captures hour-by-hour variation in carbon intensity as the
-            fossil dispatch mix changes (coal-heavy nights vs. gas-peaker afternoons). Under the Fossil Fuel
-            Price toggle, coal/gas shares shift via regional fuel-switching elasticity, dynamically changing
-            the hourly emission rate.</li>
+        <li><strong>Emission rate methodology:</strong> CO<sub>2</sub> displacement uses a dispatch-stack
+            merit-order retirement model (coal first, then oil, then gas) with coal and oil capped at 2025
+            absolute TWh. Above 70% clean penetration, all coal and oil are forced retired. The emission rate
+            used for CO<sub>2</sub> calculation is the weighted average of <em>displaced</em> fossil fuels,
+            not the remaining fleet. Under the Fossil Fuel Price toggle, coal/gas shares shift via regional
+            fuel-switching elasticity, dynamically changing the hourly emission rate. CCS-CCGT receives
+            partial credit with a 0.037 tCO<sub>2</sub>/MWh residual (90% capture).</li>
         <li><strong>Five regions only:</strong> MISO, SPP, and non-ISO regions are not covered. Future work should
             extend to all U.S. balancing authorities for national applicability.</li>
     </ul>
@@ -1617,7 +1645,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <h2 id="appendix">Appendix: Detailed Sensitivity Results &amp; Investment Planning Scenarios</h2>
 
     <p>
-        Detailed results from the 5,832-scenario sensitivity analysis, framed as a
+        Detailed results from the multi-scenario sensitivity analysis (1,944 per non-CAISO region, 5,832 for CAISO), framed as a
         <strong>phased procurement plan</strong>: <strong>80% by 2035</strong> (Phase 1),
         <strong>95% by 2040</strong> (Phase 2), <strong>99&ndash;100% by 2045</strong> (Phase 3).
         These milestones align with SBTi power sector pathways, US federal goals, IEA Net Zero,
@@ -1627,18 +1655,22 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>A.1 LCOE Sensitivity Parameters</h3>
     <p>
-        The five paired toggle groups define the 5,832-scenario sensitivity space. Each group moves member
-        variables in lockstep (all Low, all Medium, or all High), reflecting real-world cost correlations.
+        Seven graduated toggles plus one binary toggle define the sensitivity space (1,944 scenarios for
+        non-CAISO regions, 5,832 for CAISO). Graduated toggles move member variables in lockstep
+        (all Low, all Medium, or all High), reflecting real-world cost correlations.
     </p>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Toggle Group</th><th>Members</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
+        <thead><tr><th>Toggle</th><th>Members</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
         <tbody>
             <tr><td><strong>Renewable Generation</strong></td><td>Solar + Wind LCOE</td><td>$30&ndash;62/MWh</td><td>$40&ndash;92/MWh</td><td>$52&ndash;120/MWh</td></tr>
-            <tr><td><strong>Firm Generation</strong></td><td>Clean Firm + CCS-CCGT LCOE</td><td>$52&ndash;78/MWh</td><td>$71&ndash;99/MWh</td><td>$92&ndash;150/MWh</td></tr>
+            <tr><td><strong>Firm Generation</strong></td><td>Clean Firm LCOE</td><td>$58&ndash;75/MWh</td><td>$78&ndash;98/MWh</td><td>$110&ndash;150/MWh</td></tr>
+            <tr><td><strong>CCS</strong></td><td>CCS-CCGT LCOE</td><td>$52&ndash;78/MWh</td><td>$71&ndash;99/MWh</td><td>$92&ndash;128/MWh</td></tr>
             <tr><td><strong>Storage</strong></td><td>Battery (4hr) + LDES (100hr) LCOS</td><td>$69&ndash;150/MWh</td><td>$92&ndash;200/MWh</td><td>$120&ndash;260/MWh</td></tr>
             <tr><td><strong>Fossil Fuel Price</strong></td><td>Gas + Coal + Oil</td><td>$2.00/MMBtu gas</td><td>$3.50/MMBtu gas</td><td>$6.00/MMBtu gas</td></tr>
+            <tr><td><strong>Geothermal</strong></td><td>Geothermal LCOE (CAISO only)</td><td colspan="3">L/M/H (3 levels, CAISO only; 1 level elsewhere)</td></tr>
             <tr><td><strong>Transmission</strong></td><td>All resource interconnection</td><td colspan="3">None / $0&ndash;7 / $1&ndash;14 / $3&ndash;22 per MWh (by resource &amp; region)</td></tr>
+            <tr><td><strong>45Q Tax Credit</strong></td><td>CCS 45Q offset</td><td colspan="3">On ($27.5/MWh offset) / Off (no offset) &mdash; binary</td></tr>
         </tbody>
     </table>
     </div>
@@ -1843,8 +1875,8 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             $13&ndash;48/MWh, comparable to the entire 75%&ndash;90% range. Curtailment jumps to 30&ndash;33%, meaning one-third
             of procured energy generates no matching credit. Under High cost assumptions, 100% matching in NEISO
             reaches $168/MWh &mdash; <strong>4&times; wholesale electricity prices</strong>. However, even at these elevated
-            per-MWh costs, the average abatement cost per ton CO&#8322; remains below $<span class="rp-mac" id="rp-mac-max-99b">...</span>/ton in all regions through 99%.
-            However, stepwise marginal analysis reveals that individual threshold steps can exceed DAC costs ($150&ndash;$400/ton range)
+            per-MWh costs, the average abatement cost per metric ton CO&#8322; remains below $<span class="rp-mac" id="rp-mac-max-99b">...</span>/metric ton in all regions through 99%.
+            However, stepwise marginal analysis reveals that individual threshold steps can exceed DAC costs ($150&ndash;$400/metric ton range)
             in <span id="rp-dac-count2">...</span> regions. The optimal stopping
             point for grid investment &mdash; before pivoting to alternative decarb &mdash; is region-specific.</li>
     </ol>
@@ -2015,11 +2047,13 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>B.5 Sensitivity Toggle Pairing</h3>
     <p>
-        The model uses <strong>5 paired sensitivity toggle groups</strong> (3 levels each, except Transmission with 4):
-        Renewable Generation (Solar + Wind), Firm Generation (Clean Firm + CCS-CCGT), Storage (Battery + LDES),
-        Fossil Fuel Price (Gas + Coal + Oil), and Transmission (all adders). This produces 3 &times; 3 &times; 3
-        &times; 3 &times; 4 = <strong>5,832 scenarios per region per threshold</strong>, a 10&times; reduction from
-        59,049 independent toggle combinations while preserving the ability to explore all major cost sensitivities.
+        The model uses <strong>7 graduated sensitivity toggles</strong> (3 levels each, except Transmission
+        with 4 and Geothermal with 3 for CAISO only) <strong>plus 1 binary toggle</strong> (45Q On/Off):
+        Renewable Generation (Solar + Wind), Firm Generation (Clean Firm), CCS (L/M/H), Storage (Battery + LDES),
+        Fossil Fuel Price (Gas + Coal + Oil), Geothermal (CAISO only, L/M/H), Transmission (None/L/M/H),
+        and 45Q (On/Off). This produces 3 &times; 3 &times; 3 &times; 3 &times; 3 &times; 2 &times; 4
+        = <strong>1,944 scenarios per non-CAISO region per threshold</strong>, and 1,944 &times; 3 (geothermal)
+        = <strong>5,832 for CAISO</strong>.
     </p>
 
     <h3>B.6 CO&#8322; Emission Factor Methodology</h3>
@@ -2052,6 +2086,22 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </table>
     </div>
 
+    <h4 style="font-size: 0.95rem; margin: 16px 0 8px;">Dispatch-Stack Retirement Model</h4>
+    <p style="font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 12px;">
+        CO&#8322; abatement uses a <strong>merit-order fuel retirement</strong> model rather than a simple fleet-average
+        emission rate. As clean energy displaces fossil generation, fuels retire in order of carbon intensity:
+        <strong>coal first, then oil, then gas</strong>. Coal and oil generation are capped at 2025 absolute TWh
+        levels (no new build); only gas expands as demand grows. Above 70% clean energy penetration, all coal
+        and oil are forced retired, and only gas CCGT remains. The CO&#8322; calculation uses the weighted average
+        emission rate of <em>displaced</em> fossil fuels (not the remaining fleet), which produces higher abatement
+        values at low clean penetration (where dirty coal is displaced first) and lower values at high penetration
+        (where only gas remains to displace).
+    </p>
+    <p style="font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 12px;">
+        CCS-CCGT receives partial displacement credit with a residual emission rate of ~0.037 tCO&#8322;/MWh
+        (reflecting 90% capture from an unabated gas rate of ~0.37 tCO&#8322;/MWh).
+    </p>
+
     <h4 style="font-size: 0.95rem; margin: 16px 0 8px;">Fuel-Switching Sensitivity</h4>
     <p style="font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 12px;">
         Under the <strong>Fossil Fuel Price</strong> toggle, coal and gas dispatch shares shift via regional
@@ -2061,7 +2111,6 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </p>
     <p style="font-size:0.85rem;color:var(--text-muted);">
         Sources: EPA eGRID 2023, EIA-930 hourly generation data.
-        CCS-CCGT receives partial displacement credit: ~0.037 tCO&#8322;/MWh residual (10% of unabated rate).
     </p>
 
     <h3>B.7 Hydro Treatment</h3>
@@ -2070,6 +2119,24 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         capacity caps: CAISO 29%, ERCOT 1%, PJM 3%, NYISO 25%, NEISO 10%. New large-scale hydro faces
         insurmountable barriers: virtually all viable sites are developed, 10&ndash;20 year environmental
         permitting timelines, and ecological concerns make new projects infeasible.
+    </p>
+
+    <h3>B.8 Marginal Abatement Cost (MAC) Methodology</h3>
+    <p style="font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 12px;">
+        MAC is computed using four complementary approaches:
+    </p>
+    <ul style="margin: 0 0 16px 24px; font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary);">
+        <li><strong>Average MAC:</strong> incremental_cost &times; demand_mwh / co2_tons_abated at each threshold.</li>
+        <li><strong>Stepwise marginal MAC:</strong> cost_delta / co2_delta between adjacent thresholds, capturing
+            the incremental cost of each additional percentage point of clean matching.</li>
+        <li><strong>Monotonic envelope:</strong> running maximum of the Medium scenario's stepwise MAC values,
+            enforcing non-decreasing marginal cost for policy analysis.</li>
+        <li><strong>Fan chart:</strong> P10/P25/P50/P75/P90 percentiles of average MAC computed across all
+            sensitivity scenarios per threshold, quantifying MAC uncertainty.</li>
+    </ul>
+    <p style="font-size: 0.92rem; line-height: 1.8; color: var(--text-secondary); margin-bottom: 12px;">
+        <strong>ANOVA decomposition</strong> (eta-squared) identifies which toggle groups drive the most MAC
+        variance at each threshold, enabling targeted policy analysis of the most impactful cost levers.
     </p>
 
     <h2 id="references">9. References</h2>
@@ -2179,6 +2246,10 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         </li>
         <li id="ref-28">
             Miller, G., et al. (2024). "Cost and Emissions Impact of Voluntary Clean Energy Procurement Strategies." <em>The Electricity Journal</em>, 37(2), 107371.
+        </li>
+        <li id="ref-29">
+            Clean Air Task Force. (2024). "Clean Firm Electricity Technologies: What, Why, How." CATF.
+            <a href="https://www.catf.us/clean-firm-electricity/" target="_blank">https://www.catf.us/clean-firm-electricity/</a>
         </li>
     </ol>
 

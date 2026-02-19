@@ -129,14 +129,22 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 - **PFS** — Physics Feasible Space: the full set of physically valid resource mixes (Step 1 output, `data/physics_cache_v4.parquet`)
 - **EF** — Efficient Frontier: the reduced set of non-dominated mixes (Step 2 output, `data/pfs_post_ef.parquet`)
 
-**Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 are cheap (minutes). Changing cost assumptions only requires Steps 3–4.
+**Post-processing scripts** (run after Step 4):
+
+| Script | Name | What It Does |
+|--------|------|-------------|
+| `recompute_co2.py` | **CO₂ Dispatch-Stack Model** | Merit-order fuel retirement (coal→oil→gas). Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average displaced emission rate for CO₂ abated. Demand-growth-aware. |
+| `compute_mac_stats.py` | **MAC Statistics** | 6 MAC metrics: average fan (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA sensitivity decomposition. Crossover analysis vs DAC/SCC/ETS benchmarks. |
+| `generate_shared_data.py` | **Dashboard Data** | Extracts all results into `dashboard/js/shared-data.js`. SBTi milestone mapping, DAC trajectories, LCOE tables for client-side repricing. |
+
+**Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 + post-processing are cheap (minutes). Changing cost assumptions only requires Steps 3–4 + post-processing.
 
 **Data contract**: Step 3 must NOT change existing columns in shared-data.js or overprocure_results.json. Add new columns/fields as needed. This prevents recoding existing figures and dashboards.
 
 ### What was accomplished
 - [x] Homepage (`index.html`) — 4 charts rendering with real data, region toggle pills, narrative sections
 - [x] Carbon Abatement Dashboard (`abatement_dashboard.html`) — 3 charts (MAC, portfolio, ladder) fully rendering with hardcoded illustrative data + 4 stress-test toggles
-- [x] Navigation site-wide: Home | Cost Optimizer | Abatement Dashboard | Regional Deep Dives | CO₂ Abatement Summary | Methodology & Paper
+- [x] Navigation site-wide: Home | Cost Optimizer | Analysis (CO₂ Abatement Analysis) | Research (Paper, Methodology, Policy, About)
 - [x] "Back to Home" button on all non-home pages
 - [x] Chart styling QA/QC on working charts (borderRadius 6, no grid lines, axis borders)
 - [x] Merged methodology into research paper (Appendix B with 7 sub-sections)
