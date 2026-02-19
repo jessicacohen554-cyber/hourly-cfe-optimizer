@@ -452,7 +452,7 @@ body {
 /* ========== METRIC TILES ========== */
 .metrics-row {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 18px;
     margin-bottom: 28px;
 }
@@ -1202,6 +1202,8 @@ body {
 .metrics-row .metric-tile:nth-child(4) { animation-delay: 0.2s; }
 .metrics-row .metric-tile:nth-child(5) { animation-delay: 0.25s; }
 .metrics-row .metric-tile:nth-child(6) { animation-delay: 0.3s; }
+.metrics-row .metric-tile:nth-child(7) { animation-delay: 0.35s; }
+.metrics-row .metric-tile:nth-child(8) { animation-delay: 0.4s; }
 
 .key-findings {
     animation: slideInLeft 0.5s ease both;
@@ -3344,6 +3346,16 @@ body {
             <div class="tile-label">Abatement Cost</div>
             <div class="tile-value" id="metricAbateCost">--</div>
             <div class="tile-sub" id="metricAbateCostSub">$/ton CO&#8322; avg</div>
+        </div>
+        <div class="metric-tile" id="tileTotalCost">
+            <div class="tile-label">Full System Cost</div>
+            <div class="tile-value" id="metricTotalCost">--</div>
+            <div class="tile-sub" id="metricTotalCostSub">clean + gas backup $/MWh</div>
+        </div>
+        <div class="metric-tile" id="tileGasBackup">
+            <div class="tile-label">Gas Backup Needed</div>
+            <div class="tile-value" id="metricGasBackup">--</div>
+            <div class="tile-sub" id="metricGasBackupSub">MW needed for RA</div>
         </div>
     </div>
 
@@ -6620,6 +6632,69 @@ function updateHeatmapTiles(region, entry, iso) {
         if (abateCostSub) abateCostSub.textContent = '$/ton CO\u2082';
         const tile = document.getElementById('tileAbateCost');
         if (tile) { tile.classList.remove(...heatmapClasses, 'tile-negative'); }
+    }
+
+    // ---- Full System Cost & Gas Backup tiles ----
+    // Look up gas backup data from GAS_BACKUP_DATA by threshold index
+    const currentThreshVal = parseFloat(findClosestThreshold(region, document.getElementById('thresholdSelect')?.value));
+    const gbIdx = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(currentThreshVal) : -1;
+    const gbData = (typeof GAS_BACKUP_DATA !== 'undefined' && GAS_BACKUP_DATA[iso]) ? GAS_BACKUP_DATA[iso] : null;
+
+    // Collect min/max for new tiles across all thresholds
+    let minTotalCost = Infinity, maxTotalCost = -Infinity;
+    let minGasBackup = Infinity, maxGasBackup = -Infinity;
+    if (gbData) {
+        for (let gi = 0; gi < (gbData.total_system_cost || []).length; gi++) {
+            const tc = gbData.total_system_cost[gi];
+            const gb = gbData.gas_backup_mw[gi];
+            if (tc > 0) { minTotalCost = Math.min(minTotalCost, tc); maxTotalCost = Math.max(maxTotalCost, tc); }
+            if (gb >= 0) { minGasBackup = Math.min(minGasBackup, gb); maxGasBackup = Math.max(maxGasBackup, gb); }
+        }
+    }
+
+    // Full System Cost tile (clean + ALL gas backup $/kW-yr → $/MWh)
+    const totalCostEl = document.getElementById('metricTotalCost');
+    const totalCostSub = document.getElementById('metricTotalCostSub');
+    if (totalCostEl && gbData && gbIdx >= 0) {
+        const totalSysCost = gbData.total_system_cost[gbIdx];
+        const gasCostPart = gbData.gas_backup_cost[gbIdx];
+        totalCostEl.textContent = '$' + formatNum(totalSysCost) + '/MWh';
+        totalCostSub.textContent = `incl. $${formatNum(gasCostPart)}/MWh gas capacity`;
+        applyHeatmap('tileTotalCost', totalSysCost, minTotalCost, maxTotalCost, true);
+    } else if (totalCostEl) {
+        totalCostEl.textContent = '--';
+    }
+
+    // Incremental Cost tile: add new-build gas cost to existing value
+    const incrCostEl = document.getElementById('metricCost');
+    const incrCostSub = document.getElementById('metricCostSub');
+    if (incrCostEl && gbData && gbIdx >= 0 && adj.newIncremental != null) {
+        const newGasCost = gbData.new_gas_cost[gbIdx];
+        const incrWithGas = adj.newIncremental + newGasCost;
+        incrCostEl.textContent = '$' + formatNum(incrWithGas) + '/MWh';
+        if (newGasCost > 0) {
+            incrCostSub.textContent = `+$${formatNum(newGasCost)}/MWh new CCGT capacity`;
+        } else {
+            incrCostSub.textContent = 'no new gas capacity needed';
+        }
+    }
+
+    // Gas Backup tile (MW needed for resource adequacy)
+    const gasBackupEl = document.getElementById('metricGasBackup');
+    const gasBackupSub = document.getElementById('metricGasBackupSub');
+    if (gasBackupEl && gbData && gbIdx >= 0) {
+        const gasMw = gbData.gas_backup_mw[gbIdx];
+        const newGasMw = gbData.new_gas_build_mw[gbIdx];
+        const coverage = gbData.clean_coverage_pct[gbIdx];
+        gasBackupEl.textContent = formatNum(gasMw / 1000, 1) + ' GW';
+        if (newGasMw > 0) {
+            gasBackupSub.textContent = `${formatNum(newGasMw / 1000, 1)} GW new-build | ${coverage}% clean coverage`;
+        } else {
+            gasBackupSub.textContent = `existing fleet sufficient | ${coverage}% clean coverage`;
+        }
+        applyHeatmap('tileGasBackup', gasMw, minGasBackup, maxGasBackup, true);
+    } else if (gasBackupEl) {
+        gasBackupEl.textContent = '--';
     }
 }
 
