@@ -229,10 +229,11 @@ p:last-child { margin-bottom: 0; }
 <section>
     <span class="section-num">Section 3</span>
     <h2>The Abatement Cost Ladder</h2>
-    <p>Grid decarbonization costs compared to alternative pathways. Dashed vertical lines show
-       regional average MAC at key thresholds. DAC range: $150 (Low) – $250 (Med) – $400 (High).</p>
+    <p>Grid decarbonization costs compared to alternative pathways (2040 projected costs).
+       Dashed vertical lines show regional average MAC at key thresholds.
+       DAC range: $115 (Low) – $225 (Med) – $375 (High).</p>
     <div class="chart-wrap chart-wrap-tall">
-        <div class="chart-title">Abatement Cost Ladder: Grid vs. Alternatives ($/ton CO₂)</div>
+        <div class="chart-title">Abatement Cost Ladder: Grid vs. Alternatives — 2040 Projected ($/ton CO₂)</div>
         <canvas id="ladderChart"></canvas>
     </div>
     <div class="callout callout-warn">
@@ -488,7 +489,7 @@ html('keyCounters',
     const ctx = $('ladderChart')?.getContext('2d');
     if (!ctx) return;
 
-    const benchmarks = getAllBenchmarks();
+    const benchmarks = getAllBenchmarks2040();
     const labels = benchmarks.map(b => b.short || b.name);
     const barData = benchmarks.map(b => [Math.max(b.low, 0), b.high]);
     const midPoints = benchmarks.map(b => b.mid);

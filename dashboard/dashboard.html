@@ -3799,8 +3799,8 @@ function buildScenarioKey() {
 }
 
 // Get the current target year and demand growth rate from dashboard controls
-function getRepricingGrowthParams() {
-    const iso = document.getElementById('regionSelect').value;
+function getRepricingGrowthParams(overrideIso) {
+    const iso = overrideIso || document.getElementById('regionSelect').value;
     const mode = typeof currentTargetMode !== 'undefined' ? currentTargetMode : 'interim';
     const yearSel = mode === 'longterm' ? 'longtermYear' : 'interimYear';
     const targetYear = parseInt(document.getElementById(yearSel)?.value || '2025', 10);
@@ -3816,11 +3816,11 @@ function resolveEntry(region, thresholdKey) {
     const thresholdData = region.thresholds?.[thresholdKey];
     if (!thresholdData) return null;
 
-    const iso = document.getElementById('regionSelect').value;
+    const iso = region.label || document.getElementById('regionSelect').value;
 
     // Client-side repricing path: use FEASIBLE_MIXES to find optimal mix
     if (typeof FEASIBLE_MIXES !== 'undefined' && FEASIBLE_MIXES[iso]) {
-        const { targetYear, growthRate } = getRepricingGrowthParams();
+        const { targetYear, growthRate } = getRepricingGrowthParams(iso);
         const optimal = findOptimalMix(iso, thresholdKey, targetYear, growthRate);
         if (optimal) {
             // Build a normalized entry from repricing result

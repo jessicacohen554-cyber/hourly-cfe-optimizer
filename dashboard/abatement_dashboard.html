@@ -367,7 +367,7 @@ body { background: #F3F4F8; }
 
         <!-- Abatement Ladder (full width) -->
         <div class="chart-card chart-card-full">
-            <div class="chart-card-title">Abatement Cost Ladder: Grid vs. Alternatives<sup style="font-size:0.7em;color:#6B7280;">[5][6][10]</sup></div>
+            <div class="chart-card-title">Abatement Cost Ladder: Grid vs. Alternatives — 2040 Projected<sup style="font-size:0.7em;color:#6B7280;">[5][6][10]</sup></div>
             <canvas id="ladderChart"></canvas>
         </div>
     </div>
@@ -783,7 +783,7 @@ let ladderInst = null;
 function buildLadder() {
     const ctx = document.getElementById('ladderChart').getContext('2d');
     const s = getState();
-    const benchmarks = getAllBenchmarks(s);
+    const benchmarks = getAllBenchmarks2040(s);
     const gridLevel = s.grid.toLowerCase();
     const macData = MAC_DATA[gridLevel] || MAC_DATA.medium;
 
