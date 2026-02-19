@@ -78,14 +78,11 @@ body { background: #F3F4F8; }
     padding: 28px 24px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     width: 100%;
-    min-height: 420px;
-    display: flex;
-    flex-direction: column;
+    height: 480px;
 }
 .chart-panel canvas {
     width: 100% !important;
-    flex: 1;
-    min-height: 350px;
+    height: 380px !important;
 }
 /* Default panel (overview) — dark blue glass */
 .chart-panel-overview {
@@ -222,8 +219,8 @@ body { background: #F3F4F8; }
 @media (max-width: 900px) {
     .hero-scrolly-container { flex-direction: column; }
     .hero-scrolly-sticky { width: 100%; height: 45vh; min-height: 320px; position: sticky; top: 0; padding: 16px; }
-    .chart-panel { min-height: 260px; padding: 16px 14px; }
-    .chart-panel canvas { min-height: 220px; }
+    .chart-panel { height: 320px; padding: 16px 14px; }
+    .chart-panel canvas { height: 240px !important; }
     .hero-scrolly-steps { width: 100%; }
     .hero-scrolly-step { min-height: auto; padding: 40px 20px; }
     .hero-step-card { padding: 24px 20px; }
@@ -231,8 +228,8 @@ body { background: #F3F4F8; }
 }
 @media (max-width: 600px) {
     .hero-scrolly-sticky { height: 38vh; min-height: 280px; padding: 10px; }
-    .chart-panel { padding: 12px 10px; min-height: 230px; }
-    .chart-panel canvas { min-height: 190px; }
+    .chart-panel { height: 290px; padding: 12px 10px; }
+    .chart-panel canvas { height: 210px !important; }
     .hero-scrolly-step { padding: 28px 14px; }
     .hero-step-card { padding: 18px 14px; }
     .hero-step-card h3 { font-size: 1.05rem; }
@@ -468,15 +465,18 @@ function switchPanel(panelName) {
         void target.offsetWidth;
         target.classList.add('panel-animate');
     }
-    // Re-animate the chart in the panel
-    if (panelName === 'overview') {
-        if (heroChart) { heroChart.reset(); heroChart.update('active'); }
-    } else {
+    // Build regional chart lazily on first show (Chart.js needs visible canvas for sizing)
+    if (panelName !== 'overview') {
         const iso = PANEL_TO_ISO[panelName];
-        if (iso && regionCharts[iso]) {
+        if (iso && !regionCharts[iso]) {
+            // First time showing — build chart now that canvas is visible
+            requestAnimationFrame(() => buildRegionalChart(iso));
+        } else if (iso && regionCharts[iso]) {
             regionCharts[iso].reset();
             regionCharts[iso].update('active');
         }
+    } else {
+        if (heroChart) { heroChart.reset(); heroChart.update('active'); }
     }
     activePanel = panelName;
 }
@@ -816,9 +816,9 @@ function initScrollytell() {
 // INIT
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Build all charts
+    // Build hero chart (overview panel is visible at init)
     buildHeroChart();
-    ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO'].forEach(iso => buildRegionalChart(iso));
+    // Regional charts built lazily in switchPanel() when first shown
 
     // Start scrollytell observers
     initScrollytell();
