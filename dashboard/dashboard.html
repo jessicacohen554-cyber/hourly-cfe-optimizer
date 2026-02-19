@@ -3438,6 +3438,8 @@ if (typeof ChartDataLabels !== 'undefined') {
 // Resource color map
 const COLORS = {
     clean_firm: { base: '#1E3A5F', alpha: 'rgba(30,58,95,0.55)' },
+    nuclear:    { base: '#1E3A5F', alpha: 'rgba(30,58,95,0.55)' },
+    geothermal: { base: '#B45309', alpha: 'rgba(180,83,9,0.55)' },
     ccs_ccgt:   { base: '#0D9488', alpha: 'rgba(13,148,136,0.55)' },
     solar:      { base: '#F59E0B', alpha: 'rgba(245,158,11,0.55)' },
     wind:       { base: '#22C55E', alpha: 'rgba(34,197,94,0.55)' },
@@ -3449,7 +3451,9 @@ const COLORS = {
 };
 
 const RESOURCE_LABELS = {
-    clean_firm: 'Clean Firm (Nuc+Geo)',
+    clean_firm: 'Clean Firm',
+    nuclear: 'Nuclear',
+    geothermal: 'Geothermal',
     ccs_ccgt: 'CCS-CCGT',
     solar: 'Solar',
     wind: 'Wind',
@@ -3459,10 +3463,42 @@ const RESOURCE_LABELS = {
     storage: 'Storage'
 };
 
+// Nuclear/Geothermal energy split for existing clean firm capacity.
+// CAISO: 70% nuclear (avg CF 0.893) + 30% geothermal (flat CF 1.0).
+// Energy fraction = capacity_share × CF / blended_CF.
+// Other ISOs: 100% nuclear.
+const CLEAN_FIRM_ENERGY_SPLIT = {
+    CAISO:  { nuclear: 0.676, geothermal: 0.324 },
+    ERCOT:  { nuclear: 1.0,   geothermal: 0.0 },
+    PJM:    { nuclear: 1.0,   geothermal: 0.0 },
+    NYISO:  { nuclear: 1.0,   geothermal: 0.0 },
+    NEISO:  { nuclear: 1.0,   geothermal: 0.0 }
+};
+
+// Split a clean_firm value into nuclear + geothermal portions.
+// For new build, uses cost-model tranche data if available;
+// otherwise falls back to existing energy split ratios.
+function splitCleanFirm(iso, value, resourceCostEntry) {
+    if (!value || value <= 0) return { nuclear: 0, geothermal: 0 };
+    // If cost-model tranche data available (new build), use it
+    if (resourceCostEntry) {
+        const geoTwh = resourceCostEntry.geo_twh || 0;
+        const nucTwh = (resourceCostEntry.uprate_twh || 0) + (resourceCostEntry.nuclear_newbuild_twh || 0);
+        const total = geoTwh + nucTwh;
+        if (total > 0) {
+            return { nuclear: value * nucTwh / total, geothermal: value * geoTwh / total };
+        }
+    }
+    // Fall back to energy split ratios (for existing capacity or when tranche data unavailable)
+    const split = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
+    return { nuclear: value * split.nuclear, geothermal: value * split.geothermal };
+}
+
 const OUTLINE_COLOR = '#374151';
 const NAVY = '#1A2744';
 
 let DATA = null;
+let COMPRESSED_DAY_PROFILES = null;
 let donutChart = null;
 let compressedDayChart = null;
 let currentTargetMode = 'interim'; // 'interim' or 'longterm'
@@ -3505,6 +3541,16 @@ function createStripePattern(ctx, color, bgColor) {
     pctx.lineTo(12, 8);
     pctx.stroke();
     return ctx.createPattern(patternCanvas, 'repeat');
+}
+
+// Extend shared-data.js MIX_COLORS/MIX_LABELS_MAP with nuclear + geothermal
+if (typeof MIX_COLORS !== 'undefined') {
+    MIX_COLORS.nuclear    = { fill: 'rgba(30,58,95,0.50)',  border: '#1E3A5F' };
+    MIX_COLORS.geothermal = { fill: 'rgba(180,83,9,0.50)',  border: '#B45309' };
+}
+if (typeof MIX_LABELS_MAP !== 'undefined') {
+    MIX_LABELS_MAP.nuclear    = 'Nuclear';
+    MIX_LABELS_MAP.geothermal = 'Geothermal';
 }
 
 // ---- Client-Side Repricing Engine ----
@@ -3765,6 +3811,9 @@ function resolveEntry(region, thresholdKey) {
                 }
             }
 
+            // Attach compressed day profile from Step 5 pre-computed data
+            entry.compressed_day = getCompressedDayProfile(iso, entry);
+
             return entry;
         }
     }
@@ -3779,7 +3828,10 @@ function resolveEntry(region, thresholdKey) {
             if (keys.length > 0) scenario = thresholdData.scenarios[keys[0]];
         }
         if (!scenario) return null;
-        return normalizeEntry(scenario);
+        const normalized = normalizeEntry(scenario);
+        // Attach compressed day profile from Step 5 pre-computed data
+        normalized.compressed_day = getCompressedDayProfile(iso, normalized);
+        return normalized;
     }
 
     // Legacy flat format
@@ -3829,12 +3881,40 @@ function normalizeEntry(raw) {
     return entry;
 }
 
+// ---- Compressed Day Profile Lookup ----
+// Builds the same mix_key as step5_compressed_day.py to look up pre-computed profiles
+function getCompressedDayProfile(iso, entry) {
+    if (!COMPRESSED_DAY_PROFILES || !entry) return null;
+    const isoData = COMPRESSED_DAY_PROFILES[iso];
+    if (!isoData) return null;
+
+    const rm = entry.resource_mix || {};
+    const cf = rm.clean_firm || 0;
+    const s = rm.solar || 0;
+    const w = rm.wind || 0;
+    const c = rm.ccs_ccgt || 0;
+    const h = rm.hydro || 0;
+    const proc = entry.procurement_pct || 0;
+    const batt = entry.battery_dispatch_pct || 0;
+    const ldes = entry.ldes_dispatch_pct || 0;
+    const mk = `${cf}_${s}_${w}_${c}_${h}_${proc}_${batt}_${ldes}`;
+
+    return isoData.profiles?.[mk] || null;
+}
+
 // ---- Data Loading ----
 async function loadData() {
     try {
-        const resp = await fetch('overprocure_results.json');
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        DATA = await resp.json();
+        const [mainResp, cdResp] = await Promise.all([
+            fetch('overprocure_results.json'),
+            fetch('compressed_day_profiles.json').catch(() => null)
+        ]);
+        if (!mainResp.ok) throw new Error(`HTTP ${mainResp.status}`);
+        DATA = await mainResp.json();
+        if (cdResp && cdResp.ok) {
+            COMPRESSED_DAY_PROFILES = await cdResp.json();
+            console.log('Compressed day profiles loaded');
+        }
         initDashboard();
     } catch (err) {
         showError(err);
@@ -4197,14 +4277,33 @@ function updateDonut(entry) {
     const borderColors = [];
 
     // Scale generation resources to their share of demand matched
+    // Split clean_firm into nuclear + geothermal for CAISO
+    const iso = document.getElementById('regionSelect').value;
     genResources.forEach(r => {
         const mixPct = mix[r] || 0;
         const scaledVal = (mixPct / mixTotal) * genMatch;
         if (scaledVal > 0.3) {
-            labels.push(RESOURCE_LABELS[r]);
-            values.push(Math.round(scaledVal * 10) / 10);
-            bgColors.push(COLORS[r].alpha);
-            borderColors.push(OUTLINE_COLOR);
+            if (r === 'clean_firm') {
+                // Split into nuclear and geothermal slices
+                const { nuclear, geothermal } = splitCleanFirm(iso, scaledVal);
+                if (nuclear > 0.3) {
+                    labels.push(RESOURCE_LABELS.nuclear);
+                    values.push(Math.round(nuclear * 10) / 10);
+                    bgColors.push(COLORS.nuclear.alpha);
+                    borderColors.push(OUTLINE_COLOR);
+                }
+                if (geothermal > 0.3) {
+                    labels.push(RESOURCE_LABELS.geothermal);
+                    values.push(Math.round(geothermal * 10) / 10);
+                    bgColors.push(COLORS.geothermal.alpha);
+                    borderColors.push(OUTLINE_COLOR);
+                }
+            } else {
+                labels.push(RESOURCE_LABELS[r]);
+                values.push(Math.round(scaledVal * 10) / 10);
+                bgColors.push(COLORS[r].alpha);
+                borderColors.push(OUTLINE_COLOR);
+            }
         }
     });
 
@@ -4343,7 +4442,11 @@ function updateCompressedDay(entry, region, iso) {
     const z24 = new Array(24).fill(0);
 
     // Calculate stacked matched values (in MW, local time) — all 7 resource types
-    const matchedCleanFirm = r(cd.matched.clean_firm || z24);
+    // Split clean_firm into nuclear + geothermal using energy split ratios
+    const matchedCleanFirmRaw = r(cd.matched.clean_firm || z24);
+    const cfSplit = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
+    const matchedNuclear = matchedCleanFirmRaw.map(v => v * cfSplit.nuclear);
+    const matchedGeothermal = matchedCleanFirmRaw.map(v => v * cfSplit.geothermal);
     const matchedCCS = r(cd.matched.ccs_ccgt || z24);
     const matchedSolar = r(cd.matched.solar || z24);
     const matchedWind = r(cd.matched.wind || z24);
@@ -4359,7 +4462,9 @@ function updateCompressedDay(entry, region, iso) {
     const surplusSolar = rRaw(cd.surplus?.solar || z24);
     const surplusWind = rRaw(cd.surplus?.wind || z24);
     const surplusHydro = rRaw(cd.surplus?.hydro || z24);
-    const surplusCleanFirm = rRaw(cd.surplus?.clean_firm || z24);
+    const surplusCleanFirmRaw = rRaw(cd.surplus?.clean_firm || z24);
+    const surplusNuclear = surplusCleanFirmRaw.map(v => v * cfSplit.nuclear);
+    const surplusGeothermal = surplusCleanFirmRaw.map(v => v * cfSplit.geothermal);
     const surplusCCS = rRaw(cd.surplus?.ccs_ccgt || z24);
 
     // Gap (unmatched) — in MW, local time
@@ -4375,13 +4480,17 @@ function updateCompressedDay(entry, region, iso) {
         solar: createStripePattern(ctx, COLORS.solar.base, 'rgba(245,158,11,0.18)'),
         wind: createStripePattern(ctx, COLORS.wind.base, 'rgba(34,197,94,0.18)'),
         hydro: createStripePattern(ctx, COLORS.hydro.base, 'rgba(14,165,233,0.18)'),
-        clean_firm: createStripePattern(ctx, COLORS.clean_firm.base, 'rgba(26,39,68,0.18)'),
+        nuclear: createStripePattern(ctx, COLORS.nuclear.base, 'rgba(26,39,68,0.18)'),
+        geothermal: createStripePattern(ctx, COLORS.geothermal.base, 'rgba(180,83,9,0.18)'),
         ccs_ccgt: createStripePattern(ctx, COLORS.ccs_ccgt.base, 'rgba(13,148,136,0.18)')
     };
 
     // Build cumulative stacking arrays (bottom to top)
-    const stack0 = matchedCleanFirm;
-    const stack1 = stack0.map((v, i) => v + matchedCCS[i]);
+    // nuclear → geothermal → ccs_ccgt → hydro → wind → solar → battery → ldes
+    const hasGeo = cfSplit.geothermal > 0;
+    const stack0 = matchedNuclear;
+    const stack0b = hasGeo ? stack0.map((v, i) => v + matchedGeothermal[i]) : stack0;
+    const stack1 = stack0b.map((v, i) => v + matchedCCS[i]);
     const stack2 = stack1.map((v, i) => v + matchedHydro[i]);
     const stack3 = stack2.map((v, i) => v + matchedWind[i]);
     const stack4 = stack3.map((v, i) => v + matchedSolar[i]);
@@ -4391,14 +4500,21 @@ function updateCompressedDay(entry, region, iso) {
     const dsBase = { borderColor: OUTLINE_COLOR, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, tension: 0.3 };
 
     const datasets = [
-        { ...dsBase, label: RESOURCE_LABELS.clean_firm, data: stack0, backgroundColor: COLORS.clean_firm.alpha, fill: 'origin', order: 11 },
-        { ...dsBase, label: RESOURCE_LABELS.ccs_ccgt,   data: stack1, backgroundColor: COLORS.ccs_ccgt.alpha,   fill: '-1',     order: 10 },
-        { ...dsBase, label: RESOURCE_LABELS.hydro,      data: stack2, backgroundColor: COLORS.hydro.alpha,      fill: '-1',     order: 9 },
-        { ...dsBase, label: RESOURCE_LABELS.wind,       data: stack3, backgroundColor: COLORS.wind.alpha,       fill: '-1',     order: 8 },
-        { ...dsBase, label: RESOURCE_LABELS.solar,      data: stack4, backgroundColor: COLORS.solar.alpha,      fill: '-1',     order: 7 },
-        { ...dsBase, label: RESOURCE_LABELS.battery,    data: stack5, backgroundColor: COLORS.battery.alpha,    fill: '-1',     order: 6 },
-        { ...dsBase, label: RESOURCE_LABELS.ldes,       data: matchedTotal.slice(), backgroundColor: COLORS.ldes.alpha, fill: '-1', order: 5 }
+        { ...dsBase, label: RESOURCE_LABELS.nuclear,    data: stack0,  backgroundColor: COLORS.nuclear.alpha,     fill: 'origin', order: 12 },
     ];
+    if (hasGeo) {
+        datasets.push(
+            { ...dsBase, label: RESOURCE_LABELS.geothermal, data: stack0b, backgroundColor: COLORS.geothermal.alpha, fill: '-1',     order: 11 }
+        );
+    }
+    datasets.push(
+        { ...dsBase, label: RESOURCE_LABELS.ccs_ccgt,   data: stack1,  backgroundColor: COLORS.ccs_ccgt.alpha,   fill: '-1',     order: 10 },
+        { ...dsBase, label: RESOURCE_LABELS.hydro,      data: stack2,  backgroundColor: COLORS.hydro.alpha,      fill: '-1',     order: 9 },
+        { ...dsBase, label: RESOURCE_LABELS.wind,       data: stack3,  backgroundColor: COLORS.wind.alpha,       fill: '-1',     order: 8 },
+        { ...dsBase, label: RESOURCE_LABELS.solar,      data: stack4,  backgroundColor: COLORS.solar.alpha,      fill: '-1',     order: 7 },
+        { ...dsBase, label: RESOURCE_LABELS.battery,    data: stack5,  backgroundColor: COLORS.battery.alpha,    fill: '-1',     order: 6 },
+        { ...dsBase, label: RESOURCE_LABELS.ldes,       data: matchedTotal.slice(), backgroundColor: COLORS.ldes.alpha, fill: '-1', order: 5 }
+    );
 
     // Remember the index of the LDES dataset (top of matched stack)
     const topMatchedIdx = datasets.length - 1;
@@ -4427,9 +4543,11 @@ function updateCompressedDay(entry, region, iso) {
         });
     }
 
-    // Curtailment order: solar first, then wind, hydro, ccs, clean firm last
-    const curtailOrder = ['solar', 'wind', 'hydro', 'ccs_ccgt', 'clean_firm'];
-    const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, ccs_ccgt: surplusCCS, clean_firm: surplusCleanFirm };
+    // Curtailment order: solar first, then wind, hydro, ccs, nuclear, geothermal last
+    const curtailOrder = hasGeo
+        ? ['solar', 'wind', 'hydro', 'ccs_ccgt', 'nuclear', 'geothermal']
+        : ['solar', 'wind', 'hydro', 'ccs_ccgt', 'nuclear'];
+    const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, ccs_ccgt: surplusCCS, nuclear: surplusNuclear, geothermal: surplusGeothermal };
     let curtailCumulative = matchedTotal.slice();
     let prevCurtailIdx = topMatchedIdx;
 
@@ -5063,22 +5181,38 @@ const existingBoundaryPlugin = {
 
 function buildMixDatasets(data) {
     const { existingData, newData } = data;
+    const iso = document.getElementById('regionSelect').value;
+    const splitGeo = (CLEAN_FIRM_ENERGY_SPLIT[iso] || {}).geothermal > 0;
+    const cfSplitR = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
+
+    // Split clean_firm arrays into nuclear + geothermal
+    const splitArr = (arr, frac) => (arr || []).map(v => v * frac);
+    const exNuclear = splitArr(existingData.clean_firm, cfSplitR.nuclear);
+    const exGeothermal = splitArr(existingData.clean_firm, cfSplitR.geothermal);
+    const newNuclear = splitArr(newData.clean_firm, cfSplitR.nuclear);
+    const newGeothermal = splitArr(newData.clean_firm, cfSplitR.geothermal);
+
     // Stack order (bottom to top): existing resources, then new resources
-    // Existing: clean_firm, hydro, wind, solar (bottom)
-    // New: solar, wind, hydro, storage, clean_firm (top — so curtailment hits new first)
-    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
+    const EXISTING_ORDER = splitGeo
+        ? ['nuclear', 'geothermal', 'ccs_ccgt', 'hydro', 'wind', 'solar']
+        : ['nuclear', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = splitGeo
+        ? ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'geothermal', 'nuclear']
+        : ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'nuclear'];
 
     const existingAlpha = 0.75;
     const newAlpha = 0.45;
     const datasets = [];
 
+    const exDataMap = { ...existingData, nuclear: exNuclear, geothermal: exGeothermal };
+    const newDataMap = { ...newData, nuclear: newNuclear, geothermal: newGeothermal };
+
     for (const r of EXISTING_ORDER) {
         const c = MIX_COLORS[r];
         if (!c) continue;
         datasets.push({
-            label: MIX_LABELS_MAP[r] + ' (existing)',
-            data: existingData[r] || [],
+            label: (MIX_LABELS_MAP[r] || r) + ' (existing)',
+            data: exDataMap[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
@@ -5092,8 +5226,8 @@ function buildMixDatasets(data) {
         const c = MIX_COLORS[r];
         if (!c) continue;
         datasets.push({
-            label: MIX_LABELS_MAP[r] + ' (new)',
-            data: newData[r],
+            label: (MIX_LABELS_MAP[r] || r) + ' (new)',
+            data: newDataMap[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
@@ -5147,10 +5281,16 @@ function initNarrativeMixChart() {
                         padding: 14,
                         generateLabels: function(chart) {
                             // Merge existing+new into one legend entry per resource
-                            const items = MIX_RESOURCES.map(r => {
+                            // Replace clean_firm with nuclear + geothermal
+                            const isoVal = document.getElementById('regionSelect').value;
+                            const showGeo = (CLEAN_FIRM_ENERGY_SPLIT[isoVal] || {}).geothermal > 0;
+                            const legendRes = showGeo
+                                ? ['nuclear', 'geothermal', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes']
+                                : ['nuclear', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+                            const items = legendRes.map(r => {
                                 const c = MIX_COLORS[r];
                                 return {
-                                    text: MIX_LABELS_MAP[r],
+                                    text: MIX_LABELS_MAP[r] || RESOURCE_LABELS[r] || r,
                                     fillStyle: c.fill,
                                     strokeStyle: c.border,
                                     lineWidth: 2,
@@ -5200,7 +5340,8 @@ function initNarrativeMixChart() {
                         return context.dataset.data[context.dataIndex] >= 6;
                     },
                     color: function(context) {
-                        if (context.dataset._resourceKey === 'clean_firm') return '#FFFFFF';
+                        const rk = context.dataset._resourceKey;
+                        if (rk === 'clean_firm' || rk === 'nuclear') return '#FFFFFF';
                         return '#1A1A1A';
                     },
                     font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 700 },
@@ -5371,8 +5512,20 @@ function getIncrementalData(region) {
 
 function buildIncrementalDatasets(data) {
     const { existingData, newData } = data;
-    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
+    const iso = document.getElementById('regionSelect').value;
+    const splitGeo = (CLEAN_FIRM_ENERGY_SPLIT[iso] || {}).geothermal > 0;
+    const cfSplitR = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
+
+    const splitArr = (arr, frac) => (arr || []).map(v => v * frac);
+    const exDataMap = { ...existingData, nuclear: splitArr(existingData.clean_firm, cfSplitR.nuclear), geothermal: splitArr(existingData.clean_firm, cfSplitR.geothermal) };
+    const newDataMap = { ...newData, nuclear: splitArr(newData.clean_firm, cfSplitR.nuclear), geothermal: splitArr(newData.clean_firm, cfSplitR.geothermal) };
+
+    const EXISTING_ORDER = splitGeo
+        ? ['nuclear', 'geothermal', 'ccs_ccgt', 'hydro', 'wind', 'solar']
+        : ['nuclear', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = splitGeo
+        ? ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'geothermal', 'nuclear']
+        : ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'nuclear'];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
     const datasets = [];
@@ -5381,8 +5534,8 @@ function buildIncrementalDatasets(data) {
         const c = MIX_COLORS[r];
         if (!c) continue;
         datasets.push({
-            label: MIX_LABELS_MAP[r] + ' (existing)',
-            data: existingData[r] || [],
+            label: (MIX_LABELS_MAP[r] || r) + ' (existing)',
+            data: exDataMap[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
@@ -5396,8 +5549,8 @@ function buildIncrementalDatasets(data) {
         const c = MIX_COLORS[r];
         if (!c) continue;
         datasets.push({
-            label: MIX_LABELS_MAP[r] + ' (new)',
-            data: newData[r] || [],
+            label: (MIX_LABELS_MAP[r] || r) + ' (new)',
+            data: newDataMap[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
@@ -5449,10 +5602,15 @@ function initIncrementalMixChart() {
                         color: '#1A1A1A',
                         padding: 14,
                         generateLabels: function(chart) {
-                            const items = MIX_RESOURCES.map(r => ({
-                                text: MIX_LABELS_MAP[r],
-                                fillStyle: MIX_COLORS[r].fill,
-                                strokeStyle: MIX_COLORS[r].border,
+                            const isoVal = document.getElementById('regionSelect').value;
+                            const showGeo = (CLEAN_FIRM_ENERGY_SPLIT[isoVal] || {}).geothermal > 0;
+                            const legendRes = showGeo
+                                ? ['nuclear', 'geothermal', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes']
+                                : ['nuclear', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+                            const items = legendRes.map(r => ({
+                                text: MIX_LABELS_MAP[r] || RESOURCE_LABELS[r] || r,
+                                fillStyle: (MIX_COLORS[r] || {}).fill || '#888',
+                                strokeStyle: (MIX_COLORS[r] || {}).border || '#888',
                                 lineWidth: 2,
                                 hidden: false,
                                 pointStyle: 'rectRounded',
@@ -5503,7 +5661,8 @@ function initIncrementalMixChart() {
                         return context.dataset.data[context.dataIndex] >= 5;
                     },
                     color: function(context) {
-                        if (context.dataset._resourceKey === 'clean_firm') return '#FFFFFF';
+                        const rk = context.dataset._resourceKey;
+                        if (rk === 'clean_firm' || rk === 'nuclear') return '#FFFFFF';
                         return '#1A1A1A';
                     },
                     font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 700 },
@@ -6559,8 +6718,12 @@ function updateCO2Tile(entry) {
 let wynCompareChartInstance = null;
 
 function updateWhatYouNeedPanel(region, entry, threshold) {
-    // This is called on every dashboard update; it renders the 3-bar TWh chart
+    // Renders the 3-bar TWh chart (Existing → Interim → Long-term)
     // and computes stranded investment metrics.
+    //
+    // KEY: Each bar resolves the optimal mix for THAT stage's year + demand.
+    // As demand grows, existing share declines and cost shifts, so the
+    // optimal NEW BUILD mix can differ between interim and long-term.
     const canvas = document.getElementById('wynCompareChart');
     const insightBox = document.getElementById('wynInsightBox');
     const metricsEl = document.getElementById('wynMetrics');
@@ -6572,20 +6735,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
     const annualDemandMWh = regionData.annual_demand_mwh || 1;
     const annualDemandTWh = annualDemandMWh / 1e6;
-
-    // Get interim entry resource costs from costs_detail (has resource_costs breakdown)
-    const interimDetail = getScenarioCostsDetail(entry);
-    const interimRC = interimDetail?.resource_costs;
-    if (!interimRC) {
-        if (insightBox) insightBox.innerHTML = 'Resource cost data not available for this threshold. Only the Medium (MMM_M_M) scenario has full cost breakdowns.';
-        return;
-    }
-
-    // Long-term target — resolve scenario within that threshold
-    const longtermVal = document.getElementById('longtermTarget').value;
-    const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
-    const longtermEntry = longtermThreshold ? resolveEntry(regionData, longtermThreshold) : null;
-    const longtermRC = getScenarioCostsDetail(longtermEntry)?.resource_costs || longtermEntry?.costs?.resource_costs;
+    const baseDemandTwh = (REGIONAL_DEMAND_TWH || {})[iso] || annualDemandTWh;
 
     // Time horizons and demand growth
     const interimYear = parseInt(document.getElementById('interimYear')?.value || '2029', 10);
@@ -6602,12 +6752,45 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // TWh at each stage
     const todayTWh = annualDemandTWh;
     const interimTWh = annualDemandTWh * interimGrowthFactor;
-    const longtermTWh = longtermRC ? annualDemandTWh * longtermGrowthFactor : null;
 
-    // Helper: extract resource data for a resource_costs object
-    // Existing resources are FIXED at today's absolute TWh (2025 actuals).
-    // New build scales with demand growth at the target time horizon.
-    // Hydro cap: fixed physical capacity (% of demand), never changes with target
+    // Resolve the OPTIMAL MIX for each stage independently.
+    // Each stage gets the mix that's cheapest at THAT year's demand level,
+    // because shifting existing/new-build shares change cost-optimal mix.
+    const interimThreshold = findClosestThreshold(regionData, threshold);
+    const interimOptimal = (typeof FEASIBLE_MIXES !== 'undefined' && FEASIBLE_MIXES[iso])
+        ? findOptimalMix(iso, interimThreshold, interimYear, annualRate)
+        : null;
+    const interimRC = interimOptimal?.resource_costs
+        || getScenarioCostsDetail(entry)?.resource_costs
+        || entry?.costs?.resource_costs;
+    if (!interimRC) {
+        if (insightBox) insightBox.innerHTML = 'Resource cost data not available for this threshold.';
+        return;
+    }
+
+    // Long-term target — resolve with longtermYear's demand
+    const longtermVal = document.getElementById('longtermTarget').value;
+    const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
+    let longtermRC = null;
+    let longtermTWh = null;
+    if (longtermThreshold) {
+        const longtermOptimal = (typeof FEASIBLE_MIXES !== 'undefined' && FEASIBLE_MIXES[iso])
+            ? findOptimalMix(iso, longtermThreshold, longtermYear, annualRate)
+            : null;
+        longtermRC = longtermOptimal?.resource_costs || null;
+        if (!longtermRC) {
+            const longtermEntry = resolveEntry(regionData, longtermThreshold);
+            longtermRC = getScenarioCostsDetail(longtermEntry)?.resource_costs
+                || longtermEntry?.costs?.resource_costs;
+        }
+        longtermTWh = annualDemandTWh * longtermGrowthFactor;
+    }
+
+    // Helper: extract resource data for a resource_costs object.
+    // existing_pct and new_pct from priceMix are expressed as % of the target
+    // year's demand (priceMix already accounts for demand growth shrinking the
+    // existing share). Both get multiplied by targetDemandTWh.
+    // Hydro is always static at 2025 absolute capacity.
     const hydroCapPct = (DATA.config?.hydro_caps?.[iso] || 0);
     const hydroCapTWh = hydroCapPct / 100 * todayTWh;
 
@@ -6626,11 +6809,24 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 existing[r] = hydroCapTWh;
                 newBuild[r] = 0;
             } else {
-                // Generation resources: existing_pct/new_pct (ccs_ccgt uses existing_share/new_share when zero)
-                existing[r] = (rd.existing_pct || rd.existing_share || 0) / 100 * todayTWh;
+                // existing_pct and new_pct are BOTH expressed as % of the target
+                // year's demand. Multiplying by targetDemandTWh gives absolute TWh.
+                // (existing_pct shrinks as demand grows; the absolute TWh stays constant)
+                existing[r] = (rd.existing_pct || rd.existing_share || 0) / 100 * targetDemandTWh;
                 newBuild[r] = (rd.new_pct || rd.new_share || 0) / 100 * targetDemandTWh;
             }
         });
+        // Split clean_firm into nuclear + geothermal
+        const existCF = existing.clean_firm || 0;
+        const { nuclear: exNuc, geothermal: exGeo } = splitCleanFirm(iso, existCF);
+        existing.nuclear = exNuc;
+        existing.geothermal = exGeo;
+        // For new build, use cost-model tranche data if available
+        const cfRD = rc.clean_firm || {};
+        const newCF = newBuild.clean_firm || 0;
+        const { nuclear: nbNuc, geothermal: nbGeo } = splitCleanFirm(iso, newCF, cfRD);
+        newBuild.nuclear = nbNuc;
+        newBuild.geothermal = nbGeo;
         return { existing, newBuild };
     }
 
@@ -6648,8 +6844,14 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         : ['Existing', 'Interim'];
 
     // Stack order: existing bottom-up, then new build on top
-    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
+    // Split clean_firm into nuclear + geothermal (geothermal only appears for CAISO)
+    const wynHasGeo = (CLEAN_FIRM_ENERGY_SPLIT[iso] || {}).geothermal > 0;
+    const EXISTING_ORDER = wynHasGeo
+        ? ['nuclear', 'geothermal', 'ccs_ccgt', 'hydro', 'wind', 'solar']
+        : ['nuclear', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+    const NEW_ORDER = wynHasGeo
+        ? ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'geothermal', 'nuclear']
+        : ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'nuclear'];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
     const datasets = [];
@@ -6755,10 +6957,14 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                         color: '#1A1A1A',
                         padding: 14,
                         generateLabels: function() {
-                            const items = MIX_RESOURCES.map(r => ({
-                                text: MIX_LABELS_MAP[r],
-                                fillStyle: MIX_COLORS[r].fill,
-                                strokeStyle: MIX_COLORS[r].border,
+                            // Show nuclear + geothermal instead of clean_firm
+                            const legendResources = wynHasGeo
+                                ? ['nuclear', 'geothermal', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes']
+                                : ['nuclear', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+                            const items = legendResources.map(r => ({
+                                text: MIX_LABELS_MAP[r] || RESOURCE_LABELS[r] || r,
+                                fillStyle: (MIX_COLORS[r] || {}).fill || COLORS[r]?.alpha || '#888',
+                                strokeStyle: (MIX_COLORS[r] || {}).border || COLORS[r]?.base || '#888',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             }));
@@ -6799,7 +7005,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                         return context.dataset.data[context.dataIndex] >= (maxTWh * 0.03);
                     },
                     color: function(context) {
-                        if (context.dataset._resourceKey === 'clean_firm') return '#FFFFFF';
+                        const rk = context.dataset._resourceKey;
+                        if (rk === 'clean_firm' || rk === 'nuclear') return '#FFFFFF';
                         return '#1A1A1A';
                     },
                     font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 700 },
@@ -6849,9 +7056,11 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     if (hasLongterm && metricsEl) {
         metricsEl.style.display = '';
 
-        // Compare interim resource mix vs long-term resource mix
-        // Resources built for interim that exceed long-term needs → stranded
-        let totalInterimProcTWh = 0;
+        // Compare interim NEW BUILD vs long-term NEW BUILD per resource.
+        // Only new build can be stranded — existing capacity is already built.
+        // Each stage's resource_costs has growth-adjusted existing_pct/new_pct
+        // (% of that year's demand), so multiply by that year's demand for absolute TWh.
+        let totalInterimNewTWh = 0;
         let totalCarriedTWh = 0;
         let totalStrandedCostM = 0; // in $M
 
@@ -6864,58 +7073,59 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             const intRes = interimRC[r] || {};
             const ltRes = longtermRC[r] || {};
 
-            // Interim procurement at interim demand level, in TWh
-            // Storage types (battery, ldes) use dispatch_pct; generation uses total_pct_of_demand
+            // New build TWh at each stage (absolute capacity)
             const isStorageType = (r === 'battery' || r === 'ldes');
-            const interimTotalPct = isStorageType ? (intRes.dispatch_pct || 0) : (intRes.total_pct_of_demand || 0);
             const interimCostPerDemandMWh = intRes.cost_per_demand_mwh || intRes.cost || 0;
-            const interimProcTWh = interimTotalPct / 100 * interimTWh;
 
-            // Long-term needs at long-term demand level, in TWh
-            const longtermTotalPct = isStorageType ? (ltRes.dispatch_pct || 0) : (ltRes.total_pct_of_demand || 0);
-            const longtermNeedTWh = longtermTotalPct / 100 * longtermTWh;
+            let interimNewTWh, longtermNewTWh;
+            if (isStorageType) {
+                interimNewTWh = (intRes.dispatch_pct || 0) / 100 * interimTWh;
+                longtermNewTWh = (ltRes.dispatch_pct || 0) / 100 * longtermTWh;
+            } else {
+                interimNewTWh = (intRes.new_pct || 0) / 100 * interimTWh;
+                longtermNewTWh = (ltRes.new_pct || 0) / 100 * longtermTWh;
+            }
 
-            if (interimProcTWh <= 0) return;
-            totalInterimProcTWh += interimProcTWh;
+            if (interimNewTWh <= 0) return;
+            totalInterimNewTWh += interimNewTWh;
 
-            // How much of interim procurement is absorbed by long-term?
-            // Demand growth helps: interim capacity serves grown long-term demand
-            const carriedTWh = Math.min(interimProcTWh, longtermNeedTWh);
-            const strandedTWh = Math.max(0, interimProcTWh - longtermNeedTWh);
+            // Carried forward: interim new build that fits into long-term needs
+            // Demand growth between interim and longterm absorbs some capacity
+            const carriedTWh = Math.min(interimNewTWh, longtermNewTWh);
+            const strandedTWh = Math.max(0, interimNewTWh - longtermNewTWh);
             totalCarriedTWh += carriedTWh;
 
-            // Stranded cost = stranded TWh × cost per MWh (proportional allocation)
+            // Stranded cost = stranded TWh × resource cost per MWh
             if (strandedTWh > 0) {
                 const strandedCostM = strandedTWh * 1e6 * interimCostPerDemandMWh / 1e6; // $M
                 totalStrandedCostM += strandedCostM;
                 strandedDetails.push({
                     resource: RESOURCE_DISPLAY_NAMES[r] || r,
                     strandedTWh,
-                    interimTWh: interimProcTWh,
-                    longtermTWh: longtermNeedTWh,
+                    interimTWh: interimNewTWh,
+                    longtermTWh: longtermNewTWh,
                 });
             }
         });
 
-        const carriedPct = totalInterimProcTWh > 0
-            ? (totalCarriedTWh / totalInterimProcTWh * 100) : 100;
+        const carriedPct = totalInterimNewTWh > 0
+            ? (totalCarriedTWh / totalInterimNewTWh * 100) : 100;
         const strandedPct = 100 - carriedPct;
 
-        // Also compute static (no growth) version for demand offset
-        const getPct = (res, key) => {
+        // Static (no growth) comparison: resolve both mixes at base year
+        // to see how much of the stranded reduction is due to demand growth
+        const getNewPct = (res, key) => {
             if (key === 'battery' || key === 'ldes') return res?.dispatch_pct || 0;
-            return res?.total_pct_of_demand || 0;
+            return res?.new_pct || 0;
         };
         const staticInterimTWh_total = Object.keys(interimRC).reduce((s, r) => {
             if (r === 'storage' || r === 'hydro') return s;
-            return s + getPct(interimRC[r], r) / 100 * todayTWh;
+            return s + getNewPct(interimRC[r], r) / 100 * interimTWh;
         }, 0);
         const staticCarriedTWh = Object.keys(interimRC).reduce((s, r) => {
             if (r === 'storage' || r === 'hydro') return s;
-            const intPct = getPct(interimRC[r], r);
-            const ltPct = getPct(longtermRC[r], r);
-            const intT = intPct / 100 * todayTWh;
-            const ltT = ltPct / 100 * todayTWh; // no growth
+            const intT = getNewPct(interimRC[r], r) / 100 * interimTWh;
+            const ltT = getNewPct(longtermRC[r], r) / 100 * interimTWh; // no growth for LT
             return s + Math.min(intT, ltT);
         }, 0);
         const staticCarriedPct = staticInterimTWh_total > 0
@@ -6968,26 +7178,35 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
             // Collect per-resource new-build TWh at interim and long-term,
             // and stranded TWh (interim new-build that exceeds long-term need)
-            const RES_ORDER = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+            // Split clean_firm into nuclear + geothermal
+            const RES_ORDER = wynHasGeo
+                ? ['nuclear', 'geothermal', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes']
+                : ['nuclear', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
             const interimNew = {};
             const longtermNew = {};
             const strandedByRes = {};
             let totalInterimNew = 0, totalLongtermNew = 0, totalStranded = 0;
 
             RES_ORDER.forEach(r => {
-                const irc = interimRC[r] || {};
-                const lrc = longtermRC[r] || {};
                 const isStore = (r === 'battery' || r === 'ldes');
+                const isNucGeo = (r === 'nuclear' || r === 'geothermal');
                 // New-build TWh at each stage
                 let iNew, lNew;
                 if (r === 'hydro') {
-                    // Hydro is always existing-only — never has new build
                     iNew = 0;
                     lNew = 0;
                 } else if (isStore) {
+                    const irc = interimRC[r] || {};
+                    const lrc = longtermRC[r] || {};
                     iNew = (irc.dispatch_pct || 0) / 100 * interimTWh;
                     lNew = (lrc.dispatch_pct || 0) / 100 * longtermTWh;
+                } else if (isNucGeo) {
+                    // Use pre-split values from getResourceTWh
+                    iNew = interimData.newBuild[r] || 0;
+                    lNew = longtermData ? (longtermData.newBuild[r] || 0) : 0;
                 } else {
+                    const irc = interimRC[r] || {};
+                    const lrc = longtermRC[r] || {};
                     iNew = (irc.new_pct || 0) / 100 * interimTWh;
                     lNew = (lrc.new_pct || 0) / 100 * longtermTWh;
                 }
@@ -7138,6 +7357,8 @@ const DEMAND_GROWTH_RATES = {
 
 const RESOURCE_DISPLAY_NAMES = {
     clean_firm: 'Clean Firm',
+    nuclear: 'Nuclear',
+    geothermal: 'Geothermal',
     solar: 'Solar',
     wind: 'Wind',
     hydro: 'Hydro',
