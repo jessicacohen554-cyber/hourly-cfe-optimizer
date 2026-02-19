@@ -529,12 +529,12 @@ function buildMacChart() {
                     { label: 'Midpoint', data: p50, borderColor: c, backgroundColor: c + '18',
                         borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, fill: false, tension: 0.3, order: 1 },
                     // DAC declining trajectory curves (SBTi year-indexed)
-                    { label: 'DAC Optimistic', data: dacOptData, borderColor: '#E91E6333',
+                    { label: 'DAC Optimistic', data: dacOptData, borderColor: '#E91E6366',
                         borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 5 },
                     { label: 'DAC Central', data: dacCenData, borderColor: '#E91E6388',
-                        borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, fill: false, tension: 0.3, order: 4 },
+                        borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.10)', tension: 0.3, order: 4 },
                     { label: 'DAC Conservative', data: dacConData, borderColor: '#E91E6333',
-                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.05)', tension: 0.3, order: 5 }
+                        borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 5 }
                 ]
             },
             options: {
@@ -548,7 +548,7 @@ function buildMacChart() {
                         ticks: {
                             callback: function(v) {
                                 const yearMap = { 50: "'30", 60: "'32", 70: "'35", 80: "'37", 90: "'40", 95: "'45", 100: "'50" };
-                                return v + '% (' + (yearMap[v] || '') + ')';
+                                return [v + '%', yearMap[v] || ''];
                             },
                             font: { size: 8 }, maxRotation: 0
                         },
@@ -598,13 +598,7 @@ function buildMacChart() {
                             }
                         }
                     },
-                    annotation: {
-                        annotations: {
-                            scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980099', borderWidth: 1.5, borderDash: [5, 3],
-                                label: { display: true, content: 'SCC $190', position: 'start', font: { size: 8 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.85)', padding: 2 }
-                            }
-                        }
-                    },
+                    annotation: { annotations: {} },
                     datalabels: { display: false }
                 }
             }
@@ -688,14 +682,14 @@ function buildPortfolio() {
         })),
         // DAC declining trajectories as line overlays
         { label: 'DAC Optimistic', type: 'line', data: dacOptZone,
-            borderColor: '#E91E6333', borderWidth: 1, borderDash: [3, 3],
+            borderColor: '#E91E6366', borderWidth: 1, borderDash: [3, 3],
             pointRadius: 0, fill: false, tension: 0.3, order: -1 },
         { label: 'DAC Central', type: 'line', data: dacCenZone,
             borderColor: '#E91E6388', borderWidth: 2, borderDash: [6, 4],
-            pointRadius: 2, pointBackgroundColor: '#E91E63', fill: '-1', backgroundColor: 'rgba(233,30,99,0.05)', tension: 0.3, order: -1 },
+            pointRadius: 2, pointBackgroundColor: '#E91E63', fill: '-1', backgroundColor: 'rgba(233,30,99,0.10)', tension: 0.3, order: -1 },
         { label: 'DAC Conservative', type: 'line', data: dacConZone,
             borderColor: '#E91E6333', borderWidth: 1, borderDash: [3, 3],
-            pointRadius: 0, fill: '-1', backgroundColor: 'rgba(233,30,99,0.05)', tension: 0.3, order: -1 }
+            pointRadius: 0, fill: false, tension: 0.3, order: -1 }
     ];
 
     if (portfolioInst) portfolioInst.destroy();
@@ -756,12 +750,7 @@ function buildPortfolio() {
                     }
                 } },
                 datalabels: { display: false },
-                annotation: {
-                    annotations: {
-                        scc: { type: 'line', yMin: 190, yMax: 190, borderColor: '#FF980088', borderWidth: 2, borderDash: [6, 4],
-                            label: { display: true, content: 'SCC $190', position: 'start', font: { size: 9, weight: 600 }, color: '#FF9800', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
-                    }
-                }
+                annotation: { annotations: {} }
             }
         }
     });
