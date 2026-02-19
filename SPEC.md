@@ -33,18 +33,20 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 | D | Numba JIT (try/fallback) | Compile storage scoring to machine code; fall back to B+C if install fails | 10-50× on storage (if available) |
 | F | Shared memory cache | `multiprocessing.shared_memory` for parallel ISO workers to share data | Enables A |
 
-**Projected runtime**: 15-25 min (NumPy fallback), 5-10 min (with Numba). Down from multi-hour current architecture.
+**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (324 paired-toggle scenarios) applied in Step 2 post-processing. This reduces from 21,060 cost-coupled optimizations to 65 physics-only sweeps (13 thresholds × 5 ISOs), each finding the Pareto frontier of feasible mixes.
 
-#### What needs building (fresh rebuild)
+**Projected runtime**: ~1-3 min with Numba (installed successfully). Down from multi-hour current architecture.
+
+**Cost model**: NOT in scope for this rebuild. Cost model will be updated separately with dynamic functionality. This optimizer produces the physics-only feasible solution space that the cost model will consume.
+
+#### What needs building (fresh rebuild — Step 1 physics only)
 - [ ] New optimizer with 4D resource space (Clean Firm absorbs CCS)
 - [ ] ISO parallel execution with shared memory (A+F)
 - [ ] Vectorized scoring functions (B+C)
 - [ ] Numba JIT with fallback (D)
-- [ ] Pareto frontier output (3-5 points per scenario)
+- [ ] Pareto frontier output (3-5 points per threshold×ISO)
 - [ ] 13-threshold sweep with adaptive procurement bounds
-- [ ] JSON + Parquet dual output
-- [ ] Updated dashboard to consume new results format
-- [ ] Updated research paper with new methodology
+- [ ] JSON + Parquet dual output of feasible solution space
 
 ### Three-Step Pipeline Architecture
 
