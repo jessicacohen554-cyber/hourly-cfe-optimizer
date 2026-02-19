@@ -64,97 +64,157 @@ GRID_MIX_SHARES = {
 # Threshold above which all coal and oil have retired — only gas CCGT remains
 COAL_OIL_RETIREMENT_THRESHOLD = 70.0  # % clean energy
 
+# 2025 base demand (TWh) per ISO — from EIA demand profiles
+BASE_DEMAND_TWH = {
+    'CAISO': 224.0, 'ERCOT': 488.0, 'PJM': 843.3, 'NYISO': 151.6, 'NEISO': 115.3,
+}
 
-def compute_dispatch_stack_emission_rate(iso, clean_pct, emission_rates, fossil_mix):
+# 2025 absolute coal and oil generation caps (TWh) — no new coal/oil is built
+# These are the max dispatch levels from 2025 EIA hourly data.
+# As demand grows, coal/oil stay at these absolute levels; only gas expands.
+COAL_CAP_TWH = {
+    'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00, 'NEISO': 0.31,
+}
+OIL_CAP_TWH = {
+    'CAISO': 0.60, 'ERCOT': 0.00, 'PJM': 4.59, 'NYISO': 0.15, 'NEISO': 1.29,
+}
+
+
+def compute_dispatch_stack_emission_rate(iso, clean_pct, emission_rates, fossil_mix,
+                                          demand_growth_factor=1.0):
     """
-    Compute the emission rate of the remaining fossil fleet at a given clean energy %.
+    Compute emission rates using the dispatch-stack retirement model.
 
-    Uses merit-order retirement: coal retires first (dirtiest), then oil, then gas.
-    Above COAL_OIL_RETIREMENT_THRESHOLD (70%), forces gas-only.
+    Returns TWO rates:
+    - displaced_rate: weighted average of all DISPLACED fossil fuels (for CO2 calculation)
+    - remaining_rate: rate of the REMAINING fossil fleet (for marginal analysis)
+
+    Coal and oil are capped at 2025 absolute TWh levels — no new coal/oil is built.
+    Under demand growth, only gas expands, so coal/oil shares naturally shrink.
 
     Args:
         iso: ISO region name
         clean_pct: Clean energy percentage (0-100) for this scenario
         emission_rates: eGRID per-fuel emission rates dict
         fossil_mix: EIA fossil mix data (annual average shares within fossil)
+        demand_growth_factor: multiplier on base demand (1.0 = no growth, 1.5 = 50% growth)
 
     Returns:
-        emission_rate: tCO₂/MWh of the remaining fossil fleet at this clean %
-        retirement_info: dict with coal/oil/gas displaced fractions for diagnostics
+        displaced_rate: tCO₂/MWh weighted avg of displaced fossil (use for CO2 abated calc)
+        retirement_info: dict with displaced/remaining TWh, both rates, diagnostics
     """
     regional_data = emission_rates.get(iso, {})
     coal_rate = regional_data.get('coal_co2_lb_per_mwh', 0.0) / 2204.62  # lb → metric tons
     gas_rate = regional_data.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
     oil_rate = regional_data.get('oil_co2_lb_per_mwh', 0.0) / 2204.62
 
+    # Work in absolute TWh for coal/oil caps
+    base_demand_twh = BASE_DEMAND_TWH.get(iso, 0)
+    grown_demand_twh = base_demand_twh * demand_growth_factor
+
+    # Total fossil TWh at this clean %
+    fossil_pct = (100.0 - clean_pct) / 100.0
+    fossil_twh = grown_demand_twh * fossil_pct
+
+    # Coal and oil capped at 2025 absolute levels — no new build
+    coal_cap = COAL_CAP_TWH.get(iso, 0)
+    oil_cap = OIL_CAP_TWH.get(iso, 0)
+
     # Baseline clean % from existing grid mix
     baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
-    fossil_total = 100.0 - baseline_clean
 
-    if fossil_total <= 0:
-        return 0.0, {'coal_displaced': 0, 'oil_displaced': 0, 'gas_displaced': 0}
-
-    # Get annual average fossil fuel shares within fossil generation
-    iso_fossil = fossil_mix.get(iso, {})
-    year_data = iso_fossil.get(DATA_YEAR, iso_fossil.get('2024', {}))
-    coal_shares_arr = year_data.get('coal_share', [0.0] * H)
-    gas_shares_arr = year_data.get('gas_share', [1.0] * H)
-    oil_shares_arr = year_data.get('oil_share', [0.0] * H)
-
-    # Annual average shares (within fossil)
-    avg_coal_share = np.mean(coal_shares_arr[:H])
-    avg_gas_share = np.mean(gas_shares_arr[:H])
-    avg_oil_share = np.mean(oil_shares_arr[:H])
-
-    # Convert to % of total generation
-    coal_total_pct = avg_coal_share * fossil_total
-    oil_total_pct = avg_oil_share * fossil_total
-    gas_total_pct = avg_gas_share * fossil_total
-
-    # Additional clean energy above baseline
-    additional_clean = max(0, clean_pct - baseline_clean)
-
-    # Above 70% clean: force gas-only (all coal and oil retired)
-    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        gas_remaining = max(0, fossil_total - additional_clean)
-        return gas_rate, {
-            'coal_displaced': coal_total_pct,
-            'oil_displaced': oil_total_pct,
-            'gas_displaced': min(additional_clean - coal_total_pct - oil_total_pct, gas_total_pct),
-            'forced_gas_only': True,
+    if fossil_twh <= 0.01 or clean_pct >= 100:
+        # 100% clean — all fossil displaced. Return weighted avg of entire fossil fleet.
+        total_fossil_twh = grown_demand_twh * (100.0 - baseline_clean) / 100.0
+        coal_twh = min(coal_cap, total_fossil_twh)
+        oil_twh = min(oil_cap, max(0, total_fossil_twh - coal_twh))
+        gas_twh = max(0, total_fossil_twh - coal_twh - oil_twh)
+        if total_fossil_twh > 0.01:
+            rate = (coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate) / total_fossil_twh
+        else:
+            rate = gas_rate
+        return rate, {
+            'coal_displaced_twh': round(coal_twh, 2),
+            'oil_displaced_twh': round(oil_twh, 2),
+            'gas_displaced_twh': round(gas_twh, 2),
+            'displaced_rate_tco2_mwh': round(rate, 4),
+            'remaining_rate_tco2_mwh': 0,
+            'demand_growth_factor': demand_growth_factor,
         }
 
-    # Merit-order displacement: coal first, then oil, then gas
-    coal_displaced = min(additional_clean, coal_total_pct)
-    remaining = additional_clean - coal_displaced
-    oil_displaced = min(remaining, oil_total_pct)
-    remaining = remaining - oil_displaced
-    gas_displaced = min(remaining, gas_total_pct)
+    # Fossil fleet composition (coal/oil capped, gas fills remainder)
+    coal_twh = min(coal_cap, fossil_twh)
+    remaining_fossil = fossil_twh - coal_twh
+    oil_twh = min(oil_cap, remaining_fossil)
+    gas_twh = max(0, fossil_twh - coal_twh - oil_twh)
 
-    coal_remaining = coal_total_pct - coal_displaced
-    oil_remaining = oil_total_pct - oil_displaced
-    gas_remaining = gas_total_pct - gas_displaced
+    additional_clean_twh = max(0, (clean_pct - baseline_clean) / 100.0 * grown_demand_twh)
+
+    # Above 70% clean: force all coal and oil retired
+    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
+        coal_displaced = coal_cap
+        oil_displaced = oil_cap
+        gas_displaced = max(0, additional_clean_twh - coal_cap - oil_cap)
+        total_displaced = coal_displaced + oil_displaced + gas_displaced
+
+        if total_displaced > 0.01:
+            displaced_rate = (coal_displaced * coal_rate + oil_displaced * oil_rate +
+                              gas_displaced * gas_rate) / total_displaced
+        else:
+            displaced_rate = gas_rate
+
+        return displaced_rate, {
+            'coal_displaced_twh': round(coal_displaced, 2),
+            'oil_displaced_twh': round(oil_displaced, 2),
+            'gas_displaced_twh': round(gas_displaced, 2),
+            'gas_remaining_twh': round(max(0, fossil_twh - additional_clean_twh + (fossil_twh - coal_twh - oil_twh - gas_twh)), 2),
+            'displaced_rate_tco2_mwh': round(displaced_rate, 4),
+            'remaining_rate_tco2_mwh': round(gas_rate, 4),
+            'forced_gas_only': True,
+            'demand_growth_factor': demand_growth_factor,
+        }
+
+    # Merit-order displacement in TWh: coal first, then oil, then gas
+    coal_displaced = min(additional_clean_twh, coal_twh)
+    remaining = additional_clean_twh - coal_displaced
+    oil_displaced = min(remaining, oil_twh)
+    remaining = remaining - oil_displaced
+    gas_displaced = min(remaining, gas_twh)
+
+    total_displaced = coal_displaced + oil_displaced + gas_displaced
+
+    # Weighted average rate of DISPLACED fossil (for CO2 abated calculation)
+    if total_displaced > 0.01:
+        displaced_rate = (coal_displaced * coal_rate + oil_displaced * oil_rate +
+                          gas_displaced * gas_rate) / total_displaced
+    else:
+        # No displacement yet (clean_pct <= baseline_clean)
+        # Use the full fossil fleet rate as fallback
+        displaced_rate = (coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate) / fossil_twh
+
+    # Remaining fossil fleet rate (for marginal/informational purposes)
+    coal_remaining = coal_twh - coal_displaced
+    oil_remaining = oil_twh - oil_displaced
+    gas_remaining = gas_twh - gas_displaced
     fossil_remaining = coal_remaining + oil_remaining + gas_remaining
 
-    if fossil_remaining <= 0.01:
-        # Effectively 100% clean
-        return gas_rate, {
-            'coal_displaced': coal_displaced,
-            'oil_displaced': oil_displaced,
-            'gas_displaced': gas_displaced,
-        }
+    if fossil_remaining > 0.01:
+        remaining_rate = (coal_remaining * coal_rate + oil_remaining * oil_rate +
+                          gas_remaining * gas_rate) / fossil_remaining
+    else:
+        remaining_rate = gas_rate
 
-    # Weighted average emission rate of remaining fossil fleet
-    rate = (coal_remaining * coal_rate + oil_remaining * oil_rate + gas_remaining * gas_rate) / fossil_remaining
-
-    return rate, {
-        'coal_displaced': round(coal_displaced, 2),
-        'oil_displaced': round(oil_displaced, 2),
-        'gas_displaced': round(gas_displaced, 2),
-        'coal_remaining_pct': round(coal_remaining, 2),
-        'oil_remaining_pct': round(oil_remaining, 2),
-        'gas_remaining_pct': round(gas_remaining, 2),
-        'emission_rate_tco2_mwh': round(rate, 4),
+    return displaced_rate, {
+        'coal_displaced_twh': round(coal_displaced, 2),
+        'oil_displaced_twh': round(oil_displaced, 2),
+        'gas_displaced_twh': round(gas_displaced, 2),
+        'coal_remaining_twh': round(coal_remaining, 2),
+        'oil_remaining_twh': round(oil_remaining, 2),
+        'gas_remaining_twh': round(gas_remaining, 2),
+        'fossil_remaining_twh': round(fossil_remaining, 2),
+        'displaced_rate_tco2_mwh': round(displaced_rate, 4),
+        'remaining_rate_tco2_mwh': round(remaining_rate, 4),
+        'demand_growth_factor': demand_growth_factor,
     }
 
 
