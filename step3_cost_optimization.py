@@ -154,6 +154,30 @@ DEMAND_GROWTH_YEARS = list(range(2026, 2051))
 DEMAND_GROWTH_LEVELS = ['Low', 'Medium', 'High']
 
 
+# ── Gas Capacity Backup (resource adequacy) ──
+RESOURCE_ADEQUACY_MARGIN = 0.15  # 15% reserve margin
+
+PEAK_DEMAND_MW = {
+    'CAISO': 43860, 'ERCOT': 83597, 'PJM': 160560, 'NYISO': 31857, 'NEISO': 25898,
+}
+EXISTING_GAS_CAPACITY_MW = {
+    'CAISO': 37000, 'ERCOT': 55000, 'PJM': 75000, 'NYISO': 18000, 'NEISO': 14000,
+}
+# Lazard v16.0 CCGT annualized capacity cost ($/kW-yr)
+NEW_CCGT_COST_KW_YR = {
+    'CAISO': 112, 'ERCOT': 89, 'PJM': 99, 'NYISO': 114, 'NEISO': 105,
+}
+# Existing gas fixed O&M ($/kW-yr)
+EXISTING_GAS_FOM_KW_YR = {
+    'CAISO': 16, 'ERCOT': 13, 'PJM': 14, 'NYISO': 17, 'NEISO': 15,
+}
+# Capacity credits at system peak
+PEAK_CAPACITY_CREDITS = {
+    'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
+    'hydro': 0.50, 'battery': 0.95, 'ldes': 0.90,
+}
+
+
 def get_tx(rtype, tx_name, iso):
     """Lookup transmission adder for a resource type."""
     entry = TX_TABLES.get(rtype, {}).get(tx_name, 0)
@@ -287,8 +311,13 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     # Tranche 3: Cheapest of nuclear new-build vs CCS
     nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + tx_cf
     ccs_tranche_price = ccs_table[ccs_lev][iso] + tx_ccs_cf
+    tranche3_is_nuclear = nuclear_price <= ccs_tranche_price
     tranche3_price = min(nuclear_price, ccs_tranche_price)
     tranche3_cost = remaining * tranche3_price
+
+    # Tranche 3 split: nuclear new-build vs CCS-CCGT
+    nuclear_newbuild_twh = remaining if tranche3_is_nuclear else np.zeros(N)
+    ccs_tranche_twh = np.zeros(N) if tranche3_is_nuclear else remaining
 
     cf_total_new_cost = uprate_cost + geo_cost + tranche3_cost
     cf_cost_per_demand = cf_total_new_cost / demand
@@ -299,10 +328,59 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     ldes_lcoe = LCOE_TABLES['ldes'][stor_name][iso] + get_tx('ldes', tx_name, iso)
     total_cost += bat_pct / 100.0 * bat_lcoe + ldes_pct / 100.0 * ldes_lcoe
 
-    # Effective cost
+    # --- Gas Capacity Backup (resource adequacy) ---
+    # Compute clean peak capacity contribution, then gas backup needed, then cost
+    peak_mw = PEAK_DEMAND_MW[iso]
+    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+    demand_mwh = demand * 1e6  # TWh → MWh
+    avg_demand_mw = demand_mwh / 8760
+
+    # Clean peak capacity from each resource (vectorized)
+    clean_peak_mw = (
+        proc * cf_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        proc * sol_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
+        proc * wnd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
+        proc * ccs_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        proc * hyd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+        bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
+        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+    )
+
+    gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw)
+    existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+    existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
+    new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
+
+    # Annualized capacity cost: existing gas FOM + new CCGT full cost ($/yr)
+    # Convert to $/MWh of demand: (MW × $/kW-yr × 1000) / demand_mwh
+    gas_cost_per_mwh = (
+        existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
+        new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
+    ) / demand_mwh
+
+    total_cost += gas_cost_per_mwh
+
+    # Effective cost (total cost ÷ match fraction)
     effective_cost = np.where(match_frac > 0, total_cost / match_frac, 0)
 
-    return total_cost, effective_cost
+    # Build tranche breakdown (per-mix arrays, shape N)
+    tranche_data = {
+        'cf_existing_twh': cf_existing_pct / 100.0 * demand,
+        'uprate_twh': uprate_twh,
+        'geo_twh': geo_twh if (iso == 'CAISO' and geo_lev) else np.zeros(N),
+        'nuclear_newbuild_twh': nuclear_newbuild_twh,
+        'ccs_tranche_twh': ccs_tranche_twh,
+        'new_cf_twh': new_cf_twh,
+        # Gas backup fields
+        'gas_backup_mw': gas_needed_mw,
+        'existing_gas_used_mw': existing_gas_used_mw,
+        'new_gas_build_mw': new_gas_mw,
+        'gas_cost_per_mwh': gas_cost_per_mwh,
+        'clean_peak_mw': clean_peak_mw,
+        'ra_peak_mw': np.full(N, ra_peak_mw),
+    }
+
+    return total_cost, effective_cost, tranche_data
 
 
 # ============================================================================
@@ -504,7 +582,7 @@ def main():
                     'geo': 'M' if iso == 'CAISO' else None,
                 }
 
-                tc, ec = price_mix_batch(iso, arrays, sens, demand_twh)
+                tc, ec, tranche = price_mix_batch(iso, arrays, sens, demand_twh)
                 best_idx = int(np.argmin(tc))
                 arch_set.add(best_idx)
 
@@ -524,12 +602,28 @@ def main():
                         'incremental': round(float(ec[best_idx]) - wholesale, 2),
                         'wholesale': wholesale,
                     },
+                    'tranche_costs': {
+                        'cf_existing_twh': round(float(tranche['cf_existing_twh'][best_idx]), 3),
+                        'uprate_twh': round(float(tranche['uprate_twh'][best_idx]), 3),
+                        'geo_twh': round(float(tranche['geo_twh'][best_idx]), 3),
+                        'nuclear_newbuild_twh': round(float(tranche['nuclear_newbuild_twh'][best_idx]), 3),
+                        'ccs_tranche_twh': round(float(tranche['ccs_tranche_twh'][best_idx]), 3),
+                        'new_cf_twh': round(float(tranche['new_cf_twh'][best_idx]), 3),
+                    },
+                    'gas_backup': {
+                        'gas_backup_needed_mw': round(float(tranche['gas_backup_mw'][best_idx])),
+                        'existing_gas_used_mw': round(float(tranche['existing_gas_used_mw'][best_idx])),
+                        'new_gas_build_mw': round(float(tranche['new_gas_build_mw'][best_idx])),
+                        'gas_cost_per_mwh': round(float(tranche['gas_cost_per_mwh'][best_idx]), 2),
+                        'clean_peak_capacity_mw': round(float(tranche['clean_peak_mw'][best_idx])),
+                        'ra_peak_mw': round(float(tranche['ra_peak_mw'][best_idx])),
+                    },
                 }
 
                 # Also compute no-45Q costs
                 no45q_sens = dict(sens)
                 no45q_sens['q45'] = '0'
-                tc_no45q, ec_no45q = price_mix_batch(iso, arrays, no45q_sens, demand_twh)
+                tc_no45q, ec_no45q, _ = price_mix_batch(iso, arrays, no45q_sens, demand_twh)
                 scenario['no_45q_costs'] = {
                     'total_cost': round(float(tc_no45q[best_idx]), 2),
                     'effective_cost': round(float(ec_no45q[best_idx]), 2),
@@ -624,7 +718,7 @@ def main():
                             growth_results = {}
                             for g_level in DEMAND_GROWTH_LEVELS:
                                 g_rate = iso_rates[g_level]
-                                tc, ec = price_mix_batch(
+                                tc, ec, _ = price_mix_batch(
                                     iso, arch_arrays, sens, demand_twh,
                                     target_year=year, growth_rate=g_rate
                                 )
