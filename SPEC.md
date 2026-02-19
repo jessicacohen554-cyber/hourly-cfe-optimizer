@@ -939,6 +939,30 @@ else:
 
 **Why this matters**: The previous uniform model assumed the fossil fleet composition stays constant as clean energy grows. In reality, coal plants are the first to retire (most expensive, most regulated, dirtiest). The dispatch-stack model correctly captures decreasing marginal emission reductions as the grid gets cleaner — the "easy" high-emission tons are abated first, and the last tons (displacing efficient gas) are the hardest.
 
+**Absolute coal/oil caps — no new fossil build (Decision: Feb 19, 2026)**:
+
+No new coal or oil capacity is built. Coal and oil generation are capped at their 2025 absolute TWh levels. As demand grows, only gas CCGT fills the gap — so coal/oil's share of total generation naturally declines, and the average fossil emission rate trends toward gas-only.
+
+2025 caps (from EIA hourly data):
+
+| ISO | Coal TWh | Oil TWh | Gas TWh | Coal Peak MW | Oil Peak MW |
+|-----|----------|---------|---------|-------------|-------------|
+| CAISO | 0.00 | 0.60 | 114.8 | 15 | 470 |
+| ERCOT | 67.58 | 0.00 | 195.5 | 14,379 | 0 |
+| PJM | 139.09 | 4.59 | 357.3 | 29,861 | 5,608 |
+| NYISO | 0.00 | 0.15 | 92.3 | 0 | 1,948 |
+| NEISO | 0.31 | 1.29 | 75.1 | 653 | 6,554 |
+
+Effect: At 2025 base demand, caps equal actual generation (no change). Under demand growth scenarios, fossil fleet composition shifts:
+```
+grown_demand_twh = base_demand_twh × (1 + annual_rate)^(target_year − 2025)
+grown_fossil_twh = grown_demand_twh × (1 − clean_pct/100)
+coal_twh = min(COAL_CAP_TWH[iso], coal_cap)  # capped at 2025 level
+oil_twh = min(OIL_CAP_TWH[iso], oil_cap)    # capped at 2025 level
+gas_twh = grown_fossil_twh − coal_twh − oil_twh  # gas absorbs all growth
+```
+This means the merit-order retirement stack uses absolute TWh internally, not fixed percentages. PJM's 139 TWh of coal stays at 139 TWh even if demand doubles — its share of fossil drops from 28% to ~16%, pulling the average fossil rate toward gas.
+
 **Data sources**:
 - `data/egrid_emission_rates.json` — 2023 eGRID per-fuel CO₂ rates (lb/MWh) by region
 - `data/eia_fossil_mix.json` — EIA hourly fossil fuel mix shares (coal/gas/oil) by ISO
