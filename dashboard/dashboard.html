@@ -4542,11 +4542,14 @@ function updateCompressedDay(entry, region, iso) {
         return (h - 12) + 'pm';
     });
 
-    // Convert normalized sums to MW (representative daily average)
-    // Each value is the sum of normalized hourly values across 365 days
-    // Divide by 365 and multiply by annual_demand to get average MW for that hour
+    // Convert normalized sums to MWh (annual total per hour-of-day)
+    // Each value is the sum of normalized hourly values across 365 days.
+    // Multiply by annual_demand_mwh to get total MWh for that hour-of-day slot.
+    // Using SUM (not average) preserves the exact relationship:
+    //   demand = matched + gap  at every hour-of-day
+    // and keeps curtailment stacking clean against the demand line.
     const annualMWh = region.annual_demand_mwh || 1;
-    const toMW = (v) => (v / 365) * annualMWh;
+    const toMWh = (v) => v * annualMWh;
 
     // NOTE: The compressed day profile was simulated at base-year (2025) demand.
     // All arrays (demand, matched, surplus, gap) are in the same normalized space.
@@ -4555,9 +4558,9 @@ function updateCompressedDay(entry, region, iso) {
     // Growth factor already affects which MIX is selected via findOptimalMix,
     // but the dispatch visualization shows that mix at the demand level it was simulated against.
 
-    // Rotate all compressed-day arrays from UTC to local time, then convert to MW
-    const r = (arr) => rotateToLocal(arr).map(v => Math.max(0, toMW(v)));
-    const rRaw = (arr) => rotateToLocal(arr).map(v => toMW(v));
+    // Rotate all compressed-day arrays from UTC to local time, then convert to MWh
+    const r = (arr) => rotateToLocal(arr).map(v => Math.max(0, toMWh(v)));
+    const rRaw = (arr) => rotateToLocal(arr).map(v => toMWh(v));
     const z24 = new Array(24).fill(0);
 
     // Calculate stacked matched values (in MW, local time) — all 7 resource types
@@ -4683,7 +4686,7 @@ function updateCompressedDay(entry, region, iso) {
 
     // Demand line FIRST — serves as the visual boundary between consumption and curtailment
     // Must be computed before curtailment so curtailment can stack from demand upward
-    const demandLocal = rotateToLocal(cd.demand).map(v => toMW(v));
+    const demandLocal = rotateToLocal(cd.demand).map(v => toMWh(v));
     const demandDsIdx = datasets.length;
     datasets.push({
         label: 'Demand',
@@ -4792,13 +4795,16 @@ function updateCompressedDay(entry, region, iso) {
                             color: '#6B6356',
                             callback: function(v) {
                                 const abs = Math.abs(v);
-                                const label = abs >= 1000 ? (abs/1000).toFixed(0) + 'k' : abs.toFixed(0);
+                                let label;
+                                if (abs >= 1e6) label = (abs / 1e6).toFixed(1) + 'M';
+                                else if (abs >= 1000) label = (abs / 1000).toFixed(0) + 'k';
+                                else label = abs.toFixed(0);
                                 return v < 0 ? '-' + label : label;
                             }
                         },
                         title: {
                             display: true,
-                            text: 'Average MW',
+                            text: 'MWh (Annual Sum by Hour)',
                             font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: '600' },
                             color: '#4A4540'
                         }
@@ -4832,13 +4838,16 @@ function updateCompressedDay(entry, region, iso) {
                         callbacks: {
                             label: function(context) {
                                 const ds = context.dataset;
-                                const fmtMW = (v) => {
+                                const fmtMWh = (v) => {
                                     const abs = Math.abs(v);
-                                    const s = abs >= 1000 ? Math.round(abs).toLocaleString() + ' MW' : abs.toFixed(0) + ' MW';
+                                    let s;
+                                    if (abs >= 1e6) s = (abs / 1e6).toFixed(1) + 'M MWh';
+                                    else if (abs >= 1000) s = Math.round(abs).toLocaleString() + ' MWh';
+                                    else s = abs.toFixed(0) + ' MWh';
                                     return v < 0 ? '-' + s : s;
                                 };
                                 if (ds.label === 'Demand') {
-                                    return ` Demand: ${fmtMW(context.parsed.y)}`;
+                                    return ` Demand: ${fmtMWh(context.parsed.y)}`;
                                 }
                                 if (ds.label === 'Unmatched (Gap)') return null;
                                 // Storage charge (negative) — show specific label
@@ -4852,13 +4861,13 @@ function updateCompressedDay(entry, region, iso) {
                                     const prev = isStackedOnCharge ? Math.abs(prevDs.data?.[idx] || 0) : 0;
                                     const contrib = isStackedOnCharge ? val - prev : val;
                                     if (contrib < 1) return null;
-                                    return ` ${ds.label}: ${fmtMW(contrib)}`;
+                                    return ` ${ds.label}: ${fmtMWh(contrib)}`;
                                 }
                                 // For curtailed datasets, use stashed surplus values
                                 if (ds._surplusVals) {
                                     const sv = ds._surplusVals[context.dataIndex];
                                     if (sv < 1) return null;
-                                    return ` ${ds.label}: ${fmtMW(sv)}`;
+                                    return ` ${ds.label}: ${fmtMWh(sv)}`;
                                 }
                                 // For stacked matched, show individual contribution
                                 const idx = context.dataIndex;
@@ -4867,7 +4876,7 @@ function updateCompressedDay(entry, region, iso) {
                                 const prev = dsIdx > 0 ? compressedDayChart.data.datasets[dsIdx - 1].data[idx] : 0;
                                 const contribution = val - prev;
                                 if (contribution < 1) return null;
-                                return ` ${ds.label}: ${fmtMW(contribution)}`;
+                                return ` ${ds.label}: ${fmtMWh(contribution)}`;
                             }
                         }
                     }
