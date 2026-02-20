@@ -31,8 +31,8 @@ ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 THRESHOLD_STRS = [str(t) for t in THRESHOLDS]
 
-# Toggle factor names for ANOVA
-TOGGLE_NAMES = ['Renewable Gen', 'Firm Gen', 'Storage', 'Fossil Fuel', 'Transmission']
+# Toggle factor names for ANOVA (6 paired dimensions — Battery/LDES split from Storage)
+TOGGLE_NAMES = ['Renewable Gen', 'Firm Gen', 'Battery Cost', 'LDES Cost', 'Fossil Fuel', 'Transmission']
 
 # Wholesale prices (duplicated from optimizer for standalone use)
 WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41}
@@ -45,24 +45,35 @@ def load_results():
 
 
 def medium_key(iso):
-    """Return the all-Medium scenario key for an ISO."""
+    """Return the all-Medium 9-dim scenario key for an ISO.
+    Format: RFBL_FF_TX_CCSq45_GEO (R=ren, F=firm, B=batt, L=ldes)
+    """
     geo = 'M' if iso == 'CAISO' else 'X'
-    return f'MMM_M_M_M1_{geo}'
+    return f'MMMM_M_M_M1_{geo}'
 
 
 def scenario_key_to_levels(key):
-    """Parse scenario key → (renew, firm, storage, fuel, tx) indices.
-    Handles both old 5-dim (LMH_L_N) and new 8-dim (LMH_L_N_M1_M) formats.
+    """Parse scenario key → (renew, firm, battery, ldes, fuel, tx) indices.
+    Handles 9-dim (RFBL_F_TX_...), 8-dim (RFS_F_TX_...), and 5-dim (RFS_F_TX) formats.
     L=0, M=1, H=2; tx: N=0, L=1, M=2, H=3
-    Returns first 5 dimensions for ANOVA (CCS/45Q/Geo handled separately).
+    Returns 6 dimensions for ANOVA (CCS/45Q/Geo handled separately).
     """
     level_map = {'L': 0, 'M': 1, 'H': 2, 'N': 0}
     parts = key.split('_')
-    rfs = parts[0]  # 3 chars: renew, firm, storage
+    gen = parts[0]
     fuel = parts[1]
     tx = parts[2]
-    return (level_map.get(rfs[0], 1), level_map.get(rfs[1], 1), level_map.get(rfs[2], 1),
-            level_map.get(fuel, 1), level_map.get(tx, 1))
+    if len(gen) >= 4:
+        # 9-dim: R, F, B, L
+        return (level_map.get(gen[0], 1), level_map.get(gen[1], 1),
+                level_map.get(gen[2], 1), level_map.get(gen[3], 1),
+                level_map.get(fuel, 1), level_map.get(tx, 1))
+    else:
+        # 8-dim or 5-dim: R, F, S — replicate S for both battery and LDES
+        s = level_map.get(gen[2], 1) if len(gen) >= 3 else 1
+        return (level_map.get(gen[0], 1), level_map.get(gen[1], 1),
+                s, s,
+                level_map.get(fuel, 1), level_map.get(tx, 1))
 
 
 def compute_mac_for_scenario(iso_data, scenario_key, thresholds):
@@ -241,7 +252,10 @@ def compute_monotonic_envelope(data):
 
         for t_str in THRESHOLD_STRS:
             t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            sc = t_data.get('scenarios', {}).get(mk) or t_data.get('scenarios', {}).get('MMM_M_M')
+            sc = (t_data.get('scenarios', {}).get(mk) or
+             t_data.get('scenarios', {}).get('MMM_M_M_M1_M') or
+             t_data.get('scenarios', {}).get('MMM_M_M_M1_X') or
+             t_data.get('scenarios', {}).get('MMM_M_M'))
             if not sc:
                 raw_macs.append(None)
                 costs_at_t.append(None)
@@ -317,7 +331,10 @@ def compute_path_constrained_mac(data):
         results_by_t = {}
         for t_str in THRESHOLD_STRS:
             t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            sc = t_data.get('scenarios', {}).get(mk) or t_data.get('scenarios', {}).get('MMM_M_M')
+            sc = (t_data.get('scenarios', {}).get(mk) or
+             t_data.get('scenarios', {}).get('MMM_M_M_M1_M') or
+             t_data.get('scenarios', {}).get('MMM_M_M_M1_X') or
+             t_data.get('scenarios', {}).get('MMM_M_M'))
             if sc:
                 results_by_t[t_str] = sc
 

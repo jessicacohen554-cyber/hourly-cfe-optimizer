@@ -20,42 +20,26 @@ THRESHOLDS_NUM = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
 
-def medium_key(iso):
-    """Return the all-Medium scenario key for a given ISO (9-dim format).
-    CAISO: MMM_M_M_M_M1_M  (geothermal = M)
-    Others: MMM_M_M_M_M1_X  (geothermal = X, not applicable)
-    Falls back to old key format if 9-dim key not found.
-    """
-    return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
-
-def get_scenario(scenarios, iso):
-    """Get scenario data using 9-dim key with fallback to old formats."""
-    key = medium_key(iso)
-    if key in scenarios:
-        return scenarios[key]
-    # Fallback to old 8-dim or 5-dim keys
-    for fallback in ['MMM_M_M_M_M1_M', 'MMM_M_M_M_M1_X', 'MMM_M_M']:
-        if fallback in scenarios:
-            return scenarios[fallback]
-    return None
-
 MAC_CAP = 1000  # Cap marginal MAC at $1000/ton
 
 
 def medium_key(iso):
-    """Return the all-Medium scenario key for an ISO.
-    CAISO: MMM_M_M_M1_M  (geothermal=M)
-    Others: MMM_M_M_M1_X  (no geothermal)
+    """Return the all-Medium 9-dim scenario key for an ISO.
+    Format: RFBL_FF_TX_CCSq45_GEO (R=ren, F=firm, B=batt, L=ldes)
+    CAISO: MMMM_M_M_M1_M  (geothermal=M)
+    Others: MMMM_M_M_M1_X  (no geothermal)
     """
     geo = 'M' if iso == 'CAISO' else 'X'
-    return f'MMM_M_M_M1_{geo}'
+    return f'MMMM_M_M_M1_{geo}'
 
 
 def get_scenario(iso_data, threshold, iso):
     """Get the medium scenario for an ISO/threshold, with backward compat fallback."""
     scenarios = iso_data.get('thresholds', {}).get(threshold, {}).get('scenarios', {})
     mk = medium_key(iso)
-    return scenarios.get(mk) or scenarios.get('MMM_M_M')
+    return (scenarios.get(mk) or
+            scenarios.get('MMM_M_M_M1_M') or scenarios.get('MMM_M_M_M1_X') or  # 8-dim legacy
+            scenarios.get('MMM_M_M'))  # 5-dim legacy
 
 # ============================================================================
 # LOAD DATA
