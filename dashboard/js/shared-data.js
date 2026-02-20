@@ -1818,7 +1818,7 @@ const GAS_BACKUP_DATA = {
 // The dashboard uses these to reprice feasible mixes when new toggles change.
 // This avoids pre-computing 40k+ sensitivity combos.
 
-// --- Nuclear New-Build LCOE ($/MWh) by Firm Gen toggle ---
+// --- Nuclear New-Build LCOE ($/MWh) by Nuclear toggle ---
 // Low = nth-of-a-kind SMR target ($70/MWh)
 const NUCLEAR_NEWBUILD_LCOE = {
     L: { CAISO: 70, ERCOT: 68, PJM: 72, NYISO: 75, NEISO: 73 },
@@ -1847,7 +1847,7 @@ const CCS_LCOE_45Q_OFF = {
     H: { CAISO: 144, ERCOT: 121, PJM: 131, NYISO: 157, NEISO: 151 }
 };
 
-// --- Nuclear Uprate LCOE ($/MWh) by Firm Gen toggle ---
+// --- Nuclear Uprate LCOE ($/MWh) by Nuclear toggle ---
 const UPRATE_LCOE = { L: 15, M: 25, H: 40 };
 
 // --- Wholesale Prices ($/MWh) ---

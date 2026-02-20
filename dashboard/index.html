@@ -2039,9 +2039,9 @@ function populateMacNarrativeValues() {
 
     // ANOVA percentages
     if (typeof MAC_ANOVA !== 'undefined') {
-        // Firm gen range in nuclear-heavy regions (CAISO, PJM, NYISO, NEISO)
+        // Nuclear cost range in nuclear-heavy regions (CAISO, PJM, NYISO, NEISO)
         const nuclearRegions = ['CAISO', 'PJM', 'NYISO', 'NEISO'];
-        const firmPcts = nuclearRegions.map(r => Math.round(MAC_ANOVA[r]['Firm Gen'] * 100));
+        const firmPcts = nuclearRegions.map(r => Math.round(MAC_ANOVA[r]['Nuclear'] * 100));
         s('hp-firm-pct-range', Math.min(...firmPcts) + '–' + Math.max(...firmPcts));
         s('hp-renew-pct-ercot', Math.round(MAC_ANOVA.ERCOT['Renewable Gen'] * 100));
     }
@@ -4113,7 +4113,7 @@ function initNoRegretsChart(iso) {
         } else {
             insightEl.innerHTML = `<strong>At 90% matching in ${iso}:</strong> No resource has a guaranteed new-build floor &mdash;
                 the optimal mix shifts dramatically depending on cost assumptions. The wide bands show how sensitive the resource choice is
-                to the Firm Gen and Renewable Gen cost toggles.`;
+                to the Nuclear and Renewable Gen cost toggles.`;
         }
     }
 
