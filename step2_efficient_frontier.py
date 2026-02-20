@@ -171,7 +171,7 @@ def step1_threshold_gate(table):
 
 def step2_procurement_minimization(iso_thr_arrays):
     """
-    Step 2: For each unique allocation (CF/Sol/Wnd/Hyd/Bat/LDES),
+    Step 2: For each unique allocation (CF/Sol/Wnd/Hyd/Bat4/Bat8/LDES),
     keep only the row with the lowest procurement_pct.
     """
     n = len(iso_thr_arrays['clean_firm'])
@@ -183,15 +183,17 @@ def step2_procurement_minimization(iso_thr_arrays):
     wnd = iso_thr_arrays['wind']
     hyd = iso_thr_arrays['hydro']
     bat = iso_thr_arrays['battery_dispatch_pct']
+    bat8 = iso_thr_arrays['battery8_dispatch_pct']
     ldes = iso_thr_arrays['ldes_dispatch_pct']
     proc = iso_thr_arrays['procurement_pct']
 
-    # Pack: CF*101^5 + Sol*101^4 + Wnd*101^3 + Hyd*101^2 + Bat*101 + LDES
-    group_key = (cf.astype(np.int64) * (101**5) +
-                 sol.astype(np.int64) * (101**4) +
-                 wnd.astype(np.int64) * (101**3) +
-                 hyd.astype(np.int64) * (101**2) +
-                 bat.astype(np.int64) * 101 +
+    # Pack: CF*101^6 + Sol*101^5 + Wnd*101^4 + Hyd*101^3 + Bat*101^2 + Bat8*101 + LDES
+    group_key = (cf.astype(np.int64) * (101**6) +
+                 sol.astype(np.int64) * (101**5) +
+                 wnd.astype(np.int64) * (101**4) +
+                 hyd.astype(np.int64) * (101**3) +
+                 bat.astype(np.int64) * (101**2) +
+                 bat8.astype(np.int64) * 101 +
                  ldes.astype(np.int64))
 
     # Sort by group_key, then by procurement (ascending)
@@ -209,8 +211,8 @@ def step2_procurement_minimization(iso_thr_arrays):
 def step3_strict_dominance(iso_thr_arrays, indices):
     """
     Step 3: Remove strictly dominated mixes.
-    A mix A is dominated by mix B if B has ≤ procurement, ≤ battery, ≤ LDES,
-    and ≥ match score (with at least one strict inequality).
+    A mix A is dominated by mix B if B has ≤ procurement, ≤ battery4, ≤ battery8,
+    ≤ LDES, and ≥ match score (with at least one strict inequality).
     O(n²) — only run for manageable group sizes.
     """
     n = len(indices)
@@ -222,12 +224,14 @@ def step3_strict_dominance(iso_thr_arrays, indices):
 
     proc = iso_thr_arrays['procurement_pct'][indices].astype(np.float64)
     bat = iso_thr_arrays['battery_dispatch_pct'][indices].astype(np.float64)
+    bat8 = iso_thr_arrays['battery8_dispatch_pct'][indices].astype(np.float64)
     ldes = iso_thr_arrays['ldes_dispatch_pct'][indices].astype(np.float64)
     score = iso_thr_arrays['hourly_match_score'][indices].astype(np.float64)
 
     sort_order = np.argsort(proc)
     proc = proc[sort_order]
     bat = bat[sort_order]
+    bat8 = bat8[sort_order]
     ldes = ldes[sort_order]
     score = score[sort_order]
     sorted_indices = indices[sort_order]
@@ -240,12 +244,14 @@ def step3_strict_dominance(iso_thr_arrays, indices):
         j_mask = (
             (proc[i] <= proc[i+1:]) &
             (bat[i] <= bat[i+1:]) &
+            (bat8[i] <= bat8[i+1:]) &
             (ldes[i] <= ldes[i+1:]) &
             (score[i] >= score[i+1:])
         )
         strict = (
             (proc[i] < proc[i+1:]) |
             (bat[i] < bat[i+1:]) |
+            (bat8[i] < bat8[i+1:]) |
             (ldes[i] < ldes[i+1:]) |
             (score[i] > score[i+1:])
         )
@@ -273,6 +279,9 @@ def process_iso_threshold(table, iso, threshold):
         'hydro': subtable.column('hydro').to_numpy(),
         'procurement_pct': subtable.column('procurement_pct').to_numpy(),
         'battery_dispatch_pct': subtable.column('battery_dispatch_pct').to_numpy(),
+        'battery8_dispatch_pct': (subtable.column('battery8_dispatch_pct').to_numpy()
+                                   if 'battery8_dispatch_pct' in subtable.column_names
+                                   else np.zeros(n_raw, dtype=np.int64)),
         'ldes_dispatch_pct': subtable.column('ldes_dispatch_pct').to_numpy(),
         'hourly_match_score': subtable.column('hourly_match_score').to_numpy(),
     }
