@@ -1,9 +1,52 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-19.
+> Last updated: 2026-02-20.
 
-## Current Status (Feb 19, 2026)
+## Current Status (Feb 20, 2026)
+
+### LMP Price Calculation & Existing vs New-Build Analysis (Feb 20, 2026)
+
+**Goal**: Separate existing-generation vs new-build pricing to enable "with vs without existing" analysis. Shows cost of replacing nuclear/hydro, asset stranding risk, and true greenfield costs.
+
+#### Decision 1: Hydro Treatment — Both Scenarios (1C)
+- **With hydro**: Hydro included as existing wholesale-priced resource. Shows cost advantage of existing hydro and its value for hourly matching. Better view of cost to replace nuclear.
+- **Without hydro**: Mixes with hydro=0 in the EF. Shows new-build requirement for hourly matching without hydro, procurement impact, and potential asset stranding if hydro is curtailed or unavailable.
+- **Implementation**: Step 2 EF existing clean floor removed → hydro=0 mixes now available. Step 3 can filter to hydro=0 or hydro>0 mixes for comparison.
+
+#### Decision 2: Nuclear Uprates — Both Scenarios
+- **With uprates**: Tranche 1 (uprate) pricing preserved. Better for hourly matching since uprates are cheap dispatchable capacity.
+- **Without uprates**: Tranche 1 disabled (uprate_cap=0). All new clean firm priced at tranche 2 (geothermal) / tranche 3 (new-build nuclear vs CCS). Provides better view of true new-build replacement cost.
+- **Implementation**: `uprate_mode` flag in Step 3 cost function. When 'off', `uprate_cap=0` and all new CF flows directly to geothermal/new-build tranches.
+
+#### Decision 3: Below-Floor Mix Recovery
+- **Problem**: Step 2 Phase 0 (existing clean floor filter) removed mixes that under-allocated existing generation. This filtered out hydro=0 and low-clean-firm mixes needed for greenfield analysis.
+- **Approach**: Temp recovery script reads PFS cache, inverts the floor filter, recovers below-floor mixes, runs Pareto procurement, and merges into existing `pfs_post_ef.parquet`.
+- **Step 2 update**: Remove Phase 0 filter for future runs (kept as dead code for reference). No full PFS re-run needed — temp script recovers the delta.
+- **Script**: `recover_below_floor.py` (one-time use, can be deleted after merge)
+
+#### Decision 4: LMP Integration — Wholesale + LCOE Hybrid (4A)
+- **Approach**: Current architecture preserved. Existing generation priced at regional wholesale (LMP-informed). New-build priced at LCOE + transmission adder.
+- **No change to pricing engine structure** — the existing/new split already computed in Step 3 `price_mix_batch()`. This decision confirms the hybrid approach is correct and no full nodal LMP model is needed.
+
+#### Decision 5: Two Analysis Tracks — Data Only (5C)
+Two distinct tracks, not a 4-way matrix:
+
+**Track 1: New-Build Requirement for Hourly Matching** (`newbuild`)
+- Hydro: **excluded** (hydro=0 mixes only)
+- Uprates: **on** (uprate tranche active)
+- Purpose: Understand what resources are incentivized/deployed when you impose an hourly CFE matching requirement. Reveals the clash between what hourly matching incentivizes vs what the grid actually needs. Without hydro, the optimizer must fill that gap with new-build — exposing the real resource deployment signal of the policy.
+
+**Track 2: Cost to Replace Existing Clean** (`replace`)
+- Hydro: **included** (up to existing floor — hydro capped at existing share, wholesale-priced)
+- Uprates: **off** (uprate_cap=0, all new CF at new-build prices)
+- Purpose: What does it cost to replace existing clean generation (nuclear, etc.) with new-build? Hydro stays because it's not being replaced — it provides baseline context. Disabling uprates forces full new-build pricing, showing the true marginal cost of replacement capacity.
+
+**Output**: Data files only. No research paper update yet — discuss findings with user first, then write.
+**Architecture**: Step 3 runs 2 additional passes per (ISO, threshold):
+  - Pass "newbuild": filter EF to hydro=0, uprate tranche on → new-build hourly matching results
+  - Pass "replace": full EF (hydro≤existing), uprate tranche off → replacement cost results
+  - Plus existing pass "baseline": full EF, all features on → current behavior (preserved)
 
 ### Columnar JSON Format for Feasible Mixes (Feb 19, 2026)
 

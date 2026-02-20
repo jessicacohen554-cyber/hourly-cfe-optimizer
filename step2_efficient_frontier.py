@@ -329,8 +329,11 @@ def main():
     total_start = time.time()
     table = load_pfs()
 
-    # Step 0: Existing generation utilization filter
-    table = step0_existing_generation_filter(table)
+    # Step 0: Existing generation utilization filter — DISABLED (Feb 20, 2026)
+    # Removed to allow below-floor mixes (hydro=0, low clean_firm) into the EF
+    # for Track 1 (new-build hourly matching) and Track 2 (cost to replace existing).
+    # The filter function is preserved above for reference but no longer called.
+    # table = step0_existing_generation_filter(table)
 
     # Step 1: Threshold gate (keep only rows from target threshold ranges)
     table = step1_threshold_gate(table)
