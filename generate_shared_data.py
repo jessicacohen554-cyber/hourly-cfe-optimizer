@@ -41,6 +41,22 @@ def get_scenario(scenarios, iso):
 
 MAC_CAP = 1000  # Cap marginal MAC at $1000/ton
 
+
+def medium_key(iso):
+    """Return the all-Medium scenario key for an ISO.
+    CAISO: MMM_M_M_M1_M  (geothermal=M)
+    Others: MMM_M_M_M1_X  (no geothermal)
+    """
+    geo = 'M' if iso == 'CAISO' else 'X'
+    return f'MMM_M_M_M1_{geo}'
+
+
+def get_scenario(iso_data, threshold, iso):
+    """Get the medium scenario for an ISO/threshold, with backward compat fallback."""
+    scenarios = iso_data.get('thresholds', {}).get(threshold, {}).get('scenarios', {})
+    mk = medium_key(iso)
+    return scenarios.get(mk) or scenarios.get('MMM_M_M')
+
 # ============================================================================
 # LOAD DATA
 # ============================================================================
