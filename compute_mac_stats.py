@@ -45,39 +45,22 @@ def load_results():
 
 
 def medium_key(iso):
-    """Return the all-Medium scenario key for a given ISO (9-dim format).
-    CAISO: MMM_M_M_M_M1_M  (geothermal = M)
-    Others: MMM_M_M_M_M1_X  (geothermal = X, not applicable)
-    """
-    return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
+    """Return the all-Medium scenario key for an ISO."""
+    geo = 'M' if iso == 'CAISO' else 'X'
+    return f'MMM_M_M_M1_{geo}'
 
 
 def scenario_key_to_levels(key):
     """Parse scenario key → (renew, firm, storage, fuel, tx) indices.
+    Handles both old 5-dim (LMH_L_N) and new 8-dim (LMH_L_N_M1_M) formats.
     L=0, M=1, H=2; tx: N=0, L=1, M=2, H=3
-
-    Supports three formats (detected by number of underscore-separated parts):
-      9-dim (6 parts): {Ren}{Firm}{Batt}_{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
-      8-dim (5 parts): {Ren}{Firm}{Stor}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
-      5-dim (3 parts): {Ren}{Firm}{Stor}_{Fuel}_{Tx}
+    Returns first 5 dimensions for ANOVA (CCS/45Q/Geo handled separately).
     """
     level_map = {'L': 0, 'M': 1, 'H': 2, 'N': 0}
     parts = key.split('_')
-    rfs = parts[0]  # 3 chars: renew, firm, battery/storage
-
-    if len(parts) == 6:
-        # 9-dim: parts[1]=LDES, parts[2]=fuel, parts[3]=tx, parts[4]=CCS+45Q, parts[5]=geo
-        fuel = parts[2]
-        tx = parts[3]
-    elif len(parts) == 5:
-        # 8-dim: parts[1]=fuel, parts[2]=tx, parts[3]=CCS+45Q, parts[4]=geo
-        fuel = parts[1]
-        tx = parts[2]
-    else:
-        # 5-dim: parts[1]=fuel, parts[2]=tx
-        fuel = parts[1]
-        tx = parts[2]
-
+    rfs = parts[0]  # 3 chars: renew, firm, storage
+    fuel = parts[1]
+    tx = parts[2]
     return (level_map.get(rfs[0], 1), level_map.get(rfs[1], 1), level_map.get(rfs[2], 1),
             level_map.get(fuel, 1), level_map.get(tx, 1))
 
@@ -248,6 +231,7 @@ def compute_monotonic_envelope(data):
     for iso in ISOS:
         iso_data = data['results'].get(iso, {})
         demand_mwh = iso_data.get('annual_demand_mwh', 1)
+        mk = medium_key(iso)
 
         # Compute raw average MAC at Medium scenario
         raw_macs = []
@@ -257,7 +241,7 @@ def compute_monotonic_envelope(data):
 
         for t_str in THRESHOLD_STRS:
             t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            sc = t_data.get('scenarios', {}).get(med_key)
+            sc = t_data.get('scenarios', {}).get(mk) or t_data.get('scenarios', {}).get('MMM_M_M')
             if not sc:
                 raw_macs.append(None)
                 costs_at_t.append(None)
@@ -327,12 +311,13 @@ def compute_path_constrained_mac(data):
         iso_data = data['results'].get(iso, {})
         demand_mwh = iso_data.get('annual_demand_mwh', 1)
         wholesale = WHOLESALE_PRICES[iso]
+        mk = medium_key(iso)
 
         # Collect Medium scenario results across thresholds
         results_by_t = {}
         for t_str in THRESHOLD_STRS:
             t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            sc = t_data.get('scenarios', {}).get('MMM_M_M')
+            sc = t_data.get('scenarios', {}).get(mk) or t_data.get('scenarios', {}).get('MMM_M_M')
             if sc:
                 results_by_t[t_str] = sc
 
