@@ -777,6 +777,30 @@ PEAK_CAPACITY_CREDITS = {
     'ldes': 0.90,         # 100hr iron-air, high duration = high credit
 }
 
+# Gas Availability Factor (GAF) — forced outages + correlated weather risk
+# Sources: PJM ELCC Class Ratings (2024/25), NERC GADS EFORd, FERC Winter Storm reports.
+# NEISO uses mechanical+weather only (pipeline constraint handled separately).
+GAS_AVAILABILITY_FACTOR = {
+    'CAISO': 0.88,  # 12% deration — summer ambient derate + mechanical outages
+    'ERCOT': 0.83,  # 17% deration — extreme weather both seasons, gas supply correlation
+    'PJM':   0.82,  # 18% deration — PJM ELCC data, Winter Storm Elliott evidence
+    'NYISO': 0.82,  # 18% deration — pipeline constraints, winter gas competition
+    'NEISO': 0.85,  # 15% deration — mechanical + weather only (pipeline separate)
+}
+
+# NEISO pipeline capacity constraint — absolute MW ceiling on gas deliverability
+# during winter peak after heating demand is served.
+# Source: ISO-NE Gas Availability Study (2025), ~4.5 BCF/day total NE pipeline,
+# heating consumes ~3.0 BCF/day at peak, leaving ~1.5 BCF/day for power.
+# 1.5 BCF/day ÷ ~7.5 MMBtu/MWh heat rate ≈ ~8,300 MW deliverable gas at peak.
+NEISO_PIPELINE_GAS_CAPACITY_MW = 8300
+
+# Pipeline expansion cost estimate ($/MW-yr annualized)
+# Source: FERC pipeline project filings, NE region. ~$150M/BCF-day new pipeline,
+# 30-yr amortization at 8% WACC → ~$13.3M/yr per BCF-day.
+# 1 BCF/day ≈ 5,500 MW at CCGT heat rate → ~$2,400/MW-yr
+NEISO_PIPELINE_EXPANSION_COST_MW_YR = 2400
+
 
 def compute_gas_capacity_and_ra(data):
     """
@@ -832,8 +856,9 @@ def compute_gas_capacity_and_ra(data):
                 ldes_mw = (ldes / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
                 clean_peak_mw += batt_mw + batt8_mw + ldes_mw
 
-                # Gas backup needed = RA requirement - clean peak capacity
-                gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw)
+                # Gas backup needed = RA requirement - clean peak capacity, derated by GAF
+                gaf = GAS_AVAILABILITY_FACTOR[iso]
+                gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
 
                 # Cost bifurcation: existing gas at wholesale, new-build at CCGT LCOE
                 existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
@@ -878,7 +903,21 @@ def compute_gas_capacity_and_ra(data):
                     'incremental_with_new_gas': round(incremental_with_new_gas, 2),
                     'clean_coverage_pct': round(clean_peak_mw / ra_peak_mw * 100, 1) if ra_peak_mw > 0 else 0,
                     'resource_adequacy_margin': RESOURCE_ADEQUACY_MARGIN,
+                    'gas_availability_factor': gaf,
                 }
+
+                # NEISO pipeline constraint: informational metric
+                if iso == 'NEISO':
+                    pipeline_cap = NEISO_PIPELINE_GAS_CAPACITY_MW
+                    pipeline_shortfall_mw = max(0, gas_needed_mw - pipeline_cap)
+                    pipeline_expansion_cost_yr = pipeline_shortfall_mw * NEISO_PIPELINE_EXPANSION_COST_MW_YR
+                    pipeline_expansion_per_mwh = pipeline_expansion_cost_yr / demand_mwh if demand_mwh > 0 else 0
+                    scenario['gas_backup']['pipeline_constraint'] = {
+                        'pipeline_deliverable_mw': pipeline_cap,
+                        'pipeline_shortfall_mw': round(pipeline_shortfall_mw),
+                        'pipeline_expansion_cost_per_mwh': round(pipeline_expansion_per_mwh, 2),
+                        'pipeline_constrained': pipeline_shortfall_mw > 0,
+                    }
 
                 total_computed += 1
 
@@ -891,11 +930,19 @@ def compute_gas_capacity_and_ra(data):
                   scenarios_t.get('MMM_M_M'))
             if sc and 'gas_backup' in sc:
                 gb = sc['gas_backup']
+                gaf_str = f"GAF={gb.get('gas_availability_factor', 1.0):.0%}"
+                pipeline_str = ''
+                if 'pipeline_constraint' in gb:
+                    pc = gb['pipeline_constraint']
+                    if pc['pipeline_constrained']:
+                        pipeline_str = f" | PIPELINE SHORTFALL: {pc['pipeline_shortfall_mw']:,} MW (+${pc['pipeline_expansion_cost_per_mwh']:.2f}/MWh)"
+                    else:
+                        pipeline_str = f" | pipeline OK ({gb['gas_backup_needed_mw']:,}/{pc['pipeline_deliverable_mw']:,} MW)"
                 print(f"      {iso} {t:>3}%: peak={gb['ra_peak_mw']:,} MW(+RA), "
                       f"clean={gb['clean_peak_capacity_mw']:,} MW, "
                       f"gas={gb['gas_backup_needed_mw']:,} MW "
                       f"(existing={gb['existing_gas_used_mw']:,}, new={gb['new_gas_build_mw']:,}), "
-                      f"coverage={gb['clean_coverage_pct']}%")
+                      f"coverage={gb['clean_coverage_pct']}%, {gaf_str}{pipeline_str}")
 
     print(f"      Computed gas backup for {total_computed:,} scenarios")
     return total_computed
