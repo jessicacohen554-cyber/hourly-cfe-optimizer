@@ -22,9 +22,9 @@ RESOURCES = ["clean_firm", "solar", "wind", "ccs_ccgt", "hydro"]
 KEY_THRESHOLDS = ["75", "80", "85", "90", "95", "97.5", "99", "100"]
 
 # Scenario code: RRR_F_T
-# R[0] = Renewable (L/M/H), R[1] = Firm (L/M/H), R[2] = Storage (L/M/H)
+# R[0] = Renewable (L/M/H), R[1] = Nuclear (L/M/H), R[2] = Storage (L/M/H)
 # F = Fossil (L/M/H), T = Transmission (N/L/M/H)
-TOGGLE_NAMES = ["Renewable Gen", "Firm Gen", "Storage", "Fossil Fuel", "Transmission"]
+TOGGLE_NAMES = ["Renewable Gen", "Nuclear", "Storage", "Fossil Fuel", "Transmission"]
 
 def parse_scenario_code(code):
     """Parse scenario key -> dict of toggle -> level.
@@ -33,7 +33,7 @@ def parse_scenario_code(code):
     parts = code.split("_")
     result = {
         "Renewable Gen": parts[0][0],   # L/M/H
-        "Firm Gen": parts[0][1],        # L/M/H
+        "Nuclear": parts[0][1],          # L/M/H
         "Storage": parts[0][2],         # L/M/H
         "Fossil Fuel": parts[1],        # L/M/H
         "Transmission": parts[2],       # N/L/M/H
@@ -46,7 +46,7 @@ def parse_scenario_code(code):
         result["Geothermal"] = parts[4]  # L/M/H or X
     else:
         # Old 5-dim: default CCS=firm, 45Q=ON, Geo=X
-        result["CCS"] = result["Firm Gen"]
+        result["CCS"] = result["Nuclear"]
         result["45Q"] = '1'
         result["Geothermal"] = 'X'
     return result
