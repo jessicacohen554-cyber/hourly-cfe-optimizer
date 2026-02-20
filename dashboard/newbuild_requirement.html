@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New-Build Investment Signals — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+/* Page-specific background */
+body { background: #0B1120; }
+
+/* ========== FOOTER ========== */
+.page-footer {
+    background: #0F1A2E;
+    color: rgba(255,255,255,0.7);
+    padding: 32px 24px;
+    text-align: center;
+}
+.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
+.footer-links a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 4px;
+}
+.footer-links a:hover { color: #ffffff; }
+.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+
+.bottom-banner {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+
+/* ========== ENERGY SPECTRUM BAR ========== */
+.energy-spectrum-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+}
+
+/* ========== HERO OVERVIEW SECTION ========== */
+.hero-overview {
+    background: linear-gradient(180deg, #0B1120 0%, #13203D 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 48px 24px;
+}
+.hero-overview::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(245,158,11,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(239,68,68,0.06) 0%, transparent 60%);
+    pointer-events: none;
+}
+.hero-overview-inner {
+    position: relative;
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+}
+.hero-text-block {
+    z-index: 2;
+}
+.hero-badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 8px;
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.25);
+    color: #fbbf24;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+.hero-text-block h2 {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 16px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.hero-text-block p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+.hero-stat-callout {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.25);
+    font-family: var(--font-heading);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #fbbf24;
+}
+.hero-chart-block {
+    z-index: 1;
+}
+
+/* ========== CHART PANELS ========== */
+.chart-panel {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    width: 100%;
+    box-sizing: border-box;
+}
+.chart-panel-overview,
+.chart-panel-region {
+    background: rgba(15,26,46,0.95);
+    border-color: rgba(74,144,217,0.2);
+}
+.chart-panel-overview {
+    min-height: 400px;
+}
+.chart-panel-overview .chart-container {
+    position: relative;
+    width: 100%;
+    min-height: 350px;
+}
+.chart-title {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+}
+.chart-subtitle {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    margin-top: 6px;
+}
+
+/* ========== ISO SELECTOR ========== */
+.iso-selector {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+.iso-btn {
+    padding: 5px 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: rgba(255,255,255,0.5);
+    min-width: 44px;
+    min-height: 34px;
+}
+.iso-btn:hover {
+    background: rgba(14,165,233,0.12);
+    border-color: rgba(14,165,233,0.3);
+    color: rgba(255,255,255,0.8);
+}
+.iso-btn.active {
+    background: rgba(14,165,233,0.2);
+    color: #fff;
+    border-color: rgba(14,165,233,0.5);
+}
+.iso-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.iso-btn:disabled:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.5);
+}
+
+/* ========== REGION SECTIONS (Scrollytell) ========== */
+.region-section {
+    background: #0B1120;
+    position: relative;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.region-section-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: auto;
+}
+.region-chart-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+.chart-panel-region {
+    background: rgba(15,26,46,0.95);
+    border-color: rgba(74,144,217,0.15);
+    min-height: 400px;
+}
+.chart-panel-region .chart-container {
+    position: relative;
+    width: 100%;
+    min-height: 350px;
+}
+.region-narrative-col {
+    padding: 48px 48px 48px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 24px;
+}
+.region-step-card {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 32px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.region-step-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.region-step-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+}
+.region-step-card p {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.75;
+    margin-bottom: 0;
+}
+.region-step-card .step-stat {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+.step-stat-green {
+    background: rgba(34,197,94,0.12);
+    border: 1px solid rgba(34,197,94,0.25);
+    color: #4ade80;
+}
+.step-stat-amber {
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.25);
+    color: #fbbf24;
+}
+.step-stat-red {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.25);
+    color: #f87171;
+}
+.step-stat-blue {
+    background: rgba(14,165,233,0.12);
+    border: 1px solid rgba(14,165,233,0.25);
+    color: #38bdf8;
+}
+.step-num {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    border-radius: 50%;
+    text-align: center;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+.step-num-amber {
+    background: rgba(245,158,11,0.15);
+    color: #fbbf24;
+}
+.step-num-red {
+    background: rgba(239,68,68,0.15);
+    color: #f87171;
+}
+.step-num-blue {
+    background: rgba(14,165,233,0.15);
+    color: #38bdf8;
+}
+
+/* ========== STANDALONE CHART SECTION ========== */
+.chart-section {
+    background: #0B1120;
+    padding: 56px 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.chart-section-inner {
+    max-width: 900px;
+    margin: 0 auto;
+}
+.chart-section-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+.chart-section-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+}
+.chart-section-header p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.55);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ========== SYNTHESIS SECTION ========== */
+.synthesis-section {
+    background: #0B1120;
+    padding: 64px 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.synthesis-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+}
+.synthesis-card {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 32px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.synthesis-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.synthesis-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.25;
+}
+.synthesis-card p {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.75;
+    margin-bottom: 0;
+}
+.synthesis-card .step-stat {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+/* ========== CHART LEGENDS ========== */
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    justify-content: center;
+    padding: 8px 12px 2px;
+    margin-top: 4px;
+}
+.chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.6);
+    white-space: nowrap;
+}
+.chart-legend-swatch {
+    display: inline-block;
+    flex-shrink: 0;
+}
+.swatch-line {
+    width: 18px;
+    height: 3px;
+    border-radius: 1.5px;
+}
+.swatch-dashed {
+    width: 18px;
+    height: 0;
+    border-top: 2px dashed;
+}
+.swatch-band {
+    width: 18px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+.chart-legend-divider {
+    width: 1px;
+    height: 12px;
+    background: rgba(255,255,255,0.15);
+    align-self: center;
+}
+
+/* ========== SECTION HEADER ========== */
+.section-header {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 48px 32px 0;
+    text-align: center;
+}
+.section-number {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    border-radius: 50%;
+    background: rgba(245,158,11,0.15);
+    color: #fbbf24;
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 10px;
+}
+.section-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+}
+.section-header p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.55);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ========== RESPONSIVE — Prevent horizontal overflow ========== */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+
+/* ========== RESPONSIVE — Tablet (900px) ========== */
+@media (max-width: 900px) {
+    .hero-overview-inner {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    .hero-overview {
+        padding: 36px 16px;
+    }
+    .region-section-inner {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+    .region-chart-col {
+        position: relative;
+        height: auto;
+        padding: 24px 16px 16px;
+    }
+    .region-narrative-col {
+        padding: 16px 16px 32px;
+    }
+    .chart-panel {
+        padding: 16px 14px;
+        border-radius: 12px;
+    }
+    .chart-panel-overview {
+        min-height: 350px;
+    }
+    .chart-panel-overview .chart-container {
+        min-height: 300px;
+    }
+    .chart-panel-region {
+        min-height: 350px;
+    }
+    .chart-panel-region .chart-container {
+        min-height: 300px;
+    }
+    .synthesis-inner {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .synthesis-section {
+        padding: 40px 16px;
+    }
+    .region-step-card {
+        padding: 24px 20px;
+    }
+    .region-step-card h3 { font-size: 1.25rem; }
+    .chart-legend {
+        gap: 4px 10px;
+        padding: 6px 8px 2px;
+    }
+    .chart-legend-item { font-size: 0.62rem; }
+    .swatch-line, .swatch-dashed { width: 14px; }
+    .swatch-band { width: 14px; height: 8px; }
+    .section-header { padding: 36px 16px 0; }
+    .section-header h2 { font-size: 1.35rem; }
+    .chart-section { padding: 40px 16px; }
+}
+
+/* ========== RESPONSIVE — Small tablet / large phone (600px) ========== */
+@media (max-width: 600px) {
+    .hero-overview {
+        padding: 28px 12px;
+    }
+    .chart-panel {
+        padding: 12px 10px;
+        border-radius: 10px;
+    }
+    .chart-panel-overview {
+        min-height: 320px;
+    }
+    .chart-panel-overview .chart-container {
+        min-height: 270px;
+    }
+    .chart-panel-region {
+        min-height: 320px;
+    }
+    .chart-panel-region .chart-container {
+        min-height: 270px;
+    }
+    .region-chart-col {
+        padding: 16px 10px 10px;
+    }
+    .region-narrative-col {
+        padding: 10px 12px 24px;
+    }
+    .region-step-card {
+        padding: 20px 16px;
+    }
+    .region-step-card h3 { font-size: 1.15rem; }
+    .region-step-card p { font-size: 0.85rem; }
+    .synthesis-card {
+        padding: 20px 16px;
+    }
+    .synthesis-card h3 { font-size: 1.1rem; }
+    .synthesis-card p { font-size: 0.85rem; }
+    .hero-text-block h2 { font-size: 1.5rem; }
+    .hero-text-block p { font-size: 0.85rem; }
+    .chart-legend { gap: 3px 8px; padding: 4px 4px 0; }
+    .chart-legend-item { font-size: 0.58rem; gap: 4px; }
+    .swatch-line, .swatch-dashed { width: 12px; }
+    .swatch-band { width: 12px; height: 7px; }
+    .chart-legend-divider { height: 10px; }
+    .chart-section { padding: 32px 12px; }
+}
+
+/* ========== RESPONSIVE — Phone (480px) ========== */
+@media (max-width: 480px) {
+    .hero-overview {
+        padding: 20px 8px;
+    }
+    .chart-panel {
+        padding: 10px 8px;
+        border-radius: 8px;
+    }
+    .chart-panel-overview {
+        min-height: 300px;
+    }
+    .chart-panel-overview .chart-container {
+        min-height: 250px;
+    }
+    .chart-panel-region {
+        min-height: 300px;
+    }
+    .chart-panel-region .chart-container {
+        min-height: 250px;
+    }
+    .region-chart-col {
+        padding: 12px 8px 8px;
+    }
+    .region-narrative-col {
+        padding: 8px 10px 20px;
+    }
+    .region-step-card {
+        padding: 16px 12px;
+        border-radius: 12px;
+    }
+    .region-step-card h3 { font-size: 1.05rem; }
+    .region-step-card p { font-size: 0.82rem; line-height: 1.6; }
+    .region-step-card .step-stat { font-size: 0.78rem; padding: 6px 12px; }
+    .synthesis-card {
+        padding: 16px 12px;
+        border-radius: 12px;
+    }
+    .synthesis-card h3 { font-size: 1rem; }
+    .synthesis-card p { font-size: 0.82rem; line-height: 1.6; }
+    .synthesis-card .step-stat { font-size: 0.78rem; padding: 6px 12px; }
+    .hero-text-block h2 { font-size: 1.3rem; }
+    .hero-text-block p { font-size: 0.8rem; line-height: 1.6; }
+    .hero-stat-callout { font-size: 0.78rem; padding: 8px 12px; }
+    .iso-btn { padding: 4px 9px; font-size: 0.68rem; min-height: 30px; }
+    .chart-legend { gap: 3px 6px; padding: 4px 2px 0; }
+    .chart-legend-item { font-size: 0.55rem; gap: 3px; }
+    .swatch-line, .swatch-dashed { width: 10px; }
+    .swatch-band { width: 10px; height: 6px; }
+    .chart-legend-divider { height: 8px; }
+    .footer-links { gap: 8px 16px; }
+    .footer-links a { font-size: 0.78rem; }
+    .section-header h2 { font-size: 1.2rem; }
+    .section-header p { font-size: 0.8rem; }
+}
+
+/* ========== RESPONSIVE — Tiny phone (320px) ========== */
+@media (max-width: 320px) {
+    .hero-overview { padding: 16px 6px; }
+    .chart-panel { padding: 8px 6px; }
+    .chart-panel-overview { min-height: 280px; }
+    .chart-panel-overview .chart-container { min-height: 230px; }
+    .chart-panel-region { min-height: 280px; }
+    .chart-panel-region .chart-container { min-height: 230px; }
+    .region-step-card { padding: 14px 10px; }
+    .region-step-card h3 { font-size: 0.95rem; }
+    .synthesis-card { padding: 14px 10px; }
+    .synthesis-card h3 { font-size: 0.95rem; }
+    .hero-text-block h2 { font-size: 1.15rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<div style="background:#0B1120;padding:8px 24px;"><a href="index.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <div class="header-accent"></div>
+    <h1>New-Build Investment Signals</h1>
+    <p class="subtitle">What does an hourly clean energy matching requirement actually incentivize?<br>The gap between market signals and grid needs</p>
+</header>
+
+<!-- ==================== SECTION 1: HERO OVERVIEW ==================== -->
+<section class="hero-overview">
+    <div class="hero-overview-inner">
+        <div class="hero-text-block">
+            <div class="hero-badge">Investment Signal Distortion</div>
+            <h2>Hourly Matching Drives Solar — Not What the Grid Needs</h2>
+            <p>When you strip away existing generation and ask "what would you build to match demand hour-by-hour?", the optimizer overwhelmingly chooses solar + storage. Clean firm power is minimized until very high thresholds force its inclusion.</p>
+            <p>This creates a potential asset stranding risk: the market signal says "build solar" while grid reliability says "you need firm dispatchable power." The disconnect between investment signals and grid needs is the core policy challenge of hourly matching requirements.</p>
+            <div class="hero-stat-callout" id="heroStatCallout">Loading...</div>
+        </div>
+        <div class="hero-chart-block">
+            <div class="chart-panel chart-panel-overview">
+                <div class="chart-title">Resource Mix: Baseline vs. New-Build at Key Thresholds</div>
+                <div class="chart-container">
+                    <canvas id="heroComparisonChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#1E3A5F;"></span>Clean Firm</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#F59E0B;"></span>Solar</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#22C55E;"></span>Wind</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#06B6D4;"></span>Hydro</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(255,255,255,0.25);"></span>Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(245,158,11,0.6);border-top:2px solid #F59E0B;height:0;"></span>New-Build</span>
+                </div>
+                <div class="chart-subtitle">CAISO at medium cost assumptions</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ENERGY SPECTRUM DIVIDER -->
+<div class="energy-spectrum-bar"></div>
+
+<!-- ==================== SECTION 2: SOLAR DOMINANCE (SCROLLYTELL) ==================== -->
+<div class="section-header">
+    <div class="section-number">1</div>
+    <h2>The Solar Dominance Story</h2>
+    <p>How hourly matching creates a market signal that overwhelmingly favors solar — and what breaks that pattern at high thresholds.</p>
+</div>
+
+<!-- Step 1: Solar Is Cheapest -->
+<section class="region-section" id="scrollStep1">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="iso-selector" id="mixISOSelector">
+                    <button class="iso-btn active" data-iso="CAISO">CAISO</button>
+                    <button class="iso-btn" data-iso="ERCOT" disabled title="Data not yet available">ERCOT</button>
+                    <button class="iso-btn" data-iso="PJM" disabled title="Data not yet available">PJM</button>
+                    <button class="iso-btn" data-iso="NYISO" disabled title="Data not yet available">NYISO</button>
+                    <button class="iso-btn" data-iso="NEISO" disabled title="Data not yet available">NEISO</button>
+                </div>
+                <div class="chart-title" id="mixChartTitle">CAISO: New-Build Resource Mix by Threshold</div>
+                <div class="chart-container">
+                    <canvas id="mixAreaChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#F59E0B90;"></span>Solar</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#22C55E90;"></span>Wind</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#1E3A5F90;"></span>Clean Firm</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#0EA5E990;"></span>CCS</span>
+                </div>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card" id="card1">
+                <div class="step-num step-num-amber">1</div>
+                <h3>Solar Is Cheapest — So Solar Wins</h3>
+                <p>At low thresholds (50-70%), the optimizer picks near-pure solar portfolios. Clean firm generation is 1% or less of the mix. This is rational from a cost perspective — solar LCOE is the lowest available new-build option. Wind barely registers because CAISO's solar resource quality so thoroughly dominates.</p>
+                <p>The pattern is stark: when you remove existing generation and ask "what should I build?", the optimizer answers "solar, almost nothing else." The hourly matching constraint barely binds at these levels — there's enough daytime generation to meet most demand hours cheaply.</p>
+                <span class="step-stat step-stat-amber" id="stat1">Loading...</span>
+            </div>
+
+            <div class="region-step-card" id="card2">
+                <div class="step-num step-num-red">2</div>
+                <h3>The Inflection Point</h3>
+                <p>Around 87.5-92.5%, clean firm power starts appearing in meaningful quantities. This is the threshold where hourly matching <em>forces</em> dispatchable generation — solar simply cannot cover nighttime demand at scale, and storage alone cannot bridge the gap economically.</p>
+                <p>The transition is sharp: clean firm jumps from single digits to 30-50% of the portfolio within a few percentage points. The optimizer resists this as long as possible because firm generation is more expensive per MWh. When it finally capitulates, the cost curve inflects upward.</p>
+                <span class="step-stat step-stat-red" id="stat2">Loading...</span>
+            </div>
+
+            <div class="region-step-card" id="card3">
+                <div class="step-num step-num-blue">3</div>
+                <h3>But It's Still Not Enough</h3>
+                <p>Even at 95-99% clean, the new-build mix underweights clean firm relative to what a grid planner would choose. The optimizer treats cost as the objective, not reliability. Compare these new-build mixes to the baseline portfolio (which includes existing nuclear and hydro) — the baseline has 2-5x more firm generation at every threshold.</p>
+                <p>The implication: an hourly matching requirement sends the right directional signal (build clean energy) but the wrong compositional signal (too much solar, not enough firm). Policy needs to correct for this or accept the reliability gap.</p>
+                <span class="step-stat step-stat-blue" id="stat3">Loading...</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ENERGY SPECTRUM DIVIDER -->
+<div class="energy-spectrum-bar"></div>
+
+<!-- ==================== SECTION 3: REGIONAL COST COMPARISON ==================== -->
+<div class="section-header">
+    <div class="section-number">2</div>
+    <h2>The New-Build Cost Curve</h2>
+    <p>When everything is new-build, the cost curve tells a different story than the baseline. No existing generation means no cheap infrastructure to leverage.</p>
+</div>
+
+<section class="chart-section">
+    <div class="chart-section-inner">
+        <div class="chart-panel chart-panel-overview">
+            <div class="iso-selector" id="costISOSelector">
+                <button class="iso-btn active" data-iso="CAISO">CAISO</button>
+                <button class="iso-btn" data-iso="ERCOT" disabled title="Data not yet available">ERCOT</button>
+                <button class="iso-btn" data-iso="PJM" disabled title="Data not yet available">PJM</button>
+                <button class="iso-btn" data-iso="NYISO" disabled title="Data not yet available">NYISO</button>
+                <button class="iso-btn" data-iso="NEISO" disabled title="Data not yet available">NEISO</button>
+            </div>
+            <div class="chart-title" id="costChartTitle">CAISO: Effective $/MWh — New-Build vs. Baseline</div>
+            <div class="chart-container">
+                <canvas id="costComparisonChart"></canvas>
+            </div>
+            <div class="chart-legend">
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>New-Build (Medium)</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.2);"></span>New-Build P10&ndash;P90</span>
+                <span class="chart-legend-divider"></span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:rgba(255,255,255,0.5);"></span>Baseline (Medium)</span>
+            </div>
+            <div class="chart-subtitle">Higher costs reflect the absence of existing low-cost generation</div>
+        </div>
+    </div>
+</section>
+
+<!-- ENERGY SPECTRUM DIVIDER -->
+<div class="energy-spectrum-bar"></div>
+
+<!-- ==================== SECTION 4: SYNTHESIS ==================== -->
+<section class="synthesis-section">
+    <div style="max-width:1320px;margin:0 auto;text-align:center;margin-bottom:32px;">
+        <div class="section-number">3</div>
+        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:8px;letter-spacing:-0.3px;">The Investment Signal Problem</h2>
+        <p style="font-size:0.88rem;color:rgba(255,255,255,0.55);max-width:700px;margin:0 auto;line-height:1.6;">The gap between what hourly matching incentivizes and what the grid actually needs.</p>
+    </div>
+    <div class="synthesis-inner">
+        <div class="synthesis-card">
+            <h3>Market vs. Grid Signals</h3>
+            <p>Hourly matching requirements send a clear market signal: build the cheapest resource that can match demand. But the cheapest resource (solar) cannot provide reliability alone. At 90% clean, the new-build track shows a portfolio that is <strong style="color:#F59E0B;">94% solar</strong> — a mix no grid planner would endorse for reliability.</p>
+            <p style="margin-top:12px;">The baseline portfolio — which co-optimizes with existing generation — produces a balanced mix of ~8% clean firm, 76% solar, 8% wind, and 8% hydro at the same threshold. Existing infrastructure acts as a reliability anchor that pure market signals cannot replicate.</p>
+            <span class="step-stat step-stat-amber">Market signal: 94% solar | Grid need: balanced portfolio</span>
+        </div>
+        <div class="synthesis-card">
+            <h3>Procurement Does Not Equal Reliability</h3>
+            <p>At 90% clean, the new-build track requires <strong style="color:#38bdf8;">106% procurement</strong> — you must buy more clean energy than you consume just to match hourly demand patterns. This overprocurement is a direct consequence of solar's intermittency: you overbuild daytime capacity to cover the hours when solar partially overlaps with demand.</p>
+            <p style="margin-top:12px;">The cost of this overprocurement is hidden in the effective $/MWh but real: you are paying for generation that gets curtailed or exported. A reliability-focused mandate — rather than a pure matching mandate — would reduce this waste by incentivizing dispatchable resources from the start.</p>
+            <span class="step-stat step-stat-blue">106% procurement at 90% clean = 6% overbuilding waste</span>
+        </div>
+    </div>
+</section>
+
+<!-- SOURCES -->
+<div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
+    <details style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
+        <div style="font-size:0.82rem;color:rgba(255,255,255,0.55);line-height:1.8;margin-top:12px;">
+            <p><strong style="color:rgba(255,255,255,0.7);">New-build track methodology:</strong> The optimizer was run with all existing clean generation zeroed (nuclear, solar, wind, CCS, and hydro set to 0). Uprate tranches remain active as the cheapest new-build option. Only hydro=0 mixes from the physics feasible space are used. This isolates what a pure new-build portfolio would look like under hourly matching constraints.</p>
+            <ol style="padding-left:20px;margin-top:8px;">
+                <li>NREL Annual Technology Baseline (ATB) 2024 — new-build costs for solar, wind, nuclear, CCS, storage.</li>
+                <li>EIA Hourly Electric Grid Monitor — hourly demand and generation profiles by ISO.</li>
+                <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) — generation technology cost benchmarks.</li>
+                <li>8,760 Problem optimizer — physics-validated hourly dispatch model with 13 threshold levels and 17,496 cost scenarios (CAISO).</li>
+            </ol>
+        </div>
+    </details>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="clean_firm_case.html">Clean Firm Case</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- DATA SCRIPTS -->
+<script src="js/shared-data.js"></script>
+<script>
+// ============================================================================
+// NEW-BUILD REQUIREMENT PAGE — Chart initialization and data binding
+// ============================================================================
+
+// --- Constants ---
+const NB_THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
+const NB_RESOURCE_COLORS = {
+    clean_firm: '#1E3A5F',
+    solar: '#F59E0B',
+    wind: '#22C55E',
+    ccs_ccgt: '#0EA5E9',
+    hydro: '#06B6D4'
+};
+const NB_RESOURCE_LABELS = {
+    clean_firm: 'Clean Firm',
+    solar: 'Solar',
+    wind: 'Wind',
+    ccs_ccgt: 'CCS-CCGT',
+    hydro: 'Hydro'
+};
+const MEDIUM_KEY = 'MMMM_M_N_M1_M';
+
+// --- State ---
+let trackData = null;
+let heroChart = null;
+let mixChart = null;
+let costChart = null;
+let activeISO = 'CAISO';
+let chartsInitialized = false;
+
+// --- Dark theme chart defaults ---
+const DARK_SCALES_X = {
+    type: 'linear', min: 48, max: 100,
+    afterBuildTicks: function(axis) {
+        axis.ticks = [50, 60, 70, 80, 90, 95, 100].map(function(v) { return { value: v }; });
+    },
+    ticks: { font: { size: 9 }, color: 'rgba(255,255,255,0.5)', maxRotation: 0,
+             callback: function(v) { return v + '%'; } },
+    grid: { color: 'rgba(255,255,255,0.06)' },
+    border: { display: true, color: 'rgba(255,255,255,0.15)' },
+    title: { display: true, text: 'Clean Energy Target', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+};
+const DARK_TOOLTIP = {
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    titleFont: { size: 11, weight: 600 },
+    bodyFont: { size: 10 },
+    cornerRadius: 8,
+    padding: 10
+};
+
+// ============================================================================
+// DATA LOADING
+// ============================================================================
+fetch('track_results.json')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        trackData = d;
+        initAllCharts();
+    })
+    .catch(function(err) {
+        console.error('Failed to load track_results.json:', err);
+    });
+
+// ============================================================================
+// HELPER: Extract medium scenario data across thresholds for an ISO
+// ============================================================================
+function getMediumMixData(iso) {
+    if (!trackData || !trackData.results[iso] || !trackData.results[iso].newbuild) return null;
+    var nb = trackData.results[iso].newbuild;
+    var mixes = [];
+    NB_THRESHOLDS.forEach(function(t) {
+        var tKey = String(t);
+        if (!nb[tKey] || !nb[tKey].scenarios || !nb[tKey].scenarios[MEDIUM_KEY]) {
+            mixes.push(null);
+            return;
+        }
+        var s = nb[tKey].scenarios[MEDIUM_KEY];
+        mixes.push({
+            threshold: t,
+            mix: s.resource_mix,
+            costs: s.costs,
+            procurement: s.procurement_pct
+        });
+    });
+    return mixes;
+}
+
+// ============================================================================
+// HELPER: Compute P10/P50/P90 effective cost across all scenarios
+// ============================================================================
+function getCostFan(iso) {
+    if (!trackData || !trackData.results[iso] || !trackData.results[iso].newbuild) return null;
+    var nb = trackData.results[iso].newbuild;
+    var p10 = [], p50 = [], p90 = [], med = [];
+    NB_THRESHOLDS.forEach(function(t) {
+        var tKey = String(t);
+        if (!nb[tKey] || !nb[tKey].scenarios) {
+            p10.push(null); p50.push(null); p90.push(null); med.push(null);
+            return;
+        }
+        var costs = [];
+        var scenarios = nb[tKey].scenarios;
+        for (var k in scenarios) {
+            if (scenarios.hasOwnProperty(k)) {
+                costs.push(scenarios[k].costs.effective_cost);
+            }
+        }
+        costs.sort(function(a, b) { return a - b; });
+        var n = costs.length;
+        p10.push(costs[Math.floor(n * 0.1)]);
+        p50.push(costs[Math.floor(n * 0.5)]);
+        p90.push(costs[Math.floor(n * 0.9)]);
+
+        // Medium scenario
+        if (scenarios[MEDIUM_KEY]) {
+            med.push(scenarios[MEDIUM_KEY].costs.effective_cost);
+        } else {
+            med.push(p50[p50.length - 1]);
+        }
+    });
+    return { p10: p10, p50: p50, p90: p90, medium: med };
+}
+
+// ============================================================================
+// CHART 1: Hero Comparison (grouped bars — baseline vs newbuild)
+// ============================================================================
+function buildHeroComparisonChart() {
+    var ctx = document.getElementById('heroComparisonChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+
+    var medData = getMediumMixData(activeISO);
+    if (!medData) return;
+
+    // Key thresholds for grouped bar comparison
+    var keyThresholds = [70, 85, 90, 95, 99];
+    var labels = keyThresholds.map(function(t) { return t + '%'; });
+
+    // Get baseline data from shared-data.js
+    var baselineMix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[activeISO] : null;
+    var resources = ['clean_firm', 'solar', 'wind', 'hydro'];
+    var colors = { clean_firm: '#1E3A5F', solar: '#F59E0B', wind: '#22C55E', hydro: '#06B6D4' };
+
+    var datasets = [];
+    resources.forEach(function(res) {
+        // Baseline bars
+        var baseVals = keyThresholds.map(function(t) {
+            if (!baselineMix || !baselineMix[res]) return 0;
+            var idx = THRESHOLDS.indexOf(t);
+            return idx >= 0 ? (baselineMix[res][idx] || 0) : 0;
+        });
+        // Newbuild bars
+        var nbVals = keyThresholds.map(function(t) {
+            var idx = NB_THRESHOLDS.indexOf(t);
+            if (idx < 0 || !medData[idx]) return 0;
+            return medData[idx].mix[res] || 0;
+        });
+
+        datasets.push({
+            label: NB_RESOURCE_LABELS[res] + ' (Baseline)',
+            data: baseVals,
+            backgroundColor: colors[res] + '60',
+            borderColor: colors[res],
+            borderWidth: 1,
+            stack: 'baseline',
+            barPercentage: 0.85,
+            categoryPercentage: 0.7
+        });
+        datasets.push({
+            label: NB_RESOURCE_LABELS[res] + ' (New-Build)',
+            data: nbVals,
+            backgroundColor: colors[res],
+            borderColor: colors[res],
+            borderWidth: 1,
+            stack: 'newbuild',
+            barPercentage: 0.85,
+            categoryPercentage: 0.7
+        });
+    });
+
+    heroChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: { font: { size: 10, weight: 600 }, color: 'rgba(255,255,255,0.6)' },
+                    grid: { display: false },
+                    border: { display: true, color: 'rgba(255,255,255,0.15)' }
+                },
+                y: {
+                    stacked: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(v) { return v + '%'; },
+                        font: { size: 9 }, color: 'rgba(255,255,255,0.5)',
+                        stepSize: 25
+                    },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
+                    title: { display: true, text: '% of Resource Mix', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    titleFont: { size: 11, weight: 600 },
+                    bodyFont: { size: 10 },
+                    cornerRadius: 8,
+                    padding: 10,
+                    callbacks: {
+                        title: function(items) {
+                            if (!items[0]) return '';
+                            return items[0].label + ' Clean';
+                        },
+                        label: function(item) {
+                            return item.dataset.label + ': ' + item.raw + '%';
+                        }
+                    }
+                },
+                datalabels: { display: false }
+            }
+        }
+    });
+
+    // Update hero stat callout
+    var stat90 = medData[NB_THRESHOLDS.indexOf(90)];
+    if (stat90) {
+        document.getElementById('heroStatCallout').textContent =
+            stat90.mix.solar + '% solar in the optimal new-build mix at 90% clean (CAISO)';
+    }
+}
+
+// ============================================================================
+// CHART 2: Stacked Area — Resource Mix across thresholds
+// ============================================================================
+function buildMixAreaChart() {
+    var ctx = document.getElementById('mixAreaChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+
+    var medData = getMediumMixData(activeISO);
+    if (!medData) return;
+
+    // Build datasets for stacked area (order: solar bottom, wind, clean_firm, ccs top)
+    var resourceOrder = ['solar', 'wind', 'clean_firm', 'ccs_ccgt'];
+    var datasets = [];
+
+    resourceOrder.forEach(function(res) {
+        var pts = [];
+        medData.forEach(function(d) {
+            if (!d) return;
+            pts.push({ x: d.threshold, y: d.mix[res] || 0 });
+        });
+        datasets.push({
+            label: NB_RESOURCE_LABELS[res],
+            data: pts,
+            backgroundColor: NB_RESOURCE_COLORS[res] + '90',
+            borderColor: NB_RESOURCE_COLORS[res],
+            borderWidth: 1.5,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointBackgroundColor: NB_RESOURCE_COLORS[res],
+            order: resourceOrder.length - resourceOrder.indexOf(res)
+        });
+    });
+
+    mixChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            scales: {
+                x: Object.assign({}, DARK_SCALES_X),
+                y: {
+                    stacked: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(v) { return v + '%'; },
+                        font: { size: 9 }, color: 'rgba(255,255,255,0.5)',
+                        stepSize: 20
+                    },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
+                    title: { display: true, text: '% of Resource Mix', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: Object.assign({}, DARK_TOOLTIP, {
+                    callbacks: {
+                        title: function(items) {
+                            return items[0] ? items[0].raw.x + '% Clean Energy Target' : '';
+                        },
+                        label: function(item) {
+                            return item.dataset.label + ': ' + item.raw.y + '%';
+                        }
+                    }
+                }),
+                datalabels: { display: false }
+            }
+        }
+    });
+
+    // Update narrative stat badges
+    updateNarrativeStats(medData);
+}
+
+function updateNarrativeStats(medData) {
+    // Card 1: Low thresholds (50-70%)
+    var d50 = medData[NB_THRESHOLDS.indexOf(50)];
+    var d70 = medData[NB_THRESHOLDS.indexOf(70)];
+    if (d50 && d70) {
+        document.getElementById('stat1').textContent =
+            'At 50%: ' + d50.mix.solar + '% solar, ' + d50.mix.clean_firm + '% firm | ' +
+            'At 70%: ' + d70.mix.solar + '% solar, ' + d70.mix.clean_firm + '% firm';
+    }
+
+    // Card 2: Inflection point (85-92.5%)
+    var d85 = medData[NB_THRESHOLDS.indexOf(85)];
+    var d90 = medData[NB_THRESHOLDS.indexOf(90)];
+    var d925 = medData[NB_THRESHOLDS.indexOf(92.5)];
+    if (d85 && d90) {
+        document.getElementById('stat2').textContent =
+            'At 85%: ' + d85.mix.clean_firm + '% firm | ' +
+            'At 90%: ' + d90.mix.clean_firm + '% firm | ' +
+            (d925 ? 'At 92.5%: ' + d925.mix.clean_firm + '% firm' : '');
+    }
+
+    // Card 3: High thresholds (95-99%)
+    var d95 = medData[NB_THRESHOLDS.indexOf(95)];
+    var d99 = medData[NB_THRESHOLDS.indexOf(99)];
+    if (d95 && d99) {
+        // Compare to baseline
+        var baselineMix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[activeISO] : null;
+        var base95cf = baselineMix ? (baselineMix.clean_firm[THRESHOLDS.indexOf(95)] || 0) : '?';
+        document.getElementById('stat3').textContent =
+            'New-build at 95%: ' + d95.mix.clean_firm + '% firm vs. baseline ' + base95cf + '% firm | ' +
+            'At 99%: ' + d99.mix.clean_firm + '% firm';
+    }
+}
+
+// ============================================================================
+// CHART 3: Cost Comparison — newbuild vs baseline effective $/MWh
+// ============================================================================
+function buildCostComparisonChart() {
+    var ctx = document.getElementById('costComparisonChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+
+    var costFan = getCostFan(activeISO);
+    if (!costFan) return;
+
+    // Baseline effective cost from shared-data.js (flat structure: EFFECTIVE_COST_DATA.ISO[])
+    var baselineMedium = null;
+    if (typeof EFFECTIVE_COST_DATA !== 'undefined' && EFFECTIVE_COST_DATA[activeISO]) {
+        baselineMedium = EFFECTIVE_COST_DATA[activeISO];
+    }
+
+    var datasets = [];
+
+    // P90 band (top)
+    var p90pts = costFan.p90.map(function(v, i) {
+        return v != null ? { x: NB_THRESHOLDS[i], y: v } : null;
+    }).filter(function(d) { return d != null; });
+    datasets.push({
+        label: 'P90',
+        data: p90pts,
+        borderColor: 'transparent',
+        backgroundColor: 'rgba(245,158,11,0.15)',
+        borderWidth: 0,
+        pointRadius: 0,
+        fill: '+1',
+        tension: 0.3,
+        order: 5
+    });
+
+    // P10 band (bottom)
+    var p10pts = costFan.p10.map(function(v, i) {
+        return v != null ? { x: NB_THRESHOLDS[i], y: v } : null;
+    }).filter(function(d) { return d != null; });
+    datasets.push({
+        label: 'P10',
+        data: p10pts,
+        borderColor: 'rgba(245,158,11,0.3)',
+        backgroundColor: 'transparent',
+        borderWidth: 0.5,
+        borderDash: [2, 2],
+        pointRadius: 0,
+        fill: false,
+        tension: 0.3,
+        order: 5
+    });
+
+    // Medium newbuild line
+    var medPts = costFan.medium.map(function(v, i) {
+        return v != null ? { x: NB_THRESHOLDS[i], y: v } : null;
+    }).filter(function(d) { return d != null; });
+    datasets.push({
+        label: 'New-Build (Medium)',
+        data: medPts,
+        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(245,158,11,0.1)',
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#F59E0B',
+        pointBorderColor: '#000',
+        pointBorderWidth: 1,
+        pointHoverRadius: 6,
+        fill: false,
+        tension: 0.3,
+        order: 1
+    });
+
+    // Baseline line (dashed)
+    if (baselineMedium) {
+        var basePts = [];
+        THRESHOLDS.forEach(function(t, i) {
+            if (baselineMedium[i] != null && t >= 50 && t <= 99) {
+                basePts.push({ x: t, y: baselineMedium[i] });
+            }
+        });
+        datasets.push({
+            label: 'Baseline (Medium)',
+            data: basePts,
+            borderColor: 'rgba(255,255,255,0.5)',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+            order: 2
+        });
+    }
+
+    // Find y-axis range
+    var allY = [];
+    datasets.forEach(function(ds) {
+        ds.data.forEach(function(d) { if (d && d.y != null) allY.push(d.y); });
+    });
+    var yMin = Math.floor(Math.min.apply(null, allY) / 10) * 10 - 10;
+    var yMax = Math.ceil(Math.max.apply(null, allY) / 10) * 10 + 10;
+    yMin = Math.max(0, yMin);
+
+    costChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: {
+                x: Object.assign({}, DARK_SCALES_X),
+                y: {
+                    min: yMin, max: yMax,
+                    ticks: {
+                        callback: function(v) { return '$' + v; },
+                        font: { size: 9 }, color: 'rgba(255,255,255,0.5)'
+                    },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
+                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: Object.assign({}, DARK_TOOLTIP, {
+                    callbacks: {
+                        title: function(items) {
+                            return items[0] ? items[0].raw.x + '% Clean' : '';
+                        },
+                        label: function(item) {
+                            if (item.dataset.label === 'P90' || item.dataset.label === 'P10') return null;
+                            return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        }
+                    },
+                    filter: function(item) {
+                        return item.dataset.label !== 'P90' && item.dataset.label !== 'P10';
+                    }
+                }),
+                datalabels: { display: false }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// ISO SELECTOR WIRING
+// ============================================================================
+function wireISOSelectors() {
+    // Mix chart ISO selector
+    var mixBtns = document.querySelectorAll('#mixISOSelector .iso-btn');
+    mixBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (this.disabled) return;
+            mixBtns.forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            var iso = this.getAttribute('data-iso');
+            activeISO = iso;
+            document.getElementById('mixChartTitle').textContent =
+                iso + ': New-Build Resource Mix by Threshold';
+            if (mixChart) { mixChart.destroy(); mixChart = null; }
+            buildMixAreaChart();
+        });
+    });
+
+    // Cost chart ISO selector
+    var costBtns = document.querySelectorAll('#costISOSelector .iso-btn');
+    costBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (this.disabled) return;
+            costBtns.forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            var iso = this.getAttribute('data-iso');
+            activeISO = iso;
+            document.getElementById('costChartTitle').textContent =
+                iso + ': Effective $/MWh — New-Build vs. Baseline';
+            if (costChart) { costChart.destroy(); costChart = null; }
+            buildCostComparisonChart();
+        });
+    });
+}
+
+// ============================================================================
+// ENABLE ISO BUTTONS WHEN DATA IS AVAILABLE
+// ============================================================================
+function enableAvailableISOs() {
+    if (!trackData || !trackData.results) return;
+    var availableISOs = Object.keys(trackData.results);
+    document.querySelectorAll('.iso-btn').forEach(function(btn) {
+        var iso = btn.getAttribute('data-iso');
+        if (availableISOs.indexOf(iso) >= 0) {
+            btn.disabled = false;
+            btn.title = '';
+        }
+    });
+}
+
+// ============================================================================
+// SCROLL-TRIGGERED ANIMATIONS
+// ============================================================================
+function initObservers() {
+    var fadeObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (e.isIntersecting) {
+                e.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.region-step-card, .synthesis-card').forEach(function(el) {
+        fadeObs.observe(el);
+    });
+}
+
+// ============================================================================
+// ANIMATED COUNTERS (for hero stat callout)
+// ============================================================================
+function animateCounters() {
+    var counters = document.querySelectorAll('[data-counter-target]');
+    counters.forEach(function(el) {
+        var target = parseFloat(el.getAttribute('data-counter-target'));
+        var suffix = el.getAttribute('data-counter-suffix') || '';
+        var prefix = el.getAttribute('data-counter-prefix') || '';
+        var duration = 1500;
+        var startTime = null;
+
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            var progress = Math.min((timestamp - startTime) / duration, 1);
+            var eased = 1 - Math.pow(1 - progress, 3);
+            var current = Math.round(target * eased);
+            el.textContent = prefix + current + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+        }
+
+        var obs = new IntersectionObserver(function(entries) {
+            if (entries[0].isIntersecting) {
+                requestAnimationFrame(step);
+                obs.unobserve(el);
+            }
+        }, { threshold: 0.5 });
+        obs.observe(el);
+    });
+}
+
+// ============================================================================
+// INIT ALL CHARTS
+// ============================================================================
+function initAllCharts() {
+    if (chartsInitialized) return;
+    chartsInitialized = true;
+
+    enableAvailableISOs();
+    buildHeroComparisonChart();
+    buildMixAreaChart();
+    buildCostComparisonChart();
+    wireISOSelectors();
+    initObservers();
+    animateCounters();
+}
+
+// Fallback: if trackData fails to load, still wire up observers for animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Give data 3s to load, then init observers anyway for card animations
+    setTimeout(function() {
+        if (!chartsInitialized) {
+            initObservers();
+            document.getElementById('heroStatCallout').textContent =
+                'Data loading failed — check track_results.json';
+        }
+    }, 3000);
+});
+</script>
+</body>
+</html>
