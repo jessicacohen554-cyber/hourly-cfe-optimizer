@@ -92,13 +92,8 @@
     // Items with 'children' create dropdown menus on desktop, expandable on mobile.
     const NAV_ITEMS = [
         { label: 'Home', href: 'index.html' },
-        { label: 'Cost Optimizer', href: 'dashboard.html' },
-        {
-            label: 'Analysis',
-            children: [
-                { label: 'CO\u2082 Abatement Analysis', href: 'abatement_dashboard.html' }
-            ]
-        },
+        { label: 'Grid Simulation', href: 'dashboard.html' },
+        { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
         {
             label: 'Research',
             children: [
