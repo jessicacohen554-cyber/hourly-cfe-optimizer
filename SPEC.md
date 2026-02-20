@@ -1753,6 +1753,48 @@ Applied to Step 3 cost optimization results via `step4_postprocess.py`. Correcte
 
 3. **Dead import** — `import copy` was unused. **Removed.**
 
+### 22.7 Gas Availability Factor (GAF) — Resource Adequacy Deration (Feb 20, 2026)
+
+**Problem**: The model assumed 100% gas availability at peak — if gas backup = 10,000 MW needed, exactly 10,000 MW was built. This contradicts all ISO practice and empirical evidence. Gas plants experience both independent forced outages (EFORd ~5-7%) and correlated failures during extreme weather events (Winter Storm Uri: 49% outage; Elliott: 24% outage). PJM's 2024 ELCC methodology rates gas CCGT at ~80% effective capacity.
+
+**Fix**: Divide raw gas backup requirement by an ISO-specific Gas Availability Factor (GAF):
+```
+gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
+```
+
+**ISO-specific GAF values** (applied in both Step 3 cost optimization and Step 4 post-processing):
+
+| ISO | GAF | Deration | Rationale |
+|-----|-----|----------|-----------|
+| CAISO | 0.88 | 12% | Summer ambient derate + mechanical outages |
+| ERCOT | 0.83 | 17% | Extreme weather both seasons, gas supply correlation |
+| PJM | 0.82 | 18% | PJM ELCC data, Winter Storm Elliott evidence |
+| NYISO | 0.82 | 18% | Pipeline constraints, winter gas competition |
+| NEISO | 0.85 | 15% | Mechanical + weather only (pipeline handled separately) |
+
+**NEISO note**: GAF captures only mechanical/weather unavailability. The pipeline capacity constraint is structurally different — an absolute MW ceiling, not a proportional derate — and is modeled separately (see §22.8).
+
+**Sources**: PJM ELCC Class Ratings (2024/25), NERC GADS EFORd class averages, FERC Final Reports on Winter Storm Uri (2021) and Elliott (2022), Brattle Group VRR Curve Review (2025), UCS gas reliability analyses, ERCOT Aurora RA Assessment (2025).
+
+**Impact on optimization**: GAF increases gas backup MW requirements by 12-18% across ISOs, which increases gas backup costs. This tilts cost-optimal mixes toward resources with higher peak capacity credits (clean firm, CCS, battery) and away from resources with low capacity credits (solar, wind) at high matching thresholds. The effect is modest at low thresholds (gas backup is small) and material at 95%+ (where gas backup costs are a significant fraction of total cost).
+
+### 22.8 NEISO Pipeline Capacity Constraint — Informational Metric (Feb 20, 2026)
+
+**Problem**: NEISO's gas constraint is an absolute physical ceiling (~4.5 BCF/day total pipeline capacity; ~1.5 BCF/day available for power generation after heating demand during winter peak), not a proportional deration. Building more gas plants doesn't help if the pipeline can't feed them. As demand grows, the constraint worsens (same pipeline, more load).
+
+**Approach**: Compute as a downstream informational metric, NOT integrated into the optimization. For each NEISO scenario:
+1. Compare gas backup MW (post-GAF) against pipeline-deliverable gas MW ceiling (8,300 MW)
+2. If gas exceeds pipeline capacity: compute shortfall MW and annualized pipeline expansion cost
+3. Output as `pipeline_constraint` sub-dict in gas_backup results
+
+**Constants**:
+- Pipeline-deliverable gas at peak: **8,300 MW** (1.5 BCF/day ÷ 7.5 MMBtu/MWh heat rate)
+- Pipeline expansion cost: **$2,400/MW-yr** annualized ($150M/BCF-day, 30yr at 8% WACC)
+
+**Source**: ISO-NE Gas Availability Study (2025), FERC pipeline project filings.
+
+**Rationale for informational-only**: The pipeline constraint is structural and binary — scenarios either exceed the ceiling or don't. Baking it into the optimization would distort mix selection by treating a New England infrastructure policy question as an engineering parameter. Instead, it's presented as: "this scenario requires X MW of gas backup, but the pipeline can only deliver 8,300 MW — here's what closing that gap would cost."
+
 4. **CCS CF estimation floor** (documented limitation) — The 0.20 minimum CF floor in `ccs_lcoe_dispatchable()` may understate no-45Q costs for small CCS shares (where actual CF might be 0.08-0.15). Without hourly dispatch data in the results JSON, we can't improve this in post-processing. Documented as a conservative (cost-understating) assumption.
 
 5. **No-45Q mix bias** (documented limitation) — The no-45Q overlay reprices the same resource mix that was co-optimized WITH 45Q. This mix over-represents CCS, making the no-45Q cost a conservative upper bound. A true no-45Q re-optimization would substitute LDES/renewables for CCS, yielding lower costs.
