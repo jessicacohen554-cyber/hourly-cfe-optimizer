@@ -101,6 +101,13 @@
 **Data contract**: Step 3 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields.
 - Steps 2–4 + post-processing scripts are cheap (seconds to minutes). Step 1 is expensive (hours). Default to Steps 3–4 unless physics assumptions change.
 
+### Incremental Results (Critical — Never Rerun What's Already Computed)
+- **Default to temp functions for new analysis tracks** — when adding a new analysis dimension (e.g., new-build track, LMP module, CO2 dispatch), write a standalone temp script that computes ONLY the missing results and appends them to the existing output files. Never rerun the full pipeline when only a subset of results is needed.
+- **Pattern**: (1) Write temp function to compute delta results, (2) Append/merge into existing output JSON/parquet, (3) Update primary scripts for future iterations (but don't rerun them)
+- **Step 3 cost optimization is semi-expensive with large EFs** — 27M mixes × 5,832 scenarios × 5 ISOs × numpy takes hours without Numba. Always preserve existing baseline results and only compute new tracks/dimensions incrementally.
+- **CO2 dispatch model**: Only run on mixes NOT already in results. Read existing results, identify gaps, compute only the gap, merge back.
+- **This rule exists because**: A full step3 rerun on 27M mixes took 5+ hours when only the new track results (~30% of compute) were actually needed. The existing baseline results were perfectly valid and didn't need recomputation.
+
 ### Optimizer Run Discipline (Critical — Token Budget Protection)
 - **Step 1 (physics) runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every Step 1 run as a high-value operation that must succeed. Steps 2–4 are cheap and can be re-run freely.
 - **NEVER start a Step 1 run while decisions are still being discussed.** The optimizer must reflect ALL decisions made up to the point of launch.
@@ -127,8 +134,9 @@
 ### Session Start Checklist
 1. **Read SPEC.md first** — it contains every design decision, cost table, and implementation detail
 2. **Read this file (CLAUDE.md)** — it contains all user preferences and project context
-3. **Check the todo list** or review git log to see what's been completed
-4. **Confirm which branch you're on** — develop on the designated branch for your task
+3. **Install dependencies**: `pip install numba` — Numba JIT is required for fast vectorized cost evaluation. Always install at the start of every session (environments don't persist). **NEVER run any optimizer script (step1-4, temp scripts, post-processing) without first verifying Numba is installed** (`python3 -c "from numba import njit; print('OK')"`). Running without Numba falls back to numpy and is 10-50× slower.
+4. **Check the todo list** or review git log to see what's been completed
+5. **Confirm which branch you're on** — develop on the designated branch for your task
 
 ### Session End / Mid-Task Handoff
 **Goal: seamless pickup by the next session — zero lost context.**
