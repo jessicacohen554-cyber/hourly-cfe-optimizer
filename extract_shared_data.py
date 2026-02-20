@@ -13,19 +13,21 @@ import os
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = ['75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99']
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
-MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
-
+MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
 
 def medium_key(iso):
-    """Return the all-Medium scenario key for an ISO."""
-    geo = 'M' if iso == 'CAISO' else 'X'
-    return f'MMM_M_M_M1_{geo}'
+    """Return the all-Medium scenario key for a given ISO (9-dim format)."""
+    return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
 
-
-def get_scenario(iso_data, threshold, iso):
-    """Get medium scenario with backward compat fallback."""
-    scenarios = iso_data.get('thresholds', {}).get(threshold, {}).get('scenarios', {})
-    return scenarios.get(medium_key(iso)) or scenarios.get('MMM_M_M')
+def get_scenario(scenarios, iso):
+    """Get scenario data using 9-dim key with fallback to old formats."""
+    key = medium_key(iso)
+    if key in scenarios:
+        return scenarios[key]
+    for fallback in ['MMM_M_M_M_M1_M', 'MMM_M_M_M_M1_X', 'MMM_M_M']:
+        if fallback in scenarios:
+            return scenarios[fallback]
+    return None
 
 # Load results
 with open('dashboard/overprocure_results.json') as f:
@@ -43,22 +45,25 @@ for iso in ISOS:
     for res in RESOURCES:
         iso_data[res] = []
     iso_data['battery'] = []
+    iso_data['battery8'] = []
     iso_data['ldes'] = []
     iso_data['procurement'] = []
 
     for t in THRESHOLDS:
-        sc = get_scenario(data['results'][iso], t, iso)
+        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
         if sc:
             rm = sc.get('resource_mix', {})
             for res in RESOURCES:
                 iso_data[res].append(rm.get(res, 0))
             iso_data['battery'].append(sc.get('battery_dispatch_pct', 0))
+            iso_data['battery8'].append(sc.get('battery8_dispatch_pct', 0))
             iso_data['ldes'].append(sc.get('ldes_dispatch_pct', 0))
             iso_data['procurement'].append(sc.get('procurement_pct', 100))
         else:
             for res in RESOURCES:
                 iso_data[res].append(0)
             iso_data['battery'].append(0)
+            iso_data['battery8'].append(0)
             iso_data['ldes'].append(0)
             iso_data['procurement'].append(100)
 
@@ -81,7 +86,7 @@ for iso in ISOS:
     }
 
     for t in THRESHOLDS:
-        sc = get_scenario(data['results'][iso], t, iso)
+        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
         if sc and 'compressed_day' in sc:
             cd = sc['compressed_day']
             iso_cd['demand'].append([round(v, 5) for v in cd['demand']])
@@ -205,7 +210,7 @@ for iso in ISOS:
         'effective_cf_lcoe': [],
     }
     for t in THRESHOLDS:
-        sc = get_scenario(data['results'][iso], t, iso)
+        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
         tc = sc.get('tranche_costs', {}) if sc else {}
         iso_tr['new_cf_twh'].append(round(tc.get('new_cf_twh', 0), 3))
         iso_tr['uprate_twh'].append(round(tc.get('uprate_twh', 0), 4))
@@ -221,16 +226,16 @@ for iso in ISOS:
 # Structure: { ISO: [ {resource: {existing_pct, new_pct, cost_per_demand_mwh}} × 9 thresholds ] }
 
 wyn_resource_costs = {}
-WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
+WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
 for iso in ISOS:
     iso_wyn = []
     for t in THRESHOLDS:
-        sc = get_scenario(data['results'][iso], t, iso)
+        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
         rc = sc.get('costs_detail', {}).get('resource_costs', {}) if sc else {}
         entry = {}
         for res in WYN_RESOURCES:
             rd = rc.get(res, {})
-            if res in ('battery', 'ldes'):
+            if res in ('battery', 'battery8', 'ldes'):
                 entry[res] = {
                     'dispatch_pct': rd.get('dispatch_pct', 0),
                     'cost': round(rd.get('cost_per_demand_mwh', 0), 2),

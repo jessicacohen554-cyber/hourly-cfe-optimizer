@@ -762,6 +762,7 @@ PEAK_CAPACITY_CREDITS = {
     'ccs_ccgt': 0.90,     # Dispatchable but planned outage risk
     'hydro': 0.50,        # Limited by water availability/reservoir
     'battery': 0.95,      # 4hr battery near-full credit for peak events
+    'battery8': 0.95,     # 8hr battery near-full credit for peak events
     'ldes': 0.90,         # 100hr iron-air, high duration = high credit
 }
 
@@ -802,6 +803,7 @@ def compute_gas_capacity_and_ra(data):
                 mix = scenario.get('resource_mix', {})
                 proc = scenario.get('procurement_pct', 100)
                 batt = scenario.get('battery_dispatch_pct', 0)
+                batt8 = scenario.get('battery8_dispatch_pct', 0)
                 ldes = scenario.get('ldes_dispatch_pct', 0)
 
                 # Calculate clean capacity contribution at peak (MW)
@@ -813,10 +815,11 @@ def compute_gas_capacity_and_ra(data):
                     credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
                     clean_peak_mw += resource_mw * credit
 
-                # Add battery/LDES peak capacity
+                # Add battery/battery8/LDES peak capacity
                 batt_mw = (batt / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
+                batt8_mw = (batt8 / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8']
                 ldes_mw = (ldes / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
-                clean_peak_mw += batt_mw + ldes_mw
+                clean_peak_mw += batt_mw + batt8_mw + ldes_mw
 
                 # Gas backup needed = RA requirement - clean peak capacity
                 gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw)

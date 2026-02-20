@@ -344,21 +344,24 @@ body { background: #F3F4F8; }
     </div>
 </section>
 
-<!-- REGION: PJM -->
-<section class="region-section" data-region="PJM">
-    <div class="region-section-inner">
-        <div class="region-chart-col">
-            <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">PJM (Mid-Atlantic)</div>
-                <canvas id="envScrolly_PJM"></canvas>
+            <!-- Act 3: PJM -->
+            <div class="hero-scrolly-step" data-hero-step="pjm">
+                <div class="hero-step-card">
+                    <span class="region-tag" style="background:rgba(74,144,217,0.15);color:#4a90d9;">PJM</span>
+                    <h3>PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points</h3>
+                    <p>At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs (achieved nuclear/geothermal) extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. The policy signal: PJM's path past 90% depends entirely on whether new nuclear generation achieves cost learning — renewables alone aren't enough at these penetration levels.</p>
+                    <span class="step-stat step-stat-amber">Low firm gen: grid wins to 92.5% &middot; High firm + high RE: only 87.5%</span>
+                </div>
             </div>
-        </div>
-        <div class="region-narrative-col">
-            <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(74,144,217,0.15);color:#4a90d9;">PJM</span>
-                <h3>PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points</h3>
-                <p>At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs (achieved nuclear/geothermal) extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. The policy signal: PJM's path past 90% depends entirely on whether clean firm generation achieves cost learning — renewables alone aren't enough at these penetration levels.</p>
-                <span class="step-stat step-stat-amber">Low firm gen: grid wins to 92.5% &middot; High firm + high RE: only 87.5%</span>
+
+            <!-- Act 4: CAISO -->
+            <div class="hero-scrolly-step" data-hero-step="caiso">
+                <div class="hero-step-card">
+                    <span class="region-tag" style="background:rgba(245,158,11,0.15);color:#F59E0B;">CAISO</span>
+                    <h3>CAISO: High marginal cost volatility, but grid still wins deep under medium costs</h3>
+                    <p>CAISO shows extreme marginal cost swings — $738/metric ton at 75% under medium costs, yet grid still beats DAC central through 99% because later steps are cheap. The variance is driven by how new nuclear resources dispatch. Low firm + low renewable costs extend the crossover to 97.5%. High firm + high renewable costs mean grid never beats even optimistic DAC. The lesson: CAISO's path past 90% is a bet on firm generation, not more solar.</p>
+                    <span class="step-stat step-stat-red">High firm + high RE: grid never beats optimistic DAC &middot; Low combo: wins to 97.5%</span>
+                </div>
             </div>
         </div>
     </div>
