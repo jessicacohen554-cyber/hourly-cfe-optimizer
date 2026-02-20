@@ -795,17 +795,17 @@ def get_seed_combos(hydro_cap):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
-                       prev_pruning=None, cross_solutions=None):
+                       prev_pruning=None, cross_feasible_mixes=None):
     """Find ALL feasible solutions for a single threshold × ISO.
 
     Uses cross-threshold pruning: mixes that were infeasible at a lower threshold
     are skipped. Each mix's min-feasible procurement from the previous threshold
     becomes the floor for the procurement sweep.
 
-    Cross-threshold pollination: solutions from lower thresholds that over-achieved
-    (hourly_match_score >= this threshold) are pre-seeded as candidates. Mixes
-    proven feasible without storage skip the expensive Phase 1b storage sweep.
-    Specific (mix, storage) combos already proven are also skipped.
+    Cross-threshold pollination: mixes proven feasible from cached results are
+    excluded from the Phase 1b storage sweep (already known to work without
+    needing the expensive storage search). Phase 1a still evaluates them to
+    find the right procurement level.
 
     Args:
         prev_pruning: dict from previous threshold with:
@@ -813,8 +813,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
             - 'min_proc': dict mapping mix_tuple -> minimum procurement that worked
             - 'all_mixes': set of all mix tuples tested
             If None, no pruning (first threshold).
-        cross_solutions: list of candidate dicts from lower thresholds where
-            hourly_match_score >= this threshold. Pre-seeded as candidates.
+        cross_feasible_mixes: set of mix tuples (cf, sol, wnd, hyd) already proven
+            to meet this threshold from cached/lower-threshold solutions.
 
     Returns:
         (candidates, pruning_info) where pruning_info can be passed to next threshold
@@ -881,51 +881,16 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
 
     candidates = []
     seen = set()  # Dedup key: (mix_tuple, proc, bp, lp)
+    near_miss_mixes = {}  # mix_index -> best_score (for storage sweep)
+    mix_min_proc = {}     # mix_tuple -> min procurement that achieved this threshold
+    all_mix_keys = set()  # All mixes tested (for cross-threshold pruning)
+    feasible_mix_keys = set()  # Mixes that achieved this threshold
 
-    # ── Cross-threshold pollination: pre-seed from over-achieving lower-threshold solutions ──
-    cross_no_storage_feasible = set()  # Mix keys feasible WITHOUT storage (skip Phase 1b entirely)
-    cross_storage_known = set()        # (mix_key, bp, b8p, lp) combos already proven (skip in Phase 1b)
-    n_cross_seeded = 0
-
-    if cross_solutions:
-        for cs in cross_solutions:
-            proc = cs['procurement_pct']
-            # Only add if procurement is within this threshold's bounds
-            if proc < proc_min or proc > proc_max:
-                continue
-            mix = cs['resource_mix']
-            mix_key = (mix['clean_firm'], mix['solar'], mix['wind'], mix['hydro'])
-            bp = cs['battery_dispatch_pct']
-            b8p = cs.get('battery8_dispatch_pct', 0)
-            lp = cs['ldes_dispatch_pct']
-            score_val = cs['hourly_match_score'] / 100.0
-
-            if score_val >= target:
-                # Pre-seed as candidate
-                mix_arr = np.array([mix['clean_firm'], mix['solar'], mix['wind'], mix['hydro']], dtype=np.float64)
-                key = (mix_key, proc, bp, b8p, lp)
-                if key not in seen:
-                    seen.add(key)
-                    candidates.append({
-                        'resource_mix': {rt: mix_key[j] for j, rt in enumerate(RESOURCE_TYPES)},
-                        'procurement_pct': proc,
-                        'battery_dispatch_pct': bp,
-                        'battery8_dispatch_pct': b8p,
-                        'ldes_dispatch_pct': lp,
-                        'hourly_match_score': round(score_val * 100, 2),
-                    })
-                    n_cross_seeded += 1
-
-                    # Track for skip logic
-                    if bp == 0 and b8p == 0 and lp == 0:
-                        cross_no_storage_feasible.add(mix_key)
-                    else:
-                        cross_storage_known.add((mix_key, bp, b8p, lp))
-
-        if n_cross_seeded > 0:
-            print(f"      Cross-pollinated {n_cross_seeded} solutions "
-                  f"({len(cross_no_storage_feasible)} no-storage mixes, "
-                  f"{len(cross_storage_known)} storage combos)")
+    # ── Cross-threshold pollination: skip set for proven mixes ──
+    cross_skip = cross_feasible_mixes if cross_feasible_mixes else set()
+    if cross_skip:
+        feasible_mix_keys.update(cross_skip)
+        print(f"      {len(cross_skip):,} mixes known feasible from cache (skip near-miss storage)")
 
     def add_candidate(mix_arr, proc, bp, b8p, lp, score):
         """Add candidate if not already seen."""
@@ -948,16 +913,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         prev_min_proc = prev_pruning.get('min_proc', {})
 
     # Phase 1a: No-storage sweep — per-mix procurement early stopping
-    # For each mix, sweep procurement upward from the floor (previous threshold's
-    # min-feasible procurement). Once target is met, stop.
-    near_miss_mixes = {}  # mix_index -> best_score (for storage sweep)
-    mix_min_proc = {}     # mix_tuple -> min procurement that achieved this threshold
-    all_mix_keys = set()  # All mixes tested (for cross-threshold pruning)
-    feasible_mix_keys = set()  # Mixes that achieved this threshold
-
-    # Inherit cross-pollinated feasibility into tracking structures
-    for mk in cross_no_storage_feasible:
-        feasible_mix_keys.add(mk)
 
     for i in range(n_combos):
         mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
@@ -980,8 +935,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 feasible_mix_keys.add(mix_key)
                 break  # Early stop: higher procurement only adds cost
             elif score >= target - 0.15:
-                # Skip near-miss if mix is already proven feasible from cross-pollination
-                if mix_key not in cross_no_storage_feasible:
+                # Skip near-miss storage sweep for mixes already proven via cross-pollination
+                if mix_key not in cross_skip:
                     near_miss_mixes[i] = max(near_miss_mixes.get(i, 0), score)
 
     # Phase 1b: Storage sweep on near-miss mixes
@@ -1022,8 +977,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                         continue
                     if b8p == 0 and lp == 0:
                         continue  # Battery4-only already covered above
-                    # Skip combos already proven from cross-pollination
-                    if (mix_key, bp, b8p, lp) in cross_storage_known:
+                    # Skip if entire mix is already proven feasible from cross-pollination
+                    if mix_key in cross_skip:
                         continue
                     ldes_cap = lp / 100.0
                     ldes_pow = ldes_cap / LDES_DURATION_HOURS
@@ -1213,64 +1168,55 @@ def process_iso(args):
         'thresholds': checkpoint.get('thresholds', {}),
     }
 
-    # ── Cross-threshold pollination: mine existing cache + accumulate solutions ──
-    all_solutions = []  # Accumulator: list of candidate dicts with actual scores
+    # ── Cross-threshold pollination: mix→max_score map ──
+    # Lightweight: only tracks which mixes are proven feasible at what score.
+    # Used to skip Phase 1b storage sweep for already-proven mixes.
+    # No injection (too slow for millions of rows) — grid search runs normally.
+    mix_max_score = {}  # (cf, sol, wnd, hyd) → max hourly_match_score
 
-    # Mine the interim parquet cache from previous/current run
     interim_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_interim.parquet')
     if os.path.exists(interim_path) and HAS_PARQUET:
         try:
             cached = pq.read_table(interim_path)
             n_cached = cached.num_rows
             if n_cached > 0:
-                # Extract all solutions for cross-pollination mining
-                c_cf = cached.column('clean_firm').to_pylist()
-                c_sol = cached.column('solar').to_pylist()
-                c_wnd = cached.column('wind').to_pylist()
-                c_hyd = cached.column('hydro').to_pylist()
-                c_proc = cached.column('procurement_pct').to_pylist()
-                c_bat = cached.column('battery_dispatch_pct').to_pylist()
-                c_bat8 = (cached.column('battery8_dispatch_pct').to_pylist()
-                          if 'battery8_dispatch_pct' in cached.column_names
-                          else [0] * n_cached)
-                c_ldes = cached.column('ldes_dispatch_pct').to_pylist()
-                c_score = cached.column('hourly_match_score').to_pylist()
-
-                for i in range(n_cached):
-                    all_solutions.append({
-                        'resource_mix': {
-                            'clean_firm': c_cf[i], 'solar': c_sol[i],
-                            'wind': c_wnd[i], 'hydro': c_hyd[i],
-                        },
-                        'procurement_pct': c_proc[i],
-                        'battery_dispatch_pct': c_bat[i],
-                        'battery8_dispatch_pct': c_bat8[i],
-                        'ldes_dispatch_pct': c_ldes[i],
-                        'hourly_match_score': c_score[i],
-                    })
-                print(f"    {iso}: Mined {n_cached:,} cached solutions for cross-pollination")
+                import pandas as pd
+                df = cached.select(['clean_firm', 'solar', 'wind', 'hydro',
+                                     'hourly_match_score']).to_pandas()
+                grouped = df.groupby(['clean_firm', 'solar', 'wind', 'hydro']
+                                      )['hourly_match_score'].max()
+                mix_max_score = {k: v for k, v in grouped.items()}
+                del df, grouped, cached
+                print(f"    {iso}: {len(mix_max_score):,} unique mixes from cache "
+                      f"(from {n_cached:,} rows)")
         except Exception as e:
             print(f"    {iso}: Could not read interim cache: {e}")
 
-    prev_pruning = None  # Cross-threshold pruning state
+    prev_pruning = None
     for threshold in THRESHOLDS:
         t_str = str(threshold)
         if t_str in completed_thresholds:
             print(f"    {iso} {threshold}%: loaded from checkpoint — skipping")
             continue
 
-        # Build cross-solutions: all previously found solutions that qualify for this threshold
-        cross_solutions = [s for s in all_solutions if s['hourly_match_score'] >= threshold]
+        # Build set of mixes known to meet this threshold
+        cross_feasible_mixes = set()
+        if mix_max_score:
+            cross_feasible_mixes = {mk for mk, s in mix_max_score.items() if s >= threshold}
 
         t_start = time.time()
         feasible, pruning_info = optimize_threshold(
             iso, threshold, demand_arr, supply_matrix, hydro_cap,
-            prev_pruning=prev_pruning, cross_solutions=cross_solutions if cross_solutions else None)
-        prev_pruning = pruning_info  # Pass to next threshold
+            prev_pruning=prev_pruning, cross_feasible_mixes=cross_feasible_mixes)
+        prev_pruning = pruning_info
 
-        # Accumulate new solutions for cross-pollination to higher thresholds
+        # Accumulate new solutions
         for c in feasible:
-            all_solutions.append(c)
+            mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
+                   c['resource_mix']['wind'], c['resource_mix']['hydro'])
+            s = c['hourly_match_score']
+            if s > mix_max_score.get(mk, 0):
+                mix_max_score[mk] = s
         t_elapsed = time.time() - t_start
 
         # Count unique mix archetypes
