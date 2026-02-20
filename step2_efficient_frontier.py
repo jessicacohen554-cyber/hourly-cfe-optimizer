@@ -2,20 +2,29 @@
 """
 Step 2: Efficient Frontier (EF) Extraction from Physics Feasible Space (PFS)
 =============================================================================
-Reads the PFS parquet (21.4M rows) and applies a 4-phase reduction:
+Reads the PFS parquet and applies a 3-phase reduction:
 
   Phase 0: Existing generation filter — remove mixes that don't fully utilize
-           existing clean generation (even at 2050 high demand growth). Any mix
-           that allocates less than the minimum existing share for a resource
-           (where min = existing / growth_factor_2050_high) wastes free/cheap
-           generation and will never be cost-optimal.
-  Phase 1: Threshold gate — keep only target thresholds (50-100%)
-  Phase 2: Procurement minimization — for each unique resource allocation
-           (CF/Sol/Wnd/CCS/Hyd/Bat/LDES), keep only the lowest procurement
-           level that achieves the threshold.
-  Phase 3: Strict dominance removal — remove mixes where another mix is ≤
-           on ALL dimensions (procurement, battery, LDES) while achieving
-           the same or better match score. Skip for groups > 50K.
+           existing clean generation (even at 2050 high demand growth). Two
+           sub-filters:
+           (a) Demand-fraction check: procurement × allocation must cover
+               the existing share at 2050 high growth.
+           (b) Allocation floor: direct floor on each resource's allocation
+               (existing_share / growth_factor), ensuring no mix under-allocates
+               relative to what the grid already has.
+  Phase 1: Threshold gate — keep only rows whose scores fall in target ranges
+  Phase 2: Global deduplication and Pareto-optimal procurement selection.
+           Drop the threshold column. For each unique allocation
+           (ISO/CF/Sol/Wnd/Hyd/Bat/Bat8/LDES), keep only the Pareto front
+           on (minimize procurement, maximize score). Each unique physical
+           configuration is stored ONCE — Step 3 handles threshold selection
+           by filtering to mixes with score >= target threshold, enabling
+           cross-threshold picking (a cheap mix that overachieves can win).
+
+Note: No dominance removal across different resource mixes is performed.
+Different resource mixes at the same procurement/storage/score can have very
+different costs under different LCOE assumptions — removing them risks losing
+true cost optimums. Cost-based selection happens in Step 3.
 
 Pipeline position: Step 2 of 4
   Step 1 — PFS Generator (step1_pfs_generator.py)
@@ -23,11 +32,11 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/physics_cache_v4.parquet  (21.4M rows — the PFS)
-Output: data/pfs_post_ef.parquet       (PFS post-EF)
+Input:  data/physics_cache_v4.parquet  (PFS)
+Output: data/pfs_post_ef.parquet       (PFS post-EF, threshold-free)
 
-The output preserves all mixes that could be optimal under ANY cost assumption,
-ensuring no true optimum is lost during cost evaluation in Step 3.
+The output preserves all mixes that could be optimal under ANY cost assumption
+at ANY threshold, ensuring no true optimum is lost during Step 3.
 """
 
 import os
@@ -43,10 +52,6 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
 
 # Target thresholds — all 13 from v4 PFS (50-100%)
 TARGET_THRESHOLDS = [50.0, 60.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 100.0]
-
-# Max group size for Step 3 dominance check (O(n²) — skip larger groups)
-DOMINANCE_MAX_GROUP = 50000
-
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 
@@ -198,25 +203,30 @@ def step1_threshold_gate(table):
     return filtered
 
 
-def step2_procurement_minimization(iso_thr_arrays):
+def step2_pareto_procurement(arrays):
     """
-    Step 2: For each unique allocation (CF/Sol/Wnd/Hyd/Bat4/Bat8/LDES),
-    keep only the row with the lowest procurement_pct.
+    For each unique allocation (CF/Sol/Wnd/Hyd/Bat4/Bat8/LDES), keep only
+    the Pareto-optimal (procurement, score) pairs: rows where no other row
+    with the same allocation has <= procurement AND >= score.
+
+    Within each allocation group sorted by ascending procurement, this means
+    keeping only rows where the score strictly increases (the running max).
     """
-    n = len(iso_thr_arrays['clean_firm'])
+    n = len(arrays['clean_firm'])
     if n == 0:
         return np.array([], dtype=np.int64)
 
-    cf = iso_thr_arrays['clean_firm']
-    sol = iso_thr_arrays['solar']
-    wnd = iso_thr_arrays['wind']
-    hyd = iso_thr_arrays['hydro']
-    bat = iso_thr_arrays['battery_dispatch_pct']
-    bat8 = iso_thr_arrays['battery8_dispatch_pct']
-    ldes = iso_thr_arrays['ldes_dispatch_pct']
-    proc = iso_thr_arrays['procurement_pct']
+    cf = arrays['clean_firm']
+    sol = arrays['solar']
+    wnd = arrays['wind']
+    hyd = arrays['hydro']
+    bat = arrays['battery_dispatch_pct']
+    bat8 = arrays['battery8_dispatch_pct']
+    ldes = arrays['ldes_dispatch_pct']
+    proc = arrays['procurement_pct']
+    score = arrays['hourly_match_score']
 
-    # Pack: CF*101^6 + Sol*101^5 + Wnd*101^4 + Hyd*101^3 + Bat*101^2 + Bat8*101 + LDES
+    # Pack allocation into a single key
     group_key = (cf.astype(np.int64) * (101**6) +
                  sol.astype(np.int64) * (101**5) +
                  wnd.astype(np.int64) * (101**4) +
@@ -225,81 +235,54 @@ def step2_procurement_minimization(iso_thr_arrays):
                  bat8.astype(np.int64) * 101 +
                  ldes.astype(np.int64))
 
-    # Sort by group_key, then by procurement (ascending)
-    sort_idx = np.lexsort((proc, group_key))
+    # Sort by (allocation, procurement ascending, score descending)
+    # Within same (allocation, proc), keep highest score; across proc levels,
+    # keep only where score increases (Pareto front).
+    sort_idx = np.lexsort((-score, proc, group_key))
     sorted_keys = group_key[sort_idx]
+    sorted_proc = proc[sort_idx]
+    sorted_score = score[sort_idx]
 
-    # Keep first occurrence of each group (lowest procurement)
-    keep_mask = np.empty(n, dtype=np.bool_)
-    keep_mask[0] = True
-    keep_mask[1:] = sorted_keys[1:] != sorted_keys[:-1]
+    keep_mask = np.zeros(n, dtype=np.bool_)
+
+    # Walk through sorted rows; within each allocation group, track running max score
+    i = 0
+    while i < n:
+        # Find end of this allocation group
+        j = i + 1
+        while j < n and sorted_keys[j] == sorted_keys[i]:
+            j += 1
+
+        # Within this group (sorted by proc asc, score desc):
+        # For each unique proc level, keep the first row (highest score).
+        # Across proc levels, keep only if score exceeds running max.
+        running_max = -1.0
+        prev_proc = -1
+        for k in range(i, j):
+            p = sorted_proc[k]
+            s = sorted_score[k]
+            # Skip duplicate proc levels (already took highest score)
+            if p == prev_proc:
+                continue
+            prev_proc = p
+            # Pareto check: keep only if score exceeds all lower-proc points
+            if s > running_max:
+                keep_mask[k] = True
+                running_max = s
+
+        i = j
 
     return sort_idx[keep_mask]
 
 
-def step3_strict_dominance(iso_thr_arrays, indices):
-    """
-    Step 3: Remove strictly dominated mixes.
-    A mix A is dominated by mix B if B has ≤ procurement, ≤ battery4, ≤ battery8,
-    ≤ LDES, and ≥ match score (with at least one strict inequality).
-    O(n²) — only run for manageable group sizes.
-    """
-    n = len(indices)
-    if n > DOMINANCE_MAX_GROUP:
-        return indices
-
-    if n <= 1:
-        return indices
-
-    proc = iso_thr_arrays['procurement_pct'][indices].astype(np.float64)
-    bat = iso_thr_arrays['battery_dispatch_pct'][indices].astype(np.float64)
-    bat8 = iso_thr_arrays['battery8_dispatch_pct'][indices].astype(np.float64)
-    ldes = iso_thr_arrays['ldes_dispatch_pct'][indices].astype(np.float64)
-    score = iso_thr_arrays['hourly_match_score'][indices].astype(np.float64)
-
-    sort_order = np.argsort(proc)
-    proc = proc[sort_order]
-    bat = bat[sort_order]
-    bat8 = bat8[sort_order]
-    ldes = ldes[sort_order]
-    score = score[sort_order]
-    sorted_indices = indices[sort_order]
-
-    dominated = np.zeros(n, dtype=np.bool_)
-
-    for i in range(n):
-        if dominated[i]:
-            continue
-        j_mask = (
-            (proc[i] <= proc[i+1:]) &
-            (bat[i] <= bat[i+1:]) &
-            (bat8[i] <= bat8[i+1:]) &
-            (ldes[i] <= ldes[i+1:]) &
-            (score[i] >= score[i+1:])
-        )
-        strict = (
-            (proc[i] < proc[i+1:]) |
-            (bat[i] < bat[i+1:]) |
-            (bat8[i] < bat8[i+1:]) |
-            (ldes[i] < ldes[i+1:]) |
-            (score[i] > score[i+1:])
-        )
-        dominated[i+1:] |= (j_mask & strict)
-
-    return sorted_indices[~dominated]
-
-
-def process_iso_threshold(table, iso, threshold):
-    """Process a single (ISO, threshold) group through Steps 2-3."""
-    mask = pc.and_(
-        pc.equal(table.column('iso'), iso),
-        pc.equal(table.column('threshold'), threshold)
-    )
+def process_iso(table, iso):
+    """Process all rows for an ISO: global Pareto-optimal procurement selection."""
+    mask = pc.equal(table.column('iso'), iso)
     subtable = table.filter(mask)
     n_raw = subtable.num_rows
 
     if n_raw == 0:
-        return None, 0, 0, 0
+        return None, 0, 0
 
     arrays = {
         'clean_firm': subtable.column('clean_firm').to_numpy(),
@@ -315,20 +298,32 @@ def process_iso_threshold(table, iso, threshold):
         'hourly_match_score': subtable.column('hourly_match_score').to_numpy(),
     }
 
-    step2_idx = step2_procurement_minimization(arrays)
-    n_step2 = len(step2_idx)
+    pareto_idx = step2_pareto_procurement(arrays)
+    n_pareto = len(pareto_idx)
 
-    step3_idx = step3_strict_dominance(arrays, step2_idx)
-    n_step3 = len(step3_idx)
+    # Build result without threshold column
+    result_cols = ['iso', 'clean_firm', 'solar', 'wind', 'hydro',
+                   'procurement_pct', 'battery_dispatch_pct',
+                   'battery8_dispatch_pct', 'ldes_dispatch_pct',
+                   'hourly_match_score']
+    if 'pareto_type' in subtable.column_names:
+        result_cols.append('pareto_type')
 
-    result = subtable.take(step3_idx)
-    return result, n_raw, n_step2, n_step3
+    result_arrays = []
+    for col_name in result_cols:
+        if col_name in subtable.column_names:
+            result_arrays.append(subtable.column(col_name).take(pareto_idx))
+        elif col_name == 'battery8_dispatch_pct':
+            result_arrays.append(pa.array(np.zeros(n_pareto, dtype=np.int64)))
+
+    result = pa.table(result_arrays, names=[c for c in result_cols if c in subtable.column_names or c == 'battery8_dispatch_pct'])
+    return result, n_raw, n_pareto
 
 
 def main():
     print("=" * 70)
     print("  STEP 2: EFFICIENT FRONTIER (EF) EXTRACTION")
-    print("  PFS → PFS post-EF")
+    print("  PFS → PFS post-EF (threshold-free)")
     print("=" * 70)
 
     total_start = time.time()
@@ -337,38 +332,34 @@ def main():
     # Step 0: Existing generation utilization filter
     table = step0_existing_generation_filter(table)
 
-    # Step 1: Threshold gate (all 13 thresholds kept since PFS has exactly these)
+    # Step 1: Threshold gate (keep only rows from target threshold ranges)
     table = step1_threshold_gate(table)
 
-    # Process each (ISO, threshold) through Steps 2-3
-    print("\nSteps 2-3: Procurement minimization + dominance removal")
-    print(f"  {'ISO':>6}  {'Thr':>5}  {'Raw':>9}  {'Step2':>9}  {'Step3':>9}  {'Time':>6}")
-    print("  " + "-" * 55)
+    # Step 2: Global Pareto-optimal procurement per ISO
+    # Drop threshold column, deduplicate, keep Pareto front on (proc, score)
+    # per allocation. Step 3 will filter by score >= target threshold.
+    print("\nStep 2: Global Pareto-optimal procurement (threshold-free)")
+    print(f"  {'ISO':>6}  {'Raw':>9}  {'Pareto':>9}  {'Time':>6}")
+    print("  " + "-" * 40)
 
     results = []
     total_raw = 0
-    total_step2 = 0
-    total_step3 = 0
+    total_pareto = 0
 
     for iso in ISOS:
-        for thr in TARGET_THRESHOLDS:
-            t0 = time.time()
-            result, n_raw, n_step2, n_step3 = process_iso_threshold(table, iso, thr)
-            elapsed = time.time() - t0
+        t0 = time.time()
+        result, n_raw, n_pareto = process_iso(table, iso)
+        elapsed = time.time() - t0
 
-            if result is not None and result.num_rows > 0:
-                results.append(result)
-                total_raw += n_raw
-                total_step2 += n_step2
-                total_step3 += n_step3
+        if result is not None and result.num_rows > 0:
+            results.append(result)
+            total_raw += n_raw
+            total_pareto += n_pareto
+            print(f"  {iso:>6}  {n_raw:>8,}  {n_pareto:>8,}  {elapsed:>5.1f}s")
 
-                print(f"  {iso:>6}  {thr:>4}%  {n_raw:>8,}  {n_step2:>8,}  "
-                      f"{n_step3:>8,}  {elapsed:>5.1f}s")
-
-    # Concatenate all results
-    print(f"\n  Total: {total_raw:,} → {total_step2:,} (Step 2) → {total_step3:,} (Step 3)")
+    print(f"\n  Total: {total_raw:,} → {total_pareto:,}")
     if total_raw > 0:
-        print(f"  Reduction: {(1 - total_step3/total_raw)*100:.1f}%")
+        print(f"  Reduction: {(1 - total_pareto/total_raw)*100:.1f}%")
 
     combined = pa.concat_tables(results)
 
@@ -380,10 +371,24 @@ def main():
     elapsed_total = time.time() - total_start
     print(f"\n  Output: {OUTPUT_PATH}")
     print(f"  Size: {file_size:.1f} MB ({combined.num_rows:,} rows)")
+    print(f"  Columns: {combined.column_names}")
     print(f"  Total time: {elapsed_total:.0f}s")
 
+    # Score distribution summary
+    scores = combined.column('hourly_match_score').to_numpy()
+    for iso in ISOS:
+        iso_mask = np.array(combined.column('iso').to_pylist()) == iso
+        iso_scores = scores[iso_mask]
+        if len(iso_scores) > 0:
+            avail = []
+            for thr in TARGET_THRESHOLDS:
+                n = (iso_scores >= thr).sum()
+                avail.append(f"{thr:.0f}%:{n:,}")
+            print(f"  {iso} mixes per threshold: {', '.join(avail[:6])}...")
+
     print("\n" + "=" * 70)
-    print("  STEP 2 COMPLETE — PFS post-EF ready for Step 3 cost optimization")
+    print("  STEP 2 COMPLETE — PFS post-EF ready for Step 3")
+    print("  Step 3 filters by score >= threshold for cross-threshold picking")
     print("=" * 70)
 
 
