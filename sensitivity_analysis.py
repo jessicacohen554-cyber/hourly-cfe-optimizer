@@ -27,15 +27,29 @@ KEY_THRESHOLDS = ["75", "80", "85", "90", "95", "97.5", "99", "100"]
 TOGGLE_NAMES = ["Renewable Gen", "Firm Gen", "Storage", "Fossil Fuel", "Transmission"]
 
 def parse_scenario_code(code):
-    """Parse 'LMH_M_N' -> dict of toggle -> level"""
+    """Parse scenario key -> dict of toggle -> level.
+    Handles both old 5-dim (LMH_M_N) and new 8-dim (LMH_M_N_M1_M) formats.
+    """
     parts = code.split("_")
-    return {
+    result = {
         "Renewable Gen": parts[0][0],   # L/M/H
         "Firm Gen": parts[0][1],        # L/M/H
         "Storage": parts[0][2],         # L/M/H
         "Fossil Fuel": parts[1],        # L/M/H
         "Transmission": parts[2],       # N/L/M/H
     }
+    # New 8-dim format: RFS_FF_TX_CCSq45_GEO
+    if len(parts) >= 5:
+        ccs_q45 = parts[3]  # e.g., 'M1' or 'H0'
+        result["CCS"] = ccs_q45[0]
+        result["45Q"] = ccs_q45[1] if len(ccs_q45) > 1 else '1'
+        result["Geothermal"] = parts[4]  # L/M/H or X
+    else:
+        # Old 5-dim: default CCS=firm, 45Q=ON, Geo=X
+        result["CCS"] = result["Firm Gen"]
+        result["45Q"] = '1'
+        result["Geothermal"] = 'X'
+    return result
 
 def get_scenarios(region, threshold):
     """Get all 324 scenarios for a region/threshold."""
