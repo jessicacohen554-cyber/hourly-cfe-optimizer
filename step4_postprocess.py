@@ -165,50 +165,39 @@ def load_results():
 
 
 def medium_key(iso):
-    """Return the all-Medium scenario key for a given ISO (9-dim format).
-    CAISO: MMM_M_M_M_M1_M  (geothermal = M)
-    Others: MMM_M_M_M_M1_X  (geothermal = X, not applicable)
-    """
-    return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
+    """Return the all-Medium scenario key for an ISO."""
+    geo = 'M' if iso == 'CAISO' else 'X'
+    return f'MMM_M_M_M1_{geo}'
 
 
 def decode_scenario_key(key):
     """Decode scenario key into toggle levels.
-
-    Supports three formats (detected by number of underscore-separated parts):
-      9-dim (6 parts): {Ren}{Firm}{Batt}_{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
-      8-dim (5 parts): {Ren}{Firm}{Stor}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
-      5-dim (3 parts): {Ren}{Firm}{Stor}_{Fuel}_{Tx}
-
-    Returns: (renewable, firm, storage, fuel, tx)
-    where 'storage' maps to Battery in 9-dim, Storage in older formats.
+    Handles both old 5-dim (MMM_M_M) and new 8-dim (MMM_M_M_M1_M) formats.
+    Returns: (renewable, firm, storage, fuel, tx, ccs, q45, geo)
     """
-    level_map = {'L': 'Low', 'M': 'Medium', 'H': 'High', 'N': 'None'}
+    level_map = {'L': 'Low', 'M': 'Medium', 'H': 'High', 'N': 'None', 'X': None}
     parts = key.split('_')
-
-    if len(parts) == 6:
-        # 9-dim: {Ren}{Firm}{Batt}_{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
-        gen_part = parts[0]  # 3 chars: renewable, firm, battery
-        # parts[1] = LDES level (L/M/H)
-        fuel = level_map.get(parts[2], 'Medium')
-        tx = level_map.get(parts[3], 'Medium')
-        # parts[4] = CCS+45Q (e.g. 'M1')
-        # parts[5] = Geo (L/M/H/X)
-    elif len(parts) == 5:
-        # 8-dim: {Ren}{Firm}{Stor}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
-        gen_part = parts[0]
-        fuel = level_map.get(parts[1], 'Medium')
-        tx = level_map.get(parts[2], 'Medium')
-    else:
-        # 5-dim: {Ren}{Firm}{Stor}_{Fuel}_{Tx}
-        gen_part = parts[0]
-        fuel = level_map.get(parts[1], 'Medium')
-        tx = level_map.get(parts[2], 'Medium')
-
+    gen_part = parts[0]  # 3 chars: renewable, firm, storage
     renewable = level_map.get(gen_part[0], 'Medium')
     firm = level_map.get(gen_part[1], 'Medium')
     storage = level_map.get(gen_part[2], 'Medium')
-    return renewable, firm, storage, fuel, tx
+    fuel = level_map.get(parts[1], 'Medium')
+    tx = level_map.get(parts[2], 'Medium')
+
+    # New 8-dim format: RFS_FF_TX_CCSq45_GEO
+    if len(parts) >= 5:
+        ccs_q45 = parts[3]  # e.g., 'M1' or 'H0'
+        ccs = level_map.get(ccs_q45[0], 'Medium')
+        q45 = ccs_q45[1] if len(ccs_q45) > 1 else '1'
+        geo_code = parts[4]
+        geo = level_map.get(geo_code, None)
+    else:
+        # Old 5-dim format: default CCS=firm, 45Q=ON, Geo=None
+        ccs = firm
+        q45 = '1'
+        geo = None
+
+    return renewable, firm, storage, fuel, tx, ccs, q45, geo
 
 
 def ccs_lcoe_corrected_45q(iso, firm_level):
@@ -259,7 +248,7 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
         tranche_cf_lcoe: If provided, use this LCOE for clean_firm instead of
                          blended table lookup (from Step 2 tranche repricing)
     """
-    renewable, firm, storage, fuel, tx = decode_scenario_key(scenario_key)
+    renewable, firm, storage, fuel, tx, ccs, q45, geo = decode_scenario_key(scenario_key)
 
     # Build LCOE map
     lcoe_map = {
@@ -506,7 +495,7 @@ def add_no45q_overlay(data):
 
                 if ccs_pct > 0:
                     # Also compute the CCS vs LDES crossover info
-                    renewable, firm, storage, fuel, tx = decode_scenario_key(effective_key)
+                    renewable, firm, storage, fuel, tx, ccs, q45, geo = decode_scenario_key(effective_key)
                     ldes_cost = FULL_LCOE_TABLES['ldes'][storage][iso] + \
                                 FULL_TRANSMISSION_TABLES['ldes'][tx][iso]
                     ccs_no45q_base = ccs_lcoe_no45q(iso, firm)
@@ -625,6 +614,9 @@ def analyze_crossover(data):
             if t_str not in thresholds_data:
                 continue
             scenario = thresholds_data[t_str].get('scenarios', {}).get(med_key)
+            # Backward compat: try old 5-dim key if new key not found
+            if not scenario:
+                scenario = thresholds_data[t_str].get('scenarios', {}).get('MMM_M_M')
             if not scenario:
                 continue
 
@@ -693,7 +685,10 @@ def analyze_crossover(data):
         neiso_impact = []
         for threshold in THRESHOLDS:
             t_str = str(threshold)
-            scenario = thresholds_data.get(t_str, {}).get('scenarios', {}).get(med_key)
+            neiso_mk = medium_key('NEISO')
+            scenario = thresholds_data.get(t_str, {}).get('scenarios', {}).get(neiso_mk)
+            if not scenario:
+                scenario = thresholds_data.get(t_str, {}).get('scenarios', {}).get('MMM_M_M')
             if not scenario:
                 continue
             base = scenario.get('costs', {}).get('effective_cost', 0)
@@ -874,8 +869,11 @@ def compute_gas_capacity_and_ra(data):
                 total_computed += 1
 
         # Log summary for Medium scenario at key thresholds
+        mk = medium_key(iso)
         for t in ['75', '90', '95', '99']:
-            sc = thresholds_data.get(t, {}).get('scenarios', {}).get(medium_key(iso))
+            sc = thresholds_data.get(t, {}).get('scenarios', {}).get(mk)
+            if not sc:
+                sc = thresholds_data.get(t, {}).get('scenarios', {}).get('MMM_M_M')
             if sc and 'gas_backup' in sc:
                 gb = sc['gas_backup']
                 print(f"      {iso} {t:>3}%: peak={gb['ra_peak_mw']:,} MW(+RA), "
