@@ -31,7 +31,8 @@ Resource types (4D optimization):
   - Hydro: EIA 2021-2025 averaged hourly profile (capped by region, existing only)
 
 Storage (not part of mix %, swept as separate dimensions):
-  - Battery: 4hr Li-ion, 85% RTE, daily-cycle dispatch
+  - Battery (4hr): Li-ion, 85% RTE, daily-cycle dispatch
+  - Battery (8hr): Li-ion, 85% RTE, daily-cycle dispatch (power = cap/8hr)
   - LDES: 100hr iron-air, 50% RTE, 7-day rolling window dispatch
 """
 
@@ -86,6 +87,8 @@ LEAP_FEB29_START = 1416
 # Storage
 BATTERY_EFFICIENCY = 0.85
 BATTERY_DURATION_HOURS = 4
+BATTERY8_EFFICIENCY = 0.85
+BATTERY8_DURATION_HOURS = 8
 LDES_EFFICIENCY = 0.50
 LDES_DURATION_HOURS = 100
 LDES_WINDOW_DAYS = 7
@@ -534,6 +537,133 @@ def _score_with_both_storage(demand, supply_row, procurement,
     return base_matched + batt_dispatched + ldes_dispatched
 
 
+@njit(cache=True)
+def _score_with_all_storage(demand, supply_row, procurement,
+                            batt_capacity, batt_power, batt_eff,
+                            batt8_capacity, batt8_power, batt8_eff,
+                            ldes_capacity, ldes_power, ldes_eff,
+                            ldes_window_hours):
+    """Hourly score + battery4 (daily) + battery8 (daily) + LDES (multi-day).
+
+    Dispatch order: battery4 first (cheapest short-duration), then battery8,
+    then LDES on post-battery residual. Each phase updates residual surplus/gap.
+    """
+    supply = np.empty(8760)
+    surplus = np.empty(8760)
+    gap = np.empty(8760)
+    for h in range(8760):
+        s = procurement * supply_row[h]
+        supply[h] = s
+        d = demand[h]
+        if s > d:
+            surplus[h] = s - d
+            gap[h] = 0.0
+        else:
+            surplus[h] = 0.0
+            gap[h] = d - s
+
+    base_matched = 0.0
+    for h in range(8760):
+        base_matched += min(demand[h], supply[h])
+
+    # Phase 1: Battery 4hr daily cycle on residual surplus/gap
+    batt_dispatched = 0.0
+    residual_surplus = np.copy(surplus)
+    residual_gap = np.copy(gap)
+
+    if batt_capacity > 0:
+        for day in range(365):
+            ds = day * 24
+            stored = 0.0
+            for h in range(24):
+                s = residual_surplus[ds + h]
+                if s > 0 and stored < batt_capacity:
+                    charge = s
+                    if charge > batt_power:
+                        charge = batt_power
+                    remaining = batt_capacity - stored
+                    if charge > remaining:
+                        charge = remaining
+                    stored += charge
+                    residual_surplus[ds + h] -= charge
+            available = stored * batt_eff
+            for h in range(24):
+                g = residual_gap[ds + h]
+                if g > 0 and available > 0:
+                    discharge = g
+                    if discharge > batt_power:
+                        discharge = batt_power
+                    if discharge > available:
+                        discharge = available
+                    batt_dispatched += discharge
+                    available -= discharge
+                    residual_gap[ds + h] -= discharge
+
+    # Phase 2: Battery 8hr daily cycle on post-4hr residual
+    batt8_dispatched = 0.0
+    if batt8_capacity > 0:
+        for day in range(365):
+            ds = day * 24
+            stored = 0.0
+            for h in range(24):
+                s = residual_surplus[ds + h]
+                if s > 0 and stored < batt8_capacity:
+                    charge = s
+                    if charge > batt8_power:
+                        charge = batt8_power
+                    remaining = batt8_capacity - stored
+                    if charge > remaining:
+                        charge = remaining
+                    stored += charge
+                    residual_surplus[ds + h] -= charge
+            available = stored * batt8_eff
+            for h in range(24):
+                g = residual_gap[ds + h]
+                if g > 0 and available > 0:
+                    discharge = g
+                    if discharge > batt8_power:
+                        discharge = batt8_power
+                    if discharge > available:
+                        discharge = available
+                    batt8_dispatched += discharge
+                    available -= discharge
+                    residual_gap[ds + h] -= discharge
+
+    # Phase 3: LDES multi-day rolling window on post-battery residual
+    ldes_dispatched = 0.0
+    if ldes_capacity > 0:
+        soc = 0.0
+        n_windows = (8760 + ldes_window_hours - 1) // ldes_window_hours
+        for w in range(n_windows):
+            ws = w * ldes_window_hours
+            we = ws + ldes_window_hours
+            if we > 8760:
+                we = 8760
+            for h in range(ws, we):
+                s = residual_surplus[h]
+                if s > 0 and soc < ldes_capacity:
+                    charge = s
+                    if charge > ldes_power:
+                        charge = ldes_power
+                    remaining = ldes_capacity - soc
+                    if charge > remaining:
+                        charge = remaining
+                    soc += charge
+            for h in range(ws, we):
+                g = residual_gap[h]
+                if g > 0 and soc > 0:
+                    available_e = soc * ldes_eff
+                    discharge = g
+                    if discharge > ldes_power:
+                        discharge = ldes_power
+                    if discharge > available_e:
+                        discharge = available_e
+                    ldes_dispatched += discharge
+                    soc -= discharge / ldes_eff
+
+    return base_matched + batt_dispatched + batt8_dispatched + ldes_dispatched
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # BATCH EVALUATION — vectorized for grid search
 # ══════════════════════════════════════════════════════════════════════════════
@@ -687,11 +817,13 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
 
     # Storage constants
     batt_eff = BATTERY_EFFICIENCY
+    batt8_eff = BATTERY8_EFFICIENCY
     ldes_eff = LDES_EFFICIENCY
     ldes_window_hours = LDES_WINDOW_DAYS * 24
 
     # Storage levels to sweep (all thresholds get full sweep — no pruning)
     batt_levels = [0, 2, 5, 8, 10, 15, 20]
+    batt8_levels = [0, 2, 5, 8, 10, 15, 20]
     ldes_levels = [0, 2, 5, 8, 10, 15, 20]
 
     # ── Phase 1: Coarse grid at 5% step ──
@@ -743,16 +875,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     candidates = []
     seen = set()  # Dedup key: (mix_tuple, proc, bp, lp)
 
-    def add_candidate(mix_arr, proc, bp, lp, score):
+    def add_candidate(mix_arr, proc, bp, b8p, lp, score):
         """Add candidate if not already seen."""
         mix_key = (int(mix_arr[0]), int(mix_arr[1]), int(mix_arr[2]), int(mix_arr[3]))
-        key = (mix_key, proc, bp, lp)
+        key = (mix_key, proc, bp, b8p, lp)
         if key not in seen:
             seen.add(key)
             candidates.append({
                 'resource_mix': {rt: mix_key[j] for j, rt in enumerate(RESOURCE_TYPES)},
                 'procurement_pct': proc,
                 'battery_dispatch_pct': bp,
+                'battery8_dispatch_pct': b8p,
                 'ldes_dispatch_pct': lp,
                 'hourly_match_score': round(score * 100, 2),
             })
@@ -786,7 +919,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
             supply_scaled = supply_rows[i] * pf
             score = np.sum(np.minimum(supply_scaled / demand_arr, 1.0)) / H
             if score >= target:
-                add_candidate(combos_5[i], proc, 0, 0, score)
+                add_candidate(combos_5[i], proc, 0, 0, 0, score)
                 mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
                 feasible_mix_keys.add(mix_key)
                 break  # Early stop: higher procurement only adds cost
@@ -795,13 +928,13 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
 
     # Phase 1b: Storage sweep on near-miss mixes
     # For each (mix, storage_config), sweep procurement upward with early stopping.
-    # Near-miss mixes that achieve target with storage are also marked feasible.
+    # Triple-nested: battery4 × battery8 × LDES (dispatch order: 4hr → 8hr → LDES).
     for i in near_miss_mixes:
         supply_row = supply_rows[i]
         mix = combos_5[i]
         mix_key = (int(mix[0]), int(mix[1]), int(mix[2]), int(mix[3]))
 
-        # Battery only — for each battery level, sweep procurement with early stop
+        # Battery4 only — for each battery level, sweep procurement with early stop
         for bp in batt_levels:
             if bp == 0:
                 continue
@@ -812,33 +945,39 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 score = _score_with_battery(demand_arr, supply_row, pf,
                                             batt_cap, batt_pow, batt_eff)
                 if score >= target:
-                    add_candidate(mix, proc, bp, 0, score)
+                    add_candidate(mix, proc, bp, 0, 0, score)
                     mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
                     feasible_mix_keys.add(mix_key)
                     break  # Early stop per (mix, battery_level)
 
-        # Battery + LDES combos — early stop per (mix, battery, ldes) combo
+        # Full storage combos: battery4 × battery8 × LDES
+        # Early stop per (mix, batt4, batt8, ldes) combo
         for bp in batt_levels:
             batt_cap = bp / 100.0
             batt_pow = batt_cap / BATTERY_DURATION_HOURS
-            for lp in ldes_levels:
-                if lp == 0 and bp == 0:
-                    continue
-                if lp == 0:
-                    continue  # Battery-only already covered above
-                ldes_cap = lp / 100.0
-                ldes_pow = ldes_cap / LDES_DURATION_HOURS
-                for proc in proc_levels:
-                    pf = proc / 100.0
-                    score = _score_with_both_storage(
-                        demand_arr, supply_row, pf,
-                        batt_cap, batt_pow, batt_eff,
-                        ldes_cap, ldes_pow, ldes_eff, ldes_window_hours)
-                    if score >= target:
-                        add_candidate(mix, proc, bp, lp, score)
-                        mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
-                        feasible_mix_keys.add(mix_key)
-                        break  # Early stop per (mix, batt, ldes)
+            for b8p in batt8_levels:
+                batt8_cap = b8p / 100.0
+                batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS
+                for lp in ldes_levels:
+                    # Skip no-storage (already covered) and battery4-only (covered above)
+                    if bp == 0 and b8p == 0 and lp == 0:
+                        continue
+                    if b8p == 0 and lp == 0:
+                        continue  # Battery4-only already covered above
+                    ldes_cap = lp / 100.0
+                    ldes_pow = ldes_cap / LDES_DURATION_HOURS
+                    for proc in proc_levels:
+                        pf = proc / 100.0
+                        score = _score_with_all_storage(
+                            demand_arr, supply_row, pf,
+                            batt_cap, batt_pow, batt_eff,
+                            batt8_cap, batt8_pow, batt8_eff,
+                            ldes_cap, ldes_pow, ldes_eff, ldes_window_hours)
+                        if score >= target:
+                            add_candidate(mix, proc, bp, b8p, lp, score)
+                            mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
+                            feasible_mix_keys.add(mix_key)
+                            break  # Early stop per (mix, batt4, batt8, ldes)
 
     # ── Phase 2: Refine feasible archetypes to 1% resolution ──
     # Same early-stop logic: per-mix, stop procurement once target is met
@@ -865,10 +1004,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     supply_scaled = fine_supply[j] * pf
                     score = np.sum(np.minimum(supply_scaled / demand_arr, 1.0)) / H
                     if score >= target:
-                        add_candidate(fine_combos[j], proc, 0, 0, score)
+                        add_candidate(fine_combos[j], proc, 0, 0, 0, score)
                         break  # Early stop
                     elif score >= target - 0.10:
-                        # Near-miss: try storage with early stop per (mix, batt)
+                        # Near-miss: try storage with early stop per (mix, batt4)
                         supply_row_j = fine_supply[j]
                         for bp in [2, 5, 10]:
                             batt_cap = bp / 100.0
@@ -876,7 +1015,18 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                             sc = _score_with_battery(demand_arr, supply_row_j, pf,
                                                      batt_cap, batt_pow, batt_eff)
                             if sc >= target:
-                                add_candidate(fine_combos[j], proc, bp, 0, sc)
+                                add_candidate(fine_combos[j], proc, bp, 0, 0, sc)
+                        # Also try battery8 alone in refinement
+                        for b8p in [2, 5, 10]:
+                            batt8_cap = b8p / 100.0
+                            batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS
+                            sc = _score_with_all_storage(
+                                demand_arr, supply_row_j, pf,
+                                0.0, 0.0, batt_eff,
+                                batt8_cap, batt8_pow, batt8_eff,
+                                0.0, 0.0, ldes_eff, ldes_window_hours)
+                            if sc >= target:
+                                add_candidate(fine_combos[j], proc, 0, b8p, 0, sc)
 
     # Build pruning info for next threshold
     # Phase 2 fine combos also contribute to feasibility (update from candidates)
@@ -912,7 +1062,8 @@ def extract_pareto(candidates, target):
     unique = []
     for c in candidates:
         m = tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES)
-        key = (m, c['procurement_pct'], c['battery_dispatch_pct'], c['ldes_dispatch_pct'])
+        key = (m, c['procurement_pct'], c['battery_dispatch_pct'],
+               c.get('battery8_dispatch_pct', 0), c['ldes_dispatch_pct'])
         if key not in seen:
             seen.add(key)
             unique.append(c)
@@ -922,7 +1073,9 @@ def extract_pareto(candidates, target):
 
     # Metrics for Pareto
     for c in unique:
-        c['total_storage'] = c['battery_dispatch_pct'] + c['ldes_dispatch_pct']
+        c['total_storage'] = (c['battery_dispatch_pct'] +
+                              c.get('battery8_dispatch_pct', 0) +
+                              c['ldes_dispatch_pct'])
         c['total_resource'] = c['procurement_pct'] + c['total_storage']
 
     # Sort by different criteria
@@ -936,7 +1089,7 @@ def extract_pareto(candidates, target):
     def add_if_new(candidate, ptype):
         m = tuple(candidate['resource_mix'][rt] for rt in RESOURCE_TYPES)
         key = (m, candidate['procurement_pct'], candidate['battery_dispatch_pct'],
-               candidate['ldes_dispatch_pct'])
+               candidate.get('battery8_dispatch_pct', 0), candidate['ldes_dispatch_pct'])
         if key not in pareto_keys:
             pareto_keys.add(key)
             c = dict(candidate)
@@ -1089,6 +1242,7 @@ def append_threshold_to_cache(iso, threshold, candidates):
             'hydro': c['resource_mix']['hydro'],
             'procurement_pct': c['procurement_pct'],
             'battery_dispatch_pct': c['battery_dispatch_pct'],
+            'battery8_dispatch_pct': c.get('battery8_dispatch_pct', 0),
             'ldes_dispatch_pct': c['ldes_dispatch_pct'],
             'hourly_match_score': c['hourly_match_score'],
             'pareto_type': c.get('pareto_type', ''),
@@ -1140,6 +1294,7 @@ def _results_to_rows(all_results):
                     'hydro': candidate['resource_mix']['hydro'],
                     'procurement_pct': candidate['procurement_pct'],
                     'battery_dispatch_pct': candidate['battery_dispatch_pct'],
+                    'battery8_dispatch_pct': candidate.get('battery8_dispatch_pct', 0),
                     'ldes_dispatch_pct': candidate['ldes_dispatch_pct'],
                     'hourly_match_score': candidate['hourly_match_score'],
                     'pareto_type': candidate.get('pareto_type', ''),
@@ -1209,8 +1364,15 @@ def merge_with_persistent_cache(new_results, cache_path):
     existing_count = existing_table.num_rows
     cols = existing_table.column_names
 
+    # Backfill battery8_dispatch_pct if missing from old cache
+    if 'battery8_dispatch_pct' not in existing_table.column_names:
+        zeros = [0] * existing_count
+        existing_table = existing_table.append_column('battery8_dispatch_pct',
+                                                       pa.array(zeros, type=pa.int64()))
+        print("  Backfilled battery8_dispatch_pct=0 for old cache entries")
+
     # Build set of existing keys for dedup
-    # Key = (iso, threshold, clean_firm, solar, wind, hydro, procurement_pct, battery_dispatch_pct, ldes_dispatch_pct)
+    # Key = (iso, threshold, clean_firm, solar, wind, hydro, procurement_pct, battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct)
     existing_iso = existing_table.column('iso').to_pylist()
     existing_threshold = existing_table.column('threshold').to_pylist()
     existing_cf = existing_table.column('clean_firm').to_pylist()
@@ -1219,6 +1381,7 @@ def merge_with_persistent_cache(new_results, cache_path):
     existing_hyd = existing_table.column('hydro').to_pylist()
     existing_proc = existing_table.column('procurement_pct').to_pylist()
     existing_bat = existing_table.column('battery_dispatch_pct').to_pylist()
+    existing_bat8 = existing_table.column('battery8_dispatch_pct').to_pylist()
     existing_ldes = existing_table.column('ldes_dispatch_pct').to_pylist()
 
     existing_keys = set()
@@ -1226,7 +1389,7 @@ def merge_with_persistent_cache(new_results, cache_path):
         existing_keys.add((
             existing_iso[i], existing_threshold[i],
             existing_cf[i], existing_sol[i], existing_wnd[i], existing_hyd[i],
-            existing_proc[i], existing_bat[i], existing_ldes[i]
+            existing_proc[i], existing_bat[i], existing_bat8[i], existing_ldes[i]
         ))
 
     # Filter new rows to only those not already in cache
@@ -1234,7 +1397,8 @@ def merge_with_persistent_cache(new_results, cache_path):
     for r in new_rows:
         key = (r['iso'], r['threshold'],
                r['clean_firm'], r['solar'], r['wind'], r['hydro'],
-               r['procurement_pct'], r['battery_dispatch_pct'], r['ldes_dispatch_pct'])
+               r['procurement_pct'], r['battery_dispatch_pct'],
+               r.get('battery8_dispatch_pct', 0), r['ldes_dispatch_pct'])
         if key not in existing_keys:
             truly_new.append(r)
 
@@ -1286,6 +1450,9 @@ def _table_to_results(table):
             hyd = t_table.column('hydro').to_pylist()
             proc = t_table.column('procurement_pct').to_pylist()
             bat = t_table.column('battery_dispatch_pct').to_pylist()
+            bat8 = (t_table.column('battery8_dispatch_pct').to_pylist()
+                    if 'battery8_dispatch_pct' in t_table.column_names
+                    else [0] * n)
             ldes = t_table.column('ldes_dispatch_pct').to_pylist()
             score = t_table.column('hourly_match_score').to_pylist()
             pareto = t_table.column('pareto_type').to_pylist()
@@ -1299,6 +1466,7 @@ def _table_to_results(table):
                     },
                     'procurement_pct': proc[i],
                     'battery_dispatch_pct': bat[i],
+                    'battery8_dispatch_pct': bat8[i],
                     'ldes_dispatch_pct': ldes[i],
                     'hourly_match_score': score[i],
                     'pareto_type': pareto[i],
@@ -1323,7 +1491,8 @@ def _dedup_parquet_table(table):
 
     # Build composite key for dedup
     key_cols = ['iso', 'threshold', 'clean_firm', 'solar', 'wind', 'hydro',
-                'procurement_pct', 'battery_dispatch_pct', 'ldes_dispatch_pct']
+                'procurement_pct', 'battery_dispatch_pct', 'battery8_dispatch_pct',
+                'ldes_dispatch_pct']
 
     n = table.num_rows
     cols = {col: table.column(col).to_pylist() for col in key_cols}
@@ -1382,6 +1551,10 @@ def main():
         _score_with_battery(dummy_demand, dummy_supply, 1.0, 0.01, 0.0025, 0.85)
         _score_with_both_storage(dummy_demand, dummy_supply, 1.0,
                                  0.01, 0.0025, 0.85, 0.01, 0.0001, 0.50, 168)
+        _score_with_all_storage(dummy_demand, dummy_supply, 1.0,
+                                0.01, 0.0025, 0.85,
+                                0.01, 0.00125, 0.85,
+                                0.01, 0.0001, 0.50, 168)
         print("  JIT compilation complete")
 
     # Parse CLI args for target ISOs
@@ -1429,10 +1602,22 @@ def main():
         run_table = pa.concat_tables(interim_tables)
         print(f"\n  Interim cache: {run_table.num_rows:,} solutions from {len(interim_tables)} ISOs")
 
+        # Backfill battery8 in interim tables if needed
+        if 'battery8_dispatch_pct' not in run_table.column_names:
+            zeros = [0] * run_table.num_rows
+            run_table = run_table.append_column('battery8_dispatch_pct',
+                                                 pa.array(zeros, type=pa.int64()))
+
         # Merge with persistent cache
         if os.path.exists(cache_path):
             try:
                 existing = pq.read_table(cache_path)
+                # Backfill battery8 in old cache if missing
+                if 'battery8_dispatch_pct' not in existing.column_names:
+                    zeros = [0] * existing.num_rows
+                    existing = existing.append_column('battery8_dispatch_pct',
+                                                       pa.array(zeros, type=pa.int64()))
+                    print("  Backfilled battery8_dispatch_pct=0 for old cache entries")
                 print(f"  Persistent cache: {existing.num_rows:,} existing solutions")
                 merged = pa.concat_tables([existing, run_table])
             except Exception:

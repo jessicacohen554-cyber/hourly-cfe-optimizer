@@ -46,15 +46,16 @@ const REGION_COLORS = {
 };
 
 // --- Resource Colors & Labels (used by dashboard, index, region_deepdive) ---
-const MIX_RESOURCES = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+const MIX_RESOURCES = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes'];
 
 const MIX_LABELS_MAP = {
-    clean_firm: 'Clean Firm',
+    clean_firm: 'New Nuclear',
     ccs_ccgt:   'CCS-CCGT',
     solar:      'Solar',
     wind:       'Wind',
     hydro:      'Hydro',
     battery:    'Battery (4hr)',
+    battery8:   'Battery (8hr)',
     ldes:       'LDES (100hr)'
 };
 
@@ -65,6 +66,7 @@ const MIX_COLORS = {
     wind:       { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },
     hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
     battery:    { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' },
+    battery8:   { fill: 'rgba(167,139,250,0.55)', border: '#A78BFA' },
     ldes:       { fill: 'rgba(236,72,153,0.50)',  border: '#EC4899' }
 };
 
@@ -314,6 +316,7 @@ const RESOURCE_MIX_DATA = {
         ccs_ccgt:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         hydro:       [0, 8, 8, 8, 8, 8, 8, 8, 5, 5, 5, 8, 8],
         battery:     [0, 0, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 0],
+        battery8:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ldes:        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         procurement: [100, 66, 75, 85, 85, 105, 97, 100, 112, 115, 120, 120, 170]
     },
@@ -324,6 +327,7 @@ const RESOURCE_MIX_DATA = {
         ccs_ccgt:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         hydro:       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         battery:     [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0],
+        battery8:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ldes:        [0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 2, 8, 0],
         procurement: [52, 60, 70, 75, 85, 90, 92, 100, 102, 105, 115, 110, 170]
     },
@@ -334,6 +338,7 @@ const RESOURCE_MIX_DATA = {
         ccs_ccgt:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         hydro:       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         battery:     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
+        battery8:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ldes:        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         procurement: [52, 62, 75, 80, 85, 90, 92, 95, 102, 105, 110, 115, 160]
     },
@@ -344,6 +349,7 @@ const RESOURCE_MIX_DATA = {
         ccs_ccgt:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         hydro:       [15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15],
         battery:     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        battery8:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ldes:        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
         procurement: [52, 62, 75, 80, 85, 95, 97, 100, 102, 110, 115, 115, 160]
     },
@@ -354,6 +360,7 @@ const RESOURCE_MIX_DATA = {
         ccs_ccgt:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         hydro:       [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
         battery:     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
+        battery8:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ldes:        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         procurement: [72, 72, 75, 80, 85, 90, 97, 100, 102, 110, 115, 120, 170]
     }
@@ -1661,79 +1668,79 @@ const CF_TRANCHE_DATA = {
 // Array of 13 objects per ISO (one per threshold in THRESHOLDS order)
 const WYN_RESOURCE_COSTS = {
     CAISO: [
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}}
     ],
     ERCOT: [
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}}
     ],
     PJM: [
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}}
     ],
     NYISO: [
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}}
     ],
     NEISO: [
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}},
-        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, ldes:{d:0,c:0}}
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}},
+        {clean_firm:{e:0,n:0,c:0}, solar:{e:0,n:0,c:0}, wind:{e:0,n:0,c:0}, ccs_ccgt:{e:0,n:0,c:0}, hydro:{e:0,n:0,c:0}, battery:{d:0,c:0}, battery8:{d:0,c:0}, ldes:{d:0,c:0}}
     ]
 };
 
