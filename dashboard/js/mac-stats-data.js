@@ -1049,35 +1049,35 @@ const MAC_PATH_CONSTRAINED = {
 const MAC_ANOVA = {
     "CAISO": {
         "Renewable Gen": 0.196,
-        "Firm Gen": 0.478,
+        "Nuclear": 0.478,
         "Storage": 0.003,
         "Fossil Fuel": 0.152,
         "Transmission": 0.033
     },
     "ERCOT": {
         "Renewable Gen": 0.271,
-        "Firm Gen": 0.186,
+        "Nuclear": 0.186,
         "Storage": 0.007,
         "Fossil Fuel": 0.432,
         "Transmission": 0.041
     },
     "PJM": {
         "Renewable Gen": 0.099,
-        "Firm Gen": 0.391,
+        "Nuclear": 0.391,
         "Storage": 0.0,
         "Fossil Fuel": 0.427,
         "Transmission": 0.035
     },
     "NYISO": {
         "Renewable Gen": 0.181,
-        "Firm Gen": 0.575,
+        "Nuclear": 0.575,
         "Storage": 0.0,
         "Fossil Fuel": 0.039,
         "Transmission": 0.065
     },
     "NEISO": {
         "Renewable Gen": 0.263,
-        "Firm Gen": 0.549,
+        "Nuclear": 0.549,
         "Storage": 0.0,
         "Fossil Fuel": 0.056,
         "Transmission": 0.045

@@ -32,7 +32,7 @@ THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 THRESHOLD_STRS = [str(t) for t in THRESHOLDS]
 
 # Toggle factor names for ANOVA (6 paired dimensions — Battery/LDES split from Storage)
-TOGGLE_NAMES = ['Renewable Gen', 'Firm Gen', 'Battery Cost', 'LDES Cost', 'Fossil Fuel', 'Transmission']
+TOGGLE_NAMES = ['Renewable Gen', 'Nuclear', 'Battery Cost', 'LDES Cost', 'Fossil Fuel', 'Transmission']
 
 # Wholesale prices (duplicated from optimizer for standalone use)
 WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41}
