@@ -194,6 +194,18 @@ PEAK_CAPACITY_CREDITS = {
     'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
 }
 
+# Gas Availability Factor (GAF) — accounts for forced outages + correlated weather risk
+# gas_needed_mw is divided by GAF to reflect that not all gas capacity is available at peak.
+# Sources: PJM ELCC Class Ratings (2024/25), NERC GADS EFORd, FERC Winter Storm reports.
+# NEISO uses mechanical+weather only (pipeline constraint handled separately downstream).
+GAS_AVAILABILITY_FACTOR = {
+    'CAISO': 0.88,  # 12% deration — summer ambient derate + mechanical outages
+    'ERCOT': 0.83,  # 17% deration — extreme weather both seasons, gas supply correlation
+    'PJM':   0.82,  # 18% deration — PJM ELCC data, Winter Storm Elliott evidence
+    'NYISO': 0.82,  # 18% deration — pipeline constraints, winter gas competition
+    'NEISO': 0.85,  # 15% deration — mechanical + weather only (pipeline separate)
+}
+
 
 def get_tx(rtype, tx_name, iso):
     """Lookup transmission adder for a resource type."""
@@ -369,7 +381,10 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
     )
 
-    gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw)
+    # Gas backup needed, derated by Gas Availability Factor (GAF)
+    # GAF accounts for forced outages + correlated weather performance
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw) / gaf
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
     new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
@@ -394,7 +409,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         'nuclear_newbuild_twh': nuclear_newbuild_twh,
         'ccs_tranche_twh': ccs_tranche_twh,
         'new_cf_twh': new_cf_twh,
-        # Gas backup fields
+        # Gas backup fields (post-GAF deration)
         'gas_backup_mw': gas_needed_mw,
         'existing_gas_used_mw': existing_gas_used_mw,
         'new_gas_build_mw': new_gas_mw,
@@ -504,7 +519,9 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh):
         ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
     )
 
-    gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw)
+    # Gas backup derated by Gas Availability Factor (GAF)
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw) / gaf
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
     new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
