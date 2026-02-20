@@ -1190,6 +1190,95 @@ def main():
         json.dump(cf_split_table, f, indent=2)
 
     # ================================================================
+    # SAVE PARQUET OUTPUTS (compact, git-friendly)
+    # ================================================================
+    print("\n--- Saving parquet outputs ---")
+    import pandas as pd
+
+    # 1. Scenarios parquet: flatten ISO × threshold × scenario → rows
+    sc_rows = []
+    for iso, iso_data in output['results'].items():
+        annual = iso_data.get('annual_demand_mwh', 0)
+        for t_str, thr_data in iso_data.get('thresholds', {}).items():
+            for sc_key, sc in thr_data.get('scenarios', {}).items():
+                row = {'iso': iso, 'threshold': float(t_str),
+                       'scenario': sc_key, 'annual_demand_mwh': annual}
+                for k, v in sc.get('resource_mix', {}).items():
+                    row[f'mix_{k}'] = v
+                row['procurement_pct'] = sc.get('procurement_pct')
+                row['hourly_match_score'] = sc.get('hourly_match_score')
+                row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct')
+                row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct')
+                row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct')
+                for k, v in sc.get('costs', {}).items():
+                    row[f'cost_{k}'] = v
+                for k, v in sc.get('tranche_costs', {}).items():
+                    row[f'tranche_{k}'] = v
+                for k, v in sc.get('gas_backup', {}).items():
+                    row[f'gas_{k}'] = v
+                sc_rows.append(row)
+    df_sc = pd.DataFrame(sc_rows)
+    df_sc.to_parquet('dashboard/overprocure_scenarios.parquet',
+                     index=False, compression='zstd')
+    print(f"  overprocure_scenarios.parquet: {len(df_sc)} rows, "
+          f"{os.path.getsize('dashboard/overprocure_scenarios.parquet') / 1e6:.1f} MB")
+
+    # 2. Feasible mixes parquet
+    mix_rows = []
+    for iso, iso_data in output['results'].items():
+        for t_str, thr_data in iso_data.get('thresholds', {}).items():
+            fm = thr_data.get('feasible_mixes', {})
+            if not fm:
+                continue
+            n = len(list(fm.values())[0])
+            for i in range(n):
+                row = {'iso': iso, 'threshold': float(t_str)}
+                for k, vals in fm.items():
+                    row[k] = vals[i]
+                mix_rows.append(row)
+    df_mix = pd.DataFrame(mix_rows)
+    df_mix.to_parquet('dashboard/overprocure_feasible_mixes.parquet',
+                      index=False, compression='zstd')
+    print(f"  overprocure_feasible_mixes.parquet: {len(df_mix)} rows, "
+          f"{os.path.getsize('dashboard/overprocure_feasible_mixes.parquet') / 1e6:.1f} MB")
+
+    # 3. Overprocure meta (config + postprocessing, small JSON)
+    meta = {k: output[k] for k in output if k != 'results'}
+    with open('dashboard/overprocure_meta.json', 'w') as f:
+        json.dump(meta, f, indent=2)
+    print(f"  overprocure_meta.json: "
+          f"{os.path.getsize('dashboard/overprocure_meta.json') / 1e3:.1f} KB")
+
+    # 4. Demand growth parquet
+    dg_rows = []
+    for iso, iso_thrs in dg_output.get('results', {}).items():
+        for t_str, thr_scenarios in iso_thrs.items():
+            for sc_key, year_data in thr_scenarios.items():
+                for year_str, growth_data in year_data.items():
+                    for g_level, vals in growth_data.items():
+                        dg_rows.append({
+                            'iso': iso,
+                            'threshold': float(t_str),
+                            'scenario': sc_key,
+                            'year': int(year_str),
+                            'growth_level': g_level,
+                            'mix_idx': vals[0],
+                            'total_cost': vals[1],
+                            'effective_cost': vals[2],
+                            'incremental': vals[3],
+                        })
+    df_dg = pd.DataFrame(dg_rows)
+    df_dg.to_parquet('dashboard/demand_growth_results.parquet',
+                     index=False, compression='zstd')
+    print(f"  demand_growth_results.parquet: {len(df_dg)} rows, "
+          f"{os.path.getsize('dashboard/demand_growth_results.parquet') / 1e6:.1f} MB")
+
+    # 5. Demand growth meta
+    dg_meta = dg_output.get('meta', {})
+    with open('dashboard/demand_growth_meta.json', 'w') as f:
+        json.dump(dg_meta, f, indent=2)
+
+    # ================================================================
     # SUMMARY
     # ================================================================
     total_elapsed = time.time() - total_start
