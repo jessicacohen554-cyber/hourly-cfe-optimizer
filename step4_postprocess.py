@@ -165,26 +165,37 @@ def load_results():
 
 
 def medium_key(iso):
-    """Return the all-Medium scenario key for an ISO."""
+    """Return the all-Medium scenario key for an ISO.
+    9-dim format: RFBL_FF_TX_CCSq45_GEO (R=ren, F=firm, B=batt, L=ldes)
+    """
     geo = 'M' if iso == 'CAISO' else 'X'
-    return f'MMM_M_M_M1_{geo}'
+    return f'MMMM_M_M_M1_{geo}'
 
 
 def decode_scenario_key(key):
     """Decode scenario key into toggle levels.
-    Handles both old 5-dim (MMM_M_M) and new 8-dim (MMM_M_M_M1_M) formats.
-    Returns: (renewable, firm, storage, fuel, tx, ccs, q45, geo)
+    Handles 9-dim (RFBL_FF_TX_CCSq45_GEO), 8-dim (RFS_FF_TX_CCSq45_GEO),
+    and old 5-dim (RFS_FF_TX) formats.
+    Returns: (renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo)
     """
     level_map = {'L': 'Low', 'M': 'Medium', 'H': 'High', 'N': 'None', 'X': None}
     parts = key.split('_')
-    gen_part = parts[0]  # 3 chars: renewable, firm, storage
+    gen_part = parts[0]  # 4 chars (9-dim) or 3 chars (8-dim/5-dim)
     renewable = level_map.get(gen_part[0], 'Medium')
     firm = level_map.get(gen_part[1], 'Medium')
-    storage = level_map.get(gen_part[2], 'Medium')
+
+    if len(gen_part) >= 4:
+        # 9-dim format: RFBL (ren, firm, battery, ldes)
+        battery = level_map.get(gen_part[2], 'Medium')
+        ldes = level_map.get(gen_part[3], 'Medium')
+    else:
+        # 8-dim or 5-dim: RFS (ren, firm, storage) — storage controls both battery+ldes
+        battery = level_map.get(gen_part[2], 'Medium')
+        ldes = battery  # Same toggle controlled both
+
     fuel = level_map.get(parts[1], 'Medium')
     tx = level_map.get(parts[2], 'Medium')
 
-    # New 8-dim format: RFS_FF_TX_CCSq45_GEO
     if len(parts) >= 5:
         ccs_q45 = parts[3]  # e.g., 'M1' or 'H0'
         ccs = level_map.get(ccs_q45[0], 'Medium')
@@ -197,7 +208,7 @@ def decode_scenario_key(key):
         q45 = '1'
         geo = None
 
-    return renewable, firm, storage, fuel, tx, ccs, q45, geo
+    return renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo
 
 
 def ccs_lcoe_corrected_45q(iso, firm_level):
@@ -248,15 +259,15 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
         tranche_cf_lcoe: If provided, use this LCOE for clean_firm instead of
                          blended table lookup (from Step 2 tranche repricing)
     """
-    renewable, firm, storage, fuel, tx, ccs, q45, geo = decode_scenario_key(scenario_key)
+    renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo = decode_scenario_key(scenario_key)
 
     # Build LCOE map
     lcoe_map = {
         'solar': FULL_LCOE_TABLES['solar'][renewable][iso],
         'wind': FULL_LCOE_TABLES['wind'][renewable][iso],
         'clean_firm': tranche_cf_lcoe if tranche_cf_lcoe is not None else FULL_LCOE_TABLES['clean_firm'][firm][iso],
-        'battery': FULL_LCOE_TABLES['battery'][storage][iso],
-        'ldes': FULL_LCOE_TABLES['ldes'][storage][iso],
+        'battery': FULL_LCOE_TABLES['battery'][battery][iso],
+        'ldes': FULL_LCOE_TABLES['ldes'][ldes][iso],
         'hydro': 0,
     }
 
@@ -495,8 +506,8 @@ def add_no45q_overlay(data):
 
                 if ccs_pct > 0:
                     # Also compute the CCS vs LDES crossover info
-                    renewable, firm, storage, fuel, tx, ccs, q45, geo = decode_scenario_key(effective_key)
-                    ldes_cost = FULL_LCOE_TABLES['ldes'][storage][iso] + \
+                    renewable, firm, battery_lvl, ldes_lvl, fuel, tx, ccs, q45, geo = decode_scenario_key(effective_key)
+                    ldes_cost = FULL_LCOE_TABLES['ldes'][ldes_lvl][iso] + \
                                 FULL_TRANSMISSION_TABLES['ldes'][tx][iso]
                     ccs_no45q_base = ccs_lcoe_no45q(iso, firm)
                     ccs_tx = FULL_TRANSMISSION_TABLES['ccs_ccgt'][tx][iso]
@@ -613,10 +624,10 @@ def analyze_crossover(data):
             t_str = str(threshold)
             if t_str not in thresholds_data:
                 continue
-            scenario = thresholds_data[t_str].get('scenarios', {}).get(med_key)
-            # Backward compat: try old 5-dim key if new key not found
-            if not scenario:
-                scenario = thresholds_data[t_str].get('scenarios', {}).get('MMM_M_M')
+            scenarios = thresholds_data[t_str].get('scenarios', {})
+            scenario = (scenarios.get(med_key) or
+                        scenarios.get('MMM_M_M_M1_M') or scenarios.get('MMM_M_M_M1_X') or  # 8-dim legacy
+                        scenarios.get('MMM_M_M'))  # 5-dim legacy
             if not scenario:
                 continue
 
@@ -686,9 +697,9 @@ def analyze_crossover(data):
         for threshold in THRESHOLDS:
             t_str = str(threshold)
             neiso_mk = medium_key('NEISO')
-            scenario = thresholds_data.get(t_str, {}).get('scenarios', {}).get(neiso_mk)
-            if not scenario:
-                scenario = thresholds_data.get(t_str, {}).get('scenarios', {}).get('MMM_M_M')
+            scenarios = thresholds_data.get(t_str, {}).get('scenarios', {})
+            scenario = (scenarios.get(neiso_mk) or
+                        scenarios.get('MMM_M_M_M1_X') or scenarios.get('MMM_M_M'))
             if not scenario:
                 continue
             base = scenario.get('costs', {}).get('effective_cost', 0)
@@ -874,9 +885,10 @@ def compute_gas_capacity_and_ra(data):
         # Log summary for Medium scenario at key thresholds
         mk = medium_key(iso)
         for t in ['75', '90', '95', '99']:
-            sc = thresholds_data.get(t, {}).get('scenarios', {}).get(mk)
-            if not sc:
-                sc = thresholds_data.get(t, {}).get('scenarios', {}).get('MMM_M_M')
+            scenarios_t = thresholds_data.get(t, {}).get('scenarios', {})
+            sc = (scenarios_t.get(mk) or
+                  scenarios_t.get('MMM_M_M_M1_M') or scenarios_t.get('MMM_M_M_M1_X') or
+                  scenarios_t.get('MMM_M_M'))
             if sc and 'gas_backup' in sc:
                 gb = sc['gas_backup']
                 print(f"      {iso} {t:>3}%: peak={gb['ra_peak_mw']:,} MW(+RA), "
