@@ -598,11 +598,11 @@ body {
     <div class="story-content">
         <span class="story-badge">The Paradox</span>
         <h2>Cheap Renewables Aren't Enough</h2>
-        <p class="story-lead">Solar and wind are the cheapest sources of electricity ever built. Their costs have plummeted over 90% in a decade. So why can't we just build more of them and call it done?</p>
-        <p>Because electricity isn't a commodity you can stockpile. The grid needs reliable power every hour of every day &mdash; all 8,760 hours per year. Weather-dependent sources produce power when conditions allow, not necessarily when demand requires it. The mismatch between supply shape and demand shape is the fundamental constraint of grid decarbonization.</p>
-        <p>Without something to fill the gap, that "something" defaults to natural gas. And that gas backup isn't free &mdash; it's a hidden tax on every megawatt-hour of clean energy you deploy.</p>
+        <p class="story-lead">Solar and wind are the cheapest sources of electricity ever built. Their costs have plummeted over 90% in a decade. Getting to 80% clean energy is achievable at roughly today's grid costs. So why can't we just build more and call it done?</p>
+        <p>Because the last 20% is a fundamentally different problem. NREL research shows the cost curve bends sharply nonlinear beyond 80% &mdash; a ~29% cost spike to reach 100% renewables-only, driven by seasonal mismatches, multi-day weather events, and the massive idle capacity needed to cover the worst hours. The grid needs reliable power all 8,760 hours per year. Weather-dependent sources can't guarantee that.</p>
+        <p>Without something to fill the shape gap, natural gas fills it by default. And that gas backup isn't free &mdash; it's a hidden tax on every megawatt-hour of clean energy you deploy.</p>
         <div class="energy-spectrum-bar"></div>
-        <p class="muted">This analysis uses hourly generation and demand data across 5 major U.S. ISOs to quantify the true cost of not investing in clean firm power.</p>
+        <p class="cite">NREL (2021): "Getting to 100% renewables is really challenging in terms of costs, but because the challenge is nonlinear, getting close to 100% is much easier." &bull; <a href="https://www.sciencedirect.com/science/article/pii/S2542435118303866">Sepulveda & Jenkins (2018)</a>: Firm resources reduce storage requirements 3&ndash;10x.</p>
     </div>
 </div>
 
@@ -679,18 +679,19 @@ body {
                 <p>First-of-a-kind costs are uncertain &mdash; but the range itself tells the story. Even at the high end, the FOAK premium is bounded and temporary. The gas backup cost it displaces is permanent.</p>
                 <div class="foak-compare">
                     <div class="foak-card">
-                        <h4>FOAK Range</h4>
-                        <div class="foak-price high">$90&ndash;170</div>
-                        <div class="foak-unit">$/MWh (P10&ndash;P90)</div>
+                        <h4>FOAK Nuclear</h4>
+                        <div class="foak-price high">~$6,200</div>
+                        <div class="foak-unit">$/kW overnight capital</div>
                     </div>
                     <div class="foak-arrow">&rarr;</div>
                     <div class="foak-card">
                         <h4>NOAK Target</h4>
-                        <div class="foak-price low">$68&ndash;75</div>
-                        <div class="foak-unit">$/MWh (learning curve)</div>
+                        <div class="foak-price low">~$3,600</div>
+                        <div class="foak-unit">$/kW (~40% reduction)</div>
                     </div>
                 </div>
-                <p>The catalytic premium shrinks with deployment. At P50 assumptions, it's ~$25/MWh. At P90 (worst case), it's ~$95/MWh. But even the P90 premium is bounded and declining &mdash; unlike the gas backup cost it displaces.</p>
+                <p>The DOE Liftoff report projects ~40% cost reduction after 10&ndash;20 deployments. Geothermal is moving even faster: Fervo Energy cut drilling costs 50% and drilling time 77% in just 3 years, with a 35% learning rate across their first 8 wells. The pattern is clear &mdash; every deployment accelerates the next.</p>
+                <p class="cite">DOE Pathways to Commercial Liftoff: Advanced Nuclear (2024) &bull; Fervo Energy 2024 Year in Review</p>
             </div>
         </div>
 
@@ -802,12 +803,18 @@ body {
         <p class="story-lead">Renewables are necessary but insufficient. Storage helps but doesn't create energy. Only dispatchable clean firm generation closes the shape gap between what the weather provides and what the grid demands.</p>
         <p>The choice isn't between renewables and clean firm &mdash; it's between a diversified clean portfolio that works, and a renewables-plus-gas system that locks in fossil dependence for decades.</p>
         <div class="energy-spectrum-bar"></div>
-        <p style="font-size:0.85rem;color:#6B7280;margin-top:24px;"><strong>Sources:</strong>
+        <p style="font-size:0.82rem;color:#6B7280;margin-top:24px;line-height:1.6;"><strong>Sources:</strong>
             Sepulveda, Jenkins et al. (2018), "The Role of Firm Low-Carbon Electricity Resources," <em>Joule</em> &bull;
             CATF (2025), "Clean Firm Electricity Technologies: What, Why, How" &bull;
             CATF (2026), "What is Clean Firm Electricity?" &bull;
             CATF (2025), "Beyond LCOE" &bull;
-            Hourly CFE Optimizer results (2025 snapshot, 5 ISOs, 13 thresholds)
+            CATF (2021), "SB100 California Clean Firm Power Report" &bull;
+            DOE (2024), "Pathways to Commercial Liftoff: Advanced Nuclear" &bull;
+            DOE (2024), "Next-Generation Geothermal Power" &bull;
+            NREL (2021), "The Challenge of the Last Few Percent" &bull;
+            IEA (2025), "World Energy Outlook" &bull;
+            Princeton Net-Zero America Project (2021) &bull;
+            Hourly CFE Optimizer results (2025 snapshot, 5 ISOs, 13 thresholds, 324 sensitivity scenarios)
         </p>
     </div>
 </div>
