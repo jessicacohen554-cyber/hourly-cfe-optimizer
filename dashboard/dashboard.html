@@ -3842,21 +3842,41 @@ function findOptimalMix(iso, thresholdKey, targetYear, growthRate) {
 }
 
 // ---- Scenario Resolver ----
-// Maps the 5 core sensitivity toggle states to a scenario key like "MMM_M_M"
-// (used for pre-computed lookup fallback)
+// Maps all 8 sensitivity toggle states to an 8-dim scenario key like "MMM_M_M_M1_M"
+// Format: RFS_FF_TX_CCSq45_GEO
 function buildScenarioKey() {
     const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
-    const r = levelMap[sensitivityState.renewable_gen] || 'M';
-    const f = levelMap[sensitivityState.firm_gen] || 'M';
-    const b = levelMap[sensitivityState.battery_cost] || 'M';
-    const d = levelMap[sensitivityState.ldes_cost] || 'M';
+    const rg = levelMap[sensitivityState.renewable_gen] || 'M';
+    const fg = levelMap[sensitivityState.firm_gen] || 'M';
+    const st = levelMap[sensitivityState.storage] || 'M';
     const ff = levelMap[sensitivityState.fossil_fuel] || 'M';
+    const tx = levelMap[sensitivityState.transmission] || 'M';
+    const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
+    const q45 = sensitivityState.q45 === 'Off' ? '0' : '1';
+    const iso = document.getElementById('regionSelect')?.value || 'CAISO';
+    const geo = iso === 'CAISO' ? (levelMap[sensitivityState.geothermal_cost] || 'M') : 'X';
+    return `${rg}${fg}${st}_${ff}_${tx}_${ccs}${q45}_${geo}`;
+}
+
+// Build old 5-dim key for backward-compat fallback
+function buildOldScenarioKey() {
+    const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
+    const rg = levelMap[sensitivityState.renewable_gen] || 'M';
+    const fg = levelMap[sensitivityState.firm_gen] || 'M';
+    const st = levelMap[sensitivityState.storage] || 'M';
     const tx = levelMap[sensitivityState.transmission] || 'M';
     const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
     const q45 = show45Q ? '1' : '0';
     const iso = document.getElementById('regionSelect')?.value || '';
     const geo = iso === 'CAISO' ? (levelMap[sensitivityState.geothermal_cost] || 'M') : 'X';
     return `${r}${f}${b}_${d}_${ff}_${tx}_${ccs}${q45}_${geo}`;
+}
+
+// ISO-aware medium key
+function getMediumKey(iso) {
+    iso = iso || document.getElementById('regionSelect')?.value || 'CAISO';
+    const geo = iso === 'CAISO' ? 'M' : 'X';
+    return `MMM_M_M_M1_${geo}`;
 }
 
 // Get the current target year and demand growth rate from dashboard controls
@@ -3913,9 +3933,10 @@ function resolveEntry(region, thresholdKey) {
                 entry.gas_backup = optimal.gas_backup;
             }
 
-            // Carry over CO2 data from the pre-computed MMM_M_M scenario if available
+            // Carry over CO2 data from the pre-computed medium scenario if available
             if (thresholdData.scenarios) {
-                const refScenario = thresholdData.scenarios['MMM_M_M'] || thresholdData.scenarios[Object.keys(thresholdData.scenarios)[0]];
+                const mk = getMediumKey(iso);
+                const refScenario = thresholdData.scenarios[mk] || thresholdData.scenarios['MMM_M_M'] || thresholdData.scenarios[Object.keys(thresholdData.scenarios)[0]];
                 if (refScenario?.co2_abated) {
                     entry.co2_abated = refScenario.co2_abated;
                     entry.co2_abated_tons = refScenario.co2_abated?.total_co2_abated_tons;
@@ -3929,10 +3950,12 @@ function resolveEntry(region, thresholdKey) {
         }
     }
 
-    // Fallback: pre-computed scenario lookup
+    // Fallback: pre-computed scenario lookup (8-dim key → old 5-dim → medium → first)
     if (thresholdData.scenarios) {
         const key = buildScenarioKey();
         let scenario = thresholdData.scenarios[key];
+        if (!scenario) scenario = thresholdData.scenarios[buildOldScenarioKey()];
+        if (!scenario) scenario = thresholdData.scenarios[getMediumKey(iso)];
         if (!scenario) scenario = thresholdData.scenarios['MMM_M_M'];
         if (!scenario) {
             const keys = Object.keys(thresholdData.scenarios);
@@ -6920,15 +6943,15 @@ function updateHeatmapTiles(region, entry, iso) {
     }
 }
 
-// ---- Sensitivity Toggle State (7 Graduated + 1 Binary) ----
+// ---- Sensitivity Toggle State (8 Dimensions) ----
 const sensitivityState = {
     renewable_gen: 'Medium',   // Solar + Wind LCOE
     firm_gen: 'Medium',        // Nuclear uprate + new-build LCOE
-    battery_cost: 'Medium',    // Battery (4hr + 8hr paired) LCOS
-    ldes_cost: 'Medium',       // LDES (100hr) LCOS — independent
-    fossil_fuel: 'Medium',     // Fossil fuel price adjustments
+    storage: 'Medium',         // Battery (4hr) + LDES (100hr) LCOS
+    fossil_fuel: 'Medium',     // Gas/coal price level
     transmission: 'Medium',    // All resource transmission adders
     ccs_cost: 'Medium',        // CCS-CCGT technology maturity
+    q45: 'On',                 // 45Q tax credit (On/Off)
     geothermal_cost: 'Medium'  // Geothermal LCOE (CAISO only)
 };
 
@@ -6936,27 +6959,41 @@ const sensitivityState = {
 let show45Q = true;  // Default: show costs WITH 45Q credit
 
 // ---- Scenario Resolver ----
-// Maps sensitivity toggle state → 9-dim scenario key
-// Format: {Ren}{Firm}{Batt}_{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+// Maps all 8 sensitivity toggle states to an 8-dim key (e.g., "MMM_M_M_M1_M")
+// Format: RFS_FF_TX_CCSq45_GEO
 function getScenarioKey() {
     const levelMap = { Low: 'L', Medium: 'M', High: 'H', None: 'N' };
     const r = levelMap[sensitivityState.renewable_gen] || 'M';
     const f = levelMap[sensitivityState.firm_gen] || 'M';
-    const b = levelMap[sensitivityState.battery_cost] || 'M';
-    const d = levelMap[sensitivityState.ldes_cost] || 'M';
+    const s = levelMap[sensitivityState.storage] || 'M';
     const ff = levelMap[sensitivityState.fossil_fuel] || 'M';
     const tx = levelMap[sensitivityState.transmission] || 'M';
     const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
-    const q45 = show45Q ? '1' : '0';
-    const iso = document.getElementById('regionSelect')?.value || '';
+    const q45 = sensitivityState.q45 === 'Off' ? '0' : '1';
+    const iso = document.getElementById('regionSelect')?.value || 'CAISO';
     const geo = iso === 'CAISO' ? (levelMap[sensitivityState.geothermal_cost] || 'M') : 'X';
-    return `${r}${f}${b}_${d}_${ff}_${tx}_${ccs}${q45}_${geo}`;
+    return `${r}${f}${s}_${ff}_${tx}_${ccs}${q45}_${geo}`;
 }
 
 function resolveScenario(thresholdData) {
     if (!thresholdData?.scenarios) return null;
     const key = getScenarioKey();
-    return thresholdData.scenarios[key] || null;
+    // Try 8-dim key, then old 5-dim fallback, then medium key
+    let sc = thresholdData.scenarios[key];
+    if (!sc) {
+        const levelMap = { Low: 'L', Medium: 'M', High: 'H', None: 'N' };
+        const r = levelMap[sensitivityState.renewable_gen] || 'M';
+        const f = levelMap[sensitivityState.firm_gen] || 'M';
+        const s = levelMap[sensitivityState.storage] || 'M';
+        const tx = levelMap[sensitivityState.transmission] || 'M';
+        sc = thresholdData.scenarios[`${r}${f}${s}_M_${tx}`];
+    }
+    if (!sc) {
+        const iso = document.getElementById('regionSelect')?.value || 'CAISO';
+        const geo = iso === 'CAISO' ? 'M' : 'X';
+        sc = thresholdData.scenarios[`MMM_M_M_M1_${geo}`] || thresholdData.scenarios['MMM_M_M'];
+    }
+    return sc || null;
 }
 
 function getScenarioCosts(scenario) {
