@@ -387,14 +387,25 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 # SENSITIVITY KEY HELPERS
 # ============================================================================
 
+def make_scenario_key(r, f, s, ff, tx, ccs, q45, geo):
+    """Build full scenario key encoding all 8 dimensions.
+    Format: RFS_FF_TX_CCSq45_GEO
+    Examples: MMM_M_M_M1_M  (CAISO, all-Medium, 45Q=ON)
+              LHM_L_N_H0_X  (non-CAISO, R=Low, F=High, S=Med, FF=Low, TX=None, CCS=High, 45Q=OFF)
+    """
+    geo_code = geo if geo else 'X'
+    return f"{r}{f}{s}_{ff}_{tx}_{ccs}{q45}_{geo_code}"
+
+
 def make_old_key(r, f, s, ff, tx):
-    """Build old-format scenario key like MMM_M_M."""
+    """Build legacy 5-toggle key like MMM_M_M (for backward compat references)."""
     return f"{r}{f}{s}_{ff}_{tx}"
 
 
 def build_sensitivity_combos(iso):
     """Build all sensitivity combos for an ISO.
-    Returns list of (old_key, sens_dict) tuples."""
+    Returns list of (scenario_key, sens_dict) tuples.
+    CAISO: 5,832 combos  |  Non-CAISO: 1,944 combos."""
     combos = []
     tx_levels = ['N', 'L', 'M', 'H']
     ccs_levels = LMH
@@ -404,16 +415,16 @@ def build_sensitivity_combos(iso):
     for r, f, s in product(LMH, LMH, LMH):
         for ff in LMH:
             for tx in tx_levels:
-                old_key = make_old_key(r, f, s, ff, tx)
                 for ccs in ccs_levels:
                     for q45 in q45_states:
                         for geo in geo_levels:
+                            key = make_scenario_key(r, f, s, ff, tx, ccs, q45, geo)
                             sens = {
                                 'ren': r, 'firm': f, 'stor': s,
                                 'ccs': ccs, 'q45': q45,
                                 'fuel': ff, 'tx': tx, 'geo': geo,
                             }
-                            combos.append((old_key, sens))
+                            combos.append((key, sens))
     return combos
 
 
@@ -541,19 +552,7 @@ def main():
 
         # Build all sensitivity combos for this ISO
         all_combos = build_sensitivity_combos(iso)
-        # Group by old_key for backward-compat output
-        old_key_combos = {}
-        for old_key, sens in all_combos:
-            if old_key not in old_key_combos:
-                old_key_combos[old_key] = []
-            old_key_combos[old_key].append(sens)
-
-        # Default sensitivity: Medium everything, 45Q=ON, CCS=M, Geo=M
-        default_sens = {
-            'ren': 'M', 'firm': 'M', 'stor': 'M', 'ccs': 'M',
-            'q45': '1', 'fuel': 'M', 'tx': 'M',
-            'geo': 'M' if iso == 'CAISO' else None,
-        }
+        n_combos = len(all_combos)
 
         for thr in OUTPUT_THRESHOLDS:
             key = (iso, thr)
@@ -566,29 +565,15 @@ def main():
             threshold_data = {'scenarios': {}, 'feasible_mixes': {}}
             arch_set = set()
 
-            # For each old-format scenario key, find the cheapest mix
-            # using the default CCS/45Q/Geo mapping (firm level = CCS level)
-            for old_key in old_key_combos:
-                parts_rfs = old_key.split('_')[0]
-                firm_lev = parts_rfs[1]  # F from RFS
-                fuel_code = old_key.split('_')[1]
-                tx_code = old_key.split('_')[2]
-
-                # Default mapping: CCS = firm level, 45Q = ON, Geo = M
-                sens = {
-                    'ren': parts_rfs[0], 'firm': firm_lev, 'stor': parts_rfs[2],
-                    'ccs': firm_lev, 'q45': '1',
-                    'fuel': fuel_code, 'tx': tx_code,
-                    'geo': 'M' if iso == 'CAISO' else None,
-                }
-
+            # Evaluate ALL sensitivity combos (5,832 CAISO / 1,944 non-CAISO)
+            for scenario_key, sens in all_combos:
                 tc, ec, tranche = price_mix_batch(iso, arrays, sens, demand_twh)
                 best_idx = int(np.argmin(tc))
                 arch_set.add(best_idx)
 
                 best_mix = arrays_to_mix_dict(arrays, best_idx)
                 wholesale = max(5, WHOLESALE_PRICES[iso] +
-                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[fuel_code]])
+                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
 
                 scenario = {
                     'resource_mix': best_mix['resource_mix'],
@@ -620,18 +605,7 @@ def main():
                     },
                 }
 
-                # Also compute no-45Q costs
-                no45q_sens = dict(sens)
-                no45q_sens['q45'] = '0'
-                tc_no45q, ec_no45q, _ = price_mix_batch(iso, arrays, no45q_sens, demand_twh)
-                scenario['no_45q_costs'] = {
-                    'total_cost': round(float(tc_no45q[best_idx]), 2),
-                    'effective_cost': round(float(ec_no45q[best_idx]), 2),
-                    'incremental': round(float(ec_no45q[best_idx]) - wholesale, 2),
-                    'wholesale': wholesale,
-                }
-
-                threshold_data['scenarios'][old_key] = scenario
+                threshold_data['scenarios'][scenario_key] = scenario
 
             # Store feasible mixes in columnar format for client-side repricing
             # Columnar: {col: [values...]} instead of [{col: val}, ...] — ~8× smaller JSON
@@ -666,7 +640,7 @@ def main():
             output['results'][iso]['thresholds'][t_str] = threshold_data
 
             print(f"  {iso:>6} {thr:>5}%: {N:>6,} mixes, "
-                  f"{len(old_key_combos)} scenarios, "
+                  f"{n_combos} scenarios, "
                   f"{len(arch_set)} archetypes")
 
     phase1_elapsed = time.time() - phase1_start
@@ -675,10 +649,7 @@ def main():
     # ================================================================
     # PHASE 2: Demand growth sweep on archetypes
     # ================================================================
-    # Sweep 324 base sensitivity keys × 25 years × 3 growth levels.
-    # CCS/45Q/Geo toggles are handled by client-side repricing.
-    # This tests whether the optimal mix changes under demand growth.
-    print("\n--- PHASE 2: Demand growth sweep (324 keys × years × growth) ---")
+    print("\n--- PHASE 2: Demand growth sweep (full factorial × years × growth) ---")
     phase2_start = time.time()
 
     dg_output = {
@@ -688,8 +659,7 @@ def main():
             'growth_rates': DEMAND_GROWTH_RATES,
             'base_year': 2025,
             'fields': ['mix_idx', 'total_cost', 'effective_cost', 'incremental'],
-            'note': 'CCS/45Q/Geo toggles use default mapping (CCS=firm, 45Q=ON, Geo=M). '
-                    'Client-side repricing handles full factorial.',
+            'key_format': 'RFS_FF_TX_CCSq45_GEO (8 dimensions)',
         },
         'results': {},
     }
@@ -698,6 +668,7 @@ def main():
         dg_output['results'][iso] = {}
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         iso_rates = DEMAND_GROWTH_RATES[iso]
+        all_combos = build_sensitivity_combos(iso)
 
         for thr in OUTPUT_THRESHOLDS:
             key = (iso, thr)
@@ -716,39 +687,29 @@ def main():
             t_str = str(thr)
             threshold_dg = {}
 
-            # 324 base sensitivity keys (CCS defaults to firm level, 45Q=ON, Geo=M)
-            for r, f, s in product(LMH, LMH, LMH):
-                for ff in LMH:
-                    for tx in ['N', 'L', 'M', 'H']:
-                        old_key = make_old_key(r, f, s, ff, tx)
-                        sens = {
-                            'ren': r, 'firm': f, 'stor': s,
-                            'ccs': f, 'q45': '1',
-                            'fuel': ff, 'tx': tx,
-                            'geo': 'M' if iso == 'CAISO' else None,
-                        }
-                        wholesale = max(5, WHOLESALE_PRICES[iso] +
-                                        FUEL_ADJUSTMENTS[iso][LEVEL_NAME[ff]])
+            for scenario_key, sens in all_combos:
+                wholesale = max(5, WHOLESALE_PRICES[iso] +
+                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
 
-                        year_results = {}
-                        for year in DEMAND_GROWTH_YEARS:
-                            growth_results = {}
-                            for g_level in DEMAND_GROWTH_LEVELS:
-                                g_rate = iso_rates[g_level]
-                                tc, ec, _ = price_mix_batch(
-                                    iso, arch_arrays, sens, demand_twh,
-                                    target_year=year, growth_rate=g_rate
-                                )
-                                best_local = int(np.argmin(tc))
-                                growth_results[g_level] = [
-                                    arch_indices[best_local],
-                                    round(float(tc[best_local]), 2),
-                                    round(float(ec[best_local]), 2),
-                                    round(float(ec[best_local]) - wholesale, 2),
-                                ]
-                            year_results[str(year)] = growth_results
+                year_results = {}
+                for year in DEMAND_GROWTH_YEARS:
+                    growth_results = {}
+                    for g_level in DEMAND_GROWTH_LEVELS:
+                        g_rate = iso_rates[g_level]
+                        tc, ec, _ = price_mix_batch(
+                            iso, arch_arrays, sens, demand_twh,
+                            target_year=year, growth_rate=g_rate
+                        )
+                        best_local = int(np.argmin(tc))
+                        growth_results[g_level] = [
+                            arch_indices[best_local],
+                            round(float(tc[best_local]), 2),
+                            round(float(ec[best_local]), 2),
+                            round(float(ec[best_local]) - wholesale, 2),
+                        ]
+                    year_results[str(year)] = growth_results
 
-                        threshold_dg[old_key] = year_results
+                threshold_dg[scenario_key] = year_results
 
             dg_output['results'][iso][t_str] = threshold_dg
             print(f"  {iso:>6} {thr:>5}%: {len(threshold_dg)} keys × "
