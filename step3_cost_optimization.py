@@ -594,7 +594,7 @@ def get_scenario_prices(iso, sens):
     return prices, wholesale, nuclear_price, ccs_price
 
 
-# Numba-accelerated cost evaluation (parallel, no temporary arrays)
+# Numba-accelerated cost evaluation
 if HAS_NUMBA:
     @njit(parallel=True, cache=True)
     def _eval_cost_numba(coeff_matrix, constant, prices):
@@ -621,12 +621,52 @@ if HAS_NUMBA:
                 best_pos = i
         return idx[best_pos], best_val
 
+    @njit(cache=True)
+    def _argmin_bucketed(tc, scores, thresholds_desc):
+        """O(N) multi-threshold argmin via bucket accumulation.
+
+        Assigns each element to its highest qualifying threshold bucket
+        (single pass), then takes cumulative min across buckets.
+        Total work: N × ~7 comparisons + N × 1 comparison = O(N).
+        vs naive 13 × argmin = O(13N).
+
+        Thresholds must be sorted descending (100, 99, 97.5, ..., 50).
+        """
+        N = len(tc)
+        n_thr = len(thresholds_desc)
+        bucket_mins = np.full(n_thr, np.inf)
+        bucket_min_idxs = np.zeros(n_thr, dtype=np.int64)
+
+        # Pass 1: assign each element to its highest qualifying bucket
+        for i in range(N):
+            s = scores[i]
+            t = tc[i]
+            for k in range(n_thr):
+                if s >= thresholds_desc[k]:
+                    if t < bucket_mins[k]:
+                        bucket_mins[k] = t
+                        bucket_min_idxs[k] = i
+                    break
+
+        # Pass 2: cumulative min from highest to lowest threshold
+        best_vals = np.full(n_thr, np.inf)
+        best_idxs = np.zeros(n_thr, dtype=np.int64)
+        running_min = np.inf
+        running_idx = np.int64(0)
+        for k in range(n_thr):
+            if bucket_mins[k] < running_min:
+                running_min = bucket_mins[k]
+                running_idx = bucket_min_idxs[k]
+            best_vals[k] = running_min
+            best_idxs[k] = running_idx
+
+        return best_idxs, best_vals
+
 
 def eval_cost_fast(coeff_matrix, constant, prices):
     """Evaluate total cost using Numba if available, else numpy."""
     if HAS_NUMBA:
         return _eval_cost_numba(coeff_matrix, constant, prices)
-    # Numpy fallback: matrix × prices + constant
     return coeff_matrix @ prices + constant
 
 
@@ -636,6 +676,24 @@ def argmin_indexed(tc, idx):
         return _argmin_indexed(tc, idx)
     local_best = int(np.argmin(tc[idx]))
     return int(idx[local_best]), float(tc[idx[local_best]])
+
+
+def eval_and_argmin_all(coeff_matrix, constant, prices, scores, thresholds_desc):
+    """Parallel cost eval + bucketed multi-threshold argmin."""
+    tc = eval_cost_fast(coeff_matrix, constant, prices)
+    if HAS_NUMBA:
+        return _argmin_bucketed(tc, scores, thresholds_desc)
+    # Numpy fallback
+    n_thr = len(thresholds_desc)
+    best_idxs = np.zeros(n_thr, dtype=np.int64)
+    best_vals = np.full(n_thr, np.inf)
+    for k in range(n_thr):
+        qualifying = np.where(scores >= thresholds_desc[k])[0]
+        if len(qualifying) > 0:
+            local_best = int(np.argmin(tc[qualifying]))
+            best_idxs[k] = qualifying[local_best]
+            best_vals[k] = tc[qualifying[local_best]]
+    return best_idxs, best_vals
 
 
 def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
@@ -887,9 +945,14 @@ def main():
 
     # Warm up Numba JIT on first call (compile cost)
     if HAS_NUMBA:
-        _dummy = _eval_cost_numba(
-            np.zeros((2, _N_COEFFS)), np.zeros(2), np.zeros(_N_COEFFS))
-        _argmin_indexed(np.array([1.0, 0.5]), np.array([0, 1]))
+        _dummy_cm = np.zeros((2, _N_COEFFS))
+        _dummy_c = np.zeros(2)
+        _dummy_p = np.zeros(_N_COEFFS)
+        _dummy_s = np.array([50.0, 100.0])
+        _dummy_t = np.array([100.0, 50.0])
+        _dummy_tc = _eval_cost_numba(_dummy_cm, _dummy_c, _dummy_p)
+        _argmin_bucketed(_dummy_tc, _dummy_s, _dummy_t)
+        print("  Numba JIT warmup complete")
 
     # Archetypes per ISO (union of winners across all thresholds) for Phase 2
     archetypes = {}
@@ -910,12 +973,18 @@ def main():
         # Pre-compute coefficient matrix + constant (one-time per ISO)
         coeff_matrix, constant, extras = precompute_base_year_coefficients(
             iso, arrays, demand_twh)
+        scores = arrays['hourly_match_score'].astype(np.float64)
 
         all_combos = build_sensitivity_combos(iso)
         n_combos = len(all_combos)
 
         active_thresholds = [thr for thr in OUTPUT_THRESHOLDS
                              if (iso, thr) in thr_indices]
+        # Sorted descending for fused eval+argmin (exploits nested structure)
+        thresholds_desc = np.array(sorted(active_thresholds, reverse=True),
+                                   dtype=np.float64)
+        # Map from position in thresholds_desc back to threshold value
+        thr_pos = {float(thresholds_desc[k]): k for k in range(len(thresholds_desc))}
 
         thr_data = {}
         thr_arch_sets = {}
@@ -926,16 +995,18 @@ def main():
         iso_arch_set = set()
         iso_start = time.time()
 
-        # Evaluate ALL combos — 10 scalar-vector multiplies per scenario
-        for scenario_key, sens in all_combos:
+        # Parallel eval (Numba prange) + bucketed argmin (O(N) single pass)
+        for combo_i, (scenario_key, sens) in enumerate(all_combos):
             prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
-            tc = eval_cost_fast(coeff_matrix, constant, prices)
+            best_idxs, best_vals = eval_and_argmin_all(
+                coeff_matrix, constant, prices, scores, thresholds_desc)
 
             for thr in active_thresholds:
-                idx = thr_indices[(iso, thr)]
-                best_idx, tc_val = argmin_indexed(tc, idx)
-                best_idx = int(best_idx)
-                tc_val = float(tc_val)
+                k = thr_pos[float(thr)]
+                if best_vals[k] == np.inf:
+                    continue
+                best_idx = int(best_idxs[k])
+                tc_val = float(best_vals[k])
 
                 thr_arch_sets[thr].add(best_idx)
                 iso_arch_set.add(best_idx)
@@ -945,6 +1016,13 @@ def main():
                     tc_val, wholesale, nuclear_price, ccs_price)
 
                 thr_data[thr]['scenarios'][scenario_key] = scenario
+
+            if (combo_i + 1) % 1000 == 0:
+                elapsed = time.time() - iso_start
+                rate = (combo_i + 1) / elapsed
+                remaining = (n_combos - combo_i - 1) / rate
+                print(f"    {iso} {combo_i+1}/{n_combos} "
+                      f"({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining)")
 
         # Store feasible mixes per threshold
         for thr in active_thresholds:
