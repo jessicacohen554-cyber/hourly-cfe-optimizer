@@ -1558,9 +1558,11 @@
 
     <h3>9.6 Storage Model Limitations</h3>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.93rem; line-height: 2;">
-        <li><strong>Two storage technologies only:</strong> Only 4h Li-ion battery and 100h iron-air LDES
-            are modeled. Other storage technologies (8h Li-ion, pumped hydro, compressed air, hydrogen)
-            could provide additional flexibility but are not included.</li>
+        <li><strong>Three storage technologies, duration gap:</strong> 4h Li-ion, 8h Li-ion, and 100h
+            iron-air LDES are modeled. However, 8h Li-ion is never cost-optimal (strictly dominated by
+            4h Li-ion due to identical efficiency and cost but half the power rating). This leaves an
+            effective gap between 4-hour and 100-hour durations. Technologies such as pumped hydro,
+            compressed air, flow batteries, and hydrogen could fill this gap.</li>
         <li><strong>Simplified dispatch:</strong> The battery storage simulation uses a daily cycling model with
             greedy charge/discharge allocation. Real-world battery operation involves more sophisticated
             co-optimized dispatch that could achieve marginally better economic results.</li>

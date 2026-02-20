@@ -854,12 +854,12 @@ function buildHeroChart() {
         }).filter(d => d.y != null);
 
         datasets.push({
-            label: iso + ' P90', data: p90pts, borderColor: 'transparent', backgroundColor: c + '15',
+            label: iso + ' P90', data: p90pts, borderColor: 'transparent', backgroundColor: c + '40',
             borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 10,
             _region: iso, _type: 'band'
         });
         datasets.push({
-            label: iso + ' P10', data: p10pts, borderColor: c + '30', backgroundColor: 'transparent',
+            label: iso + ' P10', data: p10pts, borderColor: c + '50', backgroundColor: 'transparent',
             borderWidth: 0.5, borderDash: [2, 2], pointRadius: 0, fill: false, tension: 0.3, order: 10,
             _region: iso, _type: 'band'
         });
@@ -967,9 +967,9 @@ function buildRegionalChart(iso) {
     }).filter(function(d) { return d.y != null; });
 
     var datasets = [
-        { label: 'P90', data: p90, borderColor: 'transparent', backgroundColor: c + '25',
+        { label: 'P90', data: p90, borderColor: 'transparent', backgroundColor: c + '45',
           borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3 },
-        { label: 'P10', data: p10, borderColor: c + '55', backgroundColor: 'transparent',
+        { label: 'P10', data: p10, borderColor: c + '70', backgroundColor: 'transparent',
           borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3 },
         { label: 'Envelope', data: p50, borderColor: c, backgroundColor: c + '18',
           borderWidth: 3, pointRadius: 3, pointBackgroundColor: c, pointBorderColor: '#000',
