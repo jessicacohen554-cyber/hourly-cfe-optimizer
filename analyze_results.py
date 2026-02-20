@@ -23,7 +23,18 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'analysis_results.json')
 
 THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
-MEDIUM_KEY = 'MMM_M_M'
+
+
+def medium_key(iso):
+    """Return the all-Medium scenario key for an ISO."""
+    geo = 'M' if iso == 'CAISO' else 'X'
+    return f'MMM_M_M_M1_{geo}'
+
+
+def get_medium_scenario(thresholds_data, t_str, iso):
+    """Get medium scenario with backward compat fallback to old 5-dim key."""
+    scenarios = thresholds_data.get(t_str, {}).get('scenarios', {})
+    return scenarios.get(medium_key(iso)) or scenarios.get('MMM_M_M')
 
 # Literature reference ranges for validation ($/MWh effective cost at Medium scenario)
 # Sources: NREL ATB 2024, Lazard LCOE 16.0, LBNL Utility-Scale Solar/Wind 2024
@@ -153,10 +164,10 @@ def check_literature_alignment(data):
             if t_check not in thresholds_data:
                 continue
             scenarios = thresholds_data[t_check].get('scenarios', {})
-            if MEDIUM_KEY not in scenarios:
+            mk = medium_key(iso)
+            result = scenarios.get(mk) or scenarios.get('MMM_M_M')
+            if not result:
                 continue
-
-            result = scenarios[MEDIUM_KEY]
             if 'costs' not in result:
                 continue
 
@@ -205,10 +216,10 @@ def analyze_resource_mixes(data):
                 continue
 
             scenarios = thresholds_data[t_str].get('scenarios', {})
-            if MEDIUM_KEY not in scenarios:
+            mk = medium_key(iso)
+            result = scenarios.get(mk) or scenarios.get('MMM_M_M')
+            if not result:
                 continue
-
-            result = scenarios[MEDIUM_KEY]
             mix = result.get('resource_mix', {})
             costs = result.get('costs', {})
             cost_val = costs.get('effective_cost', costs.get('effective_cost_per_useful_mwh', 0))
@@ -282,10 +293,10 @@ def analyze_curtailment_for_dac(data):
                 continue
 
             scenarios = thresholds_data[t_str].get('scenarios', {})
-            if MEDIUM_KEY not in scenarios:
+            mk = medium_key(iso)
+            result = scenarios.get(mk) or scenarios.get('MMM_M_M')
+            if not result:
                 continue
-
-            result = scenarios[MEDIUM_KEY]
             costs = result.get('costs', {})
             proc = result.get('procurement_pct', 0)
             match_score = result.get('hourly_match_score', 0)
@@ -356,8 +367,9 @@ def print_summary(data):
             if t_str not in thresholds_data:
                 continue
             scenarios = thresholds_data[t_str].get('scenarios', {})
-            if MEDIUM_KEY in scenarios:
-                result = scenarios[MEDIUM_KEY]
+            mk = medium_key(iso)
+            result = scenarios.get(mk) or scenarios.get('MMM_M_M')
+            if result:
                 c = result.get('costs', {})
                 cost_val = c.get('effective_cost', c.get('effective_cost_per_useful_mwh', 0))
                 if cost_val > 0:

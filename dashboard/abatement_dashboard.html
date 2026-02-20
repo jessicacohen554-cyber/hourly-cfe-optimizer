@@ -33,13 +33,14 @@ body { background: #F3F4F8; }
     background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
 }
 
-/* ========== HERO SCROLLYTELL ========== */
-.hero-scrolly {
+/* ========== HERO OVERVIEW ========== */
+.hero-overview {
     background: linear-gradient(180deg, #0B1120 0%, #13203D 100%);
     position: relative;
     overflow: hidden;
+    padding: 60px 24px 48px;
 }
-.hero-scrolly::before {
+.hero-overview::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -47,28 +48,35 @@ body { background: #F3F4F8; }
                 radial-gradient(ellipse at 70% 80%, rgba(233,30,99,0.06) 0%, transparent 60%);
     pointer-events: none;
 }
-.hero-scrolly-container {
+.hero-overview-inner {
     position: relative;
-    display: flex;
-    max-width: 1400px;
+    max-width: 1320px;
     margin: 0 auto;
-}
-.hero-scrolly-sticky {
-    position: sticky;
-    top: 0;
-    width: 55%;
-    height: 100vh;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
     align-items: center;
-    justify-content: center;
-    padding: 32px;
-    z-index: 1;
 }
-
-/* ---- Multi-panel chart container ---- */
-.hero-chart-panels {
-    position: relative;
-    width: 100%;
+.hero-text-block {
+    z-index: 2;
+}
+.hero-text-block h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 16px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.hero-text-block p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+.hero-chart-block {
+    z-index: 1;
 }
 .chart-panel {
     backdrop-filter: blur(16px);
@@ -78,34 +86,15 @@ body { background: #F3F4F8; }
     padding: 28px 24px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     width: 100%;
+}
+.chart-panel-overview {
+    background: rgba(15,26,46,0.85);
     height: 480px;
 }
-.chart-panel canvas {
+.chart-panel-overview canvas {
     width: 100% !important;
     height: 380px !important;
 }
-/* Default panel (overview) — dark blue glass */
-.chart-panel-overview {
-    background: rgba(15,26,46,0.85);
-}
-/* Regional panels — black background */
-.chart-panel-region {
-    background: rgba(0,0,0,0.95);
-    border-color: rgba(255,255,255,0.08);
-}
-/* Hidden panel */
-.chart-panel.panel-hidden {
-    display: none;
-}
-/* Fade-in animation when panel appears */
-@keyframes chartPanelIn {
-    from { opacity: 0; transform: scale(0.97); }
-    to   { opacity: 1; transform: scale(1); }
-}
-.chart-panel.panel-animate {
-    animation: chartPanelIn 0.5s ease forwards;
-}
-
 .hero-chart-title {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 0.85rem;
@@ -114,7 +103,6 @@ body { background: #F3F4F8; }
     text-align: center;
     margin-bottom: 10px;
     letter-spacing: 0.02em;
-    transition: opacity 0.4s;
 }
 .hero-chart-subtitle {
     font-family: 'Barlow Semi Condensed', sans-serif;
@@ -123,42 +111,62 @@ body { background: #F3F4F8; }
     text-align: center;
     margin-top: 6px;
 }
-.hero-scrolly-steps {
-    width: 45%;
+
+/* ========== REGION SECTIONS (sticky chart + narrative) ========== */
+.region-section {
+    background: #0B1120;
     position: relative;
-    z-index: 2;
+    border-top: 1px solid rgba(255,255,255,0.06);
 }
-.hero-scrolly-step {
-    min-height: 85vh;
+.region-section-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: 100vh;
+}
+.region-chart-col {
+    position: sticky;
+    top: 0;
+    height: 100vh;
     display: flex;
     align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+.chart-panel-region {
+    background: rgba(0,0,0,0.95);
+    border-color: rgba(255,255,255,0.08);
+    height: 480px;
+}
+.chart-panel-region canvas {
+    width: 100% !important;
+    height: 380px !important;
+}
+.region-narrative-col {
     padding: 80px 48px 80px 40px;
-    opacity: 0;
-    transform: translateY(40px);
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
-.hero-scrolly-step:first-child { padding-top: 120px; }
-.hero-scrolly-step:last-child { padding-bottom: 120px; }
-.hero-scrolly-step.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.hero-step-card {
+.region-step-card {
     background: rgba(255,255,255,0.06);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
     padding: 32px;
-    transition: border-color 0.4s, box-shadow 0.4s, transform 0.4s;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.hero-scrolly-step.active .hero-step-card {
-    border-color: rgba(14,165,233,0.4);
-    box-shadow: 0 10px 30px rgba(14,165,233,0.1);
-    transform: translateY(-2px);
+.region-step-card.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
-.hero-step-card h3 {
+.region-step-card h3 {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.5rem;
     font-weight: 800;
@@ -167,13 +175,13 @@ body { background: #F3F4F8; }
     line-height: 1.25;
     letter-spacing: -0.3px;
 }
-.hero-step-card p {
+.region-step-card p {
     font-size: 0.92rem;
     color: rgba(255,255,255,0.75);
     line-height: 1.75;
     margin-bottom: 0;
 }
-.hero-step-card .step-stat {
+.region-step-card .step-stat {
     display: inline-block;
     margin-top: 14px;
     padding: 8px 16px;
@@ -202,8 +210,7 @@ body { background: #F3F4F8; }
     border: 1px solid rgba(14,165,233,0.25);
     color: #38bdf8;
 }
-/* Region color accent tags */
-.hero-step-card .region-tag {
+.region-tag {
     display: inline-block;
     padding: 3px 10px;
     border-radius: 6px;
@@ -215,25 +222,72 @@ body { background: #F3F4F8; }
     text-transform: uppercase;
 }
 
+/* ========== SYNTHESIS SECTION ========== */
+.synthesis-section {
+    background: linear-gradient(180deg, #0B1120 0%, #13203D 100%);
+    padding: 80px 24px;
+}
+.synthesis-inner {
+    max-width: 900px;
+    margin: 0 auto;
+}
+.synthesis-card {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 40px;
+    margin-bottom: 32px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.synthesis-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.synthesis-card h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.25;
+}
+.synthesis-card p {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.75;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 900px) {
-    .hero-scrolly-container { flex-direction: column; }
-    .hero-scrolly-sticky { width: 100%; height: 45vh; min-height: 320px; position: sticky; top: 0; padding: 16px; }
-    .chart-panel { height: 320px; padding: 16px 14px; }
-    .chart-panel canvas { height: 240px !important; }
-    .hero-scrolly-steps { width: 100%; }
-    .hero-scrolly-step { min-height: auto; padding: 40px 20px; }
-    .hero-step-card { padding: 24px 20px; }
-    .hero-step-card h3 { font-size: 1.25rem; }
+    .hero-overview-inner { grid-template-columns: 1fr; gap: 24px; }
+    .hero-text-block h2 { font-size: 1.5rem; }
+    .chart-panel-overview { height: 350px; }
+    .chart-panel-overview canvas { height: 270px !important; }
+    .region-section-inner { grid-template-columns: 1fr; min-height: auto; }
+    .region-chart-col { position: relative; height: auto; padding: 24px 16px 0; }
+    .chart-panel-region { height: 320px; padding: 16px 14px; }
+    .chart-panel-region canvas { height: 240px !important; }
+    .region-narrative-col { padding: 24px 20px 48px; }
+    .region-step-card { padding: 24px 20px; }
+    .region-step-card h3 { font-size: 1.25rem; }
+    .synthesis-section { padding: 48px 20px; }
+    .synthesis-card { padding: 28px 24px; }
 }
 @media (max-width: 600px) {
-    .hero-scrolly-sticky { height: 38vh; min-height: 280px; padding: 10px; }
-    .chart-panel { height: 290px; padding: 12px 10px; }
-    .chart-panel canvas { height: 210px !important; }
-    .hero-scrolly-step { padding: 28px 14px; }
-    .hero-step-card { padding: 18px 14px; }
-    .hero-step-card h3 { font-size: 1.05rem; }
-    .hero-step-card p { font-size: 0.85rem; }
+    .hero-overview { padding: 40px 16px 32px; }
+    .chart-panel-overview { height: 300px; padding: 14px 12px; }
+    .chart-panel-overview canvas { height: 220px !important; }
+    .chart-panel-region { height: 290px; padding: 12px 10px; }
+    .chart-panel-region canvas { height: 210px !important; }
+    .region-narrative-col { padding: 20px 14px 40px; }
+    .region-step-card { padding: 18px 14px; }
+    .region-step-card h3 { font-size: 1.05rem; }
+    .region-step-card p { font-size: 0.85rem; }
+    .synthesis-card { padding: 20px 16px; }
+    .synthesis-card h3 { font-size: 1.15rem; }
 }
 </style>
 </head>
@@ -251,128 +305,139 @@ body { background: #F3F4F8; }
     <div class="header-accent"></div>
 </header>
 
-<!-- HERO SCROLLYTELL -->
-<section class="hero-scrolly">
-    <div class="hero-scrolly-container">
-        <!-- Sticky chart panel — swaps between overview + per-region envelopes -->
-        <div class="hero-scrolly-sticky">
-            <div class="hero-chart-panels">
-                <!-- Overview panel (all regions) -->
-                <div class="chart-panel chart-panel-overview panel-animate" id="chartPanel_overview">
-                    <div class="hero-chart-title" id="heroChartTitle">Marginal Abatement Cost vs. Projected DAC — All Regions</div>
-                    <canvas id="heroScrollyChart"></canvas>
-                    <div class="hero-chart-subtitle">Solid line = stepwise envelope (Medium cost) &middot; Shaded band = P10–P90 across 5,832+ scenarios &middot; Dashed = DAC projections</div>
-                </div>
-                <!-- ERCOT envelope -->
-                <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_ercot">
-                    <div class="hero-chart-title">ERCOT (Texas)</div>
-                    <canvas id="envScrolly_ERCOT"></canvas>
-                </div>
-                <!-- PJM envelope -->
-                <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_pjm">
-                    <div class="hero-chart-title">PJM (Mid-Atlantic)</div>
-                    <canvas id="envScrolly_PJM"></canvas>
-                </div>
-                <!-- CAISO envelope -->
-                <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_caiso">
-                    <div class="hero-chart-title">CAISO (California)</div>
-                    <canvas id="envScrolly_CAISO"></canvas>
-                </div>
-                <!-- NYISO envelope -->
-                <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_nyiso">
-                    <div class="hero-chart-title">NYISO (New York)</div>
-                    <canvas id="envScrolly_NYISO"></canvas>
-                </div>
-                <!-- NEISO envelope -->
-                <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_neiso">
-                    <div class="hero-chart-title">NEISO (New England)</div>
-                    <canvas id="envScrolly_NEISO"></canvas>
-                </div>
+<!-- HERO: Overview chart + framing text -->
+<section class="hero-overview">
+    <div class="hero-overview-inner">
+        <div class="hero-text-block">
+            <h2>Today's investment decisions determine where grid decarb outcompetes DAC</h2>
+            <p>The marginal cost of each additional percent of clean energy — not the average — determines when DAC becomes the cheaper path. Across thousands of sensitivity scenarios per region, the crossover point shifts by 10–25 percentage points depending on which technologies get investment today.</p>
+            <p>Early bets on nuclear, geothermal, or renewables have catalytic effects on how deep grid decarbonization can go before DAC wins.</p>
+            <span class="step-stat step-stat-blue">5,832+ cost scenarios &times; 5 ISOs: crossover shifts 10–25 points on policy choices</span>
+        </div>
+        <div class="hero-chart-block">
+            <div class="chart-panel chart-panel-overview">
+                <div class="hero-chart-title">Marginal Abatement Cost vs. Projected DAC — All Regions</div>
+                <canvas id="heroScrollyChart"></canvas>
+                <div class="hero-chart-subtitle">Solid line = stepwise envelope (Medium cost) &middot; Shaded band = P10–P90 &middot; Dashed = DAC projections</div>
             </div>
         </div>
+    </div>
+</section>
 
-        <!-- Scrolly narrative steps -->
-        <div class="hero-scrolly-steps">
-
-            <!-- Act 1: The framing -->
-            <div class="hero-scrolly-step" data-hero-step="overview">
-                <div class="hero-step-card">
-                    <h3>Today's investment decisions determine where grid decarb outcompetes DAC</h3>
-                    <p>The marginal cost of each additional percent of clean energy — not the average — determines when DAC becomes the cheaper path. Across thousands of sensitivity scenarios per region, the crossover point shifts by 10–25 percentage points depending on which technologies get investment today. Early bets on nuclear, geothermal, or renewables have catalytic effects on how deep grid decarbonization can go before DAC wins.</p>
-                    <span class="step-stat step-stat-blue">5,832+ cost scenarios &times; 5 ISOs: crossover shifts 10–25 points on policy choices</span>
-                </div>
+<!-- REGION: ERCOT -->
+<section class="region-section" data-region="ERCOT">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">ERCOT (Texas)</div>
+                <canvas id="envScrolly_ERCOT"></canvas>
             </div>
-
-            <!-- Act 2: ERCOT -->
-            <div class="hero-scrolly-step" data-hero-step="ercot">
-                <div class="hero-step-card">
-                    <span class="region-tag" style="background:rgba(34,197,94,0.15);color:#22C55E;">ERCOT</span>
-                    <h3>Renewable tax credits make ERCOT a no-regrets bet to 97.5%</h3>
-                    <p>At medium costs, ERCOT's grid decarb beats central DAC through 97.5%. With low renewable costs — the trajectory sustained by IRA tax credits — the crossover extends to 99%. Even under all-high cost assumptions, grid investment wins to 97.5%. ERCOT is the strongest case for continued grid investment: deep solar/wind resources mean no plausible future where DAC is cheaper before ~95%.</p>
-                    <span class="step-stat step-stat-green">Low renewables: grid wins to 99% &middot; All High: still wins to 97.5%</span>
-                </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(34,197,94,0.15);color:#22C55E;">ERCOT</span>
+                <h3>Renewable tax credits make ERCOT a no-regrets bet to 97.5%</h3>
+                <p>At medium costs, ERCOT's grid decarb beats central DAC through 97.5%. With low renewable costs — the trajectory sustained by IRA tax credits — the crossover extends to 99%. Even under all-high cost assumptions, grid investment wins to 97.5%. ERCOT is the strongest case for continued grid investment: deep solar/wind resources mean no plausible future where DAC is cheaper before ~95%.</p>
+                <span class="step-stat step-stat-green">Low renewables: grid wins to 99% &middot; All High: still wins to 97.5%</span>
             </div>
+        </div>
+    </div>
+</section>
 
-            <!-- Act 3: PJM -->
-            <div class="hero-scrolly-step" data-hero-step="pjm">
-                <div class="hero-step-card">
-                    <span class="region-tag" style="background:rgba(74,144,217,0.15);color:#4a90d9;">PJM</span>
-                    <h3>PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points</h3>
-                    <p>At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs (achieved nuclear/geothermal) extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. The policy signal: PJM's path past 90% depends entirely on whether clean firm generation achieves cost learning — renewables alone aren't enough at these penetration levels.</p>
-                    <span class="step-stat step-stat-amber">Low firm gen: grid wins to 92.5% &middot; High firm + high RE: only 87.5%</span>
-                </div>
+<!-- REGION: PJM -->
+<section class="region-section" data-region="PJM">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">PJM (Mid-Atlantic)</div>
+                <canvas id="envScrolly_PJM"></canvas>
             </div>
-
-            <!-- Act 4: CAISO -->
-            <div class="hero-scrolly-step" data-hero-step="caiso">
-                <div class="hero-step-card">
-                    <span class="region-tag" style="background:rgba(245,158,11,0.15);color:#F59E0B;">CAISO</span>
-                    <h3>CAISO: High marginal cost volatility, but grid still wins deep under medium costs</h3>
-                    <p>CAISO shows extreme marginal cost swings — $738/metric ton at 75% under medium costs, yet grid still beats DAC central through 99% because later steps are cheap. The variance is driven by how clean firm resources dispatch. Low firm + low renewable costs extend the crossover to 97.5%. High firm + high renewable costs mean grid never beats even optimistic DAC. The lesson: CAISO's path past 90% is a bet on firm generation, not more solar.</p>
-                    <span class="step-stat step-stat-red">High firm + high RE: grid never beats optimistic DAC &middot; Low combo: wins to 97.5%</span>
-                </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(74,144,217,0.15);color:#4a90d9;">PJM</span>
+                <h3>PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points</h3>
+                <p>At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs (achieved nuclear/geothermal) extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. The policy signal: PJM's path past 90% depends entirely on whether clean firm generation achieves cost learning — renewables alone aren't enough at these penetration levels.</p>
+                <span class="step-stat step-stat-amber">Low firm gen: grid wins to 92.5% &middot; High firm + high RE: only 87.5%</span>
             </div>
+        </div>
+    </div>
+</section>
 
-            <!-- Act 5: NYISO -->
-            <div class="hero-scrolly-step" data-hero-step="nyiso">
-                <div class="hero-step-card">
-                    <span class="region-tag" style="background:rgba(233,30,99,0.15);color:#E91E63;">NYISO</span>
-                    <h3>NYISO: Hydro and nuclear carry the grid to 85%, then costs spike</h3>
-                    <p>New York benefits from significant existing hydro and nuclear capacity, keeping marginal abatement costs moderate through 85% clean energy. At medium costs, grid decarb beats DAC central through 85%. Low firm generation costs push the crossover to 90% — but the gain is narrow. Past 90%, NYISO's limited wind resource and constrained transmission corridors drive marginal costs sharply higher. New York's climate law (CLCPA) requires either breakthrough firm generation costs or acceptance that DAC closes the final gap more cheaply.</p>
-                    <span class="step-stat step-stat-red">Medium: grid wins to 85% &middot; Low firm gen: 90% &middot; High costs: only 80%</span>
-                </div>
+<!-- REGION: CAISO -->
+<section class="region-section" data-region="CAISO">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">CAISO (California)</div>
+                <canvas id="envScrolly_CAISO"></canvas>
             </div>
-
-            <!-- Act 6: NEISO -->
-            <div class="hero-scrolly-step" data-hero-step="neiso">
-                <div class="hero-step-card">
-                    <span class="region-tag" style="background:rgba(156,39,176,0.15);color:#9C27B0;">NEISO</span>
-                    <h3>NEISO: The strongest case for nuclear — 15-point gain from cheap firm generation</h3>
-                    <p>New England faces the steepest marginal cost curve of any region. At medium costs, grid decarb only beats DAC central through 70% — the lowest crossover of any ISO. But low firm + low renewable costs push this to 85%, a 15-point gain that represents the largest catalytic effect anywhere in the study. NEISO's winter gas pipeline constraints add $13/MWh to CCS costs, making nuclear and enhanced geothermal the decisive technologies. Without firm generation cost reductions, New England hits a hard economic wall at 70%.</p>
-                    <span class="step-stat step-stat-red">Medium: only 70% &middot; Low firm + low RE: 85% (15-point catalytic gain)</span>
-                </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(245,158,11,0.15);color:#F59E0B;">CAISO</span>
+                <h3>CAISO: High marginal cost volatility, but grid still wins deep under medium costs</h3>
+                <p>CAISO shows extreme marginal cost swings — $738/metric ton at 75% under medium costs, yet grid still beats DAC central through 99% because later steps are cheap. The variance is driven by how clean firm resources dispatch. Low firm + low renewable costs extend the crossover to 97.5%. High firm + high renewable costs mean grid never beats even optimistic DAC. The lesson: CAISO's path past 90% is a bet on firm generation, not more solar.</p>
+                <span class="step-stat step-stat-red">High firm + high RE: grid never beats optimistic DAC &middot; Low combo: wins to 97.5%</span>
             </div>
+        </div>
+    </div>
+</section>
 
-            <!-- Act 7: Policy synthesis -->
-            <div class="hero-scrolly-step" data-hero-step="drivers">
-                <div class="hero-step-card">
-                    <h3>Three policy levers, three different effects</h3>
-                    <p><strong>Renewable tax credits</strong> (IRA/PTC/ITC) are most catalytic in ERCOT, extending grid competitiveness to 99%. Moderate effect in PJM/CAISO. Minimal impact in the Northeast where the constraint is firm generation, not renewables.<br><br>
-                    <strong>Nuclear/geothermal investment</strong> (NRC licensing, DOE LPO loans, HALEU supply) is decisive in NYISO/NEISO/CAISO. Cheap firm generation shifts the DAC crossover 10–15 percentage points higher.<br><br>
-                    <strong>Storage costs</strong> contribute &lt;1% of variance in every region — battery/LDES prices are not the bottleneck.</p>
-                    <span class="step-stat step-stat-blue">RE credits: +2–5 pts &middot; Firm gen: +10–15 pts &middot; Storage: ~0 pts</span>
-                </div>
+<!-- REGION: NYISO -->
+<section class="region-section" data-region="NYISO">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">NYISO (New York)</div>
+                <canvas id="envScrolly_NYISO"></canvas>
             </div>
-
-            <!-- Act 8: Bottom line -->
-            <div class="hero-scrolly-step" data-hero-step="conclusion">
-                <div class="hero-step-card">
-                    <h3>The optimal strategy: grid to the crossover, DAC for the rest</h3>
-                    <p>Grid decarbonization is the cheaper abatement path to at least 85–90% in every region under any cost scenario. Past that, the right answer depends on today's policy choices. Investment in firm clean generation (nuclear, enhanced geothermal, CCS) has the largest catalytic effect — buying 10–15 additional points of grid decarb that outcompetes DAC. Renewable tax credits are necessary but not sufficient in high-cost regions. The optimal portfolio: push grid decarb to its natural crossover point, then let DAC close the gap.</p>
-                    <span class="step-stat step-stat-green">Grid to 85–97.5% (region-dependent) &middot; DAC for the final stretch</span>
-                </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(233,30,99,0.15);color:#E91E63;">NYISO</span>
+                <h3>NYISO: Hydro and nuclear carry the grid to 85%, then costs spike</h3>
+                <p>New York benefits from significant existing hydro and nuclear capacity, keeping marginal abatement costs moderate through 85% clean energy. At medium costs, grid decarb beats DAC central through 85%. Low firm generation costs push the crossover to 90% — but the gain is narrow. Past 90%, NYISO's limited wind resource and constrained transmission corridors drive marginal costs sharply higher. New York's climate law (CLCPA) requires either breakthrough firm generation costs or acceptance that DAC closes the final gap more cheaply.</p>
+                <span class="step-stat step-stat-red">Medium: grid wins to 85% &middot; Low firm gen: 90% &middot; High costs: only 80%</span>
             </div>
+        </div>
+    </div>
+</section>
 
+<!-- REGION: NEISO -->
+<section class="region-section" data-region="NEISO">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">NEISO (New England)</div>
+                <canvas id="envScrolly_NEISO"></canvas>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(156,39,176,0.15);color:#9C27B0;">NEISO</span>
+                <h3>NEISO: The strongest case for nuclear — 15-point gain from cheap firm generation</h3>
+                <p>New England faces the steepest marginal cost curve of any region. At medium costs, grid decarb only beats DAC central through 70% — the lowest crossover of any ISO. But low firm + low renewable costs push this to 85%, a 15-point gain that represents the largest catalytic effect anywhere in the study. NEISO's winter gas pipeline constraints add $13/MWh to CCS costs, making nuclear and enhanced geothermal the decisive technologies. Without firm generation cost reductions, New England hits a hard economic wall at 70%.</p>
+                <span class="step-stat step-stat-red">Medium: only 70% &middot; Low firm + low RE: 85% (15-point catalytic gain)</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SYNTHESIS: Policy levers + conclusion -->
+<section class="synthesis-section">
+    <div class="synthesis-inner">
+        <div class="synthesis-card">
+            <h3>Three policy levers, three different effects</h3>
+            <p><strong>Renewable tax credits</strong> (IRA/PTC/ITC) are most catalytic in ERCOT, extending grid competitiveness to 99%. Moderate effect in PJM/CAISO. Minimal impact in the Northeast where the constraint is firm generation, not renewables.<br><br>
+            <strong>Nuclear/geothermal investment</strong> (NRC licensing, DOE LPO loans, HALEU supply) is decisive in NYISO/NEISO/CAISO. Cheap firm generation shifts the DAC crossover 10–15 percentage points higher.<br><br>
+            <strong>Storage costs</strong> contribute &lt;1% of variance in every region — battery/LDES prices are not the bottleneck.</p>
+            <span class="step-stat step-stat-blue">RE credits: +2–5 pts &middot; Firm gen: +10–15 pts &middot; Storage: ~0 pts</span>
+        </div>
+        <div class="synthesis-card">
+            <h3>The optimal strategy: grid to the crossover, DAC for the rest</h3>
+            <p>Grid decarbonization is the cheaper abatement path to at least 85–90% in every region under any cost scenario. Past that, the right answer depends on today's policy choices. Investment in firm clean generation (nuclear, enhanced geothermal, CCS) has the largest catalytic effect — buying 10–15 additional points of grid decarb that outcompetes DAC. Renewable tax credits are necessary but not sufficient in high-cost regions. The optimal portfolio: push grid decarb to its natural crossover point, then let DAC close the gap.</p>
+            <span class="step-stat step-stat-green">Grid to 85–97.5% (region-dependent) &middot; DAC for the final stretch</span>
         </div>
     </div>
 </section>
@@ -418,68 +483,11 @@ body { background: #F3F4F8; }
 // ============================================================================
 let heroChart = null;
 const regionCharts = {};
-let activePanel = 'overview';
 const yMaxHero = 700;
 
-const STEP_TO_PANEL = {
-    overview:   'overview',
-    ercot:      'ercot',
-    pjm:        'pjm',
-    caiso:      'caiso',
-    nyiso:      'nyiso',
-    neiso:      'neiso',
-    drivers:    'overview',
-    conclusion: 'overview'
-};
-
-const PANEL_TO_ISO = {
-    ercot: 'ERCOT',
-    pjm:   'PJM',
-    caiso: 'CAISO',
-    nyiso: 'NYISO',
-    neiso: 'NEISO'
-};
-
-const REGION_NAMES = {
-    CAISO: 'CAISO (California)',
-    ERCOT: 'ERCOT (Texas)',
-    PJM:   'PJM (Mid-Atlantic)',
-    NYISO: 'NYISO (New York)',
-    NEISO: 'NEISO (New England)'
-};
-
 // ============================================================================
-// PANEL SWITCHING
+// (Panel switching removed — regional charts are now in static sections)
 // ============================================================================
-function switchPanel(panelName) {
-    if (panelName === activePanel) return;
-    const allPanels = document.querySelectorAll('.chart-panel');
-    allPanels.forEach(p => {
-        p.classList.add('panel-hidden');
-        p.classList.remove('panel-animate');
-    });
-    const target = document.getElementById('chartPanel_' + panelName);
-    if (target) {
-        target.classList.remove('panel-hidden');
-        // Trigger entrance animation
-        void target.offsetWidth;
-        target.classList.add('panel-animate');
-    }
-    // Build regional chart lazily on first show (Chart.js needs visible canvas for sizing)
-    if (panelName !== 'overview') {
-        const iso = PANEL_TO_ISO[panelName];
-        if (iso && !regionCharts[iso]) {
-            // First time showing — build chart now that canvas is visible
-            requestAnimationFrame(() => buildRegionalChart(iso));
-        } else if (iso && regionCharts[iso]) {
-            regionCharts[iso].reset();
-            regionCharts[iso].update('active');
-        }
-    } else {
-        if (heroChart) { heroChart.reset(); heroChart.update('active'); }
-    }
-    activePanel = panelName;
-}
 
 // ============================================================================
 // DAC CURVE THRESHOLDS (shared by all charts)
@@ -707,121 +715,40 @@ function buildRegionalChart(iso) {
 }
 
 // ============================================================================
-// UPDATE HERO CHART HIGHLIGHTING (overview/drivers/conclusion)
+// SCROLL-TRIGGERED ANIMATIONS & LAZY CHART BUILDS
 // ============================================================================
-function updateHeroChart(step) {
-    if (!heroChart) return;
-    const regions = ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
-    const titleEl = document.getElementById('heroChartTitle');
-
-    const highlights = {
-        overview:   { show: regions, title: 'Marginal Abatement Cost vs. Projected DAC — All Regions' },
-        drivers:    { show: regions, title: 'What Drives the Marginal Cost P10–P90 Spread?' },
-        conclusion: { show: regions, title: 'Grid Wins the Marginal Dollar to ~90% Everywhere' }
-    };
-
-    const cfg = highlights[step] || highlights.overview;
-    if (titleEl) titleEl.textContent = cfg.title;
-
-    const showSet = new Set(cfg.show);
-    const emphasizeBands = (step === 'drivers');
-
-    heroChart.data.datasets.forEach(ds => {
-        if (ds._type === 'dac') {
-            ds.borderWidth = (step === 'drivers') ? 1 : (ds.label === 'DAC Central' ? 2 : 1.5);
-            return;
-        }
-        const visible = showSet.has(ds._region);
-        const baseC = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0' }[ds._region] || '#888';
-        if (ds._type === 'band') {
-            if (visible) {
-                ds.backgroundColor = ds.label.includes('P90') ? baseC + (emphasizeBands ? '30' : '15') : 'transparent';
-                ds.borderWidth = ds.label.includes('P10') ? (emphasizeBands ? 1.5 : 0.5) : 0;
-                if (ds.label.includes('P10')) ds.borderColor = baseC + (emphasizeBands ? '80' : '30');
-            } else {
-                ds.backgroundColor = 'transparent';
-                ds.borderWidth = 0;
-                ds.borderColor = 'transparent';
-            }
-        } else if (ds._type === 'line') {
-            ds.borderWidth = visible ? 2.5 : 0.5;
-            ds.borderColor = visible ? baseC : baseC + '18';
-        }
-    });
-
-    // Annotation overlays
-    const annotations = {};
-    if (step === 'drivers') {
-        annotations.note = {
-            type: 'label', xValue: 75, yValue: yMaxHero * 0.85,
-            content: ['Firm gen cost is the', 'dominant driver in 4/5 ISOs'],
-            font: { size: 11, weight: 600 }, color: 'rgba(255,255,255,0.6)',
-            backgroundColor: 'rgba(0,0,0,0.4)', padding: 8, borderRadius: 6
-        };
-    }
-    heroChart.options.plugins.annotation.annotations = annotations;
-    heroChart.update('default');
-}
-
-// ============================================================================
-// SCROLL OBSERVER & INITIALIZATION
-// ============================================================================
-function initScrollytell() {
-    const steps = document.querySelectorAll('.hero-scrolly-step');
-
-    // Fade-in observer
+function initObservers() {
+    // Fade-in observer for narrative cards and synthesis cards
     const fadeObs = new IntersectionObserver(entries => {
         entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
-    // Step activation observer
-    let activeHeroStep = null;
-    const stepObs = new IntersectionObserver(entries => {
-        let best = null;
+    document.querySelectorAll('.region-step-card, .synthesis-card').forEach(el => fadeObs.observe(el));
+
+    // Lazy chart build observer for region sections
+    const chartObs = new IntersectionObserver(entries => {
         entries.forEach(e => {
-            if (e.isIntersecting && (!best || e.intersectionRatio > best.intersectionRatio)) best = e;
-        });
-        if (best) {
-            const stepName = best.target.getAttribute('data-hero-step');
-            if (stepName !== activeHeroStep) {
-                activeHeroStep = stepName;
-                steps.forEach(s => s.classList.remove('active'));
-                best.target.classList.add('active');
-
-                // Switch chart panel
-                const panelName = STEP_TO_PANEL[stepName] || 'overview';
-                switchPanel(panelName);
-
-                // Update hero chart highlighting when on overview panel
-                if (panelName === 'overview') {
-                    updateHeroChart(stepName);
-                }
+            if (!e.isIntersecting) return;
+            const iso = e.target.getAttribute('data-region');
+            if (iso && !regionCharts[iso]) {
+                requestAnimationFrame(() => buildRegionalChart(iso));
             }
-        }
-    }, { threshold: [0.1, 0.3, 0.5, 0.7, 0.9], rootMargin: '-20% 0px -30% 0px' });
+            chartObs.unobserve(e.target);
+        });
+    }, { threshold: 0.1, rootMargin: '200px 0px 200px 0px' });
 
-    steps.forEach(s => { fadeObs.observe(s); stepObs.observe(s); });
-
-    // First-paint trigger
-    const initObs = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting) {
-            updateHeroChart('overview');
-            initObs.disconnect();
-        }
-    }, { threshold: 0.05 });
-    initObs.observe(document.querySelector('.hero-scrolly'));
+    document.querySelectorAll('.region-section').forEach(el => chartObs.observe(el));
 }
 
 // ============================================================================
 // INIT
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Build hero chart (overview panel is visible at init)
+    // Build hero overview chart
     buildHeroChart();
-    // Regional charts built lazily in switchPanel() when first shown
 
-    // Start scrollytell observers
-    initScrollytell();
+    // Start scroll-triggered observers (lazy chart builds + fade-ins)
+    initObservers();
 });
 </script>
 </body>
