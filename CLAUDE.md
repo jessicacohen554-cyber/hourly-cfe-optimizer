@@ -22,6 +22,7 @@
 
 ### Git & Commits
 - **3-minute commit cadence** — commit work every 3 minutes during active development to avoid losing work. Don't wait for a feature to be "done" to commit — frequent incremental commits protect against session interruptions and token limits. Squash into a clean commit before pushing.
+- **CRITICAL — Commit before session expiration**: Always commit all work-in-progress before the session ends or runs out of context. Uncommitted changes are lost forever when a session expires. If the session is approaching limits, immediately commit and push whatever is done — partial progress is infinitely better than lost progress. This is the #1 cause of wasted work across sessions.
 - **Squash-style commits** — one descriptive commit per feature/task, not granular per-file commits
 - **Descriptive paragraph messages** — commit messages should explain *what* and *why*, not just list files changed
 - **Detailed PR descriptions** — include summary, what changed, why, and any decisions made
