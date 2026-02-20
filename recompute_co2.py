@@ -527,11 +527,13 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
                 iso, threshold_pct, emission_rates, fossil_mix
             )
 
-            # Always recompute Medium scenario (9-dim key)
-            med_key = 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
+            # Always recompute Medium scenario (9-dim key: RFBL_FF_TX_CCSq45_GEO)
+            med_key = 'MMMM_M_M_M1_M' if iso == 'CAISO' else 'MMMM_M_M_M1_X'
             # Fallback to old key formats
             actual_med_key = None
-            for mk_candidate in [med_key, 'MMM_M_M_M_M1_M', 'MMM_M_M_M_M1_X', 'MMM_M_M']:
+            for mk_candidate in [med_key,
+                                 'MMM_M_M_M1_M', 'MMM_M_M_M1_X',  # 8-dim legacy
+                                 'MMM_M_M']:  # 5-dim legacy
                 if mk_candidate in scenarios:
                     actual_med_key = mk_candidate
                     break
