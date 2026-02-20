@@ -1,0 +1,69 @@
+{
+  "years": [
+    2026,
+    2027,
+    2028,
+    2029,
+    2030,
+    2031,
+    2032,
+    2033,
+    2034,
+    2035,
+    2036,
+    2037,
+    2038,
+    2039,
+    2040,
+    2041,
+    2042,
+    2043,
+    2044,
+    2045,
+    2046,
+    2047,
+    2048,
+    2049,
+    2050
+  ],
+  "growth_levels": [
+    "Low",
+    "Medium",
+    "High"
+  ],
+  "growth_rates": {
+    "CAISO": {
+      "Low": 0.014,
+      "Medium": 0.019,
+      "High": 0.025
+    },
+    "ERCOT": {
+      "Low": 0.02,
+      "Medium": 0.035,
+      "High": 0.055
+    },
+    "PJM": {
+      "Low": 0.015,
+      "Medium": 0.024,
+      "High": 0.036
+    },
+    "NYISO": {
+      "Low": 0.013,
+      "Medium": 0.02,
+      "High": 0.044
+    },
+    "NEISO": {
+      "Low": 0.009,
+      "Medium": 0.018,
+      "High": 0.029
+    }
+  },
+  "base_year": 2025,
+  "fields": [
+    "mix_idx",
+    "total_cost",
+    "effective_cost",
+    "incremental"
+  ],
+  "note": "Full 9-dim factorial: RFBL_FF_TX_CCSq45_GEO keys (R=ren,F=firm,B=batt,L=ldes). CAISO: 17,496 combos. Non-CAISO: 5,832 combos."
+}
