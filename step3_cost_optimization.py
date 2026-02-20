@@ -472,39 +472,59 @@ OUTPUT_THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 
 
 def load_pfs_post_ef():
-    """Load PFS post-EF and organize by (ISO, threshold)."""
+    """Load PFS post-EF (threshold-free) and organize by ISO.
+
+    The post-EF data has no threshold column — each unique mix is stored once
+    with its actual match score. Step 3 filters by score >= threshold at
+    evaluation time, enabling cross-threshold picking.
+
+    Returns:
+        pfs: dict keyed by ISO → numpy arrays of all mixes
+        thr_indices: dict keyed by (ISO, threshold) → index array of qualifying mixes
+    """
     if not PFS_POST_EF_PATH.exists():
-        raise FileNotFoundError(f"Run Step 2.1 first: {PFS_POST_EF_PATH}")
+        raise FileNotFoundError(f"Run Step 2 first: {PFS_POST_EF_PATH}")
 
     table = pq.read_table(PFS_POST_EF_PATH)
     print(f"Loaded PFS post-EF: {table.num_rows:,} rows")
 
-    # Organize into dict of numpy arrays per (iso, threshold)
-    data = {}
+    import pyarrow.compute as pc
+
+    pfs = {}
+    thr_indices = {}
+
     for iso in ISOS:
+        mask = pc.equal(table.column('iso'), iso)
+        sub = table.filter(mask)
+        if sub.num_rows == 0:
+            continue
+
+        arrays = {
+            'clean_firm': sub.column('clean_firm').to_numpy(),
+            'solar': sub.column('solar').to_numpy(),
+            'wind': sub.column('wind').to_numpy(),
+            'hydro': sub.column('hydro').to_numpy(),
+            'procurement_pct': sub.column('procurement_pct').to_numpy(),
+            'battery_dispatch_pct': sub.column('battery_dispatch_pct').to_numpy(),
+            'battery8_dispatch_pct': (sub.column('battery8_dispatch_pct').to_numpy()
+                                      if 'battery8_dispatch_pct' in sub.column_names
+                                      else np.zeros(sub.num_rows, dtype=np.int64)),
+            'ldes_dispatch_pct': sub.column('ldes_dispatch_pct').to_numpy(),
+            'hourly_match_score': sub.column('hourly_match_score').to_numpy(),
+        }
+        pfs[iso] = arrays
+
+        # Pre-compute threshold index arrays (score >= threshold)
+        scores = arrays['hourly_match_score']
         for thr in OUTPUT_THRESHOLDS:
-            import pyarrow.compute as pc
-            mask = pc.and_(
-                pc.equal(table.column('iso'), iso),
-                pc.equal(table.column('threshold'), float(thr))
-            )
-            sub = table.filter(mask)
-            if sub.num_rows == 0:
-                continue
-            data[(iso, thr)] = {
-                'clean_firm': sub.column('clean_firm').to_numpy(),
-                'solar': sub.column('solar').to_numpy(),
-                'wind': sub.column('wind').to_numpy(),
-                'hydro': sub.column('hydro').to_numpy(),
-                'procurement_pct': sub.column('procurement_pct').to_numpy(),
-                'battery_dispatch_pct': sub.column('battery_dispatch_pct').to_numpy(),
-                'battery8_dispatch_pct': (sub.column('battery8_dispatch_pct').to_numpy()
-                                          if 'battery8_dispatch_pct' in sub.column_names
-                                          else np.zeros(sub.num_rows, dtype=np.int64)),
-                'ldes_dispatch_pct': sub.column('ldes_dispatch_pct').to_numpy(),
-                'hourly_match_score': sub.column('hourly_match_score').to_numpy(),
-            }
-    return data
+            idx = np.where(scores >= thr)[0]
+            if len(idx) > 0:
+                thr_indices[(iso, thr)] = idx
+
+        print(f"  {iso}: {sub.num_rows:,} mixes, "
+              f"thresholds with data: {sum(1 for t in OUTPUT_THRESHOLDS if (iso, t) in thr_indices)}")
+
+    return pfs, thr_indices
 
 
 def arrays_to_mix_dict(arrays, idx):
@@ -534,14 +554,14 @@ def arrays_to_mix_dict(arrays, idx):
 
 def main():
     print("=" * 70)
-    print("  STEP 3: COST OPTIMIZATION (v4 — full 9-dim factorial, PFS post-EF)")
+    print("  STEP 3: COST OPTIMIZATION (v4 — vectorized, threshold-free PFS)")
     print("=" * 70)
 
     total_start = time.time()
 
-    # Load PFS post-EF
-    pfs = load_pfs_post_ef()
-    print(f"  Groups: {len(pfs)} (ISO × threshold)")
+    # Load PFS post-EF (threshold-free: one set of mixes per ISO)
+    pfs, thr_indices = load_pfs_post_ef()
+    print(f"  ISOs loaded: {len(pfs)}")
 
     # Build output structure
     output = {
@@ -571,16 +591,25 @@ def main():
     cf_split_table = []
 
     # ================================================================
-    # PHASE 1: Base year cross-evaluation (all combos, no growth)
+    # PHASE 1: Base year cross-evaluation (vectorized)
     # ================================================================
-    print("\n--- PHASE 1: Base year cross-evaluation ---")
+    # Key optimization: evaluate ALL mixes per ISO once per scenario,
+    # then use pre-computed threshold index arrays to pick best per threshold.
+    # This evaluates costs 1× per scenario instead of 13× (one per threshold).
+    print("\n--- PHASE 1: Base year cross-evaluation (vectorized) ---")
     phase1_start = time.time()
 
-    # We'll store archetypes per (iso, threshold) for phase 2
-    archetypes = {}  # {(iso, thr): set of mix indices}
+    # Archetypes per ISO (union of winners across all thresholds) for Phase 2
+    archetypes = {}  # {iso: set of mix indices into pfs[iso]}
 
     for iso in ISOS:
+        if iso not in pfs:
+            continue
+
+        arrays = pfs[iso]
+        N = len(arrays['clean_firm'])
         demand_twh = REGIONAL_DEMAND_TWH[iso]
+
         output['results'][iso] = {
             'annual_demand_mwh': demand_twh * 1e6,
             'thresholds': {},
@@ -590,28 +619,35 @@ def main():
         all_combos = build_sensitivity_combos(iso)
         n_combos = len(all_combos)
 
-        for thr in OUTPUT_THRESHOLDS:
-            pfs_key = (iso, thr)
-            if pfs_key not in pfs:
-                continue
-            arrays = pfs[pfs_key]
-            N = len(arrays['clean_firm'])
+        # Determine which thresholds have data for this ISO
+        active_thresholds = [thr for thr in OUTPUT_THRESHOLDS
+                             if (iso, thr) in thr_indices]
 
-            t_str = str(thr)
-            threshold_data = {'scenarios': {}, 'feasible_mixes': {}}
-            arch_set = set()
+        # Initialize per-threshold data structures
+        thr_data = {}
+        thr_arch_sets = {}
+        for thr in active_thresholds:
+            thr_data[thr] = {'scenarios': {}, 'feasible_mixes': {}}
+            thr_arch_sets[thr] = set()
 
-            # Evaluate ALL sensitivity combos directly (full 9-dim factorial)
-            # CAISO: 17,496 combos. Non-CAISO: 5,832 combos.
-            # 45Q is a real dimension — no separate no_45q computation needed.
-            for scenario_key, sens in all_combos:
-                tc, ec, tranche = price_mix_batch(iso, arrays, sens, demand_twh)
-                best_idx = int(np.argmin(tc))
-                arch_set.add(best_idx)
+        iso_arch_set = set()
+
+        # Evaluate ALL combos — price ALL mixes once, then pick best per threshold
+        for scenario_key, sens in all_combos:
+            tc, ec, tranche = price_mix_batch(iso, arrays, sens, demand_twh)
+
+            wholesale = max(5, WHOLESALE_PRICES[iso] +
+                            FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
+
+            for thr in active_thresholds:
+                idx = thr_indices[(iso, thr)]
+                local_best = int(np.argmin(tc[idx]))
+                best_idx = int(idx[local_best])
+
+                thr_arch_sets[thr].add(best_idx)
+                iso_arch_set.add(best_idx)
 
                 best_mix = arrays_to_mix_dict(arrays, best_idx)
-                wholesale = max(5, WHOLESALE_PRICES[iso] +
-                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
 
                 scenario = {
                     'resource_mix': best_mix['resource_mix'],
@@ -644,26 +680,30 @@ def main():
                     },
                 }
 
-                threshold_data['scenarios'][scenario_key] = scenario
+                thr_data[thr]['scenarios'][scenario_key] = scenario
 
-            # Store feasible mixes in columnar format for client-side repricing
-            max_feasible = min(N, 500)
-            step = max(1, N // max_feasible)
-            sample_indices = list(range(0, N, step))
-            # Ensure all archetypes are included
-            for aidx in arch_set:
-                if aidx not in sample_indices:
-                    sample_indices.append(aidx)
-            sample_indices.sort()
+        # Store feasible mixes per threshold (sample from threshold-qualifying mixes)
+        for thr in active_thresholds:
+            idx = thr_indices[(iso, thr)]
+            N_thr = len(idx)
 
-            # Build columnar arrays
-            idx_arr = np.array(sample_indices)
+            max_feasible = min(N_thr, 500)
+            step = max(1, N_thr // max_feasible)
+            # Sample indices into the full ISO arrays
+            sample_full = list(idx[::step])
+            # Ensure all archetypes for this threshold are included
+            for aidx in thr_arch_sets[thr]:
+                if aidx not in sample_full:
+                    sample_full.append(aidx)
+            sample_full.sort()
+
+            idx_arr = np.array(sample_full)
             ccs_pct = np.maximum(0, 100 - (arrays['clean_firm'][idx_arr].astype(int) +
                                             arrays['solar'][idx_arr].astype(int) +
                                             arrays['wind'][idx_arr].astype(int) +
                                             arrays['hydro'][idx_arr].astype(int)))
             bat8 = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.int64))
-            threshold_data['feasible_mixes'] = {
+            thr_data[thr]['feasible_mixes'] = {
                 'clean_firm': arrays['clean_firm'][idx_arr].astype(int).tolist(),
                 'solar': arrays['solar'][idx_arr].astype(int).tolist(),
                 'wind': arrays['wind'][idx_arr].astype(int).tolist(),
@@ -676,22 +716,25 @@ def main():
                 'ldes_dispatch_pct': arrays['ldes_dispatch_pct'][idx_arr].astype(int).tolist(),
             }
 
-            archetypes[pfs_key] = arch_set
-            output['results'][iso]['thresholds'][t_str] = threshold_data
+            t_str = str(thr)
+            output['results'][iso]['thresholds'][t_str] = thr_data[thr]
 
-            print(f"  {iso:>6} {thr:>5}%: {N:>6,} mixes, "
-                  f"{n_combos} scenarios, "
-                  f"{len(arch_set)} archetypes")
+        archetypes[iso] = iso_arch_set
+
+        print(f"  {iso:>6}: {N:>7,} mixes, {n_combos} scenarios, "
+              f"{len(active_thresholds)} thresholds, "
+              f"{len(iso_arch_set)} archetypes (cross-threshold)")
 
     phase1_elapsed = time.time() - phase1_start
     print(f"\nPhase 1 complete: {phase1_elapsed:.0f}s")
 
     # ================================================================
-    # PHASE 2: Demand growth sweep on archetypes
+    # PHASE 2: Demand growth sweep on archetypes (vectorized)
     # ================================================================
-    # Full factorial sweep: all 8-dim sensitivity combos × 25 years × 3 growth levels.
-    # All toggles (including CCS/45Q/Geo) are real dimensions.
-    print("\n--- PHASE 2: Demand growth sweep (full factorial × years × growth) ---")
+    # Archetypes are the union of all winning mixes per ISO across all thresholds.
+    # Evaluate all archetypes once per (scenario, year, growth), then pick best
+    # per threshold using score-based filtering.
+    print("\n--- PHASE 2: Demand growth sweep (vectorized, cross-threshold) ---")
     phase2_start = time.time()
 
     dg_output = {
@@ -708,57 +751,77 @@ def main():
     }
 
     for iso in ISOS:
+        if iso not in pfs or iso not in archetypes:
+            continue
+
         dg_output['results'][iso] = {}
+        arrays = pfs[iso]
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         iso_rates = DEMAND_GROWTH_RATES[iso]
         all_combos = build_sensitivity_combos(iso)
 
+        arch_indices = sorted(archetypes[iso])
+        n_arch = len(arch_indices)
+        if n_arch == 0:
+            continue
+
+        # Extract archetype sub-arrays (evaluate only these in Phase 2)
+        arch_arrays = {k: arrays[k][arch_indices] for k in arrays}
+
+        # Pre-compute which archetypes qualify for each threshold
+        arch_scores = arch_arrays['hourly_match_score']
+        arch_thr_mask = {}  # thr → indices into arch_arrays that qualify
         for thr in OUTPUT_THRESHOLDS:
-            pfs_key = (iso, thr)
-            if pfs_key not in pfs or pfs_key not in archetypes:
-                continue
+            qualifying = np.where(arch_scores >= thr)[0]
+            if len(qualifying) > 0:
+                arch_thr_mask[thr] = qualifying
 
-            arrays = pfs[pfs_key]
-            arch_indices = sorted(archetypes[pfs_key])
-            n_arch = len(arch_indices)
+        # Initialize per-threshold result dicts
+        thr_dg = {thr: {} for thr in arch_thr_mask}
 
-            if n_arch == 0:
-                continue
+        # Full 9-dim factorial sweep — evaluate once per (scenario, year, growth)
+        for scenario_key, sens in all_combos:
+            wholesale = max(5, WHOLESALE_PRICES[iso] +
+                            FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
 
-            arch_arrays = {k: arrays[k][arch_indices] for k in arrays}
+            thr_year_results = {thr: {} for thr in arch_thr_mask}
 
-            t_str = str(thr)
-            threshold_dg = {}
+            for year in DEMAND_GROWTH_YEARS:
+                thr_growth_results = {thr: {} for thr in arch_thr_mask}
 
-            # Full 9-dim factorial sweep
-            for scenario_key, sens in all_combos:
-                wholesale = max(5, WHOLESALE_PRICES[iso] +
-                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
+                for g_level in DEMAND_GROWTH_LEVELS:
+                    g_rate = iso_rates[g_level]
+                    tc, ec, _ = price_mix_batch(
+                        iso, arch_arrays, sens, demand_twh,
+                        target_year=year, growth_rate=g_rate
+                    )
 
-                year_results = {}
-                for year in DEMAND_GROWTH_YEARS:
-                    growth_results = {}
-                    for g_level in DEMAND_GROWTH_LEVELS:
-                        g_rate = iso_rates[g_level]
-                        tc, ec, _ = price_mix_batch(
-                            iso, arch_arrays, sens, demand_twh,
-                            target_year=year, growth_rate=g_rate
-                        )
-                        best_local = int(np.argmin(tc))
-                        growth_results[g_level] = [
-                            arch_indices[best_local],
+                    # Pick best per threshold using pre-computed score masks
+                    for thr in arch_thr_mask:
+                        qual_idx = arch_thr_mask[thr]
+                        best_local = int(qual_idx[np.argmin(tc[qual_idx])])
+                        full_idx = arch_indices[best_local]
+                        thr_growth_results[thr][g_level] = [
+                            full_idx,
                             round(float(tc[best_local]), 2),
                             round(float(ec[best_local]), 2),
                             round(float(ec[best_local]) - wholesale, 2),
                         ]
-                    year_results[str(year)] = growth_results
 
-                threshold_dg[scenario_key] = year_results
+                for thr in arch_thr_mask:
+                    thr_year_results[thr][str(year)] = thr_growth_results[thr]
 
-            dg_output['results'][iso][t_str] = threshold_dg
-            print(f"  {iso:>6} {thr:>5}%: {len(threshold_dg)} keys × "
-                  f"{len(DEMAND_GROWTH_YEARS)} years × "
-                  f"{len(DEMAND_GROWTH_LEVELS)} growth ({n_arch} archetypes)")
+            for thr in arch_thr_mask:
+                thr_dg[thr][scenario_key] = thr_year_results[thr]
+
+        for thr in arch_thr_mask:
+            dg_output['results'][iso][str(thr)] = thr_dg[thr]
+
+        print(f"  {iso:>6}: {n_arch} archetypes, "
+              f"{len(arch_thr_mask)} thresholds, "
+              f"{len(all_combos)} scenarios × "
+              f"{len(DEMAND_GROWTH_YEARS)} years × "
+              f"{len(DEMAND_GROWTH_LEVELS)} growth")
 
     phase2_elapsed = time.time() - phase2_start
     print(f"\nPhase 2 complete: {phase2_elapsed:.0f}s")
