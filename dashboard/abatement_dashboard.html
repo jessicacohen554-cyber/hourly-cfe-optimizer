@@ -87,13 +87,23 @@ body { background: #F3F4F8; }
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     width: 100%;
 }
-.chart-panel-overview {
-    background: rgba(15,26,46,0.85);
-    height: 480px;
+/* Consistent dark navy background on ALL chart panels */
+.chart-panel-overview,
+.chart-panel-region {
+    background: rgba(15,26,46,0.95);
+    border-color: rgba(74,144,217,0.2);
 }
-.chart-panel-overview canvas {
-    width: 100% !important;
-    height: 380px !important;
+/* Hidden panel */
+.chart-panel.panel-hidden {
+    display: none;
+}
+/* Fade-in animation when panel appears */
+@keyframes chartPanelIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.chart-panel.panel-animate {
+    animation: chartPanelIn 0.5s ease forwards;
 }
 .hero-chart-title {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
@@ -291,24 +301,83 @@ body { background: #F3F4F8; }
 }
 
 /* ========== RESPONSIVE ========== */
+/* Prevent horizontal overflow globally */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+.hero-scrolly {
+    overflow-x: hidden;
+}
+
 @media (max-width: 900px) {
-    .hero-scrolly-container { flex-direction: column; }
-    .hero-scrolly-sticky { width: 100%; height: 45vh; min-height: 350px; position: sticky; top: 0; padding: 16px; }
-    .chart-panel { height: 350px; padding: 16px 14px; }
-    .chart-panel canvas { height: 240px !important; }
-    .hero-scrolly-steps { width: 100%; }
-    .hero-scrolly-step { min-height: auto; padding: 40px 20px; }
-    .hero-step-card { padding: 24px 20px; }
+    .hero-scrolly-container {
+        flex-direction: column;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    .hero-scrolly-sticky {
+        width: 100%;
+        height: auto;
+        min-height: 350px;
+        position: sticky;
+        top: 0;
+        padding: 16px;
+        max-width: 100%;
+    }
+    .hero-chart-panels {
+        max-width: 100%;
+    }
+    .chart-panel {
+        height: auto;
+        min-height: 350px;
+        padding: 16px 14px;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .chart-panel canvas {
+        height: 260px !important;
+        max-width: 100% !important;
+    }
+    .hero-scrolly-steps {
+        width: 100%;
+        max-width: 100%;
+    }
+    .hero-scrolly-step {
+        min-height: auto;
+        padding: 40px 20px;
+        max-width: 100%;
+    }
+    .hero-step-card {
+        padding: 24px 20px;
+        max-width: 100%;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
     .hero-step-card h3 { font-size: 1.25rem; }
-    .chart-legend { gap: 4px 10px; padding: 6px 8px 2px; }
+    .chart-legend {
+        gap: 4px 10px;
+        padding: 6px 8px 2px;
+        max-width: 100%;
+    }
     .chart-legend-item { font-size: 0.62rem; }
     .swatch-line, .swatch-dashed, .swatch-dot-line { width: 14px; }
     .swatch-band { width: 14px; height: 8px; }
 }
 @media (max-width: 600px) {
-    .hero-scrolly-sticky { height: 38vh; min-height: 320px; padding: 10px; }
-    .chart-panel { height: 320px; padding: 12px 10px; }
-    .chart-panel canvas { height: 200px !important; }
+    .hero-scrolly-sticky {
+        height: auto;
+        min-height: 320px;
+        padding: 10px;
+    }
+    .chart-panel {
+        height: auto;
+        min-height: 320px;
+        padding: 12px 10px;
+    }
+    .chart-panel canvas {
+        height: 220px !important;
+    }
     .hero-scrolly-step { padding: 28px 14px; }
     .hero-step-card { padding: 18px 14px; }
     .hero-step-card h3 { font-size: 1.05rem; }
@@ -318,6 +387,31 @@ body { background: #F3F4F8; }
     .swatch-line, .swatch-dashed, .swatch-dot-line { width: 12px; }
     .swatch-band { width: 12px; height: 7px; }
     .chart-legend-divider { height: 10px; }
+}
+/* Mobile-first stacking: ensure single-column layout with logical order */
+@media (max-width: 480px) {
+    .hero-scrolly-sticky {
+        min-height: 300px;
+        padding: 8px;
+    }
+    .chart-panel {
+        min-height: 300px;
+        padding: 10px 8px;
+        border-radius: 10px;
+    }
+    .chart-panel canvas {
+        height: 200px !important;
+    }
+    .hero-scrolly-step {
+        padding: 20px 10px;
+    }
+    .hero-step-card {
+        padding: 16px 12px;
+        border-radius: 12px;
+    }
+    .hero-step-card h3 { font-size: 0.95rem; }
+    .hero-step-card p { font-size: 0.8rem; line-height: 1.6; }
+    .step-stat { font-size: 0.78rem !important; padding: 6px 12px !important; }
 }
 </style>
 </head>
