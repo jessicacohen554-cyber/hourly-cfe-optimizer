@@ -427,6 +427,212 @@ Before launching `step1_pfs_generator.py`, the following must be verified:
   - Novel insights produced: cost drives mix, inflection zone steeper than expected, region determines strategy, existing clean assets undervalued, 45Q perverse incentive, EAC scarcity already emerging
 - **Standalone page** — no dependencies on other files, avoids merge conflicts with ongoing work on other branches
 
+### LMP Price Calculation Module — Design Plan (Feb 20, 2026)
+
+**Purpose**: Compute synthetic hourly LMP (Locational Marginal Prices) for each winning scenario by reconstructing 8760-hour dispatch and applying ISO-specific price formation models. Enables cost-of-energy analysis that accounts for how clean energy penetration reshapes wholesale electricity prices.
+
+**Pipeline position**: Downstream of Step 4. Reads Step 3/4 outputs, writes to `data/lmp/`. No changes to Steps 1–4.
+
+```
+Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Postprocess)
+                                                      ↓
+                                          compute_lmp_prices.py    ← NEW
+                                                      ↓
+                              data/lmp/{ISO}_lmp.parquet   (per-ISO output)
+                              data/lmp/{ISO}_archetypes.parquet
+                              data/lmp/lmp_summary.json  (dashboard-ready)
+```
+
+#### Shared Architecture: `dispatch_utils.py`
+
+Extracted from `recompute_co2.py` to create a single source of truth for dispatch reconstruction, fossil retirement, and profile loading. Both `recompute_co2.py` and `compute_lmp_prices.py` import from this module. Step 1 Numba JIT dispatch functions also consolidated here.
+
+```
+dispatch_utils.py (shared)
+├── Constants: battery/LDES params, hydro caps, grid mix, coal/oil caps, base demand
+├── get_supply_profiles(iso, gen_profiles)
+├── reconstruct_hourly_dispatch(mix, demand, profiles)  ← battery + LDES dispatch
+├── compute_fossil_retirement(iso, clean_pct, ...)      ← remaining capacity at threshold
+└── load_common_data()                                  ← demand, gen profiles, emission rates, fossil mix
+
+recompute_co2.py (imports dispatch_utils — refactored, identical behavior)
+├── compute_dispatch_stack_emission_rate()
+├── compute_co2_hourly()
+└── recompute_all_co2()
+
+compute_lmp_prices.py (imports dispatch_utils)
+├── PriceModel classes (ISO-specific)
+├── build_merit_order_stack()
+├── compute_lmp_stats()
+└── calibration framework
+```
+
+**Compatibility requirement**: After refactor, `recompute_co2.py` must produce bit-identical results. Verified via automated test.
+
+#### Design Decisions (Locked)
+
+| # | Decision | Choice | Rationale |
+|---|----------|--------|-----------|
+| 1 | Merit-order stack walk | `np.searchsorted` step-function | More accurate than `np.interp` linear interpolation — discrete units don't interpolate. Same performance. |
+| 2 | Archetype dedup key | `(mix_tuple, fuel_level, threshold)` | Threshold affects fossil stack (retirement changes available capacity). ~7,800 unique calcs per ISO. Still fast with Numba (<30s). |
+| 3 | Dispatch functions | Shared module (`dispatch_utils.py`) | Single source of truth. Extracted from `recompute_co2.py` + Step 1 Numba JIT. Compatibility test required. |
+| 4 | Surplus pricing | Calibrated empirical curve from start | Parameterized with calibration targets; "reasonable defaults" before actual LMP data. Phase 2 tunes parameters, no refactoring. |
+| 5 | Calibration LMP source | Day-ahead LMP | Cleaner, better for structural model. RT sensitivity via `rt_sensitivity_factor` parameter baked in. |
+
+#### Data Flow
+
+**Inputs (all existing)**:
+- `data/eia_generation_profiles.json` — hourly solar/wind/hydro/nuclear shapes (8760)
+- `data/eia_demand_profiles.json` — hourly demand shape (8760)
+- `dashboard/overprocure_scenarios.parquet` (or `overprocure_results.json`) — winning mixes
+- `data/eia_fossil_mix.json` — coal/gas/oil shares for stack construction
+- `data/egrid_emission_rates.json` — heat rates for marginal cost derivation
+- Step 3/4 constants — wholesale prices, fuel adjustments, gas capacity (imported at runtime, NOT hardcoded)
+
+**New inputs (Phase 2 — calibration)**:
+- `data/lmp/actual_lmp_PJM.json` — PJM Data Miner 2 API (Western Hub, 2021-2025)
+
+**Outputs**:
+- `data/lmp/{ISO}_lmp.parquet` — summary stats per (threshold, scenario), ~2 MB/ISO
+- `data/lmp/{ISO}_archetypes.parquet` — 8760h profiles for unique archetypes, ~15-20 MB/ISO
+- `data/lmp/{ISO}_checkpoint.json` — resume state (transient, deleted on completion)
+- `data/lmp/lmp_summary.json` — dashboard-ready cross-ISO summary, <500 KB
+- `dashboard/js/lmp-data.js` — client-side visualization data (Phase 4)
+
+#### Hourly Dispatch Reconstruction
+
+Reuses Step 1/Step 5 logic via shared `dispatch_utils.py`:
+1. Build weighted supply curve: `Σ (mix_pct × profile)` for clean_firm, solar, wind, hydro
+2. Apply procurement multiplier
+3. Battery dispatch (4hr daily cycle, 85% RTE)
+4. Battery8 dispatch (8hr daily cycle, 85% RTE)
+5. LDES dispatch (100hr, 7-day window, 50% RTE)
+6. Result: `residual_demand = demand - total_clean_supply` (8760 array; positive = fossil needed)
+
+**Vectorization**: Base supply for N archetypes is a single matrix multiply `(N,4) @ (4,8760)`. Storage dispatch loops per-archetype (SOC state carries forward) — Numba JIT target.
+
+#### Fossil Merit-Order Stack (Parameterized)
+
+Heat rates (MMBtu/MWh) from EIA Electric Power Annual Table 8.1:
+- Coal steam: 10.0, Gas CCGT: 6.4, Gas CT: 10.0, Oil CT: 10.5
+
+Variable O&M ($/MWh) from EIA AEO / NREL ATB:
+- Coal: $4.50, Gas CCGT: $2.00, Gas CT: $4.00, Oil CT: $5.00
+
+Marginal cost = heat_rate × fuel_price + VOM. **Stack order determined by marginal cost** — fuel-switching aware:
+- At Low gas ($2/MMBtu): gas CCGT MC = $14.80 < coal MC = $22.50 → gas dispatches first
+- At High gas ($6/MMBtu): gas CCGT MC = $40.40 > coal MC = $26.50 → coal dispatches first
+
+Fuel prices imported from Step 3/4 at runtime (L/M/H sensitivity). Fossil capacity from shared retirement model (threshold-dependent: coal retires first → oil → gas).
+
+#### ISO-Specific Price Formation Models
+
+Each ISO gets its own `PriceModel` class with calibratable parameters:
+
+| ISO | Capacity Mechanism | Scarcity Model | Surplus Model | Key Parameters |
+|---|---|---|---|---|
+| **PJM** | RPM capacity market | Penalty factor → $2,000 cap | Moderate negative prices (coal/nuclear must-run) | `scarcity_cap=2000`, `floor=-30`, coal baseload min-gen |
+| **ERCOT** | Energy-only | **ORDC** — smooth exponential adder (VOLL × LOLP curve) | Aggressive negative prices (no must-run obligation) | `ordc_cap=5000`, `ordc_shape`, `floor=-50` |
+| **CAISO** | Resource Adequacy | Soft cap + RDRR mechanism | Most negative prices (solar duck curve) | `scarcity_cap=2000`, `floor=-60`, solar curtailment premium |
+| **NYISO** | ICAP | Penalty factor → $2,000 cap | Similar to PJM but tighter geography | `scarcity_cap=2000`, `floor=-20` |
+| **NEISO** | FCM | Penalty factor → $2,000 cap | Winter gas constraint creates seasonal scarcity | `scarcity_cap=2000`, `winter_gas_adder`, pipeline constraint |
+
+**ERCOT ORDC** (unique — not a simple price cap): `adder = VOLL × LOLP(reserves)`, LOLP increases exponentially as reserves drop below ~3,000 MW. VOLL = $5,000/MWh (post-2023 reform).
+
+**NEISO winter gas** (unique — already modeled in Step 4): Winter hours (Dec-Feb) get gas price spike due to pipeline constraints. Parameterized via existing `NEISO_CCS_GAS_ADDER = $13.13/MWh`.
+
+**All surplus pricing uses calibrated empirical curves** — parameterized from the start with shape/floor/decay parameters that Phase 2 calibration tunes. Reasonable defaults used before actual LMP data.
+
+**RT sensitivity**: `rt_sensitivity_factor` parameter scales volatility/spread to approximate real-time conditions from day-ahead calibration.
+
+#### Output Schema
+
+**Per-ISO stats: `data/lmp/{ISO}_lmp.parquet`**
+
+| Column | Type | Description |
+|---|---|---|
+| `threshold` | float32 | Clean energy % |
+| `scenario` | string | 9-dim key |
+| `archetype_key` | string | Dedup key |
+| `avg_lmp` | float32 | Time-weighted average $/MWh |
+| `peak_avg_lmp` | float32 | Peak hours (7am-11pm weekdays) |
+| `offpeak_avg_lmp` | float32 | Off-peak hours |
+| `zero_price_hours` | int16 | Hours at $0 or below |
+| `negative_price_hours` | int16 | Hours below $0 |
+| `scarcity_hours` | int16 | Hours above scarcity threshold |
+| `lmp_p10/p25/p50/p75/p90` | float32 | Percentiles |
+| `price_volatility` | float32 | Std dev |
+| `duck_curve_depth_mw` | float32 | Max surplus MW |
+| `net_peak_price` | float32 | Price at max net demand hour |
+| `fossil_revenue_mwh` | float32 | Avg $/MWh earned by remaining fossil |
+
+**Per-ISO archetype profiles: `data/lmp/{ISO}_archetypes.parquet`**
+
+| Column | Type |
+|---|---|
+| `archetype_key` | string |
+| `threshold` | float32 |
+| `fuel_level` | string |
+| `hourly_lmp` | float32[8760] (list column) |
+| `hourly_residual_mw` | float32[8760] (list column) |
+| `hourly_marginal_unit` | uint8[8760] (list column) |
+
+Size: ~15-20 MB/ISO compressed. Total all ISOs: ~75-100 MB.
+
+#### Checkpointing & Session Resilience
+
+- **Atomic checkpoint writes** (`os.replace` — POSIX atomic)
+- **Append-mode parquet** (don't hold full ISO in memory)
+- **Per-threshold flush** (max ~30s of lost work on crash)
+- **Skip-if-exists** at ISO level (`--force` to override)
+- **Per-ISO output files** (completing PJM doesn't risk ERCOT data)
+- **Resume from checkpoint**: loads `{ISO}_checkpoint.json`, skips completed thresholds
+
+#### Calibration Framework (Phase 2)
+
+**Data source**: PJM Data Miner 2 API — Western Hub, DA LMP, 2021-2025. Free registration.
+
+**Calibration targets (weighted)**:
+- 40%: RMSE of hourly prices
+- 15%: Error in annual mean price
+- 15%: Error in zero/negative price hour count
+- 15%: Error in P90 price (tail behavior)
+- 15%: KS statistic of price duration curve shape
+
+**Parameters calibrated**: floor_price, surplus_slope, stack price offsets, scarcity_shape.
+
+**Validation**: Train 2021-2023, test 2024-2025. Cross-region sanity check: calibrate PJM, verify NYISO (similar market).
+
+**Other ISO data sources** (Phase 3): ERCOT (`misportal.ercot.com`), CAISO (`oasis.caiso.com`), NYISO (`mis.nyiso.com`), NEISO (`isoexpress.iso-ne.com`). All free. `gridstatus` package wraps all APIs.
+
+#### Implementation Phases
+
+| Phase | Scope | Files | Size |
+|---|---|---|---|
+| **0** | Extract `dispatch_utils.py` from `recompute_co2.py` + compatibility test | `dispatch_utils.py`, `recompute_co2.py` | ~300 lines extracted |
+| **1a** | Core engine — PJM only, Medium fuel, no calibration | `compute_lmp_prices.py` | ~400 lines |
+| **1b** | Full fuel sensitivity sweep (L/M/H) + all thresholds + checkpointing | Same | +~150 lines |
+| **1c** | All 5 ISOs with market-specific models | Same | +~200 lines |
+| **2a** | PJM LMP data fetch | `fetch_pjm_lmp.py` | ~150 lines |
+| **2b** | Calibration + validation | `calibrate_lmp_model.py` | ~200 lines |
+| **3** | All-ISO calibration data fetch | Per-ISO fetch scripts | ~150 lines |
+| **4** | Dashboard integration | `generate_shared_data.py` + JS | ~150 lines |
+
+#### New Files
+
+```
+dispatch_utils.py              # Shared dispatch/retirement/profiles (~300 lines)
+compute_lmp_prices.py          # Main LMP script (~750 lines)
+fetch_pjm_lmp.py               # Phase 2: LMP data fetcher (~150 lines)
+calibrate_lmp_model.py         # Phase 2: Parameter calibration (~200 lines)
+data/lmp/                      # Output directory
+  ├── {ISO}_lmp.parquet        # ~2 MB each
+  ├── {ISO}_archetypes.parquet # ~15-20 MB each
+  ├── {ISO}_checkpoint.json    # Transient
+  ├── lmp_summary.json         # ~500 KB
+  └── actual_lmp_*.json        # Phase 2: calibration data
+```
+
 ### Open questions
 - Path-dependent MAC visualization: may need alternative to MAC curve format
 - ELCC: include in next run? Fixed or penetration-dependent?
