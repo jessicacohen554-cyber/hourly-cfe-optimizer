@@ -130,7 +130,7 @@ PROCUREMENT_BOUNDS = {
     95:   (95, 250),
     97.5: (100, 250),
     99:   (100, 250),
-    100:  (100, 500),
+    100:  (100, 350),
 }
 
 # Nuclear seasonal derate
@@ -795,7 +795,8 @@ def get_seed_combos(hydro_cap):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
-                       prev_pruning=None, cross_feasible_mixes=None):
+                       prev_pruning=None, cross_feasible_mixes=None,
+                       flush_callback=None):
     """Find ALL feasible solutions for a single threshold × ISO.
 
     Uses cross-threshold pruning: mixes that were infeasible at a lower threshold
@@ -806,6 +807,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     excluded from the Phase 1b storage sweep (already known to work without
     needing the expensive storage search). Phase 1a still evaluates them to
     find the right procurement level.
+
+    flush_callback: optional callable(candidates_so_far) called every 1M solutions
+                    to save interim progress within a single threshold.
 
     Args:
         prev_pruning: dict from previous threshold with:
@@ -892,8 +896,11 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         feasible_mix_keys.update(cross_skip)
         print(f"      {len(cross_skip):,} mixes known feasible from cache (skip near-miss storage)")
 
+    _flush_counter = [0]  # Mutable counter for closure
+    FLUSH_INTERVAL = 1_000_000  # Flush every 1M solutions
+
     def add_candidate(mix_arr, proc, bp, b8p, lp, score):
-        """Add candidate if not already seen."""
+        """Add candidate if not already seen. Triggers flush every 1M solutions."""
         mix_key = (int(mix_arr[0]), int(mix_arr[1]), int(mix_arr[2]), int(mix_arr[3]))
         key = (mix_key, proc, bp, b8p, lp)
         if key not in seen:
@@ -906,6 +913,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 'ldes_dispatch_pct': lp,
                 'hourly_match_score': round(score * 100, 2),
             })
+            # Interim flush every 1M solutions
+            if flush_callback and len(candidates) // FLUSH_INTERVAL > _flush_counter[0]:
+                _flush_counter[0] = len(candidates) // FLUSH_INTERVAL
+                flush_callback(candidates)
 
     # Build per-mix procurement floors from previous threshold
     prev_min_proc = {}
@@ -942,6 +953,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     # Phase 1b: Storage sweep on near-miss mixes
     # For each (mix, storage_config), sweep procurement upward with early stopping.
     # Triple-nested: battery4 × battery8 × LDES (dispatch order: 4hr → 8hr → LDES).
+    # All battery8 and LDES levels are tested for each mix — they have independent
+    # cost toggles in Step 3, so different configs may be optimal at different prices.
     for i in near_miss_mixes:
         supply_row = supply_rows[i]
         mix = combos_5[i]
@@ -1192,6 +1205,39 @@ def process_iso(args):
         except Exception as e:
             print(f"    {iso}: Could not read interim cache: {e}")
 
+    # Interim flush callback: saves candidates to parquet every 1M solutions
+    # Protects against process kills during long-running thresholds (esp. 100%)
+    _flush_threshold = [None]  # Current threshold being processed
+
+    def interim_flush(candidates_so_far):
+        """Save in-progress candidates to a separate WIP parquet (replaced each flush)."""
+        if not candidates_so_far or not HAS_PARQUET:
+            return
+        thr = _flush_threshold[0]
+        n = len(candidates_so_far)
+        print(f"      [interim flush] {n:,} solutions saved for {iso} {thr}%")
+        wip_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_wip.parquet')
+        rows = []
+        for c in candidates_so_far:
+            rows.append({
+                'iso': iso,
+                'threshold': float(thr),
+                'clean_firm': c['resource_mix']['clean_firm'],
+                'solar': c['resource_mix']['solar'],
+                'wind': c['resource_mix']['wind'],
+                'hydro': c['resource_mix']['hydro'],
+                'procurement_pct': c['procurement_pct'],
+                'battery_dispatch_pct': c['battery_dispatch_pct'],
+                'battery8_dispatch_pct': c.get('battery8_dispatch_pct', 0),
+                'ldes_dispatch_pct': c['ldes_dispatch_pct'],
+                'hourly_match_score': c['hourly_match_score'],
+                'pareto_type': c.get('pareto_type', ''),
+            })
+        wip_table = _rows_to_table(rows)
+        if wip_table:
+            pq.write_table(wip_table, wip_path, compression='snappy')
+            del rows  # Free memory
+
     prev_pruning = None
     for threshold in THRESHOLDS:
         t_str = str(threshold)
@@ -1204,10 +1250,12 @@ def process_iso(args):
         if mix_max_score:
             cross_feasible_mixes = {mk for mk, s in mix_max_score.items() if s >= threshold}
 
+        _flush_threshold[0] = threshold
         t_start = time.time()
         feasible, pruning_info = optimize_threshold(
             iso, threshold, demand_arr, supply_matrix, hydro_cap,
-            prev_pruning=prev_pruning, cross_feasible_mixes=cross_feasible_mixes)
+            prev_pruning=prev_pruning, cross_feasible_mixes=cross_feasible_mixes,
+            flush_callback=interim_flush)
         prev_pruning = pruning_info
 
         # Accumulate new solutions
@@ -1232,6 +1280,11 @@ def process_iso(args):
         }
         print(f"    {iso} {threshold}%: {len(feasible)} solutions "
               f"({len(archetypes)} mix archetypes), {t_elapsed:.1f}s")
+
+        # Clean up WIP file (full results saved by append_threshold_to_cache below)
+        wip_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_wip.parquet')
+        if os.path.exists(wip_path):
+            os.remove(wip_path)
 
         # Checkpoint after each threshold + append to interim Parquet cache
         save_checkpoint(iso, iso_results, t_str)
