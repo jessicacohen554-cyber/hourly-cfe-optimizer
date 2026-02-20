@@ -4,7 +4,7 @@ Extract resource mix and compressed day data from overprocure_results.json
 into shared-data.js format.
 
 Adds new constants WITHOUT modifying existing ones.
-Uses MMM_M_M scenario (all-Medium toggles) — matches EFFECTIVE_COST_DATA convention.
+Uses ISO-aware medium scenario key (8-dim format) — matches EFFECTIVE_COST_DATA convention.
 """
 
 import json
