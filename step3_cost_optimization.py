@@ -16,9 +16,14 @@ Pipeline position: Step 3 of 4
   Step 4 — Post-processing (step4_postprocess.py)
 
 Input:  data/pfs_post_ef.parquet       (from Step 2)
-Output: dashboard/overprocure_results.json  (backward-compat 324-key + feasible mixes)
+Output: dashboard/overprocure_results.json  (full 9-dim factorial keys + feasible mixes)
         dashboard/demand_growth_results.json (full factorial: all combos × years × growth)
         data/cf_split_table.json            (tranche breakdown)
+
+Key format: RFB_D_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M_M1_M for CAISO all-Medium)
+  B = Battery toggle (paired 4hr+8hr, L/M/H)
+  D = LDES toggle (independent, L/M/H)
+  CAISO: 17,496 combos per threshold. Non-CAISO: 5,832 combos per threshold.
 """
 
 import json
@@ -82,6 +87,11 @@ LCOE_TABLES = {
         'Medium': {'CAISO': 102, 'ERCOT': 92, 'PJM': 98, 'NYISO': 108, 'NEISO': 105},
         'High':   {'CAISO': 133, 'ERCOT': 120, 'PJM': 127, 'NYISO': 140, 'NEISO': 137},
     },
+    'battery8': {
+        'Low':    {'CAISO': 85, 'ERCOT': 77, 'PJM': 82, 'NYISO': 90, 'NEISO': 88},
+        'Medium': {'CAISO': 125, 'ERCOT': 113, 'PJM': 120, 'NYISO': 132, 'NEISO': 129},
+        'High':   {'CAISO': 165, 'ERCOT': 149, 'PJM': 159, 'NYISO': 175, 'NEISO': 170},
+    },
     'ldes': {
         'Low':    {'CAISO': 135, 'ERCOT': 116, 'PJM': 128, 'NYISO': 150, 'NEISO': 143},
         'Medium': {'CAISO': 180, 'ERCOT': 155, 'PJM': 170, 'NYISO': 200, 'NEISO': 190},
@@ -104,6 +114,9 @@ TX_TABLES = {
                    'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3},
                    'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6}},
     'battery':    {'None': 0, 'Low': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 1, 'NEISO': 1},
+                   'Medium': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2},
+                   'High': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3}},
+    'battery8':   {'None': 0, 'Low': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 1, 'NEISO': 1},
                    'Medium': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2},
                    'High': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3}},
     'ldes':       {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2},
@@ -174,7 +187,7 @@ EXISTING_GAS_FOM_KW_YR = {
 # Capacity credits at system peak
 PEAK_CAPACITY_CREDITS = {
     'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
-    'hydro': 0.50, 'battery': 0.95, 'ldes': 0.90,
+    'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
 }
 
 
@@ -198,10 +211,10 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         iso: region string
         arrays: dict with numpy arrays (shape N) for each mix dimension:
             'clean_firm', 'solar', 'wind', 'hydro' (% allocation),
-            'procurement_pct', 'battery_dispatch_pct', 'ldes_dispatch_pct',
-            'hourly_match_score'
+            'procurement_pct', 'battery_dispatch_pct', 'battery8_dispatch_pct',
+            'ldes_dispatch_pct', 'hourly_match_score'
         sens: dict with scalar sensitivity parameters:
-            'ren', 'firm', 'stor', 'ccs', 'q45', 'fuel', 'tx', 'geo'
+            'ren', 'firm', 'batt', 'ldes_lvl', 'ccs', 'q45', 'fuel', 'tx', 'geo'
         demand_twh: base year demand (scalar)
         target_year, growth_rate: demand growth params (scalars, optional)
 
@@ -220,7 +233,8 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 
     # Sensitivity lookups (scalar)
     ren_name = LEVEL_NAME[sens['ren']]
-    stor_name = LEVEL_NAME[sens['stor']]
+    batt_name = LEVEL_NAME[sens['batt']]
+    ldes_name = LEVEL_NAME[sens['ldes_lvl']]
     fuel_name = LEVEL_NAME[sens['fuel']]
     tx_name = LEVEL_NAME[sens['tx']]
     firm_lev = sens['firm']
@@ -245,6 +259,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     ccs_pct = np.maximum(ccs_pct, 0.0)
 
     bat_pct = arrays['battery_dispatch_pct'].astype(np.float64)
+    bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N)).astype(np.float64)
     ldes_pct = arrays['ldes_dispatch_pct'].astype(np.float64)
 
     # --- Solar ---
@@ -323,10 +338,13 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     cf_cost_per_demand = cf_total_new_cost / demand
     total_cost += existing_cost + cf_cost_per_demand
 
-    # --- Storage ---
-    bat_lcoe = LCOE_TABLES['battery'][stor_name][iso] + get_tx('battery', tx_name, iso)
-    ldes_lcoe = LCOE_TABLES['ldes'][stor_name][iso] + get_tx('ldes', tx_name, iso)
-    total_cost += bat_pct / 100.0 * bat_lcoe + ldes_pct / 100.0 * ldes_lcoe
+    # --- Storage (battery toggle = 4hr + 8hr paired; LDES toggle = independent) ---
+    bat4_lcoe = LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)
+    bat8_lcoe = LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso)
+    ldes_lcoe = LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
+    total_cost += (bat_pct / 100.0 * bat4_lcoe +
+                   bat8_pct / 100.0 * bat8_lcoe +
+                   ldes_pct / 100.0 * ldes_lcoe)
 
     # --- Gas Capacity Backup (resource adequacy) ---
     # Compute clean peak capacity contribution, then gas backup needed, then cost
@@ -343,6 +361,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         proc * ccs_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         proc * hyd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
         bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
     )
 
@@ -387,33 +406,58 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 # SENSITIVITY KEY HELPERS
 # ============================================================================
 
+def make_scenario_key(r, f, b, d, ff, tx, ccs, q45, geo):
+    """Build 9-dim scenario key like MMM_M_M_M_M1_M.
+    Format: {Ren}{Firm}{Batt}_{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+    Batt = Battery toggle (paired 4hr+8hr, L/M/H)
+    D = LDES toggle (independent, L/M/H)
+    Geo='X' for non-CAISO ISOs (no geothermal resource).
+    """
+    geo_code = geo if geo else 'X'
+    return f"{r}{f}{b}_{d}_{ff}_{tx}_{ccs}{q45}_{geo_code}"
+
+
+def medium_key(iso):
+    """Return the all-Medium scenario key for an ISO.
+    CAISO: MMM_M_M_M_M1_M  (geothermal=M)
+    Others: MMM_M_M_M_M1_X  (no geothermal)
+    """
+    geo = 'M' if iso == 'CAISO' else 'X'
+    return f'MMM_M_M_M_M1_{geo}'
+
+
 def make_old_key(r, f, s, ff, tx):
-    """Build old-format scenario key like MMM_M_M."""
+    """Build old 5-dim scenario key like MMM_M_M (backward compat)."""
     return f"{r}{f}{s}_{ff}_{tx}"
 
 
 def build_sensitivity_combos(iso):
     """Build all sensitivity combos for an ISO.
-    Returns list of (old_key, sens_dict) tuples."""
+    Returns list of (scenario_key, sens_dict) tuples.
+    9-dim: {Ren}{Firm}{Batt}_{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+    CAISO: 17,496 combos (3^3 × 3 × 3 × 4 × 3 × 2 × 3).
+    Non-CAISO: 5,832 combos (3^3 × 3 × 3 × 4 × 3 × 2 × 1).
+    """
     combos = []
     tx_levels = ['N', 'L', 'M', 'H']
     ccs_levels = LMH
     q45_states = ['1', '0']
     geo_levels = LMH if iso == 'CAISO' else [None]
 
-    for r, f, s in product(LMH, LMH, LMH):
-        for ff in LMH:
-            for tx in tx_levels:
-                old_key = make_old_key(r, f, s, ff, tx)
-                for ccs in ccs_levels:
-                    for q45 in q45_states:
-                        for geo in geo_levels:
-                            sens = {
-                                'ren': r, 'firm': f, 'stor': s,
-                                'ccs': ccs, 'q45': q45,
-                                'fuel': ff, 'tx': tx, 'geo': geo,
-                            }
-                            combos.append((old_key, sens))
+    for r, f, b in product(LMH, LMH, LMH):
+        for d in LMH:  # LDES toggle (independent)
+            for ff in LMH:
+                for tx in tx_levels:
+                    for ccs in ccs_levels:
+                        for q45 in q45_states:
+                            for geo in geo_levels:
+                                key = make_scenario_key(r, f, b, d, ff, tx, ccs, q45, geo)
+                                sens = {
+                                    'ren': r, 'firm': f, 'batt': b, 'ldes_lvl': d,
+                                    'ccs': ccs, 'q45': q45,
+                                    'fuel': ff, 'tx': tx, 'geo': geo,
+                                }
+                                combos.append((key, sens))
     return combos
 
 
@@ -456,6 +500,9 @@ def load_pfs_post_ef():
                 'hydro': sub.column('hydro').to_numpy(),
                 'procurement_pct': sub.column('procurement_pct').to_numpy(),
                 'battery_dispatch_pct': sub.column('battery_dispatch_pct').to_numpy(),
+                'battery8_dispatch_pct': (sub.column('battery8_dispatch_pct').to_numpy()
+                                          if 'battery8_dispatch_pct' in sub.column_names
+                                          else np.zeros(sub.num_rows, dtype=np.int64)),
                 'ldes_dispatch_pct': sub.column('ldes_dispatch_pct').to_numpy(),
                 'hourly_match_score': sub.column('hourly_match_score').to_numpy(),
             }
@@ -466,6 +513,7 @@ def arrays_to_mix_dict(arrays, idx):
     """Extract a single mix from arrays as a dict."""
     ccs_pct = max(0, 100 - (int(arrays['clean_firm'][idx]) + int(arrays['solar'][idx]) +
                              int(arrays['wind'][idx]) + int(arrays['hydro'][idx])))
+    bat8 = arrays.get('battery8_dispatch_pct')
     return {
         'resource_mix': {
             'clean_firm': int(arrays['clean_firm'][idx]),
@@ -477,6 +525,7 @@ def arrays_to_mix_dict(arrays, idx):
         'procurement_pct': int(arrays['procurement_pct'][idx]),
         'hourly_match_score': round(float(arrays['hourly_match_score'][idx]), 4),
         'battery_dispatch_pct': int(arrays['battery_dispatch_pct'][idx]),
+        'battery8_dispatch_pct': int(bat8[idx]) if bat8 is not None else 0,
         'ldes_dispatch_pct': int(arrays['ldes_dispatch_pct'][idx]),
     }
 
@@ -487,7 +536,7 @@ def arrays_to_mix_dict(arrays, idx):
 
 def main():
     print("=" * 70)
-    print("  STEP 2: COST OPTIMIZATION (v3 — vectorized, PFS post-EF)")
+    print("  STEP 3: COST OPTIMIZATION (v4 — full 9-dim factorial, PFS post-EF)")
     print("=" * 70)
 
     total_start = time.time()
@@ -496,7 +545,7 @@ def main():
     pfs = load_pfs_post_ef()
     print(f"  Groups: {len(pfs)} (ISO × threshold)")
 
-    # Build backward-compatible output structure
+    # Build output structure
     output = {
         'config': {
             'data_year': 2025,
@@ -539,62 +588,39 @@ def main():
             'thresholds': {},
         }
 
-        # Build all sensitivity combos for this ISO
+        # Build all sensitivity combos for this ISO (full 9-dim factorial)
         all_combos = build_sensitivity_combos(iso)
-        # Group by old_key for backward-compat output
-        old_key_combos = {}
-        for old_key, sens in all_combos:
-            if old_key not in old_key_combos:
-                old_key_combos[old_key] = []
-            old_key_combos[old_key].append(sens)
-
-        # Default sensitivity: Medium everything, 45Q=ON, CCS=M, Geo=M
-        default_sens = {
-            'ren': 'M', 'firm': 'M', 'stor': 'M', 'ccs': 'M',
-            'q45': '1', 'fuel': 'M', 'tx': 'M',
-            'geo': 'M' if iso == 'CAISO' else None,
-        }
+        n_combos = len(all_combos)
 
         for thr in OUTPUT_THRESHOLDS:
-            key = (iso, thr)
-            if key not in pfs:
+            pfs_key = (iso, thr)
+            if pfs_key not in pfs:
                 continue
-            arrays = pfs[key]
+            arrays = pfs[pfs_key]
             N = len(arrays['clean_firm'])
 
             t_str = str(thr)
             threshold_data = {'scenarios': {}, 'feasible_mixes': {}}
             arch_set = set()
 
-            # For each old-format scenario key, find the cheapest mix
-            # using the default CCS/45Q/Geo mapping (firm level = CCS level)
-            for old_key in old_key_combos:
-                parts_rfs = old_key.split('_')[0]
-                firm_lev = parts_rfs[1]  # F from RFS
-                fuel_code = old_key.split('_')[1]
-                tx_code = old_key.split('_')[2]
-
-                # Default mapping: CCS = firm level, 45Q = ON, Geo = M
-                sens = {
-                    'ren': parts_rfs[0], 'firm': firm_lev, 'stor': parts_rfs[2],
-                    'ccs': firm_lev, 'q45': '1',
-                    'fuel': fuel_code, 'tx': tx_code,
-                    'geo': 'M' if iso == 'CAISO' else None,
-                }
-
+            # Evaluate ALL sensitivity combos directly (full 9-dim factorial)
+            # CAISO: 17,496 combos. Non-CAISO: 5,832 combos.
+            # 45Q is a real dimension — no separate no_45q computation needed.
+            for scenario_key, sens in all_combos:
                 tc, ec, tranche = price_mix_batch(iso, arrays, sens, demand_twh)
                 best_idx = int(np.argmin(tc))
                 arch_set.add(best_idx)
 
                 best_mix = arrays_to_mix_dict(arrays, best_idx)
                 wholesale = max(5, WHOLESALE_PRICES[iso] +
-                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[fuel_code]])
+                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
 
                 scenario = {
                     'resource_mix': best_mix['resource_mix'],
                     'procurement_pct': best_mix['procurement_pct'],
                     'hourly_match_score': best_mix['hourly_match_score'],
                     'battery_dispatch_pct': best_mix['battery_dispatch_pct'],
+                    'battery8_dispatch_pct': best_mix['battery8_dispatch_pct'],
                     'ldes_dispatch_pct': best_mix['ldes_dispatch_pct'],
                     'costs': {
                         'total_cost': round(float(tc[best_idx]), 2),
@@ -620,21 +646,9 @@ def main():
                     },
                 }
 
-                # Also compute no-45Q costs
-                no45q_sens = dict(sens)
-                no45q_sens['q45'] = '0'
-                tc_no45q, ec_no45q, _ = price_mix_batch(iso, arrays, no45q_sens, demand_twh)
-                scenario['no_45q_costs'] = {
-                    'total_cost': round(float(tc_no45q[best_idx]), 2),
-                    'effective_cost': round(float(ec_no45q[best_idx]), 2),
-                    'incremental': round(float(ec_no45q[best_idx]) - wholesale, 2),
-                    'wholesale': wholesale,
-                }
-
-                threshold_data['scenarios'][old_key] = scenario
+                threshold_data['scenarios'][scenario_key] = scenario
 
             # Store feasible mixes in columnar format for client-side repricing
-            # Columnar: {col: [values...]} instead of [{col: val}, ...] — ~8× smaller JSON
             max_feasible = min(N, 500)
             step = max(1, N // max_feasible)
             sample_indices = list(range(0, N, step))
@@ -650,6 +664,7 @@ def main():
                                             arrays['solar'][idx_arr].astype(int) +
                                             arrays['wind'][idx_arr].astype(int) +
                                             arrays['hydro'][idx_arr].astype(int)))
+            bat8 = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.int64))
             threshold_data['feasible_mixes'] = {
                 'clean_firm': arrays['clean_firm'][idx_arr].astype(int).tolist(),
                 'solar': arrays['solar'][idx_arr].astype(int).tolist(),
@@ -659,14 +674,15 @@ def main():
                 'procurement_pct': arrays['procurement_pct'][idx_arr].astype(int).tolist(),
                 'hourly_match_score': np.round(arrays['hourly_match_score'][idx_arr], 4).tolist(),
                 'battery_dispatch_pct': arrays['battery_dispatch_pct'][idx_arr].astype(int).tolist(),
+                'battery8_dispatch_pct': bat8[idx_arr].astype(int).tolist(),
                 'ldes_dispatch_pct': arrays['ldes_dispatch_pct'][idx_arr].astype(int).tolist(),
             }
 
-            archetypes[key] = arch_set
+            archetypes[pfs_key] = arch_set
             output['results'][iso]['thresholds'][t_str] = threshold_data
 
             print(f"  {iso:>6} {thr:>5}%: {N:>6,} mixes, "
-                  f"{len(old_key_combos)} scenarios, "
+                  f"{n_combos} scenarios, "
                   f"{len(arch_set)} archetypes")
 
     phase1_elapsed = time.time() - phase1_start
@@ -675,10 +691,9 @@ def main():
     # ================================================================
     # PHASE 2: Demand growth sweep on archetypes
     # ================================================================
-    # Sweep 324 base sensitivity keys × 25 years × 3 growth levels.
-    # CCS/45Q/Geo toggles are handled by client-side repricing.
-    # This tests whether the optimal mix changes under demand growth.
-    print("\n--- PHASE 2: Demand growth sweep (324 keys × years × growth) ---")
+    # Full factorial sweep: all 9-dim sensitivity combos × 25 years × 3 growth levels.
+    # All toggles (including CCS/45Q/Geo/Battery/LDES) are real dimensions.
+    print("\n--- PHASE 2: Demand growth sweep (full factorial × years × growth) ---")
     phase2_start = time.time()
 
     dg_output = {
@@ -688,8 +703,8 @@ def main():
             'growth_rates': DEMAND_GROWTH_RATES,
             'base_year': 2025,
             'fields': ['mix_idx', 'total_cost', 'effective_cost', 'incremental'],
-            'note': 'CCS/45Q/Geo toggles use default mapping (CCS=firm, 45Q=ON, Geo=M). '
-                    'Client-side repricing handles full factorial.',
+            'note': 'Full 9-dim factorial: RFB_D_FF_TX_CCSq45_GEO keys. '
+                    'CAISO: 17,496 combos. Non-CAISO: 5,832 combos.',
         },
         'results': {},
     }
@@ -698,14 +713,15 @@ def main():
         dg_output['results'][iso] = {}
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         iso_rates = DEMAND_GROWTH_RATES[iso]
+        all_combos = build_sensitivity_combos(iso)
 
         for thr in OUTPUT_THRESHOLDS:
-            key = (iso, thr)
-            if key not in pfs or key not in archetypes:
+            pfs_key = (iso, thr)
+            if pfs_key not in pfs or pfs_key not in archetypes:
                 continue
 
-            arrays = pfs[key]
-            arch_indices = sorted(archetypes[key])
+            arrays = pfs[pfs_key]
+            arch_indices = sorted(archetypes[pfs_key])
             n_arch = len(arch_indices)
 
             if n_arch == 0:
@@ -716,39 +732,30 @@ def main():
             t_str = str(thr)
             threshold_dg = {}
 
-            # 324 base sensitivity keys (CCS defaults to firm level, 45Q=ON, Geo=M)
-            for r, f, s in product(LMH, LMH, LMH):
-                for ff in LMH:
-                    for tx in ['N', 'L', 'M', 'H']:
-                        old_key = make_old_key(r, f, s, ff, tx)
-                        sens = {
-                            'ren': r, 'firm': f, 'stor': s,
-                            'ccs': f, 'q45': '1',
-                            'fuel': ff, 'tx': tx,
-                            'geo': 'M' if iso == 'CAISO' else None,
-                        }
-                        wholesale = max(5, WHOLESALE_PRICES[iso] +
-                                        FUEL_ADJUSTMENTS[iso][LEVEL_NAME[ff]])
+            # Full 9-dim factorial sweep
+            for scenario_key, sens in all_combos:
+                wholesale = max(5, WHOLESALE_PRICES[iso] +
+                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
 
-                        year_results = {}
-                        for year in DEMAND_GROWTH_YEARS:
-                            growth_results = {}
-                            for g_level in DEMAND_GROWTH_LEVELS:
-                                g_rate = iso_rates[g_level]
-                                tc, ec, _ = price_mix_batch(
-                                    iso, arch_arrays, sens, demand_twh,
-                                    target_year=year, growth_rate=g_rate
-                                )
-                                best_local = int(np.argmin(tc))
-                                growth_results[g_level] = [
-                                    arch_indices[best_local],
-                                    round(float(tc[best_local]), 2),
-                                    round(float(ec[best_local]), 2),
-                                    round(float(ec[best_local]) - wholesale, 2),
-                                ]
-                            year_results[str(year)] = growth_results
+                year_results = {}
+                for year in DEMAND_GROWTH_YEARS:
+                    growth_results = {}
+                    for g_level in DEMAND_GROWTH_LEVELS:
+                        g_rate = iso_rates[g_level]
+                        tc, ec, _ = price_mix_batch(
+                            iso, arch_arrays, sens, demand_twh,
+                            target_year=year, growth_rate=g_rate
+                        )
+                        best_local = int(np.argmin(tc))
+                        growth_results[g_level] = [
+                            arch_indices[best_local],
+                            round(float(tc[best_local]), 2),
+                            round(float(ec[best_local]), 2),
+                            round(float(ec[best_local]) - wholesale, 2),
+                        ]
+                    year_results[str(year)] = growth_results
 
-                        threshold_dg[old_key] = year_results
+                threshold_dg[scenario_key] = year_results
 
             dg_output['results'][iso][t_str] = threshold_dg
             print(f"  {iso:>6} {thr:>5}%: {len(threshold_dg)} keys × "
@@ -763,7 +770,7 @@ def main():
     # ================================================================
     print("\n--- Saving outputs ---")
 
-    # Backward-compat results JSON
+    # Results JSON
     os.makedirs(RESULTS_PATH.parent, exist_ok=True)
     with open(RESULTS_PATH, 'w') as f:
         json.dump(output, f, separators=(',', ':'))
@@ -785,16 +792,17 @@ def main():
     # ================================================================
     total_elapsed = time.time() - total_start
     print(f"\n{'='*70}")
-    print(f"  STEP 2 COMPLETE in {total_elapsed:.0f}s")
+    print(f"  STEP 3 COMPLETE in {total_elapsed:.0f}s")
     print(f"{'='*70}")
 
-    # Print Medium scenario summary
-    print("\nMMM_M_M (all-Medium, 45Q=ON) summary:")
+    # Print Medium scenario summary (ISO-aware medium key)
+    print("\nAll-Medium (45Q=ON) summary:")
     for iso in ISOS:
-        print(f"\n  {iso}:")
+        mk = medium_key(iso)
+        print(f"\n  {iso} (key={mk}):")
         for thr in OUTPUT_THRESHOLDS:
             t_str = str(thr)
-            sc = output['results'][iso].get('thresholds', {}).get(t_str, {}).get('scenarios', {}).get('MMM_M_M')
+            sc = output['results'][iso].get('thresholds', {}).get(t_str, {}).get('scenarios', {}).get(mk)
             if not sc:
                 continue
             rm = sc['resource_mix']
