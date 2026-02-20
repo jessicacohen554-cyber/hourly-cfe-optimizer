@@ -215,25 +215,102 @@ body { background: #F3F4F8; }
     text-transform: uppercase;
 }
 
+/* ========== FIGURE LEGENDS ========== */
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    justify-content: center;
+    padding: 8px 12px 2px;
+    margin-top: 4px;
+}
+.chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.6);
+    white-space: nowrap;
+}
+.chart-legend-swatch {
+    display: inline-block;
+    flex-shrink: 0;
+}
+/* Solid line swatch */
+.swatch-line {
+    width: 18px;
+    height: 3px;
+    border-radius: 1.5px;
+}
+/* Dashed line swatch */
+.swatch-dashed {
+    width: 18px;
+    height: 0;
+    border-top: 2px dashed;
+}
+/* Shaded band swatch */
+.swatch-band {
+    width: 18px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+/* Dot swatch for regional envelope */
+.swatch-dot-line {
+    width: 18px;
+    height: 3px;
+    border-radius: 1.5px;
+    position: relative;
+}
+.swatch-dot-line::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: inherit;
+    border: 1px solid rgba(0,0,0,0.5);
+}
+/* Legend divider */
+.chart-legend-divider {
+    width: 1px;
+    height: 12px;
+    background: rgba(255,255,255,0.15);
+    align-self: center;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 900px) {
     .hero-scrolly-container { flex-direction: column; }
-    .hero-scrolly-sticky { width: 100%; height: 45vh; min-height: 320px; position: sticky; top: 0; padding: 16px; }
-    .chart-panel { height: 320px; padding: 16px 14px; }
+    .hero-scrolly-sticky { width: 100%; height: 45vh; min-height: 350px; position: sticky; top: 0; padding: 16px; }
+    .chart-panel { height: 350px; padding: 16px 14px; }
     .chart-panel canvas { height: 240px !important; }
     .hero-scrolly-steps { width: 100%; }
     .hero-scrolly-step { min-height: auto; padding: 40px 20px; }
     .hero-step-card { padding: 24px 20px; }
     .hero-step-card h3 { font-size: 1.25rem; }
+    .chart-legend { gap: 4px 10px; padding: 6px 8px 2px; }
+    .chart-legend-item { font-size: 0.62rem; }
+    .swatch-line, .swatch-dashed, .swatch-dot-line { width: 14px; }
+    .swatch-band { width: 14px; height: 8px; }
 }
 @media (max-width: 600px) {
-    .hero-scrolly-sticky { height: 38vh; min-height: 280px; padding: 10px; }
-    .chart-panel { height: 290px; padding: 12px 10px; }
-    .chart-panel canvas { height: 210px !important; }
+    .hero-scrolly-sticky { height: 38vh; min-height: 320px; padding: 10px; }
+    .chart-panel { height: 320px; padding: 12px 10px; }
+    .chart-panel canvas { height: 200px !important; }
     .hero-scrolly-step { padding: 28px 14px; }
     .hero-step-card { padding: 18px 14px; }
     .hero-step-card h3 { font-size: 1.05rem; }
     .hero-step-card p { font-size: 0.85rem; }
+    .chart-legend { gap: 3px 8px; padding: 4px 4px 0; }
+    .chart-legend-item { font-size: 0.58rem; gap: 4px; }
+    .swatch-line, .swatch-dashed, .swatch-dot-line { width: 12px; }
+    .swatch-band { width: 12px; height: 7px; }
+    .chart-legend-divider { height: 10px; }
 }
 </style>
 </head>
@@ -261,32 +338,84 @@ body { background: #F3F4F8; }
                 <div class="chart-panel chart-panel-overview panel-animate" id="chartPanel_overview">
                     <div class="hero-chart-title" id="heroChartTitle">Marginal Abatement Cost vs. Projected DAC — All Regions</div>
                     <canvas id="heroScrollyChart"></canvas>
-                    <div class="hero-chart-subtitle">Solid line = stepwise envelope (Medium cost) &middot; Shaded band = P10–P90 across 5,832+ scenarios &middot; Dashed = DAC projections</div>
+                    <div class="chart-legend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>ERCOT</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>PJM</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>CAISO</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>NYISO</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>NEISO</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(255,255,255,0.12);"></span>P10&ndash;P90 band</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6344;"></span>DAC Opt. / Cons.</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
+                    </div>
                 </div>
                 <!-- ERCOT envelope -->
                 <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_ercot">
                     <div class="hero-chart-title">ERCOT (Texas)</div>
                     <canvas id="envScrolly_ERCOT"></canvas>
+                    <div class="chart-legend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#22C55E;"></span>Stepwise envelope (Medium cost)</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6344;"></span>DAC Opt. / Cons.</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
+                    </div>
                 </div>
                 <!-- PJM envelope -->
                 <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_pjm">
                     <div class="hero-chart-title">PJM (Mid-Atlantic)</div>
                     <canvas id="envScrolly_PJM"></canvas>
+                    <div class="chart-legend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#4a90d9;"></span>Stepwise envelope (Medium cost)</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(74,144,217,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6344;"></span>DAC Opt. / Cons.</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
+                    </div>
                 </div>
                 <!-- CAISO envelope -->
                 <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_caiso">
                     <div class="hero-chart-title">CAISO (California)</div>
                     <canvas id="envScrolly_CAISO"></canvas>
+                    <div class="chart-legend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#F59E0B;"></span>Stepwise envelope (Medium cost)</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6344;"></span>DAC Opt. / Cons.</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
+                    </div>
                 </div>
                 <!-- NYISO envelope -->
                 <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_nyiso">
                     <div class="hero-chart-title">NYISO (New York)</div>
                     <canvas id="envScrolly_NYISO"></canvas>
+                    <div class="chart-legend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#E91E63;"></span>Stepwise envelope (Medium cost)</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6344;"></span>DAC Opt. / Cons.</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
+                    </div>
                 </div>
                 <!-- NEISO envelope -->
                 <div class="chart-panel chart-panel-region panel-hidden" id="chartPanel_neiso">
                     <div class="hero-chart-title">NEISO (New England)</div>
                     <canvas id="envScrolly_NEISO"></canvas>
+                    <div class="chart-legend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#9C27B0;"></span>Stepwise envelope (Medium cost)</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(156,39,176,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6344;"></span>DAC Opt. / Cons.</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
+                    </div>
                 </div>
             </div>
         </div>
