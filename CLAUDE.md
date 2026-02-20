@@ -253,6 +253,12 @@ When facing compute vs. rigor tradeoffs:
 - **Abatement benchmarks**: Static L/M/H bands (DAC, SAF, BECCS, etc.) as fixed horizontal bands on charts
 - **Social cost of carbon references**: EPA $51/ton + Rennert et al. $185/ton + EU ETS $60-100/ton range — all three shown on charts
 
+### Data Persistence (Critical — Never Lose Compute Results)
+- **NEVER gitignore compute-intensive outputs** — `physics_cache_v4.parquet`, `pfs_post_ef.parquet`, and `dashboard/physics_results_v4.parquet` must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring the cache file.
+- **Commit parquet caches immediately after optimizer runs** — the moment Step 1 completes and the cache is merged, commit and push it before doing anything else. This is higher priority than any code changes.
+- **After any Step 1 run**: `git add data/physics_cache_v4.parquet data/pfs_post_ef.parquet && git commit -m "Bank PFS cache" && git push`
+- **Checkpoint files in `data/checkpoints_v4/`** can remain gitignored (they're rebuilt from cache), but the main parquet outputs are sacred.
+
 ### Build Process
 - Deploy agents in parallel for non-dependent tasks (see Workflow Preferences above)
 - Push only after feature is complete and QA'd (see Git & Commits above)
