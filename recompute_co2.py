@@ -48,6 +48,10 @@ LDES_EFFICIENCY = 0.50
 LDES_DURATION_HOURS = 100
 LDES_WINDOW_DAYS = 7
 
+# 8hr battery parameters (must match step1)
+BATTERY8_EFFICIENCY = 0.85
+BATTERY8_DURATION_HOURS = 8
+
 HYDRO_CAPS = {
     'CAISO': 30, 'ERCOT': 5, 'PJM': 15, 'NYISO': 40, 'NEISO': 30,
 }
@@ -523,10 +527,16 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
                 iso, threshold_pct, emission_rates, fossil_mix
             )
 
-            # Always recompute Medium scenario
-            medium_key = 'MMM_M_M'
-            if medium_key in scenarios:
-                result = scenarios[medium_key]
+            # Always recompute Medium scenario (9-dim key)
+            med_key = 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
+            # Fallback to old key formats
+            actual_med_key = None
+            for mk_candidate in [med_key, 'MMM_M_M_M_M1_M', 'MMM_M_M_M_M1_X', 'MMM_M_M']:
+                if mk_candidate in scenarios:
+                    actual_med_key = mk_candidate
+                    break
+            if actual_med_key and actual_med_key in scenarios:
+                result = scenarios[actual_med_key]
                 resource_mix = result.get('resource_mix', {})
                 proc = result.get('procurement_pct', 100)
                 batt = result.get('battery_dispatch_pct', 0)
@@ -556,7 +566,7 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
 
             # For non-Medium scenarios, same emission rate (threshold-dependent, not fuel-dependent)
             for sk, result in scenarios.items():
-                if sk == medium_key:
+                if sk == actual_med_key:
                     continue
 
                 resource_mix = result.get('resource_mix', {})

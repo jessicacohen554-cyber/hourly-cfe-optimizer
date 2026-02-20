@@ -23,7 +23,21 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'analysis_results.json')
 
 THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
-MEDIUM_KEY = 'MMM_M_M'
+def medium_key(iso):
+    """Return the all-Medium scenario key for a given ISO (9-dim format)."""
+    return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
+
+OLD_MEDIUM_KEYS = ['MMM_M_M_M_M1_M', 'MMM_M_M_M_M1_X', 'MMM_M_M']
+
+def get_medium_scenario(scenarios, iso):
+    """Get medium scenario data with fallback to old key formats."""
+    key = medium_key(iso)
+    if key in scenarios:
+        return scenarios[key]
+    for fallback in OLD_MEDIUM_KEYS:
+        if fallback in scenarios:
+            return scenarios[fallback]
+    return None
 
 # Literature reference ranges for validation ($/MWh effective cost at Medium scenario)
 # Sources: NREL ATB 2024, Lazard LCOE 16.0, LBNL Utility-Scale Solar/Wind 2024
@@ -153,10 +167,10 @@ def check_literature_alignment(data):
             if t_check not in thresholds_data:
                 continue
             scenarios = thresholds_data[t_check].get('scenarios', {})
-            if MEDIUM_KEY not in scenarios:
+            if get_medium_scenario(scenarios, iso) is None:
                 continue
 
-            result = scenarios[MEDIUM_KEY]
+            result = get_medium_scenario(scenarios, iso)
             if 'costs' not in result:
                 continue
 
@@ -205,10 +219,10 @@ def analyze_resource_mixes(data):
                 continue
 
             scenarios = thresholds_data[t_str].get('scenarios', {})
-            if MEDIUM_KEY not in scenarios:
+            if get_medium_scenario(scenarios, iso) is None:
                 continue
 
-            result = scenarios[MEDIUM_KEY]
+            result = get_medium_scenario(scenarios, iso)
             mix = result.get('resource_mix', {})
             costs = result.get('costs', {})
             cost_val = costs.get('effective_cost', costs.get('effective_cost_per_useful_mwh', 0))
@@ -282,10 +296,10 @@ def analyze_curtailment_for_dac(data):
                 continue
 
             scenarios = thresholds_data[t_str].get('scenarios', {})
-            if MEDIUM_KEY not in scenarios:
+            if get_medium_scenario(scenarios, iso) is None:
                 continue
 
-            result = scenarios[MEDIUM_KEY]
+            result = get_medium_scenario(scenarios, iso)
             costs = result.get('costs', {})
             proc = result.get('procurement_pct', 0)
             match_score = result.get('hourly_match_score', 0)
@@ -356,8 +370,8 @@ def print_summary(data):
             if t_str not in thresholds_data:
                 continue
             scenarios = thresholds_data[t_str].get('scenarios', {})
-            if MEDIUM_KEY in scenarios:
-                result = scenarios[MEDIUM_KEY]
+            if get_medium_scenario(scenarios, iso) is not None:
+                result = get_medium_scenario(scenarios, iso)
                 c = result.get('costs', {})
                 cost_val = c.get('effective_cost', c.get('effective_cost_per_useful_mwh', 0))
                 if cost_val > 0:
