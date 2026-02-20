@@ -26,6 +26,9 @@ desktop.ini
 
 # Optimizer generated data (large binary files — old JSON checkpoints only)
 data/checkpoints/CAISO_cache_*.json
+# Checkpoint JSONs grow huge during Step 1 runs (full threshold data embedded)
+# Strip to just completed list before committing, or gitignore them
+data/checkpoints_v4/*_checkpoint.json
 # Note: data/checkpoints_v4/*.parquet must NOT be ignored — bank interim results
 # CRITICAL: Do NOT gitignore physics_cache_v4.parquet — it must be committed
 # to prevent data loss across sessions. Previous loss of 21M solutions was
