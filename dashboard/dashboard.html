@@ -3129,22 +3129,60 @@ body {
                 </div>
             </div>
 
-            <!-- 3. Storage Cost -->
-            <div class="sensitivity-toggle-item" data-toggle-group="storage">
+            <!-- 3a. Battery Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="battery_cost">
                 <div class="toggle-label-area">
                     <div class="toggle-label-main">
-                        Storage Cost
+                        Battery Cost
                         <span class="info-icon-wrapper" tabindex="0">
                             <span class="info-icon" aria-label="Info">i</span>
-                            <span class="info-tooltip">Controls the assumed cost of energy storage -- both 4-hour lithium-ion batteries and 100-hour long-duration iron-air batteries. Storage captures excess solar/wind energy and releases it later. <strong>Low</strong> = rapid battery cost declines continue. <strong>Medium</strong> = current best estimates. <strong>High</strong> = lithium or iron supply constraints raise costs. Storage is critical for matching clean energy to demand hour-by-hour.</span>
+                            <span class="info-tooltip">Controls the assumed cost of lithium-ion batteries (4hr and 8hr). Batteries capture excess solar/wind energy during the day and release it in the evening. <strong>Low</strong> = rapid cost declines continue. <strong>Medium</strong> = current best estimates. <strong>High</strong> = lithium supply constraints raise costs.</span>
                         </span>
                     </div>
-                    <div class="toggle-label-sub">Battery (4hr) + LDES (100hr) LCOS</div>
+                    <div class="toggle-label-sub">Battery (4hr + 8hr) LCOS</div>
                 </div>
-                <div class="toggle-btn-group" data-toggle="storage" data-default="Medium">
-                    <button data-value="Low" data-toggle-group="storage" data-level="Low">Low</button>
-                    <button data-value="Medium" data-toggle-group="storage" data-level="Medium" class="active">Medium</button>
-                    <button data-value="High" data-toggle-group="storage" data-level="High">High</button>
+                <div class="toggle-btn-group" data-toggle="battery_cost" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="battery_cost" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="battery_cost" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="battery_cost" data-level="High">High</button>
+                </div>
+            </div>
+
+            <!-- 3b. LDES Cost -->
+            <div class="sensitivity-toggle-item" data-toggle-group="ldes_cost">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        LDES Cost
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls the assumed cost of 100-hour long-duration energy storage (iron-air batteries). LDES bridges multi-day weather events when solar and wind output is low. <strong>Low</strong> = technology matures rapidly. <strong>Medium</strong> = current best estimates. <strong>High</strong> = iron-air technology remains expensive.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">LDES (100hr iron-air) LCOS</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="ldes_cost" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="ldes_cost" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="ldes_cost" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="ldes_cost" data-level="High">High</button>
+                </div>
+            </div>
+
+            <!-- 4. Fossil Fuel Price -->
+            <div class="sensitivity-toggle-item" data-toggle-group="fossil_fuel">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Fossil Fuel Price
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Controls assumed fossil fuel prices (natural gas, coal, oil). Higher fossil fuel prices raise wholesale electricity costs and the baseline against which clean energy is compared. <strong>Low</strong> = cheap gas (e.g., fracking boom). <strong>Medium</strong> = current market prices. <strong>High</strong> = supply constraints or carbon pricing raise fossil costs.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Gas, coal &amp; oil price levels</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="fossil_fuel" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="fossil_fuel" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="fossil_fuel" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="fossil_fuel" data-level="High">High</button>
                 </div>
             </div>
 
@@ -3223,6 +3261,25 @@ body {
                     <button data-value="High" data-toggle-group="geothermal_cost" data-level="High">High</button>
                 </div>
             </div>
+
+            <!-- Demand Growth -->
+            <div class="sensitivity-toggle-item" data-toggle-group="demand_growth" style="border-top: 2px solid rgba(14,165,233,0.3); padding-top: 12px; margin-top: 8px;">
+                <div class="toggle-label-area">
+                    <div class="toggle-label-main">
+                        Demand Growth
+                        <span class="info-icon-wrapper" tabindex="0">
+                            <span class="info-icon" aria-label="Info">i</span>
+                            <span class="info-tooltip">Regional annual demand growth rate. Higher growth absorbs more interim procurement and reduces stranded investment. Rates are ISO-specific: ERCOT's data-center boom drives highest growth.</span>
+                        </span>
+                    </div>
+                    <div class="toggle-label-sub">Annual electricity demand growth rate</div>
+                </div>
+                <div class="toggle-btn-group" data-toggle="demand_growth" data-default="Medium">
+                    <button data-value="Low" data-toggle-group="demand_growth" data-level="Low">Low</button>
+                    <button data-value="Medium" data-toggle-group="demand_growth" data-level="Medium" class="active">Medium</button>
+                    <button data-value="High" data-toggle-group="demand_growth" data-level="High">High</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3239,12 +3296,6 @@ body {
 
         <div class="pathway-controls">
             <div class="pathway-ctrl">
-                <label>Demand Growth <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Regional annual demand growth. Higher growth absorbs more interim procurement and reduces stranded investment. Rates are ISO-specific: ERCOT's data-center boom drives highest growth.</span></span></label>
-                <div class="toggle-btn-group" data-toggle="demand_growth" data-default="Medium">
-                    <button data-value="Low" data-toggle-group="demand_growth" data-level="Low">Low</button>
-                    <button data-value="Medium" data-toggle-group="demand_growth" data-level="Medium" class="active">Medium</button>
-                    <button data-value="High" data-toggle-group="demand_growth" data-level="High">High</button>
-                </div>
                 <div class="pathway-rate-display" id="demandRateDisplay" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;"></div>
             </div>
         </div>
@@ -3580,7 +3631,8 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
     const ren = levelMap[sensitivityState.renewable_gen] || 'M';
     const firm = levelMap[sensitivityState.firm_gen] || 'M';
-    const stor = levelMap[sensitivityState.storage] || 'M';
+    const battLevel = levelMap[sensitivityState.battery_cost] || 'M';
+    const ldesLevel = levelMap[sensitivityState.ldes_cost] || 'M';
     const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
     const tx = sensitivityState.transmission || 'Medium';
     const geo = levelMap[sensitivityState.geothermal_cost] || 'M';
@@ -3701,15 +3753,16 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
         totalCost += costPerDemand;
     }
 
-    // Storage costs
-    const storName = { L: 'Low', M: 'Medium', H: 'High' }[stor] || 'Medium';
-    const batLcoe = ((LCOE_TABLES.battery || {})[storName] || {})[iso] || 102;
+    // Storage costs — battery and LDES use independent cost toggles
+    const battCostName = { L: 'Low', M: 'Medium', H: 'High' }[battLevel] || 'Medium';
+    const batLcoe = ((LCOE_TABLES.battery || {})[battCostName] || {})[iso] || 102;
     const batTx = ((TX_TABLES.battery || {})[tx] || {})[iso] || 0;
     const batCost = (batPct / 100.0) * (batLcoe + batTx);
     resourceCosts.battery = { dispatch_pct: batPct, cost_per_demand_mwh: batCost };
     totalCost += batCost;
 
-    const ldesLcoe = ((LCOE_TABLES.ldes || {})[storName] || {})[iso] || 180;
+    const ldesCostName = { L: 'Low', M: 'Medium', H: 'High' }[ldesLevel] || 'Medium';
+    const ldesLcoe = ((LCOE_TABLES.ldes || {})[ldesCostName] || {})[iso] || 180;
     const ldesTx = ((TX_TABLES.ldes || {})[tx] || {})[iso] || 0;
     const ldesCost = (ldesPct / 100.0) * (ldesLcoe + ldesTx);
     resourceCosts.ldes = { dispatch_pct: ldesPct, cost_per_demand_mwh: ldesCost };
@@ -4621,6 +4674,7 @@ function updateCompressedDay(entry, region, iso) {
     const matchedWind = r(cd.matched.wind || z24);
     const matchedHydro = r(cd.matched.hydro || z24);
     const matchedBattery = r(cd.matched.battery || cd.matched.storage || z24);
+    const matchedBattery8 = r(cd.matched.battery8 || z24);
     const matchedLDES = r(cd.matched.ldes || z24);
 
     // Separate charging for battery and LDES (negative, below x-axis) — in MWh, local time
@@ -4655,7 +4709,7 @@ function updateCompressedDay(entry, region, iso) {
     };
 
     // Build cumulative stacking arrays (bottom to top)
-    // nuclear → geothermal → ccs_ccgt → hydro → wind → solar → battery → ldes
+    // nuclear → geothermal → ccs_ccgt → hydro → wind → solar → battery → battery8 → ldes
     const hasGeo = cfGeoFrac > 0;
     const stack0 = matchedNuclear;
     const stack0b = hasGeo ? stack0.map((v, i) => v + matchedGeothermal[i]) : stack0;
@@ -4664,24 +4718,26 @@ function updateCompressedDay(entry, region, iso) {
     const stack3 = stack2.map((v, i) => v + matchedWind[i]);
     const stack4 = stack3.map((v, i) => v + matchedSolar[i]);
     const stack5 = stack4.map((v, i) => v + matchedBattery[i]);
-    const matchedTotal = stack5.map((v, i) => v + matchedLDES[i]);
+    const stack5b = stack5.map((v, i) => v + matchedBattery8[i]);
+    const matchedTotal = stack5b.map((v, i) => v + matchedLDES[i]);
 
     const dsBase = { borderColor: OUTLINE_COLOR, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, tension: 0.3 };
 
     const datasets = [
-        { ...dsBase, label: RESOURCE_LABELS.nuclear,    data: stack0,  backgroundColor: COLORS.nuclear.alpha,     fill: 'origin', order: 12 },
+        { ...dsBase, label: RESOURCE_LABELS.nuclear,    data: stack0,  backgroundColor: COLORS.nuclear.alpha,     fill: 'origin', order: 13 },
     ];
     if (hasGeo) {
         datasets.push(
-            { ...dsBase, label: RESOURCE_LABELS.geothermal, data: stack0b, backgroundColor: COLORS.geothermal.alpha, fill: '-1',     order: 11 }
+            { ...dsBase, label: RESOURCE_LABELS.geothermal, data: stack0b, backgroundColor: COLORS.geothermal.alpha, fill: '-1',     order: 12 }
         );
     }
     datasets.push(
-        { ...dsBase, label: RESOURCE_LABELS.ccs_ccgt,   data: stack1,  backgroundColor: COLORS.ccs_ccgt.alpha,   fill: '-1',     order: 10 },
-        { ...dsBase, label: RESOURCE_LABELS.hydro,      data: stack2,  backgroundColor: COLORS.hydro.alpha,      fill: '-1',     order: 9 },
-        { ...dsBase, label: RESOURCE_LABELS.wind,       data: stack3,  backgroundColor: COLORS.wind.alpha,       fill: '-1',     order: 8 },
-        { ...dsBase, label: RESOURCE_LABELS.solar,      data: stack4,  backgroundColor: COLORS.solar.alpha,      fill: '-1',     order: 7 },
-        { ...dsBase, label: RESOURCE_LABELS.battery,    data: stack5,  backgroundColor: COLORS.battery.alpha,    fill: '-1',     order: 6 },
+        { ...dsBase, label: RESOURCE_LABELS.ccs_ccgt,   data: stack1,  backgroundColor: COLORS.ccs_ccgt.alpha,   fill: '-1',     order: 11 },
+        { ...dsBase, label: RESOURCE_LABELS.hydro,      data: stack2,  backgroundColor: COLORS.hydro.alpha,      fill: '-1',     order: 10 },
+        { ...dsBase, label: RESOURCE_LABELS.wind,       data: stack3,  backgroundColor: COLORS.wind.alpha,       fill: '-1',     order: 9 },
+        { ...dsBase, label: RESOURCE_LABELS.solar,      data: stack4,  backgroundColor: COLORS.solar.alpha,      fill: '-1',     order: 8 },
+        { ...dsBase, label: RESOURCE_LABELS.battery,    data: stack5,  backgroundColor: COLORS.battery.alpha,    fill: '-1',     order: 7 },
+        { ...dsBase, label: RESOURCE_LABELS.battery8,   data: stack5b, backgroundColor: COLORS.battery8.alpha,   fill: '-1',     order: 6 },
         { ...dsBase, label: RESOURCE_LABELS.ldes,       data: matchedTotal.slice(), backgroundColor: COLORS.ldes.alpha, fill: '-1', order: 5 }
     );
 
@@ -4694,7 +4750,7 @@ function updateCompressedDay(entry, region, iso) {
         datasets.push({
             ...dsBase, label: 'Battery Charge', data: batteryCharge.map(v => -Math.abs(v)),
             backgroundColor: 'rgba(139,92,246,0.30)', borderColor: COLORS.battery.base,
-            fill: 'origin', order: 13, _isCharge: true
+            fill: 'origin', order: 14, _isCharge: true
         });
     }
 
@@ -4708,7 +4764,7 @@ function updateCompressedDay(entry, region, iso) {
         datasets.push({
             ...dsBase, label: 'LDES Charge', data: ldesChargeData,
             backgroundColor: 'rgba(236,72,153,0.30)', borderColor: COLORS.ldes.base,
-            fill: hasBattCharge ? '-1' : 'origin', order: 14, _isCharge: true
+            fill: hasBattCharge ? '-1' : 'origin', order: 15, _isCharge: true
         });
     }
 
@@ -6961,6 +7017,8 @@ function initSensitivityToggles() {
     document.querySelectorAll('.toggle-btn-group').forEach(group => {
         const toggleKey = group.getAttribute('data-toggle');
         if (!toggleKey) return;
+        // Skip demand_growth — handled by initPathwayAnalysis with extra updateDemandGrowthLabel()
+        if (toggleKey === 'demand_growth') return;
         group.querySelectorAll('button').forEach(btn => {
             btn.addEventListener('click', function() {
                 // Update active state
@@ -7114,10 +7172,10 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         MIX_RESOURCES.forEach(r => {
             const rd = rc[r];
             if (!rd) { existing[r] = 0; newBuild[r] = 0; return; }
-            if (r === 'battery' || r === 'ldes') {
+            if (r === 'battery' || r === 'battery8' || r === 'ldes') {
                 // Storage resources: dispatch_pct only (all new build)
                 existing[r] = 0;
-                newBuild[r] = (rd.dispatch_pct || 0) / 100 * targetDemandTWh;
+                newBuild[r] = (rd.dispatch_pct || rd.d || 0) / 100 * targetDemandTWh;
             } else if (r === 'hydro') {
                 // Hydro: always static at absolute existing capacity, never new build
                 existing[r] = hydroCapTWh;
@@ -7162,8 +7220,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         ? ['nuclear', 'geothermal', 'ccs_ccgt', 'hydro', 'wind', 'solar']
         : ['nuclear', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
     const NEW_ORDER = wynHasGeo
-        ? ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'geothermal', 'nuclear']
-        : ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'nuclear'];
+        ? ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'geothermal', 'nuclear']
+        : ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'nuclear'];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
     const datasets = [];
@@ -7271,8 +7329,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                         generateLabels: function() {
                             // Show nuclear + geothermal instead of clean_firm
                             const legendResources = wynHasGeo
-                                ? ['nuclear', 'geothermal', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes']
-                                : ['nuclear', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+                                ? ['nuclear', 'geothermal', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes']
+                                : ['nuclear', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes'];
                             const items = legendResources.map(r => ({
                                 text: MIX_LABELS_MAP[r] || RESOURCE_LABELS[r] || r,
                                 fillStyle: (MIX_COLORS[r] || {}).fill || COLORS[r]?.alpha || '#888',
@@ -7386,13 +7444,13 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             const ltRes = longtermRC[r] || {};
 
             // New build TWh at each stage (absolute capacity)
-            const isStorageType = (r === 'battery' || r === 'ldes');
-            const interimCostPerDemandMWh = intRes.cost_per_demand_mwh || intRes.cost || 0;
+            const isStorageType = (r === 'battery' || r === 'battery8' || r === 'ldes');
+            const interimCostPerDemandMWh = intRes.cost_per_demand_mwh || intRes.cost || intRes.c || 0;
 
             let interimNewTWh, longtermNewTWh;
             if (isStorageType) {
-                interimNewTWh = (intRes.dispatch_pct || 0) / 100 * interimTWh;
-                longtermNewTWh = (ltRes.dispatch_pct || 0) / 100 * longtermTWh;
+                interimNewTWh = (intRes.dispatch_pct || intRes.d || 0) / 100 * interimTWh;
+                longtermNewTWh = (ltRes.dispatch_pct || ltRes.d || 0) / 100 * longtermTWh;
             } else {
                 interimNewTWh = (intRes.new_pct || 0) / 100 * interimTWh;
                 longtermNewTWh = (ltRes.new_pct || 0) / 100 * longtermTWh;
