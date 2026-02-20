@@ -24,9 +24,10 @@ desktop.ini
 .env
 .env.local
 
-# Optimizer generated data (large binary files)
+# Optimizer generated data (large binary files — old JSON checkpoints only)
 data/checkpoints/CAISO_cache_*.json
 data/checkpoints_v4/
-data/physics_cache_v4.parquet
-dashboard/physics_results_v4.parquet
+# CRITICAL: Do NOT gitignore physics_cache_v4.parquet — it must be committed
+# to prevent data loss across sessions. Previous loss of 21M solutions was
+# caused by gitignoring this file.
 dashboard/physics_results_v4.json
