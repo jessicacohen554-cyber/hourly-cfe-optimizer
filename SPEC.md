@@ -34,13 +34,15 @@ Two distinct tracks, not a 4-way matrix:
 
 **Track 1: New-Build Requirement for Hourly Matching** (`newbuild`)
 - Hydro: **excluded** (hydro=0 mixes only)
-- Uprates: **on** (uprate tranche active)
-- Purpose: Understand what resources are incentivized/deployed when you impose an hourly CFE matching requirement. Reveals the clash between what hourly matching incentivizes vs what the grid actually needs. Without hydro, the optimizer must fill that gap with new-build — exposing the real resource deployment signal of the policy.
+- All existing clean: **zeroed** (GRID_MIX_SHARES = 0 for CF, solar, wind, CCS)
+- Uprates: **on** (uprate tranche active — cheapest new-build option)
+- Purpose: What does hourly matching incentivize you to BUILD from scratch? No existing generation credited. Uprates stay because they're a real new-build deployment option (capacity additions to existing plants). Reveals the clash between what hourly matching drives vs what the grid actually needs.
 
 **Track 2: Cost to Replace Existing Clean** (`replace`)
-- Hydro: **included** (up to existing floor — hydro capped at existing share, wholesale-priced)
-- Uprates: **off** (uprate_cap=0, all new CF at new-build prices)
-- Purpose: What does it cost to replace existing clean generation (nuclear, etc.) with new-build? Hydro stays because it's not being replaced — it provides baseline context. Disabling uprates forces full new-build pricing, showing the true marginal cost of replacement capacity.
+- Hydro: **included** (existing floor, wholesale-priced)
+- All other existing clean: **zeroed** (CF, solar, wind, CCS all priced as new-build)
+- Uprates: **off** (uprate_cap=0, no uprate tranche)
+- Purpose: True greenfield cost of replacing all existing clean generation. Only hydro stays at existing/wholesale. Everything else must be new-build. Shows the full replacement premium — especially dramatic in PJM (32.1% nuclear), NEISO (23.8%), and NYISO (18.4%).
 
 **Output**: Data files only. No research paper update yet — discuss findings with user first, then write.
 **Architecture**: Step 3 runs 2 additional passes per (ISO, threshold):

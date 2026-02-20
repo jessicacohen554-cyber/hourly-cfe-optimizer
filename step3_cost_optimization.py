@@ -220,7 +220,7 @@ def get_tx(rtype, tx_name, iso):
 # ============================================================================
 
 def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate=None,
-                     uprate_cap_override=None):
+                     uprate_cap_override=None, existing_override=None):
     """
     Vectorized pricing of N mixes under a single sensitivity combo.
 
@@ -235,7 +235,9 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         demand_twh: base year demand (scalar)
         target_year, growth_rate: demand growth params (scalars, optional)
         uprate_cap_override: if not None, override UPRATE_CAP_TWH[iso] with this
-            value. Set to 0 to disable uprate tranche (Track 2: replace).
+            value. Set to 0 to disable uprate tranche.
+        existing_override: if not None, dict overriding GRID_MIX_SHARES[iso].
+            Set resources to 0 to force new-build pricing (greenfield).
 
     Returns:
         numpy array of total_cost (shape N), and effective_cost (shape N)
@@ -262,7 +264,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     geo_lev = sens.get('geo')
 
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
-    existing = GRID_MIX_SHARES[iso]
+    existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
     proc = arrays['procurement_pct'].astype(np.float64) / 100.0
     match_frac = arrays['hourly_match_score'].astype(np.float64) / 100.0
@@ -447,7 +449,8 @@ _COL_LDES      = 9  # LDES dispatch
 _N_COEFFS = 10
 
 
-def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_override=None):
+def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_override=None,
+                                       existing_override=None):
     """Pre-compute scenario-invariant coefficient arrays for base year.
 
     Args:
@@ -456,6 +459,10 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         demand_twh: base year demand (scalar)
         uprate_cap_override: if not None, override UPRATE_CAP_TWH[iso] with this
             value. Set to 0 to disable uprate tranche (Track 2: replace).
+        existing_override: if not None, dict overriding GRID_MIX_SHARES[iso].
+            Set individual resources to 0 to force new-build pricing.
+            e.g., {'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0, 'hydro': 9.5}
+            keeps hydro at existing share, zeros everything else.
 
     Returns:
         coeff_matrix: (N, 10) float64 — multiply by scenario prices
@@ -477,7 +484,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N)).astype(np.float64)
     ldes_pct = arrays['ldes_dispatch_pct'].astype(np.float64)
 
-    existing = GRID_MIX_SHARES[iso]
+    existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
     # Demand pcts (proc × alloc) — scenario-invariant
     sol_demand_pct = proc * sol_pct

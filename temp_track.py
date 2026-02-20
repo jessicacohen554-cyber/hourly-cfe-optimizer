@@ -64,7 +64,8 @@ def load_iso_arrays(table, iso):
     }
 
 
-def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=None):
+def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=None,
+              existing_override=None):
     """Run cost optimization for a track (newbuild or replace).
 
     Returns:
@@ -89,7 +90,8 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
 
     # Pre-compute coefficients
     coeff_matrix, constant, extras = precompute_base_year_coefficients(
-        iso, arrays, demand_twh, uprate_cap_override=uprate_cap_override)
+        iso, arrays, demand_twh, uprate_cap_override=uprate_cap_override,
+        existing_override=existing_override)
 
     active_thresholds = sorted(thr_indices.keys())
     thresholds_desc = np.array(sorted(active_thresholds, reverse=True), dtype=np.float64)
@@ -134,7 +136,7 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
 
 
 def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
-                             uprate_cap_override=None):
+                             uprate_cap_override=None, existing_override=None):
     """Run demand growth sweep for track archetypes."""
     demand_twh = REGIONAL_DEMAND_TWH[iso]
     iso_rates = DEMAND_GROWTH_RATES[iso]
@@ -167,7 +169,8 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
                 tc, ec, _ = price_mix_batch(
                     iso, arch_arrays, sens, demand_twh,
                     target_year=year, growth_rate=g_rate,
-                    uprate_cap_override=uprate_cap_override
+                    uprate_cap_override=uprate_cap_override,
+                    existing_override=existing_override
                 )
                 for thr in arch_thr_mask:
                     qual_idx = arch_thr_mask[thr]
@@ -222,14 +225,16 @@ def main():
                 'newbuild': {
                     'description': 'New-build requirement for hourly matching',
                     'hydro': 'excluded (hydro=0 mixes only)',
-                    'uprates': 'on (uprate tranche active)',
-                    'purpose': 'What resources does hourly matching incentivize vs what the grid needs?',
+                    'existing_clean': 'zeroed (all existing CF/solar/wind/CCS = 0)',
+                    'uprates': 'on (uprate tranche active as cheapest new-build)',
+                    'purpose': 'What does hourly matching incentivize to BUILD from scratch?',
                 },
                 'replace': {
-                    'description': 'Cost to replace existing clean generation',
-                    'hydro': 'included (up to existing floor, wholesale-priced)',
-                    'uprates': 'off (uprate_cap=0, all new CF at new-build prices)',
-                    'purpose': 'True cost of replacing existing nuclear/firm with new-build',
+                    'description': 'Cost to replace all existing clean generation',
+                    'hydro': 'included (existing floor, wholesale-priced)',
+                    'existing_clean': 'zeroed (all existing CF/solar/wind/CCS = 0)',
+                    'uprates': 'off (uprate_cap=0, no uprate tranche)',
+                    'purpose': 'True greenfield cost — only hydro is existing, everything else new-build',
                 },
             },
             'mode': 'full' if args.full else 'medium_only',
@@ -255,7 +260,16 @@ def main():
                     'ccs': 'M', 'q45': '1', 'fuel': 'M', 'tx': 'M', 'geo': geo}
             combos = [(mk, sens)]
 
-        # Track 1: newbuild (hydro=0 from expanded EF)
+        # Greenfield existing override: all clean resources zeroed
+        greenfield_all = {'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0, 'hydro': 0}
+        # Replace override: hydro stays at existing floor, everything else zeroed
+        existing_shares = GRID_MIX_SHARES[iso]
+        greenfield_keep_hydro = {
+            'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0,
+            'hydro': existing_shares['hydro'],
+        }
+
+        # Track 1: newbuild (hydro=0, all existing zeroed, uprates ON)
         all_arrays = load_iso_arrays(ef_expanded, iso)
         if all_arrays is not None:
             h0_mask = all_arrays['hydro'] == 0
@@ -265,30 +279,33 @@ def main():
                 nb_arrays = {k: all_arrays[k][h0_idx] for k in all_arrays}
 
                 nb_data, nb_arch = run_track(
-                    'newbuild', iso, nb_arrays, demand_twh, combos)
+                    'newbuild', iso, nb_arrays, demand_twh, combos,
+                    existing_override=greenfield_all)
                 track_output['results'][iso]['newbuild'] = nb_data
 
                 # Demand growth for newbuild archetypes
                 if nb_arch:
                     nb_dg = run_track_demand_growth(
-                        'newbuild', iso, nb_arrays, nb_arch, combos)
+                        'newbuild', iso, nb_arrays, nb_arch, combos,
+                        existing_override=greenfield_all)
                     track_output['demand_growth']['newbuild'][iso] = nb_dg
             else:
                 print(f"  {iso:>6}   newbuild: no hydro=0 mixes")
 
-        # Track 2: replace (original EF, uprate_cap=0)
-        rp_arrays = load_iso_arrays(ef_backup, iso)
+        # Track 2: replace (hydro at existing floor, everything else zeroed,
+        #           uprates OFF, uses expanded EF for full mix space)
+        rp_arrays = load_iso_arrays(ef_expanded, iso)
         if rp_arrays is not None:
             rp_data, rp_arch = run_track(
                 'replace', iso, rp_arrays, demand_twh, combos,
-                uprate_cap_override=0)
+                uprate_cap_override=0, existing_override=greenfield_keep_hydro)
             track_output['results'][iso]['replace'] = rp_data
 
             # Demand growth for replace archetypes
             if rp_arch:
                 rp_dg = run_track_demand_growth(
                     'replace', iso, rp_arrays, rp_arch, combos,
-                    uprate_cap_override=0)
+                    uprate_cap_override=0, existing_override=greenfield_keep_hydro)
                 track_output['demand_growth']['replace'][iso] = rp_dg
 
     # Save
