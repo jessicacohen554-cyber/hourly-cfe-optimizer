@@ -219,7 +219,8 @@ def get_tx(rtype, tx_name, iso):
 # VECTORIZED COST FUNCTION
 # ============================================================================
 
-def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate=None):
+def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate=None,
+                     uprate_cap_override=None):
     """
     Vectorized pricing of N mixes under a single sensitivity combo.
 
@@ -233,6 +234,8 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
             'ren', 'firm', 'batt', 'ldes_lvl', 'ccs', 'q45', 'fuel', 'tx', 'geo'
         demand_twh: base year demand (scalar)
         target_year, growth_rate: demand growth params (scalars, optional)
+        uprate_cap_override: if not None, override UPRATE_CAP_TWH[iso] with this
+            value. Set to 0 to disable uprate tranche (Track 2: replace).
 
     Returns:
         numpy array of total_cost (shape N), and effective_cost (shape N)
@@ -326,7 +329,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     tx_ccs_cf = get_tx('ccs_ccgt', tx_name, iso)
 
     # Tranche 1: Nuclear uprates (capped, no tx beyond grid connection)
-    uprate_cap = UPRATE_CAP_TWH[iso]
+    uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
     uprate_twh = np.minimum(new_cf_twh, uprate_cap)
     uprate_cost = uprate_twh * UPRATE_LCOE[firm_lev]
     remaining = np.maximum(0, new_cf_twh - uprate_twh)
@@ -444,8 +447,15 @@ _COL_LDES      = 9  # LDES dispatch
 _N_COEFFS = 10
 
 
-def precompute_base_year_coefficients(iso, arrays, demand_twh):
+def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_override=None):
     """Pre-compute scenario-invariant coefficient arrays for base year.
+
+    Args:
+        iso: region string
+        arrays: dict with numpy arrays for each mix dimension
+        demand_twh: base year demand (scalar)
+        uprate_cap_override: if not None, override UPRATE_CAP_TWH[iso] with this
+            value. Set to 0 to disable uprate tranche (Track 2: replace).
 
     Returns:
         coeff_matrix: (N, 10) float64 — multiply by scenario prices
@@ -492,7 +502,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh):
 
     # Clean firm tranche allocation (scenario-invariant quantities)
     new_cf_twh = cf_new_pct / 100.0 * demand_twh
-    uprate_cap = UPRATE_CAP_TWH[iso]
+    uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
     uprate_twh = np.minimum(new_cf_twh, uprate_cap)
     remaining_after_uprate = np.maximum(0, new_cf_twh - uprate_twh)
 
@@ -826,6 +836,7 @@ def build_sensitivity_combos(iso):
 PFS_POST_EF_PATH = Path('data/pfs_post_ef.parquet')
 RESULTS_PATH = Path('dashboard/overprocure_results.json')
 DG_RESULTS_PATH = Path('dashboard/demand_growth_results.json')
+TRACK_RESULTS_PATH = Path('dashboard/track_results.json')
 
 # Thresholds to include in backward-compat output
 OUTPUT_THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
@@ -1087,6 +1098,175 @@ def main():
     print(f"\nPhase 1 complete: {phase1_elapsed:.0f}s")
 
     # ================================================================
+    # PHASE 1.5: TRACK ANALYSIS (newbuild + replace)
+    # ================================================================
+    # Track 1 (newbuild): hydro=0 mixes, uprates ON — what hourly matching incentivizes
+    # Track 2 (replace): all mixes (hydro≤existing), uprates OFF — cost to replace existing
+    print("\n--- PHASE 1.5: Track analysis (newbuild + replace) ---")
+    phase15_start = time.time()
+
+    track_output = {
+        'meta': {
+            'tracks': {
+                'newbuild': {
+                    'description': 'New-build requirement for hourly matching',
+                    'hydro': 'excluded (hydro=0 mixes only)',
+                    'uprates': 'on (uprate tranche active)',
+                    'purpose': 'What resources does hourly matching incentivize vs what the grid needs?',
+                },
+                'replace': {
+                    'description': 'Cost to replace existing clean generation',
+                    'hydro': 'included (up to existing floor, wholesale-priced)',
+                    'uprates': 'off (uprate_cap=0, all new CF at new-build prices)',
+                    'purpose': 'True cost of replacing existing nuclear/firm with new-build',
+                },
+            },
+            'thresholds': OUTPUT_THRESHOLDS,
+            'resource_types': RESOURCE_TYPES,
+        },
+        'results': {},
+    }
+
+    # Track archetypes for Phase 2 demand growth
+    track_archetypes = {'newbuild': {}, 'replace': {}}
+
+    for iso in ISOS:
+        if iso not in pfs:
+            continue
+
+        arrays = pfs[iso]
+        N = len(arrays['clean_firm'])
+        demand_twh = REGIONAL_DEMAND_TWH[iso]
+        all_combos = build_sensitivity_combos(iso)
+        n_combos = len(all_combos)
+        scores_all = arrays['hourly_match_score'].astype(np.float64)
+
+        track_output['results'][iso] = {}
+
+        # ------ Track 1 (newbuild): Filter to hydro=0 ------
+        hydro_arr = arrays['hydro']
+        h0_mask = hydro_arr == 0
+        n_h0 = h0_mask.sum()
+
+        if n_h0 > 0:
+            h0_idx = np.where(h0_mask)[0]
+            nb_arrays = {k: arrays[k][h0_idx] for k in arrays}
+            nb_scores = nb_arrays['hourly_match_score'].astype(np.float64)
+
+            # Pre-compute threshold indices for newbuild mixes
+            nb_thr_indices = {}
+            for thr in OUTPUT_THRESHOLDS:
+                idx = np.where(nb_scores >= thr)[0]
+                if len(idx) > 0:
+                    nb_thr_indices[thr] = idx
+
+            if nb_thr_indices:
+                nb_cm, nb_const, nb_extras = precompute_base_year_coefficients(
+                    iso, nb_arrays, demand_twh)  # uprates ON (default)
+
+                active_thr_nb = sorted(nb_thr_indices.keys())
+                thresholds_desc_nb = np.array(sorted(active_thr_nb, reverse=True),
+                                               dtype=np.float64)
+                thr_pos_nb = {float(thresholds_desc_nb[k]): k
+                              for k in range(len(thresholds_desc_nb))}
+
+                nb_thr_data = {thr: {'scenarios': {}} for thr in active_thr_nb}
+                nb_arch_set = set()
+
+                iso_start_nb = time.time()
+                for combo_i, (scenario_key, sens) in enumerate(all_combos):
+                    prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
+                    best_idxs, best_vals = eval_and_argmin_all(
+                        nb_cm, nb_const, prices, nb_scores, thresholds_desc_nb)
+
+                    for thr in active_thr_nb:
+                        k = thr_pos_nb[float(thr)]
+                        if best_vals[k] == np.inf:
+                            continue
+                        best_idx = int(best_idxs[k])
+                        tc_val = float(best_vals[k])
+                        nb_arch_set.add(best_idx)
+
+                        scenario = build_winner_scenario(
+                            nb_arrays, nb_extras, best_idx, sens, iso, demand_twh,
+                            tc_val, wholesale, nuclear_price, ccs_price)
+                        nb_thr_data[thr]['scenarios'][scenario_key] = scenario
+
+                    if (combo_i + 1) % 2000 == 0:
+                        elapsed = time.time() - iso_start_nb
+                        rate = (combo_i + 1) / elapsed
+                        print(f"    {iso} newbuild {combo_i+1}/{n_combos} ({elapsed:.0f}s)")
+
+                track_output['results'][iso]['newbuild'] = {
+                    str(thr): nb_thr_data[thr] for thr in active_thr_nb
+                }
+                track_archetypes['newbuild'][iso] = {
+                    'arch_set': nb_arch_set,
+                    'arrays': nb_arrays,
+                    'h0_idx': h0_idx,
+                    'uprate_cap_override': None,  # uprates ON
+                }
+                print(f"  {iso:>6} newbuild: {n_h0:,} hydro=0 mixes, "
+                      f"{len(active_thr_nb)} thresholds, {len(nb_arch_set)} archetypes "
+                      f"— {time.time()-iso_start_nb:.0f}s")
+            else:
+                print(f"  {iso:>6} newbuild: {n_h0:,} hydro=0 mixes but none meet any threshold")
+        else:
+            print(f"  {iso:>6} newbuild: no hydro=0 mixes available")
+
+        # ------ Track 2 (replace): All mixes, uprate_cap=0 ------
+        rp_cm, rp_const, rp_extras = precompute_base_year_coefficients(
+            iso, arrays, demand_twh, uprate_cap_override=0)  # uprates OFF
+
+        active_thr_rp = [thr for thr in OUTPUT_THRESHOLDS
+                          if (iso, thr) in thr_indices]
+        thresholds_desc_rp = np.array(sorted(active_thr_rp, reverse=True),
+                                       dtype=np.float64)
+        thr_pos_rp = {float(thresholds_desc_rp[k]): k
+                      for k in range(len(thresholds_desc_rp))}
+
+        rp_thr_data = {thr: {'scenarios': {}} for thr in active_thr_rp}
+        rp_arch_set = set()
+
+        iso_start_rp = time.time()
+        for combo_i, (scenario_key, sens) in enumerate(all_combos):
+            prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
+            best_idxs, best_vals = eval_and_argmin_all(
+                rp_cm, rp_const, prices, scores_all, thresholds_desc_rp)
+
+            for thr in active_thr_rp:
+                k = thr_pos_rp[float(thr)]
+                if best_vals[k] == np.inf:
+                    continue
+                best_idx = int(best_idxs[k])
+                tc_val = float(best_vals[k])
+                rp_arch_set.add(best_idx)
+
+                scenario = build_winner_scenario(
+                    arrays, rp_extras, best_idx, sens, iso, demand_twh,
+                    tc_val, wholesale, nuclear_price, ccs_price)
+                rp_thr_data[thr]['scenarios'][scenario_key] = scenario
+
+            if (combo_i + 1) % 2000 == 0:
+                elapsed = time.time() - iso_start_rp
+                print(f"    {iso} replace {combo_i+1}/{n_combos} ({elapsed:.0f}s)")
+
+        track_output['results'][iso]['replace'] = {
+            str(thr): rp_thr_data[thr] for thr in active_thr_rp
+        }
+        track_archetypes['replace'][iso] = {
+            'arch_set': rp_arch_set,
+            'arrays': arrays,
+            'uprate_cap_override': 0,  # uprates OFF
+        }
+        print(f"  {iso:>6} replace:  {N:,} mixes, "
+              f"{len(active_thr_rp)} thresholds, {len(rp_arch_set)} archetypes "
+              f"— {time.time()-iso_start_rp:.0f}s")
+
+    phase15_elapsed = time.time() - phase15_start
+    print(f"\nPhase 1.5 complete: {phase15_elapsed:.0f}s")
+
+    # ================================================================
     # PHASE 2: Demand growth sweep on archetypes (vectorized)
     # ================================================================
     # Archetypes are the union of all winning mixes per ISO across all thresholds.
@@ -1185,6 +1365,86 @@ def main():
     print(f"\nPhase 2 complete: {phase2_elapsed:.0f}s")
 
     # ================================================================
+    # PHASE 2.5: Track demand growth sweeps
+    # ================================================================
+    print("\n--- PHASE 2.5: Track demand growth sweeps ---")
+    phase25_start = time.time()
+
+    track_dg = {'newbuild': {}, 'replace': {}}
+
+    for track_name in ['newbuild', 'replace']:
+        for iso in ISOS:
+            if iso not in track_archetypes[track_name]:
+                continue
+
+            ta = track_archetypes[track_name][iso]
+            arch_set = ta['arch_set']
+            t_arrays = ta['arrays']
+            uprate_override = ta['uprate_cap_override']
+
+            demand_twh = REGIONAL_DEMAND_TWH[iso]
+            iso_rates = DEMAND_GROWTH_RATES[iso]
+            all_combos = build_sensitivity_combos(iso)
+
+            arch_indices = sorted(arch_set)
+            n_arch = len(arch_indices)
+            if n_arch == 0:
+                continue
+
+            arch_arrays = {k: t_arrays[k][arch_indices] for k in t_arrays}
+            arch_scores = arch_arrays['hourly_match_score']
+            arch_thr_mask = {}
+            for thr in OUTPUT_THRESHOLDS:
+                qualifying = np.where(arch_scores >= thr)[0]
+                if len(qualifying) > 0:
+                    arch_thr_mask[thr] = qualifying
+
+            thr_dg = {thr: {} for thr in arch_thr_mask}
+
+            for scenario_key, sens in all_combos:
+                wholesale = max(5, WHOLESALE_PRICES[iso] +
+                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
+                thr_year_results = {thr: {} for thr in arch_thr_mask}
+
+                for year in DEMAND_GROWTH_YEARS:
+                    thr_growth_results = {thr: {} for thr in arch_thr_mask}
+                    for g_level in DEMAND_GROWTH_LEVELS:
+                        g_rate = iso_rates[g_level]
+                        tc, ec, _ = price_mix_batch(
+                            iso, arch_arrays, sens, demand_twh,
+                            target_year=year, growth_rate=g_rate,
+                            uprate_cap_override=uprate_override
+                        )
+                        for thr in arch_thr_mask:
+                            qual_idx = arch_thr_mask[thr]
+                            best_local = int(qual_idx[np.argmin(tc[qual_idx])])
+                            full_idx = arch_indices[best_local]
+                            thr_growth_results[thr][g_level] = [
+                                full_idx,
+                                round(float(tc[best_local]), 2),
+                                round(float(ec[best_local]), 2),
+                                round(float(ec[best_local]) - wholesale, 2),
+                            ]
+                    for thr in arch_thr_mask:
+                        thr_year_results[thr][str(year)] = thr_growth_results[thr]
+
+                for thr in arch_thr_mask:
+                    thr_dg[thr][scenario_key] = thr_year_results[thr]
+
+            if iso not in track_dg[track_name]:
+                track_dg[track_name][iso] = {}
+            for thr in arch_thr_mask:
+                track_dg[track_name][iso][str(thr)] = thr_dg[thr]
+
+            print(f"  {iso:>6} {track_name}: {n_arch} archetypes, "
+                  f"{len(arch_thr_mask)} thresholds")
+
+    track_output['demand_growth'] = track_dg
+
+    phase25_elapsed = time.time() - phase25_start
+    print(f"\nPhase 2.5 complete: {phase25_elapsed:.0f}s")
+
+    # ================================================================
     # SAVE OUTPUTS
     # ================================================================
     print("\n--- Saving outputs ---")
@@ -1205,6 +1465,12 @@ def main():
     # CF split table
     with open('data/cf_split_table.json', 'w') as f:
         json.dump(cf_split_table, f, indent=2)
+
+    # Track results JSON (newbuild + replace analysis)
+    with open(TRACK_RESULTS_PATH, 'w') as f:
+        json.dump(track_output, f, separators=(',', ':'))
+    tr_size = os.path.getsize(TRACK_RESULTS_PATH) / (1024 * 1024)
+    print(f"  {TRACK_RESULTS_PATH} ({tr_size:.1f} MB)")
 
     # ================================================================
     # SAVE PARQUET OUTPUTS (compact, git-friendly)
@@ -1304,7 +1570,7 @@ def main():
     print(f"{'='*70}")
 
     # Print Medium scenario summary (ISO-aware medium key)
-    print("\nAll-Medium (45Q=ON) summary:")
+    print("\nAll-Medium (45Q=ON) summary — Baseline:")
     for iso in ISOS:
         mk = medium_key(iso)
         print(f"\n  {iso} (key={mk}):")
@@ -1320,6 +1586,30 @@ def main():
             print(f"    {thr:>5}%: CF={rm.get('clean_firm',0):>2} Sol={rm.get('solar',0):>2} "
                   f"Wnd={rm.get('wind',0):>2} CCS={rm.get('ccs_ccgt',0):>2} Hyd={rm.get('hydro',0):>2} | "
                   f"proc={proc}% eff=${eff:.1f}/MWh match={match}%")
+
+    # Track summaries
+    for track_name in ['newbuild', 'replace']:
+        label = 'New-Build (no hydro, +uprates)' if track_name == 'newbuild' else 'Replace (with hydro, no uprates)'
+        print(f"\nAll-Medium (45Q=ON) summary — {label}:")
+        for iso in ISOS:
+            iso_track = track_output.get('results', {}).get(iso, {}).get(track_name, {})
+            if not iso_track:
+                print(f"\n  {iso}: no data")
+                continue
+            mk = medium_key(iso)
+            print(f"\n  {iso} (key={mk}):")
+            for thr in OUTPUT_THRESHOLDS:
+                t_str = str(thr)
+                sc = iso_track.get(t_str, {}).get('scenarios', {}).get(mk)
+                if not sc:
+                    continue
+                rm = sc['resource_mix']
+                eff = sc['costs']['effective_cost']
+                match = sc['hourly_match_score']
+                proc = sc['procurement_pct']
+                print(f"    {thr:>5}%: CF={rm.get('clean_firm',0):>2} Sol={rm.get('solar',0):>2} "
+                      f"Wnd={rm.get('wind',0):>2} CCS={rm.get('ccs_ccgt',0):>2} Hyd={rm.get('hydro',0):>2} | "
+                      f"proc={proc}% eff=${eff:.1f}/MWh match={match}%")
 
 
 if __name__ == '__main__':
