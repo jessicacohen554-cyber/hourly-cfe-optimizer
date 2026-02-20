@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Case for Clean Firm Power — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+/* ========== PAGE-SPECIFIC BODY ========== */
+body {
+    background: #0F1A2E;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(14,165,233,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+}
+
+/* ========== NARRATIVE STORY SECTIONS ========== */
+#narrativeSection {
+    background: #F3F4F8;
+    border-radius: 16px;
+    max-width: 1440px;
+    margin: 24px auto 0;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    padding: 20px 0 40px;
+}
+.story-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 72px 48px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.story-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.story-content {
+    position: relative;
+}
+.story-badge {
+    display: inline-block;
+    padding: 5px 18px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: capitalize;
+    margin-bottom: 18px;
+    background: rgba(26,39,68,0.1);
+    color: #1A2744;
+}
+.story-badge-orange {
+    background: rgba(239,68,68,0.1);
+    color: #DC2626;
+}
+.story-badge-green {
+    background: rgba(34,197,94,0.12);
+    color: #16A34A;
+}
+.story-badge-blue {
+    background: rgba(14,165,233,0.1);
+    color: #0284C7;
+}
+.story-badge-navy {
+    background: rgba(30,58,95,0.12);
+    color: #1E3A5F;
+}
+.story-section h2 {
+    font-family: var(--font-heading);
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: #DC2626;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+.story-lead {
+    font-size: 1.05rem;
+    color: #1A1A1A;
+    line-height: 1.75;
+    margin-bottom: 18px;
+}
+.story-section p {
+    font-size: 0.95rem;
+    color: #1A1A1A;
+    line-height: 1.75;
+    margin-bottom: 14px;
+}
+.story-section p.muted {
+    color: #6B7280;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* Energy spectrum accent bar */
+.energy-spectrum-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    border-radius: 2px;
+    margin: 32px 0;
+    opacity: 0.6;
+}
+
+/* ========== SCROLLYTELLING ========== */
+.story-divider-wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+}
+.story-divider {
+    border: none;
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    margin: 0;
+    opacity: 0.7;
+}
+
+.scrolly-container {
+    position: relative;
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.scrolly-sticky {
+    position: sticky;
+    top: 0;
+    width: 55%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+
+.scrolly-chart-wrap {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 16px;
+    padding: 32px 28px;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+    height: 500px;
+    max-height: 500px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.scrolly-chart-wrap canvas {
+    width: 100% !important;
+    height: 380px !important;
+    max-height: 380px;
+}
+
+.scrolly-steps {
+    width: 45%;
+    position: relative;
+    z-index: 2;
+}
+
+.scrolly-step {
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    padding: 80px 48px 80px 40px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scrolly-step:first-child {
+    padding-top: 120px;
+}
+
+.scrolly-step:last-child {
+    padding-bottom: 120px;
+}
+
+.scrolly-step.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scrolly-step.active .step-card {
+    border-color: rgba(239,68,68,0.35);
+    box-shadow: 0 10px 25px rgba(26,39,68,0.1), 0 4px 8px rgba(0,0,0,0.04);
+    transform: translateY(-2px);
+}
+
+.step-card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 16px;
+    padding: 32px 32px;
+    transition: border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.82rem;
+    font-weight: 800;
+    color: #DC2626;
+    margin-bottom: 14px;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+}
+
+.step-card p {
+    font-size: 0.95rem;
+    color: #1A1A1A;
+    line-height: 1.75;
+    margin-bottom: 0;
+}
+
+.step-cost-callout {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #1A1A1A;
+}
+.step-cost-callout.step-cost-green {
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.15);
+}
+.step-cost-callout.step-cost-green strong {
+    color: #16A34A;
+}
+.step-cost-callout.step-cost-red {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.15);
+}
+.step-cost-callout.step-cost-red strong {
+    color: #DC2626;
+}
+.step-cost-callout.step-cost-blue {
+    background: rgba(14,165,233,0.08);
+    border: 1px solid rgba(14,165,233,0.15);
+}
+.step-cost-callout.step-cost-blue strong {
+    color: #0284C7;
+}
+.step-cost-callout.step-cost-navy {
+    background: rgba(30,58,95,0.08);
+    border: 1px solid rgba(30,58,95,0.15);
+}
+.step-cost-callout.step-cost-navy strong {
+    color: #1E3A5F;
+}
+@media (max-width: 480px) {
+    .step-cost-callout {
+        padding: 10px 12px;
+        font-size: 0.82rem;
+        border-radius: 8px;
+    }
+}
+
+/* Inline step charts: hidden on desktop, shown on mobile */
+.step-inline-chart {
+    display: none;
+}
+@media (max-width: 1024px) {
+    .step-inline-chart {
+        display: block;
+        width: 100%;
+        height: 240px;
+        margin-bottom: 18px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid rgba(221,208,192,0.5);
+        border-radius: 12px;
+        padding: 12px 8px;
+    }
+    .step-inline-chart canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+    .scrolly-sticky {
+        display: none;
+    }
+}
+@media (max-width: 480px) {
+    .step-inline-chart {
+        height: 200px;
+        padding: 8px 4px;
+        margin-bottom: 14px;
+    }
+}
+
+/* Responsive scrollytelling */
+@media (max-width: 1024px) {
+    .scrolly-container {
+        flex-direction: column;
+    }
+    .scrolly-sticky {
+        width: 100%;
+        height: auto;
+        min-height: 380px;
+        position: relative;
+        top: auto;
+        padding: 24px 20px;
+    }
+    .scrolly-steps {
+        width: 100%;
+    }
+    .scrolly-step {
+        min-height: auto;
+        padding: 48px 24px;
+    }
+}
+@media (max-width: 1024px) and (min-width: 481px) {
+    .scrolly-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        min-height: 400px;
+    }
+}
+
+/* ========== REGION SELECTOR (on sticky chart) ========== */
+.region-selector {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+.region-btn {
+    padding: 6px 14px;
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.7);
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #6B7280;
+    min-width: 44px;
+    min-height: 36px;
+}
+.region-btn:hover {
+    background: rgba(14,165,233,0.08);
+    border-color: rgba(14,165,233,0.3);
+}
+.region-btn.active {
+    background: #1E3A5F;
+    color: #ffffff;
+    border-color: #1E3A5F;
+}
+
+/* ========== ANIMATED COUNTERS ========== */
+.counter-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 32px 0;
+}
+.counter-card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 16px;
+    padding: 24px 20px;
+    text-align: center;
+    min-width: 140px;
+    flex: 1;
+    max-width: 200px;
+}
+.counter-value {
+    font-family: var(--font-heading);
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #DC2626;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+.counter-label {
+    font-size: 0.82rem;
+    color: #6B7280;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: capitalize;
+}
+@media (max-width: 480px) {
+    .counter-card {
+        min-width: 100px;
+        padding: 16px 12px;
+    }
+    .counter-value {
+        font-size: 1.8rem;
+    }
+    .counter-label {
+        font-size: 0.75rem;
+    }
+}
+
+/* ========== FOAK/NOAK COMPARISON ========== */
+.foak-compare {
+    display: flex;
+    gap: 20px;
+    margin: 24px 0;
+    flex-wrap: wrap;
+}
+.foak-card {
+    flex: 1;
+    min-width: 160px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+}
+.foak-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #6B7280;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.foak-price {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+.foak-price.high { color: #DC2626; }
+.foak-price.low { color: #16A34A; }
+.foak-unit {
+    font-size: 0.8rem;
+    color: #6B7280;
+}
+.foak-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    font-size: 1.5rem;
+    color: #16A34A;
+}
+@media (max-width: 480px) {
+    .foak-compare {
+        gap: 10px;
+    }
+    .foak-card {
+        min-width: 100px;
+        padding: 14px 10px;
+    }
+    .foak-price {
+        font-size: 1.5rem;
+    }
+}
+
+/* ========== CITATION STYLE ========== */
+.cite {
+    font-size: 0.82rem;
+    color: #6B7280;
+    font-style: italic;
+    margin-top: 8px;
+    line-height: 1.5;
+}
+.cite a {
+    color: #0284C7;
+    text-decoration: none;
+}
+.cite a:hover {
+    text-decoration: underline;
+}
+
+/* ========== STANDALONE CHART SECTIONS ========== */
+.chart-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 48px;
+}
+.chart-wrap {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: 16px;
+    padding: 28px 24px;
+    height: 480px;
+    max-height: 480px;
+    display: flex;
+    flex-direction: column;
+}
+.chart-wrap .region-selector {
+    flex-shrink: 0;
+}
+.chart-wrap canvas {
+    width: 100% !important;
+    flex: 1;
+    min-height: 0;
+    max-height: 400px;
+}
+
+/* ========== MOBILE TYPOGRAPHY & CHART HEIGHTS ========== */
+@media (max-width: 768px) {
+    .story-section {
+        padding: 48px 24px;
+    }
+    .story-section h2 {
+        font-size: 1.8rem;
+    }
+    .chart-section {
+        padding: 24px 16px;
+    }
+    .chart-wrap {
+        height: 420px;
+        max-height: 420px;
+        padding: 20px 16px;
+    }
+    .chart-wrap canvas {
+        max-height: 340px;
+    }
+    .scrolly-chart-wrap {
+        min-height: 350px;
+        max-height: 400px;
+    }
+    .scrolly-chart-wrap canvas {
+        height: 300px !important;
+        max-height: 300px;
+    }
+}
+@media (max-width: 480px) {
+    .story-section {
+        padding: 36px 16px;
+    }
+    .story-section h2 {
+        font-size: 1.6rem;
+    }
+    .story-lead {
+        font-size: 0.95rem;
+    }
+    .step-card h3 {
+        font-size: 1.4rem;
+    }
+    .chart-wrap {
+        height: 380px;
+        max-height: 380px;
+        padding: 16px 12px;
+    }
+    .chart-wrap canvas {
+        max-height: 280px;
+    }
+    .scrolly-chart-wrap canvas {
+        height: 260px !important;
+        max-height: 260px;
+    }
+    .region-btn {
+        padding: 5px 10px;
+        font-size: 0.72rem;
+        min-height: 32px;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== NAVIGATION (auto-injected by nav.js) ========== -->
+<nav id="topNav"></nav>
+
+<!-- ========== HEADER BANNER ========== -->
+<header class="header">
+    <div class="header-accent"></div>
+    <h1>The Case for Clean Firm Power</h1>
+    <p class="subtitle">Why catalytic investment in dispatchable clean generation today<br>is the key to avoiding a costly gas-dependent future</p>
+</header>
+
+<!-- ========== MAIN NARRATIVE ========== -->
+<section id="narrativeSection">
+
+<!-- ===== INTRO SECTION ===== -->
+<div class="story-section story-fade-in">
+    <div class="story-content">
+        <span class="story-badge">The Paradox</span>
+        <h2>Cheap Renewables Aren't Enough</h2>
+        <p class="story-lead">Solar and wind are the cheapest sources of electricity ever built. Their costs have plummeted over 90% in a decade. So why can't we just build more of them and call it done?</p>
+        <p>Because electricity isn't a commodity you can stockpile. The grid needs reliable power every hour of every day &mdash; all 8,760 hours per year. Weather-dependent sources produce power when conditions allow, not necessarily when demand requires it. The mismatch between supply shape and demand shape is the fundamental constraint of grid decarbonization.</p>
+        <p>Without something to fill the gap, that "something" defaults to natural gas. And that gas backup isn't free &mdash; it's a hidden tax on every megawatt-hour of clean energy you deploy.</p>
+        <div class="energy-spectrum-bar"></div>
+        <p class="muted">This analysis uses hourly generation and demand data across 5 major U.S. ISOs to quantify the true cost of not investing in clean firm power.</p>
+    </div>
+</div>
+
+<!-- ===== SCROLLYTELLING: GAS BACKUP STORY ===== -->
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<div class="scrolly-container">
+    <!-- Sticky chart (left side on desktop) -->
+    <div class="scrolly-sticky">
+        <div class="scrolly-chart-wrap">
+            <div class="region-selector" id="regionSelector">
+                <button class="region-btn active" data-region="PJM">PJM</button>
+                <button class="region-btn" data-region="ERCOT">ERCOT</button>
+                <button class="region-btn" data-region="CAISO">CAISO</button>
+                <button class="region-btn" data-region="NYISO">NYISO</button>
+                <button class="region-btn" data-region="NEISO">NEISO</button>
+            </div>
+            <canvas id="stickyChart" height="420"></canvas>
+        </div>
+    </div>
+
+    <!-- Scrolling steps (right side) -->
+    <div class="scrolly-steps">
+        <!-- Step 1: The Gas Backup Tax -->
+        <div class="scrolly-step story-fade-in" data-step="gas-backup">
+            <div class="step-card">
+                <h3>The Gas Backup Tax</h3>
+                <p>Even at 90% clean energy, every ISO still requires massive gas backup capacity to guarantee reliability. This holds across <em>all</em> cost scenarios we model &mdash; whether renewable costs fall further or not, the structural need for gas backup persists.</p>
+                <div class="step-cost-callout step-cost-red">
+                    <strong id="gasBackupCallout">PJM needs 124 GW of gas backup at 90% clean</strong> &mdash; and this number is stable across P10 to P90 cost assumptions because it's driven by physics, not economics.
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: New Gas You'll Pay For Twice -->
+        <div class="scrolly-step story-fade-in" data-step="new-gas">
+            <div class="step-card">
+                <h3>New Gas You'll Pay For Twice</h3>
+                <p>Much of that gas backup isn't existing plants &mdash; it's <em>new construction</em>. We're building gas capacity today that will become stranded assets as clean energy scales. The capital risk is real: you pay to build it, then pay again when it's retired early.</p>
+                <div class="step-cost-callout step-cost-red">
+                    <strong id="newGasCallout">49 GW of new gas construction required</strong> &mdash; capital that could compound returns if directed toward clean firm instead.
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Clean Firm Fills the Gap -->
+        <div class="scrolly-step story-fade-in" data-step="clean-firm-fills">
+            <div class="step-card">
+                <h3>Clean Firm Fills the Shape</h3>
+                <p>Nuclear, enhanced geothermal, and CCS-equipped gas turbines provide the dispatchable, weather-independent hours that renewables can't. As clean firm enters the mix, gas backup drops &mdash; and this relationship is consistent regardless of which cost scenario materializes.</p>
+                <div class="step-cost-callout step-cost-green">
+                    <strong id="cleanCoverageCallout">Clean coverage rises from 20% to 53% of peak load</strong> between 50% and 97.5% thresholds &mdash; displacing gas at every step.
+                </div>
+                <p class="cite">CATF (2025): "Each GW of clean firm capacity offsets several GW of variable renewables and storage that would otherwise be required."</p>
+            </div>
+        </div>
+
+        <!-- Step 4: The System Cost Penalty -->
+        <div class="scrolly-step story-fade-in" data-step="system-cost">
+            <div class="step-card">
+                <h3>The Cost Penalty Is Robust</h3>
+                <p>We evaluate 324 sensitivity combinations across 5 toggle groups. The conclusion holds across the full distribution: excluding firm clean power raises system costs. The penalty varies in magnitude &mdash; but it's never zero.</p>
+                <div class="step-cost-callout step-cost-red">
+                    <strong>10&ndash;62% higher system costs</strong> without firm low-carbon resources &mdash; across nearly 1,000 scenarios spanning different geographies, cost assumptions, and technology availabilities.
+                </div>
+                <p class="cite">Sepulveda, Jenkins et al. (2018), <em>Joule</em>: "<a href="https://www.sciencedirect.com/science/article/pii/S2542435118303866">The Role of Firm Low-Carbon Electricity Resources in Deep Decarbonization</a>" — findings robust across all scenarios modeled.</p>
+            </div>
+        </div>
+
+        <!-- Step 5: The FOAK Premium Is an Investment -->
+        <div class="scrolly-step story-fade-in" data-step="foak-premium">
+            <div class="step-card">
+                <h3>The FOAK Premium Is an Investment</h3>
+                <p>First-of-a-kind costs are uncertain &mdash; but the range itself tells the story. Even at the high end, the FOAK premium is bounded and temporary. The gas backup cost it displaces is permanent.</p>
+                <div class="foak-compare">
+                    <div class="foak-card">
+                        <h4>FOAK Range</h4>
+                        <div class="foak-price high">$90&ndash;170</div>
+                        <div class="foak-unit">$/MWh (P10&ndash;P90)</div>
+                    </div>
+                    <div class="foak-arrow">&rarr;</div>
+                    <div class="foak-card">
+                        <h4>NOAK Target</h4>
+                        <div class="foak-price low">$68&ndash;75</div>
+                        <div class="foak-unit">$/MWh (learning curve)</div>
+                    </div>
+                </div>
+                <p>The catalytic premium shrinks with deployment. At P50 assumptions, it's ~$25/MWh. At P90 (worst case), it's ~$95/MWh. But even the P90 premium is bounded and declining &mdash; unlike the gas backup cost it displaces.</p>
+            </div>
+        </div>
+
+        <!-- Step 6: The Math Works Across Scenarios -->
+        <div class="scrolly-step story-fade-in" data-step="the-math">
+            <div class="step-card">
+                <h3>The Math Works Across Scenarios</h3>
+                <p>We don't know exactly what clean firm will cost. But we <em>do</em> know what gas backup costs &mdash; it's $5&ndash;17/MWh of total system load depending on the ISO. That's the floor of the "do nothing" option, and it recurs annually.</p>
+                <div class="step-cost-callout step-cost-navy">
+                    <strong id="mathCallout">Gas backup costs $7.0/MWh</strong> at 90% clean. Even under P10 (optimistic) assumptions, this cost persists. Under P90 assumptions, it's substantially higher. Either way, it compounds over decades while clean firm costs decline.
+                </div>
+                <p>The asymmetry matters: clean firm costs decline with deployment (learning curves are well-documented). Gas backup costs escalate with demand growth and carbon pricing. The expected value of investing early is positive across the full scenario range.</p>
+            </div>
+        </div>
+
+        <!-- Step 7: Plan for the Destination -->
+        <div class="scrolly-step story-fade-in" data-step="destination">
+            <div class="step-card">
+                <h3>Plan for the Destination</h3>
+                <p>Rising demand amplifies every cost scenario. Under all growth projections, a renewables-only portfolio requires proportionally <em>more</em> gas backup per unit of new demand &mdash; the shape problem doesn't scale linearly, it compounds.</p>
+                <p>Clean firm breaks the cycle regardless of which cost path materializes. It provides dispatchable generation that scales with demand, and its system value <em>increases</em> as the grid decarbonizes further.</p>
+                <div class="step-cost-callout step-cost-blue">
+                    <strong>Under uncertainty, diversification wins.</strong> A portfolio including clean firm is more robust across cost scenarios, demand trajectories, and policy environments than one that bets exclusively on renewables + storage.
+                </div>
+                <p class="cite">CATF (2025): "Diversified power systems that include clean firm generation are significantly less expensive &mdash; often by tens of percent &mdash; than systems relying almost exclusively on variable renewables." <a href="https://www.catf.us/resource/clean-firm-electricity-technologies-why-what-how/">Read the report &rarr;</a></p>
+            </div>
+        </div>
+
+        <!-- Step 8: The Call to Action -->
+        <div class="scrolly-step story-fade-in" data-step="call-to-action">
+            <div class="step-card">
+                <h3>Start Building Now</h3>
+                <p>Every technology that's cheap today was once expensive. Solar dropped 90% because early adopters absorbed FOAK costs. Wind followed the same curve. Batteries are on it now. The pattern is robust and well-documented across energy technologies.</p>
+                <p>Clean firm generation needs the same catalytic runway. The physics demand it. The economics &mdash; evaluated across hundreds of scenarios &mdash; justify it. The alternative is a gas-dependent grid whose costs grow more uncertain, not less, with every year of delay.</p>
+                <div class="step-cost-callout step-cost-green">
+                    <strong>Explore the full scenario space.</strong> Use the <a href="dashboard.html" style="color:#16A34A;">Grid Simulation</a> with all 5 sensitivity toggles to see how clean firm power transforms system economics under your own assumptions.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- ===== WHERE GAS BACKUP MEETS SYSTEM COST ===== -->
+<div class="story-section story-fade-in">
+    <div class="story-content">
+        <span class="story-badge story-badge-blue">The Planning Window</span>
+        <h2>Where Gas Backup Meets System Cost</h2>
+        <p class="story-lead">The chart below overlays two things: the P10/P50/P90 total system cost envelope (left axis) and the gas backup cost component (right axis, red fill). As gas backup cost declines at higher thresholds &mdash; because clean firm displaces it &mdash; total system cost stays flat or rises only modestly.</p>
+        <p>The planning window is where the envelope is flattest: adding clean firm capacity in this range reduces gas backup cost almost dollar-for-dollar, keeping total system cost stable. Beyond this range, the cost of the last few percentage points of clean energy steepens. The right target depends on your risk tolerance &mdash; but the range of reasonable targets is narrow and robust across scenarios.</p>
+    </div>
+</div>
+<div class="chart-section story-fade-in">
+    <div class="chart-wrap">
+        <div class="region-selector" id="envelopeRegionSelector">
+            <button class="region-btn active" data-region="PJM" data-chart="envelope">PJM</button>
+            <button class="region-btn" data-region="ERCOT" data-chart="envelope">ERCOT</button>
+            <button class="region-btn" data-region="CAISO" data-chart="envelope">CAISO</button>
+            <button class="region-btn" data-region="NYISO" data-chart="envelope">NYISO</button>
+            <button class="region-btn" data-region="NEISO" data-chart="envelope">NEISO</button>
+        </div>
+        <canvas id="costEnvelopeChart" height="380"></canvas>
+    </div>
+</div>
+
+<!-- ===== LCOE COMPARISON CHART ===== -->
+<div class="story-section story-fade-in">
+    <div class="story-content">
+        <span class="story-badge story-badge-navy">Cost Context</span>
+        <h2>FOAK Premium vs. Gas Backup Cost</h2>
+        <p class="story-lead">The catalytic premium for first-of-a-kind clean firm generation is a one-time investment that declines with deployment. The gas backup cost is a permanent tax that compounds with rising demand.</p>
+        <p>The bars below show gas backup cost at 90% clean threshold for each region. The lines show nuclear LCOE at FOAK (High) and NOAK (Low) pricing. The shaded band between them is the catalytic premium &mdash; the investment gap that early deployment closes.</p>
+    </div>
+</div>
+<div class="chart-section story-fade-in">
+    <div class="chart-wrap">
+        <canvas id="foakVsGasChart" height="350"></canvas>
+    </div>
+</div>
+
+<!-- ===== GAS BACKUP ACROSS ALL REGIONS ===== -->
+<div class="story-section story-fade-in">
+    <div class="story-content">
+        <span class="story-badge story-badge-orange">Regional View</span>
+        <h2>New Gas Construction by Region</h2>
+        <p class="story-lead">Every ISO faces the same structural challenge, but the magnitude varies with regional grid mix, existing infrastructure, and demand profile. Select a region to see how new gas construction requirements change with clean energy threshold.</p>
+    </div>
+</div>
+<div class="chart-section story-fade-in">
+    <div class="chart-wrap">
+        <div class="region-selector" id="gasRegionSelector">
+            <button class="region-btn" data-region="ALL" data-chart="gas" style="font-style:italic;">All Regions</button>
+            <button class="region-btn active" data-region="PJM" data-chart="gas">PJM</button>
+            <button class="region-btn" data-region="ERCOT" data-chart="gas">ERCOT</button>
+            <button class="region-btn" data-region="CAISO" data-chart="gas">CAISO</button>
+            <button class="region-btn" data-region="NYISO" data-chart="gas">NYISO</button>
+            <button class="region-btn" data-region="NEISO" data-chart="gas">NEISO</button>
+        </div>
+        <canvas id="regionGasChart" height="350"></canvas>
+    </div>
+</div>
+
+<!-- ===== CLOSING ===== -->
+<div class="story-section story-fade-in">
+    <div class="story-content">
+        <span class="story-badge story-badge-green">The Bottom Line</span>
+        <h2>Invest in the Shape of Tomorrow's Grid</h2>
+        <p class="story-lead">Renewables are necessary but insufficient. Storage helps but doesn't create energy. Only dispatchable clean firm generation closes the shape gap between what the weather provides and what the grid demands.</p>
+        <p>The choice isn't between renewables and clean firm &mdash; it's between a diversified clean portfolio that works, and a renewables-plus-gas system that locks in fossil dependence for decades.</p>
+        <div class="energy-spectrum-bar"></div>
+        <p style="font-size:0.85rem;color:#6B7280;margin-top:24px;"><strong>Sources:</strong>
+            Sepulveda, Jenkins et al. (2018), "The Role of Firm Low-Carbon Electricity Resources," <em>Joule</em> &bull;
+            CATF (2025), "Clean Firm Electricity Technologies: What, Why, How" &bull;
+            CATF (2026), "What is Clean Firm Electricity?" &bull;
+            CATF (2025), "Beyond LCOE" &bull;
+            Hourly CFE Optimizer results (2025 snapshot, 5 ISOs, 13 thresholds)
+        </p>
+    </div>
+</div>
+
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer style="background:#1a1a2e;padding:24px;text-align:center;">
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-bottom:12px;">
+        <a href="index.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Home</a>
+        <a href="dashboard.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Grid Simulation</a>
+        <a href="abatement_dashboard.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">CO&#8322; Abatement</a>
+        <a href="research_paper.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">Research Paper</a>
+        <a href="about.html" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;">About</a>
+    </div>
+    <p style="color:rgba(255,255,255,0.4);font-size:0.78rem;">The 8,760 Problem &mdash; 2025 Snapshot Model</p>
+</footer>
+
+<!-- ========== SCRIPTS ========== -->
+<script src="js/shared-data.js"></script>
+<script src="js/nav.js"></script>
+<script>
+// ============================================================================
+// CLEAN FIRM CASE — SCROLLYTELLING JAVASCRIPT
+// ============================================================================
+
+// --- State ---
+let selectedRegion = 'PJM';
+let envelopeRegion = 'PJM';
+let gasChartRegion = 'PJM';
+let stickyChart = null;
+let foakVsGasChart = null;
+let regionGasChart = null;
+let costEnvelopeChart = null;
+
+// --- Data Accessors ---
+const REGIONS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+const REGION_DISPLAY = { CAISO: 'CAISO', ERCOT: 'ERCOT', PJM: 'PJM', NYISO: 'NYISO', NEISO: 'NEISO' };
+const REGION_CLR = { CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0' };
+
+function getGasData(region) {
+    return GAS_BACKUP_DATA[region];
+}
+
+function formatGW(mw) {
+    return (mw / 1000).toFixed(0);
+}
+
+// --- Region Selectors (scoped to each chart's container) ---
+// Scrollytelling sticky chart region buttons
+document.querySelectorAll('#regionSelector .region-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('#regionSelector .region-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        selectedRegion = this.getAttribute('data-region');
+        updateStickyChart();
+        updateCallouts();
+    });
+});
+
+// Cost envelope chart region buttons
+document.querySelectorAll('#envelopeRegionSelector .region-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('#envelopeRegionSelector .region-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        envelopeRegion = this.getAttribute('data-region');
+        updateCostEnvelopeChart();
+    });
+});
+
+// Gas backup chart region buttons
+document.querySelectorAll('#gasRegionSelector .region-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('#gasRegionSelector .region-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        gasChartRegion = this.getAttribute('data-region');
+        updateRegionGasChart();
+    });
+});
+
+// --- Callout Text Updates ---
+function updateCallouts() {
+    const d = getGasData(selectedRegion);
+    // Index 7 = 90% threshold
+    const idx90 = 7;
+    const totalGas90 = formatGW(d.gas_backup_mw[idx90]);
+    const newGas90 = formatGW(d.new_gas_build_mw[idx90]);
+    const cleanCov50 = d.clean_coverage_pct[0].toFixed(0);
+    const cleanCov975 = d.clean_coverage_pct[10].toFixed(0);
+    const gasCost90 = d.gas_backup_cost[idx90].toFixed(1);
+
+    document.getElementById('gasBackupCallout').textContent =
+        `${selectedRegion} needs ${totalGas90} GW of gas backup at 90% clean`;
+    document.getElementById('newGasCallout').textContent =
+        `${newGas90} GW of new gas construction required`;
+    document.getElementById('cleanCoverageCallout').textContent =
+        `Clean coverage rises from ${cleanCov50}% to ${cleanCov975}% of peak load`;
+    document.getElementById('mathCallout').textContent =
+        `Gas backup costs $${gasCost90}/MWh of total system load at 90% clean`;
+}
+
+// --- Sticky Chart ---
+function buildStickyChart() {
+    const ctx = document.getElementById('stickyChart');
+    if (!ctx) return;
+
+    const d = getGasData(selectedRegion);
+    // Use subset of thresholds for readability
+    const labelIdxs = [0, 2, 3, 5, 7, 9, 10, 11]; // 50,70,75,85,90,95,97.5,99
+    const labels = labelIdxs.map(i => THRESHOLDS[i] + '%');
+    const gasTotal = labelIdxs.map(i => d.gas_backup_mw[i] / 1000);
+    const newGas = labelIdxs.map(i => d.new_gas_build_mw[i] / 1000);
+    const cleanCov = labelIdxs.map(i => d.clean_coverage_pct[i]);
+
+    stickyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Existing Gas (GW)',
+                    data: labelIdxs.map(i => (d.gas_backup_mw[i] - d.new_gas_build_mw[i]) / 1000),
+                    backgroundColor: 'rgba(156,163,175,0.5)',
+                    borderColor: '#9CA3AF',
+                    borderWidth: 1,
+                    stack: 'gas',
+                    order: 2
+                },
+                {
+                    label: 'New Gas Build (GW)',
+                    data: newGas,
+                    backgroundColor: 'rgba(239,68,68,0.55)',
+                    borderColor: '#EF4444',
+                    borderWidth: 1,
+                    stack: 'gas',
+                    order: 2
+                },
+                {
+                    label: 'Clean Coverage %',
+                    data: cleanCov,
+                    type: 'line',
+                    yAxisID: 'y2',
+                    borderColor: '#1E3A5F',
+                    backgroundColor: 'rgba(30,58,95,0.1)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#1E3A5F',
+                    tension: 0.3,
+                    fill: true,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        usePointStyle: true,
+                        padding: 16
+                    }
+                },
+                title: {
+                    display: true,
+                    text: `${selectedRegion}: Gas Backup vs Clean Coverage`,
+                    font: {
+                        family: "'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif",
+                        size: 16,
+                        weight: 'bold'
+                    },
+                    color: '#1A2744',
+                    padding: { bottom: 12 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 13 },
+                    bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.dataset.yAxisID === 'y2') {
+                                return `Clean Coverage: ${ctx.raw.toFixed(1)}%`;
+                            }
+                            return `${ctx.dataset.label}: ${ctx.raw.toFixed(1)} GW`;
+                        }
+                    }
+                },
+                datalabels: { display: false }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Clean Energy Threshold',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+                        color: '#6B7280'
+                    },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#6B7280'
+                    },
+                    grid: { display: false }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Gas Backup Capacity (GW)',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+                        color: '#6B7280'
+                    },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#6B7280'
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    stacked: true
+                },
+                y2: {
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Clean Coverage of Peak (%)',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+                        color: '#1E3A5F'
+                    },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#1E3A5F',
+                        callback: v => v + '%'
+                    },
+                    grid: { display: false },
+                    min: 0,
+                    max: 100
+                }
+            }
+        }
+    });
+}
+
+function updateStickyChart() {
+    if (!stickyChart) return;
+    const d = getGasData(selectedRegion);
+    const labelIdxs = [0, 2, 3, 5, 7, 9, 10, 11];
+    stickyChart.data.datasets[0].data = labelIdxs.map(i => (d.gas_backup_mw[i] - d.new_gas_build_mw[i]) / 1000);
+    stickyChart.data.datasets[1].data = labelIdxs.map(i => d.new_gas_build_mw[i] / 1000);
+    stickyChart.data.datasets[2].data = labelIdxs.map(i => d.clean_coverage_pct[i]);
+    stickyChart.options.plugins.title.text = `${selectedRegion}: Gas Backup vs Clean Coverage`;
+    stickyChart.update('none');
+}
+
+// --- Scrollytelling Step Highlight ---
+function highlightStep(stepName) {
+    if (!stickyChart) return;
+    const d = getGasData(selectedRegion);
+    const labelIdxs = [0, 2, 3, 5, 7, 9, 10, 11];
+
+    // Reset all bar colors
+    const existingColors = labelIdxs.map(() => 'rgba(156,163,175,0.5)');
+    const newGasColors = labelIdxs.map(() => 'rgba(239,68,68,0.55)');
+    const lineColor = '#1E3A5F';
+
+    switch (stepName) {
+        case 'gas-backup':
+            // Highlight total gas - make bars more vivid
+            stickyChart.data.datasets[0].backgroundColor = labelIdxs.map(() => 'rgba(156,163,175,0.7)');
+            stickyChart.data.datasets[1].backgroundColor = labelIdxs.map(() => 'rgba(239,68,68,0.75)');
+            stickyChart.data.datasets[2].borderColor = 'rgba(30,58,95,0.3)';
+            stickyChart.data.datasets[2].pointBackgroundColor = 'rgba(30,58,95,0.3)';
+            stickyChart.options.plugins.title.text = `${selectedRegion}: Total Gas Backup Required`;
+            break;
+
+        case 'new-gas':
+            // Highlight new gas build - dim existing, emphasize new
+            stickyChart.data.datasets[0].backgroundColor = labelIdxs.map(() => 'rgba(156,163,175,0.2)');
+            stickyChart.data.datasets[1].backgroundColor = labelIdxs.map(() => 'rgba(239,68,68,0.85)');
+            stickyChart.data.datasets[2].borderColor = 'rgba(30,58,95,0.3)';
+            stickyChart.data.datasets[2].pointBackgroundColor = 'rgba(30,58,95,0.3)';
+            stickyChart.options.plugins.title.text = `${selectedRegion}: New Gas Construction Required`;
+            break;
+
+        case 'clean-firm-fills':
+            // Highlight clean coverage line - dim bars, emphasize line
+            stickyChart.data.datasets[0].backgroundColor = labelIdxs.map(() => 'rgba(156,163,175,0.2)');
+            stickyChart.data.datasets[1].backgroundColor = labelIdxs.map(() => 'rgba(239,68,68,0.2)');
+            stickyChart.data.datasets[2].borderColor = '#1E3A5F';
+            stickyChart.data.datasets[2].pointBackgroundColor = '#1E3A5F';
+            stickyChart.data.datasets[2].borderWidth = 4;
+            stickyChart.options.plugins.title.text = `${selectedRegion}: Clean Firm Displaces Gas`;
+            break;
+
+        case 'system-cost':
+        case 'foak-premium':
+        case 'the-math':
+            // Show all elements with balanced emphasis
+            stickyChart.data.datasets[0].backgroundColor = existingColors;
+            stickyChart.data.datasets[1].backgroundColor = newGasColors;
+            stickyChart.data.datasets[2].borderColor = lineColor;
+            stickyChart.data.datasets[2].pointBackgroundColor = lineColor;
+            stickyChart.data.datasets[2].borderWidth = 3;
+            stickyChart.options.plugins.title.text = `${selectedRegion}: Gas Backup vs Clean Coverage`;
+            break;
+
+        case 'destination':
+        case 'call-to-action':
+            // Emphasize the improvement - highlight low-gas, high-clean-coverage end
+            stickyChart.data.datasets[0].backgroundColor = labelIdxs.map((_, i) =>
+                i >= 5 ? 'rgba(34,197,94,0.25)' : 'rgba(156,163,175,0.3)');
+            stickyChart.data.datasets[1].backgroundColor = labelIdxs.map((_, i) =>
+                i >= 5 ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.3)');
+            stickyChart.data.datasets[2].borderColor = '#16A34A';
+            stickyChart.data.datasets[2].pointBackgroundColor = '#16A34A';
+            stickyChart.data.datasets[2].borderWidth = 4;
+            stickyChart.options.plugins.title.text = `${selectedRegion}: The Path Forward`;
+            break;
+
+        default:
+            stickyChart.data.datasets[0].backgroundColor = existingColors;
+            stickyChart.data.datasets[1].backgroundColor = newGasColors;
+            stickyChart.data.datasets[2].borderColor = lineColor;
+            stickyChart.data.datasets[2].pointBackgroundColor = lineColor;
+            stickyChart.data.datasets[2].borderWidth = 3;
+            stickyChart.options.plugins.title.text = `${selectedRegion}: Gas Backup vs Clean Coverage`;
+    }
+
+    stickyChart.update('none');
+}
+
+// --- FOAK vs Gas Backup Cost Chart ---
+function initFoakVsGasChart() {
+    const ctx = document.getElementById('foakVsGasChart');
+    if (!ctx) return;
+
+    // For each region, show gas backup cost at 90% threshold vs FOAK premium
+    const gasBackup90 = REGIONS.map(r => GAS_BACKUP_DATA[r].gas_backup_cost[7]); // idx 7 = 90%
+    const newGasCost90 = REGIONS.map(r => GAS_BACKUP_DATA[r].new_gas_cost[7]);
+
+    // NOAK nuclear LCOE (Low toggle) - represents the target
+    const noakLcoe = REGIONS.map(r => NUCLEAR_NEWBUILD_LCOE.L[r]);
+    // FOAK nuclear LCOE (High toggle) - represents current
+    const foakLcoe = REGIONS.map(r => NUCLEAR_NEWBUILD_LCOE.H[r]);
+    // Medium as reference
+    const medLcoe = REGIONS.map(r => NUCLEAR_NEWBUILD_LCOE.M[r]);
+
+    foakVsGasChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: REGIONS,
+            datasets: [
+                {
+                    label: 'Gas Backup Cost ($/MWh)',
+                    data: gasBackup90,
+                    backgroundColor: 'rgba(239,68,68,0.6)',
+                    borderColor: '#EF4444',
+                    borderWidth: 1,
+                    barPercentage: 0.35,
+                    categoryPercentage: 0.8
+                },
+                {
+                    label: 'New Gas Cost Only ($/MWh)',
+                    data: newGasCost90,
+                    backgroundColor: 'rgba(239,68,68,0.3)',
+                    borderColor: '#EF4444',
+                    borderWidth: 1,
+                    borderDash: [4, 2],
+                    barPercentage: 0.35,
+                    categoryPercentage: 0.8
+                },
+                {
+                    label: 'FOAK Nuclear LCOE ($/MWh)',
+                    data: foakLcoe,
+                    type: 'line',
+                    borderColor: '#DC2626',
+                    backgroundColor: 'rgba(220,38,38,0.1)',
+                    borderWidth: 2,
+                    borderDash: [6, 3],
+                    pointRadius: 6,
+                    pointBackgroundColor: '#DC2626',
+                    tension: 0,
+                    order: 0
+                },
+                {
+                    label: 'NOAK Nuclear LCOE ($/MWh)',
+                    data: noakLcoe,
+                    type: 'line',
+                    borderColor: '#16A34A',
+                    backgroundColor: 'rgba(22,163,74,0.1)',
+                    borderWidth: 2,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#16A34A',
+                    tension: 0,
+                    order: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        usePointStyle: true,
+                        padding: 14
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Gas Backup Cost vs Nuclear LCOE at 90% Clean Threshold',
+                    font: {
+                        family: "'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif",
+                        size: 15,
+                        weight: 'bold'
+                    },
+                    color: '#1A2744',
+                    padding: { bottom: 12 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(ctx) {
+                            return `${ctx.dataset.label}: $${ctx.raw.toFixed(1)}/MWh`;
+                        }
+                    }
+                },
+                datalabels: { display: false },
+                annotation: {
+                    annotations: {
+                        foakBand: {
+                            type: 'box',
+                            yMin: Math.min(...noakLcoe),
+                            yMax: Math.max(...foakLcoe),
+                            backgroundColor: 'rgba(30,58,95,0.06)',
+                            borderColor: 'rgba(30,58,95,0.15)',
+                            borderWidth: 1,
+                            label: {
+                                display: true,
+                                content: 'Catalytic Premium',
+                                position: 'end',
+                                font: { size: 11, style: 'italic' },
+                                color: '#6B7280'
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { font: { size: 12, weight: '600' }, color: '#1A2744' },
+                    grid: { display: false }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '$/MWh',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+                        color: '#6B7280'
+                    },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#6B7280',
+                        callback: v => '$' + v
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// --- System Cost Envelope Chart (P10/P50/P90) ---
+function initCostEnvelopeChart() {
+    const ctx = document.getElementById('costEnvelopeChart');
+    if (!ctx) return;
+
+    const labelIdxs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; // skip 100% (often null/extreme)
+    const labels = labelIdxs.map(i => THRESHOLDS[i] + '%');
+    const r = envelopeRegion;
+
+    const p50 = labelIdxs.map(i => SYSTEM_COST_DATA.medium[r][i]);
+    const p10 = labelIdxs.map(i => SYSTEM_COST_DATA.low[r][i]);
+    const p90 = labelIdxs.map(i => SYSTEM_COST_DATA.high[r][i]);
+    const gasCost = labelIdxs.map(i => GAS_BACKUP_DATA[r].gas_backup_cost[i]);
+
+    costEnvelopeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'P90 (High Cost)',
+                    data: p90,
+                    borderColor: 'rgba(239,68,68,0.6)',
+                    backgroundColor: 'rgba(239,68,68,0.08)',
+                    borderWidth: 1.5,
+                    borderDash: [4, 3],
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(239,68,68,0.6)',
+                    fill: '+1',
+                    tension: 0.35,
+                    order: 2
+                },
+                {
+                    label: 'P50 (Median)',
+                    data: p50,
+                    borderColor: '#1A2744',
+                    backgroundColor: 'rgba(26,39,68,0.12)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#1A2744',
+                    fill: false,
+                    tension: 0.35,
+                    order: 1
+                },
+                {
+                    label: 'P10 (Low Cost)',
+                    data: p10,
+                    borderColor: 'rgba(34,197,94,0.6)',
+                    backgroundColor: 'rgba(34,197,94,0.08)',
+                    borderWidth: 1.5,
+                    borderDash: [4, 3],
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(34,197,94,0.6)',
+                    fill: '-1',
+                    tension: 0.35,
+                    order: 2
+                },
+                {
+                    label: 'Gas Backup Cost',
+                    data: gasCost,
+                    borderColor: 'rgba(239,68,68,0.8)',
+                    backgroundColor: 'rgba(239,68,68,0.15)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(239,68,68,0.8)',
+                    fill: true,
+                    tension: 0.3,
+                    yAxisID: 'y2',
+                    order: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutCubic' },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                        usePointStyle: true,
+                        pointStyle: 'line',
+                        padding: 14,
+                        color: '#1A1A1A',
+                        boxWidth: 20,
+                        boxHeight: 1
+                    }
+                },
+                title: {
+                    display: true,
+                    text: `${r}: System Cost Envelope (324 Scenarios)`,
+                    font: {
+                        family: "'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif",
+                        size: 15,
+                        weight: 'bold'
+                    },
+                    color: '#1A2744',
+                    padding: { bottom: 12 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.92)',
+                    titleFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                    bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) {
+                            if (items.length > 0) return items[0].label + ' Clean Energy';
+                            return '';
+                        },
+                        label: function(ctx) {
+                            if (ctx.parsed.y == null) return null;
+                            return ` ${ctx.dataset.label}: $${ctx.parsed.y.toFixed(1)}/MWh`;
+                        }
+                    }
+                },
+                datalabels: { display: false }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Clean Energy Threshold',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+                        color: '#6B7280'
+                    },
+                    ticks: { font: { size: 11 }, color: '#6B7280' },
+                    grid: { display: false }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Total System Cost ($/MWh)',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+                        color: '#1A2744'
+                    },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#6B7280',
+                        callback: v => '$' + v
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                y2: {
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Gas Backup Cost ($/MWh)',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+                        color: '#EF4444'
+                    },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#EF4444',
+                        callback: v => '$' + v
+                    },
+                    grid: { display: false },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function updateCostEnvelopeChart() {
+    if (!costEnvelopeChart) return;
+    const r = envelopeRegion;
+    const labelIdxs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    costEnvelopeChart.data.datasets[0].data = labelIdxs.map(i => SYSTEM_COST_DATA.high[r][i]);
+    costEnvelopeChart.data.datasets[1].data = labelIdxs.map(i => SYSTEM_COST_DATA.medium[r][i]);
+    costEnvelopeChart.data.datasets[2].data = labelIdxs.map(i => SYSTEM_COST_DATA.low[r][i]);
+    costEnvelopeChart.data.datasets[3].data = labelIdxs.map(i => GAS_BACKUP_DATA[r].gas_backup_cost[i]);
+    costEnvelopeChart.options.plugins.title.text = `${r}: System Cost Envelope (324 Scenarios)`;
+    costEnvelopeChart.update('none');
+}
+
+// --- Regional Gas Backup Chart (single region with new/existing stack, or all-regions overlay) ---
+function initRegionGasChart() {
+    const ctx = document.getElementById('regionGasChart');
+    if (!ctx) return;
+    buildRegionGasChart(ctx);
+}
+
+function buildRegionGasChart(ctx) {
+    const labelIdxs = [0, 2, 3, 5, 7, 9, 10, 11];
+    const labels = labelIdxs.map(i => THRESHOLDS[i] + '%');
+
+    if (gasChartRegion === 'ALL') {
+        // All regions overlaid — line chart
+        const datasets = REGIONS.map(region => {
+            const d = getGasData(region);
+            return {
+                label: region,
+                data: labelIdxs.map(i => d.new_gas_build_mw[i] / 1000),
+                borderColor: REGION_CLR[region],
+                backgroundColor: REGION_CLR[region].replace(')', ',0.08)').replace('rgb', 'rgba'),
+                borderWidth: 2.5,
+                pointRadius: 5,
+                pointBackgroundColor: REGION_CLR[region],
+                tension: 0.3,
+                fill: false
+            };
+        });
+
+        regionGasChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: gasChartOptions('New Gas Construction — All Regions (GW)')
+        });
+    } else {
+        // Single region — stacked bar with new/existing + clean coverage line
+        const d = getGasData(gasChartRegion);
+        regionGasChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Existing Gas (GW)',
+                        data: labelIdxs.map(i => (d.gas_backup_mw[i] - d.new_gas_build_mw[i]) / 1000),
+                        backgroundColor: 'rgba(156,163,175,0.45)',
+                        borderColor: 'rgba(156,163,175,0.8)',
+                        borderWidth: 1,
+                        stack: 'gas',
+                        order: 2
+                    },
+                    {
+                        label: 'New Gas Build (GW)',
+                        data: labelIdxs.map(i => d.new_gas_build_mw[i] / 1000),
+                        backgroundColor: 'rgba(239,68,68,0.55)',
+                        borderColor: '#EF4444',
+                        borderWidth: 1,
+                        stack: 'gas',
+                        order: 2
+                    },
+                    {
+                        label: 'Clean Coverage %',
+                        data: labelIdxs.map(i => d.clean_coverage_pct[i]),
+                        type: 'line',
+                        yAxisID: 'y2',
+                        borderColor: '#1E3A5F',
+                        backgroundColor: 'rgba(30,58,95,0.08)',
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#1E3A5F',
+                        tension: 0.3,
+                        fill: true,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                ...gasChartOptions(`${gasChartRegion}: Gas Backup Breakdown`),
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Clean Energy Threshold', font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' }, color: '#6B7280' },
+                        ticks: { font: { size: 11 }, color: '#6B7280' },
+                        grid: { display: false }
+                    },
+                    y: {
+                        title: { display: true, text: 'Gas Backup (GW)', font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' }, color: '#6B7280' },
+                        ticks: { font: { size: 11 }, color: '#6B7280' },
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        stacked: true
+                    },
+                    y2: {
+                        position: 'right',
+                        title: { display: true, text: 'Clean Coverage (%)', font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' }, color: '#1E3A5F' },
+                        ticks: { font: { size: 11 }, color: '#1E3A5F', callback: v => v + '%' },
+                        grid: { display: false },
+                        min: 0, max: 100
+                    }
+                }
+            }
+        });
+    }
+}
+
+function gasChartOptions(titleText) {
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11 },
+                    usePointStyle: true,
+                    padding: 14,
+                    color: '#1A1A1A'
+                }
+            },
+            title: {
+                display: true,
+                text: titleText,
+                font: {
+                    family: "'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif",
+                    size: 15,
+                    weight: 'bold'
+                },
+                color: '#1A2744',
+                padding: { bottom: 12 }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(26,39,68,0.92)',
+                titleFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 13, weight: 600 },
+                bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(ctx) {
+                        if (ctx.dataset.yAxisID === 'y2') return `Clean Coverage: ${ctx.raw.toFixed(1)}%`;
+                        return `${ctx.dataset.label}: ${ctx.raw.toFixed(1)} GW`;
+                    }
+                }
+            },
+            datalabels: { display: false }
+        },
+        scales: {
+            x: {
+                title: { display: true, text: 'Clean Energy Threshold', font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' }, color: '#6B7280' },
+                ticks: { font: { size: 11 }, color: '#6B7280' },
+                grid: { display: false }
+            },
+            y: {
+                title: { display: true, text: 'New Gas Build (GW)', font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' }, color: '#6B7280' },
+                ticks: { font: { size: 11 }, color: '#6B7280' },
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                beginAtZero: true
+            }
+        }
+    };
+}
+
+function updateRegionGasChart() {
+    if (regionGasChart) {
+        regionGasChart.destroy();
+        regionGasChart = null;
+    }
+    const ctx = document.getElementById('regionGasChart');
+    if (ctx) buildRegionGasChart(ctx);
+}
+
+// --- Scroll Animations ---
+function initScrollAnimations() {
+    // 1. Fade-in observer
+    const fadeObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.story-fade-in').forEach(el => {
+        fadeObserver.observe(el);
+    });
+
+    // 2. Scrollytelling step observer
+    const steps = document.querySelectorAll('.scrolly-step');
+    if (steps.length === 0) return;
+
+    let activeStepName = null;
+    const stepObserver = new IntersectionObserver((entries) => {
+        let best = null;
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                if (!best || entry.intersectionRatio > best.intersectionRatio) {
+                    best = entry;
+                }
+            }
+        });
+
+        if (best) {
+            const stepEl = best.target;
+            const stepName = stepEl.getAttribute('data-step');
+
+            if (stepName !== activeStepName) {
+                activeStepName = stepName;
+                steps.forEach(s => s.classList.remove('active'));
+                stepEl.classList.add('active');
+                highlightStep(stepName);
+            }
+        }
+    }, {
+        threshold: [0.1, 0.3, 0.5, 0.7, 0.9],
+        rootMargin: '-20% 0px -30% 0px'
+    });
+
+    steps.forEach(step => stepObserver.observe(step));
+
+    // 3. Initialize sticky chart when scrolly-container enters view
+    const chartContainer = document.querySelector('.scrolly-container');
+    if (chartContainer) {
+        const chartInitObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !stickyChart) {
+                buildStickyChart();
+                updateCallouts();
+                setTimeout(() => highlightStep('gas-backup'), 300);
+            }
+        }, { threshold: 0.05 });
+        chartInitObserver.observe(chartContainer);
+    }
+
+    // 4. Initialize cost envelope chart when visible
+    const envelopeCanvas = document.getElementById('costEnvelopeChart');
+    if (envelopeCanvas) {
+        const envelopeObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !costEnvelopeChart) {
+                initCostEnvelopeChart();
+            }
+        }, { threshold: 0.05 });
+        envelopeObserver.observe(envelopeCanvas.closest('.chart-section') || envelopeCanvas);
+    }
+
+    // 5. Initialize FOAK vs Gas chart when visible
+    const foakCanvas = document.getElementById('foakVsGasChart');
+    if (foakCanvas) {
+        const foakObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !foakVsGasChart) {
+                initFoakVsGasChart();
+            }
+        }, { threshold: 0.05 });
+        foakObserver.observe(foakCanvas.closest('.chart-section') || foakCanvas);
+    }
+
+    // 6. Initialize regional gas chart when visible
+    const regionCanvas = document.getElementById('regionGasChart');
+    if (regionCanvas) {
+        const regionObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !regionGasChart) {
+                initRegionGasChart();
+            }
+        }, { threshold: 0.05 });
+        regionObserver.observe(regionCanvas.closest('.chart-section') || regionCanvas);
+    }
+}
+
+// --- Animated Number Counters ---
+function animateCounters() {
+    document.querySelectorAll('.counter-value[data-target]').forEach(el => {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                const target = parseFloat(el.getAttribute('data-target'));
+                const suffix = el.getAttribute('data-suffix') || '';
+                const prefix = el.getAttribute('data-prefix') || '';
+                const decimals = parseInt(el.getAttribute('data-decimals') || '0');
+                let current = 0;
+                const duration = 1500;
+                const start = performance.now();
+
+                function step(timestamp) {
+                    const progress = Math.min((timestamp - start) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+                    current = target * eased;
+                    el.textContent = prefix + current.toFixed(decimals) + suffix;
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+                observer.disconnect();
+            }
+        }, { threshold: 0.5 });
+        observer.observe(el);
+    });
+}
+
+// --- Init ---
+document.addEventListener('DOMContentLoaded', function() {
+    initScrollAnimations();
+    animateCounters();
+});
+</script>
+</body>
+</html>
