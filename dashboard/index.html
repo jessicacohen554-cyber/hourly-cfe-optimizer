@@ -1720,10 +1720,13 @@ const selectedCfCost = 90;  // Medium cost
 function updateAll() {}
 function getSelectedISO() { return 'CAISO'; }
 
-// Scenario resolver: returns the synthetic MMM_M_M scenario from DATA
-function resolveScenario(thresholdData) {
+// Scenario resolver: returns the medium scenario (8-dim key with old-format fallback)
+function resolveScenario(thresholdData, iso) {
     if (!thresholdData?.scenarios) return thresholdData; // synthetic entry
-    return thresholdData.scenarios['MMM_M_M'] || null;
+    iso = iso || 'CAISO';
+    const geo = iso === 'CAISO' ? 'M' : 'X';
+    const mk = `MMM_M_M_M1_${geo}`;
+    return thresholdData.scenarios[mk] || thresholdData.scenarios['MMM_M_M'] || null;
 }
 
 // Unified cost accessor: merges costs_detail (long keys) with costs (short keys)
@@ -1892,7 +1895,7 @@ function populateCurtailmentVisual() {
         for (const iso of isos) {
             const tData = DATA.results[iso]?.thresholds?.[tk];
             if (tData) {
-                const sc = resolveScenario(tData);
+                const sc = resolveScenario(tData, iso);
                 if (!sc) continue;
                 const scCosts = getUnifiedCosts(sc);
                 const curt = scCosts.curtailment_pct || Math.max(0, sc.procurement_pct - 100);
@@ -1933,7 +1936,7 @@ function populateReliabilityGauges() {
         const iso = isos[i];
         const t99Data = DATA.results[iso]?.thresholds?.['99'];
         if (!t99Data) continue;
-        const t99sc = resolveScenario(t99Data);
+        const t99sc = resolveScenario(t99Data, iso);
         const peakGapPct = t99sc?.peak_gap_pct || 0;
         const coveragePct = Math.round(100 - peakGapPct);
         const color = gaugeColors[i % gaugeColors.length];
@@ -1982,7 +1985,7 @@ function cfAdjust(entry, iso) {
 function getAdjustedEffectiveCost(iso, thresholdKey) {
     const tData = DATA.results[iso]?.thresholds?.[thresholdKey];
     if (!tData) return null;
-    const sc = resolveScenario(tData);
+    const sc = resolveScenario(tData, iso);
     if (!sc) return null;
     const adj = cfAdjust(sc, iso);
     return adj.newEffective;
@@ -2143,7 +2146,7 @@ function getMixDataForRegion(region) {
         for (const iso of regions) {
             const tData = DATA.results[iso]?.thresholds?.[tk];
             if (!tData) continue;
-            const sc = resolveScenario(tData);
+            const sc = resolveScenario(tData, iso);
             if (!sc) continue;
             const scCosts = getUnifiedCosts(sc);
             const rc = scCosts.resource_costs;
@@ -2880,7 +2883,7 @@ function initNarrativeCostChart() {
         let hasData = false;
         for (const iso of isos) {
             const tData = DATA.results[iso]?.thresholds?.[tk];
-            const sc = tData ? resolveScenario(tData) : null;
+            const sc = tData ? resolveScenario(tData, iso) : null;
             const scCosts = sc ? getUnifiedCosts(sc) : {};
             if (scCosts.effective_cost_per_useful_mwh != null) {
                 const cost = scCosts.effective_cost_per_useful_mwh;
@@ -3267,7 +3270,7 @@ function buildStepChartData() {
         let costSum = 0, count = 0;
         for (const iso of isos) {
             const tData = DATA.results[iso]?.thresholds?.[tk];
-            const sc = tData ? resolveScenario(tData) : null;
+            const sc = tData ? resolveScenario(tData, iso) : null;
             const scCosts = sc ? getUnifiedCosts(sc) : {};
             if (scCosts.effective_cost_per_useful_mwh != null) {
                 const cost = scCosts.effective_cost_per_useful_mwh;
