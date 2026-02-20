@@ -16,12 +16,12 @@ Pipeline position: Step 3 of 4
   Step 4 — Post-processing (step4_postprocess.py)
 
 Input:  data/pfs_post_ef.parquet       (from Step 2)
-Output: dashboard/overprocure_results.json  (full 8-dim factorial keys + feasible mixes)
+Output: dashboard/overprocure_results.json  (full 9-dim factorial keys + feasible mixes)
         dashboard/demand_growth_results.json (full factorial: all combos × years × growth)
         data/cf_split_table.json            (tranche breakdown)
 
 Key format: RFS_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M1_M for CAISO all-Medium)
-  CAISO: 5,832 combos per threshold. Non-CAISO: 1,944 combos per threshold.
+  CAISO: 17,496 combos per threshold. Non-CAISO: 5,832 combos per threshold.
 """
 
 import json
@@ -404,22 +404,23 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 # SENSITIVITY KEY HELPERS
 # ============================================================================
 
-def make_scenario_key(r, f, s, ff, tx, ccs, q45, geo):
-    """Build 8-dim scenario key like MMM_M_M_M1_M.
-    Format: {Ren}{Firm}{Stor}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+def make_scenario_key(r, f, batt, ldes, ff, tx, ccs, q45, geo):
+    """Build 9-dim scenario key.
+    Format: {Ren}{Firm}{Batt}{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+    Example: MMMM_M_M_M1_M (all-Medium, 45Q on, CAISO)
     Geo='X' for non-CAISO ISOs (no geothermal resource).
     """
     geo_code = geo if geo else 'X'
-    return f"{r}{f}{s}_{ff}_{tx}_{ccs}{q45}_{geo_code}"
+    return f"{r}{f}{batt}{ldes}_{ff}_{tx}_{ccs}{q45}_{geo_code}"
 
 
 def medium_key(iso):
     """Return the all-Medium scenario key for an ISO.
-    CAISO: MMM_M_M_M1_M  (geothermal=M)
-    Others: MMM_M_M_M1_X  (no geothermal)
+    CAISO: MMMM_M_M_M1_M  (geothermal=M)
+    Others: MMMM_M_M_M1_X  (no geothermal)
     """
     geo = 'M' if iso == 'CAISO' else 'X'
-    return f'MMM_M_M_M1_{geo}'
+    return f'MMMM_M_M_M1_{geo}'
 
 
 def make_old_key(r, f, s, ff, tx):
@@ -430,8 +431,10 @@ def make_old_key(r, f, s, ff, tx):
 def build_sensitivity_combos(iso):
     """Build all sensitivity combos for an ISO.
     Returns list of (scenario_key, sens_dict) tuples.
-    CAISO: 5,832 combos (3^5 × 4 × 2 × 3).
-    Non-CAISO: 1,944 combos (3^5 × 4 × 2 × 1).
+
+    9 toggles: Ren(3) × Firm(3) × Battery(3) × LDES(3) × CCS(3) × 45Q(2) × Fuel(3) × Tx(4) × Geo(3|1)
+    CAISO:     3^6 × 2 × 4 × 3 = 17,496 combos per threshold.
+    Non-CAISO: 3^6 × 2 × 4 × 1 = 5,832 combos per threshold.
     """
     combos = []
     tx_levels = ['N', 'L', 'M', 'H']
@@ -439,15 +442,16 @@ def build_sensitivity_combos(iso):
     q45_states = ['1', '0']
     geo_levels = LMH if iso == 'CAISO' else [None]
 
-    for r, f, s in product(LMH, LMH, LMH):
+    for r, f, batt, ldes in product(LMH, LMH, LMH, LMH):
         for ff in LMH:
             for tx in tx_levels:
                 for ccs in ccs_levels:
                     for q45 in q45_states:
                         for geo in geo_levels:
-                            key = make_scenario_key(r, f, s, ff, tx, ccs, q45, geo)
+                            key = make_scenario_key(r, f, batt, ldes, ff, tx, ccs, q45, geo)
                             sens = {
-                                'ren': r, 'firm': f, 'stor': s,
+                                'ren': r, 'firm': f,
+                                'batt': batt, 'ldes_lvl': ldes,
                                 'ccs': ccs, 'q45': q45,
                                 'fuel': ff, 'tx': tx, 'geo': geo,
                             }
@@ -530,7 +534,7 @@ def arrays_to_mix_dict(arrays, idx):
 
 def main():
     print("=" * 70)
-    print("  STEP 3: COST OPTIMIZATION (v4 — full 8-dim factorial, PFS post-EF)")
+    print("  STEP 3: COST OPTIMIZATION (v4 — full 9-dim factorial, PFS post-EF)")
     print("=" * 70)
 
     total_start = time.time()
@@ -597,8 +601,8 @@ def main():
             threshold_data = {'scenarios': {}, 'feasible_mixes': {}}
             arch_set = set()
 
-            # Evaluate ALL sensitivity combos directly (full 8-dim factorial)
-            # CAISO: 5,832 combos. Non-CAISO: 1,944 combos.
+            # Evaluate ALL sensitivity combos directly (full 9-dim factorial)
+            # CAISO: 17,496 combos. Non-CAISO: 5,832 combos.
             # 45Q is a real dimension — no separate no_45q computation needed.
             for scenario_key, sens in all_combos:
                 tc, ec, tranche = price_mix_batch(iso, arrays, sens, demand_twh)
@@ -697,8 +701,8 @@ def main():
             'growth_rates': DEMAND_GROWTH_RATES,
             'base_year': 2025,
             'fields': ['mix_idx', 'total_cost', 'effective_cost', 'incremental'],
-            'note': 'Full 8-dim factorial: RFS_FF_TX_CCSq45_GEO keys. '
-                    'CAISO: 5,832 combos. Non-CAISO: 1,944 combos.',
+            'note': 'Full 9-dim factorial: RFBL_FF_TX_CCSq45_GEO keys (R=ren,F=firm,B=batt,L=ldes). '
+                    'CAISO: 17,496 combos. Non-CAISO: 5,832 combos.',
         },
         'results': {},
     }
@@ -726,7 +730,7 @@ def main():
             t_str = str(thr)
             threshold_dg = {}
 
-            # Full 8-dim factorial sweep
+            # Full 9-dim factorial sweep
             for scenario_key, sens in all_combos:
                 wholesale = max(5, WHOLESALE_PRICES[iso] +
                                 FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
