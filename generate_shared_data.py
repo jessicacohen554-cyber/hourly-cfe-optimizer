@@ -22,11 +22,11 @@ MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'batter
 
 def medium_key(iso):
     """Return the all-Medium scenario key for a given ISO (9-dim format).
-    CAISO: MMM_M_M_M_M1_M/X_M_M1_M  (geothermal = M)
-    Others: MMM_M_M_M_M1_M/X_M_M1_X  (geothermal = X, not applicable)
+    CAISO: MMM_M_M_M_M1_M  (geothermal = M)
+    Others: MMM_M_M_M_M1_X  (geothermal = X, not applicable)
     Falls back to old key format if 9-dim key not found.
     """
-    return 'MMM_M_M_M_M1_M/X_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_M/X_M_M1_X'
+    return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
 
 def get_scenario(scenarios, iso):
     """Get scenario data using 9-dim key with fallback to old formats."""
@@ -34,10 +34,11 @@ def get_scenario(scenarios, iso):
     if key in scenarios:
         return scenarios[key]
     # Fallback to old 8-dim or 5-dim keys
-    for fallback in ['MMM_M_M_M_M1_M/X_M_M1_M', 'MMM_M_M_M_M1_M/X_M_M1_X', 'MMM_M_M_M_M1_M/X']:
+    for fallback in ['MMM_M_M_M_M1_M', 'MMM_M_M_M_M1_X', 'MMM_M_M']:
         if fallback in scenarios:
             return scenarios[fallback]
     return None
+
 MAC_CAP = 1000  # Cap marginal MAC at $1000/ton
 
 # ============================================================================
@@ -63,7 +64,7 @@ for iso in ISOS:
     env = mac_stats['envelope'][iso]['envelope']
     fan = mac_stats['fan_chart'][iso]
 
-    # Medium = envelope (monotonic running-max of MMM_M_M_M_M1_M/X)
+    # Medium = envelope (monotonic running-max of medium key (9-dim))
     mac_data['medium'][iso] = [round(v) if v is not None else None for v in env]
     # Low = P10 of fan chart
     mac_data['low'][iso] = [round(v) if v is not None else None for v in fan['p10']]
@@ -541,7 +542,7 @@ lines.append('')
 
 # EFFECTIVE_COST_DATA
 lines.append('// --- Effective Cost per Useful MWh ($/MWh) ---')
-lines.append('// Source: Step 2 tranche-repriced MMM_M_M_M_M1_M/X + postprocess corrections')
+lines.append('// Source: Step 2 tranche-repriced medium key (9-dim) + postprocess corrections')
 lines.append('// Monotonicity enforced (lower thresholds <= higher thresholds)')
 thresh_str = ', '.join(str(t) for t in THRESHOLDS_NUM)
 lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
