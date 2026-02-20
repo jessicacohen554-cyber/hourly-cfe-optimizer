@@ -19,8 +19,23 @@ THRESHOLDS = ['50', '60', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '9
 THRESHOLDS_NUM = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
-SCENARIO_KEY = 'MMM_M_M'
 MAC_CAP = 1000  # Cap marginal MAC at $1000/ton
+
+
+def medium_key(iso):
+    """Return the all-Medium scenario key for an ISO.
+    CAISO: MMM_M_M_M1_M  (geothermal=M)
+    Others: MMM_M_M_M1_X  (no geothermal)
+    """
+    geo = 'M' if iso == 'CAISO' else 'X'
+    return f'MMM_M_M_M1_{geo}'
+
+
+def get_scenario(iso_data, threshold, iso):
+    """Get the medium scenario for an ISO/threshold, with backward compat fallback."""
+    scenarios = iso_data.get('thresholds', {}).get(threshold, {}).get('scenarios', {})
+    mk = medium_key(iso)
+    return scenarios.get(mk) or scenarios.get('MMM_M_M')
 
 # ============================================================================
 # LOAD DATA
@@ -116,7 +131,7 @@ effective_cost_data = {}
 for iso in ISOS:
     costs = []
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         if sc:
             costs.append(round(sc['costs']['effective_cost'], 1))
         else:
@@ -175,7 +190,7 @@ for iso in ISOS:
     iso_data['procurement'] = []
 
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         if sc:
             rm = sc.get('resource_mix', {})
             for res in RESOURCES:
@@ -222,7 +237,7 @@ for iso in ISOS:
 
     for t in THRESHOLDS:
         # Build the mix_key for Medium scenario at this threshold
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         profile = None
         if sc and iso_profiles:
             rm = sc.get('resource_mix', {})
@@ -268,7 +283,7 @@ for iso in ISOS:
                                'geo_twh', 'nuclear_newbuild_twh', 'ccs_tranche_twh',
                                'uprate_price', 'newbuild_price', 'effective_cf_lcoe']}
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         tc = sc.get('tranche_costs', {}) if sc else {}
         iso_tr['new_cf_twh'].append(round(tc.get('new_cf_twh', 0), 3))
         iso_tr['cf_existing_twh'].append(round(tc.get('cf_existing_twh', 0), 3))
@@ -291,7 +306,7 @@ wyn_resource_costs = {}
 for iso in ISOS:
     iso_wyn = []
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         rc = sc.get('costs_detail', {}).get('resource_costs', {}) if sc else {}
         entry = {}
         for res in WYN_RESOURCES:
@@ -330,7 +345,7 @@ for iso in ISOS:
         'existing_gas_cost': [],
     }
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         if sc and 'gas_backup' in sc:
             gb = sc['gas_backup']
             iso_gb['total_system_cost'].append(round(gb.get('total_system_cost_per_mwh', 0), 2))

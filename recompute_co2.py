@@ -523,10 +523,13 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
                 iso, threshold_pct, emission_rates, fossil_mix
             )
 
-            # Always recompute Medium scenario
-            medium_key = 'MMM_M_M'
-            if medium_key in scenarios:
-                result = scenarios[medium_key]
+            # Always recompute Medium scenario (ISO-aware key with old fallback)
+            def _medium_key(iso_name):
+                geo = 'M' if iso_name == 'CAISO' else 'X'
+                return f'MMM_M_M_M1_{geo}'
+            med_key = _medium_key(iso)
+            result = scenarios.get(med_key) or scenarios.get('MMM_M_M')
+            if result:
                 resource_mix = result.get('resource_mix', {})
                 proc = result.get('procurement_pct', 100)
                 batt = result.get('battery_dispatch_pct', 0)
@@ -556,7 +559,7 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
 
             # For non-Medium scenarios, same emission rate (threshold-dependent, not fuel-dependent)
             for sk, result in scenarios.items():
-                if sk == medium_key:
+                if sk == med_key or sk == 'MMM_M_M':
                     continue
 
                 resource_mix = result.get('resource_mix', {})
