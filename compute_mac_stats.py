@@ -237,6 +237,7 @@ def compute_monotonic_envelope(data):
         raw_macs = []
         costs_at_t = []
         co2_at_t = []
+        med_key = medium_key(iso)
 
         for t_str in THRESHOLD_STRS:
             t_data = iso_data.get('thresholds', {}).get(t_str, {})

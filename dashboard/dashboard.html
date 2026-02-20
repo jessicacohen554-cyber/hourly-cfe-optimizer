@@ -3438,13 +3438,14 @@ const COLORS = {
     wind:       { base: '#22C55E', alpha: 'rgba(34,197,94,0.55)' },
     hydro:      { base: '#0EA5E9', alpha: 'rgba(14,165,233,0.55)' },
     battery:    { base: '#8B5CF6', alpha: 'rgba(139,92,246,0.55)' },
+    battery8:   { base: '#A78BFA', alpha: 'rgba(167,139,250,0.55)' },
     ldes:       { base: '#EC4899', alpha: 'rgba(236,72,153,0.55)' },
     storage:    { base: '#EF4444', alpha: 'rgba(239,68,68,0.55)' },
     gap:        { base: '#D1D5DB', alpha: 'rgba(209,213,219,0.55)' }
 };
 
 const RESOURCE_LABELS = {
-    clean_firm: 'Clean Firm',
+    clean_firm: 'New Nuclear',
     nuclear: 'Nuclear',
     geothermal: 'Geothermal',
     ccs_ccgt: 'CCS-CCGT',
@@ -3452,6 +3453,7 @@ const RESOURCE_LABELS = {
     wind: 'Wind',
     hydro: 'Hydro',
     battery: 'Battery (4hr)',
+    battery8: 'Battery (8hr)',
     ldes: 'LDES (100hr)',
     storage: 'Storage'
 };
@@ -3810,7 +3812,11 @@ function buildOldScenarioKey() {
     const fg = levelMap[sensitivityState.firm_gen] || 'M';
     const st = levelMap[sensitivityState.storage] || 'M';
     const tx = levelMap[sensitivityState.transmission] || 'M';
-    return `${rg}${fg}${st}_M_${tx}`;
+    const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
+    const q45 = show45Q ? '1' : '0';
+    const iso = document.getElementById('regionSelect')?.value || '';
+    const geo = iso === 'CAISO' ? (levelMap[sensitivityState.geothermal_cost] || 'M') : 'X';
+    return `${r}${f}${b}_${d}_${ff}_${tx}_${ccs}${q45}_${geo}`;
 }
 
 // ISO-aware medium key
@@ -4411,6 +4417,7 @@ function updateDonut(entry) {
     const mix = entry.resource_mix;
     const matchScore = entry.hourly_match_score || 0;
     const battPct = entry.battery_dispatch_pct || 0;
+    const batt8Pct = entry.battery8_dispatch_pct || 0;
     const ldesPct = entry.ldes_dispatch_pct || 0;
 
     // All 5 generation resources from resource_mix
@@ -4418,7 +4425,7 @@ function updateDonut(entry) {
     const mixTotal = genResources.reduce((s, r) => s + (mix[r] || 0), 0) || 100;
 
     // Storage dispatch contributes to match score but isn't in resource_mix
-    const storageTotal = battPct + ldesPct;
+    const storageTotal = battPct + batt8Pct + ldesPct;
     const genMatch = Math.max(0, matchScore - storageTotal);
 
     const labels = [];
@@ -4457,11 +4464,17 @@ function updateDonut(entry) {
         }
     });
 
-    // Battery and LDES as separate slices
+    // Battery (4hr), Battery (8hr), and LDES as separate slices
     if (battPct > 0.3) {
         labels.push(RESOURCE_LABELS.battery);
         values.push(Math.round(battPct * 10) / 10);
         bgColors.push(COLORS.battery.alpha);
+        borderColors.push(OUTLINE_COLOR);
+    }
+    if (batt8Pct > 0.3) {
+        labels.push(RESOURCE_LABELS.battery8);
+        values.push(Math.round(batt8Pct * 10) / 10);
+        bgColors.push(COLORS.battery8.alpha);
         borderColors.push(OUTLINE_COLOR);
     }
     if (ldesPct > 0.3) {
@@ -7680,7 +7693,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 // DEMAND_GROWTH_RATES now lives in shared-data.js (single source of truth)
 
 const RESOURCE_DISPLAY_NAMES = {
-    clean_firm: 'Clean Firm',
+    clean_firm: 'New Nuclear',
     nuclear: 'Nuclear',
     geothermal: 'Geothermal',
     solar: 'Solar',
@@ -7689,7 +7702,8 @@ const RESOURCE_DISPLAY_NAMES = {
     storage: 'Storage',
     ccs_ccgt: 'CCS-CCGT',
     ldes: 'LDES',
-    battery: 'Battery'
+    battery: 'Battery (4hr)',
+    battery8: 'Battery (8hr)'
 };
 
 function initPathwayAnalysis() {
