@@ -44,18 +44,42 @@ def load_results():
         return json.load(f)
 
 
+def medium_key(iso):
+    """Return the all-Medium scenario key for a given ISO (9-dim format).
+    CAISO: MMM_M_M_M_M1_M  (geothermal = M)
+    Others: MMM_M_M_M_M1_X  (geothermal = X, not applicable)
+    """
+    return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
+
+
 def scenario_key_to_levels(key):
-    """Parse scenario key like 'LMH_L_N' → (renew, firm, storage, fuel, tx) indices.
+    """Parse scenario key → (renew, firm, storage, fuel, tx) indices.
     L=0, M=1, H=2; tx: N=0, L=1, M=2, H=3
+
+    Supports three formats (detected by number of underscore-separated parts):
+      9-dim (6 parts): {Ren}{Firm}{Batt}_{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+      8-dim (5 parts): {Ren}{Firm}{Stor}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+      5-dim (3 parts): {Ren}{Firm}{Stor}_{Fuel}_{Tx}
     """
     level_map = {'L': 0, 'M': 1, 'H': 2, 'N': 0}
-    # Format: {r}{f}{s}_{fuel}_{tx}
     parts = key.split('_')
-    rfs = parts[0]  # 3 chars: renew, firm, storage
-    fuel = parts[1]
-    tx = parts[2]
-    return (level_map[rfs[0]], level_map[rfs[1]], level_map[rfs[2]],
-            level_map[fuel], level_map.get(tx, 1))
+    rfs = parts[0]  # 3 chars: renew, firm, battery/storage
+
+    if len(parts) == 6:
+        # 9-dim: parts[1]=LDES, parts[2]=fuel, parts[3]=tx, parts[4]=CCS+45Q, parts[5]=geo
+        fuel = parts[2]
+        tx = parts[3]
+    elif len(parts) == 5:
+        # 8-dim: parts[1]=fuel, parts[2]=tx, parts[3]=CCS+45Q, parts[4]=geo
+        fuel = parts[1]
+        tx = parts[2]
+    else:
+        # 5-dim: parts[1]=fuel, parts[2]=tx
+        fuel = parts[1]
+        tx = parts[2]
+
+    return (level_map.get(rfs[0], 1), level_map.get(rfs[1], 1), level_map.get(rfs[2], 1),
+            level_map.get(fuel, 1), level_map.get(tx, 1))
 
 
 def compute_mac_for_scenario(iso_data, scenario_key, thresholds):
@@ -229,10 +253,11 @@ def compute_monotonic_envelope(data):
         raw_macs = []
         costs_at_t = []
         co2_at_t = []
+        med_key = medium_key(iso)
 
         for t_str in THRESHOLD_STRS:
             t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            sc = t_data.get('scenarios', {}).get('MMM_M_M')
+            sc = t_data.get('scenarios', {}).get(med_key)
             if not sc:
                 raw_macs.append(None)
                 costs_at_t.append(None)
