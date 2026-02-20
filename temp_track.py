@@ -41,6 +41,37 @@ from step3_cost_optimization import (
 
 EF_EXPANDED_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
 EF_BACKUP_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef_backup.parquet')
+CHECKPOINT_PATH = os.path.join(SCRIPT_DIR, 'data', 'track_checkpoint.json')
+
+
+def save_checkpoint(track_output, completed_steps):
+    """Save progress checkpoint after each ISO/track completes."""
+    ckpt = {
+        'track_output': track_output,
+        'completed_steps': completed_steps,
+        'timestamp': time.time(),
+    }
+    tmp = CHECKPOINT_PATH + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(ckpt, f, separators=(',', ':'))
+    os.replace(tmp, CHECKPOINT_PATH)
+    print(f"    [checkpoint saved: {len(completed_steps)} steps completed]")
+
+
+def load_checkpoint():
+    """Load checkpoint if it exists. Returns (track_output, completed_steps) or (None, set())."""
+    if not os.path.exists(CHECKPOINT_PATH):
+        return None, set()
+    try:
+        with open(CHECKPOINT_PATH) as f:
+            ckpt = json.load(f)
+        completed = set(tuple(s) for s in ckpt['completed_steps'])
+        age_min = (time.time() - ckpt.get('timestamp', 0)) / 60
+        print(f"  Loaded checkpoint: {len(completed)} steps completed ({age_min:.0f} min ago)")
+        return ckpt['track_output'], completed
+    except Exception as e:
+        print(f"  WARNING: Failed to load checkpoint: {e}")
+        return None, set()
 
 
 def load_iso_arrays(table, iso):
@@ -65,8 +96,11 @@ def load_iso_arrays(table, iso):
 
 
 def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=None,
-              existing_override=None):
+              existing_override=None, track_output=None, completed_steps=None):
     """Run cost optimization for a track (newbuild or replace).
+
+    Checkpoints after every 500 combos (full sweep) by writing partial results
+    to track_output and saving to disk.
 
     Returns:
         track_data: dict of {threshold_str: {'scenarios': {key: scenario_dict}}}
@@ -97,13 +131,38 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
     thresholds_desc = np.array(sorted(active_thresholds, reverse=True), dtype=np.float64)
     thr_pos = {float(thresholds_desc[k]): k for k in range(len(thresholds_desc))}
 
-    thr_data = {thr: {'scenarios': {}} for thr in active_thresholds}
-    arch_set = set()
+    # Check for existing partial results from a checkpoint
+    existing_scenarios = set()
+    if (track_output and iso in track_output.get('results', {})
+            and track_name in track_output['results'][iso]):
+        existing_data = track_output['results'][iso][track_name]
+        for thr_str, thr_val in existing_data.items():
+            for sk in thr_val.get('scenarios', {}):
+                existing_scenarios.add(sk)
+        if existing_scenarios:
+            print(f"    {iso} {track_name}: resuming, {len(existing_scenarios)} scenarios cached")
 
+    thr_data = {thr: {'scenarios': {}} for thr in active_thresholds}
+    # Pre-populate from checkpoint
+    if existing_scenarios and track_output:
+        existing_data = track_output['results'][iso].get(track_name, {})
+        for thr in active_thresholds:
+            thr_str = str(thr)
+            if thr_str in existing_data:
+                thr_data[thr]['scenarios'] = dict(existing_data[thr_str].get('scenarios', {}))
+
+    arch_set = set()
     n_combos = len(combos)
     iso_start = time.time()
+    checkpoint_interval = 500 if n_combos > 100 else n_combos + 1
+    skipped = 0
 
     for combo_i, (scenario_key, sens) in enumerate(combos):
+        # Skip already-computed scenarios
+        if scenario_key in existing_scenarios:
+            skipped += 1
+            continue
+
         prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
         best_idxs, best_vals = eval_and_argmin_all(
             coeff_matrix, constant, prices, scores, thresholds_desc)
@@ -121,12 +180,25 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
                 tc_val, wholesale, nuclear_price, ccs_price)
             thr_data[thr]['scenarios'][scenario_key] = scenario
 
-        if n_combos > 100 and (combo_i + 1) % 1000 == 0:
+        computed = combo_i + 1 - skipped
+        if n_combos > 100 and computed > 0 and computed % 1000 == 0:
             elapsed = time.time() - iso_start
-            rate = (combo_i + 1) / elapsed
-            remaining = (n_combos - combo_i - 1) / rate
+            total_remaining = n_combos - combo_i - 1
+            rate = computed / elapsed
+            remaining = total_remaining / rate if rate > 0 else 0
             print(f"    {iso} {track_name} {combo_i+1}/{n_combos} "
                   f"({elapsed:.0f}s, ~{remaining:.0f}s remaining)")
+
+        # Checkpoint every N combos
+        if (track_output is not None and completed_steps is not None
+                and computed > 0 and computed % checkpoint_interval == 0):
+            result_partial = {str(thr): thr_data[thr] for thr in active_thresholds}
+            track_output['results'][iso][track_name] = result_partial
+            _save_results(track_output)
+            save_checkpoint(track_output, [list(s) for s in completed_steps])
+
+    if skipped > 0:
+        print(f"    {iso} {track_name}: skipped {skipped} cached scenarios")
 
     result = {str(thr): thr_data[thr] for thr in active_thresholds}
     elapsed = time.time() - iso_start
@@ -198,7 +270,11 @@ def main():
     parser = argparse.ArgumentParser(description='Incremental track analysis')
     parser.add_argument('--full', action='store_true',
                         help='Run all sensitivity combos (hours). Default: Medium-only.')
+    parser.add_argument('--fresh', action='store_true',
+                        help='Ignore checkpoint and start from scratch.')
     args = parser.parse_args()
+
+    mode = 'full' if args.full else 'medium_only'
 
     print("=" * 70)
     print("  INCREMENTAL TRACK ANALYSIS")
@@ -206,54 +282,66 @@ def main():
     print("=" * 70)
     total_start = time.time()
 
+    # Load checkpoint if available (and mode matches)
+    if not args.fresh:
+        ckpt_output, completed_steps = load_checkpoint()
+        if ckpt_output and ckpt_output.get('meta', {}).get('mode') == mode:
+            track_output = ckpt_output
+            print(f"  Resuming from checkpoint — skipping {len(completed_steps)} completed steps")
+        else:
+            if ckpt_output:
+                print(f"  Checkpoint mode mismatch (was {ckpt_output.get('meta',{}).get('mode')}, "
+                      f"now {mode}) — starting fresh")
+            track_output = None
+            completed_steps = set()
+    else:
+        print("  --fresh flag: ignoring any existing checkpoint")
+        track_output = None
+        completed_steps = set()
+
+    # Initialize output structure if no valid checkpoint
+    if track_output is None:
+        track_output = {
+            'meta': {
+                'tracks': {
+                    'newbuild': {
+                        'description': 'New-build requirement for hourly matching',
+                        'hydro': 'excluded (hydro=0 mixes only)',
+                        'existing_clean': 'zeroed (all existing CF/solar/wind/CCS = 0)',
+                        'uprates': 'on (uprate tranche active as cheapest new-build)',
+                        'purpose': 'What does hourly matching incentivize to BUILD from scratch?',
+                    },
+                    'replace': {
+                        'description': 'Cost to replace all existing clean generation',
+                        'hydro': 'included (existing floor, wholesale-priced)',
+                        'existing_clean': 'zeroed (all existing CF/solar/wind/CCS = 0)',
+                        'uprates': 'off (uprate_cap=0, no uprate tranche)',
+                        'purpose': 'True greenfield cost — only hydro is existing, everything else new-build',
+                    },
+                },
+                'mode': mode,
+                'thresholds': OUTPUT_THRESHOLDS,
+                'resource_types': RESOURCE_TYPES,
+            },
+            'results': {},
+            'demand_growth': {'newbuild': {}, 'replace': {}},
+        }
+        completed_steps = set()
+
     # Load EF sources
     print("\nLoading EF sources...")
     ef_expanded = pq.read_table(EF_EXPANDED_PATH)
     print(f"  Expanded EF: {ef_expanded.num_rows:,} rows")
 
-    if os.path.exists(EF_BACKUP_PATH):
-        ef_backup = pq.read_table(EF_BACKUP_PATH)
-        print(f"  Backup EF (original): {ef_backup.num_rows:,} rows")
-    else:
-        print(f"  WARNING: No backup EF found at {EF_BACKUP_PATH}")
-        print(f"  Using expanded EF for Track 2 (will be slower)")
-        ef_backup = ef_expanded
-
-    track_output = {
-        'meta': {
-            'tracks': {
-                'newbuild': {
-                    'description': 'New-build requirement for hourly matching',
-                    'hydro': 'excluded (hydro=0 mixes only)',
-                    'existing_clean': 'zeroed (all existing CF/solar/wind/CCS = 0)',
-                    'uprates': 'on (uprate tranche active as cheapest new-build)',
-                    'purpose': 'What does hourly matching incentivize to BUILD from scratch?',
-                },
-                'replace': {
-                    'description': 'Cost to replace all existing clean generation',
-                    'hydro': 'included (existing floor, wholesale-priced)',
-                    'existing_clean': 'zeroed (all existing CF/solar/wind/CCS = 0)',
-                    'uprates': 'off (uprate_cap=0, no uprate tranche)',
-                    'purpose': 'True greenfield cost — only hydro is existing, everything else new-build',
-                },
-            },
-            'mode': 'full' if args.full else 'medium_only',
-            'thresholds': OUTPUT_THRESHOLDS,
-            'resource_types': RESOURCE_TYPES,
-        },
-        'results': {},
-        'demand_growth': {'newbuild': {}, 'replace': {}},
-    }
-
     for iso in ISOS:
         demand_twh = REGIONAL_DEMAND_TWH[iso]
-        track_output['results'][iso] = {}
+        if iso not in track_output['results']:
+            track_output['results'][iso] = {}
 
         # Build combos
         if args.full:
             combos = build_sensitivity_combos(iso)
         else:
-            # Medium-only: single combo
             mk = medium_key(iso)
             geo = 'M' if iso == 'CAISO' else None
             sens = {'ren': 'M', 'firm': 'M', 'batt': 'M', 'ldes_lvl': 'M',
@@ -270,105 +358,87 @@ def main():
         }
 
         # Track 1: newbuild (hydro=0, all existing zeroed, uprates ON)
-        all_arrays = load_iso_arrays(ef_expanded, iso)
-        if all_arrays is not None:
-            h0_mask = all_arrays['hydro'] == 0
-            n_h0 = h0_mask.sum()
-            if n_h0 > 0:
-                h0_idx = np.where(h0_mask)[0]
-                nb_arrays = {k: all_arrays[k][h0_idx] for k in all_arrays}
+        step_key_nb = (iso, 'newbuild')
+        if step_key_nb not in completed_steps:
+            all_arrays = load_iso_arrays(ef_expanded, iso)
+            if all_arrays is not None:
+                h0_mask = all_arrays['hydro'] == 0
+                n_h0 = h0_mask.sum()
+                if n_h0 > 0:
+                    h0_idx = np.where(h0_mask)[0]
+                    nb_arrays = {k: all_arrays[k][h0_idx] for k in all_arrays}
 
-                nb_data, nb_arch = run_track(
-                    'newbuild', iso, nb_arrays, demand_twh, combos,
-                    existing_override=greenfield_all)
-                track_output['results'][iso]['newbuild'] = nb_data
+                    nb_data, nb_arch = run_track(
+                        'newbuild', iso, nb_arrays, demand_twh, combos,
+                        existing_override=greenfield_all,
+                        track_output=track_output, completed_steps=completed_steps)
+                    track_output['results'][iso]['newbuild'] = nb_data
 
-                # Demand growth for newbuild archetypes
-                if nb_arch:
-                    nb_dg = run_track_demand_growth(
-                        'newbuild', iso, nb_arrays, nb_arch, combos,
-                        existing_override=greenfield_all)
-                    track_output['demand_growth']['newbuild'][iso] = nb_dg
-            else:
-                print(f"  {iso:>6}   newbuild: no hydro=0 mixes")
+                    if nb_arch:
+                        nb_dg = run_track_demand_growth(
+                            'newbuild', iso, nb_arrays, nb_arch, combos,
+                            existing_override=greenfield_all)
+                        track_output['demand_growth']['newbuild'][iso] = nb_dg
+                else:
+                    print(f"  {iso:>6}   newbuild: no hydro=0 mixes")
 
-        # Track 2: replace (hydro at existing floor, everything else zeroed,
-        #           uprates OFF, uses expanded EF for full mix space)
-        rp_arrays = load_iso_arrays(ef_expanded, iso)
-        if rp_arrays is not None:
-            rp_data, rp_arch = run_track(
-                'replace', iso, rp_arrays, demand_twh, combos,
-                uprate_cap_override=0, existing_override=greenfield_keep_hydro)
-            track_output['results'][iso]['replace'] = rp_data
+            completed_steps.add(step_key_nb)
+            save_checkpoint(track_output, [list(s) for s in completed_steps])
 
-            # Demand growth for replace archetypes
-            if rp_arch:
-                rp_dg = run_track_demand_growth(
-                    'replace', iso, rp_arrays, rp_arch, combos,
-                    uprate_cap_override=0, existing_override=greenfield_keep_hydro)
-                track_output['demand_growth']['replace'][iso] = rp_dg
+            # Also save intermediate results to disk
+            _save_results(track_output)
+        else:
+            print(f"  {iso:>6}   newbuild: skipped (checkpoint)")
 
-    # Save
-    out_path = str(TRACK_RESULTS_PATH)
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    with open(out_path, 'w') as f:
-        json.dump(track_output, f, separators=(',', ':'))
-    tr_size = os.path.getsize(out_path) / (1024 * 1024)
+        # Track 2: replace (hydro at existing floor, everything else zeroed, uprates OFF)
+        step_key_rp = (iso, 'replace')
+        if step_key_rp not in completed_steps:
+            rp_arrays = load_iso_arrays(ef_expanded, iso)
+            if rp_arrays is not None:
+                rp_data, rp_arch = run_track(
+                    'replace', iso, rp_arrays, demand_twh, combos,
+                    uprate_cap_override=0, existing_override=greenfield_keep_hydro,
+                    track_output=track_output, completed_steps=completed_steps)
+                track_output['results'][iso]['replace'] = rp_data
+
+                if rp_arch:
+                    rp_dg = run_track_demand_growth(
+                        'replace', iso, rp_arrays, rp_arch, combos,
+                        uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+                    track_output['demand_growth']['replace'][iso] = rp_dg
+
+            completed_steps.add(step_key_rp)
+            save_checkpoint(track_output, [list(s) for s in completed_steps])
+
+            # Save intermediate results
+            _save_results(track_output)
+        else:
+            print(f"  {iso:>6}    replace: skipped (checkpoint)")
+
+    # Final save
+    _save_results(track_output)
+
+    # Clean up checkpoint on successful completion
+    if os.path.exists(CHECKPOINT_PATH):
+        os.remove(CHECKPOINT_PATH)
+        print("  Checkpoint removed (run complete)")
 
     total_elapsed = time.time() - total_start
+    out_path = str(TRACK_RESULTS_PATH)
+    tr_size = os.path.getsize(out_path) / (1024 * 1024)
     print(f"\n{'='*70}")
     print(f"  TRACK ANALYSIS COMPLETE in {total_elapsed:.0f}s")
     print(f"  Output: {out_path} ({tr_size:.1f} MB)")
     print(f"{'='*70}")
 
-    # Summary: Medium scenario comparison
-    print("\nAll-Medium (45Q=ON) comparison — Baseline vs Tracks:")
-    # Load baseline for comparison
-    baseline_path = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
-    if os.path.exists(baseline_path):
-        with open(baseline_path) as f:
-            baseline = json.load(f)
-    else:
-        baseline = None
-
-    for iso in ISOS:
-        mk = medium_key(iso)
-        print(f"\n  {iso} ({mk}):")
-        print(f"  {'Thr':>6} | {'Track':>10} | {'CF':>3} {'Sol':>3} {'Wnd':>3} "
-              f"{'CCS':>3} {'Hyd':>3} | {'Proc':>4} {'Eff$/MWh':>9} {'Match':>5}")
-        print(f"  {'-'*6}-+-{'-'*10}-+-{'-'*3}-{'-'*3}-{'-'*3}-{'-'*3}-{'-'*3}-+-"
-              f"{'-'*4}-{'-'*9}-{'-'*5}")
-
-        for thr in OUTPUT_THRESHOLDS:
-            t_str = str(thr)
-
-            # Baseline
-            if baseline:
-                sc = (baseline.get('results', {}).get(iso, {})
-                      .get('thresholds', {}).get(t_str, {})
-                      .get('scenarios', {}).get(mk))
-                if sc:
-                    rm = sc['resource_mix']
-                    print(f"  {thr:>5}% | {'baseline':>10} | "
-                          f"{rm.get('clean_firm',0):>3} {rm.get('solar',0):>3} "
-                          f"{rm.get('wind',0):>3} {rm.get('ccs_ccgt',0):>3} "
-                          f"{rm.get('hydro',0):>3} | "
-                          f"{sc['procurement_pct']:>4} ${sc['costs']['effective_cost']:>7.1f} "
-                          f"{sc['hourly_match_score']:>5.1f}")
-
-            # Track results
-            for track_name in ['newbuild', 'replace']:
-                sc = (track_output.get('results', {}).get(iso, {})
-                      .get(track_name, {}).get(t_str, {})
-                      .get('scenarios', {}).get(mk))
-                if sc:
-                    rm = sc['resource_mix']
-                    print(f"  {'':>6} | {track_name:>10} | "
-                          f"{rm.get('clean_firm',0):>3} {rm.get('solar',0):>3} "
-                          f"{rm.get('wind',0):>3} {rm.get('ccs_ccgt',0):>3} "
-                          f"{rm.get('hydro',0):>3} | "
-                          f"{sc['procurement_pct']:>4} ${sc['costs']['effective_cost']:>7.1f} "
-                          f"{sc['hourly_match_score']:>5.1f}")
+def _save_results(track_output):
+    """Write track_output to disk."""
+    out_path = str(TRACK_RESULTS_PATH)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    tmp = out_path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(track_output, f, separators=(',', ':'))
+    os.replace(tmp, out_path)
 
 
 if __name__ == '__main__':
