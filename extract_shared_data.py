@@ -4,7 +4,7 @@ Extract resource mix and compressed day data from overprocure_results.json
 into shared-data.js format.
 
 Adds new constants WITHOUT modifying existing ones.
-Uses MMM_M_M scenario (all-Medium toggles) — matches EFFECTIVE_COST_DATA convention.
+Uses ISO-aware medium scenario key (8-dim format) — matches EFFECTIVE_COST_DATA convention.
 """
 
 import json
@@ -14,7 +14,18 @@ ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = ['75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99']
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
-SCENARIO_KEY = 'MMM_M_M'
+
+
+def medium_key(iso):
+    """Return the all-Medium scenario key for an ISO."""
+    geo = 'M' if iso == 'CAISO' else 'X'
+    return f'MMM_M_M_M1_{geo}'
+
+
+def get_scenario(iso_data, threshold, iso):
+    """Get medium scenario with backward compat fallback."""
+    scenarios = iso_data.get('thresholds', {}).get(threshold, {}).get('scenarios', {})
+    return scenarios.get(medium_key(iso)) or scenarios.get('MMM_M_M')
 
 # Load results
 with open('dashboard/overprocure_results.json') as f:
@@ -36,7 +47,7 @@ for iso in ISOS:
     iso_data['procurement'] = []
 
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         if sc:
             rm = sc.get('resource_mix', {})
             for res in RESOURCES:
@@ -70,7 +81,7 @@ for iso in ISOS:
     }
 
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         if sc and 'compressed_day' in sc:
             cd = sc['compressed_day']
             iso_cd['demand'].append([round(v, 5) for v in cd['demand']])
@@ -194,7 +205,7 @@ for iso in ISOS:
         'effective_cf_lcoe': [],
     }
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         tc = sc.get('tranche_costs', {}) if sc else {}
         iso_tr['new_cf_twh'].append(round(tc.get('new_cf_twh', 0), 3))
         iso_tr['uprate_twh'].append(round(tc.get('uprate_twh', 0), 4))
@@ -214,7 +225,7 @@ WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 
 for iso in ISOS:
     iso_wyn = []
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(SCENARIO_KEY)
+        sc = get_scenario(data['results'][iso], t, iso)
         rc = sc.get('costs_detail', {}).get('resource_costs', {}) if sc else {}
         entry = {}
         for res in WYN_RESOURCES:
