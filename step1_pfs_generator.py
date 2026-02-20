@@ -942,22 +942,16 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     # Phase 1b: Storage sweep on near-miss mixes
     # For each (mix, storage_config), sweep procurement upward with early stopping.
     # Triple-nested: battery4 × battery8 × LDES (dispatch order: 4hr → 8hr → LDES).
-    #
-    # EF ceiling: once a mix achieves the target, record the minimal storage config.
-    # Skip any storage config where ALL storage dimensions >= the first feasible config
-    # (since cheaper combos already work, costlier ones are dominated in cost space).
+    # All battery8 and LDES levels are tested for each mix — they have independent
+    # cost toggles in Step 3, so different configs may be optimal at different prices.
     for i in near_miss_mixes:
         supply_row = supply_rows[i]
         mix = combos_5[i]
         mix_key = (int(mix[0]), int(mix[1]), int(mix[2]), int(mix[3]))
-        mix_feasible_configs = []  # List of (bp, b8p, lp) that achieved target
 
         # Battery4 only — for each battery level, sweep procurement with early stop
         for bp in batt_levels:
             if bp == 0:
-                continue
-            # EF ceiling: skip if a cheaper battery4-only config already worked
-            if any(fb <= bp and fb8 == 0 and fl == 0 for fb, fb8, fl in mix_feasible_configs):
                 continue
             batt_cap = bp / 100.0
             batt_pow = batt_cap / BATTERY_DURATION_HOURS
@@ -969,7 +963,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     add_candidate(mix, proc, bp, 0, 0, score)
                     mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
                     feasible_mix_keys.add(mix_key)
-                    mix_feasible_configs.append((bp, 0, 0))
                     break  # Early stop per (mix, battery_level)
 
         # Full storage combos: battery4 × battery8 × LDES
@@ -989,9 +982,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     # Skip if entire mix is already proven feasible from cross-pollination
                     if mix_key in cross_skip:
                         continue
-                    # EF ceiling: skip if a cheaper-or-equal config on ALL storage dims already worked
-                    if any(fb <= bp and fb8 <= b8p and fl <= lp for fb, fb8, fl in mix_feasible_configs):
-                        continue
                     ldes_cap = lp / 100.0
                     ldes_pow = ldes_cap / LDES_DURATION_HOURS
                     for proc in proc_levels:
@@ -1005,7 +995,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                             add_candidate(mix, proc, bp, b8p, lp, score)
                             mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
                             feasible_mix_keys.add(mix_key)
-                            mix_feasible_configs.append((bp, b8p, lp))
                             break  # Early stop per (mix, batt4, batt8, ldes)
 
     # ── Phase 2: Refine feasible archetypes to 1% resolution ──
