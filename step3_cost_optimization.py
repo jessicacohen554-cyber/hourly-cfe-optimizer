@@ -32,6 +32,12 @@ import pyarrow.parquet as pq
 from pathlib import Path
 from itertools import product
 
+try:
+    from numba import njit, prange
+    HAS_NUMBA = True
+except ImportError:
+    HAS_NUMBA = False
+
 # ============================================================================
 # COST TABLES
 # ============================================================================
@@ -401,6 +407,285 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 
 
 # ============================================================================
+# PRE-COMPUTED COEFFICIENT MODEL (Phase 1 acceleration)
+# ============================================================================
+# For base year (no growth), total_cost decomposes into:
+#   tc[i] = Σ(coeff_matrix[i,k] × prices[k]) + constant[i]
+# where coefficients are scenario-invariant and prices are 10 scalars.
+# This avoids recomputing existing/new splits, tranche allocations, and
+# gas backup for every scenario — just 10 scalar-vector multiplies.
+
+# Coefficient column indices
+_COL_WHOLESALE = 0  # existing generation priced at wholesale
+_COL_SOL_NEW   = 1  # new solar (LCOE + tx)
+_COL_WND_NEW   = 2  # new wind (LCOE + tx)
+_COL_CCS_NEW   = 3  # new CCS-CCGT standalone (LCOE + tx)
+_COL_UPRATE    = 4  # nuclear uprate tranche
+_COL_GEO       = 5  # geothermal tranche (CAISO only, 0 elsewhere)
+_COL_REMAINING = 6  # tranche 3: min(nuclear, CCS) new-build
+_COL_BAT4      = 7  # 4hr battery dispatch
+_COL_BAT8      = 8  # 8hr battery dispatch
+_COL_LDES      = 9  # LDES dispatch
+_N_COEFFS = 10
+
+
+def precompute_base_year_coefficients(iso, arrays, demand_twh):
+    """Pre-compute scenario-invariant coefficient arrays for base year.
+
+    Returns:
+        coeff_matrix: (N, 10) float64 — multiply by scenario prices
+        constant: (N,) float64 — gas backup cost (scenario-invariant)
+        extras: dict with per-element data needed for winner detail extraction
+    """
+    N = len(arrays['clean_firm'])
+
+    proc = arrays['procurement_pct'].astype(np.float64) / 100.0
+    match_frac = arrays['hourly_match_score'].astype(np.float64) / 100.0
+
+    cf_pct = arrays['clean_firm'].astype(np.float64)
+    sol_pct = arrays['solar'].astype(np.float64)
+    wnd_pct = arrays['wind'].astype(np.float64)
+    hyd_pct = arrays['hydro'].astype(np.float64)
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
+
+    bat_pct = arrays['battery_dispatch_pct'].astype(np.float64)
+    bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N)).astype(np.float64)
+    ldes_pct = arrays['ldes_dispatch_pct'].astype(np.float64)
+
+    existing = GRID_MIX_SHARES[iso]
+
+    # Demand pcts (proc × alloc) — scenario-invariant
+    sol_demand_pct = proc * sol_pct
+    wnd_demand_pct = proc * wnd_pct
+    hyd_demand_pct = proc * hyd_pct
+    ccs_demand_pct = proc * ccs_pct
+    cf_demand_pct = proc * cf_pct
+
+    # Existing/new splits (base year, existing_scale=1.0)
+    sol_existing_pct = np.minimum(sol_demand_pct, existing['solar'])
+    sol_new_pct = np.maximum(0, sol_demand_pct - existing['solar'])
+
+    wnd_existing_pct = np.minimum(wnd_demand_pct, existing['wind'])
+    wnd_new_pct = np.maximum(0, wnd_demand_pct - existing['wind'])
+
+    ccs_ex = existing.get('ccs_ccgt', 0)
+    ccs_existing_pct = np.minimum(ccs_demand_pct, ccs_ex)
+    ccs_new_pct = np.maximum(0, ccs_demand_pct - ccs_ex)
+
+    cf_existing_pct = np.minimum(cf_demand_pct, existing['clean_firm'])
+    cf_new_pct = np.maximum(0, cf_demand_pct - existing['clean_firm'])
+
+    # Clean firm tranche allocation (scenario-invariant quantities)
+    new_cf_twh = cf_new_pct / 100.0 * demand_twh
+    uprate_cap = UPRATE_CAP_TWH[iso]
+    uprate_twh = np.minimum(new_cf_twh, uprate_cap)
+    remaining_after_uprate = np.maximum(0, new_cf_twh - uprate_twh)
+
+    geo_twh = np.zeros(N)
+    remaining_after_geo = remaining_after_uprate
+    if iso == 'CAISO':
+        geo_twh = np.minimum(remaining_after_uprate, GEO_CAP_TWH)
+        remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_twh)
+
+    # Gas backup (entirely scenario-invariant for base year)
+    peak_mw = PEAK_DEMAND_MW[iso]
+    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+    demand_mwh = demand_twh * 1e6
+    avg_demand_mw = demand_mwh / 8760
+
+    clean_peak_mw = (
+        proc * cf_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        proc * sol_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
+        proc * wnd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
+        proc * ccs_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        proc * hyd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+        bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+    )
+
+    gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw)
+    existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+    existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
+    new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
+
+    constant = (
+        existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
+        new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
+    ) / demand_mwh
+
+    # Build coefficient matrix (N, 10)
+    coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
+    coeff_matrix[:, _COL_WHOLESALE] = (sol_existing_pct + wnd_existing_pct +
+                                        hyd_demand_pct + ccs_existing_pct +
+                                        cf_existing_pct) / 100.0
+    coeff_matrix[:, _COL_SOL_NEW] = sol_new_pct / 100.0
+    coeff_matrix[:, _COL_WND_NEW] = wnd_new_pct / 100.0
+    coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
+    coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_twh
+    coeff_matrix[:, _COL_GEO] = geo_twh / demand_twh
+    coeff_matrix[:, _COL_REMAINING] = remaining_after_geo / demand_twh
+    coeff_matrix[:, _COL_BAT4] = bat_pct / 100.0
+    coeff_matrix[:, _COL_BAT8] = bat8_pct / 100.0
+    coeff_matrix[:, _COL_LDES] = ldes_pct / 100.0
+
+    extras = {
+        'match_frac': match_frac,
+        'cf_existing_twh': cf_existing_pct / 100.0 * demand_twh,
+        'new_cf_twh': new_cf_twh,
+        'uprate_twh': uprate_twh,
+        'geo_twh': geo_twh,
+        'remaining_twh': remaining_after_geo,
+        'gas_needed_mw': gas_needed_mw,
+        'existing_gas_used_mw': existing_gas_used_mw,
+        'new_gas_mw': new_gas_mw,
+        'clean_peak_mw': clean_peak_mw,
+        'ra_peak_mw': ra_peak_mw,
+    }
+
+    return coeff_matrix, constant, extras
+
+
+def get_scenario_prices(iso, sens):
+    """Look up 10 scenario-dependent price scalars from sensitivity toggles.
+
+    Returns:
+        prices: (10,) float64 array matching coefficient column order
+        wholesale: scalar for incremental cost calculation
+        nuclear_price: scalar for tranche detail extraction
+        ccs_tranche_price: scalar for tranche detail extraction
+    """
+    ren_name = LEVEL_NAME[sens['ren']]
+    batt_name = LEVEL_NAME[sens['batt']]
+    ldes_name = LEVEL_NAME[sens['ldes_lvl']]
+    fuel_name = LEVEL_NAME[sens['fuel']]
+    tx_name = LEVEL_NAME[sens['tx']]
+    firm_lev = sens['firm']
+    ccs_lev = sens['ccs']
+    q45 = sens['q45']
+    geo_lev = sens.get('geo')
+
+    wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
+    ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
+    ccs_lcoe = ccs_table[ccs_lev][iso]
+    ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
+    ccs_price = ccs_lcoe + ccs_tx
+
+    nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
+    remaining_price = min(nuclear_price, ccs_price)
+
+    geo_price = 0.0
+    if iso == 'CAISO' and geo_lev:
+        geo_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
+
+    prices = np.array([
+        wholesale,
+        LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso),
+        LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso),
+        ccs_price,
+        UPRATE_LCOE[firm_lev],
+        geo_price,
+        remaining_price,
+        LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso),
+        LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso),
+        LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso),
+    ], dtype=np.float64)
+
+    return prices, wholesale, nuclear_price, ccs_price
+
+
+# Numba-accelerated cost evaluation (parallel, no temporary arrays)
+if HAS_NUMBA:
+    @njit(parallel=True, cache=True)
+    def _eval_cost_numba(coeff_matrix, constant, prices):
+        """Fused multiply-add: tc[i] = Σ(coeff[i,k] × prices[k]) + constant[i]"""
+        N = coeff_matrix.shape[0]
+        K = coeff_matrix.shape[1]
+        tc = np.empty(N, dtype=np.float64)
+        for i in prange(N):
+            s = constant[i]
+            for k in range(K):
+                s += coeff_matrix[i, k] * prices[k]
+            tc[i] = s
+        return tc
+
+    @njit(cache=True)
+    def _argmin_indexed(tc, idx):
+        """Argmin over a subset of tc without allocating a temporary array."""
+        best_val = tc[idx[0]]
+        best_pos = 0
+        for i in range(1, len(idx)):
+            v = tc[idx[i]]
+            if v < best_val:
+                best_val = v
+                best_pos = i
+        return idx[best_pos], best_val
+
+
+def eval_cost_fast(coeff_matrix, constant, prices):
+    """Evaluate total cost using Numba if available, else numpy."""
+    if HAS_NUMBA:
+        return _eval_cost_numba(coeff_matrix, constant, prices)
+    # Numpy fallback: matrix × prices + constant
+    return coeff_matrix @ prices + constant
+
+
+def argmin_indexed(tc, idx):
+    """Find argmin of tc[idx] without allocating a copy."""
+    if HAS_NUMBA:
+        return _argmin_indexed(tc, idx)
+    local_best = int(np.argmin(tc[idx]))
+    return int(idx[local_best]), float(tc[idx[local_best]])
+
+
+def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
+                          tc_val, wholesale, nuclear_price, ccs_price):
+    """Build scenario result dict for a single winning mix."""
+    match_frac = extras['match_frac'][best_idx]
+    ec_val = tc_val / match_frac if match_frac > 0 else 0.0
+
+    best_mix = arrays_to_mix_dict(arrays, best_idx)
+
+    # Tranche detail (scenario-dependent: which is cheaper, nuclear or CCS?)
+    tranche3_is_nuclear = nuclear_price <= ccs_price
+    remaining_twh = float(extras['remaining_twh'][best_idx])
+
+    return {
+        'resource_mix': best_mix['resource_mix'],
+        'procurement_pct': best_mix['procurement_pct'],
+        'hourly_match_score': best_mix['hourly_match_score'],
+        'battery_dispatch_pct': best_mix['battery_dispatch_pct'],
+        'battery8_dispatch_pct': best_mix['battery8_dispatch_pct'],
+        'ldes_dispatch_pct': best_mix['ldes_dispatch_pct'],
+        'costs': {
+            'total_cost': round(tc_val, 2),
+            'effective_cost': round(ec_val, 2),
+            'incremental': round(ec_val - wholesale, 2),
+            'wholesale': wholesale,
+        },
+        'tranche_costs': {
+            'cf_existing_twh': round(float(extras['cf_existing_twh'][best_idx]), 3),
+            'uprate_twh': round(float(extras['uprate_twh'][best_idx]), 3),
+            'geo_twh': round(float(extras['geo_twh'][best_idx]), 3),
+            'nuclear_newbuild_twh': round(remaining_twh if tranche3_is_nuclear else 0.0, 3),
+            'ccs_tranche_twh': round(0.0 if tranche3_is_nuclear else remaining_twh, 3),
+            'new_cf_twh': round(float(extras['new_cf_twh'][best_idx]), 3),
+        },
+        'gas_backup': {
+            'gas_backup_needed_mw': round(float(extras['gas_needed_mw'][best_idx])),
+            'existing_gas_used_mw': round(float(extras['existing_gas_used_mw'][best_idx])),
+            'new_gas_build_mw': round(float(extras['new_gas_mw'][best_idx])),
+            'gas_cost_per_mwh': round(float(
+                (extras['existing_gas_used_mw'][best_idx] * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
+                 extras['new_gas_mw'][best_idx] * NEW_CCGT_COST_KW_YR[iso] * 1000)
+                / (demand_twh * 1e6)), 2),
+            'clean_peak_capacity_mw': round(float(extras['clean_peak_mw'][best_idx])),
+            'ra_peak_mw': round(float(extras['ra_peak_mw'])),
+        },
+    }
+
+
+# ============================================================================
 # SENSITIVITY KEY HELPERS
 # ============================================================================
 
@@ -591,16 +876,23 @@ def main():
     cf_split_table = []
 
     # ================================================================
-    # PHASE 1: Base year cross-evaluation (vectorized)
+    # PHASE 1: Base year cross-evaluation (pre-computed + Numba)
     # ================================================================
-    # Key optimization: evaluate ALL mixes per ISO once per scenario,
-    # then use pre-computed threshold index arrays to pick best per threshold.
-    # This evaluates costs 1× per scenario instead of 13× (one per threshold).
-    print("\n--- PHASE 1: Base year cross-evaluation (vectorized) ---")
+    # Pre-compute scenario-invariant coefficient arrays per ISO, then
+    # evaluate total_cost as a fused multiply-add (10 coefficients × 10 prices).
+    # Numba prange parallelizes across CPU cores; no temporary arrays.
+    print("\n--- PHASE 1: Base year cross-evaluation (pre-computed + Numba) ---")
+    print(f"  Numba JIT: {'enabled' if HAS_NUMBA else 'DISABLED (numpy fallback)'}")
     phase1_start = time.time()
 
+    # Warm up Numba JIT on first call (compile cost)
+    if HAS_NUMBA:
+        _dummy = _eval_cost_numba(
+            np.zeros((2, _N_COEFFS)), np.zeros(2), np.zeros(_N_COEFFS))
+        _argmin_indexed(np.array([1.0, 0.5]), np.array([0, 1]))
+
     # Archetypes per ISO (union of winners across all thresholds) for Phase 2
-    archetypes = {}  # {iso: set of mix indices into pfs[iso]}
+    archetypes = {}
 
     for iso in ISOS:
         if iso not in pfs:
@@ -615,15 +907,16 @@ def main():
             'thresholds': {},
         }
 
-        # Build all sensitivity combos for this ISO (full factorial)
+        # Pre-compute coefficient matrix + constant (one-time per ISO)
+        coeff_matrix, constant, extras = precompute_base_year_coefficients(
+            iso, arrays, demand_twh)
+
         all_combos = build_sensitivity_combos(iso)
         n_combos = len(all_combos)
 
-        # Determine which thresholds have data for this ISO
         active_thresholds = [thr for thr in OUTPUT_THRESHOLDS
                              if (iso, thr) in thr_indices]
 
-        # Initialize per-threshold data structures
         thr_data = {}
         thr_arch_sets = {}
         for thr in active_thresholds:
@@ -631,67 +924,36 @@ def main():
             thr_arch_sets[thr] = set()
 
         iso_arch_set = set()
+        iso_start = time.time()
 
-        # Evaluate ALL combos — price ALL mixes once, then pick best per threshold
+        # Evaluate ALL combos — 10 scalar-vector multiplies per scenario
         for scenario_key, sens in all_combos:
-            tc, ec, tranche = price_mix_batch(iso, arrays, sens, demand_twh)
-
-            wholesale = max(5, WHOLESALE_PRICES[iso] +
-                            FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
+            prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
+            tc = eval_cost_fast(coeff_matrix, constant, prices)
 
             for thr in active_thresholds:
                 idx = thr_indices[(iso, thr)]
-                local_best = int(np.argmin(tc[idx]))
-                best_idx = int(idx[local_best])
+                best_idx, tc_val = argmin_indexed(tc, idx)
+                best_idx = int(best_idx)
+                tc_val = float(tc_val)
 
                 thr_arch_sets[thr].add(best_idx)
                 iso_arch_set.add(best_idx)
 
-                best_mix = arrays_to_mix_dict(arrays, best_idx)
-
-                scenario = {
-                    'resource_mix': best_mix['resource_mix'],
-                    'procurement_pct': best_mix['procurement_pct'],
-                    'hourly_match_score': best_mix['hourly_match_score'],
-                    'battery_dispatch_pct': best_mix['battery_dispatch_pct'],
-                    'battery8_dispatch_pct': best_mix['battery8_dispatch_pct'],
-                    'ldes_dispatch_pct': best_mix['ldes_dispatch_pct'],
-                    'costs': {
-                        'total_cost': round(float(tc[best_idx]), 2),
-                        'effective_cost': round(float(ec[best_idx]), 2),
-                        'incremental': round(float(ec[best_idx]) - wholesale, 2),
-                        'wholesale': wholesale,
-                    },
-                    'tranche_costs': {
-                        'cf_existing_twh': round(float(tranche['cf_existing_twh'][best_idx]), 3),
-                        'uprate_twh': round(float(tranche['uprate_twh'][best_idx]), 3),
-                        'geo_twh': round(float(tranche['geo_twh'][best_idx]), 3),
-                        'nuclear_newbuild_twh': round(float(tranche['nuclear_newbuild_twh'][best_idx]), 3),
-                        'ccs_tranche_twh': round(float(tranche['ccs_tranche_twh'][best_idx]), 3),
-                        'new_cf_twh': round(float(tranche['new_cf_twh'][best_idx]), 3),
-                    },
-                    'gas_backup': {
-                        'gas_backup_needed_mw': round(float(tranche['gas_backup_mw'][best_idx])),
-                        'existing_gas_used_mw': round(float(tranche['existing_gas_used_mw'][best_idx])),
-                        'new_gas_build_mw': round(float(tranche['new_gas_build_mw'][best_idx])),
-                        'gas_cost_per_mwh': round(float(tranche['gas_cost_per_mwh'][best_idx]), 2),
-                        'clean_peak_capacity_mw': round(float(tranche['clean_peak_mw'][best_idx])),
-                        'ra_peak_mw': round(float(tranche['ra_peak_mw'][best_idx])),
-                    },
-                }
+                scenario = build_winner_scenario(
+                    arrays, extras, best_idx, sens, iso, demand_twh,
+                    tc_val, wholesale, nuclear_price, ccs_price)
 
                 thr_data[thr]['scenarios'][scenario_key] = scenario
 
-        # Store feasible mixes per threshold (sample from threshold-qualifying mixes)
+        # Store feasible mixes per threshold
         for thr in active_thresholds:
             idx = thr_indices[(iso, thr)]
             N_thr = len(idx)
 
             max_feasible = min(N_thr, 500)
             step = max(1, N_thr // max_feasible)
-            # Sample indices into the full ISO arrays
             sample_full = list(idx[::step])
-            # Ensure all archetypes for this threshold are included
             for aidx in thr_arch_sets[thr]:
                 if aidx not in sample_full:
                     sample_full.append(aidx)
@@ -720,10 +982,11 @@ def main():
             output['results'][iso]['thresholds'][t_str] = thr_data[thr]
 
         archetypes[iso] = iso_arch_set
+        iso_elapsed = time.time() - iso_start
 
         print(f"  {iso:>6}: {N:>7,} mixes, {n_combos} scenarios, "
               f"{len(active_thresholds)} thresholds, "
-              f"{len(iso_arch_set)} archetypes (cross-threshold)")
+              f"{len(iso_arch_set)} archetypes — {iso_elapsed:.0f}s")
 
     phase1_elapsed = time.time() - phase1_start
     print(f"\nPhase 1 complete: {phase1_elapsed:.0f}s")
