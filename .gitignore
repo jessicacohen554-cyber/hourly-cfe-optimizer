@@ -34,3 +34,8 @@ data/checkpoints_v4/*_checkpoint.json
 # to prevent data loss across sessions. Previous loss of 21M solutions was
 # caused by gitignoring this file.
 dashboard/physics_results_v4.json
+
+# Large JSON results (>100MB, exceed GitHub limit) — use parquet versions instead
+# JSON versions are regenerated locally from parquets via convert_parquet_to_json.py
+dashboard/overprocure_results.json
+dashboard/demand_growth_results.json
