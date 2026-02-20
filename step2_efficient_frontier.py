@@ -47,6 +47,7 @@ TARGET_THRESHOLDS = [50.0, 60.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0,
 # Max group size for Step 3 dominance check (O(n²) — skip larger groups)
 DOMINANCE_MAX_GROUP = 50000
 
+
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 
 # Existing clean generation as % of 2025 demand (from eGRID/EIA)
@@ -136,6 +137,34 @@ def step0_existing_generation_filter(table):
         has_material_existing = row_min > MATERIALITY_THRESHOLD
         fails = has_material_existing & (mix_demand_pct < row_min)
         keep &= ~fails
+
+    # Resource allocation floors: existing generation scaled to 2050 high demand growth.
+    # Any mix allocating less than the floor for a resource wastes cheap existing generation.
+    # Applied to all four resource types where the floor exceeds the materiality threshold.
+    resource_cols = {'clean_firm': cf, 'solar': sol, 'wind': wnd, 'hydro': hyd}
+    print("  Resource allocation floors (existing / 2050 high growth factor):")
+    alloc_floor_removed = 0
+    for rtype, r_col in resource_cols.items():
+        floor_arr = np.zeros(len(ISOS), dtype=np.float64)
+        for i, iso in enumerate(ISOS):
+            existing = GRID_MIX_SHARES[iso].get(rtype, 0)
+            growth_factor = (1 + DEMAND_GROWTH_HIGH[iso]) ** 25
+            floor_val = existing / growth_factor
+            if floor_val > MATERIALITY_THRESHOLD:
+                floor_arr[i] = floor_val
+        row_floor = floor_arr[iso_indices]
+        fails = (row_floor > 0) & (r_col < row_floor)
+        n_removed = (keep & fails).sum()
+        if n_removed > 0:
+            keep &= ~fails
+            alloc_floor_removed += n_removed
+        # Print summary per resource
+        active_isos = [iso for i, iso in enumerate(ISOS) if floor_arr[i] > 0]
+        if active_isos:
+            floors_str = ", ".join(f"{iso}≥{floor_arr[ISOS.index(iso)]:.1f}" for iso in active_isos)
+            print(f"    {rtype:>10}: {floors_str} (removed {n_removed:,})")
+    if alloc_floor_removed > 0:
+        print(f"  Allocation floor total: removed {alloc_floor_removed:,} additional rows")
 
     filtered = table.filter(pa.array(keep))
     removed = table.num_rows - filtered.num_rows
