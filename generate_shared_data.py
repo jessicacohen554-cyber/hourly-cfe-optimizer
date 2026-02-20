@@ -795,7 +795,7 @@ lines.append('// This avoids pre-computing 40k+ sensitivity combos.')
 lines.append('')
 
 # Nuclear new-build LCOE
-lines.append('// --- Nuclear New-Build LCOE ($/MWh) by Firm Gen toggle ---')
+lines.append('// --- Nuclear New-Build LCOE ($/MWh) by Nuclear toggle ---')
 lines.append('// Low = nth-of-a-kind SMR target ($70/MWh)')
 nuc_lcoe = tranche_model.get('nuclear_newbuild_lcoe', {})
 lines.append('const NUCLEAR_NEWBUILD_LCOE = {')
@@ -843,7 +843,7 @@ lines.append('};')
 lines.append('')
 
 # Uprate LCOE
-lines.append('// --- Nuclear Uprate LCOE ($/MWh) by Firm Gen toggle ---')
+lines.append('// --- Nuclear Uprate LCOE ($/MWh) by Nuclear toggle ---')
 uprate_lcoe = tranche_model.get('uprate_lcoe', {'L': 15, 'M': 25, 'H': 40})
 lines.append(f'const UPRATE_LCOE = {{ L: {uprate_lcoe.get("L", 15)}, M: {uprate_lcoe.get("M", 25)}, H: {uprate_lcoe.get("H", 40)} }};')
 lines.append('')

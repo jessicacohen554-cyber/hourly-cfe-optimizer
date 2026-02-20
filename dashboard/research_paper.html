@@ -1191,13 +1191,13 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         </tbody>
     </table>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-muted);">Low/Midpoint/High effective costs at the 90% hourly matching target across all sensitivity scenarios (1,944 per non-CAISO region, 5,832 for CAISO). Spread shown as absolute difference and as percentage of midpoint. Toggle labels: Renew = Renewable Generation, Firm = Firm Generation, CCS = CCS-CCGT, Stor = Storage, Fuel = Fossil Fuel Price, Geo = Geothermal (CAISO only), Tx = Transmission, 45Q = 45Q Tax Credit (On/Off).</p>
+    <p style="font-size:0.82rem;color:var(--text-muted);">Low/Midpoint/High effective costs at the 90% hourly matching target across all sensitivity scenarios (1,944 per non-CAISO region, 5,832 for CAISO). Spread shown as absolute difference and as percentage of midpoint. Toggle labels: Renew = Renewable Generation, Nuclear = Nuclear Cost, CCS = CCS-CCGT, Stor = Storage, Fuel = Fossil Fuel Price, Geo = Geothermal (CAISO only), Tx = Transmission, 45Q = 45Q Tax Credit (On/Off).</p>
 
     <p>
         The cost sensitivity analysis reveals several important patterns. First, the spread widens at higher
         thresholds: at 75% matching, the low-to-high range is typically $15&ndash;25/MWh, while at 100% it
         expands to $50&ndash;80/MWh. This reflects the increasing reliance on firm generation and storage
-        technologies that carry the widest cost uncertainty. Second, the <strong>firm generation cost toggle
+        technologies that carry the widest cost uncertainty. Second, the <strong>nuclear cost toggle
         has the largest single-factor impact</strong> at thresholds above 90%, because clean firm constitutes
         40&ndash;60% of the portfolio at those levels. Third, the transmission toggle has an outsized effect
         in regions with high new-build requirements (NEISO, NYISO), where most resources require new
@@ -1678,7 +1678,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         <thead><tr><th>Toggle</th><th>Members</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
         <tbody>
             <tr><td><strong>Renewable Generation</strong></td><td>Solar + Wind LCOE</td><td>$30&ndash;62/MWh</td><td>$40&ndash;92/MWh</td><td>$52&ndash;120/MWh</td></tr>
-            <tr><td><strong>Firm Generation</strong></td><td>Clean Firm LCOE</td><td>$58&ndash;75/MWh</td><td>$78&ndash;98/MWh</td><td>$110&ndash;150/MWh</td></tr>
+            <tr><td><strong>Nuclear</strong></td><td>Clean Firm LCOE</td><td>$58&ndash;75/MWh</td><td>$78&ndash;98/MWh</td><td>$110&ndash;150/MWh</td></tr>
             <tr><td><strong>CCS</strong></td><td>CCS-CCGT LCOE</td><td>$52&ndash;78/MWh</td><td>$71&ndash;99/MWh</td><td>$92&ndash;128/MWh</td></tr>
             <tr><td><strong>Storage</strong></td><td>Battery (4hr) + LDES (100hr) LCOS</td><td>$69&ndash;150/MWh</td><td>$92&ndash;200/MWh</td><td>$120&ndash;260/MWh</td></tr>
             <tr><td><strong>Fossil Fuel Price</strong></td><td>Gas + Coal + Oil</td><td>$2.00/MMBtu gas</td><td>$3.50/MMBtu gas</td><td>$6.00/MMBtu gas</td></tr>
@@ -2063,7 +2063,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p>
         The model uses <strong>7 graduated sensitivity toggles</strong> (3 levels each, except Transmission
         with 4 and Geothermal with 3 for CAISO only) <strong>plus 1 binary toggle</strong> (45Q On/Off):
-        Renewable Generation (Solar + Wind), Firm Generation (Clean Firm), CCS (L/M/H), Storage (Battery + LDES),
+        Renewable Generation (Solar + Wind), Nuclear (Clean Firm), CCS (L/M/H), Storage (Battery + LDES),
         Fossil Fuel Price (Gas + Coal + Oil), Geothermal (CAISO only, L/M/H), Transmission (None/L/M/H),
         and 45Q (On/Off). This produces 3 &times; 3 &times; 3 &times; 3 &times; 3 &times; 2 &times; 4
         = <strong>1,944 scenarios per non-CAISO region per threshold</strong>, and 1,944 &times; 3 (geothermal)

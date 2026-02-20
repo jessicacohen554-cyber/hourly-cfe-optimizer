@@ -3110,11 +3110,11 @@ body {
                 </div>
             </div>
 
-            <!-- 2. Firm Generation Cost (Nuclear) -->
+            <!-- 2. Nuclear Cost -->
             <div class="sensitivity-toggle-item" data-toggle-group="firm_gen">
                 <div class="toggle-label-area">
                     <div class="toggle-label-main">
-                        Firm Generation Cost
+                        Nuclear Cost
                         <span class="info-icon-wrapper" tabindex="0">
                             <span class="info-icon" aria-label="Info">i</span>
                             <span class="info-tooltip">Controls the assumed cost of advanced nuclear (SMR) new-build and nuclear uprates. These "always-on" clean power sources run 24/7 regardless of weather. <strong>Low</strong> = nth-of-a-kind SMR deployment (~$70/MWh). <strong>Medium</strong> = current best estimates. <strong>High</strong> = first-of-a-kind project costs. CCS-CCGT has its own toggle below.</span>
@@ -7815,10 +7815,10 @@ function initPathwayAnalysis() {
     document.getElementById('interimYear')?.addEventListener('change', triggerRerender);
     document.getElementById('longtermYear')?.addEventListener('change', triggerRerender);
 
-    const demandGrowthBtns = document.querySelectorAll('[data-toggle-group="demand_growth"]');
+    const demandGrowthBtns = document.querySelectorAll('button[data-toggle-group="demand_growth"]');
     demandGrowthBtns.forEach(btn => {
         btn.addEventListener('click', function() {
-            document.querySelectorAll('[data-toggle-group="demand_growth"]').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('button[data-toggle-group="demand_growth"]').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             triggerRerender();
         });
@@ -7835,7 +7835,7 @@ function initPathwayAnalysis() {
 }
 
 function getDemandGrowthLevel() {
-    const activeBtn = document.querySelector('[data-toggle-group="demand_growth"].active');
+    const activeBtn = document.querySelector('button[data-toggle-group="demand_growth"].active');
     return activeBtn ? activeBtn.getAttribute('data-value') : 'Medium';
 }
 
