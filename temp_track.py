@@ -36,7 +36,8 @@ from step3_cost_optimization import (
     precompute_base_year_coefficients, get_scenario_prices,
     eval_cost_fast, eval_and_argmin_all, build_winner_scenario,
     build_sensitivity_combos, medium_key, price_mix_batch,
-    TRACK_RESULTS_PATH,
+    precompute_all_prices, batch_eval_and_argmin_all,
+    TRACK_RESULTS_PATH, HAS_NUMBA,
 )
 
 EF_EXPANDED_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
@@ -239,51 +240,47 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
     arch_set = set()
     n_combos = len(combos)
     iso_start = time.time()
-    checkpoint_interval = 500 if n_combos > 100 else n_combos + 1
-    skipped = 0
 
-    for combo_i, (scenario_key, sens) in enumerate(combos):
-        # Skip already-computed scenarios
-        if scenario_key in existing_scenarios:
-            skipped += 1
-            continue
+    # Filter to uncomputed combos only
+    remaining_combos = [(sk, sens) for sk, sens in combos if sk not in existing_scenarios]
+    n_remaining = len(remaining_combos)
+    n_skipped = n_combos - n_remaining
 
-        prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
-        best_idxs, best_vals = eval_and_argmin_all(
-            coeff_matrix, constant, prices, scores, thresholds_desc)
+    if n_skipped > 0:
+        print(f"    {iso} {track_name}: skipping {n_skipped} cached, evaluating {n_remaining}")
 
-        for thr in active_thresholds:
-            k = thr_pos[float(thr)]
-            if best_vals[k] == np.inf:
-                continue
-            best_idx = int(best_idxs[k])
-            tc_val = float(best_vals[k])
-            arch_set.add(best_idx)
+    if n_remaining > 0:
+        # Pre-compute all price vectors at once
+        price_matrix, wholesale_arr, nuclear_arr, ccs_arr = precompute_all_prices(iso, remaining_combos)
+        price_time = time.time() - iso_start
+        print(f"    {iso} {track_name}: prices pre-computed ({price_time:.1f}s), "
+              f"launching batched eval ({N:,} mixes × {n_remaining:,} combos)...")
 
-            scenario = build_winner_scenario(
-                arrays, extras, best_idx, sens, iso, demand_twh,
-                tc_val, wholesale, nuclear_price, ccs_price)
-            thr_data[thr]['scenarios'][scenario_key] = scenario
+        # Single batched Numba call — tiled for cache efficiency
+        batch_start = time.time()
+        all_best_idxs, all_best_vals = batch_eval_and_argmin_all(
+            coeff_matrix, constant, price_matrix, scores, thresholds_desc)
+        batch_elapsed = time.time() - batch_start
+        print(f"    {iso} {track_name}: batched eval+argmin done in {batch_elapsed:.1f}s")
 
-        computed = combo_i + 1 - skipped
-        if n_combos > 100 and computed > 0 and computed % 1000 == 0:
-            elapsed = time.time() - iso_start
-            total_remaining = n_combos - combo_i - 1
-            rate = computed / elapsed
-            remaining = total_remaining / rate if rate > 0 else 0
-            print(f"    {iso} {track_name} {combo_i+1}/{n_combos} "
-                  f"({elapsed:.0f}s, ~{remaining:.0f}s remaining)")
+        # Build winner scenarios from batched results
+        build_start = time.time()
+        for j, (scenario_key, sens) in enumerate(remaining_combos):
+            for thr in active_thresholds:
+                k = thr_pos[float(thr)]
+                if all_best_vals[j, k] == np.inf:
+                    continue
+                best_idx = int(all_best_idxs[j, k])
+                tc_val = float(all_best_vals[j, k])
+                arch_set.add(best_idx)
 
-        # Checkpoint every N combos
-        if (track_output is not None and completed_steps is not None
-                and computed > 0 and computed % checkpoint_interval == 0):
-            result_partial = {str(thr): thr_data[thr] for thr in active_thresholds}
-            track_output['results'][iso][track_name] = result_partial
-            _save_results(track_output)
-            save_checkpoint(track_output, [list(s) for s in completed_steps])
-
-    if skipped > 0:
-        print(f"    {iso} {track_name}: skipped {skipped} cached scenarios")
+                scenario = build_winner_scenario(
+                    arrays, extras, best_idx, sens, iso, demand_twh,
+                    tc_val, float(wholesale_arr[j]),
+                    float(nuclear_arr[j]), float(ccs_arr[j]))
+                thr_data[thr]['scenarios'][scenario_key] = scenario
+        build_elapsed = time.time() - build_start
+        print(f"    {iso} {track_name}: winner scenarios built in {build_elapsed:.1f}s")
 
     result = {str(thr): thr_data[thr] for thr in active_thresholds}
     elapsed = time.time() - iso_start
@@ -412,6 +409,20 @@ def main():
             'demand_growth': {'newbuild': {}, 'replace': {}},
         }
         completed_steps = set()
+
+    # Warm up Numba JIT (batched function)
+    if HAS_NUMBA:
+        from step3_cost_optimization import _batch_eval_and_argmin, _eval_cost_numba, _argmin_bucketed, _N_COEFFS
+        _dcm = np.zeros((2, _N_COEFFS))
+        _dc = np.zeros(2)
+        _dp = np.zeros(_N_COEFFS)
+        _ds = np.array([50.0, 100.0])
+        _dt = np.array([100.0, 50.0])
+        _eval_cost_numba(_dcm, _dc, _dp)
+        _argmin_bucketed(np.zeros(2), _ds, _dt)
+        _dpm = np.zeros((2, _N_COEFFS))
+        _batch_eval_and_argmin(_dcm, _dc, _dpm, _ds, _dt)
+        print(f"  Numba JIT warmup complete (batched mode)")
 
     # Load EF sources
     print("\nLoading EF sources...")
