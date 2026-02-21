@@ -2190,13 +2190,8 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 **Improvement**: Use the full `[0, 2, 5, 8, 10, 15, 20]` grid, matching Phase 1b. Catches refinement mixes that need higher storage levels (15-20%) to become feasible.
 **Cost**: Modest — refinement mixes are few (neighborhoods of Phase 1 archetypes), so the extra storage combos add seconds, not minutes.
 
-#### 6. Adaptive Storage Sweep (Speed)
-**Current**: All 342 non-zero storage combos (7×7×7 - 1) evaluated for every near-miss mix.
-**Improvement**: Tiered approach:
-  1. Battery4-only sweep (6 combos) — cheapest storage, catches most solutions
-  2. Battery4 + Battery8 (36 combos) — only for mixes not solved in tier 1
-  3. Full triple sweep (342 combos) — only for remaining hard-to-match mixes
-**Impact**: Most near-miss mixes become feasible with battery4 alone. Tiers 2-3 only needed for high-threshold (95%+) mixes. Could reduce total evaluations by 50-70%.
+#### ~~6. Adaptive Storage Sweep~~ — REJECTED
+Undermines scientific rigor. Skipping higher-tier storage configs for mixes already feasible with simpler configs would miss storage diversity needed for Step 3 cost optimization under different cost assumptions.
 
 #### 7. Cross-Threshold Solution Injection (Coverage)
 **Current**: Step 1 uses "cross-threshold pollination" to track proven-feasible mixes and skip their storage sweep at higher thresholds. But doesn't inject these solutions — just avoids redundant work.
@@ -2215,8 +2210,33 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 | 3 | Wider near-miss window | More solutions | Low | None |
 | 4 | Binary search procurement | 2-5× per-mix speedup | Medium | None |
 | 5 | Full refinement storage grid | More solutions | Low | None |
-| 6 | Adaptive storage tiers | 50-70% fewer evals | Medium | None |
+| ~~6~~ | ~~Adaptive storage tiers~~ | ~~50-70% fewer evals~~ | ~~Medium~~ | **REJECTED — undermines rigor** |
 | 7 | Cross-threshold injection | More solutions | Medium | None |
 | 8 | Vectorized Phase 1a | Minor speedup | Low | None (memory) |
 
 **Implementation path**: Improvements 1-3 can be applied to `step1_pfs_generator.py` directly by copying kernels from `postprocess_storage_resweep.py`. Improvements 4-7 require refactoring the `optimize_threshold()` function. None require re-running from scratch — all are refinements to existing logic.
+
+#### Implemented (Feb 21, 2026)
+
+| # | Improvement | Status | Notes |
+|---|---|---|---|
+| 1 | Numba parallel storage | **Done** | `_batch_score_storage()` and `_batch_score_no_storage()` added with `prange`. JIT warmup includes batch kernels. |
+| 2 | Consistent scoring metric | **Done** | Phase 1a and Phase 2 now use `sum(min(demand, supply))` (total matched energy), consistent with `_score_with_all_storage` base_matched. Previously used `sum(min(supply/demand, 1.0)) / H` (hourly average fraction) — different metric. |
+| 5 | Full refinement storage grid | **Done** | Phase 2 now uses full `batt_levels × batt8_levels × ldes_levels` grid (matching Phase 1b) instead of limited `[2, 5, 10]` for battery4/battery8 only. LDES now modeled in Phase 2. |
+| 3 | Wider near-miss window | **Done** | Phase 1a: 15% → 25%. Phase 2: 10% → 15%. More near-miss mixes enter storage testing → more feasible solutions found. |
+| 4 | Binary search procurement | **Done** | All phases (1a, 1b, Phase 2) now use binary search O(log₂ N) instead of linear sweep O(N). Phase 1b also checks max procurement first and skips infeasible (mix, storage) combos entirely. |
+| 8 | Vectorized Phase 1a procurement | **Done** | `batch_hourly_scores()` classifies all mixes at max procurement in one matrix multiply. Only feasible mixes enter per-mix binary search. Eliminates per-mix × per-proc scoring loop. |
+
+**Code cleanup (Feb 21, 2026)**:
+- **Removed 3 redundant scoring functions**: `_score_hourly`, `_score_with_battery`, `_score_with_both_storage` — all subsets of `_score_with_all_storage` (passing 0 for unused storage types skips those phases via capacity guards)
+- **Removed redundant Phase 1b battery4-only loop**: Was a separate sweep before the full triple storage loop. Now the full triple loop covers all non-zero storage combos including battery4-only (no `b8p == 0 and lp == 0` skip)
+- **Vectorized `_average_profiles()`**: Replaced nested Python loop (O(N×8760)) with `np.mean(np.array(profiles), axis=0)`
+- **Vectorized `get_supply_profiles()` clean_firm**: Replaced hour-by-hour Python loop with `np.repeat(month_cfs, month_hours)`
+- **Vectorized `get_supply_profiles()` solar DST correction**: Replaced 365×24 nested Python loop with numpy boolean mask across all 8760 hours
+- **Vectorized `get_supply_profiles()` post-processing**: Replaced list comprehension `[max(0, v) for v in p]` with `np.maximum(arr, 0.0, out=arr)`
+- **Vectorized `generate_4d_combos()`**: Replaced triple-nested Python loop with `np.meshgrid` + vectorized filter
+
+| 7 | Cross-threshold solution injection | **Done** | Solutions from lower thresholds that score >= current threshold are injected directly into higher threshold candidate lists. Combined with existing `cross_skip` (Phase 1b skips re-testing known-feasible mixes), this avoids redundant computation while ensuring all qualifying solutions propagate upward. Done-threshold parquets load full solutions for seeding. |
+
+**Rejected**:
+- ~~Item 6: Adaptive storage tiers~~ — **Deleted from consideration**. Would skip higher-tier storage configs for mixes already feasible with simpler configs, undermining scientific rigor by missing storage diversity needed for Step 3 cost optimization.
