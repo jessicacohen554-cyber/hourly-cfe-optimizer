@@ -132,8 +132,10 @@ def run_synthetic_lmp_for_calibration(iso='PJM', fuel_level='Medium'):
         0,  # battery8
         0)  # ldes
 
-    # Merit-order stack
-    stack, fossil_mw = build_merit_order_stack(iso, closest_threshold, fuel_level)
+    # Merit-order stack (RA + GAF aware)
+    stack, fossil_mw = build_merit_order_stack(
+        iso, closest_threshold, fuel_level,
+        resource_mix=resource_mix, procurement_pct=procurement_pct)
     print(f"  Fossil stack: {fossil_mw:,.0f} MW")
 
     # Price model
