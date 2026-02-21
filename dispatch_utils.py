@@ -663,9 +663,11 @@ def save_dispatch_cache(iso, cache):
         for field, arr in fields.items():
             arrays[f'k_{k}_{field}'] = arr
     path = _cache_path(iso)
-    tmp = path + '.tmp'
-    np.savez_compressed(tmp, **arrays)
-    os.replace(tmp, path)
+    # np.savez_compressed auto-appends .npz, so use a stem without extension
+    tmp_stem = path.replace('.npz', '') + '_tmp'
+    np.savez_compressed(tmp_stem, **arrays)
+    tmp_file = tmp_stem + '.npz'
+    os.replace(tmp_file, path)
 
 
 def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
