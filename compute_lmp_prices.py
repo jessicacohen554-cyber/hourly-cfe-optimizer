@@ -59,21 +59,48 @@ SCENARIOS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_scenarios.pa
 # FOSSIL MERIT-ORDER STACK — heat rates, VOM, marginal cost
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Heat rates (MMBtu/MWh) — EIA Electric Power Annual Table 8.1
+# Heat rates (MMBtu/MWh) — PJM IMM SOM 2024 benchmarks + EIA Table 8.1
+# PJM SOM uses 7,000 Btu/kWh for CCGT spark spreads; fleet-weighted avg ~7.0
+# EIA: modern H/J-class 6.7, F-class 7.0-7.5, B/D/E-class 8.0+
+# Fleet-weighted PJM CCGT: ~7.0 (mix of vintages)
 HEAT_RATES = {
-    'coal_steam': 10.0,
-    'gas_ccgt': 6.4,
-    'gas_ct': 10.0,
-    'oil_ct': 10.5,
+    'coal_steam': 10.0,   # EIA Table 8.1 avg; PJM SOM dark spread benchmark
+    'gas_ccgt': 7.0,      # PJM SOM spark spread benchmark (fleet-weighted)
+    'gas_ct': 10.5,       # EIA simple-cycle avg 10,000-11,000 Btu/kWh
+    'oil_ct': 10.5,       # Similar to gas CT
 }
 
-# Variable O&M ($/MWh) — EIA AEO / NREL ATB
+# Variable O&M ($/MWh) — PJM SOM 2024 decomposition
+# SOM 2024 breakdown: Variable Maintenance $3.18 + Variable Operations $1.43 = $4.61 fleet avg
+# Split by technology using NREL ATB relativities
 VOM = {
-    'coal_steam': 4.50,
-    'gas_ccgt': 2.00,
-    'gas_ct': 4.00,
-    'oil_ct': 5.00,
+    'coal_steam': 5.50,   # Higher maintenance (sorbent, ash, tube repair)
+    'gas_ccgt': 3.50,     # SOM fleet avg ~$4.61; CCGT lower than fleet
+    'gas_ct': 5.00,       # CT: more starts, higher per-MWh maintenance
+    'oil_ct': 6.00,       # Oil: rare dispatch, high per-start costs
 }
+
+# CO2 emission rates (tons CO2 / MWh) — EPA eGRID 2022 + EIA
+CO2_RATES = {
+    'coal_steam': 0.95,   # ~2,100 lb/MWh ≈ 0.95 t/MWh
+    'gas_ccgt': 0.37,     # ~820 lb/MWh ≈ 0.37 t/MWh
+    'gas_ct': 0.55,       # ~1,210 lb/MWh ≈ 0.55 t/MWh (lower efficiency)
+    'oil_ct': 0.65,       # ~1,430 lb/MWh ≈ 0.65 t/MWh
+}
+
+# CO2 allowance prices ($/ton) — RGGI, state programs
+# PJM SOM 2024: CO2 cost component = $1.94/MWh (5.8% of LMP)
+# RGGI 2024 avg clearing price ~$14/ton; not all PJM states in RGGI
+# Effective fleet-weighted CO2 cost: ~$5.50/ton × fleet-avg emission rate ≈ $1.94/MWh
+CO2_PRICES = {
+    'Low': 3.00,      # $/ton — low RGGI / no state program
+    'Medium': 5.50,   # $/ton — 2024 effective (RGGI weighted by PJM participation)
+    'High': 14.00,    # $/ton — full RGGI clearing price
+}
+
+# 10% Adder — PJM market rules allow generators 10% markup above cost-based offers
+# PJM SOM 2024: 10% adder contributed $2.00/MWh (5.9% of RT LMP)
+TEN_PERCENT_ADDER = 0.10
 
 # Fuel prices ($/MMBtu) by sensitivity level
 FUEL_PRICES = {
@@ -139,14 +166,26 @@ GAS_AVAILABILITY_FACTOR = {
 }
 
 
-def compute_marginal_costs(fuel_level='Medium'):
-    """Compute marginal cost ($/MWh) for each fossil unit type at given fuel prices."""
+def compute_marginal_costs(fuel_level='Medium', co2_level='Medium'):
+    """Compute marginal cost ($/MWh) for each fossil unit type.
+
+    PJM Manual 15 cost-based offer formula:
+      MC = (Incremental Heat Rate × Fuel Price + VOM + CO2 Rate × CO2 Price) × (1 + 10% Adder)
+
+    The 10% adder is PJM's allowed markup above cost-based offers (SOM 2024: $2.00/MWh).
+    CO2 costs reflect RGGI and state compliance programs (SOM 2024: $1.94/MWh).
+    """
     fp = FUEL_PRICES[fuel_level]
+    co2_price = CO2_PRICES.get(co2_level, CO2_PRICES['Medium'])
+    adder = 1.0 + TEN_PERCENT_ADDER
+
     costs = {}
-    costs['coal_steam'] = HEAT_RATES['coal_steam'] * fp['coal'] + VOM['coal_steam']
-    costs['gas_ccgt'] = HEAT_RATES['gas_ccgt'] * fp['gas'] + VOM['gas_ccgt']
-    costs['gas_ct'] = HEAT_RATES['gas_ct'] * fp['gas'] + VOM['gas_ct']
-    costs['oil_ct'] = HEAT_RATES['oil_ct'] * fp['oil'] + VOM['oil_ct']
+    for unit_type in HEAT_RATES:
+        fuel_key = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}[unit_type]
+        base_cost = (HEAT_RATES[unit_type] * fp[fuel_key] + VOM[unit_type]
+                     + CO2_RATES[unit_type] * co2_price)
+        costs[unit_type] = base_cost * adder
+
     return costs
 
 
@@ -177,7 +216,8 @@ def _compute_clean_peak_mw(iso, resource_mix, procurement_pct, battery_pct=0,
 
 def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw=None,
                              resource_mix=None, procurement_pct=100,
-                             battery_pct=0, battery8_pct=0, ldes_pct=0):
+                             battery_pct=0, battery8_pct=0, ldes_pct=0,
+                             co2_level='Medium'):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
@@ -197,12 +237,13 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         battery_pct: battery dispatch percentage
         battery8_pct: battery8 dispatch percentage
         ldes_pct: LDES dispatch percentage
+        co2_level: 'Low', 'Medium', 'High' — CO2 allowance pricing
 
     Returns:
         stack: list of (unit_type, capacity_mw, marginal_cost_per_mwh)
         total_capacity_mw: total fossil MW
     """
-    mc = compute_marginal_costs(fuel_level)
+    mc = compute_marginal_costs(fuel_level, co2_level)
 
     if total_fossil_mw is None:
         installed = INSTALLED_FOSSIL_MW.get(iso, 80_000)
@@ -409,25 +450,31 @@ class PJMPriceModel(PriceModel):
         self.scarcity_threshold = 0.03  # PJM has large reserves; scarcity is rare
         self.coal_min_gen_fraction = 0.4
 
-        # PJM demand-quantile calibration (v7 — tuned against SOM 2024)
-        # High-demand: PJM summer peaks drive congestion + gas tightness
-        self.dq_high_percentile = 55
-        self.dq_high_max_adder = 40.0
-        self.dq_high_exponent = 1.8
-        # Scarcity tail: PJM penalty factor regime
-        # Linear scarcity ramp at P94.5 (482 hours). Linear ramp distributes
-        # adder evenly → ~100 hours cross $200 without extreme spikes.
-        # Max = 170 means hours at position > 0.82 ((200-60)/170) cross $200.
-        # That's top 18% of 482 = ~87 hours; with some price variation → ~100.
-        self.dq_scarcity_percentile = 94.5
+        # PJM demand-quantile calibration (v9 — SOM 2024 cost decomposition)
+        # Base merit-order now includes 10% adder + CO2 + realistic VOM/heat rates.
+        # Demand-quantile layer adds: congestion ($3.01), markup beyond 10% (~$1.56),
+        # ancillary redispatch ($1.33), and compresses off-peak to baseload pricing.
+        #
+        # High-demand: congestion + gas tightness on top 25% of hours
+        self.dq_high_percentile = 75
+        self.dq_high_max_adder = 25.0
+        self.dq_high_exponent = 2.0
+        # Scarcity tail: PJM penalty factor regime — top 5% (~438h)
+        # At P95+ hours, base price is ~$48-55 (merit-order + high-demand adder).
+        # For $200 crossover: need scarcity adder > ~$150. With max=200, linear ramp:
+        # position > 150/200 = 0.75 → top 25% of 438 = ~110 hours cross $200.
+        self.dq_scarcity_percentile = 95.5
         self.dq_scarcity_max = 170.0
         # Low-demand: PJM ~200 negative price hours
-        self.dq_low_percentile = 8
+        self.dq_low_percentile = 10
         self.dq_low_floor = -30.0
-        self.dq_low_exponent = 2.0
-        # Mid-low: P8-P45 range gets price compression
-        self.dq_midlow_percentile = 45
-        self.dq_midlow_discount = 0.45
+        self.dq_low_exponent = 1.8
+        # Mid-low: P10-P65 range gets price compression (off-peak baseload)
+        # Off-peak avg target: $28. Current CCGT base ~$33, need ~15% discount.
+        # Coal min-gen pricing + cheap overnight baseload. Off-peak is ~60% of hours
+        # (nights, weekends), so compression needs to cover most of the lower distribution.
+        self.dq_midlow_percentile = 70
+        self.dq_midlow_discount = 0.50     # 50% max discount at low end of range
 
 
 class ERCOTPriceModel(PriceModel):
@@ -717,9 +764,10 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
                 0.5)
             position_in_band = np.clip(position_in_band, 0.0, 1.0)
             # Quadratic ramp: steeper at high utilization (realistic heat rate curve)
-            # Gas CCGT heat rate varies ~6.0-7.5 MMBtu/MWh across load range (~25%)
-            # Gas CT varies ~9.0-12.0 (~33%). Coal ~9.5-11.0 (~16%).
-            heat_rate_ramp = 1.0 + 0.30 * position_in_band ** 1.5
+            # Gas CCGT heat rate varies ~6.7-7.5 MMBtu/MWh across load range (~12%)
+            # Gas CT varies ~9.5-11.5 (~20%). Coal ~9.5-11.0 (~16%).
+            # Ramp applies to total MC so use ~15% (not full heat rate variation)
+            heat_rate_ramp = 1.0 + 0.15 * position_in_band ** 1.5
             normal_prices = base_prices * heat_rate_ramp
 
             # Reserve margin check for scarcity adder
