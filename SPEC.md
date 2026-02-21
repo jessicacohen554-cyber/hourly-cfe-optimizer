@@ -2190,13 +2190,8 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 **Improvement**: Use the full `[0, 2, 5, 8, 10, 15, 20]` grid, matching Phase 1b. Catches refinement mixes that need higher storage levels (15-20%) to become feasible.
 **Cost**: Modest — refinement mixes are few (neighborhoods of Phase 1 archetypes), so the extra storage combos add seconds, not minutes.
 
-#### 6. Adaptive Storage Sweep (Speed)
-**Current**: All 342 non-zero storage combos (7×7×7 - 1) evaluated for every near-miss mix.
-**Improvement**: Tiered approach:
-  1. Battery4-only sweep (6 combos) — cheapest storage, catches most solutions
-  2. Battery4 + Battery8 (36 combos) — only for mixes not solved in tier 1
-  3. Full triple sweep (342 combos) — only for remaining hard-to-match mixes
-**Impact**: Most near-miss mixes become feasible with battery4 alone. Tiers 2-3 only needed for high-threshold (95%+) mixes. Could reduce total evaluations by 50-70%.
+#### ~~6. Adaptive Storage Sweep~~ — REJECTED
+Undermines scientific rigor. Skipping higher-tier storage configs for mixes already feasible with simpler configs would miss storage diversity needed for Step 3 cost optimization under different cost assumptions.
 
 #### 7. Cross-Threshold Solution Injection (Coverage)
 **Current**: Step 1 uses "cross-threshold pollination" to track proven-feasible mixes and skip their storage sweep at higher thresholds. But doesn't inject these solutions — just avoids redundant work.
@@ -2215,7 +2210,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 | 3 | Wider near-miss window | More solutions | Low | None |
 | 4 | Binary search procurement | 2-5× per-mix speedup | Medium | None |
 | 5 | Full refinement storage grid | More solutions | Low | None |
-| 6 | Adaptive storage tiers | 50-70% fewer evals | Medium | None |
+| ~~6~~ | ~~Adaptive storage tiers~~ | ~~50-70% fewer evals~~ | ~~Medium~~ | **REJECTED — undermines rigor** |
 | 7 | Cross-threshold injection | More solutions | Medium | None |
 | 8 | Vectorized Phase 1a | Minor speedup | Low | None (memory) |
 
@@ -2241,6 +2236,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 - **Vectorized `get_supply_profiles()` post-processing**: Replaced list comprehension `[max(0, v) for v in p]` with `np.maximum(arr, 0.0, out=arr)`
 - **Vectorized `generate_4d_combos()`**: Replaced triple-nested Python loop with `np.meshgrid` + vectorized filter
 
-**Still TODO (deferred — requires larger refactor, risk to PFS coverage)**:
-- [ ] Item 6: Adaptive storage tiers — would skip higher-tier storage for mixes already feasible with simpler configs, missing storage diversity needed for Step 3 cost optimization
-- [ ] Item 7: Cross-threshold solution injection — requires refactoring `cross_feasible_mixes` from set to dict with (storage, procurement) metadata
+| 7 | Cross-threshold solution injection | **Done** | Solutions from lower thresholds that score >= current threshold are injected directly into higher threshold candidate lists. Combined with existing `cross_skip` (Phase 1b skips re-testing known-feasible mixes), this avoids redundant computation while ensuring all qualifying solutions propagate upward. Done-threshold parquets load full solutions for seeding. |
+
+**Rejected**:
+- ~~Item 6: Adaptive storage tiers~~ — **Deleted from consideration**. Would skip higher-tier storage configs for mixes already feasible with simpler configs, undermining scientific rigor by missing storage diversity needed for Step 3 cost optimization.

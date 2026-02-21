@@ -1244,6 +1244,11 @@ def process_iso(args):
     if mix_max_score:
         print(f"    {iso}: {len(mix_max_score):,} unique mixes from cache/completed thresholds")
 
+    # ── Cross-threshold solution seeding accumulator ──
+    # Collects full solutions from completed thresholds so qualifying ones
+    # can be injected into higher thresholds without re-computation.
+    all_found_solutions = []
+
     prev_pruning = None
     for threshold in THRESHOLDS:
         t_str = str(threshold)
@@ -1251,7 +1256,7 @@ def process_iso(args):
         # Skip if done (parquet exists or legacy JSON says so)
         if _is_threshold_done(iso, threshold) or t_str in legacy_completed:
             print(f"    {iso} {threshold}%: done — skipping")
-            # Build pruning info from completed results for next threshold
+            # Build pruning info + load full solutions for cross-threshold seeding
             done_path = _threshold_done_path(iso, threshold)
             if os.path.exists(done_path):
                 try:
@@ -1263,6 +1268,12 @@ def process_iso(args):
                         wnd = done_table.column('wind').to_pylist()
                         hyd = done_table.column('hydro').to_pylist()
                         proc = done_table.column('procurement_pct').to_pylist()
+                        bat = done_table.column('battery_dispatch_pct').to_pylist()
+                        bat8 = (done_table.column('battery8_dispatch_pct').to_pylist()
+                                if 'battery8_dispatch_pct' in done_table.column_names
+                                else [0] * n)
+                        ldes_col = done_table.column('ldes_dispatch_pct').to_pylist()
+                        scores = done_table.column('hourly_match_score').to_pylist()
                         feasible_keys = set()
                         min_proc = {}
                         for j in range(n):
@@ -1270,6 +1281,15 @@ def process_iso(args):
                             feasible_keys.add(mk)
                             if mk not in min_proc or proc[j] < min_proc[mk]:
                                 min_proc[mk] = proc[j]
+                            all_found_solutions.append({
+                                'resource_mix': {'clean_firm': cf[j], 'solar': sol[j],
+                                                 'wind': wnd[j], 'hydro': hyd[j]},
+                                'procurement_pct': proc[j],
+                                'battery_dispatch_pct': bat[j],
+                                'battery8_dispatch_pct': bat8[j],
+                                'ldes_dispatch_pct': ldes_col[j],
+                                'hourly_match_score': scores[j],
+                            })
                         prev_pruning = {
                             'feasible_mixes': feasible_keys,
                             'min_proc': min_proc,
@@ -1290,13 +1310,39 @@ def process_iso(args):
             prev_pruning=prev_pruning, cross_feasible_mixes=cross_feasible_mixes)
         prev_pruning = pruning_info
 
-        # Accumulate new solutions into mix_max_score
+        # ── Cross-threshold seeding: inject qualifying solutions from
+        #    lower thresholds. Mixes that scored >= current threshold at a
+        #    lower threshold are injected directly (their Phase 1b was
+        #    skipped via cross_skip, so the known result is carried forward).
+        if all_found_solutions:
+            existing_keys = set()
+            for c in feasible:
+                mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
+                       c['resource_mix']['wind'], c['resource_mix']['hydro'])
+                existing_keys.add((mk, c['procurement_pct'], c['battery_dispatch_pct'],
+                                    c.get('battery8_dispatch_pct', 0), c['ldes_dispatch_pct']))
+            seeded = 0
+            for c in all_found_solutions:
+                if c['hourly_match_score'] >= threshold:
+                    mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
+                           c['resource_mix']['wind'], c['resource_mix']['hydro'])
+                    key = (mk, c['procurement_pct'], c['battery_dispatch_pct'],
+                            c.get('battery8_dispatch_pct', 0), c['ldes_dispatch_pct'])
+                    if key not in existing_keys:
+                        feasible.append(c)
+                        existing_keys.add(key)
+                        seeded += 1
+            if seeded > 0:
+                print(f"      Seeded {seeded:,} solutions from lower thresholds")
+
+        # Accumulate new solutions into mix_max_score + seeding pool
         for c in feasible:
             mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
                    c['resource_mix']['wind'], c['resource_mix']['hydro'])
             s = c['hourly_match_score']
             if s > mix_max_score.get(mk, 0):
                 mix_max_score[mk] = s
+        all_found_solutions.extend(feasible)
         t_elapsed = time.time() - t_start
 
         archetypes = set()
