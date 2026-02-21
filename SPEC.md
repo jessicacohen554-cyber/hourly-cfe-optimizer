@@ -29,26 +29,36 @@
 - **Approach**: Current architecture preserved. Existing generation priced at regional wholesale (LMP-informed). New-build priced at LCOE + transmission adder.
 - **No change to pricing engine structure** — the existing/new split already computed in Step 3 `price_mix_batch()`. This decision confirms the hybrid approach is correct and no full nodal LMP model is needed.
 
-#### Decision 5: Two Analysis Tracks — Data Only (5C)
-Two distinct tracks, not a 4-way matrix:
+#### Decision 5: Three Analysis Tracks (5C — Updated Feb 21, 2026)
+Three distinct tracks with standardized naming:
 
-**Track 1: New-Build Requirement for Hourly Matching** (`newbuild`)
+**Track 1 — ECF (Existing Clean Floor)**: Base case
+- The standard optimizer output with existing generation credited at wholesale
+- Source: `overprocure_scenarios.parquet` (baseline results)
+- LMP module runs on this track first
+- Files/caches use `ecf_` prefix
+
+**Track 2 — NB (New-Build)**: What hourly matching incentivizes
 - Hydro: **excluded** (hydro=0 mixes only)
 - All existing clean: **zeroed** (GRID_MIX_SHARES = 0 for CF, solar, wind, CCS)
 - Uprates: **on** (uprate tranche active — cheapest new-build option)
-- Purpose: What does hourly matching incentivize you to BUILD from scratch? No existing generation credited. Uprates stay because they're a real new-build deployment option (capacity additions to existing plants). Reveals the clash between what hourly matching drives vs what the grid actually needs.
+- Purpose: What does hourly matching incentivize you to BUILD from scratch?
+- Files/caches use `nb_` prefix
 
-**Track 2: Cost to Replace Existing Clean** (`replace`)
+**Track 3 — CTR (Cost to Replace)**: True greenfield replacement cost
 - Hydro: **included** (existing floor, wholesale-priced)
 - All other existing clean: **zeroed** (CF, solar, wind, CCS all priced as new-build)
 - Uprates: **off** (uprate_cap=0, no uprate tranche)
-- Purpose: True greenfield cost of replacing all existing clean generation. Only hydro stays at existing/wholesale. Everything else must be new-build. Shows the full replacement premium — especially dramatic in PJM (32.1% nuclear), NEISO (23.8%), and NYISO (18.4%).
+- Purpose: True greenfield cost of replacing all existing clean generation
+- Files/caches use `ctr_` prefix
+
+**Naming convention**: All file names, cache keys, code comments, and output fields use ECF/NB/CTR abbreviations consistently. File rename deferred until NB/CTR sweep completes.
 
 **Output**: Data files only. No research paper update yet — discuss findings with user first, then write.
 **Architecture**: Step 3 runs 2 additional passes per (ISO, threshold):
-  - Pass "newbuild": filter EF to hydro=0, uprate tranche on → new-build hourly matching results
-  - Pass "replace": full EF (hydro≤existing), uprate tranche off → replacement cost results
-  - Plus existing pass "baseline": full EF, all features on → current behavior (preserved)
+  - Pass "NB": filter EF to hydro=0, uprate tranche on → new-build hourly matching results
+  - Pass "CTR": full EF (hydro≤existing), uprate tranche off → replacement cost results
+  - Plus existing pass "ECF": full EF, all features on → current behavior (preserved)
 
 ### Columnar JSON Format for Feasible Mixes (Feb 19, 2026)
 

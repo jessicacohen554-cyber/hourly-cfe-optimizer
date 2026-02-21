@@ -21,6 +21,8 @@ Reads:  dashboard/overprocure_results.json
         data/eia_demand_profiles.json
 Writes: dashboard/overprocure_results.json (updated CO₂ fields)
         data/optimizer_cache.json (updated if exists)
+
+Refactored to import shared dispatch logic from dispatch_utils.py.
 """
 
 import json
@@ -30,413 +32,62 @@ import numpy as np
 import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPT_DIR)
+
+from dispatch_utils import (
+    H, ISOS, RESOURCE_TYPES, CCS_RESIDUAL_EMISSION_RATE,
+    GRID_MIX_SHARES, load_common_data,
+    get_supply_profiles_simple as get_supply_profiles,
+    compute_fossil_retirement as compute_dispatch_stack_emission_rate,
+    reconstruct_hourly_dispatch,
+)
+
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
+DATA_YEAR = '2025'
 RESULTS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CACHE_PATH = os.path.join(DATA_DIR, 'optimizer_cache.json')
-
-H = 8760
-DATA_YEAR = '2025'
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
-RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
-CCS_RESIDUAL_EMISSION_RATE = 0.037  # tCO2/MWh after 90% capture
-
-# Battery / LDES parameters (must match optimizer)
-BATTERY_EFFICIENCY = 0.85
-BATTERY_DURATION_HOURS = 4
-LDES_EFFICIENCY = 0.50
-LDES_DURATION_HOURS = 100
-LDES_WINDOW_DAYS = 7
-
-# 8hr battery parameters (must match step1)
-BATTERY8_EFFICIENCY = 0.85
-BATTERY8_DURATION_HOURS = 8
-
-HYDRO_CAPS = {
-    'CAISO': 30, 'ERCOT': 5, 'PJM': 15, 'NYISO': 40, 'NEISO': 30,
-}
-
-# Existing clean generation shares (% of total generation) — from step4 GRID_MIX_SHARES
-GRID_MIX_SHARES = {
-    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'ccs_ccgt': 0, 'hydro': 9.5},
-    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'ccs_ccgt': 0, 'hydro': 0.1},
-    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
-    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
-    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
-}
-
-# Threshold above which all coal and oil have retired — only gas CCGT remains
-COAL_OIL_RETIREMENT_THRESHOLD = 70.0  # % clean energy
-
-# 2025 base demand (TWh) per ISO — from EIA demand profiles
-BASE_DEMAND_TWH = {
-    'CAISO': 224.0, 'ERCOT': 488.0, 'PJM': 843.3, 'NYISO': 151.6, 'NEISO': 115.3,
-}
-
-# 2025 absolute coal and oil generation caps (TWh) — no new coal/oil is built
-# These are the max dispatch levels from 2025 EIA hourly data.
-# As demand grows, coal/oil stay at these absolute levels; only gas expands.
-COAL_CAP_TWH = {
-    'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00, 'NEISO': 0.31,
-}
-OIL_CAP_TWH = {
-    'CAISO': 0.60, 'ERCOT': 0.00, 'PJM': 4.59, 'NYISO': 0.15, 'NEISO': 1.29,
-}
-
-
-def compute_dispatch_stack_emission_rate(iso, clean_pct, emission_rates, fossil_mix,
-                                          demand_growth_factor=1.0):
-    """
-    Compute emission rates using the dispatch-stack retirement model.
-
-    Returns TWO rates:
-    - displaced_rate: weighted average of all DISPLACED fossil fuels (for CO2 calculation)
-    - remaining_rate: rate of the REMAINING fossil fleet (for marginal analysis)
-
-    Coal and oil are capped at 2025 absolute TWh levels — no new coal/oil is built.
-    Under demand growth, only gas expands, so coal/oil shares naturally shrink.
-
-    Args:
-        iso: ISO region name
-        clean_pct: Clean energy percentage (0-100) for this scenario
-        emission_rates: eGRID per-fuel emission rates dict
-        fossil_mix: EIA fossil mix data (annual average shares within fossil)
-        demand_growth_factor: multiplier on base demand (1.0 = no growth, 1.5 = 50% growth)
-
-    Returns:
-        displaced_rate: tCO₂/MWh weighted avg of displaced fossil (use for CO2 abated calc)
-        retirement_info: dict with displaced/remaining TWh, both rates, diagnostics
-    """
-    regional_data = emission_rates.get(iso, {})
-    coal_rate = regional_data.get('coal_co2_lb_per_mwh', 0.0) / 2204.62  # lb → metric tons
-    gas_rate = regional_data.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
-    oil_rate = regional_data.get('oil_co2_lb_per_mwh', 0.0) / 2204.62
-
-    # Work in absolute TWh for coal/oil caps
-    base_demand_twh = BASE_DEMAND_TWH.get(iso, 0)
-    grown_demand_twh = base_demand_twh * demand_growth_factor
-
-    # Total fossil TWh at this clean %
-    fossil_pct = (100.0 - clean_pct) / 100.0
-    fossil_twh = grown_demand_twh * fossil_pct
-
-    # Coal and oil capped at 2025 absolute levels — no new build
-    coal_cap = COAL_CAP_TWH.get(iso, 0)
-    oil_cap = OIL_CAP_TWH.get(iso, 0)
-
-    # Baseline clean % from existing grid mix
-    baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
-
-    if fossil_twh <= 0.01 or clean_pct >= 100:
-        # 100% clean — all fossil displaced. Return weighted avg of entire fossil fleet.
-        total_fossil_twh = grown_demand_twh * (100.0 - baseline_clean) / 100.0
-        coal_twh = min(coal_cap, total_fossil_twh)
-        oil_twh = min(oil_cap, max(0, total_fossil_twh - coal_twh))
-        gas_twh = max(0, total_fossil_twh - coal_twh - oil_twh)
-        if total_fossil_twh > 0.01:
-            rate = (coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate) / total_fossil_twh
-        else:
-            rate = gas_rate
-        return rate, {
-            'coal_displaced_twh': round(coal_twh, 2),
-            'oil_displaced_twh': round(oil_twh, 2),
-            'gas_displaced_twh': round(gas_twh, 2),
-            'displaced_rate_tco2_mwh': round(rate, 4),
-            'remaining_rate_tco2_mwh': 0,
-            'demand_growth_factor': demand_growth_factor,
-        }
-
-    # Fossil fleet composition (coal/oil capped, gas fills remainder)
-    coal_twh = min(coal_cap, fossil_twh)
-    remaining_fossil = fossil_twh - coal_twh
-    oil_twh = min(oil_cap, remaining_fossil)
-    gas_twh = max(0, fossil_twh - coal_twh - oil_twh)
-
-    additional_clean_twh = max(0, (clean_pct - baseline_clean) / 100.0 * grown_demand_twh)
-
-    # Above 70% clean: force all coal and oil retired
-    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        coal_displaced = coal_cap
-        oil_displaced = oil_cap
-        gas_displaced = max(0, additional_clean_twh - coal_cap - oil_cap)
-        total_displaced = coal_displaced + oil_displaced + gas_displaced
-
-        if total_displaced > 0.01:
-            displaced_rate = (coal_displaced * coal_rate + oil_displaced * oil_rate +
-                              gas_displaced * gas_rate) / total_displaced
-        else:
-            displaced_rate = gas_rate
-
-        return displaced_rate, {
-            'coal_displaced_twh': round(coal_displaced, 2),
-            'oil_displaced_twh': round(oil_displaced, 2),
-            'gas_displaced_twh': round(gas_displaced, 2),
-            'gas_remaining_twh': round(max(0, fossil_twh - additional_clean_twh + (fossil_twh - coal_twh - oil_twh - gas_twh)), 2),
-            'displaced_rate_tco2_mwh': round(displaced_rate, 4),
-            'remaining_rate_tco2_mwh': round(gas_rate, 4),
-            'forced_gas_only': True,
-            'demand_growth_factor': demand_growth_factor,
-        }
-
-    # Merit-order displacement in TWh: coal first, then oil, then gas
-    coal_displaced = min(additional_clean_twh, coal_twh)
-    remaining = additional_clean_twh - coal_displaced
-    oil_displaced = min(remaining, oil_twh)
-    remaining = remaining - oil_displaced
-    gas_displaced = min(remaining, gas_twh)
-
-    total_displaced = coal_displaced + oil_displaced + gas_displaced
-
-    # Weighted average rate of DISPLACED fossil (for CO2 abated calculation)
-    if total_displaced > 0.01:
-        displaced_rate = (coal_displaced * coal_rate + oil_displaced * oil_rate +
-                          gas_displaced * gas_rate) / total_displaced
-    else:
-        # No displacement yet (clean_pct <= baseline_clean)
-        # Use the full fossil fleet rate as fallback
-        displaced_rate = (coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate) / fossil_twh
-
-    # Remaining fossil fleet rate (for marginal/informational purposes)
-    coal_remaining = coal_twh - coal_displaced
-    oil_remaining = oil_twh - oil_displaced
-    gas_remaining = gas_twh - gas_displaced
-    fossil_remaining = coal_remaining + oil_remaining + gas_remaining
-
-    if fossil_remaining > 0.01:
-        remaining_rate = (coal_remaining * coal_rate + oil_remaining * oil_rate +
-                          gas_remaining * gas_rate) / fossil_remaining
-    else:
-        remaining_rate = gas_rate
-
-    return displaced_rate, {
-        'coal_displaced_twh': round(coal_displaced, 2),
-        'oil_displaced_twh': round(oil_displaced, 2),
-        'gas_displaced_twh': round(gas_displaced, 2),
-        'coal_remaining_twh': round(coal_remaining, 2),
-        'oil_remaining_twh': round(oil_remaining, 2),
-        'gas_remaining_twh': round(gas_remaining, 2),
-        'fossil_remaining_twh': round(fossil_remaining, 2),
-        'displaced_rate_tco2_mwh': round(displaced_rate, 4),
-        'remaining_rate_tco2_mwh': round(remaining_rate, 4),
-        'demand_growth_factor': demand_growth_factor,
-    }
 
 
 def load_data():
     """Load all required data files."""
-    with open(os.path.join(DATA_DIR, 'eia_demand_profiles.json')) as f:
-        demand_data = json.load(f)
-
-    with open(os.path.join(DATA_DIR, 'eia_generation_profiles.json')) as f:
-        gen_profiles = json.load(f)
-
-    with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
-        emission_rates = json.load(f)
-
-    with open(os.path.join(DATA_DIR, 'eia_fossil_mix.json')) as f:
-        fossil_mix = json.load(f)
-
-    return demand_data, gen_profiles, emission_rates, fossil_mix
-
-
-def get_supply_profiles(iso, gen_profiles):
-    """Get generation shape profiles (must match optimizer's function)."""
-    profiles = {}
-    profiles['clean_firm'] = [1.0 / H] * H
-
-    if iso == 'NYISO':
-        p = gen_profiles[iso][DATA_YEAR].get('solar_proxy')
-        if not p:
-            p = gen_profiles['NEISO'][DATA_YEAR].get('solar')
-        profiles['solar'] = p[:H]
-    else:
-        profiles['solar'] = gen_profiles[iso][DATA_YEAR].get('solar', [0.0] * H)[:H]
-
-    profiles['wind'] = gen_profiles[iso][DATA_YEAR].get('wind', [0.0] * H)[:H]
-    profiles['ccs_ccgt'] = [1.0 / H] * H
-    profiles['hydro'] = gen_profiles[iso][DATA_YEAR].get('hydro', [0.0] * H)[:H]
-
-    for rtype in RESOURCE_TYPES:
-        if len(profiles[rtype]) > H:
-            profiles[rtype] = profiles[rtype][:H]
-        elif len(profiles[rtype]) < H:
-            profiles[rtype] = profiles[rtype] + [0.0] * (H - len(profiles[rtype]))
-
-    return profiles
+    return load_common_data()
 
 
 def get_emission_rate_for_threshold(iso, threshold_pct, emission_rates, fossil_mix):
-    """
-    Get the single emission rate (tCO₂/MWh) for a given clean energy threshold.
-
-    Uses the dispatch-stack retirement model: coal retires first, then oil, then gas.
-    Above 70% clean, emission rate = gas CCGT only.
-
-    Returns: (emission_rate, retirement_info)
-    """
+    """Get the single emission rate (tCO₂/MWh) for a given clean energy threshold."""
     return compute_dispatch_stack_emission_rate(iso, threshold_pct, emission_rates, fossil_mix)
 
 
 def compute_hourly_fossil_displacement(demand_norm, supply_profiles, resource_pcts,
                                         procurement_pct, battery_dispatch_pct, ldes_dispatch_pct):
+    """Reconstruct hourly clean supply and compute fossil displacement at each hour.
+
+    Thin wrapper around dispatch_utils.reconstruct_hourly_dispatch that preserves
+    the original return signature (fossil_displaced, ccs_supply, curtailed).
     """
-    Reconstruct hourly clean supply and compute fossil displacement at each hour.
+    # Original recompute_co2 didn't handle battery8 — pass 0 for backward compat
+    result = reconstruct_hourly_dispatch(
+        demand_norm, supply_profiles, resource_pcts,
+        procurement_pct, battery_dispatch_pct,
+        0,  # battery8 not used in original CO2 model
+        ldes_dispatch_pct)
 
-    For each hour: fossil_displaced[h] = min(demand[h], total_clean_supply[h])
-    where total_clean_supply includes battery/LDES dispatch.
-
-    Returns:
-        fossil_displaced: numpy array (H,) — MWh of fossil displaced at each hour (normalized)
-        ccs_supply: numpy array (H,) — CCS-CCGT supply at each hour (for partial credit)
-        curtailed: numpy array (H,) — curtailed energy at each hour
-    """
-    procurement_factor = procurement_pct / 100.0
-    demand_arr = np.array(demand_norm[:H], dtype=np.float64)
-
-    # Build total supply profile from resource mix
-    supply_total = np.zeros(H, dtype=np.float64)
-    ccs_supply = np.zeros(H, dtype=np.float64)
-
-    for rtype in RESOURCE_TYPES:
-        pct = resource_pcts.get(rtype, 0)
-        if pct <= 0:
-            continue
-        profile = np.array(supply_profiles[rtype][:H], dtype=np.float64)
-        contribution = procurement_factor * (pct / 100.0) * profile
-        supply_total += contribution
-        if rtype == 'ccs_ccgt':
-            ccs_supply = contribution.copy()
-
-    # Battery daily-cycle dispatch (simplified reconstruction)
-    residual_surplus = np.maximum(0.0, supply_total - demand_arr)
-    residual_gap = np.maximum(0.0, demand_arr - supply_total)
-
-    battery_dispatch_profile = np.zeros(H, dtype=np.float64)
-    if battery_dispatch_pct > 0:
-        batt_dispatch_total = battery_dispatch_pct / 100.0
-        num_days = H // 24
-        daily_dispatch_target = batt_dispatch_total / num_days
-        batt_power_rating = daily_dispatch_target / BATTERY_DURATION_HOURS
-
-        for day in range(num_days):
-            ds = day * 24
-            de = ds + 24
-            day_surplus = residual_surplus[ds:de].copy()
-            day_gap = residual_gap[ds:de].copy()
-
-            max_from_charge = day_surplus.sum() * BATTERY_EFFICIENCY
-            actual_dispatch = min(daily_dispatch_target, max_from_charge, day_gap.sum())
-            if actual_dispatch <= 0:
-                continue
-
-            required_charge = actual_dispatch / BATTERY_EFFICIENCY
-
-            # Charge from largest surpluses
-            sorted_idx = np.argsort(-day_surplus)
-            remaining_charge = required_charge
-            for idx in sorted_idx:
-                if remaining_charge <= 0 or day_surplus[idx] <= 0:
-                    break
-                amt = min(float(day_surplus[idx]), batt_power_rating, remaining_charge)
-                residual_surplus[ds + idx] -= amt
-                remaining_charge -= amt
-
-            # Discharge to largest gaps
-            sorted_gap = np.argsort(-day_gap)
-            remaining_dispatch = actual_dispatch
-            for idx in sorted_gap:
-                if remaining_dispatch <= 0 or day_gap[idx] <= 0:
-                    break
-                amt = min(float(day_gap[idx]), batt_power_rating, remaining_dispatch)
-                battery_dispatch_profile[ds + idx] = amt
-                residual_gap[ds + idx] -= amt
-                remaining_dispatch -= amt
-
-    # LDES dispatch (simplified reconstruction)
-    ldes_dispatch_profile = np.zeros(H, dtype=np.float64)
-    if ldes_dispatch_pct > 0:
-        total_demand_energy = demand_arr.sum()
-        ldes_energy_capacity = total_demand_energy * (24.0 / H)
-        ldes_power_rating = ldes_energy_capacity / LDES_DURATION_HOURS
-        state_of_charge = 0.0
-        window_hours = LDES_WINDOW_DAYS * 24
-
-        num_windows = (H + window_hours - 1) // window_hours
-        for w in range(num_windows):
-            w_start = w * window_hours
-            w_end = min(w_start + window_hours, H)
-
-            w_surplus = residual_surplus[w_start:w_end].copy()
-            w_gap = residual_gap[w_start:w_end].copy()
-
-            # Charge
-            surplus_indices = np.argsort(-w_surplus)
-            for idx in surplus_indices:
-                if w_surplus[idx] <= 0:
-                    break
-                space = ldes_energy_capacity - state_of_charge
-                if space <= 0:
-                    break
-                charge_amt = min(float(w_surplus[idx]), ldes_power_rating, space)
-                if charge_amt > 0:
-                    state_of_charge += charge_amt
-
-            # Discharge
-            gap_indices = np.argsort(-w_gap)
-            for idx in gap_indices:
-                if w_gap[idx] <= 0:
-                    break
-                avail = state_of_charge * LDES_EFFICIENCY
-                if avail <= 0:
-                    break
-                dispatch_amt = min(float(w_gap[idx]), ldes_power_rating, avail)
-                if dispatch_amt > 0:
-                    ldes_dispatch_profile[w_start + idx] = dispatch_amt
-                    state_of_charge -= dispatch_amt / LDES_EFFICIENCY
-                    residual_gap[w_start + idx] -= dispatch_amt
-
-    # Total clean supply including storage dispatch
-    total_clean = supply_total + battery_dispatch_profile + ldes_dispatch_profile
-
-    # Fossil displaced = demand met by clean energy at each hour
-    fossil_displaced = np.minimum(demand_arr, total_clean)
-
-    # Curtailed = clean supply exceeding demand
-    curtailed = np.maximum(0.0, total_clean - demand_arr)
-
-    return fossil_displaced, ccs_supply, curtailed
+    return result['fossil_displaced'], result['ccs_supply'], result['curtailed']
 
 
 def compute_co2_hourly(fossil_displaced, ccs_supply, emission_rate, demand_total_mwh,
                        retirement_info=None):
-    """
-    Compute CO₂ abated using dispatch-stack emission rate.
-
-    fossil_displaced: normalized hourly fossil displacement (sums to ~matched_fraction)
-    ccs_supply: normalized hourly CCS-CCGT supply
-    emission_rate: single tCO₂/MWh rate for the remaining fossil fleet at this threshold
-    demand_total_mwh: total annual demand in MWh (to denormalize)
-    retirement_info: optional dict with fuel retirement diagnostics
-
-    For clean resources: each displaced MWh avoids emission_rate tons CO₂
-    For CCS-CCGT: each MWh avoids (emission_rate - residual) tons CO₂
-    """
+    """Compute CO₂ abated using dispatch-stack emission rate."""
     scale = demand_total_mwh
 
-    # Non-CCS clean displacement (fossil_displaced minus CCS portion)
     non_ccs_displaced = np.maximum(0.0, fossil_displaced - np.minimum(fossil_displaced, ccs_supply))
     ccs_displaced = np.minimum(fossil_displaced, ccs_supply)
 
-    # CO₂ from non-CCS clean: full credit at threshold emission rate
     co2_clean = np.sum(non_ccs_displaced) * emission_rate * scale
-
-    # CO₂ from CCS: partial credit (emission_rate - residual)
     ccs_credit = max(0.0, emission_rate - CCS_RESIDUAL_EMISSION_RATE)
     co2_ccs = np.sum(ccs_displaced) * ccs_credit * scale
 
     total_abated = co2_clean + co2_ccs
-
-    # Summary stats
     matched_mwh = np.sum(fossil_displaced) * scale
     co2_rate = total_abated / matched_mwh if matched_mwh > 0 else 0
 
@@ -455,12 +106,7 @@ def compute_co2_hourly(fossil_displaced, ccs_supply, emission_rate, demand_total
 
 
 def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, fossil_mix):
-    """
-    Recompute CO₂ for all results using dispatch-stack retirement model.
-    Emission rates are threshold-dependent: coal retires first, then oil, then gas.
-    Above 70% clean, only gas CCGT remains.
-    Updates results_data in-place.
-    """
+    """Recompute CO₂ for all results using dispatch-stack retirement model."""
     start = time.time()
 
     for iso in ISOS:
@@ -479,7 +125,6 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
         supply_profiles = get_supply_profiles(iso, gen_profiles)
         demand_total_mwh = iso_data.get('annual_demand_mwh', demand_total_mwh_fallback)
 
-        # Log dispatch-stack emission rates at key thresholds
         baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
         print(f"\n  {iso} (baseline clean: {baseline_clean:.1f}%):")
         print(f"    Dispatch-stack emission rates (tCO₂/MWh):")
@@ -499,18 +144,14 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
                 ldes = sweep_result.get('ldes_dispatch_pct', 0)
                 match_score = sweep_result.get('hourly_match_score', 0)
 
-                # Use match score as the clean % for dispatch-stack
                 rate, info = get_emission_rate_for_threshold(
-                    iso, match_score, emission_rates, fossil_mix
-                )
+                    iso, match_score, emission_rates, fossil_mix)
 
                 fossil_displaced, ccs_supply, curtailed = compute_hourly_fossil_displacement(
-                    demand_norm, supply_profiles, resource_mix, proc, batt, ldes
-                )
+                    demand_norm, supply_profiles, resource_mix, proc, batt, ldes)
 
                 co2 = compute_co2_hourly(
-                    fossil_displaced, ccs_supply, rate, demand_total_mwh, info
-                )
+                    fossil_displaced, ccs_supply, rate, demand_total_mwh, info)
                 sweep_result['co2_abated'] = co2
                 sweep_result['curtailed_mwh'] = round(float(np.sum(curtailed)) * demand_total_mwh, 0)
 
@@ -522,18 +163,14 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
             threshold_pct = float(t_str)
             scenarios = t_data.get('scenarios', {})
 
-            # Get emission rate for this threshold (dispatch-stack model)
             rate, info = get_emission_rate_for_threshold(
-                iso, threshold_pct, emission_rates, fossil_mix
-            )
+                iso, threshold_pct, emission_rates, fossil_mix)
 
-            # Always recompute Medium scenario (9-dim key: RFBL_FF_TX_CCSq45_GEO)
             med_key = 'MMMM_M_M_M1_M' if iso == 'CAISO' else 'MMMM_M_M_M1_X'
-            # Fallback to old key formats
             actual_med_key = None
             for mk_candidate in [med_key,
-                                 'MMM_M_M_M1_M', 'MMM_M_M_M1_X',  # 8-dim legacy
-                                 'MMM_M_M']:  # 5-dim legacy
+                                 'MMM_M_M_M1_M', 'MMM_M_M_M1_X',
+                                 'MMM_M_M']:
                 if mk_candidate in scenarios:
                     actual_med_key = mk_candidate
                     break
@@ -545,19 +182,13 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
                 ldes = result.get('ldes_dispatch_pct', 0)
 
                 fossil_displaced, ccs_supply, curtailed = compute_hourly_fossil_displacement(
-                    demand_norm, supply_profiles, resource_mix, proc, batt, ldes
-                )
+                    demand_norm, supply_profiles, resource_mix, proc, batt, ldes)
 
                 co2 = compute_co2_hourly(
-                    fossil_displaced, ccs_supply, rate, demand_total_mwh, info
-                )
+                    fossil_displaced, ccs_supply, rate, demand_total_mwh, info)
                 result['co2_abated'] = co2
                 result['curtailed_mwh'] = round(float(np.sum(curtailed)) * demand_total_mwh, 0)
 
-                # Under dispatch-stack model, fuel price sensitivity no longer shifts
-                # emission rates (coal/oil retired above 70%, no switching possible).
-                # Below 70%, the stack determines composition, not fuel prices.
-                # Store the single rate for all fuel scenarios.
                 result['co2_abated_fuel_sensitivity'] = {
                     'Low': co2,
                     'Medium': co2,
@@ -566,7 +197,6 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
 
                 recomputed += 1
 
-            # For non-Medium scenarios, same emission rate (threshold-dependent, not fuel-dependent)
             for sk, result in scenarios.items():
                 if sk == actual_med_key:
                     continue
@@ -577,12 +207,10 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
                 ldes = result.get('ldes_dispatch_pct', 0)
 
                 fossil_displaced, ccs_supply, curtailed = compute_hourly_fossil_displacement(
-                    demand_norm, supply_profiles, resource_mix, proc, batt, ldes
-                )
+                    demand_norm, supply_profiles, resource_mix, proc, batt, ldes)
 
                 co2 = compute_co2_hourly(
-                    fossil_displaced, ccs_supply, rate, demand_total_mwh, info
-                )
+                    fossil_displaced, ccs_supply, rate, demand_total_mwh, info)
                 result['co2_abated'] = co2
                 recomputed += 1
 
@@ -599,11 +227,9 @@ def main():
     print("  CO₂ RECOMPUTATION — Hourly Fossil-Fuel Emission Rates")
     print("=" * 70)
 
-    # Load data
     print("\n  Loading data...")
     demand_data, gen_profiles, emission_rates, fossil_mix = load_data()
 
-    # Load results
     if not os.path.exists(RESULTS_PATH):
         print(f"  ERROR: Results file not found: {RESULTS_PATH}")
         sys.exit(1)
@@ -612,20 +238,15 @@ def main():
         results_data = json.load(f)
     print(f"  Loaded results: {RESULTS_PATH}")
 
-    # Check which ISOs are present
     isos_present = [iso for iso in ISOS if iso in results_data.get('results', {})]
     print(f"  ISOs in results: {isos_present}")
 
-    # Recompute all CO₂
     results_data = recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, fossil_mix)
 
-    # Save updated results
     with open(RESULTS_PATH, 'w') as f:
         json.dump(results_data, f)
     print(f"\n  Updated: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
 
-    # Cache is LOCKED — do not modify
-    # CO2 data is only written to the dashboard results file
     print(f"  Cache ({CACHE_PATH}) is locked — skipped")
 
     print(f"\n{'='*70}")
