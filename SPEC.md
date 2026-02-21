@@ -1238,10 +1238,45 @@ ldes_levels  = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]  # 11 levels
 **Combo count**: 20 × 20 × 11 = **4,400** storage combos per mix (vs. old 7³ = 343 → **12.8×** increase).
 
 **Implementation notes**:
-- Storage levels change from integer to float → parquet schema must use `pa.float64()` for `battery_dispatch_pct`, `battery8_dispatch_pct`, `ldes_dispatch_pct`
+- Storage levels change from integer to float → parquet schema uses `pa.float64()` for `battery_dispatch_pct`, `battery8_dispatch_pct`, `ldes_dispatch_pct`
 - All downstream code (Step 2 EF, Step 3 cost, Step 4 postprocess, dashboard) must handle float storage values
 - Existing cache with integer storage values must be preserved and converted on merge
-- The compute increase (12.8×) is offset by the fact that most storage combos will hit early-stopping (oversized configs produce no additional dispatch)
+
+### 6.4 Storage Sweep Optimizations — SOC Pre-Screen + Dominance Pruning (Feb 21, 2026)
+
+The 12.8× increase in nominal storage combos is offset by three optimizations that eliminate 80-95% of evaluations:
+
+#### 1. SOC Pre-Screen (Per-Mix Battery Cap)
+
+Before running the full storage dispatch loop, compute the **maximum state of charge** each storage type would reach with **unlimited capacity** at max procurement. This is a single fast pass over the year — no capacity constraint means no nested binary search.
+
+```python
+# For bat4/bat8: daily cycle — find peak-day SOC
+_compute_max_daily_battery_soc(demand, supply_row, max_pf, eff, duration)
+→ (max_soc, total_dispatch)
+
+# For LDES: multi-day window — find peak-window SOC
+_compute_max_ldes_soc(demand, supply_row, max_pf, eff, window_hours)
+→ (max_soc, total_dispatch)
+```
+
+The `max_soc` is the **ceiling** — any storage level above this is pure idle capacity. Storage levels are filtered to `level ≤ max_soc × 1.1` (10% margin for procurement variation). For typical high-RE mixes:
+- bat4/bat8: max_soc ≈ 0.5-1.2% → filters 20 levels down to 4-8 effective levels
+- LDES: max_soc > 20% → little filtering (expected — LDES is capacity-hungry)
+
+If `total_dispatch` is zero for all three types, the mix has no curtailment to harness and is skipped entirely.
+
+#### 2. Dominance Pruning (Early Stop on Storage Levels)
+
+Within the LDES innermost loop, once a level achieves feasibility at procurement P, the next level is tested. If it achieves feasibility at the same or higher P, higher LDES levels are **dominated** — they add cost (more capacity) without reducing procurement. The LDES sweep breaks at that point.
+
+This captures the key physics: beyond a certain LDES capacity, the added energy is marginal (the charging window is full, or the remaining gaps are too small for LDES power rating to serve).
+
+#### 3. Curtailment Guard
+
+A mix with no surplus at max procurement gets zero dispatch from any storage type. The SOC pre-screen naturally catches this (total_dispatch = 0 → skip), but it's explicitly checked as an early exit before allocating the effective level arrays.
+
+**Net effect**: The 4,400 nominal combos per mix typically reduce to ~200-600 actual evaluations, making the refined grid computationally comparable to the old 343-combo grid while providing 10-20× finer resolution in the battery saturation zone.
 
 ---
 
