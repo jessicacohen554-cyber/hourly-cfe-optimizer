@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Pipeline Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body { background: #0B1120; }
+
+/* ========== FOOTER ========== */
+.page-footer {
+    background: #0F1A2E;
+    color: rgba(255,255,255,0.7);
+    padding: 32px 24px;
+    text-align: center;
+}
+.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
+.footer-links a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 4px;
+}
+.footer-links a:hover { color: #ffffff; }
+.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+
+.bottom-banner {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+
+/* ========== HERO ========== */
+.hero-section {
+    background: linear-gradient(180deg, #0B1120 0%, #0F1D35 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 56px 24px 48px;
+}
+.hero-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 25% 15%, rgba(14,165,233,0.1) 0%, transparent 55%),
+                radial-gradient(ellipse at 75% 85%, rgba(34,197,94,0.06) 0%, transparent 55%);
+    pointer-events: none;
+}
+.hero-inner {
+    position: relative;
+    max-width: 1320px;
+    margin: 0 auto;
+}
+.hero-kicker {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #0EA5E9;
+    margin-bottom: 12px;
+}
+.hero-inner h1 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 20px;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+}
+.hero-inner h1 span.accent { color: #0EA5E9; }
+.hero-inner p.hero-desc {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.75;
+    max-width: 740px;
+    margin-bottom: 0;
+}
+
+/* ========== PIPELINE OVERVIEW STATS ========== */
+.stats-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+}
+.stat-card {
+    background: rgba(15,26,46,0.8);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    min-width: 130px;
+    flex: 1;
+}
+.stat-value {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.stat-value.blue { color: #38bdf8; }
+.stat-value.green { color: #4ade80; }
+.stat-value.amber { color: #fbbf24; }
+.stat-value.red { color: #f87171; }
+.stat-value.purple { color: #c084fc; }
+.stat-label {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+    line-height: 1.3;
+}
+
+/* ========== PIPELINE DIAGRAM ========== */
+.pipeline-diagram-section {
+    background: #0B1120;
+    padding: 48px 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.pipeline-diagram-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+}
+.section-heading {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+}
+.section-subheading {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 32px;
+    line-height: 1.6;
+}
+
+/* ========== FLOW DIAGRAM (CSS-based) ========== */
+.flow-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+}
+.flow-step {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 0;
+    position: relative;
+}
+.flow-track {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+.flow-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #fff;
+    z-index: 2;
+    flex-shrink: 0;
+    border: 2px solid;
+}
+.flow-dot.step-physics { background: rgba(14,165,233,0.2); border-color: #0EA5E9; }
+.flow-dot.step-frontier { background: rgba(34,197,94,0.2); border-color: #22C55E; }
+.flow-dot.step-cost { background: rgba(245,158,11,0.2); border-color: #F59E0B; }
+.flow-dot.step-post { background: rgba(239,68,68,0.2); border-color: #EF4444; }
+.flow-dot.step-parallel { background: rgba(192,132,252,0.2); border-color: #c084fc; }
+.flow-dot.step-final { background: rgba(14,165,233,0.2); border-color: #0EA5E9; }
+
+.flow-line {
+    width: 2px;
+    flex: 1;
+    min-height: 20px;
+}
+.flow-line.line-physics { background: linear-gradient(180deg, #0EA5E9, #22C55E); }
+.flow-line.line-frontier { background: linear-gradient(180deg, #22C55E, #F59E0B); }
+.flow-line.line-cost { background: linear-gradient(180deg, #F59E0B, #EF4444); }
+.flow-line.line-post { background: linear-gradient(180deg, #EF4444, #c084fc); }
+.flow-line.line-parallel { background: linear-gradient(180deg, #c084fc, #0EA5E9); }
+
+.flow-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin: 0 0 16px;
+    transition: border-color 0.3s, background 0.3s;
+}
+.flow-card:hover {
+    border-color: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.07);
+}
+.flow-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.flow-card h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1.2;
+}
+.flow-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.flow-tag-hours { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
+.flow-tag-minutes { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
+.flow-tag-seconds { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
+
+.flow-card p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+    margin: 0 0 12px;
+}
+.flow-card p:last-child { margin-bottom: 0; }
+
+.flow-files {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+}
+.flow-file {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+.flow-file-label {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+}
+.flow-file-label.in {
+    background: rgba(14,165,233,0.15);
+    border: 1px solid rgba(14,165,233,0.3);
+    color: #38bdf8;
+}
+.flow-file-label.out {
+    background: rgba(34,197,94,0.15);
+    border: 1px solid rgba(34,197,94,0.3);
+    color: #4ade80;
+}
+.flow-file-path {
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: rgba(255,255,255,0.55);
+    word-break: break-all;
+}
+
+/* ========== PARALLEL SECTION ========== */
+.parallel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 0 0 16px;
+}
+
+/* ========== TRACK SYSTEM SECTION ========== */
+.tracks-section {
+    background: #0B1120;
+    padding: 48px 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.tracks-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+}
+.track-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+}
+.track-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 28px;
+    transition: border-color 0.3s, background 0.3s;
+}
+.track-card:hover {
+    border-color: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.07);
+}
+.track-card h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 8px;
+}
+.track-card p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+    margin: 0 0 12px;
+}
+.track-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.track-card li {
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.55);
+    padding: 4px 0;
+    padding-left: 16px;
+    position: relative;
+}
+.track-card li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.track-card.baseline li::before { background: #0EA5E9; }
+.track-card.newbuild li::before { background: #4ade80; }
+.track-card.ctr li::before { background: #fbbf24; }
+
+.track-card .track-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+.track-tag-blue { background: rgba(14,165,233,0.15); border: 1px solid rgba(14,165,233,0.3); color: #38bdf8; }
+.track-tag-green { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
+.track-tag-amber { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
+
+/* ========== DATA CONTRACT ========== */
+.contract-section {
+    background: linear-gradient(180deg, #0B1120 0%, #0F1A2E 100%);
+    padding: 48px 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.contract-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+}
+.contract-table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.contract-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+.contract-table th {
+    background: rgba(14,165,233,0.1);
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    padding: 12px 16px;
+    text-align: left;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    white-space: nowrap;
+}
+.contract-table td {
+    padding: 10px 16px;
+    color: rgba(255,255,255,0.6);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    vertical-align: top;
+}
+.contract-table tr:hover td {
+    background: rgba(255,255,255,0.03);
+}
+.contract-table code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.06);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* ========== RESPONSIVE ========== */
+html, body { overflow-x: hidden; max-width: 100vw; }
+
+@media (max-width: 900px) {
+    .hero-section { padding: 36px 16px; }
+    .hero-inner h1 { font-size: 1.6rem; }
+    .stats-row { gap: 10px; }
+    .stat-card { min-width: 100px; padding: 12px 14px; }
+    .stat-value { font-size: 1.2rem; }
+
+    .pipeline-diagram-section,
+    .tracks-section,
+    .contract-section { padding: 32px 16px; }
+
+    .flow-step { grid-template-columns: 56px 1fr; }
+    .flow-dot { width: 32px; height: 32px; font-size: 0.72rem; }
+    .flow-card { padding: 16px 18px; }
+
+    .parallel-grid { grid-template-columns: 1fr; }
+    .track-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+    .stats-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+    .hero-inner h1 { font-size: 1.4rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== HERO ========== -->
+<section class="hero-section">
+<div class="hero-inner">
+    <div class="hero-kicker">Technical Reference</div>
+    <h1>Pipeline <span class="accent">Architecture</span></h1>
+    <p class="hero-desc">
+        The 8,760 Problem optimizer runs a 6-step pipeline that transforms hourly generation and demand curves into
+        co-optimized resource mixes and cost surfaces across 5 ISOs, 13 clean energy thresholds, and thousands of
+        cost sensitivity scenarios. This page documents every script, data file, and dependency in the pipeline.
+    </p>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value blue">6</div>
+            <div class="stat-label">Pipeline steps</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value green">5</div>
+            <div class="stat-label">Step 5 post-processors</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value amber">3</div>
+            <div class="stat-label">Analysis tracks</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value purple">21.4M</div>
+            <div class="stat-label">Physics solutions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value red">5,832</div>
+            <div class="stat-label">Cost scenarios / region</div>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ========== PIPELINE FLOW ========== -->
+<section class="pipeline-diagram-section">
+<div class="pipeline-diagram-inner">
+    <h2 class="section-heading">Core Pipeline</h2>
+    <p class="section-subheading">Steps 1&ndash;4 run sequentially. Step 1 is compute-intensive (hours); Steps 2&ndash;4 are cheap (seconds to minutes). Step 5 post-processors run in parallel. Step 6 exports all data for the dashboard.</p>
+
+    <div class="flow-container">
+
+        <!-- STEP 1 -->
+        <div class="flow-step">
+            <div class="flow-track">
+                <div class="flow-dot step-physics">1</div>
+                <div class="flow-line line-physics"></div>
+            </div>
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <h3>PFS Generator</h3>
+                    <span class="flow-tag flow-tag-hours">~4 hrs</span>
+                </div>
+                <p>
+                    <code>step1_pfs_generator.py</code> &mdash; Generates the Physics Feasible Space (PFS).
+                    4D adaptive grid search over clean_firm, solar, wind, and hydro resource fractions with
+                    procurement sweep. Battery daily-cycle dispatch (4hr, 85% RTE) and LDES multi-day dispatch
+                    (100hr, 50% RTE). Produces 21.4M physics-validated resource mixes across 13 thresholds and 5 ISOs.
+                </p>
+                <p style="color:rgba(239,68,68,0.8); font-size:0.8rem; font-weight:600;">
+                    Only re-run if dispatch logic, generation curves, or demand curves change.
+                </p>
+                <div class="flow-files">
+                    <div class="flow-file">
+                        <span class="flow-file-label in">IN</span>
+                        <span class="flow-file-path">data/eia_generation_profiles.json, data/eia_demand_profiles.json</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">data/physics_cache_v4.parquet</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">data/checkpoints_v4/ (incremental checkpoints)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 1.5 -->
+        <div class="flow-step">
+            <div class="flow-track">
+                <div class="flow-dot step-physics" style="font-size:0.65rem;">1.5</div>
+                <div class="flow-line line-physics"></div>
+            </div>
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <h3>Storage Re-Sweep</h3>
+                    <span class="flow-tag flow-tag-minutes">~10 min</span>
+                </div>
+                <p>
+                    <code>postprocess_storage_resweep.py</code> &mdash; Re-dispatches battery/LDES for mixes near
+                    EF boundary with finer procurement grid. Appends improved solutions to PFS cache.
+                </p>
+                <div class="flow-files">
+                    <div class="flow-file">
+                        <span class="flow-file-label in">IN</span>
+                        <span class="flow-file-path">data/physics_cache_v4.parquet</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">data/physics_cache_v4.parquet (appended rows)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="flow-step">
+            <div class="flow-track">
+                <div class="flow-dot step-frontier">2</div>
+                <div class="flow-line line-frontier"></div>
+            </div>
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <h3>Efficient Frontier</h3>
+                    <span class="flow-tag flow-tag-seconds">~30 sec</span>
+                </div>
+                <p>
+                    <code>step2_efficient_frontier.py</code> &mdash; Extracts the Efficient Frontier (EF)
+                    from the PFS. Filters by existing generation utilization, procurement minimization, and
+                    strict dominance removal. Reduces 21.4M solutions to ~1.8M Pareto-optimal mixes.
+                </p>
+                <div class="flow-files">
+                    <div class="flow-file">
+                        <span class="flow-file-label in">IN</span>
+                        <span class="flow-file-path">data/physics_cache_v4.parquet</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">data/pfs_post_ef.parquet</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="flow-step">
+            <div class="flow-track">
+                <div class="flow-dot step-cost">3</div>
+                <div class="flow-line line-cost"></div>
+            </div>
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <h3>Cost Optimization</h3>
+                    <span class="flow-tag flow-tag-minutes">~20 min</span>
+                </div>
+                <p>
+                    <code>step3_cost_optimization.py</code> &mdash; Vectorized cross-evaluation of EF mixes
+                    under 5,832 cost sensitivity combos per region (17,496 for CAISO). Merit-order tranche pricing
+                    for clean firm: uprate &rarr; geothermal &rarr; cheapest of nuclear/CCS. Demand growth sweep
+                    across 25 years &times; 3 growth rates.
+                </p>
+                <div class="flow-files">
+                    <div class="flow-file">
+                        <span class="flow-file-label in">IN</span>
+                        <span class="flow-file-path">data/pfs_post_ef.parquet</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">dashboard/overprocure_results.json</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">dashboard/overprocure_scenarios.parquet</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">data/optimizer_cache.json</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="flow-step">
+            <div class="flow-track">
+                <div class="flow-dot step-post">4</div>
+                <div class="flow-line line-post"></div>
+            </div>
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <h3>Post-Processing</h3>
+                    <span class="flow-tag flow-tag-seconds">~60 sec</span>
+                </div>
+                <p>
+                    <code>step4_postprocess.py</code> &mdash; Applies NEISO winter gas pipeline constraint
+                    (+$13.13/MWh CCS adder), 45Q tax credit correction ($27.5/MWh), without-45Q overlay,
+                    gas capacity backup pricing, and resource adequacy margin (15% RA).
+                    Also runs CCS vs LDES crossover analysis.
+                </p>
+                <div class="flow-files">
+                    <div class="flow-file">
+                        <span class="flow-file-label in">IN</span>
+                        <span class="flow-file-path">dashboard/overprocure_results.json</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">dashboard/overprocure_results.json (corrected)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 5: POST-PROCESSORS -->
+        <div class="flow-step">
+            <div class="flow-track">
+                <div class="flow-dot step-parallel">5</div>
+                <div class="flow-line line-parallel"></div>
+            </div>
+            <div>
+                <div class="flow-card" style="margin-bottom:8px;">
+                    <div class="flow-card-header">
+                        <h3>Post-Processors</h3>
+                    </div>
+                    <p>Run independently in parallel after Step 4. Each reads from Step 3/4 outputs and produces specialized analysis data.</p>
+                </div>
+                <div class="parallel-grid">
+                    <div class="flow-card">
+                        <div class="flow-card-header">
+                            <h3>CO&#8322; Recompute</h3>
+                            <span class="flow-tag flow-tag-seconds">~15 sec</span>
+                        </div>
+                        <p>
+                            <code>recompute_co2.py</code> &mdash; Dispatch-stack emission model. Merit-order
+                            retirement: coal first, then oil, then gas. Fast path uses pre-computed
+                            <code>hourly_match_score</code> (~1000x speedup). Numba-accelerated fallback for
+                            full hourly dispatch.
+                        </p>
+                        <div class="flow-files">
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">dashboard/overprocure_results.json</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">data/egrid_emission_rates.json, data/eia_fossil_mix.json</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label out">OUT</span>
+                                <span class="flow-file-path">dashboard/overprocure_results.json (CO&#8322; fields added)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-card">
+                        <div class="flow-card-header">
+                            <h3>MAC Statistics</h3>
+                            <span class="flow-tag flow-tag-seconds">~30 sec</span>
+                        </div>
+                        <p>
+                            <code>compute_mac_stats.py</code> &mdash; Computes 6 MAC metrics: average fan
+                            (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA
+                            sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS.
+                        </p>
+                        <div class="flow-files">
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">dashboard/overprocure_results.json</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label out">OUT</span>
+                                <span class="flow-file-path">dashboard/js/mac-stats-data.js</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-card">
+                        <div class="flow-card-header">
+                            <h3>LMP Pricing</h3>
+                            <span class="flow-tag flow-tag-seconds">~10 sec</span>
+                        </div>
+                        <p>
+                            <code>compute_lmp_prices.py</code> &mdash; Wholesale energy market simulation.
+                            Dispatch-stack LMP model with merit-order fuel retirement. Computes price distributions,
+                            nuclear breakeven analysis, and revenue adequacy metrics.
+                        </p>
+                        <div class="flow-files">
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">dashboard/overprocure_results.json</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">data/eia_generation_profiles.json, data/eia_demand_profiles.json</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label out">OUT</span>
+                                <span class="flow-file-path">dashboard/lmp_analysis_results.json</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-card">
+                        <div class="flow-card-header">
+                            <h3>Track Optimization</h3>
+                            <span class="flow-tag flow-tag-minutes">~5 min</span>
+                        </div>
+                        <p>
+                            <code>temp_track.py</code> &mdash; Runs cost optimization for NB (new-build) and
+                            CTR (cost-to-replace) analysis tracks. Same EF mixes, different cost assumptions
+                            and resource constraints.
+                        </p>
+                        <div class="flow-files">
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">data/pfs_post_ef.parquet</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label out">OUT</span>
+                                <span class="flow-file-path">dashboard/track_results.json</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-card">
+                        <div class="flow-card-header">
+                            <h3>Compressed Day Profiles</h3>
+                            <span class="flow-tag flow-tag-seconds">~10 sec</span>
+                        </div>
+                        <p>
+                            <code>step5_compressed_day.py</code> &mdash; Generates 24-hour representative day profiles
+                            from the full 8,760-hour dispatch data. Compact supply/demand curves for dashboard
+                            visualization of daily dispatch patterns.
+                        </p>
+                        <div class="flow-files">
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">dashboard/overprocure_results.json</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">data/eia_generation_profiles.json, data/eia_demand_profiles.json</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label out">OUT</span>
+                                <span class="flow-file-path">dashboard/compressed_day_profiles.json</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 6: SHARED DATA EXPORT -->
+        <div class="flow-step">
+            <div class="flow-track">
+                <div class="flow-dot step-final">6</div>
+            </div>
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <h3>Shared Data Export</h3>
+                    <span class="flow-tag flow-tag-seconds">~5 sec</span>
+                </div>
+                <p>
+                    <code>generate_shared_data.py</code> &mdash; Final pipeline step. Extracts all results into a single JavaScript
+                    module for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections,
+                    LCOE/transmission tables for client-side repricing. All dashboard pages read from this file.
+                </p>
+                <div class="flow-files">
+                    <div class="flow-file">
+                        <span class="flow-file-label in">IN</span>
+                        <span class="flow-file-path">dashboard/overprocure_results.json, dashboard/track_results.json</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label in">IN</span>
+                        <span class="flow-file-path">dashboard/overprocure_scenarios.parquet</span>
+                    </div>
+                    <div class="flow-file">
+                        <span class="flow-file-label out">OUT</span>
+                        <span class="flow-file-path">dashboard/js/shared-data.js</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /flow-container -->
+</div>
+</section>
+
+<!-- ========== TRACK SYSTEM ========== -->
+<section class="tracks-section">
+<div class="tracks-inner">
+    <h2 class="section-heading">Analysis Tracks</h2>
+    <p class="section-subheading">
+        Three analysis tracks share the same Physics Feasible Space but apply different resource constraints and cost assumptions.
+        All tracks read from <code style="font-family:'Consolas',monospace; font-size:0.82rem; color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">data/pfs_post_ef.parquet</code>.
+    </p>
+
+    <div class="track-grid">
+        <div class="track-card baseline">
+            <span class="track-tag track-tag-blue">Baseline</span>
+            <h3>Standard Optimization</h3>
+            <p>Full co-optimization with all resource types available. The primary analysis track used across the dashboard.</p>
+            <ul>
+                <li>All resources available: solar, wind, nuclear, CCS, hydro, battery, LDES</li>
+                <li>Hydro capped at existing regional capacity</li>
+                <li>Nuclear uprates included at reduced cost</li>
+                <li>5,832 cost scenarios per ISO/threshold</li>
+                <li>Script: <code style="font-family:'Consolas',monospace; font-size:0.75rem; color:rgba(255,255,255,0.6);">step3_cost_optimization.py</code></li>
+            </ul>
+        </div>
+
+        <div class="track-card newbuild">
+            <span class="track-tag track-tag-green">New-Build (NB)</span>
+            <h3>No Existing Resources</h3>
+            <p>What would a greenfield buyer build from scratch? Removes hydro (existing-only) and nuclear uprates.</p>
+            <ul>
+                <li>Hydro forced to 0% (not available for new-build)</li>
+                <li>Nuclear uprates OFF &mdash; only new-build nuclear at full LCOE</li>
+                <li>All other resources at new-build pricing</li>
+                <li>Shows the &ldquo;pure market&rdquo; optimum</li>
+                <li>Script: <code style="font-family:'Consolas',monospace; font-size:0.75rem; color:rgba(255,255,255,0.6);">temp_track.py</code> (NB mode)</li>
+            </ul>
+        </div>
+
+        <div class="track-card ctr">
+            <span class="track-tag track-tag-amber">Cost to Replace (CTR)</span>
+            <h3>Existing Fleet Replacement</h3>
+            <p>What does it cost to replace existing nuclear with alternatives? All resources at existing fleet prices, no uprates.</p>
+            <ul>
+                <li>All resources modeled as existing fleet (wholesale pricing)</li>
+                <li>Nuclear uprates OFF &mdash; existing capacity only</li>
+                <li>Hydro at existing regional capacity</li>
+                <li>Answers &ldquo;what&rsquo;s the cost if we lose this plant?&rdquo;</li>
+                <li>Script: <code style="font-family:'Consolas',monospace; font-size:0.75rem; color:rgba(255,255,255,0.6);">temp_track.py</code> (CTR mode)</li>
+            </ul>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ========== DATA CONTRACT ========== -->
+<section class="contract-section">
+<div class="contract-inner">
+    <h2 class="section-heading">Result Files &amp; Data Contract</h2>
+    <p class="section-subheading">
+        Every output file, its producer, consumers, and format. Step 3 must NOT change existing columns &mdash; only ADD new columns/fields.
+    </p>
+
+    <div class="contract-table-wrap">
+        <table class="contract-table">
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Format</th>
+                    <th>Producer</th>
+                    <th>Consumers</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>data/physics_cache_v4.parquet</code></td>
+                    <td>Parquet</td>
+                    <td>Step 1, Step 1.5</td>
+                    <td>Step 2</td>
+                    <td>21.4M physics-validated resource mixes with match scores and dispatch metrics</td>
+                </tr>
+                <tr>
+                    <td><code>data/pfs_post_ef.parquet</code></td>
+                    <td>Parquet</td>
+                    <td>Step 2</td>
+                    <td>Step 3, temp_track.py</td>
+                    <td>~1.8M Efficient Frontier mixes after dominance filtering</td>
+                </tr>
+                <tr>
+                    <td><code>dashboard/overprocure_results.json</code></td>
+                    <td>JSON</td>
+                    <td>Step 3, Step 4, CO&#8322;</td>
+                    <td>Step 5, CO&#8322;, MAC, LMP, shared-data</td>
+                    <td>Primary results: optimal mixes, costs, scores per ISO/threshold/scenario</td>
+                </tr>
+                <tr>
+                    <td><code>dashboard/overprocure_scenarios.parquet</code></td>
+                    <td>Parquet</td>
+                    <td>Step 3</td>
+                    <td>generate_shared_data.py</td>
+                    <td>513K scenario rows with hourly_match_score, resource_mix, costs</td>
+                </tr>
+                <tr>
+                    <td><code>data/optimizer_cache.json</code></td>
+                    <td>JSON</td>
+                    <td>Step 3</td>
+                    <td>External projects</td>
+                    <td>Full cached results for cross-project consumption</td>
+                </tr>
+                <tr>
+                    <td><code>dashboard/track_results.json</code></td>
+                    <td>JSON</td>
+                    <td>temp_track.py</td>
+                    <td>generate_shared_data.py</td>
+                    <td>NB and CTR track cost optimization results</td>
+                </tr>
+                <tr>
+                    <td><code>dashboard/lmp_analysis_results.json</code></td>
+                    <td>JSON</td>
+                    <td>compute_lmp_prices.py</td>
+                    <td>lmp_trends.html</td>
+                    <td>Wholesale price distributions, nuclear breakeven, revenue adequacy</td>
+                </tr>
+                <tr>
+                    <td><code>dashboard/js/mac-stats-data.js</code></td>
+                    <td>JS module</td>
+                    <td>compute_mac_stats.py</td>
+                    <td>abatement_dashboard.html</td>
+                    <td>MAC curve statistics: fans, envelopes, ANOVA decomposition</td>
+                </tr>
+                <tr>
+                    <td><code>dashboard/compressed_day_profiles.json</code></td>
+                    <td>JSON</td>
+                    <td>Step 5</td>
+                    <td>dashboard.html</td>
+                    <td>24-hour representative dispatch profiles for visualization</td>
+                </tr>
+                <tr>
+                    <td><code>dashboard/js/shared-data.js</code></td>
+                    <td>JS module</td>
+                    <td>generate_shared_data.py</td>
+                    <td>All dashboard pages</td>
+                    <td>Master data file: SBTi milestones, LCOE tables, all extracted results</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</section>
+
+<!-- ========== SHARED UTILITIES ========== -->
+<section class="pipeline-diagram-section">
+<div class="pipeline-diagram-inner">
+    <h2 class="section-heading">Shared Utilities</h2>
+    <p class="section-subheading">Core libraries shared across multiple pipeline stages.</p>
+
+    <div class="parallel-grid">
+        <div class="flow-card">
+            <div class="flow-card-header">
+                <h3>dispatch_utils.py</h3>
+            </div>
+            <p>
+                Shared dispatch engine used by <code>recompute_co2.py</code>, <code>compute_lmp_prices.py</code>,
+                and <code>step5_compressed_day.py</code>. Contains Numba-compiled battery and LDES dispatch loops,
+                supply matrix construction, dispatch cache system, and merit-order fossil retirement model.
+            </p>
+            <ul style="list-style:none; padding:0; margin:8px 0 0;">
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#38bdf8;">&#9632;</span> <code>reconstruct_hourly_dispatch()</code> &mdash; 8,760-hour supply/demand matching
+                </li>
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#4ade80;">&#9632;</span> <code>build_supply_matrix()</code> &mdash; Pre-built (5, 8760) numpy array per ISO
+                </li>
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#fbbf24;">&#9632;</span> <code>compute_fossil_retirement()</code> &mdash; Merit-order emission rate at threshold
+                </li>
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#c084fc;">&#9632;</span> <code>_battery_loop() / _ldes_loop()</code> &mdash; Numba @njit compiled inner loops
+                </li>
+            </ul>
+        </div>
+
+        <div class="flow-card">
+            <div class="flow-card-header">
+                <h3>Shared Constants</h3>
+            </div>
+            <p>
+                Key constants defined in <code>dispatch_utils.py</code> and used across the pipeline.
+            </p>
+            <ul style="list-style:none; padding:0; margin:8px 0 0;">
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#38bdf8;">&#9632;</span> <code>H = 8760</code> &mdash; Hours in a year
+                </li>
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#4ade80;">&#9632;</span> <code>ISOS</code> &mdash; ['CAISO', 'ERCOT', 'MISO', 'PJM', 'NEISO']
+                </li>
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#fbbf24;">&#9632;</span> <code>RESOURCE_TYPES</code> &mdash; ['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'hydro']
+                </li>
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#f87171;">&#9632;</span> <code>GRID_MIX_SHARES</code> &mdash; Regional existing clean energy baselines
+                </li>
+                <li style="font-size:0.8rem; color:rgba(255,255,255,0.55); padding:3px 0;">
+                    <span style="color:#c084fc;">&#9632;</span> <code>BASE_DEMAND_TWH</code> &mdash; Regional annual demand (TWh)
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Methodology &amp; Paper</a>
+        <a href="about.html">About</a>
+        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<script src="js/nav.js"></script>
+
+<!-- Scroll-triggered animations -->
+<script>
+(function() {
+    // Animate flow cards on scroll
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.flow-card, .track-card, .stat-card').forEach(function(el) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+        observer.observe(el);
+    });
+
+    // Stagger stat cards
+    document.querySelectorAll('.stat-card').forEach(function(el, i) {
+        el.style.transitionDelay = (i * 0.08) + 's';
+    });
+})();
+</script>
+
+</body>
+</html>
