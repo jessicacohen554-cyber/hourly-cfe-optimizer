@@ -730,6 +730,132 @@ def eval_and_argmin_all(coeff_matrix, constant, prices, scores, thresholds_desc)
     return best_idxs, best_vals
 
 
+def precompute_all_prices(iso, all_combos):
+    """Pre-compute price vectors + metadata for all sensitivity combos at once.
+
+    Returns:
+        price_matrix: (B, 10) float64 price vectors
+        wholesale_arr: (B,) float64 wholesale prices
+        nuclear_arr: (B,) float64 nuclear new-build prices
+        ccs_arr: (B,) float64 CCS tranche prices
+    """
+    B = len(all_combos)
+    price_matrix = np.empty((B, _N_COEFFS), dtype=np.float64)
+    wholesale_arr = np.empty(B, dtype=np.float64)
+    nuclear_arr = np.empty(B, dtype=np.float64)
+    ccs_arr = np.empty(B, dtype=np.float64)
+
+    for j, (scenario_key, sens) in enumerate(all_combos):
+        prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
+        price_matrix[j] = prices
+        wholesale_arr[j] = wholesale
+        nuclear_arr[j] = nuclear_price
+        ccs_arr[j] = ccs_price
+
+    return price_matrix, wholesale_arr, nuclear_arr, ccs_arr
+
+
+# Numba-accelerated batched evaluation (tiled for cache efficiency)
+if HAS_NUMBA:
+    @njit(parallel=True, cache=True)
+    def _batch_eval_and_argmin(coeff_matrix, constant, price_matrix, scores, thresholds_desc):
+        """Fused batched cost eval + bucketed argmin, tiled for cache efficiency.
+
+        Tiles over N (mixes) so each tile fits in L3 cache, then
+        parallelizes over B (combos) with prange.  Each tile is loaded
+        from main memory once and reused across all B combos — up to
+        ~5000× reduction in memory bandwidth vs per-combo evaluation.
+
+        Args:
+            coeff_matrix: (N, K) coefficient matrix
+            constant: (N,) constant terms
+            price_matrix: (B, K) price vectors for all combos
+            scores: (N,) hourly match scores
+            thresholds_desc: (T,) thresholds sorted descending
+
+        Returns:
+            all_best_idxs: (B, T) int64
+            all_best_vals: (B, T) float64
+        """
+        N = coeff_matrix.shape[0]
+        K = coeff_matrix.shape[1]
+        B = price_matrix.shape[0]
+        n_thr = len(thresholds_desc)
+        TILE = 200000  # ~16 MB per tile at K=10, fits in L3
+
+        # Per-combo bucket accumulators (persist across tiles)
+        bucket_mins = np.full((B, n_thr), np.inf)
+        bucket_min_idxs = np.zeros((B, n_thr), dtype=np.int64)
+
+        # Tile over N for cache efficiency
+        for t_start in range(0, N, TILE):
+            t_end = min(t_start + TILE, N)
+
+            # All B combos process this tile in parallel
+            for j in prange(B):
+                for i in range(t_start, t_end):
+                    # Fused multiply-add: tc = dot(coeff[i], prices[j]) + constant[i]
+                    s = constant[i]
+                    for k in range(K):
+                        s += coeff_matrix[i, k] * price_matrix[j, k]
+
+                    # Bucketed argmin: assign to highest qualifying threshold
+                    score_i = scores[i]
+                    for kt in range(n_thr):
+                        if score_i >= thresholds_desc[kt]:
+                            if s < bucket_mins[j, kt]:
+                                bucket_mins[j, kt] = s
+                                bucket_min_idxs[j, kt] = i
+                            break
+
+        # Cumulative min pass (parallel over combos)
+        all_best_idxs = np.zeros((B, n_thr), dtype=np.int64)
+        all_best_vals = np.full((B, n_thr), np.inf)
+        for j in prange(B):
+            running_min = np.inf
+            running_idx = np.int64(0)
+            for kt in range(n_thr):
+                if bucket_mins[j, kt] < running_min:
+                    running_min = bucket_mins[j, kt]
+                    running_idx = bucket_min_idxs[j, kt]
+                all_best_vals[j, kt] = running_min
+                all_best_idxs[j, kt] = running_idx
+
+        return all_best_idxs, all_best_vals
+
+
+def batch_eval_and_argmin_all(coeff_matrix, constant, price_matrix, scores, thresholds_desc):
+    """Batched cost eval + multi-threshold argmin for all combos at once.
+
+    Args:
+        coeff_matrix: (N, K) coefficient matrix
+        constant: (N,) constant terms
+        price_matrix: (B, K) price vectors for B sensitivity combos
+        scores: (N,) hourly match scores
+        thresholds_desc: (T,) thresholds sorted descending
+
+    Returns:
+        all_best_idxs: (B, T) int64 — best mix index per combo × threshold
+        all_best_vals: (B, T) float64 — best cost per combo × threshold
+    """
+    if HAS_NUMBA:
+        return _batch_eval_and_argmin(coeff_matrix, constant, price_matrix, scores, thresholds_desc)
+    # Numpy fallback: sequential per-combo
+    B = price_matrix.shape[0]
+    n_thr = len(thresholds_desc)
+    all_best_idxs = np.zeros((B, n_thr), dtype=np.int64)
+    all_best_vals = np.full((B, n_thr), np.inf)
+    for j in range(B):
+        tc = coeff_matrix @ price_matrix[j] + constant
+        for k in range(n_thr):
+            qualifying = np.where(scores >= thresholds_desc[k])[0]
+            if len(qualifying) > 0:
+                local_best = int(np.argmin(tc[qualifying]))
+                all_best_idxs[j, k] = qualifying[local_best]
+                all_best_vals[j, k] = tc[qualifying[local_best]]
+    return all_best_idxs, all_best_vals
+
+
 def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
                           tc_val, wholesale, nuclear_price, ccs_price):
     """Build scenario result dict for a single winning mix."""
@@ -987,7 +1113,9 @@ def main():
         _dummy_t = np.array([100.0, 50.0])
         _dummy_tc = _eval_cost_numba(_dummy_cm, _dummy_c, _dummy_p)
         _argmin_bucketed(_dummy_tc, _dummy_s, _dummy_t)
-        print("  Numba JIT warmup complete")
+        _dummy_pm = np.zeros((2, _N_COEFFS))
+        _batch_eval_and_argmin(_dummy_cm, _dummy_c, _dummy_pm, _dummy_s, _dummy_t)
+        print("  Numba JIT warmup complete (incl. batched)")
 
     # Archetypes per ISO (union of winners across all thresholds) for Phase 2
     archetypes = {}
