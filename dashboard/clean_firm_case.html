@@ -330,6 +330,86 @@ body { background: #0B1120; }
     line-height: 1.6;
 }
 
+/* ========== FOAK → NOAK HERO ========== */
+.foak-hero {
+    background: linear-gradient(180deg, #0F1A2E 0%, #0B1120 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 48px 24px;
+}
+.foak-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(233,30,99,0.06) 0%, transparent 60%);
+    pointer-events: none;
+}
+.foak-inner {
+    position: relative;
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+}
+.foak-text { z-index: 2; }
+.foak-text h2 {
+    font-family: var(--font-heading);
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 16px;
+    line-height: 1.25;
+    letter-spacing: -0.5px;
+}
+.foak-text p {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.7;
+    margin-bottom: 14px;
+}
+.foak-chart { z-index: 1; }
+.foak-sources {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+.foak-sources summary {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.45);
+    cursor: pointer;
+    font-weight: 600;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+.foak-sources .src-list {
+    font-size: 0.73rem;
+    color: rgba(255,255,255,0.4);
+    line-height: 1.7;
+    margin-top: 8px;
+    padding-left: 16px;
+}
+.foak-sources .src-list li { margin-bottom: 2px; }
+
+@media (max-width: 900px) {
+    .foak-inner { grid-template-columns: 1fr; gap: 24px; }
+    .foak-hero { padding: 36px 16px; }
+    .foak-text h2 { font-size: 1.5rem; }
+    .foak-text p { font-size: 0.85rem; }
+}
+@media (max-width: 600px) {
+    .foak-hero { padding: 28px 12px; }
+    .foak-text h2 { font-size: 1.3rem; }
+    .foak-text p { font-size: 0.8rem; line-height: 1.6; }
+}
+@media (max-width: 480px) {
+    .foak-hero { padding: 20px 8px; }
+    .foak-text h2 { font-size: 1.15rem; }
+}
+
 /* ========== FOOTER ========== */
 .page-footer {
     background: #0F1A2E;
@@ -413,12 +493,74 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     <p class="subtitle">Why every ISO needs dispatchable clean generation — and why the gas alternative is more expensive than it looks</p>
 </header>
 
-<!-- ==================== HERO ==================== -->
+<!-- ==================== FOAK → NOAK: THE INVESTMENT CASE (HERO) ==================== -->
+<section class="foak-hero">
+    <div class="foak-inner">
+        <div class="foak-text">
+            <h2>Build clean firm today.<br>It's cheaper in the long run.</h2>
+            <p>
+                High matching targets need clean firm power in most regions. Without it, the gap between demand and variable renewable supply must be filled by gas backup &mdash; and every new gas plant built today becomes a stranded asset tomorrow.
+            </p>
+            <p>
+                Clean firm is expensive today because it's <strong style="color:#F59E0B;">first-of-a-kind</strong>. Vogtle Units 3&amp;4 came in at ~$15,000/kW; NuScale's SMR reached ~$20,000/kW before cancellation. Lazard (2025) puts unsubsidized new nuclear at $141&ndash;220/MWh. But every energy technology follows Wright's Law: costs decline with deployment. Solar achieved a 24% learning rate per doubling. Wind: 15%. NREL ATB 2024 models nuclear learning at 8&ndash;9.5% per doubling; the DOE's Liftoff report projects ~40% total reduction after 5&ndash;10 reactors per design, reaching $3,600/kW and ~$66/MWh. MIT's 2024 analysis puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized).
+            </p>
+            <p>
+                Meanwhile, gas gets <em>more</em> expensive. Fuel prices rise (EIA AEO2025: $3.50&rarr;$4.95/MMBtu by 2050). Capital costs have <strong style="color:#EF4444;">tripled</strong> &mdash; market quotes are $2,400/kW vs. EIA's $1,200/kW estimate (GridLab 2025). As clean energy scales, gas plants run fewer hours, spreading fixed costs over declining output. Add carbon pricing &mdash; EU ETS already at &euro;77/ton, heading to &euro;126+ by 2030 &mdash; and the true cost of gas rises relentlessly. Carbon Tracker estimates $3.5 trillion in stranded fossil assets globally under IEA net-zero scenarios.
+            </p>
+            <p>
+                CCS follows a parallel trajectory. DOE OCED projects ~25% CAPEX reduction from FOAK to NOAK, with learning rates of 3&ndash;5% per doubling (NETL). The 45Q tax credit ($85/ton for saline storage) reduces CCS-CCGT LCOE by over 25%, bringing near-term costs to ~$92/MWh (Frontiers 2022). As both nuclear and CCS descend their learning curves, the clean firm portfolio converges on $68&ndash;75/MWh by the late 2030s.
+            </p>
+            <p style="color:rgba(255,255,255,0.65);font-size:0.85rem;line-height:1.6;font-style:italic;">
+                Diversifying beyond VRE + storage derisks grid decarbonization and prevents wasted investment solidifying the future of fossil fuels via redundant gas backup. The FOAK premium is temporary. The gas trap is permanent.
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;">
+                <span class="stat-callout stat-green" style="font-size:0.78rem;">Nuclear NOAK target: $68&ndash;75/MWh (vs. FOAK $135&ndash;170)</span>
+                <span class="stat-callout stat-red" style="font-size:0.78rem;">Gas true cost by 2040: $85&ndash;112/MWh (and rising)</span>
+            </div>
+
+            <!-- Inline research citations -->
+            <details class="foak-sources">
+                <summary>Research Sources &amp; Citations</summary>
+                <ol class="src-list">
+                    <li><strong>Lazard LCOE+ v18 (June 2025)</strong> &mdash; unsubsidized new nuclear $141&ndash;220/MWh; CCGT $48&ndash;109/MWh.</li>
+                    <li><strong>DOE (Sept 2024), &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo;</strong> &mdash; FOAK ~$6,200/kW &rarr; NOAK $3,600/kW target; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design.</li>
+                    <li><strong>MIT Advanced Nuclear Power Program (2024)</strong> &mdash; AP1000 NOAK: $4,625/kW, $66/MWh unsubsidized. SMR 300 MWe NOAK: ~$6,700/kW, $95/MWh.</li>
+                    <li><strong>NREL ATB 2024</strong> &mdash; nuclear learning rates: 8% (large), 9.5% (SMR) per doubling. Based on INL meta-analysis (Abou-Jaoude et al., RPT-24-77048).</li>
+                    <li><strong>INL (2024), &ldquo;Quantifying Capital Cost Reduction Pathways&rdquo;</strong> &mdash; optimized NOAK: ~$3,421/kW.</li>
+                    <li><strong>Vogtle Units 3&amp;4</strong> &mdash; actual construction cost ~$15,000/kW (Georgia Power, 2023). <strong>NuScale CFPP</strong> &mdash; ~$20,000/kW at cancellation (IEEFA 2023).</li>
+                    <li><strong>EIA AEO 2025</strong> &mdash; natural gas $3.50&rarr;$4.95/MMBtu; nuclear $7,821/kWe reference case.</li>
+                    <li><strong>DOE OCED (2024)</strong> &mdash; CCS FOAK&rarr;NOAK ~25% CAPEX reduction.</li>
+                    <li><strong>NETL Baseline Study</strong> &mdash; CCS learning rates: CO&#8322; capture 3%/doubling; transport &amp; sequestration 5%/doubling.</li>
+                    <li><strong>Frontiers in Energy Research (2022)</strong> &mdash; CCGT+CCS: FOAK ~$103/MWh; NOAK ~$92/MWh.</li>
+                    <li><strong>Carbon Tracker</strong> &mdash; $3.5 trillion in stranded fossil fuel assets under net-zero scenarios.</li>
+                    <li><strong>ITIF (2025), &ldquo;Small Modular Reactors: A Realist Approach&rdquo;</strong> &mdash; ~$10,000/kW representative FOAK; Wright&rsquo;s Law 4&ndash;10%/doubling.</li>
+                    <li><strong>GridLab (2025)</strong> &mdash; gas turbine market quotes $2,200&ndash;2,600/kW vs. EIA's $1,200/kW estimate.</li>
+                </ol>
+            </details>
+        </div>
+        <div class="foak-chart">
+            <div class="chart-panel">
+                <div class="chart-title">FOAK &rarr; NOAK: Clean Firm Costs Fall as Gas Costs Rise</div>
+                <div class="chart-container" style="min-height:380px;position:relative;">
+                    <canvas id="foakNOAKChart"></canvas>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;padding:8px 12px 12px;font-size:0.72rem;color:rgba(255,255,255,0.55);">
+                    <span><span style="display:inline-block;width:20px;height:3px;background:#22C55E;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Clean Firm (central)</span>
+                    <span><span style="display:inline-block;width:20px;height:3px;background:rgba(34,197,94,0.3);vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Learning range</span>
+                    <span style="border-left:1px solid rgba(255,255,255,0.15);padding-left:12px;"><span style="display:inline-block;width:20px;height:3px;background:#EF4444;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Gas + carbon pricing</span>
+                    <span><span style="display:inline-block;width:20px;height:3px;background:rgba(239,68,68,0.4);vertical-align:middle;margin-right:4px;border-radius:2px;border:1px dashed rgba(239,68,68,0.6);"></span> Gas (no carbon price)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== STRANDED ASSETS OVERVIEW ==================== -->
 <section class="hero-overview">
     <div class="hero-inner">
         <div class="hero-text">
             <h2>You're building gas plants today that become stranded assets tomorrow.</h2>
-            <p>At 90% clean energy, America's 5 major ISOs need <strong style="color:#f87171;">120 GW of new gas construction</strong> to maintain reliability. That's billions in capital that earns diminishing returns as decarbonization continues. Clean firm power — nuclear, enhanced geothermal, CCS — prevents this trap. The investment case holds across all 324 cost scenarios we tested.</p>
+            <p>At 90% clean energy, America's 5 major ISOs need <strong style="color:#f87171;">120 GW of new gas construction</strong> to maintain reliability. That's billions in capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 324 cost scenarios we tested.</p>
             <div class="counter-row">
                 <div class="counter-card">
                     <div class="counter-val" id="ctrNewGas">120</div>
@@ -539,7 +681,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         </div>
         <div class="synthesis-card">
             <h3>The FOAK premium is an investment, not a cost</h3>
-            <p>Nuclear FOAK costs are ~$135&ndash;170/MWh. NOAK targets are $68&ndash;75/MWh after 10&ndash;20 deployments (DOE Liftoff). Geothermal is moving even faster — Fervo cut drilling costs 50% in 3 years. Every deployment accelerates the next. The gas cost it displaces never declines.</p>
+            <p>Lazard (2025) puts unsubsidized new nuclear at $141&ndash;220/MWh &mdash; consistent with Vogtle ($15,000/kW) and NuScale ($20,000/kW) experience. But DOE&rsquo;s Liftoff report targets $3,600/kW after 5&ndash;10 deployments per design; MIT (2024) models AP1000 NOAK at $66/MWh unsubsidized. NREL ATB 2024 applies 8&ndash;9.5% learning rates per doubling. Geothermal is moving even faster &mdash; Fervo cut drilling costs 50% in 3 years. CCS follows suit: NETL documents 3&ndash;5% learning per doubling, with DOE OCED projecting 25% CAPEX reduction to NOAK. The gas cost it displaces never declines.</p>
             <span class="stat-callout stat-green">~40% cost decline FOAK&rarr;NOAK &middot; Fervo: 35% learning rate</span>
         </div>
     </div>
@@ -551,13 +693,21 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         <summary style="font-family:var(--font-heading);font-size:0.85rem;font-weight:600;color:rgba(255,255,255,0.8);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
         <div style="font-size:0.78rem;color:rgba(255,255,255,0.5);line-height:1.8;margin-top:12px;">
             <p><strong>Data:</strong> Hourly CFE Optimizer (2025 snapshot, 5 ISOs, 13 thresholds, 324 sensitivity scenarios). Gas backup modeled with 15% reserve margin above ISO peak demand.</p>
-            <p><strong>Key sources:</strong> Sepulveda &amp; Jenkins (2018), <em>Joule</em> — 10&ndash;62% cost reduction from firm resources &bull;
-            CATF (2025), "Clean Firm Electricity Technologies" &bull;
-            DOE (2024), "Pathways to Commercial Liftoff: Advanced Nuclear" — FOAK $6,200/kW &rarr; NOAK $3,600/kW &bull;
-            Fervo Energy (2024) — 35% learning rate, 50% drilling cost reduction &bull;
-            NREL (2021), "The Challenge of the Last Few Percent" — 29% cost spike at 100% RE &bull;
+            <p><strong>Key sources:</strong> Sepulveda &amp; Jenkins (2018), <em>Joule</em> &mdash; 10&ndash;62% cost reduction from firm resources &bull;
+            CATF (2025), &ldquo;Clean Firm Electricity Technologies&rdquo; &bull;
+            DOE (Sept 2024), &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; &mdash; FOAK $6,200/kW &rarr; NOAK $3,600/kW; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design &bull;
+            MIT Advanced Nuclear Power Program (2024) &mdash; AP1000 NOAK $4,625/kW, $66/MWh; SMR NOAK ~$6,700/kW, $95/MWh &bull;
+            INL (2024), &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations&rdquo; (RPT-24-77048) &bull;
+            NREL ATB 2024 &mdash; nuclear learning rates 8% (large), 9.5% (SMR) per doubling &bull;
+            Lazard LCOE+ v18 (June 2025) &mdash; new nuclear $141&ndash;220/MWh unsubsidized &bull;
+            Vogtle Units 3&amp;4 actual cost ~$15,000/kW; NuScale CFPP ~$20,000/kW at cancellation (IEEFA 2023) &bull;
+            NETL &mdash; CCS learning rates: capture 3%/doubling, transport 5%/doubling &bull;
+            DOE OCED (2024) &mdash; CCS FOAK&rarr;NOAK ~25% CAPEX reduction &bull;
+            Fervo Energy (2024) &mdash; 35% learning rate, 50% drilling cost reduction &bull;
+            NREL (2021), &ldquo;The Challenge of the Last Few Percent&rdquo; &mdash; 29% cost spike at 100% RE &bull;
             IEA (2025), World Energy Outlook &bull;
-            Princeton Net-Zero America Project (2021)</p>
+            Princeton Net-Zero America Project (2021) &bull;
+            ITIF (2025), &ldquo;Small Modular Reactors: A Realist Approach&rdquo; &mdash; Wright&rsquo;s Law 4&ndash;10%/doubling</p>
         </div>
     </details>
 </div>
@@ -1137,6 +1287,193 @@ function animateCounter(el, target, prefix, suffix) {
 }
 
 // ============================================================================
+// FOAK → NOAK CHART: Clean Firm Learning Curve vs. Rising Gas Cost
+// ============================================================================
+let foakChart = null;
+
+function buildFoakNOAKChart() {
+    var ctx = document.getElementById('foakNOAKChart');
+    if (!ctx || foakChart) return;
+
+    var years = FOAK_NOAK_YEARS;
+    var cf = CLEAN_FIRM_LEARNING;
+    var gas = GAS_TRUE_COST;
+
+    // Find crossover year (central clean firm vs gas with carbon)
+    var crossoverYear = null;
+    for (var i = 0; i < years.length - 1; i++) {
+        if (cf.central[i] > gas.with_carbon[i] && cf.central[i + 1] <= gas.with_carbon[i + 1]) {
+            var cfSlope = (cf.central[i + 1] - cf.central[i]) / (years[i + 1] - years[i]);
+            var gasSlope = (gas.with_carbon[i + 1] - gas.with_carbon[i]) / (years[i + 1] - years[i]);
+            crossoverYear = years[i] + (cf.central[i] - gas.with_carbon[i]) / (gasSlope - cfSlope);
+            break;
+        }
+    }
+
+    function interpAt(arr, yr) {
+        for (var i = 0; i < years.length - 1; i++) {
+            if (yr >= years[i] && yr <= years[i + 1]) {
+                var frac = (yr - years[i]) / (years[i + 1] - years[i]);
+                return arr[i] + frac * (arr[i + 1] - arr[i]);
+            }
+        }
+        return arr[arr.length - 1];
+    }
+
+    var crossoverCost = crossoverYear ? Math.round(interpAt(cf.central, crossoverYear)) : null;
+
+    var annotations = {};
+    if (crossoverYear) {
+        annotations.crossoverLine = {
+            type: 'line',
+            xMin: crossoverYear, xMax: crossoverYear,
+            borderColor: 'rgba(255,255,255,0.35)', borderWidth: 1, borderDash: [4, 4],
+            label: {
+                display: true, content: 'Crossover ~' + Math.round(crossoverYear),
+                position: 'start', backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff',
+                font: { size: 10, weight: '600' }, padding: { top: 4, bottom: 4, left: 6, right: 6 },
+                borderRadius: 4, yAdjust: -8
+            }
+        };
+        annotations.crossoverPoint = {
+            type: 'point', xValue: crossoverYear, yValue: crossoverCost,
+            radius: 7, backgroundColor: 'rgba(255,255,255,0.9)',
+            borderColor: '#F59E0B', borderWidth: 2.5
+        };
+        annotations.wastedArea = {
+            type: 'box', xMin: crossoverYear, xMax: 2050,
+            yMin: crossoverCost, yMax: gas.with_carbon[gas.with_carbon.length - 1],
+            backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.15)',
+            borderWidth: 1, borderDash: [3, 3],
+            label: { display: true, content: 'Wasted gas investment',
+                position: { x: 'center', y: 'start' }, color: 'rgba(239,68,68,0.6)',
+                font: { size: 9, style: 'italic' }, yAdjust: 10 }
+        };
+        annotations.catalyticArea = {
+            type: 'box', xMin: 2025, xMax: crossoverYear,
+            yMin: gas.with_carbon[0], yMax: cf.central[0],
+            backgroundColor: 'rgba(34,197,94,0.04)', borderColor: 'rgba(34,197,94,0.12)',
+            borderWidth: 1, borderDash: [3, 3],
+            label: { display: true, content: 'Catalytic premium',
+                position: { x: 'center', y: 'end' }, color: 'rgba(34,197,94,0.5)',
+                font: { size: 9, style: 'italic' }, yAdjust: -10 }
+        };
+    }
+
+    if (typeof SBTI_MILESTONES !== 'undefined') {
+        SBTI_MILESTONES.forEach(function(ms) {
+            if (ms.year >= 2025 && ms.year <= 2050 && ms.threshold > 0) {
+                annotations['sbti_' + ms.year] = {
+                    type: 'label', xValue: ms.year, yValue: 0,
+                    content: ms.label, color: 'rgba(255,255,255,0.3)',
+                    font: { size: 8 }, position: 'start', yAdjust: 16
+                };
+            }
+        });
+    }
+
+    foakChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Clean Firm (conservative)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.conservative[i] }; }),
+                    borderColor: 'rgba(34,197,94,0.15)', borderWidth: 0, pointRadius: 0,
+                    fill: '+2', backgroundColor: 'rgba(34,197,94,0.08)', tension: 0.35, order: 6
+                },
+                {
+                    label: 'Clean Firm (central learning)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.central[i] }; }),
+                    borderColor: '#22C55E', borderWidth: 3, pointRadius: 4,
+                    pointBackgroundColor: '#22C55E', pointBorderColor: '#0B1120',
+                    pointBorderWidth: 1.5, fill: false, tension: 0.35, order: 2
+                },
+                {
+                    label: 'Clean Firm (optimistic)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.optimistic[i] }; }),
+                    borderColor: 'rgba(34,197,94,0.15)', borderWidth: 0, pointRadius: 0,
+                    fill: false, tension: 0.35, order: 6
+                },
+                {
+                    label: 'Gas + carbon pricing',
+                    data: years.map(function(y, i) { return { x: y, y: gas.with_carbon[i] }; }),
+                    borderColor: '#EF4444', borderWidth: 3, pointRadius: 4,
+                    pointBackgroundColor: '#EF4444', pointBorderColor: '#0B1120',
+                    pointBorderWidth: 1.5, fill: false, tension: 0.35, order: 1
+                },
+                {
+                    label: 'Gas (no carbon price)',
+                    data: years.map(function(y, i) { return { x: y, y: gas.base[i] }; }),
+                    borderColor: 'rgba(239,68,68,0.4)', borderWidth: 2, borderDash: [6, 4],
+                    pointRadius: 3, pointBackgroundColor: 'rgba(239,68,68,0.4)', pointBorderWidth: 0,
+                    fill: '+0', backgroundColor: 'rgba(239,68,68,0.04)', tension: 0.35, order: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1400, easing: 'easeOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.9)', padding: 12, cornerRadius: 8,
+                    titleColor: 'rgba(255,255,255,0.9)', bodyColor: 'rgba(255,255,255,0.75)',
+                    bodyFont: { size: 11 },
+                    callbacks: {
+                        title: function(items) {
+                            var yr = items[0].parsed.x;
+                            var ms = typeof SBTI_MILESTONES !== 'undefined' ? SBTI_MILESTONES.find(function(m) { return m.year === yr; }) : null;
+                            return yr + (ms && ms.threshold > 0 ? ' (' + ms.label + ')' : '');
+                        },
+                        label: function(ctx) {
+                            if (ctx.datasetIndex === 0 || ctx.datasetIndex === 2) return null;
+                            return ctx.dataset.label + ': $' + ctx.parsed.y + '/MWh';
+                        }
+                    }
+                },
+                datalabels: {
+                    display: function(ctx) {
+                        if (ctx.datasetIndex === 1 || ctx.datasetIndex === 3) {
+                            return ctx.dataIndex === 0 || ctx.dataIndex === ctx.dataset.data.length - 1;
+                        }
+                        return false;
+                    },
+                    color: function(ctx) { return ctx.datasetIndex === 1 ? '#22C55E' : '#EF4444'; },
+                    font: { size: 11, weight: '700' },
+                    anchor: function(ctx) { return ctx.datasetIndex === 1 ? 'end' : 'start'; },
+                    align: function(ctx) {
+                        if (ctx.dataIndex === 0) return ctx.datasetIndex === 1 ? 'top' : 'bottom';
+                        return ctx.datasetIndex === 1 ? 'bottom' : 'top';
+                    },
+                    formatter: function(val) { return '$' + val.y; },
+                    offset: 6
+                },
+                annotation: { annotations: annotations }
+            },
+            scales: {
+                x: {
+                    type: 'linear', min: 2024, max: 2051,
+                    ticks: { stepSize: 5, color: 'rgba(255,255,255,0.6)', font: { size: 11, weight: '600' }, callback: function(v) { return v; } },
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    border: { color: 'rgba(255,255,255,0.15)' },
+                    title: { display: true, text: 'SBTi Target Year', color: 'rgba(255,255,255,0.4)', font: { size: 10 } }
+                },
+                y: {
+                    min: 0, max: 180,
+                    ticks: { stepSize: 20, color: 'rgba(255,255,255,0.5)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { color: 'rgba(255,255,255,0.15)' },
+                    title: { display: true, text: 'LCOE ($/MWh)', color: 'rgba(255,255,255,0.4)', font: { size: 10 } }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+// ============================================================================
 // INIT
 // ============================================================================
 document.addEventListener('DOMContentLoaded', function() {
@@ -1181,6 +1518,18 @@ document.addEventListener('DOMContentLoaded', function() {
         var el = document.getElementById(id);
         if (el) chartObs.observe(el);
     });
+
+    // FOAK → NOAK chart (lazy: build on scroll into view)
+    var foakObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (e.isIntersecting && !foakChart) {
+                requestAnimationFrame(buildFoakNOAKChart);
+                foakObs.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '200px 0px 200px 0px' });
+    var foakCanvas = document.getElementById('foakNOAKChart');
+    if (foakCanvas) foakObs.observe(foakCanvas.closest('.chart-panel') || foakCanvas);
 
     // Wire ISO selectors
     wireISOSelector('gasTrapISO', function(iso) {
