@@ -760,16 +760,28 @@ html, body {
     <details style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px 20px;">
         <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
         <ol style="font-size:0.8rem;color:rgba(255,255,255,0.55);line-height:1.8;padding-left:20px;margin-top:12px;">
-            <li>EPA eGRID 2022 — regional emission rates and CO&#8322; intensity by balancing authority.</li>
-            <li>EPA Social Cost of Carbon — Technical Support Document (2020), central estimate $51/metric ton.</li>
-            <li>Rennert, K. et al. (2022). "Comprehensive evidence implies a higher social cost of CO&#8322;." <em>Nature</em>, 610, 687-692. $185/metric ton.</li>
-            <li>EU Emissions Trading System (EU ETS) — carbon price range $60-100/metric ton.</li>
-            <li>NREL Annual Technology Baseline (ATB) 2024 — technology costs for wind, solar, storage, nuclear, CCS, DAC.</li>
-            <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) — generation technology cost benchmarks.</li>
-            <li>EIA Hourly Electric Grid Monitor — hourly generation data by fuel type and balancing authority.</li>
-            <li>IEA Net Zero by 2050 Roadmap (2023 update) — sector emission reduction benchmarks.</li>
-            <li>IPCC AR6 Working Group III (2022) — power sector targets and mitigation pathways.</li>
-            <li>McKinsey Marginal Abatement Cost Curve methodology — cross-sector decarbonization benchmarks.</li>
+            <li>EPA eGRID 2022 &mdash; regional emission rates and CO&#8322; intensity by balancing authority.</li>
+            <li>EPA Social Cost of Carbon &mdash; Technical Support Document (2020), central estimate $51/metric ton.</li>
+            <li>Rennert, K. et al. (2022). &ldquo;Comprehensive evidence implies a higher social cost of CO&#8322;.&rdquo; <em>Nature</em>, 610, 687&ndash;692. $185/metric ton.</li>
+            <li>EU Emissions Trading System (EU ETS) &mdash; carbon price range $60&ndash;100/metric ton.</li>
+            <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; nuclear learning rates 8% (large), 9.5% (SMR) per doubling. Based on INL meta-analysis (Abou-Jaoude et al., 2024).</li>
+            <li>Lazard Levelized Cost of Energy+ (LCOE+), Version 18 (June 2025) &mdash; unsubsidized new nuclear $141&ndash;220/MWh; CCGT $48&ndash;109/MWh.</li>
+            <li>DOE (2024). &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear.&rdquo; FOAK ~$6,200/kW &rarr; NOAK $3,600/kW target; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design for NOAK.</li>
+            <li>MIT Advanced Nuclear Power Program (2024). AP1000 NOAK: $4,625/kW, $66/MWh unsubsidized. SMR 300 MWe NOAK: ~$6,700/kW, $95/MWh.</li>
+            <li>INL (2024). &ldquo;Quantifying Capital Cost Reduction Pathways for Advanced Nuclear.&rdquo; Optimized NOAK: ~$3,421/kW.</li>
+            <li>INL (2024). &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations.&rdquo; RPT-24-77048. Quartile-based cost benchmarks used in NREL ATB 2024.</li>
+            <li>Vogtle Units 3&amp;4 &mdash; actual construction cost ~$15,000/kW (Georgia Power, 2023). NuScale CFPP &mdash; ~$20,000/kW at cancellation (IEEFA 2023).</li>
+            <li>DOE OCED (2024). &ldquo;Portfolio Insights: Carbon Capture in the Power Sector.&rdquo; FOAK&rarr;NOAK ~25% CAPEX reduction for CCS.</li>
+            <li>NETL. &ldquo;Baseline Study &mdash; High Carbon Capture Rates.&rdquo; CCS learning rates: CO&#8322; capture 3%/doubling; transport &amp; sequestration 5%/doubling.</li>
+            <li>Frontiers in Energy Research (2022). &ldquo;Cost Projection of CCGT with Post-Combustion Carbon Capture.&rdquo; FOAK ~$103/MWh; NOAK ~$92/MWh.</li>
+            <li>EIA Annual Energy Outlook 2025 &mdash; natural gas price projections ($3.50&rarr;$4.95/MMBtu); nuclear $7,821/kWe reference case.</li>
+            <li>Carbon Tracker Initiative &mdash; $3.5 trillion in stranded fossil fuel assets under net-zero scenarios.</li>
+            <li>EIA Hourly Electric Grid Monitor &mdash; hourly generation data by fuel type and balancing authority.</li>
+            <li>IEA Net Zero by 2050 Roadmap (2023 update) &mdash; sector emission reduction benchmarks.</li>
+            <li>IPCC AR6 Working Group III (2022) &mdash; power sector targets and mitigation pathways.</li>
+            <li>McKinsey Marginal Abatement Cost Curve methodology &mdash; cross-sector decarbonization benchmarks.</li>
+            <li>ITIF (2025). &ldquo;Small Modular Reactors: A Realist Approach to the Future of Nuclear Power.&rdquo; ~$10,000/kW representative FOAK; Wright&rsquo;s Law 4&ndash;10% learning rate.</li>
+            <li>IISD (2024). &ldquo;Why the Cost of CCS Remains Persistently High.&rdquo; Historical CCS experience rate far below solar/wind.</li>
         </ol>
     </details>
 </div>
@@ -1051,7 +1063,7 @@ function initObservers() {
         entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('.region-step-card, .synthesis-card').forEach(function(el) { fadeObs.observe(el); });
+    document.querySelectorAll('.region-step-card, .synthesis-card, .hero-text-block').forEach(function(el) { fadeObs.observe(el); });
 
     // Lazy chart build observer for region sections
     var chartObs = new IntersectionObserver(function(entries) {
