@@ -2220,3 +2220,27 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 | 8 | Vectorized Phase 1a | Minor speedup | Low | None (memory) |
 
 **Implementation path**: Improvements 1-3 can be applied to `step1_pfs_generator.py` directly by copying kernels from `postprocess_storage_resweep.py`. Improvements 4-7 require refactoring the `optimize_threshold()` function. None require re-running from scratch — all are refinements to existing logic.
+
+#### Implemented (Feb 21, 2026)
+
+| # | Improvement | Status | Notes |
+|---|---|---|---|
+| 1 | Numba parallel storage | **Done** | `_batch_score_storage()` and `_batch_score_no_storage()` added with `prange`. JIT warmup includes batch kernels. |
+| 2 | Consistent scoring metric | **Done** | Phase 1a and Phase 2 now use `sum(min(demand, supply))` (total matched energy), consistent with `_score_with_all_storage` base_matched. Previously used `sum(min(supply/demand, 1.0)) / H` (hourly average fraction) — different metric. |
+| 5 | Full refinement storage grid | **Done** | Phase 2 now uses full `batt_levels × batt8_levels × ldes_levels` grid (matching Phase 1b) instead of limited `[2, 5, 10]` for battery4/battery8 only. LDES now modeled in Phase 2. |
+
+**Code cleanup (Feb 21, 2026)**:
+- **Removed 3 redundant scoring functions**: `_score_hourly`, `_score_with_battery`, `_score_with_both_storage` — all subsets of `_score_with_all_storage` (passing 0 for unused storage types skips those phases via capacity guards)
+- **Removed redundant Phase 1b battery4-only loop**: Was a separate sweep before the full triple storage loop. Now the full triple loop covers all non-zero storage combos including battery4-only (no `b8p == 0 and lp == 0` skip)
+- **Vectorized `_average_profiles()`**: Replaced nested Python loop (O(N×8760)) with `np.mean(np.array(profiles), axis=0)`
+- **Vectorized `get_supply_profiles()` clean_firm**: Replaced hour-by-hour Python loop with `np.repeat(month_cfs, month_hours)`
+- **Vectorized `get_supply_profiles()` solar DST correction**: Replaced 365×24 nested Python loop with numpy boolean mask across all 8760 hours
+- **Vectorized `get_supply_profiles()` post-processing**: Replaced list comprehension `[max(0, v) for v in p]` with `np.maximum(arr, 0.0, out=arr)`
+- **Vectorized `generate_4d_combos()`**: Replaced triple-nested Python loop with `np.meshgrid` + vectorized filter
+
+**Still TODO**:
+- [ ] Item 3: Wider near-miss window (25% vs 15%) — trivial constant change but affects runtime/coverage tradeoff
+- [ ] Item 4: Binary search procurement — requires refactoring procurement loop
+- [ ] Item 6: Adaptive storage tiers — requires refactoring Phase 1b loop structure
+- [ ] Item 7: Cross-threshold solution injection — requires refactoring pruning data flow
+- [ ] Item 8: Vectorized Phase 1a procurement — memory-intensive, needs chunking
