@@ -299,6 +299,9 @@ body { background: #0B1120; }
             <a href="#curtailment">Curtailment</a>
             <a href="#transmission-adder">Transmission Adder</a>
             <a href="#resource-adequacy">Resource Adequacy</a>
+
+            <div class="glossary-category">Policy &amp; Market Design</div>
+            <a href="#scope2-reform">GHG Protocol Scope 2 Revision</a>
         </div>
     </nav>
 
@@ -759,6 +762,48 @@ body { background: #0B1120; }
             <rect x="460" y="212" width="130" height="26" rx="5" fill="rgba(245,158,11,0.12)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
             <text x="525" y="230" font-family="Lexend" font-weight="700" font-size="11" fill="#F59E0B" text-anchor="middle">LMP $/MWh</text>
         </svg>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--          POLICY & MARKET DESIGN            -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="metric-entry" id="scope2-reform">
+        <div class="metric-header">
+            <span class="metric-name">GHG Protocol Scope 2 Revision</span>
+            <span class="metric-aka">Voluntary Market Reform &amp; Grid Decarbonization</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The GHG Protocol&rsquo;s ongoing revision of its Scope 2 Guidance is the single most consequential voluntary market reform for accelerating grid decarbonization.</strong> By changing how corporate electricity emissions are counted, the revision reshapes which clean energy investments the market rewards &mdash; and which it doesn&rsquo;t.</p>
+
+        <p class="metric-detail"><strong>The current framework (2015):</strong> The existing Scope 2 Guidance allows two accounting methods. The <em>location-based</em> method uses the average grid emission factor &mdash; every consumer on the same grid gets the same rate regardless of procurement choices. The <em>market-based</em> method allows companies to claim emissions reductions through contractual instruments like Renewable Energy Certificates (RECs), Power Purchase Agreements (PPAs), and green tariffs. Under market-based accounting, a company can purchase enough unbundled RECs to &ldquo;cover&rdquo; its annual consumption and report zero Scope 2 emissions &mdash; even if the grid supplying its facilities runs on 60% fossil fuel.</p>
+
+        <p class="metric-detail"><strong>The problem this creates:</strong> Annual matching with unbundled RECs creates a disconnect between reported emissions and actual atmospheric impact. A data center consuming 100 MW around the clock can buy annual RECs from a solar farm that only generates during daylight hours. The accounting says &ldquo;100% renewable.&rdquo; The atmosphere sees the gas plants that actually powered the facility at night. This isn&rsquo;t fraud &mdash; it&rsquo;s a structural flaw in the accounting standard. The result: corporate renewable procurement concentrates in the cheapest available technology (solar + wind) without creating demand signals for the resources that fill temporal gaps &mdash; clean firm power, long-duration storage, and geographically diverse portfolios.</p>
+
+        <p class="metric-detail"><strong>What the revision proposes:</strong> The October 2025 public consultation (Phase 1) introduces four key reforms to the market-based method that move accounting closer to physical reality:</p>
+        <p class="metric-detail">
+        <ul>
+            <li><strong>Hourly matching (Quality Criteria 4):</strong> All contractual instruments (RECs, EACs, etc.) used in the market-based method must be issued and redeemed for the same hour as the energy consumption they&rsquo;re applied to. This is the fundamental shift &mdash; from annual matching to hourly matching. Companies can no longer buy a year&rsquo;s worth of daytime solar certificates to cover round-the-clock consumption. Load profiles are available for organizations without hourly metering, and smaller organizations (threshold TBD) would be exempt from the hourly requirement.</li>
+            <li><strong>Deliverability (Quality Criteria 5):</strong> Contractual instruments must be sourced from the same market boundary as the reporting entity&rsquo;s operations, or otherwise demonstrate deliverability. Market boundaries are defined as power pricing/bidding zones &mdash; where those don&rsquo;t exist, country borders or the synchronous grid, whichever is smaller. A solar farm in ERCOT cannot offset a facility in ISO-NE if there&rsquo;s no deliverable path between them. This aligns accounting with how power markets actually settle supply and demand.</li>
+            <li><strong>Standard Supply Service (SSS) allocation:</strong> Energy mandated by law or publicly funded (e.g., state RPS programs, feed-in tariffs) is proportionally allocated to all consumers in the region. Each reporter may claim only its pro-rata share of SSS &mdash; unclaimed attributes are not available for voluntary market-based claims. This prevents organizations from double-counting policy-driven clean energy that serves all ratepayers.</li>
+            <li><strong>Residual mix and emission factor requirements:</strong> Grid-average emission factors can no longer be used as a fallback when no residual mix is available. For consumption not matched through contractual instruments, organizations must use either a residual emission factor (which excludes all claimed instruments and SSS) or a fossil-only emission factor. This closes a loophole where certificates already counted in the grid average could be double-counted by individual reporters.</li>
+        </ul>
+        </p>
+        <p class="metric-detail"><strong>Feasibility measures:</strong> The consultation includes a legacy clause for existing contracts (VPPAs, PPAs) that don&rsquo;t meet new hourly/deliverability criteria, a phased implementation period of several years, and exemption thresholds for smaller organizations. A second public consultation is expected in 2026, with final standards targeted for 2027.</p>
+
+        <p class="metric-detail"><strong>How this accelerates grid decarbonization:</strong> The revision creates market demand for exactly the resources that are hardest to finance under current frameworks. When companies must match consumption hour-by-hour:</p>
+        <p class="metric-detail">
+        <ul>
+            <li><strong>Clean firm power becomes essential.</strong> Solar and wind alone cannot achieve high hourly CFE percentages. Geothermal, advanced nuclear, and CCS-equipped gas provide the dispatchable clean generation needed during nights, calm periods, and winter peaks. Under annual matching these resources compete on LCOE alone; under hourly matching they command a premium for their temporal value.</li>
+            <li><strong>Storage investment is pulled forward.</strong> Battery and long-duration storage shift cheap daytime solar into expensive evening and overnight hours. Under annual matching, storage is an optimization &mdash; under hourly matching, it&rsquo;s a necessity for any company pursuing 90%+ CFE targets.</li>
+            <li><strong>Portfolio diversity is rewarded.</strong> A mix of solar, wind, clean firm, and storage achieves higher hourly CFE than any single technology. Hourly matching creates a natural incentive for the diversified resource portfolios that this optimizer models &mdash; exactly the &ldquo;what you need depends on what you have&rdquo; insight.</li>
+            <li><strong>Regional grid composition matters.</strong> In hydro-rich regions (PJM&rsquo;s pumped storage, NYISO&rsquo;s run-of-river), existing clean resources provide a baseline. In fossil-heavy regions (PJM coal, ERCOT gas), the procurement gap is larger and the abatement impact of new clean resources is greater. Locational matching ensures investment flows where atmospheric impact is highest.</li>
+        </ul>
+        </p>
+
+        <p class="metric-detail"><strong>Scale of impact:</strong> Voluntary corporate procurement is not marginal. The Clean Energy Buyers Alliance (CEBA) members have contracted over 90 GW of clean energy globally. RE100 signatories represent over 400 TWh of annual demand &mdash; more than the total electricity consumption of France. When the accounting rules change for these buyers, the procurement patterns shift for a significant fraction of global electricity demand. The Scope 2 revision doesn&rsquo;t just change spreadsheets &mdash; it redirects hundreds of billions of dollars in capital allocation toward the technologies and locations where clean energy has the most atmospheric value.</p>
+
+        <p class="metric-detail"><strong>Connection to this optimizer:</strong> The entire 8,760 Problem framework is built on hourly matching logic. Every resource mix in the Physics Feasible Space is evaluated hour-by-hour against actual demand profiles. The cost curves, inflection points, and regional variations in this optimizer are precisely the analytics that corporate procurement teams will need as Scope 2 accounting shifts from annual to temporal matching. The question changes from &ldquo;what&rsquo;s the cheapest REC?&rdquo; to &ldquo;what portfolio of resources delivers the highest hourly CFE at the lowest cost in my grid region?&rdquo; &mdash; which is exactly what this tool answers.</p>
     </div>
 
     <a href="reference.html" class="back-link"><span>&larr;</span> Back to Reference Library</a>
