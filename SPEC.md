@@ -1,40 +1,61 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-20.
+> Last updated: 2026-02-21.
 
 ## Current Status (Feb 21, 2026)
 
-### LMP Module — Built and Calibrated (Feb 21, 2026)
+### LMP Module — v9 Calibration Complete (Feb 21, 2026)
 
 **Completed:**
 - `dispatch_utils.py` — shared dispatch module (constants, profiles, battery/LDES dispatch, fossil retirement, hourly dispatch cache)
 - `compute_lmp_prices.py` — core LMP engine with:
-  - Merit-order fossil stack (heat rate × fuel price + VOM, searchsorted step function)
-  - Load-dependent heat rate ramp (30% quadratic) for realistic within-band price variation
-  - Must-run nuclear surplus pricing (overnight price compression)
+  - Merit-order fossil stack: PJM Manual 15 cost-based offer formula (HR × fuel + VOM + CO2 + 10% adder)
+  - Heat rates calibrated to PJM SOM 2024 benchmarks (CCGT 7.0, CT 10.5, coal 10.0 MMBtu/MWh)
+  - CO2 allowance costs (RGGI-weighted: L/M/H = $3/$5.50/$14 per ton)
+  - 10% adder per PJM market rules ($2.00/MWh contribution per SOM 2024)
+  - VOM split: variable maintenance + variable operations (SOM 2024: $3.18 + $1.43 = $4.61 fleet avg)
+  - Load-dependent heat rate ramp (15% quadratic) for within-band price variation
+  - Demand-quantile pricing: congestion, scarcity tail, off-peak compression
   - ISO-specific price formation: PJM (RPM), ERCOT (ORDC), CAISO (RA), NYISO (ICAP), NEISO (FCM + winter gas)
   - Archetype deduplication: (mix, fuel_level, threshold) → ~7,800 unique per ISO
   - Dispatch cache: append-mode NPZ per ISO, shared with recompute_co2.py
 - `calibrate_lmp_model.py` — validation framework with embedded PJM IMM/EIA reference data
 - `recompute_co2.py` — refactored to import from dispatch_utils.py (identical behavior)
 
-**PJM Calibration Results (2024 baseline, Medium fuel):**
-- Avg LMP: $36.23/MWh (target $34.70, +4%)
-- P50: $29.17/MWh (target $30, -3%)
-- Scarcity hours: 138 (target 100)
-- Known limitation: P75-P90 compressed vs actual (no unit commitment/congestion)
+**PJM v9 Calibration Results (2024 baseline, Medium fuel/CO2):**
 
-**PJM Test Cases (using optimizer scenarios):**
-- 2025 Baseline: $34.42/MWh — matches PJM actual
-- 2032 50% clean: $35.49/MWh — fossil fleet still large, prices similar
-- 2045 95% clean: $130.98/MWh — 5,299 negative hours, 572 scarcity hours, price bifurcation
+| Metric | Synthetic | Target | Delta | Status |
+|---|---|---|---|---|
+| Avg LMP | $36.69 | $34.70 | +6% | GOOD |
+| Peak avg | $38.82 | $42.00 | -8% | GOOD |
+| P10 | $20.00 | $18.00 | +$2 | FAIR |
+| P25 | $24.37 | $23.00 | +$1.37 | GOOD |
+| P50 | $31.88 | $30.00 | +$1.88 | GOOD |
+| P75 | $38.96 | $42.00 | -$3 | GOOD |
+| P90 | $50.21 | $55.00 | -$5 | GOOD |
+| Scarcity hours | 102 | 100 | +2 | GOOD |
+| Negative hours | 246 | 200 | +46 | FAIR |
+| Volatility | $31.03 | $25.00 | +$6 | FAIR |
 
-**In Progress:**
-- NB/CTR track sweep: CAISO replace ~89%, then 4 remaining ISOs
+- Calibration report: "No major adjustments needed"
+- Known limitation: off-peak avg ($34.75 vs $28) — no unit commitment/min-gen constraints
+
+**Marginal Costs at Medium (with 10% adder + CO2):**
+- Gas CCGT: $33.04/MWh (PJM 2024 RT avg: $33.74 — matches within 2%)
+- Coal: $36.55/MWh
+- Gas CT: $49.25/MWh
+- Oil CT: $131.81/MWh
+
+**Track Sweep Status:**
+- CAISO: Complete (NB + replace, 12 thresholds × 209,952 scenarios each)
+- ERCOT: NB partial (10/13 thresholds), replace not started
+- PJM, NYISO, NEISO: Not started
+- Checkpoint: `data/track_checkpoint.json` (partial results)
+- Parquet export: `dashboard/track_scenarios.parquet` (CAISO only)
 
 **Next Steps:**
-- Finish track sweep → commit results → rename to ECF/NB/CTR convention
+- Finish track sweep (ERCOT + PJM + NYISO + NEISO)
 - Run LMP model on full PJM ECF scenarios (all thresholds × fuel sensitivities)
 - Optional: fetch PJM hourly LMP data from Data Miner 2 for distribution matching
 
@@ -62,17 +83,22 @@
 - **Approach**: Current architecture preserved. Existing generation priced at regional wholesale (LMP-informed). New-build priced at LCOE + transmission adder.
 - **No change to pricing engine structure** — the existing/new split already computed in Step 3 `price_mix_batch()`. This decision confirms the hybrid approach is correct and no full nodal LMP model is needed.
 
-#### Decision 6: LMP Module Architecture (Feb 21, 2026)
+#### Decision 6: LMP Module Architecture (Feb 21, 2026, updated v9)
 - **Pipeline position**: Downstream of Step 4, reads ECF base case from `overprocure_scenarios.parquet`
-- **Fossil merit-order stack**: Heat rates (Coal 10.0, CCGT 6.4, CT 10.0, Oil 10.5 MMBtu/MWh) × fuel price + VOM
-- **Stack walk**: `np.searchsorted` step function with load-dependent heat rate ramp (30% quadratic)
+- **Cost-based offer formula** (PJM Manual 15): `MC = (Heat Rate × Fuel Price + VOM + CO2 Rate × CO2 Price) × (1 + 10% Adder)`
+- **Heat rates** (PJM SOM 2024 benchmarks): Coal 10.0, CCGT 7.0, CT 10.5, Oil 10.5 MMBtu/MWh
+- **VOM** (SOM 2024 decomposition: $3.18 maintenance + $1.43 operations): Coal $5.50, CCGT $3.50, CT $5.00, Oil $6.00 $/MWh
+- **CO2 allowance** (RGGI-weighted for PJM): Low $3/ton, Medium $5.50/ton, High $14/ton. SOM 2024: $1.94/MWh contribution.
+- **10% adder**: PJM market rules allow 10% markup above cost-based offers. SOM 2024: $2.00/MWh contribution.
+- **Stack walk**: `np.searchsorted` step function with load-dependent heat rate ramp (15% quadratic)
+- **Demand-quantile pricing**: High-demand congestion adder (P75+), scarcity tail (P95.5+), mid-low compression (P10-P70), negative pricing (P0-P10)
 - **ISO price formation**: PJM RPM ($2K cap), ERCOT ORDC (VOLL×LOLP, $5K cap), CAISO RA (-$60 floor), NYISO ICAP, NEISO FCM (+$13.13 winter gas)
-- **Must-run pricing**: Nuclear baseload surplus compresses overnight prices toward floor
-- **Installed capacity**: EIA 860 actuals (PJM 140 GW, ERCOT 80 GW, CAISO 47 GW, NYISO 28 GW, NEISO 16 GW)
+- **Installed capacity**: EIA 860 actuals (PJM 127.8 GW, ERCOT 80 GW, CAISO 47 GW, NYISO 28 GW, NEISO 16 GW)
 - **Fuel prices**: Low/Medium/High sensitivity (coal $2.00-2.50, gas $2.00-6.00, oil $8.00-13.00 $/MMBtu)
 - **Dispatch cache**: Shared with recompute_co2.py via dispatch_utils.py, append-mode NPZ per ISO
 - **Calibration reference**: PJM IMM 2024 SOM: RT LW avg $33.74/MWh, total wholesale $55.54/MWh
 - **LMP runs on ECF track only** (base case with existing clean floor). NB/CTR tracks are separate analysis, not priced through LMP.
+- **Data sources**: PJM Manual 15 Rev. 47, Monitoring Analytics 2024 SOM, EIA Electric Power Annual Table 8.1, EPA eGRID 2022
 
 #### Decision 5: Three Analysis Tracks (5C — Updated Feb 21, 2026)
 Three distinct tracks with standardized naming:
