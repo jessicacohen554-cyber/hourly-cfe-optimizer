@@ -996,15 +996,16 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     ldes_eff = LDES_EFFICIENCY
     ldes_window_hours = LDES_WINDOW_DAYS * 24
 
-    # Storage levels to sweep — sub-percent granularity below saturation threshold.
-    # Battery4/8 saturate at ~1.2% of annual demand (PJM binding case). LDES never
-    # saturates (multi-day accumulation). Fine granularity finds right-sized capacity
-    # to maximize utilization and minimize LCOS.
-    batt_levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-                   1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]
-    batt8_levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-                    1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]
-    ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]
+    # Storage levels to sweep — 0.05% steps under 1% for fine-grained battery sizing.
+    # Batteries saturate at <1% of annual demand (daily/2-day cycling fills gap quickly).
+    # Cap per-mix via energy-based ceiling; these lists are the max search space.
+    batt_levels = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
+                   0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95,
+                   1.0, 1.2, 1.5, 2.0, 2.5]
+    batt8_levels = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
+                    0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95,
+                    1.0, 1.2, 1.5, 2.0, 2.5, 3.0]
+    ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
 
     # Curtailment frequency threshold: daily-cycle batteries need 150+ surplus days
     MIN_SURPLUS_DAYS_FOR_BATTERY = 150
