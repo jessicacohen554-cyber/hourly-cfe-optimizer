@@ -1,0 +1,134 @@
+{
+  "iso": "PJM",
+  "mode": "qa_actual",
+  "year": 2024,
+  "calibration_date": "2026-02-21 04:55:57",
+  "eia_actual_stats": {
+    "avg_lmp": 36.05,
+    "peak_avg_lmp": 34.82,
+    "offpeak_avg_lmp": 37.18,
+    "zero_price_hours": 248,
+    "negative_price_hours": 248,
+    "scarcity_hours": 101,
+    "lmp_p10": 19.96,
+    "lmp_p25": 24.42,
+    "lmp_p50": 31.53,
+    "lmp_p75": 37.94,
+    "lmp_p90": 48.94,
+    "price_volatility": 30.71,
+    "duck_curve_depth_mw": 0.0,
+    "net_peak_price": 246.35,
+    "fossil_revenue_mwh": 36.22
+  },
+  "actual_mix": {
+    "clean_firm": 33.475384185023316,
+    "solar": 1.957600314178107,
+    "wind": 3.790789595949897,
+    "hydro": 1.9524487185057,
+    "ccs_ccgt": 0
+  },
+  "actual_clean_pct": 41.17622281365702,
+  "targets": {
+    "avg_lmp": 34.7,
+    "peak_avg_lmp": 42.0,
+    "offpeak_avg_lmp": 28.0,
+    "lmp_p10": 18.0,
+    "lmp_p25": 23.0,
+    "lmp_p50": 30.0,
+    "lmp_p75": 42.0,
+    "lmp_p90": 55.0,
+    "price_volatility": 25.0,
+    "negative_price_hours": 200,
+    "scarcity_hours": 100
+  },
+  "comparison": [
+    {
+      "metric": "avg_lmp",
+      "synthetic": 36.05,
+      "target": 34.7,
+      "delta": 1.3499999999999943,
+      "pct_delta": 3.890489913544652,
+      "status": "GOOD"
+    },
+    {
+      "metric": "peak_avg_lmp",
+      "synthetic": 34.82,
+      "target": 42.0,
+      "delta": -7.18,
+      "pct_delta": -17.095238095238095,
+      "status": "FAIR"
+    },
+    {
+      "metric": "offpeak_avg_lmp",
+      "synthetic": 37.18,
+      "target": 28.0,
+      "delta": 9.18,
+      "pct_delta": 32.785714285714285,
+      "status": "ADJUST"
+    },
+    {
+      "metric": "lmp_p10",
+      "synthetic": 19.96,
+      "target": 18.0,
+      "delta": 1.9600000000000009,
+      "pct_delta": 10.888888888888895,
+      "status": "FAIR"
+    },
+    {
+      "metric": "lmp_p25",
+      "synthetic": 24.42,
+      "target": 23.0,
+      "delta": 1.4200000000000017,
+      "pct_delta": 6.173913043478269,
+      "status": "GOOD"
+    },
+    {
+      "metric": "lmp_p50",
+      "synthetic": 31.53,
+      "target": 30.0,
+      "delta": 1.5300000000000011,
+      "pct_delta": 5.100000000000004,
+      "status": "GOOD"
+    },
+    {
+      "metric": "lmp_p75",
+      "synthetic": 37.94,
+      "target": 42.0,
+      "delta": -4.060000000000002,
+      "pct_delta": -9.666666666666671,
+      "status": "GOOD"
+    },
+    {
+      "metric": "lmp_p90",
+      "synthetic": 48.94,
+      "target": 55.0,
+      "delta": -6.060000000000002,
+      "pct_delta": -11.018181818181823,
+      "status": "FAIR"
+    },
+    {
+      "metric": "price_volatility",
+      "synthetic": 30.71,
+      "target": 25.0,
+      "delta": 5.710000000000001,
+      "pct_delta": 22.840000000000003,
+      "status": "FAIR"
+    },
+    {
+      "metric": "negative_price_hours",
+      "synthetic": 248,
+      "target": 200,
+      "delta": 48,
+      "pct_delta": 24.0,
+      "status": "FAIR"
+    },
+    {
+      "metric": "scarcity_hours",
+      "synthetic": 101,
+      "target": 100,
+      "delta": 1,
+      "pct_delta": 1.0,
+      "status": "GOOD"
+    }
+  ]
+}
