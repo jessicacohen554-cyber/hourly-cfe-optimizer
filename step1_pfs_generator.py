@@ -99,7 +99,7 @@ RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'hydro']
 N_RESOURCES = len(RESOURCE_TYPES)
 
 # Regions
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 ISO_LABELS = {
     'CAISO': 'CAISO (California)',
     'ERCOT': 'ERCOT (Texas)',
@@ -996,15 +996,11 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     ldes_eff = LDES_EFFICIENCY
     ldes_window_hours = LDES_WINDOW_DAYS * 24
 
-    # Storage levels to sweep — 0.05% steps under 1% for fine-grained battery sizing.
-    # Batteries saturate at <1% of annual demand (daily/2-day cycling fills gap quickly).
-    # Cap per-mix via energy-based ceiling; these lists are the max search space.
-    batt_levels = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
-                   0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95,
-                   1.0, 1.2, 1.5, 2.0, 2.5]
-    batt8_levels = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
-                    0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95,
-                    1.0, 1.2, 1.5, 2.0, 2.5, 3.0]
+    # Storage levels — coarse 0.25% sweep to identify saturation range.
+    # Batteries saturate at <1% of annual demand (daily/2-day cycling).
+    # Cap per-mix via energy-based ceiling; levels above cap auto-skipped.
+    batt_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
+    batt8_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0]
     ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
 
     # Curtailment frequency threshold: daily-cycle batteries need 150+ surplus days
