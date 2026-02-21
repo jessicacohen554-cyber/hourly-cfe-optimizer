@@ -391,76 +391,40 @@ def prepare_numpy_profiles(demand_norm, supply_profiles):
 # ══════════════════════════════════════════════════════════════════════════════
 
 @njit(cache=True)
-def _compute_max_daily_battery_soc(demand, supply_row, procurement,
-                                    batt_eff, batt_duration):
-    """Compute max daily SOC a battery would reach with unlimited capacity.
+def _compute_storage_caps(demand, supply_row, procurement,
+                          batt4_duration, batt8_duration, ldes_duration):
+    """Compute max useful capacity for each storage type from curtailment profile.
 
-    This is the SOC screening formula: for a given (mix, procurement), find the
-    absolute maximum SOC any battery (4hr or 8hr) would reach on any day of the
-    year. Storage levels above this are pure waste — the battery would never fill.
+    Physics-based ceiling: a battery with power = cap/duration can never charge
+    faster than max_hourly_surplus. So max useful cap = max_hourly_surplus × duration.
+    Any capacity above this has power that exceeds available curtailment in every
+    hour of the year — physically impossible to fill.
 
-    Also returns total annual dispatch at unlimited capacity (useful for checking
-    if any dispatch is possible at all).
+    For LDES (100hr), the same logic applies but the long duration means the
+    power-based cap can be quite large. We also check window-accumulated surplus
+    as a secondary ceiling.
 
-    Returns: (max_soc, total_dispatch)
-        max_soc: maximum state of charge reached on any day (normalized units)
-        total_dispatch: total energy dispatched over the year (normalized units)
+    Returns: (bat4_cap, bat8_cap, ldes_cap, has_curtailment)
+        bat4_cap: max useful bat4 capacity (normalized units, as fraction of annual demand)
+        bat8_cap: max useful bat8 capacity (same)
+        ldes_cap: max useful LDES capacity (same)
+        has_curtailment: True if any hour has surplus > 0
     """
-    max_soc = 0.0
-    total_dispatch = 0.0
-    for day in range(365):
-        ds = day * 24
-        stored = 0.0
-        # Charge phase: accumulate all surplus (no capacity limit)
-        for h in range(24):
-            s = procurement * supply_row[ds + h] - demand[ds + h]
-            if s > 0:
-                stored += s  # No power limit — we want max possible SOC
-        if stored > max_soc:
-            max_soc = stored
-        # Discharge: all stored × RTE into gaps (no power limit)
-        avail = stored * batt_eff
-        for h in range(24):
-            g = demand[ds + h] - procurement * supply_row[ds + h]
-            if g > 0 and avail > 0:
-                d = g if g < avail else avail
-                total_dispatch += d
-                avail -= d
-    return max_soc, total_dispatch
+    max_hourly_surplus = 0.0
+    has_curtailment = False
+    for h in range(8760):
+        s = procurement * supply_row[h] - demand[h]
+        if s > 0:
+            if s > max_hourly_surplus:
+                max_hourly_surplus = s
+            has_curtailment = True
 
+    # Power-based ceiling: max_useful_cap = max_hourly_surplus × duration
+    bat4_cap = max_hourly_surplus * batt4_duration
+    bat8_cap = max_hourly_surplus * batt8_duration
+    ldes_cap = max_hourly_surplus * ldes_duration
 
-@njit(cache=True)
-def _compute_max_ldes_soc(demand, supply_row, procurement,
-                           ldes_eff, ldes_window_hours):
-    """Compute max SOC LDES would reach with unlimited capacity.
-
-    Returns: (max_soc, total_dispatch)
-    """
-    max_soc = 0.0
-    total_dispatch = 0.0
-    soc = 0.0
-    n_windows = (8760 + ldes_window_hours - 1) // ldes_window_hours
-    for w in range(n_windows):
-        ws = w * ldes_window_hours
-        we = ws + ldes_window_hours
-        if we > 8760:
-            we = 8760
-        # Charge phase
-        for h in range(ws, we):
-            s = procurement * supply_row[h] - demand[h]
-            if s > 0:
-                soc += s
-        if soc > max_soc:
-            max_soc = soc
-        # Discharge phase
-        for h in range(ws, we):
-            g = demand[h] - procurement * supply_row[h]
-            if g > 0 and soc > 0:
-                ae = soc * ldes_eff
-                d = g if g < ae else ae
-                total_dispatch += d
-                soc -= d / ldes_eff
-    return max_soc, total_dispatch
+    return bat4_cap, bat8_cap, ldes_cap, has_curtailment
 
 
 @njit(cache=True)
@@ -993,20 +957,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     # Phase 1b: Storage sweep on near-miss mixes
     # OPTIMIZED with three key efficiency strategies:
     #
-    # 1. SOC PRE-SCREEN: For each (mix, max_procurement), compute the max daily
-    #    SOC that bat4/bat8/LDES would ever reach with unlimited capacity. Storage
-    #    levels above max_soc are pure waste — skip them entirely. This eliminates
-    #    80-95% of bat4/bat8 combos since they saturate below ~1.2%.
+    # 1. CURTAILMENT-MW CAP: For each (mix, max_procurement), find the max hourly
+    #    surplus (curtailment). A battery with power = cap/duration can never charge
+    #    faster than this. So max_useful_cap = max_hourly_surplus × duration.
+    #    Any capacity above this physically cannot fill — skip those levels.
+    #    This is tighter than SOC-based screening especially for bat4 (4hr → ~2× tighter).
     #
     # 2. DOMINANCE PRUNING: Within each storage type's sweep, once a level achieves
     #    the target, higher levels are dominated (same target met with more idle
     #    capacity = higher LCOS). Stop searching higher levels.
-    #    Exception: we still record the first-feasible as a solution, since Step 3
-    #    needs all feasible configs to find cost-optimal ones.
     #
-    # 3. CURTAILMENT GUARD: Only run storage sweep if the mix actually has curtailed
-    #    clean energy to harness. If surplus at max procurement is zero, storage
-    #    can't help regardless of capacity.
+    # 3. CURTAILMENT GUARD: No surplus at max procurement → no storage can help.
     #
     # Dispatch order remains: battery4 → battery8 → LDES (cheapest first).
     near_miss_list = sorted(near_miss_mixes.keys())
@@ -1025,35 +986,32 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
 
         max_pf = proc_levels[-1] / 100.0
 
-        # ── SOC PRE-SCREEN ──
-        # Compute max useful SOC for each storage type at max procurement.
-        # This is fast (no storage capacity constraint) and gives us the ceiling.
-        bat4_max_soc, bat4_max_disp = _compute_max_daily_battery_soc(
-            demand_arr, supply_row, max_pf, batt_eff, BATTERY_DURATION_HOURS)
-        bat8_max_soc, bat8_max_disp = _compute_max_daily_battery_soc(
-            demand_arr, supply_row, max_pf, batt8_eff, BATTERY8_DURATION_HOURS)
-        ldes_max_soc, ldes_max_disp = _compute_max_ldes_soc(
-            demand_arr, supply_row, max_pf, ldes_eff, ldes_window_hours)
+        # ── CURTAILMENT-MW CAP ──
+        # max_hourly_surplus × duration = max useful battery capacity.
+        # A battery can never charge faster than its power rating (cap/duration),
+        # so capacity beyond max_hourly_surplus × duration is physically impossible to fill.
+        bat4_cap_ceil, bat8_cap_ceil, ldes_cap_ceil, has_curt = _compute_storage_caps(
+            demand_arr, supply_row, max_pf,
+            BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
 
-        # Skip mix entirely if no curtailment to harness
-        if bat4_max_disp <= 0 and bat8_max_disp <= 0 and ldes_max_disp <= 0:
-            continue
+        if not has_curt:
+            continue  # No curtailment to harness
 
-        # Filter storage levels to only those below max useful SOC (+ 10% margin)
-        bat4_max_pct = bat4_max_soc * 100.0 * 1.1  # 10% margin
-        bat8_max_pct = bat8_max_soc * 100.0 * 1.1
-        ldes_max_pct = ldes_max_soc * 100.0 * 1.1
+        # Convert to % and filter levels (+ 10% margin for procurement variation)
+        bat4_max_pct = bat4_cap_ceil * 100.0 * 1.1
+        bat8_max_pct = bat8_cap_ceil * 100.0 * 1.1
+        ldes_max_pct = ldes_cap_ceil * 100.0 * 1.1
 
         eff_batt_levels = [bl for bl in batt_levels if bl <= bat4_max_pct or bl == 0]
         eff_batt8_levels = [bl for bl in batt8_levels if bl <= bat8_max_pct or bl == 0]
         eff_ldes_levels = [ll for ll in ldes_levels if ll <= ldes_max_pct or ll == 0]
 
-        # Ensure at least one non-zero level per type if there's any dispatch potential
-        if bat4_max_disp > 0 and len(eff_batt_levels) == 1:
-            eff_batt_levels = [0, batt_levels[1]]  # Add smallest non-zero
-        if bat8_max_disp > 0 and len(eff_batt8_levels) == 1:
+        # Ensure at least one non-zero level if there's curtailment
+        if len(eff_batt_levels) == 1:
+            eff_batt_levels = [0, batt_levels[1]]
+        if len(eff_batt8_levels) == 1:
             eff_batt8_levels = [0, batt8_levels[1]]
-        if ldes_max_disp > 0 and len(eff_ldes_levels) == 1:
+        if len(eff_ldes_levels) == 1:
             eff_ldes_levels = [0, ldes_levels[1]]
 
         # ── STORAGE SWEEP WITH DOMINANCE PRUNING ──
@@ -1176,20 +1134,18 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     # Near-miss refinement: storage sweep with SOC screen + dominance
                     supply_row_j = fine_supply[j]
 
-                    # SOC pre-screen for this fine mix
-                    b4ms, b4md = _compute_max_daily_battery_soc(
-                        demand_arr, supply_row_j, max_pf, batt_eff, BATTERY_DURATION_HOURS)
-                    b8ms, b8md = _compute_max_daily_battery_soc(
-                        demand_arr, supply_row_j, max_pf, batt8_eff, BATTERY8_DURATION_HOURS)
-                    lms, lmd = _compute_max_ldes_soc(
-                        demand_arr, supply_row_j, max_pf, ldes_eff, ldes_window_hours)
+                    # Curtailment-MW cap for this fine mix
+                    b4c, b8c, lc, has_c = _compute_storage_caps(
+                        demand_arr, supply_row_j, max_pf,
+                        BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
+                        LDES_DURATION_HOURS)
 
-                    if b4md <= 0 and b8md <= 0 and lmd <= 0:
-                        continue  # No curtailment to harness
+                    if not has_c:
+                        continue
 
-                    b4_ceil = b4ms * 100.0 * 1.1
-                    b8_ceil = b8ms * 100.0 * 1.1
-                    l_ceil = lms * 100.0 * 1.1
+                    b4_ceil = b4c * 100.0 * 1.1
+                    b8_ceil = b8c * 100.0 * 1.1
+                    l_ceil = lc * 100.0 * 1.1
                     e_bl = [bl for bl in batt_levels if bl <= b4_ceil or bl == 0]
                     e_b8l = [bl for bl in batt8_levels if bl <= b8_ceil or bl == 0]
                     e_ll = [ll for ll in ldes_levels if ll <= l_ceil or ll == 0]
