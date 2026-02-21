@@ -94,13 +94,16 @@ FOSSIL_CAPACITY_SHARES = {
     'NEISO': {'coal_steam': 0.00, 'gas_ccgt': 0.52, 'gas_ct': 0.42, 'oil_ct': 0.06},
 }
 
-# Actual installed fossil capacity (MW)
-# PJM: Monitoring Analytics 2024 SOM (Dec 31, 2024): gas 88.8 GW + coal 37.8 GW + oil 4.0 GW = 130.6 GW
+# Actual installed fossil capacity (MW) — 2025 estimates
+# PJM: Monitoring Analytics 2024 SOM baseline (gas 88.8 + coal 37.8 + oil 4.0 = 130.6 GW)
+#   2025 coal retirements: Brandon Shores 1.3 GW, Wagner 0.8 GW, Indian River 0.4 GW, other ~0.5 GW = ~3.0 GW
+#   Sources: PJM Gen Deactivations list, Utility Dive, IMM SOM Sec 12
+#   Net 2025: coal ~34.8 GW, gas ~89.5 GW (minor additions), oil ~3.5 GW = ~127.8 GW
 # Others: EIA 860M (2024) cross-referenced with ISO capacity reports
 INSTALLED_FOSSIL_MW = {
     'CAISO': 47_000,   # ~47 GW gas fleet (no coal)
     'ERCOT': 80_000,   # ~80 GW total fossil (gas ~55, coal ~18, oil ~7)
-    'PJM':   130_600,  # 130.6 GW fossil — SOM: gas 88.8 + coal 37.8 + oil 4.0
+    'PJM':   127_800,  # 127.8 GW fossil — 2025 est. after ~3 GW coal retirements
     'NYISO': 28_000,   # ~28 GW fossil (mostly gas)
     'NEISO': 16_000,   # ~16 GW fossil (mostly gas)
 }
@@ -278,7 +281,19 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
 # ══════════════════════════════════════════════════════════════════════════════
 
 class PriceModel:
-    """Base price formation model. ISO-specific subclasses override parameters."""
+    """Base price formation model. ISO-specific subclasses override parameters.
+
+    Three pricing layers:
+      1. Merit-order dispatch — marginal cost from heat rate × fuel + VOM
+      2. Demand-quantile pricing — congestion/tightness adder on high-demand hours,
+         negative pricing on low-demand hours with must-run surplus
+      3. Scarcity pricing — exponential adder when reserves drop below threshold
+
+    The demand-quantile layer captures real-world price formation that a single-bus
+    merit-order model misses: transmission congestion, gas-supply tightness during
+    winter peaks, bid markup above marginal cost, and must-run nuclear/wind curtailment
+    economics. Parameters calibrated against PJM SOM 2024 price distribution.
+    """
 
     def __init__(self, iso, fuel_level='Medium'):
         self.iso = iso
@@ -289,6 +304,19 @@ class PriceModel:
         self.surplus_decay = 0.02      # decay rate for surplus pricing
         self.rt_sensitivity_factor = 1.0  # scale for RT volatility
         self.scarcity_threshold = 0.05    # reserves/demand ratio triggering scarcity
+
+        # Demand-quantile pricing parameters
+        # High-demand adder: congestion + gas tightness on highest-demand hours
+        self.dq_high_percentile = 80    # demand percentile above which adder applies
+        self.dq_high_max_adder = 60.0   # $/MWh max adder at peak demand hour
+        self.dq_high_exponent = 2.0     # curvature — higher = sharper peak premium
+        # Scarcity tail: extreme high-demand hours get exponential scarcity adder
+        self.dq_scarcity_percentile = 97  # demand percentile for scarcity tail
+        self.dq_scarcity_max = 500.0     # $/MWh max scarcity-like adder
+        # Low-demand negative pricing: must-run surplus drives prices negative
+        self.dq_low_percentile = 15     # demand percentile below which prices depress
+        self.dq_low_floor = -25.0       # $/MWh floor for low-demand hours
+        self.dq_low_exponent = 1.5      # curvature for negative pricing
 
     def price_hour(self, residual_demand_mw, demand_mw, stack, surplus_mw=0.0):
         """Compute LMP for a single hour given residual demand and merit-order stack.
@@ -324,8 +352,9 @@ class PriceModel:
             # Demand exceeds all capacity — scarcity pricing
             return self._price_scarcity(residual_demand_mw, cumulative_mw, demand_mw), len(stack)
 
-        # Check reserve margin — partial scarcity adder
-        remaining_capacity = cumulative_mw - residual_demand_mw
+        # Check reserve margin — use TOTAL stack remaining (not just within-band)
+        total_stack_cap = sum(cap for _, cap, _ in stack)
+        remaining_capacity = total_stack_cap - residual_demand_mw
         reserve_ratio = remaining_capacity / demand_mw if demand_mw > 0 else 1.0
 
         if reserve_ratio < self.scarcity_threshold:
@@ -365,7 +394,11 @@ class PriceModel:
 
 
 class PJMPriceModel(PriceModel):
-    """PJM: RPM capacity market, penalty factor scarcity, moderate negative prices."""
+    """PJM: RPM capacity market, penalty factor scarcity, moderate negative prices.
+
+    Calibrated against PJM SOM 2024: avg $34.70, peak $42, offpeak $28,
+    P10 $18, P90 $55, volatility $25, ~200 negative hours, ~100 scarcity hours.
+    """
 
     def __init__(self, fuel_level='Medium'):
         super().__init__('PJM', fuel_level)
@@ -375,6 +408,26 @@ class PJMPriceModel(PriceModel):
         self.surplus_decay = 0.015
         self.scarcity_threshold = 0.03  # PJM has large reserves; scarcity is rare
         self.coal_min_gen_fraction = 0.4
+
+        # PJM demand-quantile calibration (v7 — tuned against SOM 2024)
+        # High-demand: PJM summer peaks drive congestion + gas tightness
+        self.dq_high_percentile = 55
+        self.dq_high_max_adder = 40.0
+        self.dq_high_exponent = 1.8
+        # Scarcity tail: PJM penalty factor regime
+        # Linear scarcity ramp at P94.5 (482 hours). Linear ramp distributes
+        # adder evenly → ~100 hours cross $200 without extreme spikes.
+        # Max = 170 means hours at position > 0.82 ((200-60)/170) cross $200.
+        # That's top 18% of 482 = ~87 hours; with some price variation → ~100.
+        self.dq_scarcity_percentile = 94.5
+        self.dq_scarcity_max = 170.0
+        # Low-demand: PJM ~200 negative price hours
+        self.dq_low_percentile = 8
+        self.dq_low_floor = -30.0
+        self.dq_low_exponent = 2.0
+        # Mid-low: P8-P45 range gets price compression
+        self.dq_midlow_percentile = 45
+        self.dq_midlow_discount = 0.45
 
 
 class ERCOTPriceModel(PriceModel):
@@ -391,6 +444,16 @@ class ERCOTPriceModel(PriceModel):
         self.surplus_decay = 0.025
         self.voll = 5000.0
         self.ordc_knee_mw = 3000.0  # reserves below this trigger exponential ORDC
+
+        # ERCOT: energy-only → more extreme price swings
+        self.dq_high_percentile = 80
+        self.dq_high_max_adder = 100.0   # higher — no capacity market dampening
+        self.dq_high_exponent = 2.5
+        self.dq_scarcity_percentile = 95  # ERCOT hits scarcity more often
+        self.dq_scarcity_max = 1000.0
+        self.dq_low_percentile = 15       # wind surplus more common
+        self.dq_low_floor = -50.0
+        self.dq_low_exponent = 1.5
 
     def _scarcity_adder(self, reserve_ratio, demand_mw):
         """ERCOT ORDC: smooth exponential adder, not a hard cap."""
@@ -413,6 +476,16 @@ class CAISOPriceModel(PriceModel):
         self.surplus_decay = 0.030  # steeper negative prices (more solar)
         self.scarcity_threshold = 0.05
 
+        # CAISO: big solar surplus → many negative hours; evening ramp scarcity
+        self.dq_high_percentile = 80
+        self.dq_high_max_adder = 80.0    # evening net-load ramp premium
+        self.dq_high_exponent = 2.0
+        self.dq_scarcity_percentile = 96
+        self.dq_scarcity_max = 500.0
+        self.dq_low_percentile = 20       # more surplus hours (solar duck curve)
+        self.dq_low_floor = -60.0
+        self.dq_low_exponent = 1.5
+
 
 class NYISOPriceModel(PriceModel):
     """NYISO: ICAP capacity market. Similar to PJM but tighter geography."""
@@ -423,6 +496,16 @@ class NYISOPriceModel(PriceModel):
         self.floor_price = -20.0
         self.surplus_decay = 0.012
         self.scarcity_threshold = 0.06
+
+        # NYISO: tighter geography → more congestion
+        self.dq_high_percentile = 78
+        self.dq_high_max_adder = 65.0
+        self.dq_high_exponent = 2.0
+        self.dq_scarcity_percentile = 96
+        self.dq_scarcity_max = 500.0
+        self.dq_low_percentile = 12
+        self.dq_low_floor = -20.0
+        self.dq_low_exponent = 1.5
 
 
 class NEISOPriceModel(PriceModel):
@@ -437,6 +520,16 @@ class NEISOPriceModel(PriceModel):
         self.floor_price = -25.0
         self.surplus_decay = 0.012
         self.scarcity_threshold = 0.07  # tighter than PJM — winter gas
+
+        # NEISO: winter gas pipeline scarcity on top of regular adder
+        self.dq_high_percentile = 78
+        self.dq_high_max_adder = 65.0
+        self.dq_high_exponent = 2.0
+        self.dq_scarcity_percentile = 96
+        self.dq_scarcity_max = 500.0
+        self.dq_low_percentile = 12
+        self.dq_low_floor = -25.0
+        self.dq_low_exponent = 1.5
 
     def price_hour(self, residual_demand_mw, demand_mw, stack, surplus_mw=0.0,
                    hour_of_year=0):
@@ -630,8 +723,9 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             normal_prices = base_prices * heat_rate_ramp
 
             # Reserve margin check for scarcity adder
+            # Use TOTAL stack remaining (not within-band), reflecting actual system reserves
             pos_demand = demand_mw_profile[pos_mask][normal_mask]
-            remaining_cap = cum_capacity[normal_idx] - normal_residual
+            remaining_cap = total_fossil_cap - normal_residual
             reserve_ratio = np.where(pos_demand > 0, remaining_cap / pos_demand, 1.0)
 
             low_reserve = reserve_ratio < price_model.scarcity_threshold
@@ -665,33 +759,77 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
                 float(surplus_mw[gi]), float(demand_mw_profile[gi]))
             hourly_marginal_unit[gi] = -1
 
-    # Must-run baseload effect: nuclear and some coal can't economically ramp
-    # down. During low-demand hours, must-run output pushes prices toward
-    # or below zero. In PJM, ~30-40 GW of nuclear runs 24/7. When overnight
-    # demand drops to ~60 GW, nuclear alone covers a large share.
-    if n_units > 0 and len(stack) > 0:
-        cheapest_mc = marginal_costs[0]
-        # Absolute must-run level (MW) — nuclear + inflexible coal
-        baseline_shares = GRID_MIX_SHARES.get(iso or 'PJM', {})
-        nuclear_pct = baseline_shares.get('clean_firm', 0) / 100.0
-        avg_demand = demand_mw_profile.mean()
-        must_run_mw_level = avg_demand * nuclear_pct * 0.95  # nuclear at ~95% CF
+    # ══════════════════════════════════════════════════════════════════════
+    # DEMAND-QUANTILE PRICING LAYER
+    # ══════════════════════════════════════════════════════════════════════
+    # Real-world LMP deviates from pure merit-order due to:
+    #   - Transmission congestion (high-demand hours)
+    #   - Gas supply tightness (winter peaks, pipeline limits)
+    #   - Bid markup above marginal cost (generator bidding behavior)
+    #   - Must-run nuclear/wind surplus (overnight negative prices)
+    # This layer adds demand-quantile-dependent adders calibrated against
+    # actual PJM price distribution statistics.
 
-        # Hours where total fossil demand is less than must-run surplus
-        # (i.e., total demand - clean supply < must_run_level means clean + must_run > demand)
-        fossil_demand = residual_mw.copy()
-        total_demand = demand_mw_profile
-        effective_surplus = must_run_mw_level - fossil_demand  # positive = must-run excess
+    # Compute demand percentile rank for each hour (0-1)
+    demand_sorted = np.sort(demand_mw_profile)
+    demand_rank = np.searchsorted(demand_sorted, demand_mw_profile, side='right') / H
 
-        # Only affect hours where must-run creates genuine surplus pressure
-        surplus_hours = (effective_surplus > 0) & (fossil_demand > 0)
-        if surplus_hours.any():
-            surplus_ratio = effective_surplus[surplus_hours] / must_run_mw_level
-            surplus_ratio = np.clip(surplus_ratio, 0, 1)
-            # Prices compress: from cheapest MC down toward floor
-            depressed = cheapest_mc * (1 - surplus_ratio) + price_model.floor_price * surplus_ratio * 0.3
-            # Only depress prices, never increase them
-            hourly_lmp[surplus_hours] = np.minimum(hourly_lmp[surplus_hours], depressed)
+    # --- HIGH-DEMAND CONGESTION/TIGHTNESS ADDER ---
+    # Hours above dq_high_percentile get increasing adder
+    high_threshold = price_model.dq_high_percentile / 100.0
+    high_mask = demand_rank > high_threshold
+    if high_mask.any():
+        # Normalized position: 0 at threshold, 1 at rank=1.0
+        high_position = (demand_rank[high_mask] - high_threshold) / (1.0 - high_threshold)
+        high_position = np.clip(high_position, 0.0, 1.0)
+        # Exponential ramp: most adder concentrated on hottest hours
+        high_adder = price_model.dq_high_max_adder * (high_position ** price_model.dq_high_exponent)
+        hourly_lmp[high_mask] += high_adder
+
+    # --- SCARCITY TAIL ---
+    # Extreme high-demand hours get additional scarcity-like pricing
+    # (represents penalty factor / emergency pricing / ORDC tail)
+    scarcity_threshold = price_model.dq_scarcity_percentile / 100.0
+    scarcity_mask = demand_rank > scarcity_threshold
+    if scarcity_mask.any():
+        scar_position = (demand_rank[scarcity_mask] - scarcity_threshold) / (1.0 - scarcity_threshold)
+        scar_position = np.clip(scar_position, 0.0, 1.0)
+        # Linear scarcity ramp — distributes adder evenly across tail hours
+        # This avoids extreme concentration that causes excess volatility
+        scarcity_adder = price_model.dq_scarcity_max * scar_position
+        hourly_lmp[scarcity_mask] += scarcity_adder
+
+    # --- LOW-DEMAND NEGATIVE PRICING ---
+    # Hours below dq_low_percentile get depressed/negative prices
+    # Must-run nuclear + wind surplus → negative LMP
+    low_threshold = price_model.dq_low_percentile / 100.0
+    low_mask = demand_rank < low_threshold
+    if low_mask.any():
+        # Normalized position: 1 at lowest demand, 0 at threshold
+        low_position = 1.0 - (demand_rank[low_mask] / low_threshold)
+        low_position = np.clip(low_position, 0.0, 1.0)
+        # Price depression: from merit-order price toward floor
+        depression = low_position ** price_model.dq_low_exponent
+        # Depress toward floor: lerp from current price toward dq_low_floor
+        current = hourly_lmp[low_mask]
+        target_price = price_model.dq_low_floor
+        hourly_lmp[low_mask] = current * (1.0 - depression) + target_price * depression
+
+    # --- MID-LOW PRICE COMPRESSION ---
+    # Hours between low_percentile and midlow_percentile get mild depression
+    # Represents cheap overnight baseload pricing, low congestion
+    midlow_pct = getattr(price_model, 'dq_midlow_percentile', 0)
+    midlow_discount = getattr(price_model, 'dq_midlow_discount', 0)
+    if midlow_pct > 0 and midlow_discount > 0:
+        midlow_threshold = midlow_pct / 100.0
+        midlow_mask = (demand_rank >= low_threshold) & (demand_rank < midlow_threshold)
+        if midlow_mask.any():
+            # Normalized position: 1 at low_threshold, 0 at midlow_threshold
+            midlow_position = 1.0 - (demand_rank[midlow_mask] - low_threshold) / (midlow_threshold - low_threshold)
+            midlow_position = np.clip(midlow_position, 0.0, 1.0)
+            # Gentle linear discount
+            discount = midlow_discount * midlow_position
+            hourly_lmp[midlow_mask] *= (1.0 - discount)
 
     # NEISO winter gas adder
     if isinstance(price_model, NEISOPriceModel):
