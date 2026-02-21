@@ -46,7 +46,7 @@ from datetime import datetime, timezone
 
 # Numba JIT — try import, fall back to pure NumPy
 try:
-    from numba import njit
+    from numba import njit, prange
     HAS_NUMBA = True
     print("  Numba available — JIT-compiled scoring enabled")
 except ImportError:
@@ -59,6 +59,7 @@ except ImportError:
         if args and callable(args[0]):
             return args[0]
         return wrapper
+    prange = range
 
 # PyArrow for Parquet output
 try:
@@ -181,14 +182,8 @@ def _remove_leap_day(profile_8784):
 def _average_profiles(yearly_profiles):
     if not yearly_profiles:
         return [0.0] * H
-    n = len(yearly_profiles)
-    avg = [0.0] * H
-    for profile in yearly_profiles:
-        for h in range(H):
-            avg[h] += profile[h]
-    for h in range(H):
-        avg[h] /= n
-    return avg
+    stacked = np.array(yearly_profiles, dtype=np.float64)
+    return np.mean(stacked, axis=0).tolist()
 
 
 def _validate_demand_profile(iso, year, profile):
@@ -304,7 +299,11 @@ def load_data():
 
 
 def get_supply_profiles(iso, gen_profiles):
-    """Get generation profiles for 4D resource types (v4.0: no separate CCS)."""
+    """Get generation profiles for 4D resource types (v4.0: no separate CCS).
+
+    Returns dict mapping resource type to list of H floats (normalized shape profiles).
+    Uses numpy for vectorized DST correction and profile construction.
+    """
     profiles = {}
 
     # Clean firm = nuclear seasonal-derated baseload
@@ -312,66 +311,67 @@ def get_supply_profiles(iso, gen_profiles):
     nuc_share = NUCLEAR_SHARE_OF_CLEAN_FIRM.get(iso, 1.0)
     geo_share = 1.0 - nuc_share
     monthly_cf = NUCLEAR_MONTHLY_CF.get(iso, {m: 1.0 for m in range(1, 13)})
-    cf_profile = []
-    month_hours = [744, 672, 744, 720, 744, 720, 744, 744, 720, 744, 720, 744]
-    hour = 0
-    for month_idx, hours_in_month in enumerate(month_hours):
-        month_num = month_idx + 1
-        nuc_cf = monthly_cf.get(month_num, 1.0)
-        blended = nuc_share * nuc_cf + geo_share * 1.0
-        for _ in range(hours_in_month):
-            if hour < H:
-                cf_profile.append(blended / H)
-                hour += 1
-    while len(cf_profile) < H:
-        cf_profile.append(1.0 / H)
-    profiles['clean_firm'] = cf_profile[:H]
+    month_hours = np.array([744, 672, 744, 720, 744, 720, 744, 744, 720, 744, 720, 744])
+    month_cfs = np.array([nuc_share * monthly_cf.get(m + 1, 1.0) + geo_share
+                          for m in range(12)])
+    cf_profile = np.repeat(month_cfs, month_hours)[:H] / H
+    if len(cf_profile) < H:
+        cf_profile = np.pad(cf_profile, (0, H - len(cf_profile)),
+                            constant_values=1.0 / H)
+    profiles['clean_firm'] = cf_profile.tolist()
 
-    # Solar (with DST-aware nighttime correction)
+    # Solar (with vectorized DST-aware nighttime correction)
     if iso == 'NYISO':
         p = gen_profiles[iso].get('solar_proxy')
         if not p:
             p = gen_profiles['NEISO'].get('solar')
-        solar_raw = list(p[:H])
+        solar_arr = np.array(p[:H], dtype=np.float64)
     else:
-        solar_raw = list(gen_profiles[iso].get('solar', [0.0] * H)[:H])
+        solar_arr = np.array(gen_profiles[iso].get('solar', [0.0] * H)[:H],
+                             dtype=np.float64)
 
     STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5,
                        'MISO': 6, 'SPP': 6}
     DST_START_DAY, DST_END_DAY = 69, 307
     local_start, local_end = 6, 19
     std_off = STD_UTC_OFFSETS.get(iso, 5)
-    for day in range(H // 24):
-        ds = day * 24
-        is_dst = DST_START_DAY <= day < DST_END_DAY
-        utc_off = std_off - (1 if is_dst else 0)
-        utc_start = (local_start + utc_off) % 24
-        utc_end = (local_end + utc_off) % 24
-        for h_utc in range(24):
-            idx = ds + h_utc
-            if idx < len(solar_raw):
-                if utc_start <= utc_end:
-                    is_daylight = utc_start <= h_utc <= utc_end
-                else:
-                    is_daylight = h_utc >= utc_start or h_utc <= utc_end
-                if not is_daylight:
-                    solar_raw[idx] = 0.0
-    profiles['solar'] = solar_raw
+
+    # Vectorized: build daylight mask for all 8760 hours at once
+    hours = np.arange(H)
+    days = hours // 24
+    hour_of_day = hours % 24
+    is_dst = (days >= DST_START_DAY) & (days < DST_END_DAY)
+    utc_off = std_off - is_dst.astype(int)
+    utc_start = (local_start + utc_off) % 24
+    utc_end = (local_end + utc_off) % 24
+    # Normal case: utc_start <= utc_end → daylight when start <= h <= end
+    # Wrap case: utc_start > utc_end → daylight when h >= start OR h <= end
+    normal_mask = utc_start <= utc_end
+    is_daylight = np.where(
+        normal_mask,
+        (hour_of_day >= utc_start) & (hour_of_day <= utc_end),
+        (hour_of_day >= utc_start) | (hour_of_day <= utc_end)
+    )
+    solar_arr[~is_daylight] = 0.0
+    if len(solar_arr) < H:
+        solar_arr = np.pad(solar_arr, (0, H - len(solar_arr)))
+    profiles['solar'] = solar_arr.tolist()
 
     # Wind
-    profiles['wind'] = gen_profiles[iso].get('wind', [0.0] * H)[:H]
+    profiles['wind'] = list(gen_profiles[iso].get('wind', [0.0] * H)[:H])
 
     # Hydro
-    profiles['hydro'] = gen_profiles[iso].get('hydro', [0.0] * H)[:H]
+    profiles['hydro'] = list(gen_profiles[iso].get('hydro', [0.0] * H)[:H])
 
-    # Ensure all profiles are exactly H hours, no negatives
+    # Ensure all profiles are exactly H hours, no negatives (vectorized)
     for rtype in RESOURCE_TYPES:
-        p = profiles[rtype]
-        if len(p) > H:
-            p = p[:H]
-        elif len(p) < H:
-            p = p + [0.0] * (H - len(p))
-        profiles[rtype] = [max(0.0, v) for v in p]
+        arr = np.array(profiles[rtype], dtype=np.float64)
+        if len(arr) > H:
+            arr = arr[:H]
+        elif len(arr) < H:
+            arr = np.pad(arr, (0, H - len(arr)))
+        np.maximum(arr, 0.0, out=arr)
+        profiles[rtype] = arr.tolist()
 
     return profiles
 
@@ -389,168 +389,6 @@ def prepare_numpy_profiles(demand_norm, supply_profiles):
 # ══════════════════════════════════════════════════════════════════════════════
 # SCORING FUNCTIONS — Numba JIT compiled
 # ══════════════════════════════════════════════════════════════════════════════
-
-@njit(cache=True)
-def _score_hourly(demand, supply_row, procurement):
-    """Base hourly matching score. supply_row is already mix-weighted (8760,)."""
-    total = 0.0
-    for h in range(8760):
-        s = procurement * supply_row[h]
-        total += min(demand[h], s)
-    return total
-
-
-@njit(cache=True)
-def _score_with_battery(demand, supply_row, procurement,
-                        batt_capacity, batt_power, batt_eff):
-    """Hourly score + battery daily-cycle dispatch with power limits."""
-    supply = np.empty(8760)
-    surplus = np.empty(8760)
-    gap = np.empty(8760)
-    for h in range(8760):
-        s = procurement * supply_row[h]
-        supply[h] = s
-        d = demand[h]
-        if s > d:
-            surplus[h] = s - d
-            gap[h] = 0.0
-        else:
-            surplus[h] = 0.0
-            gap[h] = d - s
-
-    base_matched = 0.0
-    for h in range(8760):
-        base_matched += min(demand[h], supply[h])
-
-    if batt_capacity <= 0:
-        return base_matched
-
-    total_dispatched = 0.0
-    for day in range(365):
-        ds = day * 24
-        # Charge phase
-        stored = 0.0
-        for h in range(24):
-            s = surplus[ds + h]
-            if s > 0 and stored < batt_capacity:
-                charge = s
-                if charge > batt_power:
-                    charge = batt_power
-                remaining = batt_capacity - stored
-                if charge > remaining:
-                    charge = remaining
-                stored += charge
-        # Discharge phase
-        available = stored * batt_eff
-        for h in range(24):
-            g = gap[ds + h]
-            if g > 0 and available > 0:
-                discharge = g
-                if discharge > batt_power:
-                    discharge = batt_power
-                if discharge > available:
-                    discharge = available
-                total_dispatched += discharge
-                available -= discharge
-
-    return base_matched + total_dispatched
-
-
-@njit(cache=True)
-def _score_with_both_storage(demand, supply_row, procurement,
-                             batt_capacity, batt_power, batt_eff,
-                             ldes_capacity, ldes_power, ldes_eff,
-                             ldes_window_hours):
-    """Hourly score + battery (daily) + LDES (multi-day rolling window)."""
-    supply = np.empty(8760)
-    surplus = np.empty(8760)
-    gap = np.empty(8760)
-    for h in range(8760):
-        s = procurement * supply_row[h]
-        supply[h] = s
-        d = demand[h]
-        if s > d:
-            surplus[h] = s - d
-            gap[h] = 0.0
-        else:
-            surplus[h] = 0.0
-            gap[h] = d - s
-
-    base_matched = 0.0
-    for h in range(8760):
-        base_matched += min(demand[h], supply[h])
-
-    # Phase 1: Battery daily cycle on residual surplus/gap
-    batt_dispatched = 0.0
-    residual_surplus = np.copy(surplus)
-    residual_gap = np.copy(gap)
-
-    if batt_capacity > 0:
-        for day in range(365):
-            ds = day * 24
-            stored = 0.0
-            # Charge
-            for h in range(24):
-                s = residual_surplus[ds + h]
-                if s > 0 and stored < batt_capacity:
-                    charge = s
-                    if charge > batt_power:
-                        charge = batt_power
-                    remaining = batt_capacity - stored
-                    if charge > remaining:
-                        charge = remaining
-                    stored += charge
-                    residual_surplus[ds + h] -= charge
-            # Discharge
-            available = stored * batt_eff
-            for h in range(24):
-                g = residual_gap[ds + h]
-                if g > 0 and available > 0:
-                    discharge = g
-                    if discharge > batt_power:
-                        discharge = batt_power
-                    if discharge > available:
-                        discharge = available
-                    batt_dispatched += discharge
-                    available -= discharge
-                    residual_gap[ds + h] -= discharge
-
-    # Phase 2: LDES multi-day rolling window on post-battery residual
-    ldes_dispatched = 0.0
-    if ldes_capacity > 0:
-        soc = 0.0
-        n_windows = (8760 + ldes_window_hours - 1) // ldes_window_hours
-        for w in range(n_windows):
-            ws = w * ldes_window_hours
-            we = ws + ldes_window_hours
-            if we > 8760:
-                we = 8760
-            # Charge phase
-            for h in range(ws, we):
-                s = residual_surplus[h]
-                if s > 0 and soc < ldes_capacity:
-                    charge = s
-                    if charge > ldes_power:
-                        charge = ldes_power
-                    remaining = ldes_capacity - soc
-                    if charge > remaining:
-                        charge = remaining
-                    soc += charge
-            # Discharge phase
-            for h in range(ws, we):
-                g = residual_gap[h]
-                if g > 0 and soc > 0:
-                    available_e = soc * ldes_eff
-                    discharge = g
-                    if discharge > ldes_power:
-                        discharge = ldes_power
-                    if discharge > available_e:
-                        discharge = available_e
-                    ldes_dispatched += discharge
-                    soc -= discharge / ldes_eff
-
-    return base_matched + batt_dispatched + ldes_dispatched
-
 
 @njit(cache=True)
 def _score_with_all_storage(demand, supply_row, procurement,
@@ -680,15 +518,61 @@ def _score_with_all_storage(demand, supply_row, procurement,
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# BATCH EVALUATION — vectorized for grid search
+# BATCH EVALUATION — vectorized for grid search + Numba parallel for storage
 # ══════════════════════════════════════════════════════════════════════════════
 
 def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, procurement):
-    """Evaluate N mixes at once. mix_batch shape (N, 4), returns (N,) scores."""
+    """Evaluate N mixes at once. mix_batch shape (N, 4), returns (N,) scores.
+
+    Uses total matched energy metric: sum(min(demand, supply)) for consistency
+    with storage scoring functions.
+    """
     # (N, 4) @ (4, 8760) = (N, 8760) — all mixes in one matrix multiply
     supply_batch = procurement * (mix_batch @ supply_matrix)
     matched = np.minimum(demand_arr, supply_batch)
     return matched.sum(axis=1)
+
+
+@njit(cache=True)
+def _batch_score_no_storage(demand, supply_rows, procurement, N):
+    """Score N mixes without storage, using Numba parallel if available.
+
+    Uses sum(min(demand, supply)) — total matched energy, consistent with
+    _score_with_all_storage's base_matched computation.
+    """
+    scores = np.empty(N, dtype=np.float64)
+    for i in prange(N):
+        total = 0.0
+        for h in range(8760):
+            s = procurement * supply_rows[i, h]
+            d = demand[h]
+            if s < d:
+                total += s
+            else:
+                total += d
+        scores[i] = total
+    return scores
+
+
+@njit(cache=True)
+def _batch_score_storage(demand, supply_rows, procurement, N,
+                         batt_cap, batt_pow, batt_eff,
+                         batt8_cap, batt8_pow, batt8_eff,
+                         ldes_cap, ldes_pow, ldes_eff,
+                         ldes_window_hours):
+    """Evaluate N mixes in parallel at a single (procurement, storage) config.
+
+    Each mix is independent — Numba prange distributes across CPU cores.
+    """
+    scores = np.empty(N, dtype=np.float64)
+    for i in prange(N):
+        scores[i] = _score_with_all_storage(
+            demand, supply_rows[i], procurement,
+            batt_cap, batt_pow, batt_eff,
+            batt8_cap, batt8_pow, batt8_eff,
+            ldes_cap, ldes_pow, ldes_eff,
+            ldes_window_hours)
+    return scores
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -704,17 +588,26 @@ def generate_4d_combos(hydro_cap, step=5, max_single=100):
 
     Returns numpy array of shape (N, 4) where columns are
     [clean_firm, solar, wind, hydro] as percentages.
+
+    Uses vectorized numpy meshgrid instead of nested Python loops.
     """
-    combos = []
     hydro_max = min(int(hydro_cap), max_single)
-    for hyd in range(0, hydro_max + 1, step):
-        remainder = 100 - hyd
-        for cf in range(0, min(max_single + 1, remainder + 1), step):
-            for sol in range(0, min(max_single + 1, remainder - cf + 1), step):
-                wnd = remainder - cf - sol
-                if 0 <= wnd <= max_single:
-                    combos.append([cf, sol, wnd, hyd])
-    return np.array(combos, dtype=np.float64)
+    hyd_vals = np.arange(0, hydro_max + 1, step)
+    cf_vals = np.arange(0, max_single + 1, step)
+    sol_vals = np.arange(0, max_single + 1, step)
+
+    # Build all (cf, sol, hyd) triples via meshgrid
+    cf_grid, sol_grid, hyd_grid = np.meshgrid(cf_vals, sol_vals, hyd_vals, indexing='ij')
+    cf_flat = cf_grid.ravel()
+    sol_flat = sol_grid.ravel()
+    hyd_flat = hyd_grid.ravel()
+    wnd_flat = 100 - cf_flat - sol_flat - hyd_flat
+
+    # Filter: wind must be in [0, max_single]
+    valid = (wnd_flat >= 0) & (wnd_flat <= max_single)
+    combos = np.column_stack([cf_flat[valid], sol_flat[valid],
+                              wnd_flat[valid], hyd_flat[valid]])
+    return combos.astype(np.float64)
 
 
 def generate_4d_combos_around(base_combo, hydro_cap, step=1, radius=2, max_single=100):
@@ -966,6 +859,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         prev_min_proc = prev_pruning.get('min_proc', {})
 
     # Phase 1a: No-storage sweep — per-mix procurement early stopping
+    # Uses consistent scoring metric: sum(min(demand, supply)) matching storage functions
     phase1a_start = resume_cursor if resume_phase == '1a' else n_combos
 
     for i in range(phase1a_start, n_combos):
@@ -982,7 +876,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 continue  # Skip below floor
             pf = proc / 100.0
             supply_scaled = supply_rows[i] * pf
-            score = np.sum(np.minimum(supply_scaled / demand_arr, 1.0)) / H
+            score = np.sum(np.minimum(demand_arr, supply_scaled))
             if score >= target:
                 add_candidate(combos_5[i], proc, 0, 0, 0, score)
                 mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
@@ -1022,22 +916,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         mix = combos_5[i]
         mix_key = (int(mix[0]), int(mix[1]), int(mix[2]), int(mix[3]))
 
-        # Battery4 only — for each battery level, sweep procurement with early stop
-        for bp in batt_levels:
-            if bp == 0:
-                continue
-            batt_cap = bp / 100.0
-            batt_pow = batt_cap / BATTERY_DURATION_HOURS
-            for proc in proc_levels:
-                pf = proc / 100.0
-                score = _score_with_battery(demand_arr, supply_row, pf,
-                                            batt_cap, batt_pow, batt_eff)
-                if score >= target:
-                    add_candidate(mix, proc, bp, 0, 0, score)
-                    mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
-                    feasible_mix_keys.add(mix_key)
-                    break  # Early stop per (mix, battery_level)
-
         # Full storage combos: battery4 × battery8 × LDES
         # Early stop per (mix, batt4, batt8, ldes) combo
         for bp in batt_levels:
@@ -1047,11 +925,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 batt8_cap = b8p / 100.0
                 batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS
                 for lp in ldes_levels:
-                    # Skip no-storage (already covered) and battery4-only (covered above)
+                    # Skip no-storage (already covered in Phase 1a)
                     if bp == 0 and b8p == 0 and lp == 0:
                         continue
-                    if b8p == 0 and lp == 0:
-                        continue  # Battery4-only already covered above
                     # Skip if entire mix is already proven feasible from cross-pollination
                     if mix_key in cross_skip:
                         continue
@@ -1095,36 +971,44 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
             fine_supply = fine_fracs @ supply_matrix
             n_fine = len(fine_combos)
 
-            # No-storage: per-mix procurement early stop
+            # No-storage: per-mix procurement early stop (consistent energy metric)
             for j in range(n_fine):
+                near_miss_fine = False
                 for proc in proc_levels:
                     pf = proc / 100.0
                     supply_scaled = fine_supply[j] * pf
-                    score = np.sum(np.minimum(supply_scaled / demand_arr, 1.0)) / H
+                    score = np.sum(np.minimum(demand_arr, supply_scaled))
                     if score >= target:
                         add_candidate(fine_combos[j], proc, 0, 0, 0, score)
                         break  # Early stop
                     elif score >= target - 0.10:
-                        # Near-miss: try storage with early stop per (mix, batt4)
-                        supply_row_j = fine_supply[j]
-                        for bp in [2, 5, 10]:
-                            batt_cap = bp / 100.0
-                            batt_pow = batt_cap / BATTERY_DURATION_HOURS
-                            sc = _score_with_battery(demand_arr, supply_row_j, pf,
-                                                     batt_cap, batt_pow, batt_eff)
-                            if sc >= target:
-                                add_candidate(fine_combos[j], proc, bp, 0, 0, sc)
-                        # Also try battery8 alone in refinement
-                        for b8p in [2, 5, 10]:
+                        near_miss_fine = True
+
+                # Full storage sweep on near-miss refinement mixes
+                if near_miss_fine:
+                    supply_row_j = fine_supply[j]
+                    for bp in batt_levels:
+                        batt_cap = bp / 100.0
+                        batt_pow = batt_cap / BATTERY_DURATION_HOURS
+                        for b8p in batt8_levels:
                             batt8_cap = b8p / 100.0
                             batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS
-                            sc = _score_with_all_storage(
-                                demand_arr, supply_row_j, pf,
-                                0.0, 0.0, batt_eff,
-                                batt8_cap, batt8_pow, batt8_eff,
-                                0.0, 0.0, ldes_eff, ldes_window_hours)
-                            if sc >= target:
-                                add_candidate(fine_combos[j], proc, 0, b8p, 0, sc)
+                            for lp in ldes_levels:
+                                if bp == 0 and b8p == 0 and lp == 0:
+                                    continue
+                                ldes_cap = lp / 100.0
+                                ldes_pow = ldes_cap / LDES_DURATION_HOURS
+                                for proc in proc_levels:
+                                    pf = proc / 100.0
+                                    sc = _score_with_all_storage(
+                                        demand_arr, supply_row_j, pf,
+                                        batt_cap, batt_pow, batt_eff,
+                                        batt8_cap, batt8_pow, batt8_eff,
+                                        ldes_cap, ldes_pow, ldes_eff,
+                                        ldes_window_hours)
+                                    if sc >= target:
+                                        add_candidate(fine_combos[j], proc, bp, b8p, lp, sc)
+                                        break  # Early stop per storage config
 
     # Build pruning info for next threshold
     # Phase 2 fine combos also contribute to feasibility (update from candidates)
@@ -1952,19 +1836,20 @@ def main():
     # Load data
     demand_data, gen_profiles, emission_rates, fossil_mix = load_data()
 
-    # Warm up Numba JIT (first call compiles)
+    # Warm up Numba JIT (first call compiles — includes batch kernels)
     if HAS_NUMBA:
         print("  Warming up Numba JIT...")
         dummy_demand = np.ones(H) / H
         dummy_supply = np.ones(H) / H
-        _score_hourly(dummy_demand, dummy_supply, 1.0)
-        _score_with_battery(dummy_demand, dummy_supply, 1.0, 0.01, 0.0025, 0.85)
-        _score_with_both_storage(dummy_demand, dummy_supply, 1.0,
-                                 0.01, 0.0025, 0.85, 0.01, 0.0001, 0.50, 168)
+        dummy_supply_2d = np.ones((2, H)) / H
         _score_with_all_storage(dummy_demand, dummy_supply, 1.0,
                                 0.01, 0.0025, 0.85,
                                 0.01, 0.00125, 0.85,
                                 0.01, 0.0001, 0.50, 168)
+        _batch_score_no_storage(dummy_demand, dummy_supply_2d, 1.0, 2)
+        _batch_score_storage(dummy_demand, dummy_supply_2d, 1.0, 2,
+                             0.01, 0.0025, 0.85, 0.01, 0.00125, 0.85,
+                             0.01, 0.0001, 0.50, 168)
         print("  JIT compilation complete")
 
     # Parse CLI args for target ISOs
