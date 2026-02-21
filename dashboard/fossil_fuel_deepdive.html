@@ -613,24 +613,24 @@ function buildRetirementChart(iso, withGrowth) {
 
     var datasets = [
         {
-            label: 'Clean Energy', data: cleanArr,
-            backgroundColor: 'rgba(34,197,94,0.55)', borderColor: '#22C55E',
-            borderWidth: 1.5, fill: 'origin', pointRadius: 0, tension: 0.3, order: 4
-        },
-        {
-            label: 'Gas', data: gasArr,
-            backgroundColor: 'rgba(100,116,139,0.55)', borderColor: '#64748B',
-            borderWidth: 1.5, fill: '-1', pointRadius: 0, tension: 0.3, order: 3
+            label: 'Coal', data: coalArr,
+            backgroundColor: 'rgba(220,38,38,0.65)', borderColor: '#DC2626',
+            borderWidth: 1.5, fill: 'origin', pointRadius: 0, tension: 0.3
         },
         {
             label: 'Oil', data: oilArr,
             backgroundColor: 'rgba(217,119,6,0.65)', borderColor: '#D97706',
-            borderWidth: 1, fill: '-1', pointRadius: 0, tension: 0.3, order: 2
+            borderWidth: 1, fill: '-1', pointRadius: 0, tension: 0.3
         },
         {
-            label: 'Coal', data: coalArr,
-            backgroundColor: 'rgba(220,38,38,0.65)', borderColor: '#DC2626',
-            borderWidth: 1.5, fill: '-1', pointRadius: 0, tension: 0.3, order: 1
+            label: 'Gas', data: gasArr,
+            backgroundColor: 'rgba(100,116,139,0.55)', borderColor: '#64748B',
+            borderWidth: 1.5, fill: '-1', pointRadius: 0, tension: 0.3
+        },
+        {
+            label: 'Clean Energy', data: cleanArr,
+            backgroundColor: 'rgba(34,197,94,0.55)', borderColor: '#22C55E',
+            borderWidth: 1.5, fill: '-1', pointRadius: 0, tension: 0.3
         }
     ];
 
