@@ -200,19 +200,6 @@ body {
     height: 300px;
     margin-bottom: 16px;
 }
-.wyn-insight-box {
-    background: linear-gradient(145deg, #f8f9fb 0%, #f0f2f5 100%);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    padding: 14px 18px;
-    font-size: 0.88rem;
-    color: var(--text-secondary);
-    line-height: 1.6;
-}
-.wyn-insight-box strong {
-    color: var(--navy);
-}
-
 /* Stranded Asset Breakdown */
 .stranded-breakdown {
     margin-bottom: 20px;
@@ -3444,9 +3431,6 @@ body {
             <div class="gas-strand-bars" id="gasStrandBars"></div>
         </div>
 
-        <div class="wyn-insight-box" id="wynInsightBox">
-            Select a region and matching targets to see the resource pathway comparison.
-        </div>
     </div>
 
     <!-- TARGET MODE TOGGLE (Interim / Long-term) -->
@@ -7287,7 +7271,6 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // As demand grows, existing share declines and cost shifts, so the
     // optimal NEW BUILD mix can differ between interim and long-term.
     const canvas = document.getElementById('wynCompareChart');
-    const insightBox = document.getElementById('wynInsightBox');
     const metricsEl = document.getElementById('wynMetrics');
     if (!canvas || !DATA) return;
 
@@ -7327,7 +7310,6 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         || entry?.costs?.resource_costs;
     const interimGasBackup = interimOptimal?.gas_backup || entry?.gas_backup || null;
     if (!interimRC) {
-        if (insightBox) insightBox.innerHTML = 'Resource cost data not available for this threshold.';
         return;
     }
 
@@ -7971,57 +7953,6 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             }
         }
 
-        // Narrative
-        if (insightBox) {
-            const isoLabel = regionData.label?.split(' (')[0] || iso;
-            let narrative = '';
-            if (carriedPct >= 95) {
-                narrative = `<strong>Nearly all interim investment carries forward.</strong> Moving from ` +
-                    `<strong>${threshold}%</strong> to <strong>${longtermThreshold}%</strong> in ${isoLabel} ` +
-                    `is highly capital-efficient — ${Math.round(carriedPct)}% of your ${Math.round(interimTWh)} TWh ` +
-                    `interim portfolio remains useful at the ${Math.round(longtermTWh)} TWh long-term state.`;
-            } else if (carriedPct >= 75) {
-                const topStranded = strandedDetails.filter(s => s.strandedTWh > 0).sort((a, b) => b.strandedTWh - a.strandedTWh)[0];
-                narrative = `<strong>Most interim investment carries forward, with some rebalancing.</strong> ` +
-                    `${Math.round(carriedPct)}% of your interim procurement remains useful.`;
-                if (topStranded) {
-                    narrative += ` The main shift: <strong>${topStranded.resource}</strong> has ` +
-                        `${topStranded.strandedTWh.toFixed(1)} TWh of stranded capacity as the mix shifts toward ` +
-                        `firm generation at ${longtermThreshold}%.`;
-                }
-                if (strandedPerMWh > 1) {
-                    narrative += ` Building strategically toward ${longtermThreshold}% from the start could save ` +
-                        `~<strong>$${strandedPerMWh.toFixed(1)}/MWh</strong> of stranded investment.`;
-                }
-            } else {
-                narrative = `<strong>Significant portfolio restructuring required.</strong> ` +
-                    `Only <strong>${Math.round(carriedPct)}%</strong> of the ${threshold}% portfolio carries ` +
-                    `to the ${longtermThreshold}% end state.`;
-                if (strandedDetails.length > 0) {
-                    const cleanStranded = strandedDetails.filter(s => s.strandedTWh > 0);
-                    const topTwo = cleanStranded.sort((a, b) => b.strandedTWh - a.strandedTWh).slice(0, 2);
-                    if (topTwo.length > 0) {
-                        narrative += ` Biggest stranded assets: ` + topTwo.map(s =>
-                            `<strong>${s.resource}</strong> (${s.strandedTWh.toFixed(1)} TWh excess)`
-                        ).join(' and ') + '.';
-                    }
-                    if (strandedGasMW > 0) {
-                        const fmtGas = strandedGasMW >= 1000 ? (strandedGasMW / 1000).toFixed(1) + ' GW' : Math.round(strandedGasMW) + ' MW';
-                        narrative += ` Additionally, <strong>${fmtGas}</strong> of new gas capacity becomes stranded.`;
-                    }
-                }
-                if (strandedPerMWh > 2) {
-                    narrative += ` This represents <strong>$${strandedPerMWh.toFixed(1)}/MWh</strong> of wasted ` +
-                        `investment — the cost of optimizing for ${threshold}% instead of building toward ` +
-                        `${longtermThreshold}% from day one.`;
-                }
-                if (demandOffset > 3) {
-                    narrative += ` Demand growth of ${(annualRate * 100).toFixed(1)}%/yr helps absorb ` +
-                        `<strong>${Math.round(demandOffset)} pp</strong> of surplus vs. static demand.`;
-                }
-            }
-            insightBox.innerHTML = narrative;
-        }
     } else {
         // No long-term target selected — show simpler insight, hide metrics
         if (metricsEl) metricsEl.style.display = 'none';
@@ -8029,25 +7960,6 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         if (breakdownElHide) breakdownElHide.style.display = 'none';
         const gasPanelHide = document.getElementById('gasStrandPanel');
         if (gasPanelHide) gasPanelHide.style.display = 'none';
-        if (insightBox) {
-            let totalExistingTWh = 0;
-            let totalTargetTWh = 0;
-            MIX_RESOURCES.forEach(r => {
-                totalExistingTWh += todayData.existing[r];
-                totalTargetTWh += interimData.existing[r] + interimData.newBuild[r];
-            });
-            const newBuildTWh = totalTargetTWh - totalExistingTWh;
-            // Dominant new resource
-            let maxR = 'clean_firm', maxV = 0;
-            MIX_RESOURCES.forEach(r => {
-                if (interimData.newBuild[r] > maxV) { maxV = interimData.newBuild[r]; maxR = r; }
-            });
-            insightBox.innerHTML = `<strong>${iso}</strong> has <strong>${totalExistingTWh.toFixed(1)} TWh</strong> of existing clean energy. ` +
-                `Reaching <strong>${threshold}%</strong> hourly matching by ${interimYear} requires ` +
-                `<strong>${newBuildTWh.toFixed(1)} TWh</strong> of new procurement` +
-                (maxV > 0.1 ? `, led by <strong>${MIX_LABELS_MAP[maxR]}</strong> at ${maxV.toFixed(1)} TWh.` : '.') +
-                ` Select a <strong>long-term target</strong> above to see stranded investment analysis.`;
-        }
     }
 }
 
