@@ -2,17 +2,17 @@
   "iso": "PJM",
   "mode": "qa_actual",
   "year": 2024,
-  "calibration_date": "2026-02-21 04:55:57",
+  "calibration_date": "2026-02-21 05:17:55",
   "eia_actual_stats": {
     "avg_lmp": 36.05,
-    "peak_avg_lmp": 34.82,
-    "offpeak_avg_lmp": 37.18,
+    "peak_avg_lmp": 41.59,
+    "offpeak_avg_lmp": 31.01,
     "zero_price_hours": 248,
     "negative_price_hours": 248,
     "scarcity_hours": 101,
     "lmp_p10": 19.96,
     "lmp_p25": 24.42,
-    "lmp_p50": 31.53,
+    "lmp_p50": 31.54,
     "lmp_p75": 37.94,
     "lmp_p90": 48.94,
     "price_volatility": 30.71,
@@ -21,13 +21,13 @@
     "fossil_revenue_mwh": 36.22
   },
   "actual_mix": {
-    "clean_firm": 33.475384185023316,
-    "solar": 1.957600314178107,
-    "wind": 3.790789595949897,
-    "hydro": 1.9524487185057,
+    "clean_firm": 33.474658439007776,
+    "solar": 1.9576421424453532,
+    "wind": 3.79058542289773,
+    "hydro": 1.9536866257290404,
     "ccs_ccgt": 0
   },
-  "actual_clean_pct": 41.17622281365702,
+  "actual_clean_pct": 41.1765726300799,
   "targets": {
     "avg_lmp": 34.7,
     "peak_avg_lmp": 42.0,
@@ -52,19 +52,19 @@
     },
     {
       "metric": "peak_avg_lmp",
-      "synthetic": 34.82,
+      "synthetic": 41.59,
       "target": 42.0,
-      "delta": -7.18,
-      "pct_delta": -17.095238095238095,
-      "status": "FAIR"
+      "delta": -0.4099999999999966,
+      "pct_delta": -0.9761904761904681,
+      "status": "GOOD"
     },
     {
       "metric": "offpeak_avg_lmp",
-      "synthetic": 37.18,
+      "synthetic": 31.01,
       "target": 28.0,
-      "delta": 9.18,
-      "pct_delta": 32.785714285714285,
-      "status": "ADJUST"
+      "delta": 3.0100000000000016,
+      "pct_delta": 10.750000000000005,
+      "status": "FAIR"
     },
     {
       "metric": "lmp_p10",
@@ -84,10 +84,10 @@
     },
     {
       "metric": "lmp_p50",
-      "synthetic": 31.53,
+      "synthetic": 31.54,
       "target": 30.0,
-      "delta": 1.5300000000000011,
-      "pct_delta": 5.100000000000004,
+      "delta": 1.5399999999999991,
+      "pct_delta": 5.133333333333331,
       "status": "GOOD"
     },
     {
