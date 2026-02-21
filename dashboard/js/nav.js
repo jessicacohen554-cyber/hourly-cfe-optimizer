@@ -96,6 +96,13 @@
         { label: 'Clean Firm Case', href: 'clean_firm_case.html' },
         { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
         {
+            label: 'LMP Analysis',
+            children: [
+                { label: 'Cost to Replace', href: 'cost_to_replace.html' },
+                { label: 'New-Build Signals', href: 'newbuild_requirement.html' }
+            ]
+        },
+        {
             label: 'Research',
             children: [
                 { label: 'Research Paper', href: 'research_paper.html' },
