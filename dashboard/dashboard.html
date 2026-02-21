@@ -312,6 +312,90 @@ body {
     color: var(--text-primary);
 }
 
+/* Gas Capacity Stranding Visual */
+.gas-strand-panel {
+    margin-top: 22px;
+    padding: 18px 20px;
+    background: rgba(239,68,68,0.03);
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: 12px;
+}
+.gas-strand-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 6px 0 14px 0;
+}
+.gas-strand-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.gas-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.gas-bar-label {
+    flex: 0 0 100px;
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: right;
+    line-height: 1.2;
+}
+.gas-bar-track {
+    flex: 1;
+    display: flex;
+    height: 28px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(0,0,0,0.02);
+}
+.gas-bar-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    min-width: 0;
+    transition: width 0.4s ease;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.gas-bar-val {
+    flex: 0 0 auto;
+    font-family: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-left: 8px;
+    white-space: nowrap;
+}
+.gas-bar-val-warn { color: #C75B4A; }
+.gas-strand-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 12px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.gas-strand-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.gas-strand-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
 /* ========== WHAT YOU NEED PANEL ========== */
 .what-you-need-panel {
     background: var(--bg-card);
@@ -3328,6 +3412,13 @@ body {
             <h4 class="stranded-breakdown-title">New Build &amp; Stranded Asset Mix</h4>
             <div class="stranded-bars-wrapper" id="strandedBarsWrapper"></div>
             <div class="stranded-legend" id="strandedLegend"></div>
+        </div>
+
+        <!-- Gas Capacity Stranding Visual -->
+        <div class="gas-strand-panel" id="gasStrandPanel" style="display:none;">
+            <h4 class="stranded-breakdown-title">Gas Backup Capacity: Interim vs. Long-term</h4>
+            <p class="gas-strand-subtitle" id="gasStrandSubtitle"></p>
+            <div class="gas-strand-bars" id="gasStrandBars"></div>
         </div>
 
         <div class="wyn-insight-box" id="wynInsightBox">
@@ -7211,6 +7302,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const interimRC = interimOptimal?.resource_costs
         || getScenarioCostsDetail(entry)?.resource_costs
         || entry?.costs?.resource_costs;
+    const interimGasBackup = interimOptimal?.gas_backup || entry?.gas_backup || null;
     if (!interimRC) {
         if (insightBox) insightBox.innerHTML = 'Resource cost data not available for this threshold.';
         return;
@@ -7221,15 +7313,18 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
     let longtermRC = null;
     let longtermTWh = null;
+    let longtermGasBackup = null;
     if (longtermThreshold) {
         const longtermOptimal = (typeof FEASIBLE_MIXES !== 'undefined' && FEASIBLE_MIXES[iso])
             ? findOptimalMix(iso, longtermThreshold, longtermYear, annualRate)
             : null;
         longtermRC = longtermOptimal?.resource_costs || null;
+        longtermGasBackup = longtermOptimal?.gas_backup || null;
         if (!longtermRC) {
             const longtermEntry = resolveEntry(regionData, longtermThreshold);
             longtermRC = getScenarioCostsDetail(longtermEntry)?.resource_costs
                 || longtermEntry?.costs?.resource_costs;
+            longtermGasBackup = longtermEntry?.gas_backup || null;
         }
         longtermTWh = annualDemandTWh * longtermGrowthFactor;
     }
@@ -7583,6 +7678,26 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             }
         });
 
+        // Stranded new-build gas: gas built for interim that's not needed at long-term
+        const gc = GAS_CAPACITY_CONSTANTS;
+        const interimNewGasMW = interimGasBackup?.new_gas_build_mw || 0;
+        const longtermNewGasMW = longtermGasBackup?.new_gas_build_mw || 0;
+        const strandedGasMW = Math.max(0, interimNewGasMW - longtermNewGasMW);
+        const existingGasMW = gc.EXISTING_GAS_CAPACITY_MW[iso] || 0;
+        // Stranded gas cost: annual fixed cost × assumed 20-year asset life
+        const newGasCostKwYr = gc.NEW_CCGT_COST_KW_YR[iso] || 100;
+        const strandedGasCostM = strandedGasMW * newGasCostKwYr * 1000 * 20 / 1e6; // $M over asset life
+        totalStrandedCostM += strandedGasCostM;
+        if (strandedGasMW > 0) {
+            strandedDetails.push({
+                resource: 'New Gas (CCGT)',
+                strandedTWh: 0,
+                strandedMW: strandedGasMW,
+                interimMW: interimNewGasMW,
+                longtermMW: longtermNewGasMW,
+            });
+        }
+
         const carriedPct = totalInterimNewTWh > 0
             ? (totalCarriedTWh / totalInterimNewTWh * 100) : 100;
         const strandedPct = 100 - carriedPct;
@@ -7724,6 +7839,99 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             }).join('');
         }
 
+        // Gas Capacity Stranding Visual
+        const gasPanel = document.getElementById('gasStrandPanel');
+        const gasBarsEl = document.getElementById('gasStrandBars');
+        const gasSubtitle = document.getElementById('gasStrandSubtitle');
+        if (gasPanel && gasBarsEl) {
+            const totalInterimGasMW = (interimGasBackup?.gas_backup_needed_mw || 0);
+            const totalLongtermGasMW = (longtermGasBackup?.gas_backup_needed_mw || 0);
+            const interimExistGasUsed = interimGasBackup?.existing_gas_used_mw || 0;
+            const longtermExistGasUsed = longtermGasBackup?.existing_gas_used_mw || 0;
+
+            // Show panel if any gas is involved
+            if (totalInterimGasMW > 0 || totalLongtermGasMW > 0) {
+                gasPanel.style.display = '';
+                const maxGasMW = Math.max(existingGasMW, totalInterimGasMW + existingGasMW, totalLongtermGasMW + existingGasMW, 1);
+                const fmtMW = (v) => v >= 1000 ? (v / 1000).toFixed(1) + ' GW' : Math.round(v) + ' MW';
+                const pct = (v) => (v / maxGasMW * 100).toFixed(1);
+
+                // Bar 1: Existing Gas Capacity (full fleet)
+                // Bar 2: Interim — existing used + new build
+                // Bar 3: Long-term — existing used + new build
+                // Bar 4: Stranded — delta between interim and long-term new build
+
+                let gasHtml = '';
+
+                // Existing gas fleet
+                gasHtml += `<div class="gas-bar-row">
+                    <div class="gas-bar-label">Existing<br>Gas Fleet</div>
+                    <div class="gas-bar-track">
+                        <div class="gas-bar-seg" style="width:${pct(existingGasMW)}%;background:#9CA3AF;" title="Existing gas capacity">${fmtMW(existingGasMW)}</div>
+                    </div>
+                    <div class="gas-bar-val">${fmtMW(existingGasMW)}</div>
+                </div>`;
+
+                // Interim: existing used + new build
+                gasHtml += `<div class="gas-bar-row">
+                    <div class="gas-bar-label">Interim<br>(${interimYear})</div>
+                    <div class="gas-bar-track">
+                        <div class="gas-bar-seg" style="width:${pct(interimExistGasUsed)}%;background:#6B7280;" title="Existing gas retained: ${fmtMW(interimExistGasUsed)}">${interimExistGasUsed > maxGasMW * 0.08 ? fmtMW(interimExistGasUsed) : ''}</div>
+                        ${interimNewGasMW > 0 ? `<div class="gas-bar-seg" style="width:${pct(interimNewGasMW)}%;background:#EF4444;" title="New gas build: ${fmtMW(interimNewGasMW)}">${interimNewGasMW > maxGasMW * 0.08 ? fmtMW(interimNewGasMW) : ''}</div>` : ''}
+                    </div>
+                    <div class="gas-bar-val">${fmtMW(totalInterimGasMW)} needed</div>
+                </div>`;
+
+                // Long-term: existing used + new build
+                gasHtml += `<div class="gas-bar-row">
+                    <div class="gas-bar-label">Long-term<br>(${longtermYear})</div>
+                    <div class="gas-bar-track">
+                        <div class="gas-bar-seg" style="width:${pct(longtermExistGasUsed)}%;background:#6B7280;" title="Existing gas retained: ${fmtMW(longtermExistGasUsed)}">${longtermExistGasUsed > maxGasMW * 0.08 ? fmtMW(longtermExistGasUsed) : ''}</div>
+                        ${longtermNewGasMW > 0 ? `<div class="gas-bar-seg" style="width:${pct(longtermNewGasMW)}%;background:#F59E0B;" title="New gas build: ${fmtMW(longtermNewGasMW)}">${longtermNewGasMW > maxGasMW * 0.08 ? fmtMW(longtermNewGasMW) : ''}</div>` : ''}
+                    </div>
+                    <div class="gas-bar-val">${fmtMW(totalLongtermGasMW)} needed</div>
+                </div>`;
+
+                // Stranded gas row
+                if (strandedGasMW > 0) {
+                    gasHtml += `<div class="gas-bar-row">
+                        <div class="gas-bar-label" style="color:#C75B4A;">Stranded<br>New Gas</div>
+                        <div class="gas-bar-track" style="border-color:rgba(239,68,68,0.25);background:rgba(239,68,68,0.04);">
+                            <div class="gas-bar-seg" style="width:${pct(strandedGasMW)}%;background:rgba(239,68,68,0.7);" title="Stranded new gas: ${fmtMW(strandedGasMW)}">${fmtMW(strandedGasMW)}</div>
+                        </div>
+                        <div class="gas-bar-val gas-bar-val-warn">${fmtMW(strandedGasMW)} stranded</div>
+                    </div>`;
+                }
+
+                // Legend
+                gasHtml += `<div class="gas-strand-legend">
+                    <div class="gas-strand-legend-item"><div class="gas-strand-legend-dot" style="background:#9CA3AF;"></div><span>Existing Gas Fleet</span></div>
+                    <div class="gas-strand-legend-item"><div class="gas-strand-legend-dot" style="background:#6B7280;"></div><span>Existing Gas Retained for RA</span></div>
+                    <div class="gas-strand-legend-item"><div class="gas-strand-legend-dot" style="background:#EF4444;"></div><span>New Gas Build (Interim)</span></div>
+                    ${longtermNewGasMW > 0 ? '<div class="gas-strand-legend-item"><div class="gas-strand-legend-dot" style="background:#F59E0B;"></div><span>New Gas Build (Long-term)</span></div>' : ''}
+                    ${strandedGasMW > 0 ? '<div class="gas-strand-legend-item"><div class="gas-strand-legend-dot" style="background:rgba(239,68,68,0.7);"></div><span>Stranded (Interim excess)</span></div>' : ''}
+                </div>`;
+
+                gasBarsEl.innerHTML = gasHtml;
+
+                // Subtitle
+                if (gasSubtitle) {
+                    if (strandedGasMW > 0) {
+                        gasSubtitle.innerHTML = `The interim target requires <strong>${fmtMW(interimNewGasMW)}</strong> of new gas capacity, ` +
+                            `but the long-term target only needs <strong>${fmtMW(longtermNewGasMW)}</strong>. ` +
+                            `<strong style="color:#C75B4A;">${fmtMW(strandedGasMW)}</strong> of new-build gas becomes stranded ` +
+                            `(~<strong style="color:#C75B4A;">$${Math.round(strandedGasCostM)}M</strong> over 20-year asset life).`;
+                    } else if (interimNewGasMW > 0 && longtermNewGasMW >= interimNewGasMW) {
+                        gasSubtitle.innerHTML = `All interim new gas build (<strong>${fmtMW(interimNewGasMW)}</strong>) is still needed at the long-term target. No stranded gas capacity.`;
+                    } else {
+                        gasSubtitle.innerHTML = `Gas backup needs shift from <strong>${fmtMW(totalInterimGasMW)}</strong> (interim) to <strong>${fmtMW(totalLongtermGasMW)}</strong> (long-term).`;
+                    }
+                }
+            } else {
+                gasPanel.style.display = 'none';
+            }
+        }
+
         // Narrative
         if (insightBox) {
             const isoLabel = regionData.label?.split(' (')[0] || iso;
@@ -7773,6 +7981,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         if (metricsEl) metricsEl.style.display = 'none';
         const breakdownElHide = document.getElementById('strandedBreakdown');
         if (breakdownElHide) breakdownElHide.style.display = 'none';
+        const gasPanelHide = document.getElementById('gasStrandPanel');
+        if (gasPanelHide) gasPanelHide.style.display = 'none';
         if (insightBox) {
             let totalExistingTWh = 0;
             let totalTargetTWh = 0;
