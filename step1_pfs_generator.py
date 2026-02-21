@@ -740,10 +740,15 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     ldes_eff = LDES_EFFICIENCY
     ldes_window_hours = LDES_WINDOW_DAYS * 24
 
-    # Storage levels to sweep (all thresholds get full sweep — no pruning)
-    batt_levels = [0, 2, 5, 8, 10, 15, 20]
-    batt8_levels = [0, 2, 5, 8, 10, 15, 20]
-    ldes_levels = [0, 2, 5, 8, 10, 15, 20]
+    # Storage levels to sweep — sub-percent granularity below saturation threshold.
+    # Battery4/8 saturate at ~1.2% of annual demand (PJM binding case). LDES never
+    # saturates (multi-day accumulation). Fine granularity finds right-sized capacity
+    # to maximize utilization and minimize LCOS.
+    batt_levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                   1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]
+    batt8_levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                    1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]
+    ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]
 
     # ── Phase 1: Coarse grid at 5% step ──
     combos_5 = generate_4d_combos(hydro_cap, step=5)
