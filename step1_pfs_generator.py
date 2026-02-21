@@ -2390,101 +2390,81 @@ def main():
 
     run_isos = target_isos if target_isos else ISOS
 
-    # Run ISOs in parallel
-    n_workers = min(len(run_isos), cpu_count(), 5)
-    worker_args = [(iso, demand_data, gen_profiles) for iso in run_isos]
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard')
+    os.makedirs(output_dir, exist_ok=True)
 
-    all_results = {}
-    if n_workers > 1 and len(run_isos) > 1:
-        print(f"\n  Running {len(run_isos)} ISOs in parallel ({n_workers} workers)...")
-        with Pool(n_workers) as pool:
-            results = pool.map(process_iso, worker_args)
-        for iso_name, iso_results in results:
-            all_results[iso_name] = iso_results
-    else:
-        # Sequential for single ISO or debugging
-        for args in worker_args:
-            iso_name, iso_results = process_iso(args)
-            all_results[iso_name] = iso_results
-
-    # Merge interim per-ISO Parquet files with persistent cache
-    elapsed = time.time() - start_time
-    cache_path = os.path.join(DATA_DIR, 'physics_cache_v4.parquet')
-
-    # Collect interim files from this run + done parquets as fallback
-    interim_tables = []
+    # Run ISOs sequentially, saving per-ISO cache files after each
+    total_solutions = 0
     for iso in run_isos:
+        args = (iso, demand_data, gen_profiles)
+        iso_name, iso_results = process_iso(args)
+
+        # ── Save per-ISO cache file ──
+        iso_cache_path = os.path.join(DATA_DIR, f'physics_cache_v4_{iso}.parquet')
+        iso_dashboard_path = os.path.join(output_dir, f'physics_results_v4_{iso}.parquet')
+
+        # Collect from interim + done parquets
+        iso_tables = []
         interim_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_interim.parquet')
         if os.path.exists(interim_path):
             try:
-                interim_tables.append(pq.read_table(interim_path))
+                iso_tables.append(pq.read_table(interim_path))
             except Exception:
                 pass
-        # Fallback: also collect from per-threshold done parquets
         for threshold in THRESHOLDS:
             done_path = _threshold_done_path(iso, threshold)
             if os.path.exists(done_path):
                 try:
-                    interim_tables.append(pq.read_table(done_path))
+                    iso_tables.append(pq.read_table(done_path))
                 except Exception:
                     pass
 
-    if interim_tables:
-        # Merge all interim tables into one
-        run_table = pa.concat_tables(interim_tables)
-        print(f"\n  Interim cache: {run_table.num_rows:,} solutions from {len(interim_tables)} ISOs")
+        if iso_tables:
+            iso_table = pa.concat_tables(iso_tables)
+            if 'battery8_dispatch_pct' not in iso_table.column_names:
+                zeros = [0] * iso_table.num_rows
+                iso_table = iso_table.append_column('battery8_dispatch_pct',
+                                                     pa.array(zeros, type=pa.int64()))
 
-        # Backfill battery8 in interim tables if needed
-        if 'battery8_dispatch_pct' not in run_table.column_names:
-            zeros = [0] * run_table.num_rows
-            run_table = run_table.append_column('battery8_dispatch_pct',
-                                                 pa.array(zeros, type=pa.int64()))
+            # Merge with existing per-ISO cache if it exists
+            if os.path.exists(iso_cache_path):
+                try:
+                    existing = pq.read_table(iso_cache_path)
+                    if 'battery8_dispatch_pct' not in existing.column_names:
+                        zeros = [0] * existing.num_rows
+                        existing = existing.append_column('battery8_dispatch_pct',
+                                                           pa.array(zeros, type=pa.int64()))
+                    iso_table = pa.concat_tables([existing, iso_table])
+                except Exception:
+                    pass
 
-        # Merge with persistent cache
-        if os.path.exists(cache_path):
-            try:
-                existing = pq.read_table(cache_path)
-                # Backfill battery8 in old cache if missing
-                if 'battery8_dispatch_pct' not in existing.column_names:
-                    zeros = [0] * existing.num_rows
-                    existing = existing.append_column('battery8_dispatch_pct',
-                                                       pa.array(zeros, type=pa.int64()))
-                    print("  Backfilled battery8_dispatch_pct=0 for old cache entries")
-                print(f"  Persistent cache: {existing.num_rows:,} existing solutions")
-                merged = pa.concat_tables([existing, run_table])
-            except Exception:
-                merged = run_table
-        else:
-            merged = run_table
+            iso_table = _dedup_parquet_table(iso_table)
+            pq.write_table(iso_table, iso_cache_path, compression='snappy')
+            size_mb = os.path.getsize(iso_cache_path) / (1024 * 1024)
+            print(f"  Cache saved: {iso_cache_path} ({iso_table.num_rows:,} solutions, {size_mb:.1f} MB)")
 
-        # Dedup the merged table
-        merged = _dedup_parquet_table(merged)
-        pq.write_table(merged, cache_path, compression='snappy')
-        size_mb = os.path.getsize(cache_path) / (1024 * 1024)
-        print(f"  Cache saved: {cache_path} ({merged.num_rows:,} solutions, {size_mb:.1f} MB)")
+            # Also save dashboard copy
+            pq.write_table(iso_table, iso_dashboard_path, compression='snappy')
+            print(f"  Dashboard saved: {iso_dashboard_path}")
 
-        # Convert back to results dict for dashboard output
-        all_results = _table_to_results(merged)
+            total_solutions += iso_table.num_rows
 
-        # Clean up interim files
-        for iso in run_isos:
-            interim_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_interim.parquet')
+            # Clean up interim file
             if os.path.exists(interim_path):
                 os.remove(interim_path)
-    else:
-        # No interim files — just merge in-memory results with cache
-        all_results = merge_with_persistent_cache(all_results, cache_path)
+        else:
+            # Fallback: save from in-memory results
+            iso_dict = {iso_name: iso_results}
+            save_results_parquet(iso_dict, iso_cache_path)
+            save_results_parquet(iso_dict, iso_dashboard_path)
+            n = sum(len(t.get('candidates', []))
+                    for t in iso_results.get('thresholds', {}).values())
+            total_solutions += n
 
-    # Save dashboard output as Parquet
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard')
-    os.makedirs(output_dir, exist_ok=True)
-
-    parquet_path = os.path.join(output_dir, 'physics_results_v4.parquet')
-    save_results_parquet(all_results, parquet_path)
-
+    elapsed = time.time() - start_time
     print(f"\n{'=' * 70}")
     print(f"  Complete in {elapsed:.1f}s")
-    print(f"  Total candidates: {sum(len(t.get('candidates', [])) for iso in all_results.values() for t in iso.get('thresholds', {}).values())}")
+    print(f"  Total candidates: {total_solutions:,}")
     print(f"{'=' * 70}")
 
 
