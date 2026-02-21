@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — LMP Impact of Dispatchable CCS &amp; Nuclear</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body { background: #0B1120; }
+
+/* ===== Breadcrumb ===== */
+.breadcrumb {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 24px 0;
+    font-size: 0.82rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.03em;
+}
+.breadcrumb a {
+    color: #0EA5E9;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.breadcrumb a:hover { color: #38BDF8; }
+.breadcrumb .sep { color: rgba(255,255,255,0.3); margin: 0 8px; }
+.breadcrumb .current { color: rgba(255,255,255,0.5); }
+
+/* ===== Article Layout ===== */
+.article-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+}
+.article-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+    margin-bottom: 12px;
+    letter-spacing: -0.4px;
+}
+.article-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+.article-tag {
+    display: inline-block;
+    background: rgba(14,165,233,0.15);
+    color: #0EA5E9;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--font-heading);
+}
+.article-date {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.8rem;
+}
+
+/* ===== Illustration Panel ===== */
+.illustration-panel {
+    background: rgba(15,26,46,0.95);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: 16px;
+    padding: 32px 24px 24px;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1),
+                transform 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.illustration-panel.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.illustration-title {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: 0.02em;
+}
+.illustration-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+}
+.illustration-chart {
+    text-align: center;
+}
+.illustration-chart-label {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 12px;
+    letter-spacing: 0.03em;
+}
+.illustration-caption {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+/* ===== Content Sections ===== */
+.content-section {
+    margin-bottom: 36px;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                transform 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.content-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.content-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    padding-left: 14px;
+    border-left: 3px solid #0EA5E9;
+    line-height: 1.3;
+}
+.content-section p {
+    color: rgba(255,255,255,0.72);
+    font-size: 0.93rem;
+    line-height: 1.8;
+    margin-bottom: 14px;
+}
+.content-section strong {
+    color: rgba(255,255,255,0.92);
+    font-weight: 600;
+}
+
+/* ===== Callout Box ===== */
+.callout-box {
+    background: rgba(14,165,233,0.08);
+    border: 1px solid rgba(14,165,233,0.25);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 36px 0;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                transform 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.callout-box.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.callout-box h4 {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0EA5E9;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.callout-box p {
+    color: rgba(255,255,255,0.72);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    margin: 0;
+}
+
+/* ===== Back Link ===== */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #0EA5E9;
+    text-decoration: none;
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    transition: gap 0.2s, color 0.2s;
+    margin-top: 24px;
+}
+.back-link:hover { gap: 12px; color: #38BDF8; }
+
+/* ===== Footer ===== */
+.page-footer {
+    background: #0F1A2E;
+    color: rgba(255,255,255,0.7);
+    padding: 32px 24px;
+    text-align: center;
+}
+.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
+.footer-links a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 4px;
+}
+.footer-links a:hover { color: #ffffff; }
+.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+.bottom-banner {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+
+/* ===== SVG Styles ===== */
+.merit-svg { width: 100%; height: auto; max-width: 320px; }
+.merit-svg text { font-family: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif; }
+
+@media (max-width: 768px) {
+    .article-title { font-size: 1.6rem; }
+    .illustration-grid { grid-template-columns: 1fr; gap: 40px; }
+    .illustration-panel { padding: 24px 16px 20px; }
+    .article-wrapper { padding: 24px 20px 64px; }
+    .merit-svg { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>Reference Library</h1>
+    <p class="subtitle">Concepts, mechanics, and deep dives into electricity market design</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- Breadcrumb -->
+<div class="breadcrumb">
+    <a href="reference.html">Reference</a>
+    <span class="sep">/</span>
+    <span class="current">LMP Impact of Dispatchable CCS &amp; Nuclear</span>
+</div>
+
+<article class="article-wrapper">
+
+    <h1 class="article-title">How Would Dispatchable CCS or Nuclear Change Wholesale Prices?</h1>
+    <div class="article-meta">
+        <span class="article-tag">Market Design</span>
+        <span class="article-date">February 2026</span>
+    </div>
+
+    <!-- ===== Key Illustration ===== -->
+    <div class="illustration-panel">
+        <div class="illustration-title">Merit Order &amp; LMP Formation: Current vs. With Dispatchable Clean Resources</div>
+        <div class="illustration-grid">
+
+            <!-- Chart 1: Current -->
+            <div class="illustration-chart">
+                <div class="illustration-chart-label">Today's Merit Order</div>
+                <svg class="merit-svg" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Background grid -->
+                    <line x1="50" y1="30" x2="50" y2="200" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+                    <line x1="50" y1="200" x2="300" y2="200" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+                    <!-- Y-axis labels -->
+                    <text x="44" y="34" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$100</text>
+                    <text x="44" y="77" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$75</text>
+                    <text x="44" y="117" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$50</text>
+                    <text x="44" y="160" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$25</text>
+                    <text x="44" y="203" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$0</text>
+                    <!-- Y-axis gridlines -->
+                    <line x1="50" y1="77" x2="300" y2="77" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3,3"/>
+                    <line x1="50" y1="117" x2="300" y2="117" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3,3"/>
+                    <line x1="50" y1="160" x2="300" y2="160" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3,3"/>
+                    <!-- Y-axis title -->
+                    <text x="12" y="120" fill="rgba(255,255,255,0.5)" font-size="9" text-anchor="middle" transform="rotate(-90,12,120)">Marginal Cost ($/MWh)</text>
+                    <!-- X-axis title -->
+                    <text x="175" y="220" fill="rgba(255,255,255,0.5)" font-size="9" text-anchor="middle">Cumulative Capacity &rarr;</text>
+
+                    <!-- Supply curve steps -->
+                    <!-- Renewables: $3, x=50-120 -->
+                    <rect x="50" y="195" width="70" height="5" fill="#22C55E" opacity="0.8" rx="1"/>
+                    <!-- Nuclear baseload: $10, x=120-160 -->
+                    <rect x="120" y="183" width="40" height="17" fill="#3B82F6" opacity="0.7" rx="1"/>
+                    <!-- Gas CCGT: $42, x=160-245 -->
+                    <rect x="160" y="130" width="85" height="70" fill="#6B7280" opacity="0.6" rx="1"/>
+                    <!-- Gas CT: $78, x=245-285 -->
+                    <rect x="245" y="68" width="40" height="132" fill="#EF4444" opacity="0.5" rx="1"/>
+
+                    <!-- Step outline -->
+                    <polyline points="50,195 120,195 120,183 160,183 160,130 245,130 245,68 285,68"
+                              fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linejoin="round"/>
+
+                    <!-- Demand line -->
+                    <line x1="200" y1="25" x2="200" y2="200" stroke="#F59E0B" stroke-width="2" stroke-dasharray="6,4" opacity="0.8"/>
+                    <text x="203" y="42" fill="#F59E0B" font-size="8.5" font-weight="600">Demand</text>
+
+                    <!-- LMP annotation -->
+                    <line x1="50" y1="130" x2="200" y2="130" stroke="#F59E0B" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+                    <rect x="52" y="119" width="70" height="16" rx="3" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" stroke-width="0.8"/>
+                    <text x="87" y="130" fill="#F59E0B" font-size="9" font-weight="700" text-anchor="middle">LMP &#8776; $42</text>
+
+                    <!-- Resource labels -->
+                    <text x="85" y="230" fill="#22C55E" font-size="8" text-anchor="middle" font-weight="600">RE</text>
+                    <text x="140" y="230" fill="#3B82F6" font-size="8" text-anchor="middle" font-weight="600">Nuc</text>
+                    <text x="202" y="230" fill="#9CA3AF" font-size="8" text-anchor="middle" font-weight="600">Gas CC</text>
+                    <text x="265" y="230" fill="#EF4444" font-size="8" text-anchor="middle" font-weight="600">Gas CT</text>
+                </svg>
+            </div>
+
+            <!-- Chart 2: With Dispatchable -->
+            <div class="illustration-chart">
+                <div class="illustration-chart-label">With Dispatchable Nuclear &amp; CCS</div>
+                <svg class="merit-svg" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Background grid -->
+                    <line x1="50" y1="30" x2="50" y2="200" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+                    <line x1="50" y1="200" x2="300" y2="200" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+                    <!-- Y-axis labels -->
+                    <text x="44" y="34" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$100</text>
+                    <text x="44" y="77" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$75</text>
+                    <text x="44" y="117" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$50</text>
+                    <text x="44" y="160" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$25</text>
+                    <text x="44" y="203" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="end">$0</text>
+                    <!-- Y-axis gridlines -->
+                    <line x1="50" y1="77" x2="300" y2="77" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3,3"/>
+                    <line x1="50" y1="117" x2="300" y2="117" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3,3"/>
+                    <line x1="50" y1="160" x2="300" y2="160" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3,3"/>
+                    <!-- Y-axis title -->
+                    <text x="12" y="120" fill="rgba(255,255,255,0.5)" font-size="9" text-anchor="middle" transform="rotate(-90,12,120)">Marginal Cost ($/MWh)</text>
+                    <!-- X-axis title -->
+                    <text x="175" y="220" fill="rgba(255,255,255,0.5)" font-size="9" text-anchor="middle">Cumulative Capacity &rarr;</text>
+
+                    <!-- Supply curve steps -->
+                    <!-- Renewables: $3, x=50-120 -->
+                    <rect x="50" y="195" width="70" height="5" fill="#22C55E" opacity="0.8" rx="1"/>
+                    <!-- Nuclear FLEXIBLE: $8, x=120-210 (WIDER — flex dispatch) -->
+                    <rect x="120" y="186" width="90" height="14" fill="#3B82F6" opacity="0.85" rx="1"/>
+                    <!-- Gas CCGT: $42, x=210-250 (narrower — displaced) -->
+                    <rect x="210" y="130" width="40" height="70" fill="#6B7280" opacity="0.5" rx="1"/>
+                    <!-- CCS-CCGT: $58, x=250-280 -->
+                    <rect x="250" y="102" width="30" height="98" fill="#14B8A6" opacity="0.6" rx="1"/>
+                    <!-- Gas CT: $78, x=280-300 (much narrower) -->
+                    <rect x="280" y="68" width="20" height="132" fill="#EF4444" opacity="0.4" rx="1"/>
+
+                    <!-- Step outline -->
+                    <polyline points="50,195 120,195 120,186 210,186 210,130 250,130 250,102 280,102 280,68 300,68"
+                              fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linejoin="round"/>
+
+                    <!-- Demand line (same position as Chart 1) -->
+                    <line x1="200" y1="25" x2="200" y2="200" stroke="#22C55E" stroke-width="2" stroke-dasharray="6,4" opacity="0.8"/>
+                    <text x="203" y="42" fill="#22C55E" font-size="8.5" font-weight="600">Demand</text>
+
+                    <!-- LMP annotation — now much lower! -->
+                    <line x1="50" y1="186" x2="200" y2="186" stroke="#22C55E" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+                    <rect x="52" y="175" width="64" height="16" rx="3" fill="rgba(34,197,94,0.2)" stroke="#22C55E" stroke-width="0.8"/>
+                    <text x="84" y="186" fill="#22C55E" font-size="9" font-weight="700" text-anchor="middle">LMP &#8776; $8</text>
+
+                    <!-- Price drop annotation -->
+                    <line x1="38" y1="130" x2="38" y2="186" stroke="#F59E0B" stroke-width="1.5" opacity="0.7"/>
+                    <polygon points="38,186 35,179 41,179" fill="#F59E0B" opacity="0.7"/>
+                    <polygon points="38,130 35,137 41,137" fill="#F59E0B" opacity="0.7"/>
+                    <text x="22" y="161" fill="#F59E0B" font-size="8" font-weight="600" text-anchor="middle" transform="rotate(-90,22,161)">&#8595; $34</text>
+
+                    <!-- Resource labels -->
+                    <text x="85" y="230" fill="#22C55E" font-size="8" text-anchor="middle" font-weight="600">RE</text>
+                    <text x="165" y="230" fill="#3B82F6" font-size="8" text-anchor="middle" font-weight="600">Nuc (flex)</text>
+                    <text x="230" y="230" fill="#9CA3AF" font-size="7.5" text-anchor="middle" font-weight="600">CC</text>
+                    <text x="265" y="230" fill="#14B8A6" font-size="7.5" text-anchor="middle" font-weight="600">CCS</text>
+                    <text x="290" y="230" fill="#EF4444" font-size="7.5" text-anchor="middle" font-weight="600">CT</text>
+                </svg>
+            </div>
+
+        </div>
+        <p class="illustration-caption">Same demand level, different clearing price. Nuclear flexibility shifts the marginal generator from gas ($42/MWh) to nuclear ($8/MWh) in most hours.</p>
+    </div>
+
+    <!-- ===== Content ===== -->
+    <div class="content-section">
+        <h3>The Merit Order Sets the Price</h3>
+        <p>Wholesale electricity prices in organized U.S. markets (LMPs) are determined by the <strong>marginal generator</strong> &mdash; the most expensive unit dispatched to meet demand in any given hour. Today, natural gas combined-cycle plants set the clearing price in most hours across all five major ISOs, with marginal costs typically ranging from $35&ndash;50/MWh depending on regional gas prices and plant heat rates. This means every generator on the grid &mdash; including zero-marginal-cost renewables &mdash; gets paid the gas plant's price. The merit order is the foundation of price formation, and any resource that changes <em>which generator is marginal</em> fundamentally reshapes wholesale economics.</p>
+    </div>
+
+    <div class="content-section">
+        <h3>CCS on the Margin: Prices Go Up</h3>
+        <p>Carbon capture equipment imposes a <strong>25&ndash;30% energy penalty</strong> on a combined-cycle gas plant. The same fuel input produces less electricity, raising the effective heat rate and marginal cost per MWh. Add CO&#8322; transport and storage variable costs ($5&ndash;10/MWh), and a CCS-equipped CCGT sets LMPs roughly <strong>$10&ndash;25/MWh higher</strong> than an equivalent unabated plant at the same gas price. In markets with a carbon price (e.g., EU ETS at $60&ndash;100/ton), this premium narrows because unabated gas internalizes emission costs too. Above approximately $50&ndash;80/ton CO&#8322;, CCS plants can actually set <em>lower</em> clearing prices than carbon-burdened gas. But in today's U.S. market with no federal carbon price, CCS unambiguously raises LMPs whenever it's the marginal unit.</p>
+    </div>
+
+    <div class="content-section">
+        <h3>Dispatchable Nuclear: Prices Get Crushed</h3>
+        <p>Advanced nuclear designs (SMRs, load-following reactors) would bid into the market at <strong>$5&ndash;10/MWh marginal cost</strong> &mdash; comparable to renewables, but available in every hour regardless of weather or time of day. Unlike solar and wind, which suppress prices only during their production hours, flexible nuclear would push LMPs down during <strong>evening peaks, winter mornings, and overnight periods</strong> where gas currently commands premium prices. The result is a dramatically compressed peak-to-trough price spread: fewer high-price hours means less arbitrage revenue for battery storage and a deepening &ldquo;missing money&rdquo; problem for mid-merit gas plants that depend on peak margins for economic viability.</p>
+    </div>
+
+    <div class="content-section">
+        <h3>Both Together: A Bimodal Price World</h3>
+        <p>If both resources dispatch flexibly, the supply curve reshapes into a steeper staircase. Nuclear displaces gas in most hours, pushing CCS-CCGT to the margins &mdash; needed only when demand exceeds nuclear plus renewable capacity. The resulting price distribution becomes <strong>bimodal</strong>: a dense cluster of hours near $0&ndash;10/MWh (when nuclear and renewables are sufficient) and a thinner tail of $55&ndash;80/MWh hours (when CCS or peakers are needed). For corporate buyers pursuing 24/7 carbon-free energy, this is largely good news. Average procurement costs drop substantially. But the last few percentage points of hourly matching (95% &rarr; 100% CFE) still depend on which resource fills the hardest hours, and those hours still carry premium pricing.</p>
+    </div>
+
+    <div class="callout-box">
+        <h4>Implication for CFE Procurement</h4>
+        <p>Dispatchable nuclear is unambiguously beneficial for corporate CFE buyers: lower LMPs across all hours reduce procurement costs. CCS is more nuanced &mdash; it raises LMPs when marginal, but provides the firm clean capacity needed to avoid the cost cliff at high matching thresholds. The optimal procurement portfolio shifts: less storage arbitrage, less renewable overbuilding, and the &ldquo;last mile&rdquo; to 100% hourly matching becomes more accessible. The resource that sets the price in the <em>hardest-to-match hours</em> determines whether the 95&ndash;100% climb is a gentle slope or a cost cliff.</p>
+    </div>
+
+    <a href="reference.html" class="back-link"><span>&larr;</span> Back to Reference Library</a>
+
+</article>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="reference.html">Reference Library</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <p class="footer-note">The 8,760 Problem &mdash; Reference Library</p>
+</footer>
+<div class="bottom-banner"></div>
+
+<script>
+// Fade-in on scroll
+var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+        if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            obs.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.illustration-panel, .content-section, .callout-box').forEach(function(el) {
+    obs.observe(el);
+});
+</script>
+
+</body>
+</html>
