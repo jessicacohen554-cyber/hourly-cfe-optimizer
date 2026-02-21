@@ -102,11 +102,7 @@
                 { label: 'New-Build Signals', href: 'newbuild_requirement.html' },
                 { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
                 { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' },
-                { label: 'Generator Overview', href: '../power-gen-decarbonization/site/index.html' },
-                { label: 'Fleet Analysis', href: '../power-gen-decarbonization/site/fleet-analysis.html' },
-                { label: 'Generator Dashboard', href: '../power-gen-decarbonization/site/dashboard.html' },
-                { label: 'Targets & Standards', href: '../power-gen-decarbonization/site/targets.html' },
-                { label: 'Policy Scenarios', href: '../power-gen-decarbonization/site/policy.html' }
+                { label: 'Generator Analysis', href: '../power-gen-decarbonization/site/index.html' }
             ]
         },
         {
