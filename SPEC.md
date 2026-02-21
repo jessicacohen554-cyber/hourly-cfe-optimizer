@@ -5,6 +5,30 @@
 
 ## Current Status (Feb 21, 2026)
 
+### Step 1 PFS Rebuild — Two-Phase Adaptive Storage Sweep (Feb 21, 2026)
+
+**Completed:**
+- Energy-based battery caps (replaces power-based formula): `bat4_cap = max_daily_surplus`, `bat8_cap = max_2day_surplus`, `ldes_cap = max_7day_surplus`
+- Two-phase adaptive storage sweep: Phase 1 coarse (0.25% steps) → analyze saturation → Phase 2 fine (0.05% steps) within saturation range
+- Per-ISO output files: `data/physics_cache_v4_{ISO}.parquet` (avoids 100MB+ merged files)
+- ERCOT: 2,033,961 solutions (complete)
+- CAISO: Running (Phase 2 in progress)
+
+**In Progress:**
+- CAISO two-phase run
+- PJM, NYISO, NEISO queued
+
+**Per-ISO Results:**
+| ISO | Solutions | Phase 1 (coarse) | Phase 2 (fine) | bat4 sat | bat8 sat | Time |
+|---|---|---|---|---|---|---|
+| ERCOT | 2,033,961 | 226K | 1.8M | 0.75% | 1.50% | 11 min |
+| CAISO | (running) | — | — | 1.00% | 2.00% | ~25 min |
+| PJM | (queued) | — | — | — | — | — |
+| NYISO | (queued) | — | — | — | — | — |
+| NEISO | (queued) | — | — | — | — | — |
+
+**Branch:** `claude/validate-battery-physics-bqZTr`
+
 ### LMP Module — v9 Calibration Complete (Feb 21, 2026)
 
 **Completed:**
@@ -1266,19 +1290,17 @@ Near-miss mixes are processed in batches of `MAX_MIX_BATCH = 100`. Each batch:
 
 This prevents large ISOs (NYISO with hydro_cap=15.9%, PJM) from stalling by parallelizing across mixes.
 
-#### 3. Curtailment-MW Cap (Per-Mix Physics Ceiling)
+#### 3. Energy-Based Storage Cap (Per-Mix Physics Ceiling)
 
-For each (mix, max_procurement), `_compute_storage_caps` finds the max hourly surplus (curtailment). A battery with power = cap/duration can never charge faster than max_hourly_surplus, so:
+For each (mix, max_procurement), `_compute_storage_caps` computes the maximum surplus energy that could charge each storage type over its operational window:
 
-```python
-max_useful_cap = max_hourly_surplus × duration
-```
+- `bat4_cap = max_daily_surplus` — max energy surplus in any single day (4hr daily-cycle battery can't charge more than available daily curtailment)
+- `bat8_cap = max_2day_surplus` — max energy surplus in any 2-day window (8hr battery uses 48hr dispatch window)
+- `ldes_cap = max_7day_surplus` — max energy surplus in any 7-day window (100hr iron-air)
 
-Caps computed per mix, applied in post-processing to filter batch results:
-- `bat4_cap = max_hourly_surplus × 4hr` (tight: ~2× tighter than SOC ceiling)
-- `bat8_cap = max_hourly_surplus × 8hr`
-- `ldes_cap = max_hourly_surplus × 100hr`
-- All with 10% margin for procurement variation
+This is an **energy-based** ceiling, not power-based. A 4hr battery at 200% pure solar saturates at ~0.3% of annual demand capacity because the discharge-side gap (nighttime hours) limits useful capacity, not the charge-side surplus. The 0.3% capacity cycles 365×/year, delivering ~57% of annual demand throughput at 61% utilization.
+
+Levels above the per-mix cap are auto-skipped in the storage sweep.
 
 #### 4. Curtailment Frequency Filter
 
@@ -2288,8 +2310,28 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 **Improvement**: Use the full `[0, 2, 5, 8, 10, 15, 20]` grid, matching Phase 1b. Catches refinement mixes that need higher storage levels (15-20%) to become feasible.
 **Cost**: Modest — refinement mixes are few (neighborhoods of Phase 1 archetypes), so the extra storage combos add seconds, not minutes.
 
-#### ~~6. Adaptive Storage Sweep~~ — REJECTED
-Undermines scientific rigor. Skipping higher-tier storage configs for mixes already feasible with simpler configs would miss storage diversity needed for Step 3 cost optimization under different cost assumptions.
+#### 6. Two-Phase Adaptive Storage Sweep (Feb 21, 2026) — IMPLEMENTED
+
+**Replaces** the previously rejected "adaptive storage tiers" approach. The two-phase approach does NOT skip storage levels — it sweeps ALL levels in both phases, differing only in granularity.
+
+**Phase 1 — Coarse sweep (0.25% steps):** Identifies saturation range per ISO.
+- bat4: `[0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]`
+- bat8: `[0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0]`
+- LDES: `[0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]`
+- After Phase 1, analyzes max used levels across all thresholds to find saturation point.
+
+**Phase 2 — Fine sweep (0.05% steps):** Fills in granularity within the saturation range.
+- bat4: `[0, 0.05, 0.10, ..., max_bat4 + 0.25%]` — e.g., ERCOT: 21 levels (0-1.00%)
+- bat8: `[0, 0.05, 0.10, ..., max_bat8 + 0.25%]` — e.g., ERCOT: 36 levels (0-1.75%)
+- LDES: Same coarse levels (less sensitive to granularity)
+- Phase 1 coarse solutions merged with Phase 2 fine solutions (deduped by full key).
+
+**Results per ISO:**
+- ERCOT: 2,033,961 solutions (Phase 1: 226K coarse → Phase 2: 1.8M fine), 11 min
+- CAISO: ~1.8M solutions (saturation: bat4=1.00%, bat8=2.00%), ~25 min
+- Output: Per-ISO parquet files (`physics_cache_v4_{ISO}.parquet`) to avoid exceeding 100MB
+
+**Scientific rigor preserved:** Every level from 0 to saturation+margin is swept at 0.05% resolution. No levels are skipped or short-circuited. The coarse phase just identifies WHERE the fine sweep should focus.
 
 #### 7. Cross-Threshold Solution Injection (Coverage)
 **Current**: Step 1 uses "cross-threshold pollination" to track proven-feasible mixes and skip their storage sweep at higher thresholds. But doesn't inject these solutions — just avoids redundant work.
@@ -2308,7 +2350,7 @@ Undermines scientific rigor. Skipping higher-tier storage configs for mixes alre
 | 3 | Wider near-miss window | More solutions | Low | None |
 | 4 | Binary search procurement | 2-5× per-mix speedup | Medium | None |
 | 5 | Full refinement storage grid | More solutions | Low | None |
-| ~~6~~ | ~~Adaptive storage tiers~~ | ~~50-70% fewer evals~~ | ~~Medium~~ | **REJECTED — undermines rigor** |
+| 6 | Two-phase adaptive sweep | 0.05% granularity | Medium | None — **IMPLEMENTED** |
 | 7 | Cross-threshold injection | More solutions | Medium | None |
 | 8 | Vectorized Phase 1a | Minor speedup | Low | None (memory) |
 
