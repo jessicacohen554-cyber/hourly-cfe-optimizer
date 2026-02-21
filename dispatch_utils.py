@@ -42,7 +42,7 @@ DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 H = 8760
 DATA_YEAR = '2025'
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -63,6 +63,7 @@ LDES_WINDOW_DAYS = 7
 
 HYDRO_CAPS = {
     'CAISO': 30, 'ERCOT': 5, 'PJM': 15, 'NYISO': 40, 'NEISO': 30,
+    'MISO': 1.6, 'SPP': 4.3,
 }
 
 GRID_MIX_SHARES = {
@@ -71,19 +72,24 @@ GRID_MIX_SHARES = {
     'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
     'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
     'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
+    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'ccs_ccgt': 0, 'hydro': 1.6},
+    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'ccs_ccgt': 0, 'hydro': 4.3},
 }
 
 BASE_DEMAND_TWH = {
     'CAISO': 224.0, 'ERCOT': 488.0, 'PJM': 843.3, 'NYISO': 151.6, 'NEISO': 115.3,
+    'MISO': 660.0, 'SPP': 296.0,
 }
 
 COAL_OIL_RETIREMENT_THRESHOLD = 70.0
 
 COAL_CAP_TWH = {
     'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00, 'NEISO': 0.31,
+    'MISO': 125.0, 'SPP': 42.0,
 }
 OIL_CAP_TWH = {
     'CAISO': 0.60, 'ERCOT': 0.00, 'PJM': 4.59, 'NYISO': 0.15, 'NEISO': 1.29,
+    'MISO': 0.50, 'SPP': 0.20,
 }
 
 CCS_RESIDUAL_EMISSION_RATE = 0.037  # tCO2/MWh after 90% capture
@@ -91,6 +97,7 @@ CCS_RESIDUAL_EMISSION_RATE = 0.037  # tCO2/MWh after 90% capture
 # Nuclear seasonal derate (from Step 1)
 NUCLEAR_SHARE_OF_CLEAN_FIRM = {
     'CAISO': 0.70, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
+    'MISO': 1.0, 'SPP': 1.0,
 }
 NUCLEAR_MONTHLY_CF = {
     'CAISO': {1: 0.94, 2: 0.94, 3: 0.85, 4: 0.75, 5: 0.80, 6: 0.99,
@@ -103,16 +110,22 @@ NUCLEAR_MONTHLY_CF = {
               7: 0.96, 8: 0.94, 9: 0.85, 10: 0.75, 11: 0.79, 12: 1.0},
     'NEISO': {1: 1.0, 2: 0.99, 3: 0.92, 4: 0.83, 5: 0.88, 6: 0.96,
               7: 0.97, 8: 0.95, 9: 0.88, 10: 0.82, 11: 0.85, 12: 1.0},
+    'MISO':  {1: 1.0, 2: 1.0, 3: 0.92, 4: 0.84, 5: 0.87, 6: 0.98,
+              7: 0.99, 8: 0.97, 9: 0.93, 10: 0.88, 11: 0.91, 12: 1.0},
+    'SPP':   {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.88, 6: 0.97,
+              7: 0.97, 8: 0.96, 9: 0.88, 10: 0.80, 11: 0.85, 12: 1.0},
 }
 
 # Wholesale prices and fuel adjustments (from Step 3)
-WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41}
+WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
 FUEL_ADJUSTMENTS = {
     'CAISO': {'Low': -5, 'Medium': 0, 'High': 10},
     'ERCOT': {'Low': -7, 'Medium': 0, 'High': 12},
     'PJM':   {'Low': -6, 'Medium': 0, 'High': 11},
     'NYISO': {'Low': -4, 'Medium': 0, 'High': 8},
     'NEISO': {'Low': -4, 'Medium': 0, 'High': 8},
+    'MISO':  {'Low': -6, 'Medium': 0, 'High': 11},
+    'SPP':   {'Low': -5, 'Medium': 0, 'High': 10},
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -194,7 +207,7 @@ def get_supply_profiles(iso, gen_profiles):
         else:
             solar_raw = [0.0] * H
 
-    STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5}
+    STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5, 'MISO': 6, 'SPP': 6}
     DST_START_DAY, DST_END_DAY = 69, 307
     local_start, local_end = 6, 19
     std_off = STD_UTC_OFFSETS.get(iso, 5)
