@@ -93,11 +93,11 @@
     const NAV_ITEMS = [
         { label: 'Home', href: 'index.html' },
         { label: 'Grid Simulation', href: 'dashboard.html' },
-        { label: 'Clean Firm Case', href: 'clean_firm_case.html' },
-        { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
         {
-            label: 'LMP Analysis',
+            label: 'Analysis',
             children: [
+                { label: 'Clean Firm Case', href: 'clean_firm_case.html' },
+                { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Cost to Replace', href: 'cost_to_replace.html' },
                 { label: 'New-Build Signals', href: 'newbuild_requirement.html' }
             ]
