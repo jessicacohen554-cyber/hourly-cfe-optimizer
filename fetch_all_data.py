@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-Fetch hourly generation mix and demand data from EIA API for 5 ISOs, 2021-2025.
+Fetch hourly generation mix and demand data from EIA API for 7 ISOs, 2021-2025.
 Saves per-ISO-year JSON files plus aggregated profiles.
+
+Usage:
+  python fetch_all_data.py                  # Fetch all 7 ISOs
+  python fetch_all_data.py MISO SWPP        # Fetch only MISO and SPP
+  python fetch_all_data.py CISO ERCO        # Fetch only CAISO and ERCOT
 """
 import json
 import os
@@ -16,7 +21,7 @@ API_KEY = "rCMyAk40PIFypAygazPXuEI9cYCddmhBdRKaoBNJ"
 GEN_URL = "https://api.eia.gov/v2/electricity/rto/fuel-type-data/data/"
 DEMAND_URL = "https://api.eia.gov/v2/electricity/rto/region-data/data/"
 
-RESPONDENTS = ["CISO", "ERCO", "PJM", "NYIS", "ISNE"]
+RESPONDENTS = ["CISO", "ERCO", "PJM", "NYIS", "ISNE", "MISO", "SWPP"]
 YEARS = [2021, 2022, 2023, 2024, 2025]
 
 FUEL_MAP = {
@@ -36,6 +41,8 @@ REGION_MAP = {
     "PJM":  "PJM",
     "NYIS": "NYISO",
     "ISNE": "NEISO",
+    "MISO": "MISO",
+    "SWPP": "SPP",
 }
 
 PAGE_SIZE = 5000
@@ -326,10 +333,28 @@ def save_json(filepath, data):
     print(f"  Saved: {os.path.basename(filepath)} ({size_mb:.2f} MB)")
 
 
+def load_json(filepath):
+    """Load existing JSON file, return empty dict if missing."""
+    if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
 def main():
+    # CLI arg filtering: specify BA codes to fetch a subset
+    if len(sys.argv) > 1:
+        requested = [a.upper() for a in sys.argv[1:]]
+        run_respondents = [r for r in RESPONDENTS if r in requested]
+        if not run_respondents:
+            print(f"Error: none of {requested} found in {RESPONDENTS}")
+            sys.exit(1)
+    else:
+        run_respondents = RESPONDENTS
+
     print("=" * 70)
     print("EIA Hourly Generation + Demand Fetcher")
-    print(f"Regions: {', '.join(RESPONDENTS)}")
+    print(f"Regions: {', '.join(REGION_MAP[r] for r in run_respondents)}")
     print(f"Years: {', '.join(str(y) for y in YEARS)}")
     print(f"Output dir: {DATA_DIR}")
     print("=" * 70)
@@ -342,7 +367,7 @@ def main():
     print("=== PHASE 1: Fetching hourly generation data ===")
     print()
     raw_gen = {}
-    for respondent in RESPONDENTS:
+    for respondent in run_respondents:
         for year in YEARS:
             region = REGION_MAP[respondent]
             start_str = f"{year}-01-01T00"
@@ -367,7 +392,7 @@ def main():
     print("=== PHASE 2: Fetching hourly demand data ===")
     print()
     raw_demand = {}
-    for respondent in RESPONDENTS:
+    for respondent in run_respondents:
         for year in YEARS:
             region = REGION_MAP[respondent]
             start_str = f"{year}-01-01T00"
@@ -396,7 +421,7 @@ def main():
     print("=== PHASE 3: Processing generation data ===")
     print()
     all_gen = {}
-    for respondent in RESPONDENTS:
+    for respondent in run_respondents:
         for year in YEARS:
             region = REGION_MAP[respondent]
             print(f"Processing GEN {region} {year}...")
@@ -418,7 +443,7 @@ def main():
     print("=== PHASE 4: Processing demand data ===")
     print()
     all_demand = {}
-    for respondent in RESPONDENTS:
+    for respondent in run_respondents:
         for year in YEARS:
             region = REGION_MAP[respondent]
             print(f"Processing DEMAND {region} {year}...")
@@ -450,19 +475,29 @@ def main():
         filepath = os.path.join(DATA_DIR, filename)
         save_json(filepath, hourly_array)
 
-    # Aggregated profiles
+    # Aggregated profiles — merge with existing data (preserves ISOs not fetched)
     print()
+    gen_path = os.path.join(DATA_DIR, "eia_generation_profiles.json")
+    fossil_path = os.path.join(DATA_DIR, "eia_fossil_mix.json")
+    demand_path = os.path.join(DATA_DIR, "eia_demand_profiles.json")
+
     print("Building generation profiles...")
-    profiles = build_generation_profiles(all_gen)
-    save_json(os.path.join(DATA_DIR, "eia_generation_profiles.json"), profiles)
+    new_profiles = build_generation_profiles(all_gen)
+    existing_profiles = load_json(gen_path)
+    existing_profiles.update(new_profiles)
+    save_json(gen_path, existing_profiles)
 
     print("Building fossil mix...")
-    fossil_mix = build_fossil_mix(all_gen)
-    save_json(os.path.join(DATA_DIR, "eia_fossil_mix.json"), fossil_mix)
+    new_fossil = build_fossil_mix(all_gen)
+    existing_fossil = load_json(fossil_path)
+    existing_fossil.update(new_fossil)
+    save_json(fossil_path, existing_fossil)
 
     print("Building demand profiles...")
-    demand_profiles = build_demand_profiles(all_demand)
-    save_json(os.path.join(DATA_DIR, "eia_demand_profiles.json"), demand_profiles)
+    new_demand = build_demand_profiles(all_demand)
+    existing_demand = load_json(demand_path)
+    existing_demand.update(new_demand)
+    save_json(demand_path, existing_demand)
 
     print()
     print("=" * 70)

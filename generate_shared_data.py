@@ -14,7 +14,7 @@ import json
 import os
 from datetime import datetime
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = ['50', '60', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
 THRESHOLDS_NUM = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
@@ -572,7 +572,7 @@ lines.append('')
 # UPRATE_CAPS_TWH
 uprate_caps = data['config'].get('tranche_model', {}).get('uprate_caps_twh', {})
 if not uprate_caps:
-    uprate_caps = {'CAISO': 0.907, 'ERCOT': 1.064, 'PJM': 12.614, 'NYISO': 1.340, 'NEISO': 1.380}
+    uprate_caps = {'CAISO': 0.907, 'ERCOT': 1.064, 'PJM': 12.614, 'NYISO': 1.340, 'NEISO': 1.380, 'MISO': 4.730, 'SPP': 0.473}
 lines.append("// --- Nuclear Uprate Caps (TWh/yr) — 5% of existing nuclear at 90% CF ---")
 lines.append("const UPRATE_CAPS_TWH = {")
 parts = [f'    {iso}: {uprate_caps.get(iso, 0)}' for iso in ISOS]
@@ -1044,6 +1044,7 @@ print("\nComputing demand growth counterfactual MAC...")
 REGIONAL_DEMAND_TWH_PY = {
     'CAISO': 224.039, 'ERCOT': 488.020, 'PJM': 843.331,
     'NYISO': 151.599, 'NEISO': 115.336,
+    'MISO': 660.0, 'SPP': 296.0,
 }
 DEMAND_GROWTH_RATES_PY = {
     'CAISO':  {'Low': 0.014, 'Medium': 0.019, 'High': 0.025},
@@ -1051,6 +1052,8 @@ DEMAND_GROWTH_RATES_PY = {
     'PJM':    {'Low': 0.015, 'Medium': 0.024, 'High': 0.036},
     'NYISO':  {'Low': 0.013, 'Medium': 0.020, 'High': 0.044},
     'NEISO':  {'Low': 0.009, 'Medium': 0.018, 'High': 0.029},
+    'MISO':   {'Low': 0.012, 'Medium': 0.022, 'High': 0.038},
+    'SPP':    {'Low': 0.010, 'Medium': 0.018, 'High': 0.030},
 }
 NEW_GAS_EMISSION_RATE = 0.35  # tCO₂/MWh (new CCGT counterfactual)
 
