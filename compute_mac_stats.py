@@ -27,7 +27,7 @@ RESULTS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_results.json')
 JS_OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'js', 'mac-stats-data.js')
 JSON_OUTPUT_PATH = os.path.join(BASE_DIR, 'data', 'mac_stats.json')
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 THRESHOLD_STRS = [str(t) for t in THRESHOLDS]
 
@@ -35,7 +35,7 @@ THRESHOLD_STRS = [str(t) for t in THRESHOLDS]
 TOGGLE_NAMES = ['Renewable Gen', 'Nuclear', 'Battery Cost', 'LDES Cost', 'Fossil Fuel', 'Transmission']
 
 # Wholesale prices (duplicated from optimizer for standalone use)
-WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41}
+WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
 
 
 def load_results():
