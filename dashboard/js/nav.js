@@ -113,6 +113,7 @@
                 { label: 'About', href: 'about.html' }
             ]
         },
+        { label: 'Reference', href: 'reference.html' },
         {
             label: 'Generator Analysis',
             children: [
