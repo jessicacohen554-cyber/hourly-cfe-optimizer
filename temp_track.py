@@ -43,6 +43,11 @@ EF_EXPANDED_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
 EF_BACKUP_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef_backup.parquet')
 CHECKPOINT_PATH = os.path.join(SCRIPT_DIR, 'data', 'track_checkpoint.json')
 
+from step3_cost_optimization import (
+    _N_COEFFS, _COL_WHOLESALE, _COL_SOL_NEW, _COL_WND_NEW, _COL_CCS_NEW,
+    _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4, _COL_BAT8, _COL_LDES,
+)
+
 
 def save_checkpoint(track_output, completed_steps):
     """Save progress checkpoint after each ISO/track completes."""
@@ -95,12 +100,68 @@ def load_iso_arrays(table, iso):
     }
 
 
+def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
+    """Vectorized price-bound Pareto pruning per threshold.
+
+    For each threshold t, among qualifying mixes (score >= t):
+    1. Compute each mix's cost under lowest possible prices (min_cost)
+       and under highest possible prices (max_cost)
+    2. Find the best mix's max_cost (upper bound on best achievable)
+    3. Prune any mix whose min_cost > that bound (can never win)
+
+    Uses precomputed price ranges from sensitivity combos. O(N) per threshold.
+
+    Returns: boolean mask of NON-dominated mixes (True = keep)
+    """
+    N = len(scores)
+    if N < 100:
+        return np.ones(N, dtype=bool)
+
+    keep = np.ones(N, dtype=bool)
+
+    # Price ranges across all ISOs and sensitivity combos (empirically measured)
+    # Cols: wholesale, sol_new, wnd_new, ccs_new, uprate, geo, remaining, bat4, bat8, ldes
+    min_prices = np.array([20, 40, 30, 52, 15, 0, 52, 69, 77, 116], dtype=np.float64)
+    max_prices = np.array([50, 82, 83, 164, 15, 116, 84, 144, 179, 267], dtype=np.float64)
+
+    for thr in thresholds:
+        qual_mask = (scores >= thr) & keep
+        qual_idx = np.where(qual_mask)[0]
+        Q = len(qual_idx)
+        if Q < 2:
+            continue
+
+        q_coeff = coeff_matrix[qual_idx]  # (Q, 10)
+        q_const = constant[qual_idx]      # (Q,)
+
+        # Min possible cost = q_coeff @ min_prices + q_const
+        min_cost = q_coeff @ min_prices + q_const
+        # Max possible cost = q_coeff @ max_prices + q_const
+        max_cost = q_coeff @ max_prices + q_const
+
+        # Best achievable upper bound: lowest max_cost among qualifying mixes
+        best_max_cost = np.min(max_cost)
+
+        # Prune: any mix whose min cost exceeds the best worst-case
+        dominated = min_cost > best_max_cost
+        n_pruned = dominated.sum()
+        if n_pruned > 0:
+            keep[qual_idx[dominated]] = False
+
+    return keep
+
+
 def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=None,
-              existing_override=None, track_output=None, completed_steps=None):
+              existing_override=None, track_output=None, completed_steps=None,
+              apply_dominance_filter=True):
     """Run cost optimization for a track (newbuild or replace).
 
     Checkpoints after every 500 combos (full sweep) by writing partial results
     to track_output and saving to disk.
+
+    Args:
+        apply_dominance_filter: if True, prune dominated mixes before evaluation.
+            Dramatically reduces evaluation count (typically 50-80% reduction).
 
     Returns:
         track_data: dict of {threshold_str: {'scenarios': {key: scenario_dict}}}
@@ -126,6 +187,30 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
     coeff_matrix, constant, extras = precompute_base_year_coefficients(
         iso, arrays, demand_twh, uprate_cap_override=uprate_cap_override,
         existing_override=existing_override)
+
+    # Apply Pareto dominance filter — prune mixes that can never win
+    if apply_dominance_filter and N > 500:
+        active_thr_list = sorted(thr_indices.keys())
+        keep_mask = pareto_prune_fast(coeff_matrix, constant, scores, active_thr_list)
+        n_pruned = N - keep_mask.sum()
+        if n_pruned > 0:
+            keep_idx = np.where(keep_mask)[0]
+            arrays = {k: arrays[k][keep_idx] for k in arrays}
+            coeff_matrix = coeff_matrix[keep_idx]
+            constant = constant[keep_idx]
+            scores = scores[keep_idx]
+            extras = {k: (v[keep_idx] if isinstance(v, np.ndarray) and v.shape[0] == N else v)
+                      for k, v in extras.items()}
+            N_new = len(keep_idx)
+            print(f"    {iso} {track_name}: Pareto pruned {n_pruned:,} / {N:,} "
+                  f"({100*n_pruned/N:.1f}%) → {N_new:,} mixes remain")
+            N = N_new
+            # Recompute threshold indices on pruned arrays
+            thr_indices = {}
+            for thr in OUTPUT_THRESHOLDS:
+                idx = np.where(scores >= thr)[0]
+                if len(idx) > 0:
+                    thr_indices[thr] = idx
 
     active_thresholds = sorted(thr_indices.keys())
     thresholds_desc = np.array(sorted(active_thresholds, reverse=True), dtype=np.float64)
@@ -333,6 +418,9 @@ def main():
     ef_expanded = pq.read_table(EF_EXPANDED_PATH)
     print(f"  Expanded EF: {ef_expanded.num_rows:,} rows")
 
+    # Replace track also uses expanded EF (dataset was expanded on purpose)
+    # but filters to hydro > 0 since replace track needs existing hydro
+
     for iso in ISOS:
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         if iso not in track_output['results']:
@@ -391,10 +479,36 @@ def main():
             print(f"  {iso:>6}   newbuild: skipped (checkpoint)")
 
         # Track 2: replace (hydro at existing floor, everything else zeroed, uprates OFF)
+        # Filter: hydro >= 2050 high-demand floor (hydro can't go below this)
         step_key_rp = (iso, 'replace')
         if step_key_rp not in completed_steps:
             rp_arrays = load_iso_arrays(ef_expanded, iso)
             if rp_arrays is not None:
+                # Compute 2050 high-demand hydro floor: existing share / max demand growth
+                # Hydro is fixed capacity — as demand grows, its share shrinks.
+                # At 2050 high growth, hydro share = existing / (1+rate)^25.
+                # Mixes below this floor can never be optimal in replace track.
+                hydro_existing_share = GRID_MIX_SHARES[iso]['hydro']
+                high_rate = DEMAND_GROWTH_RATES[iso].get('High',
+                            DEMAND_GROWTH_RATES[iso].get('high', 0))
+                target_year = max(DEMAND_GROWTH_YEARS) if DEMAND_GROWTH_YEARS else 2050
+                years_of_growth = target_year - 2025
+                demand_scale_2050 = (1 + high_rate) ** years_of_growth
+                hydro_floor = hydro_existing_share / demand_scale_2050 if demand_scale_2050 > 0 else 0
+                n_before = len(rp_arrays['hydro'])
+                h_mask = rp_arrays['hydro'] >= hydro_floor
+                n_pass = int(h_mask.sum())
+                if n_pass > 0 and n_pass < n_before:
+                    h_idx = np.where(h_mask)[0]
+                    rp_arrays = {k: rp_arrays[k][h_idx] for k in rp_arrays}
+                    print(f"    {iso} replace: hydro>={hydro_floor:.1f}% (2050 high-demand floor) "
+                          f"{n_before:,} → {n_pass:,} ({100*(n_before-n_pass)/n_before:.1f}% pruned)")
+                elif n_pass == 0:
+                    print(f"    {iso} replace: no mixes with hydro>={hydro_floor:.1f}%, skipping")
+                    completed_steps.add(step_key_rp)
+                    save_checkpoint(track_output, [list(s) for s in completed_steps])
+                    continue
+
                 rp_data, rp_arch = run_track(
                     'replace', iso, rp_arrays, demand_twh, combos,
                     uprate_cap_override=0, existing_override=greenfield_keep_hydro,
