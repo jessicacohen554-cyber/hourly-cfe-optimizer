@@ -102,6 +102,7 @@
                 { label: 'New-Build Signals', href: 'newbuild_requirement.html' },
                 { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
                 { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' },
+                { label: 'Consequential Accounting', href: 'consequential_accounting.html' },
                 { label: 'Generator Analysis', href: '../power-gen-decarbonization/site/index.html' }
             ]
         },
