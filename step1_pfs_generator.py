@@ -396,38 +396,46 @@ def prepare_numpy_profiles(demand_norm, supply_profiles):
 @njit(cache=True)
 def _compute_storage_caps(demand, supply_row, procurement,
                           batt4_duration, batt8_duration, ldes_duration):
-    """Compute max useful capacity for each storage type from curtailment profile.
+    """Compute max useful capacity and curtailment frequency for storage screening.
 
     Physics-based ceiling: a battery with power = cap/duration can never charge
     faster than max_hourly_surplus. So max useful cap = max_hourly_surplus × duration.
-    Any capacity above this has power that exceeds available curtailment in every
-    hour of the year — physically impossible to fill.
 
-    For LDES (100hr), the same logic applies but the long duration means the
-    power-based cap can be quite large. We also check window-accumulated surplus
-    as a secondary ceiling.
+    Curtailment frequency: counts days with non-trivial surplus. Daily-cycle
+    batteries need FREQUENT curtailment to be useful — a mix with 300+ surplus
+    days is a battery candidate; one with <30 is not worth the dispatch cost.
 
-    Returns: (bat4_cap, bat8_cap, ldes_cap, has_curtailment)
-        bat4_cap: max useful bat4 capacity (normalized units, as fraction of annual demand)
+    Returns: (bat4_cap, bat8_cap, ldes_cap, has_curtailment, surplus_days)
+        bat4_cap: max useful bat4 capacity (normalized units)
         bat8_cap: max useful bat8 capacity (same)
         ldes_cap: max useful LDES capacity (same)
         has_curtailment: True if any hour has surplus > 0
+        surplus_days: number of days with surplus > 0.1% of daily demand
     """
     max_hourly_surplus = 0.0
     has_curtailment = False
-    for h in range(8760):
-        s = procurement * supply_row[h] - demand[h]
-        if s > 0:
-            if s > max_hourly_surplus:
-                max_hourly_surplus = s
-            has_curtailment = True
+    surplus_days = 0
+    daily_demand_avg = 1.0 / 365.0  # normalized annual demand = 1.0
+    surplus_threshold = daily_demand_avg * 0.001  # 0.1% of daily demand
 
-    # Power-based ceiling: max_useful_cap = max_hourly_surplus × duration
+    for day in range(365):
+        ds = day * 24
+        day_surplus = 0.0
+        for h in range(24):
+            s = procurement * supply_row[ds + h] - demand[ds + h]
+            if s > 0:
+                day_surplus += s
+                if s > max_hourly_surplus:
+                    max_hourly_surplus = s
+                has_curtailment = True
+        if day_surplus > surplus_threshold:
+            surplus_days += 1
+
     bat4_cap = max_hourly_surplus * batt4_duration
     bat8_cap = max_hourly_surplus * batt8_duration
     ldes_cap = max_hourly_surplus * ldes_duration
 
-    return bat4_cap, bat8_cap, ldes_cap, has_curtailment
+    return bat4_cap, bat8_cap, ldes_cap, has_curtailment, surplus_days
 
 
 @njit(cache=True)
@@ -492,14 +500,22 @@ def _score_with_all_storage(demand, supply_row, procurement,
                     available -= discharge
                     residual_gap[ds + h] -= discharge
 
-    # Phase 2: Battery 8hr daily cycle on post-4hr residual
+    # Phase 2: Battery 8hr on 2-day (48hr) window cycle on post-4hr residual
+    # 8hr batteries cycle ~200×/year (~every 1.8 days), not daily.
+    # Using 2-day windows allows accumulating surplus across 2 days before
+    # discharging, better reflecting actual 8hr battery operations.
     batt8_dispatched = 0.0
     if batt8_capacity > 0:
-        for day in range(365):
-            ds = day * 24
+        batt8_window = 48  # 2-day window
+        n_win8 = (8760 + batt8_window - 1) // batt8_window
+        for w in range(n_win8):
+            ws = w * batt8_window
+            we = ws + batt8_window
+            if we > 8760:
+                we = 8760
             stored = 0.0
-            for h in range(24):
-                s = residual_surplus[ds + h]
+            for h in range(ws, we):
+                s = residual_surplus[h]
                 if s > 0 and stored < batt8_capacity:
                     charge = s
                     if charge > batt8_power:
@@ -508,10 +524,10 @@ def _score_with_all_storage(demand, supply_row, procurement,
                     if charge > remaining:
                         charge = remaining
                     stored += charge
-                    residual_surplus[ds + h] -= charge
+                    residual_surplus[h] -= charge
             available = stored * batt8_eff
-            for h in range(24):
-                g = residual_gap[ds + h]
+            for h in range(ws, we):
+                g = residual_gap[h]
                 if g > 0 and available > 0:
                     discharge = g
                     if discharge > batt8_power:
@@ -520,7 +536,7 @@ def _score_with_all_storage(demand, supply_row, procurement,
                         discharge = available
                     batt8_dispatched += discharge
                     available -= discharge
-                    residual_gap[ds + h] -= discharge
+                    residual_gap[h] -= discharge
 
     # Phase 3: LDES multi-day rolling window on post-battery residual
     ldes_dispatched = 0.0
@@ -995,9 +1011,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         # max_hourly_surplus × duration = max useful battery capacity.
         # A battery can never charge faster than its power rating (cap/duration),
         # so capacity beyond max_hourly_surplus × duration is physically impossible to fill.
-        bat4_cap_ceil, bat8_cap_ceil, ldes_cap_ceil, has_curt = _compute_storage_caps(
-            demand_arr, supply_row, max_pf,
-            BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
+        bat4_cap_ceil, bat8_cap_ceil, ldes_cap_ceil, has_curt, n_surplus_days = \
+            _compute_storage_caps(
+                demand_arr, supply_row, max_pf,
+                BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
 
         if not has_curt:
             continue  # No curtailment to harness
@@ -1007,8 +1024,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         bat8_max_pct = bat8_cap_ceil * 100.0 * 1.1
         ldes_max_pct = ldes_cap_ceil * 100.0 * 1.1
 
-        eff_batt_levels = [bl for bl in batt_levels if bl <= bat4_max_pct or bl == 0]
-        eff_batt8_levels = [bl for bl in batt8_levels if bl <= bat8_max_pct or bl == 0]
+        # Curtailment frequency filter: daily-cycle batteries need frequent surplus.
+        # If fewer than 30 days have non-trivial surplus, batteries can't cycle enough
+        # to justify capacity — skip bat4/bat8, only try LDES (which accumulates
+        # across multi-day windows and can use infrequent but large surpluses).
+        MIN_SURPLUS_DAYS_FOR_BATTERY = 150
+        if n_surplus_days >= MIN_SURPLUS_DAYS_FOR_BATTERY:
+            eff_batt_levels = [bl for bl in batt_levels if bl <= bat4_max_pct or bl == 0]
+            eff_batt8_levels = [bl for bl in batt8_levels if bl <= bat8_max_pct or bl == 0]
+        else:
+            eff_batt_levels = [0]   # Skip batteries — too few surplus days
+            eff_batt8_levels = [0]
         eff_ldes_levels = [ll for ll in ldes_levels if ll <= ldes_max_pct or ll == 0]
 
         # Ensure at least one non-zero level if there's curtailment
@@ -1151,8 +1177,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     # Near-miss refinement: storage sweep with curtailment cap + dominance
                     supply_row_j = fine_supply[j]
 
-                    # Curtailment-MW cap for this fine mix
-                    b4c, b8c, lc, has_c = _compute_storage_caps(
+                    # Curtailment-MW cap + frequency filter for this fine mix
+                    b4c, b8c, lc, has_c, n_sd = _compute_storage_caps(
                         demand_arr, supply_row_j, max_pf,
                         BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
                         LDES_DURATION_HOURS)
@@ -1163,8 +1189,12 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     b4_ceil = b4c * 100.0 * 1.1
                     b8_ceil = b8c * 100.0 * 1.1
                     l_ceil = lc * 100.0 * 1.1
-                    e_bl = [bl for bl in batt_levels if bl <= b4_ceil or bl == 0]
-                    e_b8l = [bl for bl in batt8_levels if bl <= b8_ceil or bl == 0]
+                    if n_sd >= MIN_SURPLUS_DAYS_FOR_BATTERY:
+                        e_bl = [bl for bl in batt_levels if bl <= b4_ceil or bl == 0]
+                        e_b8l = [bl for bl in batt8_levels if bl <= b8_ceil or bl == 0]
+                    else:
+                        e_bl = [0]
+                        e_b8l = [0]
                     e_ll = [ll for ll in ldes_levels if ll <= l_ceil or ll == 0]
 
                     for bp in e_bl:
