@@ -418,6 +418,9 @@ def main():
     # Final save
     _save_results(track_output)
 
+    # Save parquet (compact, git-friendly)
+    _save_parquet(track_output)
+
     # Clean up checkpoint on successful completion
     if os.path.exists(CHECKPOINT_PATH):
         os.remove(CHECKPOINT_PATH)
@@ -426,9 +429,12 @@ def main():
     total_elapsed = time.time() - total_start
     out_path = str(TRACK_RESULTS_PATH)
     tr_size = os.path.getsize(out_path) / (1024 * 1024)
+    pq_path = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
+    pq_size = os.path.getsize(pq_path) / (1024 * 1024) if os.path.exists(pq_path) else 0
     print(f"\n{'='*70}")
     print(f"  TRACK ANALYSIS COMPLETE in {total_elapsed:.0f}s")
-    print(f"  Output: {out_path} ({tr_size:.1f} MB)")
+    print(f"  JSON:    {out_path} ({tr_size:.1f} MB)")
+    print(f"  Parquet: {pq_path} ({pq_size:.1f} MB)")
     print(f"{'='*70}")
 
 def _save_results(track_output):
@@ -439,6 +445,75 @@ def _save_results(track_output):
     with open(tmp, 'w') as f:
         json.dump(track_output, f, separators=(',', ':'))
     os.replace(tmp, out_path)
+
+
+def _save_parquet(track_output):
+    """Flatten track results into a compact parquet file for git storage."""
+    import pandas as pd
+
+    rows = []
+    for iso, iso_data in track_output.get('results', {}).items():
+        for track_name, thr_dict in iso_data.items():
+            for thr_str, thr_val in thr_dict.items():
+                for sc_key, sc in thr_val.get('scenarios', {}).items():
+                    row = {
+                        'iso': iso,
+                        'track': track_name,
+                        'threshold': float(thr_str),
+                        'scenario': sc_key,
+                    }
+                    for k, v in sc.get('resource_mix', {}).items():
+                        row[f'mix_{k}'] = v
+                    row['procurement_pct'] = sc.get('procurement_pct')
+                    row['hourly_match_score'] = sc.get('hourly_match_score')
+                    row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct')
+                    row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct')
+                    row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct')
+                    for k, v in sc.get('costs', {}).items():
+                        row[f'cost_{k}'] = v
+                    for k, v in sc.get('tranche_costs', {}).items():
+                        row[f'tranche_{k}'] = v
+                    for k, v in sc.get('gas_backup', {}).items():
+                        row[f'gas_{k}'] = v
+                    rows.append(row)
+
+    if not rows:
+        print("  No scenario data to write to parquet")
+        return
+
+    df = pd.DataFrame(rows)
+    pq_path = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
+    df.to_parquet(pq_path, index=False, compression='zstd')
+    print(f"  track_scenarios.parquet: {len(df):,} rows, "
+          f"{os.path.getsize(pq_path) / (1024*1024):.1f} MB")
+
+    # Also save demand growth parquet
+    dg_rows = []
+    for track_name, iso_dict in track_output.get('demand_growth', {}).items():
+        for iso, thr_dict in iso_dict.items():
+            for thr_str, sc_dict in thr_dict.items():
+                for sc_key, year_data in sc_dict.items():
+                    for year_str, growth_data in year_data.items():
+                        for g_level, vals in growth_data.items():
+                            dg_rows.append({
+                                'iso': iso,
+                                'track': track_name,
+                                'threshold': float(thr_str),
+                                'scenario': sc_key,
+                                'year': int(year_str),
+                                'growth_level': g_level,
+                                'best_mix_idx': vals[0],
+                                'total_cost': vals[1],
+                                'effective_cost': vals[2],
+                                'incremental_cost': vals[3],
+                            })
+
+    if dg_rows:
+        df_dg = pd.DataFrame(dg_rows)
+        dg_path = os.path.join(SCRIPT_DIR, 'dashboard', 'track_demand_growth.parquet')
+        df_dg.to_parquet(dg_path, index=False, compression='zstd')
+        print(f"  track_demand_growth.parquet: {len(df_dg):,} rows, "
+              f"{os.path.getsize(dg_path) / (1024*1024):.1f} MB")
 
 
 if __name__ == '__main__':
