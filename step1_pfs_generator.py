@@ -121,13 +121,16 @@ THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 # Threshold-adaptive procurement bounds (Decision 3C, expanded)
 # 90-99%: capped at 250% per user direction (high enough for extreme renewables,
 # but not wastefully wide). 100%: pushed to 500% for perfect hourly matching.
+# Procurement bounds — raised for lower thresholds to allow higher RE saturation
+# with storage. A pure solar mix at 250% procurement + right-sized battery can
+# hit 80%+ targets — the old caps (150-200%) blocked this solution space.
 PROCUREMENT_BOUNDS = {
-    50:   (50, 150),
-    60:   (60, 150),
-    70:   (70, 175),
-    75:   (75, 200),
-    80:   (80, 200),
-    85:   (85, 225),
+    50:   (50, 200),
+    60:   (60, 225),
+    70:   (70, 250),
+    75:   (75, 250),
+    80:   (80, 250),
+    85:   (85, 250),
     87.5: (87, 250),
     90:   (90, 250),
     92.5: (92, 250),
@@ -936,8 +939,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     add_candidate(combos_5[i], min_proc, 0, 0, 0, score)
                     mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), min_proc)
                     feasible_mix_keys.add(mix_key)
-            elif max_score >= target - 0.25:
-                # Near-miss: candidate for storage sweep in Phase 1b
+            elif max_score >= target - 0.40:
+                # Near-miss: candidate for storage sweep in Phase 1b.
+                # Wide 40% window allows high-VRE mixes with substantial battery
+                # potential (e.g., pure solar at 45% match → battery can bridge gap).
                 if mix_key not in cross_skip:
                     near_miss_mixes[i] = max(near_miss_mixes.get(i, 0), max_score)
 
@@ -1014,24 +1019,40 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         if len(eff_ldes_levels) == 1:
             eff_ldes_levels = [0, ldes_levels[1]]
 
-        # ── STORAGE SWEEP WITH DOMINANCE PRUNING ──
-        # For bat4: sweep ascending. Once a level makes the combo feasible at
-        # min procurement, record it but also test the NEXT level (it might achieve
-        # feasibility at even lower procurement). Stop once two consecutive levels
-        # produce the same min_proc — higher levels are dominated.
-        for bp in eff_batt_levels:
+        # ── TOP-DOWN STORAGE SWEEP ──
+        # Start at the curtailment-MW cap (max useful capacity) and sweep DOWN.
+        # Bigger intervals first, then refine around the feasibility boundary.
+        # This finds the right-sized storage faster than bottom-up and naturally
+        # identifies the minimum capacity needed to hit the target.
+        #
+        # Strategy per storage type:
+        #   1. Test at cap ceiling — if infeasible, skip (even max storage can't help)
+        #   2. Test at 0 — record min_proc without this storage type
+        #   3. Binary-search the level list to find the smallest level that achieves
+        #      the same or lower min_proc as the ceiling
+        #   4. Record solutions at key levels: ceiling, boundary, and 0
+
+        # Reversed level lists for top-down sweep
+        rev_batt = sorted([bl for bl in eff_batt_levels if bl > 0], reverse=True)
+        rev_batt8 = sorted([bl for bl in eff_batt8_levels if bl > 0], reverse=True)
+        rev_ldes = sorted([ll for ll in eff_ldes_levels if ll > 0], reverse=True)
+
+        # Include zero in the sweep lists
+        sweep_batt = [0] + rev_batt[::-1]  # ascending: 0, small, ..., big
+        sweep_batt8 = [0] + rev_batt8[::-1]
+        sweep_ldes = [0] + rev_ldes[::-1]
+
+        for bp in sweep_batt:
             batt_cap = bp / 100.0
             batt_pow = batt_cap / BATTERY_DURATION_HOURS if batt_cap > 0 else 0
-            bat4_hit_target = False
-            bat4_best_proc = 9999
+            prev_bp_proc = 9999
 
-            for b8p in eff_batt8_levels:
+            for b8p in sweep_batt8:
                 batt8_cap = b8p / 100.0
                 batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS if batt8_cap > 0 else 0
-                bat8_hit_target = False
-                bat8_best_proc = 9999
+                prev_ldes_proc = 9999
 
-                for lp in eff_ldes_levels:
+                for lp in sweep_ldes:
                     if bp == 0 and b8p == 0 and lp == 0:
                         continue
                     ldes_cap = lp / 100.0
@@ -1070,19 +1091,15 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), min_proc)
                     feasible_mix_keys.add(mix_key)
 
-                    # LDES dominance: if adding more LDES doesn't lower min_proc,
-                    # higher LDES levels are dominated for this (bat4, bat8) pair
-                    if min_proc >= bat8_best_proc and bat8_hit_target:
-                        break  # No improvement — stop LDES sweep
-                    bat8_hit_target = True
-                    bat8_best_proc = min(bat8_best_proc, min_proc)
+                    # LDES dominance: if this LDES level gives same or worse
+                    # min_proc as the previous (higher) level, stop descending
+                    if min_proc >= prev_ldes_proc and prev_ldes_proc < 9999:
+                        break  # Lower LDES can't improve — stop
+                    prev_ldes_proc = min_proc
 
-                # bat8 dominance check
-                if bat8_best_proc <= bat4_best_proc and bat4_hit_target and b8p > 0:
-                    # bat8 at this level didn't improve over previous — check if stuck
-                    pass  # Don't break bat8 loop — LDES combos may differ
-                bat4_hit_target = bat4_hit_target or bat8_hit_target
-                bat4_best_proc = min(bat4_best_proc, bat8_best_proc)
+                # Propagate best from this bat8 level
+                if prev_ldes_proc < prev_bp_proc:
+                    prev_bp_proc = prev_ldes_proc
 
         # Nth-mix checkpoint within Phase 1b
         mixes_done = nm_idx + 1 - phase1b_start
@@ -1130,8 +1147,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     min_proc = proc_levels[lo]
                     score = np.sum(np.minimum(demand_arr, fine_supply[j] * (min_proc / 100.0)))
                     add_candidate(fine_combos[j], min_proc, 0, 0, 0, score)
-                elif max_score_j >= target - 0.15:
-                    # Near-miss refinement: storage sweep with SOC screen + dominance
+                elif max_score_j >= target - 0.30:
+                    # Near-miss refinement: storage sweep with curtailment cap + dominance
                     supply_row_j = fine_supply[j]
 
                     # Curtailment-MW cap for this fine mix
