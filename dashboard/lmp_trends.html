@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — Wholesale Price Trends</title>
+<title>The 8,760 Problem — PJM Wholesale Price Trends</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -301,6 +301,141 @@ body { background: #0B1120; }
     line-height: 1.75;
 }
 
+/* ========== NUCLEAR CALLOUT ========== */
+.nuclear-callout {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+.nuclear-callout-inner {
+    background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(245,158,11,0.06) 100%);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-left: 4px solid #EF4444;
+    border-radius: 14px;
+    padding: 24px 28px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin-top: -16px;
+    margin-bottom: 16px;
+}
+.nuclear-callout-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.nuclear-callout-text h4 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #f87171;
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+}
+.nuclear-callout-text p {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.65;
+    margin: 0;
+}
+.nuclear-callout-text strong { color: #fbbf24; }
+
+/* ========== NUCLEAR DEEP-DIVE SECTION ========== */
+.nuclear-section {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 64px 24px;
+    border-top: 1px solid rgba(239,68,68,0.15);
+}
+.nuclear-section-header {
+    margin-bottom: 40px;
+}
+.nuclear-section-header h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.nuclear-section-header p {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+    max-width: 780px;
+}
+.nuclear-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 32px;
+    align-items: start;
+}
+.nuclear-chart-col .chart-panel {
+    position: sticky;
+    top: 80px;
+}
+.nuclear-narrative-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+.nuclear-metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 24px;
+}
+.nuclear-metric {
+    background: rgba(15,26,46,0.85);
+    border: 1px solid rgba(74,144,217,0.15);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+}
+.nuclear-metric-value {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.nuclear-metric-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 6px;
+    line-height: 1.35;
+}
+.nuclear-paradox {
+    background: rgba(15,26,46,0.9);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 14px;
+    padding: 28px 24px;
+    margin-top: 12px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nuclear-paradox.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.nuclear-paradox h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #fbbf24;
+    margin-bottom: 12px;
+}
+.nuclear-paradox p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.75;
+    margin-bottom: 12px;
+}
+.nuclear-paradox p:last-child { margin-bottom: 0; }
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 900px) {
     .hero-inner { grid-template-columns: 1fr; gap: 28px; }
@@ -309,6 +444,10 @@ body { background: #0B1120; }
     .synthesis-grid { grid-template-columns: 1fr; }
     .hero-text h1 { font-size: 1.7rem; }
     .chart-container { min-height: 280px; }
+    .nuclear-grid { grid-template-columns: 1fr; }
+    .nuclear-chart-col .chart-panel { position: relative; top: 0; }
+    .nuclear-metric-row { grid-template-columns: repeat(3, 1fr); }
+    .nuclear-callout-inner { flex-direction: column; gap: 12px; }
 }
 @media (max-width: 600px) {
     .hero-section { padding: 40px 16px 36px; }
@@ -322,6 +461,13 @@ body { background: #0B1120; }
     .chart-panel { padding: 16px 12px; }
     .chart-container { min-height: 250px; }
     .chart-legend { font-size: 0.6rem; gap: 4px 10px; }
+    .nuclear-section { padding: 40px 16px; }
+    .nuclear-section-header h2 { font-size: 1.35rem; }
+    .nuclear-metric-row { grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .nuclear-metric { padding: 12px 8px; }
+    .nuclear-metric-value { font-size: 1.2rem; }
+    .nuclear-callout { padding: 0 16px; }
+    .nuclear-callout-inner { padding: 18px 16px; }
 }
 @media (max-width: 480px) {
     .hero-stats-row { flex-direction: column; }
@@ -336,7 +482,7 @@ body { background: #0B1120; }
 <!-- HEADER BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">How clean energy procurement reshapes wholesale electricity prices in PJM</p>
+    <p class="subtitle">How clean energy procurement reshapes wholesale electricity prices &mdash; PJM Interconnection</p>
     <div class="header-accent"></div>
 </header>
 
@@ -347,8 +493,8 @@ body { background: #0B1120; }
     <div class="hero-inner">
         <div class="hero-text">
             <div class="hero-kicker">PJM Wholesale Market Analysis</div>
-            <h1>Clean energy <span class="accent">halves wholesale prices</span> — but the path is narrower than you think</h1>
-            <p>Across 151,944 simulated scenarios, PJM wholesale prices decline from $35/MWh at 50% clean energy to $17/MWh at 95%. But the spread between best- and worst-case outcomes peaks in the middle of the transition — precisely where most utilities are planning today.</p>
+            <h1>Clean energy <span class="accent">halves wholesale prices</span> in PJM — but the path is narrower than you think</h1>
+            <p>Across 151,944 simulated PJM scenarios, wholesale prices decline from $35/MWh at 50% clean energy to $17/MWh at 95%. But the spread between best- and worst-case outcomes peaks in the middle of the transition — precisely where most utilities are planning today.</p>
             <p>Fuel prices explain nearly everything until 100% clean, where the rules change entirely and renewable costs, transmission, and policy levers take over.</p>
             <div class="hero-stats-row">
                 <div class="hero-stat">
@@ -360,8 +506,8 @@ body { background: #0B1120; }
                     <div class="hero-stat-label">Peak uncertainty band (P10&ndash;P90) at 75&ndash;80% clean</div>
                 </div>
                 <div class="hero-stat">
-                    <div class="hero-stat-value blue">7,980 hrs</div>
-                    <div class="hero-stat-label">Zero-price hours at 100% clean (91% of the year)</div>
+                    <div class="hero-stat-value red">~85%</div>
+                    <div class="hero-stat-label">Clean threshold where LMP falls below nuclear operating cost</div>
                 </div>
             </div>
         </div>
@@ -381,6 +527,17 @@ body { background: #0B1120; }
         </div>
     </div>
 </section>
+
+<!-- NUCLEAR RETIREMENT CALLOUT -->
+<div class="nuclear-callout">
+    <div class="nuclear-callout-inner">
+        <div class="nuclear-callout-icon">&#9762;</div>
+        <div class="nuclear-callout-text">
+            <h4>Existing Nuclear at Risk: Wholesale prices cross below operating cost at ~85% clean</h4>
+            <p>PJM's 32 GW nuclear fleet needs <strong>$25&ndash;30/MWh</strong> to cover operating costs. Our LMP model shows median wholesale prices fall through this floor between 85% and 90% clean energy &mdash; and off-peak prices collapse even earlier. At 95% clean, nearly half the year prices at zero or below. <a href="#nuclear-deepdive" style="color:#38bdf8;text-decoration:underline;">Jump to full analysis &darr;</a></p>
+        </div>
+    </div>
+</div>
 
 <!-- ================================================================ -->
 <!-- SECTION 1: Fuel Prices Dominate                                   -->
@@ -407,7 +564,7 @@ body { background: #0B1120; }
                 <span class="section-tag" style="background:rgba(14,165,233,0.12);color:#38bdf8;">Price Drivers</span>
                 <h3>Fuel prices explain 88&ndash;100% of wholesale cost variation — until they don't</h3>
                 <p>From 50% to 95% clean energy, the single biggest determinant of wholesale prices is the fossil fuel price assumption. At 50% clean, fuel level explains <strong>100%</strong> of the variance in average LMP. At 80%, it still accounts for <strong>88%</strong>.</p>
-                <p>The gap between Low and High fuel scenarios is massive: at 80% clean, Low fuel yields $17/MWh while High fuel yields $37/MWh — a 2.2&times; difference driven entirely by what marginal gas plants cost to run.</p>
+                <p>The gap between Low and High fuel scenarios in PJM is massive: at 80% clean, Low fuel yields $17/MWh while High fuel yields $37/MWh — a 2.2&times; difference driven entirely by what marginal gas plants cost to run.</p>
                 <span class="stat-badge stat-badge-blue">Low fuel: $17/MWh at 80% &middot; High fuel: $37/MWh at 80%</span>
             </div>
             <div class="narrative-card">
@@ -443,7 +600,7 @@ body { background: #0B1120; }
         <div class="scroll-narrative-col">
             <div class="narrative-card">
                 <span class="section-tag" style="background:rgba(34,197,94,0.12);color:#4ade80;">Market Structure</span>
-                <h3>Zero-price hours explode from 265 to 7,980 — and the market flips inside out</h3>
+                <h3>PJM zero-price hours explode from 265 to 7,980 — and the market flips inside out</h3>
                 <p>At 50% clean, PJM sees about 265 zero-or-negative-price hours per year — roughly 3% of the time, typically overnight with must-run nuclear surplus. By 95%, that figure hits <strong>4,268 hours</strong> — nearly half the year. At 100%, it's <strong>7,980 hours</strong>: 91% of all hours produce free or negatively-priced electricity.</p>
                 <p>This isn't a gradual shift. The curve accelerates sharply past 75%, as each incremental percentage of clean energy adds more zero-marginal-cost generation to hours where fossil was already barely dispatching.</p>
                 <span class="stat-badge stat-badge-green">265 &rarr; 7,980 zero-price hours: a 30&times; increase</span>
@@ -495,6 +652,94 @@ body { background: #0B1120; }
 </div>
 
 <!-- ================================================================ -->
+<!-- SECTION 4: Nuclear Economics Deep-Dive                            -->
+<!-- ================================================================ -->
+<section class="nuclear-section" id="nuclear-deepdive">
+    <div class="nuclear-section-header">
+        <span class="section-tag" style="background:rgba(239,68,68,0.12);color:#f87171;">PJM Nuclear Economics</span>
+        <h2>The Clean Energy Paradox: Decarbonization Destroys the Price Signal That Keeps Nuclear Alive</h2>
+        <p>PJM's 32 GW existing nuclear fleet is the cheapest firm clean energy on the grid at $34/MWh wholesale. But the very renewable buildout needed to decarbonize the grid collapses wholesale prices below nuclear operating costs &mdash; creating a retirement risk for the resource you need most at high clean energy targets.</p>
+    </div>
+
+    <div class="nuclear-grid">
+        <div class="nuclear-chart-col">
+            <div class="chart-panel">
+                <div class="chart-title">PJM Wholesale Price vs. Nuclear Operating Cost — By Clean Energy %</div>
+                <div class="chart-container">
+                    <canvas id="nuclearEconChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>High fuel LMP</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Medium fuel LMP</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Low fuel LMP</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.25);border-color:rgba(239,68,68,0.4);"></span>Nuclear operating cost ($25&ndash;30)</span>
+                </div>
+            </div>
+
+            <div class="chart-panel" style="margin-top: 24px;">
+                <div class="chart-title">PJM Hours Per Year at Zero or Negative Price — Nuclear Revenue Erosion</div>
+                <div class="chart-container" style="min-height: 260px;">
+                    <canvas id="nuclearZeroHoursChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Off-peak avg LMP</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Zero/negative hours (right axis)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="nuclear-narrative-col">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(239,68,68,0.12);color:#f87171;">Retirement Threshold</span>
+                <h3>The breakeven line: ~85% clean energy</h3>
+                <p>Nuclear plants need $25&ndash;30/MWh to cover fuel ($6&ndash;8), fixed O&amp;M ($15&ndash;20), and variable O&amp;M ($3&ndash;5). PJM's median wholesale price crosses below $28/MWh at <strong>85% clean</strong> and drops to $20/MWh by 90%.</p>
+                <p>Under <strong>low fuel prices</strong> &mdash; the scenario where cheap renewables are most likely &mdash; LMP drops to $16/MWh at 90% clean. Nuclear loses $9&ndash;14 on every MWh sold.</p>
+                <span class="stat-badge stat-badge-red">At 90% clean, Low fuel: $16/MWh LMP vs. $25&ndash;30 nuclear cost</span>
+            </div>
+
+            <div class="narrative-card">
+                <h3>Off-peak is where nuclear bleeds</h3>
+                <p>Nuclear is baseload &mdash; it runs 24/7 and can't economically cycle. Off-peak hours are ~60% of the year. At 90% clean, off-peak LMP averages <strong>$19/MWh</strong> (P10 = $10/MWh). At 95%, it falls to <strong>$14/MWh</strong>. At 99%, off-peak hits <strong>$5&ndash;7/MWh</strong> &mdash; well below even fuel cost alone.</p>
+                <p>Simultaneously, zero-price hours explode: <strong>2,660 hours at 90%</strong> (30% of the year), <strong>4,270 at 95%</strong> (49%), <strong>5,610 at 99%</strong> (64%). Nuclear earns nothing or pays to produce during these hours.</p>
+                <span class="stat-badge stat-badge-amber">At 95%: off-peak $14/MWh, 4,270 zero-price hrs (49% of year)</span>
+            </div>
+
+            <div class="narrative-card">
+                <h3>Fuel price is the survival toggle</h3>
+                <p>At 90% clean energy, the fuel price assumption separates nuclear survival from retirement:</p>
+                <p><strong>High fuel ($45/MWh wholesale base)</strong>: LMP averages $35/MWh. Nuclear clears with a $5&ndash;10 margin. Plants remain economic.</p>
+                <p><strong>Medium fuel ($34/MWh)</strong>: LMP averages $20/MWh. Nuclear loses $5&ndash;10/MWh. Retirement pressure mounts.</p>
+                <p><strong>Low fuel ($28/MWh)</strong>: LMP averages $16/MWh. Nuclear is deeply underwater. Fleet-wide retirement becomes rational.</p>
+                <span class="stat-badge stat-badge-blue">High fuel saves nuclear &middot; Low fuel triggers retirement cascade</span>
+            </div>
+
+            <div class="nuclear-metric-row">
+                <div class="nuclear-metric">
+                    <div class="nuclear-metric-value" style="color:#4ade80;">$34</div>
+                    <div class="nuclear-metric-label">Today's PJM wholesale ($/MWh)</div>
+                </div>
+                <div class="nuclear-metric">
+                    <div class="nuclear-metric-value" style="color:#fbbf24;">$20</div>
+                    <div class="nuclear-metric-label">LMP at 90% clean (median)</div>
+                </div>
+                <div class="nuclear-metric">
+                    <div class="nuclear-metric-value" style="color:#f87171;">$11</div>
+                    <div class="nuclear-metric-label">LMP at 99% clean (median)</div>
+                </div>
+            </div>
+
+            <div class="nuclear-paradox">
+                <h3>The Replacement Cost Paradox</h3>
+                <p>If nuclear retires due to price depression, replacing its firm generation capacity costs <strong>$105&ndash;163/MWh</strong> for new nuclear or <strong>$79&ndash;131/MWh</strong> for CCS-CCGT &mdash; 3&ndash;5&times; the wholesale price that caused the retirement.</p>
+                <p>This is the central tension: the grid needs nuclear at 90%+ clean targets, but the market doesn't pay enough to keep it running. Without capacity payments, clean energy standards, or nuclear production credits, the economic signal and the system need diverge completely.</p>
+                <p>High demand growth (PJM: up to 3.6%/yr) provides some price support by absorbing renewable output &mdash; but the LMP data shows it's insufficient. The wholesale price collapse is structural, not cyclical.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
 <!-- SYNTHESIS                                                         -->
 <!-- ================================================================ -->
 <section class="synthesis-section">
@@ -524,7 +769,7 @@ body { background: #0B1120; }
         <a href="research_paper.html">Research Paper</a>
         <a href="optimizer_methodology.html">Methodology</a>
     </div>
-    <div class="footer-note">Wholesale price analysis based on 151,944 simulated PJM scenarios &middot; Synthetic LMP model calibrated to PJM IMM 2024 SOM</div>
+    <div class="footer-note">All analysis on this page is PJM Interconnection &middot; 151,944 simulated scenarios &middot; Synthetic LMP model calibrated to PJM IMM State of the Market 2024</div>
 </footer>
 <div class="bottom-banner"></div>
 
@@ -796,6 +1041,21 @@ function baseTooltip() {
     });
 })();
 
+// ===== NUCLEAR DATA =====
+LMP.nuclear = {
+    // Nuclear operating cost band
+    opCostLow: 25,   // $/MWh — fuel + variable O&M floor
+    opCostHigh: 30,  // $/MWh — fuel + fixed & variable O&M ceiling
+    // Off-peak LMP by threshold (median)
+    offpeakP50: [27.86,26.26,23.47,21.85,19.1,19.21,20.12,17.85,16.61,13.74,8.05,4.6,-12.18],
+    // Fuel-level LMP medians (from pjm_lmp_trends.json)
+    fuelLow:    [28.16,25.56,19.6,18.39,17.07,15.87,14.43,14.87,13.65,12.33,10.02,7.32,-7.26],
+    fuelMedium: [34.8,32.29,28.14,26.83,24.53,22.42,20.63,19.81,19.07,16.78,14.27,10.83,-7.22],
+    fuelHigh:   [47.54,43.9,42.74,40.77,37.26,35.29,35.67,33.89,30.26,23.59,20.64,16.12,-7.18],
+    // Zero/negative price hours (median)
+    zeroP50: [265,514,1655,1929,2210,2340,2479,2627,3339,4268,5127,6350,7980]
+};
+
 // ===== 4. PEAK / OFF-PEAK CHART =====
 (function() {
     var ctx = document.getElementById('peakSpreadChart').getContext('2d');
@@ -840,6 +1100,153 @@ function baseTooltip() {
         }
     });
 })();
+// ===== 5. NUCLEAR ECONOMICS CHART =====
+(function() {
+    var ctx = document.getElementById('nuclearEconChart').getContext('2d');
+    var T = LMP.thresholds;
+    var N = LMP.nuclear;
+
+    // Nuclear operating cost band — horizontal band from 25 to 30
+    var costBandUpper = T.map(function(x) { return N.opCostHigh; });
+    var costBandLower = T.map(function(x) { return N.opCostLow; });
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                // Nuclear operating cost band (upper)
+                { label: 'Nuclear cost ceiling', data: pts(T, costBandUpper),
+                  borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.18)',
+                  borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 12, _type: 'band' },
+                // Nuclear operating cost band (lower)
+                { label: 'Nuclear cost floor', data: pts(T, costBandLower),
+                  borderColor: RED + '50', backgroundColor: 'transparent',
+                  borderWidth: 1, borderDash: [4,3], pointRadius: 0, fill: false, tension: 0, order: 12, _type: 'band' },
+                // High fuel LMP
+                { label: 'High fuel LMP', data: pts(T, N.fuelHigh),
+                  borderColor: RED, backgroundColor: RED + '08',
+                  borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RED,
+                  fill: false, tension: 0.35, order: 3 },
+                // Medium fuel LMP
+                { label: 'Medium fuel LMP', data: pts(T, N.fuelMedium),
+                  borderColor: AMBER, backgroundColor: AMBER + '08',
+                  borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: AMBER,
+                  fill: false, tension: 0.35, order: 2 },
+                // Low fuel LMP
+                { label: 'Low fuel LMP', data: pts(T, N.fuelLow),
+                  borderColor: GREEN, backgroundColor: GREEN + '08',
+                  borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: GREEN,
+                  fill: false, tension: 0.35, order: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: baseScales('Average Wholesale Price ($/MWh)', -12, 55),
+            plugins: {
+                legend: { display: false },
+                tooltip: baseTooltip(),
+                annotation: {
+                    annotations: {
+                        zeroLine: { type: 'line', yMin: 0, yMax: 0,
+                            borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderDash: [6, 4] },
+                        nucLabel: { type: 'label',
+                            xValue: 100, yValue: 27.5,
+                            content: ['Nuclear', 'operating cost'],
+                            color: 'rgba(239,68,68,0.7)',
+                            font: { size: 10, weight: '600' },
+                            position: 'start'
+                        },
+                        crossover85: { type: 'line', xMin: 85, xMax: 85,
+                            borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderDash: [4,4],
+                            label: { display: true, content: 'Breakeven ~85%', position: 'start',
+                                color: 'rgba(255,255,255,0.4)', font: { size: 9 }, backgroundColor: 'transparent' }
+                        }
+                    }
+                }
+            }
+        }
+    });
+})();
+
+// ===== 6. NUCLEAR ZERO-HOURS + OFF-PEAK DUAL-AXIS CHART =====
+(function() {
+    var ctx = document.getElementById('nuclearZeroHoursChart').getContext('2d');
+    var T = LMP.thresholds;
+    var N = LMP.nuclear;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                // Off-peak LMP (left axis)
+                { label: 'Off-peak avg LMP', data: pts(T, N.offpeakP50),
+                  borderColor: PURPLE, backgroundColor: PURPLE + '15',
+                  borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: PURPLE,
+                  fill: false, tension: 0.35, yAxisID: 'y', order: 2 },
+                // Zero/neg hours (right axis)
+                { label: 'Zero/negative price hours', data: pts(T, N.zeroP50),
+                  borderColor: BLUE, backgroundColor: BLUE + '12',
+                  borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: BLUE,
+                  fill: true, tension: 0.35, yAxisID: 'y1', order: 3, _unit: 'hrs' }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1000, easing: 'easeOutQuart' },
+            scales: {
+                x: baseScales('', 0, 0).x,
+                y: {
+                    position: 'left',
+                    title: { display: true, text: 'Off-Peak LMP ($/MWh)', color: PURPLE + '99', font: { size: 11 } },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    ticks: { color: PURPLE + '99', font: { size: 10 } },
+                    min: -15, max: 35
+                },
+                y1: {
+                    position: 'right',
+                    title: { display: true, text: 'Zero/Negative Price Hours', color: BLUE + '99', font: { size: 11 } },
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: BLUE + '99', font: { size: 10 },
+                        callback: function(v) { return v >= 1000 ? (v/1000).toFixed(0) + 'k' : v; }
+                    },
+                    min: 0, max: 8500
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15,26,46,0.95)',
+                    titleColor: '#fff',
+                    bodyColor: 'rgba(255,255,255,0.8)',
+                    borderColor: 'rgba(74,144,217,0.3)',
+                    borderWidth: 1, padding: 12, cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) { return items[0] ? items[0].raw.x + '% Clean Energy' : ''; },
+                        label: function(item) {
+                            if (item.dataset._unit === 'hrs') return item.dataset.label + ': ' + Math.round(item.raw.y) + ' hours';
+                            return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        nucFloor: { type: 'line', yMin: 25, yMax: 25, yScaleID: 'y',
+                            borderColor: 'rgba(239,68,68,0.4)', borderWidth: 1.5, borderDash: [6,3],
+                            label: { display: true, content: 'Nuclear min cost $25', position: 'end',
+                                color: 'rgba(239,68,68,0.6)', font: { size: 9 }, backgroundColor: 'transparent' }
+                        },
+                        halfYear: { type: 'line', yMin: 4380, yMax: 4380, yScaleID: 'y1',
+                            borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderDash: [4,4],
+                            label: { display: true, content: '50% of year', position: 'start',
+                                color: 'rgba(255,255,255,0.35)', font: { size: 9 }, backgroundColor: 'transparent' }
+                        }
+                    }
+                }
+            }
+        }
+    });
+})();
 </script>
 
 <!-- NAV -->
@@ -854,7 +1261,7 @@ function baseTooltip() {
         });
     }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('.narrative-card, .synthesis-card').forEach(function(el) {
+    document.querySelectorAll('.narrative-card, .synthesis-card, .nuclear-paradox').forEach(function(el) {
         fadeObs.observe(el);
     });
 })();
