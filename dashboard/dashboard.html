@@ -7942,7 +7942,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     `is highly capital-efficient — ${Math.round(carriedPct)}% of your ${Math.round(interimTWh)} TWh ` +
                     `interim portfolio remains useful at the ${Math.round(longtermTWh)} TWh long-term state.`;
             } else if (carriedPct >= 75) {
-                const topStranded = strandedDetails.sort((a, b) => b.strandedTWh - a.strandedTWh)[0];
+                const topStranded = strandedDetails.filter(s => s.strandedTWh > 0).sort((a, b) => b.strandedTWh - a.strandedTWh)[0];
                 narrative = `<strong>Most interim investment carries forward, with some rebalancing.</strong> ` +
                     `${Math.round(carriedPct)}% of your interim procurement remains useful.`;
                 if (topStranded) {
@@ -7959,10 +7959,17 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     `Only <strong>${Math.round(carriedPct)}%</strong> of the ${threshold}% portfolio carries ` +
                     `to the ${longtermThreshold}% end state.`;
                 if (strandedDetails.length > 0) {
-                    const topTwo = strandedDetails.sort((a, b) => b.strandedTWh - a.strandedTWh).slice(0, 2);
-                    narrative += ` Biggest stranded assets: ` + topTwo.map(s =>
-                        `<strong>${s.resource}</strong> (${s.strandedTWh.toFixed(1)} TWh excess)`
-                    ).join(' and ') + '.';
+                    const cleanStranded = strandedDetails.filter(s => s.strandedTWh > 0);
+                    const topTwo = cleanStranded.sort((a, b) => b.strandedTWh - a.strandedTWh).slice(0, 2);
+                    if (topTwo.length > 0) {
+                        narrative += ` Biggest stranded assets: ` + topTwo.map(s =>
+                            `<strong>${s.resource}</strong> (${s.strandedTWh.toFixed(1)} TWh excess)`
+                        ).join(' and ') + '.';
+                    }
+                    if (strandedGasMW > 0) {
+                        const fmtGas = strandedGasMW >= 1000 ? (strandedGasMW / 1000).toFixed(1) + ' GW' : Math.round(strandedGasMW) + ' MW';
+                        narrative += ` Additionally, <strong>${fmtGas}</strong> of new gas capacity becomes stranded.`;
+                    }
                 }
                 if (strandedPerMWh > 2) {
                     narrative += ` This represents <strong>$${strandedPerMWh.toFixed(1)}/MWh</strong> of wasted ` +
