@@ -312,6 +312,28 @@ body {
     color: var(--text-primary);
 }
 
+/* Stranded Clean Cost Summary */
+.stranded-clean-cost {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: rgba(239,68,68,0.06);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.stranded-clean-cost .scc-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #C75B4A;
+}
+.stranded-clean-cost .scc-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
 /* Gas Capacity Stranding Visual */
 .gas-strand-panel {
     margin-top: 22px;
@@ -3407,7 +3429,8 @@ body {
             </div>
         </div>
 
-        <!-- New Build & Stranded Resource Breakdown -->
+        <!-- Stranded Clean Cost Summary + New Build Breakdown -->
+        <div class="stranded-clean-cost" id="strandedCleanCost" style="display:none;"></div>
         <div class="stranded-breakdown" id="strandedBreakdown" style="display:none;">
             <h4 class="stranded-breakdown-title">New Build &amp; Stranded Asset Mix</h4>
             <div class="stranded-bars-wrapper" id="strandedBarsWrapper"></div>
@@ -7633,6 +7656,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         let totalInterimNewTWh = 0;
         let totalCarriedTWh = 0;
         let totalStrandedCostM = 0; // in $M
+        let cleanStrandedCostM = 0; // clean resources only (no gas)
 
         const strandedDetails = [];
         const allResources = new Set([...Object.keys(interimRC), ...Object.keys(longtermRC)]);
@@ -7669,6 +7693,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             if (strandedTWh > 0) {
                 const strandedCostM = strandedTWh * 1e6 * interimCostPerDemandMWh / 1e6; // $M
                 totalStrandedCostM += strandedCostM;
+                cleanStrandedCostM += strandedCostM;
                 strandedDetails.push({
                     resource: RESOURCE_DISPLAY_NAMES[r] || r,
                     strandedTWh,
@@ -7733,10 +7758,9 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         if (pwCarried) pwCarried.textContent = Math.round(carriedPct) + '%';
         if (pwWasted) {
             if (totalStrandedCostM > 0.5) {
-                // Absolute $ amount bold, $/MWh as subtext
                 pwWasted.innerHTML = '$' + (totalStrandedCostM >= 1000
                     ? (totalStrandedCostM / 1000).toFixed(1) + 'B'
-                    : Math.round(totalStrandedCostM) + 'M');
+                    : Math.round(totalStrandedCostM) + 'M') + '/yr';
                 const wastedSub = pwWasted.closest('.pathway-metric')?.querySelector('.pathway-metric-sub');
                 if (wastedSub) wastedSub.textContent = '$' + strandedPerMWh.toFixed(1) + '/MWh of demand';
                 pwWasted.closest('.pathway-metric')?.classList.add('pathway-metric-warn');
@@ -7837,6 +7861,21 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     <span>${rLabel}${stNote}</span>
                 </div>`;
             }).join('');
+
+        }
+
+        // Stranded clean cost summary (above the breakdown bars)
+        const sccEl = document.getElementById('strandedCleanCost');
+        if (sccEl) {
+            if (cleanStrandedCostM > 0.5) {
+                const fmtCost = cleanStrandedCostM >= 1000
+                    ? '$' + (cleanStrandedCostM / 1000).toFixed(1) + 'B'
+                    : '$' + Math.round(cleanStrandedCostM) + 'M';
+                sccEl.style.display = '';
+                sccEl.innerHTML = `<span class="scc-value">${fmtCost}/yr</span> <span class="scc-label">in stranded clean energy investment</span>`;
+            } else {
+                sccEl.style.display = 'none';
+            }
         }
 
         // Gas Capacity Stranding Visual
@@ -7988,6 +8027,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         if (metricsEl) metricsEl.style.display = 'none';
         const breakdownElHide = document.getElementById('strandedBreakdown');
         if (breakdownElHide) breakdownElHide.style.display = 'none';
+        const sccElHide = document.getElementById('strandedCleanCost');
+        if (sccElHide) sccElHide.style.display = 'none';
         const gasPanelHide = document.getElementById('gasStrandPanel');
         if (gasPanelHide) gasPanelHide.style.display = 'none';
         if (insightBox) {
