@@ -41,7 +41,7 @@ LEAP_FEB29_START = 1416
 PROFILE_YEARS = ['2021', '2022', '2023', '2024', '2025']
 DATA_YEAR = '2025'
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
 # Storage parameters
 BATTERY_EFFICIENCY = 0.85
@@ -53,6 +53,7 @@ LDES_WINDOW_DAYS = 7
 # Nuclear parameters
 NUCLEAR_SHARE_OF_CLEAN_FIRM = {
     'CAISO': 0.70, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
+    'MISO': 1.0, 'SPP': 1.0,
 }
 NUCLEAR_MONTHLY_CF = {
     'CAISO': {1: 0.94, 2: 0.94, 3: 0.85, 4: 0.75, 5: 0.80, 6: 0.99,
@@ -65,10 +66,15 @@ NUCLEAR_MONTHLY_CF = {
               7: 0.96, 8: 0.94, 9: 0.85, 10: 0.75, 11: 0.79, 12: 1.0},
     'NEISO': {1: 1.0, 2: 0.99, 3: 0.92, 4: 0.83, 5: 0.88, 6: 0.96,
               7: 0.97, 8: 0.95, 9: 0.88, 10: 0.82, 11: 0.85, 12: 1.0},
+    'MISO':  {1: 1.0, 2: 1.0, 3: 0.92, 4: 0.84, 5: 0.87, 6: 0.98,
+              7: 0.99, 8: 0.97, 9: 0.93, 10: 0.88, 11: 0.91, 12: 1.0},
+    'SPP':   {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.88, 6: 0.97,
+              7: 0.97, 8: 0.96, 9: 0.88, 10: 0.80, 11: 0.85, 12: 1.0},
 }
 
 HYDRO_CAPS = {
     'CAISO': 9.5, 'ERCOT': 0.1, 'PJM': 1.8, 'NYISO': 15.9, 'NEISO': 4.4,
+    'MISO': 1.6, 'SPP': 4.3,
 }
 
 
@@ -210,7 +216,7 @@ def get_supply_profiles(iso, gen_profiles):
     else:
         solar_raw = list(gen_profiles[iso].get('solar', [0.0] * H)[:H])
 
-    STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5}
+    STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5, 'MISO': 6, 'SPP': 6}
     DST_START_DAY, DST_END_DAY = 69, 307
     local_start, local_end = 6, 19
     std_off = STD_UTC_OFFSETS.get(iso, 5)

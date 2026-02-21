@@ -53,7 +53,7 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
 # Target thresholds — all 13 from v4 PFS (50-100%)
 TARGET_THRESHOLDS = [50.0, 60.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 100.0]
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
 # Existing clean generation as % of 2025 demand (from eGRID/EIA)
 GRID_MIX_SHARES = {
@@ -62,12 +62,15 @@ GRID_MIX_SHARES = {
     'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
     'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
     'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
+    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'ccs_ccgt': 0, 'hydro': 1.6},
+    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'ccs_ccgt': 0, 'hydro': 4.3},
 }
 
 # High demand growth rates (annual) — most aggressive scenario
 # At 2050 high growth, existing share is smallest → tightest filter
 DEMAND_GROWTH_HIGH = {
     'CAISO': 0.025, 'ERCOT': 0.055, 'PJM': 0.036, 'NYISO': 0.044, 'NEISO': 0.029,
+    'MISO': 0.038, 'SPP': 0.030,
 }
 
 
