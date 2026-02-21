@@ -647,6 +647,7 @@ def main():
     parser.add_argument('--iso', type=str, help='Process single ISO (e.g., PJM)')
     parser.add_argument('--threshold', type=float, help='Process single threshold (e.g., 90)')
     parser.add_argument('--dry-run', action='store_true', help='Report only, do not write')
+    parser.add_argument('--no-git', action='store_true', help='Skip git commits (for parallel runs)')
     args = parser.parse_args()
 
     print("=" * 70)
@@ -766,7 +767,8 @@ def main():
             if not args.dry_run:
                 save_threshold_checkpoint(iso, threshold, new_rows)
                 clear_partial_checkpoint(iso, threshold)
-                git_commit_checkpoint(iso, threshold)
+                if not args.no_git:
+                    git_commit_checkpoint(iso, threshold)
 
             iso_new += len(new_rows)
             elapsed = time.time() - thr_start
