@@ -38,6 +38,10 @@ try:
 except ImportError:
     raise RuntimeError("Numba required for parallel scoring. Install: pip install numba")
 
+import json
+import shutil
+import subprocess
+
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pandas as pd
@@ -77,6 +81,9 @@ LDES_LEVELS = [0, 2, 5, 8, 10, 15, 20]
 
 # Near-miss window (wider than Step 1's 0.15 to catch more mixes)
 NEAR_MISS_WINDOW = 0.25
+
+# Partial checkpoint: save every N storage combos within an (ISO, threshold) pair
+PARTIAL_SAVE_COMBO_INTERVAL = 50
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -304,7 +311,9 @@ def generate_storage_combos():
 # ══════════════════════════════════════════════════════════════════════════════
 
 def process_iso_threshold(iso, threshold, demand_arr, supply_matrix,
-                          all_mixes, supply_rows, existing_keys_set):
+                          all_mixes, supply_rows, existing_keys_set,
+                          combo_start_idx=0, initial_rows=None,
+                          save_partial_fn=None):
     """Re-sweep storage for near-miss mixes at a single (ISO, threshold).
 
     Args:
@@ -313,6 +322,9 @@ def process_iso_threshold(iso, threshold, demand_arr, supply_matrix,
         all_mixes: (N, 4) gen mix allocations (percentage points)
         supply_rows: (N, 8760) pre-computed supply per mix = (mix/100) @ supply_matrix
         existing_keys_set: set of (cf, sol, wnd, hyd, proc, bp, b8p, lp) already in PFS
+        combo_start_idx: resume from this storage combo index (for partial checkpoint)
+        initial_rows: pre-loaded rows from partial checkpoint
+        save_partial_fn: callback(combo_idx, new_rows) for periodic partial saves
 
     Returns:
         list of new solution dicts
@@ -353,10 +365,13 @@ def process_iso_threshold(iso, threshold, demand_arr, supply_matrix,
 
     # Step 2: Sweep storage combos with Numba parallel batch evaluation
     storage_combos = generate_storage_combos()
-    new_rows = []
+    new_rows = list(initial_rows) if initial_rows else []
     ldes_window_hours = LDES_WINDOW_DAYS * 24
 
     for combo_idx, (bp, b8p, lp) in enumerate(storage_combos):
+        # Skip combos already processed in a previous partial checkpoint
+        if combo_idx < combo_start_idx:
+            continue
         batt_cap = bp / 100.0
         batt_pow = batt_cap / BATTERY_DURATION_HOURS if bp > 0 else 0.0
         batt8_cap = b8p / 100.0
@@ -403,6 +418,10 @@ def process_iso_threshold(iso, threshold, demand_arr, supply_matrix,
                         'pareto_type': '',
                     })
                     existing_keys_set.add(key)
+
+        # Periodic partial checkpoint: save every N combos within this pair
+        if save_partial_fn and (combo_idx + 1) % PARTIAL_SAVE_COMBO_INTERVAL == 0:
+            save_partial_fn(combo_idx, new_rows)
 
     return new_rows
 
@@ -475,6 +494,96 @@ def save_threshold_checkpoint(iso, threshold, new_rows_list):
     tmp_path = path + '.tmp'
     pq.write_table(new_table, tmp_path, compression='snappy')
     os.replace(tmp_path, path)
+
+
+def _partial_checkpoint_dir(iso, threshold):
+    """Directory for partial (in-progress) checkpoint within a single (iso, threshold) pair."""
+    thr_str = str(threshold).replace('.', '_')
+    return os.path.join(CHECKPOINT_DIR, f'partial_{iso}_{thr_str}')
+
+
+def save_partial_checkpoint(iso, threshold, combo_idx, new_rows):
+    """Save intermediate results during processing of a single (iso, threshold) pair.
+
+    Stores the last-completed combo index and all new rows found so far.
+    On resume, processing starts from combo_idx + 1 with these rows pre-loaded.
+    Atomic write via temp file.
+    """
+    partial_dir = _partial_checkpoint_dir(iso, threshold)
+    os.makedirs(partial_dir, exist_ok=True)
+
+    # Save metadata (combo index, row count)
+    meta_path = os.path.join(partial_dir, 'meta.json')
+    meta_tmp = meta_path + '.tmp'
+    with open(meta_tmp, 'w') as f:
+        json.dump({'combo_idx': combo_idx, 'n_rows': len(new_rows)}, f)
+    os.replace(meta_tmp, meta_path)
+
+    # Save rows (if any)
+    rows_path = os.path.join(partial_dir, 'rows.parquet')
+    if new_rows:
+        df = pd.DataFrame(new_rows)
+        table = pa.Table.from_pandas(df, preserve_index=False)
+        rows_tmp = rows_path + '.tmp'
+        pq.write_table(table, rows_tmp, compression='snappy')
+        os.replace(rows_tmp, rows_path)
+    elif os.path.exists(rows_path):
+        os.remove(rows_path)
+
+
+def load_partial_checkpoint(iso, threshold):
+    """Load partial checkpoint for an in-progress (iso, threshold) pair.
+
+    Returns:
+        (combo_start_idx, partial_rows): combo index to resume from and pre-loaded rows.
+        Returns (0, []) if no partial checkpoint exists.
+    """
+    partial_dir = _partial_checkpoint_dir(iso, threshold)
+    meta_path = os.path.join(partial_dir, 'meta.json')
+
+    if not os.path.exists(meta_path):
+        return 0, []
+
+    with open(meta_path, 'r') as f:
+        meta = json.load(f)
+
+    combo_idx = meta['combo_idx']
+    rows_path = os.path.join(partial_dir, 'rows.parquet')
+    if os.path.exists(rows_path):
+        df = pd.read_parquet(rows_path)
+        partial_rows = df.to_dict('records')
+    else:
+        partial_rows = []
+
+    print(f"      Resuming from combo {combo_idx + 1}/342 with {len(partial_rows)} rows cached")
+    return combo_idx + 1, partial_rows  # Start from the NEXT combo
+
+
+def clear_partial_checkpoint(iso, threshold):
+    """Remove partial checkpoint after pair is fully completed."""
+    partial_dir = _partial_checkpoint_dir(iso, threshold)
+    if os.path.exists(partial_dir):
+        shutil.rmtree(partial_dir)
+
+
+def git_commit_checkpoint(iso, threshold):
+    """Git add and commit the checkpoint file for this ISO/threshold pair."""
+    path = _checkpoint_path(iso, threshold)
+    rel_path = os.path.relpath(path, SCRIPT_DIR)
+    try:
+        subprocess.run(
+            ['git', 'add', rel_path], cwd=SCRIPT_DIR,
+            check=True, capture_output=True, timeout=30)
+        msg = f"Bank resweep checkpoint: {iso} {threshold}%"
+        subprocess.run(
+            ['git', 'commit', '-m', msg], cwd=SCRIPT_DIR,
+            check=True, capture_output=True, timeout=30)
+        print(f"      [git] Committed {iso} {threshold}%")
+    except subprocess.CalledProcessError as e:
+        stderr = e.stderr.decode().strip() if e.stderr else str(e)
+        print(f"      [git] Warning: commit failed — {stderr}")
+    except Exception as e:
+        print(f"      [git] Warning: {e}")
 
 
 def merge_checkpoints_to_pfs():
@@ -619,6 +728,9 @@ def main():
 
             thr_start = time.time()
 
+            # Check for partial checkpoint (interrupted mid-pair)
+            combo_start_idx, partial_rows = load_partial_checkpoint(iso, threshold)
+
             # Build existing solution keys for deduplication
             thr_df = iso_df[iso_df['threshold'] == threshold]
             existing_keys = set(zip(
@@ -632,18 +744,34 @@ def main():
                 thr_df['ldes_dispatch_pct'].astype(int),
             ))
 
+            # Add partial rows' keys to existing set (prevent duplicates on resume)
+            for row in partial_rows:
+                key = (row['clean_firm'], row['solar'], row['wind'], row['hydro'],
+                       row['procurement_pct'], row['battery_dispatch_pct'],
+                       row['battery8_dispatch_pct'], row['ldes_dispatch_pct'])
+                existing_keys.add(key)
+
+            # Partial save callback for periodic mid-pair checkpointing
+            def _save_partial(combo_idx, rows, _iso=iso, _thr=threshold):
+                save_partial_checkpoint(_iso, _thr, combo_idx, rows)
+
             new_rows = process_iso_threshold(
                 iso, threshold, demand_arr, supply_matrix,
-                all_mixes, supply_rows, existing_keys)
+                all_mixes, supply_rows, existing_keys,
+                combo_start_idx=combo_start_idx,
+                initial_rows=partial_rows,
+                save_partial_fn=None if args.dry_run else _save_partial)
 
             # Checkpoint immediately after each threshold completes
             if not args.dry_run:
                 save_threshold_checkpoint(iso, threshold, new_rows)
+                clear_partial_checkpoint(iso, threshold)
+                git_commit_checkpoint(iso, threshold)
 
             iso_new += len(new_rows)
             elapsed = time.time() - thr_start
             print(f"    {iso} {threshold:>5}%: {len(new_rows):>6,} new solutions ({elapsed:.1f}s)"
-                  + (" [saved]" if not args.dry_run else ""))
+                  + (" [saved+committed]" if not args.dry_run else ""))
 
         iso_elapsed = time.time() - iso_start
         summary[iso] = iso_new
