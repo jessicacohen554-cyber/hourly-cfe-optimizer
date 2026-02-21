@@ -3617,7 +3617,7 @@ const GAS_CAPACITY_CONSTANTS = {
     EXISTING_GAS_FOM_KW_YR: { CAISO: 16, ERCOT: 13, PJM: 14, NYISO: 17, NEISO: 15 },
     PEAK_CAPACITY_CREDITS: {
         clean_firm: 1.0, solar: 0.30, wind: 0.10, ccs_ccgt: 0.90,
-        hydro: 0.50, battery: 0.95, ldes: 0.90
+        hydro: 0.50, battery: 0.95, battery8: 0.95, ldes: 0.90
     }
 };
 
@@ -3649,7 +3649,8 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     const proc = mixArr[5] / 100.0;
     const matchFrac = mixArr[6] / 100.0;
     const batPct = mixArr[7] || 0;
-    const ldesPct = mixArr[8] || 0;
+    const bat8Pct = mixArr[8] || 0;
+    const ldesPct = mixArr[9] || 0;
 
     const baseExisting = GRID_MIX_SHARES[iso] || {};
     let wholesale = WHOLESALE_PRICES[iso] || 30;
@@ -3753,13 +3754,20 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
         totalCost += costPerDemand;
     }
 
-    // Storage costs — battery and LDES use independent cost toggles
+    // Storage costs — battery, battery8, and LDES use independent cost toggles
     const battCostName = { L: 'Low', M: 'Medium', H: 'High' }[battLevel] || 'Medium';
     const batLcoe = ((LCOE_TABLES.battery || {})[battCostName] || {})[iso] || 102;
     const batTx = ((TX_TABLES.battery || {})[tx] || {})[iso] || 0;
     const batCost = (batPct / 100.0) * (batLcoe + batTx);
     resourceCosts.battery = { dispatch_pct: batPct, cost_per_demand_mwh: batCost };
     totalCost += batCost;
+
+    // Battery 8hr — uses same storage toggle level as 4hr battery
+    const bat8Lcoe = ((LCOE_TABLES.battery8 || {})[battCostName] || {})[iso] || 130;
+    const bat8Tx = ((TX_TABLES.battery8 || {})[tx] || {})[iso] || 0;
+    const bat8Cost = (bat8Pct / 100.0) * (bat8Lcoe + bat8Tx);
+    resourceCosts.battery8 = { dispatch_pct: bat8Pct, cost_per_demand_mwh: bat8Cost };
+    totalCost += bat8Cost;
 
     const ldesCostName = { L: 'Low', M: 'Medium', H: 'High' }[ldesLevel] || 'Medium';
     const ldesLcoe = ((LCOE_TABLES.ldes || {})[ldesCostName] || {})[iso] || 180;
@@ -3782,6 +3790,7 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
         (proc * (rm.ccs_ccgt || 0) / 100 * avgDemandMw * cc.ccs_ccgt) +
         (proc * (rm.hydro || 0) / 100 * avgDemandMw * cc.hydro) +
         (batPct / 100 * avgDemandMw * cc.battery) +
+        (bat8Pct / 100 * avgDemandMw * (cc.battery8 || 0.95)) +
         (ldesPct / 100 * avgDemandMw * cc.ldes);
     const gasNeededMw = Math.max(0, raPeakMw - cleanPeakMw);
     const existingGasMw = gc.EXISTING_GAS_CAPACITY_MW[iso] || 0;
@@ -3815,6 +3824,7 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
         procurement_pct: mixArr[5],
         hourly_match_score: mixArr[6],
         battery_dispatch_pct: batPct,
+        battery8_dispatch_pct: bat8Pct,
         ldes_dispatch_pct: ldesPct
     };
 }
@@ -3910,8 +3920,9 @@ function resolveEntry(region, thresholdKey) {
                 procurement_pct: optimal.procurement_pct,
                 hourly_match_score: optimal.hourly_match_score,
                 battery_dispatch_pct: optimal.battery_dispatch_pct,
+                battery8_dispatch_pct: optimal.battery8_dispatch_pct,
                 ldes_dispatch_pct: optimal.ldes_dispatch_pct,
-                storage_dispatch_pct: (optimal.battery_dispatch_pct || 0) + (optimal.ldes_dispatch_pct || 0),
+                storage_dispatch_pct: (optimal.battery_dispatch_pct || 0) + (optimal.battery8_dispatch_pct || 0) + (optimal.ldes_dispatch_pct || 0),
                 costs: {
                     total_cost_per_demand_mwh: optimal.total_cost,
                     effective_cost_per_useful_mwh: optimal.effective_cost,
@@ -3983,12 +3994,13 @@ function normalizeEntry(raw) {
 
     // Build resource_costs with merged storage from battery + ldes
     const rc = detail.resource_costs ? Object.assign({}, detail.resource_costs) : null;
-    if (rc && !rc.storage && (rc.battery || rc.ldes)) {
+    if (rc && !rc.storage && (rc.battery || rc.battery8 || rc.ldes)) {
         const bat = rc.battery || {};
+        const bat8 = rc.battery8 || {};
         const ldes = rc.ldes || {};
         rc.storage = {
-            dispatch_pct: (bat.dispatch_pct || 0) + (ldes.dispatch_pct || 0),
-            cost_per_demand_mwh: (bat.cost_per_demand_mwh || 0) + (ldes.cost_per_demand_mwh || 0)
+            dispatch_pct: (bat.dispatch_pct || 0) + (bat8.dispatch_pct || 0) + (ldes.dispatch_pct || 0),
+            cost_per_demand_mwh: (bat.cost_per_demand_mwh || 0) + (bat8.cost_per_demand_mwh || 0) + (ldes.cost_per_demand_mwh || 0)
         };
     }
 
@@ -4009,8 +4021,9 @@ function normalizeEntry(raw) {
 
     // Map storage dispatch fields
     const batDisp = raw.battery_dispatch_pct || 0;
+    const bat8Disp = raw.battery8_dispatch_pct || 0;
     const ldesDisp = raw.ldes_dispatch_pct || 0;
-    entry.storage_dispatch_pct = batDisp + ldesDisp;
+    entry.storage_dispatch_pct = batDisp + bat8Disp + ldesDisp;
 
     return entry;
 }
@@ -4025,8 +4038,15 @@ function getCompressedDayProfile(iso, entry) {
         const isoData = COMPRESSED_DAY_PROFILES[iso];
         if (isoData) {
             const rm = entry.resource_mix || {};
-            const mk = `${rm.clean_firm||0}_${rm.solar||0}_${rm.wind||0}_${rm.ccs_ccgt||0}_${rm.hydro||0}_${entry.procurement_pct||0}_${entry.battery_dispatch_pct||0}_${entry.ldes_dispatch_pct||0}`;
-            const profile = isoData.profiles?.[mk];
+            const cf = rm.clean_firm||0, s = rm.solar||0, w = rm.wind||0, c = rm.ccs_ccgt||0, h = rm.hydro||0;
+            const proc = entry.procurement_pct||0;
+            const bat = entry.battery_dispatch_pct||0;
+            const bat8 = entry.battery8_dispatch_pct||0;
+            const ldes = entry.ldes_dispatch_pct||0;
+            // Try 9-dim key first (with battery8), then 8-dim fallback (battery + ldes only)
+            const mk9 = `${cf}_${s}_${w}_${c}_${h}_${proc}_${bat}_${bat8}_${ldes}`;
+            const mk8 = `${cf}_${s}_${w}_${c}_${h}_${proc}_${bat}_${ldes}`;
+            const profile = isoData.profiles?.[mk9] || isoData.profiles?.[mk8];
             if (profile) return profile;
         }
     }
@@ -4040,6 +4060,7 @@ function getCompressedDayProfile(iso, entry) {
                 demand: cd.demand[tIdx],
                 gap: cd.gap[tIdx],
                 battery_charge: cd.battery_charge[tIdx],
+                battery8_charge: cd.battery8_charge?.[tIdx] || new Array(24).fill(0),
                 ldes_charge: cd.ldes_charge[tIdx],
                 matched: {
                     clean_firm: cd.matched.clean_firm[tIdx],
@@ -4048,6 +4069,7 @@ function getCompressedDayProfile(iso, entry) {
                     ccs_ccgt: cd.matched.ccs_ccgt[tIdx],
                     hydro: cd.matched.hydro[tIdx],
                     battery: cd.matched.battery?.[tIdx] || new Array(24).fill(0),
+                    battery8: cd.matched.battery8?.[tIdx] || new Array(24).fill(0),
                     ldes: cd.matched.ldes?.[tIdx] || new Array(24).fill(0),
                 },
             };
@@ -4700,8 +4722,9 @@ function updateCompressedDay(entry, region, iso) {
     const matchedBattery8 = r(cd.matched.battery8 || z24);
     const matchedLDES = r(cd.matched.ldes || z24);
 
-    // Separate charging for battery and LDES (negative, below x-axis) — in MWh, local time
+    // Separate charging for battery, battery8, and LDES (negative, below x-axis) — in MWh, local time
     const batteryCharge = rRaw(cd.battery_charge || z24);
+    const battery8Charge = rRaw(cd.battery8_charge || z24);
     const ldesCharge = rRaw(cd.ldes_charge || z24);
 
     // Per-resource surplus (curtailed) — in MWh, local time
@@ -4767,7 +4790,7 @@ function updateCompressedDay(entry, region, iso) {
     // Remember the index of the LDES dataset (top of matched stack)
     const topMatchedIdx = datasets.length - 1;
 
-    // Battery charging (shown as negative below the x-axis)
+    // Battery 4hr charging (shown as negative below the x-axis)
     const hasBattCharge = batteryCharge.some(v => v > 0.001);
     if (hasBattCharge) {
         datasets.push({
@@ -4777,17 +4800,34 @@ function updateCompressedDay(entry, region, iso) {
         });
     }
 
-    // LDES charging (shown as negative below the x-axis, stacked under battery charge)
+    // Battery 8hr charging (stacked under 4hr battery charge)
+    const hasBatt8Charge = battery8Charge.some(v => v > 0.001);
+    if (hasBatt8Charge) {
+        const bat8ChargeData = battery8Charge.map((v, i) => {
+            const prevBase = hasBattCharge ? -Math.abs(batteryCharge[i]) : 0;
+            return prevBase - Math.abs(v);
+        });
+        datasets.push({
+            ...dsBase, label: 'Battery 8hr Charge', data: bat8ChargeData,
+            backgroundColor: 'rgba(167,139,250,0.30)', borderColor: COLORS.battery8.base,
+            fill: hasBattCharge ? '-1' : 'origin', order: 14.5, _isCharge: true
+        });
+    }
+
+    // LDES charging (shown as negative below the x-axis, stacked under battery charges)
     const hasLdesCharge = ldesCharge.some(v => v > 0.001);
     if (hasLdesCharge) {
+        const prevChargePresent = hasBattCharge || hasBatt8Charge;
         const ldesChargeData = ldesCharge.map((v, i) => {
-            const battBase = hasBattCharge ? -Math.abs(batteryCharge[i]) : 0;
-            return battBase - Math.abs(v);
+            let base = 0;
+            if (hasBattCharge) base -= Math.abs(batteryCharge[i]);
+            if (hasBatt8Charge) base -= Math.abs(battery8Charge[i]);
+            return base - Math.abs(v);
         });
         datasets.push({
             ...dsBase, label: 'LDES Charge', data: ldesChargeData,
             backgroundColor: 'rgba(236,72,153,0.30)', borderColor: COLORS.ldes.base,
-            fill: hasBattCharge ? '-1' : 'origin', order: 15, _isCharge: true
+            fill: prevChargePresent ? '-1' : 'origin', order: 15, _isCharge: true
         });
     }
 
