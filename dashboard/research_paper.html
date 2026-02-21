@@ -1307,11 +1307,20 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p>
         Our baseline analysis uses $90/MWh for new-build clean firm power across all regions, consistent
         with NREL ATB 2024 estimates for advanced nuclear <a href="#ref-5" class="cite">[5]</a>.
-        However, this assumption carries significant uncertainty. Lazard's LCOE v17.0 reports unsubsidized
+        However, this assumption carries significant uncertainty. Lazard&rsquo;s LCOE+ v18 (2025) reports unsubsidized
         new nuclear costs of $141&ndash;220/MWh <a href="#ref-6" class="cite">[6]</a>, and recent
-        U.S. construction experience (Vogtle Units 3&ndash;4) suggests realized costs may substantially exceed
-        projections. Natural gas with carbon capture and storage (CCS) offers a range of $65&ndash;152/MWh
-        depending on capture rate and CO&#8322; transport costs.
+        U.S. construction experience &mdash; Vogtle Units 3&ndash;4 at ~$15,000/kW
+        <a href="#ref-30" class="cite">[30]</a> and NuScale&rsquo;s cancelled CFPP at ~$20,000/kW
+        <a href="#ref-31" class="cite">[31]</a> &mdash; demonstrates that realized FOAK costs substantially exceed projections.
+        The DOE&rsquo;s 2024 Liftoff report projects NOAK costs of ~$3,600/kW (~$66/MWh with 48E ITC) after
+        5&ndash;10 reactors per design <a href="#ref-32" class="cite">[32]</a>, while MIT&rsquo;s 2024 analysis
+        puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized) and SMR NOAK at ~$6,700/kW ($95/MWh)
+        <a href="#ref-33" class="cite">[33]</a>. NREL ATB 2024 applies learning rates of 8% (large reactors)
+        and 9.5% (SMRs) per doubling, based on INL&rsquo;s meta-analysis of advanced reactor cost estimates
+        <a href="#ref-34" class="cite">[34]</a>. Natural gas with carbon capture and storage (CCS) offers a range of
+        $92&ndash;103/MWh for NOAK and FOAK respectively <a href="#ref-35" class="cite">[35]</a>, with
+        DOE OCED projecting ~25% CAPEX reduction from FOAK to NOAK <a href="#ref-36" class="cite">[36]</a>
+        and NETL documenting CCS learning rates of 3&ndash;5% per doubling <a href="#ref-37" class="cite">[37]</a>.
     </p>
     <div class="note-box">
         <strong>Sensitivity Range:</strong> If clean firm costs reach $120/MWh instead of $90/MWh, 100% matching
@@ -1321,7 +1330,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         sensitive, with costs increasing only 5&ndash;10% because clean firm constitutes a smaller share of
         the optimal portfolio at those targets. Our $90/MWh baseline should be understood as a <strong>best-case
         scenario for new-build clean firm</strong>, achievable only if advanced nuclear or enhanced geothermal
-        technologies deliver on current cost projections.
+        technologies deliver on current cost projections. The DOE Liftoff timeline suggests NOAK costs are
+        achievable in the late 2030s to early 2040s <a href="#ref-32" class="cite">[32]</a>, contingent on
+        sustained order flow and standardized designs.
     </div>
 
     <h3 id="storage-limitation">6.5 Storage Duration and the 8-Hour Battery Finding</h3>
@@ -2264,6 +2275,31 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         <li id="ref-29">
             Clean Air Task Force. (2024). "Clean Firm Electricity Technologies: What, Why, How." CATF.
             <a href="https://www.catf.us/clean-firm-electricity/" target="_blank">https://www.catf.us/clean-firm-electricity/</a>
+        </li>
+        <li id="ref-30">
+            Georgia Power / Southern Company. (2023). Vogtle Units 3&amp;4 construction completion &mdash; realized cost ~$15,000/kW for 2.2 GW AP1000 expansion.
+        </li>
+        <li id="ref-31">
+            IEEFA. (2023). &ldquo;Eye-Popping New Cost Estimates Released for NuScale Small Modular Reactor.&rdquo; ~$20,000/kW at cancellation; $89/MWh final LCOE estimate.
+        </li>
+        <li id="ref-32">
+            U.S. Department of Energy. (2024). &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear.&rdquo; FOAK ~$6,200/kW &rarr; NOAK $3,600/kW; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design for NOAK.
+            <a href="https://liftoff.energy.gov/advanced-nuclear/" target="_blank">https://liftoff.energy.gov/advanced-nuclear/</a>
+        </li>
+        <li id="ref-33">
+            MIT Advanced Nuclear Power Program. (2024). AP1000 NOAK: $4,625/kW, $66/MWh unsubsidized. SMR 300 MWe NOAK: ~$6,700/kW, $95/MWh (2&times; O&amp;M premium).
+        </li>
+        <li id="ref-34">
+            Abou-Jaoude, A., et al. (2024). &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations.&rdquo; INL RPT-24-77048. Quartile-based cost benchmarks adopted by NREL ATB 2024. Learning rates: 8% (large), 9.5% (SMR) per doubling.
+        </li>
+        <li id="ref-35">
+            Frontiers in Energy Research. (2022). &ldquo;Cost Projection of Natural Gas Combined Cycle with Post-Combustion Carbon Capture.&rdquo; FOAK ~$103/MWh; NOAK ~$92/MWh.
+        </li>
+        <li id="ref-36">
+            DOE Office of Clean Energy Demonstrations (OCED). (2024). &ldquo;Portfolio Insights: Carbon Capture in the Power Sector.&rdquo; FOAK&rarr;NOAK ~25% CAPEX reduction for CCS.
+        </li>
+        <li id="ref-37">
+            NETL. (2023). &ldquo;Baseline Study: High Carbon Capture Rates.&rdquo; CCS learning rates: CO&#8322; capture 3%/doubling; transport &amp; sequestration 5%/doubling.
         </li>
     </ol>
 
