@@ -411,67 +411,102 @@ def process_iso_threshold(iso, threshold, demand_arr, supply_matrix,
 # CHECKPOINTING — parquet-based, per ISO×threshold
 # ══════════════════════════════════════════════════════════════════════════════
 
-def load_checkpoint():
-    """Load checkpoint parquet and return (completed_set, accumulated_rows_table).
+def _checkpoint_path(iso, threshold):
+    """Per-ISO/threshold checkpoint file path."""
+    thr_str = str(threshold).replace('.', '_')
+    return os.path.join(CHECKPOINT_DIR, f'{iso}_{thr_str}.parquet')
+
+
+def load_completed_checkpoints():
+    """Scan checkpoint directory for completed (iso, threshold) pairs.
 
     Returns:
         completed: set of (iso, threshold) tuples already processed
-        checkpoint_table: pa.Table of accumulated results, or None
     """
     completed = set()
-    checkpoint_table = None
-    if os.path.exists(CHECKPOINT_PATH):
-        try:
-            checkpoint_table = pq.read_table(CHECKPOINT_PATH)
-            df = checkpoint_table.select(['iso', 'threshold']).to_pandas()
-            completed = set(zip(df['iso'], df['threshold']))
-            print(f"  Checkpoint loaded: {checkpoint_table.num_rows:,} rows, "
-                  f"{len(completed)} (iso, threshold) pairs completed")
-        except Exception as e:
-            print(f"  Checkpoint corrupt, starting fresh: {e}")
-    return completed, checkpoint_table
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    for fname in os.listdir(CHECKPOINT_DIR):
+        if not fname.endswith('.parquet'):
+            continue
+        # Parse ISO_threshold.parquet
+        stem = fname.replace('.parquet', '')
+        parts = stem.rsplit('_', 1)
+        if len(parts) == 2:
+            iso = parts[0]
+            thr_str = parts[1].replace('_', '.')
+            # Handle ISOs with underscores by checking known ISOs
+            for known_iso in ISOS:
+                if stem.startswith(known_iso + '_'):
+                    iso = known_iso
+                    thr_str = stem[len(known_iso) + 1:].replace('_', '.')
+                    break
+            try:
+                threshold = float(thr_str)
+                completed.add((iso, threshold))
+            except ValueError:
+                pass
+    if completed:
+        print(f"  Checkpoint: {len(completed)} (iso, threshold) pairs already completed")
+    return completed
 
 
-def save_checkpoint(new_rows_list, existing_checkpoint_table=None):
-    """Append new rows to checkpoint parquet. Atomic write via temp file."""
+def save_threshold_checkpoint(iso, threshold, new_rows_list):
+    """Save results for a single ISO×threshold to its own parquet file.
+
+    Atomic write via temp file — safe against interruption.
+    """
     if not new_rows_list:
-        return existing_checkpoint_table
+        # Write empty marker file so we know this pair was processed (0 new solutions)
+        os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+        path = _checkpoint_path(iso, threshold)
+        # Create empty parquet with correct schema
+        empty_df = pd.DataFrame(columns=[
+            'iso', 'threshold', 'clean_firm', 'solar', 'wind', 'hydro',
+            'procurement_pct', 'battery_dispatch_pct', 'battery8_dispatch_pct',
+            'ldes_dispatch_pct', 'hourly_match_score', 'pareto_type'])
+        empty_table = pa.Table.from_pandas(empty_df, preserve_index=False)
+        pq.write_table(empty_table, path, compression='snappy')
+        return
 
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     new_df = pd.DataFrame(new_rows_list)
     new_table = pa.Table.from_pandas(new_df, preserve_index=False)
-
-    if existing_checkpoint_table is not None and existing_checkpoint_table.num_rows > 0:
-        # Align schemas
-        for col in existing_checkpoint_table.column_names:
-            if col not in new_table.column_names:
-                null_arr = pa.nulls(new_table.num_rows,
-                                    type=existing_checkpoint_table.schema.field(col).type)
-                new_table = new_table.append_column(col, null_arr)
-        new_table = new_table.select(existing_checkpoint_table.column_names)
-        combined = pa.concat_tables([existing_checkpoint_table, new_table])
-    else:
-        combined = new_table
-
-    tmp_path = CHECKPOINT_PATH + '.tmp'
-    pq.write_table(combined, tmp_path, compression='snappy')
-    os.replace(tmp_path, CHECKPOINT_PATH)
-    return combined
+    path = _checkpoint_path(iso, threshold)
+    tmp_path = path + '.tmp'
+    pq.write_table(new_table, tmp_path, compression='snappy')
+    os.replace(tmp_path, path)
 
 
-def merge_checkpoint_to_pfs():
-    """Merge checkpoint results into the main PFS parquet."""
-    if not os.path.exists(CHECKPOINT_PATH):
-        print("  No checkpoint to merge")
+def merge_checkpoints_to_pfs():
+    """Merge all per-ISO/threshold checkpoint parquets into the main PFS.
+
+    Reads each checkpoint file, concatenates non-empty ones, appends to PFS.
+    Cleans up checkpoint files after successful merge.
+    """
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    checkpoint_files = [f for f in os.listdir(CHECKPOINT_DIR) if f.endswith('.parquet')]
+    if not checkpoint_files:
+        print("  No checkpoints to merge")
         return 0
 
-    checkpoint_table = pq.read_table(CHECKPOINT_PATH)
+    tables = []
+    for fname in sorted(checkpoint_files):
+        path = os.path.join(CHECKPOINT_DIR, fname)
+        try:
+            t = pq.read_table(path)
+            if t.num_rows > 0:
+                tables.append(t)
+        except Exception as e:
+            print(f"  WARNING: Could not read {fname}: {e}")
+
+    if not tables:
+        print("  All checkpoints empty — no new solutions")
+        return 0
+
+    checkpoint_table = pa.concat_tables(tables)
     n_new = checkpoint_table.num_rows
-    if n_new == 0:
-        print("  Checkpoint empty")
-        return 0
+    print(f"  Merging {n_new:,} rows from {len(tables)} checkpoint files into PFS...")
 
-    print(f"  Merging {n_new:,} checkpoint rows into PFS...")
     existing_table = pq.read_table(PFS_PATH)
 
     # Align schemas
@@ -487,9 +522,10 @@ def merge_checkpoint_to_pfs():
     size_mb = os.path.getsize(PFS_PATH) / (1024 * 1024)
     print(f"  PFS updated: {merged.num_rows:,} total rows ({size_mb:.1f} MB)")
 
-    # Clean up checkpoint
-    os.remove(CHECKPOINT_PATH)
-    print("  Checkpoint cleaned up")
+    # Clean up checkpoint files
+    for fname in checkpoint_files:
+        os.remove(os.path.join(CHECKPOINT_DIR, fname))
+    print(f"  Cleaned up {len(checkpoint_files)} checkpoint files")
     return n_new
 
 
@@ -533,7 +569,7 @@ def main():
     print(f"    Compiled in {time.time() - warmup_start:.1f}s\n")
 
     # Load checkpoint (resume from previous interrupted run)
-    completed_pairs, checkpoint_table = load_checkpoint()
+    completed_pairs = load_completed_checkpoints()
     summary = {}
 
     for iso in isos:
@@ -601,13 +637,13 @@ def main():
                 all_mixes, supply_rows, existing_keys)
 
             # Checkpoint immediately after each threshold completes
-            if new_rows and not args.dry_run:
-                checkpoint_table = save_checkpoint(new_rows, checkpoint_table)
+            if not args.dry_run:
+                save_threshold_checkpoint(iso, threshold, new_rows)
 
             iso_new += len(new_rows)
             elapsed = time.time() - thr_start
             print(f"    {iso} {threshold:>5}%: {len(new_rows):>6,} new solutions ({elapsed:.1f}s)"
-                  + (" [saved]" if new_rows and not args.dry_run else ""))
+                  + (" [saved]" if not args.dry_run else ""))
 
         iso_elapsed = time.time() - iso_start
         summary[iso] = iso_new
@@ -625,14 +661,13 @@ def main():
         print(f"    {iso}: {count:,}")
     print(f"{'='*70}")
 
-    # Merge checkpoint into PFS
+    # Merge all checkpoints into PFS
     if not args.dry_run:
-        n_merged = merge_checkpoint_to_pfs()
+        n_merged = merge_checkpoints_to_pfs()
         if n_merged == 0:
             print("\n  No new solutions found — PFS unchanged")
     else:
-        cp_rows = checkpoint_table.num_rows if checkpoint_table else 0
-        print(f"\n  Dry run — {total_new:,} new + {cp_rows:,} checkpoint rows would be merged")
+        print(f"\n  Dry run — {total_new:,} rows would be merged into PFS")
 
 
 if __name__ == '__main__':
