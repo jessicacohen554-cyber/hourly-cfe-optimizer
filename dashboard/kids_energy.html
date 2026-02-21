@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Energy for Kids — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+/* ========== KIDS PAGE ========== */
+body {
+    background: linear-gradient(180deg, #E0F2FE 0%, #FEF9C3 30%, #DCFCE7 60%, #E0F2FE 100%);
+    background-attachment: fixed;
+}
+
+.kids-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+}
+
+/* Hero */
+.kids-hero {
+    text-align: center;
+    padding: 48px 20px 32px;
+}
+.kids-hero h1 {
+    font-family: 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #1E3A5F;
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+.kids-hero .age-tag {
+    display: inline-block;
+    background: #FBBF24;
+    color: #78350F;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 999px;
+    margin-bottom: 16px;
+    font-family: 'Lexend', sans-serif;
+}
+.kids-hero p {
+    font-size: 1.15rem;
+    color: #374151;
+    max-width: 540px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Cards */
+.kids-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 36px 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.kids-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.kids-card h2 {
+    font-family: 'Lexend', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    line-height: 1.3;
+}
+.kids-card p {
+    font-size: 1.05rem;
+    color: #374151;
+    line-height: 1.7;
+    margin-bottom: 12px;
+}
+.kids-card p:last-child { margin-bottom: 0; }
+
+/* Color themes per card */
+.card-sun { border-left: 6px solid #F59E0B; }
+.card-sun h2 { color: #B45309; }
+.card-wind { border-left: 6px solid #22C55E; }
+.card-wind h2 { color: #15803D; }
+.card-water { border-left: 6px solid #0EA5E9; }
+.card-water h2 { color: #0369A1; }
+.card-battery { border-left: 6px solid #A855F7; }
+.card-battery h2 { color: #7E22CE; }
+.card-night { border-left: 6px solid #1E3A5F; }
+.card-night h2 { color: #1E3A5F; }
+.card-future { border-left: 6px solid #EF4444; }
+.card-future h2 { color: #DC2626; }
+
+/* CSS Illustrations */
+.illustration {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 16px;
+    margin: 20px 0 8px;
+    min-height: 120px;
+    position: relative;
+}
+
+/* Sun scene */
+.sun-scene { align-items: center; }
+.sun {
+    width: 80px; height: 80px;
+    background: radial-gradient(circle, #FDE047 40%, #FBBF24 70%, transparent 71%);
+    border-radius: 50%;
+    position: relative;
+    animation: pulse 3s ease-in-out infinite;
+}
+.sun::before {
+    content: '';
+    position: absolute;
+    inset: -16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(251,191,36,0.3) 0%, transparent 70%);
+    animation: pulse 3s ease-in-out infinite alternate;
+}
+.solar-panel {
+    width: 60px; height: 40px;
+    background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+    border-radius: 4px;
+    transform: skewX(-5deg);
+    position: relative;
+    border: 2px solid #1E40AF;
+}
+.solar-panel::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    background: repeating-linear-gradient(90deg, transparent, transparent 45%, rgba(255,255,255,0.3) 45%, rgba(255,255,255,0.3) 55%);
+}
+.solar-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -12px; left: 50%;
+    transform: translateX(-50%);
+    width: 6px; height: 12px;
+    background: #6B7280;
+    border-radius: 0 0 2px 2px;
+}
+
+/* Wind scene */
+.turbine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.turbine-head {
+    width: 12px; height: 12px;
+    background: #E5E7EB;
+    border-radius: 50%;
+    position: relative;
+    z-index: 2;
+}
+.turbine-blades {
+    position: absolute;
+    width: 70px; height: 70px;
+    top: -30px;
+    animation: spin 4s linear infinite;
+}
+.turbine-blades span {
+    position: absolute;
+    width: 4px; height: 32px;
+    background: #D1D5DB;
+    border-radius: 2px;
+    left: 50%; top: 50%;
+    transform-origin: center top;
+}
+.turbine-blades span:nth-child(1) { transform: translateX(-50%) rotate(0deg); }
+.turbine-blades span:nth-child(2) { transform: translateX(-50%) rotate(120deg); }
+.turbine-blades span:nth-child(3) { transform: translateX(-50%) rotate(240deg); }
+.turbine-tower {
+    width: 6px; height: 70px;
+    background: linear-gradient(to bottom, #D1D5DB, #9CA3AF);
+    border-radius: 0 0 3px 3px;
+}
+.wind-cloud {
+    width: 60px; height: 24px;
+    background: #fff;
+    border-radius: 24px;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    animation: drift 8s ease-in-out infinite;
+}
+.wind-cloud::before {
+    content: '';
+    position: absolute;
+    width: 28px; height: 28px;
+    background: #fff;
+    border-radius: 50%;
+    top: -14px; left: 14px;
+}
+
+/* Water scene */
+.water-scene { min-height: 100px; align-items: flex-end; }
+.dam {
+    width: 80px; height: 60px;
+    background: linear-gradient(to bottom, #9CA3AF, #6B7280);
+    border-radius: 4px 4px 0 0;
+    position: relative;
+}
+.dam::after {
+    content: '';
+    position: absolute;
+    bottom: 0; right: -20px;
+    width: 20px; height: 30px;
+    background: linear-gradient(to bottom, #38BDF8, #0EA5E9);
+    border-radius: 0 0 8px 0;
+    animation: flow 1.5s ease-in-out infinite;
+}
+.water-body {
+    width: 140px; height: 24px;
+    background: linear-gradient(to bottom, #7DD3FC, #38BDF8);
+    border-radius: 0 0 12px 12px;
+    position: absolute;
+    bottom: 0;
+    animation: wave 3s ease-in-out infinite;
+}
+
+/* Battery scene */
+.battery-icon {
+    width: 50px; height: 80px;
+    border: 4px solid #7E22CE;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+.battery-icon::before {
+    content: '';
+    position: absolute;
+    top: -8px; left: 50%;
+    transform: translateX(-50%);
+    width: 20px; height: 8px;
+    background: #7E22CE;
+    border-radius: 4px 4px 0 0;
+}
+.battery-fill {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, #A855F7, #C084FC);
+    animation: charge 3s ease-in-out infinite;
+}
+.lightning {
+    font-size: 2rem;
+    animation: flicker 2s ease-in-out infinite;
+    line-height: 1;
+}
+
+/* Night scene */
+.night-scene {
+    background: linear-gradient(to bottom, #1E293B, #334155);
+    border-radius: 16px;
+    padding: 20px;
+    min-height: 100px;
+    position: relative;
+    overflow: hidden;
+}
+.moon {
+    width: 40px; height: 40px;
+    background: #FDE68A;
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(253,230,138,0.5);
+    position: absolute;
+    top: 12px; right: 24px;
+}
+.moon::before {
+    content: '';
+    position: absolute;
+    width: 32px; height: 32px;
+    background: #1E293B;
+    border-radius: 50%;
+    top: -6px; left: -10px;
+}
+.star {
+    position: absolute;
+    width: 4px; height: 4px;
+    background: #FDE68A;
+    border-radius: 50%;
+    animation: twinkle 2s ease-in-out infinite;
+}
+.star:nth-child(2) { top: 8px; left: 20%; animation-delay: 0.5s; }
+.star:nth-child(3) { top: 20px; left: 45%; animation-delay: 1s; }
+.star:nth-child(4) { top: 12px; left: 70%; animation-delay: 1.5s; }
+.star:nth-child(5) { top: 30px; left: 30%; animation-delay: 0.3s; }
+.night-text {
+    color: #E2E8F0;
+    font-size: 0.95rem;
+    position: relative;
+    z-index: 1;
+    padding-top: 50px;
+    text-align: center;
+    font-family: 'Lexend', sans-serif;
+}
+
+/* Fun facts */
+.fun-fact {
+    background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-top: 16px;
+    font-size: 0.95rem;
+    color: #78350F;
+    font-weight: 600;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+}
+.fun-fact-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+/* Quiz */
+.quiz-box {
+    background: linear-gradient(135deg, #EDE9FE, #DDD6FE);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 20px;
+}
+.quiz-box h3 {
+    font-family: 'Lexend', sans-serif;
+    color: #5B21B6;
+    font-size: 1.15rem;
+    margin-bottom: 12px;
+}
+.quiz-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: #fff;
+    border: 2px solid #C4B5FD;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+}
+.quiz-btn:hover {
+    background: #F5F3FF;
+    border-color: #8B5CF6;
+    transform: scale(1.01);
+}
+.quiz-btn:active { transform: scale(0.99); }
+.quiz-btn.correct {
+    background: #DCFCE7;
+    border-color: #22C55E;
+    color: #15803D;
+    font-weight: 600;
+}
+.quiz-btn.wrong {
+    background: #FEE2E2;
+    border-color: #EF4444;
+    color: #DC2626;
+}
+.quiz-result {
+    display: none;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* CTA */
+.kids-cta {
+    text-align: center;
+    padding: 32px 20px;
+}
+.kids-cta p {
+    font-size: 1.1rem;
+    color: #374151;
+    margin-bottom: 16px;
+}
+.kids-cta a {
+    display: inline-block;
+    background: #1E3A5F;
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-family: 'Lexend', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s;
+}
+.kids-cta a:hover { background: #2D4A6F; transform: translateY(-2px); }
+
+/* Animations */
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes drift {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(20px); }
+}
+@keyframes flow {
+    0%, 100% { height: 30px; }
+    50% { height: 40px; }
+}
+@keyframes wave {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(1.15); }
+}
+@keyframes charge {
+    0% { height: 20%; }
+    50% { height: 85%; }
+    100% { height: 20%; }
+}
+@keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+@keyframes twinkle {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sun, .sun::before, .turbine-blades, .wind-cloud,
+    .dam::after, .water-body, .battery-fill, .lightning,
+    .star, .kids-card {
+        animation: none !important;
+        transition: none !important;
+    }
+    .kids-card { opacity: 1; transform: none; }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .kids-hero h1 { font-size: 2rem; }
+    .kids-card { padding: 24px 20px; }
+    .kids-card h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<!-- HEADER -->
+<header class="header">
+    <h1>Energy for Kids</h1>
+    <p class="subtitle">Learn how we power the world with clean energy!</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="kids-wrap">
+
+<!-- Hero -->
+<div class="kids-hero">
+    <span class="age-tag">Ages 5 &ndash; 12</span>
+    <h1>Where Does Our Power Come From?</h1>
+    <p>Every time you turn on a light, charge a tablet, or open the fridge, you&rsquo;re using electricity. But where does it come from? Let&rsquo;s find out!</p>
+</div>
+
+<!-- SOLAR -->
+<div class="kids-card card-sun">
+    <h2>The Sun: Our Biggest Power Source</h2>
+    <div class="illustration sun-scene">
+        <div class="sun"></div>
+        <div class="solar-panel"></div>
+        <div class="solar-panel"></div>
+        <div class="solar-panel"></div>
+    </div>
+    <p>Solar panels catch sunlight and turn it into electricity &mdash; no smoke, no noise, no pollution. They work best on sunny days.</p>
+    <p>One hour of sunshine hitting the Earth has enough energy to power the whole world for a year! We just need to catch it.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#9728;&#65039;</span>
+        <span><strong>Fun fact:</strong> The sun is so far away that its light takes 8 minutes to reach us &mdash; but it still powers millions of homes!</span>
+    </div>
+</div>
+
+<!-- WIND -->
+<div class="kids-card card-wind">
+    <h2>Wind: Invisible Energy</h2>
+    <div class="illustration" style="min-height:130px; align-items:flex-end;">
+        <div class="wind-cloud" style="align-self:flex-start;"></div>
+        <div class="turbine" style="position:relative;">
+            <div class="turbine-head">
+                <div class="turbine-blades">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="turbine-tower"></div>
+        </div>
+        <div class="turbine" style="position:relative; margin-left:24px;">
+            <div class="turbine-head">
+                <div class="turbine-blades" style="animation-duration:5s;">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="turbine-tower" style="height:55px;"></div>
+        </div>
+        <div class="wind-cloud" style="align-self:flex-start; width:45px; height:18px; animation-delay:2s;"></div>
+    </div>
+    <p>Wind turbines have giant blades that spin when the wind blows. That spinning motion makes electricity &mdash; like a bicycle dynamo, but much bigger!</p>
+    <p>Some wind turbines are as tall as the Statue of Liberty. Their blades can be longer than a Boeing 747 wing.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127744;</span>
+        <span><strong>Fun fact:</strong> One big wind turbine can make enough electricity to power about 1,500 homes!</span>
+    </div>
+</div>
+
+<!-- WATER -->
+<div class="kids-card card-water">
+    <h2>Water: The Original Clean Power</h2>
+    <div class="illustration water-scene">
+        <div class="dam"></div>
+        <div class="water-body"></div>
+    </div>
+    <p>Hydropower uses flowing water to spin turbines. Dams hold back rivers and release water through generators to make electricity.</p>
+    <p>People have used moving water for power for thousands of years &mdash; first to grind grain, now to light up cities.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128167;</span>
+        <span><strong>Fun fact:</strong> The Hoover Dam makes enough electricity to serve over a million people!</span>
+    </div>
+</div>
+
+<!-- BATTERIES -->
+<div class="kids-card card-battery">
+    <h2>Batteries: Saving Energy for Later</h2>
+    <div class="illustration" style="gap:24px;">
+        <div class="battery-icon"><div class="battery-fill"></div></div>
+        <div style="text-align:center;">
+            <div class="lightning">&#9889;</div>
+            <div style="font-size:0.8rem; color:#7E22CE; font-weight:600; font-family:'Lexend',sans-serif; margin-top:4px;">Charge &amp; release!</div>
+        </div>
+        <div class="battery-icon"><div class="battery-fill" style="animation-delay:1s;"></div></div>
+    </div>
+    <p>The sun doesn&rsquo;t always shine and the wind doesn&rsquo;t always blow. That&rsquo;s why we need batteries &mdash; giant ones! &mdash; to store energy and use it later.</p>
+    <p>Think of it like a water bottle: you fill it up when there&rsquo;s water, and drink from it when you&rsquo;re thirsty.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128267;</span>
+        <span><strong>Fun fact:</strong> Some grid batteries are as big as a football field and can power thousands of homes for hours!</span>
+    </div>
+</div>
+
+<!-- THE NIGHTTIME PROBLEM -->
+<div class="kids-card card-night">
+    <h2>The Big Challenge: What Happens at Night?</h2>
+    <div class="night-scene">
+        <span class="star"></span>
+        <span class="star"></span>
+        <span class="star"></span>
+        <span class="star"></span>
+        <span class="star"></span>
+        <div class="moon"></div>
+        <div class="night-text">When the sun goes down, solar panels stop working.<br>If the wind isn&rsquo;t blowing either, we need another plan!</div>
+    </div>
+    <p>This is called the <strong>&ldquo;8,760 Problem&rdquo;</strong> &mdash; there are 8,760 hours in a year, and we need clean energy for <em>every single one</em>.</p>
+    <p>Some hours are easy (sunny, windy afternoons). Some are hard (still, cloudy winter nights). Solving the hard hours is the big puzzle!</p>
+</div>
+
+<!-- PUTTING IT TOGETHER -->
+<div class="kids-card card-future">
+    <h2>Teamwork Makes Clean Energy Work!</h2>
+    <p>No single energy source can do it alone. We need <strong>solar + wind + water + batteries</strong> working together like a team.</p>
+    <p>Solar covers the daytime. Wind often blows at night. Water can ramp up quickly. Batteries fill in the gaps. Together, they can power everything &mdash; cleanly!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127758;</span>
+        <span><strong>Key idea:</strong> Clean energy is a team sport. The more sources we combine, the closer we get to powering the world without pollution.</span>
+    </div>
+
+    <!-- Quiz -->
+    <div class="quiz-box">
+        <h3>Quick Quiz!</h3>
+        <p style="font-size:0.95rem; color:#5B21B6; margin-bottom:12px;">How many hours are in a year?</p>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">A) 365</button>
+        <button class="quiz-btn" data-answer="correct" onclick="handleQuiz(this)">B) 8,760</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">C) 24,000</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">D) 1,000</button>
+        <div class="quiz-result" id="quizResult"></div>
+    </div>
+</div>
+
+<!-- CTA -->
+<div class="kids-cta">
+    <p>Want to see how energy experts solve the 8,760 Problem?</p>
+    <a href="index.html">Explore the Full Dashboard &rarr;</a>
+</div>
+
+</div><!-- /kids-wrap -->
+
+<script>
+// Scroll-triggered fade-in
+(function() {
+    var cards = document.querySelectorAll('.kids-card');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15 });
+    cards.forEach(function(card) { observer.observe(card); });
+})();
+
+// Quiz handler
+function handleQuiz(btn) {
+    var box = btn.closest('.quiz-box');
+    var buttons = box.querySelectorAll('.quiz-btn');
+    var result = box.querySelector('.quiz-result');
+    // Disable all buttons
+    buttons.forEach(function(b) { b.disabled = true; b.style.cursor = 'default'; });
+    if (btn.getAttribute('data-answer') === 'correct') {
+        btn.classList.add('correct');
+        result.textContent = 'That\u2019s right! 365 days \u00d7 24 hours = 8,760 hours in a year!';
+        result.style.background = '#DCFCE7';
+        result.style.color = '#15803D';
+    } else {
+        btn.classList.add('wrong');
+        // Highlight correct answer
+        buttons.forEach(function(b) {
+            if (b.getAttribute('data-answer') === 'correct') b.classList.add('correct');
+        });
+        result.textContent = 'Not quite! It\u2019s 8,760. That\u2019s 365 days \u00d7 24 hours!';
+        result.style.background = '#FEF3C7';
+        result.style.color = '#92400E';
+    }
+    result.style.display = 'block';
+}
+</script>
+</body>
+</html>
