@@ -275,9 +275,8 @@ class PJMPriceModel(PriceModel):
         self.floor_price = -30.0
         self.surplus_slope = 0.4
         self.surplus_decay = 0.015
-        self.scarcity_threshold = 0.06
-        # Coal baseload: minimum generation when coal is online
-        self.coal_min_gen_fraction = 0.4  # coal can't go below 40% of capacity
+        self.scarcity_threshold = 0.03  # PJM has large reserves; scarcity is rare
+        self.coal_min_gen_fraction = 0.4
 
 
 class ERCOTPriceModel(PriceModel):
@@ -509,14 +508,32 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
         scarcity_mask = pos_residual > total_fossil_cap
         normal_mask = ~scarcity_mask
 
-        # Normal pricing: marginal cost of the marginal unit
+        # Normal pricing: marginal cost with load-dependent heat rate ramp
         if normal_mask.any():
             normal_idx = unit_idx[normal_mask]
-            normal_prices = marginal_costs[normal_idx]
+            base_prices = marginal_costs[normal_idx].copy()
+
+            # Load-dependent marginal cost ramp: as utilization within a unit's
+            # capacity band increases, heat rate curves push marginal cost up.
+            # This creates price variation instead of flat step-function prices.
+            # Ramp factor: 0-15% above base cost depending on position within band.
+            normal_residual = pos_residual[normal_mask]
+            band_start = np.where(normal_idx > 0, cum_capacity[normal_idx - 1], 0.0)
+            band_capacity = cum_capacity[normal_idx] - band_start
+            position_in_band = np.where(
+                band_capacity > 0,
+                (normal_residual - band_start) / band_capacity,
+                0.5)
+            position_in_band = np.clip(position_in_band, 0.0, 1.0)
+            # Quadratic ramp: steeper at high utilization (realistic heat rate curve)
+            # Gas CCGT heat rate varies ~6.0-7.5 MMBtu/MWh across load range (~25%)
+            # Gas CT varies ~9.0-12.0 (~33%). Coal ~9.5-11.0 (~16%).
+            heat_rate_ramp = 1.0 + 0.30 * position_in_band ** 1.5
+            normal_prices = base_prices * heat_rate_ramp
 
             # Reserve margin check for scarcity adder
             pos_demand = demand_mw_profile[pos_mask][normal_mask]
-            remaining_cap = cum_capacity[normal_idx] - pos_residual[normal_mask]
+            remaining_cap = cum_capacity[normal_idx] - normal_residual
             reserve_ratio = np.where(pos_demand > 0, remaining_cap / pos_demand, 1.0)
 
             low_reserve = reserve_ratio < price_model.scarcity_threshold
@@ -541,7 +558,7 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
                     float(demand_mw_profile[gi]))
                 hourly_marginal_unit[gi] = n_units
 
-    # Negative residual (surplus): negative pricing
+    # Negative/zero residual (surplus): negative pricing
     neg_mask = residual_mw <= 0
     if neg_mask.any():
         neg_indices = np.where(neg_mask)[0]
@@ -549,6 +566,34 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             hourly_lmp[gi] = price_model._price_surplus(
                 float(surplus_mw[gi]), float(demand_mw_profile[gi]))
             hourly_marginal_unit[gi] = -1
+
+    # Must-run baseload effect: nuclear and some coal can't economically ramp
+    # down. During low-demand hours, must-run output pushes prices toward
+    # or below zero. In PJM, ~30-40 GW of nuclear runs 24/7. When overnight
+    # demand drops to ~60 GW, nuclear alone covers a large share.
+    if n_units > 0 and len(stack) > 0:
+        cheapest_mc = marginal_costs[0]
+        # Absolute must-run level (MW) — nuclear + inflexible coal
+        baseline_shares = GRID_MIX_SHARES.get(iso or 'PJM', {})
+        nuclear_pct = baseline_shares.get('clean_firm', 0) / 100.0
+        avg_demand = demand_mw_profile.mean()
+        must_run_mw_level = avg_demand * nuclear_pct * 0.95  # nuclear at ~95% CF
+
+        # Hours where total fossil demand is less than must-run surplus
+        # (i.e., total demand - clean supply < must_run_level means clean + must_run > demand)
+        fossil_demand = residual_mw.copy()
+        total_demand = demand_mw_profile
+        effective_surplus = must_run_mw_level - fossil_demand  # positive = must-run excess
+
+        # Only affect hours where must-run creates genuine surplus pressure
+        surplus_hours = (effective_surplus > 0) & (fossil_demand > 0)
+        if surplus_hours.any():
+            surplus_ratio = effective_surplus[surplus_hours] / must_run_mw_level
+            surplus_ratio = np.clip(surplus_ratio, 0, 1)
+            # Prices compress: from cheapest MC down toward floor
+            depressed = cheapest_mc * (1 - surplus_ratio) + price_model.floor_price * surplus_ratio * 0.3
+            # Only depress prices, never increase them
+            hourly_lmp[surplus_hours] = np.minimum(hourly_lmp[surplus_hours], depressed)
 
     # NEISO winter gas adder
     if isinstance(price_model, NEISOPriceModel):
