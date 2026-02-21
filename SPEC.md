@@ -2153,3 +2153,70 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 - 46–70 unique resource mix archetypes per ISO across all thresholds
 - Only 4–14 unique mixes per threshold (massive redundancy across 5,832 scenarios)
 - Cache comprehensively covers the feasible solution space — new constraint runs can seed from existing archetypes rather than cold-start
+
+### 22.9 Step 1 PFS Improvement Opportunities (Feb 21, 2026)
+
+**Constraint: No changes may sacrifice the ability to find the full PFS.** All improvements below are backward-compatible — they improve speed and/or coverage without changing the feasible space definition or dispatch physics.
+
+**Post-process script**: `postprocess_storage_resweep.py` — standalone Numba parallel re-sweep that runs between Step 1 and Step 2. Demonstrates patterns 1, 4, and 8 below. Uses `@njit(parallel=True)` with `prange` to batch-evaluate near-miss mixes across CPU cores. Checkpoints to `data/resweep_checkpoints/resweep_progress.parquet` after each ISO×threshold.
+
+#### 1. Numba Parallel Storage Sweep (High Impact — 4-8× speedup)
+**Current**: Step 1 Phase 1b evaluates storage combos sequentially per mix — one mix at a time through 342 storage configs × N procurement levels.
+**Improvement**: Wrap `_score_with_all_storage` in `@njit(parallel=True)` with `prange` across mixes. All near-miss mixes at a single (procurement, storage) config are evaluated simultaneously across CPU cores.
+**Pattern**: `batch_score_storage()` in `postprocess_storage_resweep.py` — takes `(demand, supply_rows[N, 8760], procurement, N, storage_params...)`, returns `scores[N]` via `prange`.
+**Impact**: Phase 1b is 60-80% of Step 1 runtime. Multi-core parallel cuts this proportional to available cores (typically 4-8× on modern machines).
+
+#### 2. Consistent Scoring Metric (Correctness)
+**Current**: Two different scoring metrics used within Step 1:
+- Phase 1a (no storage): `np.sum(np.minimum(supply / demand, 1.0)) / H` — hourly average match fraction (weights all hours equally)
+- Phase 1b (with storage): `sum(min(demand[h], supply[h]))` — total energy match fraction (weights by demand magnitude)
+**Problem**: These produce different scores for the same mix. A mix could pass the no-storage check but fail the storage check (or vice versa) at the same threshold. The PFS mixes `hourly_match_score` column contains a mix of both metrics.
+**Fix**: Unify to the energy metric (`sum(min(demand, supply))`) everywhere. The energy metric is more physically meaningful — it answers "what fraction of total demand energy is met?" rather than "what fraction of hours have some matching?"
+**Risk**: None to PFS completeness. May change which mixes are classified as near-miss in Phase 1a, but the `batch_score_no_storage()` kernel in the post-process script shows how to do this efficiently.
+
+#### 3. Wider Near-Miss Window (Coverage)
+**Current**: Step 1 uses 15% near-miss window (`target - 0.15`).
+**Improvement**: Expand to 25%. The post-process re-sweep with 25% window found 471K+ new solutions at CAISO 50% alone — mixes that scored 25-50% without storage but reached 50%+ with storage.
+**Trade-off**: More near-miss mixes → more storage evaluations → longer runtime. With parallel kernels (improvement 1), the marginal cost is acceptable.
+
+#### 4. Procurement Binary Search (2-5× faster per mix)
+**Current**: Linear sweep of procurement levels — typically 30-50 evaluations per (mix, storage) combo with early stopping.
+**Improvement**: Binary search for minimum feasible procurement: O(log₂ N) ≈ 5-6 evaluations instead of O(N) ≈ 30.
+**Prerequisite**: Score is monotonically increasing with procurement (true by construction — more supply always helps).
+**Integration**: Use batch evaluation at max procurement first to identify feasible mixes, then binary search per mix for the minimum.
+
+#### 5. Full Storage Grid on Phase 2 Refinement (Coverage)
+**Current**: Phase 2 (1% resolution refinement) only tries `[2, 5, 10]` for battery4 and battery8 levels.
+**Improvement**: Use the full `[0, 2, 5, 8, 10, 15, 20]` grid, matching Phase 1b. Catches refinement mixes that need higher storage levels (15-20%) to become feasible.
+**Cost**: Modest — refinement mixes are few (neighborhoods of Phase 1 archetypes), so the extra storage combos add seconds, not minutes.
+
+#### 6. Adaptive Storage Sweep (Speed)
+**Current**: All 342 non-zero storage combos (7×7×7 - 1) evaluated for every near-miss mix.
+**Improvement**: Tiered approach:
+  1. Battery4-only sweep (6 combos) — cheapest storage, catches most solutions
+  2. Battery4 + Battery8 (36 combos) — only for mixes not solved in tier 1
+  3. Full triple sweep (342 combos) — only for remaining hard-to-match mixes
+**Impact**: Most near-miss mixes become feasible with battery4 alone. Tiers 2-3 only needed for high-threshold (95%+) mixes. Could reduce total evaluations by 50-70%.
+
+#### 7. Cross-Threshold Solution Injection (Coverage)
+**Current**: Step 1 uses "cross-threshold pollination" to track proven-feasible mixes and skip their storage sweep at higher thresholds. But doesn't inject these solutions — just avoids redundant work.
+**Improvement**: Inject known-feasible (mix, storage) configs from lower thresholds as seeds for higher thresholds' procurement sweep. A mix feasible at 85% with battery=10 is likely feasible at 87.5% with battery=15 or higher procurement — the seed gives a starting point for the procurement search.
+
+#### 8. Vectorized Phase 1a Procurement (Minor)
+**Current**: Phase 1a loops over procurement levels sequentially, computing vectorized scores at each level.
+**Improvement**: Batch multiple procurement levels into a single evaluation: `supply_batch[N, P, H] = supply_rows[:, None, :] * proc_array[None, :, None]`. Score all (mix × procurement) combinations in one vectorized operation.
+**Caveat**: Memory-intensive — N_mixes × N_procurement × 8760 × 8 bytes. For 20K mixes × 50 proc levels = 70 GB. Only viable with chunking or for small grids.
+
+#### Priority Ranking
+| # | Improvement | Impact | Effort | Risk to PFS |
+|---|---|---|---|---|
+| 1 | Numba parallel storage | 4-8× speedup | Low (pattern exists) | None |
+| 2 | Consistent scoring metric | Correctness | Low | None |
+| 3 | Wider near-miss window | More solutions | Low | None |
+| 4 | Binary search procurement | 2-5× per-mix speedup | Medium | None |
+| 5 | Full refinement storage grid | More solutions | Low | None |
+| 6 | Adaptive storage tiers | 50-70% fewer evals | Medium | None |
+| 7 | Cross-threshold injection | More solutions | Medium | None |
+| 8 | Vectorized Phase 1a | Minor speedup | Low | None (memory) |
+
+**Implementation path**: Improvements 1-3 can be applied to `step1_pfs_generator.py` directly by copying kernels from `postprocess_storage_resweep.py`. Improvements 4-7 require refactoring the `optimize_threshold()` function. None require re-running from scratch — all are refinements to existing logic.
