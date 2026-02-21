@@ -3429,10 +3429,10 @@ body {
             </div>
         </div>
 
-        <!-- Stranded Clean Cost Summary + New Build Breakdown -->
-        <div class="stranded-clean-cost" id="strandedCleanCost" style="display:none;"></div>
+        <!-- New Build & Stranded Resource Breakdown -->
         <div class="stranded-breakdown" id="strandedBreakdown" style="display:none;">
             <h4 class="stranded-breakdown-title">New Build &amp; Stranded Asset Mix</h4>
+            <div class="stranded-clean-cost" id="strandedCleanCost" style="display:none;"></div>
             <div class="stranded-bars-wrapper" id="strandedBarsWrapper"></div>
             <div class="stranded-legend" id="strandedLegend"></div>
         </div>
@@ -7864,7 +7864,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
         }
 
-        // Stranded clean cost summary (above the breakdown bars)
+        // Stranded clean cost summary (inside breakdown, under header)
         const sccEl = document.getElementById('strandedCleanCost');
         if (sccEl) {
             if (cleanStrandedCostM > 0.5) {
@@ -7872,7 +7872,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                     ? '$' + (cleanStrandedCostM / 1000).toFixed(1) + 'B'
                     : '$' + Math.round(cleanStrandedCostM) + 'M';
                 sccEl.style.display = '';
-                sccEl.innerHTML = `<span class="scc-value">${fmtCost}/yr</span> <span class="scc-label">in stranded clean energy investment</span>`;
+                sccEl.innerHTML = `<span class="scc-value">${fmtCost}/yr</span> <span class="scc-label">in stranded clean energy assets</span>`;
             } else {
                 sccEl.style.display = 'none';
             }
@@ -8027,8 +8027,6 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         if (metricsEl) metricsEl.style.display = 'none';
         const breakdownElHide = document.getElementById('strandedBreakdown');
         if (breakdownElHide) breakdownElHide.style.display = 'none';
-        const sccElHide = document.getElementById('strandedCleanCost');
-        if (sccElHide) sccElHide.style.display = 'none';
         const gasPanelHide = document.getElementById('gasStrandPanel');
         if (gasPanelHide) gasPanelHide.style.display = 'none';
         if (insightBox) {
