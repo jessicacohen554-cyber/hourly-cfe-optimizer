@@ -114,14 +114,20 @@ def fetch_iso_lmp(iso_name, retry_max=3):
 
         for attempt in range(retry_max):
             try:
-                kwargs = {
-                    'start': start,
-                    'end': end,
-                    'market': config['market'],
-                }
-                # Some ISOs support location_type filter
-                if iso_name in ('PJM',):
-                    kwargs['location_type'] = config['location_type']
+                kwargs = {'date': start, 'end': end}
+
+                # ISO-specific API parameters
+                if iso_name == 'ERCOT':
+                    # ERCOT doesn't take 'market' param — returns settlement point prices
+                    kwargs['location_type'] = 'Settlement Point'
+                elif iso_name == 'CAISO':
+                    kwargs['market'] = 'DAY_AHEAD_HOURLY'
+                    kwargs['locations'] = config.get('zone_names')
+                elif iso_name == 'PJM':
+                    kwargs['market'] = config['market']
+                    kwargs['location_type'] = config.get('location_type', 'ZONE')
+                elif iso_name in ('NYISO', 'NEISO'):
+                    kwargs['market'] = 'DAY_AHEAD_HOURLY'
 
                 df = iso.get_lmp(**kwargs)
                 all_dfs.append(df)
