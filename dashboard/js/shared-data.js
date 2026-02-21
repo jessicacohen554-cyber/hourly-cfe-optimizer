@@ -2127,18 +2127,28 @@ function dacCostAtThreshold(threshold, trajectory) {
 // FOAK → NOAK LEARNING CURVES & GAS TRUE COST (SPEC.md §7.4)
 // ============================================================================
 // Clean firm LCOE trajectory: FOAK (2025) declining to NOAK (~2040-2045)
-// via Wright's Law learning curves. Nuclear SMR learning rates 10-20% per
-// doubling; DOE projects ~40% total reduction after 10-20 deployments.
-// Sources: DOE Liftoff (2023), NREL ATB 2024, GE Hitachi ($60/MWh NOAK target),
-//   NuScale ($51-54/MWh NOAK), INL FOAK/NOAK study (2021), IEEFA,
-//   Lazard LCOE v17.0 (2024).
+// via Wright's Law learning curves.
+//
+// VALIDATED AGAINST RESEARCH:
+//   Nuclear FOAK reality: $141-220/MWh (Lazard LCOE+ v18, June 2025);
+//     Vogtle Units 3&4 ~$15,000/kW; NuScale CFPP ~$20,000/kW at cancellation.
+//   Nuclear NOAK targets: DOE Liftoff (Sept 2024) $3,600/kW, ~$66/MWh with 48E ITC;
+//     MIT ANP (2024) AP1000 NOAK $4,625/kW, $66/MWh unsubsidized;
+//     SMR 300 MWe NOAK ~$6,700/kW, $95/MWh; INL optimized ~$3,421/kW.
+//   Learning rates: NREL ATB 2024 uses 8% (large), 9.5% (SMR) per doubling
+//     (based on INL meta-analysis, Abou-Jaoude et al. RPT-24-77048).
+//     Navy analogy: 10%/doubling (Rosner & Goldberg). INL high-case: 15%.
+//   Timeline: NOAK achievable late 2030s-early 2040s with 5-10 reactors/design.
+//   CCS: FOAK ~$103/MWh → NOAK ~$92/MWh (Frontiers 2022); DOE OCED ~25%
+//     CAPEX reduction; NETL learning 3-5%/doubling; 45Q ($85/ton) >25% LCOE cut.
 //
 // Gas "true cost" trajectory: base LCOE (Lazard/NREL ATB) + fuel price
 // escalation (EIA AEO2025: $3.50→$4.95/MMBtu) + carbon pricing trajectory
 // (EU ETS: €77→€126→€150+/ton; moderate US adoption) + declining utilization
 // as renewables displace gas hours + stranding risk premium.
-// Sources: EIA AEO2025, Lazard LCOE+ (2025), GridLab gas turbine cost report,
-//   Carbon Tracker stranded assets, EU ETS market data, IEA WEO (2024).
+// Sources: EIA AEO2025, Lazard LCOE+ v18 (2025), GridLab gas turbine report
+//   ($2,200-2,600/kW market quotes vs EIA's $1,200/kW),
+//   Carbon Tracker ($3.5T stranded assets), EU ETS market data, IEA WEO (2024).
 //
 // Mapped to SBTi milestone years (SBTI_MILESTONES above).
 
@@ -2146,9 +2156,13 @@ const FOAK_NOAK_YEARS = [2025, 2030, 2035, 2040, 2045, 2050];
 
 // Clean Firm Portfolio LCOE ($/MWh) — weighted across nuclear SMR, CCS-CCGT,
 // enhanced geothermal. Decline driven by Wright's Law learning curves.
-// Conservative: 5-8% learning rate, policy headwinds, slow licensing
+// Conservative: 5-8% learning rate (NREL ATB 8% baseline), slow licensing
+//   → $160→$95: ~40% decline, consistent with NREL ATB conservative track
 // Central: 10-12% learning rate, moderate policy support (IRA + DOE LPO)
-// Optimistic: 15-20% learning rate, tech breakthroughs, fast deployment
+//   → $155→$70: ~55% decline, consistent with DOE Liftoff ~40% after 10-20 builds
+//     and MIT NOAK $66/MWh. Crossover ~2035 aligns with DOE deployment timeline.
+// Optimistic: 15-20% learning rate, modular factory deployment
+//   → $145→$62: consistent with INL high-case 15% rate and Fervo 35% geothermal
 const CLEAN_FIRM_LEARNING = {
     conservative: [160, 145, 125, 110, 100, 95],   // Slow learning, FOAK persists
     central:      [155, 115,  90,  75,  72, 70],    // DOE central: ~40% decline by NOAK
