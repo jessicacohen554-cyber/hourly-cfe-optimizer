@@ -103,6 +103,7 @@
                 { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
                 { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' },
                 { label: 'Consequential Accounting', href: 'consequential_accounting.html' },
+                { label: 'Consequential Deep Dive', href: 'consequential_vacuum.html' },
                 { label: 'Generator Analysis', href: '../power-gen-decarbonization/site/index.html' }
             ]
         },
