@@ -450,31 +450,30 @@ class PJMPriceModel(PriceModel):
         self.scarcity_threshold = 0.03  # PJM has large reserves; scarcity is rare
         self.coal_min_gen_fraction = 0.4
 
-        # PJM demand-quantile calibration (v9 — SOM 2024 cost decomposition)
-        # Base merit-order now includes 10% adder + CO2 + realistic VOM/heat rates.
+        # PJM demand-quantile calibration (v10 — post-UTC timezone fix)
+        # Base merit-order includes 10% adder + CO2 + realistic VOM/heat rates.
         # Demand-quantile layer adds: congestion ($3.01), markup beyond 10% (~$1.56),
         # ancillary redispatch ($1.33), and compresses off-peak to baseload pricing.
         #
+        # v10 changes (post-timezone fix):
+        # - Timezone fix corrected peak/off-peak from ADJUST→GOOD
+        # - Reduced negative price depth (P10: $20→$18 target, neg hrs: 246→200)
+        # - Tightened volatility ($31→$25 target) by narrowing scarcity tail
+        #
         # High-demand: congestion + gas tightness on top 25% of hours
         self.dq_high_percentile = 75
-        self.dq_high_max_adder = 25.0
+        self.dq_high_max_adder = 23.0
         self.dq_high_exponent = 2.0
-        # Scarcity tail: PJM penalty factor regime — top 5% (~438h)
-        # At P95+ hours, base price is ~$48-55 (merit-order + high-demand adder).
-        # For $200 crossover: need scarcity adder > ~$150. With max=200, linear ramp:
-        # position > 150/200 = 0.75 → top 25% of 438 = ~110 hours cross $200.
+        # Scarcity tail: PJM penalty factor regime
         self.dq_scarcity_percentile = 95.5
-        self.dq_scarcity_max = 170.0
+        self.dq_scarcity_max = 165.0
         # Low-demand: PJM ~200 negative price hours
-        self.dq_low_percentile = 10
-        self.dq_low_floor = -30.0
+        self.dq_low_percentile = 9
+        self.dq_low_floor = -25.0           # shallower than -30 for less vol
         self.dq_low_exponent = 1.8
-        # Mid-low: P10-P65 range gets price compression (off-peak baseload)
-        # Off-peak avg target: $28. Current CCGT base ~$33, need ~15% discount.
-        # Coal min-gen pricing + cheap overnight baseload. Off-peak is ~60% of hours
-        # (nights, weekends), so compression needs to cover most of the lower distribution.
+        # Mid-low: P9-P70 — compress off-peak toward baseload pricing
         self.dq_midlow_percentile = 70
-        self.dq_midlow_discount = 0.50     # 50% max discount at low end of range
+        self.dq_midlow_discount = 0.55
 
 
 class ERCOTPriceModel(PriceModel):
