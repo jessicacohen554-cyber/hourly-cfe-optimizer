@@ -2,23 +2,23 @@
   "iso": "PJM",
   "mode": "qa_actual",
   "year": 2024,
-  "calibration_date": "2026-02-21 05:24:20",
+  "calibration_date": "2026-02-21 05:28:27",
   "eia_actual_stats": {
-    "avg_lmp": 35.36,
-    "peak_avg_lmp": 40.69,
-    "offpeak_avg_lmp": 30.5,
-    "zero_price_hours": 223,
-    "negative_price_hours": 223,
+    "avg_lmp": 35.52,
+    "peak_avg_lmp": 40.74,
+    "offpeak_avg_lmp": 30.75,
+    "zero_price_hours": 200,
+    "negative_price_hours": 200,
     "scarcity_hours": 89,
-    "lmp_p10": 18.46,
-    "lmp_p25": 23.29,
+    "lmp_p10": 18.53,
+    "lmp_p25": 23.35,
     "lmp_p50": 31.05,
     "lmp_p75": 37.93,
     "lmp_p90": 48.22,
-    "price_volatility": 29.89,
+    "price_volatility": 29.69,
     "duck_curve_depth_mw": 0.0,
     "net_peak_price": 239.4,
-    "fossil_revenue_mwh": 35.52
+    "fossil_revenue_mwh": 35.66
   },
   "actual_mix": {
     "clean_firm": 33.474658439007776,
@@ -44,42 +44,42 @@
   "comparison": [
     {
       "metric": "avg_lmp",
-      "synthetic": 35.36,
+      "synthetic": 35.52,
       "target": 34.7,
-      "delta": 0.6599999999999966,
-      "pct_delta": 1.9020172910662725,
+      "delta": 0.8200000000000003,
+      "pct_delta": 2.3631123919308363,
       "status": "GOOD"
     },
     {
       "metric": "peak_avg_lmp",
-      "synthetic": 40.69,
+      "synthetic": 40.74,
       "target": 42.0,
-      "delta": -1.3100000000000023,
-      "pct_delta": -3.1190476190476244,
+      "delta": -1.259999999999998,
+      "pct_delta": -2.9999999999999956,
       "status": "GOOD"
     },
     {
       "metric": "offpeak_avg_lmp",
-      "synthetic": 30.5,
+      "synthetic": 30.75,
       "target": 28.0,
-      "delta": 2.5,
-      "pct_delta": 8.928571428571429,
+      "delta": 2.75,
+      "pct_delta": 9.821428571428571,
       "status": "GOOD"
     },
     {
       "metric": "lmp_p10",
-      "synthetic": 18.46,
+      "synthetic": 18.53,
       "target": 18.0,
-      "delta": 0.46000000000000085,
-      "pct_delta": 2.5555555555555602,
+      "delta": 0.5300000000000011,
+      "pct_delta": 2.944444444444451,
       "status": "GOOD"
     },
     {
       "metric": "lmp_p25",
-      "synthetic": 23.29,
+      "synthetic": 23.35,
       "target": 23.0,
-      "delta": 0.28999999999999915,
-      "pct_delta": 1.2608695652173876,
+      "delta": 0.3500000000000014,
+      "pct_delta": 1.5217391304347887,
       "status": "GOOD"
     },
     {
@@ -108,19 +108,19 @@
     },
     {
       "metric": "price_volatility",
-      "synthetic": 29.89,
+      "synthetic": 29.69,
       "target": 25.0,
-      "delta": 4.890000000000001,
-      "pct_delta": 19.560000000000002,
+      "delta": 4.690000000000001,
+      "pct_delta": 18.760000000000005,
       "status": "FAIR"
     },
     {
       "metric": "negative_price_hours",
-      "synthetic": 223,
+      "synthetic": 200,
       "target": 200,
-      "delta": 23,
-      "pct_delta": 11.5,
-      "status": "FAIR"
+      "delta": 0,
+      "pct_delta": 0.0,
+      "status": "GOOD"
     },
     {
       "metric": "scarcity_hours",
