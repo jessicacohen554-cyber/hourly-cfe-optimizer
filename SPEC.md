@@ -1204,6 +1204,80 @@ CCS cost is controlled by two independent toggles: **CCS Cost** (L/M/H maturity)
 7. **LCOS** = annualized capital cost of built capacity / actual MWh dispatched — same utilization penalty as battery
 8. Seasonal shifting: captures week-to-week and seasonal patterns batteries cannot
 
+### 6.3 Storage Grid Refinement — Sub-Percent Granularity (Decision: Feb 21, 2026)
+
+**Problem identified**: The original storage sweep grid `[0, 2, 5, 8, 10, 15, 20]` (% of annual demand) had a blind spot. Battery4 and Battery8 max SOC never exceeds ~1.0% of annual demand even under peak-stress conditions (high RE, low CF, max procurement, >90% targets). The jump from 0% → 2% skipped the entire range where batteries actually saturate, meaning the cost optimizer never tested right-sized battery configurations. This systematically overpriced storage (paying for 4-20× idle capacity) and biased the optimizer toward avoiding batteries when properly-sized batteries could be cost-competitive.
+
+**Empirical saturation thresholds** (max SOC as % of annual demand, unconstrained capacity, high-RE stress mixes at 97.5-99% targets):
+
+| ISO | Bat4 (4hr) 90% Sat | Bat8 (8hr) 90% Sat | LDES (100hr) |
+|-----|---------------------|---------------------|--------------|
+| CAISO | 0.577% | 0.577% | >50% (always saturated) |
+| ERCOT | 0.663% | 0.663% | >50% |
+| PJM | **1.155%** | **1.155%** | >50% |
+| NYISO | 0.922% | 0.922% | >50% |
+| NEISO | 0.975% | 0.975% | >50% |
+
+**Root cause**: Battery daily surplus/gap is small relative to annual demand (~0.5% of annual demand on peak days). The 4hr/8hr durations provide sufficient power headroom that power rating never binds — only energy capacity matters. PJM is the binding case due to high-wind mixes at 99% creating larger daily swings.
+
+**LDES is fundamentally different**: Multi-day accumulation over 7-day windows means LDES fills to capacity even at 20% of annual demand. LDES is capacity-hungry through the entire tested range. Fine granularity for LDES is about optimizing the marginal cost/benefit tradeoff, not finding saturation.
+
+**Refined storage grids** — 0.1% intervals below max saturation, then coarser above:
+
+```python
+# Bat4: 0.1% intervals to 1.5% (covers PJM binding case + margin), then coarser
+batt_levels  = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]  # 20 levels
+
+# Bat8: identical physics (same surplus, duration only affects power limit which never binds)
+batt8_levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]  # 20 levels
+
+# LDES: 0.5% intervals to 2.5% (marginal value optimization), then coarser
+ldes_levels  = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]  # 11 levels
+```
+
+**Combo count**: 20 × 20 × 11 = **4,400** storage combos per mix (vs. old 7³ = 343 → **12.8×** increase).
+
+**Implementation notes**:
+- Storage levels change from integer to float → parquet schema uses `pa.float64()` for `battery_dispatch_pct`, `battery8_dispatch_pct`, `ldes_dispatch_pct`
+- All downstream code (Step 2 EF, Step 3 cost, Step 4 postprocess, dashboard) must handle float storage values
+- Existing cache with integer storage values must be preserved and converted on merge
+
+### 6.4 Storage Sweep Optimizations — SOC Pre-Screen + Dominance Pruning (Feb 21, 2026)
+
+The 12.8× increase in nominal storage combos is offset by three optimizations that eliminate 80-95% of evaluations:
+
+#### 1. SOC Pre-Screen (Per-Mix Battery Cap)
+
+Before running the full storage dispatch loop, compute the **maximum state of charge** each storage type would reach with **unlimited capacity** at max procurement. This is a single fast pass over the year — no capacity constraint means no nested binary search.
+
+```python
+# For bat4/bat8: daily cycle — find peak-day SOC
+_compute_max_daily_battery_soc(demand, supply_row, max_pf, eff, duration)
+→ (max_soc, total_dispatch)
+
+# For LDES: multi-day window — find peak-window SOC
+_compute_max_ldes_soc(demand, supply_row, max_pf, eff, window_hours)
+→ (max_soc, total_dispatch)
+```
+
+The `max_soc` is the **ceiling** — any storage level above this is pure idle capacity. Storage levels are filtered to `level ≤ max_soc × 1.1` (10% margin for procurement variation). For typical high-RE mixes:
+- bat4/bat8: max_soc ≈ 0.5-1.2% → filters 20 levels down to 4-8 effective levels
+- LDES: max_soc > 20% → little filtering (expected — LDES is capacity-hungry)
+
+If `total_dispatch` is zero for all three types, the mix has no curtailment to harness and is skipped entirely.
+
+#### 2. Dominance Pruning (Early Stop on Storage Levels)
+
+Within the LDES innermost loop, once a level achieves feasibility at procurement P, the next level is tested. If it achieves feasibility at the same or higher P, higher LDES levels are **dominated** — they add cost (more capacity) without reducing procurement. The LDES sweep breaks at that point.
+
+This captures the key physics: beyond a certain LDES capacity, the added energy is marginal (the charging window is full, or the remaining gaps are too small for LDES power rating to serve).
+
+#### 3. Curtailment Guard
+
+A mix with no surplus at max procurement gets zero dispatch from any storage type. The SOC pre-screen naturally catches this (total_dispatch = 0 → skip), but it's explicitly checked as an early exit before allocating the effective level arrays.
+
+**Net effect**: The 4,400 nominal combos per mix typically reduce to ~200-600 actual evaluations, making the refined grid computationally comparable to the old 343-combo grid while providing 10-20× finer resolution in the battery saturation zone.
+
 ---
 
 ## 7. CO2 & Abatement
