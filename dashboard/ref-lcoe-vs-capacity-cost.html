@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Energy Economics Metric Dictionary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body { background: #0B1120; }
+
+/* ===== Breadcrumb ===== */
+.breadcrumb {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 20px 24px 0;
+    font-size: 0.82rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.03em;
+}
+.breadcrumb a { color: #0EA5E9; text-decoration: none; transition: color 0.2s; }
+.breadcrumb a:hover { color: #38BDF8; }
+.breadcrumb .sep { color: rgba(255,255,255,0.3); margin: 0 8px; }
+.breadcrumb .current { color: rgba(255,255,255,0.5); }
+
+/* ===== Article ===== */
+.article-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+}
+.article-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+    margin-bottom: 8px;
+    letter-spacing: -0.4px;
+}
+.article-subtitle {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.95rem;
+    margin-bottom: 36px;
+    line-height: 1.6;
+}
+
+/* ===== Glossary Nav ===== */
+.glossary-nav {
+    background: rgba(15,26,46,0.8);
+    border: 1px solid rgba(74,144,217,0.15);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 48px;
+}
+.glossary-nav h2 {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+}
+.glossary-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+}
+.glossary-links a {
+    color: #0EA5E9;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(14,165,233,0.15);
+    transition: background 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+.glossary-links a:hover {
+    background: rgba(14,165,233,0.1);
+    border-color: rgba(14,165,233,0.35);
+}
+.glossary-category {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    font-family: var(--font-heading);
+    width: 100%;
+}
+.glossary-category:first-of-type { margin-top: 0; }
+
+/* ===== Metric Entry ===== */
+.metric-entry {
+    margin-bottom: 56px;
+    scroll-margin-top: 80px;
+}
+.metric-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+.metric-name {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+}
+.metric-unit {
+    font-family: 'Courier New', monospace;
+    font-size: 0.88rem;
+    color: #0EA5E9;
+    font-weight: 600;
+}
+.metric-aka {
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.4);
+    font-style: italic;
+}
+.metric-divider {
+    height: 2px;
+    background: linear-gradient(90deg, rgba(14,165,233,0.4) 0%, transparent 100%);
+    margin-bottom: 16px;
+    border: none;
+}
+.metric-def {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.95rem;
+    line-height: 1.75;
+    margin-bottom: 12px;
+}
+.metric-def strong {
+    color: #fff;
+    font-weight: 600;
+}
+.metric-detail {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.88rem;
+    line-height: 1.75;
+    margin-bottom: 10px;
+}
+.metric-detail ul {
+    padding-left: 20px;
+    margin: 6px 0;
+}
+.metric-detail li {
+    margin-bottom: 4px;
+}
+.metric-formula {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #0EA5E9;
+    background: rgba(14,165,233,0.06);
+    border: 1px solid rgba(14,165,233,0.15);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    display: inline-block;
+}
+
+/* ===== Relationship Diagram ===== */
+.diagram-panel {
+    background: rgba(15,26,46,0.95);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: 12px;
+    padding: 28px 20px 20px;
+    margin: 40px 0 56px;
+}
+.diagram-title {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.8);
+    text-align: center;
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+}
+.diagram-caption {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.4);
+    text-align: center;
+    margin-top: 14px;
+    line-height: 1.5;
+    font-style: italic;
+}
+.diagram-panel svg {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* ===== Back Link ===== */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #0EA5E9;
+    text-decoration: none;
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    transition: gap 0.2s, color 0.2s;
+    margin-top: 24px;
+}
+.back-link:hover { gap: 12px; color: #38BDF8; }
+
+/* ===== Footer ===== */
+.page-footer {
+    background: #0F1A2E;
+    color: rgba(255,255,255,0.7);
+    padding: 32px 24px;
+    text-align: center;
+}
+.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
+.footer-links a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 4px;
+}
+.footer-links a:hover { color: #ffffff; }
+.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+.bottom-banner {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+
+@media (max-width: 768px) {
+    .article-title { font-size: 1.5rem; }
+    .article-wrapper { padding: 24px 20px 64px; }
+    .metric-name { font-size: 1.15rem; }
+    .glossary-links a { font-size: 0.8rem; padding: 3px 8px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>Reference Library</h1>
+    <p class="subtitle">Concepts, mechanics, and deep dives into electricity market design</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="breadcrumb">
+    <a href="reference.html">Reference</a>
+    <span class="sep">/</span>
+    <span class="current">Energy Economics Metric Dictionary</span>
+</div>
+
+<article class="article-wrapper">
+
+    <h1 class="article-title">Energy Economics Metric Dictionary</h1>
+    <p class="article-subtitle">The key metrics used in electricity resource economics &mdash; what they measure, how they relate, and when each one matters.</p>
+
+    <!-- ===== Glossary Nav ===== -->
+    <nav class="glossary-nav">
+        <h2>Jump To</h2>
+        <div class="glossary-links">
+            <div class="glossary-category">Cost Metrics</div>
+            <a href="#lcoe">LCOE</a>
+            <a href="#lcos">LCOS</a>
+            <a href="#capacity-cost">Capacity Cost ($/kW)</a>
+            <a href="#marginal-cost">Marginal Cost</a>
+            <a href="#mac">Marginal Abatement Cost</a>
+            <a href="#lmp">LMP</a>
+
+            <div class="glossary-category">Plant Characteristics</div>
+            <a href="#capacity-factor">Capacity Factor</a>
+            <a href="#heat-rate">Heat Rate</a>
+            <a href="#rte">Round-Trip Efficiency</a>
+            <a href="#capacity-credit">Capacity Credit / ELCC</a>
+
+            <div class="glossary-category">Financial</div>
+            <a href="#crf">Capital Recovery Factor</a>
+            <a href="#wacc">WACC</a>
+            <a href="#fom">Fixed O&amp;M</a>
+            <a href="#vom">Variable O&amp;M</a>
+
+            <div class="glossary-category">System</div>
+            <a href="#curtailment">Curtailment</a>
+            <a href="#transmission-adder">Transmission Adder</a>
+            <a href="#resource-adequacy">Resource Adequacy</a>
+        </div>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--          RELATIONSHIP DIAGRAM #1           -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="diagram-panel">
+        <div class="diagram-title">How the Metrics Connect: From Plant Cost to Electricity Price</div>
+        <svg viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg" style="max-width:760px;">
+            <style>
+                .d-box { rx: 8; }
+                .d-label { font-family: 'Lexend', sans-serif; font-weight: 700; font-size: 11px; }
+                .d-sub { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 9px; fill: rgba(255,255,255,0.45); }
+                .d-arrow { stroke: rgba(255,255,255,0.25); stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+                .d-arrow-bold { stroke: #0EA5E9; stroke-width: 2; fill: none; marker-end: url(#arrowhead-blue); }
+            </style>
+            <defs>
+                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="rgba(255,255,255,0.3)"/>
+                </marker>
+                <marker id="arrowhead-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#0EA5E9"/>
+                </marker>
+            </defs>
+
+            <!-- Row 1: Input metrics -->
+            <rect x="20" y="20" width="130" height="52" class="d-box" fill="rgba(245,158,11,0.1)" stroke="rgba(245,158,11,0.35)" stroke-width="1.2"/>
+            <text x="85" y="43" class="d-label" fill="#F59E0B" text-anchor="middle">CapEx ($/kW)</text>
+            <text x="85" y="58" class="d-sub" text-anchor="middle">overnight capital</text>
+
+            <rect x="170" y="20" width="120" height="52" class="d-box" fill="rgba(34,197,94,0.1)" stroke="rgba(34,197,94,0.35)" stroke-width="1.2"/>
+            <text x="230" y="43" class="d-label" fill="#22C55E" text-anchor="middle">CRF</text>
+            <text x="230" y="58" class="d-sub" text-anchor="middle">annualization rate</text>
+
+            <rect x="310" y="20" width="120" height="52" class="d-box" fill="rgba(139,92,246,0.1)" stroke="rgba(139,92,246,0.35)" stroke-width="1.2"/>
+            <text x="370" y="43" class="d-label" fill="#A855F7" text-anchor="middle">FOM ($/kW-yr)</text>
+            <text x="370" y="58" class="d-sub" text-anchor="middle">fixed O&amp;M</text>
+
+            <rect x="450" y="20" width="130" height="52" class="d-box" fill="rgba(236,72,153,0.1)" stroke="rgba(236,72,153,0.35)" stroke-width="1.2"/>
+            <text x="515" y="43" class="d-label" fill="#EC4899" text-anchor="middle">CF (%)</text>
+            <text x="515" y="58" class="d-sub" text-anchor="middle">capacity factor</text>
+
+            <rect x="600" y="20" width="140" height="52" class="d-box" fill="rgba(107,114,128,0.15)" stroke="rgba(107,114,128,0.35)" stroke-width="1.2"/>
+            <text x="670" y="43" class="d-label" fill="#9CA3AF" text-anchor="middle">VOM + Fuel</text>
+            <text x="670" y="58" class="d-sub" text-anchor="middle">variable costs ($/MWh)</text>
+
+            <!-- Arrows down to LCOE -->
+            <path d="M85,72 L85,110 L310,110 L310,130" class="d-arrow"/>
+            <path d="M230,72 L230,110 L310,110" class="d-arrow"/>
+            <path d="M370,72 L370,110 L350,110 L350,130" class="d-arrow"/>
+            <path d="M515,72 L515,110 L370,110" class="d-arrow"/>
+            <path d="M670,72 L670,110 L390,110 L390,130" class="d-arrow"/>
+
+            <!-- Row 2: LCOE -->
+            <rect x="240" y="130" width="220" height="56" class="d-box" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="1.8"/>
+            <text x="350" y="155" class="d-label" fill="#0EA5E9" text-anchor="middle" font-size="14">LCOE ($/MWh)</text>
+            <text x="350" y="172" class="d-sub" text-anchor="middle">lifetime cost per unit of energy</text>
+
+            <!-- Arrows from LCOE down -->
+            <path d="M300,186 L300,218 L220,218 L220,238" class="d-arrow-bold"/>
+            <path d="M400,186 L400,218 L490,218 L490,238" class="d-arrow-bold"/>
+
+            <!-- TX adder feeds into delivered cost -->
+            <rect x="30" y="220" width="120" height="44" class="d-box" fill="rgba(14,165,233,0.06)" stroke="rgba(14,165,233,0.2)" stroke-width="1"/>
+            <text x="90" y="241" class="d-label" fill="rgba(255,255,255,0.6)" text-anchor="middle" font-size="10">TX Adder</text>
+            <text x="90" y="254" class="d-sub" text-anchor="middle">$/MWh delivery</text>
+            <path d="M150,242 L170,242 L170,260 L220,260" class="d-arrow"/>
+
+            <!-- Row 3: Delivered cost and LMP -->
+            <rect x="160" y="238" width="180" height="52" class="d-box" fill="rgba(14,165,233,0.08)" stroke="rgba(14,165,233,0.3)" stroke-width="1.2"/>
+            <text x="250" y="261" class="d-label" fill="#38BDF8" text-anchor="middle">Delivered Cost</text>
+            <text x="250" y="276" class="d-sub" text-anchor="middle">LCOE + transmission</text>
+
+            <rect x="420" y="238" width="180" height="52" class="d-box" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)" stroke-width="1.2"/>
+            <text x="510" y="261" class="d-label" fill="#F59E0B" text-anchor="middle">LMP ($/MWh)</text>
+            <text x="510" y="276" class="d-sub" text-anchor="middle">market clearing price</text>
+
+            <!-- Merit order label -->
+            <rect x="620" y="238" width="120" height="44" class="d-box" fill="rgba(107,114,128,0.08)" stroke="rgba(107,114,128,0.2)" stroke-width="1"/>
+            <text x="680" y="256" class="d-label" fill="rgba(255,255,255,0.5)" text-anchor="middle" font-size="10">Merit Order</text>
+            <text x="680" y="269" class="d-sub" text-anchor="middle">dispatch stack</text>
+            <path d="M620,260 L600,260" class="d-arrow"/>
+
+            <!-- MAC -->
+            <path d="M250,290 L250,310 L380,310 L380,318" class="d-arrow"/>
+            <path d="M510,290 L510,310 L420,310 L420,318" class="d-arrow"/>
+            <rect x="320" y="318" width="160" height="20" class="d-box" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.2)" stroke-width="1"/>
+            <text x="400" y="332" class="d-sub" text-anchor="middle" fill="#22C55E" font-size="9" font-weight="600">MAC = (Clean Cost &minus; Fossil Cost) / CO&#8322; Avoided</text>
+        </svg>
+        <p class="diagram-caption">Every electricity cost metric is built from a few primitive inputs. CapEx flows through CRF and capacity factor to become LCOE, which adds transmission to become delivered cost. LMP is set by the merit order, not by any individual plant&rsquo;s LCOE.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--              COST METRICS                  -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="metric-entry" id="lcoe">
+        <div class="metric-header">
+            <span class="metric-name">LCOE</span>
+            <span class="metric-unit">$/MWh</span>
+            <span class="metric-aka">Levelized Cost of Energy</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def">The <strong>lifetime average cost of producing one MWh of electricity</strong> from a generator. Spreads all costs &mdash; capital, financing, fixed O&amp;M, variable O&amp;M, and fuel &mdash; over all the energy the plant produces across its economic life.</p>
+        <div class="metric-formula">LCOE = (CapEx &times; CRF + FOM) / (CF &times; 8,760) + VOM + Fuel</div>
+        <p class="metric-detail"><strong>What it captures:</strong> Capital costs (amortized), operating costs, fuel costs, and implicitly the plant&rsquo;s utilization via capacity factor. Enables apples-to-apples comparison across technologies that have fundamentally different cost structures (capital-heavy nuclear vs. fuel-heavy gas).</p>
+        <p class="metric-detail"><strong>What it doesn&rsquo;t capture:</strong> Transmission costs, integration costs, backup/reliability value, curtailment risk, or the temporal value of generation (a MWh at 3 PM is worth more than at 3 AM). LCOE treats all MWh as equal.</p>
+        <p class="metric-detail"><strong>Hidden assumptions:</strong> Capacity factor is embedded as a fixed input, but in reality it&rsquo;s a market outcome (a gas plant&rsquo;s CF depends on dispatch order). Policy incentives (ITC, PTC, 45Q) may or may not be included &mdash; always check. Financing assumptions (WACC, plant life) materially affect the result.</p>
+    </div>
+
+    <div class="metric-entry" id="lcos">
+        <div class="metric-header">
+            <span class="metric-name">LCOS</span>
+            <span class="metric-unit">$/MWh</span>
+            <span class="metric-aka">Levelized Cost of Storage</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def">The <strong>all-in cost per MWh discharged from a storage system</strong>, including capital, O&amp;M, the cost of charging energy lost to round-trip efficiency, and degradation over the system&rsquo;s life.</p>
+        <p class="metric-detail">LCOS differs from LCOE because storage doesn&rsquo;t generate &mdash; it shifts energy in time. The &ldquo;fuel cost&rdquo; is the electricity consumed during charging, inflated by round-trip efficiency losses. A 4hr Li-ion battery at 85% RTE loses 15% of every MWh it stores; a 100hr iron-air system at 50% RTE loses half.</p>
+        <p class="metric-detail"><strong>Depends heavily on:</strong> Cycle count (how many charge/discharge cycles per year), duration (hours of storage), round-trip efficiency, and the cost of charging energy. A battery cycled once per day has a very different LCOS than one cycled twice per week.</p>
+    </div>
+
+    <div class="metric-entry" id="capacity-cost">
+        <div class="metric-header">
+            <span class="metric-name">Capacity Cost</span>
+            <span class="metric-unit">$/kW</span>
+            <span class="metric-aka">Overnight Capital Cost, Installed Cost, CapEx</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The cost to build one kilowatt of generating capacity</strong>, measured as if the plant could be built &ldquo;overnight&rdquo; (no construction interest). The most market-neutral metric &mdash; it measures physical construction cost independent of dispatch, fuel, or policy.</p>
+        <p class="metric-detail"><strong>&ldquo;Overnight&rdquo; vs. &ldquo;All-in&rdquo;:</strong> Overnight CapEx excludes financing costs during construction. For a solar farm built in 12 months, the difference is small. For a nuclear plant taking 7&ndash;10 years, construction interest can add 30&ndash;50% to the overnight cost. Always check which version is being quoted.</p>
+        <p class="metric-detail"><strong>Why it misleads across technologies:</strong> Solar at $1,200/kW looks cheaper than nuclear at $8,000/kW, but solar runs 25% of hours while nuclear runs 93%. Per MWh of output, the gap narrows dramatically. $/kW is useful for comparing the same technology across projects or tracking cost trends, but meaningless for comparing generation cost across technologies without a capacity factor adjustment.</p>
+        <p class="metric-detail"><strong>Annualized form ($/kW-yr):</strong> CapEx &times; CRF converts the one-time cost to an annual charge. This is used for resource adequacy costs (gas backup) where you&rsquo;re paying for availability, not energy.</p>
+    </div>
+
+    <div class="metric-entry" id="marginal-cost">
+        <div class="metric-header">
+            <span class="metric-name">Marginal Cost</span>
+            <span class="metric-unit">$/MWh</span>
+            <span class="metric-aka">Short-Run Marginal Cost, SRMC</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The cost of producing one additional MWh</strong> from a plant that&rsquo;s already built. Excludes capital costs entirely &mdash; only fuel and variable O&amp;M. This is what generators bid into wholesale markets.</p>
+        <p class="metric-detail">For renewables and nuclear, marginal cost is near <strong>$0/MWh</strong> (no fuel). For gas plants, it&rsquo;s <strong>$25&ndash;60/MWh</strong> depending on heat rate and gas price. This is why renewables always dispatch first in the merit order &mdash; their bid is $0, so they run whenever available. The marginal cost of the <em>most expensive plant running</em> in any hour sets the wholesale price (LMP) for everyone.</p>
+    </div>
+
+    <div class="metric-entry" id="mac">
+        <div class="metric-header">
+            <span class="metric-name">Marginal Abatement Cost</span>
+            <span class="metric-unit">$/ton CO&#8322;</span>
+            <span class="metric-aka">MAC</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The incremental cost of avoiding one ton of CO&#8322; emissions</strong> by substituting a clean resource for a fossil one. Measures the cost-effectiveness of decarbonization strategies.</p>
+        <div class="metric-formula">MAC = (Cost<sub>clean</sub> &minus; Cost<sub>fossil</sub>) / CO&#8322; Avoided per MWh</div>
+        <p class="metric-detail">MAC depends on both the clean resource cost and the fossil resource it displaces. Replacing coal (high emissions) yields a lower MAC than replacing gas (lower emissions) for the same clean cost. Common benchmarks: Social Cost of Carbon ~$51&ndash;185/ton, EU ETS ~$60&ndash;100/ton, Direct Air Capture ~$250&ndash;600/ton.</p>
+    </div>
+
+    <div class="metric-entry" id="lmp">
+        <div class="metric-header">
+            <span class="metric-name">LMP</span>
+            <span class="metric-unit">$/MWh</span>
+            <span class="metric-aka">Locational Marginal Price</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The wholesale price of electricity at a specific grid node in a specific hour.</strong> Set by the marginal generator &mdash; the most expensive plant dispatched to meet demand. Every generator on the grid gets paid this price, regardless of their own costs.</p>
+        <p class="metric-detail">LMP has three components: <strong>energy</strong> (marginal generation cost), <strong>congestion</strong> (transmission constraint premium), and <strong>losses</strong> (electrical losses on the wire). In most hours, the energy component dominates and equals the marginal gas plant&rsquo;s fuel + VOM cost.</p>
+        <p class="metric-detail"><strong>Key distinction from LCOE:</strong> LCOE is a plant-level lifetime average. LMP is a system-level hourly clearing price. A plant with $40/MWh LCOE might receive $25/MWh LMP in some hours and $80/MWh in others. Profitability depends on whether average LMP exceeds LCOE over enough hours.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--        RELATIONSHIP DIAGRAM #2             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="diagram-panel">
+        <div class="diagram-title">LCOE vs. $/kW: The Capacity Factor Bridge</div>
+        <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" style="max-width:700px;">
+            <defs>
+                <marker id="ah2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+                    <polygon points="0 0, 7 2.5, 0 5" fill="#0EA5E9"/>
+                </marker>
+            </defs>
+
+            <!-- $/kW box -->
+            <rect x="20" y="70" width="140" height="70" rx="10" fill="rgba(245,158,11,0.1)" stroke="rgba(245,158,11,0.4)" stroke-width="1.5"/>
+            <text x="90" y="98" font-family="Lexend" font-weight="700" font-size="13" fill="#F59E0B" text-anchor="middle">$/kW</text>
+            <text x="90" y="118" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.45)" text-anchor="middle">&ldquo;sticker price&rdquo;</text>
+            <text x="90" y="130" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.35)" text-anchor="middle">market-neutral</text>
+
+            <!-- CRF multiply -->
+            <path d="M160,105 L210,105" stroke="#0EA5E9" stroke-width="1.5" fill="none" marker-end="url(#ah2)"/>
+            <text x="185" y="98" font-family="Courier New" font-size="11" fill="rgba(255,255,255,0.5)" text-anchor="middle">&times; CRF</text>
+
+            <!-- $/kW-yr box -->
+            <rect x="215" y="70" width="130" height="70" rx="10" fill="rgba(139,92,246,0.1)" stroke="rgba(139,92,246,0.35)" stroke-width="1.5"/>
+            <text x="280" y="98" font-family="Lexend" font-weight="700" font-size="13" fill="#A855F7" text-anchor="middle">$/kW-yr</text>
+            <text x="280" y="118" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.45)" text-anchor="middle">annual capital charge</text>
+            <text x="280" y="130" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.35)" text-anchor="middle">+ FOM</text>
+
+            <!-- CF divide -->
+            <path d="M345,105 L410,105" stroke="#0EA5E9" stroke-width="1.5" fill="none" marker-end="url(#ah2)"/>
+            <text x="377" y="96" font-family="Courier New" font-size="11" fill="rgba(255,255,255,0.5)" text-anchor="middle">&divide;</text>
+            <text x="377" y="118" font-family="Plus Jakarta Sans" font-size="9" fill="#EC4899" text-anchor="middle">CF &times; 8,760</text>
+
+            <!-- $/MWh capital box -->
+            <rect x="415" y="70" width="130" height="70" rx="10" fill="rgba(14,165,233,0.08)" stroke="rgba(14,165,233,0.3)" stroke-width="1.5"/>
+            <text x="480" y="95" font-family="Lexend" font-weight="700" font-size="12" fill="#38BDF8" text-anchor="middle">$/MWh</text>
+            <text x="480" y="112" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.45)" text-anchor="middle">capital component</text>
+
+            <!-- + VOM/fuel -->
+            <path d="M545,105 L600,105" stroke="#0EA5E9" stroke-width="1.5" fill="none" marker-end="url(#ah2)"/>
+            <text x="572" y="96" font-family="Courier New" font-size="11" fill="rgba(255,255,255,0.5)" text-anchor="middle">+</text>
+            <text x="572" y="118" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.45)" text-anchor="middle">VOM+Fuel</text>
+
+            <!-- LCOE box -->
+            <rect x="605" y="62" width="80" height="86" rx="10" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="2"/>
+            <text x="645" y="100" font-family="Lexend" font-weight="700" font-size="15" fill="#0EA5E9" text-anchor="middle">LCOE</text>
+            <text x="645" y="118" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.45)" text-anchor="middle">$/MWh</text>
+            <text x="645" y="140" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.35)" text-anchor="middle">full cost</text>
+
+            <!-- Annotations -->
+            <text x="90" y="170" font-family="Plus Jakarta Sans" font-size="9.5" fill="rgba(255,255,255,0.35)" text-anchor="middle">Pure capex</text>
+            <text x="90" y="183" font-family="Plus Jakarta Sans" font-size="9.5" fill="rgba(255,255,255,0.35)" text-anchor="middle">No market assumptions</text>
+
+            <text x="645" y="175" font-family="Plus Jakarta Sans" font-size="9.5" fill="rgba(255,255,255,0.35)" text-anchor="middle">Embeds CF, fuel price,</text>
+            <text x="645" y="188" font-family="Plus Jakarta Sans" font-size="9.5" fill="rgba(255,255,255,0.35)" text-anchor="middle">financing, &amp; policy</text>
+
+            <!-- Big arrow showing spectrum -->
+            <line x1="90" y1="200" x2="645" y2="200" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <text x="370" y="215" font-family="Lexend" font-size="9" fill="rgba(255,255,255,0.3)" text-anchor="middle" letter-spacing="0.15em">MARKET-NEUTRAL &rarr; MARKET-EMBEDDED</text>
+        </svg>
+        <p class="diagram-caption">Each step from left to right adds a market-dependent assumption. $/kW is pure construction cost. LCOE bakes in capacity factor, fuel, financing, and sometimes policy incentives.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--          PLANT CHARACTERISTICS             -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="metric-entry" id="capacity-factor">
+        <div class="metric-header">
+            <span class="metric-name">Capacity Factor</span>
+            <span class="metric-unit">%</span>
+            <span class="metric-aka">CF, Utilization Rate</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The fraction of a plant&rsquo;s maximum possible output that it actually produces</strong> over a period. A 100 MW plant at 30% CF produces 30 MW on average, or 262,800 MWh per year.</p>
+        <div class="metric-formula">CF = Actual Generation / (Nameplate Capacity &times; Hours in Period)</div>
+        <p class="metric-detail"><strong>This is the single most important variable in translating $/kW to $/MWh.</strong> It varies by technology, region, and market conditions:</p>
+        <p class="metric-detail">
+        <ul>
+            <li><strong>Nuclear:</strong> 90&ndash;93% &mdash; nearly constant across regions (baseload, must-run)</li>
+            <li><strong>Wind:</strong> 25&ndash;42% &mdash; highly regional (ERCOT best, CAISO weakest)</li>
+            <li><strong>Solar:</strong> 18&ndash;29% &mdash; latitude-driven (ERCOT/CAISO best, NYISO weakest)</li>
+            <li><strong>Gas CCGT:</strong> 40&ndash;85% &mdash; market-dependent (dispatch order determines utilization)</li>
+            <li><strong>Gas CT (peaker):</strong> 5&ndash;15% &mdash; only runs during peak hours</li>
+        </ul>
+        </p>
+        <p class="metric-detail"><strong>The trap:</strong> CF is often treated as a fixed property of the technology, but for dispatchable resources (gas, CCS), it&rsquo;s a market outcome. A gas plant in a market with heavy renewables might achieve 40% CF instead of the 85% assumed in its LCOE calculation &mdash; effectively doubling its per-MWh cost.</p>
+    </div>
+
+    <div class="metric-entry" id="heat-rate">
+        <div class="metric-header">
+            <span class="metric-name">Heat Rate</span>
+            <span class="metric-unit">BTU/kWh</span>
+            <span class="metric-aka">Thermal Efficiency</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The amount of fuel energy (in BTU) needed to produce one kWh of electricity.</strong> Lower is better. Converts fuel price ($/MMBtu) directly to generation fuel cost ($/MWh).</p>
+        <div class="metric-formula">Fuel Cost ($/MWh) = Heat Rate (BTU/kWh) &times; Fuel Price ($/MMBtu) / 1,000</div>
+        <p class="metric-detail">A modern CCGT at 6,400 BTU/kWh is roughly 53% efficient. An older steam turbine at 10,000 BTU/kWh is ~34% efficient. At $3/MMBtu gas, the CCGT spends $19.2/MWh on fuel while the steam turbine spends $30/MWh &mdash; a $10.8/MWh advantage from efficiency alone.</p>
+        <p class="metric-detail"><strong>CCS penalty:</strong> Carbon capture equipment raises a plant&rsquo;s effective heat rate by 25&ndash;30% because the capture process consumes energy. A 6,400 BTU/kWh CCGT becomes ~8,300 BTU/kWh with CCS.</p>
+    </div>
+
+    <div class="metric-entry" id="rte">
+        <div class="metric-header">
+            <span class="metric-name">Round-Trip Efficiency</span>
+            <span class="metric-unit">%</span>
+            <span class="metric-aka">RTE</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The percentage of energy put into a storage system that comes back out.</strong> A battery with 85% RTE returns 0.85 MWh for every 1.0 MWh stored. The 15% loss is heat, friction, and conversion inefficiency.</p>
+        <p class="metric-detail">RTE directly affects the effective cost of stored energy. If charging electricity costs $40/MWh and RTE is 85%, the energy cost component of the discharge is $40/0.85 = $47/MWh before any capital or O&amp;M costs.</p>
+        <p class="metric-detail">Typical values: <strong>Li-ion battery</strong> 85&ndash;90%, <strong>Pumped hydro</strong> 75&ndash;82%, <strong>Iron-air (LDES)</strong> 45&ndash;55%, <strong>Hydrogen</strong> 30&ndash;40%.</p>
+    </div>
+
+    <div class="metric-entry" id="capacity-credit">
+        <div class="metric-header">
+            <span class="metric-name">Capacity Credit</span>
+            <span class="metric-unit">%</span>
+            <span class="metric-aka">ELCC, Effective Load Carrying Capability</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The fraction of a resource&rsquo;s nameplate capacity that can be counted toward meeting peak demand</strong> for resource adequacy purposes. A 100 MW solar farm with 30% capacity credit contributes 30 MW toward the system&rsquo;s reliability requirement.</p>
+        <p class="metric-detail">Capacity credit reflects how reliably a resource produces during the hours when the grid most needs it (typically summer afternoon peaks or winter morning peaks). Thermal plants get high credits (90&ndash;100%) because they can dispatch on demand. Variable renewables get lower credits because their output depends on weather.</p>
+        <p class="metric-detail">Typical values: <strong>Nuclear</strong> ~100%, <strong>Gas CCGT</strong> 90%, <strong>Battery</strong> 90&ndash;95% (duration-limited), <strong>Solar</strong> 30%, <strong>Wind</strong> 10%, <strong>Hydro</strong> 50%.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--        RELATIONSHIP DIAGRAM #3             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="diagram-panel">
+        <div class="diagram-title">Storage Economics: LCOS Components</div>
+        <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="max-width:700px;">
+            <defs>
+                <marker id="ah3" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+                    <polygon points="0 0, 7 2.5, 0 5" fill="#A855F7"/>
+                </marker>
+            </defs>
+
+            <!-- Charging cost -->
+            <rect x="20" y="60" width="130" height="60" rx="8" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)" stroke-width="1.2"/>
+            <text x="85" y="85" font-family="Lexend" font-weight="700" font-size="11" fill="#F59E0B" text-anchor="middle">Charge Cost</text>
+            <text x="85" y="100" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.4)" text-anchor="middle">electricity in ($/MWh)</text>
+
+            <text x="170" y="92" font-family="Courier New" font-size="14" fill="rgba(255,255,255,0.4)" text-anchor="middle">&divide;</text>
+
+            <!-- RTE -->
+            <rect x="190" y="60" width="100" height="60" rx="8" fill="rgba(236,72,153,0.08)" stroke="rgba(236,72,153,0.3)" stroke-width="1.2"/>
+            <text x="240" y="85" font-family="Lexend" font-weight="700" font-size="11" fill="#EC4899" text-anchor="middle">RTE</text>
+            <text x="240" y="100" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.4)" text-anchor="middle">85% or 50%</text>
+
+            <text x="315" y="92" font-family="Courier New" font-size="14" fill="rgba(255,255,255,0.4)" text-anchor="middle">+</text>
+
+            <!-- Capital -->
+            <rect x="335" y="60" width="130" height="60" rx="8" fill="rgba(14,165,233,0.08)" stroke="rgba(14,165,233,0.3)" stroke-width="1.2"/>
+            <text x="400" y="80" font-family="Lexend" font-weight="700" font-size="11" fill="#0EA5E9" text-anchor="middle">Annualized CapEx</text>
+            <text x="400" y="95" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.4)" text-anchor="middle">&divide; cycles &times; capacity</text>
+            <text x="400" y="108" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.4)" text-anchor="middle">+ FOM + Degradation</text>
+
+            <path d="M465,90 L500,90" stroke="#A855F7" stroke-width="1.5" fill="none" marker-end="url(#ah3)"/>
+            <text x="483" y="82" font-family="Courier New" font-size="14" fill="rgba(255,255,255,0.4)" text-anchor="middle">=</text>
+
+            <!-- LCOS -->
+            <rect x="505" y="50" width="100" height="80" rx="10" fill="rgba(139,92,246,0.12)" stroke="#A855F7" stroke-width="2"/>
+            <text x="555" y="85" font-family="Lexend" font-weight="700" font-size="15" fill="#A855F7" text-anchor="middle">LCOS</text>
+            <text x="555" y="103" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(255,255,255,0.45)" text-anchor="middle">$/MWh out</text>
+
+            <!-- Annotation -->
+            <text x="350" y="160" font-family="Plus Jakarta Sans" font-size="10" fill="rgba(255,255,255,0.3)" text-anchor="middle">Low RTE multiplies charging losses. 50% RTE means you need 2 MWh in for every 1 MWh out.</text>
+        </svg>
+        <p class="diagram-caption">Storage costs combine the capital cost of the hardware, the cost of charging electricity (inflated by efficiency losses), and degradation from repeated cycling.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--             FINANCIAL METRICS              -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="metric-entry" id="crf">
+        <div class="metric-header">
+            <span class="metric-name">Capital Recovery Factor</span>
+            <span class="metric-unit">ratio</span>
+            <span class="metric-aka">CRF, Annuity Factor</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The fraction of total capital cost that must be recovered each year</strong> to repay investment plus interest over the plant&rsquo;s economic life. Converts a one-time $/kW cost into an annual $/kW-yr stream.</p>
+        <div class="metric-formula">CRF = r(1+r)<sup>n</sup> / [(1+r)<sup>n</sup> &minus; 1]</div>
+        <p class="metric-detail">Where <strong>r</strong> = discount rate (WACC) and <strong>n</strong> = economic life in years. Typical values: ~8% for a 25-year plant at 7% WACC, ~6.5% for a 30-year plant. A higher CRF (shorter life or higher WACC) means each year must recover more capital, raising LCOE.</p>
+    </div>
+
+    <div class="metric-entry" id="wacc">
+        <div class="metric-header">
+            <span class="metric-name">WACC</span>
+            <span class="metric-unit">%</span>
+            <span class="metric-aka">Weighted Average Cost of Capital, Discount Rate</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The blended cost of debt and equity financing</strong> for a project. Reflects the minimum return investors require to put capital at risk. Feeds directly into CRF and thus into LCOE.</p>
+        <p class="metric-detail">Typical values: 5&ndash;8% nominal for utility-scale renewables in developed markets, 8&ndash;12% for nuclear or emerging markets. A 1 percentage point increase in WACC raises LCOE by roughly 8&ndash;12% for capital-intensive technologies (solar, wind, nuclear) but has minimal effect on fuel-intensive technologies (gas).</p>
+    </div>
+
+    <div class="metric-entry" id="fom">
+        <div class="metric-header">
+            <span class="metric-name">Fixed O&amp;M</span>
+            <span class="metric-unit">$/kW-yr</span>
+            <span class="metric-aka">FOM, Fixed Operating Costs</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>Annual costs that don&rsquo;t vary with how much the plant runs.</strong> Includes maintenance crews, insurance, land lease, property taxes, administrative costs. You pay these whether the plant generates 0 MWh or 8,760 MWh.</p>
+        <p class="metric-detail">FOM is added to annualized capital (CapEx &times; CRF) before dividing by energy output to get LCOE. For capital-light technologies, FOM can be a meaningful share of total cost. Typical: Solar $12&ndash;18/kW-yr, Wind $25&ndash;40/kW-yr, Nuclear $100&ndash;130/kW-yr, Gas CCGT $13&ndash;17/kW-yr.</p>
+    </div>
+
+    <div class="metric-entry" id="vom">
+        <div class="metric-header">
+            <span class="metric-name">Variable O&amp;M</span>
+            <span class="metric-unit">$/MWh</span>
+            <span class="metric-aka">VOM, Variable Operating Costs</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>Costs that scale with generation.</strong> Consumables, wear-and-tear, water treatment, emissions allowances. Excludes fuel (which is tracked separately). Added directly to the per-MWh LCOE calculation.</p>
+        <p class="metric-detail">Typically small relative to capital and fuel: Solar $0&ndash;2/MWh, Wind $0&ndash;3/MWh, Gas CCGT $2&ndash;4/MWh, Nuclear $2&ndash;3/MWh. VOM is part of what generators bid into the market (along with fuel cost) to form the merit order.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--             SYSTEM METRICS                 -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <div class="metric-entry" id="curtailment">
+        <div class="metric-header">
+            <span class="metric-name">Curtailment</span>
+            <span class="metric-unit">MWh or %</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>Clean energy that&rsquo;s available but intentionally wasted</strong> because the grid can&rsquo;t absorb it. Happens when renewable output exceeds demand minus must-run generation and there&rsquo;s no storage capacity left.</p>
+        <p class="metric-detail">Curtailment is an integration cost that LCOE doesn&rsquo;t capture. A solar farm with $40/MWh LCOE that&rsquo;s curtailed 20% of the time effectively costs $50/MWh for the energy that actually gets used. CAISO curtailed ~2.4 million MWh of solar in 2023 &mdash; about 5% of total solar production.</p>
+    </div>
+
+    <div class="metric-entry" id="transmission-adder">
+        <div class="metric-header">
+            <span class="metric-name">Transmission Adder</span>
+            <span class="metric-unit">$/MWh</span>
+            <span class="metric-aka">Wheeling Cost, Delivery Cost</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The cost of moving electricity from where it&rsquo;s generated to where it&rsquo;s consumed.</strong> Includes new line construction (amortized), congestion charges, and line losses. Added on top of LCOE to get delivered cost.</p>
+        <p class="metric-detail">Ranges from $0 (on-site generation) to $20+/MWh for remote renewables requiring long-distance transmission. This is a key hidden cost that makes &ldquo;cheapest LCOE wins&rdquo; misleading &mdash; a wind farm with $30/MWh LCOE plus $15/MWh transmission costs more delivered than a gas plant with $50/MWh LCOE and $0 transmission.</p>
+    </div>
+
+    <div class="metric-entry" id="resource-adequacy">
+        <div class="metric-header">
+            <span class="metric-name">Resource Adequacy</span>
+            <span class="metric-unit">MW or %</span>
+            <span class="metric-aka">RA, Capacity Requirement, Reserve Margin</span>
+        </div>
+        <hr class="metric-divider">
+        <p class="metric-def"><strong>The regulatory requirement to have enough generating capacity available to meet peak demand plus a safety margin</strong> (typically 15%). Ensures the grid doesn&rsquo;t black out during extreme demand events.</p>
+        <p class="metric-detail">RA is priced in <strong>$/kW-yr</strong>, not $/MWh, because you&rsquo;re paying for the plant to be <em>available</em>, not to generate. A peaker gas plant that runs 200 hours/year at a terrible $/MWh LCOE can still be the cheapest way to provide RA because its $/kW-yr availability cost is low. This is the metric where $/kW capacity cost is the right framing &mdash; you&rsquo;re buying insurance, not energy.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--        RELATIONSHIP DIAGRAM #4             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="diagram-panel">
+        <div class="diagram-title">When to Use Which Metric</div>
+        <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" style="max-width:720px;">
+            <!-- Question column -->
+            <text x="20" y="30" font-family="Lexend" font-weight="700" font-size="11" fill="rgba(255,255,255,0.6)" text-anchor="start">QUESTION YOU&rsquo;RE ASKING</text>
+            <text x="460" y="30" font-family="Lexend" font-weight="700" font-size="11" fill="rgba(255,255,255,0.6)" text-anchor="start">USE THIS METRIC</text>
+
+            <line x1="20" y1="40" x2="700" y2="40" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+            <!-- Rows -->
+            <text x="20" y="68" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(255,255,255,0.7)">&ldquo;How much does it cost to build?&rdquo;</text>
+            <rect x="460" y="52" width="130" height="26" rx="5" fill="rgba(245,158,11,0.12)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
+            <text x="525" y="70" font-family="Lexend" font-weight="700" font-size="11" fill="#F59E0B" text-anchor="middle">$/kW CapEx</text>
+
+            <text x="20" y="108" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(255,255,255,0.7)">&ldquo;How much does each MWh of output cost?&rdquo;</text>
+            <rect x="460" y="92" width="130" height="26" rx="5" fill="rgba(14,165,233,0.12)" stroke="rgba(14,165,233,0.3)" stroke-width="1"/>
+            <text x="525" y="110" font-family="Lexend" font-weight="700" font-size="11" fill="#0EA5E9" text-anchor="middle">LCOE $/MWh</text>
+
+            <text x="20" y="148" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(255,255,255,0.7)">&ldquo;What does stored energy cost per MWh out?&rdquo;</text>
+            <rect x="460" y="132" width="130" height="26" rx="5" fill="rgba(139,92,246,0.12)" stroke="rgba(139,92,246,0.3)" stroke-width="1"/>
+            <text x="525" y="150" font-family="Lexend" font-weight="700" font-size="11" fill="#A855F7" text-anchor="middle">LCOS $/MWh</text>
+
+            <text x="20" y="188" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(255,255,255,0.7)">&ldquo;What does peak reliability cost?&rdquo;</text>
+            <rect x="460" y="172" width="130" height="26" rx="5" fill="rgba(34,197,94,0.12)" stroke="rgba(34,197,94,0.3)" stroke-width="1"/>
+            <text x="525" y="190" font-family="Lexend" font-weight="700" font-size="11" fill="#22C55E" text-anchor="middle">$/kW-yr RA</text>
+
+            <text x="20" y="228" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(255,255,255,0.7)">&ldquo;What will the market pay for this MWh?&rdquo;</text>
+            <rect x="460" y="212" width="130" height="26" rx="5" fill="rgba(245,158,11,0.12)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
+            <text x="525" y="230" font-family="Lexend" font-weight="700" font-size="11" fill="#F59E0B" text-anchor="middle">LMP $/MWh</text>
+        </svg>
+    </div>
+
+    <a href="reference.html" class="back-link"><span>&larr;</span> Back to Reference Library</a>
+
+</article>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="reference.html">Reference Library</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <p class="footer-note">The 8,760 Problem &mdash; Reference Library</p>
+</footer>
+<div class="bottom-banner"></div>
+
+<script>
+// Smooth scroll for glossary links
+document.querySelectorAll('.glossary-links a').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+        var id = this.getAttribute('href');
+        if (id && id.startsWith('#')) {
+            e.preventDefault();
+            var target = document.querySelector(id);
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+});
+</script>
+
+</body>
+</html>
