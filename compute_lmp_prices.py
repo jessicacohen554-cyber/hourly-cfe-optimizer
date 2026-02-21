@@ -83,21 +83,24 @@ FUEL_PRICES = {
 }
 
 # Capacity shares within fossil fleet (fraction of total fossil capacity)
-# Derived from EIA 860 — installed capacity shares by fuel type within each ISO
+# PJM: Monitoring Analytics 2024 SOM — coal 37.8/130.6=0.29, gas 88.8/130.6=0.68, oil 4.0/130.6=0.03
+# PJM gas split: ~55% CCGT (~48.8 GW), ~45% CT (~40.0 GW) per SOM CC vs peaker breakdown
+# Others: EIA 860 cross-referenced with ISO-specific capacity reports
 FOSSIL_CAPACITY_SHARES = {
     'CAISO': {'coal_steam': 0.00, 'gas_ccgt': 0.55, 'gas_ct': 0.40, 'oil_ct': 0.05},
     'ERCOT': {'coal_steam': 0.22, 'gas_ccgt': 0.50, 'gas_ct': 0.28, 'oil_ct': 0.00},
-    'PJM':   {'coal_steam': 0.23, 'gas_ccgt': 0.48, 'gas_ct': 0.25, 'oil_ct': 0.04},
+    'PJM':   {'coal_steam': 0.29, 'gas_ccgt': 0.37, 'gas_ct': 0.31, 'oil_ct': 0.03},
     'NYISO': {'coal_steam': 0.00, 'gas_ccgt': 0.45, 'gas_ct': 0.50, 'oil_ct': 0.05},
     'NEISO': {'coal_steam': 0.00, 'gas_ccgt': 0.52, 'gas_ct': 0.42, 'oil_ct': 0.06},
 }
 
-# Actual installed fossil capacity (MW) — EIA 860 2024
-# Used instead of demand-based estimation for more accurate stack sizing
+# Actual installed fossil capacity (MW)
+# PJM: Monitoring Analytics 2024 SOM (Dec 31, 2024): gas 88.8 GW + coal 37.8 GW + oil 4.0 GW = 130.6 GW
+# Others: EIA 860M (2024) cross-referenced with ISO capacity reports
 INSTALLED_FOSSIL_MW = {
-    'CAISO': 47_000,   # ~47 GW gas fleet
-    'ERCOT': 80_000,   # ~80 GW total fossil (gas + coal)
-    'PJM':   140_000,  # ~140 GW fossil (gas ~90, coal ~40, oil ~10)
+    'CAISO': 47_000,   # ~47 GW gas fleet (no coal)
+    'ERCOT': 80_000,   # ~80 GW total fossil (gas ~55, coal ~18, oil ~7)
+    'PJM':   130_600,  # 130.6 GW fossil — SOM: gas 88.8 + coal 37.8 + oil 4.0
     'NYISO': 28_000,   # ~28 GW fossil (mostly gas)
     'NEISO': 16_000,   # ~16 GW fossil (mostly gas)
 }
