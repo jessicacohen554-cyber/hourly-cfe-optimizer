@@ -1204,6 +1204,45 @@ CCS cost is controlled by two independent toggles: **CCS Cost** (L/M/H maturity)
 7. **LCOS** = annualized capital cost of built capacity / actual MWh dispatched — same utilization penalty as battery
 8. Seasonal shifting: captures week-to-week and seasonal patterns batteries cannot
 
+### 6.3 Storage Grid Refinement — Sub-Percent Granularity (Decision: Feb 21, 2026)
+
+**Problem identified**: The original storage sweep grid `[0, 2, 5, 8, 10, 15, 20]` (% of annual demand) had a blind spot. Battery4 and Battery8 max SOC never exceeds ~1.0% of annual demand even under peak-stress conditions (high RE, low CF, max procurement, >90% targets). The jump from 0% → 2% skipped the entire range where batteries actually saturate, meaning the cost optimizer never tested right-sized battery configurations. This systematically overpriced storage (paying for 4-20× idle capacity) and biased the optimizer toward avoiding batteries when properly-sized batteries could be cost-competitive.
+
+**Empirical saturation thresholds** (max SOC as % of annual demand, unconstrained capacity, high-RE stress mixes at 97.5-99% targets):
+
+| ISO | Bat4 (4hr) 90% Sat | Bat8 (8hr) 90% Sat | LDES (100hr) |
+|-----|---------------------|---------------------|--------------|
+| CAISO | 0.577% | 0.577% | >50% (always saturated) |
+| ERCOT | 0.663% | 0.663% | >50% |
+| PJM | **1.155%** | **1.155%** | >50% |
+| NYISO | 0.922% | 0.922% | >50% |
+| NEISO | 0.975% | 0.975% | >50% |
+
+**Root cause**: Battery daily surplus/gap is small relative to annual demand (~0.5% of annual demand on peak days). The 4hr/8hr durations provide sufficient power headroom that power rating never binds — only energy capacity matters. PJM is the binding case due to high-wind mixes at 99% creating larger daily swings.
+
+**LDES is fundamentally different**: Multi-day accumulation over 7-day windows means LDES fills to capacity even at 20% of annual demand. LDES is capacity-hungry through the entire tested range. Fine granularity for LDES is about optimizing the marginal cost/benefit tradeoff, not finding saturation.
+
+**Refined storage grids** — 0.1% intervals below max saturation, then coarser above:
+
+```python
+# Bat4: 0.1% intervals to 1.5% (covers PJM binding case + margin), then coarser
+batt_levels  = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]  # 20 levels
+
+# Bat8: identical physics (same surplus, duration only affects power limit which never binds)
+batt8_levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]  # 20 levels
+
+# LDES: 0.5% intervals to 2.5% (marginal value optimization), then coarser
+ldes_levels  = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]  # 11 levels
+```
+
+**Combo count**: 20 × 20 × 11 = **4,400** storage combos per mix (vs. old 7³ = 343 → **12.8×** increase).
+
+**Implementation notes**:
+- Storage levels change from integer to float → parquet schema must use `pa.float64()` for `battery_dispatch_pct`, `battery8_dispatch_pct`, `ldes_dispatch_pct`
+- All downstream code (Step 2 EF, Step 3 cost, Step 4 postprocess, dashboard) must handle float storage values
+- Existing cache with integer storage values must be preserved and converted on merge
+- The compute increase (12.8×) is offset by the fact that most storage combos will hit early-stopping (oversized configs produce no additional dispatch)
+
 ---
 
 ## 7. CO2 & Abatement
