@@ -469,10 +469,9 @@ class PJMPriceModel(PriceModel):
         self.dq_scarcity_max = 165.0
         # Low-demand: PJM ~200 negative price hours
         self.dq_low_percentile = 9
-        self.dq_low_floor = -30.0
+        self.dq_low_floor = -25.0           # shallower than -30 for less vol
         self.dq_low_exponent = 1.8
-        # Mid-low: P9-P70 range gets aggressive compression (off-peak baseload)
-        # This pulls P10 and off-peak down without creating more negative hours
+        # Mid-low: P9-P70 — compress off-peak toward baseload pricing
         self.dq_midlow_percentile = 70
         self.dq_midlow_discount = 0.55
 
