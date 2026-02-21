@@ -960,7 +960,7 @@ def get_seed_combos(hydro_cap):
 
 def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                        prev_pruning=None, cross_feasible_mixes=None,
-                       flush_callback=None):
+                       flush_callback=None, storage_levels=None):
     """Find ALL feasible solutions for a single threshold × ISO.
 
     Uses cross-threshold pruning: mixes that were infeasible at a lower threshold
@@ -996,12 +996,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     ldes_eff = LDES_EFFICIENCY
     ldes_window_hours = LDES_WINDOW_DAYS * 24
 
-    # Storage levels — coarse 0.25% sweep to identify saturation range.
-    # Batteries saturate at <1% of annual demand (daily/2-day cycling).
-    # Cap per-mix via energy-based ceiling; levels above cap auto-skipped.
-    batt_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
-    batt8_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0]
-    ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
+    # Storage levels — either from two-phase adaptive sweep (storage_levels param)
+    # or default coarse 0.25% for initial pass.
+    if storage_levels is not None:
+        batt_levels = storage_levels['bat4']
+        batt8_levels = storage_levels['bat8']
+        ldes_levels = storage_levels['ldes']
+    else:
+        # Default: coarse 0.25% sweep (Phase 1 of two-phase adaptive approach)
+        batt_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
+        batt8_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0]
+        ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
 
     # Curtailment frequency threshold: daily-cycle batteries need 150+ surplus days
     MIN_SURPLUS_DAYS_FOR_BATTERY = 150
@@ -1613,121 +1618,168 @@ def process_iso(args):
     # can be injected into higher thresholds without re-computation.
     all_found_solutions = []
 
-    prev_pruning = None
-    for threshold in THRESHOLDS:
-        t_str = str(threshold)
+    # ════════════════════════════════════════════════════════════════
+    # TWO-PHASE ADAPTIVE STORAGE SWEEP
+    # Phase 1: Coarse 0.25% sweep → identify saturation range
+    # Phase 2: Fine 0.05% sweep within identified range → merge
+    # ════════════════════════════════════════════════════════════════
 
-        # Skip if done (parquet exists or legacy JSON says so)
-        if _is_threshold_done(iso, threshold) or t_str in legacy_completed:
-            print(f"    {iso} {threshold}%: done — skipping")
-            # Build pruning info + load full solutions for cross-threshold seeding
-            done_path = _threshold_done_path(iso, threshold)
-            if os.path.exists(done_path):
-                try:
-                    done_table = pq.read_table(done_path)
-                    n = done_table.num_rows
-                    if n > 0:
-                        cf = done_table.column('clean_firm').to_pylist()
-                        sol = done_table.column('solar').to_pylist()
-                        wnd = done_table.column('wind').to_pylist()
-                        hyd = done_table.column('hydro').to_pylist()
-                        proc = done_table.column('procurement_pct').to_pylist()
-                        bat = done_table.column('battery_dispatch_pct').to_pylist()
-                        bat8 = (done_table.column('battery8_dispatch_pct').to_pylist()
-                                if 'battery8_dispatch_pct' in done_table.column_names
-                                else [0] * n)
-                        ldes_col = done_table.column('ldes_dispatch_pct').to_pylist()
-                        scores = done_table.column('hourly_match_score').to_pylist()
-                        feasible_keys = set()
-                        min_proc = {}
-                        for j in range(n):
-                            mk = (cf[j], sol[j], wnd[j], hyd[j])
-                            feasible_keys.add(mk)
-                            if mk not in min_proc or proc[j] < min_proc[mk]:
-                                min_proc[mk] = proc[j]
-                            all_found_solutions.append({
-                                'resource_mix': {'clean_firm': cf[j], 'solar': sol[j],
-                                                 'wind': wnd[j], 'hydro': hyd[j]},
-                                'procurement_pct': proc[j],
-                                'battery_dispatch_pct': bat[j],
-                                'battery8_dispatch_pct': bat8[j],
-                                'ldes_dispatch_pct': ldes_col[j],
-                                'hourly_match_score': scores[j],
-                            })
-                        prev_pruning = {
-                            'feasible_mixes': feasible_keys,
-                            'min_proc': min_proc,
-                            'all_mixes': feasible_keys,  # Approximate
-                        }
-                except Exception:
-                    pass
-            continue
+    def _run_threshold_loop(phase_label, storage_levels_override=None):
+        """Run all thresholds with given storage levels. Returns per-threshold results."""
+        nonlocal mix_max_score
+        phase_results = {}  # threshold -> list of candidates
+        prev_prun = None
+        found_solutions = list(all_found_solutions)  # copy for cross-threshold seeding
 
-        # Build cross-feasible set from mix_max_score
-        cross_feasible_mixes = set()
-        if mix_max_score:
-            cross_feasible_mixes = {mk for mk, s in mix_max_score.items() if s >= threshold}
+        for threshold in THRESHOLDS:
+            t_str = str(threshold)
 
-        t_start = time.time()
-        feasible, pruning_info = optimize_threshold(
-            iso, threshold, demand_arr, supply_matrix, hydro_cap,
-            prev_pruning=prev_pruning, cross_feasible_mixes=cross_feasible_mixes)
-        prev_pruning = pruning_info
+            # Build cross-feasible set from mix_max_score
+            cross_feas = set()
+            if mix_max_score:
+                cross_feas = {mk for mk, s in mix_max_score.items() if s >= threshold}
 
-        # ── Cross-threshold seeding: inject qualifying solutions from
-        #    lower thresholds. Mixes that scored >= current threshold at a
-        #    lower threshold are injected directly (their Phase 1b was
-        #    skipped via cross_skip, so the known result is carried forward).
-        if all_found_solutions:
-            existing_keys = set()
+            t_start = time.time()
+            feasible, prun_info = optimize_threshold(
+                iso, threshold, demand_arr, supply_matrix, hydro_cap,
+                prev_pruning=prev_prun, cross_feasible_mixes=cross_feas,
+                storage_levels=storage_levels_override)
+            prev_prun = prun_info
+
+            # Cross-threshold seeding
+            if found_solutions:
+                existing_keys = set()
+                for c in feasible:
+                    mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
+                           c['resource_mix']['wind'], c['resource_mix']['hydro'])
+                    existing_keys.add((mk, c['procurement_pct'], c['battery_dispatch_pct'],
+                                        c.get('battery8_dispatch_pct', 0), c['ldes_dispatch_pct']))
+                seeded = 0
+                for c in found_solutions:
+                    if c['hourly_match_score'] >= threshold:
+                        mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
+                               c['resource_mix']['wind'], c['resource_mix']['hydro'])
+                        key = (mk, c['procurement_pct'], c['battery_dispatch_pct'],
+                                c.get('battery8_dispatch_pct', 0), c['ldes_dispatch_pct'])
+                        if key not in existing_keys:
+                            feasible.append(c)
+                            existing_keys.add(key)
+                            seeded += 1
+                if seeded > 0:
+                    print(f"      Seeded {seeded:,} solutions from lower thresholds")
+
+            # Accumulate
             for c in feasible:
                 mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
                        c['resource_mix']['wind'], c['resource_mix']['hydro'])
-                existing_keys.add((mk, c['procurement_pct'], c['battery_dispatch_pct'],
-                                    c.get('battery8_dispatch_pct', 0), c['ldes_dispatch_pct']))
-            seeded = 0
-            for c in all_found_solutions:
-                if c['hourly_match_score'] >= threshold:
-                    mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
-                           c['resource_mix']['wind'], c['resource_mix']['hydro'])
-                    key = (mk, c['procurement_pct'], c['battery_dispatch_pct'],
-                            c.get('battery8_dispatch_pct', 0), c['ldes_dispatch_pct'])
-                    if key not in existing_keys:
-                        feasible.append(c)
-                        existing_keys.add(key)
-                        seeded += 1
-            if seeded > 0:
-                print(f"      Seeded {seeded:,} solutions from lower thresholds")
+                s = c['hourly_match_score']
+                if s > mix_max_score.get(mk, 0):
+                    mix_max_score[mk] = s
+            found_solutions.extend(feasible)
 
-        # Accumulate new solutions into mix_max_score + seeding pool
-        for c in feasible:
+            t_elapsed = time.time() - t_start
+            archetypes = set()
+            for c in feasible:
+                archetypes.add(tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES))
+            phase_results[threshold] = feasible
+            print(f"    {iso} {threshold}%: {len(feasible)} solutions "
+                  f"({len(archetypes)} mix archetypes), {t_elapsed:.1f}s")
+
+        return phase_results, found_solutions
+
+    def _clear_iso_checkpoints():
+        """Clear all checkpoint files for this ISO to start a fresh phase."""
+        for threshold in THRESHOLDS:
+            for path in [_threshold_done_path(iso, threshold),
+                         _mix_progress_path(iso, threshold)]:
+                if os.path.exists(path):
+                    os.remove(path)
+        # Also clear legacy JSON checkpoint
+        legacy_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_checkpoint.json')
+        if os.path.exists(legacy_path):
+            os.remove(legacy_path)
+
+    # ── Phase 1: Coarse sweep ──
+    print(f"    {iso}: Phase 1 — Coarse 0.25% storage sweep")
+    _clear_iso_checkpoints()
+
+    coarse_results, coarse_solutions = _run_threshold_loop("coarse")
+
+    # Analyze saturation from coarse results
+    max_bat4 = 0.0
+    max_bat8 = 0.0
+    max_ldes = 0.0
+    for results_list in coarse_results.values():
+        for c in results_list:
+            b4 = c.get('battery_dispatch_pct', 0) or 0
+            b8 = c.get('battery8_dispatch_pct', 0) or 0
+            ld = c.get('ldes_dispatch_pct', 0) or 0
+            if b4 > max_bat4:
+                max_bat4 = b4
+            if b8 > max_bat8:
+                max_bat8 = b8
+            if ld > max_ldes:
+                max_ldes = ld
+
+    print(f"    {iso}: Coarse saturation — bat4={max_bat4:.2f}%, bat8={max_bat8:.2f}%, ldes={max_ldes:.1f}%")
+
+    # ── Phase 2: Fine sweep within saturation range ──
+    # Generate 0.05% steps from 0 to (max + 0.25% margin)
+    fine_bat4_max = max_bat4 + 0.25
+    fine_bat8_max = max_bat8 + 0.25
+    fine_bat4 = [0] + [round(x * 0.05, 2) for x in range(1, int(fine_bat4_max / 0.05) + 1)]
+    fine_bat8 = [0] + [round(x * 0.05, 2) for x in range(1, int(fine_bat8_max / 0.05) + 1)]
+    # LDES: keep coarse (0.5% steps) — less sensitive to granularity
+    fine_ldes = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
+
+    fine_levels = {'bat4': fine_bat4, 'bat8': fine_bat8, 'ldes': fine_ldes}
+    print(f"    {iso}: Phase 2 — Fine sweep: bat4={len(fine_bat4)} levels (0-{fine_bat4[-1]:.2f}%), "
+          f"bat8={len(fine_bat8)} levels (0-{fine_bat8[-1]:.2f}%)")
+
+    # Clear ALL checkpoints for fresh fine sweep
+    _clear_iso_checkpoints()
+
+    # Seed with coarse solutions
+    all_found_solutions.extend(coarse_solutions)
+
+    fine_results, fine_solutions = _run_threshold_loop("fine", fine_levels)
+
+    # ── Merge coarse + fine results per threshold ──
+    for threshold in THRESHOLDS:
+        t_str = str(threshold)
+        coarse_cands = coarse_results.get(threshold, [])
+        fine_cands = fine_results.get(threshold, [])
+
+        # Dedup by full key
+        seen = set()
+        merged = []
+        for c in coarse_cands + fine_cands:
             mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
                    c['resource_mix']['wind'], c['resource_mix']['hydro'])
-            s = c['hourly_match_score']
-            if s > mix_max_score.get(mk, 0):
-                mix_max_score[mk] = s
-        all_found_solutions.extend(feasible)
-        t_elapsed = time.time() - t_start
+            key = (mk, c['procurement_pct'], c.get('battery_dispatch_pct', 0),
+                    c.get('battery8_dispatch_pct', 0), c.get('ldes_dispatch_pct', 0))
+            if key not in seen:
+                merged.append(c)
+                seen.add(key)
 
         archetypes = set()
-        for c in feasible:
+        for c in merged:
             archetypes.add(tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES))
 
         iso_results['thresholds'][t_str] = {
-            'candidates': feasible,
-            'candidate_count': len(feasible),
+            'candidates': merged,
+            'candidate_count': len(merged),
             'mix_archetypes': len(archetypes),
-            'elapsed_seconds': round(t_elapsed, 2),
         }
-        print(f"    {iso} {threshold}%: {len(feasible)} solutions "
-              f"({len(archetypes)} mix archetypes), {t_elapsed:.1f}s")
 
-        # Save done parquet (also cleans up progress file)
-        _save_threshold_done(iso, threshold, feasible)
-
-        # Append to interim cache + legacy JSON checkpoint for backward compat
-        append_threshold_to_cache(iso, threshold, feasible)
+        # Save final merged results
+        _save_threshold_done(iso, threshold, merged)
+        append_threshold_to_cache(iso, threshold, merged)
         save_checkpoint(iso, iso_results, t_str)
+
+    total_solutions = sum(
+        len(t.get('candidates', [])) for t in iso_results['thresholds'].values())
+    print(f"    {iso}: Merged total: {total_solutions:,} solutions")
 
     iso_elapsed = time.time() - iso_start
     print(f"  {iso} completed in {iso_elapsed:.1f}s")
