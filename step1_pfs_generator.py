@@ -121,13 +121,16 @@ THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 # Threshold-adaptive procurement bounds (Decision 3C, expanded)
 # 90-99%: capped at 250% per user direction (high enough for extreme renewables,
 # but not wastefully wide). 100%: pushed to 500% for perfect hourly matching.
+# Procurement bounds — raised for lower thresholds to allow higher RE saturation
+# with storage. A pure solar mix at 250% procurement + right-sized battery can
+# hit 80%+ targets — the old caps (150-200%) blocked this solution space.
 PROCUREMENT_BOUNDS = {
-    50:   (50, 150),
-    60:   (60, 150),
-    70:   (70, 175),
-    75:   (75, 200),
-    80:   (80, 200),
-    85:   (85, 225),
+    50:   (50, 200),
+    60:   (60, 225),
+    70:   (70, 250),
+    75:   (75, 250),
+    80:   (80, 250),
+    85:   (85, 250),
     87.5: (87, 250),
     90:   (90, 250),
     92.5: (92, 250),
@@ -391,6 +394,51 @@ def prepare_numpy_profiles(demand_norm, supply_profiles):
 # ══════════════════════════════════════════════════════════════════════════════
 
 @njit(cache=True)
+def _compute_storage_caps(demand, supply_row, procurement,
+                          batt4_duration, batt8_duration, ldes_duration):
+    """Compute max useful capacity and curtailment frequency for storage screening.
+
+    Physics-based ceiling: a battery with power = cap/duration can never charge
+    faster than max_hourly_surplus. So max useful cap = max_hourly_surplus × duration.
+
+    Curtailment frequency: counts days with non-trivial surplus. Daily-cycle
+    batteries need FREQUENT curtailment to be useful — a mix with 300+ surplus
+    days is a battery candidate; one with <30 is not worth the dispatch cost.
+
+    Returns: (bat4_cap, bat8_cap, ldes_cap, has_curtailment, surplus_days)
+        bat4_cap: max useful bat4 capacity (normalized units)
+        bat8_cap: max useful bat8 capacity (same)
+        ldes_cap: max useful LDES capacity (same)
+        has_curtailment: True if any hour has surplus > 0
+        surplus_days: number of days with surplus > 0.1% of daily demand
+    """
+    max_hourly_surplus = 0.0
+    has_curtailment = False
+    surplus_days = 0
+    daily_demand_avg = 1.0 / 365.0  # normalized annual demand = 1.0
+    surplus_threshold = daily_demand_avg * 0.001  # 0.1% of daily demand
+
+    for day in range(365):
+        ds = day * 24
+        day_surplus = 0.0
+        for h in range(24):
+            s = procurement * supply_row[ds + h] - demand[ds + h]
+            if s > 0:
+                day_surplus += s
+                if s > max_hourly_surplus:
+                    max_hourly_surplus = s
+                has_curtailment = True
+        if day_surplus > surplus_threshold:
+            surplus_days += 1
+
+    bat4_cap = max_hourly_surplus * batt4_duration
+    bat8_cap = max_hourly_surplus * batt8_duration
+    ldes_cap = max_hourly_surplus * ldes_duration
+
+    return bat4_cap, bat8_cap, ldes_cap, has_curtailment, surplus_days
+
+
+@njit(cache=True)
 def _score_with_all_storage(demand, supply_row, procurement,
                             batt_capacity, batt_power, batt_eff,
                             batt8_capacity, batt8_power, batt8_eff,
@@ -452,14 +500,22 @@ def _score_with_all_storage(demand, supply_row, procurement,
                     available -= discharge
                     residual_gap[ds + h] -= discharge
 
-    # Phase 2: Battery 8hr daily cycle on post-4hr residual
+    # Phase 2: Battery 8hr on 2-day (48hr) window cycle on post-4hr residual
+    # 8hr batteries cycle ~200×/year (~every 1.8 days), not daily.
+    # Using 2-day windows allows accumulating surplus across 2 days before
+    # discharging, better reflecting actual 8hr battery operations.
     batt8_dispatched = 0.0
     if batt8_capacity > 0:
-        for day in range(365):
-            ds = day * 24
+        batt8_window = 48  # 2-day window
+        n_win8 = (8760 + batt8_window - 1) // batt8_window
+        for w in range(n_win8):
+            ws = w * batt8_window
+            we = ws + batt8_window
+            if we > 8760:
+                we = 8760
             stored = 0.0
-            for h in range(24):
-                s = residual_surplus[ds + h]
+            for h in range(ws, we):
+                s = residual_surplus[h]
                 if s > 0 and stored < batt8_capacity:
                     charge = s
                     if charge > batt8_power:
@@ -468,10 +524,10 @@ def _score_with_all_storage(demand, supply_row, procurement,
                     if charge > remaining:
                         charge = remaining
                     stored += charge
-                    residual_surplus[ds + h] -= charge
+                    residual_surplus[h] -= charge
             available = stored * batt8_eff
-            for h in range(24):
-                g = residual_gap[ds + h]
+            for h in range(ws, we):
+                g = residual_gap[h]
                 if g > 0 and available > 0:
                     discharge = g
                     if discharge > batt8_power:
@@ -480,7 +536,7 @@ def _score_with_all_storage(demand, supply_row, procurement,
                         discharge = available
                     batt8_dispatched += discharge
                     available -= discharge
-                    residual_gap[ds + h] -= discharge
+                    residual_gap[h] -= discharge
 
     # Phase 3: LDES multi-day rolling window on post-battery residual
     ldes_dispatched = 0.0
@@ -740,10 +796,15 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     ldes_eff = LDES_EFFICIENCY
     ldes_window_hours = LDES_WINDOW_DAYS * 24
 
-    # Storage levels to sweep (all thresholds get full sweep — no pruning)
-    batt_levels = [0, 2, 5, 8, 10, 15, 20]
-    batt8_levels = [0, 2, 5, 8, 10, 15, 20]
-    ldes_levels = [0, 2, 5, 8, 10, 15, 20]
+    # Storage levels to sweep — sub-percent granularity below saturation threshold.
+    # Battery4/8 saturate at ~1.2% of annual demand (PJM binding case). LDES never
+    # saturates (multi-day accumulation). Fine granularity finds right-sized capacity
+    # to maximize utilization and minimize LCOS.
+    batt_levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                   1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]
+    batt8_levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                    1.0, 1.1, 1.2, 1.5, 2.0, 2.5, 5, 10, 15, 20]
+    ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]
 
     # ── Phase 1: Coarse grid at 5% step ──
     combos_5 = generate_4d_combos(hydro_cap, step=5)
@@ -894,8 +955,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     add_candidate(combos_5[i], min_proc, 0, 0, 0, score)
                     mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), min_proc)
                     feasible_mix_keys.add(mix_key)
-            elif max_score >= target - 0.25:
-                # Near-miss: candidate for storage sweep in Phase 1b
+            elif max_score >= target - 0.40:
+                # Near-miss: candidate for storage sweep in Phase 1b.
+                # Wide 40% window allows high-VRE mixes with substantial battery
+                # potential (e.g., pure solar at 45% match → battery can bridge gap).
                 if mix_key not in cross_skip:
                     near_miss_mixes[i] = max(near_miss_mixes.get(i, 0), max_score)
 
@@ -913,10 +976,21 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                            mix_min_proc_data=mix_min_proc)
 
     # Phase 1b: Storage sweep on near-miss mixes
-    # For each (mix, storage_config), sweep procurement upward with early stopping.
-    # Triple-nested: battery4 × battery8 × LDES (dispatch order: 4hr → 8hr → LDES).
-    # All battery8 and LDES levels are tested for each mix — they have independent
-    # cost toggles in Step 3, so different configs may be optimal at different prices.
+    # OPTIMIZED with three key efficiency strategies:
+    #
+    # 1. CURTAILMENT-MW CAP: For each (mix, max_procurement), find the max hourly
+    #    surplus (curtailment). A battery with power = cap/duration can never charge
+    #    faster than this. So max_useful_cap = max_hourly_surplus × duration.
+    #    Any capacity above this physically cannot fill — skip those levels.
+    #    This is tighter than SOC-based screening especially for bat4 (4hr → ~2× tighter).
+    #
+    # 2. DOMINANCE PRUNING: Within each storage type's sweep, once a level achieves
+    #    the target, higher levels are dominated (same target met with more idle
+    #    capacity = higher LCOS). Stop searching higher levels.
+    #
+    # 3. CURTAILMENT GUARD: No surplus at max procurement → no storage can help.
+    #
+    # Dispatch order remains: battery4 → battery8 → LDES (cheapest first).
     near_miss_list = sorted(near_miss_mixes.keys())
     phase1b_start = resume_cursor if resume_phase == '1b' else 0
     if resume_phase not in ('1a', '1b'):
@@ -928,22 +1002,88 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         mix = combos_5[i]
         mix_key = (int(mix[0]), int(mix[1]), int(mix[2]), int(mix[3]))
 
-        # Full storage combos: battery4 × battery8 × LDES
-        # Binary search procurement per (mix, storage) combo
+        if mix_key in cross_skip:
+            continue
+
         max_pf = proc_levels[-1] / 100.0
-        for bp in batt_levels:
+
+        # ── CURTAILMENT-MW CAP ──
+        # max_hourly_surplus × duration = max useful battery capacity.
+        # A battery can never charge faster than its power rating (cap/duration),
+        # so capacity beyond max_hourly_surplus × duration is physically impossible to fill.
+        bat4_cap_ceil, bat8_cap_ceil, ldes_cap_ceil, has_curt, n_surplus_days = \
+            _compute_storage_caps(
+                demand_arr, supply_row, max_pf,
+                BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
+
+        if not has_curt:
+            continue  # No curtailment to harness
+
+        # Convert to % and filter levels (+ 10% margin for procurement variation)
+        bat4_max_pct = bat4_cap_ceil * 100.0 * 1.1
+        bat8_max_pct = bat8_cap_ceil * 100.0 * 1.1
+        ldes_max_pct = ldes_cap_ceil * 100.0 * 1.1
+
+        # Curtailment frequency filter: daily-cycle batteries need frequent surplus.
+        # If fewer than 30 days have non-trivial surplus, batteries can't cycle enough
+        # to justify capacity — skip bat4/bat8, only try LDES (which accumulates
+        # across multi-day windows and can use infrequent but large surpluses).
+        MIN_SURPLUS_DAYS_FOR_BATTERY = 150
+        if n_surplus_days >= MIN_SURPLUS_DAYS_FOR_BATTERY:
+            eff_batt_levels = [bl for bl in batt_levels if bl <= bat4_max_pct or bl == 0]
+            eff_batt8_levels = [bl for bl in batt8_levels if bl <= bat8_max_pct or bl == 0]
+        else:
+            eff_batt_levels = [0]   # Skip batteries — too few surplus days
+            eff_batt8_levels = [0]
+        eff_ldes_levels = [ll for ll in ldes_levels if ll <= ldes_max_pct or ll == 0]
+
+        # Ensure at least one non-zero level if there's curtailment
+        if len(eff_batt_levels) == 1:
+            eff_batt_levels = [0, batt_levels[1]]
+        if len(eff_batt8_levels) == 1:
+            eff_batt8_levels = [0, batt8_levels[1]]
+        if len(eff_ldes_levels) == 1:
+            eff_ldes_levels = [0, ldes_levels[1]]
+
+        # ── TOP-DOWN STORAGE SWEEP ──
+        # Start at the curtailment-MW cap (max useful capacity) and sweep DOWN.
+        # Bigger intervals first, then refine around the feasibility boundary.
+        # This finds the right-sized storage faster than bottom-up and naturally
+        # identifies the minimum capacity needed to hit the target.
+        #
+        # Strategy per storage type:
+        #   1. Test at cap ceiling — if infeasible, skip (even max storage can't help)
+        #   2. Test at 0 — record min_proc without this storage type
+        #   3. Binary-search the level list to find the smallest level that achieves
+        #      the same or lower min_proc as the ceiling
+        #   4. Record solutions at key levels: ceiling, boundary, and 0
+
+        # Reversed level lists for top-down sweep
+        rev_batt = sorted([bl for bl in eff_batt_levels if bl > 0], reverse=True)
+        rev_batt8 = sorted([bl for bl in eff_batt8_levels if bl > 0], reverse=True)
+        rev_ldes = sorted([ll for ll in eff_ldes_levels if ll > 0], reverse=True)
+
+        # Include zero in the sweep lists
+        sweep_batt = [0] + rev_batt[::-1]  # ascending: 0, small, ..., big
+        sweep_batt8 = [0] + rev_batt8[::-1]
+        sweep_ldes = [0] + rev_ldes[::-1]
+
+        for bp in sweep_batt:
             batt_cap = bp / 100.0
-            batt_pow = batt_cap / BATTERY_DURATION_HOURS
-            for b8p in batt8_levels:
+            batt_pow = batt_cap / BATTERY_DURATION_HOURS if batt_cap > 0 else 0
+            prev_bp_proc = 9999
+
+            for b8p in sweep_batt8:
                 batt8_cap = b8p / 100.0
-                batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS
-                for lp in ldes_levels:
+                batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS if batt8_cap > 0 else 0
+                prev_ldes_proc = 9999
+
+                for lp in sweep_ldes:
                     if bp == 0 and b8p == 0 and lp == 0:
                         continue
-                    if mix_key in cross_skip:
-                        continue
                     ldes_cap = lp / 100.0
-                    ldes_pow = ldes_cap / LDES_DURATION_HOURS
+                    ldes_pow = ldes_cap / LDES_DURATION_HOURS if ldes_cap > 0 else 0
+
                     # Check feasibility at max procurement first
                     max_score = _score_with_all_storage(
                         demand_arr, supply_row, max_pf,
@@ -952,6 +1092,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                         ldes_cap, ldes_pow, ldes_eff, ldes_window_hours)
                     if max_score < target:
                         continue  # Infeasible even at max procurement
+
                     # Binary search for minimum feasible procurement
                     lo, hi = 0, len(proc_levels) - 1
                     while lo < hi:
@@ -975,6 +1116,16 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     add_candidate(mix, min_proc, bp, b8p, lp, score)
                     mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), min_proc)
                     feasible_mix_keys.add(mix_key)
+
+                    # LDES dominance: if this LDES level gives same or worse
+                    # min_proc as the previous (higher) level, stop descending
+                    if min_proc >= prev_ldes_proc and prev_ldes_proc < 9999:
+                        break  # Lower LDES can't improve — stop
+                    prev_ldes_proc = min_proc
+
+                # Propagate best from this bat8 level
+                if prev_ldes_proc < prev_bp_proc:
+                    prev_bp_proc = prev_ldes_proc
 
         # Nth-mix checkpoint within Phase 1b
         mixes_done = nm_idx + 1 - phase1b_start
@@ -1022,21 +1173,42 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                     min_proc = proc_levels[lo]
                     score = np.sum(np.minimum(demand_arr, fine_supply[j] * (min_proc / 100.0)))
                     add_candidate(fine_combos[j], min_proc, 0, 0, 0, score)
-                elif max_score_j >= target - 0.15:
-                    # Near-miss refinement: storage sweep with binary search
+                elif max_score_j >= target - 0.30:
+                    # Near-miss refinement: storage sweep with curtailment cap + dominance
                     supply_row_j = fine_supply[j]
-                    for bp in batt_levels:
+
+                    # Curtailment-MW cap + frequency filter for this fine mix
+                    b4c, b8c, lc, has_c, n_sd = _compute_storage_caps(
+                        demand_arr, supply_row_j, max_pf,
+                        BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
+                        LDES_DURATION_HOURS)
+
+                    if not has_c:
+                        continue
+
+                    b4_ceil = b4c * 100.0 * 1.1
+                    b8_ceil = b8c * 100.0 * 1.1
+                    l_ceil = lc * 100.0 * 1.1
+                    if n_sd >= MIN_SURPLUS_DAYS_FOR_BATTERY:
+                        e_bl = [bl for bl in batt_levels if bl <= b4_ceil or bl == 0]
+                        e_b8l = [bl for bl in batt8_levels if bl <= b8_ceil or bl == 0]
+                    else:
+                        e_bl = [0]
+                        e_b8l = [0]
+                    e_ll = [ll for ll in ldes_levels if ll <= l_ceil or ll == 0]
+
+                    for bp in e_bl:
                         batt_cap = bp / 100.0
-                        batt_pow = batt_cap / BATTERY_DURATION_HOURS
-                        for b8p in batt8_levels:
+                        batt_pow = batt_cap / BATTERY_DURATION_HOURS if batt_cap > 0 else 0
+                        for b8p in e_b8l:
                             batt8_cap = b8p / 100.0
-                            batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS
-                            for lp in ldes_levels:
+                            batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS if batt8_cap > 0 else 0
+                            ldes_best_proc = 9999
+                            for lp in e_ll:
                                 if bp == 0 and b8p == 0 and lp == 0:
                                     continue
                                 ldes_cap = lp / 100.0
-                                ldes_pow = ldes_cap / LDES_DURATION_HOURS
-                                # Check max procurement first
+                                ldes_pow = ldes_cap / LDES_DURATION_HOURS if ldes_cap > 0 else 0
                                 max_sc = _score_with_all_storage(
                                     demand_arr, supply_row_j, max_pf,
                                     batt_cap, batt_pow, batt_eff,
@@ -1044,8 +1216,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                                     ldes_cap, ldes_pow, ldes_eff,
                                     ldes_window_hours)
                                 if max_sc < target:
-                                    continue  # Skip infeasible configs
-                                # Binary search for min feasible procurement
+                                    continue
                                 lo, hi = 0, len(proc_levels) - 1
                                 while lo < hi:
                                     mid = (lo + hi) // 2
@@ -1068,6 +1239,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                                     ldes_cap, ldes_pow, ldes_eff,
                                     ldes_window_hours)
                                 add_candidate(fine_combos[j], min_proc, bp, b8p, lp, sc)
+                                # LDES dominance pruning
+                                if min_proc >= ldes_best_proc and ldes_best_proc < 9999:
+                                    break
+                                ldes_best_proc = min(ldes_best_proc, min_proc)
 
     # Build pruning info for next threshold
     # Phase 2 fine combos also contribute to feasibility (update from candidates)
@@ -1513,9 +1688,9 @@ def _save_mix_progress(iso, threshold, candidates, phase, mix_cursor,
             'wind': pa.array([], type=pa.float64()),
             'hydro': pa.array([], type=pa.float64()),
             'procurement_pct': pa.array([], type=pa.int64()),
-            'battery_dispatch_pct': pa.array([], type=pa.int64()),
-            'battery8_dispatch_pct': pa.array([], type=pa.int64()),
-            'ldes_dispatch_pct': pa.array([], type=pa.int64()),
+            'battery_dispatch_pct': pa.array([], type=pa.float64()),
+            'battery8_dispatch_pct': pa.array([], type=pa.float64()),
+            'ldes_dispatch_pct': pa.array([], type=pa.float64()),
             'hourly_match_score': pa.array([], type=pa.float64()),
             'pareto_type': pa.array([], type=pa.string()),
         })
