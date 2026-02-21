@@ -100,7 +100,8 @@
                 { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Cost to Replace', href: 'cost_to_replace.html' },
                 { label: 'New-Build Signals', href: 'newbuild_requirement.html' },
-                { label: 'Wholesale Price Trends', href: 'lmp_trends.html' }
+                { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
+                { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' }
             ]
         },
         {
