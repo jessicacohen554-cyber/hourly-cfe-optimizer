@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Fossil Fuel Deep Dive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; color: #fff; }
+
+/* ===== HERO ===== */
+.hero-section {
+    background: radial-gradient(ellipse at 50% 0%, rgba(30,58,95,0.5) 0%, #0B1120 70%);
+    padding: 80px 24px 48px;
+    text-align: center;
+}
+.hero-inner { max-width: 900px; margin: 0 auto; }
+.hero-kicker {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+    color: #EF4444; margin-bottom: 12px;
+}
+.hero-inner h1 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 2.4rem; font-weight: 800; line-height: 1.15; margin: 0 0 16px;
+    color: #fff;
+}
+.hero-inner h1 .accent { color: #F59E0B; }
+.hero-desc {
+    font-size: 0.95rem; color: rgba(255,255,255,0.65); line-height: 1.7;
+    max-width: 700px; margin: 0 auto 32px;
+}
+.stats-row {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+}
+.stat-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 16px 24px; min-width: 120px; text-align: center;
+}
+.stat-value {
+    font-family: 'Rajdhani', sans-serif; font-size: 1.6rem; font-weight: 700; line-height: 1.1;
+}
+.stat-value.red { color: #EF4444; }
+.stat-value.amber { color: #F59E0B; }
+.stat-value.slate { color: #94A3B8; }
+.stat-value.green { color: #22C55E; }
+.stat-label { font-size: 0.72rem; color: rgba(255,255,255,0.45); margin-top: 4px; font-weight: 500; }
+
+/* ===== NARRATIVE ===== */
+.narrative-section {
+    padding: 48px 24px 32px; text-align: center;
+}
+.narrative-inner {
+    max-width: 740px; margin: 0 auto;
+}
+.narrative-inner h2 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.5rem; font-weight: 700; margin: 0 0 14px; color: #fff;
+}
+.narrative-inner p {
+    font-size: 0.9rem; color: rgba(255,255,255,0.6); line-height: 1.75; margin: 0 0 12px;
+}
+.narrative-inner p strong { color: rgba(255,255,255,0.85); }
+.narrative-inner p em { color: #F59E0B; font-style: normal; font-weight: 500; }
+
+/* ===== CHART SECTIONS ===== */
+.chart-section {
+    padding: 16px 24px 48px;
+}
+.chart-section-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.3fr 1fr; gap: 32px; align-items: start;
+}
+.chart-section-inner.reverse { grid-template-columns: 1fr 1.3fr; }
+.chart-panel {
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(74,144,217,0.2); border-radius: 16px;
+    padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+.chart-panel h3 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.05rem; font-weight: 700; margin: 0 0 4px; color: #fff;
+}
+.chart-panel .chart-subtitle {
+    font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-bottom: 16px;
+}
+.chart-container { position: relative; width: 100%; min-height: 360px; }
+.chart-container canvas { width: 100% !important; }
+
+/* ===== ISO SELECTOR ===== */
+.chart-controls {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap;
+}
+.iso-selector { display: flex; gap: 6px; flex-wrap: wrap; }
+.iso-btn {
+    padding: 7px 18px; border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.6); font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    transition: all 0.3s; min-height: 36px;
+}
+.iso-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); }
+.iso-btn.active { color: #fff; }
+.iso-btn.active[data-iso="PJM"]   { background: rgba(74,144,217,0.25); border-color: #4a90d9; }
+.iso-btn.active[data-iso="ERCOT"] { background: rgba(34,197,94,0.25);  border-color: #22C55E; }
+.iso-btn.active[data-iso="CAISO"] { background: rgba(245,158,11,0.25); border-color: #F59E0B; }
+.iso-btn.active[data-iso="NYISO"] { background: rgba(233,30,99,0.25);  border-color: #E91E63; }
+.iso-btn.active[data-iso="NEISO"] { background: rgba(156,39,176,0.25); border-color: #9C27B0; }
+
+/* ===== GROWTH TOGGLE ===== */
+.growth-toggle {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    font-size: 0.78rem; color: rgba(255,255,255,0.5); font-weight: 500;
+    user-select: none;
+}
+.growth-toggle input[type="checkbox"] { display: none; }
+.toggle-track {
+    width: 36px; height: 20px; border-radius: 10px;
+    background: rgba(255,255,255,0.12); position: relative; transition: background 0.3s;
+    flex-shrink: 0;
+}
+.toggle-track::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(255,255,255,0.5); transition: transform 0.3s, background 0.3s;
+}
+.growth-toggle input:checked + .toggle-track {
+    background: rgba(245,158,11,0.35);
+}
+.growth-toggle input:checked + .toggle-track::after {
+    transform: translateX(16px); background: #F59E0B;
+}
+
+/* ===== NARRATIVE CARD (alongside chart) ===== */
+.narrative-card {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 28px; align-self: start;
+}
+.narrative-card h4 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1rem; font-weight: 700; margin: 0 0 12px; color: #fff;
+}
+.narrative-card p {
+    font-size: 0.84rem; color: rgba(255,255,255,0.55); line-height: 1.7; margin: 0 0 10px;
+}
+.narrative-card p:last-child { margin-bottom: 0; }
+.narrative-card strong { color: rgba(255,255,255,0.8); }
+.insight-badge {
+    display: inline-block; padding: 5px 12px; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 600; margin-top: 8px;
+}
+.insight-badge.red   { background: rgba(239,68,68,0.15); color: #f87171; }
+.insight-badge.amber { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.insight-badge.green { background: rgba(34,197,94,0.15);  color: #4ade80; }
+
+/* ===== CHART LEGEND ===== */
+.chart-legend {
+    display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px;
+    font-size: 0.72rem; color: rgba(255,255,255,0.45);
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-swatch {
+    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+}
+
+/* ===== TAKEAWAY SECTION ===== */
+.takeaway-section {
+    padding: 32px 24px 56px;
+}
+.takeaway-inner {
+    max-width: 740px; margin: 0 auto; text-align: center;
+}
+.takeaway-box {
+    background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 16px; padding: 32px;
+}
+.takeaway-box h3 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.15rem; font-weight: 700; color: #F59E0B; margin: 0 0 12px;
+}
+.takeaway-box p {
+    font-size: 0.88rem; color: rgba(255,255,255,0.6); line-height: 1.7; margin: 0;
+}
+
+/* ===== FOOTER ===== */
+.page-footer {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 32px 24px; text-align: center;
+}
+.footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+.footer-links a { color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.8rem; transition: color 0.3s; }
+.footer-links a:hover { color: rgba(255,255,255,0.7); }
+.footer-note { font-size: 0.72rem; color: rgba(255,255,255,0.25); }
+.bottom-banner { height: 4px; background: linear-gradient(90deg, #F59E0B, #EF4444, #8B5CF6, #3B82F6); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+    .chart-section-inner, .chart-section-inner.reverse {
+        grid-template-columns: 1fr; gap: 20px;
+    }
+    .hero-inner h1 { font-size: 1.8rem; }
+    .chart-container { min-height: 300px; }
+}
+@media (max-width: 600px) {
+    .hero-section { padding: 60px 16px 36px; }
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr; }
+    .hero-inner h1 { font-size: 1.4rem; }
+    .chart-section { padding: 12px 12px 36px; }
+    .chart-panel { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== HERO ========== -->
+<section class="hero-section">
+<div class="hero-inner">
+    <div class="hero-kicker">Analysis</div>
+    <h1>Fossil Fuel <span class="accent">Deep Dive</span></h1>
+    <p class="hero-desc">
+        Not all fossil displacement is created equal. The path from today&rsquo;s grid to 100% clean energy
+        runs through three distinct fuels &mdash; coal, oil, and gas &mdash; each with different CO&#8322;
+        intensities, regional concentrations, and retirement timelines. This page maps the fossil phase-out
+        fuel by fuel, region by region.
+    </p>
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value red">1,049</div>
+            <div class="stat-label">TWh fossil to displace</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value slate">80%</div>
+            <div class="stat-label">Gas share of fossil</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value amber">207</div>
+            <div class="stat-label">TWh coal generation</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value green">~2032</div>
+            <div class="stat-label">Coal fully retired (SBTi)</div>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ========== NARRATIVE: INTRO ========== -->
+<section class="narrative-section">
+<div class="narrative-inner">
+    <h2>The fossil fleet is not one thing</h2>
+    <p>
+        The five ISOs in this study burn very different mixes of fossil fuel. <strong>PJM and ERCOT carry
+        nearly all U.S. coal generation</strong> &mdash; combined 207 TWh, representing the dirtiest and highest-priority
+        displacement target. CAISO and NYISO are almost entirely gas. NEISO has negligible coal but faces
+        winter gas pipeline constraints that shape its decarbonization path.
+    </p>
+    <p>
+        This matters because <em>coal emits 2&ndash;2.5&times; more CO&#8322; per MWh than gas</em>. Displacing
+        coal-heavy regions first delivers the biggest emission reduction per dollar spent. But coal is also
+        concentrated in just two ISOs &mdash; once it&rsquo;s gone, the national challenge shifts entirely to gas.
+    </p>
+</div>
+</section>
+
+<!-- ========== FIGURE 1: REGIONAL FOSSIL SUPPLY STACK ========== -->
+<section class="chart-section">
+<div class="chart-section-inner">
+    <div class="chart-panel">
+        <h3>Today&rsquo;s Fossil Fleet by Region</h3>
+        <div class="chart-subtitle">2025 generation (TWh) &mdash; Coal, Oil, Gas</div>
+        <div class="chart-container" style="min-height:320px;">
+            <canvas id="fossilStackChart"></canvas>
+        </div>
+        <div class="chart-legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span>Coal</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#D97706;"></span>Oil</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span>Gas</span>
+        </div>
+    </div>
+    <div class="narrative-card">
+        <h4>PJM dominates the displacement challenge</h4>
+        <p>
+            At <strong>501 TWh</strong>, PJM&rsquo;s fossil generation is nearly double ERCOT&rsquo;s and
+            almost 5&times; CAISO&rsquo;s. It also holds <strong>67% of all coal generation</strong> across
+            the five ISOs. Any national clean energy strategy must reckon with PJM first.
+        </p>
+        <p>
+            ERCOT&rsquo;s 68 TWh of coal is the other major pocket. Together, PJM + ERCOT account for
+            <strong>99.9% of coal generation</strong> in the study. CAISO, NYISO, and NEISO are
+            functionally gas-only systems.
+        </p>
+        <span class="insight-badge red">Coal: 20% of fossil TWh but ~40% of fossil CO&#8322;</span>
+    </div>
+</div>
+</section>
+
+<!-- ========== NARRATIVE: MERIT ORDER ========== -->
+<section class="narrative-section">
+<div class="narrative-inner">
+    <h2>Coal retires first &mdash; but when depends on demand growth</h2>
+    <p>
+        The model retires fossil fuels in <strong>merit order: coal first, then oil, then gas</strong>.
+        Coal is the dirtiest and most expensive to operate &mdash; it goes first. By the <em>70% clean energy
+        threshold</em>, all coal and oil are fully retired by rule, leaving only gas.
+    </p>
+    <p>
+        But demand growth changes the timeline. With growing electricity demand (data centers, electrification,
+        population), <strong>more total fossil generation is needed at each threshold percentage</strong>.
+        Coal stays on the grid longer, and gas generation can actually <em>increase</em> above today&rsquo;s
+        levels at moderate thresholds before eventually declining. Toggle demand growth below to see the effect.
+    </p>
+</div>
+</section>
+
+<!-- ========== FIGURE 2: FOSSIL RETIREMENT PATHWAY ========== -->
+<section class="chart-section">
+<div class="chart-section-inner reverse">
+    <div class="narrative-card" id="retirementNarrative">
+        <h4 id="retireNarrTitle">PJM: The coal retirement story</h4>
+        <p id="retireNarrBody">
+            PJM&rsquo;s 139 TWh of coal generation is fully displaced by the <strong>~57% clean target</strong>
+            (around 2031 on the SBTi trajectory). With medium demand growth, coal survives until ~63%
+            (2033). Once coal is gone, the remaining 357 TWh of gas must be displaced &mdash; a steeper
+            per-MWh challenge because gas emits less CO&#8322;.
+        </p>
+        <div id="retireNarrBadge">
+            <span class="insight-badge amber">Coal fully retired: ~57% without growth, ~63% with growth</span>
+        </div>
+    </div>
+    <div class="chart-panel">
+        <h3>Fossil Phase-Out &amp; Clean Energy Ramp</h3>
+        <div class="chart-subtitle">Stacked TWh by fuel type across SBTi trajectory &mdash; Medium cost sensitivity</div>
+        <div class="chart-controls">
+            <div class="iso-selector">
+                <button class="iso-btn active" data-iso="PJM">PJM</button>
+                <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
+                <button class="iso-btn" data-iso="CAISO">CAISO</button>
+                <button class="iso-btn" data-iso="NYISO">NYISO</button>
+                <button class="iso-btn" data-iso="NEISO">NEISO</button>
+            </div>
+            <label class="growth-toggle">
+                <input type="checkbox" id="growthToggle">
+                <span class="toggle-track"></span>
+                <span>Demand Growth</span>
+            </label>
+        </div>
+        <div class="chart-container">
+            <canvas id="retirementChart"></canvas>
+        </div>
+        <div class="chart-legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:#22C55E;"></span>Clean Energy</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span>Gas</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#D97706;"></span>Oil</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span>Coal</span>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ========== TAKEAWAY ========== -->
+<section class="takeaway-section">
+<div class="takeaway-inner">
+    <div class="takeaway-box">
+        <h3>The last 30% is the hardest 30%</h3>
+        <p>
+            By 70% clean, all coal and oil are gone. The remaining challenge is entirely gas displacement &mdash;
+            and gas is the cleanest fossil fuel (lowest CO&#8322;/MWh) and most operationally flexible.
+            This is why marginal abatement costs accelerate sharply above 70%: you&rsquo;re displacing a
+            cleaner fuel that&rsquo;s harder to replace with intermittent renewables. It&rsquo;s also why firm
+            clean generation (nuclear, geothermal, CCS) becomes critical at high thresholds.
+        </p>
+    </div>
+</div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Methodology &amp; Paper</a>
+        <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<script src="js/nav.js"></script>
+
+<script>
+// ===== DATA =====
+var THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100];
+
+var YEAR_MAP = {50:2030, 60:2032, 70:2035, 75:2036, 80:2037, 85:2038, 87.5:2039, 90:2040, 92.5:2042, 95:2045, 97.5:2047, 99:2049, 100:2050};
+var YEAR_LABEL = {50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 100:"'50"};
+
+var REGION_COLORS = {
+    CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0'
+};
+
+// Fossil generation TWh (2025 actuals from EIA/eGRID)
+var FOSSIL = {
+    PJM:   { demand: 843.3, coal: 139.09, oil: 4.59, gas: 357.22, cleanPct: 40.6 },
+    ERCOT: { demand: 488.0, coal: 67.58,  oil: 0.00, gas: 195.45, cleanPct: 46.1 },
+    CAISO: { demand: 224.0, coal: 0.00,   oil: 0.60, gas: 114.76, cleanPct: 48.5 },
+    NYISO: { demand: 151.6, coal: 0.00,   oil: 0.15, gas: 92.33,  cleanPct: 39.0 },
+    NEISO: { demand: 115.3, coal: 0.31,   oil: 1.29, gas: 75.07,  cleanPct: 33.5 }
+};
+
+// Medium demand growth rates (annual, from EIA/regional forecasts)
+var GROWTH_RATES = {
+    CAISO: 0.019, ERCOT: 0.035, PJM: 0.024, NYISO: 0.020, NEISO: 0.018
+};
+
+var ISO_ORDER = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO'];
+
+// ===== FOSSIL COMPUTATION =====
+function computeFossilAtThreshold(iso, threshold, withGrowth) {
+    var d = FOSSIL[iso];
+    var gf = 1;
+    if (withGrowth) {
+        var yr = YEAR_MAP[threshold] || 2025;
+        gf = Math.pow(1 + GROWTH_RATES[iso], yr - 2025);
+    }
+    var totalDemand = d.demand * gf;
+    var fossilRemaining = totalDemand * (1 - threshold / 100);
+    var existingFossil = d.coal + d.oil + d.gas;
+    var displaced = existingFossil - fossilRemaining;
+
+    var cr, or_, gr;
+    if (threshold >= 70) {
+        // All coal and oil retired by rule at 70%+
+        cr = 0; or_ = 0;
+        gr = Math.max(0, fossilRemaining);
+    } else if (displaced <= 0) {
+        // Demand growth exceeds displacement — coal/oil at cap, gas GROWS
+        cr = d.coal; or_ = d.oil;
+        gr = Math.max(0, fossilRemaining - d.coal - d.oil);
+    } else {
+        // Merit order: coal first, then oil, then gas
+        var cd = Math.min(d.coal, displaced); displaced -= cd;
+        var od = Math.min(d.oil, displaced);  displaced -= od;
+        var gd = Math.min(d.gas, displaced);
+        cr = d.coal - cd; or_ = d.oil - od; gr = d.gas - gd;
+    }
+    cr = Math.max(0, cr); or_ = Math.max(0, or_); gr = Math.max(0, gr);
+    var clean = totalDemand - cr - or_ - gr;
+    return { coal: cr, oil: or_, gas: gr, clean: clean, demand: totalDemand };
+}
+
+// ===== FIGURE 1: FOSSIL SUPPLY STACK (All ISOs) =====
+var fossilChart = null;
+function buildFossilStack() {
+    var ctx = document.getElementById('fossilStackChart').getContext('2d');
+    var labels = ISO_ORDER;
+    var coalData = [], oilData = [], gasData = [];
+    for (var i = 0; i < labels.length; i++) {
+        var d = FOSSIL[labels[i]];
+        coalData.push(d.coal);
+        oilData.push(d.oil);
+        gasData.push(d.gas);
+    }
+
+    fossilChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Coal', data: coalData,
+                    backgroundColor: 'rgba(220,38,38,0.75)', borderColor: '#DC2626',
+                    borderWidth: 1, borderRadius: 2
+                },
+                {
+                    label: 'Oil', data: oilData,
+                    backgroundColor: 'rgba(217,119,6,0.75)', borderColor: '#D97706',
+                    borderWidth: 1, borderRadius: 2
+                },
+                {
+                    label: 'Gas', data: gasData,
+                    backgroundColor: 'rgba(100,116,139,0.65)', borderColor: '#64748B',
+                    borderWidth: 1, borderRadius: 2
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: {
+                        callback: function(v) { return v + ' TWh'; },
+                        color: 'rgba(255,255,255,0.5)', font: { size: 10 }
+                    },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { color: 'rgba(255,255,255,0.15)' },
+                    title: { display: true, text: 'Annual Generation (TWh)', color: 'rgba(255,255,255,0.35)', font: { size: 10 } }
+                },
+                y: {
+                    stacked: true,
+                    ticks: {
+                        color: 'rgba(255,255,255,0.7)', font: { size: 11, weight: 600 }
+                    },
+                    grid: { display: false },
+                    border: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    display: function(ctx) { return ctx.dataset.data[ctx.dataIndex] > 10; },
+                    color: '#fff', font: { size: 10, weight: 600 },
+                    formatter: function(v) { return Math.round(v); },
+                    anchor: 'center', align: 'center'
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.85)', cornerRadius: 8,
+                    titleFont: { size: 12, weight: 700 }, bodyFont: { size: 11 },
+                    callbacks: {
+                        label: function(item) {
+                            return item.dataset.label + ': ' + Math.round(item.raw) + ' TWh';
+                        },
+                        afterBody: function(items) {
+                            var iso = items[0].label;
+                            var d = FOSSIL[iso];
+                            var total = d.coal + d.oil + d.gas;
+                            return ['Total fossil: ' + Math.round(total) + ' TWh'];
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+// ===== FIGURE 2: RETIREMENT PATHWAY =====
+var retireChart = null;
+var currentISO = 'PJM';
+
+function buildRetirementChart(iso, withGrowth) {
+    var ctx = document.getElementById('retirementChart').getContext('2d');
+
+    var cleanArr = [], gasArr = [], oilArr = [], coalArr = [];
+    for (var i = 0; i < THRESHOLDS.length; i++) {
+        var r = computeFossilAtThreshold(iso, THRESHOLDS[i], withGrowth);
+        cleanArr.push({ x: THRESHOLDS[i], y: parseFloat(r.clean.toFixed(1)) });
+        gasArr.push({ x: THRESHOLDS[i], y: parseFloat(r.gas.toFixed(1)) });
+        oilArr.push({ x: THRESHOLDS[i], y: parseFloat(r.oil.toFixed(1)) });
+        coalArr.push({ x: THRESHOLDS[i], y: parseFloat(r.coal.toFixed(1)) });
+    }
+
+    // Find coal retirement threshold
+    var coalRetireThreshold = null;
+    for (var j = 0; j < THRESHOLDS.length; j++) {
+        if (coalArr[j].y <= 0.5 && FOSSIL[iso].coal > 1) {
+            coalRetireThreshold = THRESHOLDS[j];
+            break;
+        }
+    }
+
+    // Annotation for 70% line
+    var annotations = {
+        line70: {
+            type: 'line', xMin: 70, xMax: 70, yMin: 0,
+            borderColor: 'rgba(239,68,68,0.4)', borderWidth: 1.5, borderDash: [4, 4],
+            label: {
+                display: true, content: 'Coal & oil fully retired',
+                position: 'start', backgroundColor: 'rgba(239,68,68,0.15)',
+                color: '#f87171', font: { size: 9, weight: 600 },
+                padding: { left: 6, right: 6, top: 3, bottom: 3 },
+                borderRadius: 4
+            }
+        }
+    };
+
+    // Check if gas grows above today's level (demand growth effect)
+    var gasToday = FOSSIL[iso].gas;
+    var gasGrowsAt = null;
+    if (withGrowth) {
+        for (var k = 0; k < gasArr.length; k++) {
+            if (gasArr[k].y > gasToday + 1) {
+                gasGrowsAt = THRESHOLDS[k];
+                break;
+            }
+        }
+        if (gasGrowsAt) {
+            annotations.gasGrow = {
+                type: 'line', xMin: gasGrowsAt, xMax: gasGrowsAt, yMin: 0,
+                borderColor: 'rgba(245,158,11,0.4)', borderWidth: 1.5, borderDash: [4, 4],
+                label: {
+                    display: true, content: 'Gas exceeds today',
+                    position: 'end', backgroundColor: 'rgba(245,158,11,0.15)',
+                    color: '#fbbf24', font: { size: 9, weight: 600 },
+                    padding: { left: 6, right: 6, top: 3, bottom: 3 },
+                    borderRadius: 4
+                }
+            };
+        }
+    }
+
+    var c = REGION_COLORS[iso];
+
+    var datasets = [
+        {
+            label: 'Clean Energy', data: cleanArr,
+            backgroundColor: 'rgba(34,197,94,0.55)', borderColor: '#22C55E',
+            borderWidth: 1.5, fill: 'origin', pointRadius: 0, tension: 0.3, order: 4
+        },
+        {
+            label: 'Gas', data: gasArr,
+            backgroundColor: 'rgba(100,116,139,0.55)', borderColor: '#64748B',
+            borderWidth: 1.5, fill: '-1', pointRadius: 0, tension: 0.3, order: 3
+        },
+        {
+            label: 'Oil', data: oilArr,
+            backgroundColor: 'rgba(217,119,6,0.65)', borderColor: '#D97706',
+            borderWidth: 1, fill: '-1', pointRadius: 0, tension: 0.3, order: 2
+        },
+        {
+            label: 'Coal', data: coalArr,
+            backgroundColor: 'rgba(220,38,38,0.65)', borderColor: '#DC2626',
+            borderWidth: 1.5, fill: '-1', pointRadius: 0, tension: 0.3, order: 1
+        }
+    ];
+
+    var maxDemand = withGrowth
+        ? FOSSIL[iso].demand * Math.pow(1 + GROWTH_RATES[iso], 25)
+        : FOSSIL[iso].demand;
+    var yMax = Math.ceil(maxDemand / 100) * 100 + 50;
+
+    if (retireChart) { retireChart.destroy(); retireChart = null; }
+
+    retireChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1000, easing: 'easeOutQuart' },
+            scales: {
+                x: {
+                    type: 'linear', min: 48, max: 101,
+                    stacked: true,
+                    afterBuildTicks: function(axis) {
+                        axis.ticks = [50, 60, 70, 80, 90, 95, 100].map(function(v) { return { value: v }; });
+                    },
+                    ticks: {
+                        callback: function(v) {
+                            return [v + '%', YEAR_LABEL[v] || ''];
+                        },
+                        color: 'rgba(255,255,255,0.5)', font: { size: 10 }, maxRotation: 0
+                    },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { color: 'rgba(255,255,255,0.15)' },
+                    title: { display: true, text: 'Clean Energy Target / SBTi Year', color: 'rgba(255,255,255,0.35)', font: { size: 10 } }
+                },
+                y: {
+                    stacked: true,
+                    min: 0, max: yMax,
+                    ticks: {
+                        callback: function(v) { return v + ' TWh'; },
+                        color: 'rgba(255,255,255,0.5)', font: { size: 10 }
+                    },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { color: 'rgba(255,255,255,0.15)' },
+                    title: { display: true, text: 'Annual Generation (TWh)', color: 'rgba(255,255,255,0.35)', font: { size: 10 } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                datalabels: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.88)', cornerRadius: 8,
+                    titleFont: { size: 11, weight: 700 }, bodyFont: { size: 10 },
+                    callbacks: {
+                        title: function(items) {
+                            var x = items[0].raw.x;
+                            var yr = YEAR_MAP[x];
+                            return x + '% Clean' + (yr ? ' (' + yr + ')' : '');
+                        },
+                        label: function(item) {
+                            if (item.raw.y < 0.1) return null;
+                            return item.dataset.label + ': ' + Math.round(item.raw.y) + ' TWh';
+                        }
+                    },
+                    filter: function(item) { return item.raw.y >= 0.1; }
+                },
+                annotation: { annotations: annotations }
+            }
+        }
+    });
+}
+
+// ===== NARRATIVE UPDATES =====
+var NARRATIVES = {
+    PJM: {
+        title: 'PJM: The coal retirement story',
+        body: 'PJM\u2019s 139 TWh of coal generation is fully displaced by the <strong>~57% clean target</strong> ' +
+              '(around 2031). With medium demand growth (2.4%/yr), coal survives until ~63% (2033). Once coal is gone, ' +
+              'the remaining 357 TWh of gas must be displaced \u2014 a steeper per-MWh challenge because gas emits less CO\u2082.',
+        bodyGrowth: 'With demand growth, PJM\u2019s total demand reaches <strong>~1,350 TWh by 2050</strong>. ' +
+              'Coal survives longer (to ~63%), and gas generation actually stays above today\u2019s level until the ' +
+              '65% threshold. The absolute volume of fossil to displace grows even as the percentage shrinks.',
+        badge: 'Coal fully retired: ~57% without growth, ~63% with growth',
+        badgeClass: 'amber'
+    },
+    ERCOT: {
+        title: 'ERCOT: Fast coal exit, then the gas marathon',
+        body: 'ERCOT\u2019s 68 TWh of coal is fully displaced by the <strong>60% target</strong> (2032). ' +
+              'But ERCOT\u2019s story is really about gas: 195 TWh that declines slowly from 60\u2013100%. ' +
+              'Texas\u2019s deep wind and solar resources make this displacement cheaper than most regions.',
+        bodyGrowth: 'ERCOT has the <strong>highest demand growth rate</strong> (3.5%/yr) driven by data centers and ' +
+              'population. With growth, gas generation at 50% actually <strong>exceeds today\u2019s level</strong> \u2014 ' +
+              'demand is growing faster than coal retires. Coal survives to ~64% instead of 60%.',
+        badge: 'Highest demand growth risk: 3.5%/yr (data centers + population)',
+        badgeClass: 'red'
+    },
+    CAISO: {
+        title: 'CAISO: Already a gas-only system',
+        body: 'California has <strong>zero coal</strong> and negligible oil. The entire 115 TWh fossil fleet is gas. ' +
+              'Displacement is straightforward but the CO\u2082 yield per MWh is lower than coal-heavy regions. ' +
+              'CAISO\u2019s advantage: the highest existing clean share (48.5%) means less total displacement needed.',
+        bodyGrowth: 'With 1.9%/yr electrification-driven growth, CAISO\u2019s demand reaches ~330 TWh by 2050. ' +
+              'Gas generation stays relatively flat at low thresholds \u2014 demand growth roughly offsets displacement gains ' +
+              'until the 70% target.',
+        badge: 'Zero coal \u2014 pure gas displacement from day one',
+        badgeClass: 'amber'
+    },
+    NYISO: {
+        title: 'NYISO: Gas pipeline, meet clean energy',
+        body: 'New York has <strong>no coal</strong> (retired years ago) and essentially no oil. The 92 TWh ' +
+              'fossil fleet is entirely gas. NYISO\u2019s challenge isn\u2019t fuel diversity \u2014 it\u2019s ' +
+              'that nuclear provides 18% of clean energy and faces political headwinds (Indian Point closure).',
+        bodyGrowth: 'CLCPA-driven electrification (2.0%/yr) pushes demand to ~230 TWh by 2050. Gas stays elevated ' +
+              'longer at moderate thresholds. The clean firm story \u2014 preserving existing nuclear \u2014 becomes ' +
+              'even more critical with growing demand.',
+        badge: 'Nuclear preservation is the swing variable',
+        badgeClass: 'green'
+    },
+    NEISO: {
+        title: 'NEISO: Negligible coal, winter gas constraints',
+        body: 'New England has <strong>0.3 TWh of coal</strong> (essentially zero) and 1.3 TWh oil. The 75 TWh ' +
+              'fossil story is gas \u2014 and specifically, <strong>winter gas delivered through the constrained ' +
+              'Algonquin pipeline</strong>. Pipeline capacity limits (8.3 GW) make high-threshold gas displacement ' +
+              'physically easier but economically harder.',
+        bodyGrowth: 'Heating electrification (1.8%/yr) grows demand modestly to ~170 TWh by 2050. The winter gas ' +
+              'pipeline constraint becomes binding sooner with demand growth \u2014 the system needs firm clean ' +
+              'generation specifically in January\u2013February.',
+        badge: 'Winter gas pipeline is the binding constraint',
+        badgeClass: 'red'
+    }
+};
+
+function updateNarrative(iso, withGrowth) {
+    var n = NARRATIVES[iso];
+    document.getElementById('retireNarrTitle').textContent = n.title;
+    document.getElementById('retireNarrBody').innerHTML = withGrowth ? n.bodyGrowth : n.body;
+    document.getElementById('retireNarrBadge').innerHTML =
+        '<span class="insight-badge ' + n.badgeClass + '">' + n.badge + '</span>';
+}
+
+// ===== EVENT HANDLERS =====
+function initControls() {
+    var btns = document.querySelectorAll('.iso-btn');
+    btns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            btns.forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            currentISO = btn.getAttribute('data-iso');
+            var withGrowth = document.getElementById('growthToggle').checked;
+            buildRetirementChart(currentISO, withGrowth);
+            updateNarrative(currentISO, withGrowth);
+        });
+    });
+
+    document.getElementById('growthToggle').addEventListener('change', function() {
+        var withGrowth = this.checked;
+        buildRetirementChart(currentISO, withGrowth);
+        updateNarrative(currentISO, withGrowth);
+    });
+}
+
+// ===== SCROLL ANIMATIONS =====
+function initScrollAnimations() {
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.chart-panel, .narrative-card, .stat-card, .takeaway-box').forEach(function(el) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(24px)';
+        el.style.transition = 'opacity 0.7s cubic-bezier(0.4,0,0.2,1), transform 0.7s cubic-bezier(0.4,0,0.2,1)';
+        observer.observe(el);
+    });
+
+    // Stagger stat cards
+    document.querySelectorAll('.stat-card').forEach(function(el, i) {
+        el.style.transitionDelay = (i * 0.08) + 's';
+    });
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', function() {
+    buildFossilStack();
+    buildRetirementChart('PJM', false);
+    updateNarrative('PJM', false);
+    initControls();
+    initScrollAnimations();
+});
+</script>
+
+</body>
+</html>
