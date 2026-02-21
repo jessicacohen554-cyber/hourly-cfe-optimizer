@@ -3,7 +3,40 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-02-20.
 
-## Current Status (Feb 20, 2026)
+## Current Status (Feb 21, 2026)
+
+### LMP Module — Built and Calibrated (Feb 21, 2026)
+
+**Completed:**
+- `dispatch_utils.py` — shared dispatch module (constants, profiles, battery/LDES dispatch, fossil retirement, hourly dispatch cache)
+- `compute_lmp_prices.py` — core LMP engine with:
+  - Merit-order fossil stack (heat rate × fuel price + VOM, searchsorted step function)
+  - Load-dependent heat rate ramp (30% quadratic) for realistic within-band price variation
+  - Must-run nuclear surplus pricing (overnight price compression)
+  - ISO-specific price formation: PJM (RPM), ERCOT (ORDC), CAISO (RA), NYISO (ICAP), NEISO (FCM + winter gas)
+  - Archetype deduplication: (mix, fuel_level, threshold) → ~7,800 unique per ISO
+  - Dispatch cache: append-mode NPZ per ISO, shared with recompute_co2.py
+- `calibrate_lmp_model.py` — validation framework with embedded PJM IMM/EIA reference data
+- `recompute_co2.py` — refactored to import from dispatch_utils.py (identical behavior)
+
+**PJM Calibration Results (2024 baseline, Medium fuel):**
+- Avg LMP: $36.23/MWh (target $34.70, +4%)
+- P50: $29.17/MWh (target $30, -3%)
+- Scarcity hours: 138 (target 100)
+- Known limitation: P75-P90 compressed vs actual (no unit commitment/congestion)
+
+**PJM Test Cases (using optimizer scenarios):**
+- 2025 Baseline: $34.42/MWh — matches PJM actual
+- 2032 50% clean: $35.49/MWh — fossil fleet still large, prices similar
+- 2045 95% clean: $130.98/MWh — 5,299 negative hours, 572 scarcity hours, price bifurcation
+
+**In Progress:**
+- NB/CTR track sweep: CAISO replace ~89%, then 4 remaining ISOs
+
+**Next Steps:**
+- Finish track sweep → commit results → rename to ECF/NB/CTR convention
+- Run LMP model on full PJM ECF scenarios (all thresholds × fuel sensitivities)
+- Optional: fetch PJM hourly LMP data from Data Miner 2 for distribution matching
 
 ### LMP Price Calculation & Existing vs New-Build Analysis (Feb 20, 2026)
 
@@ -28,6 +61,18 @@
 #### Decision 4: LMP Integration — Wholesale + LCOE Hybrid (4A)
 - **Approach**: Current architecture preserved. Existing generation priced at regional wholesale (LMP-informed). New-build priced at LCOE + transmission adder.
 - **No change to pricing engine structure** — the existing/new split already computed in Step 3 `price_mix_batch()`. This decision confirms the hybrid approach is correct and no full nodal LMP model is needed.
+
+#### Decision 6: LMP Module Architecture (Feb 21, 2026)
+- **Pipeline position**: Downstream of Step 4, reads ECF base case from `overprocure_scenarios.parquet`
+- **Fossil merit-order stack**: Heat rates (Coal 10.0, CCGT 6.4, CT 10.0, Oil 10.5 MMBtu/MWh) × fuel price + VOM
+- **Stack walk**: `np.searchsorted` step function with load-dependent heat rate ramp (30% quadratic)
+- **ISO price formation**: PJM RPM ($2K cap), ERCOT ORDC (VOLL×LOLP, $5K cap), CAISO RA (-$60 floor), NYISO ICAP, NEISO FCM (+$13.13 winter gas)
+- **Must-run pricing**: Nuclear baseload surplus compresses overnight prices toward floor
+- **Installed capacity**: EIA 860 actuals (PJM 140 GW, ERCOT 80 GW, CAISO 47 GW, NYISO 28 GW, NEISO 16 GW)
+- **Fuel prices**: Low/Medium/High sensitivity (coal $2.00-2.50, gas $2.00-6.00, oil $8.00-13.00 $/MMBtu)
+- **Dispatch cache**: Shared with recompute_co2.py via dispatch_utils.py, append-mode NPZ per ISO
+- **Calibration reference**: PJM IMM 2024 SOM: RT LW avg $33.74/MWh, total wholesale $55.54/MWh
+- **LMP runs on ECF track only** (base case with existing clean floor). NB/CTR tracks are separate analysis, not priced through LMP.
 
 #### Decision 5: Three Analysis Tracks (5C — Updated Feb 21, 2026)
 Three distinct tracks with standardized naming:

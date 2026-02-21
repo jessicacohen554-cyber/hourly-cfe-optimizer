@@ -83,23 +83,56 @@ FUEL_PRICES = {
 }
 
 # Capacity shares within fossil fleet (fraction of total fossil capacity)
-# Derived from EIA 860 — installed capacity shares by fuel type within each ISO
+# PJM: Monitoring Analytics 2024 SOM — coal 37.8/130.6=0.29, gas 88.8/130.6=0.68, oil 4.0/130.6=0.03
+# PJM gas split: ~55% CCGT (~48.8 GW), ~45% CT (~40.0 GW) per SOM CC vs peaker breakdown
+# Others: EIA 860 cross-referenced with ISO-specific capacity reports
 FOSSIL_CAPACITY_SHARES = {
     'CAISO': {'coal_steam': 0.00, 'gas_ccgt': 0.55, 'gas_ct': 0.40, 'oil_ct': 0.05},
     'ERCOT': {'coal_steam': 0.22, 'gas_ccgt': 0.50, 'gas_ct': 0.28, 'oil_ct': 0.00},
-    'PJM':   {'coal_steam': 0.23, 'gas_ccgt': 0.48, 'gas_ct': 0.25, 'oil_ct': 0.04},
+    'PJM':   {'coal_steam': 0.29, 'gas_ccgt': 0.37, 'gas_ct': 0.31, 'oil_ct': 0.03},
     'NYISO': {'coal_steam': 0.00, 'gas_ccgt': 0.45, 'gas_ct': 0.50, 'oil_ct': 0.05},
     'NEISO': {'coal_steam': 0.00, 'gas_ccgt': 0.52, 'gas_ct': 0.42, 'oil_ct': 0.06},
 }
 
-# Actual installed fossil capacity (MW) — EIA 860 2024
-# Used instead of demand-based estimation for more accurate stack sizing
+# Actual installed fossil capacity (MW)
+# PJM: Monitoring Analytics 2024 SOM (Dec 31, 2024): gas 88.8 GW + coal 37.8 GW + oil 4.0 GW = 130.6 GW
+# Others: EIA 860M (2024) cross-referenced with ISO capacity reports
 INSTALLED_FOSSIL_MW = {
-    'CAISO': 47_000,   # ~47 GW gas fleet
-    'ERCOT': 80_000,   # ~80 GW total fossil (gas + coal)
-    'PJM':   140_000,  # ~140 GW fossil (gas ~90, coal ~40, oil ~10)
+    'CAISO': 47_000,   # ~47 GW gas fleet (no coal)
+    'ERCOT': 80_000,   # ~80 GW total fossil (gas ~55, coal ~18, oil ~7)
+    'PJM':   130_600,  # 130.6 GW fossil — SOM: gas 88.8 + coal 37.8 + oil 4.0
     'NYISO': 28_000,   # ~28 GW fossil (mostly gas)
     'NEISO': 16_000,   # ~16 GW fossil (mostly gas)
+}
+
+# Peak demand (MW) — matches step3_cost_optimization.py
+PEAK_DEMAND_MW = {
+    'CAISO': 43_860, 'ERCOT': 83_597, 'PJM': 160_560, 'NYISO': 31_857, 'NEISO': 25_898,
+}
+
+# Resource adequacy reserve margin — 15%, consistent with step3/step4
+RESOURCE_ADEQUACY_MARGIN = 0.15
+
+# Peak capacity credits — exact copy from step3_cost_optimization.py
+PEAK_CAPACITY_CREDITS = {
+    'clean_firm': 1.0,   # nuclear — fully accredited
+    'solar': 0.30,       # ELCC — only afternoon contribution
+    'wind': 0.10,        # ELCC — low correlation with peak
+    'ccs_ccgt': 0.90,    # dispatchable
+    'hydro': 0.50,       # seasonal/capacity-limited
+    'battery': 0.95,     # 4hr Li-ion
+    'battery8': 0.95,    # 8hr Li-ion
+    'ldes': 0.90,        # 100hr iron-air
+}
+
+# Gas Availability Factor (GAF) — forced outages + correlated weather risk
+# From step3: gas_needed_mw / GAF = nameplate needed to deliver firm capacity
+GAS_AVAILABILITY_FACTOR = {
+    'CAISO': 0.88,  # 12% deration — summer ambient + mechanical
+    'ERCOT': 0.83,  # 17% deration — extreme weather both seasons
+    'PJM':   0.82,  # 18% deration — PJM ELCC data, Winter Storm Elliott
+    'NYISO': 0.82,  # 18% deration — pipeline constraints, winter gas
+    'NEISO': 0.85,  # 15% deration — mechanical + weather (pipeline separate)
 }
 
 
@@ -114,17 +147,53 @@ def compute_marginal_costs(fuel_level='Medium'):
     return costs
 
 
-def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw=None):
+def _compute_clean_peak_mw(iso, resource_mix, procurement_pct, battery_pct=0,
+                           battery8_pct=0, ldes_pct=0):
+    """Compute clean peak capacity contribution (MW) from resource mix.
+
+    Mirrors step3_cost_optimization.py clean_peak_mw calculation exactly.
+    Uses per-resource ELCC capacity credits at system peak.
+    """
+    peak_mw = PEAK_DEMAND_MW.get(iso, 80_000)
+    demand_twh = BASE_DEMAND_TWH.get(iso, 0)
+    avg_demand_mw = (demand_twh * 1e6) / H  # TWh → MWh / 8760 → avg MW
+
+    proc = procurement_pct / 100.0
+    clean_peak = (
+        proc * resource_mix.get('clean_firm', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        proc * resource_mix.get('solar', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
+        proc * resource_mix.get('wind', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
+        proc * resource_mix.get('ccs_ccgt', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        proc * resource_mix.get('hydro', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+        battery_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
+        battery8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+    )
+    return clean_peak
+
+
+def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw=None,
+                             resource_mix=None, procurement_pct=100,
+                             battery_pct=0, battery8_pct=0, ldes_pct=0):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
     retirement model: coal retires first, then oil, then gas.
 
+    Fossil fleet is sized with a 15% RA reserve margin above peak residual demand,
+    GAF-derated for gas availability — consistent with step3/step4. ISOs don't
+    decommission below what's needed for reliability.
+
     Args:
         iso: ISO region
         clean_pct: clean energy threshold (determines retirements)
         fuel_level: 'Low', 'Medium', 'High'
-        total_fossil_mw: total fossil capacity in MW (if None, estimated from demand)
+        total_fossil_mw: total fossil capacity in MW (if None, RA+GAF estimate)
+        resource_mix: dict with clean resource percentages (for ELCC calculation)
+        procurement_pct: procurement level (%)
+        battery_pct: battery dispatch percentage
+        battery8_pct: battery8 dispatch percentage
+        ldes_pct: LDES dispatch percentage
 
     Returns:
         stack: list of (unit_type, capacity_mw, marginal_cost_per_mwh)
@@ -132,18 +201,47 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
     """
     mc = compute_marginal_costs(fuel_level)
 
-    # Use actual installed capacity, scaled down by retirement
     if total_fossil_mw is None:
         installed = INSTALLED_FOSSIL_MW.get(iso, 80_000)
-        # At higher clean %, fossil fleet retires proportionally
-        # But remaining units don't decommission until no longer needed
         baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
+
         if clean_pct <= baseline_clean:
             total_fossil_mw = installed
         else:
-            # Linear retirement: at 100% clean, fossil → 0
+            # RA-aware fleet sizing with GAF deration (matches step3 formula)
+            peak_mw = PEAK_DEMAND_MW.get(iso, 80_000)
+            ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+
+            # Compute clean peak MW using actual resource mix when available
+            if resource_mix is not None:
+                clean_peak_mw = _compute_clean_peak_mw(
+                    iso, resource_mix, procurement_pct,
+                    battery_pct, battery8_pct, ldes_pct)
+            else:
+                # Fallback: estimate from clean_pct with conservative blended credit
+                # At low clean%, mix is mostly solar/wind (low ELCC ~0.25)
+                # At high clean%, mix is dominated by clean_firm (ELCC ~1.0)
+                # Sigmoid-like blend: transitions from 0.25 to 0.80 across 50-100%
+                t = max(0, min(1, (clean_pct - 50) / 50))
+                blended_credit = 0.25 + 0.55 * t
+                avg_demand_mw = (BASE_DEMAND_TWH.get(iso, 0) * 1e6) / H
+                clean_peak_mw = (clean_pct / 100.0) * avg_demand_mw * blended_credit
+
+            # Residual peak demand that fossil must serve
+            residual_peak_mw = max(0, ra_peak_mw - clean_peak_mw)
+
+            # GAF deration: not all gas is available at peak (forced outages,
+            # weather correlation). Need more nameplate MW to deliver firm capacity.
+            gaf = GAS_AVAILABILITY_FACTOR.get(iso, 0.85)
+            ra_floor_mw = residual_peak_mw / gaf
+
+            # Linear retirement gives a supply-side estimate
             fossil_fraction = max(0.05, (100.0 - clean_pct) / (100.0 - baseline_clean))
-            total_fossil_mw = installed * fossil_fraction
+            linear_mw = installed * fossil_fraction
+
+            # Take the higher of RA floor and linear — fleet doesn't retire
+            # below reliability requirement, but also doesn't magically grow
+            total_fossil_mw = min(installed, max(ra_floor_mw, linear_mw))
 
     shares = FOSSIL_CAPACITY_SHARES.get(iso, FOSSIL_CAPACITY_SHARES['PJM'])
 
@@ -275,9 +373,8 @@ class PJMPriceModel(PriceModel):
         self.floor_price = -30.0
         self.surplus_slope = 0.4
         self.surplus_decay = 0.015
-        self.scarcity_threshold = 0.06
-        # Coal baseload: minimum generation when coal is online
-        self.coal_min_gen_fraction = 0.4  # coal can't go below 40% of capacity
+        self.scarcity_threshold = 0.03  # PJM has large reserves; scarcity is rare
+        self.coal_min_gen_fraction = 0.4
 
 
 class ERCOTPriceModel(PriceModel):
@@ -509,14 +606,32 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
         scarcity_mask = pos_residual > total_fossil_cap
         normal_mask = ~scarcity_mask
 
-        # Normal pricing: marginal cost of the marginal unit
+        # Normal pricing: marginal cost with load-dependent heat rate ramp
         if normal_mask.any():
             normal_idx = unit_idx[normal_mask]
-            normal_prices = marginal_costs[normal_idx]
+            base_prices = marginal_costs[normal_idx].copy()
+
+            # Load-dependent marginal cost ramp: as utilization within a unit's
+            # capacity band increases, heat rate curves push marginal cost up.
+            # This creates price variation instead of flat step-function prices.
+            # Ramp factor: 0-15% above base cost depending on position within band.
+            normal_residual = pos_residual[normal_mask]
+            band_start = np.where(normal_idx > 0, cum_capacity[normal_idx - 1], 0.0)
+            band_capacity = cum_capacity[normal_idx] - band_start
+            position_in_band = np.where(
+                band_capacity > 0,
+                (normal_residual - band_start) / band_capacity,
+                0.5)
+            position_in_band = np.clip(position_in_band, 0.0, 1.0)
+            # Quadratic ramp: steeper at high utilization (realistic heat rate curve)
+            # Gas CCGT heat rate varies ~6.0-7.5 MMBtu/MWh across load range (~25%)
+            # Gas CT varies ~9.0-12.0 (~33%). Coal ~9.5-11.0 (~16%).
+            heat_rate_ramp = 1.0 + 0.30 * position_in_band ** 1.5
+            normal_prices = base_prices * heat_rate_ramp
 
             # Reserve margin check for scarcity adder
             pos_demand = demand_mw_profile[pos_mask][normal_mask]
-            remaining_cap = cum_capacity[normal_idx] - pos_residual[normal_mask]
+            remaining_cap = cum_capacity[normal_idx] - normal_residual
             reserve_ratio = np.where(pos_demand > 0, remaining_cap / pos_demand, 1.0)
 
             low_reserve = reserve_ratio < price_model.scarcity_threshold
@@ -541,7 +656,7 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
                     float(demand_mw_profile[gi]))
                 hourly_marginal_unit[gi] = n_units
 
-    # Negative residual (surplus): negative pricing
+    # Negative/zero residual (surplus): negative pricing
     neg_mask = residual_mw <= 0
     if neg_mask.any():
         neg_indices = np.where(neg_mask)[0]
@@ -549,6 +664,34 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             hourly_lmp[gi] = price_model._price_surplus(
                 float(surplus_mw[gi]), float(demand_mw_profile[gi]))
             hourly_marginal_unit[gi] = -1
+
+    # Must-run baseload effect: nuclear and some coal can't economically ramp
+    # down. During low-demand hours, must-run output pushes prices toward
+    # or below zero. In PJM, ~30-40 GW of nuclear runs 24/7. When overnight
+    # demand drops to ~60 GW, nuclear alone covers a large share.
+    if n_units > 0 and len(stack) > 0:
+        cheapest_mc = marginal_costs[0]
+        # Absolute must-run level (MW) — nuclear + inflexible coal
+        baseline_shares = GRID_MIX_SHARES.get(iso or 'PJM', {})
+        nuclear_pct = baseline_shares.get('clean_firm', 0) / 100.0
+        avg_demand = demand_mw_profile.mean()
+        must_run_mw_level = avg_demand * nuclear_pct * 0.95  # nuclear at ~95% CF
+
+        # Hours where total fossil demand is less than must-run surplus
+        # (i.e., total demand - clean supply < must_run_level means clean + must_run > demand)
+        fossil_demand = residual_mw.copy()
+        total_demand = demand_mw_profile
+        effective_surplus = must_run_mw_level - fossil_demand  # positive = must-run excess
+
+        # Only affect hours where must-run creates genuine surplus pressure
+        surplus_hours = (effective_surplus > 0) & (fossil_demand > 0)
+        if surplus_hours.any():
+            surplus_ratio = effective_surplus[surplus_hours] / must_run_mw_level
+            surplus_ratio = np.clip(surplus_ratio, 0, 1)
+            # Prices compress: from cheapest MC down toward floor
+            depressed = cheapest_mc * (1 - surplus_ratio) + price_model.floor_price * surplus_ratio * 0.3
+            # Only depress prices, never increase them
+            hourly_lmp[surplus_hours] = np.minimum(hourly_lmp[surplus_hours], depressed)
 
     # NEISO winter gas adder
     if isinstance(price_model, NEISOPriceModel):
@@ -763,9 +906,11 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
         else:
             cache_misses += 1
 
-        # Build merit-order stack for this threshold
+        # Build merit-order stack for this threshold (RA+GAF aware)
         stack, total_fossil_mw = build_merit_order_stack(
-            iso, threshold, fuel_level)
+            iso, threshold, fuel_level,
+            resource_mix=resource_mix, procurement_pct=procurement_pct,
+            battery_pct=batt4, battery8_pct=batt8, ldes_pct=ldes)
 
         # Compute hourly LMP
         hourly_lmp, hourly_mu = compute_hourly_lmp_vectorized(
@@ -896,8 +1041,15 @@ def run_test_cases(iso='PJM'):
             sc.get('battery8_dispatch_pct', 0),
             sc.get('ldes_dispatch_pct', 0))
 
-        # Merit-order stack
-        stack, fossil_mw = build_merit_order_stack(iso, sc['threshold'], fuel_level)
+        # Merit-order stack (RA + GAF aware)
+        proc_pct = sc.get('procurement_pct', 100)
+        batt4_pct = sc.get('battery_dispatch_pct', 0)
+        batt8_pct = sc.get('battery8_dispatch_pct', 0)
+        ldes_pct = sc.get('ldes_dispatch_pct', 0)
+        stack, fossil_mw = build_merit_order_stack(
+            iso, sc['threshold'], fuel_level,
+            resource_mix=resource_mix, procurement_pct=proc_pct,
+            battery_pct=batt4_pct, battery8_pct=batt8_pct, ldes_pct=ldes_pct)
         print(f"    Fossil stack ({fossil_mw:,.0f} MW):")
         for unit_type, cap, mc in stack:
             print(f"      {unit_type:>12}: {cap:>8,.0f} MW @ ${mc:.2f}/MWh")
