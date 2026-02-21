@@ -354,6 +354,8 @@ def main():
                         help='Run all sensitivity combos (hours). Default: Medium-only.')
     parser.add_argument('--fresh', action='store_true',
                         help='Ignore checkpoint and start from scratch.')
+    parser.add_argument('--iso', type=str, default=None,
+                        help='Run only this ISO (e.g., PJM). Default: all ISOs.')
     args = parser.parse_args()
 
     mode = 'full' if args.full else 'medium_only'
@@ -432,7 +434,8 @@ def main():
     # Replace track also uses expanded EF (dataset was expanded on purpose)
     # but filters to hydro > 0 since replace track needs existing hydro
 
-    for iso in ISOS:
+    run_isos = [args.iso] if args.iso else ISOS
+    for iso in run_isos:
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         if iso not in track_output['results']:
             track_output['results'][iso] = {}
