@@ -111,10 +111,10 @@
                 { label: 'Methodology', href: 'optimizer_methodology.html' },
                 { label: 'Policy Context', href: 'policy_context.html' },
                 { label: 'About the Model', href: 'pipeline.html' },
-                { label: 'About', href: 'about.html' }
+                { label: 'About', href: 'about.html' },
+                { label: 'Reference Library', href: 'reference.html' }
             ]
         },
-        { label: 'Reference', href: 'reference.html' },
         {
             label: 'Generator Analysis',
             children: [
