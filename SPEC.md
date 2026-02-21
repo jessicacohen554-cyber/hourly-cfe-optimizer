@@ -2228,6 +2228,9 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 | 1 | Numba parallel storage | **Done** | `_batch_score_storage()` and `_batch_score_no_storage()` added with `prange`. JIT warmup includes batch kernels. |
 | 2 | Consistent scoring metric | **Done** | Phase 1a and Phase 2 now use `sum(min(demand, supply))` (total matched energy), consistent with `_score_with_all_storage` base_matched. Previously used `sum(min(supply/demand, 1.0)) / H` (hourly average fraction) — different metric. |
 | 5 | Full refinement storage grid | **Done** | Phase 2 now uses full `batt_levels × batt8_levels × ldes_levels` grid (matching Phase 1b) instead of limited `[2, 5, 10]` for battery4/battery8 only. LDES now modeled in Phase 2. |
+| 3 | Wider near-miss window | **Done** | Phase 1a: 15% → 25%. Phase 2: 10% → 15%. More near-miss mixes enter storage testing → more feasible solutions found. |
+| 4 | Binary search procurement | **Done** | All phases (1a, 1b, Phase 2) now use binary search O(log₂ N) instead of linear sweep O(N). Phase 1b also checks max procurement first and skips infeasible (mix, storage) combos entirely. |
+| 8 | Vectorized Phase 1a procurement | **Done** | `batch_hourly_scores()` classifies all mixes at max procurement in one matrix multiply. Only feasible mixes enter per-mix binary search. Eliminates per-mix × per-proc scoring loop. |
 
 **Code cleanup (Feb 21, 2026)**:
 - **Removed 3 redundant scoring functions**: `_score_hourly`, `_score_with_battery`, `_score_with_both_storage` — all subsets of `_score_with_all_storage` (passing 0 for unused storage types skips those phases via capacity guards)
@@ -2238,9 +2241,6 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 - **Vectorized `get_supply_profiles()` post-processing**: Replaced list comprehension `[max(0, v) for v in p]` with `np.maximum(arr, 0.0, out=arr)`
 - **Vectorized `generate_4d_combos()`**: Replaced triple-nested Python loop with `np.meshgrid` + vectorized filter
 
-**Still TODO**:
-- [ ] Item 3: Wider near-miss window (25% vs 15%) — trivial constant change but affects runtime/coverage tradeoff
-- [ ] Item 4: Binary search procurement — requires refactoring procurement loop
-- [ ] Item 6: Adaptive storage tiers — requires refactoring Phase 1b loop structure
-- [ ] Item 7: Cross-threshold solution injection — requires refactoring pruning data flow
-- [ ] Item 8: Vectorized Phase 1a procurement — memory-intensive, needs chunking
+**Still TODO (deferred — requires larger refactor, risk to PFS coverage)**:
+- [ ] Item 6: Adaptive storage tiers — would skip higher-tier storage for mixes already feasible with simpler configs, missing storage diversity needed for Step 3 cost optimization
+- [ ] Item 7: Cross-threshold solution injection — requires refactoring `cross_feasible_mixes` from set to dict with (storage, procurement) metadata

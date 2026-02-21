@@ -858,41 +858,53 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     if prev_pruning is not None:
         prev_min_proc = prev_pruning.get('min_proc', {})
 
-    # Phase 1a: No-storage sweep — per-mix procurement early stopping
-    # Uses consistent scoring metric: sum(min(demand, supply)) matching storage functions
+    # Phase 1a: No-storage sweep — vectorized batch + binary search procurement
+    # Batch-scores all mixes at max procurement in one matrix multiply, then
+    # binary searches for minimum feasible procurement per feasible mix.
+    # Near-miss window: 25% (wider than original 15% per SPEC item 3).
     phase1a_start = resume_cursor if resume_phase == '1a' else n_combos
 
-    for i in range(phase1a_start, n_combos):
-        mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
-                   int(combos_5[i][2]), int(combos_5[i][3]))
-        all_mix_keys.add(mix_key)
+    if phase1a_start < n_combos:
+        # Vectorized: score ALL mixes at max procurement in one shot
+        max_pf = proc_levels[-1] / 100.0
+        all_max_scores = batch_hourly_scores(demand_arr, supply_matrix, mix_fracs, max_pf)
 
-        # Start procurement at previous threshold's min-feasible (if known)
-        floor = prev_min_proc.get(mix_key, proc_min)
-        floor = max(floor, proc_min)  # Never go below this threshold's min
+        for i in range(phase1a_start, n_combos):
+            mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
+                       int(combos_5[i][2]), int(combos_5[i][3]))
+            all_mix_keys.add(mix_key)
 
-        for proc in proc_levels:
-            if proc < floor:
-                continue  # Skip below floor
-            pf = proc / 100.0
-            supply_scaled = supply_rows[i] * pf
-            score = np.sum(np.minimum(demand_arr, supply_scaled))
-            if score >= target:
-                add_candidate(combos_5[i], proc, 0, 0, 0, score)
-                mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
-                feasible_mix_keys.add(mix_key)
-                break  # Early stop: higher procurement only adds cost
-            elif score >= target - 0.15:
-                # Skip near-miss storage sweep for mixes already proven via cross-pollination
+            max_score = all_max_scores[i]
+            if max_score >= target:
+                # Binary search for minimum feasible procurement
+                floor = max(prev_min_proc.get(mix_key, proc_min), proc_min)
+                valid_procs = [p for p in proc_levels if p >= floor]
+                if valid_procs:
+                    lo, hi = 0, len(valid_procs) - 1
+                    while lo < hi:
+                        mid = (lo + hi) // 2
+                        pf = valid_procs[mid] / 100.0
+                        score = np.sum(np.minimum(demand_arr, supply_rows[i] * pf))
+                        if score >= target:
+                            hi = mid
+                        else:
+                            lo = mid + 1
+                    min_proc = valid_procs[lo]
+                    score = np.sum(np.minimum(demand_arr, supply_rows[i] * (min_proc / 100.0)))
+                    add_candidate(combos_5[i], min_proc, 0, 0, 0, score)
+                    mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), min_proc)
+                    feasible_mix_keys.add(mix_key)
+            elif max_score >= target - 0.25:
+                # Near-miss: candidate for storage sweep in Phase 1b
                 if mix_key not in cross_skip:
-                    near_miss_mixes[i] = max(near_miss_mixes.get(i, 0), score)
+                    near_miss_mixes[i] = max(near_miss_mixes.get(i, 0), max_score)
 
-        # Nth-mix checkpoint within Phase 1a
-        mixes_done = i + 1 - phase1a_start
-        if mixes_done > 0 and mixes_done % MIX_CHECKPOINT_INTERVAL == 0:
-            _save_mix_progress(iso, threshold, candidates, '1a', i + 1,
-                               near_miss_data=near_miss_mixes,
-                               mix_min_proc_data=mix_min_proc)
+            # Nth-mix checkpoint within Phase 1a
+            mixes_done = i + 1 - phase1a_start
+            if mixes_done > 0 and mixes_done % MIX_CHECKPOINT_INTERVAL == 0:
+                _save_mix_progress(iso, threshold, candidates, '1a', i + 1,
+                                   near_miss_data=near_miss_mixes,
+                                   mix_min_proc_data=mix_min_proc)
 
     # Phase 1a→1b transition checkpoint
     if resume_phase == '1a' and phase1a_start < n_combos:
@@ -917,7 +929,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         mix_key = (int(mix[0]), int(mix[1]), int(mix[2]), int(mix[3]))
 
         # Full storage combos: battery4 × battery8 × LDES
-        # Early stop per (mix, batt4, batt8, ldes) combo
+        # Binary search procurement per (mix, storage) combo
+        max_pf = proc_levels[-1] / 100.0
         for bp in batt_levels:
             batt_cap = bp / 100.0
             batt_pow = batt_cap / BATTERY_DURATION_HOURS
@@ -925,26 +938,43 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 batt8_cap = b8p / 100.0
                 batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS
                 for lp in ldes_levels:
-                    # Skip no-storage (already covered in Phase 1a)
                     if bp == 0 and b8p == 0 and lp == 0:
                         continue
-                    # Skip if entire mix is already proven feasible from cross-pollination
                     if mix_key in cross_skip:
                         continue
                     ldes_cap = lp / 100.0
                     ldes_pow = ldes_cap / LDES_DURATION_HOURS
-                    for proc in proc_levels:
-                        pf = proc / 100.0
+                    # Check feasibility at max procurement first
+                    max_score = _score_with_all_storage(
+                        demand_arr, supply_row, max_pf,
+                        batt_cap, batt_pow, batt_eff,
+                        batt8_cap, batt8_pow, batt8_eff,
+                        ldes_cap, ldes_pow, ldes_eff, ldes_window_hours)
+                    if max_score < target:
+                        continue  # Infeasible even at max procurement
+                    # Binary search for minimum feasible procurement
+                    lo, hi = 0, len(proc_levels) - 1
+                    while lo < hi:
+                        mid = (lo + hi) // 2
+                        pf = proc_levels[mid] / 100.0
                         score = _score_with_all_storage(
                             demand_arr, supply_row, pf,
                             batt_cap, batt_pow, batt_eff,
                             batt8_cap, batt8_pow, batt8_eff,
                             ldes_cap, ldes_pow, ldes_eff, ldes_window_hours)
                         if score >= target:
-                            add_candidate(mix, proc, bp, b8p, lp, score)
-                            mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
-                            feasible_mix_keys.add(mix_key)
-                            break  # Early stop per (mix, batt4, batt8, ldes)
+                            hi = mid
+                        else:
+                            lo = mid + 1
+                    min_proc = proc_levels[lo]
+                    score = _score_with_all_storage(
+                        demand_arr, supply_row, min_proc / 100.0,
+                        batt_cap, batt_pow, batt_eff,
+                        batt8_cap, batt8_pow, batt8_eff,
+                        ldes_cap, ldes_pow, ldes_eff, ldes_window_hours)
+                    add_candidate(mix, min_proc, bp, b8p, lp, score)
+                    mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), min_proc)
+                    feasible_mix_keys.add(mix_key)
 
         # Nth-mix checkpoint within Phase 1b
         mixes_done = nm_idx + 1 - phase1b_start
@@ -971,21 +1001,29 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
             fine_supply = fine_fracs @ supply_matrix
             n_fine = len(fine_combos)
 
-            # No-storage: per-mix procurement early stop (consistent energy metric)
-            for j in range(n_fine):
-                near_miss_fine = False
-                for proc in proc_levels:
-                    pf = proc / 100.0
-                    supply_scaled = fine_supply[j] * pf
-                    score = np.sum(np.minimum(demand_arr, supply_scaled))
-                    if score >= target:
-                        add_candidate(fine_combos[j], proc, 0, 0, 0, score)
-                        break  # Early stop
-                    elif score >= target - 0.10:
-                        near_miss_fine = True
+            # No-storage: batch eval at max proc + binary search for feasible
+            # Near-miss window: 15% for refinement (wider than original 10%, SPEC item 3)
+            max_pf = proc_levels[-1] / 100.0
+            fine_max_scores = batch_hourly_scores(demand_arr, supply_matrix, fine_fracs, max_pf)
 
-                # Full storage sweep on near-miss refinement mixes
-                if near_miss_fine:
+            for j in range(n_fine):
+                max_score_j = fine_max_scores[j]
+                if max_score_j >= target:
+                    # Binary search for min feasible procurement (no storage)
+                    lo, hi = 0, len(proc_levels) - 1
+                    while lo < hi:
+                        mid = (lo + hi) // 2
+                        pf = proc_levels[mid] / 100.0
+                        score = np.sum(np.minimum(demand_arr, fine_supply[j] * pf))
+                        if score >= target:
+                            hi = mid
+                        else:
+                            lo = mid + 1
+                    min_proc = proc_levels[lo]
+                    score = np.sum(np.minimum(demand_arr, fine_supply[j] * (min_proc / 100.0)))
+                    add_candidate(fine_combos[j], min_proc, 0, 0, 0, score)
+                elif max_score_j >= target - 0.15:
+                    # Near-miss refinement: storage sweep with binary search
                     supply_row_j = fine_supply[j]
                     for bp in batt_levels:
                         batt_cap = bp / 100.0
@@ -998,8 +1036,20 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                                     continue
                                 ldes_cap = lp / 100.0
                                 ldes_pow = ldes_cap / LDES_DURATION_HOURS
-                                for proc in proc_levels:
-                                    pf = proc / 100.0
+                                # Check max procurement first
+                                max_sc = _score_with_all_storage(
+                                    demand_arr, supply_row_j, max_pf,
+                                    batt_cap, batt_pow, batt_eff,
+                                    batt8_cap, batt8_pow, batt8_eff,
+                                    ldes_cap, ldes_pow, ldes_eff,
+                                    ldes_window_hours)
+                                if max_sc < target:
+                                    continue  # Skip infeasible configs
+                                # Binary search for min feasible procurement
+                                lo, hi = 0, len(proc_levels) - 1
+                                while lo < hi:
+                                    mid = (lo + hi) // 2
+                                    pf = proc_levels[mid] / 100.0
                                     sc = _score_with_all_storage(
                                         demand_arr, supply_row_j, pf,
                                         batt_cap, batt_pow, batt_eff,
@@ -1007,8 +1057,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                                         ldes_cap, ldes_pow, ldes_eff,
                                         ldes_window_hours)
                                     if sc >= target:
-                                        add_candidate(fine_combos[j], proc, bp, b8p, lp, sc)
-                                        break  # Early stop per storage config
+                                        hi = mid
+                                    else:
+                                        lo = mid + 1
+                                min_proc = proc_levels[lo]
+                                sc = _score_with_all_storage(
+                                    demand_arr, supply_row_j, min_proc / 100.0,
+                                    batt_cap, batt_pow, batt_eff,
+                                    batt8_cap, batt8_pow, batt8_eff,
+                                    ldes_cap, ldes_pow, ldes_eff,
+                                    ldes_window_hours)
+                                add_candidate(fine_combos[j], min_proc, bp, b8p, lp, sc)
 
     # Build pruning info for next threshold
     # Phase 2 fine combos also contribute to feasibility (update from candidates)
