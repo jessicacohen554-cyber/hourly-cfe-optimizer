@@ -587,6 +587,103 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         cost across matching targets and regions.
     </p>
 
+    <h3>2.7 Relationship to Capacity Expansion Models</h3>
+    <p>
+        The dominant tools for grid planning&mdash;GenX <a href="#ref-38" class="cite">[38]</a>,
+        ReEDS <a href="#ref-39" class="cite">[39]</a>, SWITCH <a href="#ref-40" class="cite">[40]</a>,
+        and PyPSA <a href="#ref-41" class="cite">[41]</a>&mdash;are capacity expansion (CE) models.
+        They solve a unified optimization: given cost assumptions, find the least-cost portfolio of generation,
+        storage, and transmission that meets demand subject to reliability and policy constraints. They are
+        powerful system-planning instruments. This optimizer is not one of them, and the distinction is
+        deliberate.
+    </p>
+    <p>
+        <strong>CE models answer a system planner&rsquo;s question: &ldquo;What should the grid build?&rdquo;</strong>
+        They co-optimize capacity investment and operational dispatch within a single linear or mixed-integer
+        program, typically over a 20&ndash;30 year horizon. To keep the problem computationally tractable,
+        most CE models compress 8,760 hours into representative periods&mdash;often 50&ndash;200 time slices
+        selected to preserve statistical properties of load and renewable output
+        <a href="#ref-42" class="cite">[42]</a>. This approximation is acceptable for system-level planning,
+        where the goal is directionally correct capacity buildout under policy scenarios.
+    </p>
+    <p>
+        <strong>This optimizer answers a procurement strategist&rsquo;s question: &ldquo;What does it cost to
+        match my load cleanly at every hour, and what drives that cost?&rdquo;</strong> The unit of analysis is
+        not the grid&mdash;it is a load-following clean energy portfolio evaluated against actual hourly demand
+        and generation profiles. This reframing enables (and requires) a different methodological architecture.
+    </p>
+
+    <h4>Full temporal resolution without representative-period compression</h4>
+    <p>
+        Hourly CFE matching is inherently a tail-risk problem. The hours that matter most&mdash;winter
+        evening peaks, multi-day wind droughts, low-solar shoulder seasons&mdash;are precisely the hours
+        that representative-period selection algorithms tend to underweight. A portfolio that scores 95%
+        CFE on representative days may score 88% on the actual 8,760-hour profile because the hardest hours
+        were averaged away. This optimizer simulates every hour of the year, which is essential for accurately
+        sizing storage, quantifying curtailment losses, and identifying the resource mix transitions that
+        occur at high matching thresholds.
+    </p>
+
+    <h4>Physics-first feasibility, then economic evaluation</h4>
+    <p>
+        CE models couple physics and economics into a single objective: minimize cost subject to constraints.
+        This produces one optimal point per scenario. If cost assumptions change, the entire optimization
+        must re-run. This optimizer inverts the sequence. Step 1 exhaustively enumerates the
+        <em>Physics Feasible Space</em> (PFS)&mdash;all resource mixes capable of achieving each hourly
+        matching target from 50% to 100%&mdash;without reference to cost. Step 3 then evaluates the
+        economic performance of every feasible mix under thousands of cost scenarios. Because physics and
+        economics are decoupled, changing cost assumptions requires only a re-evaluation of the cached
+        feasible space (minutes), not a re-solve of the physical dispatch (hours).
+    </p>
+    <p>
+        This architecture exposes structure that single-objective optimization conceals. The full PFS reveals
+        that multiple qualitatively different portfolios can achieve the same matching target: a
+        wind-heavy/low-storage mix and a solar-heavy/high-storage mix may both reach 90% CFE, but their
+        cost sensitivity profiles diverge sharply under different technology cost futures. A CE model would
+        return whichever is cheaper under its assumed inputs; this optimizer returns both and maps their
+        relative economics across the entire sensitivity space. For a procurement strategist evaluating
+        a 15&ndash;20 year PPA commitment under cost uncertainty, this visibility into portfolio robustness
+        across scenarios is directly actionable.
+    </p>
+
+    <h4>Parametric sensitivity at marginal cost</h4>
+    <p>
+        The cached PFS of ~21.4 million physics-validated mixes enables what would be computationally
+        prohibitive in a CE framework: exhaustive parametric sensitivity analysis across 5,832 cost
+        scenarios per region and threshold (17,496 for CAISO). Each scenario varies renewable generation
+        costs, firm generation costs, storage costs, fossil fuel prices, transmission costs, CCS technology
+        costs, and 45Q policy assumptions simultaneously. In a CE model, each combination would require a
+        full re-solve; here, it requires a vectorized cost evaluation on the pre-computed feasible set.
+        This enables the ANOVA-style sensitivity decomposition presented in Section 6&mdash;identifying
+        which cost toggles dominate total cost variance at each matching threshold and in each
+        region&mdash;which would be impractical to derive from a model requiring hours per solve.
+    </p>
+
+    <h4>What this approach does not do</h4>
+    <p>
+        The tradeoffs are real. This optimizer does not model unit commitment, spinning reserves, or
+        ramp-rate constraints&mdash;operational details that matter for grid reliability but are secondary
+        for portfolio-level procurement analysis. It treats each ISO as a single node, omitting intra-regional
+        transmission congestion. Storage dispatch follows a deterministic priority rule (short-duration
+        batteries first, then long-duration) rather than being co-optimized with generation dispatch
+        per cost scenario. And it is a single-year snapshot using 2025 hourly profiles, not a multi-decade
+        capacity expansion pathway.
+    </p>
+    <p>
+        These are appropriate simplifications for the question being asked. A corporate buyer evaluating
+        hourly CFE procurement does not need to solve the system planner&rsquo;s problem. They need to
+        understand how their portfolio&rsquo;s cost and physical performance interact across plausible
+        futures&mdash;and that requires full temporal resolution, exhaustive feasibility mapping, and
+        rapid parametric evaluation, none of which are strengths of the CE paradigm.
+    </p>
+    <p>
+        The two approaches are complementary. CE models like GenX and ReEDS generate the technology cost
+        projections and system-level deployment trajectories that inform this optimizer&rsquo;s input
+        assumptions (LCOE ranges, transmission costs, capacity factors). This optimizer then applies those
+        assumptions to the specific problem of hourly load matching&mdash;a procurement-scale question that
+        system models are not designed to answer at the temporal granularity required.
+    </p>
+
     <!-- ========== 3. DATA SOURCES ========== -->
     <h2 id="data-sources">3. Data Sources &amp; Regional Profiles</h2>
 
@@ -2300,6 +2397,24 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         </li>
         <li id="ref-37">
             NETL. (2023). &ldquo;Baseline Study: High Carbon Capture Rates.&rdquo; CCS learning rates: CO&#8322; capture 3%/doubling; transport &amp; sequestration 5%/doubling.
+        </li>
+        <li id="ref-38">
+            Jenkins, J.D., &amp; Sep&uacute;lveda, N.A. (2017&ndash;2024). &ldquo;GenX: Configurable Capacity Expansion Model for Studying Low-Carbon Energy Futures.&rdquo; MIT Energy Initiative / Princeton Zero-carbon Energy Systems Research.
+            <a href="https://github.com/GenXProject/GenX" target="_blank">https://github.com/GenXProject/GenX</a>
+        </li>
+        <li id="ref-39">
+            Ho, J., et al. (2021). &ldquo;Regional Energy Deployment System (ReEDS) Model Documentation: Version 2020.&rdquo; NREL/TP-6A20-78195. National Renewable Energy Laboratory.
+            <a href="https://www.nrel.gov/analysis/reeds/" target="_blank">https://www.nrel.gov/analysis/reeds/</a>
+        </li>
+        <li id="ref-40">
+            Johnston, J., et al. (2019). &ldquo;Switch 2.0: A Modern Platform for Planning High-Renewable Power Systems.&rdquo; <em>SoftwareX</em>, 10, 100251.
+        </li>
+        <li id="ref-41">
+            Brown, T., H&ouml;rsch, J., Schlachtberger, D. (2018). &ldquo;PyPSA: Python for Power System Analysis.&rdquo; <em>Journal of Open Research Software</em>, 6(4).
+            <a href="https://pypsa.org/" target="_blank">https://pypsa.org/</a>
+        </li>
+        <li id="ref-42">
+            Kotzur, L., et al. (2018). &ldquo;Impact of Different Time Series Aggregation Methods on Optimal Energy System Design.&rdquo; <em>Renewable Energy</em>, 117, 474&ndash;487.
         </li>
     </ol>
 
