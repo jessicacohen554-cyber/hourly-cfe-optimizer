@@ -3417,6 +3417,11 @@ body {
                 <div class="pathway-metric-label">Carried Forward</div>
                 <div class="pathway-metric-sub">% of interim procurement useful at long-term target</div>
             </div>
+            <div class="pathway-metric pathway-metric-warn">
+                <div class="pathway-metric-value" id="pwWastedCost">--</div>
+                <div class="pathway-metric-label">Stranded Investment</div>
+                <div class="pathway-metric-sub">Estimated wasted cost from building toward interim instead of long-term</div>
+            </div>
             <div class="pathway-metric">
                 <div class="pathway-metric-value" id="pwDemandEffect">--</div>
                 <div class="pathway-metric-label">Demand Growth Offset</div>
@@ -7747,9 +7752,25 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
         // Update metrics
         const pwCarried = document.getElementById('pwCarriedForward');
+        const pwWasted = document.getElementById('pwWastedCost');
         const pwDemand = document.getElementById('pwDemandEffect');
 
         if (pwCarried) pwCarried.textContent = Math.round(carriedPct) + '%';
+        if (pwWasted) {
+            if (totalStrandedCostM > 0.5) {
+                pwWasted.innerHTML = '$' + (totalStrandedCostM >= 1000
+                    ? (totalStrandedCostM / 1000).toFixed(1) + 'B'
+                    : Math.round(totalStrandedCostM) + 'M') + '/yr';
+                const wastedSub = pwWasted.closest('.pathway-metric')?.querySelector('.pathway-metric-sub');
+                if (wastedSub) wastedSub.textContent = '$' + strandedPerMWh.toFixed(1) + '/MWh of demand';
+                pwWasted.closest('.pathway-metric')?.classList.add('pathway-metric-warn');
+            } else {
+                pwWasted.textContent = '~$0';
+                const wastedSub = pwWasted.closest('.pathway-metric')?.querySelector('.pathway-metric-sub');
+                if (wastedSub) wastedSub.textContent = 'No stranded investment';
+                pwWasted.closest('.pathway-metric')?.classList.remove('pathway-metric-warn');
+            }
+        }
         if (pwDemand) {
             if (demandOffset > 0.5) {
                 pwDemand.textContent = '+' + Math.round(demandOffset) + ' pp';
