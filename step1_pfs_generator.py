@@ -98,17 +98,20 @@ RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'hydro']
 N_RESOURCES = len(RESOURCE_TYPES)
 
 # Regions
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 ISO_LABELS = {
     'CAISO': 'CAISO (California)',
     'ERCOT': 'ERCOT (Texas)',
     'PJM': 'PJM (Mid-Atlantic)',
     'NYISO': 'NYISO (New York)',
     'NEISO': 'NEISO (New England)',
+    'MISO': 'MISO (Midwest)',
+    'SPP': 'SPP (Central)',
 }
 
 HYDRO_CAPS = {
     'CAISO': 9.5, 'ERCOT': 0.1, 'PJM': 1.8, 'NYISO': 15.9, 'NEISO': 4.4,
+    'MISO': 1.6, 'SPP': 4.3,
 }
 
 # 13 thresholds (v4.0: added 50, 60, 70)
@@ -136,6 +139,7 @@ PROCUREMENT_BOUNDS = {
 # Nuclear seasonal derate
 NUCLEAR_SHARE_OF_CLEAN_FIRM = {
     'CAISO': 0.70, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
+    'MISO': 1.0, 'SPP': 1.0,
 }
 
 NUCLEAR_MONTHLY_CF = {
@@ -149,10 +153,20 @@ NUCLEAR_MONTHLY_CF = {
               7: 0.96, 8: 0.94, 9: 0.85, 10: 0.75, 11: 0.79, 12: 1.0},
     'NEISO': {1: 1.0, 2: 0.99, 3: 0.92, 4: 0.83, 5: 0.88, 6: 0.96,
               7: 0.97, 8: 0.95, 9: 0.88, 10: 0.82, 11: 0.85, 12: 1.0},
+    # MISO: large inland fleet (11 plants), spring refueling pattern similar to PJM
+    'MISO':  {1: 1.0, 2: 1.0, 3: 0.91, 4: 0.83, 5: 0.86, 6: 0.97,
+              7: 0.98, 8: 0.96, 9: 0.91, 10: 0.85, 11: 0.88, 12: 1.0},
+    # SPP: single plant (Wolf Creek), higher refueling impact
+    'SPP':   {1: 1.0, 2: 1.0, 3: 0.88, 4: 0.78, 5: 0.85, 6: 0.96,
+              7: 0.97, 8: 0.95, 9: 0.87, 10: 0.80, 11: 0.84, 12: 1.0},
 }
 
 # Checkpoint directory
 CHECKPOINT_DIR = os.path.join(DATA_DIR, 'checkpoints_v4')
+
+# Mix-level checkpoint interval: save progress every N outer-loop mixes
+# within a single threshold. Protects against mid-threshold crashes.
+MIX_CHECKPOINT_INTERVAL = 500
 
 # ══════════════════════════════════════════════════════════════════════════════
 # DATA LOADING (preserved from v3.x with minimal changes)
@@ -322,7 +336,8 @@ def get_supply_profiles(iso, gen_profiles):
     else:
         solar_raw = list(gen_profiles[iso].get('solar', [0.0] * H)[:H])
 
-    STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5}
+    STD_UTC_OFFSETS = {'CAISO': 8, 'ERCOT': 6, 'PJM': 5, 'NYISO': 5, 'NEISO': 5,
+                       'MISO': 6, 'SPP': 6}
     DST_START_DAY, DST_END_DAY = 69, 307
     local_start, local_end = 6, 19
     std_off = STD_UTC_OFFSETS.get(iso, 5)
@@ -883,24 +898,55 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     if proc_max not in proc_levels:
         proc_levels.append(proc_max)
 
-    candidates = []
-    seen = set()  # Dedup key: (mix_tuple, proc, bp, lp)
-    near_miss_mixes = {}  # mix_index -> best_score (for storage sweep)
-    mix_min_proc = {}     # mix_tuple -> min procurement that achieved this threshold
-    all_mix_keys = set()  # All mixes tested (for cross-threshold pruning)
-    feasible_mix_keys = set()  # Mixes that achieved this threshold
+    # ── Mix checkpoint: load or initialize state ──
+    chk = _load_mix_progress(iso, threshold)
+    if chk is not None:
+        candidates = chk['candidates']
+        resume_phase = chk['phase']
+        resume_cursor = chk['mix_cursor']
+        near_miss_mixes = chk['near_miss_mixes'] or {}
+        mix_min_proc = chk['mix_min_proc'] or {}
+        # Rebuild seen set from candidates
+        seen = set()
+        for c in candidates:
+            mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
+                   c['resource_mix']['wind'], c['resource_mix']['hydro'])
+            key = (mk, c['procurement_pct'], c['battery_dispatch_pct'],
+                   c.get('battery8_dispatch_pct', 0), c['ldes_dispatch_pct'])
+            seen.add(key)
+        # Rebuild feasible_mix_keys from candidates
+        feasible_mix_keys = set()
+        for c in candidates:
+            mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
+                   c['resource_mix']['wind'], c['resource_mix']['hydro'])
+            feasible_mix_keys.add(mk)
+        # Rebuild all_mix_keys from combos evaluated so far
+        all_mix_keys = set()
+        cursor_1a = resume_cursor if resume_phase == '1a' else n_combos
+        for idx in range(min(cursor_1a, n_combos)):
+            all_mix_keys.add((int(combos_5[idx][0]), int(combos_5[idx][1]),
+                              int(combos_5[idx][2]), int(combos_5[idx][3])))
+        print(f"      Resuming from phase={resume_phase}, cursor={resume_cursor}, "
+              f"{len(candidates):,} candidates loaded")
+    else:
+        candidates = []
+        seen = set()
+        near_miss_mixes = {}
+        mix_min_proc = {}
+        all_mix_keys = set()
+        feasible_mix_keys = set()
+        resume_phase = '1a'
+        resume_cursor = 0
 
     # ── Cross-threshold pollination: skip set for proven mixes ──
     cross_skip = cross_feasible_mixes if cross_feasible_mixes else set()
     if cross_skip:
         feasible_mix_keys.update(cross_skip)
-        print(f"      {len(cross_skip):,} mixes known feasible from cache (skip near-miss storage)")
-
-    _flush_counter = [0]  # Mutable counter for closure
-    FLUSH_INTERVAL = 1_000_000  # Flush every 1M solutions
+        if resume_phase == '1a' and resume_cursor == 0:
+            print(f"      {len(cross_skip):,} mixes known feasible from cache (skip near-miss storage)")
 
     def add_candidate(mix_arr, proc, bp, b8p, lp, score):
-        """Add candidate if not already seen. Triggers flush every 1M solutions."""
+        """Add candidate if not already seen."""
         mix_key = (int(mix_arr[0]), int(mix_arr[1]), int(mix_arr[2]), int(mix_arr[3]))
         key = (mix_key, proc, bp, b8p, lp)
         if key not in seen:
@@ -913,10 +959,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 'ldes_dispatch_pct': lp,
                 'hourly_match_score': round(score * 100, 2),
             })
-            # Interim flush every 1M solutions
-            if flush_callback and len(candidates) // FLUSH_INTERVAL > _flush_counter[0]:
-                _flush_counter[0] = len(candidates) // FLUSH_INTERVAL
-                flush_callback(candidates)
 
     # Build per-mix procurement floors from previous threshold
     prev_min_proc = {}
@@ -924,8 +966,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         prev_min_proc = prev_pruning.get('min_proc', {})
 
     # Phase 1a: No-storage sweep — per-mix procurement early stopping
+    phase1a_start = resume_cursor if resume_phase == '1a' else n_combos
 
-    for i in range(n_combos):
+    for i in range(phase1a_start, n_combos):
         mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
                    int(combos_5[i][2]), int(combos_5[i][3]))
         all_mix_keys.add(mix_key)
@@ -950,12 +993,31 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 if mix_key not in cross_skip:
                     near_miss_mixes[i] = max(near_miss_mixes.get(i, 0), score)
 
+        # Nth-mix checkpoint within Phase 1a
+        mixes_done = i + 1 - phase1a_start
+        if mixes_done > 0 and mixes_done % MIX_CHECKPOINT_INTERVAL == 0:
+            _save_mix_progress(iso, threshold, candidates, '1a', i + 1,
+                               near_miss_data=near_miss_mixes,
+                               mix_min_proc_data=mix_min_proc)
+
+    # Phase 1a→1b transition checkpoint
+    if resume_phase == '1a' and phase1a_start < n_combos:
+        _save_mix_progress(iso, threshold, candidates, '1b', 0,
+                           near_miss_data=near_miss_mixes,
+                           mix_min_proc_data=mix_min_proc)
+
     # Phase 1b: Storage sweep on near-miss mixes
     # For each (mix, storage_config), sweep procurement upward with early stopping.
     # Triple-nested: battery4 × battery8 × LDES (dispatch order: 4hr → 8hr → LDES).
     # All battery8 and LDES levels are tested for each mix — they have independent
     # cost toggles in Step 3, so different configs may be optimal at different prices.
-    for i in near_miss_mixes:
+    near_miss_list = sorted(near_miss_mixes.keys())
+    phase1b_start = resume_cursor if resume_phase == '1b' else 0
+    if resume_phase not in ('1a', '1b'):
+        phase1b_start = len(near_miss_list)  # Skip entirely if past Phase 1b
+
+    for nm_idx in range(phase1b_start, len(near_miss_list)):
+        i = near_miss_list[nm_idx]
         supply_row = supply_rows[i]
         mix = combos_5[i]
         mix_key = (int(mix[0]), int(mix[1]), int(mix[2]), int(mix[3]))
@@ -1007,6 +1069,13 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                             mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), proc)
                             feasible_mix_keys.add(mix_key)
                             break  # Early stop per (mix, batt4, batt8, ldes)
+
+        # Nth-mix checkpoint within Phase 1b
+        mixes_done = nm_idx + 1 - phase1b_start
+        if mixes_done > 0 and mixes_done % MIX_CHECKPOINT_INTERVAL == 0:
+            _save_mix_progress(iso, threshold, candidates, '1b', nm_idx + 1,
+                               near_miss_data=near_miss_mixes,
+                               mix_min_proc_data=mix_min_proc)
 
     # ── Phase 2: Refine feasible archetypes to 1% resolution ──
     # Same early-stop logic: per-mix, stop procurement once target is met
@@ -1156,7 +1225,12 @@ def extract_pareto(candidates, target):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def process_iso(args):
-    """Process all thresholds for a single ISO. Designed for multiprocessing."""
+    """Process all thresholds for a single ISO. Designed for multiprocessing.
+
+    Uses per-ISO/threshold parquet checkpoints for both threshold-level and
+    intra-threshold (Nth-mix) resume. Falls back to legacy JSON checkpoints
+    for backward compatibility with older runs.
+    """
     iso, demand_data, gen_profiles = args
     iso_start = time.time()
 
@@ -1168,9 +1242,9 @@ def process_iso(args):
     print(f"\n  {iso}: Starting optimization ({len(THRESHOLDS)} thresholds, "
           f"hydro_cap={hydro_cap}%)")
 
-    # Check for checkpoint
-    checkpoint = load_checkpoint(iso)
-    completed_thresholds = set(checkpoint.get('completed', []))
+    # Check which thresholds are done: new parquet-based + legacy JSON fallback
+    legacy_checkpoint = load_checkpoint(iso)
+    legacy_completed = set(legacy_checkpoint.get('completed', []))
 
     iso_results = {
         'iso': iso,
@@ -1178,87 +1252,102 @@ def process_iso(args):
         'annual_demand_mwh': demand_data[iso]['total_annual_mwh'],
         'peak_demand_mw': demand_data[iso]['peak_mw'],
         'hydro_cap': hydro_cap,
-        'thresholds': checkpoint.get('thresholds', {}),
+        'thresholds': {},
     }
 
     # ── Cross-threshold pollination: mix→max_score map ──
-    # Lightweight: only tracks which mixes are proven feasible at what score.
-    # Used to skip Phase 1b storage sweep for already-proven mixes.
-    # No injection (too slow for millions of rows) — grid search runs normally.
-    mix_max_score = {}  # (cf, sol, wnd, hyd) → max hourly_match_score
+    mix_max_score = {}
 
+    # Seed from done parquets (completed thresholds)
+    for threshold in THRESHOLDS:
+        t_str = str(threshold)
+        if _is_threshold_done(iso, threshold):
+            # Load from done parquet
+            done_path = _threshold_done_path(iso, threshold)
+            try:
+                done_table = pq.read_table(done_path)
+                n = done_table.num_rows
+                if n > 0:
+                    cf = done_table.column('clean_firm').to_pylist()
+                    sol = done_table.column('solar').to_pylist()
+                    wnd = done_table.column('wind').to_pylist()
+                    hyd = done_table.column('hydro').to_pylist()
+                    scores = done_table.column('hourly_match_score').to_pylist()
+                    for j in range(n):
+                        mk = (cf[j], sol[j], wnd[j], hyd[j])
+                        if scores[j] > mix_max_score.get(mk, 0):
+                            mix_max_score[mk] = scores[j]
+            except Exception:
+                pass
+
+    # Also seed from interim parquet cache (legacy)
     interim_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_interim.parquet')
     if os.path.exists(interim_path) and HAS_PARQUET:
         try:
             cached = pq.read_table(interim_path)
-            n_cached = cached.num_rows
-            if n_cached > 0:
+            if cached.num_rows > 0:
                 import pandas as pd
                 df = cached.select(['clean_firm', 'solar', 'wind', 'hydro',
                                      'hourly_match_score']).to_pandas()
                 grouped = df.groupby(['clean_firm', 'solar', 'wind', 'hydro']
                                       )['hourly_match_score'].max()
-                mix_max_score = {k: v for k, v in grouped.items()}
+                for k, v in grouped.items():
+                    if v > mix_max_score.get(k, 0):
+                        mix_max_score[k] = v
                 del df, grouped, cached
-                print(f"    {iso}: {len(mix_max_score):,} unique mixes from cache "
-                      f"(from {n_cached:,} rows)")
-        except Exception as e:
-            print(f"    {iso}: Could not read interim cache: {e}")
+        except Exception:
+            pass
 
-    # Interim flush callback: saves candidates to parquet every 1M solutions
-    # Protects against process kills during long-running thresholds (esp. 100%)
-    _flush_threshold = [None]  # Current threshold being processed
-
-    def interim_flush(candidates_so_far):
-        """Save in-progress candidates to a separate WIP parquet (replaced each flush)."""
-        if not candidates_so_far or not HAS_PARQUET:
-            return
-        thr = _flush_threshold[0]
-        n = len(candidates_so_far)
-        print(f"      [interim flush] {n:,} solutions saved for {iso} {thr}%")
-        wip_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_wip.parquet')
-        rows = []
-        for c in candidates_so_far:
-            rows.append({
-                'iso': iso,
-                'threshold': float(thr),
-                'clean_firm': c['resource_mix']['clean_firm'],
-                'solar': c['resource_mix']['solar'],
-                'wind': c['resource_mix']['wind'],
-                'hydro': c['resource_mix']['hydro'],
-                'procurement_pct': c['procurement_pct'],
-                'battery_dispatch_pct': c['battery_dispatch_pct'],
-                'battery8_dispatch_pct': c.get('battery8_dispatch_pct', 0),
-                'ldes_dispatch_pct': c['ldes_dispatch_pct'],
-                'hourly_match_score': c['hourly_match_score'],
-                'pareto_type': c.get('pareto_type', ''),
-            })
-        wip_table = _rows_to_table(rows)
-        if wip_table:
-            pq.write_table(wip_table, wip_path, compression='snappy')
-            del rows  # Free memory
+    if mix_max_score:
+        print(f"    {iso}: {len(mix_max_score):,} unique mixes from cache/completed thresholds")
 
     prev_pruning = None
     for threshold in THRESHOLDS:
         t_str = str(threshold)
-        if t_str in completed_thresholds:
-            print(f"    {iso} {threshold}%: loaded from checkpoint — skipping")
+
+        # Skip if done (parquet exists or legacy JSON says so)
+        if _is_threshold_done(iso, threshold) or t_str in legacy_completed:
+            print(f"    {iso} {threshold}%: done — skipping")
+            # Build pruning info from completed results for next threshold
+            done_path = _threshold_done_path(iso, threshold)
+            if os.path.exists(done_path):
+                try:
+                    done_table = pq.read_table(done_path)
+                    n = done_table.num_rows
+                    if n > 0:
+                        cf = done_table.column('clean_firm').to_pylist()
+                        sol = done_table.column('solar').to_pylist()
+                        wnd = done_table.column('wind').to_pylist()
+                        hyd = done_table.column('hydro').to_pylist()
+                        proc = done_table.column('procurement_pct').to_pylist()
+                        feasible_keys = set()
+                        min_proc = {}
+                        for j in range(n):
+                            mk = (cf[j], sol[j], wnd[j], hyd[j])
+                            feasible_keys.add(mk)
+                            if mk not in min_proc or proc[j] < min_proc[mk]:
+                                min_proc[mk] = proc[j]
+                        prev_pruning = {
+                            'feasible_mixes': feasible_keys,
+                            'min_proc': min_proc,
+                            'all_mixes': feasible_keys,  # Approximate
+                        }
+                except Exception:
+                    pass
             continue
 
-        # Build set of mixes known to meet this threshold
+        # Build cross-feasible set from mix_max_score
         cross_feasible_mixes = set()
         if mix_max_score:
             cross_feasible_mixes = {mk for mk, s in mix_max_score.items() if s >= threshold}
 
-        _flush_threshold[0] = threshold
         t_start = time.time()
         feasible, pruning_info = optimize_threshold(
             iso, threshold, demand_arr, supply_matrix, hydro_cap,
-            prev_pruning=prev_pruning, cross_feasible_mixes=cross_feasible_mixes,
-            flush_callback=interim_flush)
+            prev_pruning=prev_pruning, cross_feasible_mixes=cross_feasible_mixes)
         prev_pruning = pruning_info
 
-        # Accumulate new solutions
+        # Accumulate new solutions into mix_max_score
         for c in feasible:
             mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
                    c['resource_mix']['wind'], c['resource_mix']['hydro'])
@@ -1267,7 +1356,6 @@ def process_iso(args):
                 mix_max_score[mk] = s
         t_elapsed = time.time() - t_start
 
-        # Count unique mix archetypes
         archetypes = set()
         for c in feasible:
             archetypes.add(tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES))
@@ -1281,14 +1369,12 @@ def process_iso(args):
         print(f"    {iso} {threshold}%: {len(feasible)} solutions "
               f"({len(archetypes)} mix archetypes), {t_elapsed:.1f}s")
 
-        # Clean up WIP file (full results saved by append_threshold_to_cache below)
-        wip_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_wip.parquet')
-        if os.path.exists(wip_path):
-            os.remove(wip_path)
+        # Save done parquet (also cleans up progress file)
+        _save_threshold_done(iso, threshold, feasible)
 
-        # Checkpoint after each threshold + append to interim Parquet cache
-        save_checkpoint(iso, iso_results, t_str)
+        # Append to interim cache + legacy JSON checkpoint for backward compat
         append_threshold_to_cache(iso, threshold, feasible)
+        save_checkpoint(iso, iso_results, t_str)
 
     iso_elapsed = time.time() - iso_start
     print(f"  {iso} completed in {iso_elapsed:.1f}s")
@@ -1379,6 +1465,224 @@ def load_checkpoint(iso):
         except (json.JSONDecodeError, IOError):
             pass
     return {}
+
+
+# ── Per-ISO/threshold Parquet mix checkpoints ──
+
+def _mix_progress_path(iso, threshold):
+    """Path for in-progress mix checkpoint parquet."""
+    return os.path.join(CHECKPOINT_DIR, f'{iso}_v4_t{threshold}_progress.parquet')
+
+
+def _threshold_done_path(iso, threshold):
+    """Path for completed threshold results parquet."""
+    return os.path.join(CHECKPOINT_DIR, f'{iso}_v4_t{threshold}_done.parquet')
+
+
+def _is_threshold_done(iso, threshold):
+    """Check if a threshold has a completed parquet."""
+    return os.path.exists(_threshold_done_path(iso, threshold))
+
+
+def _save_mix_progress(iso, threshold, candidates, phase, mix_cursor,
+                       near_miss_data=None, mix_min_proc_data=None):
+    """Save mix-level progress as per-ISO/threshold parquet with cursor metadata.
+
+    Writes atomically (temp file + rename) to avoid corruption on crash.
+    Metadata stored in parquet schema: phase, mix_cursor, near_miss, mix_min_proc.
+    """
+    if not HAS_PARQUET:
+        return
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    path = _mix_progress_path(iso, threshold)
+
+    rows = []
+    for c in candidates:
+        rows.append({
+            'iso': iso,
+            'threshold': float(threshold),
+            'clean_firm': c['resource_mix']['clean_firm'],
+            'solar': c['resource_mix']['solar'],
+            'wind': c['resource_mix']['wind'],
+            'hydro': c['resource_mix']['hydro'],
+            'procurement_pct': c['procurement_pct'],
+            'battery_dispatch_pct': c['battery_dispatch_pct'],
+            'battery8_dispatch_pct': c.get('battery8_dispatch_pct', 0),
+            'ldes_dispatch_pct': c['ldes_dispatch_pct'],
+            'hourly_match_score': c['hourly_match_score'],
+            'pareto_type': c.get('pareto_type', ''),
+        })
+
+    if rows:
+        table = _rows_to_table(rows)
+    else:
+        table = pa.table({
+            'iso': pa.array([], type=pa.string()),
+            'threshold': pa.array([], type=pa.float64()),
+            'clean_firm': pa.array([], type=pa.float64()),
+            'solar': pa.array([], type=pa.float64()),
+            'wind': pa.array([], type=pa.float64()),
+            'hydro': pa.array([], type=pa.float64()),
+            'procurement_pct': pa.array([], type=pa.int64()),
+            'battery_dispatch_pct': pa.array([], type=pa.int64()),
+            'battery8_dispatch_pct': pa.array([], type=pa.int64()),
+            'ldes_dispatch_pct': pa.array([], type=pa.int64()),
+            'hourly_match_score': pa.array([], type=pa.float64()),
+            'pareto_type': pa.array([], type=pa.string()),
+        })
+
+    # Encode cursor state in schema metadata
+    meta = {
+        b'phase': phase.encode(),
+        b'mix_cursor': str(mix_cursor).encode(),
+        b'timestamp': datetime.now(timezone.utc).isoformat().encode(),
+    }
+    if near_miss_data is not None:
+        meta[b'near_miss_json'] = json.dumps(
+            {str(k): v for k, v in near_miss_data.items()}
+        ).encode()
+    if mix_min_proc_data is not None:
+        meta[b'mix_min_proc_json'] = json.dumps(
+            {','.join(str(x) for x in k): v for k, v in mix_min_proc_data.items()}
+        ).encode()
+
+    existing_meta = table.schema.metadata or {}
+    existing_meta.update(meta)
+    table = table.replace_schema_metadata(existing_meta)
+
+    # Atomic write: temp file + rename
+    import tempfile
+    fd, tmp_path = tempfile.mkstemp(dir=CHECKPOINT_DIR, suffix='.parquet.tmp')
+    os.close(fd)
+    try:
+        pq.write_table(table, tmp_path, compression='snappy')
+        os.replace(tmp_path, path)  # Atomic on POSIX
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
+    n = len(candidates)
+    print(f"      [mix checkpoint] {iso} {threshold}%: {n:,} solutions, "
+          f"phase={phase}, cursor={mix_cursor}")
+
+
+def _load_mix_progress(iso, threshold):
+    """Load mix-level progress checkpoint from per-ISO/threshold parquet.
+
+    Returns dict with candidates, phase, mix_cursor, near_miss_mixes, mix_min_proc.
+    Returns None if no checkpoint exists or it's unreadable.
+    """
+    if not HAS_PARQUET:
+        return None
+    path = _mix_progress_path(iso, threshold)
+    if not os.path.exists(path):
+        return None
+
+    try:
+        table = pq.read_table(path)
+        meta = table.schema.metadata or {}
+
+        phase = meta.get(b'phase', b'1a').decode()
+        mix_cursor = int(meta.get(b'mix_cursor', b'0').decode())
+
+        # Decode near_miss_mixes: {int_index: float_score}
+        near_miss_raw = meta.get(b'near_miss_json')
+        near_miss_mixes = None
+        if near_miss_raw:
+            raw = json.loads(near_miss_raw.decode())
+            near_miss_mixes = {int(k): v for k, v in raw.items()}
+
+        # Decode mix_min_proc: {(int,...): int}
+        min_proc_raw = meta.get(b'mix_min_proc_json')
+        mix_min_proc = None
+        if min_proc_raw:
+            raw = json.loads(min_proc_raw.decode())
+            mix_min_proc = {
+                tuple(int(x) for x in k.split(',')): v
+                for k, v in raw.items()
+            }
+
+        # Reconstruct candidates from parquet rows
+        candidates = []
+        n = table.num_rows
+        if n > 0:
+            cf = table.column('clean_firm').to_pylist()
+            sol = table.column('solar').to_pylist()
+            wnd = table.column('wind').to_pylist()
+            hyd = table.column('hydro').to_pylist()
+            proc = table.column('procurement_pct').to_pylist()
+            bat = table.column('battery_dispatch_pct').to_pylist()
+            bat8 = (table.column('battery8_dispatch_pct').to_pylist()
+                    if 'battery8_dispatch_pct' in table.column_names
+                    else [0] * n)
+            ldes = table.column('ldes_dispatch_pct').to_pylist()
+            score = table.column('hourly_match_score').to_pylist()
+            pareto = table.column('pareto_type').to_pylist()
+
+            for i in range(n):
+                candidates.append({
+                    'resource_mix': {
+                        'clean_firm': cf[i], 'solar': sol[i],
+                        'wind': wnd[i], 'hydro': hyd[i],
+                    },
+                    'procurement_pct': proc[i],
+                    'battery_dispatch_pct': bat[i],
+                    'battery8_dispatch_pct': bat8[i],
+                    'ldes_dispatch_pct': ldes[i],
+                    'hourly_match_score': score[i],
+                    'pareto_type': pareto[i],
+                })
+
+        print(f"      [mix checkpoint loaded] {iso} {threshold}%: "
+              f"{n:,} solutions, phase={phase}, cursor={mix_cursor}")
+
+        return {
+            'candidates': candidates,
+            'phase': phase,
+            'mix_cursor': mix_cursor,
+            'near_miss_mixes': near_miss_mixes,
+            'mix_min_proc': mix_min_proc,
+        }
+    except Exception as e:
+        print(f"      [mix checkpoint] Could not load {path}: {e}")
+        return None
+
+
+def _save_threshold_done(iso, threshold, candidates):
+    """Write finalized threshold parquet and clean up progress file."""
+    if not HAS_PARQUET or not candidates:
+        return
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+
+    rows = []
+    for c in candidates:
+        rows.append({
+            'iso': iso,
+            'threshold': float(threshold),
+            'clean_firm': c['resource_mix']['clean_firm'],
+            'solar': c['resource_mix']['solar'],
+            'wind': c['resource_mix']['wind'],
+            'hydro': c['resource_mix']['hydro'],
+            'procurement_pct': c['procurement_pct'],
+            'battery_dispatch_pct': c['battery_dispatch_pct'],
+            'battery8_dispatch_pct': c.get('battery8_dispatch_pct', 0),
+            'ldes_dispatch_pct': c['ldes_dispatch_pct'],
+            'hourly_match_score': c['hourly_match_score'],
+            'pareto_type': c.get('pareto_type', ''),
+        })
+
+    table = _rows_to_table(rows)
+    if table is None:
+        return
+
+    done_path = _threshold_done_path(iso, threshold)
+    pq.write_table(table, done_path, compression='snappy')
+
+    # Clean up progress file
+    progress_path = _mix_progress_path(iso, threshold)
+    if os.path.exists(progress_path):
+        os.remove(progress_path)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1693,7 +1997,7 @@ def main():
     elapsed = time.time() - start_time
     cache_path = os.path.join(DATA_DIR, 'physics_cache_v4.parquet')
 
-    # Collect interim files from this run
+    # Collect interim files from this run + done parquets as fallback
     interim_tables = []
     for iso in run_isos:
         interim_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_interim.parquet')
@@ -1702,6 +2006,14 @@ def main():
                 interim_tables.append(pq.read_table(interim_path))
             except Exception:
                 pass
+        # Fallback: also collect from per-threshold done parquets
+        for threshold in THRESHOLDS:
+            done_path = _threshold_done_path(iso, threshold)
+            if os.path.exists(done_path):
+                try:
+                    interim_tables.append(pq.read_table(done_path))
+                except Exception:
+                    pass
 
     if interim_tables:
         # Merge all interim tables into one
