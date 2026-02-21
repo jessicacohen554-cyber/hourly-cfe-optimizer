@@ -398,26 +398,33 @@ def _compute_storage_caps(demand, supply_row, procurement,
                           batt4_duration, batt8_duration, ldes_duration):
     """Compute max useful capacity and curtailment frequency for storage screening.
 
-    Physics-based ceiling: a battery with power = cap/duration can never charge
-    faster than max_hourly_surplus. So max useful cap = max_hourly_surplus × duration.
+    Energy-based ceiling: the max useful battery capacity equals the total surplus
+    energy available in its charge window (1 day for bat4, 2 days for bat8,
+    7 days for LDES). A battery can charge over multiple surplus hours — the
+    ceiling is the total window surplus, not max_hourly × duration.
+
+    A battery larger than max_window_surplus has idle capacity that can never fill
+    in any single charge cycle. Power = cap/duration may exceed max_hourly_surplus,
+    but that's OK — the surplus rate is the binding constraint, and the battery
+    charges at min(surplus, power) per hour.
 
     Curtailment frequency: counts days with non-trivial surplus. Daily-cycle
-    batteries need FREQUENT curtailment to be useful — a mix with 300+ surplus
-    days is a battery candidate; one with <30 is not worth the dispatch cost.
+    batteries need FREQUENT curtailment (150+ days) to justify capacity.
 
     Returns: (bat4_cap, bat8_cap, ldes_cap, has_curtailment, surplus_days)
-        bat4_cap: max useful bat4 capacity (normalized units)
-        bat8_cap: max useful bat8 capacity (same)
-        ldes_cap: max useful LDES capacity (same)
+        bat4_cap: max useful bat4 capacity = max daily surplus (normalized)
+        bat8_cap: max useful bat8 capacity = max 2-day surplus (normalized)
+        ldes_cap: max useful LDES capacity = max 7-day surplus (normalized)
         has_curtailment: True if any hour has surplus > 0
         surplus_days: number of days with surplus > 0.1% of daily demand
     """
-    max_hourly_surplus = 0.0
     has_curtailment = False
     surplus_days = 0
-    daily_demand_avg = 1.0 / 365.0  # normalized annual demand = 1.0
-    surplus_threshold = daily_demand_avg * 0.001  # 0.1% of daily demand
+    daily_demand_avg = 1.0 / 365.0
+    surplus_threshold = daily_demand_avg * 0.001
 
+    # Pass 1: compute daily surplus totals and surplus_days count
+    daily_surpluses = np.empty(365)
     for day in range(365):
         ds = day * 24
         day_surplus = 0.0
@@ -425,15 +432,37 @@ def _compute_storage_caps(demand, supply_row, procurement,
             s = procurement * supply_row[ds + h] - demand[ds + h]
             if s > 0:
                 day_surplus += s
-                if s > max_hourly_surplus:
-                    max_hourly_surplus = s
                 has_curtailment = True
+        daily_surpluses[day] = day_surplus
         if day_surplus > surplus_threshold:
             surplus_days += 1
 
-    bat4_cap = max_hourly_surplus * batt4_duration
-    bat8_cap = max_hourly_surplus * batt8_duration
-    ldes_cap = max_hourly_surplus * ldes_duration
+    # Bat4: max daily surplus (battery charges over full day, discharges same day)
+    max_daily = 0.0
+    for day in range(365):
+        if daily_surpluses[day] > max_daily:
+            max_daily = daily_surpluses[day]
+    bat4_cap = max_daily
+
+    # Bat8: max 2-day surplus (48hr charge window)
+    max_2day = 0.0
+    for w in range(0, 365, 2):
+        window = daily_surpluses[w]
+        if w + 1 < 365:
+            window += daily_surpluses[w + 1]
+        if window > max_2day:
+            max_2day = window
+    bat8_cap = max_2day
+
+    # LDES: max 7-day surplus (168hr charge window)
+    max_7day = 0.0
+    for w in range(0, 365, 7):
+        window = 0.0
+        for d in range(w, min(w + 7, 365)):
+            window += daily_surpluses[d]
+        if window > max_7day:
+            max_7day = window
+    ldes_cap = max_7day
 
     return bat4_cap, bat8_cap, ldes_cap, has_curtailment, surplus_days
 
