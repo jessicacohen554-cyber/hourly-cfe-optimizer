@@ -367,7 +367,26 @@ def main():
     total_start = time.time()
 
     # Load checkpoint if available (and mode matches)
-    if not args.fresh:
+    # IMPORTANT: Skip checkpoint loading when --iso is specified for a fresh ISO.
+    # The checkpoint can be 1-2GB (CAISO+ERCOT data) and json.load() will OOM.
+    # Instead, start fresh for the target ISO and merge into parquet at the end.
+    if args.iso and not args.fresh:
+        # Check if this ISO is already in the checkpoint WITHOUT loading the full file
+        skip_checkpoint = True
+        if os.path.exists(CHECKPOINT_PATH):
+            import mmap
+            with open(CHECKPOINT_PATH, 'rb') as f:
+                mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+                iso_in_ckpt = mm.find(f'"{args.iso}"'.encode()) >= 0
+                mm.close()
+            if iso_in_ckpt:
+                print(f"  WARNING: {args.iso} found in checkpoint but loading 1.6GB JSON is too expensive.")
+                print(f"  Starting fresh for {args.iso}. Use --fresh to force full restart.")
+            else:
+                print(f"  {args.iso} not in checkpoint — starting fresh (skipping 1.6GB checkpoint load)")
+        track_output = None
+        completed_steps = set()
+    elif not args.fresh:
         ckpt_output, completed_steps = load_checkpoint()
         if ckpt_output and ckpt_output.get('meta', {}).get('mode') == mode:
             track_output = ckpt_output
@@ -543,16 +562,17 @@ def main():
         else:
             print(f"  {iso:>6}    replace: skipped (checkpoint)")
 
-    # Final save
-    _save_results(track_output)
-
-    # Save parquet (compact, git-friendly)
+    # Save parquet (compact, git-friendly) — always do this
     _save_parquet(track_output)
 
-    # Clean up checkpoint on successful completion
-    if os.path.exists(CHECKPOINT_PATH):
-        os.remove(CHECKPOINT_PATH)
-        print("  Checkpoint removed (run complete)")
+    # Only write full JSON and clean checkpoint when running all ISOs
+    if not args.iso:
+        _save_results(track_output)
+        if os.path.exists(CHECKPOINT_PATH):
+            os.remove(CHECKPOINT_PATH)
+            print("  Checkpoint removed (run complete)")
+    else:
+        print(f"  Single-ISO mode ({args.iso}) — results saved to parquet only (skipping 1.6GB JSON)")
 
     total_elapsed = time.time() - total_start
     out_path = str(TRACK_RESULTS_PATH)
@@ -609,8 +629,22 @@ def _save_parquet(track_output):
         print("  No scenario data to write to parquet")
         return
 
-    df = pd.DataFrame(rows)
+    df_new = pd.DataFrame(rows)
     pq_path = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
+
+    # Merge with existing parquet to preserve other ISOs' data
+    if os.path.exists(pq_path):
+        df_existing = pd.read_parquet(pq_path)
+        # Remove rows for ISOs/tracks that are in the new data (replace them)
+        new_keys = set(zip(df_new['iso'], df_new['track']))
+        mask = ~pd.Series(list(zip(df_existing['iso'], df_existing['track']))).apply(
+            lambda x: x in new_keys)
+        df_keep = df_existing[mask.values]
+        df = pd.concat([df_keep, df_new], ignore_index=True)
+        print(f"  Merged: kept {len(df_keep):,} existing + {len(df_new):,} new = {len(df):,} total")
+    else:
+        df = df_new
+
     df.to_parquet(pq_path, index=False, compression='zstd')
     print(f"  track_scenarios.parquet: {len(df):,} rows, "
           f"{os.path.getsize(pq_path) / (1024*1024):.1f} MB")
@@ -637,8 +671,20 @@ def _save_parquet(track_output):
                             })
 
     if dg_rows:
-        df_dg = pd.DataFrame(dg_rows)
+        df_dg_new = pd.DataFrame(dg_rows)
         dg_path = os.path.join(SCRIPT_DIR, 'dashboard', 'track_demand_growth.parquet')
+
+        # Merge with existing demand growth parquet
+        if os.path.exists(dg_path):
+            df_dg_existing = pd.read_parquet(dg_path)
+            new_keys = set(zip(df_dg_new['iso'], df_dg_new['track']))
+            mask = ~pd.Series(list(zip(df_dg_existing['iso'], df_dg_existing['track']))).apply(
+                lambda x: x in new_keys)
+            df_dg_keep = df_dg_existing[mask.values]
+            df_dg = pd.concat([df_dg_keep, df_dg_new], ignore_index=True)
+        else:
+            df_dg = df_dg_new
+
         df_dg.to_parquet(dg_path, index=False, compression='zstd')
         print(f"  track_demand_growth.parquet: {len(df_dg):,} rows, "
               f"{os.path.getsize(dg_path) / (1024*1024):.1f} MB")
