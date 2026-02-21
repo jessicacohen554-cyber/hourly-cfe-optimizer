@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Market Design for a Post-Fossil Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body { background: #0B1120; }
+
+/* ===== Breadcrumb ===== */
+.breadcrumb {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 24px 0;
+    font-size: 0.82rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.03em;
+}
+.breadcrumb a {
+    color: #0EA5E9;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.breadcrumb a:hover { color: #38BDF8; }
+.breadcrumb .sep { color: rgba(255,255,255,0.3); margin: 0 8px; }
+.breadcrumb .current { color: rgba(255,255,255,0.5); }
+
+/* ===== Article Layout ===== */
+.article-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+}
+.article-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+    margin-bottom: 12px;
+    letter-spacing: -0.4px;
+}
+.article-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+.article-tag {
+    display: inline-block;
+    background: rgba(14,165,233,0.15);
+    color: #0EA5E9;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--font-heading);
+}
+.article-date {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.8rem;
+}
+
+/* ===== Illustration Panel ===== */
+.illustration-panel {
+    background: rgba(15,26,46,0.95);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: 16px;
+    padding: 32px 24px 24px;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1),
+                transform 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.illustration-panel.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.illustration-title {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: 0.02em;
+}
+
+/* ===== Paradox Diagram ===== */
+.paradox-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+}
+.paradox-box {
+    background: rgba(14,165,233,0.06);
+    border: 1px solid rgba(14,165,233,0.2);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+.paradox-box h4 {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #0EA5E9;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+}
+.paradox-box p {
+    color: rgba(255,255,255,0.65);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin: 0;
+}
+.paradox-arrow {
+    color: #F59E0B;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+}
+.paradox-result {
+    text-align: center;
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 10px;
+}
+.paradox-result p {
+    color: rgba(255,255,255,0.75);
+    font-size: 0.88rem;
+    line-height: 1.6;
+    margin: 0;
+}
+.paradox-result strong { color: #EF4444; }
+.illustration-caption {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+/* ===== Content Sections ===== */
+.content-section {
+    margin-bottom: 36px;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                transform 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.content-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.content-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    padding-left: 14px;
+    border-left: 3px solid #0EA5E9;
+    line-height: 1.3;
+}
+.content-section p {
+    color: rgba(255,255,255,0.72);
+    font-size: 0.93rem;
+    line-height: 1.8;
+    margin-bottom: 14px;
+}
+.content-section strong {
+    color: rgba(255,255,255,0.92);
+    font-weight: 600;
+}
+
+/* ===== School Cards ===== */
+.school-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0 24px;
+}
+.school-card {
+    background: rgba(15,26,46,0.95);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: 10px;
+    padding: 20px;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                transform 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.school-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.school-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #0EA5E9;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+}
+.school-card .school-who {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.78rem;
+    font-style: italic;
+    margin-bottom: 10px;
+}
+.school-card p {
+    color: rgba(255,255,255,0.65);
+    font-size: 0.85rem;
+    line-height: 1.65;
+    margin: 0;
+}
+.school-card .school-verdict {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.5);
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+/* ===== Reference Table ===== */
+.ref-table-wrap {
+    overflow-x: auto;
+    margin: 20px 0 24px;
+    border-radius: 10px;
+    border: 1px solid rgba(74,144,217,0.2);
+}
+.ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    min-width: 600px;
+}
+.ref-table th {
+    background: rgba(14,165,233,0.1);
+    color: #0EA5E9;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(74,144,217,0.2);
+}
+.ref-table td {
+    padding: 10px 14px;
+    color: rgba(255,255,255,0.65);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    vertical-align: top;
+    line-height: 1.5;
+}
+.ref-table tr:last-child td { border-bottom: none; }
+.ref-table td strong { color: rgba(255,255,255,0.85); }
+
+/* ===== Callout Box ===== */
+.callout-box {
+    background: rgba(14,165,233,0.08);
+    border: 1px solid rgba(14,165,233,0.25);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 36px 0;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                transform 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.callout-box.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.callout-box h4 {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0EA5E9;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.callout-box p {
+    color: rgba(255,255,255,0.72);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    margin: 0 0 10px 0;
+}
+.callout-box p:last-child { margin-bottom: 0; }
+
+.callout-box.warning {
+    background: rgba(245,158,11,0.08);
+    border-color: rgba(245,158,11,0.25);
+}
+.callout-box.warning h4 { color: #F59E0B; }
+
+/* ===== Back Link ===== */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #0EA5E9;
+    text-decoration: none;
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    transition: gap 0.2s, color 0.2s;
+    margin-top: 24px;
+}
+.back-link:hover { gap: 12px; color: #38BDF8; }
+
+/* ===== Footer ===== */
+.page-footer {
+    background: #0F1A2E;
+    color: rgba(255,255,255,0.7);
+    padding: 32px 24px;
+    text-align: center;
+}
+.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
+.footer-links a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 4px;
+}
+.footer-links a:hover { color: #ffffff; }
+.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+.bottom-banner {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+
+@media (max-width: 768px) {
+    .article-title { font-size: 1.6rem; }
+    .article-wrapper { padding: 24px 20px 64px; }
+    .paradox-grid { grid-template-columns: 1fr; }
+    .paradox-arrow { transform: rotate(90deg); }
+    .school-grid { grid-template-columns: 1fr; }
+    .illustration-panel { padding: 24px 16px 20px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>Reference Library</h1>
+    <p class="subtitle">Concepts, mechanics, and deep dives into electricity market design</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- Breadcrumb -->
+<div class="breadcrumb">
+    <a href="reference.html">Reference</a>
+    <span class="sep">/</span>
+    <span class="current">Market Design for a Post-Fossil Grid</span>
+</div>
+
+<article class="article-wrapper">
+
+    <h1 class="article-title">If Nobody Burns Fuel, How Do You Build a Market?</h1>
+    <div class="article-meta">
+        <span class="article-tag">Market Design</span>
+        <span class="article-tag">Capital Recovery</span>
+        <span class="article-date">February 2026</span>
+    </div>
+
+    <!-- ===== Key Illustration: The Paradox ===== -->
+    <div class="illustration-panel">
+        <div class="illustration-title">The Zero-Marginal-Cost Paradox</div>
+        <div class="paradox-grid">
+            <div class="paradox-box">
+                <h4>Today&rsquo;s Market</h4>
+                <p>Gas plants burn fuel at $35&ndash;50/MWh. This fuel cost sets the clearing price. Every generator &mdash; including zero-cost renewables &mdash; earns this price. Capital gets recovered through energy margins.</p>
+            </div>
+            <div class="paradox-arrow">&rarr;</div>
+            <div class="paradox-box">
+                <h4>Tomorrow&rsquo;s Market</h4>
+                <p>Nuclear runs at $5&ndash;10/MWh marginal cost. Solar and wind at ~$0. No fuel to burn. Clearing prices collapse toward zero in most hours. Energy margins vanish.</p>
+            </div>
+        </div>
+        <div class="paradox-result">
+            <p><strong>The paradox:</strong> The cheaper clean energy gets, the harder it is to finance. Every new zero-marginal-cost plant depresses revenue for every existing one. The market rewards the resource it needs least (peakers) and punishes the resource it needs most (firm clean baseload).</p>
+        </div>
+        <p class="illustration-caption">Current wholesale markets price at short-run marginal cost (SRMC). When SRMC is zero, the entire capital recovery mechanism breaks.</p>
+    </div>
+
+    <!-- ===== Section 1: The Problem ===== -->
+    <div class="content-section">
+        <h3>The Market Wasn&rsquo;t Built for This</h3>
+        <p>Wholesale electricity markets &mdash; PJM, CAISO, ERCOT, ISO-NE, MISO &mdash; all price electricity based on the <strong>marginal generator</strong>: the most expensive unit dispatched to meet demand in any given hour. This design assumed a fleet dominated by fossil plants with significant fuel costs. The fuel cost IS the marginal cost, and that margin pays for the plant. It worked for 30 years.</p>
+        <p>But the clean energy transition inverts this logic. Wind, solar, and nuclear have <strong>near-zero operating costs</strong>. Their cost is almost entirely capital &mdash; the upfront investment to build them. Current markets have no mechanism to recover capital through energy prices when the clearing price is zero most hours. MIT CEEPR modeling (Mallapragada et al., 2023) found this produces a <strong>bimodal price distribution</strong>: a dense cluster near $0/MWh and a thin tail of extreme scarcity prices. That&rsquo;s a terrible revenue profile for financing $5&ndash;10 billion infrastructure projects.</p>
+    </div>
+
+    <!-- ===== Section 2: Nuclear Case Study ===== -->
+    <div class="content-section">
+        <h3>The Nuclear Revenue Crisis Is Already Here</h3>
+        <p>This isn&rsquo;t a hypothetical. Existing nuclear plants are already drowning in markets that don&rsquo;t value their attributes. Illinois created Zero Emission Credits (ZECs) in 2016 to rescue its nuclear fleet from early retirement &mdash; plants that provided 50% of the state&rsquo;s electricity and virtually all its zero-carbon power. New York followed with similar ZECs. New Jersey enacted its own program. California extended Diablo Canyon past its planned 2025 closure. In every case, the same story: <strong>a zero-carbon, always-on, 90%+ capacity factor resource couldn&rsquo;t survive on market revenues alone.</strong></p>
+        <p>The market actively punishes the exact resource the grid needs most. Nuclear provides firm, dispatchable, zero-emission power 24/7/365 &mdash; the single most valuable combination of attributes for decarbonization. Yet wholesale energy prices, set by gas plants, don&rsquo;t compensate for those attributes. The 2022 Inflation Reduction Act tried to fill this gap with a technology-neutral Production Tax Credit (up to 1.5&cent;/kWh for existing nuclear), but this is a subsidy layered on a broken price signal, not a fix to the market itself.</p>
+    </div>
+
+    <!-- ===== Section 3: What Should the Clean Premium Be? ===== -->
+    <div class="content-section">
+        <h3>What Should the &ldquo;Clean Premium&rdquo; Be?</h3>
+        <p>If the market doesn&rsquo;t pay for clean attributes, what&rsquo;s the right price? The answer depends on which attributes you&rsquo;re valuing:</p>
+        <p><strong>Carbon-free generation.</strong> A carbon price of $50&ndash;80/ton CO&#8322; would raise the cost of unabated gas by $20&ndash;35/MWh at average U.S. heat rates, creating a natural spread that rewards zero-emission resources. The EU ETS currently prices at &euro;60&ndash;100/ton. The EPA&rsquo;s social cost of carbon is $51/ton (2020 dollars); Rennert et al. estimate $185/ton. Even at the low end, internalizing carbon costs would fundamentally reshape the merit order.</p>
+        <p><strong>Firmness and dispatchability.</strong> An intermittent MWh is not equivalent to a firm MWh. LCOE comparisons systematically undervalue firm resources by ignoring capacity credit (nuclear: 90%+, solar: 30&ndash;70%, wind: 10&ndash;25%), system integration costs, inertia, voltage support, and temporal correlation with demand. FTI Consulting has proposed a <strong>Levelized Value of Energy (LVOE)</strong> metric that incorporates all monetized value streams &mdash; energy, capacity, ancillary services, carbon credits &mdash; minus full project costs. Nuclear consistently outperforms its LCOE ranking when LVOE is used.</p>
+        <p><strong>Reliability during scarcity.</strong> The hours that matter most &mdash; winter peaks, low-wind/low-solar periods, system stress events &mdash; are precisely when firm clean resources are irreplaceable. PJM&rsquo;s 2025/26 capacity auction cleared at $269&ndash;333/MW-day, reflecting genuine scarcity value. But capacity payments go to all qualifying resources, including aging coal and gas, not specifically to clean ones.</p>
+    </div>
+
+    <!-- ===== Section 4: Can You Internalize Capex? ===== -->
+    <div class="content-section">
+        <h3>Can You Put Capital Costs Into Marginal Prices?</h3>
+        <p>This is the radical question. Today&rsquo;s markets clear at <strong>short-run marginal cost (SRMC)</strong> &mdash; just fuel plus variable O&amp;M. If you shifted to <strong>long-run marginal cost (LRMC)</strong> pricing, you&rsquo;d internalize capital recovery directly into the clearing price. A nuclear plant would bid at its full levelized cost (~$65&ndash;90/MWh including capex amortization) rather than its marginal fuel cost (~$8/MWh).</p>
+        <p>The problem is that LRMC pricing fundamentally changes dispatch efficiency. SRMC-based dispatch ensures the cheapest-to-run generators are dispatched first &mdash; that&rsquo;s economically efficient hour by hour. LRMC pricing could lead to perverse dispatch orders where a plant with high capital costs but low fuel costs gets displaced by one with lower capital costs but higher fuel costs.</p>
+        <p>The emerging consensus is a <strong>hybrid approach</strong>: keep SRMC dispatch for operational efficiency, but layer on long-term mechanisms that handle capital recovery separately. This is the direction the EU took in its May 2024 market reform &mdash; retaining marginal pricing for day-ahead and real-time markets while mandating <strong>two-way Contracts for Difference (CfDs)</strong> for all publicly supported new clean energy investments starting in 2027.</p>
+    </div>
+
+    <div class="callout-box warning">
+        <h4>The Cannibalization Trap</h4>
+        <p>Every new wind or solar farm depresses wholesale prices during the hours it produces &mdash; reducing revenue for all existing clean generators. This is the <strong>merit order effect</strong>, and at high penetration it becomes self-defeating: the cannibalization rate for solar in some markets now exceeds 30%, meaning a new solar plant earns 30% less per MWh than the market average. The more clean energy you build, the worse the economics get for the clean energy already built.</p>
+        <p>Germany, Australia, UK, Ireland, Chile, and Spain have all seen surging hours of negative wholesale prices in 2024&ndash;2025. This isn&rsquo;t an edge case &mdash; it&rsquo;s the new normal.</p>
+    </div>
+
+    <!-- ===== Section 5: Schools of Thought ===== -->
+    <div class="content-section">
+        <h3>Four Schools of Thought on How to Fix It</h3>
+        <p>The literature on market redesign is deep and growing. Here are the four dominant approaches, along with who&rsquo;s championing them and the trade-offs of each.</p>
+    </div>
+
+    <div class="school-grid">
+        <div class="school-card">
+            <h4>1. Fix the Existing Design</h4>
+            <div class="school-who">Hogan (Harvard), Harvey &bull; 2022&ndash;2025</div>
+            <p>Zero-marginal-cost generation doesn&rsquo;t change the fundamentals. Implement the existing design properly: better scarcity pricing (ORDC), expanded demand response, carbon price integrated into LMP. The market framework is sound; the execution is incomplete.</p>
+            <div class="school-verdict"><strong>Trade-off:</strong> Requires a politically durable carbon price high enough to create real investment signals. No country has achieved this yet.</div>
+        </div>
+        <div class="school-card">
+            <h4>2. Hybrid Long-Term Contracting</h4>
+            <div class="school-who">Brattle Group, RFF (Lo Prete, Palmer), EU 2024 Reform</div>
+            <p>Keep short-term dispatch markets, but add organized long-term mechanisms: CfDs, Forward Clean Energy Markets (FCEMs), reliability options. Guarantee revenue certainty for capital-intensive clean resources through competitive auctions years ahead of delivery.</p>
+            <div class="school-verdict"><strong>Trade-off:</strong> Layering mechanisms adds complexity. CfD design matters &mdash; poorly designed CfDs can distort dispatch (producers generating into negative prices to earn the strike). Capacity-based CfDs and &ldquo;deemed output&rdquo; approaches are being explored to mitigate this.</div>
+        </div>
+        <div class="school-card">
+            <h4>3. Structural Split Markets</h4>
+            <div class="school-who">Grubb (UCL), Keay (Oxford/OIES) &bull; 2017&ndash;2023</div>
+            <p>The cost structure of the industry has fundamentally changed &mdash; from variable-cost-dominated to capital-cost-dominated. Split the market into &ldquo;as available&rdquo; (clean, capital-intensive, average-cost contracts) and &ldquo;on demand&rdquo; (dispatchable, flexible, marginal-cost pricing). A government-backed Green Power Pool would manage clean energy procurement.</p>
+            <div class="school-verdict"><strong>Trade-off:</strong> Requires significant institutional change. Risks creating two disconnected markets with seams problems. The UK considered and rejected zonal pricing in 2025 partly due to implementation complexity.</div>
+        </div>
+        <div class="school-card">
+            <h4>4. Forward Energy Markets</h4>
+            <div class="school-who">Cramton (Maryland/Max Planck), Ockenfels, Stoft &bull; 2024</div>
+            <p>Replace capacity markets with granular forward energy contracts &mdash; monthly and hourly products traded up to 4 years ahead. Load-serving entities must buy forward; large generators must sell. Incentivizes investment through price discovery and risk reduction, not administrative capacity payments.</p>
+            <div class="school-verdict"><strong>Trade-off:</strong> Liquidity is the challenge. Thousands of products across time, location, and horizon may fragment trading. But a centralized operator could aggregate better than bilateral markets.</div>
+        </div>
+    </div>
+
+    <!-- ===== Section 6: Capital Must Earn a Return ===== -->
+    <div class="content-section">
+        <h3>Money Has to Be Made: The Capital Deployment Problem</h3>
+        <p>Every proposed market design ultimately has to answer one question: <strong>will investors deploy capital?</strong> The clean energy transition requires trillions in new infrastructure &mdash; nuclear plants at $7,000&ndash;10,000/kW, transmission lines, 36 GW of storage in Australia alone (vs. 3 GW today), hundreds of GW of renewables globally. This capital won&rsquo;t flow without predictable returns.</p>
+        <p>The UK&rsquo;s CfD program is the most mature evidence point. Since 2013, it has contracted over 20 GW of clean energy through competitive auctions with two-way strike prices. When wholesale prices are below the strike, the government pays the difference. When prices are above, the generator pays back. This gives investors bankable, 15-year revenue certainty &mdash; and it works. UK offshore wind costs have dropped 70% under this regime.</p>
+        <p>For nuclear, the revenue problem is more acute. New nuclear projects take 10&ndash;15 years to build and cost $5&ndash;10 billion per unit. No private investor will commit that capital on spot market revenues that might be zero in most hours by the time the plant is operational. The UK&rsquo;s Regulated Asset Base (RAB) model for Sizewell C, and France&rsquo;s Universal Nuclear Payment mechanism (a progressive levy on EDF revenues redistributed to consumers), represent different approaches to the same problem: <strong>how do you guarantee a return on a $10 billion, 60-year asset in a market designed for marginal-cost fuel?</strong></p>
+    </div>
+
+    <div class="content-section">
+        <h3>What&rsquo;s Actually Happening on the Ground</h3>
+        <p><strong>United States.</strong> No coherent national market reform. Instead, a patchwork: state ZEC programs for nuclear, IRA tax credits (PTC/ITC), FERC Order 2023 fixing interconnection queues (2,600 GW backlog, mostly renewables), PJM capacity auctions hitting record prices ($333/MW-day). ERCOT canceled its proposed Performance Credit Mechanism in late 2024 but implemented real-time co-optimization for storage. Texas launched a $5B state fund for gas-fired generation, but 40%+ of projects have already been withdrawn. The system is adapting through kludges, not design.</p>
+        <p><strong>European Union.</strong> The most deliberate reform. May 2024 regulation retained marginal pricing for spot markets but mandated two-way CfDs for all new publicly-supported clean energy (effective 2027). Capacity mechanisms upgraded from &ldquo;temporary last resort&rdquo; to permanent structural features. The EU spent &euro;600B+ on emergency energy measures in 2021&ndash;2023, which concentrated minds on structural reform.</p>
+        <p><strong>United Kingdom.</strong> REMA (Review of Electricity Market Arrangements) concluded in July 2025: zonal pricing rejected as too disruptive, &ldquo;Reformed National Pricing&rdquo; adopted instead. CfDs remain the primary investment mechanism. Target: clean power by 2030.</p>
+        <p><strong>Australia.</strong> Capacity Investment Scheme procuring 32 GW via CfD-like tenders. AEMO expects 90% of coal retired by 2035. The gap between 3 GW of storage today and 36 GW needed by 2034&ndash;35 is the starkest illustration of the capital deployment challenge anywhere in the world.</p>
+    </div>
+
+    <!-- ===== Section 7: The Optimistic Counter ===== -->
+    <div class="content-section">
+        <h3>A Contrarian View: Maybe Markets Survive Just Fine</h3>
+        <p>Not everyone agrees the sky is falling. Antweiler &amp; M&uuml;sgens (2025, <em>Energy Economics</em>) modeled all-renewable-plus-storage markets and found that <strong>energy-only markets remain viable</strong>. Storage creates a &ldquo;new merit order&rdquo; driven by opportunity costs: batteries and long-duration storage buy low, sell high, and their time-shifting behavior re-creates a price curve with enough spread for capital recovery. The result looks surprisingly similar to today &mdash; few hours at zero, a middle band at positive prices, and a tail of peaks.</p>
+        <p>De Vries &amp; Verzijlbergh (2024, <em>Renewable and Sustainable Energy Reviews</em>) reached a similar conclusion: energy-limited resources (storage, hydro, demand response) create opportunity-cost-based pricing that partially solves the zero-marginal-cost problem. If enough flexible demand and storage participate, scarcity rents still emerge naturally.</p>
+        <p>The catch: both analyses assume <strong>massive storage deployment</strong> and active demand response &mdash; neither of which exists at the required scale today. The transition path from here to there is where the market design problem bites hardest.</p>
+    </div>
+
+    <!-- ===== Callout: Connection to 8,760 ===== -->
+    <div class="callout-box">
+        <h4>What This Means for 24/7 CFE Procurement</h4>
+        <p>Our optimizer models the cost of hourly carbon-free energy matching from 50% to 100%. The results expose the same tension the market design literature is wrestling with: <strong>the last 5&ndash;10% of hourly matching requires firm clean resources that can&rsquo;t recover their costs under current market structures.</strong></p>
+        <p>If market reforms succeed in properly valuing firm clean attributes &mdash; through CfDs, capacity payments, carbon pricing, or forward markets &mdash; the cost curve for 90&ndash;100% CFE would flatten significantly. If they don&rsquo;t, the &ldquo;cost cliff&rdquo; at high matching thresholds isn&rsquo;t a temporary artifact &mdash; it&rsquo;s a structural feature of a market that can&rsquo;t price what it needs.</p>
+    </div>
+
+    <!-- ===== Key References Table ===== -->
+    <div class="content-section">
+        <h3>Key References</h3>
+    </div>
+    <div class="ref-table-wrap">
+        <table class="ref-table">
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Year</th>
+                    <th>Contribution</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Mallapragada, Junge, Wang, Pfeifenberger, Joskow, Schmalensee</strong> (MIT CEEPR)</td>
+                    <td>2023</td>
+                    <td>Bimodal price distribution in deeply decarbonized systems; robust finding across all U.S. regions</td>
+                </tr>
+                <tr>
+                    <td><strong>Hogan</strong> (Harvard)</td>
+                    <td>2022</td>
+                    <td>Zero-MC generation doesn&rsquo;t change market design fundamentals; carbon price + scarcity pricing is sufficient</td>
+                </tr>
+                <tr>
+                    <td><strong>Grubb</strong> (UCL) &amp; <strong>Keay</strong> (OIES)</td>
+                    <td>2017&ndash;2023</td>
+                    <td>Dual-market / Green Power Pool proposal; &ldquo;as available&rdquo; vs. &ldquo;on demand&rdquo; market separation</td>
+                </tr>
+                <tr>
+                    <td><strong>Cramton, Ockenfels, Stoft</strong></td>
+                    <td>2013&ndash;2024</td>
+                    <td>Reliability options, forward energy markets replacing capacity markets, flow-trading framework</td>
+                </tr>
+                <tr>
+                    <td><strong>Lo Prete, Palmer, Robertson</strong> (RFF)</td>
+                    <td>2024&ndash;2025</td>
+                    <td>Review of 11 market designs across 10 criteria; identified &ldquo;available capacity at times of need&rdquo; as key challenge</td>
+                </tr>
+                <tr>
+                    <td><strong>Brattle Group</strong></td>
+                    <td>2019&ndash;2025</td>
+                    <td>Forward Clean Energy Market (FCEM); Clean Energy Attribute Certificates; Integrated Clean Capacity Market</td>
+                </tr>
+                <tr>
+                    <td><strong>Antweiler &amp; M&uuml;sgens</strong></td>
+                    <td>2025</td>
+                    <td>Energy-only markets remain viable with renewables + storage; new merit order driven by storage opportunity costs</td>
+                </tr>
+                <tr>
+                    <td><strong>De Vries &amp; Verzijlbergh</strong></td>
+                    <td>2024</td>
+                    <td>Energy-limited resources create opportunity-cost pricing that partially solves zero-MC problem</td>
+                </tr>
+                <tr>
+                    <td><strong>EU Market Reform</strong> (Regulation 2024/1747)</td>
+                    <td>2024</td>
+                    <td>Mandatory two-way CfDs for new clean energy; capacity mechanisms made permanent</td>
+                </tr>
+                <tr>
+                    <td><strong>Joskow</strong> (MIT)</td>
+                    <td>2007&ndash;2008</td>
+                    <td>Foundational &ldquo;missing money&rdquo; evidence; capacity payment need and design</td>
+                </tr>
+                <tr>
+                    <td><strong>Gramlich &amp; Goggin</strong> (Grid Strategies)</td>
+                    <td>2019&ndash;2024</td>
+                    <td>Capacity market critique: systematic bias toward excess reserves, props up 18 GW uneconomic coal in PJM</td>
+                </tr>
+                <tr>
+                    <td><strong>FTI Consulting</strong></td>
+                    <td>2024</td>
+                    <td>Levelized Value of Energy (LVOE) metric; nuclear outperforms LCOE ranking when all value streams included</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <a href="reference.html" class="back-link"><span>&larr;</span> Back to Reference Library</a>
+
+</article>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="reference.html">Reference Library</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <p class="footer-note">The 8,760 Problem &mdash; Reference Library</p>
+</footer>
+<div class="bottom-banner"></div>
+
+<script>
+// Fade-in on scroll
+var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+        if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            obs.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.illustration-panel, .content-section, .callout-box, .school-card').forEach(function(el) {
+    obs.observe(el);
+});
+</script>
+
+</body>
+</html>
