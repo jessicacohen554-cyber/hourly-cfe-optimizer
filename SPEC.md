@@ -1242,41 +1242,65 @@ ldes_levels  = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]  # 11 levels
 - All downstream code (Step 2 EF, Step 3 cost, Step 4 postprocess, dashboard) must handle float storage values
 - Existing cache with integer storage values must be preserved and converted on merge
 
-### 6.4 Storage Sweep Optimizations — SOC Pre-Screen + Dominance Pruning (Feb 21, 2026)
+### 6.4 Storage Sweep Optimizations — Batched Dispatch + Parallel Mixes (Feb 21, 2026)
 
-The 12.8× increase in nominal storage combos is offset by three optimizations that eliminate 80-95% of evaluations:
+The 12.8× increase in nominal storage combos is offset by a batched + parallel architecture:
 
-#### 1. SOC Pre-Screen (Per-Mix Battery Cap)
+#### 1. Batched Storage Dispatch (`_batch_storage_scores`)
 
-Before running the full storage dispatch loop, compute the **maximum state of charge** each storage type would reach with **unlimited capacity** at max procurement. This is a single fast pass over the year — no capacity constraint means no nested binary search.
+Instead of calling `_score_with_all_storage` per combo (each recomputing bat4/bat8 dispatch from scratch), a single `_batch_storage_scores` call evaluates ALL bat4×bat8×LDES combos for a given (mix, procurement):
+
+- **Bat4 dispatch residual reuse**: Computed once per bat4 level, reused across all bat8 levels
+- **Bat8 dispatch residual reuse**: Computed once per (bat4, bat8) pair, reused across all LDES levels
+- **LDES dispatch**: Only the innermost loop; runs on post-bat4+bat8 residual
+
+This eliminates the redundant base dispatch recomputation that dominated the old triple-nested loop.
+
+#### 2. Parallel Mix Screening (`_batch_mixes_storage_screen`)
+
+Near-miss mixes are processed in batches of `MAX_MIX_BATCH = 100`. Each batch:
+1. Pre-computes curtailment-MW caps for all mixes (fast: one 8760-hour pass per mix)
+2. Gathers supply rows into a (N_batch, 8760) array
+3. Calls `_batch_mixes_storage_screen` which uses **Numba `prange`** to distribute mixes across CPU cores
+4. Each core runs `_batch_storage_scores` for its assigned mixes in parallel
+
+This prevents large ISOs (NYISO with hydro_cap=15.9%, PJM) from stalling by parallelizing across mixes.
+
+#### 3. Curtailment-MW Cap (Per-Mix Physics Ceiling)
+
+For each (mix, max_procurement), `_compute_storage_caps` finds the max hourly surplus (curtailment). A battery with power = cap/duration can never charge faster than max_hourly_surplus, so:
 
 ```python
-# For bat4/bat8: daily cycle — find peak-day SOC
-_compute_max_daily_battery_soc(demand, supply_row, max_pf, eff, duration)
-→ (max_soc, total_dispatch)
-
-# For LDES: multi-day window — find peak-window SOC
-_compute_max_ldes_soc(demand, supply_row, max_pf, eff, window_hours)
-→ (max_soc, total_dispatch)
+max_useful_cap = max_hourly_surplus × duration
 ```
 
-The `max_soc` is the **ceiling** — any storage level above this is pure idle capacity. Storage levels are filtered to `level ≤ max_soc × 1.1` (10% margin for procurement variation). For typical high-RE mixes:
-- bat4/bat8: max_soc ≈ 0.5-1.2% → filters 20 levels down to 4-8 effective levels
-- LDES: max_soc > 20% → little filtering (expected — LDES is capacity-hungry)
+Caps computed per mix, applied in post-processing to filter batch results:
+- `bat4_cap = max_hourly_surplus × 4hr` (tight: ~2× tighter than SOC ceiling)
+- `bat8_cap = max_hourly_surplus × 8hr`
+- `ldes_cap = max_hourly_surplus × 100hr`
+- All with 10% margin for procurement variation
 
-If `total_dispatch` is zero for all three types, the mix has no curtailment to harness and is skipped entirely.
+#### 4. Curtailment Frequency Filter
 
-#### 2. Dominance Pruning (Early Stop on Storage Levels)
+Daily-cycle batteries (bat4/bat8) need **≥ 150 surplus days** to justify capacity. Mixes with fewer surplus days skip battery combos entirely; only LDES is evaluated (which accumulates across multi-day windows).
 
-Within the LDES innermost loop, once a level achieves feasibility at procurement P, the next level is tested. If it achieves feasibility at the same or higher P, higher LDES levels are **dominated** — they add cost (more capacity) without reducing procurement. The LDES sweep breaks at that point.
+#### 5. Bat8 Two-Day Dispatch Window
 
-This captures the key physics: beyond a certain LDES capacity, the added energy is marginal (the charging window is full, or the remaining gaps are too small for LDES power rating to serve).
+Battery 8hr dispatch uses 48hr (2-day) windows instead of daily 24hr windows, reflecting ~200 cycles/year operational pattern. This allows accumulating surplus across 2 days before discharging.
 
-#### 3. Curtailment Guard
+```python
+batt8_window = 48  # 2-day window → ~183 windows/year → ~200 actual cycles
+```
 
-A mix with no surplus at max procurement gets zero dispatch from any storage type. The SOC pre-screen naturally catches this (total_dispatch = 0 → skip), but it's explicitly checked as an early exit before allocating the effective level arrays.
+#### 6. Dominance Pruning (LDES Early Stop)
 
-**Net effect**: The 4,400 nominal combos per mix typically reduce to ~200-600 actual evaluations, making the refined grid computationally comparable to the old 343-combo grid while providing 10-20× finer resolution in the battery saturation zone.
+Within each (bat4, bat8) pair's LDES sweep, if increasing LDES doesn't reduce minimum feasible procurement, stop — higher LDES adds cost without reducing procurement.
+
+#### 7. Infeasible Screening
+
+The batch call at max procurement screens ALL combos in one shot. Combos infeasible at max procurement are skipped without binary search (biggest win — most combos are infeasible).
+
+**Net architecture**: `_batch_mixes_storage_screen` (Numba prange across mixes) → `_batch_storage_scores` (residual reuse across storage combos) → post-filter by per-mix caps → binary search only feasible combos.
 
 ---
 
