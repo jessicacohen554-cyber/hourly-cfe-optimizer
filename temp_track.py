@@ -11,12 +11,16 @@ Track 2 (replace): all mixes (hydro≤existing), uprates OFF
   Source: original EF backup (8.6M mixes with floor filter)
   Purpose: Cost to replace existing clean generation
 
+Checkpoint: Parquet-based. After each (iso, track) completes, results are
+  appended to track_scenarios.parquet. On resume, completed (iso, track) pairs
+  are read from the parquet header — no full data load needed.
+
 Usage:
   python temp_track.py              # Medium-only (fast, ~30s)
   python temp_track.py --full       # All 5,832+ combos (hours)
+  python temp_track.py --iso PJM    # Single ISO
 """
 
-import json
 import os
 import sys
 import time
@@ -36,47 +40,117 @@ from step3_cost_optimization import (
     precompute_base_year_coefficients, get_scenario_prices,
     eval_cost_fast, eval_and_argmin_all, build_winner_scenario,
     build_sensitivity_combos, medium_key, price_mix_batch,
-    TRACK_RESULTS_PATH,
+    precompute_all_prices, batch_eval_and_argmin_all,
+    TRACK_RESULTS_PATH, HAS_NUMBA,
 )
-
-EF_EXPANDED_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
-EF_BACKUP_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef_backup.parquet')
-CHECKPOINT_PATH = os.path.join(SCRIPT_DIR, 'data', 'track_checkpoint.json')
 
 from step3_cost_optimization import (
     _N_COEFFS, _COL_WHOLESALE, _COL_SOL_NEW, _COL_WND_NEW, _COL_CCS_NEW,
     _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4, _COL_BAT8, _COL_LDES,
 )
 
+EF_EXPANDED_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
+EF_BACKUP_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef_backup.parquet')
 
-def save_checkpoint(track_output, completed_steps):
-    """Save progress checkpoint after each ISO/track completes."""
-    ckpt = {
-        'track_output': track_output,
-        'completed_steps': completed_steps,
-        'timestamp': time.time(),
-    }
-    tmp = CHECKPOINT_PATH + '.tmp'
-    with open(tmp, 'w') as f:
-        json.dump(ckpt, f, separators=(',', ':'))
-    os.replace(tmp, CHECKPOINT_PATH)
-    print(f"    [checkpoint saved: {len(completed_steps)} steps completed]")
+# Parquet paths — these ARE the checkpoints
+PQ_SCENARIOS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
+PQ_DG_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_demand_growth.parquet')
 
 
-def load_checkpoint():
-    """Load checkpoint if it exists. Returns (track_output, completed_steps) or (None, set())."""
-    if not os.path.exists(CHECKPOINT_PATH):
-        return None, set()
-    try:
-        with open(CHECKPOINT_PATH) as f:
-            ckpt = json.load(f)
-        completed = set(tuple(s) for s in ckpt['completed_steps'])
-        age_min = (time.time() - ckpt.get('timestamp', 0)) / 60
-        print(f"  Loaded checkpoint: {len(completed)} steps completed ({age_min:.0f} min ago)")
-        return ckpt['track_output'], completed
-    except Exception as e:
-        print(f"  WARNING: Failed to load checkpoint: {e}")
-        return None, set()
+def load_completed_tracks(pq_path):
+    """Read parquet metadata to find completed (iso, track) pairs.
+
+    Only reads the iso and track columns — O(rows) but tiny memory since
+    it's just two string columns from a ~1MB file.
+    """
+    if not os.path.exists(pq_path):
+        return set()
+    import pandas as pd
+    df = pd.read_parquet(pq_path, columns=['iso', 'track'])
+    completed = set(zip(df['iso'], df['track']))
+    print(f"  Parquet checkpoint: {len(completed)} (iso, track) pairs completed")
+    for iso, track in sorted(completed):
+        n = len(df[(df['iso'] == iso) & (df['track'] == track)])
+        print(f"    {iso}/{track}: {n:,} scenarios")
+    return completed
+
+
+def flatten_track_rows(iso, track_name, result_dict):
+    """Flatten nested track result dict into flat rows for parquet."""
+    rows = []
+    for thr_str, thr_val in result_dict.items():
+        for sc_key, sc in thr_val.get('scenarios', {}).items():
+            row = {
+                'iso': iso,
+                'track': track_name,
+                'threshold': float(thr_str),
+                'scenario': sc_key,
+            }
+            for k, v in sc.get('resource_mix', {}).items():
+                row[f'mix_{k}'] = v
+            row['procurement_pct'] = sc.get('procurement_pct')
+            row['hourly_match_score'] = sc.get('hourly_match_score')
+            row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct')
+            row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct')
+            row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct')
+            for k, v in sc.get('costs', {}).items():
+                row[f'cost_{k}'] = v
+            for k, v in sc.get('tranche_costs', {}).items():
+                row[f'tranche_{k}'] = v
+            for k, v in sc.get('gas_backup', {}).items():
+                row[f'gas_{k}'] = v
+            rows.append(row)
+    return rows
+
+
+def flatten_dg_rows(iso, track_name, dg_dict):
+    """Flatten demand growth result dict into flat rows for parquet."""
+    rows = []
+    for thr_str, sc_dict in dg_dict.items():
+        for sc_key, year_data in sc_dict.items():
+            for year_str, growth_data in year_data.items():
+                for g_level, vals in growth_data.items():
+                    rows.append({
+                        'iso': iso,
+                        'track': track_name,
+                        'threshold': float(thr_str),
+                        'scenario': sc_key,
+                        'year': int(year_str),
+                        'growth_level': g_level,
+                        'best_mix_idx': vals[0],
+                        'total_cost': vals[1],
+                        'effective_cost': vals[2],
+                        'incremental_cost': vals[3],
+                    })
+    return rows
+
+
+def append_to_parquet(new_rows, pq_path):
+    """Append rows to parquet, replacing any existing data for the same (iso, track) pairs."""
+    import pandas as pd
+
+    df_new = pd.DataFrame(new_rows)
+    if len(df_new) == 0:
+        return 0
+
+    if os.path.exists(pq_path):
+        df_existing = pd.read_parquet(pq_path)
+        new_keys = set(zip(df_new['iso'], df_new['track']))
+        mask = ~pd.Series(list(zip(df_existing['iso'], df_existing['track']))).apply(
+            lambda x: x in new_keys)
+        df_keep = df_existing[mask.values]
+        df = pd.concat([df_keep, df_new], ignore_index=True)
+        print(f"    Parquet merge: kept {len(df_keep):,} + added {len(df_new):,} = {len(df):,} total")
+    else:
+        df = df_new
+
+    # Atomic write
+    tmp = pq_path + '.tmp'
+    df.to_parquet(tmp, index=False, compression='zstd')
+    os.replace(tmp, pq_path)
+    size_mb = os.path.getsize(pq_path) / (1024 * 1024)
+    print(f"    Saved: {pq_path} ({len(df):,} rows, {size_mb:.1f} MB)")
+    return len(df)
 
 
 def load_iso_arrays(table, iso):
@@ -152,16 +226,8 @@ def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
 
 
 def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=None,
-              existing_override=None, track_output=None, completed_steps=None,
-              apply_dominance_filter=True):
+              existing_override=None, apply_dominance_filter=True):
     """Run cost optimization for a track (newbuild or replace).
-
-    Checkpoints after every 500 combos (full sweep) by writing partial results
-    to track_output and saving to disk.
-
-    Args:
-        apply_dominance_filter: if True, prune dominated mixes before evaluation.
-            Dramatically reduces evaluation count (typically 50-80% reduction).
 
     Returns:
         track_data: dict of {threshold_str: {'scenarios': {key: scenario_dict}}}
@@ -216,74 +282,42 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
     thresholds_desc = np.array(sorted(active_thresholds, reverse=True), dtype=np.float64)
     thr_pos = {float(thresholds_desc[k]): k for k in range(len(thresholds_desc))}
 
-    # Check for existing partial results from a checkpoint
-    existing_scenarios = set()
-    if (track_output and iso in track_output.get('results', {})
-            and track_name in track_output['results'][iso]):
-        existing_data = track_output['results'][iso][track_name]
-        for thr_str, thr_val in existing_data.items():
-            for sk in thr_val.get('scenarios', {}):
-                existing_scenarios.add(sk)
-        if existing_scenarios:
-            print(f"    {iso} {track_name}: resuming, {len(existing_scenarios)} scenarios cached")
-
     thr_data = {thr: {'scenarios': {}} for thr in active_thresholds}
-    # Pre-populate from checkpoint
-    if existing_scenarios and track_output:
-        existing_data = track_output['results'][iso].get(track_name, {})
-        for thr in active_thresholds:
-            thr_str = str(thr)
-            if thr_str in existing_data:
-                thr_data[thr]['scenarios'] = dict(existing_data[thr_str].get('scenarios', {}))
-
     arch_set = set()
     n_combos = len(combos)
     iso_start = time.time()
-    checkpoint_interval = 500 if n_combos > 100 else n_combos + 1
-    skipped = 0
 
-    for combo_i, (scenario_key, sens) in enumerate(combos):
-        # Skip already-computed scenarios
-        if scenario_key in existing_scenarios:
-            skipped += 1
-            continue
+    # Pre-compute all price vectors at once
+    price_matrix, wholesale_arr, nuclear_arr, ccs_arr = precompute_all_prices(iso, combos)
+    price_time = time.time() - iso_start
+    print(f"    {iso} {track_name}: prices pre-computed ({price_time:.1f}s), "
+          f"launching batched eval ({N:,} mixes × {n_combos:,} combos)...")
 
-        prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
-        best_idxs, best_vals = eval_and_argmin_all(
-            coeff_matrix, constant, prices, scores, thresholds_desc)
+    # Single batched Numba call — tiled for cache efficiency
+    batch_start = time.time()
+    all_best_idxs, all_best_vals = batch_eval_and_argmin_all(
+        coeff_matrix, constant, price_matrix, scores, thresholds_desc)
+    batch_elapsed = time.time() - batch_start
+    print(f"    {iso} {track_name}: batched eval+argmin done in {batch_elapsed:.1f}s")
 
+    # Build winner scenarios from batched results
+    build_start = time.time()
+    for j, (scenario_key, sens) in enumerate(combos):
         for thr in active_thresholds:
             k = thr_pos[float(thr)]
-            if best_vals[k] == np.inf:
+            if all_best_vals[j, k] == np.inf:
                 continue
-            best_idx = int(best_idxs[k])
-            tc_val = float(best_vals[k])
+            best_idx = int(all_best_idxs[j, k])
+            tc_val = float(all_best_vals[j, k])
             arch_set.add(best_idx)
 
             scenario = build_winner_scenario(
                 arrays, extras, best_idx, sens, iso, demand_twh,
-                tc_val, wholesale, nuclear_price, ccs_price)
+                tc_val, float(wholesale_arr[j]),
+                float(nuclear_arr[j]), float(ccs_arr[j]))
             thr_data[thr]['scenarios'][scenario_key] = scenario
-
-        computed = combo_i + 1 - skipped
-        if n_combos > 100 and computed > 0 and computed % 1000 == 0:
-            elapsed = time.time() - iso_start
-            total_remaining = n_combos - combo_i - 1
-            rate = computed / elapsed
-            remaining = total_remaining / rate if rate > 0 else 0
-            print(f"    {iso} {track_name} {combo_i+1}/{n_combos} "
-                  f"({elapsed:.0f}s, ~{remaining:.0f}s remaining)")
-
-        # Checkpoint every N combos
-        if (track_output is not None and completed_steps is not None
-                and computed > 0 and computed % checkpoint_interval == 0):
-            result_partial = {str(thr): thr_data[thr] for thr in active_thresholds}
-            track_output['results'][iso][track_name] = result_partial
-            _save_results(track_output)
-            save_checkpoint(track_output, [list(s) for s in completed_steps])
-
-    if skipped > 0:
-        print(f"    {iso} {track_name}: skipped {skipped} cached scenarios")
+    build_elapsed = time.time() - build_start
+    print(f"    {iso} {track_name}: winner scenarios built in {build_elapsed:.1f}s")
 
     result = {str(thr): thr_data[thr] for thr in active_thresholds}
     elapsed = time.time() - iso_start
@@ -357,74 +391,46 @@ def main():
                         help='Run all sensitivity combos (hours). Default: Medium-only.')
     parser.add_argument('--fresh', action='store_true',
                         help='Ignore checkpoint and start from scratch.')
+    parser.add_argument('--iso', type=str, default=None,
+                        help='Run only this ISO (e.g., PJM). Default: all ISOs.')
     args = parser.parse_args()
-
-    mode = 'full' if args.full else 'medium_only'
 
     print("=" * 70)
     print("  INCREMENTAL TRACK ANALYSIS")
     print(f"  Mode: {'Full sweep (all combos)' if args.full else 'Medium-only (fast)'}")
+    print(f"  Checkpoint: Parquet-based ({PQ_SCENARIOS_PATH})")
     print("=" * 70)
     total_start = time.time()
 
-    # Load checkpoint if available (and mode matches)
-    if not args.fresh:
-        ckpt_output, completed_steps = load_checkpoint()
-        if ckpt_output and ckpt_output.get('meta', {}).get('mode') == mode:
-            track_output = ckpt_output
-            print(f"  Resuming from checkpoint — skipping {len(completed_steps)} completed steps")
-        else:
-            if ckpt_output:
-                print(f"  Checkpoint mode mismatch (was {ckpt_output.get('meta',{}).get('mode')}, "
-                      f"now {mode}) — starting fresh")
-            track_output = None
-            completed_steps = set()
+    # Load completed tracks from parquet checkpoint
+    if args.fresh:
+        print("  --fresh flag: ignoring existing parquet checkpoint")
+        completed_tracks = set()
     else:
-        print("  --fresh flag: ignoring any existing checkpoint")
-        track_output = None
-        completed_steps = set()
+        completed_tracks = load_completed_tracks(PQ_SCENARIOS_PATH)
 
-    # Initialize output structure if no valid checkpoint
-    if track_output is None:
-        track_output = {
-            'meta': {
-                'tracks': {
-                    'newbuild': {
-                        'description': 'New-build requirement for hourly matching',
-                        'hydro': 'excluded (hydro=0 mixes only)',
-                        'existing_clean': 'zeroed (all existing CF/solar/wind/CCS = 0)',
-                        'uprates': 'on (uprate tranche active as cheapest new-build)',
-                        'purpose': 'What does hourly matching incentivize to BUILD from scratch?',
-                    },
-                    'replace': {
-                        'description': 'Cost to replace all existing clean generation',
-                        'hydro': 'included (existing floor, wholesale-priced)',
-                        'existing_clean': 'zeroed (all existing CF/solar/wind/CCS = 0)',
-                        'uprates': 'off (uprate_cap=0, no uprate tranche)',
-                        'purpose': 'True greenfield cost — only hydro is existing, everything else new-build',
-                    },
-                },
-                'mode': mode,
-                'thresholds': OUTPUT_THRESHOLDS,
-                'resource_types': RESOURCE_TYPES,
-            },
-            'results': {},
-            'demand_growth': {'newbuild': {}, 'replace': {}},
-        }
-        completed_steps = set()
+    # Warm up Numba JIT (batched function)
+    if HAS_NUMBA:
+        from step3_cost_optimization import _batch_eval_and_argmin, _eval_cost_numba, _argmin_bucketed, _N_COEFFS
+        _dcm = np.zeros((2, _N_COEFFS))
+        _dc = np.zeros(2)
+        _dp = np.zeros(_N_COEFFS)
+        _ds = np.array([50.0, 100.0])
+        _dt = np.array([100.0, 50.0])
+        _eval_cost_numba(_dcm, _dc, _dp)
+        _argmin_bucketed(np.zeros(2), _ds, _dt)
+        _dpm = np.zeros((2, _N_COEFFS))
+        _batch_eval_and_argmin(_dcm, _dc, _dpm, _ds, _dt)
+        print(f"  Numba JIT warmup complete (batched mode)")
 
     # Load EF sources
     print("\nLoading EF sources...")
     ef_expanded = pq.read_table(EF_EXPANDED_PATH)
     print(f"  Expanded EF: {ef_expanded.num_rows:,} rows")
 
-    # Replace track also uses expanded EF (dataset was expanded on purpose)
-    # but filters to hydro > 0 since replace track needs existing hydro
-
-    for iso in ISOS:
+    run_isos = [args.iso] if args.iso else ISOS
+    for iso in run_isos:
         demand_twh = REGIONAL_DEMAND_TWH[iso]
-        if iso not in track_output['results']:
-            track_output['results'][iso] = {}
 
         # Build combos
         if args.full:
@@ -446,8 +452,7 @@ def main():
         }
 
         # Track 1: newbuild (hydro=0, all existing zeroed, uprates ON)
-        step_key_nb = (iso, 'newbuild')
-        if step_key_nb not in completed_steps:
+        if (iso, 'newbuild') not in completed_tracks:
             all_arrays = load_iso_arrays(ef_expanded, iso)
             if all_arrays is not None:
                 h0_mask = all_arrays['hydro'] == 0
@@ -458,36 +463,29 @@ def main():
 
                     nb_data, nb_arch = run_track(
                         'newbuild', iso, nb_arrays, demand_twh, combos,
-                        existing_override=greenfield_all,
-                        track_output=track_output, completed_steps=completed_steps)
-                    track_output['results'][iso]['newbuild'] = nb_data
+                        existing_override=greenfield_all)
+
+                    # Save to parquet immediately
+                    sc_rows = flatten_track_rows(iso, 'newbuild', nb_data)
+                    append_to_parquet(sc_rows, PQ_SCENARIOS_PATH)
 
                     if nb_arch:
                         nb_dg = run_track_demand_growth(
                             'newbuild', iso, nb_arrays, nb_arch, combos,
                             existing_override=greenfield_all)
-                        track_output['demand_growth']['newbuild'][iso] = nb_dg
+                        dg_rows = flatten_dg_rows(iso, 'newbuild', nb_dg)
+                        if dg_rows:
+                            append_to_parquet(dg_rows, PQ_DG_PATH)
                 else:
                     print(f"  {iso:>6}   newbuild: no hydro=0 mixes")
-
-            completed_steps.add(step_key_nb)
-            save_checkpoint(track_output, [list(s) for s in completed_steps])
-
-            # Also save intermediate results to disk
-            _save_results(track_output)
         else:
-            print(f"  {iso:>6}   newbuild: skipped (checkpoint)")
+            print(f"  {iso:>6}   newbuild: skipped (in parquet)")
 
         # Track 2: replace (hydro at existing floor, everything else zeroed, uprates OFF)
-        # Filter: hydro >= 2050 high-demand floor (hydro can't go below this)
-        step_key_rp = (iso, 'replace')
-        if step_key_rp not in completed_steps:
+        if (iso, 'replace') not in completed_tracks:
             rp_arrays = load_iso_arrays(ef_expanded, iso)
             if rp_arrays is not None:
-                # Compute 2050 high-demand hydro floor: existing share / max demand growth
-                # Hydro is fixed capacity — as demand grows, its share shrinks.
-                # At 2050 high growth, hydro share = existing / (1+rate)^25.
-                # Mixes below this floor can never be optimal in replace track.
+                # Compute 2050 high-demand hydro floor
                 hydro_existing_share = GRID_MIX_SHARES[iso]['hydro']
                 high_rate = DEMAND_GROWTH_RATES[iso].get('High',
                             DEMAND_GROWTH_RATES[iso].get('high', 0))
@@ -505,129 +503,34 @@ def main():
                           f"{n_before:,} → {n_pass:,} ({100*(n_before-n_pass)/n_before:.1f}% pruned)")
                 elif n_pass == 0:
                     print(f"    {iso} replace: no mixes with hydro>={hydro_floor:.1f}%, skipping")
-                    completed_steps.add(step_key_rp)
-                    save_checkpoint(track_output, [list(s) for s in completed_steps])
                     continue
 
                 rp_data, rp_arch = run_track(
                     'replace', iso, rp_arrays, demand_twh, combos,
-                    uprate_cap_override=0, existing_override=greenfield_keep_hydro,
-                    track_output=track_output, completed_steps=completed_steps)
-                track_output['results'][iso]['replace'] = rp_data
+                    uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+
+                # Save to parquet immediately
+                sc_rows = flatten_track_rows(iso, 'replace', rp_data)
+                append_to_parquet(sc_rows, PQ_SCENARIOS_PATH)
 
                 if rp_arch:
                     rp_dg = run_track_demand_growth(
                         'replace', iso, rp_arrays, rp_arch, combos,
                         uprate_cap_override=0, existing_override=greenfield_keep_hydro)
-                    track_output['demand_growth']['replace'][iso] = rp_dg
-
-            completed_steps.add(step_key_rp)
-            save_checkpoint(track_output, [list(s) for s in completed_steps])
-
-            # Save intermediate results
-            _save_results(track_output)
+                    dg_rows = flatten_dg_rows(iso, 'replace', rp_dg)
+                    if dg_rows:
+                        append_to_parquet(dg_rows, PQ_DG_PATH)
         else:
-            print(f"  {iso:>6}    replace: skipped (checkpoint)")
-
-    # Final save
-    _save_results(track_output)
-
-    # Save parquet (compact, git-friendly)
-    _save_parquet(track_output)
-
-    # Clean up checkpoint on successful completion
-    if os.path.exists(CHECKPOINT_PATH):
-        os.remove(CHECKPOINT_PATH)
-        print("  Checkpoint removed (run complete)")
+            print(f"  {iso:>6}    replace: skipped (in parquet)")
 
     total_elapsed = time.time() - total_start
-    out_path = str(TRACK_RESULTS_PATH)
-    tr_size = os.path.getsize(out_path) / (1024 * 1024)
-    pq_path = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
-    pq_size = os.path.getsize(pq_path) / (1024 * 1024) if os.path.exists(pq_path) else 0
+    pq_size = os.path.getsize(PQ_SCENARIOS_PATH) / (1024 * 1024) if os.path.exists(PQ_SCENARIOS_PATH) else 0
+    dg_size = os.path.getsize(PQ_DG_PATH) / (1024 * 1024) if os.path.exists(PQ_DG_PATH) else 0
     print(f"\n{'='*70}")
     print(f"  TRACK ANALYSIS COMPLETE in {total_elapsed:.0f}s")
-    print(f"  JSON:    {out_path} ({tr_size:.1f} MB)")
-    print(f"  Parquet: {pq_path} ({pq_size:.1f} MB)")
+    print(f"  Scenarios: {PQ_SCENARIOS_PATH} ({pq_size:.1f} MB)")
+    print(f"  Demand Growth: {PQ_DG_PATH} ({dg_size:.1f} MB)")
     print(f"{'='*70}")
-
-def _save_results(track_output):
-    """Write track_output to disk."""
-    out_path = str(TRACK_RESULTS_PATH)
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    tmp = out_path + '.tmp'
-    with open(tmp, 'w') as f:
-        json.dump(track_output, f, separators=(',', ':'))
-    os.replace(tmp, out_path)
-
-
-def _save_parquet(track_output):
-    """Flatten track results into a compact parquet file for git storage."""
-    import pandas as pd
-
-    rows = []
-    for iso, iso_data in track_output.get('results', {}).items():
-        for track_name, thr_dict in iso_data.items():
-            for thr_str, thr_val in thr_dict.items():
-                for sc_key, sc in thr_val.get('scenarios', {}).items():
-                    row = {
-                        'iso': iso,
-                        'track': track_name,
-                        'threshold': float(thr_str),
-                        'scenario': sc_key,
-                    }
-                    for k, v in sc.get('resource_mix', {}).items():
-                        row[f'mix_{k}'] = v
-                    row['procurement_pct'] = sc.get('procurement_pct')
-                    row['hourly_match_score'] = sc.get('hourly_match_score')
-                    row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct')
-                    row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct')
-                    row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct')
-                    for k, v in sc.get('costs', {}).items():
-                        row[f'cost_{k}'] = v
-                    for k, v in sc.get('tranche_costs', {}).items():
-                        row[f'tranche_{k}'] = v
-                    for k, v in sc.get('gas_backup', {}).items():
-                        row[f'gas_{k}'] = v
-                    rows.append(row)
-
-    if not rows:
-        print("  No scenario data to write to parquet")
-        return
-
-    df = pd.DataFrame(rows)
-    pq_path = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
-    df.to_parquet(pq_path, index=False, compression='zstd')
-    print(f"  track_scenarios.parquet: {len(df):,} rows, "
-          f"{os.path.getsize(pq_path) / (1024*1024):.1f} MB")
-
-    # Also save demand growth parquet
-    dg_rows = []
-    for track_name, iso_dict in track_output.get('demand_growth', {}).items():
-        for iso, thr_dict in iso_dict.items():
-            for thr_str, sc_dict in thr_dict.items():
-                for sc_key, year_data in sc_dict.items():
-                    for year_str, growth_data in year_data.items():
-                        for g_level, vals in growth_data.items():
-                            dg_rows.append({
-                                'iso': iso,
-                                'track': track_name,
-                                'threshold': float(thr_str),
-                                'scenario': sc_key,
-                                'year': int(year_str),
-                                'growth_level': g_level,
-                                'best_mix_idx': vals[0],
-                                'total_cost': vals[1],
-                                'effective_cost': vals[2],
-                                'incremental_cost': vals[3],
-                            })
-
-    if dg_rows:
-        df_dg = pd.DataFrame(dg_rows)
-        dg_path = os.path.join(SCRIPT_DIR, 'dashboard', 'track_demand_growth.parquet')
-        df_dg.to_parquet(dg_path, index=False, compression='zstd')
-        print(f"  track_demand_growth.parquet: {len(df_dg):,} rows, "
-              f"{os.path.getsize(dg_path) / (1024*1024):.1f} MB")
 
 
 if __name__ == '__main__':
