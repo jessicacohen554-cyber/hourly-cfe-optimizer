@@ -7265,15 +7265,43 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 newBuild[r] = Math.max(0, totalResourceTWh - existing[r]);
             }
         });
-        // Split clean_firm into nuclear + geothermal using threshold-aware tranche data
+        // Split clean_firm into nuclear + geothermal + CCS using tranche data from priceMix
         const existCF = existing.clean_firm || 0;
         const { nuclear: exNuc, geothermal: exGeo } = splitCleanFirm(iso, existCF);
         existing.nuclear = exNuc;
         existing.geothermal = exGeo;
+        existing.ccs_tranche = 0; // CCS from clean_firm tranche (existing is always nuclear/geo)
+
         const newCF = newBuild.clean_firm || 0;
-        const { nuclear: nbNuc, geothermal: nbGeo } = splitCleanFirm(iso, newCF);
-        newBuild.nuclear = nbNuc;
-        newBuild.geothermal = nbGeo;
+        const cfDetail = rc.clean_firm || {};
+        // If tranche detail is available, use actual TWh splits for new-build clean_firm
+        if (newCF > 0 && (cfDetail.nuclear_newbuild_twh != null || cfDetail.ccs_newbuild_twh != null)) {
+            const uprateTwh = cfDetail.uprate_twh || 0;
+            const geoTwh = cfDetail.geo_twh || 0;
+            const nucNewTwh = cfDetail.nuclear_newbuild_twh || 0;
+            const ccsNewTwh = cfDetail.ccs_newbuild_twh || 0;
+            const trancheTotal = uprateTwh + geoTwh + nucNewTwh + ccsNewTwh;
+            if (trancheTotal > 0) {
+                // Scale tranche proportions to the actual new-build TWh at this demand level
+                newBuild.nuclear = newCF * (uprateTwh + nucNewTwh) / trancheTotal;
+                newBuild.geothermal = newCF * geoTwh / trancheTotal;
+                newBuild.ccs_tranche = newCF * ccsNewTwh / trancheTotal;
+            } else {
+                const { nuclear: nbNuc, geothermal: nbGeo } = splitCleanFirm(iso, newCF);
+                newBuild.nuclear = nbNuc;
+                newBuild.geothermal = nbGeo;
+                newBuild.ccs_tranche = 0;
+            }
+        } else {
+            const { nuclear: nbNuc, geothermal: nbGeo } = splitCleanFirm(iso, newCF);
+            newBuild.nuclear = nbNuc;
+            newBuild.geothermal = nbGeo;
+            newBuild.ccs_tranche = 0;
+        }
+        // Merge CCS from clean_firm tranche into the ccs_ccgt resource for display
+        if (newBuild.ccs_tranche > 0) {
+            newBuild.ccs_ccgt = (newBuild.ccs_ccgt || 0) + newBuild.ccs_tranche;
+        }
         return { existing, newBuild };
     }
 
@@ -7562,7 +7590,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         // Static (no growth) comparison: resolve both mixes at base year
         // to see how much of the stranded reduction is due to demand growth
         const getNewPct = (res, key) => {
-            if (key === 'battery' || key === 'ldes') return res?.dispatch_pct || 0;
+            if (key === 'battery' || key === 'battery8' || key === 'ldes') return res?.dispatch_pct || 0;
             return res?.new_pct || 0;
         };
         const staticInterimTWh_total = Object.keys(interimRC).reduce((s, r) => {
@@ -7625,38 +7653,19 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
             // Collect per-resource new-build TWh at interim and long-term,
             // and stranded TWh (interim new-build that exceeds long-term need)
-            // Split clean_firm into nuclear + geothermal
+            // Uses getResourceTWh results which properly split clean_firm tranche into nuclear/geo/ccs
             const RES_ORDER = wynHasGeo
-                ? ['nuclear', 'geothermal', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes']
-                : ['nuclear', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
+                ? ['nuclear', 'geothermal', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes']
+                : ['nuclear', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes'];
             const interimNew = {};
             const longtermNew = {};
             const strandedByRes = {};
             let totalInterimNew = 0, totalLongtermNew = 0, totalStranded = 0;
 
             RES_ORDER.forEach(r => {
-                const isStore = (r === 'battery' || r === 'ldes');
-                const isNucGeo = (r === 'nuclear' || r === 'geothermal');
-                // New-build TWh at each stage
-                let iNew, lNew;
-                if (r === 'hydro') {
-                    iNew = 0;
-                    lNew = 0;
-                } else if (isStore) {
-                    const irc = interimRC[r] || {};
-                    const lrc = longtermRC[r] || {};
-                    iNew = (irc.dispatch_pct || 0) / 100 * interimTWh;
-                    lNew = (lrc.dispatch_pct || 0) / 100 * longtermTWh;
-                } else if (isNucGeo) {
-                    // Use pre-split values from getResourceTWh
-                    iNew = interimData.newBuild[r] || 0;
-                    lNew = longtermData ? (longtermData.newBuild[r] || 0) : 0;
-                } else {
-                    const irc = interimRC[r] || {};
-                    const lrc = longtermRC[r] || {};
-                    iNew = (irc.new_pct || 0) / 100 * interimTWh;
-                    lNew = (lrc.new_pct || 0) / 100 * longtermTWh;
-                }
+                // Use pre-computed values from getResourceTWh which handles tranche splitting
+                let iNew = interimData.newBuild[r] || 0;
+                let lNew = longtermData ? (longtermData.newBuild[r] || 0) : 0;
                 interimNew[r] = iNew;
                 longtermNew[r] = lNew;
                 totalInterimNew += iNew;
