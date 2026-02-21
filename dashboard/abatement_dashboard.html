@@ -755,6 +755,47 @@ html, body {
     </div>
 </section>
 
+<!-- FOAK → NOAK: THE INVESTMENT CASE FOR CLEAN FIRM POWER -->
+<section class="hero-overview" style="background:linear-gradient(180deg, #0F1A2E 0%, #0B1120 100%);">
+    <div class="hero-overview-inner">
+        <div class="hero-text-block">
+            <h2 style="font-size:1.7rem;line-height:1.25;">Build clean firm today.<br>It's cheaper in the long run.</h2>
+            <p style="color:rgba(255,255,255,0.75);font-size:0.92rem;line-height:1.7;margin-bottom:14px;">
+                High matching targets need clean firm power in most regions. Without it, the gap between demand and variable renewable supply must be filled by gas backup — and every new gas plant built today becomes a stranded asset tomorrow.
+            </p>
+            <p style="color:rgba(255,255,255,0.75);font-size:0.92rem;line-height:1.7;margin-bottom:14px;">
+                Clean firm is expensive today because it's <strong style="color:#F59E0B;">first-of-a-kind</strong>. Nuclear SMRs, enhanced geothermal, and CCS are early in their deployment curves. But every energy technology follows Wright's Law: costs decline 15–40% per doubling of deployment. Solar did it (24% learning rate). Wind did it (15%). Batteries are doing it. Clean firm will too — DOE projects ~40% cost reduction after 10–20 deployments.
+            </p>
+            <p style="color:rgba(255,255,255,0.75);font-size:0.92rem;line-height:1.7;margin-bottom:14px;">
+                Meanwhile, gas gets <em>more</em> expensive. Fuel prices rise (EIA: $3.50→$5/MMBtu by 2050). Capital costs have <strong style="color:#EF4444;">tripled</strong> — market quotes are $2,400/kW vs. EIA's $1,200/kW estimate. As clean energy scales, gas plants run fewer hours, spreading fixed costs over declining output. Add carbon pricing — EU ETS already at €77/ton, heading to €126+ by 2030 — and the true cost of gas rises relentlessly.
+            </p>
+            <p style="color:rgba(255,255,255,0.65);font-size:0.85rem;line-height:1.6;font-style:italic;">
+                Diversifying beyond VRE + storage derisks grid decarbonization and prevents wasted investment solidifying the future of fossil fuels via redundant gas backup. The FOAK premium is temporary. The gas trap is permanent.
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;">
+                <span class="step-stat step-stat-green" style="font-size:0.78rem;">Nuclear NOAK target: $68–75/MWh (vs. FOAK $135–170)</span>
+                <span class="step-stat step-stat-red" style="font-size:0.78rem;">Gas true cost by 2040: $85–112/MWh (and rising)</span>
+            </div>
+        </div>
+        <div class="hero-chart-block">
+            <div class="chart-panel chart-panel-overview">
+                <div class="hero-chart-title" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.95rem;font-weight:700;color:rgba(255,255,255,0.9);text-align:center;padding:12px 12px 4px;">
+                    FOAK → NOAK: Clean Firm Costs Fall as Gas Costs Rise
+                </div>
+                <div class="chart-container" style="min-height:380px;position:relative;">
+                    <canvas id="foakNOAKChart"></canvas>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;padding:8px 12px 12px;font-size:0.72rem;color:rgba(255,255,255,0.55);">
+                    <span><span style="display:inline-block;width:20px;height:3px;background:#22C55E;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Clean Firm (central)</span>
+                    <span><span style="display:inline-block;width:20px;height:3px;background:rgba(34,197,94,0.3);vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Learning range</span>
+                    <span style="border-left:1px solid rgba(255,255,255,0.15);padding-left:12px;"><span style="display:inline-block;width:20px;height:3px;background:#EF4444;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Gas + carbon pricing</span>
+                    <span><span style="display:inline-block;width:20px;height:3px;background:rgba(239,68,68,0.4);vertical-align:middle;margin-right:4px;border-radius:2px;border:1px dashed rgba(239,68,68,0.6);"></span> Gas (no carbon price)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
     <details style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px 20px;">
@@ -1043,6 +1084,299 @@ function buildRegionalChart(iso) {
 }
 
 // ============================================================================
+// FOAK → NOAK CHART: Clean Firm Learning Curve vs. Rising Gas Cost
+// ============================================================================
+let foakChart = null;
+
+function buildFoakNOAKChart() {
+    var ctx = document.getElementById('foakNOAKChart');
+    if (!ctx || foakChart) return;
+
+    var years = FOAK_NOAK_YEARS;
+    var cf = CLEAN_FIRM_LEARNING;
+    var gas = GAS_TRUE_COST;
+
+    // Find crossover year (central clean firm vs gas with carbon)
+    var crossoverYear = null;
+    for (var i = 0; i < years.length - 1; i++) {
+        if (cf.central[i] > gas.with_carbon[i] && cf.central[i + 1] <= gas.with_carbon[i + 1]) {
+            // Linear interpolation to find exact crossover
+            var cfSlope = (cf.central[i + 1] - cf.central[i]) / (years[i + 1] - years[i]);
+            var gasSlope = (gas.with_carbon[i + 1] - gas.with_carbon[i]) / (years[i + 1] - years[i]);
+            crossoverYear = years[i] + (cf.central[i] - gas.with_carbon[i]) / (gasSlope - cfSlope);
+            break;
+        }
+    }
+
+    // Helper: interpolate value at a year
+    function interpAt(arr, yr) {
+        for (var i = 0; i < years.length - 1; i++) {
+            if (yr >= years[i] && yr <= years[i + 1]) {
+                var frac = (yr - years[i]) / (years[i + 1] - years[i]);
+                return arr[i] + frac * (arr[i + 1] - arr[i]);
+            }
+        }
+        return arr[arr.length - 1];
+    }
+
+    var crossoverCost = crossoverYear ? Math.round(interpAt(cf.central, crossoverYear)) : null;
+
+    // Build annotations
+    var annotations = {};
+    if (crossoverYear) {
+        annotations.crossoverLine = {
+            type: 'line',
+            xMin: crossoverYear,
+            xMax: crossoverYear,
+            borderColor: 'rgba(255,255,255,0.35)',
+            borderWidth: 1,
+            borderDash: [4, 4],
+            label: {
+                display: true,
+                content: 'Crossover ~' + Math.round(crossoverYear),
+                position: 'start',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                color: '#fff',
+                font: { size: 10, weight: '600' },
+                padding: { top: 4, bottom: 4, left: 6, right: 6 },
+                borderRadius: 4,
+                yAdjust: -8
+            }
+        };
+        annotations.crossoverPoint = {
+            type: 'point',
+            xValue: crossoverYear,
+            yValue: crossoverCost,
+            radius: 7,
+            backgroundColor: 'rgba(255,255,255,0.9)',
+            borderColor: '#F59E0B',
+            borderWidth: 2.5
+        };
+        // "Wasted gas investment" area — gas above clean firm after crossover
+        annotations.wastedArea = {
+            type: 'box',
+            xMin: crossoverYear,
+            xMax: 2050,
+            yMin: crossoverCost,
+            yMax: gas.with_carbon[gas.with_carbon.length - 1],
+            backgroundColor: 'rgba(239,68,68,0.06)',
+            borderColor: 'rgba(239,68,68,0.15)',
+            borderWidth: 1,
+            borderDash: [3, 3],
+            label: {
+                display: true,
+                content: 'Wasted gas investment',
+                position: { x: 'center', y: 'start' },
+                color: 'rgba(239,68,68,0.6)',
+                font: { size: 9, style: 'italic' },
+                yAdjust: 10
+            }
+        };
+        // "Catalytic premium" area — clean firm above gas before crossover
+        annotations.catalyticArea = {
+            type: 'box',
+            xMin: 2025,
+            xMax: crossoverYear,
+            yMin: gas.with_carbon[0],
+            yMax: cf.central[0],
+            backgroundColor: 'rgba(34,197,94,0.04)',
+            borderColor: 'rgba(34,197,94,0.12)',
+            borderWidth: 1,
+            borderDash: [3, 3],
+            label: {
+                display: true,
+                content: 'Catalytic premium',
+                position: { x: 'center', y: 'end' },
+                color: 'rgba(34,197,94,0.5)',
+                font: { size: 9, style: 'italic' },
+                yAdjust: -10
+            }
+        };
+    }
+
+    // SBTi milestone annotations on x-axis
+    SBTI_MILESTONES.forEach(function(ms) {
+        if (ms.year >= 2025 && ms.year <= 2050 && ms.threshold > 0) {
+            annotations['sbti_' + ms.year] = {
+                type: 'label',
+                xValue: ms.year,
+                yValue: 0,
+                content: ms.label,
+                color: 'rgba(255,255,255,0.3)',
+                font: { size: 8 },
+                position: 'start',
+                yAdjust: 16
+            };
+        }
+    });
+
+    foakChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                // Clean firm conservative (upper bound of learning band)
+                {
+                    label: 'Clean Firm (conservative)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.conservative[i] }; }),
+                    borderColor: 'rgba(34,197,94,0.15)',
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    fill: '+2',
+                    backgroundColor: 'rgba(34,197,94,0.08)',
+                    tension: 0.35,
+                    order: 6
+                },
+                // Clean firm central
+                {
+                    label: 'Clean Firm (central learning)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.central[i] }; }),
+                    borderColor: '#22C55E',
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#22C55E',
+                    pointBorderColor: '#0B1120',
+                    pointBorderWidth: 1.5,
+                    fill: false,
+                    tension: 0.35,
+                    order: 2
+                },
+                // Clean firm optimistic (lower bound of learning band)
+                {
+                    label: 'Clean Firm (optimistic)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.optimistic[i] }; }),
+                    borderColor: 'rgba(34,197,94,0.15)',
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.35,
+                    order: 6
+                },
+                // Gas with carbon pricing (main rising line)
+                {
+                    label: 'Gas + carbon pricing',
+                    data: years.map(function(y, i) { return { x: y, y: gas.with_carbon[i] }; }),
+                    borderColor: '#EF4444',
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#EF4444',
+                    pointBorderColor: '#0B1120',
+                    pointBorderWidth: 1.5,
+                    fill: false,
+                    tension: 0.35,
+                    order: 1
+                },
+                // Gas base (no carbon price) — dashed
+                {
+                    label: 'Gas (no carbon price)',
+                    data: years.map(function(y, i) { return { x: y, y: gas.base[i] }; }),
+                    borderColor: 'rgba(239,68,68,0.4)',
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(239,68,68,0.4)',
+                    pointBorderWidth: 0,
+                    fill: '+0',
+                    backgroundColor: 'rgba(239,68,68,0.04)',
+                    tension: 0.35,
+                    order: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 1400, easing: 'easeOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.9)',
+                    padding: 12,
+                    cornerRadius: 8,
+                    titleColor: 'rgba(255,255,255,0.9)',
+                    bodyColor: 'rgba(255,255,255,0.75)',
+                    bodyFont: { size: 11 },
+                    callbacks: {
+                        title: function(items) {
+                            var yr = items[0].parsed.x;
+                            var ms = SBTI_MILESTONES.find(function(m) { return m.year === yr; });
+                            return yr + (ms && ms.threshold > 0 ? ' (' + ms.label + ')' : '');
+                        },
+                        label: function(ctx) {
+                            if (ctx.datasetIndex === 0 || ctx.datasetIndex === 2) return null;
+                            return ctx.dataset.label + ': $' + ctx.parsed.y + '/MWh';
+                        }
+                    }
+                },
+                datalabels: {
+                    display: function(ctx) {
+                        // Show labels only for central clean firm and gas+carbon at endpoints
+                        if (ctx.datasetIndex === 1 || ctx.datasetIndex === 3) {
+                            return ctx.dataIndex === 0 || ctx.dataIndex === ctx.dataset.data.length - 1;
+                        }
+                        return false;
+                    },
+                    color: function(ctx) {
+                        return ctx.datasetIndex === 1 ? '#22C55E' : '#EF4444';
+                    },
+                    font: { size: 11, weight: '700' },
+                    anchor: function(ctx) {
+                        return ctx.datasetIndex === 1 ? 'end' : 'start';
+                    },
+                    align: function(ctx) {
+                        if (ctx.dataIndex === 0) return ctx.datasetIndex === 1 ? 'top' : 'bottom';
+                        return ctx.datasetIndex === 1 ? 'bottom' : 'top';
+                    },
+                    formatter: function(val) { return '$' + val.y; },
+                    offset: 6
+                },
+                annotation: { annotations: annotations }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 2024,
+                    max: 2051,
+                    ticks: {
+                        stepSize: 5,
+                        color: 'rgba(255,255,255,0.6)',
+                        font: { size: 11, weight: '600' },
+                        callback: function(v) { return v; }
+                    },
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    border: { color: 'rgba(255,255,255,0.15)' },
+                    title: {
+                        display: true,
+                        text: 'SBTi Target Year',
+                        color: 'rgba(255,255,255,0.4)',
+                        font: { size: 10 }
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 180,
+                    ticks: {
+                        stepSize: 20,
+                        color: 'rgba(255,255,255,0.5)',
+                        font: { size: 10 },
+                        callback: function(v) { return '$' + v; }
+                    },
+                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    border: { color: 'rgba(255,255,255,0.15)' },
+                    title: {
+                        display: true,
+                        text: 'LCOE ($/MWh)',
+                        color: 'rgba(255,255,255,0.4)',
+                        font: { size: 10 }
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+// ============================================================================
 // SCROLL-TRIGGERED ANIMATIONS & LAZY CHART BUILDS
 // ============================================================================
 function initObservers() {
@@ -1051,7 +1385,7 @@ function initObservers() {
         entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('.region-step-card, .synthesis-card').forEach(function(el) { fadeObs.observe(el); });
+    document.querySelectorAll('.region-step-card, .synthesis-card, .hero-text-block').forEach(function(el) { fadeObs.observe(el); });
 
     // Lazy chart build observer for region sections
     var chartObs = new IntersectionObserver(function(entries) {
@@ -1074,6 +1408,18 @@ function initObservers() {
 document.addEventListener('DOMContentLoaded', function() {
     // Build hero overview chart
     buildHeroChart();
+
+    // Build FOAK → NOAK chart (lazy: build on scroll into view)
+    var foakObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (e.isIntersecting && !foakChart) {
+                requestAnimationFrame(buildFoakNOAKChart);
+                foakObs.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '200px 0px 200px 0px' });
+    var foakCanvas = document.getElementById('foakNOAKChart');
+    if (foakCanvas) foakObs.observe(foakCanvas.closest('.chart-panel') || foakCanvas);
 
     // Start scroll-triggered observers (lazy chart builds + fade-ins)
     initObservers();
