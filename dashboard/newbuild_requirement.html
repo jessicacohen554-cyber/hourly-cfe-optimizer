@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>New-Build Investment Signals — The 8,760 Problem</title>
+<title>The Starting Point Problem — The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -687,23 +687,23 @@ html, body {
 <!-- HEADER BANNER -->
 <header class="header">
     <div class="header-accent"></div>
-    <h1>New-Build Investment Signals</h1>
-    <p class="subtitle">What does an hourly clean energy matching requirement actually incentivize?<br>The gap between market signals and grid needs</p>
+    <h1>The Starting Point Problem</h1>
+    <p class="subtitle">What you need to build depends on what you already have.<br>Ignore that and you risk investing in the wrong resources.</p>
 </header>
 
 <!-- ==================== SECTION 1: HERO OVERVIEW ==================== -->
 <section class="hero-overview">
     <div class="hero-overview-inner">
         <div class="hero-text-block">
-            <div class="hero-badge">Investment Signal Distortion</div>
-            <h2>Hourly Matching Drives Solar — Not What the Grid Needs</h2>
-            <p>When you strip away existing generation and ask "what would you build to match demand hour-by-hour?", the optimizer overwhelmingly chooses solar + storage. Clean firm power is minimized until very high thresholds force its inclusion.</p>
-            <p>This creates a potential asset stranding risk: the market signal says "build solar" while grid reliability says "you need firm dispatchable power." The disconnect between investment signals and grid needs is the core policy challenge of hourly matching requirements.</p>
+            <div class="hero-badge">Where You Start Determines What You Need</div>
+            <h2>Your Grid Has Existing Clean Resources. Price Them In — Or Build the Wrong Thing.</h2>
+            <p>Every grid already has nuclear, hydro, and legacy wind generating around the clock. When procurement decisions ignore these existing resources and treat the problem as a full new-build, the resulting investment mix is fundamentally wrong — solar-heavy, firm-light, and expensive.</p>
+            <p>The shape of what you need to <em>add</em> depends entirely on what's already there. A grid with 30% existing nuclear needs different new-build than one starting from fossil. Ignore the starting point, and capital flows into resources that duplicate what exists — creating stranded asset risk on both sides.</p>
             <div class="hero-stat-callout" id="heroStatCallout">Loading...</div>
         </div>
         <div class="hero-chart-block">
             <div class="chart-panel chart-panel-overview">
-                <div class="chart-title">Resource Mix: Baseline vs. New-Build at Key Thresholds</div>
+                <div class="chart-title">Same Target, Different Starting Point: Baseline vs. Greenfield Mix</div>
                 <div class="chart-container">
                     <canvas id="heroComparisonChart"></canvas>
                 </div>
@@ -713,8 +713,8 @@ html, body {
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#22C55E;"></span>Wind</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#06B6D4;"></span>Hydro</span>
                     <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(255,255,255,0.25);"></span>Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(245,158,11,0.6);border-top:2px solid #F59E0B;height:0;"></span>New-Build</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(255,255,255,0.25);"></span>With Existing</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(245,158,11,0.6);border-top:2px solid #F59E0B;height:0;"></span>Greenfield</span>
                 </div>
                 <div class="chart-subtitle">CAISO at medium cost assumptions</div>
             </div>
@@ -728,8 +728,8 @@ html, body {
 <!-- ==================== SECTION 2: SOLAR DOMINANCE (SCROLLYTELL) ==================== -->
 <div class="section-header">
     <div class="section-number">1</div>
-    <h2>The Solar Dominance Story</h2>
-    <p>How hourly matching creates a market signal that overwhelmingly favors solar — and what breaks that pattern at high thresholds.</p>
+    <h2>The Greenfield Fallacy</h2>
+    <p>Optimizing from scratch produces a fundamentally different — and likely wrong — investment mix compared to building on top of what's already generating.</p>
 </div>
 
 <!-- Step 1: Solar Is Cheapest -->
@@ -744,7 +744,7 @@ html, body {
                     <button class="iso-btn" data-iso="NYISO" disabled title="Data not yet available">NYISO</button>
                     <button class="iso-btn" data-iso="NEISO" disabled title="Data not yet available">NEISO</button>
                 </div>
-                <div class="chart-title" id="mixChartTitle">CAISO: New-Build Resource Mix by Threshold</div>
+                <div class="chart-title" id="mixChartTitle">CAISO: What You'd Build Starting From Zero</div>
                 <div class="chart-container">
                     <canvas id="mixAreaChart"></canvas>
                 </div>
@@ -759,25 +759,25 @@ html, body {
         <div class="region-narrative-col">
             <div class="region-step-card" id="card1">
                 <div class="step-num step-num-amber">1</div>
-                <h3>Solar Is Cheapest — So Solar Wins</h3>
-                <p>At low thresholds (50-70%), the optimizer picks near-pure solar portfolios. Clean firm generation is 1% or less of the mix. This is rational from a cost perspective — solar LCOE is the lowest available new-build option. Wind barely registers because CAISO's solar resource quality so thoroughly dominates.</p>
-                <p>The pattern is stark: when you remove existing generation and ask "what should I build?", the optimizer answers "solar, almost nothing else." The hourly matching constraint barely binds at these levels — there's enough daytime generation to meet most demand hours cheaply.</p>
+                <h3>Without a Starting Point, the Optimizer Picks Solar</h3>
+                <p>Strip away existing generation — no nuclear, no hydro, no legacy wind — and the optimizer builds near-pure solar at 50-70% clean. Solar LCOE is lowest, so from a blank slate, this is the rational answer.</p>
+                <p>But no buyer starts from zero. Every grid has existing clean resources generating 24/7. Ignore them and capital flows into solar that duplicates what nuclear and hydro already provide — while the firm generation the grid actually needs goes unfunded. The wrong starting point produces the wrong investment signal.</p>
                 <span class="step-stat step-stat-amber" id="stat1">Loading...</span>
             </div>
 
             <div class="region-step-card" id="card2">
                 <div class="step-num step-num-red">2</div>
-                <h3>The Inflection Point</h3>
-                <p>Around 87.5-92.5%, clean firm power starts appearing in meaningful quantities. This is the threshold where hourly matching <em>forces</em> dispatchable generation — solar simply cannot cover nighttime demand at scale, and storage alone cannot bridge the gap economically.</p>
-                <p>The transition is sharp: clean firm jumps from single digits to 30-50% of the portfolio within a few percentage points. The optimizer resists this as long as possible because firm generation is more expensive per MWh. When it finally capitulates, the cost curve inflects upward.</p>
+                <h3>The Shape You Need to Fill Depends on What's Already There</h3>
+                <p>With existing nuclear and hydro on the grid, the remaining gap to fill is dominated by nighttime and shoulder hours — exactly the shape that demands firm, dispatchable generation. Pricing in existing resources means firm power enters the mix early, in cost-effective increments.</p>
+                <p>Without that starting point, the optimizer delays firm generation until 87-93%, when solar physically can't cover nights. The resulting investment profile is backward: massive solar overbuilding first, then a sudden, expensive pivot to firm. Capital that should flow steadily into firm resources instead gets front-loaded into solar that duplicates daytime capacity the grid already has.</p>
                 <span class="step-stat step-stat-red" id="stat2">Loading...</span>
             </div>
 
             <div class="region-step-card" id="card3">
                 <div class="step-num step-num-blue">3</div>
-                <h3>But It's Still Not Enough</h3>
-                <p>Even at 95-99% clean, the new-build mix underweights clean firm relative to what a grid planner would choose. The optimizer treats cost as the objective, not reliability. Compare these new-build mixes to the baseline portfolio (which includes existing nuclear and hydro) — the baseline has 2-5x more firm generation at every threshold.</p>
-                <p>The implication: an hourly matching requirement sends the right directional signal (build clean energy) but the wrong compositional signal (too much solar, not enough firm). Policy needs to correct for this or accept the reliability gap.</p>
+                <h3>The Path Matters More Than the Destination</h3>
+                <p>At 95% clean, both approaches hit the same target — but the portfolios look nothing alike. Without existing resources priced in, the mix is solar-heavy with firm generation forced in at the last minute. With them, you get a balanced portfolio at lower cost that builds incrementally on existing infrastructure.</p>
+                <p>The stranded asset risk is real in both directions: new solar capacity that duplicates existing clean generation, and existing firm resources that lose market share despite being exactly what the grid needs. Getting the starting point right isn't academic — it determines whether billions in clean energy investment goes to the right resources or the wrong ones.</p>
                 <span class="step-stat step-stat-blue" id="stat3">Loading...</span>
             </div>
         </div>
@@ -790,8 +790,8 @@ html, body {
 <!-- ==================== SECTION 3: REGIONAL COST COMPARISON ==================== -->
 <div class="section-header">
     <div class="section-number">2</div>
-    <h2>The New-Build Cost Curve</h2>
-    <p>When everything is new-build, the cost curve tells a different story than the baseline. No existing generation means no cheap infrastructure to leverage.</p>
+    <h2>The Cost of Ignoring What You Have</h2>
+    <p>New-build-only procurement pays more because it rebuilds capacity that already exists. The gap between the two cost curves is the premium for ignoring your starting point.</p>
 </div>
 
 <section class="chart-section">
@@ -804,17 +804,17 @@ html, body {
                 <button class="iso-btn" data-iso="NYISO" disabled title="Data not yet available">NYISO</button>
                 <button class="iso-btn" data-iso="NEISO" disabled title="Data not yet available">NEISO</button>
             </div>
-            <div class="chart-title" id="costChartTitle">CAISO: Effective $/MWh — New-Build vs. Baseline</div>
+            <div class="chart-title" id="costChartTitle">CAISO: The Cost Premium of Ignoring Existing Generation</div>
             <div class="chart-container">
                 <canvas id="costComparisonChart"></canvas>
             </div>
             <div class="chart-legend">
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>New-Build (Medium)</span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.2);"></span>New-Build P10&ndash;P90</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Greenfield (no existing)</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.2);"></span>Greenfield P10&ndash;P90</span>
                 <span class="chart-legend-divider"></span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:rgba(255,255,255,0.5);"></span>Baseline (Medium)</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:rgba(255,255,255,0.5);"></span>With existing resources</span>
             </div>
-            <div class="chart-subtitle">Higher costs reflect the absence of existing low-cost generation</div>
+            <div class="chart-subtitle">The gap between curves = the cost of ignoring existing clean generation</div>
         </div>
     </div>
 </section>
@@ -826,21 +826,21 @@ html, body {
 <section class="synthesis-section">
     <div style="max-width:1320px;margin:0 auto;text-align:center;margin-bottom:32px;">
         <div class="section-number">3</div>
-        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:8px;letter-spacing:-0.3px;">The Investment Signal Problem</h2>
-        <p style="font-size:0.88rem;color:rgba(255,255,255,0.55);max-width:700px;margin:0 auto;line-height:1.6;">The gap between what hourly matching incentivizes and what the grid actually needs.</p>
+        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:8px;letter-spacing:-0.3px;">Price In Your Starting Point — Or Risk Stranded Assets</h2>
+        <p style="font-size:0.88rem;color:rgba(255,255,255,0.55);max-width:700px;margin:0 auto;line-height:1.6;">The difference between building the right portfolio and the wrong one comes down to one question: did you account for what's already on the grid?</p>
     </div>
     <div class="synthesis-inner">
         <div class="synthesis-card">
-            <h3>Market vs. Grid Signals</h3>
-            <p>Hourly matching requirements send a clear market signal: build the cheapest resource that can match demand. But the cheapest resource (solar) cannot provide reliability alone. At 90% clean, the new-build track shows a portfolio that is <strong style="color:#F59E0B;">94% solar</strong> — a mix no grid planner would endorse for reliability.</p>
-            <p style="margin-top:12px;">The baseline portfolio — which co-optimizes with existing generation — produces a balanced mix of ~8% clean firm, 76% solar, 8% wind, and 8% hydro at the same threshold. Existing infrastructure acts as a reliability anchor that pure market signals cannot replicate.</p>
-            <span class="step-stat step-stat-amber">Market signal: 94% solar | Grid need: balanced portfolio</span>
+            <h3>Same Target, Different Starting Point, Different Portfolio</h3>
+            <p>At 90% clean, a buyer who prices in existing nuclear and hydro adds solar, wind, and modest firm generation to fill the remaining shape — a balanced mix. A buyer who ignores the starting point procures <strong style="color:#F59E0B;">94% solar</strong> and needs <strong style="color:#38bdf8;">106% procurement</strong> just to make it work.</p>
+            <p style="margin-top:12px;">One asks "what do I need on top of what exists?" The other asks "what would I build from scratch?" The second question directs capital into solar that duplicates existing clean generation — while the firm dispatchable power the grid actually needs goes unfunded and at risk of stranding.</p>
+            <span class="step-stat step-stat-amber">Same 90% target — two completely different investment paths</span>
         </div>
         <div class="synthesis-card">
-            <h3>Procurement Does Not Equal Reliability</h3>
-            <p>At 90% clean, the new-build track requires <strong style="color:#38bdf8;">106% procurement</strong> — you must buy more clean energy than you consume just to match hourly demand patterns. This overprocurement is a direct consequence of solar's intermittency: you overbuild daytime capacity to cover the hours when solar partially overlaps with demand.</p>
-            <p style="margin-top:12px;">The cost of this overprocurement is hidden in the effective $/MWh but real: you are paying for generation that gets curtailed or exported. A reliability-focused mandate — rather than a pure matching mandate — would reduce this waste by incentivizing dispatchable resources from the start.</p>
-            <span class="step-stat step-stat-blue">106% procurement at 90% clean = 6% overbuilding waste</span>
+            <h3>The Stranded Asset Risk</h3>
+            <p>When markets don't price in existing clean resources, two things happen simultaneously: new capital flows into solar that duplicates existing generation capacity, and existing firm resources (nuclear, hydro) lose revenue despite providing exactly the reliability the grid needs.</p>
+            <p style="margin-top:12px;">A company in a region with 30% existing nuclear needs a fundamentally different new-build mix than one in a fossil-dominated grid. Markets and mandates that fail to distinguish between these starting points will systematically direct investment into the wrong resources — creating stranded assets on both the new-build and existing sides of the portfolio.</p>
+            <span class="step-stat step-stat-blue">Right investment requires knowing where you start</span>
         </div>
     </div>
 </section>
@@ -850,7 +850,7 @@ html, body {
     <details style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px 20px;">
         <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
         <div style="font-size:0.82rem;color:rgba(255,255,255,0.55);line-height:1.8;margin-top:12px;">
-            <p><strong style="color:rgba(255,255,255,0.7);">New-build track methodology:</strong> The optimizer was run with all existing clean generation zeroed (nuclear, solar, wind, CCS, and hydro set to 0). Uprate tranches remain active as the cheapest new-build option. Only hydro=0 mixes from the physics feasible space are used. This isolates what a pure new-build portfolio would look like under hourly matching constraints.</p>
+            <p><strong style="color:rgba(255,255,255,0.7);">New-build track methodology:</strong> The optimizer was run with all existing clean generation zeroed (nuclear, solar, wind, CCS, and hydro set to 0) to isolate the greenfield case — what a buyer would procure if they ignored existing grid resources. Uprate tranches remain active as the cheapest new-build option. Results are compared against the baseline track (which builds on top of existing generation) to quantify the cost and compositional distortion of ignoring the starting point.</p>
             <ol style="padding-left:20px;margin-top:8px;">
                 <li>NREL Annual Technology Baseline (ATB) 2024 — new-build costs for solar, wind, nuclear, CCS, storage.</li>
                 <li>EIA Hourly Electric Grid Monitor — hourly demand and generation profiles by ISO.</li>
@@ -1037,7 +1037,7 @@ function buildHeroComparisonChart() {
         });
 
         datasets.push({
-            label: NB_RESOURCE_LABELS[res] + ' (Baseline)',
+            label: NB_RESOURCE_LABELS[res] + ' (With Existing)',
             data: baseVals,
             backgroundColor: colors[res] + '60',
             borderColor: colors[res],
@@ -1047,7 +1047,7 @@ function buildHeroComparisonChart() {
             categoryPercentage: 0.7
         });
         datasets.push({
-            label: NB_RESOURCE_LABELS[res] + ' (New-Build)',
+            label: NB_RESOURCE_LABELS[res] + ' (Greenfield)',
             data: nbVals,
             backgroundColor: colors[res],
             borderColor: colors[res],
@@ -1111,8 +1111,11 @@ function buildHeroComparisonChart() {
     // Update hero stat callout
     var stat90 = medData[NB_THRESHOLDS.indexOf(90)];
     if (stat90) {
+        // Compare to baseline
+        var baselineMix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[activeISO] : null;
+        var baseSolar90 = baselineMix && baselineMix.solar ? baselineMix.solar[THRESHOLDS.indexOf(90)] : '?';
         document.getElementById('heroStatCallout').textContent =
-            stat90.mix.solar + '% solar in the optimal new-build mix at 90% clean (CAISO)';
+            'Ignore existing grid: ' + stat90.mix.solar + '% solar | Account for it: ' + baseSolar90 + '% solar — same 90% target';
     }
 }
 
@@ -1290,7 +1293,7 @@ function buildCostComparisonChart() {
         return v != null ? { x: NB_THRESHOLDS[i], y: v } : null;
     }).filter(function(d) { return d != null; });
     datasets.push({
-        label: 'New-Build (Medium)',
+        label: 'Greenfield (Medium)',
         data: medPts,
         borderColor: '#F59E0B',
         backgroundColor: 'rgba(245,158,11,0.1)',
@@ -1314,7 +1317,7 @@ function buildCostComparisonChart() {
             }
         });
         datasets.push({
-            label: 'Baseline (Medium)',
+            label: 'With Existing (Medium)',
             data: basePts,
             borderColor: 'rgba(255,255,255,0.5)',
             backgroundColor: 'transparent',
@@ -1392,7 +1395,7 @@ function wireISOSelectors() {
             var iso = this.getAttribute('data-iso');
             activeISO = iso;
             document.getElementById('mixChartTitle').textContent =
-                iso + ': New-Build Resource Mix by Threshold';
+                iso + ': What You\'d Build Starting From Zero';
             if (mixChart) { mixChart.destroy(); mixChart = null; }
             buildMixAreaChart();
         });
@@ -1408,7 +1411,7 @@ function wireISOSelectors() {
             var iso = this.getAttribute('data-iso');
             activeISO = iso;
             document.getElementById('costChartTitle').textContent =
-                iso + ': Effective $/MWh — New-Build vs. Baseline';
+                iso + ': The Cost Premium of Ignoring Existing Generation';
             if (costChart) { costChart.destroy(); costChart = null; }
             buildCostComparisonChart();
         });
