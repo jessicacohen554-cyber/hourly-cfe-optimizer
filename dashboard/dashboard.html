@@ -7684,9 +7684,9 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         const longtermNewGasMW = longtermGasBackup?.new_gas_build_mw || 0;
         const strandedGasMW = Math.max(0, interimNewGasMW - longtermNewGasMW);
         const existingGasMW = gc.EXISTING_GAS_CAPACITY_MW[iso] || 0;
-        // Stranded gas cost: annual fixed cost × assumed 20-year asset life
+        // Stranded gas cost: stranded MW × annualized capacity cost ($/kW-yr), consistent with priceMix
         const newGasCostKwYr = gc.NEW_CCGT_COST_KW_YR[iso] || 100;
-        const strandedGasCostM = strandedGasMW * newGasCostKwYr * 1000 * 20 / 1e6; // $M over asset life
+        const strandedGasCostM = strandedGasMW * newGasCostKwYr * 1000 / 1e6; // $M/yr annualized
         totalStrandedCostM += strandedGasCostM;
         if (strandedGasMW > 0) {
             strandedDetails.push({
@@ -7920,7 +7920,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                         gasSubtitle.innerHTML = `The interim target requires <strong>${fmtMW(interimNewGasMW)}</strong> of new gas capacity, ` +
                             `but the long-term target only needs <strong>${fmtMW(longtermNewGasMW)}</strong>. ` +
                             `<strong style="color:#C75B4A;">${fmtMW(strandedGasMW)}</strong> of new-build gas becomes stranded ` +
-                            `(~<strong style="color:#C75B4A;">$${Math.round(strandedGasCostM)}M</strong> over 20-year asset life).`;
+                            `(~<strong style="color:#C75B4A;">$${Math.round(strandedGasCostM)}M/yr</strong> in stranded capacity costs).`;
                     } else if (interimNewGasMW > 0 && longtermNewGasMW >= interimNewGasMW) {
                         gasSubtitle.innerHTML = `All interim new gas build (<strong>${fmtMW(interimNewGasMW)}</strong>) is still needed at the long-term target. No stranded gas capacity.`;
                     } else {
