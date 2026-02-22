@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import numpy as np
+import pandas as pd
 from pathlib import Path
 
 # Import dispatch utilities for emission rates
@@ -163,7 +164,7 @@ SCENARIO_A = {
     'toggles': {
         'ren': 'L',        # Low renewable (cheap solar/wind)
         'firm': 'H',       # High firm gen (expensive nuclear)
-        'batt': 'M',       # Medium battery
+        'batt': 'L',       # Low battery
         'ldes_lvl': 'H',   # High LDES (expensive)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
