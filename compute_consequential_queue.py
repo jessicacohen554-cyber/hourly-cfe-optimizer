@@ -6,10 +6,14 @@ Computes the optimal cross-regional deployment path under consequential
 accounting — where capital flows to whichever grid offers the cheapest
 marginal $/tCO₂ abated at each step.
 
-Uses dispatch-stack retirement model: coal retires first (highest marginal
-cost + highest emissions), then oil, then gas. The emission rate of
-DISPLACED fossil generation — not the remaining fleet average — determines
-the consequential CO₂ impact at each step.
+Uses the canonical dispatch-stack retirement model from dispatch_utils.py:
+coal retires first (highest marginal cost + emissions), then oil, then gas.
+Above 70% clean, all coal+oil are forced-retired. Emission rates use absolute
+regional coal/oil capacity caps from EIA data, not simple fuel-share fractions.
+
+The MARGINAL emission rate between two thresholds is computed as the delta
+CO₂ displaced divided by the delta clean TWh — capturing the shift from
+coal-heavy to gas-only displacement as the stack retires.
 
 Reads: dashboard/overprocure_scenarios.parquet, dashboard/overprocure_meta.json,
        data/egrid_emission_rates.json, data/eia_fossil_mix.json
@@ -18,12 +22,22 @@ Writes: data/consequential_queue.json, dashboard/js/consequential-queue-data.js
 
 import json
 import os
+import sys
 import pyarrow.parquet as pq
 import pandas as pd
 import numpy as np
 
-# ========== PATHS ==========
+# Add project root to path for dispatch_utils import
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
+
+from dispatch_utils import (
+    compute_fossil_retirement,
+    COAL_CAP_TWH, OIL_CAP_TWH, COAL_OIL_RETIREMENT_THRESHOLD,
+    BASE_DEMAND_TWH, GRID_MIX_SHARES, CCS_RESIDUAL_EMISSION_RATE,
+)
+
+# ========== PATHS ==========
 SCENARIOS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_scenarios.parquet')
 META_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_meta.json')
 EGRID_PATH = os.path.join(BASE_DIR, 'data', 'egrid_emission_rates.json')
@@ -36,7 +50,6 @@ ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
-# Medium scenario keys (all-Medium cost assumptions, 45Q on)
 MEDIUM_KEYS = {
     'CAISO': 'MMMM_M_M_M1_L',
     'ERCOT': 'MMMM_M_M_M1_X',
@@ -45,29 +58,24 @@ MEDIUM_KEYS = {
     'NEISO': 'MMMM_M_M_M1_X',
 }
 
-# Marginal MAC zones (matching shared-data.js zone definitions)
 ZONES = [
-    {'label': '50→75%', 'start_thresh': 50, 'end_thresh': 75, 'start_idx': 0, 'end_idx': 3},
-    {'label': '75→90%', 'start_thresh': 75, 'end_thresh': 90, 'start_idx': 3, 'end_idx': 7},
-    {'label': '90→92.5%', 'start_thresh': 90, 'end_thresh': 92.5, 'start_idx': 7, 'end_idx': 8},
-    {'label': '92.5→95%', 'start_thresh': 92.5, 'end_thresh': 95, 'start_idx': 8, 'end_idx': 9},
-    {'label': '95→97.5%', 'start_thresh': 95, 'end_thresh': 97.5, 'start_idx': 9, 'end_idx': 10},
-    {'label': '97.5→99%', 'start_thresh': 97.5, 'end_thresh': 99, 'start_idx': 10, 'end_idx': 11},
+    {'label': '50→75%', 'start_thresh': 50, 'end_thresh': 75},
+    {'label': '75→90%', 'start_thresh': 75, 'end_thresh': 90},
+    {'label': '90→92.5%', 'start_thresh': 90, 'end_thresh': 92.5},
+    {'label': '92.5→95%', 'start_thresh': 92.5, 'end_thresh': 95},
+    {'label': '95→97.5%', 'start_thresh': 95, 'end_thresh': 97.5},
+    {'label': '97.5→99%', 'start_thresh': 97.5, 'end_thresh': 99},
 ]
 
-# Demand growth rates by ISO (medium scenario, %/yr)
 GROWTH_RATES = {
     'CAISO': 1.8, 'ERCOT': 3.5, 'PJM': 2.4, 'NYISO': 1.2, 'NEISO': 1.0,
 }
 
-# SBTi milestone year mapping
 SBTI_YEAR_MAP = {
     50: 2025, 60: 2027, 70: 2029, 75: 2030, 80: 2032,
     85: 2035, 87.5: 2036, 90: 2040, 92.5: 2042,
     95: 2045, 97.5: 2047, 99: 2049, 100: 2050,
 }
-
-LBS_PER_TON = 2204.62
 
 
 def load_data():
@@ -78,126 +86,72 @@ def load_data():
 
     with open(META_PATH) as f:
         meta = json.load(f)
-
     with open(EGRID_PATH) as f:
         egrid = json.load(f)
-
     with open(FOSSIL_MIX_PATH) as f:
         fossil_mix = json.load(f)
 
     return df, meta, egrid, fossil_mix
 
 
-def build_dispatch_stack(egrid, fossil_mix):
+def compute_marginal_displaced_rate(iso, threshold_start, threshold_end, egrid, fossil_mix):
     """
-    Build the fossil dispatch stack for each ISO:
-    - Fuel types ordered by retirement priority: coal first, then oil, then gas
-    - Each fuel has: share of fossil generation, emission rate (tCO₂/MWh)
-    - Coal retires first because highest marginal cost and highest emissions
+    Compute the MARGINAL emission rate of fossil displaced between two thresholds.
 
-    Returns: {iso: {'fuels': [{'type', 'share', 'emission_rate'}], 'total_fossil_share': float}}
+    Uses dispatch_utils.compute_fossil_retirement() at both thresholds, then:
+      marginal_rate = (total_CO₂_at_end - total_CO₂_at_start) / (clean_TWh_end - clean_TWh_start)
+
+    This captures the shift from coal-heavy displacement (early) to gas-only (late).
     """
-    stacks = {}
-    for iso in ISOS:
-        # Get fossil fuel shares (using latest available year)
-        years = sorted(fossil_mix[iso].keys())
-        latest_yr = years[-1]
-        yr_data = fossil_mix[iso][latest_yr]
+    demand_twh = BASE_DEMAND_TWH[iso]
+    baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
 
-        # Average annual shares
-        coal_share = np.mean(yr_data['coal_share'])
-        gas_share = np.mean(yr_data['gas_share'])
-        oil_share = np.mean(yr_data['oil_share'])
+    # Get cumulative displacement info at both thresholds
+    rate_start, info_start = compute_fossil_retirement(iso, threshold_start, egrid, fossil_mix)
+    rate_end, info_end = compute_fossil_retirement(iso, threshold_end, egrid, fossil_mix)
 
-        # Emission rates per fuel (tCO₂/MWh) from eGRID
-        rates = egrid[iso]
-        coal_rate = rates['coal_co2_lb_per_mwh'] / LBS_PER_TON
-        gas_rate = rates['gas_co2_lb_per_mwh'] / LBS_PER_TON
-        oil_rate = rates['oil_co2_lb_per_mwh'] / LBS_PER_TON
+    # Additional clean TWh at each threshold (from baseline)
+    clean_twh_start = max(0, (threshold_start - baseline_clean) / 100.0 * demand_twh)
+    clean_twh_end = max(0, (threshold_end - baseline_clean) / 100.0 * demand_twh)
 
-        # Build stack in retirement order: coal → oil → gas
-        fuels = []
-        if coal_share > 0.001:
-            fuels.append({'type': 'coal', 'share': round(coal_share, 4), 'emission_rate': round(coal_rate, 4)})
-        if oil_share > 0.001:
-            fuels.append({'type': 'oil', 'share': round(oil_share, 4), 'emission_rate': round(oil_rate, 4)})
-        if gas_share > 0.001:
-            fuels.append({'type': 'gas', 'share': round(gas_share, 4), 'emission_rate': round(gas_rate, 4)})
+    # Cumulative CO₂ displaced at each threshold
+    co2_start = (info_start['coal_displaced_twh'] * (egrid[iso]['coal_co2_lb_per_mwh'] / 2204.62) +
+                 info_start['oil_displaced_twh'] * (egrid[iso]['oil_co2_lb_per_mwh'] / 2204.62) +
+                 info_start['gas_displaced_twh'] * (egrid[iso]['gas_co2_lb_per_mwh'] / 2204.62))
 
-        stacks[iso] = {
-            'fuels': fuels,
-            'fuel_year': latest_yr,
-        }
+    co2_end = (info_end['coal_displaced_twh'] * (egrid[iso]['coal_co2_lb_per_mwh'] / 2204.62) +
+               info_end['oil_displaced_twh'] * (egrid[iso]['oil_co2_lb_per_mwh'] / 2204.62) +
+               info_end['gas_displaced_twh'] * (egrid[iso]['gas_co2_lb_per_mwh'] / 2204.62))
 
-    return stacks
+    delta_co2 = co2_end - co2_start  # MT CO₂
+    delta_clean = clean_twh_end - clean_twh_start  # TWh
 
-
-def compute_displaced_emission_rate(dispatch_stack, fossil_twh_start, fossil_twh_end, demand_twh):
-    """
-    Compute the weighted-average emission rate of the fossil generation
-    displaced between two thresholds, using merit-order retirement.
-
-    The fossil that retires first (coal) has the highest emission rate.
-    Once coal is fully retired, subsequent displacement comes from oil/gas.
-
-    Args:
-        dispatch_stack: {'fuels': [{'type', 'share', 'emission_rate'}]}
-        fossil_twh_start: Total fossil TWh at the starting threshold
-        fossil_twh_end: Total fossil TWh at the ending threshold
-        demand_twh: Annual demand in TWh
-
-    Returns: (weighted_avg_rate, displacement_breakdown)
-    """
-    displaced_twh = fossil_twh_start - fossil_twh_end
-    if displaced_twh <= 0.001:
-        return 0.0, {}
-
-    fuels = dispatch_stack['fuels']
-
-    # Compute TWh for each fuel at the starting level
-    # The stack is ordered by retirement priority (coal first)
-    # At any fossil level, the fuel mix follows the observed shares
-    # When fossil shrinks, coal retires first from the "top" of the stack
-
-    # Total fuel TWh at start (using observed shares)
-    fuel_twh_start = []
-    for f in fuels:
-        fuel_twh_start.append(f['share'] * fossil_twh_start)
-
-    # Walk through displacement: retire coal first, then oil, then gas
-    remaining_to_displace = displaced_twh
-    displacement = {}
-    total_co2 = 0
-
-    for i, fuel in enumerate(fuels):
-        fuel_available = fuel['share'] * fossil_twh_start
-
-        # How much of this fuel was already retired by reaching fossil_twh_end?
-        # We compute how much of each fuel remains at fossil_twh_end
-        # Using merit-order: cheapest-to-retire fuel (coal) is removed first
-
-        if remaining_to_displace <= 0:
-            break
-
-        displaced_from_this_fuel = min(fuel_available, remaining_to_displace)
-        remaining_to_displace -= displaced_from_this_fuel
-
-        co2_from_this = displaced_from_this_fuel * fuel['emission_rate'] * 1e6  # tons
-        total_co2 += co2_from_this
-
-        displacement[fuel['type']] = {
-            'twh_displaced': round(displaced_from_this_fuel, 2),
-            'emission_rate': fuel['emission_rate'],
-            'co2_tons': round(co2_from_this, 0),
-        }
-
-    # Weighted average rate
-    if displaced_twh > 0:
-        weighted_rate = total_co2 / (displaced_twh * 1e6)
+    if delta_clean > 0.01:
+        marginal_rate = delta_co2 / delta_clean
     else:
-        weighted_rate = 0
+        marginal_rate = rate_end
 
-    return weighted_rate, displacement
+    # Build breakdown of what was marginally displaced
+    marginal_coal = info_end['coal_displaced_twh'] - info_start.get('coal_displaced_twh', 0)
+    marginal_oil = info_end['oil_displaced_twh'] - info_start.get('oil_displaced_twh', 0)
+    marginal_gas = info_end['gas_displaced_twh'] - info_start.get('gas_displaced_twh', 0)
+
+    # Determine primary fuel displaced in this zone
+    fuels = {'coal': marginal_coal, 'oil': marginal_oil, 'gas': marginal_gas}
+    primary_fuel = max(fuels, key=lambda k: fuels[k]) if any(v > 0.01 for v in fuels.values()) else 'gas'
+
+    return marginal_rate, delta_co2, {
+        'marginal_coal_twh': round(marginal_coal, 2),
+        'marginal_oil_twh': round(marginal_oil, 2),
+        'marginal_gas_twh': round(marginal_gas, 2),
+        'cumulative_coal_displaced_twh': round(info_end['coal_displaced_twh'], 2),
+        'cumulative_oil_displaced_twh': round(info_end['oil_displaced_twh'], 2),
+        'cumulative_gas_displaced_twh': round(info_end['gas_displaced_twh'], 2),
+        'forced_gas_only': info_end.get('forced_gas_only', False),
+        'primary_fuel': primary_fuel,
+        'avg_rate_at_start': round(rate_start, 4),
+        'avg_rate_at_end': round(rate_end, 4),
+    }
 
 
 def extract_medium_scenarios(df):
@@ -219,9 +173,6 @@ def extract_medium_scenarios(df):
                 pct = row[f'mix_{res}'] / 100
                 res_twh[res] = pct * proc * demand_twh
 
-            bat_twh = row['battery_dispatch_pct'] / 100 * demand_twh
-            ldes_twh = row['ldes_dispatch_pct'] / 100 * demand_twh
-
             result[iso][t] = {
                 'demand_twh': demand_twh,
                 'demand_mwh': row['annual_demand_mwh'],
@@ -232,8 +183,8 @@ def extract_medium_scenarios(df):
                 'incremental_cost': row['cost_incremental'],
                 'wholesale': row['cost_wholesale'],
                 'resource_twh': res_twh,
-                'battery_twh': bat_twh,
-                'ldes_twh': ldes_twh,
+                'battery_twh': row['battery_dispatch_pct'] / 100 * demand_twh,
+                'ldes_twh': row['ldes_dispatch_pct'] / 100 * demand_twh,
                 'resource_pct': {res: float(row[f'mix_{res}']) for res in RESOURCES},
                 'gas_backup_mw': float(row['gas_gas_backup_needed_mw']),
                 'new_gas_mw': float(row['gas_new_gas_build_mw']),
@@ -248,10 +199,11 @@ def extract_medium_scenarios(df):
     return result
 
 
-def compute_zone_metrics(med_data, dispatch_stacks):
+def compute_zone_metrics(med_data, egrid, fossil_mix):
     """
-    Compute metrics for each (ISO, zone) pair using dispatch-stack
-    retirement emission rates.
+    Compute metrics for each (ISO, zone) pair using dispatch-stack retirement.
+    Uses compute_fossil_retirement() from dispatch_utils.py for rigorous
+    merit-order displacement with absolute coal/oil capacity caps.
     """
     zone_metrics = []
 
@@ -259,7 +211,6 @@ def compute_zone_metrics(med_data, dispatch_stacks):
         iso_data = med_data[iso]
         demand_twh = list(iso_data.values())[0]['demand_twh']
         demand_mwh = demand_twh * 1e6
-        stack = dispatch_stacks[iso]
 
         for zone_idx, zone in enumerate(ZONES):
             t_start = float(zone['start_thresh'])
@@ -271,20 +222,19 @@ def compute_zone_metrics(med_data, dispatch_stacks):
             start = iso_data[t_start]
             end = iso_data[t_end]
 
-            # Fossil TWh at each threshold
-            fossil_twh_start = demand_twh * (1 - start['match_score'] / 100)
-            fossil_twh_end = demand_twh * (1 - end['match_score'] / 100)
-            delta_clean_twh = fossil_twh_start - fossil_twh_end
-
-            # Dispatch-stack displacement: compute emission rate of DISPLACED fossil
-            displaced_rate, displacement_breakdown = compute_displaced_emission_rate(
-                stack, fossil_twh_start, fossil_twh_end, demand_twh
+            # Compute marginal displaced emission rate using dispatch_utils
+            marginal_rate, delta_co2_mt, displacement = compute_marginal_displaced_rate(
+                iso, t_start, t_end, egrid, fossil_mix
             )
 
-            # CO₂ displaced using marginal (displaced) emission rate
-            co2_displaced_mt = delta_clean_twh * displaced_rate  # TWh × tCO₂/MWh = MT
+            # Delta clean TWh (from optimizer match scores)
+            delta_match_pct = (end['match_score'] - start['match_score']) / 100
+            delta_clean_twh = delta_match_pct * demand_twh
 
-            # Cost change (system cost per MWh of demand)
+            # CO₂ displaced using marginal displaced rate
+            co2_displaced_mt = delta_clean_twh * marginal_rate
+
+            # System cost change (effective cost × procurement + gas backup)
             cost_start = start['eff_cost'] * start['procurement_pct'] / 100 + start['gas_cost']
             cost_end = end['eff_cost'] * end['procurement_pct'] / 100 + end['gas_cost']
             delta_cost_per_mwh = cost_end - cost_start
@@ -296,31 +246,17 @@ def compute_zone_metrics(med_data, dispatch_stacks):
             else:
                 marginal_mac = float('inf')
 
-            marginal_mac_display = min(marginal_mac, 1500)
-
-            # Resource changes (delta TWh)
+            # Resource changes
             delta_resources = {}
             for res in RESOURCES:
                 delta_resources[res] = end['resource_twh'][res] - start['resource_twh'][res]
             delta_resources['battery'] = end['battery_twh'] - start['battery_twh']
             delta_resources['ldes'] = end['ldes_twh'] - start['ldes_twh']
 
-            delta_gas_mw = end['new_gas_mw'] - start['new_gas_mw']
-
             year_start = SBTI_YEAR_MAP.get(t_start, 2025)
             year_end = SBTI_YEAR_MAP.get(t_end, 2050)
             midpoint_year = (year_start + year_end) / 2
-            growth_rate = GROWTH_RATES[iso] / 100
-            growth_factor = (1 + growth_rate) ** (midpoint_year - 2025)
-
-            # Determine primary fuel displaced
-            primary_displaced = 'gas'
-            for fuel_info in displacement_breakdown.values():
-                pass
-            if displacement_breakdown:
-                sorted_disp = sorted(displacement_breakdown.items(),
-                                     key=lambda x: x[1]['twh_displaced'], reverse=True)
-                primary_displaced = sorted_disp[0][0]
+            growth_factor = (1 + GROWTH_RATES[iso] / 100) ** (midpoint_year - 2025)
 
             zone_metrics.append({
                 'iso': iso,
@@ -331,13 +267,13 @@ def compute_zone_metrics(med_data, dispatch_stacks):
                 'year_start': year_start,
                 'year_end': year_end,
                 'marginal_mac': round(marginal_mac, 1),
-                'marginal_mac_display': round(marginal_mac_display, 1),
+                'marginal_mac_display': round(min(marginal_mac, 1500), 1),
                 'co2_displaced_mt': round(co2_displaced_mt, 2),
-                'displaced_emission_rate': round(displaced_rate, 4),
-                'displacement_breakdown': displacement_breakdown,
-                'primary_fuel_displaced': primary_displaced,
-                'fossil_twh_start': round(fossil_twh_start, 1),
-                'fossil_twh_end': round(fossil_twh_end, 1),
+                'displaced_emission_rate': round(marginal_rate, 4),
+                'displacement_detail': displacement,
+                'primary_fuel_displaced': displacement['primary_fuel'],
+                'fossil_twh_start': round(demand_twh * (1 - start['match_score'] / 100), 1),
+                'fossil_twh_end': round(demand_twh * (1 - end['match_score'] / 100), 1),
                 'delta_clean_twh': round(delta_clean_twh, 1),
                 'delta_cost_per_mwh': round(delta_cost_per_mwh, 2),
                 'delta_cost_total_bn': round(delta_cost_total_bn, 2),
@@ -345,16 +281,15 @@ def compute_zone_metrics(med_data, dispatch_stacks):
                 'end_resource_twh': {k: round(v, 1) for k, v in end['resource_twh'].items()},
                 'end_procurement_pct': end['procurement_pct'],
                 'gas_backup_mw_end': end['gas_backup_mw'],
-                'delta_gas_mw': round(delta_gas_mw, 0),
+                'delta_gas_mw': round(end['new_gas_mw'] - start['new_gas_mw'], 0),
                 'demand_twh': demand_twh,
                 'growth_factor': round(growth_factor, 3),
                 'growth_adjusted_demand_twh': round(demand_twh * growth_factor, 1),
                 'growth_adjusted_co2_mt': round(co2_displaced_mt * growth_factor, 2),
             })
 
-    # Sort by marginal MAC (cheapest first) — the consequential deployment queue
+    # Sort by marginal MAC — the consequential deployment queue
     zone_metrics.sort(key=lambda x: (x['marginal_mac'], -x['co2_displaced_mt']))
-
     for i, step in enumerate(zone_metrics):
         step['queue_position'] = i + 1
 
@@ -362,16 +297,13 @@ def compute_zone_metrics(med_data, dispatch_stacks):
 
 
 def compute_stranding_analysis(med_data):
-    """
-    For each ISO and resource, find peak TWh, final TWh, and stranding ratio.
-    """
+    """For each ISO and resource, find peak TWh, final TWh, and stranding ratio."""
     stranding = {}
     for iso in ISOS:
         iso_data = med_data[iso]
         stranding[iso] = {}
 
-        all_resources = RESOURCES + ['battery', 'ldes']
-        for res in all_resources:
+        for res in RESOURCES + ['battery', 'ldes']:
             peak_twh = 0
             peak_thresh = 50
             values = {}
@@ -406,12 +338,11 @@ def compute_stranding_analysis(med_data):
                 'stranded_twh': round(max(0, peak_twh - final_twh), 1),
                 'values_by_threshold': values,
             }
-
     return stranding
 
 
 def compute_cumulative_deployment(queue):
-    """Follow the deployment queue and track cumulative metrics."""
+    """Follow the queue and track cumulative metrics."""
     cumulative = []
     running_co2 = 0
     running_cost = 0
@@ -419,18 +350,15 @@ def compute_cumulative_deployment(queue):
     iso_progress = {iso: 50 for iso in ISOS}
 
     for step in queue:
-        iso = step['iso']
         running_co2 += step['co2_displaced_mt']
         running_cost += step['delta_cost_total_bn']
-
         for res, delta in step['delta_resources'].items():
             running_twh[res] = running_twh.get(res, 0) + delta
-
-        iso_progress[iso] = step['threshold_end']
+        iso_progress[step['iso']] = step['threshold_end']
 
         cumulative.append({
             'queue_position': step['queue_position'],
-            'iso': iso,
+            'iso': step['iso'],
             'zone_label': step['zone_label'],
             'marginal_mac': step['marginal_mac'],
             'cumulative_co2_mt': round(running_co2, 2),
@@ -438,7 +366,6 @@ def compute_cumulative_deployment(queue):
             'cumulative_twh': {k: round(v, 1) for k, v in running_twh.items()},
             'iso_thresholds': dict(iso_progress),
         })
-
     return cumulative
 
 
@@ -448,7 +375,6 @@ def compute_resource_trajectories(med_data):
     for iso in ISOS:
         iso_data = med_data[iso]
         iso_traj = []
-
         for t in THRESHOLDS:
             t_float = float(t)
             if t_float not in iso_data:
@@ -467,21 +393,19 @@ def compute_resource_trajectories(med_data):
             row['gas_backup_mw'] = d['gas_backup_mw']
             row['new_gas_mw'] = d['new_gas_mw']
             iso_traj.append(row)
-
         trajectories[iso] = iso_traj
-
     return trajectories
 
 
 def compute_demand_growth(med_data):
-    """Demand at SBTi milestone years for each ISO."""
+    """Demand at SBTi milestone years."""
     projections = {}
     for iso in ISOS:
         demand_twh = list(med_data[iso].values())[0]['demand_twh']
-        growth_rate = GROWTH_RATES[iso] / 100
+        rate = GROWTH_RATES[iso] / 100
         iso_proj = {}
         for year in [2025, 2030, 2035, 2040, 2045, 2050]:
-            factor = (1 + growth_rate) ** (year - 2025)
+            factor = (1 + rate) ** (year - 2025)
             iso_proj[year] = {
                 'demand_twh': round(demand_twh * factor, 1),
                 'growth_factor': round(factor, 3),
@@ -492,27 +416,47 @@ def compute_demand_growth(med_data):
     return projections
 
 
-def print_summary(queue, stranding, dispatch_stacks):
-    """Print human-readable results."""
-    # Dispatch stacks
-    print("\n" + "=" * 80)
-    print("FOSSIL DISPATCH STACKS (retirement order: coal → oil → gas)")
-    print("=" * 80)
+def compute_emission_rate_trajectory(egrid, fossil_mix):
+    """Compute displaced emission rate at every threshold for every ISO."""
+    rate_traj = {}
     for iso in ISOS:
-        stack = dispatch_stacks[iso]
-        fuels_str = ", ".join(
-            f"{f['type']}: {f['share']*100:.1f}% @ {f['emission_rate']:.3f} tCO₂/MWh"
-            for f in stack['fuels']
-        )
-        print(f"  {iso} ({stack['fuel_year']}): {fuels_str}")
+        rates = []
+        for t in THRESHOLDS:
+            rate, info = compute_fossil_retirement(iso, t, egrid, fossil_mix)
+            rates.append({
+                'threshold': t,
+                'displaced_rate': round(rate, 4),
+                'coal_displaced_twh': info['coal_displaced_twh'],
+                'oil_displaced_twh': info['oil_displaced_twh'],
+                'gas_displaced_twh': info['gas_displaced_twh'],
+                'forced_gas_only': info.get('forced_gas_only', False),
+            })
+        rate_traj[iso] = rates
+    return rate_traj
 
-    # Deployment queue
-    print("\n" + "=" * 100)
-    print("CONSEQUENTIAL DEPLOYMENT QUEUE (sorted by marginal $/tCO₂, dispatch-stack emission rates)")
-    print("=" * 100)
-    print(f"{'#':>3} {'ISO':<7} {'Zone':<12} {'MAC $/t':>9} {'Disp Rate':>10} {'Fuel':>6} "
-          f"{'CO₂ MT':>8} {'ΔCost $B':>10} {'Primary Resource Change':>35}")
-    print("-" * 100)
+
+def print_summary(queue, stranding, egrid, fossil_mix):
+    """Print human-readable results."""
+    # Dispatch stack info
+    print("\n" + "=" * 90)
+    print("FOSSIL DISPATCH STACKS (merit-order: coal → oil → gas)")
+    print("=" * 90)
+    for iso in ISOS:
+        coal_cap = COAL_CAP_TWH.get(iso, 0)
+        oil_cap = OIL_CAP_TWH.get(iso, 0)
+        baseline = sum(GRID_MIX_SHARES.get(iso, {}).values())
+        demand = BASE_DEMAND_TWH[iso]
+        fossil_twh = demand * (1 - baseline / 100)
+        print(f"  {iso}: demand={demand:.0f} TWh, baseline_clean={baseline:.1f}%, "
+              f"fossil={fossil_twh:.0f} TWh (coal={coal_cap:.1f}, oil={oil_cap:.1f})")
+
+    # Queue
+    print("\n" + "=" * 110)
+    print("CONSEQUENTIAL DEPLOYMENT QUEUE (dispatch_utils.compute_fossil_retirement, marginal rates)")
+    print("=" * 110)
+    print(f"{'#':>3} {'ISO':<7} {'Zone':<12} {'MAC $/t':>9} {'Marg Rate':>10} {'Fuel':>6} "
+          f"{'CO₂ MT':>8} {'ΔCost $B':>10} {'Coal Left':>10} {'Primary Resource Change':>35}")
+    print("-" * 110)
 
     for step in queue:
         deltas = step['delta_resources']
@@ -524,10 +468,14 @@ def print_summary(queue, stranding, dispatch_stacks):
             top_str += f", {r2[0]}: {'+' if r2[1]>0 else ''}{r2[1]:.0f}"
 
         mac_str = f"${step['marginal_mac']:,.0f}" if step['marginal_mac'] < 9999 else "$∞"
+        coal_left = step['displacement_detail']['cumulative_coal_displaced_twh']
+        coal_cap = COAL_CAP_TWH.get(step['iso'], 0)
+        coal_remaining = max(0, coal_cap - coal_left)
 
         print(f"{step['queue_position']:>3} {step['iso']:<7} {step['zone_label']:<12} "
-              f"{mac_str:>9} {step['displaced_emission_rate']:>9.3f} {step['primary_fuel_displaced']:>6} "
-              f"{step['co2_displaced_mt']:>7.1f} {step['delta_cost_total_bn']:>9.2f} {top_str:>35}")
+              f"{mac_str:>9} {step['displaced_emission_rate']:>9.4f} {step['primary_fuel_displaced']:>6} "
+              f"{step['co2_displaced_mt']:>7.1f} {step['delta_cost_total_bn']:>9.2f} "
+              f"{coal_remaining:>9.1f} {top_str:>35}")
 
     total_co2 = sum(s['co2_displaced_mt'] for s in queue)
     total_cost = sum(s['delta_cost_total_bn'] for s in queue)
@@ -535,15 +483,16 @@ def print_summary(queue, stranding, dispatch_stacks):
     mid = [s for s in queue if 100 <= s['marginal_mac'] < 500]
     exp = [s for s in queue if s['marginal_mac'] >= 500]
 
-    print("-" * 100)
+    print("-" * 110)
     print(f"TOTAL: {total_co2:.1f} MT CO₂, ${total_cost:.1f}B annual cost")
-    print(f"  Cheap (<$100/t): {len(cheap)} steps, {sum(s['co2_displaced_mt'] for s in cheap):.1f} MT")
+    print(f"  Cheap (<$100/t): {len(cheap)} steps, {sum(s['co2_displaced_mt'] for s in cheap):.1f} MT "
+          f"({sum(s['co2_displaced_mt'] for s in cheap)/total_co2*100:.0f}% of CO₂)")
     print(f"  Moderate ($100-500/t): {len(mid)} steps, {sum(s['co2_displaced_mt'] for s in mid):.1f} MT")
     print(f"  Expensive (>$500/t): {len(exp)} steps, {sum(s['co2_displaced_mt'] for s in exp):.1f} MT")
 
     # Stranding
     print("\n" + "=" * 80)
-    print("STRANDING ANALYSIS (Peak TWh vs. Final at 99%)")
+    print("STRANDING ANALYSIS (Peak vs Final @ 99%)")
     print("=" * 80)
     for iso in ISOS:
         print(f"\n{iso}:")
@@ -557,21 +506,42 @@ def print_summary(queue, stranding, dispatch_stacks):
                   f"(ratio: {s['stranding_ratio']:.1f}x){flag}")
 
 
-def write_outputs(queue, cumulative, stranding, trajectories, projections, dispatch_stacks):
+def write_outputs(queue, cumulative, stranding, trajectories, projections,
+                  rate_trajectory, egrid, fossil_mix):
     """Write JSON and JS output files."""
-    # Convert dispatch stacks for serialization
-    stacks_serial = {}
-    for iso, stack in dispatch_stacks.items():
-        stacks_serial[iso] = {
-            'fuels': stack['fuels'],
-            'fuel_year': stack['fuel_year'],
+    # Build dispatch stack summary for output
+    stack_summary = {}
+    for iso in ISOS:
+        coal_cap = COAL_CAP_TWH.get(iso, 0)
+        oil_cap = OIL_CAP_TWH.get(iso, 0)
+        baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
+        demand = BASE_DEMAND_TWH[iso]
+
+        coal_rate = egrid[iso]['coal_co2_lb_per_mwh'] / 2204.62
+        oil_rate = egrid[iso]['oil_co2_lb_per_mwh'] / 2204.62
+        gas_rate = egrid[iso]['gas_co2_lb_per_mwh'] / 2204.62
+
+        fuels = []
+        if coal_cap > 0.01:
+            fuels.append({'type': 'coal', 'cap_twh': round(coal_cap, 2), 'emission_rate': round(coal_rate, 4)})
+        if oil_cap > 0.01:
+            fuels.append({'type': 'oil', 'cap_twh': round(oil_cap, 2), 'emission_rate': round(oil_rate, 4)})
+        fuels.append({'type': 'gas', 'cap_twh': round(demand * (1 - baseline_clean / 100) - coal_cap - oil_cap, 2),
+                      'emission_rate': round(gas_rate, 4)})
+
+        stack_summary[iso] = {
+            'fuels': fuels,
+            'baseline_clean_pct': round(baseline_clean, 1),
+            'demand_twh': demand,
+            'coal_oil_retirement_threshold': COAL_OIL_RETIREMENT_THRESHOLD,
         }
 
     output = {
         'metadata': {
-            'description': 'Consequential deployment queue with dispatch-stack retirement emission rates',
-            'methodology': 'Coal retires first (highest marginal cost), then oil, then gas. '
-                           'Emission rate is for DISPLACED fossil, not remaining fleet average.',
+            'description': 'Consequential deployment queue with dispatch-stack retirement (dispatch_utils.py)',
+            'methodology': 'Uses compute_fossil_retirement() with absolute coal/oil capacity caps and '
+                           '70% forced-retirement threshold. Marginal emission rate = delta CO₂ / delta clean TWh '
+                           'between zone boundaries, capturing coal→gas transition.',
             'zones': [z['label'] for z in ZONES],
             'thresholds': THRESHOLDS,
             'isos': ISOS,
@@ -579,12 +549,13 @@ def write_outputs(queue, cumulative, stranding, trajectories, projections, dispa
             'growth_rates_pct': GROWTH_RATES,
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
         },
-        'dispatch_stacks': stacks_serial,
+        'dispatch_stacks': stack_summary,
         'deployment_queue': queue,
         'cumulative_deployment': cumulative,
         'stranding_analysis': stranding,
         'resource_trajectories': trajectories,
         'demand_growth_projections': projections,
+        'emission_rate_trajectory': rate_trajectory,
     }
 
     os.makedirs(os.path.dirname(OUTPUT_JSON), exist_ok=True)
@@ -595,7 +566,8 @@ def write_outputs(queue, cumulative, stranding, trajectories, projections, dispa
     os.makedirs(os.path.dirname(OUTPUT_JS), exist_ok=True)
     with open(OUTPUT_JS, 'w') as f:
         f.write("// Auto-generated by compute_consequential_queue.py\n")
-        f.write("// Dispatch-stack retirement: coal→oil→gas merit order\n\n")
+        f.write("// Uses dispatch_utils.compute_fossil_retirement() with coal/oil capacity caps\n")
+        f.write("// Merit-order: coal→oil→gas; forced retirement above 70% clean\n\n")
         f.write(f"const CQ_DATA = {json.dumps(output, indent=2, default=str)};\n")
     print(f"JS:   {OUTPUT_JS} ({os.path.getsize(OUTPUT_JS) / 1024:.0f} KB)")
 
@@ -603,37 +575,24 @@ def write_outputs(queue, cumulative, stranding, trajectories, projections, dispa
 def main():
     print("=" * 60)
     print("CONSEQUENTIAL DEPLOYMENT QUEUE ANALYSIS")
-    print("  (Dispatch-Stack Retirement Emission Rates)")
+    print("  dispatch_utils.compute_fossil_retirement()")
+    print("  coal capacity caps + 70% forced retirement")
     print("=" * 60)
 
     df, meta, egrid, fossil_mix = load_data()
-
-    # Build dispatch stacks with merit-order retirement
-    dispatch_stacks = build_dispatch_stack(egrid, fossil_mix)
-
-    # Extract medium scenarios
     med_data = extract_medium_scenarios(df)
 
-    # Compute zone metrics with dispatch-stack emission rates
-    queue = compute_zone_metrics(med_data, dispatch_stacks)
-
-    # Cumulative deployment path
+    # Compute with canonical dispatch stack model
+    queue = compute_zone_metrics(med_data, egrid, fossil_mix)
     cumulative = compute_cumulative_deployment(queue)
-
-    # Stranding analysis
     stranding = compute_stranding_analysis(med_data)
-
-    # Resource trajectories
     trajectories = compute_resource_trajectories(med_data)
-
-    # Demand growth
     projections = compute_demand_growth(med_data)
+    rate_traj = compute_emission_rate_trajectory(egrid, fossil_mix)
 
-    # Print results
-    print_summary(queue, stranding, dispatch_stacks)
-
-    # Write outputs
-    write_outputs(queue, cumulative, stranding, trajectories, projections, dispatch_stacks)
+    print_summary(queue, stranding, egrid, fossil_mix)
+    write_outputs(queue, cumulative, stranding, trajectories, projections,
+                  rate_traj, egrid, fossil_mix)
 
     print("\nDone.")
 
