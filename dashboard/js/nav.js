@@ -122,7 +122,12 @@
             label: 'Kids',
             children: [
                 { label: 'Clean Energy', href: 'kids_energy.html' },
-                { label: 'Dinosaurs & Fossil Fuels', href: 'kids_fossil_fuels.html' }
+                { label: 'Dinosaurs & Fossil Fuels', href: 'kids_fossil_fuels.html' },
+                { label: 'How Wind Works', href: 'kids_wind.html' },
+                { label: 'How Solar Works', href: 'kids_solar.html' },
+                { label: 'How Nuclear Works', href: 'kids_nuclear.html' },
+                { label: 'How Geothermal Works', href: 'kids_geothermal.html' },
+                { label: 'How Storage Works', href: 'kids_storage.html' }
             ]
         }
     ];
