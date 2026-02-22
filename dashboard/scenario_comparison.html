@@ -99,17 +99,8 @@ body { background: #0B1120; }
 .insight.green { background: rgba(34,197,94,0.06); border-color: #22C55E; }
 .insight.green strong { color: #22C55E; }
 
-/* Resource deployed table */
-.deploy-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-bottom: 24px; }
-.deploy-table th { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); padding: 10px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.15); }
-.deploy-table th:first-child { text-align: left; }
-.deploy-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); text-align: center; }
-.deploy-table td:first-child { text-align: left; font-weight: 600; }
-.deploy-table tr:hover td { background: rgba(255,255,255,0.04); }
-.deploy-table .res-bar { display: inline-block; height: 14px; border-radius: 2px; vertical-align: middle; margin-right: 4px; min-width: 2px; }
-.deploy-table .bar-solar { background: #F59E0B; } .deploy-table .bar-wind { background: #3B82F6; }
-.deploy-table .bar-cf { background: #22C55E; } .deploy-table .bar-ccs { background: #14B8A6; }
-.deploy-table .bar-hydro { background: #06B6D4; }
+/* Deploy bar chart containers */
+.deploy-chart-container { position: relative; height: 380px; }
 
 @media (max-width: 768px) {
     .hero h1 { font-size: 1.5rem; }
@@ -117,6 +108,7 @@ body { background: #0B1120; }
     .headline-row { grid-template-columns: 1fr 1fr; }
     .chart-container { height: 280px; }
     .chart-container-wide { height: 320px; }
+    .deploy-chart-container { height: 320px; }
     .domino-table { font-size: 0.7rem; }
     .domino-table td, .domino-table th { padding: 5px 4px; }
     .deploy-table { font-size: 0.7rem; }
@@ -203,15 +195,17 @@ body { background: #0B1120; }
     <div class="iso-selector" id="deployIsoSelector"></div>
 
     <div class="chart-pair">
-        <div class="chart-box" style="overflow-x: auto;">
-            <span class="scenario-tag tag-a">Pure Consequential</span>
-            <h3 id="deployTitleA">PJM — Resource Deployed per Zone</h3>
-            <table class="deploy-table" id="deployTableA"></table>
+        <div class="chart-box">
+            <span class="scenario-tag tag-a">Sequential Path-Dependent</span>
+            <h3 id="deployTitleA">PJM — Resources at Each Threshold (TWh)</h3>
+            <p class="chart-note">Horizontal bars show total deployed resources + gas backup (GW, rightmost). Hover for details.</p>
+            <div class="deploy-chart-container"><canvas id="deployChartA"></canvas></div>
         </div>
-        <div class="chart-box" style="overflow-x: auto;">
-            <span class="scenario-tag tag-b">FOAK Investment</span>
-            <h3 id="deployTitleB">PJM — Resource Deployed per Zone</h3>
-            <table class="deploy-table" id="deployTableB"></table>
+        <div class="chart-box">
+            <span class="scenario-tag tag-b">FOAK Target 95%</span>
+            <h3 id="deployTitleB">PJM — Resources at Each Threshold (TWh)</h3>
+            <p class="chart-note">Single target portfolio — same resource mix at every threshold.</p>
+            <div class="deploy-chart-container"><canvas id="deployChartB"></canvas></div>
         </div>
     </div>
 
@@ -482,14 +476,27 @@ const THRESHOLDS = DATA.metadata.thresholds;
 const YEAR_MAP = {};
 Object.entries(DATA.metadata.sbti_year_map).forEach(([k,v]) => YEAR_MAP[parseFloat(k)] = v);
 
+// Match dashboard color palette from shared-data.js MIX_COLORS
 const COLORS = {
     A: '#EF4444', B: '#22C55E',
     A85: 'rgba(239,68,68,0.85)', B85: 'rgba(34,197,94,0.85)',
     A_fill: 'rgba(239,68,68,0.12)', B_fill: 'rgba(34,197,94,0.12)',
     A_area: 'rgba(239,68,68,0.25)', B_area: 'rgba(34,197,94,0.25)',
-    clean_firm: '#22C55E', solar: '#F59E0B', wind: '#3B82F6',
-    ccs: '#14B8A6', hydro: '#06B6D4', battery: '#A855F7', ldes: '#EC4899',
+    clean_firm: '#1E3A5F', solar: '#F59E0B', wind: '#22C55E',
+    ccs: '#0D9488', hydro: '#0EA5E9', battery: '#8B5CF6', ldes: '#EC4899',
+    gas: '#6B7280',
 };
+const RES_RGB = {
+    clean_firm: '30,58,95',  solar: '245,158,11', wind: '34,197,94',
+    ccs_ccgt: '13,148,136',  hydro: '14,165,233', battery: '139,92,246', ldes: '236,72,153',
+    gas: '107,114,128',
+};
+const RES_LABELS = {
+    clean_firm: 'Nuclear', ccs_ccgt: 'CCS-CCGT', solar: 'Solar', wind: 'Wind',
+    hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas: 'Gas Backup',
+};
+const GRID_MIX = DATA.metadata.grid_mix_shares;
+const DEMAND_TWH = DATA.metadata.base_demand_twh;
 
 const CHART_DEFAULTS = {
     responsive: true, maintainAspectRatio: false,
@@ -635,53 +642,82 @@ function renderMacTimeline(iso) {
 createIsoSelector('macIsoSelector', 'PJM', renderMacTimeline);
 renderMacTimeline('PJM');
 
-// ===== 2. RESOURCE DEPLOYED PER ZONE TABLES =====
-function buildDeployTable(tableId, queue, iso) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    const steps = queue.filter(s => s.iso === iso);
-    let html = '<thead><tr><th>Zone</th><th>MAC</th><th>Resources Deployed (TWh)</th><th>Gas &Delta;</th></tr></thead><tbody>';
+// ===== 2. HORIZONTAL STACKED BAR CHARTS (Resources + Gas at each threshold) =====
+let deployChartA, deployChartB;
+const DEPLOY_RES_ORDER = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
 
-    steps.forEach(step => {
-        const mac = step.marginal_mac >= 9999 ? '&infin;' : '$' + Math.round(step.marginal_mac).toLocaleString();
-        const macClass = step.marginal_mac < 0 ? 'mac-cheap' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
+function renderDeployCharts(iso) {
+    document.getElementById('deployTitleA').textContent = iso + ' \u2014 Resources at Each Threshold (TWh)';
+    document.getElementById('deployTitleB').textContent = iso + ' \u2014 Resources at Each Threshold (TWh)';
 
-        // Build resource bars
-        const deltas = step.delta_resources;
-        let barsHtml = '';
-        const maxAbsTwh = Math.max(...Object.values(deltas).map(Math.abs), 1);
-        const order = ['solar','wind','clean_firm','ccs_ccgt','hydro','battery','ldes'];
-        const barColors = { solar: 'bar-solar', wind: 'bar-wind', clean_firm: 'bar-cf', ccs_ccgt: 'bar-ccs', hydro: 'bar-hydro', battery: 'bar-cf', ldes: 'bar-cf' };
-        const labels = { solar: 'Sol', wind: 'Wnd', clean_firm: 'CF', ccs_ccgt: 'CCS', hydro: 'Hyd', battery: 'Bat', ldes: 'LDES' };
-        order.forEach(res => {
-            const val = deltas[res] || 0;
-            if (Math.abs(val) < 1) return;
-            const w = Math.max(4, Math.round(Math.abs(val) / maxAbsTwh * 80));
-            const sign = val > 0 ? '+' : '';
-            barsHtml += `<span class="res-bar ${barColors[res]}" style="width:${w}px" title="${labels[res]}: ${sign}${Math.round(val)} TWh"></span>`;
-            barsHtml += `<span style="font-size:0.7rem;color:rgba(255,255,255,0.6);margin-right:8px">${labels[res]} ${sign}${Math.round(val)}</span>`;
+    const trajA = DATA.trajectories.cheap_ren[iso] || [];
+    const trajB = DATA.trajectories.clean_firm_invest[iso] || [];
+    const labels = trajA.map(d => d.threshold + '%');
+
+    function makeDatasets(traj) {
+        const datasets = [];
+        DEPLOY_RES_ORDER.forEach(res => {
+            datasets.push({
+                label: RES_LABELS[res] || res,
+                data: traj.map(d => Math.round(d.resource_twh[res] || 0)),
+                backgroundColor: 'rgba(' + RES_RGB[res] + ',0.8)',
+                borderColor: 'rgba(' + RES_RGB[res] + ',1)',
+                borderWidth: 1,
+            });
         });
+        // Gas as GW converted to a comparable scale: show as TWh-equivalent using 8760h
+        // But that distorts scale. Instead show gas as a separate dataset with annotation.
+        // We'll add gas as actual GW value in a distinct gray bar.
+        datasets.push({
+            label: 'Gas Backup (GW)',
+            data: traj.map(d => Math.round(d.gas_backup_mw / 1000)),
+            backgroundColor: 'rgba(107,114,128,0.5)',
+            borderColor: 'rgba(107,114,128,0.8)',
+            borderWidth: 1,
+            borderDash: [4, 2],
+        });
+        return datasets;
+    }
 
-        const gasDir = step.delta_gas_mw > 0 ? 'positive' : step.delta_gas_mw < 0 ? 'negative' : '';
-        html += `<tr>
-            <td style="font-weight:600">${step.zone_label}</td>
-            <td class="${macClass} num" style="text-align:center">${mac}</td>
-            <td style="text-align:left">${barsHtml || '<span style="color:rgba(255,255,255,0.3)">—</span>'}</td>
-            <td class="${gasDir} num">${step.delta_gas_mw > 0 ? '+' : ''}${(step.delta_gas_mw/1000).toFixed(1)}k MW</td>
-        </tr>`;
-    });
-    html += '</tbody>';
-    table.innerHTML = html;
-}
+    const opts = {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 }, usePointStyle: true, pointStyle: 'rectRounded' } },
+            tooltip: {
+                callbacks: {
+                    label: ctx => {
+                        if (ctx.dataset.label.includes('Gas')) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.x.toLocaleString() + ' GW';
+                        }
+                        return ctx.dataset.label + ': ' + ctx.parsed.x.toLocaleString() + ' TWh';
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                stacked: true,
+                ticks: { color: 'rgba(255,255,255,0.5)' },
+                grid: { color: 'rgba(255,255,255,0.06)' },
+                title: { display: true, text: 'TWh (Gas in GW)', color: 'rgba(255,255,255,0.5)', font: { size: 10 } },
+            },
+            y: {
+                stacked: true,
+                ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 10 } },
+                grid: { color: 'rgba(255,255,255,0.06)' },
+            }
+        }
+    };
 
-function renderDeployTables(iso) {
-    document.getElementById('deployTitleA').textContent = iso + ' \u2014 Resource Deployed per Zone';
-    document.getElementById('deployTitleB').textContent = iso + ' \u2014 Resource Deployed per Zone';
-    buildDeployTable('deployTableA', DATA.queue_a, iso);
-    buildDeployTable('deployTableB', DATA.queue_b, iso);
+    if (deployChartA) deployChartA.destroy();
+    if (deployChartB) deployChartB.destroy();
+    deployChartA = new Chart(document.getElementById('deployChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA) }, options: opts });
+    deployChartB = new Chart(document.getElementById('deployChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB) }, options: opts });
 }
-createIsoSelector('deployIsoSelector', 'PJM', renderDeployTables);
-renderDeployTables('PJM');
+createIsoSelector('deployIsoSelector', 'PJM', renderDeployCharts);
+renderDeployCharts('PJM');
 
 // ===== 3. GAS BACKUP CHART =====
 let gasChart;
@@ -754,7 +790,31 @@ function renderGasChart(iso) {
 createIsoSelector('gasIsoSelector', 'PJM', renderGasChart);
 renderGasChart('PJM');
 
-// ===== 4. RESOURCE MIX STACKED BAR =====
+// ===== 4. WYN-PANEL RESOURCE MIX: existing (transparent) + new (saturated) + curtailment (striped) =====
+
+// Create diagonal stripe pattern for curtailment
+function createStripePattern(ctx, rgb) {
+    const size = 8;
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = size; pCanvas.height = size;
+    const pCtx = pCanvas.getContext('2d');
+    pCtx.strokeStyle = 'rgba(' + rgb + ',0.6)';
+    pCtx.lineWidth = 2;
+    pCtx.beginPath();
+    pCtx.moveTo(0, size); pCtx.lineTo(size, 0);
+    pCtx.stroke();
+    pCtx.beginPath();
+    pCtx.moveTo(-2, 2); pCtx.lineTo(2, -2);
+    pCtx.stroke();
+    pCtx.beginPath();
+    pCtx.moveTo(size - 2, size + 2); pCtx.lineTo(size + 2, size - 2);
+    pCtx.stroke();
+    return ctx.createPattern(pCanvas, 'repeat');
+}
+
+const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+const NEWBUILD_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
+
 let mixChartA, mixChartB;
 function renderMixCharts(iso) {
     document.getElementById('mixTitleA').textContent = iso + ' \u2014 Resource Mix (TWh)';
@@ -763,22 +823,106 @@ function renderMixCharts(iso) {
     const trajA = DATA.trajectories.cheap_ren[iso] || [];
     const trajB = DATA.trajectories.clean_firm_invest[iso] || [];
     const labels = trajA.map(d => d.year + '\n' + d.threshold + '%');
+    const demandTwh = DEMAND_TWH[iso];
+    const existShares = GRID_MIX || {};
+    const isoShares = existShares[iso] || {};
 
-    function makeDatasets(traj) {
-        return [
-            { label: 'Clean Firm', data: traj.map(d => d.resource_twh.clean_firm), backgroundColor: COLORS.clean_firm + 'CC', borderColor: COLORS.clean_firm, borderWidth: 1 },
-            { label: 'CCS', data: traj.map(d => d.resource_twh.ccs_ccgt || 0), backgroundColor: COLORS.ccs + 'CC', borderColor: COLORS.ccs, borderWidth: 1 },
-            { label: 'Solar', data: traj.map(d => d.resource_twh.solar), backgroundColor: COLORS.solar + 'CC', borderColor: COLORS.solar, borderWidth: 1 },
-            { label: 'Wind', data: traj.map(d => d.resource_twh.wind), backgroundColor: COLORS.wind + 'CC', borderColor: COLORS.wind, borderWidth: 1 },
-            { label: 'Hydro', data: traj.map(d => d.resource_twh.hydro), backgroundColor: COLORS.hydro + 'CC', borderColor: COLORS.hydro, borderWidth: 1 },
-        ];
+    // Compute existing TWh per resource
+    const existingTwh = {};
+    for (const res of EXISTING_ORDER) {
+        existingTwh[res] = (isoShares[res] || 0) / 100 * demandTwh;
+    }
+
+    function makeDatasets(traj, canvasId) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        const datasets = [];
+
+        // 1) Existing resources (transparent/light, bottom of stack)
+        for (const res of EXISTING_ORDER) {
+            const ex = existingTwh[res] || 0;
+            if (ex < 0.5) continue;
+            datasets.push({
+                label: (RES_LABELS[res] || res) + ' (existing)',
+                data: traj.map(() => Math.round(ex)),
+                backgroundColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.25)',
+                borderColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.5)',
+                borderWidth: 1,
+                stack: 'mix',
+            });
+        }
+
+        // 2) New build resources (saturated/solid, middle)
+        for (const res of NEWBUILD_ORDER) {
+            datasets.push({
+                label: (RES_LABELS[res] || res) + ' (new)',
+                data: traj.map(d => {
+                    const total = d.resource_twh[res] || 0;
+                    const ex = existingTwh[res] || 0;
+                    return Math.max(0, Math.round(total - ex));
+                }),
+                backgroundColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.85)',
+                borderColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',1)',
+                borderWidth: 1,
+                stack: 'mix',
+            });
+        }
+
+        // 3) Curtailment (diagonal stripes, top of stack)
+        // Curtailed = total procured - threshold-matched demand
+        // Allocate proportionally to solar and wind (variable renewables are curtailed)
+        const curtailRes = ['solar', 'wind'];
+        for (const res of curtailRes) {
+            datasets.push({
+                label: (RES_LABELS[res] || res) + ' (curtailed)',
+                data: traj.map(d => {
+                    const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+                    const matched = d.threshold / 100 * demandTwh;
+                    const totalCurtailed = Math.max(0, totalProcured - matched);
+                    if (totalCurtailed < 1) return 0;
+                    // Allocate to this VRE proportionally
+                    const newSol = Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0));
+                    const newWnd = Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0));
+                    const totalVRE = newSol + newWnd;
+                    if (totalVRE < 1) return 0;
+                    const share = res === 'solar' ? newSol / totalVRE : newWnd / totalVRE;
+                    return Math.round(totalCurtailed * share);
+                }),
+                backgroundColor: createStripePattern(ctx, RES_RGB[res]),
+                borderColor: 'rgba(' + RES_RGB[res] + ',0.4)',
+                borderWidth: 1,
+                stack: 'mix',
+            });
+        }
+
+        return datasets;
     }
 
     const opts = {
-        ...CHART_DEFAULTS,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
-            ...CHART_DEFAULTS.plugins,
-            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y) + ' TWh' } }
+            legend: {
+                labels: {
+                    color: 'rgba(255,255,255,0.7)', font: { size: 10 },
+                    filter: item => {
+                        // Collapse legend: show each resource once, plus one "(existing)" and one "(curtailed)" marker
+                        if (item.text.includes('(existing)') && !item.text.startsWith('Nuclear'))
+                            return false;
+                        if (item.text.includes('(curtailed)') && !item.text.startsWith('Solar'))
+                            return false;
+                        return true;
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: ctx => {
+                        const v = ctx.parsed.y;
+                        if (v === 0) return null;
+                        return ctx.dataset.label + ': ' + v.toLocaleString() + ' TWh';
+                    }
+                }
+            }
         },
         scales: {
             x: { stacked: true, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 }, maxRotation: 55 }, grid: { color: 'rgba(255,255,255,0.06)' } },
@@ -788,8 +932,8 @@ function renderMixCharts(iso) {
 
     if (mixChartA) mixChartA.destroy();
     if (mixChartB) mixChartB.destroy();
-    mixChartA = new Chart(document.getElementById('mixChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA) }, options: opts });
-    mixChartB = new Chart(document.getElementById('mixChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB) }, options: opts });
+    mixChartA = new Chart(document.getElementById('mixChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA, 'mixChartA') }, options: opts });
+    mixChartB = new Chart(document.getElementById('mixChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB, 'mixChartB') }, options: opts });
 }
 createIsoSelector('mixIsoSelector', 'PJM', renderMixCharts);
 renderMixCharts('PJM');

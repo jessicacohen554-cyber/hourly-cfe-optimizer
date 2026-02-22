@@ -979,6 +979,8 @@ def main():
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
             'isos': ISOS,
+            'grid_mix_shares': {iso: dict(GRID_MIX_SHARES[iso]) for iso in ISOS},
+            'base_demand_twh': dict(BASE_DEMAND_TWH),
         },
         'queue_a': queue_a,
         'queue_b': queue_b,
