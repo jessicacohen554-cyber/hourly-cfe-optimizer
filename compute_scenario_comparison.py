@@ -749,27 +749,63 @@ def main():
     # WRITE OUTPUT FILES
     # ========================================================================
 
-    # Build resource trajectories for each scenario
+    # Build resource trajectories with per-threshold stepwise MAC
     trajectories = {}
     for scenario, results, label in [(SCENARIO_A, results_a, 'cheap_ren'),
                                       (SCENARIO_B, results_b, 'clean_firm_invest')]:
         traj = {}
         for iso in ISOS:
             iso_traj = []
+            demand_twh = BASE_DEMAND_TWH[iso]
+            demand_mwh = demand_twh * 1e6
+            baseline_clean = sum(GRID_MIX_SHARES[iso].values())
+            prev_t = None
             for t in THRESHOLDS:
                 d = results.get(iso, {}).get(t, {})
                 if not d:
                     continue
+
+                # Stepwise MAC from previous threshold
+                stepwise_mac = None
+                if prev_t is not None and prev_t in results.get(iso, {}):
+                    prev_d = results[iso][prev_t]
+                    delta_cost = d['effective_cost'] - prev_d['effective_cost']
+                    # CO2 displaced in this step
+                    clean_twh_prev = max(0, (prev_t - baseline_clean) / 100.0 * demand_twh)
+                    clean_twh_cur = max(0, (t - baseline_clean) / 100.0 * demand_twh)
+                    delta_clean = clean_twh_cur - clean_twh_prev
+                    rate_prev, _ = compute_fossil_retirement(iso, prev_t, egrid, fossil_mix)
+                    rate_cur, _ = compute_fossil_retirement(iso, t, egrid, fossil_mix)
+                    avg_rate = (rate_prev + rate_cur) / 2
+                    co2_mt = delta_clean * avg_rate
+                    if co2_mt > 0.001:
+                        stepwise_mac = round((delta_cost * demand_mwh) / (co2_mt * 1e6), 1)
+                    else:
+                        stepwise_mac = 9999
+
+                # Clean firm TWh (nuclear + geothermal + CCS combined)
+                cf_twh = d['resource_twh'].get('clean_firm', 0)
+                ccs_twh = d['resource_twh'].get('ccs_ccgt', 0)
+                firm_total_twh = cf_twh + ccs_twh
+
                 iso_traj.append({
                     'threshold': t,
                     'year': SBTI_YEAR_MAP.get(t, 2050),
                     'effective_cost': d['effective_cost'],
+                    'total_cost': d['total_cost'],
+                    'incremental': d['incremental'],
                     'resource_twh': d['resource_twh'],
                     'battery_twh': d.get('battery_twh', 0) + d.get('battery8_twh', 0),
                     'ldes_twh': d.get('ldes_twh', 0),
                     'gas_backup_mw': d['gas_backup_mw'],
                     'new_gas_mw': d['new_gas_mw'],
+                    'existing_gas_used_mw': d.get('existing_gas_used_mw', 0),
+                    'clean_peak_mw': d.get('clean_peak_mw', 0),
+                    'firm_total_twh': round(firm_total_twh, 1),
+                    'procurement_pct': d.get('procurement_pct', 100),
+                    'stepwise_mac': stepwise_mac,
                 })
+                prev_t = t
             traj[iso] = iso_traj
         trajectories[label] = traj
 
