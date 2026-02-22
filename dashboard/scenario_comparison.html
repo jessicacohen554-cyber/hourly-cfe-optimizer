@@ -130,9 +130,9 @@ body { background: #0B1120; }
 <section class="hero">
     <h1>The FOAK Investment Case</h1>
     <p class="subtitle">
-        Two paths to the same 595 MT of CO<sub>2</sub> displacement. One invests in clean firm learning curves.
-        The other chases the cheapest $/tCO<sub>2</sub> first — and pays for it later with gas lock-in,
-        stranded assets, and a cost cliff at 99%.
+        Two procurement strategies. One chases the cheapest $/tCO<sub>2</sub> at each step — locking in
+        resources that can't be unbuilt. The other targets 95% CFE directly with cheap clean firm from
+        FOAK learning curves. Same physics, same feasible mixes — radically different outcomes.
     </p>
 </section>
 
@@ -142,24 +142,29 @@ body { background: #0B1120; }
 <!-- Scenario descriptions -->
 <section class="content-section">
     <div class="scenario-legend">
-        <div class="legend-item"><div class="legend-dot scn-a"></div><span class="legend-label">Pure Consequential</span><span class="legend-desc">&mdash; cheap renewables, expensive clean firm</span></div>
-        <div class="legend-item"><div class="legend-dot scn-b"></div><span class="legend-label">FOAK Investment</span><span class="legend-desc">&mdash; all clean tech at low cost (learning curve success)</span></div>
+        <div class="legend-item"><div class="legend-dot scn-a"></div><span class="legend-label">Pure Consequential</span><span class="legend-desc">&mdash; sequential, cheapest $/tCO₂ first, path-dependent lock-in</span></div>
+        <div class="legend-item"><div class="legend-dot scn-b"></div><span class="legend-label">FOAK Investment</span><span class="legend-desc">&mdash; target 95% CFE directly, cheap clean firm from learning curves</span></div>
     </div>
 
     <div class="scenario-cards">
         <div class="scenario-card" style="border-color: rgba(239,68,68,0.25);">
             <span class="scenario-tag tag-a">Pure Consequential</span>
-            <h3>Cheap Renewables / Expensive Clean Firm</h3>
+            <h3>Sequential Path-Dependent Optimization</h3>
             <div class="toggles">Ren: Low | Firm: High | CCS: High | LDES: High | Geo: High | Battery: Med | Fuel: Med | Tx: Med</div>
-            <p>Follow the cheapest marginal $/tCO<sub>2</sub> at each step. Renewables are cheap; clean firm is expensive.
-            Build wind and solar first, defer clean firm investment, rely on gas backup for reliability.</p>
+            <p>At each threshold (50% → 60% → 75% → ... → 100%), buy the cheapest resources to reach
+            that target. Resources deployed at each step are <strong>locked in</strong> as committed infrastructure —
+            they can't be unbuilt. The optimizer can only add on top.
+            Result: early renewable overbuilding creates path dependency that makes later thresholds
+            dramatically more expensive.</p>
         </div>
         <div class="scenario-card" style="border-color: rgba(34,197,94,0.25);">
             <span class="scenario-tag tag-b">FOAK Investment</span>
-            <h3>Clean Firm Learning Curve / All Clean Tech Cheap</h3>
+            <h3>Target 95% CFE Directly</h3>
             <div class="toggles">Ren: Low | Firm: Low | CCS: Low | LDES: Low | Geo: Low | Battery: Low | Fuel: Med | Tx: Med</div>
-            <p>FOAK investment drives down learning curves for nuclear, CCS, geothermal, and storage.
-            Clean firm enters the queue early, displaces gas backup, and reduces total system cost.</p>
+            <p>All buyers target 95% hourly CFE simultaneously. FOAK investment drives clean firm
+            to Low LCOE via learning curves. The optimizer selects the globally optimal portfolio for 95% —
+            a balanced mix of clean firm, renewables, and storage that achieves reliable hourly matching
+            at a fraction of the sequential path's cost.</p>
         </div>
     </div>
 </section>
@@ -178,19 +183,22 @@ body { background: #0B1120; }
     </div>
 
     <div class="insight">
-        <p><strong>The divergence starts at 90%.</strong> Below 90%, both scenarios displace coal and gas at roughly similar marginal cost.
-        Above 90%, the pure consequential path keeps throwing renewables at the problem — but their marginal value for hourly matching
-        is declining. Clean firm in the FOAK scenario maintains affordable $/tCO<sub>2</sub> because firm power provides
-        nighttime + winter capacity that renewables cannot.</p>
+        <p><strong>The path-dependent trap reveals itself above 80%.</strong> The sequential strategy locks in massive
+        renewable overbuilds early (they're the cheapest $/tCO<sub>2</sub> at each step). But those locked-in renewables
+        have declining marginal value for hourly matching — you've already saturated the sunny and windy hours.
+        To reach higher thresholds, the optimizer is forced into even more extreme overbuilding because clean firm
+        is expensive at High LCOE. The FOAK 95% target achieves the same physics with a balanced portfolio —
+        clean firm provides the nighttime/winter hours that no amount of renewables can cover.</p>
     </div>
 </section>
 
 <!-- 2. What Resources Get Deployed at Each Zone -->
 <section class="content-section">
     <h2 class="section-title">What Gets Deployed at Each Zone?</h2>
-    <p class="section-subtitle">The consequential deployment queue — sorted by cheapest $/tCO<sub>2</sub> first — shows which resources
-    are added at each step. In the pure consequential path, it's almost entirely renewables. By 95%+, those renewables have
-    sharply declining marginal value for hourly matching.</p>
+    <p class="section-subtitle">The consequential path deploys resources sequentially — locked-in at each threshold before
+    optimizing the next. By contrast, the FOAK path procures a single balanced portfolio targeting 95% CFE. The sequential
+    path shows escalating renewable overbuilding as each step inherits prior commitments; the FOAK path shows stable deployment
+    because it's one optimized portfolio from the start.</p>
 
     <div class="iso-selector" id="deployIsoSelector"></div>
 
@@ -208,20 +216,22 @@ body { background: #0B1120; }
     </div>
 
     <div class="callout">
-        <div class="callout-title">The Renewable Saturation Problem</div>
-        <p>In the pure consequential path, solar and wind are deployed at every zone because they're the cheapest $/tCO<sub>2</sub>.
-        But at 95%+ clean grids, incremental renewables don't help with the hardest hours — winter nights, low-wind weeks,
-        peak demand periods. The optimizer keeps buying renewables because they're cheap, but each additional TWh contributes
-        less to hourly CFE matching. Clean firm is avoided because it's expensive per MWh — but it's the only resource that
-        can provide reliable clean power at the margin. The result: ballooning procurement ratios and gas backup that never goes away.</p>
+        <div class="callout-title">Path Dependency Creates Renewable Saturation</div>
+        <p>Because the sequential strategy locks in the cheapest resources first, it overbuilds renewables at early thresholds.
+        Those resources are committed — they can't be unbuilt. At 80%+, the optimizer inherits this oversized renewable base
+        and must add even more to push hourly matching higher, because clean firm is expensive at High LCOE. The result:
+        PJM reaches 2,400 TWh of solar at 95% (vs. 27 TWh in the FOAK target). ERCOT hits 1,400+ TWh of solar at 85%.
+        This is the cost of local optimization — each step was the cheapest $/tCO<sub>2</sub> at the time, but the cumulative
+        path is 3-5&times; more expensive than targeting a high threshold directly.</p>
     </div>
 </section>
 
 <!-- 3. Gas Capacity: The Stranding Story -->
 <section class="content-section">
-    <h2 class="section-title">Gas Capacity Trajectory: Buildout vs. Displacement</h2>
-    <p class="section-subtitle">Gas backup capacity required at each SBTi milestone. The FOAK investment path steadily displaces gas;
-    the pure consequential path locks in gas infrastructure that becomes stranded at 99-100%.</p>
+    <h2 class="section-title">Gas Capacity: Overbuilding vs. Efficient Displacement</h2>
+    <p class="section-subtitle">Gas backup capacity at each milestone. The sequential path's massive renewable overbuilding
+    eventually eliminates gas through sheer overcapacity — but at 3-5&times; the cost. The FOAK target path maintains
+    some gas at 95% but achieves near-full decarbonization at a fraction of the system cost.</p>
 
     <div class="iso-selector" id="gasIsoSelector"></div>
 
@@ -232,18 +242,20 @@ body { background: #0B1120; }
     </div>
 
     <div class="insight green">
-        <p><strong>Gas infrastructure avoided by FOAK investment:</strong> The green scenario avoids building gas that the red scenario
-        locks in. In PJM, the gap reaches <span id="gasGapPJM">48 GW</span> at 99% — gas capacity the pure consequential path builds
-        and then must strand at 100%. In ERCOT, the gap is <span id="gasGapERCOT">17 GW</span>. Clean firm doesn't just displace
-        emissions — it displaces gas infrastructure, reducing costs on two dimensions.</p>
+        <p><strong>The gas story is counterintuitive.</strong> The sequential path's extreme renewable overbuilding
+        actually eliminates gas at high thresholds — PJM hits 0 MW gas at 90% because it's deployed so much
+        solar and wind that capacity credits exceed the RA requirement. But this comes at
+        $252/MWh vs. the FOAK path's $63/MWh. The FOAK 95% target retains ~<span id="gasGapPJM">110 GW</span> of gas
+        in PJM but achieves 95% CFE at 4&times; lower cost. The efficient path doesn't require eliminating every MW of gas —
+        it requires matching clean energy to demand hourly.</p>
     </div>
 </section>
 
 <!-- 4. Resource Mix Side-by-Side -->
 <section class="content-section">
-    <h2 class="section-title">What Gets Built: Resource Mix at Each SBTi Year</h2>
-    <p class="section-subtitle">Same feasible mixes, different cost signals. The FOAK investment path builds clean firm early and
-    avoids the renewable-heavy portfolio that saturates above 90%.</p>
+    <h2 class="section-title">What Gets Built: Path-Dependent vs. Target Portfolio</h2>
+    <p class="section-subtitle">The sequential path's resource mix evolves erratically as each threshold inherits prior overbuilds.
+    The FOAK target is a single stable portfolio — the same optimized mix at every point because that's what everyone is building toward.</p>
 
     <div class="iso-selector" id="mixIsoSelector"></div>
 
@@ -264,8 +276,8 @@ body { background: #0B1120; }
 <!-- 5. Effective System Cost Overlay -->
 <section class="content-section">
     <h2 class="section-title">Effective System Cost: The Learning Curve Dividend</h2>
-    <p class="section-subtitle">$/MWh effective system cost at each SBTi milestone. The FOAK investment path is cheaper at every
-    single threshold — and the gap widens dramatically above 90%.</p>
+    <p class="section-subtitle">$/MWh effective system cost at each milestone. The sequential path escalates 3-5&times; as locked-in
+    renewables saturate. The FOAK 95% target is a flat line — one portfolio, one cost — dramatically cheaper at every threshold.</p>
 
     <div class="iso-selector" id="costIsoSelector"></div>
 
@@ -280,7 +292,7 @@ body { background: #0B1120; }
 <section class="content-section">
     <h2 class="section-title">Clean Firm Deployment: Early Entry vs. Last-Minute Cliff</h2>
     <p class="section-subtitle">Total clean firm generation (nuclear + CCS + geothermal) at each threshold.
-    The FOAK path builds clean firm steadily; the consequential path defers it until forced at 99-100%.</p>
+    The sequential path eventually needs massive clean firm at extreme thresholds; the FOAK target gets it right from the start.</p>
 
     <div class="iso-selector" id="firmIsoSelector"></div>
 
@@ -291,47 +303,50 @@ body { background: #0B1120; }
     </div>
 
     <div class="callout" style="background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.2);">
-        <div class="callout-title" style="color: #EF4444;">The 99% Cliff</div>
-        <p>In the pure consequential path, clean firm is deferred until 99-100% — then hundreds of TWh must be built
-        all at once on a compressed timeline. This isn't a cost optimization; it's a supply chain crisis.
-        The FOAK investment path avoids this cliff by building clean firm steadily from 75% onward,
-        spreading construction over 20 years instead of cramming it into the last 2.</p>
+        <div class="callout-title" style="color: #EF4444;">The Path-Dependent Trap</div>
+        <p>The sequential path's clean firm deployment is erratic — forced into large buildouts at certain thresholds
+        where the inherited renewable base simply can't achieve hourly matching. PJM needs 1,000+ TWh of clean firm
+        at 90% in the sequential path vs. 815 TWh in the FOAK target. The difference: the FOAK portfolio was
+        <em>designed</em> for 95% reliability from the start. The sequential path has to compensate for
+        a renewable-heavy legacy that wasn't designed for high-threshold hourly matching.</p>
     </div>
 </section>
 
 <!-- 7. Domino Sequence Tables -->
 <section class="content-section">
-    <h2 class="section-title">The Deployment Queue: Step-by-Step</h2>
-    <p class="section-subtitle">Ordered by marginal MAC — cheapest $/tCO<sub>2</sub> first across all ISOs. Each row shows which
-    ISO-zone falls next, what resource drives it, and how gas capacity changes.</p>
+    <h2 class="section-title">The Sequential Deployment Queue</h2>
+    <p class="section-subtitle">The consequential path deploys resources step-by-step, ordered by cheapest $/tCO<sub>2</sub> first.
+    Each row inherits all prior resource commitments. The FOAK path has no queue — it's a single portfolio targeting 95%.</p>
 
-    <div class="chart-pair">
-        <div class="chart-box" style="overflow-x: auto;">
-            <span class="scenario-tag tag-a">Pure Consequential</span>
-            <table class="domino-table" id="dominoTableA"></table>
-        </div>
-        <div class="chart-box" style="overflow-x: auto;">
-            <span class="scenario-tag tag-b">FOAK Investment</span>
-            <table class="domino-table" id="dominoTableB"></table>
-        </div>
+    <div class="chart-wide" style="overflow-x: auto;">
+        <span class="scenario-tag tag-a">Pure Consequential — Sequential Queue</span>
+        <table class="domino-table" id="dominoTableA"></table>
+    </div>
+    <div class="insight" style="margin-top: 16px;">
+        <p><strong>No queue for the FOAK path.</strong> In the target-95% scenario, there's no sequential deployment —
+        every buyer procures the same optimized portfolio simultaneously. The "queue" concept only applies
+        to the sequential strategy, where each step depends on what was locked in before.</p>
     </div>
 </section>
 
 <!-- Bottom line -->
 <section class="content-section">
-    <h2 class="section-title">Bottom Line: The Investment Signal Is the Strategy</h2>
+    <h2 class="section-title">Bottom Line: Local Optimization Fails Globally</h2>
     <div class="insight green">
-        <p><strong>FOAK investment in clean firm saves $64B</strong> across 5 ISOs for the same 595 MT of CO<sub>2</sub> displacement.
-        It avoids 48+ GW of gas buildout in PJM, eliminates the 99% cost cliff, and spreads clean firm construction
-        over 20 years instead of 2. The "cheap" consequential path — always choosing the next cheapest $/tCO<sub>2</sub> —
-        is a local optimization that fails globally. It locks in gas, strands assets, and creates the very supply chain
-        crisis it was trying to avoid.</p>
+        <p><strong>Targeting 95% CFE directly costs 3-5&times; less per MWh than getting there sequentially.</strong>
+        At 95%, PJM pays $290/MWh through the sequential path vs. $63/MWh targeting directly — a $227/MWh gap
+        on 833 TWh of demand. Across all 5 ISOs, the sequential path to 95% costs ~$255B more per year in
+        effective system cost. The "cheap" sequential strategy — always buying the next cheapest $/tCO<sub>2</sub> —
+        is a textbook local optimization that produces a globally suboptimal outcome.</p>
     </div>
     <div class="insight">
-        <p><strong>Clean firm doesn't just displace emissions — it displaces gas infrastructure.</strong>
-        Each GW of nuclear, CCS, or geothermal that enters the grid at 80% replaces a GW of gas backup capacity
-        that would have been built, operated for 15 years, and stranded at 100%. The learning curve investment
-        pays for itself twice: once in cheaper clean firm costs, and again in avoided gas capital.</p>
+        <p><strong>The mechanism is path dependency.</strong> Resources deployed at 50% are locked in at 60%.
+        Because renewables are cheapest at each step (clean firm is expensive at FOAK pricing), the sequential
+        strategy builds massive renewable portfolios that saturate the sunny/windy hours. At higher thresholds,
+        the hard hours — winter nights, low-wind weeks — need firm generation. But the optimizer is trapped:
+        it can't unwind the renewable overbuilding, so it piles on even more at escalating cost.
+        The FOAK path avoids this by targeting a high threshold from the start — the optimizer naturally selects
+        a balanced mix of firm + renewables + storage because that's what hourly matching requires.</p>
     </div>
 </section>
 
@@ -342,24 +357,44 @@ body { background: #0B1120; }
 
     <div style="color: rgba(255,255,255,0.75); font-size: 0.88rem; line-height: 1.8; max-width: 900px;">
 
-    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Same Physics, Different Cost Functions</h3>
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Same Physics, Different Procurement Strategies</h3>
     <p>Both scenarios draw from an <strong>identical pool of ~33,000 physics-feasible resource mixes</strong> produced by the 8,760-hour dispatch model
     (Step 1 PFS Generator). Each mix is a validated combination of clean firm, solar, wind, CCS-CCGT, hydro, 4-hour battery, 8-hour battery,
     and 100-hour LDES that achieves a specific hourly CFE threshold across all 8,760 hours of 2025 demand and generation data.
-    The physics are fixed — what changes between scenarios is <em>which mix the optimizer selects as cheapest</em>.</p>
+    The physics are fixed — what changes between scenarios is the <em>procurement strategy</em>: sequential path-dependent
+    optimization vs. targeting a single high threshold directly.</p>
 
-    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Scenario Construction</h3>
-    <p>Each scenario defines a set of 9 cost toggles (Renewable Gen, Firm Gen, Battery, LDES, CCS, 45Q, Fossil Fuel, Transmission, Geothermal)
-    at Low/Medium/High levels. These toggles set the LCOE and transmission adder for each resource type. The optimizer then evaluates
-    <strong>every feasible mix at every threshold</strong> under that scenario's cost function and selects the one with the lowest
-    effective system cost ($/MWh).</p>
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Scenario A: Sequential Path-Dependent Optimization</h3>
+    <p>The consequential scenario models a buyer who procures the cheapest resources at each threshold step,
+    with <strong>prior deployments locked in as committed infrastructure</strong>:</p>
+    <ol style="padding-left: 20px; margin: 8px 0;">
+        <li>At 50% CFE: find the cheapest feasible mix from the existing grid floor. Deploy those resources.</li>
+        <li>At 60% CFE: resources deployed at 50% are now the <strong>floor</strong> — they can't be unbuilt.
+            The optimizer can only add on top. Among all feasible mixes at 60% that meet the floor constraint
+            (every resource &ge; what was deployed at 50%), select the cheapest.</li>
+        <li>Continue sequentially through 70%, 75%, 80%, ... 100%. Each step inherits all prior commitments.</li>
+        <li>Resources remain priced at their original LCOE — committed capacity does NOT shift to wholesale pricing.
+            The sunk cost creates path dependency but doesn't create a pricing advantage.</li>
+    </ol>
+    <p>When the discrete feasible-mix space is too sparse for strict monotonicity, the optimizer uses a <strong>soft floor</strong>:
+    each mix is scored by its total floor violation (TWh shortfall across all resources), and the cheapest mix with
+    minimum violation is selected. The floor ratchets up using the element-wise maximum of the old floor and new deployment.</p>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Scenario B: Target 95% Directly</h3>
+    <p>The FOAK scenario models collective procurement where all buyers target <strong>95% hourly CFE simultaneously</strong>.
+    FOAK investment has driven clean firm technologies to Low LCOE via learning curves. The optimizer finds the single
+    cheapest feasible mix at the 95% threshold — that portfolio IS the target everyone is building toward.
+    Every threshold on the trajectory charts shows this same 95% target mix, because the procurement strategy is
+    "build the right portfolio for 95% and deploy it."</p>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Cost Toggle Comparison</h3>
 
     <table style="width:100%; border-collapse:collapse; margin: 16px 0 24px; font-size: 0.82rem;">
         <thead>
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
                 <th style="text-align:left; padding: 8px; color: rgba(255,255,255,0.5); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">Toggle</th>
-                <th style="text-align:center; padding: 8px; color: #EF4444; font-size: 0.72rem; text-transform: uppercase;">Pure Consequential</th>
-                <th style="text-align:center; padding: 8px; color: #22C55E; font-size: 0.72rem; text-transform: uppercase;">FOAK Investment</th>
+                <th style="text-align:center; padding: 8px; color: #EF4444; font-size: 0.72rem; text-transform: uppercase;">Sequential</th>
+                <th style="text-align:center; padding: 8px; color: #22C55E; font-size: 0.72rem; text-transform: uppercase;">FOAK Target</th>
             </tr>
         </thead>
         <tbody>
@@ -375,26 +410,20 @@ body { background: #0B1120; }
         </tbody>
     </table>
 
-    <p>The key difference: in the pure consequential scenario, clean firm technologies (nuclear, CCS, LDES, geothermal) are at <strong>High cost</strong> — representing
-    today's FOAK pricing before learning curves have materialized. Renewables and battery are cheap. In the FOAK investment scenario, learning-curve
-    investment has driven <strong>all</strong> clean technologies to Low cost.</p>
+    <p>In the sequential scenario, clean firm technologies are at <strong>High cost</strong> — FOAK pricing before learning curves.
+    Renewables and battery are cheap. In the FOAK scenario, learning curves have materialized and <strong>all</strong>
+    clean technologies are at Low cost.</p>
 
-    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Cost Optimization (per ISO &times; Threshold)</h3>
-    <p>For each of the 5 ISOs &times; 13 thresholds = 65 cells, the optimizer:</p>
-    <ol style="padding-left: 20px; margin: 8px 0;">
-        <li>Iterates through all physics-feasible mixes at that threshold</li>
-        <li>Computes <strong>effective system cost</strong> = total procurement cost / hourly match fraction, including:
-            <ul style="padding-left: 16px; margin: 4px 0;">
-                <li>Existing generation at wholesale price; new generation at LCOE + transmission adder</li>
-                <li>Clean firm tranche pricing: uprates first, then geothermal (CAISO), then cheapest of nuclear/CCS</li>
-                <li>Storage costs: battery (4hr/8hr) and LDES at scenario-specific LCOE</li>
-                <li>Gas backup: resource adequacy requirement (15% margin above peak) minus clean capacity credits, priced at fixed O&amp;M (existing) or full annualized cost (new build)</li>
-            </ul>
-        </li>
-        <li>Selects the mix with the <strong>lowest effective $/MWh</strong></li>
-    </ol>
-    <p>Because the cost function differs between scenarios, the <strong>optimal resource mix changes</strong> — not just the price tag.
-    The FOAK scenario selects more clean firm because it's now cost-competitive; the consequential scenario avoids it because it's expensive.</p>
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Cost Function (Both Scenarios)</h3>
+    <p>Effective system cost = total procurement cost / hourly match fraction, including:</p>
+    <ul style="padding-left: 20px; margin: 8px 0;">
+        <li>Existing generation at wholesale price; new generation at LCOE + transmission adder</li>
+        <li>Clean firm tranche pricing: uprates first, then geothermal (CAISO), then cheapest of nuclear/CCS</li>
+        <li>Storage costs: battery (4hr/8hr) and LDES at scenario-specific LCOE</li>
+        <li>Gas backup: resource adequacy requirement (15% margin above peak) minus clean capacity credits, priced at fixed O&amp;M (existing) or full annualized cost (new build)</li>
+    </ul>
+    <p>The cost function is identical between scenarios. What differs is (a) the cost toggle levels, (b) the optimization
+    strategy (sequential with floor constraints vs. single-target), and (c) the resulting optimal resource mix.</p>
 
     <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Gas Backup &amp; Capacity Credits</h3>
     <p>Gas capacity is <strong>not a choice variable</strong> — it's derived from resource adequacy constraints. Each clean resource receives a
@@ -473,49 +502,46 @@ function pctLabel(d) { return d.threshold + '%'; }
 // ===== HEADLINE CARDS (dynamic from data) =====
 function buildHeadlineCards() {
     const container = document.getElementById('headlineCards');
-    // Compute total cost deltas
-    const qA = DATA.queue_a, qB = DATA.queue_b;
-    let totalCostA = 0, totalCostB = 0;
     const baseDemand = { CAISO: 217, ERCOT: 485, PJM: 833, NYISO: 154, NEISO: 117 };
-    qA.forEach(s => { totalCostA += s.delta_cost_per_mwh * baseDemand[s.iso] * 1e3; }); // $M
-    qB.forEach(s => { totalCostB += s.delta_cost_per_mwh * baseDemand[s.iso] * 1e3; });
 
-    // Gas gap at 99% for PJM
+    // Compare effective system cost at 95% threshold
+    let annualCostA = 0, annualCostB = 0;
+    ISOS.forEach(iso => {
+        const trajA = DATA.trajectories.cheap_ren[iso] || [];
+        const trajB = DATA.trajectories.clean_firm_invest[iso] || [];
+        const a95 = trajA.find(d => d.threshold === 95);
+        const b95 = trajB.find(d => d.threshold === 95);
+        if (a95 && b95) {
+            annualCostA += a95.effective_cost * baseDemand[iso]; // $/MWh × TWh = $M
+            annualCostB += b95.effective_cost * baseDemand[iso];
+        }
+    });
+    const savingsB = Math.round((annualCostA - annualCostB) / 1000);
+
+    // PJM cost gap at 95%
     const trajA_PJM = DATA.trajectories.cheap_ren.PJM || [];
     const trajB_PJM = DATA.trajectories.clean_firm_invest.PJM || [];
-    const gas99A = trajA_PJM.find(d => d.threshold === 99);
-    const gas99B = trajB_PJM.find(d => d.threshold === 99);
-    const gasGapPJM = gas99A && gas99B ? Math.round((gas99A.gas_backup_mw - gas99B.gas_backup_mw) / 1000) : 48;
+    const a95_PJM = trajA_PJM.find(d => d.threshold === 95);
+    const b95_PJM = trajB_PJM.find(d => d.threshold === 95);
+    const costGapPJM = a95_PJM && b95_PJM ? Math.round(a95_PJM.effective_cost - b95_PJM.effective_cost) : 227;
 
-    // Cost gap at 99% for PJM
-    const costGapPJM = gas99A && gas99B ? (gas99A.effective_cost - gas99B.effective_cost).toFixed(0) : '11';
+    // Cost multiplier at 95% — ratio of sequential to FOAK
+    const costMultiplier = (annualCostB > 0) ? (annualCostA / annualCostB).toFixed(1) : '3.5';
 
-    // MAC at 97.5% for PJM
-    const macA97 = trajA_PJM.find(d => d.threshold === 97.5);
-    const macB97 = trajB_PJM.find(d => d.threshold === 97.5);
-
-    const savings = Math.round((totalCostA - totalCostB) / 1000);
-    const savingsPct = Math.round((1 - totalCostB / totalCostA) * 100);
+    // PJM solar overbuilding — TWh at 95% in sequential path
+    const solarOverPJM = a95_PJM ? Math.round(a95_PJM.resource_twh.solar) : 2412;
+    const solarFOAK_PJM = b95_PJM ? Math.round(b95_PJM.resource_twh.solar) : 27;
 
     container.innerHTML = `
-        <div class="headline-card"><div class="val red">$${Math.round(totalCostA/1000)}B</div><div class="lbl">Pure Consequential Total Cost</div></div>
-        <div class="headline-card"><div class="val green">$${Math.round(totalCostB/1000)}B</div><div class="lbl">FOAK Investment Total Cost</div></div>
-        <div class="headline-card"><div class="val amber">$${savings}B</div><div class="lbl">Savings from FOAK Investment</div></div>
-        <div class="headline-card"><div class="val blue">${gasGapPJM} GW</div><div class="lbl">Gas Avoided in PJM at 99%</div></div>
-        <div class="headline-card"><div class="val cyan">$${costGapPJM}/MWh</div><div class="lbl">PJM Cost Gap at 99%</div></div>
+        <div class="headline-card"><div class="val red">${costMultiplier}&times;</div><div class="lbl">Sequential Cost vs. FOAK at 95%</div></div>
+        <div class="headline-card"><div class="val amber">$${savingsB}B</div><div class="lbl">Annual Savings From Targeting 95%</div></div>
+        <div class="headline-card"><div class="val blue">$${costGapPJM}/MWh</div><div class="lbl">PJM Cost Gap at 95%</div></div>
+        <div class="headline-card"><div class="val cyan">${solarOverPJM} TWh</div><div class="lbl">PJM Solar in Sequential (vs. ${solarFOAK_PJM} FOAK)</div></div>
     `;
 
-    // Update gas gap callout text
+    // Update gas callout text
     const gapEl = document.getElementById('gasGapPJM');
-    if (gapEl) gapEl.textContent = gasGapPJM + ' GW';
-
-    const trajA_ERCOT = DATA.trajectories.cheap_ren.ERCOT || [];
-    const trajB_ERCOT = DATA.trajectories.clean_firm_invest.ERCOT || [];
-    const g99AE = trajA_ERCOT.find(d => d.threshold === 99);
-    const g99BE = trajB_ERCOT.find(d => d.threshold === 99);
-    const gasGapERCOT = g99AE && g99BE ? Math.round((g99AE.gas_backup_mw - g99BE.gas_backup_mw) / 1000) : 17;
-    const gapElE = document.getElementById('gasGapERCOT');
-    if (gapElE) gapElE.textContent = gasGapERCOT + ' GW';
+    if (gapEl && b95_PJM) gapEl.textContent = Math.round(b95_PJM.gas_backup_mw / 1000) + ' GW';
 }
 buildHeadlineCards();
 
@@ -942,7 +968,6 @@ function buildDominoTable(tableId, queue) {
 }
 
 buildDominoTable('dominoTableA', DATA.queue_a);
-buildDominoTable('dominoTableB', DATA.queue_b);
 
 })();
 </script>
