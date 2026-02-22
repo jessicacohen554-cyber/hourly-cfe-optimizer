@@ -115,6 +115,7 @@
                 { separator: true, label: 'Consequential Accounting' },
                 { label: 'Overview', href: 'consequential_accounting.html' },
                 { label: 'Failure Modes at Scale', href: 'consequential_vacuum.html' },
+                { label: 'Cross-Regional Deployment', href: 'consequential_stranding.html' },
                 { label: 'Generator Analysis', href: '../power-gen-decarbonization/site/index.html' }
             ]
         },
