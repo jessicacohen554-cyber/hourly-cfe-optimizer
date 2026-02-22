@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Solar Energy Works — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body {
+    background: linear-gradient(180deg, #FEF9C3 0%, #FDE68A 25%, #FEF3C7 50%, #E0F2FE 75%, #FEF9C3 100%);
+    background-attachment: fixed;
+}
+.kids-wrap { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+
+.kids-hero { text-align: center; padding: 48px 20px 32px; }
+.kids-hero h1 { font-family: 'Lexend', sans-serif; font-size: 2.8rem; font-weight: 700; color: #1E3A5F; margin-bottom: 8px; line-height: 1.2; }
+.kids-hero .age-tag { display: inline-block; background: #FBBF24; color: #78350F; font-size: 0.85rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; margin-bottom: 16px; font-family: 'Lexend', sans-serif; }
+.kids-hero p { font-size: 1.15rem; color: #374151; max-width: 540px; margin: 0 auto; line-height: 1.6; }
+
+.kids-card { background: #fff; border-radius: 24px; padding: 36px 32px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.kids-card.visible { opacity: 1; transform: translateY(0); }
+.kids-card h2 { font-family: 'Lexend', sans-serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+.kids-card p { font-size: 1.05rem; color: #374151; line-height: 1.7; margin-bottom: 12px; }
+.kids-card p:last-child { margin-bottom: 0; }
+
+.card-sunshine { border-left: 6px solid #F59E0B; }
+.card-sunshine h2 { color: #B45309; }
+.card-panel { border-left: 6px solid #3B82F6; }
+.card-panel h2 { color: #1D4ED8; }
+.card-rooftop { border-left: 6px solid #22C55E; }
+.card-rooftop h2 { color: #15803D; }
+.card-nighttime { border-left: 6px solid #7C3AED; }
+.card-nighttime h2 { color: #5B21B6; }
+
+.illustration { display: flex; justify-content: center; align-items: flex-end; gap: 16px; margin: 20px 0 8px; min-height: 140px; position: relative; }
+
+/* === SUNSHINE SCENE === */
+.sunshine-scene {
+    background: linear-gradient(to bottom, #FDE68A 0%, #FEF9C3 60%, #DCFCE7 100%);
+    border-radius: 16px; min-height: 200px; padding: 16px; position: relative; overflow: hidden;
+}
+.sunshine-scene::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 35px; background: linear-gradient(to bottom, #86EFAC, #4ADE80); border-radius: 0 0 16px 16px; }
+.big-sun { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 90px; height: 90px; background: radial-gradient(circle, #FDE047 35%, #FBBF24 65%, transparent 66%); border-radius: 50%; z-index: 2; animation: pulse 3s ease-in-out infinite; }
+.big-sun::before { content: ''; position: absolute; inset: -20px; border-radius: 50%; background: radial-gradient(circle, rgba(251,191,36,0.3) 0%, transparent 70%); }
+.sun-beam { position: absolute; width: 4px; background: linear-gradient(to bottom, #FBBF24, transparent); z-index: 1; animation: rayShine 2s ease-in-out infinite; }
+.sun-beam:nth-child(2) { height: 60px; top: 70px; left: 25%; transform: rotate(-15deg); }
+.sun-beam:nth-child(3) { height: 70px; top: 65px; left: 40%; animation-delay: 0.3s; }
+.sun-beam:nth-child(4) { height: 65px; top: 68px; left: 55%; animation-delay: 0.6s; }
+.sun-beam:nth-child(5) { height: 55px; top: 72px; left: 70%; transform: rotate(15deg); animation-delay: 0.9s; }
+.flower { position: absolute; bottom: 30px; z-index: 3; }
+.flower-stem { width: 3px; height: 25px; background: #16A34A; margin: 0 auto; }
+.flower-head { width: 16px; height: 16px; background: #F472B6; border-radius: 50%; margin: 0 auto -2px; position: relative; }
+.flower-head::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; background: #FDE047; border-radius: 50%; }
+.flower:nth-child(6) { left: 12%; }
+.flower:nth-child(7) { right: 15%; }
+.flower:nth-child(7) .flower-head { background: #A78BFA; }
+
+/* Rexy */
+.rexy-sun { position: absolute; bottom: 32px; right: 20%; z-index: 4; }
+.rexy-s-body { width: 50px; height: 30px; background: #16A34A; border-radius: 16px 24px 8px 12px; position: relative; }
+.rexy-s-head { position: absolute; right: -16px; top: -6px; width: 22px; height: 18px; background: #16A34A; border-radius: 10px 12px 6px 4px; }
+.rexy-s-head::before { content: ''; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #1E3A5F; }
+.rexy-s-head::after { content: ''; position: absolute; bottom: 1px; right: 2px; width: 12px; height: 2px; background: #14532D; border-radius: 2px; }
+.rexy-s-arm { position: absolute; right: 2px; top: 10px; width: 8px; height: 4px; background: #15803D; border-radius: 2px; transform: rotate(30deg); }
+.rexy-s-tail { position: absolute; left: -15px; top: 3px; width: 18px; height: 10px; background: #16A34A; border-radius: 10px 0 3px 6px; }
+.rexy-s-leg { position: absolute; bottom: -10px; width: 8px; height: 12px; background: #15803D; border-radius: 0 0 3px 3px; }
+.rexy-s-leg:nth-child(5) { left: 10px; }
+.rexy-s-leg:nth-child(6) { right: 12px; }
+.dino-speech { position: absolute; top: -30px; right: -10px; background: #fff; border-radius: 12px; padding: 4px 10px; font-family: 'Lexend', sans-serif; font-size: 0.65rem; font-weight: 600; color: #1E3A5F; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 5; }
+.dino-speech::after { content: ''; position: absolute; bottom: -6px; left: 16px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff; }
+
+/* === HOW-IT-WORKS SCENE === */
+.panel-scene {
+    background: linear-gradient(to bottom, #DBEAFE 0%, #BFDBFE 100%);
+    border-radius: 16px; min-height: 240px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+}
+.mini-sun { width: 50px; height: 50px; background: radial-gradient(circle, #FDE047 35%, #FBBF24 65%, transparent 66%); border-radius: 50%; animation: pulse 3s ease-in-out infinite; }
+.light-arrows { display: flex; gap: 20px; }
+.light-arrow { width: 4px; height: 30px; background: linear-gradient(to bottom, #FBBF24, #F59E0B); border-radius: 2px; position: relative; animation: arrowBounce 1.5s ease-in-out infinite; }
+.light-arrow::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #F59E0B; }
+.light-arrow:nth-child(2) { animation-delay: 0.3s; }
+.light-arrow:nth-child(3) { animation-delay: 0.6s; }
+.big-panel { width: 120px; height: 70px; background: linear-gradient(135deg, #1E3A8A, #3B82F6); border-radius: 6px; border: 3px solid #1E40AF; position: relative; transform: perspective(200px) rotateX(15deg); }
+.big-panel::before { content: ''; position: absolute; inset: 6px; background: repeating-linear-gradient(90deg, transparent, transparent 30%, rgba(255,255,255,0.2) 30%, rgba(255,255,255,0.2) 33%), repeating-linear-gradient(0deg, transparent, transparent 45%, rgba(255,255,255,0.15) 45%, rgba(255,255,255,0.15) 50%); }
+.elec-flow { display: flex; align-items: center; gap: 8px; }
+.elec-bolt { font-size: 1.5rem; animation: flicker 1.5s ease-in-out infinite; }
+.elec-label { font-family: 'Lexend', sans-serif; font-size: 0.8rem; font-weight: 600; color: #1D4ED8; }
+
+/* Spike */
+.spike-explain { position: absolute; bottom: 12px; left: 12px; z-index: 5; }
+.spike-e-body { width: 36px; height: 20px; background: #F59E0B; border-radius: 10px 8px 5px 8px; position: relative; }
+.spike-e-head { position: absolute; left: -10px; top: 2px; width: 14px; height: 12px; background: #F59E0B; border-radius: 7px 3px 4px 7px; }
+.spike-e-head::before { content: ''; position: absolute; top: 3px; left: 3px; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #78350F; }
+.spike-e-plates { position: absolute; top: -7px; left: 4px; display: flex; gap: 2px; }
+.spike-e-plates span { width: 5px; height: 8px; background: #D97706; border-radius: 50% 50% 0 0; }
+.spike-e-leg { position: absolute; bottom: -7px; width: 5px; height: 8px; background: #D97706; border-radius: 0 0 2px 2px; }
+.spike-e-leg:nth-child(4) { left: 5px; }
+.spike-e-leg:nth-child(5) { right: 5px; }
+
+/* === ROOFTOP SCENE === */
+.rooftop-scene {
+    background: linear-gradient(to bottom, #BAE6FD 0%, #7DD3FC 100%);
+    border-radius: 16px; min-height: 200px; padding: 16px; position: relative; overflow: hidden;
+}
+.roof-sun { position: absolute; top: 10px; right: 20px; width: 40px; height: 40px; background: radial-gradient(circle, #FDE047 40%, #FBBF24 70%, transparent 71%); border-radius: 50%; animation: pulse 3s ease-in-out infinite; z-index: 2; }
+.big-house { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 3; }
+.big-house-body { width: 140px; height: 70px; background: #FDE68A; border-radius: 4px 4px 0 0; position: relative; }
+.big-house-body::before { content: ''; position: absolute; bottom: 10px; left: 15px; width: 18px; height: 22px; background: #92400E; border-radius: 3px 3px 0 0; }
+.house-window { position: absolute; width: 18px; height: 18px; background: #BAE6FD; border: 2px solid #78350F; border-radius: 2px; }
+.house-window:nth-child(2) { top: 15px; left: 50px; }
+.house-window:nth-child(3) { top: 15px; right: 15px; }
+.big-roof { width: 0; height: 0; border-left: 80px solid transparent; border-right: 80px solid transparent; border-bottom: 45px solid #DC2626; position: relative; }
+.roof-panels { position: absolute; top: 12px; left: -40px; display: flex; gap: 4px; transform: skewY(-15deg); }
+.roof-panel { width: 22px; height: 16px; background: linear-gradient(135deg, #1E3A8A, #3B82F6); border-radius: 2px; border: 1px solid #1E40AF; }
+.panel-sparkle { position: absolute; width: 6px; height: 6px; background: #FDE047; border-radius: 50%; z-index: 4; animation: sparkle 2s ease-in-out infinite; }
+.panel-sparkle:nth-child(5) { top: -15px; left: -20px; }
+.panel-sparkle:nth-child(6) { top: -20px; left: 0px; animation-delay: 0.5s; }
+.panel-sparkle:nth-child(7) { top: -12px; left: 20px; animation-delay: 1s; }
+
+/* === NIGHTTIME SCENE === */
+.night-solar-scene {
+    background: linear-gradient(to bottom, #1E293B 0%, #334155 70%, #475569 100%);
+    border-radius: 16px; min-height: 180px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; justify-content: center; align-items: center; gap: 20px;
+}
+.moon { position: absolute; top: 12px; right: 20px; width: 35px; height: 35px; background: #FDE68A; border-radius: 50%; box-shadow: 0 0 15px rgba(253,230,138,0.4); }
+.moon::before { content: ''; position: absolute; width: 28px; height: 28px; background: #1E293B; border-radius: 50%; top: -5px; left: -8px; }
+.star { position: absolute; width: 4px; height: 4px; background: #FDE68A; border-radius: 50%; animation: twinkle 2s ease-in-out infinite; }
+.star:nth-child(2) { top: 15px; left: 15%; animation-delay: 0.3s; }
+.star:nth-child(3) { top: 25px; left: 40%; animation-delay: 0.8s; }
+.star:nth-child(4) { top: 10px; left: 65%; animation-delay: 1.2s; }
+.star:nth-child(5) { top: 30px; left: 25%; animation-delay: 0.5s; }
+.sleeping-panel { width: 80px; height: 50px; background: linear-gradient(135deg, #334155, #475569); border-radius: 4px; border: 2px solid #64748B; position: relative; flex-shrink: 0; }
+.sleeping-panel::before { content: ''; position: absolute; inset: 5px; background: repeating-linear-gradient(90deg, transparent, transparent 30%, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.05) 33%); }
+.night-zzz { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.night-zzz span { font-family: 'Lexend', sans-serif; font-weight: 700; color: #94A3B8; animation: zzFloat 2s ease-in-out infinite; }
+.night-zzz span:nth-child(1) { font-size: 1.2rem; }
+.night-zzz span:nth-child(2) { font-size: 0.9rem; animation-delay: 0.5s; }
+.night-zzz span:nth-child(3) { font-size: 0.7rem; animation-delay: 1s; }
+.night-text { color: #E2E8F0; font-family: 'Lexend', sans-serif; font-size: 0.9rem; font-weight: 600; text-align: center; max-width: 120px; line-height: 1.4; flex-shrink: 0; }
+
+/* Fun facts & Quiz & CTA */
+.fun-fact { background: linear-gradient(135deg, #FEF3C7, #FDE68A); border-radius: 16px; padding: 16px 20px; margin-top: 16px; font-size: 0.95rem; color: #78350F; font-weight: 600; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+.fun-fact-icon { font-size: 1.3rem; flex-shrink: 0; line-height: 1.4; }
+.quiz-box { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); border-radius: 16px; padding: 24px; margin-top: 20px; }
+.quiz-box h3 { font-family: 'Lexend', sans-serif; color: #5B21B6; font-size: 1.15rem; margin-bottom: 12px; }
+.quiz-btn { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #fff; border: 2px solid #C4B5FD; border-radius: 12px; font-size: 1rem; font-family: 'Plus Jakarta Sans', sans-serif; color: #374151; cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
+.quiz-btn:hover { background: #F5F3FF; border-color: #8B5CF6; transform: scale(1.01); }
+.quiz-btn.correct { background: #DCFCE7; border-color: #22C55E; color: #15803D; font-weight: 600; }
+.quiz-btn.wrong { background: #FEE2E2; border-color: #EF4444; color: #DC2626; }
+.quiz-result { display: none; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; margin-top: 8px; text-align: center; }
+.kids-cta { text-align: center; padding: 32px 20px; }
+.kids-cta p { font-size: 1.1rem; color: #374151; margin-bottom: 16px; }
+.kids-cta a { display: inline-block; background: #1E3A5F; color: #fff; padding: 14px 28px; border-radius: 12px; font-family: 'Lexend', sans-serif; font-weight: 600; font-size: 1rem; text-decoration: none; transition: background 0.2s, transform 0.1s; margin: 6px; }
+.kids-cta a:hover { background: #2D4A6F; transform: translateY(-2px); }
+.kids-cta a.secondary-cta { background: #F59E0B; }
+.kids-cta a.secondary-cta:hover { background: #D97706; }
+
+/* Animations */
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes rayShine { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes arrowBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+@keyframes flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes sparkle { 0%, 100% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2); } }
+@keyframes twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.6); } }
+@keyframes zzFloat { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-10px); opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) {
+    .big-sun, .sun-beam, .light-arrow, .elec-bolt, .panel-sparkle, .roof-sun, .star, .night-zzz span, .kids-card { animation: none !important; transition: none !important; }
+    .kids-card { opacity: 1; transform: none; }
+}
+@media (max-width: 600px) {
+    .kids-hero h1 { font-size: 2rem; }
+    .kids-card { padding: 24px 20px; }
+    .kids-card h2 { font-size: 1.3rem; }
+    .night-solar-scene { flex-wrap: wrap; gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>How Solar Energy Works</h1>
+    <p class="subtitle">Sunshine power! Learn how we catch sunlight and turn it into electricity.</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="kids-wrap">
+
+<div class="kids-hero">
+    <span class="age-tag">Ages 5 &ndash; 7</span>
+    <h1>Power From the Sun!</h1>
+    <p>The sun gives us light and warmth every day. But did you know we can also use sunshine to make electricity? Let&rsquo;s find out how!</p>
+</div>
+
+<!-- 1. THE AMAZING SUN -->
+<div class="kids-card card-sunshine">
+    <h2>Our Amazing Sun</h2>
+    <div class="illustration sunshine-scene">
+        <div class="big-sun"></div>
+        <div class="sun-beam"></div>
+        <div class="sun-beam"></div>
+        <div class="sun-beam"></div>
+        <div class="sun-beam"></div>
+        <div class="flower"><div class="flower-head"></div><div class="flower-stem"></div></div>
+        <div class="flower"><div class="flower-head"></div><div class="flower-stem"></div></div>
+        <div class="rexy-sun">
+            <div class="dino-speech">So warm!</div>
+            <div class="rexy-s-body">
+                <div class="rexy-s-head"></div>
+                <div class="rexy-s-arm"></div>
+                <div class="rexy-s-tail"></div>
+                <div class="rexy-s-leg"></div>
+                <div class="rexy-s-leg"></div>
+            </div>
+        </div>
+    </div>
+    <p>The sun is a giant ball of fire in space. It sends light and heat to Earth every single day. Without the sun, there would be no life on our planet!</p>
+    <p>Sunlight is full of energy. In just <strong>one hour</strong>, the sun sends enough energy to Earth to power the whole world for a <strong>whole year</strong>!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#9728;&#65039;</span>
+        <span><strong>Fun fact:</strong> The sun is so far away that its light takes 8 minutes to reach us &mdash; and it travels at 186,000 miles per second!</span>
+    </div>
+</div>
+
+<!-- 2. HOW SOLAR PANELS WORK -->
+<div class="kids-card card-panel">
+    <h2>How Do Solar Panels Work?</h2>
+    <div class="illustration panel-scene">
+        <div class="mini-sun"></div>
+        <div class="light-arrows">
+            <div class="light-arrow"></div>
+            <div class="light-arrow"></div>
+            <div class="light-arrow"></div>
+        </div>
+        <div class="big-panel"></div>
+        <div class="elec-flow">
+            <span class="elec-bolt">&#9889;</span>
+            <span class="elec-label">Electricity!</span>
+        </div>
+        <div class="spike-explain">
+            <div class="spike-e-body">
+                <div class="spike-e-head"></div>
+                <div class="spike-e-plates"><span></span><span></span><span></span><span></span></div>
+                <div class="spike-e-leg"></div>
+                <div class="spike-e-leg"></div>
+            </div>
+        </div>
+    </div>
+    <p>Solar panels are made of special material called <strong>silicon</strong>. When sunlight hits the panel, tiny bits of light called <strong>photons</strong> knock little things called electrons loose.</p>
+    <p>Those moving electrons create <strong>electricity</strong>! Think of it like a waterslide &mdash; the sun pushes the electrons down the slide, and that motion is electricity.</p>
+    <p>No smoke, no noise, no pollution. Just clean energy from sunshine!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128161;</span>
+        <span><strong>Fun fact:</strong> Solar panels have no moving parts! They sit still and quietly turn sunlight into electricity &mdash; no spinning needed.</span>
+    </div>
+</div>
+
+<!-- 3. SOLAR ON ROOFTOPS -->
+<div class="kids-card card-rooftop">
+    <h2>Solar Panels Are Everywhere!</h2>
+    <div class="illustration rooftop-scene">
+        <div class="roof-sun"></div>
+        <div class="big-house">
+            <div class="big-roof">
+                <div class="roof-panels">
+                    <div class="roof-panel"></div>
+                    <div class="roof-panel"></div>
+                    <div class="roof-panel"></div>
+                </div>
+                <div class="panel-sparkle"></div>
+                <div class="panel-sparkle"></div>
+                <div class="panel-sparkle"></div>
+            </div>
+            <div class="big-house-body">
+                <div class="house-window"></div>
+                <div class="house-window"></div>
+            </div>
+        </div>
+    </div>
+    <p>You can put solar panels on the roof of a house, a school, or even a barn! They sit up high where they can catch the most sunshine.</p>
+    <p>Big <strong>solar farms</strong> have thousands of panels covering huge fields. They make enough electricity for whole towns!</p>
+    <p>Some solar panels even follow the sun across the sky, like a sunflower turning its face!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127968;</span>
+        <span><strong>Fun fact:</strong> A house with solar panels on the roof can sometimes make MORE electricity than it needs &mdash; and share the extra with neighbors!</span>
+    </div>
+</div>
+
+<!-- 4. THE NIGHTTIME CHALLENGE -->
+<div class="kids-card card-nighttime">
+    <h2>What Happens at Night?</h2>
+    <div class="illustration night-solar-scene">
+        <span class="star"></span>
+        <span class="star"></span>
+        <span class="star"></span>
+        <span class="star"></span>
+        <div class="moon"></div>
+        <div class="sleeping-panel"></div>
+        <div class="night-zzz"><span>Z</span><span>z</span><span>z</span></div>
+        <div class="night-text">No sun? Panels rest!</div>
+    </div>
+    <p>When the sun goes down, solar panels stop making electricity. They need sunlight to work &mdash; moonlight isn&rsquo;t strong enough!</p>
+    <p>That&rsquo;s why solar energy needs <strong>friends</strong>. We can store sunshine energy in <strong>batteries</strong> during the day and use it at night. Or use wind turbines that work when it&rsquo;s dark!</p>
+    <p><strong>Clean energy is a team sport!</strong></p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128267;</span>
+        <span><strong>Key idea:</strong> Solar energy is free, quiet, and clean. The sun will keep shining for billions more years &mdash; that&rsquo;s a LOT of free electricity!</span>
+    </div>
+    <div class="quiz-box">
+        <h3>Quick Quiz!</h3>
+        <p style="font-size:0.95rem; color:#5B21B6; margin-bottom:12px;">What do solar panels need to make electricity?</p>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">A) Wind</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">B) Water</button>
+        <button class="quiz-btn" data-answer="correct" onclick="handleQuiz(this)">C) Sunlight</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">D) Batteries</button>
+        <div class="quiz-result" id="quizResult"></div>
+    </div>
+</div>
+
+<div class="kids-cta">
+    <p>Want to learn about more clean energy sources?</p>
+    <a class="secondary-cta" href="kids_wind.html">Learn About Wind &rarr;</a>
+    <a href="kids_energy.html">All Clean Energy &rarr;</a>
+</div>
+
+</div>
+
+<script>
+(function() {
+    var cards = document.querySelectorAll('.kids-card');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
+        });
+    }, { threshold: 0.15 });
+    cards.forEach(function(card) { observer.observe(card); });
+})();
+function handleQuiz(btn) {
+    var box = btn.closest('.quiz-box'), buttons = box.querySelectorAll('.quiz-btn'), result = box.querySelector('.quiz-result');
+    buttons.forEach(function(b) { b.disabled = true; b.style.cursor = 'default'; });
+    if (btn.getAttribute('data-answer') === 'correct') {
+        btn.classList.add('correct');
+        result.textContent = 'That\u2019s right! Solar panels turn sunlight into electricity!';
+        result.style.background = '#DCFCE7'; result.style.color = '#15803D';
+    } else {
+        btn.classList.add('wrong');
+        buttons.forEach(function(b) { if (b.getAttribute('data-answer') === 'correct') b.classList.add('correct'); });
+        result.textContent = 'Not quite! Solar panels need sunlight to work. The sun\u2019s rays hit the panel and get turned into electricity!';
+        result.style.background = '#FEF3C7'; result.style.color = '#92400E';
+    }
+    result.style.display = 'block';
+}
+</script>
+</body>
+</html>
