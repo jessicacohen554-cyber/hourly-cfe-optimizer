@@ -32,8 +32,9 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/physics_cache_v4.parquet  (PFS)
-Output: data/pfs_post_ef.parquet       (PFS post-EF, threshold-free)
+Input:  data/physics_cache_v4_{ISO}.parquet per ISO  (PFS, from Step 1)
+        Falls back to legacy data/physics_cache_v4.parquet if per-ISO missing
+Output: data/pfs_post_ef.parquet  (merged PFS post-EF, threshold-free, all ISOs)
 
 The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
@@ -47,8 +48,12 @@ import pyarrow.parquet as pq
 import pyarrow.compute as pc
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PFS_PATH = os.path.join(SCRIPT_DIR, 'data', 'physics_cache_v4.parquet')
+PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
+
+# Per-ISO PFS files (from Step 1 two-phase adaptive sweep)
+# Falls back to legacy single-file if per-ISO files don't exist
+LEGACY_PFS_PATH = os.path.join(PFS_DIR, 'physics_cache_v4.parquet')
 
 # Target thresholds — all 13 from v4 PFS (50-100%)
 TARGET_THRESHOLDS = [50.0, 60.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 100.0]
@@ -87,14 +92,44 @@ def compute_existing_min_shares():
 
 
 def load_pfs():
-    """Load the v4 Physics Feasible Space."""
-    if not os.path.exists(PFS_PATH):
-        raise FileNotFoundError(f"PFS not found: {PFS_PATH}")
+    """Load the v4 Physics Feasible Space from per-ISO parquet files.
 
-    print(f"Loading PFS: {PFS_PATH}")
-    table = pq.read_table(PFS_PATH)
-    print(f"  Total rows: {table.num_rows:,}")
-    return table
+    Reads data/physics_cache_v4_{ISO}.parquet for each ISO, concatenates
+    into a single table. Falls back to legacy single-file if per-ISO
+    files are not available.
+    """
+    # Try per-ISO files first
+    per_iso_tables = []
+    found_isos = []
+    for iso in ISOS:
+        iso_path = os.path.join(PFS_DIR, f'physics_cache_v4_{iso}.parquet')
+        if os.path.exists(iso_path):
+            t = pq.read_table(iso_path)
+            per_iso_tables.append(t)
+            found_isos.append(iso)
+            size_mb = os.path.getsize(iso_path) / (1024 * 1024)
+            print(f"  {iso}: {t.num_rows:>10,} rows  ({size_mb:.1f} MB)")
+
+    if per_iso_tables:
+        print(f"\nLoaded {len(found_isos)} per-ISO PFS files: {', '.join(found_isos)}")
+        table = pa.concat_tables(per_iso_tables)
+        print(f"  Combined: {table.num_rows:,} rows")
+        missing = [iso for iso in ISOS if iso not in found_isos]
+        if missing:
+            print(f"  WARNING: Missing ISOs: {', '.join(missing)}")
+        return table
+
+    # Fallback to legacy single file
+    if os.path.exists(LEGACY_PFS_PATH):
+        print(f"Loading legacy PFS: {LEGACY_PFS_PATH}")
+        table = pq.read_table(LEGACY_PFS_PATH)
+        print(f"  Total rows: {table.num_rows:,}")
+        return table
+
+    raise FileNotFoundError(
+        f"No PFS files found. Expected per-ISO files in {PFS_DIR}/ "
+        f"(physics_cache_v4_{{ISO}}.parquet) or legacy {LEGACY_PFS_PATH}"
+    )
 
 
 def step0_existing_generation_filter(table):
