@@ -1175,6 +1175,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 _save_mix_progress(iso, threshold, candidates, '1a', i + 1,
                                    near_miss_data=near_miss_mixes,
                                    mix_min_proc_data=mix_min_proc)
+                _append_partial_to_interim(iso, threshold, candidates)
 
     # Phase 1a→1b transition checkpoint
     if resume_phase == '1a' and phase1a_start < n_combos:
@@ -1317,6 +1318,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         _save_mix_progress(iso, threshold, candidates, '1b', last_nm_idx + 1,
                            near_miss_data=near_miss_mixes,
                            mix_min_proc_data=mix_min_proc)
+        _append_partial_to_interim(iso, threshold, candidates)
 
     # ── Phase 2: Refine feasible archetypes to 1% resolution ──
     # Same early-stop logic: per-mix, stop procurement once target is met
@@ -1853,14 +1855,22 @@ def load_checkpoint(iso):
 
 # ── Per-ISO/threshold Parquet mix checkpoints ──
 
+def _normalize_threshold_str(threshold):
+    """Normalize threshold to consistent string: int-like floats become ints (99.0→'99')."""
+    t = float(threshold)
+    return str(int(t)) if t == int(t) else str(t)
+
+
 def _mix_progress_path(iso, threshold):
     """Path for in-progress mix checkpoint parquet."""
-    return os.path.join(CHECKPOINT_DIR, f'{iso}_v4_t{threshold}_progress.parquet')
+    t_str = _normalize_threshold_str(threshold)
+    return os.path.join(CHECKPOINT_DIR, f'{iso}_v4_t{t_str}_progress.parquet')
 
 
 def _threshold_done_path(iso, threshold):
     """Path for completed threshold results parquet."""
-    return os.path.join(CHECKPOINT_DIR, f'{iso}_v4_t{threshold}_done.parquet')
+    t_str = _normalize_threshold_str(threshold)
+    return os.path.join(CHECKPOINT_DIR, f'{iso}_v4_t{t_str}_done.parquet')
 
 
 def _is_threshold_done(iso, threshold):
@@ -2031,6 +2041,73 @@ def _load_mix_progress(iso, threshold):
     except Exception as e:
         print(f"      [mix checkpoint] Could not load {path}: {e}")
         return None
+
+
+def _append_partial_to_interim(iso, threshold, candidates):
+    """Append partial threshold results to interim file during long-running thresholds.
+
+    Unlike append_threshold_to_cache (which is called once when a threshold completes),
+    this is called at each mix checkpoint to persist partial results incrementally.
+    Replaces any existing rows for this (iso, threshold) in the interim to avoid dupes,
+    then appends the current candidates.
+
+    This ensures partial results are committable via git even if the process is killed.
+    """
+    if not HAS_PARQUET or not candidates:
+        return
+
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    interim_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_interim.parquet')
+
+    rows = []
+    for c in candidates:
+        rows.append({
+            'iso': iso,
+            'threshold': float(threshold),
+            'clean_firm': c['resource_mix']['clean_firm'],
+            'solar': c['resource_mix']['solar'],
+            'wind': c['resource_mix']['wind'],
+            'hydro': c['resource_mix']['hydro'],
+            'procurement_pct': c['procurement_pct'],
+            'battery_dispatch_pct': c['battery_dispatch_pct'],
+            'battery8_dispatch_pct': c.get('battery8_dispatch_pct', 0),
+            'ldes_dispatch_pct': c['ldes_dispatch_pct'],
+            'hourly_match_score': c['hourly_match_score'],
+            'pareto_type': c.get('pareto_type', ''),
+        })
+
+    new_table = _rows_to_table(rows)
+    if new_table is None:
+        return
+
+    if os.path.exists(interim_path):
+        try:
+            existing = pq.read_table(interim_path)
+            import pyarrow.compute as pc
+            # Remove existing rows for this threshold (we'll replace with current candidates)
+            thr_mask = pc.and_(
+                pc.equal(existing.column('iso'), iso),
+                pc.equal(existing.column('threshold'), float(threshold))
+            )
+            keep_mask = pc.invert(thr_mask)
+            existing = existing.filter(keep_mask)
+            new_table = pa.concat_tables([existing, new_table])
+        except Exception:
+            pass  # If corrupt, just overwrite
+
+    # Atomic write
+    import tempfile
+    fd, tmp_path = tempfile.mkstemp(dir=CHECKPOINT_DIR, suffix='.parquet.tmp')
+    os.close(fd)
+    try:
+        pq.write_table(new_table, tmp_path, compression='snappy')
+        os.replace(tmp_path, interim_path)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
+    print(f"      [interim save] {iso} {threshold}%: {len(candidates):,} solutions → interim")
 
 
 def _save_threshold_done(iso, threshold, candidates):
