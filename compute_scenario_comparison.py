@@ -424,6 +424,150 @@ def find_optimal_mixes(feasible_mixes, scenario, demand_twh_map):
     return results
 
 
+def _mix_resource_twh(mix, demand_twh):
+    """Extract deployed resource TWh from a raw mix vector for floor comparison.
+
+    mix = [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    Returns dict of resource → TWh deployed.
+    """
+    cf, sol, wnd, ccs, hyd, proc_pct = mix[0], mix[1], mix[2], mix[3], mix[4], mix[5]
+    bat4, bat8, ldes = mix[7], mix[8], mix[9]
+    proc = proc_pct / 100.0
+    return {
+        'clean_firm': proc * cf / 100.0 * demand_twh,
+        'solar':      proc * sol / 100.0 * demand_twh,
+        'wind':       proc * wnd / 100.0 * demand_twh,
+        'ccs_ccgt':   proc * ccs / 100.0 * demand_twh,
+        'hydro':      proc * hyd / 100.0 * demand_twh,
+        'battery':    (bat4 + bat8) / 100.0 * demand_twh,
+        'ldes':       ldes / 100.0 * demand_twh,
+    }
+
+
+def _floor_violation_score(mix, floor, demand_twh):
+    """Compute how much a mix violates the floor (0 = perfect compliance).
+
+    Returns the sum of shortfalls (in TWh) across all resources.
+    Only counts resources where floor > 1 TWh (ignore negligible floors).
+    """
+    deployed = _mix_resource_twh(mix, demand_twh)
+    violation = 0.0
+    for res, floor_val in floor.items():
+        if floor_val < 1.0:
+            continue
+        shortfall = max(0, floor_val - deployed.get(res, 0))
+        violation += shortfall
+    return violation
+
+
+def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
+    """Path-dependent sequential optimization for the consequential scenario.
+
+    At each threshold step, resources deployed in prior steps form a floor —
+    the optimizer can only ADD on top, never shrink.  This models the
+    consequential procurement strategy where buyers chase cheapest $/tCO₂
+    at each increment, locking in prior resource commitments.
+
+    Resources remain at LCOE pricing (not wholesale) — committed capacity
+    retains its original cost, it doesn't become "existing" at wholesale.
+
+    When the feasible mix space is too sparse for strict monotonicity,
+    the optimizer uses a soft-floor approach: score each mix by its total
+    floor violation (TWh shortfall), then select the cheapest mix among
+    those with the minimum violation. This preserves path dependency
+    while handling discrete feasible-set gaps.
+    """
+    results = {}
+    sens = scenario['toggles']
+
+    for iso in ISOS:
+        iso_results = {}
+        iso_sens = dict(sens)
+        if iso != 'CAISO':
+            iso_sens['geo'] = None
+
+        demand_twh = demand_twh_map[iso]
+        # Floor starts at zero — existing grid resources are already accounted
+        # for in the cost function (wholesale pricing for existing share).
+        floor = {
+            'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0,
+            'hydro': 0, 'battery': 0, 'ldes': 0,
+        }
+
+        for t in THRESHOLDS:
+            t_str = str(int(t)) if t == int(t) else str(t)
+            mixes = feasible_mixes.get(iso, {}).get(t_str, [])
+            if not mixes:
+                continue
+
+            # Score all mixes by (floor_violation, cost) — lexicographic sort
+            # This picks the mix with minimum floor violation; among ties, cheapest
+            candidates = []
+            for mix in mixes:
+                violation = _floor_violation_score(mix, floor, demand_twh)
+                result = compute_mix_cost(mix, iso_sens, iso, demand_twh)
+                candidates.append((violation, result['effective_cost'], result, mix))
+
+            # Sort: minimum violation first, then cheapest
+            candidates.sort(key=lambda x: (x[0], x[1]))
+
+            if candidates:
+                violation, cost, best_result, best_mix = candidates[0]
+                if violation > 0.1:
+                    print(f"  ⚠ {iso} {t}%: soft floor violation {violation:.0f} TWh "
+                          f"(best of {len(candidates)} mixes)")
+                iso_results[t] = best_result
+                # Update floor: take element-wise MAX of old floor and new deployment
+                # This ensures the ratchet only goes up, even if soft constraint was used
+                new_deployed = _mix_resource_twh(best_mix, demand_twh)
+                floor = {res: max(floor[res], new_deployed.get(res, 0))
+                         for res in floor}
+
+        results[iso] = iso_results
+    return results
+
+
+def find_optimal_mix_at_target(feasible_mixes, scenario, demand_twh_map, target_threshold=95):
+    """FOAK scenario: optimize at a single target threshold.
+
+    Everyone targets the same high CFE threshold simultaneously.
+    The optimal mix at that threshold (with Low clean firm costs) IS
+    the portfolio.  Returns results dict with the target mix replicated
+    at every threshold for charting, but the 'target' key holds the
+    canonical result.
+    """
+    results = {}
+    sens = scenario['toggles']
+
+    for iso in ISOS:
+        iso_results = {}
+        iso_sens = dict(sens)
+        if iso != 'CAISO':
+            iso_sens['geo'] = None
+
+        demand_twh = demand_twh_map[iso]
+        t_str = str(int(target_threshold)) if target_threshold == int(target_threshold) else str(target_threshold)
+        mixes = feasible_mixes.get(iso, {}).get(t_str, [])
+
+        # Find cheapest mix at the target threshold
+        best_cost = float('inf')
+        best_result = None
+
+        for mix in mixes:
+            result = compute_mix_cost(mix, iso_sens, iso, demand_twh)
+            if result['effective_cost'] < best_cost:
+                best_cost = result['effective_cost']
+                best_result = result
+
+        if best_result:
+            # The target mix IS the portfolio at every threshold for display
+            for t in THRESHOLDS:
+                iso_results[t] = best_result
+
+        results[iso] = iso_results
+    return results
+
+
 # ============================================================================
 # CONSEQUENTIAL QUEUE BUILDER
 # ============================================================================
@@ -604,10 +748,15 @@ def main():
                       for mixes in iso_data.values())
     print(f"  Loaded {total_mixes:,} feasible mixes across {len(ISOS)} ISOs × {len(THRESHOLDS)} thresholds")
 
-    # Find optimal mixes for both scenarios
-    print("\nFinding optimal mixes...")
-    results_a = find_optimal_mixes(feasible_mixes, SCENARIO_A, BASE_DEMAND_TWH)
-    results_b = find_optimal_mixes(feasible_mixes, SCENARIO_B, BASE_DEMAND_TWH)
+    # Scenario A: path-dependent sequential optimization
+    # At each threshold, resources from prior steps are locked in as floor
+    print("\nScenario A: path-dependent sequential optimization...")
+    results_a = find_optimal_mixes_sequential(feasible_mixes, SCENARIO_A, BASE_DEMAND_TWH)
+
+    # Scenario B: everyone targets 95% CFE simultaneously
+    # The optimal mix at 95% with cheap clean firm IS the portfolio
+    print("\nScenario B: target 95% optimization...")
+    results_b = find_optimal_mix_at_target(feasible_mixes, SCENARIO_B, BASE_DEMAND_TWH, target_threshold=95)
     print("  Done.")
 
     # Build consequential queues
@@ -816,11 +965,16 @@ def main():
                 'name': SCENARIO_A['name'],
                 'description': SCENARIO_A['description'],
                 'toggles': SCENARIO_A['toggles'],
+                'method': 'path_dependent_sequential',
+                'method_description': 'Sequential optimization: resources deployed at each threshold become the floor for the next. Cheapest $/tCO2 at each step, but locked into prior commitments.',
             },
             'scenario_b': {
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
+                'method': 'target_95_collective',
+                'method_description': 'All buyers target 95% CFE simultaneously. Optimal mix at 95% with Low clean firm costs is the portfolio. FOAK investment drives learning curves to NOAK pricing.',
+                'target_threshold': 95,
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
