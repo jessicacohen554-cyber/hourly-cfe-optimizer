@@ -1172,34 +1172,36 @@ def main():
         iso_arch_set = set()
         iso_start = time.time()
 
-        # Parallel eval (Numba prange) + bucketed argmin (O(N) single pass)
-        for combo_i, (scenario_key, sens) in enumerate(all_combos):
-            prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
-            best_idxs, best_vals = eval_and_argmin_all(
-                coeff_matrix, constant, prices, scores, thresholds_desc)
+        # Batched evaluation: all combos at once via Numba kernel
+        price_matrix, wholesale_arr, nuclear_arr, ccs_arr = precompute_all_prices(
+            iso, all_combos)
+        eval_start = time.time()
+        all_best_idxs, all_best_vals = batch_eval_and_argmin_all(
+            coeff_matrix, constant, price_matrix, scores, thresholds_desc)
+        eval_elapsed = time.time() - eval_start
+        print(f"    {iso}: batched eval {n_combos} combos × {N:,} mixes — {eval_elapsed:.1f}s")
 
+        # Extract winners from batched results
+        for combo_i, (scenario_key, sens) in enumerate(all_combos):
             for thr in active_thresholds:
                 k = thr_pos[float(thr)]
-                if best_vals[k] == np.inf:
+                if all_best_vals[combo_i, k] == np.inf:
                     continue
-                best_idx = int(best_idxs[k])
-                tc_val = float(best_vals[k])
+                best_idx = int(all_best_idxs[combo_i, k])
+                tc_val = float(all_best_vals[combo_i, k])
 
                 thr_arch_sets[thr].add(best_idx)
                 iso_arch_set.add(best_idx)
 
                 scenario = build_winner_scenario(
                     arrays, extras, best_idx, sens, iso, demand_twh,
-                    tc_val, wholesale, nuclear_price, ccs_price)
+                    tc_val, float(wholesale_arr[combo_i]),
+                    float(nuclear_arr[combo_i]), float(ccs_arr[combo_i]))
 
                 thr_data[thr]['scenarios'][scenario_key] = scenario
 
-            if (combo_i + 1) % 1000 == 0:
-                elapsed = time.time() - iso_start
-                rate = (combo_i + 1) / elapsed
-                remaining = (n_combos - combo_i - 1) / rate
-                print(f"    {iso} {combo_i+1}/{n_combos} "
-                      f"({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining)")
+            if (combo_i + 1) % 5000 == 0:
+                print(f"    {iso}: extracted {combo_i+1}/{n_combos} winners")
 
         # Store feasible mixes per threshold
         for thr in active_thresholds:
@@ -1323,28 +1325,27 @@ def main():
                 nb_arch_set = set()
 
                 iso_start_nb = time.time()
-                for combo_i, (scenario_key, sens) in enumerate(all_combos):
-                    prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
-                    best_idxs, best_vals = eval_and_argmin_all(
-                        nb_cm, nb_const, prices, nb_scores, thresholds_desc_nb)
+                nb_price_matrix, nb_ws_arr, nb_nuc_arr, nb_ccs_arr = precompute_all_prices(
+                    iso, all_combos)
+                nb_all_idxs, nb_all_vals = batch_eval_and_argmin_all(
+                    nb_cm, nb_const, nb_price_matrix, nb_scores, thresholds_desc_nb)
+                print(f"    {iso} newbuild: batched eval {n_combos} combos × {n_h0:,} mixes "
+                      f"— {time.time()-iso_start_nb:.1f}s")
 
+                for combo_i, (scenario_key, sens) in enumerate(all_combos):
                     for thr in active_thr_nb:
                         k = thr_pos_nb[float(thr)]
-                        if best_vals[k] == np.inf:
+                        if nb_all_vals[combo_i, k] == np.inf:
                             continue
-                        best_idx = int(best_idxs[k])
-                        tc_val = float(best_vals[k])
+                        best_idx = int(nb_all_idxs[combo_i, k])
+                        tc_val = float(nb_all_vals[combo_i, k])
                         nb_arch_set.add(best_idx)
 
                         scenario = build_winner_scenario(
                             nb_arrays, nb_extras, best_idx, sens, iso, demand_twh,
-                            tc_val, wholesale, nuclear_price, ccs_price)
+                            tc_val, float(nb_ws_arr[combo_i]),
+                            float(nb_nuc_arr[combo_i]), float(nb_ccs_arr[combo_i]))
                         nb_thr_data[thr]['scenarios'][scenario_key] = scenario
-
-                    if (combo_i + 1) % 2000 == 0:
-                        elapsed = time.time() - iso_start_nb
-                        rate = (combo_i + 1) / elapsed
-                        print(f"    {iso} newbuild {combo_i+1}/{n_combos} ({elapsed:.0f}s)")
 
                 track_output['results'][iso]['newbuild'] = {
                     str(thr): nb_thr_data[thr] for thr in active_thr_nb
@@ -1378,27 +1379,27 @@ def main():
         rp_arch_set = set()
 
         iso_start_rp = time.time()
-        for combo_i, (scenario_key, sens) in enumerate(all_combos):
-            prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
-            best_idxs, best_vals = eval_and_argmin_all(
-                rp_cm, rp_const, prices, scores_all, thresholds_desc_rp)
+        rp_price_matrix, rp_ws_arr, rp_nuc_arr, rp_ccs_arr = precompute_all_prices(
+            iso, all_combos)
+        rp_all_idxs, rp_all_vals = batch_eval_and_argmin_all(
+            rp_cm, rp_const, rp_price_matrix, scores_all, thresholds_desc_rp)
+        print(f"    {iso} replace: batched eval {n_combos} combos × {N:,} mixes "
+              f"— {time.time()-iso_start_rp:.1f}s")
 
+        for combo_i, (scenario_key, sens) in enumerate(all_combos):
             for thr in active_thr_rp:
                 k = thr_pos_rp[float(thr)]
-                if best_vals[k] == np.inf:
+                if rp_all_vals[combo_i, k] == np.inf:
                     continue
-                best_idx = int(best_idxs[k])
-                tc_val = float(best_vals[k])
+                best_idx = int(rp_all_idxs[combo_i, k])
+                tc_val = float(rp_all_vals[combo_i, k])
                 rp_arch_set.add(best_idx)
 
                 scenario = build_winner_scenario(
                     arrays, rp_extras, best_idx, sens, iso, demand_twh,
-                    tc_val, wholesale, nuclear_price, ccs_price)
+                    tc_val, float(rp_ws_arr[combo_i]),
+                    float(rp_nuc_arr[combo_i]), float(rp_ccs_arr[combo_i]))
                 rp_thr_data[thr]['scenarios'][scenario_key] = scenario
-
-            if (combo_i + 1) % 2000 == 0:
-                elapsed = time.time() - iso_start_rp
-                print(f"    {iso} replace {combo_i+1}/{n_combos} ({elapsed:.0f}s)")
 
         track_output['results'][iso]['replace'] = {
             str(thr): rp_thr_data[thr] for thr in active_thr_rp
@@ -1466,49 +1467,84 @@ def main():
         # Initialize per-threshold result dicts
         thr_dg = {thr: {} for thr in arch_thr_mask}
 
-        # Full 9-dim factorial sweep — evaluate once per (scenario, year, growth)
-        for scenario_key, sens in all_combos:
-            wholesale = max(5, WHOLESALE_PRICES[iso] +
-                            FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
+        # Pre-compute price matrix for all combos (one-time per ISO)
+        dg_price_matrix, dg_ws_arr, _, _ = precompute_all_prices(iso, all_combos)
 
-            thr_year_results = {thr: {} for thr in arch_thr_mask}
+        # Archetype scores for batched eval + effective cost
+        arch_scores_f64 = arch_scores.astype(np.float64)
+        arch_match_frac = arch_scores_f64 / 100.0
 
-            for year in DEMAND_GROWTH_YEARS:
-                thr_growth_results = {thr: {} for thr in arch_thr_mask}
+        # Thresholds for batched eval (sorted descending)
+        active_thr_dg = sorted(arch_thr_mask.keys())
+        thresholds_desc_dg = np.array(sorted(active_thr_dg, reverse=True), dtype=np.float64)
+        thr_pos_dg = {float(thresholds_desc_dg[k]): k for k in range(len(thresholds_desc_dg))}
 
-                for g_level in DEMAND_GROWTH_LEVELS:
-                    g_rate = iso_rates[g_level]
-                    tc, ec, _ = price_mix_batch(
-                        iso, arch_arrays, sens, demand_twh,
-                        target_year=year, growth_rate=g_rate
-                    )
-
-                    # Pick best per threshold using pre-computed score masks
-                    for thr in arch_thr_mask:
-                        qual_idx = arch_thr_mask[thr]
-                        best_local = int(qual_idx[np.argmin(tc[qual_idx])])
-                        full_idx = arch_indices[best_local]
-                        thr_growth_results[thr][g_level] = [
-                            full_idx,
-                            round(float(tc[best_local]), 2),
-                            round(float(ec[best_local]), 2),
-                            round(float(ec[best_local]) - wholesale, 2),
-                        ]
-
-                for thr in arch_thr_mask:
-                    thr_year_results[thr][str(year)] = thr_growth_results[thr]
-
+        # Pre-initialize result structure: thr → scenario_key → year_str → growth_level
+        for scenario_key, _ in all_combos:
             for thr in arch_thr_mask:
-                thr_dg[thr][scenario_key] = thr_year_results[thr]
+                thr_dg[thr][scenario_key] = {}
+
+        # Batched demand growth: 75 unique (year, growth) × single Numba kernel each
+        # Replaces 437K+ price_mix_batch() calls with 75 coefficient precomputes + 75 batched evals
+        dg_iso_start = time.time()
+        existing_base = GRID_MIX_SHARES[iso]
+        n_growth_evals = 0
+
+        for year in DEMAND_GROWTH_YEARS:
+            years_out = year - 2025
+            for g_level in DEMAND_GROWTH_LEVELS:
+                g_rate = iso_rates[g_level]
+                gf = (1 + g_rate) ** years_out
+                demand_grown = demand_twh * gf
+                existing_scale = 1.0 / gf
+
+                # Scale existing shares for this growth factor
+                scaled_existing = {k: min(v * existing_scale, 100.0)
+                                   for k, v in existing_base.items()}
+
+                # Pre-compute coefficients for this growth year
+                cm_g, const_g, _ = precompute_base_year_coefficients(
+                    iso, arch_arrays, demand_grown, existing_override=scaled_existing)
+
+                # Batch eval all combos at once
+                dg_best_idxs, dg_best_vals = batch_eval_and_argmin_all(
+                    cm_g, const_g, dg_price_matrix, arch_scores_f64, thresholds_desc_dg)
+
+                # Extract winners
+                yr_str = str(year)
+                for combo_i in range(len(all_combos)):
+                    ws = float(dg_ws_arr[combo_i])
+                    scenario_key = all_combos[combo_i][0]
+                    for thr in arch_thr_mask:
+                        k = thr_pos_dg[float(thr)]
+                        if dg_best_vals[combo_i, k] == np.inf:
+                            continue
+                        best_local = int(dg_best_idxs[combo_i, k])
+                        full_idx = arch_indices[best_local]
+                        tc = float(dg_best_vals[combo_i, k])
+                        mf = float(arch_match_frac[best_local])
+                        ec = tc / mf if mf > 0 else 0.0
+
+                        if yr_str not in thr_dg[thr][scenario_key]:
+                            thr_dg[thr][scenario_key][yr_str] = {}
+                        thr_dg[thr][scenario_key][yr_str][g_level] = [
+                            full_idx, round(tc, 2), round(ec, 2), round(ec - ws, 2)]
+
+                n_growth_evals += 1
+                if n_growth_evals % 15 == 0:
+                    elapsed = time.time() - dg_iso_start
+                    rate = n_growth_evals / elapsed if elapsed > 0 else 1
+                    remaining_evals = 75 - n_growth_evals
+                    print(f"    {iso}: {n_growth_evals}/75 growth evals "
+                          f"({elapsed:.0f}s, ~{remaining_evals/rate:.0f}s left)")
 
         for thr in arch_thr_mask:
             dg_output['results'][iso][str(thr)] = thr_dg[thr]
 
+        dg_iso_elapsed = time.time() - dg_iso_start
         print(f"  {iso:>6}: {n_arch} archetypes, "
               f"{len(arch_thr_mask)} thresholds, "
-              f"{len(all_combos)} scenarios × "
-              f"{len(DEMAND_GROWTH_YEARS)} years × "
-              f"{len(DEMAND_GROWTH_LEVELS)} growth")
+              f"{len(all_combos)} scenarios × 75 growth evals — {dg_iso_elapsed:.0f}s")
 
     phase2_elapsed = time.time() - phase2_start
     print(f"\nPhase 2 complete: {phase2_elapsed:.0f}s")
@@ -1550,43 +1586,73 @@ def main():
 
             thr_dg = {thr: {} for thr in arch_thr_mask}
 
-            for scenario_key, sens in all_combos:
-                wholesale = max(5, WHOLESALE_PRICES[iso] +
-                                FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
-                thr_year_results = {thr: {} for thr in arch_thr_mask}
+            # Pre-compute price matrix for all combos (one-time)
+            tk_price_matrix, tk_ws_arr, _, _ = precompute_all_prices(iso, all_combos)
 
-                for year in DEMAND_GROWTH_YEARS:
-                    thr_growth_results = {thr: {} for thr in arch_thr_mask}
-                    for g_level in DEMAND_GROWTH_LEVELS:
-                        g_rate = iso_rates[g_level]
-                        tc, ec, _ = price_mix_batch(
-                            iso, arch_arrays, sens, demand_twh,
-                            target_year=year, growth_rate=g_rate,
-                            uprate_cap_override=uprate_override
-                        )
-                        for thr in arch_thr_mask:
-                            qual_idx = arch_thr_mask[thr]
-                            best_local = int(qual_idx[np.argmin(tc[qual_idx])])
-                            full_idx = arch_indices[best_local]
-                            thr_growth_results[thr][g_level] = [
-                                full_idx,
-                                round(float(tc[best_local]), 2),
-                                round(float(ec[best_local]), 2),
-                                round(float(ec[best_local]) - wholesale, 2),
-                            ]
-                    for thr in arch_thr_mask:
-                        thr_year_results[thr][str(year)] = thr_growth_results[thr]
+            # Archetype scores for batched eval
+            tk_scores_f64 = arch_scores.astype(np.float64)
+            tk_match_frac = tk_scores_f64 / 100.0
 
+            # Thresholds for batched eval
+            tk_active_thr = sorted(arch_thr_mask.keys())
+            tk_thr_desc = np.array(sorted(tk_active_thr, reverse=True), dtype=np.float64)
+            tk_thr_pos = {float(tk_thr_desc[k]): k for k in range(len(tk_thr_desc))}
+
+            # Pre-initialize result structure
+            for scenario_key, _ in all_combos:
                 for thr in arch_thr_mask:
-                    thr_dg[thr][scenario_key] = thr_year_results[thr]
+                    thr_dg[thr][scenario_key] = {}
+
+            # Batched demand growth: 75 unique evals
+            tk_existing_base = GRID_MIX_SHARES[iso]
+            tk_dg_start = time.time()
+
+            for year in DEMAND_GROWTH_YEARS:
+                years_out = year - 2025
+                for g_level in DEMAND_GROWTH_LEVELS:
+                    g_rate = iso_rates[g_level]
+                    gf = (1 + g_rate) ** years_out
+                    demand_grown = demand_twh * gf
+                    existing_scale = 1.0 / gf
+
+                    scaled_existing = {k: min(v * existing_scale, 100.0)
+                                       for k, v in tk_existing_base.items()}
+
+                    cm_g, const_g, _ = precompute_base_year_coefficients(
+                        iso, arch_arrays, demand_grown,
+                        existing_override=scaled_existing,
+                        uprate_cap_override=uprate_override)
+
+                    tk_best_idxs, tk_best_vals = batch_eval_and_argmin_all(
+                        cm_g, const_g, tk_price_matrix, tk_scores_f64, tk_thr_desc)
+
+                    yr_str = str(year)
+                    for combo_i in range(len(all_combos)):
+                        ws = float(tk_ws_arr[combo_i])
+                        scenario_key = all_combos[combo_i][0]
+                        for thr in arch_thr_mask:
+                            k = tk_thr_pos[float(thr)]
+                            if tk_best_vals[combo_i, k] == np.inf:
+                                continue
+                            best_local = int(tk_best_idxs[combo_i, k])
+                            full_idx = arch_indices[best_local]
+                            tc = float(tk_best_vals[combo_i, k])
+                            mf = float(tk_match_frac[best_local])
+                            ec = tc / mf if mf > 0 else 0.0
+
+                            if yr_str not in thr_dg[thr][scenario_key]:
+                                thr_dg[thr][scenario_key][yr_str] = {}
+                            thr_dg[thr][scenario_key][yr_str][g_level] = [
+                                full_idx, round(tc, 2), round(ec, 2), round(ec - ws, 2)]
 
             if iso not in track_dg[track_name]:
                 track_dg[track_name][iso] = {}
             for thr in arch_thr_mask:
                 track_dg[track_name][iso][str(thr)] = thr_dg[thr]
 
+            tk_dg_elapsed = time.time() - tk_dg_start
             print(f"  {iso:>6} {track_name}: {n_arch} archetypes, "
-                  f"{len(arch_thr_mask)} thresholds")
+                  f"{len(arch_thr_mask)} thresholds, 75 growth evals — {tk_dg_elapsed:.0f}s")
 
     track_output['demand_growth'] = track_dg
 
