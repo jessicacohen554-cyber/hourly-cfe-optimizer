@@ -987,7 +987,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     Returns:
         (candidates, pruning_info) where pruning_info can be passed to next threshold
     """
-    target = threshold / 100.0
+    # Cap target at 0.999 — demand_arr.sum() ≈ 0.9995 due to float averaging,
+    # so a target of 1.0 is unreachable even when every hour is matched.
+    # 99.9% is functionally identical to 100% for hourly matching.
+    target = min(threshold / 100.0, 0.999)
     proc_min, proc_max = PROCUREMENT_BOUNDS.get(threshold, (70, 200))
 
     # Storage constants
