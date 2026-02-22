@@ -1799,11 +1799,12 @@ def save_checkpoint(iso, iso_results, completed_threshold):
 
 
 def append_threshold_to_cache(iso, threshold, candidates):
-    """Append a single threshold's solutions to a per-ISO interim Parquet file.
+    """Append a threshold's solutions to the per-ISO interim Parquet file safely.
 
-    Called after each threshold completes so solutions are persisted immediately.
-    Each ISO gets its own interim file to avoid write conflicts in parallel mode.
-    These get merged into the main cache at the end of the run.
+    Guarantees:
+      - Existing checkpoint data is never overwritten blindly.
+      - New rows are appended using atomic write+rename.
+      - Duplicate rows are deduplicated before persisting.
     """
     if not HAS_PARQUET or not candidates:
         return
@@ -1811,7 +1812,6 @@ def append_threshold_to_cache(iso, threshold, candidates):
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     interim_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_interim.parquet')
 
-    # Build rows for this threshold
     rows = []
     for c in candidates:
         rows.append({
@@ -1833,15 +1833,26 @@ def append_threshold_to_cache(iso, threshold, candidates):
     if new_table is None:
         return
 
-    # Append to existing interim file if it exists
+    merged = new_table
     if os.path.exists(interim_path):
         try:
             existing = pq.read_table(interim_path)
-            new_table = pa.concat_tables([existing, new_table])
-        except Exception:
-            pass  # If corrupt, just overwrite with new data
+        except Exception as exc:
+            print(f"  Warning: unable to read existing interim checkpoint {interim_path}: {exc}")
+            print("  Skipping append to avoid overwriting existing checkpoint data.")
+            return
+        merged = pa.concat_tables([existing, new_table])
+        merged = _dedup_parquet_table(merged)
 
-    pq.write_table(new_table, interim_path, compression='snappy')
+    import tempfile
+    fd, tmp_path = tempfile.mkstemp(dir=CHECKPOINT_DIR, suffix='.parquet.tmp')
+    os.close(fd)
+    try:
+        pq.write_table(merged, tmp_path, compression='snappy')
+        os.replace(tmp_path, interim_path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 
 def load_checkpoint(iso):
