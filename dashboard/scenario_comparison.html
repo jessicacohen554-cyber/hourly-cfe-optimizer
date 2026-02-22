@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cheap Renewables vs Clean Firm Investment — Scenario Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<style>
+body { background: #0B1120; }
+
+.page-footer { background: #0F1A2E; color: rgba(255,255,255,0.7); padding: 32px 24px; text-align: center; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
+.footer-links a { color: rgba(255,255,255,0.65); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; min-height: 44px; display: inline-flex; align-items: center; padding: 8px 4px; }
+.footer-links a:hover { color: #ffffff; }
+.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+.bottom-banner { height: 4px; background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%); }
+
+/* Hero */
+.hero { background: linear-gradient(180deg, #0B1120 0%, #13203D 100%); padding: 48px 24px 40px; text-align: center; }
+.hero h1 { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 2.2rem; font-weight: 800; color: #fff; margin-bottom: 12px; letter-spacing: -0.5px; }
+.hero .subtitle { font-size: 1.05rem; color: rgba(255,255,255,0.7); max-width: 800px; margin: 0 auto 24px; line-height: 1.7; }
+
+/* Headline cards */
+.headline-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; max-width: 1200px; margin: 0 auto 40px; padding: 0 24px; }
+.headline-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; text-align: center; }
+.headline-card .val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 2rem; font-weight: 800; line-height: 1.1; margin-bottom: 6px; }
+.headline-card .lbl { font-size: 0.75rem; color: rgba(255,255,255,0.5); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
+.val.green { color: #22C55E; } .val.red { color: #EF4444; } .val.amber { color: #F59E0B; } .val.blue { color: #0EA5E9; }
+
+/* Content sections */
+.content-section { max-width: 1320px; margin: 0 auto; padding: 40px 24px; }
+.section-title { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
+.section-subtitle { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.6; }
+
+/* Scenario labels */
+.scenario-tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+.tag-a { background: rgba(239,68,68,0.15); color: #EF4444; border: 1px solid rgba(239,68,68,0.3); }
+.tag-b { background: rgba(34,197,94,0.15); color: #22C55E; border: 1px solid rgba(34,197,94,0.3); }
+
+/* Charts side-by-side */
+.chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+.chart-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; }
+.chart-box h3 { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.95rem; color: rgba(255,255,255,0.9); margin-bottom: 4px; }
+.chart-box .chart-note { font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-bottom: 12px; }
+.chart-container { position: relative; height: 320px; }
+
+/* Single wide chart */
+.chart-wide { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 32px; }
+.chart-wide h3 { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.95rem; color: rgba(255,255,255,0.9); margin-bottom: 4px; }
+.chart-wide .chart-note { font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-bottom: 12px; }
+.chart-container-wide { position: relative; height: 400px; }
+
+/* Domino table */
+.domino-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 32px; }
+.domino-table th { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); padding: 10px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.15); }
+.domino-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); white-space: nowrap; }
+.domino-table tr:hover td { background: rgba(255,255,255,0.04); }
+.domino-table .num { font-family: 'Rajdhani','Barlow Semi Condensed',monospace; font-weight: 600; font-size: 0.85rem; }
+.negative { color: #22C55E; }
+.positive { color: #EF4444; }
+.mac-cheap { color: #22C55E; } .mac-mid { color: #F59E0B; } .mac-exp { color: #EF4444; }
+
+/* ISO selector */
+.iso-selector { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.iso-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; min-height: 44px; }
+.iso-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.iso-btn.active { background: rgba(14,165,233,0.15); border-color: rgba(14,165,233,0.4); color: #0EA5E9; }
+
+/* Callout */
+.callout { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
+.callout-title { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; color: #F59E0B; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+.callout p { color: rgba(255,255,255,0.7); font-size: 0.88rem; line-height: 1.7; margin: 0; }
+
+/* Insight box */
+.insight { background: rgba(14,165,233,0.06); border-left: 3px solid #0EA5E9; padding: 16px 20px; border-radius: 0 8px 8px 0; margin-bottom: 24px; }
+.insight p { color: rgba(255,255,255,0.8); font-size: 0.88rem; line-height: 1.7; margin: 0; }
+.insight strong { color: #0EA5E9; }
+
+@media (max-width: 768px) {
+    .hero h1 { font-size: 1.6rem; }
+    .chart-pair { grid-template-columns: 1fr; }
+    .headline-row { grid-template-columns: 1fr 1fr; }
+    .chart-container { height: 260px; }
+    .chart-container-wide { height: 300px; }
+    .domino-table { font-size: 0.72rem; }
+    .domino-table td, .domino-table th { padding: 6px 4px; }
+}
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<!-- Hero -->
+<section class="hero">
+    <h1>Cheap Renewables vs Clean Firm Investment</h1>
+    <p class="subtitle">
+        What happens when you chase the cheapest $/tCO<sub>2</sub> first vs. investing in clean firm learning curves?
+        Same 595 MT CO<sub>2</sub> displaced — radically different system costs, gas lock-in, and stranding outcomes.
+    </p>
+</section>
+
+<!-- Headline cards -->
+<div class="headline-row">
+    <div class="headline-card">
+        <div class="val red">$115B</div>
+        <div class="lbl">Scenario A Total Cost</div>
+    </div>
+    <div class="headline-card">
+        <div class="val green">$51B</div>
+        <div class="lbl">Scenario B Total Cost</div>
+    </div>
+    <div class="headline-card">
+        <div class="val amber">56%</div>
+        <div class="lbl">B is Cheaper</div>
+    </div>
+    <div class="headline-card">
+        <div class="val blue">48 GW</div>
+        <div class="lbl">Less Gas in PJM (B vs A at 99%)</div>
+    </div>
+</div>
+
+<!-- Scenario descriptions -->
+<section class="content-section">
+    <div class="chart-pair">
+        <div class="chart-box">
+            <span class="scenario-tag tag-a">Scenario A</span>
+            <h3>Cheap Renewables / Expensive Clean Firm</h3>
+            <p class="chart-note">Low renewables. High nuclear, CCS, LDES, geothermal. Medium battery, fossil, transmission.</p>
+            <p style="color:rgba(255,255,255,0.65); font-size:0.85rem; line-height:1.7; margin-top:8px;">
+                Pure consequential logic: chase the cheapest $/tCO<sub>2</sub> displacement. Wind and solar are cheap; clean firm is expensive.
+                Build renewables first, defer clean firm investment, rely on gas backup for reliability.
+            </p>
+        </div>
+        <div class="chart-box">
+            <span class="scenario-tag tag-b">Scenario B</span>
+            <h3>Clean Firm Investment / FOAK Learning Curve</h3>
+            <p class="chart-note">Low cost across all clean technologies. Medium fossil fuel and transmission.</p>
+            <p style="color:rgba(255,255,255,0.65); font-size:0.85rem; line-height:1.7; margin-top:8px;">
+                FOAK investment signal pays off: nuclear, CCS, geothermal, storage all reach low-cost maturity.
+                Clean firm enters the queue early, displaces gas backup, and reduces total system cost despite higher upfront $/tCO<sub>2</sub>.
+            </p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-title">The Trap</div>
+        <p>Scenario A optimizes each step independently — "what's cheapest right now?" Scenario B accounts for where you need to end up.
+           The result: A costs 2.3x more for the same CO<sub>2</sub> displacement, locks in 48+ GW more gas infrastructure in PJM alone,
+           and creates a cliff at 99% where hundreds of TWh of clean firm must be built all at once.</p>
+    </div>
+</section>
+
+<!-- Domino Sequence -->
+<section class="content-section">
+    <h2 class="section-title">The Domino Sequence: How Steps Fall in Each Scenario</h2>
+    <p class="section-subtitle">Ordered by marginal MAC — cheapest $/tCO<sub>2</sub> first. Watch how the queue ordering diverges.</p>
+
+    <div class="chart-pair">
+        <div class="chart-box" style="overflow-x: auto;">
+            <span class="scenario-tag tag-a">Scenario A: Cheap Renewables</span>
+            <table class="domino-table" id="dominoTableA"></table>
+        </div>
+        <div class="chart-box" style="overflow-x: auto;">
+            <span class="scenario-tag tag-b">Scenario B: Clean Firm Investment</span>
+            <table class="domino-table" id="dominoTableB"></table>
+        </div>
+    </div>
+
+    <div class="insight">
+        <p><strong>Key divergence:</strong> Scenario B pushes NYISO to 90% by step 2 and PJM to 90% by step 3
+        (clean firm is so cheap it's negative MAC). Scenario A spreads all 5 ISOs to 75% breadth-first
+        before going deeper — maximizing cheap coal displacement but locking in gas everywhere.</p>
+    </div>
+</section>
+
+<!-- Gas Backup Trajectory -->
+<section class="content-section">
+    <h2 class="section-title">Gas Capacity Lock-In: The Hidden Cost of Cheap Renewables</h2>
+    <p class="section-subtitle">Gas backup capacity (MW) at each SBTi threshold. Clean firm reduces gas 1:1; wind reduces gas ~10%.</p>
+
+    <div class="iso-selector" id="gasIsoSelector"></div>
+
+    <div class="chart-wide">
+        <h3 id="gasChartTitle">PJM — Gas Backup Trajectory</h3>
+        <p class="chart-note">Scenario A (red) vs Scenario B (green). Lower is better — less gas infrastructure.</p>
+        <div class="chart-container-wide"><canvas id="gasChart"></canvas></div>
+    </div>
+</section>
+
+<!-- MAC Escalation -->
+<section class="content-section">
+    <h2 class="section-title">MAC Escalation: Cost Per Ton as Targets Rise</h2>
+    <p class="section-subtitle">Marginal abatement cost at each zone. Same CO<sub>2</sub> per step — but very different $/tCO<sub>2</sub>.</p>
+
+    <div class="iso-selector" id="macIsoSelector"></div>
+
+    <div class="chart-wide">
+        <h3 id="macChartTitle">PJM — Marginal MAC by Zone</h3>
+        <p class="chart-note">Scenario A (red) vs Scenario B (green). Capped at $1,500/tCO₂ for readability.</p>
+        <div class="chart-container-wide"><canvas id="macChart"></canvas></div>
+    </div>
+</section>
+
+<!-- Resource Mix Side-by-Side -->
+<section class="content-section">
+    <h2 class="section-title">What Gets Built: Resource Mix at Each Threshold</h2>
+    <p class="section-subtitle">Clean firm (green), wind (blue), solar (amber) — in TWh. Same physics, different cost signals.</p>
+
+    <div class="iso-selector" id="mixIsoSelector"></div>
+
+    <div class="chart-pair">
+        <div class="chart-box">
+            <span class="scenario-tag tag-a">Scenario A</span>
+            <h3 id="mixChartTitleA">PJM — Resource Mix</h3>
+            <div class="chart-container"><canvas id="mixChartA"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <span class="scenario-tag tag-b">Scenario B</span>
+            <h3 id="mixChartTitleB">PJM — Resource Mix</h3>
+            <div class="chart-container"><canvas id="mixChartB"></canvas></div>
+        </div>
+    </div>
+</section>
+
+<!-- Effective Cost Trajectory -->
+<section class="content-section">
+    <h2 class="section-title">Effective System Cost: The Price of the Cheap Path</h2>
+    <p class="section-subtitle">$/MWh effective system cost at each threshold. The "cheap" path gets expensive fast.</p>
+
+    <div class="iso-selector" id="costIsoSelector"></div>
+
+    <div class="chart-wide">
+        <h3 id="costChartTitle">PJM — Effective Cost ($/MWh)</h3>
+        <p class="chart-note">Scenario A (red) vs Scenario B (green). Gap widens at higher thresholds.</p>
+        <div class="chart-container-wide"><canvas id="costChart"></canvas></div>
+    </div>
+</section>
+
+<!-- Bottom line -->
+<section class="content-section">
+    <h2 class="section-title">Bottom Line</h2>
+    <div class="callout" style="background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.2);">
+        <div class="callout-title" style="color: #EF4444;">Pure Consequential Accounting Is a System-Level Trap</div>
+        <p>Following cheapest $/tCO<sub>2</sub> step-by-step (Scenario A) costs <strong>$115B</strong> to reach 100% clean across 5 ISOs.
+           Investing in clean firm learning curves (Scenario B) costs <strong>$51B</strong> for the same CO<sub>2</sub> displacement.
+           The "cheap" path locks in 48+ GW of extra gas in PJM, 17 GW in ERCOT, and 9 GW in NYISO — infrastructure
+           that clean firm would have displaced. It also creates a cliff at 99-100% where you suddenly need to build
+           the clean firm you deferred — at enormous cost and on a compressed timeline.</p>
+    </div>
+    <div class="insight">
+        <p><strong>The investment signal matters.</strong> Scenario B's lower total cost isn't because clean firm is inherently cheaper —
+        it's because investing in FOAK drives down learning curves, making the entire pathway cheaper. The clean firm
+        doesn't just displace emissions; it displaces gas infrastructure, reducing system costs on two dimensions simultaneously.</p>
+    </div>
+</section>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="consequential_accounting.html">Consequential Accounting</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <div class="footer-note">Hourly CFE Optimizer &mdash; 8,760-hour dispatch model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<script src="js/nav.js"></script>
+<script src="js/scenario-comparison-data.js"></script>
+<script>
+(function() {
+'use strict';
+
+const DATA = SCENARIO_COMPARISON;
+const ISOS = DATA.metadata.isos;
+const THRESHOLDS = DATA.metadata.thresholds;
+const YEAR_MAP = {};
+Object.entries(DATA.metadata.sbti_year_map).forEach(([k,v]) => YEAR_MAP[parseFloat(k)] = v);
+
+const COLORS = {
+    A: 'rgba(239, 68, 68, 0.85)',
+    B: 'rgba(34, 197, 94, 0.85)',
+    A_fill: 'rgba(239, 68, 68, 0.15)',
+    B_fill: 'rgba(34, 197, 94, 0.15)',
+    clean_firm: '#22C55E',
+    solar: '#F59E0B',
+    wind: '#3B82F6',
+    ccs: '#14B8A6',
+    hydro: '#06B6D4',
+    battery: '#A855F7',
+    ldes: '#EC4899',
+};
+
+// ===== DOMINO TABLES =====
+function buildDominoTable(tableId, queue) {
+    const table = document.getElementById(tableId);
+    let html = '<thead><tr><th>#</th><th>ISO</th><th>Zone</th><th>MAC</th><th>Cum CO₂</th><th>Primary</th><th>Gas</th></tr></thead><tbody>';
+    let cumCo2 = 0;
+    queue.forEach((step, i) => {
+        if (i >= 25) return; // Cap at 25 rows
+        cumCo2 += step.co2_displaced_mt;
+        const mac = step.marginal_mac >= 9999 ? '&infin;' : '$' + Math.round(step.marginal_mac).toLocaleString();
+        const macClass = step.marginal_mac < 0 ? 'mac-cheap' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
+
+        // Find dominant resource
+        const deltas = step.delta_resources;
+        const sorted = Object.entries(deltas).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+        const top = sorted[0];
+        let primary = top[0].replace('clean_firm','CF').replace('ccs_ccgt','CCS');
+        primary += ': ' + (top[1] > 0 ? '+' : '') + Math.round(top[1]);
+
+        const gasDir = step.delta_gas_mw > 0 ? 'positive' : step.delta_gas_mw < 0 ? 'negative' : '';
+        html += `<tr>
+            <td class="num">${i+1}</td>
+            <td>${step.iso}</td>
+            <td>${step.zone_label}</td>
+            <td class="${macClass} num">${mac}</td>
+            <td class="num">${cumCo2.toFixed(0)}</td>
+            <td>${primary}</td>
+            <td class="${gasDir} num">${step.delta_gas_mw > 0 ? '+' : ''}${(step.delta_gas_mw/1000).toFixed(1)}k</td>
+        </tr>`;
+    });
+    html += '</tbody>';
+    table.innerHTML = html;
+}
+
+buildDominoTable('dominoTableA', DATA.queue_a);
+buildDominoTable('dominoTableB', DATA.queue_b);
+
+// ===== ISO SELECTOR FACTORY =====
+function createIsoSelector(containerId, defaultIso, onChange) {
+    const container = document.getElementById(containerId);
+    ISOS.forEach(iso => {
+        const btn = document.createElement('button');
+        btn.className = 'iso-btn' + (iso === defaultIso ? ' active' : '');
+        btn.textContent = iso;
+        btn.addEventListener('click', () => {
+            container.querySelectorAll('.iso-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            onChange(iso);
+        });
+        container.appendChild(btn);
+    });
+}
+
+// ===== GAS BACKUP CHART =====
+let gasChart;
+function renderGasChart(iso) {
+    document.getElementById('gasChartTitle').textContent = iso + ' \u2014 Gas Backup Trajectory';
+    const trajA = DATA.trajectories.cheap_ren[iso] || [];
+    const trajB = DATA.trajectories.clean_firm_invest[iso] || [];
+    const labels = trajA.map(d => d.threshold + '%\n(' + d.year + ')');
+
+    if (gasChart) gasChart.destroy();
+    gasChart = new Chart(document.getElementById('gasChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'A: Cheap Renewables',
+                    data: trajA.map(d => d.gas_backup_mw),
+                    borderColor: COLORS.A,
+                    backgroundColor: COLORS.A_fill,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                },
+                {
+                    label: 'B: Clean Firm Invest',
+                    data: trajB.map(d => d.gas_backup_mw),
+                    borderColor: COLORS.B,
+                    backgroundColor: COLORS.B_fill,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 12 } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y).toLocaleString() + ' MW'
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.06)' } },
+                y: { ticks: { color: 'rgba(255,255,255,0.5)', callback: v => (v/1000).toFixed(0) + 'k' }, grid: { color: 'rgba(255,255,255,0.08)' }, title: { display: true, text: 'Gas Backup (MW)', color: 'rgba(255,255,255,0.5)' } }
+            }
+        }
+    });
+}
+createIsoSelector('gasIsoSelector', 'PJM', renderGasChart);
+renderGasChart('PJM');
+
+// ===== MAC CHART =====
+let macChart;
+function renderMacChart(iso) {
+    document.getElementById('macChartTitle').textContent = iso + ' \u2014 Marginal MAC by Zone';
+    const qA = DATA.queue_a.filter(s => s.iso === iso);
+    const qB = DATA.queue_b.filter(s => s.iso === iso);
+    const labels = qA.map(s => s.zone_label);
+
+    if (macChart) macChart.destroy();
+    macChart = new Chart(document.getElementById('macChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'A: Cheap Renewables',
+                    data: qA.map(s => Math.min(s.marginal_mac, 1500)),
+                    backgroundColor: COLORS.A,
+                    borderRadius: 4,
+                },
+                {
+                    label: 'B: Clean Firm Invest',
+                    data: qB.map(s => Math.min(s.marginal_mac, 1500)),
+                    backgroundColor: COLORS.B,
+                    borderRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 12 } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const orig = ctx.dataset.label === 'A: Cheap Renewables' ?
+                                qA[ctx.dataIndex].marginal_mac : qB[ctx.dataIndex].marginal_mac;
+                            return ctx.dataset.label + ': $' + Math.round(orig).toLocaleString() + '/tCO₂';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+                y: { ticks: { color: 'rgba(255,255,255,0.5)', callback: v => '$' + v }, grid: { color: 'rgba(255,255,255,0.08)' }, title: { display: true, text: '$/tCO₂ (capped at $1,500)', color: 'rgba(255,255,255,0.5)' } }
+            }
+        }
+    });
+}
+createIsoSelector('macIsoSelector', 'PJM', renderMacChart);
+renderMacChart('PJM');
+
+// ===== RESOURCE MIX STACKED AREA =====
+let mixChartA, mixChartB;
+function renderMixCharts(iso) {
+    document.getElementById('mixChartTitleA').textContent = iso + ' \u2014 Resource Mix';
+    document.getElementById('mixChartTitleB').textContent = iso + ' \u2014 Resource Mix';
+
+    const trajA = DATA.trajectories.cheap_ren[iso] || [];
+    const trajB = DATA.trajectories.clean_firm_invest[iso] || [];
+    const labels = trajA.map(d => d.threshold + '%');
+
+    function makeDatasets(traj) {
+        return [
+            { label: 'Clean Firm', data: traj.map(d => d.resource_twh.clean_firm), backgroundColor: COLORS.clean_firm + '99', borderColor: COLORS.clean_firm, fill: true },
+            { label: 'Solar', data: traj.map(d => d.resource_twh.solar), backgroundColor: COLORS.solar + '99', borderColor: COLORS.solar, fill: true },
+            { label: 'Wind', data: traj.map(d => d.resource_twh.wind), backgroundColor: COLORS.wind + '99', borderColor: COLORS.wind, fill: true },
+            { label: 'CCS', data: traj.map(d => d.resource_twh.ccs_ccgt || 0), backgroundColor: COLORS.ccs + '99', borderColor: COLORS.ccs, fill: true },
+            { label: 'Hydro', data: traj.map(d => d.resource_twh.hydro), backgroundColor: COLORS.hydro + '99', borderColor: COLORS.hydro, fill: true },
+        ];
+    }
+
+    const opts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } } },
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y) + ' TWh' } }
+        },
+        scales: {
+            x: { stacked: true, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+            y: { stacked: true, ticks: { color: 'rgba(255,255,255,0.5)' }, grid: { color: 'rgba(255,255,255,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(255,255,255,0.5)' } }
+        }
+    };
+
+    if (mixChartA) mixChartA.destroy();
+    if (mixChartB) mixChartB.destroy();
+
+    mixChartA = new Chart(document.getElementById('mixChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA) }, options: opts });
+    mixChartB = new Chart(document.getElementById('mixChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB) }, options: opts });
+}
+createIsoSelector('mixIsoSelector', 'PJM', renderMixCharts);
+renderMixCharts('PJM');
+
+// ===== EFFECTIVE COST CHART =====
+let costChart;
+function renderCostChart(iso) {
+    document.getElementById('costChartTitle').textContent = iso + ' \u2014 Effective Cost ($/MWh)';
+    const trajA = DATA.trajectories.cheap_ren[iso] || [];
+    const trajB = DATA.trajectories.clean_firm_invest[iso] || [];
+    const labels = trajA.map(d => d.threshold + '%\n(' + d.year + ')');
+
+    if (costChart) costChart.destroy();
+    costChart = new Chart(document.getElementById('costChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'A: Cheap Renewables',
+                    data: trajA.map(d => d.effective_cost),
+                    borderColor: COLORS.A,
+                    backgroundColor: COLORS.A_fill,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                },
+                {
+                    label: 'B: Clean Firm Invest',
+                    data: trajB.map(d => d.effective_cost),
+                    borderColor: COLORS.B,
+                    backgroundColor: COLORS.B_fill,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 12 } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh'
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.06)' } },
+                y: { ticks: { color: 'rgba(255,255,255,0.5)', callback: v => '$' + v }, grid: { color: 'rgba(255,255,255,0.08)' }, title: { display: true, text: '$/MWh', color: 'rgba(255,255,255,0.5)' } }
+            }
+        }
+    });
+}
+createIsoSelector('costIsoSelector', 'PJM', renderCostChart);
+renderCostChart('PJM');
+
+})();
+</script>
+</body>
+</html>
