@@ -335,6 +335,101 @@ body { background: #0B1120; }
     </div>
 </section>
 
+<!-- Methodology -->
+<section class="content-section" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 48px;">
+    <h2 class="section-title">Methodology</h2>
+    <p class="section-subtitle">How this comparison is constructed and what it does (and doesn't) model.</p>
+
+    <div style="color: rgba(255,255,255,0.75); font-size: 0.88rem; line-height: 1.8; max-width: 900px;">
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Same Physics, Different Cost Functions</h3>
+    <p>Both scenarios draw from an <strong>identical pool of ~33,000 physics-feasible resource mixes</strong> produced by the 8,760-hour dispatch model
+    (Step 1 PFS Generator). Each mix is a validated combination of clean firm, solar, wind, CCS-CCGT, hydro, 4-hour battery, 8-hour battery,
+    and 100-hour LDES that achieves a specific hourly CFE threshold across all 8,760 hours of 2025 demand and generation data.
+    The physics are fixed — what changes between scenarios is <em>which mix the optimizer selects as cheapest</em>.</p>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Scenario Construction</h3>
+    <p>Each scenario defines a set of 9 cost toggles (Renewable Gen, Firm Gen, Battery, LDES, CCS, 45Q, Fossil Fuel, Transmission, Geothermal)
+    at Low/Medium/High levels. These toggles set the LCOE and transmission adder for each resource type. The optimizer then evaluates
+    <strong>every feasible mix at every threshold</strong> under that scenario's cost function and selects the one with the lowest
+    effective system cost ($/MWh).</p>
+
+    <table style="width:100%; border-collapse:collapse; margin: 16px 0 24px; font-size: 0.82rem;">
+        <thead>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
+                <th style="text-align:left; padding: 8px; color: rgba(255,255,255,0.5); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">Toggle</th>
+                <th style="text-align:center; padding: 8px; color: #EF4444; font-size: 0.72rem; text-transform: uppercase;">Pure Consequential</th>
+                <th style="text-align:center; padding: 8px; color: #22C55E; font-size: 0.72rem; text-transform: uppercase;">FOAK Investment</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding:6px 8px;">Renewable Gen (Solar/Wind LCOE)</td><td style="text-align:center; padding:6px;">Low</td><td style="text-align:center; padding:6px;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding:6px 8px;">Firm Gen (Nuclear new-build LCOE)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding:6px 8px;">CCS-CCGT (w/ 45Q offset)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding:6px 8px;">LDES (100hr iron-air storage)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding:6px 8px;">Geothermal (CAISO only)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding:6px 8px;">Battery (4hr Li-ion)</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding:6px 8px;">Fossil Fuel (wholesale price)</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding:6px 8px;">Transmission</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
+            <tr><td style="padding:6px 8px;">45Q Tax Credit</td><td style="text-align:center; padding:6px;">On</td><td style="text-align:center; padding:6px;">On</td></tr>
+        </tbody>
+    </table>
+
+    <p>The key difference: in the pure consequential scenario, clean firm technologies (nuclear, CCS, LDES, geothermal) are at <strong>High cost</strong> — representing
+    today's FOAK pricing before learning curves have materialized. Renewables and battery are cheap. In the FOAK investment scenario, learning-curve
+    investment has driven <strong>all</strong> clean technologies to Low cost.</p>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Cost Optimization (per ISO &times; Threshold)</h3>
+    <p>For each of the 5 ISOs &times; 13 thresholds = 65 cells, the optimizer:</p>
+    <ol style="padding-left: 20px; margin: 8px 0;">
+        <li>Iterates through all physics-feasible mixes at that threshold</li>
+        <li>Computes <strong>effective system cost</strong> = total procurement cost / hourly match fraction, including:
+            <ul style="padding-left: 16px; margin: 4px 0;">
+                <li>Existing generation at wholesale price; new generation at LCOE + transmission adder</li>
+                <li>Clean firm tranche pricing: uprates first, then geothermal (CAISO), then cheapest of nuclear/CCS</li>
+                <li>Storage costs: battery (4hr/8hr) and LDES at scenario-specific LCOE</li>
+                <li>Gas backup: resource adequacy requirement (15% margin above peak) minus clean capacity credits, priced at fixed O&amp;M (existing) or full annualized cost (new build)</li>
+            </ul>
+        </li>
+        <li>Selects the mix with the <strong>lowest effective $/MWh</strong></li>
+    </ol>
+    <p>Because the cost function differs between scenarios, the <strong>optimal resource mix changes</strong> — not just the price tag.
+    The FOAK scenario selects more clean firm because it's now cost-competitive; the consequential scenario avoids it because it's expensive.</p>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Gas Backup &amp; Capacity Credits</h3>
+    <p>Gas capacity is <strong>not a choice variable</strong> — it's derived from resource adequacy constraints. Each clean resource receives a
+    capacity credit (clean firm: 100%, CCS: 90%, LDES: 90%, battery: 95%, hydro: 50%, solar: 30%, wind: 10%). The remaining gap between
+    clean capacity and the RA requirement (peak demand &times; 1.15) must be filled by gas. Clean firm's 100% capacity credit
+    displaces gas MW-for-MW; wind's 10% credit means 10 MW of wind displaces only 1 MW of gas.</p>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Marginal Abatement Cost</h3>
+    <p>Stepwise MAC is computed between consecutive thresholds using the dispatch-stack fossil retirement model:
+    coal retires first (highest emissions + marginal cost), then oil, then gas. The marginal emission rate
+    of displaced fossil shifts from coal-heavy (~1.0 tCO<sub>2</sub>/MWh) at low thresholds to gas-only (~0.4 tCO<sub>2</sub>/MWh) at high thresholds.
+    MAC = &Delta;(system cost &times; demand) / &Delta;CO<sub>2</sub> displaced between threshold steps.</p>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">SBTi Timeline Mapping</h3>
+    <p>CFE thresholds are mapped to SBTi-aligned deployment years: 50%&rarr;2025, 60%&rarr;2027, 70%&rarr;2029, 75%&rarr;2030, 80%&rarr;2032,
+    85%&rarr;2035, 87.5%&rarr;2037, 90%&rarr;2040, 92.5%&rarr;2042, 95%&rarr;2045, 97.5%&rarr;2047, 99%&rarr;2049, 100%&rarr;2050.
+    This maps the static threshold comparison onto a temporal deployment trajectory.</p>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">What This Analysis Does Not Model</h3>
+    <ul style="padding-left: 20px; margin: 8px 0;">
+        <li><strong>Dynamic learning curves</strong> — costs are fixed within each scenario. The FOAK scenario assumes learning curves have already materialized; it does not model the investment-to-learning feedback loop endogenously.</li>
+        <li><strong>Construction timelines</strong> — all resources are assumed available at each threshold. In practice, the 99% cliff in the consequential path would face multi-year nuclear/CCS construction lead times.</li>
+        <li><strong>Demand growth</strong> — base 2025 demand is used throughout. Real demand growth (1-3.5%/yr by region) would amplify all effects shown here.</li>
+        <li><strong>Inter-regional transmission</strong> — each ISO is optimized independently. Cross-ISO power flows could moderate some regional cost differences.</li>
+        <li><strong>Gas stranding economics</strong> — gas backup is costed at annual fixed O&amp;M / annualized capital, not lifecycle NPV. The economic loss from building-then-stranding gas is understated.</li>
+    </ul>
+
+    <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #fff; margin: 24px 0 8px;">Data Sources</h3>
+    <p>EIA hourly generation profiles (2025), eGRID emission rates, NREL ATB cost projections (Low/Medium/High), Lazard LCOE benchmarks,
+    regional wholesale prices from ISO market data. Full cost tables and assumptions documented in the
+    <a href="optimizer_methodology.html" style="color: #0EA5E9;">Optimizer Methodology</a> page.</p>
+
+    </div>
+</section>
+
 <footer class="page-footer">
     <div class="footer-links">
         <a href="index.html">Home</a>
