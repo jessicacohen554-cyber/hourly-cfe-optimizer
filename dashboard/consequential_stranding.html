@@ -311,8 +311,8 @@ body {
 
 <section class="content-section fade-in">
     <table class="stack-table" id="stackTable"></table>
-    <p><strong>This distinction is critical.</strong> In ERCOT and PJM, coal is 26&ndash;28% of fossil generation and emits 2.5&times; more CO&#x2082; per MWh than gas. The first clean TWh built in these regions displaces coal at ~1.0 tCO&#x2082;/MWh. By the time coal is fully retired, subsequent clean energy only displaces gas at ~0.39 tCO&#x2082;/MWh. The same dollar of investment buys 2.5&times; more abatement early vs. late.</p>
-    <p><strong>CAISO, NYISO, and NEISO are already nearly gas-only.</strong> Coal is effectively zero in these grids, so the displaced emission rate stays flat around 0.39&ndash;0.42 tCO&#x2082;/MWh regardless of threshold.</p>
+    <p><strong>This distinction is critical.</strong> ERCOT has 67.6 TWh of coal capacity (1.05 tCO&#x2082;/MWh) and PJM has 139.1 TWh (1.01 tCO&#x2082;/MWh). The first clean energy deployed displaces coal &mdash; 2.5&times; dirtier per MWh than gas. But coal capacity is finite: once the first zone (50&rarr;75%) exhausts coal, all subsequent displacement comes from gas at ~0.39 tCO&#x2082;/MWh. Above 70% clean, coal and oil are force-retired entirely.</p>
+    <p><strong>CAISO, NYISO, and NEISO are already gas-only.</strong> Coal is zero (or trace) in these grids, so the displaced emission rate stays flat at 0.38&ndash;0.41 tCO&#x2082;/MWh at every threshold. There&rsquo;s no coal bonus &mdash; every MWh of clean energy displaces the same gas marginal rate from start to finish.</p>
 </section>
 
 <!-- ============ SECTION 2: Deployment Queue ============ -->
@@ -346,7 +346,7 @@ body {
             <canvas id="displacedRateChart"></canvas>
         </div>
         <div class="chart-narrative-below">
-            <p><strong>ERCOT and PJM show the coal transition:</strong> At 50&rarr;75%, the displaced rate includes coal at ~1.0 tCO&#x2082;/MWh. Past 90%, coal is fully retired and the rate drops to gas-level (~0.4 tCO&#x2082;/MWh). CAISO and NYISO stay flat &mdash; they were already gas-dominated.</p>
+            <p><strong>ERCOT and PJM show the coal transition clearly:</strong> In the 50&rarr;75% zone, the displaced rate averages 0.66 (ERCOT) and 0.58 (PJM) tCO&#x2082;/MWh &mdash; a blend of coal and gas retirement. Past 75%, coal is exhausted and the rate drops to gas-level (~0.39 tCO&#x2082;/MWh) for every subsequent zone. CAISO, NYISO, and NEISO are flat from start to finish &mdash; already gas-only grids.</p>
         </div>
     </div>
 </section>
@@ -437,9 +437,9 @@ body {
 <section class="insight-callout fade-in">
     <div class="insight-box">
         <h3>The Dispatch-Stack Insight</h3>
-        <p>Pure consequential accounting says invest where the marginal $/tCO&#x2082; is lowest. The dispatch-stack retirement model reveals <span class="highlight-green">coal displacement is the early bargain</span> &mdash; ERCOT and PJM's first steps displace coal at ~1.0 tCO&#x2082;/MWh, making early decarbonization in these regions 2.5&times; more carbon-effective per dollar than in gas-dominated grids like CAISO and NYISO.</p>
-        <p style="margin-top:12px">But once coal is fully retired (past ~90% clean in coal-heavy regions), <span class="highlight-red">the emission rate drops to gas-level</span> and the cost advantage vanishes. The same regions that were the best investment early become comparable to every other grid.</p>
-        <p style="margin-top:12px"><strong>The first 5 steps in the queue displace 62% of total CO&#x2082; at 37% of total cost.</strong> After that, diminishing returns set in steeply &mdash; not just because costs rise, but because the high-emission fuels being displaced are gone.</p>
+        <p>Pure consequential accounting says invest where the marginal $/tCO&#x2082; is lowest. The dispatch-stack retirement model reveals <span class="highlight-green">coal displacement is concentrated in the first zone</span> &mdash; ERCOT and PJM exhaust their entire coal fleet within the 50&rarr;75% range, displacing at 0.66&ndash;0.58 tCO&#x2082;/MWh (blended coal+gas). Above 70% clean, coal and oil are force-retired entirely.</p>
+        <p style="margin-top:12px">Past 75% clean, <span class="highlight-red">every region is gas-only</span> at ~0.39 tCO&#x2082;/MWh. The coal bonus disappears. The cost per ton roughly triples because you're displacing a fuel that emits half as much per MWh.</p>
+        <p style="margin-top:12px"><strong>The first 5 steps displace 65% of total CO&#x2082; at 34% of total cost.</strong> After that, diminishing returns set in steeply &mdash; not just because costs rise, but because the high-emission fuels being displaced are gone.</p>
     </div>
 </section>
 
@@ -494,16 +494,20 @@ var FUEL_COLORS = { coal: '#8B4513', oil: '#CD853F', gas: '#4a90d9' };
 
 // ========== 1. DISPATCH STACK TABLE ==========
 function renderStackTable() {
-    var html = '<tr><th>Region</th><th>Year</th><th>Retirement Order</th></tr>';
+    var html = '<tr><th>Region</th><th>Demand</th><th>Baseline Clean</th><th>Fossil Dispatch Stack (coal→oil→gas)</th></tr>';
     ISOS.forEach(function(iso) {
         var s = stacks[iso];
         var fuelsHtml = s.fuels.map(function(f) {
             var cls = 'fuel-' + f.type;
             return '<span class="' + cls + '">' + f.type.charAt(0).toUpperCase() + f.type.slice(1) +
-                   '</span>: ' + (f.share * 100).toFixed(1) + '% @ ' + f.emission_rate.toFixed(3) + ' tCO\u2082/MWh';
-        }).join(' \u2192 ');
+                   '</span>: ' + f.cap_twh.toFixed(1) + ' TWh @ ' + f.emission_rate.toFixed(3) + ' tCO\u2082/MWh';
+        }).join(' → ');
+        var retNote = s.coal_oil_retirement_threshold ?
+            ' <span style="color:rgba(239,68,68,0.7);font-size:0.75rem">(coal+oil forced-retired above ' +
+            s.coal_oil_retirement_threshold + '% clean)</span>' : '';
         html += '<tr><td style="font-weight:700;color:' + ISO_COLORS[iso] + '">' + iso +
-                '</td><td>' + s.fuel_year + '</td><td>' + fuelsHtml + '</td></tr>';
+                '</td><td>' + s.demand_twh + ' TWh</td><td>' + s.baseline_clean_pct + '%</td>' +
+                '<td>' + fuelsHtml + retNote + '</td></tr>';
     });
     document.getElementById('stackTable').innerHTML = html;
 }
@@ -586,52 +590,62 @@ function renderQueueChart() {
 // ========== 3. DISPLACED EMISSION RATE CHART ==========
 function renderDisplacedRateChart() {
     var ctx = document.getElementById('displacedRateChart').getContext('2d');
-    var zoneLabels = Q.metadata.zones;
+    var rateTraj = Q.emission_rate_trajectory;
 
+    // Show cumulative displaced rate at each threshold (from dispatch_utils)
+    var threshLabels = THRESHOLDS.map(function(t) { return t + '%'; });
     var datasets = ISOS.map(function(iso) {
-        var isoSteps = queue.filter(function(s) { return s.iso === iso; });
-        isoSteps.sort(function(a, b) { return a.zone_idx - b.zone_idx; });
-        var data = new Array(6).fill(null);
-        isoSteps.forEach(function(s) { data[s.zone_idx] = s.displaced_emission_rate; });
+        var traj = rateTraj[iso];
         return {
             label: iso,
-            data: data,
-            backgroundColor: ISO_COLORS[iso] + '88',
+            data: traj.map(function(r) { return r.displaced_rate; }),
             borderColor: ISO_COLORS[iso],
-            borderWidth: 1
+            backgroundColor: ISO_COLORS[iso] + '22',
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            fill: false,
+            tension: 0.3
         };
     });
 
     new Chart(ctx, {
-        type: 'bar',
-        data: { labels: zoneLabels, datasets: datasets },
+        type: 'line',
+        data: { labels: threshLabels, datasets: datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 }, usePointStyle: true } },
                 tooltip: {
                     callbacks: {
                         label: function(ctx) {
-                            var v = ctx.parsed.y;
-                            return ctx.dataset.label + ': ' + (v ? v.toFixed(3) : 'N/A') + ' tCO\u2082/MWh';
+                            var iso = ISOS[ctx.datasetIndex];
+                            var r = rateTraj[iso][ctx.dataIndex];
+                            var forced = r.forced_gas_only ? ' (gas only, coal retired)' : '';
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(4) + ' tCO\u2082/MWh' +
+                                   forced + ' | coal=' + r.coal_displaced_twh.toFixed(1) + ' TWh';
                         }
                     }
                 },
                 annotation: {
                     annotations: {
-                        gasLine: { type: 'line', yMin: 0.40, yMax: 0.40, borderColor: 'rgba(74,144,217,0.5)', borderWidth: 1, borderDash: [6,4],
-                            label: { display: true, content: 'New gas CCGT (~0.40)', position: 'end', color: '#4a90d9', font: { size: 10 } } }
+                        gasLine: { type: 'line', yMin: 0.39, yMax: 0.39, borderColor: 'rgba(74,144,217,0.5)', borderWidth: 1, borderDash: [6,4],
+                            label: { display: true, content: 'Gas CCGT (~0.39)', position: 'end', color: '#4a90d9', font: { size: 10 } } },
+                        retireLine: { type: 'line', xMin: 4, xMax: 4, borderColor: 'rgba(239,68,68,0.4)', borderWidth: 1, borderDash: [4,4],
+                            label: { display: true, content: '70% coal retirement', position: 'start', color: '#EF4444', font: { size: 9 } } }
                     }
                 }
             },
             scales: {
-                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.6)' } },
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.6)' },
+                     title: { display: true, text: 'Clean Energy Threshold', color: 'rgba(255,255,255,0.4)', font: { size: 11 } } },
                 y: {
                     grid: { color: 'rgba(255,255,255,0.05)' },
                     ticks: { color: 'rgba(255,255,255,0.5)', callback: function(v) { return v.toFixed(2); } },
-                    title: { display: true, text: 'Displaced Emission Rate (tCO\u2082/MWh)', color: 'rgba(255,255,255,0.4)', font: { size: 11 } },
-                    min: 0, max: 1.2
+                    title: { display: true, text: 'Avg Displaced Emission Rate (tCO\u2082/MWh)', color: 'rgba(255,255,255,0.4)', font: { size: 11 } },
+                    min: 0.3, max: 0.75
                 }
             }
         }
