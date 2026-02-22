@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Nuclear Energy Works — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body {
+    background: linear-gradient(180deg, #EDE9FE 0%, #DDD6FE 25%, #E0E7FF 50%, #DBEAFE 75%, #EDE9FE 100%);
+    background-attachment: fixed;
+}
+.kids-wrap { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+
+.kids-hero { text-align: center; padding: 48px 20px 32px; }
+.kids-hero h1 { font-family: 'Lexend', sans-serif; font-size: 2.8rem; font-weight: 700; color: #1E3A5F; margin-bottom: 8px; line-height: 1.2; }
+.kids-hero .age-tag { display: inline-block; background: #FBBF24; color: #78350F; font-size: 0.85rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; margin-bottom: 16px; font-family: 'Lexend', sans-serif; }
+.kids-hero p { font-size: 1.15rem; color: #374151; max-width: 540px; margin: 0 auto; line-height: 1.6; }
+
+.kids-card { background: #fff; border-radius: 24px; padding: 36px 32px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.kids-card.visible { opacity: 1; transform: translateY(0); }
+.kids-card h2 { font-family: 'Lexend', sans-serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+.kids-card p { font-size: 1.05rem; color: #374151; line-height: 1.7; margin-bottom: 12px; }
+.kids-card p:last-child { margin-bottom: 0; }
+
+.card-atom { border-left: 6px solid #8B5CF6; }
+.card-atom h2 { color: #6D28D9; }
+.card-plant { border-left: 6px solid #0EA5E9; }
+.card-plant h2 { color: #0369A1; }
+.card-power { border-left: 6px solid #22C55E; }
+.card-power h2 { color: #15803D; }
+
+.illustration { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 20px 0 8px; min-height: 140px; position: relative; }
+
+/* === ATOM SCENE === */
+.atom-scene {
+    background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);
+    border-radius: 16px; min-height: 220px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; justify-content: center; align-items: center;
+}
+/* nucleus */
+.nucleus {
+    width: 40px; height: 40px;
+    background: radial-gradient(circle, #F59E0B 0%, #D97706 60%, #B45309 100%);
+    border-radius: 50%;
+    position: relative;
+    z-index: 3;
+    box-shadow: 0 0 20px rgba(245,158,11,0.5);
+    animation: nucleusPulse 2s ease-in-out infinite;
+}
+/* protons/neutrons bumps */
+.nucleus::before {
+    content: '';
+    position: absolute;
+    top: 6px; left: 6px;
+    width: 12px; height: 12px;
+    background: #EF4444;
+    border-radius: 50%;
+    box-shadow: 14px 0 0 #3B82F6, 7px 14px 0 #EF4444, 14px 12px 0 #3B82F6;
+}
+/* electron orbits */
+.orbit {
+    position: absolute;
+    border: 2px solid rgba(147,197,253,0.3);
+    border-radius: 50%;
+    animation: orbitRotate 3s linear infinite;
+}
+.orbit-1 { width: 120px; height: 120px; }
+.orbit-2 { width: 120px; height: 120px; transform: rotate(60deg); animation-duration: 4s; animation-direction: reverse; }
+.orbit-3 { width: 120px; height: 120px; transform: rotate(-60deg); animation-duration: 5s; }
+/* electrons */
+.electron {
+    position: absolute;
+    width: 10px; height: 10px;
+    background: #60A5FA;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(96,165,250,0.6);
+}
+.orbit-1 .electron { top: -5px; left: 50%; transform: translateX(-50%); }
+.orbit-2 .electron { bottom: -5px; left: 50%; transform: translateX(-50%); }
+.orbit-3 .electron { top: 50%; right: -5px; transform: translateY(-50%); }
+/* energy burst */
+.energy-burst {
+    position: absolute;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(251,191,36,0.15) 0%, transparent 70%);
+    animation: burstPulse 3s ease-in-out infinite;
+}
+/* label */
+.atom-label {
+    position: absolute;
+    bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #C4B5FD;
+    white-space: nowrap;
+}
+/* Rexy looking at atom */
+.rexy-atom { position: absolute; bottom: 15px; left: 12%; z-index: 4; }
+.ra-body { width: 45px; height: 26px; background: #16A34A; border-radius: 14px 20px 7px 10px; position: relative; }
+.ra-head { position: absolute; right: -14px; top: -5px; width: 20px; height: 16px; background: #16A34A; border-radius: 9px 10px 5px 3px; }
+.ra-head::before { content: ''; position: absolute; top: 3px; right: 3px; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #1E3A5F; }
+.ra-head::after { content: ''; position: absolute; bottom: 1px; right: 1px; width: 10px; height: 2px; background: #14532D; border-radius: 2px; }
+.ra-arm { position: absolute; right: 1px; top: 8px; width: 7px; height: 3px; background: #15803D; border-radius: 2px; transform: rotate(25deg); }
+.ra-tail { position: absolute; left: -13px; top: 2px; width: 16px; height: 9px; background: #16A34A; border-radius: 9px 0 2px 5px; }
+.ra-leg { position: absolute; bottom: -9px; width: 7px; height: 10px; background: #15803D; border-radius: 0 0 3px 3px; }
+.ra-leg:nth-child(5) { left: 8px; }
+.ra-leg:nth-child(6) { right: 10px; }
+.dino-speech { position: absolute; top: -28px; right: -12px; background: #fff; border-radius: 12px; padding: 4px 10px; font-family: 'Lexend', sans-serif; font-size: 0.65rem; font-weight: 600; color: #1E3A5F; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 5; }
+.dino-speech::after { content: ''; position: absolute; bottom: -6px; left: 16px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff; }
+
+/* === POWER PLANT SCENE === */
+.plant-scene {
+    background: linear-gradient(to bottom, #BAE6FD 0%, #7DD3FC 60%, #38BDF8 100%);
+    border-radius: 16px; min-height: 220px; padding: 16px; position: relative; overflow: hidden;
+}
+.plant-scene::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 30px; background: #86EFAC; border-radius: 0 0 16px 16px; }
+/* cooling towers */
+.cooling-tower {
+    position: absolute; bottom: 26px; z-index: 3;
+    width: 55px; height: 80px;
+}
+.tower-shape {
+    width: 55px; height: 80px;
+    background: #D1D5DB;
+    border-radius: 8px 8px 0 0;
+    clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
+    position: relative;
+}
+.tower-shape::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 20%; right: 20%;
+    height: 8px;
+    background: #9CA3AF;
+    border-radius: 4px 4px 0 0;
+}
+/* steam from towers */
+.steam {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 4px;
+}
+.steam-puff {
+    width: 14px; height: 14px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 50%;
+    animation: steamRise 3s ease-out infinite;
+}
+.steam-puff:nth-child(2) { animation-delay: 0.8s; width: 10px; height: 10px; }
+.steam-puff:nth-child(3) { animation-delay: 1.6s; width: 12px; height: 12px; }
+.cooling-tower:nth-child(1) { left: 25%; }
+.cooling-tower:nth-child(2) { left: 50%; }
+/* reactor building */
+.reactor-building {
+    position: absolute; bottom: 26px; left: 10%; z-index: 3;
+    width: 50px; height: 45px;
+    background: #9CA3AF;
+    border-radius: 4px;
+}
+.reactor-dome {
+    position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 22px;
+    background: #D1D5DB;
+    border-radius: 18px 18px 0 0;
+}
+/* atom symbol on building */
+.atom-symbol {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px; height: 20px;
+    border: 2px solid #6D28D9;
+    border-radius: 50%;
+}
+.atom-symbol::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px; height: 6px;
+    background: #6D28D9;
+    border-radius: 50%;
+}
+/* Spike */
+.spike-plant { position: absolute; bottom: 28px; right: 10%; z-index: 5; }
+.sp-body { width: 36px; height: 20px; background: #F59E0B; border-radius: 10px 8px 5px 8px; position: relative; }
+.sp-head { position: absolute; left: -10px; top: 2px; width: 14px; height: 12px; background: #F59E0B; border-radius: 7px 3px 4px 7px; }
+.sp-head::before { content: ''; position: absolute; top: 3px; left: 3px; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #78350F; }
+.sp-plates { position: absolute; top: -7px; left: 4px; display: flex; gap: 2px; }
+.sp-plates span { width: 5px; height: 8px; background: #D97706; border-radius: 50% 50% 0 0; }
+.sp-leg { position: absolute; bottom: -7px; width: 5px; height: 8px; background: #D97706; border-radius: 0 0 2px 2px; }
+.sp-leg:nth-child(4) { left: 5px; }
+.sp-leg:nth-child(5) { right: 5px; }
+.sp-tail { position: absolute; right: -8px; top: 5px; width: 10px; height: 5px; background: #F59E0B; border-radius: 0 5px 2px 0; }
+
+/* === ALWAYS-ON SCENE === */
+.always-on-scene {
+    background: linear-gradient(to right, #FDE68A 0%, #FDE68A 50%, #1E293B 50%, #1E293B 100%);
+    border-radius: 16px; min-height: 180px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; justify-content: center; align-items: center;
+}
+/* day side */
+.day-side {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px;
+}
+.day-sun-mini {
+    width: 35px; height: 35px;
+    background: radial-gradient(circle, #FDE047 40%, #FBBF24 70%, transparent 71%);
+    border-radius: 50%;
+}
+.day-label { font-family: 'Lexend', sans-serif; font-size: 0.85rem; font-weight: 700; color: #92400E; }
+/* night side */
+.night-side {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px;
+}
+.night-moon-mini {
+    width: 28px; height: 28px;
+    background: #FDE68A;
+    border-radius: 50%;
+    position: relative;
+}
+.night-moon-mini::before {
+    content: '';
+    position: absolute;
+    width: 22px; height: 22px;
+    background: #1E293B;
+    border-radius: 50%;
+    top: -4px; left: -6px;
+}
+.night-label { font-family: 'Lexend', sans-serif; font-size: 0.85rem; font-weight: 700; color: #94A3B8; }
+.night-star { position: absolute; width: 3px; height: 3px; background: #FDE68A; border-radius: 50%; animation: twinkle 2s ease-in-out infinite; }
+.night-star:nth-child(1) { top: 15px; right: 20%; }
+.night-star:nth-child(2) { top: 30px; right: 10%; animation-delay: 0.5s; }
+.night-star:nth-child(3) { top: 20px; right: 35%; animation-delay: 1s; }
+/* center power plant icon */
+.center-plant {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    z-index: 3;
+}
+.mini-tower {
+    width: 30px; height: 40px;
+    background: #6B7280;
+    border-radius: 4px 4px 0 0;
+    clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
+    position: relative;
+    margin: 0 auto;
+}
+.mini-steam {
+    width: 10px; height: 10px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    margin: 0 auto -4px;
+    animation: steamRise 2s ease-out infinite;
+}
+.always-label {
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    background: #6D28D9;
+    padding: 3px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
+    margin-top: 4px;
+}
+/* check marks */
+.check-mark {
+    font-size: 1.4rem;
+    color: #22C55E;
+}
+
+/* Fun facts & Quiz & CTA */
+.fun-fact { background: linear-gradient(135deg, #FEF3C7, #FDE68A); border-radius: 16px; padding: 16px 20px; margin-top: 16px; font-size: 0.95rem; color: #78350F; font-weight: 600; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+.fun-fact-icon { font-size: 1.3rem; flex-shrink: 0; line-height: 1.4; }
+.quiz-box { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); border-radius: 16px; padding: 24px; margin-top: 20px; }
+.quiz-box h3 { font-family: 'Lexend', sans-serif; color: #5B21B6; font-size: 1.15rem; margin-bottom: 12px; }
+.quiz-btn { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #fff; border: 2px solid #C4B5FD; border-radius: 12px; font-size: 1rem; font-family: 'Plus Jakarta Sans', sans-serif; color: #374151; cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
+.quiz-btn:hover { background: #F5F3FF; border-color: #8B5CF6; transform: scale(1.01); }
+.quiz-btn.correct { background: #DCFCE7; border-color: #22C55E; color: #15803D; font-weight: 600; }
+.quiz-btn.wrong { background: #FEE2E2; border-color: #EF4444; color: #DC2626; }
+.quiz-result { display: none; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; margin-top: 8px; text-align: center; }
+.kids-cta { text-align: center; padding: 32px 20px; }
+.kids-cta p { font-size: 1.1rem; color: #374151; margin-bottom: 16px; }
+.kids-cta a { display: inline-block; background: #1E3A5F; color: #fff; padding: 14px 28px; border-radius: 12px; font-family: 'Lexend', sans-serif; font-weight: 600; font-size: 1rem; text-decoration: none; transition: background 0.2s, transform 0.1s; margin: 6px; }
+.kids-cta a:hover { background: #2D4A6F; transform: translateY(-2px); }
+.kids-cta a.secondary-cta { background: #8B5CF6; }
+.kids-cta a.secondary-cta:hover { background: #7C3AED; }
+
+/* Animations */
+@keyframes nucleusPulse { 0%, 100% { box-shadow: 0 0 20px rgba(245,158,11,0.5); } 50% { box-shadow: 0 0 35px rgba(245,158,11,0.8); } }
+@keyframes orbitRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes burstPulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } }
+@keyframes steamRise { 0% { transform: translateY(0) scale(1); opacity: 0.7; } 100% { transform: translateY(-30px) scale(2); opacity: 0; } }
+@keyframes twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.6); } }
+@media (prefers-reduced-motion: reduce) {
+    .nucleus, .orbit, .energy-burst, .steam-puff, .mini-steam, .night-star, .kids-card { animation: none !important; transition: none !important; }
+    .kids-card { opacity: 1; transform: none; }
+    .orbit-2 { transform: rotate(60deg); }
+    .orbit-3 { transform: rotate(-60deg); }
+}
+@media (max-width: 600px) {
+    .kids-hero h1 { font-size: 2rem; }
+    .kids-card { padding: 24px 20px; }
+    .kids-card h2 { font-size: 1.3rem; }
+    .always-on-scene { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>How Nuclear Energy Works</h1>
+    <p class="subtitle">Tiny atoms, HUGE power! Let&rsquo;s explore the energy inside everything.</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="kids-wrap">
+
+<div class="kids-hero">
+    <span class="age-tag">Ages 5 &ndash; 7</span>
+    <h1>The Superpower Inside Atoms!</h1>
+    <p>Everything around you &mdash; your toys, the air, even YOU &mdash; is made of teeny-tiny things called atoms. And atoms have a secret superpower: they hold a LOT of energy!</p>
+</div>
+
+<!-- 1. WHAT IS AN ATOM? -->
+<div class="kids-card card-atom">
+    <h2>What Is an Atom?</h2>
+    <div class="illustration atom-scene">
+        <div class="energy-burst"></div>
+        <div class="orbit orbit-1"><div class="electron"></div></div>
+        <div class="orbit orbit-2"><div class="electron"></div></div>
+        <div class="orbit orbit-3"><div class="electron"></div></div>
+        <div class="nucleus"></div>
+        <div class="atom-label">An atom &mdash; everything is made of these!</div>
+        <div class="rexy-atom">
+            <div class="dino-speech">So tiny!</div>
+            <div class="ra-body">
+                <div class="ra-head"></div>
+                <div class="ra-arm"></div>
+                <div class="ra-tail"></div>
+                <div class="ra-leg"></div>
+                <div class="ra-leg"></div>
+            </div>
+        </div>
+    </div>
+    <p>An <strong>atom</strong> is the smallest piece of anything. They&rsquo;re so small that millions of them could fit on the tip of your pencil!</p>
+    <p>In the middle of every atom is a tiny center called the <strong>nucleus</strong>. It&rsquo;s packed with energy. When we split a nucleus apart, it releases a <strong>HUGE</strong> amount of heat!</p>
+    <p>That&rsquo;s called <strong>nuclear energy</strong> &mdash; energy from splitting atoms.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#129516;</span>
+        <span><strong>Fun fact:</strong> One tiny piece of uranium (a special rock) the size of a marble has as much energy as a whole train car full of coal!</span>
+    </div>
+</div>
+
+<!-- 2. THE POWER PLANT -->
+<div class="kids-card card-plant">
+    <h2>Inside a Nuclear Power Plant</h2>
+    <div class="illustration plant-scene">
+        <div class="reactor-building">
+            <div class="reactor-dome"></div>
+            <div class="atom-symbol"></div>
+        </div>
+        <div class="cooling-tower">
+            <div class="steam"><div class="steam-puff"></div><div class="steam-puff"></div><div class="steam-puff"></div></div>
+            <div class="tower-shape"></div>
+        </div>
+        <div class="cooling-tower">
+            <div class="steam"><div class="steam-puff"></div><div class="steam-puff"></div><div class="steam-puff"></div></div>
+            <div class="tower-shape"></div>
+        </div>
+        <div class="spike-plant">
+            <div class="sp-body">
+                <div class="sp-head"></div>
+                <div class="sp-plates"><span></span><span></span><span></span><span></span></div>
+                <div class="sp-leg"></div>
+                <div class="sp-leg"></div>
+                <div class="sp-tail"></div>
+            </div>
+        </div>
+    </div>
+    <p>A nuclear power plant splits atoms to make heat. That heat boils water into <strong>steam</strong>. The steam spins a big wheel called a <strong>turbine</strong>, and the turbine makes electricity!</p>
+    <p>The big towers you see are <strong>cooling towers</strong>. They cool down the steam so it turns back into water. The white puffs coming out are just steam &mdash; not smoke!</p>
+    <p>Nuclear plants don&rsquo;t burn anything, so they make <strong>no CO&#8322;</strong> while running. That means clean air!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127971;</span>
+        <span><strong>Fun fact:</strong> Those big cooling towers breathe out steam &mdash; just like your breath on a cold day! It&rsquo;s water vapor, not pollution.</span>
+    </div>
+</div>
+
+<!-- 3. ALWAYS ON -->
+<div class="kids-card card-power">
+    <h2>Day AND Night Power!</h2>
+    <div class="illustration always-on-scene">
+        <div class="night-star"></div>
+        <div class="night-star"></div>
+        <div class="night-star"></div>
+        <div class="day-side">
+            <div class="day-sun-mini"></div>
+            <span class="check-mark">&#10003;</span>
+            <div class="day-label">Daytime? ON!</div>
+        </div>
+        <div class="center-plant">
+            <div class="mini-steam"></div>
+            <div class="mini-tower"></div>
+            <div class="always-label">Always running!</div>
+        </div>
+        <div class="night-side">
+            <div class="night-moon-mini"></div>
+            <span class="check-mark">&#10003;</span>
+            <div class="night-label">Nighttime? ON!</div>
+        </div>
+    </div>
+    <p>Here&rsquo;s what makes nuclear energy really special: it works <strong>all the time</strong>! Day or night, rain or shine, windy or calm.</p>
+    <p>Solar panels need the sun. Wind turbines need the wind. But nuclear plants just keep going and going, 24 hours a day, 7 days a week.</p>
+    <p>That makes nuclear a great <strong>teammate</strong> for solar and wind &mdash; it fills in when they can&rsquo;t!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128171;</span>
+        <span><strong>Key idea:</strong> Nuclear energy is one of the most powerful clean energy sources. A single plant can power a million homes &mdash; day and night, rain or shine!</span>
+    </div>
+    <div class="quiz-box">
+        <h3>Quick Quiz!</h3>
+        <p style="font-size:0.95rem; color:#5B21B6; margin-bottom:12px;">What comes out of nuclear cooling towers?</p>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">A) Smoke</button>
+        <button class="quiz-btn" data-answer="correct" onclick="handleQuiz(this)">B) Steam (water vapor)</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">C) CO&#8322; pollution</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">D) Nothing</button>
+        <div class="quiz-result" id="quizResult"></div>
+    </div>
+</div>
+
+<div class="kids-cta">
+    <p>Want to learn about more clean energy sources?</p>
+    <a class="secondary-cta" href="kids_geothermal.html">Learn About Geothermal &rarr;</a>
+    <a href="kids_energy.html">All Clean Energy &rarr;</a>
+</div>
+
+</div>
+
+<script>
+(function() {
+    var cards = document.querySelectorAll('.kids-card');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
+        });
+    }, { threshold: 0.15 });
+    cards.forEach(function(card) { observer.observe(card); });
+})();
+function handleQuiz(btn) {
+    var box = btn.closest('.quiz-box'), buttons = box.querySelectorAll('.quiz-btn'), result = box.querySelector('.quiz-result');
+    buttons.forEach(function(b) { b.disabled = true; b.style.cursor = 'default'; });
+    if (btn.getAttribute('data-answer') === 'correct') {
+        btn.classList.add('correct');
+        result.textContent = 'That\u2019s right! It\u2019s just steam \u2014 like a big tea kettle! No pollution at all.';
+        result.style.background = '#DCFCE7'; result.style.color = '#15803D';
+    } else {
+        btn.classList.add('wrong');
+        buttons.forEach(function(b) { if (b.getAttribute('data-answer') === 'correct') b.classList.add('correct'); });
+        result.textContent = 'Not quite! Those puffy clouds are steam \u2014 just water vapor. Nuclear plants don\u2019t make smoke!';
+        result.style.background = '#FEF3C7'; result.style.color = '#92400E';
+    }
+    result.style.display = 'block';
+}
+</script>
+</body>
+</html>
