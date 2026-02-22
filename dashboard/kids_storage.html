@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Energy Storage Works — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body {
+    background: linear-gradient(180deg, #EDE9FE 0%, #DDD6FE 25%, #E0E7FF 50%, #DCFCE7 75%, #EDE9FE 100%);
+    background-attachment: fixed;
+}
+.kids-wrap { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+
+.kids-hero { text-align: center; padding: 48px 20px 32px; }
+.kids-hero h1 { font-family: 'Lexend', sans-serif; font-size: 2.8rem; font-weight: 700; color: #1E3A5F; margin-bottom: 8px; line-height: 1.2; }
+.kids-hero .age-tag { display: inline-block; background: #FBBF24; color: #78350F; font-size: 0.85rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; margin-bottom: 16px; font-family: 'Lexend', sans-serif; }
+.kids-hero p { font-size: 1.15rem; color: #374151; max-width: 540px; margin: 0 auto; line-height: 1.6; }
+
+.kids-card { background: #fff; border-radius: 24px; padding: 36px 32px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.kids-card.visible { opacity: 1; transform: translateY(0); }
+.kids-card h2 { font-family: 'Lexend', sans-serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+.kids-card p { font-size: 1.05rem; color: #374151; line-height: 1.7; margin-bottom: 12px; }
+.kids-card p:last-child { margin-bottom: 0; }
+
+.card-why { border-left: 6px solid #F59E0B; }
+.card-why h2 { color: #B45309; }
+.card-battery { border-left: 6px solid #A855F7; }
+.card-battery h2 { color: #7E22CE; }
+.card-big-storage { border-left: 6px solid #0EA5E9; }
+.card-big-storage h2 { color: #0369A1; }
+.card-team { border-left: 6px solid #22C55E; }
+.card-team h2 { color: #15803D; }
+
+.illustration { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 20px 0 8px; min-height: 140px; position: relative; }
+
+/* === WHY STORE SCENE (day vs night) === */
+.why-scene {
+    background: linear-gradient(to right, #FDE68A 0%, #FDE68A 48%, #475569 52%, #1E293B 100%);
+    border-radius: 16px; min-height: 200px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; justify-content: space-around; align-items: center;
+}
+/* divider */
+.why-scene::before {
+    content: '';
+    position: absolute;
+    top: 10%; bottom: 10%;
+    left: 50%;
+    width: 3px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+}
+.day-half { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
+.night-half { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
+.w-sun { width: 45px; height: 45px; background: radial-gradient(circle, #FDE047 40%, #FBBF24 70%, transparent 71%); border-radius: 50%; animation: pulse 3s ease-in-out infinite; }
+.w-panel { width: 40px; height: 24px; background: linear-gradient(135deg, #1E3A8A, #3B82F6); border-radius: 3px; border: 2px solid #1E40AF; }
+.w-label { font-family: 'Lexend', sans-serif; font-weight: 700; font-size: 0.85rem; }
+.w-label-day { color: #92400E; }
+.w-label-night { color: #94A3B8; }
+.w-bolt { font-size: 1.5rem; }
+.w-moon { width: 28px; height: 28px; background: #FDE68A; border-radius: 50%; position: relative; }
+.w-moon::before { content: ''; position: absolute; width: 22px; height: 22px; background: #1E293B; border-radius: 50%; top: -4px; left: -6px; }
+.w-panel-dark { width: 40px; height: 24px; background: linear-gradient(135deg, #334155, #475569); border-radius: 3px; border: 2px solid #64748B; }
+.w-x { font-size: 1.3rem; color: #EF4444; font-weight: 700; }
+.w-question { font-family: 'Lexend', sans-serif; font-size: 0.8rem; font-weight: 600; color: #FCA5A5; text-align: center; }
+/* stars */
+.w-star { position: absolute; width: 3px; height: 3px; background: #FDE68A; border-radius: 50%; animation: twinkle 2s ease-in-out infinite; }
+.w-star:nth-child(1) { top: 12px; right: 10%; }
+.w-star:nth-child(2) { top: 25px; right: 18%; animation-delay: 0.5s; }
+.w-star:nth-child(3) { top: 18px; right: 30%; animation-delay: 1s; }
+/* Rexy */
+.rexy-store { position: absolute; bottom: 10px; left: 8%; z-index: 4; }
+.rs-body { width: 40px; height: 24px; background: #16A34A; border-radius: 12px 18px 6px 9px; position: relative; }
+.rs-head { position: absolute; right: -13px; top: -4px; width: 18px; height: 15px; background: #16A34A; border-radius: 8px 10px 4px 3px; }
+.rs-head::before { content: ''; position: absolute; top: 3px; right: 3px; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #1E3A5F; }
+.rs-head::after { content: ''; position: absolute; bottom: 1px; right: 1px; width: 9px; height: 2px; background: #14532D; border-radius: 1px; }
+.rs-arm { position: absolute; right: 1px; top: 7px; width: 6px; height: 3px; background: #15803D; border-radius: 2px; transform: rotate(25deg); }
+.rs-tail { position: absolute; left: -11px; top: 2px; width: 14px; height: 8px; background: #16A34A; border-radius: 8px 0 2px 4px; }
+.rs-leg { position: absolute; bottom: -8px; width: 6px; height: 9px; background: #15803D; border-radius: 0 0 2px 2px; }
+.rs-leg:nth-child(5) { left: 7px; }
+.rs-leg:nth-child(6) { right: 9px; }
+.dino-speech { position: absolute; top: -26px; right: -12px; background: #fff; border-radius: 12px; padding: 4px 10px; font-family: 'Lexend', sans-serif; font-size: 0.65rem; font-weight: 600; color: #1E3A5F; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 5; }
+.dino-speech::after { content: ''; position: absolute; bottom: -6px; left: 16px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff; }
+
+/* === BATTERY SCENE === */
+.battery-scene {
+    background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 50%, #C4B5FD 100%);
+    border-radius: 16px; min-height: 220px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; justify-content: center; align-items: center; gap: 30px;
+}
+.big-battery {
+    width: 70px; height: 110px;
+    border: 5px solid #7E22CE;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+}
+.big-battery::before {
+    content: '';
+    position: absolute;
+    top: -12px; left: 50%; transform: translateX(-50%);
+    width: 28px; height: 12px;
+    background: #7E22CE;
+    border-radius: 6px 6px 0 0;
+}
+.big-battery-fill {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, #A855F7, #C084FC);
+    animation: charge 3s ease-in-out infinite;
+}
+.battery-label-charge {
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #5B21B6;
+    text-align: center;
+    animation: flicker 2s ease-in-out infinite;
+}
+.battery-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 160px;
+}
+.battery-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #5B21B6;
+}
+.step-num {
+    width: 24px; height: 24px;
+    background: #7E22CE;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+/* Spike */
+.spike-store { position: absolute; bottom: 10px; right: 10%; z-index: 5; }
+.ss-body { width: 32px; height: 18px; background: #F59E0B; border-radius: 9px 7px 4px 7px; position: relative; }
+.ss-head { position: absolute; left: -9px; top: 1px; width: 12px; height: 10px; background: #F59E0B; border-radius: 6px 2px 3px 6px; }
+.ss-head::before { content: ''; position: absolute; top: 2px; left: 2px; width: 3px; height: 3px; background: #fff; border-radius: 50%; box-shadow: inset 1px 0 0 #78350F; }
+.ss-plates { position: absolute; top: -6px; left: 3px; display: flex; gap: 2px; }
+.ss-plates span { width: 4px; height: 7px; background: #D97706; border-radius: 50% 50% 0 0; }
+.ss-leg { position: absolute; bottom: -6px; width: 4px; height: 7px; background: #D97706; border-radius: 0 0 2px 2px; }
+.ss-leg:nth-child(4) { left: 4px; }
+.ss-leg:nth-child(5) { right: 4px; }
+
+/* === BIG STORAGE SCENE === */
+.big-storage-scene {
+    background: linear-gradient(to bottom, #BAE6FD 0%, #7DD3FC 40%, #4ADE80 70%, #22C55E 100%);
+    border-radius: 16px; min-height: 220px; padding: 16px; position: relative; overflow: hidden;
+}
+/* pumped hydro */
+.mountain {
+    position: absolute; bottom: 0; left: 10%;
+    width: 0; height: 0;
+    border-left: 70px solid transparent;
+    border-right: 70px solid transparent;
+    border-bottom: 100px solid #6B7280;
+    z-index: 2;
+}
+.mountain::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: -14px;
+    width: 28px; height: 8px;
+    background: #fff;
+    border-radius: 50%;
+}
+/* upper reservoir */
+.upper-lake {
+    position: absolute;
+    bottom: 85px; left: 10%;
+    width: 50px; height: 10px;
+    background: #38BDF8;
+    border-radius: 50%;
+    z-index: 3;
+}
+/* lower reservoir */
+.lower-lake {
+    position: absolute;
+    bottom: 0; left: 55%;
+    width: 100px; height: 20px;
+    background: linear-gradient(to bottom, #38BDF8, #0EA5E9);
+    border-radius: 0 0 12px 12px;
+    z-index: 2;
+}
+/* pipe connecting them */
+.hydro-pipe {
+    position: absolute;
+    bottom: 20px; left: 28%;
+    width: 30%;
+    height: 3px;
+    background: #1E40AF;
+    z-index: 3;
+    transform: rotate(-30deg);
+    transform-origin: left bottom;
+}
+/* water drops flowing */
+.water-drop {
+    position: absolute;
+    width: 6px; height: 8px;
+    background: #38BDF8;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    z-index: 4;
+    animation: dropFall 2s ease-in infinite;
+}
+.water-drop:nth-child(7) { top: 45%; left: 35%; }
+.water-drop:nth-child(8) { top: 40%; left: 42%; animation-delay: 0.6s; }
+.water-drop:nth-child(9) { top: 50%; left: 38%; animation-delay: 1.2s; }
+/* labels */
+.storage-label {
+    position: absolute;
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0,0,0,0.35);
+    padding: 2px 8px;
+    border-radius: 6px;
+    z-index: 5;
+    white-space: nowrap;
+}
+.storage-label:nth-child(10) { top: 20%; left: 5%; }
+.storage-label:nth-child(11) { bottom: 8%; right: 10%; }
+/* grid battery */
+.grid-battery {
+    position: absolute;
+    right: 8%; bottom: 25%;
+    z-index: 3;
+}
+.gb-box {
+    width: 45px; height: 30px;
+    background: linear-gradient(135deg, #7E22CE, #A855F7);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+.gb-label {
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #5B21B6;
+    text-align: center;
+    margin-top: 3px;
+    background: rgba(255,255,255,0.8);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+/* === TEAM SCENE === */
+.team-scene {
+    background: linear-gradient(to bottom, #DBEAFE 0%, #BBF7D0 100%);
+    border-radius: 16px; min-height: 200px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; justify-content: center; align-items: flex-end; gap: 16px;
+}
+.team-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 2;
+}
+.team-label {
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #1E3A5F;
+    background: rgba(255,255,255,0.8);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+/* mini sun */
+.t-sun { width: 30px; height: 30px; background: radial-gradient(circle, #FDE047 40%, #FBBF24 70%, transparent 71%); border-radius: 50%; }
+/* mini turbine */
+.t-turbine { display: flex; flex-direction: column; align-items: center; }
+.t-hub { width: 6px; height: 6px; background: #D1D5DB; border-radius: 50%; position: relative; z-index: 2; }
+.t-blades { position: absolute; width: 30px; height: 30px; top: -13px; animation: spin 4s linear infinite; }
+.t-blades span { position: absolute; width: 2px; height: 14px; background: #D1D5DB; border-radius: 1px; left: 50%; top: 50%; transform-origin: center top; }
+.t-blades span:nth-child(1) { transform: translateX(-50%) rotate(0deg); }
+.t-blades span:nth-child(2) { transform: translateX(-50%) rotate(120deg); }
+.t-blades span:nth-child(3) { transform: translateX(-50%) rotate(240deg); }
+.t-tower { width: 3px; height: 35px; background: #9CA3AF; border-radius: 0 0 2px 2px; }
+/* mini battery */
+.t-battery { width: 25px; height: 40px; border: 3px solid #7E22CE; border-radius: 6px; position: relative; overflow: hidden; background: #fff; }
+.t-battery::before { content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 12px; height: 6px; background: #7E22CE; border-radius: 3px 3px 0 0; }
+.t-battery-fill { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #A855F7, #C084FC); animation: charge 3s ease-in-out infinite; }
+/* plus signs */
+.plus-sign { font-family: 'Lexend', sans-serif; font-size: 1.5rem; font-weight: 700; color: #1E3A5F; align-self: center; z-index: 2; }
+/* equals */
+.equals-sign { font-family: 'Lexend', sans-serif; font-size: 1.5rem; font-weight: 700; color: #1E3A5F; align-self: center; z-index: 2; }
+/* happy earth */
+.happy-earth {
+    width: 45px; height: 45px;
+    background: radial-gradient(circle at 40% 40%, #60A5FA 0%, #3B82F6 40%, #4ADE80 41%, #22C55E 60%, #3B82F6 61%);
+    border-radius: 50%;
+    position: relative;
+    align-self: center;
+    z-index: 2;
+}
+.happy-face { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.happy-eye { display: inline-block; width: 4px; height: 4px; background: #1E3A5F; border-radius: 50%; margin: 0 3px; }
+.happy-mouth { width: 12px; height: 6px; border: 2px solid #1E3A5F; border-top: none; border-radius: 0 0 12px 12px; margin: 2px auto 0; }
+
+/* Fun facts & Quiz & CTA */
+.fun-fact { background: linear-gradient(135deg, #FEF3C7, #FDE68A); border-radius: 16px; padding: 16px 20px; margin-top: 16px; font-size: 0.95rem; color: #78350F; font-weight: 600; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+.fun-fact-icon { font-size: 1.3rem; flex-shrink: 0; line-height: 1.4; }
+.quiz-box { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); border-radius: 16px; padding: 24px; margin-top: 20px; }
+.quiz-box h3 { font-family: 'Lexend', sans-serif; color: #5B21B6; font-size: 1.15rem; margin-bottom: 12px; }
+.quiz-btn { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #fff; border: 2px solid #C4B5FD; border-radius: 12px; font-size: 1rem; font-family: 'Plus Jakarta Sans', sans-serif; color: #374151; cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
+.quiz-btn:hover { background: #F5F3FF; border-color: #8B5CF6; transform: scale(1.01); }
+.quiz-btn.correct { background: #DCFCE7; border-color: #22C55E; color: #15803D; font-weight: 600; }
+.quiz-btn.wrong { background: #FEE2E2; border-color: #EF4444; color: #DC2626; }
+.quiz-result { display: none; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; margin-top: 8px; text-align: center; }
+.kids-cta { text-align: center; padding: 32px 20px; }
+.kids-cta p { font-size: 1.1rem; color: #374151; margin-bottom: 16px; }
+.kids-cta a { display: inline-block; background: #1E3A5F; color: #fff; padding: 14px 28px; border-radius: 12px; font-family: 'Lexend', sans-serif; font-weight: 600; font-size: 1rem; text-decoration: none; transition: background 0.2s, transform 0.1s; margin: 6px; }
+.kids-cta a:hover { background: #2D4A6F; transform: translateY(-2px); }
+.kids-cta a.secondary-cta { background: #A855F7; }
+.kids-cta a.secondary-cta:hover { background: #7E22CE; }
+
+/* Animations */
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes charge { 0% { height: 15%; } 50% { height: 85%; } 100% { height: 15%; } }
+@keyframes flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.6); } }
+@keyframes dropFall { 0% { transform: translateY(0); opacity: 0.8; } 100% { transform: translateY(40px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+    .w-sun, .big-battery-fill, .battery-label-charge, .t-blades,
+    .t-battery-fill, .water-drop, .w-star, .kids-card { animation: none !important; transition: none !important; }
+    .kids-card { opacity: 1; transform: none; }
+}
+@media (max-width: 600px) {
+    .kids-hero h1 { font-size: 2rem; }
+    .kids-card { padding: 24px 20px; }
+    .kids-card h2 { font-size: 1.3rem; }
+    .why-scene { flex-wrap: wrap; gap: 12px; }
+    .battery-scene { flex-wrap: wrap; gap: 16px; }
+    .team-scene { flex-wrap: wrap; gap: 10px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>How Energy Storage Works</h1>
+    <p class="subtitle">Saving sunshine for a rainy day! Learn how we store energy.</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="kids-wrap">
+
+<div class="kids-hero">
+    <span class="age-tag">Ages 5 &ndash; 7</span>
+    <h1>Saving Energy for Later!</h1>
+    <p>What happens when the sun goes down or the wind stops? We need a way to save energy and use it later. That&rsquo;s what batteries and storage do!</p>
+</div>
+
+<!-- 1. WHY STORE ENERGY? -->
+<div class="kids-card card-why">
+    <h2>Why Do We Need to Store Energy?</h2>
+    <div class="illustration why-scene">
+        <div class="w-star"></div>
+        <div class="w-star"></div>
+        <div class="w-star"></div>
+        <div class="day-half">
+            <div class="w-sun"></div>
+            <div class="w-panel"></div>
+            <div class="w-bolt">&#9889;</div>
+            <div class="w-label w-label-day">Daytime: lots of power!</div>
+        </div>
+        <div class="night-half">
+            <div class="w-moon"></div>
+            <div class="w-panel-dark"></div>
+            <div class="w-x">&#10007;</div>
+            <div class="w-question">Nighttime: no solar!</div>
+        </div>
+        <div class="rexy-store">
+            <div class="dino-speech">Save it!</div>
+            <div class="rs-body">
+                <div class="rs-head"></div>
+                <div class="rs-arm"></div>
+                <div class="rs-tail"></div>
+                <div class="rs-leg"></div>
+                <div class="rs-leg"></div>
+            </div>
+        </div>
+    </div>
+    <p>During the day, solar panels can make <strong>more</strong> electricity than people need. But at night, they make <strong>none</strong>.</p>
+    <p>It&rsquo;s like having lots of lemonade in the morning but nothing to drink at bedtime. If only we could save some for later&hellip;</p>
+    <p>That&rsquo;s exactly what <strong>energy storage</strong> does! It saves extra energy when we have too much and gives it back when we need it.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128166;</span>
+        <span><strong>Fun fact:</strong> Think of storage like a water bottle &mdash; you fill it up at the fountain and drink it later when you&rsquo;re thirsty!</span>
+    </div>
+</div>
+
+<!-- 2. HOW BATTERIES WORK -->
+<div class="kids-card card-battery">
+    <h2>How Do Batteries Work?</h2>
+    <div class="illustration battery-scene">
+        <div class="big-battery"><div class="big-battery-fill"></div></div>
+        <div class="battery-steps">
+            <div class="battery-step"><div class="step-num">1</div><span>Sun shines, panels make electricity</span></div>
+            <div class="battery-step"><div class="step-num">2</div><span>Extra electricity charges the battery</span></div>
+            <div class="battery-step"><div class="step-num">3</div><span>At night, battery gives power back!</span></div>
+        </div>
+        <div class="spike-store">
+            <div class="ss-body">
+                <div class="ss-head"></div>
+                <div class="ss-plates"><span></span><span></span><span></span><span></span></div>
+                <div class="ss-leg"></div>
+                <div class="ss-leg"></div>
+            </div>
+        </div>
+    </div>
+    <p>Batteries store electricity using special chemicals inside. When electricity flows in, the chemicals change one way. When you need power, they change back and push electricity out!</p>
+    <p>You already use batteries every day &mdash; in your tablet, your toys, and your parents&rsquo; phones. <strong>Grid batteries</strong> are the same idea, just MUCH bigger!</p>
+    <p>Some grid batteries are as big as a <strong>football field</strong> and can power thousands of homes for hours.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128267;</span>
+        <span><strong>Fun fact:</strong> The biggest battery in the world is in Australia. It can store enough electricity to power 57,000 homes for an hour!</span>
+    </div>
+</div>
+
+<!-- 3. BIG STORAGE IDEAS -->
+<div class="kids-card card-big-storage">
+    <h2>Other Ways to Store Energy!</h2>
+    <div class="illustration big-storage-scene">
+        <div class="mountain"></div>
+        <div class="upper-lake"></div>
+        <div class="lower-lake"></div>
+        <div class="hydro-pipe"></div>
+        <div class="water-drop"></div>
+        <div class="water-drop"></div>
+        <div class="water-drop"></div>
+        <div class="storage-label">Water pumped UP the hill</div>
+        <div class="storage-label">Water flows DOWN to make power</div>
+        <div class="grid-battery">
+            <div class="gb-box">&#9889;</div>
+            <div class="gb-label">Grid battery</div>
+        </div>
+    </div>
+    <p>Batteries aren&rsquo;t the only way to store energy! Here are some cool ideas:</p>
+    <p><strong>Pumped hydro:</strong> When we have extra electricity, we pump water UP a hill into a lake. When we need power, we let the water flow DOWN through turbines. It&rsquo;s like a giant water battery!</p>
+    <p><strong>Iron-air batteries:</strong> These special batteries use iron (the stuff in nails!) and air to store energy for DAYS, not just hours. They&rsquo;re great for cloudy weeks!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#9968;</span>
+        <span><strong>Fun fact:</strong> Pumped hydro storage has been around since the 1920s! It&rsquo;s the oldest and most common way to store big amounts of energy.</span>
+    </div>
+</div>
+
+<!-- 4. THE TEAM -->
+<div class="kids-card card-team">
+    <h2>The Clean Energy Team!</h2>
+    <div class="illustration team-scene">
+        <div class="team-item">
+            <div class="t-sun"></div>
+            <div class="team-label">Solar</div>
+        </div>
+        <div class="plus-sign">+</div>
+        <div class="team-item">
+            <div class="t-turbine" style="position:relative;">
+                <div class="t-hub"><div class="t-blades"><span></span><span></span><span></span></div></div>
+                <div class="t-tower"></div>
+            </div>
+            <div class="team-label">Wind</div>
+        </div>
+        <div class="plus-sign">+</div>
+        <div class="team-item">
+            <div class="t-battery"><div class="t-battery-fill"></div></div>
+            <div class="team-label">Storage</div>
+        </div>
+        <div class="equals-sign">=</div>
+        <div class="team-item">
+            <div class="happy-earth">
+                <div class="happy-face">
+                    <div><span class="happy-eye"></span><span class="happy-eye"></span></div>
+                    <div class="happy-mouth"></div>
+                </div>
+            </div>
+            <div class="team-label">Happy Earth!</div>
+        </div>
+    </div>
+    <p>Storage is the <strong>missing puzzle piece</strong> that makes clean energy work all the time!</p>
+    <p>Solar + wind + batteries = electricity for <strong>every single hour</strong> of the year &mdash; all 8,760 of them!</p>
+    <p>When we store energy, we don&rsquo;t need to burn fossil fuels at night. The more storage we build, the cleaner our energy gets. And that means a happier, healthier planet!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127758;</span>
+        <span><strong>Key idea:</strong> Energy storage is like having a piggy bank for electricity. Save it when you have extra, spend it when you need it!</span>
+    </div>
+    <div class="quiz-box">
+        <h3>Quick Quiz!</h3>
+        <p style="font-size:0.95rem; color:#5B21B6; margin-bottom:12px;">Why do we need energy storage?</p>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">A) To make solar panels work faster</button>
+        <button class="quiz-btn" data-answer="correct" onclick="handleQuiz(this)">B) To save extra energy for when the sun and wind aren&rsquo;t available</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">C) To make wind blow harder</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">D) To make electricity more expensive</button>
+        <div class="quiz-result" id="quizResult"></div>
+    </div>
+</div>
+
+<div class="kids-cta">
+    <p>Want to learn about more clean energy sources?</p>
+    <a class="secondary-cta" href="kids_solar.html">Learn About Solar &rarr;</a>
+    <a href="kids_energy.html">All Clean Energy &rarr;</a>
+</div>
+
+</div>
+
+<script>
+(function() {
+    var cards = document.querySelectorAll('.kids-card');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
+        });
+    }, { threshold: 0.15 });
+    cards.forEach(function(card) { observer.observe(card); });
+})();
+function handleQuiz(btn) {
+    var box = btn.closest('.quiz-box'), buttons = box.querySelectorAll('.quiz-btn'), result = box.querySelector('.quiz-result');
+    buttons.forEach(function(b) { b.disabled = true; b.style.cursor = 'default'; });
+    if (btn.getAttribute('data-answer') === 'correct') {
+        btn.classList.add('correct');
+        result.textContent = 'That\u2019s right! Storage saves extra energy so we can use it when the sun isn\u2019t shining or the wind isn\u2019t blowing!';
+        result.style.background = '#DCFCE7'; result.style.color = '#15803D';
+    } else {
+        btn.classList.add('wrong');
+        buttons.forEach(function(b) { if (b.getAttribute('data-answer') === 'correct') b.classList.add('correct'); });
+        result.textContent = 'Not quite! We need storage to save extra electricity for later \u2014 like a piggy bank for energy!';
+        result.style.background = '#FEF3C7'; result.style.color = '#92400E';
+    }
+    result.style.display = 'block';
+}
+</script>
+</body>
+</html>

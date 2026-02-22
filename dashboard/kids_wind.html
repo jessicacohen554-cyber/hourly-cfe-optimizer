@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Wind Energy Works — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body {
+    background: linear-gradient(180deg, #DBEAFE 0%, #E0F2FE 30%, #DCFCE7 60%, #DBEAFE 100%);
+    background-attachment: fixed;
+}
+.kids-wrap { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+
+/* Hero */
+.kids-hero { text-align: center; padding: 48px 20px 32px; }
+.kids-hero h1 { font-family: 'Lexend', sans-serif; font-size: 2.8rem; font-weight: 700; color: #1E3A5F; margin-bottom: 8px; line-height: 1.2; }
+.kids-hero .age-tag { display: inline-block; background: #FBBF24; color: #78350F; font-size: 0.85rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; margin-bottom: 16px; font-family: 'Lexend', sans-serif; }
+.kids-hero p { font-size: 1.15rem; color: #374151; max-width: 540px; margin: 0 auto; line-height: 1.6; }
+
+/* Cards */
+.kids-card { background: #fff; border-radius: 24px; padding: 36px 32px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.kids-card.visible { opacity: 1; transform: translateY(0); }
+.kids-card h2 { font-family: 'Lexend', sans-serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+.kids-card p { font-size: 1.05rem; color: #374151; line-height: 1.7; margin-bottom: 12px; }
+.kids-card p:last-child { margin-bottom: 0; }
+
+.card-breeze { border-left: 6px solid #60A5FA; }
+.card-breeze h2 { color: #1D4ED8; }
+.card-turbine { border-left: 6px solid #22C55E; }
+.card-turbine h2 { color: #15803D; }
+.card-farm { border-left: 6px solid #0EA5E9; }
+.card-farm h2 { color: #0369A1; }
+.card-challenge { border-left: 6px solid #F59E0B; }
+.card-challenge h2 { color: #B45309; }
+
+.illustration { display: flex; justify-content: center; align-items: flex-end; gap: 16px; margin: 20px 0 8px; min-height: 140px; position: relative; }
+
+/* === WINDY SCENE === */
+.windy-scene {
+    background: linear-gradient(to bottom, #BFDBFE 0%, #93C5FD 40%, #60A5FA 100%);
+    border-radius: 16px; min-height: 200px; padding: 16px; position: relative; overflow: hidden;
+}
+.windy-scene::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 35px; background: linear-gradient(to bottom, #4ADE80, #22C55E); border-radius: 0 0 16px 16px; }
+.wind-line { position: absolute; height: 3px; background: rgba(255,255,255,0.6); border-radius: 3px; animation: windBlow 2s ease-in-out infinite; }
+.wind-line:nth-child(1) { width: 40px; top: 25%; left: 10%; }
+.wind-line:nth-child(2) { width: 55px; top: 35%; left: 30%; animation-delay: 0.4s; }
+.wind-line:nth-child(3) { width: 35px; top: 20%; left: 55%; animation-delay: 0.8s; }
+.wind-line:nth-child(4) { width: 50px; top: 45%; left: 15%; animation-delay: 1.2s; }
+.wind-line:nth-child(5) { width: 30px; top: 30%; left: 70%; animation-delay: 0.6s; }
+.cloud { position: absolute; background: #fff; border-radius: 50px; z-index: 2; animation: drift 8s ease-in-out infinite; }
+.cloud::before { content: ''; position: absolute; background: #fff; border-radius: 50%; }
+.cloud-1 { width: 70px; height: 28px; top: 10%; left: 5%; }
+.cloud-1::before { width: 35px; height: 35px; top: -18px; left: 16px; }
+.cloud-2 { width: 55px; height: 22px; top: 15%; right: 10%; animation-delay: 3s; }
+.cloud-2::before { width: 28px; height: 28px; top: -14px; left: 12px; }
+.wind-tree { position: absolute; bottom: 30px; z-index: 3; animation: treeSway 2s ease-in-out infinite; transform-origin: bottom center; }
+.wind-tree-trunk { width: 8px; height: 35px; background: linear-gradient(to bottom, #92400E, #78350F); border-radius: 3px; margin: 0 auto; }
+.wind-tree-top { width: 32px; height: 38px; background: #22C55E; border-radius: 50%; margin: 0 auto -4px; }
+.wind-tree:nth-child(8) { left: 8%; }
+.wind-tree:nth-child(9) { right: 12%; animation-delay: 0.5s; }
+
+/* Rexy (T-Rex) guide */
+.rexy-guide { position: absolute; bottom: 32px; right: 25%; z-index: 4; }
+.rexy-body { width: 50px; height: 30px; background: #16A34A; border-radius: 16px 24px 8px 12px; position: relative; }
+.rexy-head { position: absolute; right: -16px; top: -6px; width: 22px; height: 18px; background: #16A34A; border-radius: 10px 12px 6px 4px; }
+.rexy-head::before { content: ''; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #1E3A5F; }
+.rexy-head::after { content: ''; position: absolute; bottom: 2px; right: 2px; width: 12px; height: 2px; background: #14532D; border-radius: 2px; }
+.rexy-arm { position: absolute; right: 2px; top: 10px; width: 8px; height: 4px; background: #15803D; border-radius: 2px; transform: rotate(30deg); }
+.rexy-tail { position: absolute; left: -15px; top: 3px; width: 18px; height: 10px; background: #16A34A; border-radius: 10px 0 3px 6px; animation: tailWag 1.5s ease-in-out infinite; transform-origin: right center; }
+.rexy-leg { position: absolute; bottom: -10px; width: 8px; height: 12px; background: #15803D; border-radius: 0 0 3px 3px; }
+.rexy-leg:nth-child(5) { left: 10px; }
+.rexy-leg:nth-child(6) { right: 12px; }
+.dino-speech { position: absolute; top: -30px; right: -10px; background: #fff; border-radius: 12px; padding: 4px 10px; font-family: 'Lexend', sans-serif; font-size: 0.65rem; font-weight: 600; color: #1E3A5F; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 5; }
+.dino-speech::after { content: ''; position: absolute; bottom: -6px; left: 16px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff; }
+
+/* === TURBINE PARTS SCENE === */
+.turbine-scene {
+    background: linear-gradient(to bottom, #E0F2FE 0%, #BAE6FD 100%);
+    border-radius: 16px; min-height: 240px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; justify-content: center; align-items: flex-end;
+}
+.turbine-scene::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 30px; background: #86EFAC; border-radius: 0 0 16px 16px; }
+.big-turbine { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 3; }
+.big-hub { width: 18px; height: 18px; background: #E5E7EB; border-radius: 50%; position: relative; z-index: 2; border: 2px solid #9CA3AF; }
+.big-blades { position: absolute; width: 120px; height: 120px; top: -52px; animation: spin 4s linear infinite; }
+.big-blades span { position: absolute; width: 8px; height: 55px; background: linear-gradient(to bottom, #E5E7EB, #D1D5DB); border-radius: 4px; left: 50%; top: 50%; transform-origin: center top; }
+.big-blades span:nth-child(1) { transform: translateX(-50%) rotate(0deg); }
+.big-blades span:nth-child(2) { transform: translateX(-50%) rotate(120deg); }
+.big-blades span:nth-child(3) { transform: translateX(-50%) rotate(240deg); }
+.big-tower { width: 12px; height: 130px; background: linear-gradient(to bottom, #D1D5DB, #9CA3AF); border-radius: 0 0 4px 4px; }
+.part-label { position: absolute; font-family: 'Lexend', sans-serif; font-size: 0.7rem; font-weight: 600; color: #1E3A5F; background: rgba(255,255,255,0.9); padding: 3px 8px; border-radius: 8px; z-index: 4; white-space: nowrap; }
+.label-blade { top: 12%; left: 10%; }
+.label-hub { top: 42%; right: 12%; }
+.label-tower { bottom: 30%; right: 18%; }
+
+/* Spike (Stegosaurus) guide */
+.spike-guide { position: absolute; bottom: 28px; left: 12%; z-index: 5; }
+.spike-body { width: 40px; height: 22px; background: #F59E0B; border-radius: 12px 10px 6px 10px; position: relative; }
+.spike-head { position: absolute; left: -12px; top: 2px; width: 16px; height: 14px; background: #F59E0B; border-radius: 8px 3px 5px 8px; }
+.spike-head::before { content: ''; position: absolute; top: 3px; left: 3px; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #78350F; }
+.spike-plates { position: absolute; top: -8px; left: 4px; display: flex; gap: 3px; }
+.spike-plates span { width: 6px; height: 10px; background: #D97706; border-radius: 50% 50% 0 0; }
+.spike-leg { position: absolute; bottom: -8px; width: 6px; height: 10px; background: #D97706; border-radius: 0 0 3px 3px; }
+.spike-leg:nth-child(4) { left: 6px; }
+.spike-leg:nth-child(5) { right: 6px; }
+.spike-tail { position: absolute; right: -10px; top: 6px; width: 12px; height: 6px; background: #F59E0B; border-radius: 0 6px 3px 0; }
+
+/* === WIND FARM SCENE === */
+.farm-scene {
+    background: linear-gradient(to bottom, #93C5FD 0%, #60A5FA 50%, #3B82F6 100%);
+    border-radius: 16px; min-height: 200px; padding: 16px; position: relative; overflow: hidden;
+}
+.farm-scene::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(to bottom, #4ADE80, #16A34A); border-radius: 0 0 16px 16px; }
+.farm-turbine { position: absolute; bottom: 36px; display: flex; flex-direction: column; align-items: center; z-index: 3; }
+.farm-hub { width: 8px; height: 8px; background: #E5E7EB; border-radius: 50%; position: relative; z-index: 2; }
+.farm-blades { position: absolute; width: 50px; height: 50px; top: -22px; animation: spin 4s linear infinite; }
+.farm-blades span { position: absolute; width: 3px; height: 22px; background: #D1D5DB; border-radius: 2px; left: 50%; top: 50%; transform-origin: center top; }
+.farm-blades span:nth-child(1) { transform: translateX(-50%) rotate(0deg); }
+.farm-blades span:nth-child(2) { transform: translateX(-50%) rotate(120deg); }
+.farm-blades span:nth-child(3) { transform: translateX(-50%) rotate(240deg); }
+.farm-tower-s { width: 4px; background: linear-gradient(to bottom, #D1D5DB, #9CA3AF); border-radius: 0 0 2px 2px; }
+.farm-turbine:nth-child(1) { left: 8%; }
+.farm-turbine:nth-child(1) .farm-tower-s { height: 60px; }
+.farm-turbine:nth-child(2) { left: 26%; }
+.farm-turbine:nth-child(2) .farm-tower-s { height: 70px; }
+.farm-turbine:nth-child(2) .farm-blades { animation-duration: 5s; }
+.farm-turbine:nth-child(3) { left: 46%; }
+.farm-turbine:nth-child(3) .farm-tower-s { height: 65px; }
+.farm-turbine:nth-child(3) .farm-blades { animation-duration: 3.5s; }
+.farm-turbine:nth-child(4) { left: 66%; }
+.farm-turbine:nth-child(4) .farm-tower-s { height: 55px; }
+.farm-turbine:nth-child(4) .farm-blades { animation-duration: 6s; }
+.farm-turbine:nth-child(5) { left: 84%; }
+.farm-turbine:nth-child(5) .farm-tower-s { height: 72px; }
+.farm-turbine:nth-child(5) .farm-blades { animation-duration: 4.5s; }
+.house { position: absolute; bottom: 36px; z-index: 2; }
+.house-body-s { width: 20px; height: 16px; background: #FDE68A; border-radius: 2px; position: relative; }
+.house-roof-s { width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-bottom: 12px solid #EF4444; margin-left: -4px; }
+.house-door-s { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 6px; height: 8px; background: #92400E; border-radius: 2px 2px 0 0; }
+.house:nth-child(6) { right: 6%; }
+.house:nth-child(7) { right: 16%; }
+.power-line { position: absolute; bottom: 58px; left: 58%; width: 32%; height: 2px; background: #6B7280; z-index: 2; }
+
+/* === CALM / CHALLENGE SCENE === */
+.calm-scene {
+    background: linear-gradient(to bottom, #FEF3C7 0%, #FDE68A 50%, #FBBF24 100%);
+    border-radius: 16px; min-height: 180px; padding: 20px; position: relative; overflow: hidden;
+    display: flex; justify-content: center; align-items: center; gap: 30px;
+}
+.still-turbine { display: flex; flex-direction: column; align-items: center; }
+.still-hub { width: 12px; height: 12px; background: #D1D5DB; border-radius: 50%; position: relative; z-index: 2; }
+.still-blades { position: absolute; width: 60px; height: 60px; top: -26px; }
+.still-blades span { position: absolute; width: 4px; height: 28px; background: #D1D5DB; border-radius: 2px; left: 50%; top: 50%; transform-origin: center top; }
+.still-blades span:nth-child(1) { transform: translateX(-50%) rotate(0deg); }
+.still-blades span:nth-child(2) { transform: translateX(-50%) rotate(120deg); }
+.still-blades span:nth-child(3) { transform: translateX(-50%) rotate(240deg); }
+.still-tower { width: 6px; height: 60px; background: #D1D5DB; border-radius: 0 0 3px 3px; }
+.zzz { font-family: 'Lexend', sans-serif; font-weight: 700; color: #92400E; font-size: 1.2rem; animation: zzFloat 2s ease-in-out infinite; }
+.zzz:nth-child(2) { font-size: 0.9rem; animation-delay: 0.5s; }
+.zzz:nth-child(3) { font-size: 0.7rem; animation-delay: 1s; }
+.calm-text { font-family: 'Lexend', sans-serif; font-weight: 600; color: #92400E; font-size: 1rem; text-align: center; max-width: 140px; line-height: 1.4; }
+
+/* Fun facts & Quiz */
+.fun-fact { background: linear-gradient(135deg, #FEF3C7, #FDE68A); border-radius: 16px; padding: 16px 20px; margin-top: 16px; font-size: 0.95rem; color: #78350F; font-weight: 600; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+.fun-fact-icon { font-size: 1.3rem; flex-shrink: 0; line-height: 1.4; }
+.quiz-box { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); border-radius: 16px; padding: 24px; margin-top: 20px; }
+.quiz-box h3 { font-family: 'Lexend', sans-serif; color: #5B21B6; font-size: 1.15rem; margin-bottom: 12px; }
+.quiz-btn { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #fff; border: 2px solid #C4B5FD; border-radius: 12px; font-size: 1rem; font-family: 'Plus Jakarta Sans', sans-serif; color: #374151; cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
+.quiz-btn:hover { background: #F5F3FF; border-color: #8B5CF6; transform: scale(1.01); }
+.quiz-btn:active { transform: scale(0.99); }
+.quiz-btn.correct { background: #DCFCE7; border-color: #22C55E; color: #15803D; font-weight: 600; }
+.quiz-btn.wrong { background: #FEE2E2; border-color: #EF4444; color: #DC2626; }
+.quiz-result { display: none; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; margin-top: 8px; text-align: center; }
+
+/* CTA */
+.kids-cta { text-align: center; padding: 32px 20px; }
+.kids-cta p { font-size: 1.1rem; color: #374151; margin-bottom: 16px; }
+.kids-cta a { display: inline-block; background: #1E3A5F; color: #fff; padding: 14px 28px; border-radius: 12px; font-family: 'Lexend', sans-serif; font-weight: 600; font-size: 1rem; text-decoration: none; transition: background 0.2s, transform 0.1s; margin: 6px; }
+.kids-cta a:hover { background: #2D4A6F; transform: translateY(-2px); }
+.kids-cta a.secondary-cta { background: #22C55E; }
+.kids-cta a.secondary-cta:hover { background: #16A34A; }
+
+/* Animations */
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(20px); } }
+@keyframes windBlow { 0% { transform: translateX(0); opacity: 0; } 50% { opacity: 0.8; } 100% { transform: translateX(60px); opacity: 0; } }
+@keyframes treeSway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(8deg); } }
+@keyframes tailWag { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-8deg); } }
+@keyframes zzFloat { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-10px); opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) {
+    .wind-line, .cloud, .big-blades, .farm-blades, .wind-tree, .rexy-tail, .zzz, .kids-card { animation: none !important; transition: none !important; }
+    .kids-card { opacity: 1; transform: none; }
+}
+@media (max-width: 600px) {
+    .kids-hero h1 { font-size: 2rem; }
+    .kids-card { padding: 24px 20px; }
+    .kids-card h2 { font-size: 1.3rem; }
+    .calm-scene { flex-wrap: wrap; gap: 16px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>How Wind Energy Works</h1>
+    <p class="subtitle">Whoooosh! Let&rsquo;s learn about the power of wind!</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="kids-wrap">
+
+<div class="kids-hero">
+    <span class="age-tag">Ages 5 &ndash; 7</span>
+    <h1>The Wind Is Full of Energy!</h1>
+    <p>You can&rsquo;t see the wind, but you can feel it! It blows your hair, flies kites, and pushes sailboats. But did you know it can also make electricity?</p>
+</div>
+
+<!-- 1. FEEL THE BREEZE -->
+<div class="kids-card card-breeze">
+    <h2>Feel the Breeze!</h2>
+    <div class="illustration windy-scene">
+        <div class="wind-line"></div>
+        <div class="wind-line"></div>
+        <div class="wind-line"></div>
+        <div class="wind-line"></div>
+        <div class="wind-line"></div>
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="wind-tree"><div class="wind-tree-top"></div><div class="wind-tree-trunk"></div></div>
+        <div class="wind-tree"><div class="wind-tree-top"></div><div class="wind-tree-trunk"></div></div>
+        <div class="rexy-guide">
+            <div class="dino-speech">So windy!</div>
+            <div class="rexy-body">
+                <div class="rexy-head"></div>
+                <div class="rexy-arm"></div>
+                <div class="rexy-tail"></div>
+                <div class="rexy-leg"></div>
+                <div class="rexy-leg"></div>
+            </div>
+        </div>
+    </div>
+    <p>Wind is air that moves. When the sun heats up the ground, warm air rises and cool air rushes in to take its place. That moving air is <strong>wind</strong>!</p>
+    <p>People have used wind for thousands of years &mdash; to sail ships and grind wheat. Now we use it to make electricity!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127744;</span>
+        <span><strong>Fun fact:</strong> Wind can travel over 200 miles per hour in a tornado! But wind turbines work best with steady breezes of 15&ndash;25 mph.</span>
+    </div>
+</div>
+
+<!-- 2. HOW A TURBINE WORKS -->
+<div class="kids-card card-turbine">
+    <h2>How Does a Wind Turbine Work?</h2>
+    <div class="illustration turbine-scene">
+        <div class="big-turbine">
+            <div class="big-hub">
+                <div class="big-blades"><span></span><span></span><span></span></div>
+            </div>
+            <div class="big-tower"></div>
+        </div>
+        <div class="part-label label-blade">Blades catch the wind</div>
+        <div class="part-label label-hub">Hub spins a generator</div>
+        <div class="part-label label-tower">Tower holds it up high</div>
+        <div class="spike-guide">
+            <div class="spike-body">
+                <div class="spike-head"></div>
+                <div class="spike-plates"><span></span><span></span><span></span><span></span></div>
+                <div class="spike-leg"></div>
+                <div class="spike-leg"></div>
+                <div class="spike-tail"></div>
+            </div>
+        </div>
+    </div>
+    <p>A wind turbine has three big <strong>blades</strong> on top of a tall tower. When wind pushes the blades, they <strong>spin</strong>.</p>
+    <p>Inside the top part is a <strong>generator</strong> &mdash; a machine that turns spinning motion into electricity. It&rsquo;s like a bicycle dynamo, but way bigger!</p>
+    <p>The electricity travels down the tower through wires and goes to your house.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128170;</span>
+        <span><strong>Fun fact:</strong> The blades of a big wind turbine are longer than a Boeing 747 wing &mdash; each one can be over 200 feet long!</span>
+    </div>
+</div>
+
+<!-- 3. WIND FARMS -->
+<div class="kids-card card-farm">
+    <h2>Wind Farms: Teamwork!</h2>
+    <div class="illustration farm-scene">
+        <div class="farm-turbine"><div class="farm-hub"><div class="farm-blades"><span></span><span></span><span></span></div></div><div class="farm-tower-s"></div></div>
+        <div class="farm-turbine"><div class="farm-hub"><div class="farm-blades"><span></span><span></span><span></span></div></div><div class="farm-tower-s"></div></div>
+        <div class="farm-turbine"><div class="farm-hub"><div class="farm-blades"><span></span><span></span><span></span></div></div><div class="farm-tower-s"></div></div>
+        <div class="farm-turbine"><div class="farm-hub"><div class="farm-blades"><span></span><span></span><span></span></div></div><div class="farm-tower-s"></div></div>
+        <div class="farm-turbine"><div class="farm-hub"><div class="farm-blades"><span></span><span></span><span></span></div></div><div class="farm-tower-s"></div></div>
+        <div class="house"><div class="house-roof-s"></div><div class="house-body-s"><div class="house-door-s"></div></div></div>
+        <div class="house"><div class="house-roof-s"></div><div class="house-body-s"><div class="house-door-s"></div></div></div>
+        <div class="power-line"></div>
+    </div>
+    <p>One turbine is great, but lots of turbines together make a <strong>wind farm</strong>! Some wind farms have hundreds of turbines.</p>
+    <p>Wind farms can be on land (on hills and flat plains) or out at sea (called <strong>offshore</strong> wind farms). Offshore ones catch even stronger, steadier winds!</p>
+    <p>One big wind farm can make enough electricity for a whole city!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127754;</span>
+        <span><strong>Fun fact:</strong> The biggest offshore wind farm in the world has over 150 turbines and powers more than a million homes!</span>
+    </div>
+</div>
+
+<!-- 4. THE CHALLENGE -->
+<div class="kids-card card-challenge">
+    <h2>What If the Wind Stops?</h2>
+    <div class="illustration calm-scene">
+        <div class="still-turbine" style="position:relative;">
+            <div class="still-hub"><div class="still-blades"><span></span><span></span><span></span></div></div>
+            <div class="still-tower"></div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+            <span class="zzz">Z</span><span class="zzz">z</span><span class="zzz">z</span>
+        </div>
+        <div class="calm-text">No wind? No electricity!</div>
+    </div>
+    <p>Wind doesn&rsquo;t blow all the time. On calm, still days, the turbine blades just sit there. No spinning = no electricity.</p>
+    <p>That&rsquo;s why wind energy needs <strong>friends</strong>! When the wind stops, we can use solar panels, batteries, or other clean energy sources to keep the lights on.</p>
+    <p><strong>Teamwork makes clean energy work!</strong></p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#129300;</span>
+        <span><strong>Key idea:</strong> Wind is free and clean &mdash; it never runs out! But we need to combine it with other energy sources for the hours when it&rsquo;s calm.</span>
+    </div>
+    <div class="quiz-box">
+        <h3>Quick Quiz!</h3>
+        <p style="font-size:0.95rem; color:#5B21B6; margin-bottom:12px;">What makes a wind turbine&rsquo;s blades spin?</p>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">A) Electricity</button>
+        <button class="quiz-btn" data-answer="correct" onclick="handleQuiz(this)">B) The wind pushing them</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">C) A motor inside</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">D) The sun melting them</button>
+        <div class="quiz-result" id="quizResult"></div>
+    </div>
+</div>
+
+<div class="kids-cta">
+    <p>Want to learn about more clean energy sources?</p>
+    <a class="secondary-cta" href="kids_solar.html">Learn About Solar &rarr;</a>
+    <a href="kids_energy.html">All Clean Energy &rarr;</a>
+</div>
+
+</div>
+
+<script>
+(function() {
+    var cards = document.querySelectorAll('.kids-card');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
+        });
+    }, { threshold: 0.15 });
+    cards.forEach(function(card) { observer.observe(card); });
+})();
+function handleQuiz(btn) {
+    var box = btn.closest('.quiz-box'), buttons = box.querySelectorAll('.quiz-btn'), result = box.querySelector('.quiz-result');
+    buttons.forEach(function(b) { b.disabled = true; b.style.cursor = 'default'; });
+    if (btn.getAttribute('data-answer') === 'correct') {
+        btn.classList.add('correct');
+        result.textContent = 'That\u2019s right! The wind pushes the blades and makes them spin around!';
+        result.style.background = '#DCFCE7'; result.style.color = '#15803D';
+    } else {
+        btn.classList.add('wrong');
+        buttons.forEach(function(b) { if (b.getAttribute('data-answer') === 'correct') b.classList.add('correct'); });
+        result.textContent = 'Not quite! The wind blows against the big blades and makes them spin. That spinning makes electricity!';
+        result.style.background = '#FEF3C7'; result.style.color = '#92400E';
+    }
+    result.style.display = 'block';
+}
+</script>
+</body>
+</html>

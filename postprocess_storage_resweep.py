@@ -16,7 +16,8 @@ Key optimizations over Step 1's inline storage sweep:
   - Wider near-miss window (25% vs Step 1's 15%)
 
 Input:  data/physics_cache_v4.parquet (existing PFS from Step 1)
-Output: Updated data/physics_cache_v4.parquet with new rows appended
+Output: data/resweep_checkpoints/<ISO>_<threshold>.parquet (one file per pair)
+        Step 2 reads PFS + all checkpoint files together.
 
 Usage:
   python3 postprocess_storage_resweep.py                   # Full sweep
@@ -431,8 +432,11 @@ def process_iso_threshold(iso, threshold, demand_arr, supply_matrix,
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _checkpoint_path(iso, threshold):
-    """Per-ISO/threshold checkpoint file path."""
-    thr_str = str(threshold).replace('.', '_')
+    """Per-ISO/threshold checkpoint file path.
+
+    Uses float representation for consistency (e.g., 50 -> '50_0', 87.5 -> '87_5').
+    """
+    thr_str = str(float(threshold)).replace('.', '_')
     return os.path.join(CHECKPOINT_DIR, f'{iso}_{thr_str}.parquet')
 
 
@@ -447,23 +451,18 @@ def load_completed_checkpoints():
     for fname in os.listdir(CHECKPOINT_DIR):
         if not fname.endswith('.parquet'):
             continue
-        # Parse ISO_threshold.parquet
         stem = fname.replace('.parquet', '')
-        parts = stem.rsplit('_', 1)
-        if len(parts) == 2:
-            iso = parts[0]
-            thr_str = parts[1].replace('_', '.')
-            # Handle ISOs with underscores by checking known ISOs
-            for known_iso in ISOS:
-                if stem.startswith(known_iso + '_'):
-                    iso = known_iso
-                    thr_str = stem[len(known_iso) + 1:].replace('_', '.')
-                    break
-            try:
-                threshold = float(thr_str)
-                completed.add((iso, threshold))
-            except ValueError:
-                pass
+        # Match against known ISOs for reliable parsing
+        for known_iso in ISOS:
+            prefix = known_iso + '_'
+            if stem.startswith(prefix):
+                thr_str = stem[len(prefix):].replace('_', '.')
+                try:
+                    threshold = float(thr_str)
+                    completed.add((known_iso, threshold))
+                except ValueError:
+                    pass
+                break
     if completed:
         print(f"  Checkpoint: {len(completed)} (iso, threshold) pairs already completed")
     return completed
@@ -498,7 +497,7 @@ def save_threshold_checkpoint(iso, threshold, new_rows_list):
 
 def _partial_checkpoint_dir(iso, threshold):
     """Directory for partial (in-progress) checkpoint within a single (iso, threshold) pair."""
-    thr_str = str(threshold).replace('.', '_')
+    thr_str = str(float(threshold)).replace('.', '_')
     return os.path.join(CHECKPOINT_DIR, f'partial_{iso}_{thr_str}')
 
 
@@ -586,56 +585,21 @@ def git_commit_checkpoint(iso, threshold):
         print(f"      [git] Warning: {e}")
 
 
-def merge_checkpoints_to_pfs():
-    """Merge all per-ISO/threshold checkpoint parquets into the main PFS.
+def load_checkpoint_solutions(iso, threshold):
+    """Load existing resweep solutions from checkpoint file for deduplication.
 
-    Reads each checkpoint file, concatenates non-empty ones, appends to PFS.
-    Cleans up checkpoint files after successful merge.
+    Returns a DataFrame of existing solutions for this (iso, threshold) pair,
+    or an empty DataFrame if no checkpoint exists.
     """
-    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-    checkpoint_files = [f for f in os.listdir(CHECKPOINT_DIR) if f.endswith('.parquet')]
-    if not checkpoint_files:
-        print("  No checkpoints to merge")
-        return 0
-
-    tables = []
-    for fname in sorted(checkpoint_files):
-        path = os.path.join(CHECKPOINT_DIR, fname)
+    path = _checkpoint_path(iso, threshold)
+    if os.path.exists(path):
         try:
             t = pq.read_table(path)
             if t.num_rows > 0:
-                tables.append(t)
+                return t.to_pandas()
         except Exception as e:
-            print(f"  WARNING: Could not read {fname}: {e}")
-
-    if not tables:
-        print("  All checkpoints empty — no new solutions")
-        return 0
-
-    checkpoint_table = pa.concat_tables(tables)
-    n_new = checkpoint_table.num_rows
-    print(f"  Merging {n_new:,} rows from {len(tables)} checkpoint files into PFS...")
-
-    existing_table = pq.read_table(PFS_PATH)
-
-    # Align schemas
-    for col in existing_table.column_names:
-        if col not in checkpoint_table.column_names:
-            null_arr = pa.nulls(checkpoint_table.num_rows,
-                                type=existing_table.schema.field(col).type)
-            checkpoint_table = checkpoint_table.append_column(col, null_arr)
-    checkpoint_table = checkpoint_table.select(existing_table.column_names)
-
-    merged = pa.concat_tables([existing_table, checkpoint_table])
-    pq.write_table(merged, PFS_PATH, compression='snappy')
-    size_mb = os.path.getsize(PFS_PATH) / (1024 * 1024)
-    print(f"  PFS updated: {merged.num_rows:,} total rows ({size_mb:.1f} MB)")
-
-    # Clean up checkpoint files
-    for fname in checkpoint_files:
-        os.remove(os.path.join(CHECKPOINT_DIR, fname))
-    print(f"  Cleaned up {len(checkpoint_files)} checkpoint files")
-    return n_new
+            print(f"  WARNING: Could not read checkpoint {path}: {e}")
+    return pd.DataFrame()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -699,7 +663,7 @@ def main():
             grid_mixes = np.vstack([grid_mixes, seeds])
             grid_mixes = np.unique(grid_mixes, axis=0)
 
-        # Also include unique mixes from PFS (captures 1% refinement mixes)
+        # Also include unique mixes from PFS + checkpoints (captures 1% refinement mixes)
         iso_table = pq.read_table(PFS_PATH, filters=[('iso', '==', iso)],
                                   columns=['clean_firm', 'solar', 'wind', 'hydro',
                                            'threshold', 'procurement_pct',
@@ -707,8 +671,23 @@ def main():
                                            'ldes_dispatch_pct', 'hourly_match_score'])
         iso_df = iso_table.to_pandas()
 
+        # Load checkpoint mixes too (they may have mixes not in original PFS)
+        ckpt_mixes_list = []
+        for fname in os.listdir(CHECKPOINT_DIR):
+            if fname.endswith('.parquet') and fname.startswith(iso + '_'):
+                ckpt_path = os.path.join(CHECKPOINT_DIR, fname)
+                try:
+                    ct = pq.read_table(ckpt_path,
+                                       columns=['clean_firm', 'solar', 'wind', 'hydro'])
+                    if ct.num_rows > 0:
+                        ckpt_mixes_list.append(ct.to_pandas()[['clean_firm', 'solar', 'wind', 'hydro']].values)
+                except Exception:
+                    pass
+
         pfs_mixes = iso_df[['clean_firm', 'solar', 'wind', 'hydro']].drop_duplicates().values.astype(np.float64)
         all_mixes = np.vstack([grid_mixes, pfs_mixes])
+        for cm in ckpt_mixes_list:
+            all_mixes = np.vstack([all_mixes, cm.astype(np.float64)])
         all_mixes = np.unique(all_mixes, axis=0)
         N = len(all_mixes)
 
@@ -733,16 +712,22 @@ def main():
             combo_start_idx, partial_rows = load_partial_checkpoint(iso, threshold)
 
             # Build existing solution keys for deduplication
+            # Include both PFS solutions and any prior checkpoint solutions
             thr_df = iso_df[iso_df['threshold'] == threshold]
+            ckpt_df = load_checkpoint_solutions(iso, threshold)
+            if not ckpt_df.empty:
+                dedup_df = pd.concat([thr_df, ckpt_df], ignore_index=True)
+            else:
+                dedup_df = thr_df
             existing_keys = set(zip(
-                thr_df['clean_firm'].astype(int),
-                thr_df['solar'].astype(int),
-                thr_df['wind'].astype(int),
-                thr_df['hydro'].astype(int),
-                thr_df['procurement_pct'].astype(int),
-                thr_df['battery_dispatch_pct'].astype(int),
-                thr_df['battery8_dispatch_pct'].astype(int),
-                thr_df['ldes_dispatch_pct'].astype(int),
+                dedup_df['clean_firm'].astype(int),
+                dedup_df['solar'].astype(int),
+                dedup_df['wind'].astype(int),
+                dedup_df['hydro'].astype(int),
+                dedup_df['procurement_pct'].astype(int),
+                dedup_df['battery_dispatch_pct'].astype(int),
+                dedup_df['battery8_dispatch_pct'].astype(int),
+                dedup_df['ldes_dispatch_pct'].astype(int),
             ))
 
             # Add partial rows' keys to existing set (prevent duplicates on resume)
@@ -791,13 +776,16 @@ def main():
         print(f"    {iso}: {count:,}")
     print(f"{'='*70}")
 
-    # Merge all checkpoints into PFS
+    # Checkpoints stay as separate files — Step 2 reads PFS + checkpoints together
     if not args.dry_run:
-        n_merged = merge_checkpoints_to_pfs()
-        if n_merged == 0:
-            print("\n  No new solutions found — PFS unchanged")
+        total_ckpt = 0
+        for f in os.listdir(CHECKPOINT_DIR):
+            if f.endswith('.parquet'):
+                total_ckpt += pq.read_metadata(os.path.join(CHECKPOINT_DIR, f)).num_rows
+        print(f"\n  Resweep checkpoints: {total_ckpt:,} total rows in {CHECKPOINT_DIR}/")
+        print(f"  Step 2 will read PFS + checkpoints together")
     else:
-        print(f"\n  Dry run — {total_new:,} rows would be merged into PFS")
+        print(f"\n  Dry run — {total_new:,} new rows would be checkpointed")
 
 
 if __name__ == '__main__':

@@ -4,14 +4,11 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Three Ways to Count Carbon — The 8,760 Problem</title>
+<title>Consequential Accounting Under the Microscope — The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 body { background: #0B1120; }
 
@@ -383,8 +380,7 @@ body { background: #0B1120; }
         gap: 16px;
     }
     .chart-sticky {
-        position: sticky;
-        top: 48px;
+        position: static;
     }
     .chart-panel .chart-container {
         height: 300px;
@@ -709,7 +705,7 @@ body { background: #0B1120; }
     <div class="hero-text">
         <h2>Three Ways to Count Carbon: Which One Actually Decarbonizes the Grid?</h2>
         <p class="hero-lead">The GHG Protocol Scope 2 revision has sparked a three-way debate about how corporations should account for electricity emissions. The answer determines where hundreds of billions in clean energy capital flows — and whether it actually decarbonizes anything.</p>
-        <p>Annual RECs are the status quo. The proposed revision adds hourly matching with deliverability constraints — still attributional, but aligned to grid physics. A third camp argues for pure consequential accounting: chase the cheapest $/tCO₂ anywhere, regardless of whether it matches your load in time or space. Each approach creates different incentives. Not all of them are good.</p>
+        <p>Annual RECs are the status quo. The proposed revision adds hourly matching with deliverability constraints — still attributional, but aligned to grid physics. A third camp argues for pure consequential accounting: chase the cheapest $/tCO₂ anywhere, regardless of whether it matches your load in time or space. Our analysis of 7 ISO/RTO regions shows that at just 20–30% C&amp;I participation, pure consequential creates capital flight from gas-dependent grids toward coal displacement — leaving the hardest decarbonization problems permanently underfunded.</p>
         <div class="counter-row">
             <div class="counter-card">
                 <div class="counter-val red" data-target="0" data-suffix="">~0</div>
@@ -720,12 +716,12 @@ body { background: #0B1120; }
                 <div class="counter-lbl">Hours/Year<br>Hourly Tracks</div>
             </div>
             <div class="counter-card">
-                <div class="counter-val amber" data-target="800" data-suffix="+">0</div>
-                <div class="counter-lbl">Stakeholder<br>Responses</div>
+                <div class="counter-val amber" data-target="25" data-suffix="%">0%</div>
+                <div class="counter-lbl">C&amp;I Participation<br>= Perverse Incentives</div>
             </div>
             <div class="counter-card">
-                <div class="counter-val" data-target="3" data-suffix="">3</div>
-                <div class="counter-lbl">Competing<br>Methods</div>
+                <div class="counter-val" data-target="7" data-suffix="">7</div>
+                <div class="counter-lbl">ISO/RTOs<br>Analyzed</div>
             </div>
         </div>
     </div>
@@ -757,9 +753,9 @@ body { background: #0B1120; }
         <!-- Tier 1: The headline -->
         <div class="finding-row top">
             <div class="finding-card tier1">
-                <div class="finding-num red">Perverse Incentives</div>
-                <div class="finding-label">Pure consequential accounting decouples procurement from load — and that's the problem</div>
-                <div class="finding-desc">If the metric is cheapest $/tCO₂ anywhere, capital flows to easy-to-decarbonize grids and away from the grids buyers actually operate on. Nobody invests in the hard hours on their own grid. Meanwhile, hourly attribution creates the price signals that drive firm clean power, storage, and deep local decarbonization — while delivering strong consequential impact as a byproduct.</div>
+                <div class="finding-num red">20–30%</div>
+                <div class="finding-label">The participation threshold where consequential accounting breaks: just 20–30% of C&amp;I load</div>
+                <div class="finding-desc">Across 7 ISO/RTOs (~2.7 million GWh), pure consequential drives capital toward coal-heavy grids (SPP, MISO) at ~$15–25/tCO₂ and away from gas-dependent grids (NEISO, NYISO, CAISO) where displacement costs $40–80/tCO₂. At 25% C&amp;I participation, gas-only grids receive less investment than their load share — the free-rider dynamics dominate and nobody funds firm clean power where it's needed most.</div>
             </div>
         </div>
         <!-- Tier 2: The two pillars -->
@@ -972,164 +968,29 @@ body { background: #0B1120; }
 </table>
 </div>
 
-<!-- ============ SECTION 4: Hourly Attribution & Our Model ============ -->
+<!-- ============ DEEP DIVE CTA ============ -->
 <div class="section-header fade-in">
-    <div class="section-number">4</div>
-    <h2>Hourly Attribution: Accurate Accounting That Drives Real Impact</h2>
-    <p>Our 8,760-hour optimization model demonstrates what happens when you constrain procurement to match load hour-by-hour within deliverability regions. The accounting is attributional. The impact is profoundly consequential — because physics-aligned constraints force investment in the resources the grid actually needs.</p>
+    <div class="section-number">→</div>
+    <h2>Go Deeper: Five Failure Modes of Consequential Accounting at Scale</h2>
+    <p>What happens when you evaluate consequential accounting in a vacuum — as a system-wide procurement framework, not just a single buyer's decision? We model marginal signal degradation, saturation effects, fossil lock-in, geographic capital clustering, and the collective action problem across 7 ISO/RTO regions.</p>
 </div>
 
-<section class="chart-narrative-wrap fade-in">
-    <div class="chart-sticky">
-        <div class="chart-panel">
-            <div class="chart-title">The Cost Curve of Hourly CFE: Marginal Abatement Cost by Threshold</div>
-            <div class="iso-selector" id="macIsoSelector">
-                <button class="iso-btn" data-iso="CAISO">CAISO</button>
-                <button class="iso-btn active" data-iso="ERCOT">ERCOT</button>
-                <button class="iso-btn" data-iso="PJM">PJM</button>
-                <button class="iso-btn" data-iso="NYISO">NYISO</button>
-                <button class="iso-btn" data-iso="NEISO">NEISO</button>
-            </div>
-            <div class="chart-container">
-                <canvas id="macChart"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="chart-narrative">
-        <p><strong>Hourly attribution reveals what annual accounting hides.</strong> When you require hour-by-hour matching within a deliverability region, the optimizer discovers that you need firm, dispatchable clean power (nuclear, CCS-CCGT, geothermal) alongside variable renewables and storage. Solar and wind alone can't cover the 8,760.</p>
-        <p><strong>This is an attributional framework — but look at the consequential impact.</strong> By constraining procurement to match your actual load in your actual grid region, hourly attribution forces investment in the resources that grid physically needs. The resulting deployment directly displaces fossil generation in real time. You don't need a counterfactual model to see the impact — it's visible in the dispatch stack.</p>
-        <p>The MAC curve is relatively flat through 90%, then steepens dramatically. Those final hours — winter evenings, multi-day low-wind periods — are exactly where the value lies.</p>
-        <p><strong>The Last 10% Problem is a feature, not a bug.</strong> Getting from 90% → 100% hourly CFE costs <strong style="color:#F59E0B;">2–5× more per ton</strong>. A pure consequential framework would tell you to stop at 90% and spend that marginal dollar displacing coal in a different grid. But those hard hours are precisely what drives innovation in firm clean power and long-duration storage — the technologies deep decarbonization requires everywhere.</p>
-        <p>Hourly attribution is the framework that says: <em>invest in solving the hard problem on your grid, not the easy problem on someone else's.</em></p>
-    </div>
+<section class="concept-section fade-in" style="max-width:700px; margin:0 auto; padding:0 24px 48px; text-align:center;">
+    <a href="consequential_vacuum.html" style="display:inline-block; background:linear-gradient(135deg, rgba(239,68,68,0.2), rgba(245,158,11,0.15)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px 40px; color:#fff; text-decoration:none; font-family:'Barlow Semi Condensed',sans-serif; font-size:1.1rem; font-weight:700; transition:all 0.2s; min-height:44px;">
+        Read the Deep Dive →
+    </a>
+    <p style="margin-top:16px; font-size:0.82rem; color:rgba(255,255,255,0.5);">5 sections · Interactive charts · 7-ISO participation threshold analysis</p>
 </section>
 
-<!-- ============ SECTION 5: Perverse Incentives ============ -->
-<div class="section-header fade-in">
-    <div class="section-number">5</div>
-    <h2>The Consequential Trap: When Cheapest $/tCO₂ Creates Perverse Incentives</h2>
-    <p>Pure consequential accounting has intellectual appeal — who wouldn't want to maximize emissions reduction per dollar? But when thousands of corporate buyers all optimize for the same metric without temporal or spatial constraints, the real-world dynamics get ugly.</p>
-</div>
-
-<section class="concept-section fade-in">
-    <div class="incentive-grid">
-        <div class="incentive-card">
-            <h4>1. The Free-Rider Problem</h4>
-            <p>If every buyer chases the cheapest $/tCO₂ anywhere on the grid, they all cluster on the same low-hanging fruit — displacing coal with wind in coal-heavy grids. Meanwhile, the grids they actually operate on remain dirty. Nobody invests in decarbonizing their own consumption.</p>
-            <div class="example">Example: A data center in PJM (40% coal) buys wind credits that displace MISO coal. PJM never decarbonizes because everyone's abatement dollar goes elsewhere.</div>
-        </div>
-        <div class="incentive-card">
-            <h4>2. Moral Hazard</h4>
-            <p>A company can claim massive emissions reductions while its actual electricity consumption pattern — and the grid it operates on — never improves. The 24/7 load keeps running on fossil, but the balance sheet looks green because cheap abatement was purchased from a different grid.</p>
-            <div class="example">Example: Tech company runs 100MW in NEISO (winter gas dependency) but claims carbon neutrality via Wyoming wind displacing Montana coal at $15/tCO₂. NEISO's winter gas problem persists.</div>
-        </div>
-        <div class="incentive-card">
-            <h4>3. No Signal for Firm Clean Power</h4>
-            <p>Hourly matching forces the market to develop nuclear, geothermal, CCS, and long-duration storage — because you can't cover winter nights with solar. Pure consequential directs capital toward the cheapest marginal displacement, which is almost always more solar/wind in coal-heavy grids. The hard technologies never get the demand signal.</p>
-            <div class="example">Result: Solar/wind overbuild in favorable regions; zero investment signal for the dispatchable clean resources that deep decarbonization requires in every region.</div>
-        </div>
-        <div class="incentive-card">
-            <h4>4. Counterfactual Gaming</h4>
-            <p>The entire consequential method depends on modeling what <em>would have</em> happened without the intervention. Marginal emissions rates shift hourly, vary by model, and are inherently unverifiable. Sophisticated buyers will optimize for favorable baselines rather than genuine impact.</p>
-            <div class="example">Problem: Two models of the same grid can produce marginal rates differing by 2-3×. Which one is "right"? Whoever picks the methodology picks their abatement number.</div>
-        </div>
-        <div class="incentive-card">
-            <h4>5. Race to the "Easy" Grids</h4>
-            <p>Capital flows to grids where displacement is cheapest — typically coal-heavy, wind-rich regions. Expensive-to-decarbonize grids (like NEISO with winter gas pipeline constraints, or island grids dependent on diesel) get <em>less</em> investment, not more, because the $/tCO₂ is unfavorable.</p>
-            <div class="example">Outcome: Coal-heavy grids get over-invested in wind; natural gas-dependent grids — which need the most innovative solutions — get ignored.</div>
-        </div>
-        <div class="incentive-card">
-            <h4>6. The "Last Mile" Gets Abandoned</h4>
-            <p>Getting from 90% → 100% CFE on any grid is expensive. Pure consequential says: stop at 90%, spend the marginal dollar elsewhere. But the last 10% is where technology learning curves advance — it's the demand signal that makes firm clean power and long-duration storage commercially viable. Abandoning it everywhere guarantees deep decarbonization never arrives.</p>
-            <div class="example">Paradox: Individually rational (spend elsewhere) but collectively catastrophic (nobody solves the hard hours, ever).</div>
-        </div>
-    </div>
-</section>
-
-<div class="insight-callout fade-in">
-    <div class="insight-box">
-        <h3>The Tragedy of the Carbon Commons</h3>
-        <p>Pure consequential accounting is individually optimal and collectively suboptimal. Each buyer maximizes their own $/tCO₂ metric — but when <span class="highlight">every buyer optimizes for the cheapest ton anywhere, nobody decarbonizes their own grid</span>. It's a classic tragedy of the commons: the shared resource (each grid's need for investment in firm clean power and storage) is neglected because each actor is incentivized to free-ride on the cheapest global abatement. Hourly attribution avoids this by tethering procurement to the buyer's actual load and grid — ensuring every dollar invested addresses the physical reality of that grid's decarbonization challenge.</p>
-    </div>
-</div>
-
-<!-- ============ SECTION 6: What This Means for Buyers ============ -->
-<div class="section-header fade-in">
-    <div class="section-number">6</div>
-    <h2>What This Means for Clean Energy Buyers</h2>
-    <p>The three-method landscape creates different strategic imperatives. The smart move: anchor on hourly attribution for your own grid, and supplement with consequential analysis to understand broader impact.</p>
-</div>
-
-<section class="concept-section fade-in">
-    <div class="concept-grid">
-        <div class="concept-card">
-            <h3>For Corporates & Data Centers</h3>
-            <ul>
-                <li><strong>Adopt hourly matching now</strong> — don't wait for the 2027 standard. Match consumption to CFE hour-by-hour in your grid region</li>
-                <li><strong>Invest in firm clean power</strong> — sign PPAs for nuclear, geothermal, or CCS-backed resources that cover the hard hours</li>
-                <li><strong>Use consequential analysis as a supplement</strong> — measure displacement impact, but don't let $/tCO₂ optimization override grid-specific investment</li>
-                <li><strong>Demand T-EACs</strong> — hourly certificates from counterparties, not annual bundles</li>
-            </ul>
-        </div>
-        <div class="concept-card">
-            <h3>For Policy & Standard-Setters</h3>
-            <ul>
-                <li><strong>Anchor on hourly attribution</strong> — it's the framework that produces accurate accounting AND drives real grid investment</li>
-                <li><strong>Be cautious with pure consequential</strong> — recognize the perverse incentives at scale. If adopted, require a "home grid" constraint to prevent free-riding</li>
-                <li><strong>Build T-EAC infrastructure</strong> — regional granular certificate registries are the backbone of credible hourly matching</li>
-                <li><strong>Allow consequential disclosure alongside</strong> — let companies show their impact, but don't replace inventory accounting with it</li>
-            </ul>
-        </div>
-    </div>
-</section>
-
-<section class="chart-narrative-wrap fade-in">
-    <div class="chart-sticky">
-        <div class="chart-panel">
-            <div class="chart-title">Hourly CFE Cost vs. Carbon Benchmarks: Where the Methods Diverge</div>
-            <div class="iso-selector" id="benchIsoSelector">
-                <button class="iso-btn" data-iso="CAISO">CAISO</button>
-                <button class="iso-btn active" data-iso="ERCOT">ERCOT</button>
-                <button class="iso-btn" data-iso="PJM">PJM</button>
-                <button class="iso-btn" data-iso="NYISO">NYISO</button>
-                <button class="iso-btn" data-iso="NEISO">NEISO</button>
-            </div>
-            <div class="chart-container">
-                <canvas id="benchmarkChart"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="chart-narrative">
-        <p><strong>This is where the three-method debate gets concrete.</strong> The bars show the marginal abatement cost of hourly CFE at different thresholds — the cost per ton of CO₂ actually displaced from the grid when you match hour-by-hour within your region.</p>
-        <p>Benchmarks for context: the <strong style="color:#2196F3;">EU ETS carbon price</strong> ($88/t), the <strong style="color:#FF9800;">EPA Social Cost of Carbon</strong> ($190/t), and the <strong style="color:#E65100;">Rennert et al. SCC</strong> ($185/t).</p>
-        <p><strong>Annual attribution can't produce this chart at all.</strong> It just says "100% renewable" — no cost curve, no threshold analysis, no insight into where the grid actually needs investment.</p>
-        <p><strong>Hourly attribution reveals it directly:</strong> in ERCOT, 90% hourly CFE costs ~$52/tCO₂ — well below every major carbon benchmark. Even at 95%, it's competitive. The cost curve steepens above 95%, but even there it competes favorably with DAC ($150–400/t) and SAF ($136–500/t).</p>
-        <p><strong>Pure consequential would say:</strong> stop at 90% in ERCOT and spend the marginal dollar displacing coal in MISO at $25/t instead. Individually rational. But if every buyer does this, ERCOT's last 10% — which needs firm clean power and LDES — never gets funded. And MISO gets oversaturated with cheap wind while nobody solves the hard-to-decarbonize hours anywhere.</p>
-        <p>Hourly attribution forces the hard investment. That's the point.</p>
-    </div>
-</section>
-
-<!-- ============ SOURCES ============ -->
 <section class="sources-section fade-in">
     <h3>Sources & Further Reading</h3>
     <ol>
-        <li>GHG Protocol, "Scope 2 Guidance" (2015; dual-track revision in progress — attributional + consequential, expected ~2027). <a href="https://ghgprotocol.org/scope-2-guidance" target="_blank">ghgprotocol.org</a></li>
-        <li>GHG Protocol, "Scope 2 Proposed Updates Consultation" & "Consequential Accounting Consultation" (Oct 2025 – Jan 2026). 800+ stakeholder responses received.</li>
-        <li>Clean Air Task Force, "Modernizing GHG Accounting Rules and Climate Leadership Programs" (2024). <a href="https://www.catf.us/resource/modernizing-ghg-accounting-rules/" target="_blank">catf.us</a></li>
-        <li>GHG Management Institute, "The attributional-consequential distinction" (2022). <a href="https://www.tandfonline.com/doi/full/10.1080/17583004.2022.2088402" target="_blank">tandfonline.com</a></li>
+        <li>GHG Protocol, "Scope 2 Guidance" (2015; revision expected ~2027). <a href="https://ghgprotocol.org/scope-2-guidance" target="_blank">ghgprotocol.org</a></li>
+        <li>GHG Protocol, "Scope 2 Proposed Updates & Consequential Accounting Consultation" (Oct 2025 – Jan 2026). 800+ stakeholder responses.</li>
+        <li>Clean Air Task Force, "Modernizing GHG Accounting Rules" (2024). <a href="https://www.catf.us/resource/modernizing-ghg-accounting-rules/" target="_blank">catf.us</a></li>
         <li>EnergyTag, "Scope 2 for the Age of Deep Decarbonization" (2024). <a href="https://energytag.org/scope-2-for-the-age-of-deep-decarbonization/" target="_blank">energytag.org</a></li>
         <li>Xu et al., "System-level impacts of 24/7 carbon-free energy procurement" (2024). <a href="https://www.sciencedirect.com/science/article/pii/S2211467X24001950" target="_blank">ScienceDirect</a></li>
-        <li>WattTime / Emissions First Partnership — advocates for consequential/impact accounting framework. <a href="https://www.emissionsfirst.com/" target="_blank">emissionsfirst.com</a></li>
-        <li>WattTime, "Hourly matching without additionality has little to no impact on emissions reductions" (2024). <a href="https://watttime.org/news-and-insights/hourly-matching-without-additionality-has-little-to-no-impact-on-emissions-reductions/" target="_blank">watttime.org</a></li>
-        <li>Bjørn et al., "Ensuring low-emission electricity purchasing requires broader systems perspective" (2024). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12032940/" target="_blank">PMC / Nature Communications</a></li>
-        <li>Princeton ZERO Lab — grid decarbonization modeling and hourly matching analysis.</li>
-        <li>NREL, MIT, DTU — modeling frameworks for evaluating temporal and spatial granularity in electricity accounting.</li>
-        <li>REsurety — consequential emissions measurement and avoided emissions quantification.</li>
-        <li>IFRS S2 / ESRS / California SB 253 — mandatory climate disclosure regimes codifying GHG Protocol methodologies into binding law.</li>
-        <li>UN Energy, "24/7 Carbon-Free Energy Compact" (2021). 140+ signatories. <a href="https://www.seforall.org/programmes/un-energy/energy-compacts/247-carbon-free-energy-compact" target="_blank">seforall.org</a></li>
-        <li>Google, "24×7 Carbon-Free Energy." <a href="https://sustainability.google/stories/24x7/" target="_blank">sustainability.google</a></li>
-        <li>RMI, "Carbon Accounting That Helps Companies Shift to Clean Energy Faster" (2024). <a href="https://rmi.org/carbon-accounting-that-helps-companies-shift-to-clean-energy-faster/" target="_blank">rmi.org</a></li>
-        <li>GHGMI, Leggett & Gillenwater, "Limitations of Hourly Matching Claims for Scope 2 Reporting" (2025). <a href="https://ghginstitute.org/wp-content/uploads/2025/06/Limitations-of-Hourly-Matching-Claims-for-Scope-2-Reporting-Leggett-and-Gillenwater.pdf" target="_blank">ghginstitute.org</a></li>
+        <li>Bjørn et al., "Ensuring low-emission electricity purchasing requires broader systems perspective" (2024). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12032940/" target="_blank">Nature Communications</a></li>
     </ol>
 </section>
 
@@ -1147,10 +1008,7 @@ body { background: #0B1120; }
 </footer>
 <div class="bottom-banner"></div>
 
-<!-- ============ DATA ============ -->
-<script src="js/shared-data.js"></script>
-
-<!-- ============ CHARTS & INTERACTIVITY ============ -->
+<!-- ============ INTERACTIVITY ============ -->
 <script>
 (function() {
 'use strict';
@@ -1174,7 +1032,6 @@ function animateCounters() {
         var suffix = el.dataset.suffix || '';
         var duration = 1200;
         var start = null;
-        // Skip animation for static values like "2027"
         if (target > 2000) {
             el.textContent = target + suffix;
             return;
@@ -1189,7 +1046,6 @@ function animateCounters() {
         requestAnimationFrame(step);
     });
 }
-// Trigger counters when hero is visible
 var heroObs = new IntersectionObserver(function(entries) {
     if (entries[0].isIntersecting) {
         animateCounters();
@@ -1197,267 +1053,6 @@ var heroObs = new IntersectionObserver(function(entries) {
     }
 }, { threshold: 0.3 });
 heroObs.observe(document.querySelector('.hero-overview'));
-
-// --- Chart 1: MAC curve with L/M/H fan ---
-var macCtx = document.getElementById('macChart').getContext('2d');
-var macChart = null;
-var currentMacISO = 'ERCOT';
-
-function buildMacChart(iso) {
-    if (macChart) macChart.destroy();
-    var labels = THRESHOLDS.map(function(t) { return t + '%'; });
-    var med = MAC_DATA.medium[iso];
-    var lo = MAC_DATA.low[iso];
-    var hi = MAC_DATA.high[iso];
-
-    // Filter out nulls (CAISO 100%)
-    var validLen = med.length;
-    var filteredLabels = [];
-    var filteredMed = [];
-    var filteredLo = [];
-    var filteredHi = [];
-    for (var i = 0; i < validLen; i++) {
-        if (med[i] !== null) {
-            filteredLabels.push(labels[i]);
-            filteredMed.push(med[i]);
-            filteredLo.push(lo[i] || 0);
-            filteredHi.push(hi[i] || 0);
-        }
-    }
-
-    macChart = new Chart(macCtx, {
-        type: 'line',
-        data: {
-            labels: filteredLabels,
-            datasets: [
-                {
-                    label: 'High Cost Scenario',
-                    data: filteredHi,
-                    borderColor: 'rgba(239,68,68,0.6)',
-                    backgroundColor: 'rgba(239,68,68,0.08)',
-                    fill: '+1',
-                    borderWidth: 1,
-                    borderDash: [4, 3],
-                    pointRadius: 0,
-                    tension: 0.3
-                },
-                {
-                    label: 'Medium (Monotonic Envelope)',
-                    data: filteredMed,
-                    borderColor: '#0EA5E9',
-                    backgroundColor: 'rgba(14,165,233,0.1)',
-                    fill: false,
-                    borderWidth: 2.5,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#0EA5E9',
-                    tension: 0.3
-                },
-                {
-                    label: 'Low Cost Scenario',
-                    data: filteredLo,
-                    borderColor: 'rgba(34,197,94,0.6)',
-                    backgroundColor: 'rgba(34,197,94,0.08)',
-                    fill: '-1',
-                    borderWidth: 1,
-                    borderDash: [4, 3],
-                    pointRadius: 0,
-                    tension: 0.3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom',
-                    labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 }, padding: 16, usePointStyle: true, pointStyleWidth: 16 }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(15,26,46,0.95)',
-                    titleColor: '#fff',
-                    bodyColor: 'rgba(255,255,255,0.8)',
-                    borderColor: 'rgba(255,255,255,0.15)',
-                    borderWidth: 1,
-                    callbacks: {
-                        label: function(ctx) {
-                            return ctx.dataset.label + ': $' + ctx.parsed.y + '/tCO₂';
-                        }
-                    }
-                },
-                annotation: {
-                    annotations: {
-                        ninetyLine: {
-                            type: 'line',
-                            xMin: filteredLabels.indexOf('90%'),
-                            xMax: filteredLabels.indexOf('90%'),
-                            borderColor: 'rgba(245,158,11,0.5)',
-                            borderWidth: 1.5,
-                            borderDash: [6, 4],
-                            label: {
-                                display: true,
-                                content: '90% — Hourly matching threshold',
-                                position: 'start',
-                                backgroundColor: 'rgba(245,158,11,0.15)',
-                                color: '#F59E0B',
-                                font: { size: 10, weight: 600 },
-                                padding: 4
-                            }
-                        }
-                    }
-                },
-                datalabels: { display: false }
-            },
-            scales: {
-                x: {
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
-                    title: { display: true, text: 'CFE Matching Threshold', color: 'rgba(255,255,255,0.4)', font: { size: 11 } }
-                },
-                y: {
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 }, callback: function(v) { return '$' + v; } },
-                    title: { display: true, text: 'Average MAC ($/tCO₂)', color: 'rgba(255,255,255,0.4)', font: { size: 11 } }
-                }
-            }
-        }
-    });
-}
-
-// --- Chart 2: Benchmark comparison ---
-var benchCtx = document.getElementById('benchmarkChart').getContext('2d');
-var benchChart = null;
-var currentBenchISO = 'ERCOT';
-
-function buildBenchmarkChart(iso) {
-    if (benchChart) benchChart.destroy();
-
-    // Get MAC values at key thresholds for this ISO
-    var med = MAC_DATA.medium[iso];
-    var thresholdPoints = [
-        { label: '75% CFE', idx: 3 },
-        { label: '90% CFE', idx: 7 },
-        { label: '95% CFE', idx: 9 },
-        { label: '99% CFE', idx: 11 }
-    ];
-
-    var macBars = thresholdPoints.filter(function(p) { return med[p.idx] !== null; });
-    var barLabels = macBars.map(function(p) { return p.label; });
-    var barValues = macBars.map(function(p) { return med[p.idx]; });
-    var barColors = ['#0EA5E9', '#22C55E', '#F59E0B', '#EF4444'];
-
-    // Benchmark lines
-    var benchmarks = [
-        { label: 'EU ETS ($88/t)', value: 88, color: 'rgba(33,150,243,0.6)', dash: [6,4] },
-        { label: 'EPA SCC ($190/t)', value: 190, color: 'rgba(255,152,0,0.6)', dash: [6,4] },
-        { label: 'Rennert SCC ($185/t)', value: 185, color: 'rgba(230,81,0,0.6)', dash: [4,3] }
-    ];
-
-    var annotations = {};
-    benchmarks.forEach(function(b, i) {
-        annotations['bench' + i] = {
-            type: 'line',
-            yMin: b.value,
-            yMax: b.value,
-            borderColor: b.color,
-            borderWidth: 1.5,
-            borderDash: b.dash,
-            label: {
-                display: true,
-                content: b.label,
-                position: 'end',
-                backgroundColor: 'rgba(15,26,46,0.9)',
-                color: b.color.replace('0.6', '1'),
-                font: { size: 10, weight: 600 },
-                padding: 3
-            }
-        };
-    });
-
-    benchChart = new Chart(benchCtx, {
-        type: 'bar',
-        data: {
-            labels: barLabels,
-            datasets: [{
-                label: 'MAC at Threshold ($/tCO₂)',
-                data: barValues,
-                backgroundColor: barColors.map(function(c) { return c + '80'; }),
-                borderColor: barColors,
-                borderWidth: 1.5,
-                borderRadius: 6,
-                barPercentage: 0.6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(15,26,46,0.95)',
-                    titleColor: '#fff',
-                    bodyColor: 'rgba(255,255,255,0.8)',
-                    borderColor: 'rgba(255,255,255,0.15)',
-                    borderWidth: 1,
-                    callbacks: {
-                        label: function(ctx) {
-                            return 'MAC: $' + ctx.parsed.y + '/tCO₂';
-                        }
-                    }
-                },
-                annotation: { annotations: annotations },
-                datalabels: {
-                    display: true,
-                    color: '#fff',
-                    font: { size: 11, weight: 600 },
-                    anchor: 'end',
-                    align: 'end',
-                    formatter: function(v) { return '$' + v; }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 12, weight: 600 } }
-                },
-                y: {
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 }, callback: function(v) { return '$' + v; } },
-                    title: { display: true, text: '$/tCO₂ Displaced', color: 'rgba(255,255,255,0.4)', font: { size: 11 } },
-                    suggestedMax: 300
-                }
-            }
-        },
-        plugins: [ChartDataLabels]
-    });
-}
-
-// --- ISO Selector Wiring ---
-function wireIsoSelector(selectorId, callback, isoRef) {
-    var btns = document.querySelectorAll('#' + selectorId + ' .iso-btn');
-    btns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            btns.forEach(function(b) { b.classList.remove('active'); });
-            this.classList.add('active');
-            callback(this.dataset.iso);
-        });
-    });
-}
-
-wireIsoSelector('macIsoSelector', function(iso) {
-    currentMacISO = iso;
-    buildMacChart(iso);
-});
-
-wireIsoSelector('benchIsoSelector', function(iso) {
-    currentBenchISO = iso;
-    buildBenchmarkChart(iso);
-});
-
-// --- Initialize charts ---
-buildMacChart(currentMacISO);
-buildBenchmarkChart(currentBenchISO);
 
 })();
 </script>
