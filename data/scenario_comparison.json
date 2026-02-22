@@ -72,7 +72,51 @@
       "PJM",
       "NYISO",
       "NEISO"
-    ]
+    ],
+    "grid_mix_shares": {
+      "CAISO": {
+        "clean_firm": 7.9,
+        "solar": 22.3,
+        "wind": 8.8,
+        "ccs_ccgt": 0,
+        "hydro": 9.5
+      },
+      "ERCOT": {
+        "clean_firm": 8.6,
+        "solar": 13.8,
+        "wind": 23.6,
+        "ccs_ccgt": 0,
+        "hydro": 0.1
+      },
+      "PJM": {
+        "clean_firm": 32.1,
+        "solar": 2.9,
+        "wind": 3.8,
+        "ccs_ccgt": 0,
+        "hydro": 1.8
+      },
+      "NYISO": {
+        "clean_firm": 18.4,
+        "solar": 0.0,
+        "wind": 4.7,
+        "ccs_ccgt": 0,
+        "hydro": 15.9
+      },
+      "NEISO": {
+        "clean_firm": 23.8,
+        "solar": 1.4,
+        "wind": 3.9,
+        "ccs_ccgt": 0,
+        "hydro": 4.4
+      }
+    },
+    "base_demand_twh": {
+      "CAISO": 224.0,
+      "ERCOT": 488.0,
+      "PJM": 843.3,
+      "NYISO": 151.6,
+      "NEISO": 115.3
+    }
   },
   "queue_a": [
     {
