@@ -1650,6 +1650,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 54.72,
+          "total_cost": 34.75,
+          "incremental": 24.72,
           "resource_twh": {
             "clean_firm": 17.7408,
             "solar": 99.0528,
@@ -1660,12 +1662,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 49592,
-          "new_gas_mw": 12592
+          "new_gas_mw": 12592,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 6798,
+          "firm_total_twh": 17.7,
+          "procurement_pct": 66,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 54.72,
+          "total_cost": 34.75,
+          "incremental": 24.72,
           "resource_twh": {
             "clean_firm": 17.7408,
             "solar": 99.0528,
@@ -1676,12 +1685,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 49592,
-          "new_gas_mw": 12592
+          "new_gas_mw": 12592,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 6798,
+          "firm_total_twh": 17.7,
+          "procurement_pct": 66,
+          "stepwise_mac": 0.0
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 53.96,
+          "total_cost": 38.05,
+          "incremental": 23.96,
           "resource_twh": {
             "clean_firm": 18.2336,
             "solar": 114.37439999999998,
@@ -1692,12 +1708,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 48830,
-          "new_gas_mw": 11830
+          "new_gas_mw": 11830,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 7468,
+          "firm_total_twh": 18.2,
+          "procurement_pct": 74,
+          "stepwise_mac": -19.1
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 53.86,
+          "total_cost": 40.72,
+          "incremental": 23.86,
           "resource_twh": {
             "clean_firm": 17.92,
             "solar": 125.43999999999998,
@@ -1708,12 +1731,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 48350,
-          "new_gas_mw": 11350
+          "new_gas_mw": 11350,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 7891,
+          "firm_total_twh": 17.9,
+          "procurement_pct": 80,
+          "stepwise_mac": -5.1
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 54.19,
+          "total_cost": 43.95,
+          "incremental": 24.19,
           "resource_twh": {
             "clean_firm": 17.7408,
             "solar": 143.89759999999998,
@@ -1724,12 +1754,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 47585,
-          "new_gas_mw": 10585
+          "new_gas_mw": 10585,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 8564,
+          "firm_total_twh": 17.7,
+          "procurement_pct": 88,
+          "stepwise_mac": 16.7
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 55.02,
+          "total_cost": 46.99,
+          "incremental": 25.02,
           "resource_twh": {
             "clean_firm": 19.151999999999997,
             "solar": 157.47199999999998,
@@ -1740,12 +1777,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 46800,
-          "new_gas_mw": 9800
+          "new_gas_mw": 9800,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 9255,
+          "firm_total_twh": 19.2,
+          "procurement_pct": 95,
+          "stepwise_mac": 42.1
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 55.62,
+          "total_cost": 49.0,
+          "incremental": 25.62,
           "resource_twh": {
             "clean_firm": 17.92,
             "solar": 168.0,
@@ -1756,12 +1800,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 46479,
-          "new_gas_mw": 9479
+          "new_gas_mw": 9479,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 9538,
+          "firm_total_twh": 17.9,
+          "procurement_pct": 100,
+          "stepwise_mac": 60.9
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 56.43,
+          "total_cost": 51.12,
+          "incremental": 26.43,
           "resource_twh": {
             "clean_firm": 18.816000000000003,
             "solar": 178.752,
@@ -1772,12 +1823,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 45903,
-          "new_gas_mw": 8903
+          "new_gas_mw": 8903,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 10044,
+          "firm_total_twh": 18.8,
+          "procurement_pct": 105,
+          "stepwise_mac": 82.2
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 57.49,
+          "total_cost": 53.24,
+          "incremental": 27.49,
           "resource_twh": {
             "clean_firm": 17.248000000000005,
             "solar": 189.728,
@@ -1788,12 +1846,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 45610,
-          "new_gas_mw": 8610
+          "new_gas_mw": 8610,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 10302,
+          "firm_total_twh": 17.2,
+          "procurement_pct": 110,
+          "stepwise_mac": 107.7
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 60.31,
+          "total_cost": 57.42,
+          "incremental": 30.31,
           "resource_twh": {
             "clean_firm": 18.816000000000003,
             "solar": 209.664,
@@ -1804,12 +1869,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 44526,
-          "new_gas_mw": 7526
+          "new_gas_mw": 7526,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 11256,
+          "firm_total_twh": 18.8,
+          "procurement_pct": 120,
+          "stepwise_mac": 286.6
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 66.49,
+          "total_cost": 64.83,
+          "incremental": 36.49,
           "resource_twh": {
             "clean_firm": 21.168000000000003,
             "solar": 229.824,
@@ -1820,12 +1892,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 43153,
-          "new_gas_mw": 6153
+          "new_gas_mw": 6153,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 12464,
+          "firm_total_twh": 21.2,
+          "procurement_pct": 135,
+          "stepwise_mac": 628.2
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 72.4,
+          "total_cost": 71.67,
+          "incremental": 42.4,
           "resource_twh": {
             "clean_firm": 23.520000000000003,
             "solar": 258.72,
@@ -1836,7 +1915,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 41553,
-          "new_gas_mw": 4553
+          "new_gas_mw": 4553,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 13872,
+          "firm_total_twh": 23.5,
+          "procurement_pct": 150,
+          "stepwise_mac": 1001.6
         }
       ],
       "ERCOT": [
@@ -1844,6 +1928,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 46.17,
+          "total_cost": 39.38,
+          "incremental": 19.17,
           "resource_twh": {
             "clean_firm": 52.704,
             "solar": 65.88000000000001,
@@ -1854,12 +1940,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 101451,
-          "new_gas_mw": 46451
+          "new_gas_mw": 46451,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 11933,
+          "firm_total_twh": 52.7,
+          "procurement_pct": 90,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 46.42,
+          "total_cost": 28.04,
+          "incremental": 19.42,
           "resource_twh": {
             "clean_firm": 40.992000000000004,
             "solar": 67.34400000000001,
@@ -1870,12 +1963,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 104874,
-          "new_gas_mw": 49874
+          "new_gas_mw": 49874,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 9092,
+          "firm_total_twh": 41.0,
+          "procurement_pct": 60,
+          "stepwise_mac": 2.4
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 44.72,
+          "total_cost": 31.53,
+          "incremental": 17.72,
           "resource_twh": {
             "clean_firm": 40.992,
             "solar": 68.32,
@@ -1886,12 +1986,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 104176,
-          "new_gas_mw": 49176
+          "new_gas_mw": 49176,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 9671,
+          "firm_total_twh": 41.0,
+          "procurement_pct": 70,
+          "stepwise_mac": -18.6
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 44.54,
+          "total_cost": 33.41,
+          "incremental": 17.54,
           "resource_twh": {
             "clean_firm": 40.260000000000005,
             "solar": 62.22,
@@ -1902,12 +2009,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 104098,
-          "new_gas_mw": 49098
+          "new_gas_mw": 49098,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 9735,
+          "firm_total_twh": 40.3,
+          "procurement_pct": 75,
+          "stepwise_mac": -4.8
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 44.64,
+          "total_cost": 36.74,
+          "incremental": 17.64,
           "resource_twh": {
             "clean_firm": 41.480000000000004,
             "solar": 66.36800000000001,
@@ -1918,12 +2032,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 103162,
-          "new_gas_mw": 48162
+          "new_gas_mw": 48162,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 10512,
+          "firm_total_twh": 41.5,
+          "procurement_pct": 85,
+          "stepwise_mac": 2.9
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 45.22,
+          "total_cost": 38.53,
+          "incremental": 18.22,
           "resource_twh": {
             "clean_firm": 43.92,
             "solar": 70.272,
@@ -1934,12 +2055,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 102417,
-          "new_gas_mw": 47417
+          "new_gas_mw": 47417,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 11130,
+          "firm_total_twh": 43.9,
+          "procurement_pct": 90,
+          "stepwise_mac": 18.0
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 46.19,
+          "total_cost": 40.88,
+          "incremental": 19.19,
           "resource_twh": {
             "clean_firm": 42.602399999999996,
             "solar": 66.2704,
@@ -1950,12 +2078,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 102220,
-          "new_gas_mw": 47220
+          "new_gas_mw": 47220,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 11294,
+          "firm_total_twh": 42.6,
+          "procurement_pct": 97,
+          "stepwise_mac": 62.4
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 47.85,
+          "total_cost": 43.06,
+          "incremental": 20.85,
           "resource_twh": {
             "clean_firm": 53.68,
             "solar": 82.96000000000001,
@@ -1966,12 +2101,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 100189,
-          "new_gas_mw": 45189
+          "new_gas_mw": 45189,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 12980,
+          "firm_total_twh": 53.7,
+          "procurement_pct": 100,
+          "stepwise_mac": 109.2
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 48.89,
+          "total_cost": 45.27,
+          "incremental": 21.89,
           "resource_twh": {
             "clean_firm": 39.820800000000006,
             "solar": 169.2384,
@@ -1982,12 +2124,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 9.76,
           "ldes_twh": 0.0,
           "gas_backup_mw": 98121,
-          "new_gas_mw": 43121
+          "new_gas_mw": 43121,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 14696,
+          "firm_total_twh": 39.8,
+          "procurement_pct": 102,
+          "stepwise_mac": 69.8
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 49.74,
+          "total_cost": 47.25,
+          "incremental": 22.74,
           "resource_twh": {
             "clean_firm": 41.772800000000004,
             "solar": 203.64240000000004,
@@ -1998,12 +2147,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 9.76,
           "ldes_twh": 0.0,
           "gas_backup_mw": 96598,
-          "new_gas_mw": 41598
+          "new_gas_mw": 41598,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 15960,
+          "firm_total_twh": 41.8,
+          "procurement_pct": 107,
+          "stepwise_mac": 58.0
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 51.67,
+          "total_cost": 50.38,
+          "incremental": 24.67,
           "resource_twh": {
             "clean_firm": 39.284,
             "solar": 230.09199999999996,
@@ -2014,12 +2170,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 9.76,
           "ldes_twh": 0.0,
           "gas_backup_mw": 95641,
-          "new_gas_mw": 40641
+          "new_gas_mw": 40641,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 16754,
+          "firm_total_twh": 39.3,
+          "procurement_pct": 115,
+          "stepwise_mac": 134.0
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 54.53,
+          "total_cost": 53.98,
+          "incremental": 27.53,
           "resource_twh": {
             "clean_firm": 42.7,
             "solar": 256.2,
@@ -2030,12 +2193,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 9.76,
           "ldes_twh": 0.0,
           "gas_backup_mw": 93829,
-          "new_gas_mw": 38829
+          "new_gas_mw": 38829,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 18258,
+          "firm_total_twh": 42.7,
+          "procurement_pct": 125,
+          "stepwise_mac": 335.1
         },
         {
           "threshold": 100,
           "year": 2050,
           "effective_cost": 113.69,
+          "total_cost": 113.69,
+          "incremental": 86.69,
           "resource_twh": {
             "clean_firm": 244.0,
             "solar": 97.60000000000001,
@@ -2046,7 +2216,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 66160,
-          "new_gas_mw": 11160
+          "new_gas_mw": 11160,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 41224,
+          "firm_total_twh": 244.0,
+          "procurement_pct": 250,
+          "stepwise_mac": 10472.7
         }
       ],
       "PJM": [
@@ -2054,6 +2229,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 66.45,
+          "total_cost": 53.7,
+          "incremental": 32.45,
           "resource_twh": {
             "clean_firm": 258.0498,
             "solar": 286.722,
@@ -2064,12 +2241,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 172252,
-          "new_gas_mw": 97252
+          "new_gas_mw": 97252,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 43397,
+          "firm_total_twh": 258.0,
+          "procurement_pct": 85,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 64.9,
+          "total_cost": 39.78,
+          "incremental": 30.9,
           "resource_twh": {
             "clean_firm": 282.33684,
             "solar": 26.1423,
@@ -2080,12 +2264,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 181503,
-          "new_gas_mw": 106503
+          "new_gas_mw": 106503,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 35811,
+          "firm_total_twh": 282.3,
+          "procurement_pct": 62,
+          "stepwise_mac": -16.0
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 63.6,
+          "total_cost": 47.0,
+          "incremental": 29.6,
           "resource_twh": {
             "clean_firm": 284.61375,
             "solar": 25.298999999999996,
@@ -2096,12 +2287,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 179654,
-          "new_gas_mw": 104654
+          "new_gas_mw": 104654,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 37328,
+          "firm_total_twh": 284.6,
+          "procurement_pct": 75,
+          "stepwise_mac": -15.5
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 63.97,
+          "total_cost": 49.71,
+          "incremental": 29.97,
           "resource_twh": {
             "clean_firm": 283.3488,
             "solar": 26.985599999999998,
@@ -2112,12 +2310,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 179155,
-          "new_gas_mw": 104155
+          "new_gas_mw": 104155,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 37737,
+          "firm_total_twh": 283.3,
+          "procurement_pct": 80,
+          "stepwise_mac": 10.3
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 64.85,
+          "total_cost": 51.95,
+          "incremental": 30.85,
           "resource_twh": {
             "clean_firm": 279.55395,
             "solar": 143.361,
@@ -2128,12 +2333,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 175780,
-          "new_gas_mw": 100780
+          "new_gas_mw": 100780,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 40504,
+          "firm_total_twh": 279.6,
+          "procurement_pct": 85,
+          "stepwise_mac": 26.1
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 65.78,
+          "total_cost": 55.91,
+          "incremental": 31.78,
           "resource_twh": {
             "clean_firm": 280.8189,
             "solar": 227.691,
@@ -2144,12 +2356,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 170432,
-          "new_gas_mw": 95432
+          "new_gas_mw": 95432,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 44889,
+          "firm_total_twh": 280.8,
+          "procurement_pct": 90,
+          "stepwise_mac": 29.0
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 66.02,
+          "total_cost": 57.76,
+          "incremental": 32.02,
           "resource_twh": {
             "clean_firm": 280.39724999999993,
             "solar": 392.55614999999995,
@@ -2160,12 +2379,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 165285,
-          "new_gas_mw": 90285
+          "new_gas_mw": 90285,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 49111,
+          "firm_total_twh": 280.4,
+          "procurement_pct": 95,
+          "stepwise_mac": 15.5
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 66.94,
+          "total_cost": 60.31,
+          "incremental": 32.94,
           "resource_twh": {
             "clean_firm": 286.722,
             "solar": 438.516,
@@ -2176,12 +2402,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 162602,
-          "new_gas_mw": 87602
+          "new_gas_mw": 87602,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 51310,
+          "firm_total_twh": 286.7,
+          "procurement_pct": 100,
+          "stepwise_mac": 60.5
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 67.96,
+          "total_cost": 62.86,
+          "incremental": 33.96,
           "resource_twh": {
             "clean_firm": 283.3488,
             "solar": 451.58715000000007,
@@ -2192,12 +2425,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 162050,
-          "new_gas_mw": 87050
+          "new_gas_mw": 87050,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 51763,
+          "firm_total_twh": 283.3,
+          "procurement_pct": 105,
+          "stepwise_mac": 68.2
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 69.64,
+          "total_cost": 66.15,
+          "incremental": 35.64,
           "resource_twh": {
             "clean_firm": 278.289,
             "solar": 389.6046,
@@ -2208,12 +2448,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 163799,
-          "new_gas_mw": 88799
+          "new_gas_mw": 88799,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 50328,
+          "firm_total_twh": 278.3,
+          "procurement_pct": 110,
+          "stepwise_mac": 114.2
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 73.03,
+          "total_cost": 71.2,
+          "incremental": 39.03,
           "resource_twh": {
             "clean_firm": 283.3488,
             "solar": 445.2624,
@@ -2224,12 +2471,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 160395,
-          "new_gas_mw": 85395
+          "new_gas_mw": 85395,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 53120,
+          "firm_total_twh": 283.3,
+          "procurement_pct": 120,
+          "stepwise_mac": 234.0
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 78.09,
+          "total_cost": 77.31,
+          "incremental": 44.09,
           "resource_twh": {
             "clean_firm": 295.99830000000003,
             "solar": 438.516,
@@ -2240,12 +2494,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 157777,
-          "new_gas_mw": 82777
+          "new_gas_mw": 82777,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 55267,
+          "firm_total_twh": 296.0,
+          "procurement_pct": 130,
+          "stepwise_mac": 588.8
         },
         {
           "threshold": 100,
           "year": 2050,
           "effective_cost": 132.52,
+          "total_cost": 132.52,
+          "incremental": 98.52,
           "resource_twh": {
             "clean_firm": 1160.3808000000001,
             "solar": 40.4784,
@@ -2256,7 +2517,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 59127,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 59127,
+          "clean_peak_mw": 136160,
+          "firm_total_twh": 1160.4,
+          "procurement_pct": 160,
+          "stepwise_mac": 9564.2
         }
       ],
       "NYISO": [
@@ -2264,6 +2530,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 88.97,
+          "total_cost": 68.24,
+          "incremental": 46.97,
           "resource_twh": {
             "clean_firm": 35.1712,
             "solar": 12.128000000000002,
@@ -2274,12 +2542,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 37502,
-          "new_gas_mw": 19502
+          "new_gas_mw": 19502,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 5884,
+          "firm_total_twh": 35.2,
+          "procurement_pct": 80,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 86.92,
+          "total_cost": 53.28,
+          "incremental": 44.92,
           "resource_twh": {
             "clean_firm": 29.137520000000002,
             "solar": 0.0,
@@ -2290,12 +2565,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 38933,
-          "new_gas_mw": 20933
+          "new_gas_mw": 20933,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 4710,
+          "firm_total_twh": 29.1,
+          "procurement_pct": 62,
+          "stepwise_mac": -49.4
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 85.33,
+          "total_cost": 62.12,
+          "incremental": 43.33,
           "resource_twh": {
             "clean_firm": 29.562,
             "solar": 0.0,
@@ -2306,12 +2588,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 38441,
-          "new_gas_mw": 20441
+          "new_gas_mw": 20441,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 5114,
+          "firm_total_twh": 29.6,
+          "procurement_pct": 75,
+          "stepwise_mac": -38.3
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 85.66,
+          "total_cost": 65.44,
+          "incremental": 43.66,
           "resource_twh": {
             "clean_firm": 29.1072,
             "solar": 0.0,
@@ -2322,12 +2611,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 38329,
-          "new_gas_mw": 20329
+          "new_gas_mw": 20329,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 5206,
+          "firm_total_twh": 29.1,
+          "procurement_pct": 80,
+          "stepwise_mac": 15.9
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 85.94,
+          "total_cost": 68.75,
+          "incremental": 43.94,
           "resource_twh": {
             "clean_firm": 29.6378,
             "solar": 18.0404,
@@ -2338,12 +2634,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 37592,
-          "new_gas_mw": 19592
+          "new_gas_mw": 19592,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 5810,
+          "firm_total_twh": 29.6,
+          "procurement_pct": 85,
+          "stepwise_mac": 13.5
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 88.69,
+          "total_cost": 75.48,
+          "incremental": 46.69,
           "resource_twh": {
             "clean_firm": 28.804,
             "solar": 24.4834,
@@ -2354,12 +2657,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 37179,
-          "new_gas_mw": 19179
+          "new_gas_mw": 19179,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 6149,
+          "firm_total_twh": 28.8,
+          "procurement_pct": 95,
+          "stepwise_mac": 132.6
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 88.87,
+          "total_cost": 77.76,
+          "incremental": 46.87,
           "resource_twh": {
             "clean_firm": 31.684399999999997,
             "solar": 46.0864,
@@ -2370,12 +2680,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 3.032,
           "ldes_twh": 0.0,
           "gas_backup_mw": 35816,
-          "new_gas_mw": 17816
+          "new_gas_mw": 17816,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 7267,
+          "firm_total_twh": 31.7,
+          "procurement_pct": 95,
+          "stepwise_mac": 17.4
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 89.44,
+          "total_cost": 80.5,
+          "incremental": 47.44,
           "resource_twh": {
             "clean_firm": 28.804,
             "solar": 57.608,
@@ -2386,12 +2703,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 3.032,
           "ldes_twh": 0.0,
           "gas_backup_mw": 35687,
-          "new_gas_mw": 17687
+          "new_gas_mw": 17687,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 7372,
+          "firm_total_twh": 28.8,
+          "procurement_pct": 100,
+          "stepwise_mac": 55.0
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 91.4,
+          "total_cost": 85.0,
+          "incremental": 49.4,
           "resource_twh": {
             "clean_firm": 29.198159999999998,
             "solar": 69.75116,
@@ -2402,12 +2726,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 3.032,
           "ldes_twh": 0.0,
           "gas_backup_mw": 35063,
-          "new_gas_mw": 17063
+          "new_gas_mw": 17063,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 7884,
+          "firm_total_twh": 29.2,
+          "procurement_pct": 107,
+          "stepwise_mac": 189.0
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 93.41,
+          "total_cost": 88.74,
+          "incremental": 51.41,
           "resource_twh": {
             "clean_firm": 30.562559999999998,
             "solar": 69.61471999999999,
@@ -2418,12 +2749,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 3.032,
           "ldes_twh": 0.0,
           "gas_backup_mw": 34727,
-          "new_gas_mw": 16727
+          "new_gas_mw": 16727,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 8159,
+          "firm_total_twh": 30.6,
+          "procurement_pct": 112,
+          "stepwise_mac": 193.8
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 97.59,
+          "total_cost": 95.15,
+          "incremental": 55.59,
           "resource_twh": {
             "clean_firm": 29.59232,
             "solar": 77.67984,
@@ -2434,12 +2772,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 3.032,
           "ldes_twh": 0.0,
           "gas_backup_mw": 34286,
-          "new_gas_mw": 16286
+          "new_gas_mw": 16286,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 8521,
+          "firm_total_twh": 29.6,
+          "procurement_pct": 122,
+          "stepwise_mac": 403.1
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 103.62,
+          "total_cost": 102.59,
+          "incremental": 61.62,
           "resource_twh": {
             "clean_firm": 32.017920000000004,
             "solar": 78.04368000000001,
@@ -2450,12 +2795,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 3.032,
           "ldes_twh": 0.0,
           "gas_backup_mw": 33635,
-          "new_gas_mw": 15635
+          "new_gas_mw": 15635,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 9055,
+          "firm_total_twh": 32.0,
+          "procurement_pct": 132,
+          "stepwise_mac": 969.1
         },
         {
           "threshold": 100,
           "year": 2050,
           "effective_cost": 161.67,
+          "total_cost": 161.67,
+          "incremental": 119.67,
           "resource_twh": {
             "clean_firm": 177.06879999999998,
             "solar": 2.4255999999999998,
@@ -2466,7 +2818,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 17022,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 17022,
+          "clean_peak_mw": 22678,
+          "firm_total_twh": 177.1,
+          "procurement_pct": 160,
+          "stepwise_mac": 13994.8
         }
       ],
       "NEISO": [
@@ -2474,6 +2831,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 79.86,
+          "total_cost": 58.46,
+          "incremental": 38.86,
           "resource_twh": {
             "clean_firm": 28.536749999999998,
             "solar": 1.7294999999999998,
@@ -2484,12 +2843,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 30242,
-          "new_gas_mw": 16242
+          "new_gas_mw": 16242,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 4077,
+          "firm_total_twh": 28.5,
+          "procurement_pct": 75,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 79.86,
+          "total_cost": 58.46,
+          "incremental": 38.86,
           "resource_twh": {
             "clean_firm": 28.536749999999998,
             "solar": 1.7294999999999998,
@@ -2500,12 +2866,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 30242,
-          "new_gas_mw": 16242
+          "new_gas_mw": 16242,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 4077,
+          "firm_total_twh": 28.5,
+          "procurement_pct": 75,
+          "stepwise_mac": 0.0
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 79.86,
+          "total_cost": 58.46,
+          "incremental": 38.86,
           "resource_twh": {
             "clean_firm": 28.536749999999998,
             "solar": 1.7294999999999998,
@@ -2516,12 +2889,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 30242,
-          "new_gas_mw": 16242
+          "new_gas_mw": 16242,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 4077,
+          "firm_total_twh": 28.5,
+          "procurement_pct": 75,
+          "stepwise_mac": 0.0
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 80.19,
+          "total_cost": 61.67,
+          "incremental": 39.19,
           "resource_twh": {
             "clean_firm": 28.5944,
             "solar": 1.8448,
@@ -2532,12 +2912,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 30145,
-          "new_gas_mw": 16145
+          "new_gas_mw": 16145,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 4159,
+          "firm_total_twh": 28.6,
+          "procurement_pct": 80,
+          "stepwise_mac": 16.3
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 80.86,
+          "total_cost": 64.77,
+          "incremental": 39.86,
           "resource_twh": {
             "clean_firm": 28.421449999999997,
             "solar": 13.7207,
@@ -2548,12 +2935,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 29760,
-          "new_gas_mw": 15760
+          "new_gas_mw": 15760,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 4486,
+          "firm_total_twh": 28.4,
+          "procurement_pct": 85,
+          "stepwise_mac": 33.3
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 83.59,
+          "total_cost": 71.14,
+          "incremental": 42.59,
           "resource_twh": {
             "clean_firm": 28.4791,
             "solar": 18.62095,
@@ -2564,12 +2958,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 29448,
-          "new_gas_mw": 15448
+          "new_gas_mw": 15448,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 4752,
+          "firm_total_twh": 28.5,
+          "procurement_pct": 95,
+          "stepwise_mac": 136.4
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 84.45,
+          "total_cost": 73.98,
+          "incremental": 43.45,
           "resource_twh": {
             "clean_firm": 29.078659999999996,
             "solar": 38.025940000000006,
@@ -2580,12 +2981,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 2.306,
           "ldes_twh": 0.0,
           "gas_backup_mw": 28526,
-          "new_gas_mw": 14526
+          "new_gas_mw": 14526,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 5536,
+          "firm_total_twh": 29.1,
+          "procurement_pct": 97,
+          "stepwise_mac": 86.2
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 85.87,
+          "total_cost": 77.28,
+          "incremental": 44.87,
           "resource_twh": {
             "clean_firm": 28.22544,
             "solar": 39.98604,
@@ -2596,12 +3004,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 2.306,
           "ldes_twh": 0.0,
           "gas_backup_mw": 28490,
-          "new_gas_mw": 14490
+          "new_gas_mw": 14490,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 5567,
+          "firm_total_twh": 28.2,
+          "procurement_pct": 102,
+          "stepwise_mac": 142.6
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 88.64,
+          "total_cost": 82.08,
+          "incremental": 47.64,
           "resource_twh": {
             "clean_firm": 29.170900000000007,
             "solar": 59.6101,
@@ -2612,12 +3027,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 2.306,
           "ldes_twh": 0.0,
           "gas_backup_mw": 27710,
-          "new_gas_mw": 13710
+          "new_gas_mw": 13710,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 6230,
+          "firm_total_twh": 29.2,
+          "procurement_pct": 110,
+          "stepwise_mac": 278.6
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 91.14,
+          "total_cost": 86.85,
+          "incremental": 50.14,
           "resource_twh": {
             "clean_firm": 28.329209999999996,
             "solar": 45.866339999999994,
@@ -2628,12 +3050,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 2.306,
           "ldes_twh": 0.0,
           "gas_backup_mw": 28059,
-          "new_gas_mw": 14059
+          "new_gas_mw": 14059,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 5933,
+          "firm_total_twh": 28.3,
+          "procurement_pct": 117,
+          "stepwise_mac": 251.9
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 97.29,
+          "total_cost": 94.85,
+          "incremental": 56.29,
           "resource_twh": {
             "clean_firm": 33.67913,
             "solar": 58.5724,
@@ -2644,12 +3073,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 2.306,
           "ldes_twh": 0.0,
           "gas_backup_mw": 26898,
-          "new_gas_mw": 12898
+          "new_gas_mw": 12898,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 6920,
+          "firm_total_twh": 33.7,
+          "procurement_pct": 127,
+          "stepwise_mac": 620.5
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 103.06,
+          "total_cost": 102.03,
+          "incremental": 62.06,
           "resource_twh": {
             "clean_firm": 30.669799999999995,
             "solar": 61.33959999999999,
@@ -2660,12 +3096,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 2.306,
           "ldes_twh": 0.0,
           "gas_backup_mw": 26962,
-          "new_gas_mw": 12962
+          "new_gas_mw": 12962,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 6865,
+          "firm_total_twh": 30.7,
+          "procurement_pct": 140,
+          "stepwise_mac": 971.3
         },
         {
           "threshold": 100,
           "year": 2050,
           "effective_cost": 178.41,
+          "total_cost": 178.41,
+          "incremental": 137.41,
           "resource_twh": {
             "clean_firm": 172.4888,
             "solar": 1.9601000000000002,
@@ -2676,7 +3119,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 11189,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 11189,
+          "clean_peak_mw": 20272,
+          "firm_total_twh": 172.5,
+          "procurement_pct": 170,
+          "stepwise_mac": 19037.9
         }
       ]
     },
@@ -2686,6 +3134,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 53.65,
+          "total_cost": 40.56,
+          "incremental": 23.65,
           "resource_twh": {
             "clean_firm": 28.672,
             "solar": 120.06400000000001,
@@ -2696,12 +3146,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 47327,
-          "new_gas_mw": 10327
+          "new_gas_mw": 10327,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 8791,
+          "firm_total_twh": 28.7,
+          "procurement_pct": 80,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 53.65,
+          "total_cost": 40.56,
+          "incremental": 23.65,
           "resource_twh": {
             "clean_firm": 28.672,
             "solar": 120.06400000000001,
@@ -2712,12 +3169,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 47327,
-          "new_gas_mw": 10327
+          "new_gas_mw": 10327,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 8791,
+          "firm_total_twh": 28.7,
+          "procurement_pct": 80,
+          "stepwise_mac": 0.0
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 53.13,
+          "total_cost": 37.46,
+          "incremental": 23.13,
           "resource_twh": {
             "clean_firm": 19.891199999999998,
             "solar": 112.71679999999999,
@@ -2728,12 +3192,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 48680,
-          "new_gas_mw": 11680
+          "new_gas_mw": 11680,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 7601,
+          "firm_total_twh": 19.9,
+          "procurement_pct": 74,
+          "stepwise_mac": -13.0
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 52.94,
+          "total_cost": 40.02,
+          "incremental": 22.94,
           "resource_twh": {
             "clean_firm": 21.504,
             "solar": 123.64799999999998,
@@ -2744,12 +3215,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 47978,
-          "new_gas_mw": 10978
+          "new_gas_mw": 10978,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 8218,
+          "firm_total_twh": 21.5,
+          "procurement_pct": 80,
+          "stepwise_mac": -9.6
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 53.34,
+          "total_cost": 43.31,
+          "incremental": 23.34,
           "resource_twh": {
             "clean_firm": 19.712000000000003,
             "solar": 141.9264,
@@ -2760,12 +3238,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 47406,
-          "new_gas_mw": 10406
+          "new_gas_mw": 10406,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 8722,
+          "firm_total_twh": 19.7,
+          "procurement_pct": 88,
+          "stepwise_mac": 20.3
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 54.18,
+          "total_cost": 46.27,
+          "incremental": 24.18,
           "resource_twh": {
             "clean_firm": 19.151999999999997,
             "solar": 157.47199999999998,
@@ -2776,12 +3261,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 46800,
-          "new_gas_mw": 9800
+          "new_gas_mw": 9800,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 9255,
+          "firm_total_twh": 19.2,
+          "procurement_pct": 95,
+          "stepwise_mac": 42.6
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 54.31,
+          "total_cost": 48.17,
+          "incremental": 24.31,
           "resource_twh": {
             "clean_firm": 125.55199999999999,
             "solar": 51.071999999999996,
@@ -2792,12 +3284,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 37138,
-          "new_gas_mw": 138
+          "new_gas_mw": 138,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 17758,
+          "firm_total_twh": 125.6,
+          "procurement_pct": 95,
+          "stepwise_mac": 13.2
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 54.58,
+          "total_cost": 49.12,
+          "incremental": 24.58,
           "resource_twh": {
             "clean_firm": 128.19519999999997,
             "solar": 52.1472,
@@ -2808,12 +3307,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 36725,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 36725,
+          "clean_peak_mw": 18121,
+          "firm_total_twh": 128.2,
+          "procurement_pct": 97,
+          "stepwise_mac": 27.4
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 55.14,
+          "total_cost": 51.06,
+          "incremental": 25.14,
           "resource_twh": {
             "clean_firm": 116.5248,
             "solar": 73.1136,
@@ -2824,12 +3330,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 37351,
-          "new_gas_mw": 351
+          "new_gas_mw": 351,
+          "existing_gas_used_mw": 37000,
+          "clean_peak_mw": 17570,
+          "firm_total_twh": 116.5,
+          "procurement_pct": 102,
+          "stepwise_mac": 56.9
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 56.04,
+          "total_cost": 53.24,
+          "incremental": 26.04,
           "resource_twh": {
             "clean_firm": 117.44319999999999,
             "solar": 83.888,
@@ -2840,12 +3353,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 36773,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 36773,
+          "clean_peak_mw": 18079,
+          "firm_total_twh": 117.4,
+          "procurement_pct": 107,
+          "stepwise_mac": 91.5
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 57.81,
+          "total_cost": 56.36,
+          "incremental": 27.81,
           "resource_twh": {
             "clean_firm": 135.47520000000003,
             "solar": 75.26400000000001,
@@ -2856,12 +3376,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 34700,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 34700,
+          "clean_peak_mw": 19903,
+          "firm_total_twh": 135.5,
+          "procurement_pct": 112,
+          "stepwise_mac": 179.9
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 59.85,
+          "total_cost": 59.25,
+          "incremental": 29.85,
           "resource_twh": {
             "clean_firm": 146.7648,
             "solar": 73.3824,
@@ -2872,7 +3399,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 4.48,
           "ldes_twh": 0.0,
           "gas_backup_mw": 33239,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 33239,
+          "clean_peak_mw": 21189,
+          "firm_total_twh": 146.8,
+          "procurement_pct": 117,
+          "stepwise_mac": 345.7
         }
       ],
       "ERCOT": [
@@ -2880,6 +3412,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 45.18,
+          "total_cost": 38.53,
+          "incremental": 18.18,
           "resource_twh": {
             "clean_firm": 52.704,
             "solar": 65.88000000000001,
@@ -2890,12 +3424,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 101451,
-          "new_gas_mw": 46451
+          "new_gas_mw": 46451,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 11933,
+          "firm_total_twh": 52.7,
+          "procurement_pct": 90,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 46.34,
+          "total_cost": 27.94,
+          "incremental": 19.34,
           "resource_twh": {
             "clean_firm": 43.92,
             "solar": 67.34400000000001,
@@ -2906,12 +3447,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 104511,
-          "new_gas_mw": 49511
+          "new_gas_mw": 49511,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 9392,
+          "firm_total_twh": 43.9,
+          "procurement_pct": 60,
+          "stepwise_mac": 11.0
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 44.65,
+          "total_cost": 31.44,
+          "incremental": 17.65,
           "resource_twh": {
             "clean_firm": 44.408,
             "solar": 68.32,
@@ -2922,12 +3470,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 103753,
-          "new_gas_mw": 48753
+          "new_gas_mw": 48753,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 10022,
+          "firm_total_twh": 44.4,
+          "procurement_pct": 70,
+          "stepwise_mac": -18.5
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 44.37,
+          "total_cost": 33.28,
+          "incremental": 17.37,
           "resource_twh": {
             "clean_firm": 43.92,
             "solar": 62.22,
@@ -2938,12 +3493,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 103645,
-          "new_gas_mw": 48645
+          "new_gas_mw": 48645,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 10111,
+          "firm_total_twh": 43.9,
+          "procurement_pct": 75,
+          "stepwise_mac": -7.5
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 44.57,
+          "total_cost": 36.68,
+          "incremental": 17.57,
           "resource_twh": {
             "clean_firm": 45.628,
             "solar": 66.36800000000001,
@@ -2954,12 +3516,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 102649,
-          "new_gas_mw": 47649
+          "new_gas_mw": 47649,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 10938,
+          "firm_total_twh": 45.6,
+          "procurement_pct": 85,
+          "stepwise_mac": 5.8
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 45.07,
+          "total_cost": 38.4,
+          "incremental": 18.07,
           "resource_twh": {
             "clean_firm": 43.92,
             "solar": 70.272,
@@ -2970,12 +3539,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 102417,
-          "new_gas_mw": 47417
+          "new_gas_mw": 47417,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 11130,
+          "firm_total_twh": 43.9,
+          "procurement_pct": 90,
+          "stepwise_mac": 15.5
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 46.16,
+          "total_cost": 40.85,
+          "incremental": 19.16,
           "resource_twh": {
             "clean_firm": 42.602399999999996,
             "solar": 66.2704,
@@ -2986,12 +3562,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 102220,
-          "new_gas_mw": 47220
+          "new_gas_mw": 47220,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 11294,
+          "firm_total_twh": 42.6,
+          "procurement_pct": 97,
+          "stepwise_mac": 70.1
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 46.82,
+          "total_cost": 42.14,
+          "incremental": 19.82,
           "resource_twh": {
             "clean_firm": 53.68,
             "solar": 82.96000000000001,
@@ -3002,12 +3585,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 100189,
-          "new_gas_mw": 45189
+          "new_gas_mw": 45189,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 12980,
+          "firm_total_twh": 53.7,
+          "procurement_pct": 100,
+          "stepwise_mac": 43.4
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 48.19,
+          "total_cost": 44.57,
+          "incremental": 21.19,
           "resource_twh": {
             "clean_firm": 48.800000000000004,
             "solar": 122.0,
@@ -3018,12 +3608,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 9.76,
           "gas_backup_mw": 98511,
-          "new_gas_mw": 43511
+          "new_gas_mw": 43511,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 14373,
+          "firm_total_twh": 48.8,
+          "procurement_pct": 100,
+          "stepwise_mac": 91.9
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 49.23,
+          "total_cost": 46.77,
+          "incremental": 22.23,
           "resource_twh": {
             "clean_firm": 46.9944,
             "solar": 203.64240000000004,
@@ -3034,12 +3631,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 9.76,
           "ldes_twh": 0.0,
           "gas_backup_mw": 95952,
-          "new_gas_mw": 40952
+          "new_gas_mw": 40952,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 16497,
+          "firm_total_twh": 47.0,
+          "procurement_pct": 107,
+          "stepwise_mac": 71.0
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 50.88,
+          "total_cost": 49.61,
+          "incremental": 23.88,
           "resource_twh": {
             "clean_firm": 81.98400000000001,
             "solar": 267.81440000000003,
@@ -3050,12 +3654,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 9.76,
           "ldes_twh": 0.0,
           "gas_backup_mw": 89520,
-          "new_gas_mw": 34520
+          "new_gas_mw": 34520,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 21835,
+          "firm_total_twh": 82.0,
+          "procurement_pct": 112,
+          "stepwise_mac": 114.6
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 53.11,
+          "total_cost": 52.58,
+          "incremental": 26.11,
           "resource_twh": {
             "clean_firm": 182.7072,
             "solar": 245.5128,
@@ -3066,12 +3677,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 9.76,
           "ldes_twh": 0.0,
           "gas_backup_mw": 77330,
-          "new_gas_mw": 22330
+          "new_gas_mw": 22330,
+          "existing_gas_used_mw": 55000,
+          "clean_peak_mw": 31953,
+          "firm_total_twh": 182.7,
+          "procurement_pct": 117,
+          "stepwise_mac": 261.3
         },
         {
           "threshold": 100,
           "year": 2050,
           "effective_cost": 79.99,
+          "total_cost": 79.99,
+          "incremental": 52.99,
           "resource_twh": {
             "clean_firm": 630.496,
             "solar": 33.184000000000005,
@@ -3082,7 +3700,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 25460,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 25460,
+          "clean_peak_mw": 75005,
+          "firm_total_twh": 630.5,
+          "procurement_pct": 170,
+          "stepwise_mac": 4758.4
         }
       ],
       "PJM": [
@@ -3090,6 +3713,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 62.37,
+          "total_cost": 51.27,
+          "incremental": 28.37,
           "resource_twh": {
             "clean_firm": 408.57884999999993,
             "solar": 57.3444,
@@ -3100,12 +3725,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 162009,
-          "new_gas_mw": 87009
+          "new_gas_mw": 87009,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 51797,
+          "firm_total_twh": 408.6,
+          "procurement_pct": 85,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 61.93,
+          "total_cost": 47.62,
+          "incremental": 27.93,
           "resource_twh": {
             "clean_firm": 566.6976,
             "solar": 67.46400000000001,
@@ -3116,12 +3748,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 142527,
-          "new_gas_mw": 67527
+          "new_gas_mw": 67527,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 67772,
+          "firm_total_twh": 566.7,
+          "procurement_pct": 80,
+          "stepwise_mac": -4.6
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 62.48,
+          "total_cost": 45.11,
+          "incremental": 28.48,
           "resource_twh": {
             "clean_firm": 562.90275,
             "solar": 25.298999999999996,
@@ -3132,12 +3771,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 144787,
-          "new_gas_mw": 69787
+          "new_gas_mw": 69787,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 65919,
+          "firm_total_twh": 562.9,
+          "procurement_pct": 75,
+          "stepwise_mac": 6.6
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 61.95,
+          "total_cost": 47.64,
+          "incremental": 27.95,
           "resource_twh": {
             "clean_firm": 607.176,
             "solar": 26.985599999999998,
@@ -3148,12 +3794,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 138582,
-          "new_gas_mw": 63582
+          "new_gas_mw": 63582,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 71007,
+          "firm_total_twh": 607.2,
+          "procurement_pct": 80,
+          "stepwise_mac": -14.7
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 61.44,
+          "total_cost": 50.2,
+          "incremental": 27.44,
           "resource_twh": {
             "clean_firm": 645.1245,
             "solar": 28.6722,
@@ -3164,12 +3817,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 133170,
-          "new_gas_mw": 58170
+          "new_gas_mw": 58170,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 75445,
+          "firm_total_twh": 645.1,
+          "procurement_pct": 85,
+          "stepwise_mac": -15.1
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 61.13,
+          "total_cost": 52.76,
+          "incremental": 27.13,
           "resource_twh": {
             "clean_firm": 683.073,
             "solar": 30.358800000000002,
@@ -3180,12 +3840,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 127758,
-          "new_gas_mw": 52758
+          "new_gas_mw": 52758,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 79882,
+          "firm_total_twh": 683.1,
+          "procurement_pct": 90,
+          "stepwise_mac": -9.7
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 61.05,
+          "total_cost": 53.78,
+          "incremental": 27.05,
           "resource_twh": {
             "clean_firm": 698.2524,
             "solar": 31.03344,
@@ -3196,12 +3863,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 125593,
-          "new_gas_mw": 50593
+          "new_gas_mw": 50593,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 81658,
+          "firm_total_twh": 698.3,
+          "procurement_pct": 92,
+          "stepwise_mac": -5.2
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 61.09,
+          "total_cost": 55.29,
+          "incremental": 27.09,
           "resource_twh": {
             "clean_firm": 737.0441999999999,
             "solar": 24.034049999999997,
@@ -3212,12 +3886,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 120561,
-          "new_gas_mw": 45561
+          "new_gas_mw": 45561,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 85784,
+          "firm_total_twh": 737.0,
+          "procurement_pct": 95,
+          "stepwise_mac": 2.6
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 62.09,
+          "total_cost": 58.86,
+          "incremental": 28.09,
           "resource_twh": {
             "clean_firm": 791.35272,
             "solar": 25.804979999999997,
@@ -3228,12 +3909,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 112853,
-          "new_gas_mw": 37853
+          "new_gas_mw": 37853,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 92105,
+          "firm_total_twh": 791.4,
+          "procurement_pct": 102,
+          "stepwise_mac": 66.9
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 62.84,
+          "total_cost": 60.39,
+          "incremental": 28.84,
           "resource_twh": {
             "clean_firm": 814.6278,
             "solar": 26.56395,
@@ -3244,12 +3932,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 109549,
-          "new_gas_mw": 34549
+          "new_gas_mw": 34549,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 94813,
+          "firm_total_twh": 814.6,
+          "procurement_pct": 105,
+          "stepwise_mac": 51.0
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 64.43,
+          "total_cost": 62.95,
+          "incremental": 30.43,
           "resource_twh": {
             "clean_firm": 853.4196000000002,
             "solar": 27.8289,
@@ -3260,12 +3955,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 104043,
-          "new_gas_mw": 29043
+          "new_gas_mw": 29043,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 99328,
+          "firm_total_twh": 853.4,
+          "procurement_pct": 110,
+          "stepwise_mac": 109.8
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 67.36,
+          "total_cost": 66.69,
+          "incremental": 33.36,
           "resource_twh": {
             "clean_firm": 756.4400999999999,
             "solar": 164.86515,
@@ -3276,12 +3978,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 16.866,
           "ldes_twh": 0.0,
           "gas_backup_mw": 109538,
-          "new_gas_mw": 34538
+          "new_gas_mw": 34538,
+          "existing_gas_used_mw": 75000,
+          "clean_peak_mw": 94823,
+          "firm_total_twh": 756.4,
+          "procurement_pct": 115,
+          "stepwise_mac": 340.9
         },
         {
           "threshold": 100,
           "year": 2050,
           "effective_cost": 90.54,
+          "total_cost": 90.54,
+          "incremental": 56.54,
           "resource_twh": {
             "clean_firm": 1160.3808000000001,
             "solar": 40.4784,
@@ -3292,7 +4001,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 59127,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 59127,
+          "clean_peak_mw": 136160,
+          "firm_total_twh": 1160.4,
+          "procurement_pct": 160,
+          "stepwise_mac": 4073.1
         }
       ],
       "NYISO": [
@@ -3300,6 +4014,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 84.45,
+          "total_cost": 75.07,
+          "incremental": 42.45,
           "resource_twh": {
             "clean_firm": 82.34912,
             "solar": 32.35144,
@@ -3310,12 +4026,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 3.032,
           "ldes_twh": 0.0,
           "gas_backup_mw": 29864,
-          "new_gas_mw": 11864
+          "new_gas_mw": 11864,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 12147,
+          "firm_total_twh": 82.3,
+          "procurement_pct": 97,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 81.41,
+          "total_cost": 72.62,
+          "incremental": 39.41,
           "resource_twh": {
             "clean_firm": 101.46587999999998,
             "solar": 0.0,
@@ -3326,12 +4049,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 28771,
-          "new_gas_mw": 10771
+          "new_gas_mw": 10771,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 13043,
+          "firm_total_twh": 101.5,
+          "procurement_pct": 97,
+          "stepwise_mac": -73.3
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 82.32,
+          "total_cost": 68.82,
+          "incremental": 40.32,
           "resource_twh": {
             "clean_firm": 90.05040000000001,
             "solar": 12.2796,
@@ -3342,12 +4072,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 30166,
-          "new_gas_mw": 12166
+          "new_gas_mw": 12166,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 11900,
+          "firm_total_twh": 90.1,
+          "procurement_pct": 90,
+          "stepwise_mac": 21.9
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 81.3,
+          "total_cost": 74.31,
+          "incremental": 39.3,
           "resource_twh": {
             "clean_firm": 100.056,
             "solar": 4.548,
@@ -3358,12 +4095,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 28638,
-          "new_gas_mw": 10638
+          "new_gas_mw": 10638,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 13153,
+          "firm_total_twh": 100.1,
+          "procurement_pct": 100,
+          "stepwise_mac": -49.2
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 80.56,
+          "total_cost": 67.1,
+          "incremental": 38.56,
           "resource_twh": {
             "clean_firm": 109.15200000000002,
             "solar": 0.0,
@@ -3374,12 +4118,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 27962,
-          "new_gas_mw": 9962
+          "new_gas_mw": 9962,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 13706,
+          "firm_total_twh": 109.2,
+          "procurement_pct": 90,
+          "stepwise_mac": -35.7
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 79.96,
+          "total_cost": 70.04,
+          "incremental": 37.96,
           "resource_twh": {
             "clean_firm": 115.216,
             "solar": 0.0,
@@ -3390,12 +4141,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 27034,
-          "new_gas_mw": 9034
+          "new_gas_mw": 9034,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 14468,
+          "firm_total_twh": 115.2,
+          "procurement_pct": 95,
+          "stepwise_mac": -28.9
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 79.96,
+          "total_cost": 70.04,
+          "incremental": 37.96,
           "resource_twh": {
             "clean_firm": 115.216,
             "solar": 0.0,
@@ -3406,12 +4164,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 27034,
-          "new_gas_mw": 9034
+          "new_gas_mw": 9034,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 14468,
+          "firm_total_twh": 115.2,
+          "procurement_pct": 95,
+          "stepwise_mac": 0.0
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 80.09,
+          "total_cost": 73.05,
+          "incremental": 38.09,
           "resource_twh": {
             "clean_firm": 121.28,
             "solar": 0.0,
@@ -3422,12 +4187,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 26105,
-          "new_gas_mw": 8105
+          "new_gas_mw": 8105,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 15229,
+          "firm_total_twh": 121.3,
+          "procurement_pct": 100,
+          "stepwise_mac": 12.5
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 80.27,
+          "total_cost": 74.33,
+          "incremental": 38.27,
           "resource_twh": {
             "clean_firm": 122.15928000000001,
             "solar": 1.5463200000000001,
@@ -3438,12 +4210,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 25885,
-          "new_gas_mw": 7885
+          "new_gas_mw": 7885,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 15410,
+          "firm_total_twh": 122.2,
+          "procurement_pct": 102,
+          "stepwise_mac": 17.4
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 81.23,
+          "total_cost": 77.25,
+          "incremental": 39.23,
           "resource_twh": {
             "clean_firm": 129.7696,
             "solar": 0.0,
@@ -3454,12 +4233,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 24805,
-          "new_gas_mw": 6805
+          "new_gas_mw": 6805,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 16295,
+          "firm_total_twh": 129.8,
+          "procurement_pct": 107,
+          "stepwise_mac": 92.6
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 84.0,
+          "total_cost": 81.98,
+          "incremental": 42.0,
           "resource_twh": {
             "clean_firm": 141.2154,
             "solar": 0.0,
@@ -3470,12 +4256,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 23101,
-          "new_gas_mw": 5101
+          "new_gas_mw": 5101,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 17693,
+          "firm_total_twh": 141.2,
+          "procurement_pct": 115,
+          "stepwise_mac": 267.1
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 86.56,
+          "total_cost": 85.79,
+          "incremental": 44.56,
           "resource_twh": {
             "clean_firm": 122.03799999999998,
             "solar": 17.433999999999997,
@@ -3486,12 +4279,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 3.032,
           "gas_backup_mw": 24638,
-          "new_gas_mw": 6638
+          "new_gas_mw": 6638,
+          "existing_gas_used_mw": 18000,
+          "clean_peak_mw": 16432,
+          "firm_total_twh": 122.0,
+          "procurement_pct": 115,
+          "stepwise_mac": 411.4
         },
         {
           "threshold": 100,
           "year": 2050,
           "effective_cost": 110.74,
+          "total_cost": 110.74,
+          "incremental": 68.74,
           "resource_twh": {
             "clean_firm": 177.06879999999998,
             "solar": 2.4255999999999998,
@@ -3502,7 +4302,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 17022,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 17022,
+          "clean_peak_mw": 22678,
+          "firm_total_twh": 177.1,
+          "procurement_pct": 160,
+          "stepwise_mac": 5829.4
         }
       ],
       "NEISO": [
@@ -3510,6 +4315,8 @@ const SCENARIO_COMPARISON = {
           "threshold": 50,
           "year": 2025,
           "effective_cost": 79.19,
+          "total_cost": 58.05,
+          "incremental": 38.19,
           "resource_twh": {
             "clean_firm": 29.4015,
             "solar": 1.7294999999999998,
@@ -3520,12 +4327,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 30138,
-          "new_gas_mw": 16138
+          "new_gas_mw": 16138,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 4166,
+          "firm_total_twh": 29.4,
+          "procurement_pct": 75,
+          "stepwise_mac": null
         },
         {
           "threshold": 60,
           "year": 2027,
           "effective_cost": 79.16,
+          "total_cost": 60.24,
+          "incremental": 38.16,
           "resource_twh": {
             "clean_firm": 70.1024,
             "solar": 7.3792,
@@ -3536,12 +4350,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 24980,
-          "new_gas_mw": 10980
+          "new_gas_mw": 10980,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 8550,
+          "firm_total_twh": 70.1,
+          "procurement_pct": 80,
+          "stepwise_mac": -0.7
         },
         {
           "threshold": 70,
           "year": 2029,
           "effective_cost": 78.21,
+          "total_cost": 63.67,
+          "incremental": 37.21,
           "resource_twh": {
             "clean_firm": 64.6833,
             "solar": 2.9401499999999996,
@@ -3552,12 +4373,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 25667,
-          "new_gas_mw": 11667
+          "new_gas_mw": 11667,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 7966,
+          "firm_total_twh": 64.7,
+          "procurement_pct": 85,
+          "stepwise_mac": -23.1
         },
         {
           "threshold": 75,
           "year": 2030,
           "effective_cost": 78.9,
+          "total_cost": 60.6,
+          "incremental": 37.9,
           "resource_twh": {
             "clean_firm": 53.499199999999995,
             "solar": 9.224000000000002,
@@ -3568,12 +4396,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 26937,
-          "new_gas_mw": 12937
+          "new_gas_mw": 12937,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 6886,
+          "firm_total_twh": 53.5,
+          "procurement_pct": 80,
+          "stepwise_mac": 34.1
         },
         {
           "threshold": 80,
           "year": 2032,
           "effective_cost": 78.52,
+          "total_cost": 63.13,
+          "incremental": 37.52,
           "resource_twh": {
             "clean_firm": 88.2045,
             "solar": 1.9601000000000002,
@@ -3584,12 +4419,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 22850,
-          "new_gas_mw": 8850
+          "new_gas_mw": 8850,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 10360,
+          "firm_total_twh": 88.2,
+          "procurement_pct": 85,
+          "stepwise_mac": -18.9
         },
         {
           "threshold": 85,
           "year": 2035,
           "effective_cost": 78.07,
+          "total_cost": 66.36,
+          "incremental": 37.07,
           "resource_twh": {
             "clean_firm": 88.2045,
             "solar": 2.0754,
@@ -3600,12 +4442,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 22761,
-          "new_gas_mw": 8761
+          "new_gas_mw": 8761,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 10436,
+          "firm_total_twh": 88.2,
+          "procurement_pct": 90,
+          "stepwise_mac": -22.5
         },
         {
           "threshold": 87.5,
           "year": 2037,
           "effective_cost": 78.27,
+          "total_cost": 69.35,
+          "incremental": 37.27,
           "resource_twh": {
             "clean_firm": 98.58149999999999,
             "solar": 2.1907,
@@ -3616,12 +4465,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 21416,
-          "new_gas_mw": 7416
+          "new_gas_mw": 7416,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 11579,
+          "firm_total_twh": 98.6,
+          "procurement_pct": 95,
+          "stepwise_mac": 20.0
         },
         {
           "threshold": 90,
           "year": 2040,
           "effective_cost": 78.5,
+          "total_cost": 70.65,
+          "incremental": 37.5,
           "resource_twh": {
             "clean_firm": 98.42008,
             "solar": 2.23682,
@@ -3632,12 +4488,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 21400,
-          "new_gas_mw": 7400
+          "new_gas_mw": 7400,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 11593,
+          "firm_total_twh": 98.4,
+          "procurement_pct": 97,
+          "stepwise_mac": 23.1
         },
         {
           "threshold": 92.5,
           "year": 2042,
           "effective_cost": 79.31,
+          "total_cost": 73.68,
+          "incremental": 38.31,
           "resource_twh": {
             "clean_firm": 107.02146,
             "solar": 2.35212,
@@ -3648,12 +4511,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 20271,
-          "new_gas_mw": 6271
+          "new_gas_mw": 6271,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 12553,
+          "firm_total_twh": 107.0,
+          "procurement_pct": 102,
+          "stepwise_mac": 81.5
         },
         {
           "threshold": 95,
           "year": 2045,
           "effective_cost": 81.67,
+          "total_cost": 78.65,
+          "incremental": 40.67,
           "resource_twh": {
             "clean_firm": 115.41530000000002,
             "solar": 2.5366000000000004,
@@ -3664,12 +4534,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 19112,
-          "new_gas_mw": 5112
+          "new_gas_mw": 5112,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 13537,
+          "firm_total_twh": 115.4,
+          "procurement_pct": 110,
+          "stepwise_mac": 237.8
         },
         {
           "threshold": 97.5,
           "year": 2047,
           "effective_cost": 83.68,
+          "total_cost": 81.76,
+          "incremental": 42.68,
           "resource_twh": {
             "clean_firm": 120.66145,
             "solar": 2.6519,
@@ -3680,12 +4557,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 18388,
-          "new_gas_mw": 4388
+          "new_gas_mw": 4388,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 14153,
+          "firm_total_twh": 120.7,
+          "procurement_pct": 115,
+          "stepwise_mac": 202.8
         },
         {
           "threshold": 99,
           "year": 2049,
           "effective_cost": 86.96,
+          "total_cost": 86.35,
+          "incremental": 45.96,
           "resource_twh": {
             "clean_firm": 110.68799999999999,
             "solar": 16.603199999999998,
@@ -3696,12 +4580,19 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 2.306,
           "ldes_twh": 0.0,
           "gas_backup_mw": 18838,
-          "new_gas_mw": 4838
+          "new_gas_mw": 4838,
+          "existing_gas_used_mw": 14000,
+          "clean_peak_mw": 13770,
+          "firm_total_twh": 110.7,
+          "procurement_pct": 120,
+          "stepwise_mac": 552.1
         },
         {
           "threshold": 100,
           "year": 2050,
           "effective_cost": 118.3,
+          "total_cost": 118.3,
+          "incremental": 77.3,
           "resource_twh": {
             "clean_firm": 172.4888,
             "solar": 1.9601000000000002,
@@ -3712,7 +4603,12 @@ const SCENARIO_COMPARISON = {
           "battery_twh": 0.0,
           "ldes_twh": 0.0,
           "gas_backup_mw": 11189,
-          "new_gas_mw": 0
+          "new_gas_mw": 0,
+          "existing_gas_used_mw": 11189,
+          "clean_peak_mw": 20272,
+          "firm_total_twh": 172.5,
+          "procurement_pct": 170,
+          "stepwise_mac": 7918.4
         }
       ]
     }
