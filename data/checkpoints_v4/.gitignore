@@ -1,0 +1,11 @@
+# Checkpoint files are rebuilt from cache — only the main per-ISO
+# parquet caches (physics_cache_v4_*.parquet) need to be committed.
+# The interim file (NYISO_v4_interim.parquet) is tracked while NYISO
+# is still running to enable resume.
+*_done.parquet
+*_progress.parquet
+*_checkpoint.json
+# Keep NYISO interim (still in progress)
+!NYISO_v4_interim.parquet
+# Keep PJM/NEISO/CAISO interims temporarily
+!*_interim.parquet
