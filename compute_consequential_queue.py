@@ -435,6 +435,214 @@ def compute_emission_rate_trajectory(egrid, fossil_mix):
     return rate_traj
 
 
+def compute_sequencing_analysis(med_data, stranding, queue):
+    """
+    Analyze the cheap-first sequencing problem:
+    - What gets built in the 50→75% zone when chasing cheapest $/tCO₂?
+    - How much of it is stranded at deeper decarbonization (>90%)?
+    - Does delaying clean firm cause gas capacity lock-in?
+    - Compare gas trajectories of wind-heavy vs. clean-firm-heavy grids.
+    """
+    analysis = {}
+
+    for iso in ISOS:
+        iso_data = med_data[iso]
+        demand_twh = list(iso_data.values())[0]['demand_twh']
+
+        # What gets built in 50→75% zone
+        d50 = iso_data.get(50.0, {})
+        d75 = iso_data.get(75.0, {})
+        d90 = iso_data.get(90.0, {})
+        d95 = iso_data.get(95.0, {})
+        d99 = iso_data.get(99.0, {})
+
+        if not d50 or not d75:
+            continue
+
+        # Resource deltas in cheap zone
+        cheap_zone_build = {}
+        for res in RESOURCES:
+            cheap_zone_build[res] = d75['resource_twh'].get(res, 0) - d50['resource_twh'].get(res, 0)
+        cheap_zone_build['battery'] = d75.get('battery_twh', 0) - d50.get('battery_twh', 0)
+        cheap_zone_build['ldes'] = d75.get('ldes_twh', 0) - d50.get('ldes_twh', 0)
+
+        # Dominant resource in cheap zone
+        dominant = max(cheap_zone_build.items(), key=lambda x: abs(x[1]))
+        strategy = 'clean_firm_first' if dominant[0] == 'clean_firm' and dominant[1] > 10 else \
+                   'wind_first' if cheap_zone_build.get('wind', 0) > 10 else \
+                   'solar_first' if cheap_zone_build.get('solar', 0) > 10 else 'mixed'
+
+        # Stranding: how much of what was built in 50→75% is NOT needed at 99%?
+        stranding_from_cheap_zone = {}
+        for res in ['solar', 'wind']:
+            built_in_cheap = max(0, cheap_zone_build.get(res, 0))
+            at_75 = d75['resource_twh'].get(res, 0) if res not in ['battery', 'ldes'] else d75.get(f'{res}_twh', 0)
+            at_99 = d99['resource_twh'].get(res, 0) if res not in ['battery', 'ldes'] else d99.get(f'{res}_twh', 0)
+            stranded = max(0, at_75 - at_99)
+            stranding_from_cheap_zone[res] = {
+                'built_in_cheap_zone_twh': round(built_in_cheap, 1),
+                'at_75pct_twh': round(at_75, 1),
+                'at_99pct_twh': round(at_99, 1),
+                'stranded_twh': round(stranded, 1),
+                'stranding_pct': round(stranded / at_75 * 100, 1) if at_75 > 0.1 else 0,
+            }
+
+        # Gas capacity trajectory
+        gas_trajectory = []
+        for t in THRESHOLDS:
+            t_f = float(t)
+            if t_f not in iso_data:
+                continue
+            d = iso_data[t_f]
+            gas_trajectory.append({
+                'threshold': t,
+                'gas_backup_mw': round(d['gas_backup_mw']),
+                'new_gas_mw': round(d['new_gas_mw']),
+                'clean_firm_twh': round(d['resource_twh'].get('clean_firm', 0), 1),
+                'wind_twh': round(d['resource_twh'].get('wind', 0), 1),
+                'solar_twh': round(d['resource_twh'].get('solar', 0), 1),
+            })
+
+        # Gas lock-in: cumulative new gas GW-years from 50% to 99%
+        # If gas stays at 48 GW for 25 years instead of declining, that's infrastructure lock-in
+        gas_at_50 = d50['new_gas_mw']
+        gas_at_75 = d75['new_gas_mw']
+        gas_at_90 = d90['new_gas_mw'] if d90 else 0
+        gas_at_95 = d95['new_gas_mw'] if d95 else 0
+        gas_at_99 = d99['new_gas_mw'] if d99 else 0
+
+        # Clean firm deficit: how much clean firm at 75% vs. what's needed at 99%?
+        cf_at_75 = d75['resource_twh'].get('clean_firm', 0)
+        cf_at_99 = d99['resource_twh'].get('clean_firm', 0)
+        cf_deficit_twh = cf_at_99 - cf_at_75
+        # Clean firm capacity factor ~90%, so TWh → GW
+        cf_deficit_gw = cf_deficit_twh / (8.76 * 0.90)
+
+        # The "deferred clean firm" problem: if you built clean firm in 50→75% instead of wind,
+        # how much less gas backup would you need?
+        # Approximation: clean firm at CF=90% offsets gas backup 1:1 on capacity
+        wind_built = max(0, cheap_zone_build.get('wind', 0))
+        # Wind capacity factor ~35%, so capacity equivalent is much larger than firm
+        wind_gw = wind_built / (8.76 * 0.35)
+        # But wind only reduces gas backup by ~10-15% of nameplate (low capacity credit)
+        wind_gas_offset_gw = wind_gw * 0.10  # ~10% capacity credit for gas backup reduction
+        # Clean firm would have reduced gas backup by ~85% of nameplate
+        cf_equivalent_twh = wind_built  # Same TWh
+        cf_equivalent_gw = cf_equivalent_twh / (8.76 * 0.90)
+        cf_gas_offset_gw = cf_equivalent_gw * 0.85
+
+        gas_lock_in = {
+            'gas_at_50_mw': round(gas_at_50),
+            'gas_at_75_mw': round(gas_at_75),
+            'gas_at_90_mw': round(gas_at_90),
+            'gas_at_99_mw': round(gas_at_99),
+            'gas_delta_50_to_75_mw': round(gas_at_75 - gas_at_50),
+            'gas_delta_75_to_99_mw': round(gas_at_99 - gas_at_75),
+            'clean_firm_at_75_twh': round(cf_at_75, 1),
+            'clean_firm_at_99_twh': round(cf_at_99, 1),
+            'clean_firm_deficit_twh': round(cf_deficit_twh, 1),
+            'clean_firm_deficit_gw': round(cf_deficit_gw, 1),
+            'wind_built_cheap_zone_gw': round(wind_gw, 1),
+            'cf_equivalent_gw': round(cf_equivalent_gw, 1),
+            'forgone_gas_reduction_gw': round(cf_gas_offset_gw - wind_gas_offset_gw, 1),
+        }
+
+        # MAC comparison: what does cheap $/tCO₂ cost when you include stranding + gas lock-in?
+        # Find this ISO's 50→75% queue step
+        cheap_step = next((s for s in queue if s['iso'] == iso and s['zone_label'] == '50→75%'), None)
+        mac_naive = cheap_step['marginal_mac'] if cheap_step else 0
+
+        # Stranded asset cost estimate: assume stranded renewables are a sunk cost
+        # Wind: ~$30/MWh LCOE × stranded TWh × 25yr life = wasted capital
+        stranded_wind = stranding_from_cheap_zone.get('wind', {}).get('stranded_twh', 0)
+        stranded_solar = stranding_from_cheap_zone.get('solar', {}).get('stranded_twh', 0)
+        stranded_cost_bn = (stranded_wind * 30 + stranded_solar * 25) * 25 / 1e3  # rough $B
+        # Gas backup cost: new gas MW × fixed O&M (~$30/kW-yr) × years
+        excess_gas_gw = max(0, gas_lock_in['forgone_gas_reduction_gw'])
+        gas_lockin_cost_bn = excess_gas_gw * 1000 * 30 * 25 / 1e9  # GW → MW × $/kW-yr × years / $B
+
+        analysis[iso] = {
+            'strategy': strategy,
+            'cheap_zone_build': {k: round(v, 1) for k, v in cheap_zone_build.items()},
+            'dominant_resource': dominant[0],
+            'dominant_twh': round(dominant[1], 1),
+            'stranding_from_cheap_zone': stranding_from_cheap_zone,
+            'gas_trajectory': gas_trajectory,
+            'gas_lock_in': gas_lock_in,
+            'mac_naive': round(mac_naive, 1),
+            'stranded_cost_bn': round(stranded_cost_bn, 1),
+            'gas_lockin_cost_bn': round(gas_lockin_cost_bn, 1),
+            'total_hidden_cost_bn': round(stranded_cost_bn + gas_lockin_cost_bn, 1),
+        }
+
+    return analysis
+
+
+def print_sequencing_analysis(seq_analysis):
+    """Print the sequencing / stranding / gas lock-in analysis."""
+    print("\n" + "=" * 120)
+    print("SEQUENCING ANALYSIS: CHEAP-FIRST vs. DEEP DECARBONIZATION")
+    print("What gets built in 50→75% (chasing cheapest $/tCO₂) vs. what's needed for >90% clean")
+    print("=" * 120)
+
+    for iso in ISOS:
+        a = seq_analysis[iso]
+        print(f"\n{'─' * 100}")
+        print(f"  {iso} — Strategy: {a['strategy'].upper().replace('_', ' ')}")
+        print(f"{'─' * 100}")
+
+        # What gets built
+        build = a['cheap_zone_build']
+        print(f"  Built in 50→75%: ", end="")
+        parts = [(k, v) for k, v in sorted(build.items(), key=lambda x: -abs(x[1])) if abs(v) > 0.5]
+        print(", ".join(f"{k}: {'+' if v > 0 else ''}{v:.0f} TWh" for k, v in parts))
+
+        # Stranding
+        for res in ['wind', 'solar']:
+            s = a['stranding_from_cheap_zone'][res]
+            if s['built_in_cheap_zone_twh'] > 1:
+                flag = " ⚠ STRANDED" if s['stranded_twh'] > 5 else ""
+                print(f"  {res:>7} @ 75%: {s['at_75pct_twh']:.0f} TWh → @ 99%: {s['at_99pct_twh']:.0f} TWh "
+                      f"({s['stranded_twh']:.0f} TWh stranded, {s['stranding_pct']:.0f}%){flag}")
+
+        # Gas lock-in
+        gl = a['gas_lock_in']
+        gas_delta = gl['gas_delta_50_to_75_mw']
+        direction = "↑" if gas_delta > 0 else "↓"
+        print(f"  Gas backup: {gl['gas_at_50_mw']:,} MW @ 50% → {gl['gas_at_75_mw']:,} MW @ 75% "
+              f"({direction}{abs(gas_delta):,} MW) → {gl['gas_at_99_mw']:,} MW @ 99%")
+        print(f"  Clean firm deficit: {gl['clean_firm_at_75_twh']:.0f} TWh @ 75% → "
+              f"{gl['clean_firm_at_99_twh']:.0f} TWh needed @ 99% = "
+              f"{gl['clean_firm_deficit_twh']:.0f} TWh / {gl['clean_firm_deficit_gw']:.0f} GW still to build")
+
+        if gl['forgone_gas_reduction_gw'] > 0.5:
+            print(f"  ⚠ Forgone gas reduction: Building wind instead of clean firm in cheap zone "
+                  f"left {gl['forgone_gas_reduction_gw']:.0f} GW of gas backup that clean firm would have displaced")
+
+        # Hidden costs
+        if a['stranded_cost_bn'] > 0.1 or a['gas_lockin_cost_bn'] > 0.1:
+            print(f"  Hidden costs: ${a['stranded_cost_bn']:.1f}B stranded assets + "
+                  f"${a['gas_lockin_cost_bn']:.1f}B gas lock-in = ${a['total_hidden_cost_bn']:.1f}B total")
+            print(f"  Naive MAC: ${a['mac_naive']:.0f}/tCO₂ → True MAC (with stranding+gas): higher")
+
+    # Summary comparison table
+    print(f"\n{'=' * 120}")
+    print("SUMMARY: WIND-FIRST vs CLEAN-FIRM-FIRST GRIDS")
+    print(f"{'=' * 120}")
+    print(f"{'ISO':<7} {'Strategy':<18} {'Wind Built':>12} {'Wind Stranded':>14} {'Gas @ 75%':>12} "
+          f"{'Gas @ 99%':>12} {'Gas Δ':>10} {'CF Deficit':>12} {'Hidden $B':>10}")
+    print("-" * 120)
+
+    for iso in ISOS:
+        a = seq_analysis[iso]
+        gl = a['gas_lock_in']
+        ws = a['stranding_from_cheap_zone']['wind']
+        print(f"{iso:<7} {a['strategy']:<18} {ws['built_in_cheap_zone_twh']:>10.0f} TWh "
+              f"{ws['stranded_twh']:>12.0f} TWh {gl['gas_at_75_mw']:>10,} MW "
+              f"{gl['gas_at_99_mw']:>10,} MW {gl['gas_delta_50_to_75_mw']:>+9,} MW "
+              f"{gl['clean_firm_deficit_twh']:>10.0f} TWh {a['total_hidden_cost_bn']:>9.1f}")
+
+
 def print_summary(queue, stranding, egrid, fossil_mix):
     """Print human-readable results."""
     # Dispatch stack info
@@ -507,7 +715,7 @@ def print_summary(queue, stranding, egrid, fossil_mix):
 
 
 def write_outputs(queue, cumulative, stranding, trajectories, projections,
-                  rate_trajectory, egrid, fossil_mix):
+                  rate_trajectory, sequencing_analysis, egrid, fossil_mix):
     """Write JSON and JS output files."""
     # Build dispatch stack summary for output
     stack_summary = {}
@@ -556,6 +764,7 @@ def write_outputs(queue, cumulative, stranding, trajectories, projections,
         'resource_trajectories': trajectories,
         'demand_growth_projections': projections,
         'emission_rate_trajectory': rate_trajectory,
+        'sequencing_analysis': sequencing_analysis,
     }
 
     os.makedirs(os.path.dirname(OUTPUT_JSON), exist_ok=True)
@@ -590,9 +799,12 @@ def main():
     projections = compute_demand_growth(med_data)
     rate_traj = compute_emission_rate_trajectory(egrid, fossil_mix)
 
+    seq_analysis = compute_sequencing_analysis(med_data, stranding, queue)
+
     print_summary(queue, stranding, egrid, fossil_mix)
+    print_sequencing_analysis(seq_analysis)
     write_outputs(queue, cumulative, stranding, trajectories, projections,
-                  rate_traj, egrid, fossil_mix)
+                  rate_traj, seq_analysis, egrid, fossil_mix)
 
     print("\nDone.")
 
