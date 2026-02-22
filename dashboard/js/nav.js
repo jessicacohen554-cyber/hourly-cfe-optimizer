@@ -30,6 +30,16 @@
         '.dropdown-arrow { transition: transform 0.2s; }',
         '.nav-dropdown-toggle[aria-expanded="true"] .dropdown-arrow { transform: rotate(180deg); }',
         '',
+        '/* Separator/group label */',
+        '.nav-separator {',
+        '  padding: 8px 18px 4px; margin-top: 4px;',
+        '  border-top: 1px solid rgba(255,255,255,0.08);',
+        '}',
+        '.nav-separator span {',
+        '  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;',
+        '  letter-spacing: 0.08em; color: rgba(255,255,255,0.35);',
+        '}',
+        '',
         '/* Desktop: hover to open */',
         '@media (min-width: 769px) {',
         '  .nav-dropdown-menu {',
@@ -102,7 +112,11 @@
                 { label: 'New-Build Signals', href: 'newbuild_requirement.html' },
                 { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
                 { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' },
-                { label: 'Consequential Accounting', href: 'consequential_accounting.html' },
+                { separator: true, label: 'Consequential Accounting' },
+                { label: 'Overview', href: 'consequential_accounting.html' },
+                { label: 'Failure Modes at Scale', href: 'consequential_vacuum.html' },
+                { label: 'Cross-Regional Deployment', href: 'consequential_stranding.html' },
+                { label: 'Scenario Comparison', href: 'scenario_comparison.html' },
                 { label: 'Generator Analysis', href: '../power-gen-decarbonization/site/index.html' }
             ]
         },
@@ -116,7 +130,19 @@
                 { label: 'About', href: 'about.html' }
             ]
         },
-        { label: 'Reference', href: 'reference.html' }
+        { label: 'Reference', href: 'reference.html' },
+        {
+            label: 'Kids',
+            children: [
+                { label: 'Clean Energy', href: 'kids_energy.html' },
+                { label: 'Dinosaurs & Fossil Fuels', href: 'kids_fossil_fuels.html' },
+                { label: 'How Wind Works', href: 'kids_wind.html' },
+                { label: 'How Solar Works', href: 'kids_solar.html' },
+                { label: 'How Nuclear Works', href: 'kids_nuclear.html' },
+                { label: 'How Geothermal Works', href: 'kids_geothermal.html' },
+                { label: 'How Storage Works', href: 'kids_storage.html' }
+            ]
+        }
     ];
 
     const HAMBURGER_OPEN = '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
@@ -140,7 +166,7 @@
 
     // Check if any child in a dropdown matches the current page
     function hasActiveChild(children) {
-        return children.some(function(child) { return isActive(child.href); });
+        return children.some(function(child) { return child.href && isActive(child.href); });
     }
 
     // Build a single nav link
@@ -157,7 +183,11 @@
         html += item.label + ' ' + DROPDOWN_ARROW + '</button>';
         html += '<div class="nav-dropdown-menu">';
         item.children.forEach(function(child) {
-            html += buildLink(child);
+            if (child.separator) {
+                html += '<div class="nav-separator"><span>' + child.label + '</span></div>';
+            } else {
+                html += buildLink(child);
+            }
         });
         html += '</div></div>';
         return html;

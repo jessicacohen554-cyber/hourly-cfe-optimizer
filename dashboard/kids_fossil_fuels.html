@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dinosaurs &amp; Fossil Fuels — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+/* ========== FOSSIL FUELS KIDS PAGE ========== */
+body {
+    background: linear-gradient(180deg, #FEF3C7 0%, #DCFCE7 25%, #E0F2FE 50%, #FEE2E2 75%, #DCFCE7 100%);
+    background-attachment: fixed;
+}
+
+.kids-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+}
+
+/* Hero */
+.kids-hero {
+    text-align: center;
+    padding: 48px 20px 32px;
+}
+.kids-hero h1 {
+    font-family: 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #1E3A5F;
+    margin-bottom: 8px;
+    line-height: 1.2;
+}
+.kids-hero .age-tag {
+    display: inline-block;
+    background: #FBBF24;
+    color: #78350F;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 999px;
+    margin-bottom: 16px;
+    font-family: 'Lexend', sans-serif;
+}
+.kids-hero p {
+    font-size: 1.15rem;
+    color: #374151;
+    max-width: 540px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Cards */
+.kids-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 36px 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.kids-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.kids-card h2 {
+    font-family: 'Lexend', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    line-height: 1.3;
+}
+.kids-card p {
+    font-size: 1.05rem;
+    color: #374151;
+    line-height: 1.7;
+    margin-bottom: 12px;
+}
+.kids-card p:last-child { margin-bottom: 0; }
+
+/* Color themes per card */
+.card-dino { border-left: 6px solid #22C55E; }
+.card-dino h2 { color: #15803D; }
+.card-buried { border-left: 6px solid #92400E; }
+.card-buried h2 { color: #78350F; }
+.card-digging { border-left: 6px solid #6B7280; }
+.card-digging h2 { color: #374151; }
+.card-smoke { border-left: 6px solid #EF4444; }
+.card-smoke h2 { color: #DC2626; }
+.card-blanket { border-left: 6px solid #F59E0B; }
+.card-blanket h2 { color: #B45309; }
+.card-sad-earth { border-left: 6px solid #0EA5E9; }
+.card-sad-earth h2 { color: #0369A1; }
+.card-hope { border-left: 6px solid #A855F7; }
+.card-hope h2 { color: #7E22CE; }
+
+/* ===== CSS ILLUSTRATIONS ===== */
+.illustration {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 16px;
+    margin: 20px 0 8px;
+    min-height: 140px;
+    position: relative;
+}
+
+/* ---------- DINOSAUR SCENE ---------- */
+.dino-scene {
+    background: linear-gradient(to bottom, #86EFAC 0%, #4ADE80 60%, #166534 100%);
+    border-radius: 16px;
+    min-height: 180px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+}
+/* ground */
+.dino-scene::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 30px;
+    background: #166534;
+    border-radius: 0 0 16px 16px;
+}
+/* palm trees */
+.palm-tree {
+    position: absolute;
+    bottom: 25px;
+    z-index: 2;
+}
+.palm-trunk {
+    width: 8px;
+    height: 50px;
+    background: linear-gradient(to bottom, #92400E, #78350F);
+    border-radius: 3px;
+    margin: 0 auto;
+}
+.palm-leaves {
+    position: relative;
+    width: 50px;
+    height: 24px;
+}
+.palm-leaves span {
+    position: absolute;
+    width: 24px;
+    height: 10px;
+    background: #15803D;
+    border-radius: 50%;
+    top: 0;
+}
+.palm-leaves span:nth-child(1) { left: 0; transform: rotate(-30deg); }
+.palm-leaves span:nth-child(2) { left: 13px; transform: rotate(0deg); }
+.palm-leaves span:nth-child(3) { left: 26px; transform: rotate(30deg); }
+.palm-tree:nth-child(1) { left: 12%; }
+.palm-tree:nth-child(2) { right: 10%; }
+
+/* T-Rex (CSS art) */
+.trex {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    animation: dinoWalk 3s ease-in-out infinite;
+}
+.trex-body {
+    width: 70px;
+    height: 40px;
+    background: #16A34A;
+    border-radius: 20px 35px 12px 18px;
+    position: relative;
+}
+/* head */
+.trex-head {
+    position: absolute;
+    right: -22px;
+    top: -8px;
+    width: 30px;
+    height: 24px;
+    background: #16A34A;
+    border-radius: 12px 16px 8px 6px;
+}
+/* eye */
+.trex-head::before {
+    content: '';
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 6px; height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: inset 2px 0 0 #1E3A5F;
+}
+/* mouth */
+.trex-head::after {
+    content: '';
+    position: absolute;
+    bottom: 2px; right: 2px;
+    width: 16px; height: 3px;
+    background: #14532D;
+    border-radius: 2px;
+}
+/* tiny arms */
+.trex-arm {
+    position: absolute;
+    right: 2px;
+    top: 14px;
+    width: 10px;
+    height: 5px;
+    background: #15803D;
+    border-radius: 3px;
+    transform: rotate(30deg);
+}
+/* legs */
+.trex-leg {
+    position: absolute;
+    bottom: -14px;
+    width: 10px;
+    height: 16px;
+    background: #15803D;
+    border-radius: 0 0 4px 4px;
+}
+.trex-leg:nth-child(4) { left: 14px; }
+.trex-leg:nth-child(5) { right: 16px; animation: legMove 0.6s ease-in-out infinite alternate; }
+/* tail */
+.trex-tail {
+    position: absolute;
+    left: -20px;
+    top: 4px;
+    width: 24px;
+    height: 14px;
+    background: #16A34A;
+    border-radius: 14px 0 4px 8px;
+    animation: tailWag 1.5s ease-in-out infinite;
+    transform-origin: right center;
+}
+
+/* Little stegosaurus */
+.stego {
+    position: absolute;
+    bottom: 28px;
+    left: 18%;
+    z-index: 3;
+    animation: dinoWalk 4s ease-in-out infinite reverse;
+}
+.stego-body {
+    width: 50px;
+    height: 28px;
+    background: #F59E0B;
+    border-radius: 16px 12px 8px 12px;
+    position: relative;
+}
+.stego-head {
+    position: absolute;
+    left: -14px;
+    top: 4px;
+    width: 18px;
+    height: 16px;
+    background: #F59E0B;
+    border-radius: 10px 4px 6px 10px;
+}
+.stego-head::before {
+    content: '';
+    position: absolute;
+    top: 4px; left: 4px;
+    width: 5px; height: 5px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: inset 2px 0 0 #78350F;
+}
+/* plates on back */
+.stego-plates {
+    position: absolute;
+    top: -10px;
+    left: 6px;
+    display: flex;
+    gap: 4px;
+}
+.stego-plates span {
+    width: 8px;
+    height: 12px;
+    background: #D97706;
+    border-radius: 50% 50% 0 0;
+}
+.stego-leg {
+    position: absolute;
+    bottom: -10px;
+    width: 8px;
+    height: 12px;
+    background: #D97706;
+    border-radius: 0 0 3px 3px;
+}
+.stego-leg:nth-child(4) { left: 8px; }
+.stego-leg:nth-child(5) { right: 8px; }
+
+/* Volcano */
+.volcano {
+    position: absolute;
+    bottom: 25px;
+    right: 22%;
+    z-index: 1;
+}
+.volcano-body {
+    width: 0;
+    height: 0;
+    border-left: 28px solid transparent;
+    border-right: 28px solid transparent;
+    border-bottom: 45px solid #78350F;
+    position: relative;
+}
+.volcano-body::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -8px;
+    width: 16px;
+    height: 8px;
+    background: #EF4444;
+    border-radius: 50%;
+    animation: lavaGlow 1.5s ease-in-out infinite;
+}
+/* smoke puffs from volcano */
+.volcano-smoke {
+    position: absolute;
+    bottom: 44px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.volcano-smoke span {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: rgba(156,163,175,0.6);
+    border-radius: 50%;
+    animation: smokeRise 3s ease-out infinite;
+}
+.volcano-smoke span:nth-child(1) { left: -4px; animation-delay: 0s; }
+.volcano-smoke span:nth-child(2) { left: 4px; animation-delay: 1s; }
+.volcano-smoke span:nth-child(3) { left: 0; animation-delay: 2s; }
+
+/* ---------- UNDERGROUND SCENE ---------- */
+.underground-scene {
+    border-radius: 16px;
+    min-height: 180px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(to bottom, #86EFAC 0%, #4ADE80 8%, #92400E 8%, #78350F 40%, #451A03 70%, #1C1917 100%);
+}
+.underground-label {
+    position: absolute;
+    color: #FDE68A;
+    font-family: 'Lexend', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    z-index: 2;
+}
+.underground-label.top-label {
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #15803D;
+    font-size: 0.7rem;
+}
+/* layers */
+.layer-label {
+    position: absolute;
+    right: 12px;
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    z-index: 2;
+}
+/* bone icons */
+.bone {
+    position: absolute;
+    z-index: 2;
+    opacity: 0.7;
+}
+.bone-shape {
+    width: 24px;
+    height: 6px;
+    background: #E5E7EB;
+    border-radius: 3px;
+    position: relative;
+}
+.bone-shape::before, .bone-shape::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #E5E7EB;
+    border-radius: 50%;
+    top: -1px;
+}
+.bone-shape::before { left: -3px; }
+.bone-shape::after { right: -3px; }
+/* leaf fossils */
+.fossil-leaf {
+    position: absolute;
+    width: 14px;
+    height: 20px;
+    border: 2px solid rgba(253,230,138,0.4);
+    border-radius: 0 50% 50% 0;
+    z-index: 2;
+    transform: rotate(-20deg);
+}
+/* black oil blob */
+.oil-blob {
+    position: absolute;
+    background: #1C1917;
+    border-radius: 50%;
+    z-index: 2;
+    animation: oilPulse 4s ease-in-out infinite;
+}
+/* animated arrow showing time passing */
+.time-arrow {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    text-align: center;
+}
+.time-arrow-text {
+    font-family: 'Lexend', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #FDE68A;
+    background: rgba(0,0,0,0.5);
+    padding: 6px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    animation: timePulse 2s ease-in-out infinite;
+}
+
+/* ---------- FACTORY / SMOKE SCENE ---------- */
+.factory-scene {
+    background: linear-gradient(to bottom, #CBD5E1 0%, #94A3B8 100%);
+    border-radius: 16px;
+    min-height: 160px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+}
+.factory {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+}
+.factory-building {
+    width: 80px;
+    height: 50px;
+    background: #475569;
+    border-radius: 4px 4px 0 0;
+    position: relative;
+}
+.factory-building::before {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 8px;
+    width: 12px; height: 12px;
+    background: #FDE68A;
+    border-radius: 2px;
+    box-shadow: 20px 0 0 #FDE68A, 40px 0 0 #FDE68A, 0 -18px 0 #FDE68A, 20px -18px 0 #FDE68A, 40px -18px 0 #FDE68A;
+}
+.smokestack {
+    position: absolute;
+    bottom: 50px;
+    width: 14px;
+    height: 35px;
+    background: #374151;
+    border-radius: 3px 3px 0 0;
+}
+.smokestack:nth-child(2) { left: 12px; }
+.smokestack:nth-child(3) { left: 36px; height: 45px; }
+.smokestack:nth-child(4) { left: 56px; height: 30px; }
+
+/* Smoke puffs */
+.smoke-puff {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(107,114,128,0.5);
+    z-index: 3;
+    animation: smokeBig 4s ease-out infinite;
+}
+.smoke-puff:nth-child(5) { width: 20px; height: 20px; left: 16px; bottom: 85px; animation-delay: 0s; }
+.smoke-puff:nth-child(6) { width: 16px; height: 16px; left: 40px; bottom: 95px; animation-delay: 0.8s; }
+.smoke-puff:nth-child(7) { width: 24px; height: 24px; left: 58px; bottom: 80px; animation-delay: 1.6s; }
+.smoke-puff:nth-child(8) { width: 14px; height: 14px; left: 24px; bottom: 90px; animation-delay: 2.4s; }
+/* car */
+.car {
+    position: absolute;
+    bottom: 4px;
+    left: 10%;
+    z-index: 3;
+    animation: carDrive 6s linear infinite;
+}
+.car-body {
+    width: 40px;
+    height: 16px;
+    background: #EF4444;
+    border-radius: 6px 10px 2px 2px;
+    position: relative;
+}
+.car-body::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 6px;
+    width: 28px; height: 10px;
+    background: #DC2626;
+    border-radius: 0 0 2px 2px;
+    z-index: -1;
+    top: 14px;
+}
+.car-wheel {
+    position: absolute;
+    bottom: -4px;
+    width: 10px; height: 10px;
+    background: #1F2937;
+    border-radius: 50%;
+    border: 2px solid #6B7280;
+}
+.car-wheel:nth-child(2) { left: 2px; }
+.car-wheel:nth-child(3) { right: 2px; }
+.car-exhaust {
+    position: absolute;
+    left: -6px;
+    bottom: 2px;
+    width: 8px; height: 8px;
+    background: rgba(107,114,128,0.4);
+    border-radius: 50%;
+    animation: exhaustPuff 1s ease-out infinite;
+}
+
+/* ---------- BLANKET / GREENHOUSE SCENE ---------- */
+.blanket-scene {
+    border-radius: 16px;
+    min-height: 180px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(to bottom, #1E293B 0%, #334155 100%);
+}
+.earth-small {
+    width: 90px;
+    height: 90px;
+    background: radial-gradient(circle at 40% 40%, #3B82F6 0%, #1D4ED8 40%, #15803D 41%, #16A34A 60%, #1D4ED8 61%, #2563EB 100%);
+    border-radius: 50%;
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+}
+/* CO2 blanket wrapping earth */
+.co2-blanket {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 6px solid rgba(239,68,68,0.3);
+    z-index: 3;
+    animation: blanketPulse 3s ease-in-out infinite;
+}
+.co2-blanket::before {
+    content: 'CO₂';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #FCA5A5;
+    background: rgba(127,29,29,0.5);
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+/* sun rays bouncing */
+.sun-ray {
+    position: absolute;
+    width: 3px;
+    background: linear-gradient(to bottom, #FDE68A, transparent);
+    z-index: 1;
+    animation: rayBounce 4s ease-in-out infinite;
+}
+.sun-ray:nth-child(4) { height: 50px; left: 30%; top: 0; animation-delay: 0s; }
+.sun-ray:nth-child(5) { height: 60px; left: 50%; top: 0; animation-delay: 0.5s; }
+.sun-ray:nth-child(6) { height: 45px; left: 70%; top: 0; animation-delay: 1s; }
+/* trapped rays bouncing back */
+.trapped-ray {
+    position: absolute;
+    width: 3px;
+    height: 20px;
+    background: linear-gradient(to top, transparent, #FCA5A5);
+    z-index: 4;
+    animation: rayTrapped 4s ease-in-out infinite;
+}
+.trapped-ray:nth-child(7) { left: 38%; bottom: 55px; animation-delay: 0.3s; }
+.trapped-ray:nth-child(8) { left: 55%; bottom: 60px; animation-delay: 1s; }
+.trapped-ray:nth-child(9) { left: 65%; bottom: 50px; animation-delay: 1.8s; }
+.blanket-label {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #FCA5A5;
+    white-space: nowrap;
+    z-index: 5;
+}
+
+/* ---------- SAD EARTH SCENE ---------- */
+.sad-earth-scene {
+    border-radius: 16px;
+    min-height: 170px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(to bottom, #FEE2E2 0%, #FECACA 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    padding: 20px;
+}
+.sad-earth {
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle at 40% 40%, #60A5FA 0%, #3B82F6 40%, #4ADE80 41%, #22C55E 60%, #3B82F6 61%, #2563EB 100%);
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+}
+/* thermometer */
+.thermometer {
+    width: 16px;
+    height: 50px;
+    background: #fff;
+    border-radius: 8px 8px 12px 12px;
+    position: relative;
+    border: 2px solid #DC2626;
+    flex-shrink: 0;
+}
+.thermometer::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    background: #EF4444;
+    border-radius: 0 0 6px 6px;
+    animation: tempRise 3s ease-in-out infinite;
+}
+.thermometer-bulb {
+    width: 22px;
+    height: 22px;
+    background: #EF4444;
+    border-radius: 50%;
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 2px solid #DC2626;
+}
+/* sweat drops on earth */
+.sweat {
+    position: absolute;
+    width: 6px;
+    height: 9px;
+    background: #60A5FA;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    z-index: 2;
+    animation: sweatDrip 2s ease-in infinite;
+}
+.sweat:nth-child(1) { top: 12px; right: 8px; animation-delay: 0s; }
+.sweat:nth-child(2) { top: 20px; right: 2px; animation-delay: 0.7s; }
+/* sad face on earth */
+.sad-face {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+.sad-eye {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #1E3A5F;
+    border-radius: 50%;
+    margin: 0 6px;
+}
+.sad-mouth {
+    width: 18px;
+    height: 9px;
+    border: 3px solid #1E3A5F;
+    border-top: none;
+    border-radius: 0 0 18px 18px;
+    margin: 4px auto 0;
+    transform: rotate(180deg);
+}
+/* melting ice */
+.ice-effects {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.ice-cube {
+    width: 30px;
+    height: 24px;
+    background: linear-gradient(135deg, #E0F2FE, #BAE6FD);
+    border-radius: 4px;
+    position: relative;
+    border: 2px solid #7DD3FC;
+}
+.ice-cube::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 4px;
+    width: 22px;
+    height: 4px;
+    background: #7DD3FC;
+    border-radius: 50%;
+    animation: meltDrip 2s ease-in-out infinite;
+}
+
+/* ---------- HOPE / CLEAN ENERGY SCENE ---------- */
+.hope-scene {
+    background: linear-gradient(to bottom, #DBEAFE 0%, #BBF7D0 100%);
+    border-radius: 16px;
+    min-height: 140px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 20px;
+}
+.hope-sun {
+    width: 50px;
+    height: 50px;
+    background: radial-gradient(circle, #FDE047 40%, #FBBF24 70%, transparent 71%);
+    border-radius: 50%;
+    position: absolute;
+    top: 12px;
+    right: 20px;
+    animation: pulse 3s ease-in-out infinite;
+}
+.hope-turbine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.hope-turbine-head {
+    width: 8px;
+    height: 8px;
+    background: #E5E7EB;
+    border-radius: 50%;
+    position: relative;
+    z-index: 2;
+}
+.hope-turbine-blades {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    top: -22px;
+    animation: spin 4s linear infinite;
+}
+.hope-turbine-blades span {
+    position: absolute;
+    width: 3px;
+    height: 24px;
+    background: #D1D5DB;
+    border-radius: 2px;
+    left: 50%;
+    top: 50%;
+    transform-origin: center top;
+}
+.hope-turbine-blades span:nth-child(1) { transform: translateX(-50%) rotate(0deg); }
+.hope-turbine-blades span:nth-child(2) { transform: translateX(-50%) rotate(120deg); }
+.hope-turbine-blades span:nth-child(3) { transform: translateX(-50%) rotate(240deg); }
+.hope-tower {
+    width: 5px;
+    height: 50px;
+    background: linear-gradient(to bottom, #D1D5DB, #9CA3AF);
+    border-radius: 0 0 2px 2px;
+}
+.hope-panel {
+    width: 40px;
+    height: 28px;
+    background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+    border-radius: 3px;
+    border: 2px solid #1E40AF;
+    transform: skewX(-5deg);
+}
+.hope-tree {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.hope-tree-top {
+    width: 30px;
+    height: 36px;
+    background: #22C55E;
+    border-radius: 50%;
+}
+.hope-tree-trunk {
+    width: 6px;
+    height: 16px;
+    background: #92400E;
+    border-radius: 0 0 2px 2px;
+}
+.happy-earth-mini {
+    width: 50px;
+    height: 50px;
+    background: radial-gradient(circle at 40% 40%, #60A5FA 0%, #3B82F6 40%, #4ADE80 41%, #22C55E 60%, #3B82F6 61%);
+    border-radius: 50%;
+    position: relative;
+    align-self: center;
+}
+.happy-face {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.happy-eye {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    background: #1E3A5F;
+    border-radius: 50%;
+    margin: 0 4px;
+}
+.happy-mouth {
+    width: 14px;
+    height: 7px;
+    border: 2px solid #1E3A5F;
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    margin: 2px auto 0;
+}
+
+/* Fun facts */
+.fun-fact {
+    background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-top: 16px;
+    font-size: 0.95rem;
+    color: #78350F;
+    font-weight: 600;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+}
+.fun-fact-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+/* Quiz */
+.quiz-box {
+    background: linear-gradient(135deg, #EDE9FE, #DDD6FE);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 20px;
+}
+.quiz-box h3 {
+    font-family: 'Lexend', sans-serif;
+    color: #5B21B6;
+    font-size: 1.15rem;
+    margin-bottom: 12px;
+}
+.quiz-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: #fff;
+    border: 2px solid #C4B5FD;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+}
+.quiz-btn:hover {
+    background: #F5F3FF;
+    border-color: #8B5CF6;
+    transform: scale(1.01);
+}
+.quiz-btn:active { transform: scale(0.99); }
+.quiz-btn.correct {
+    background: #DCFCE7;
+    border-color: #22C55E;
+    color: #15803D;
+    font-weight: 600;
+}
+.quiz-btn.wrong {
+    background: #FEE2E2;
+    border-color: #EF4444;
+    color: #DC2626;
+}
+.quiz-result {
+    display: none;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* CTA */
+.kids-cta {
+    text-align: center;
+    padding: 32px 20px;
+}
+.kids-cta p {
+    font-size: 1.1rem;
+    color: #374151;
+    margin-bottom: 16px;
+}
+.kids-cta a {
+    display: inline-block;
+    background: #1E3A5F;
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-family: 'Lexend', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s;
+    margin: 6px;
+}
+.kids-cta a:hover { background: #2D4A6F; transform: translateY(-2px); }
+.kids-cta a.secondary-cta {
+    background: #22C55E;
+}
+.kids-cta a.secondary-cta:hover { background: #16A34A; }
+
+/* ===== ANIMATIONS ===== */
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes dinoWalk {
+    0%, 100% { transform: translateX(-50%); }
+    50% { transform: translateX(-42%); }
+}
+@keyframes legMove {
+    0% { transform: rotate(-8deg); }
+    100% { transform: rotate(8deg); }
+}
+@keyframes tailWag {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-8deg); }
+}
+@keyframes smokeRise {
+    0% { transform: translateY(0) scale(1); opacity: 0.6; }
+    100% { transform: translateY(-40px) scale(2); opacity: 0; }
+}
+@keyframes lavaGlow {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+@keyframes oilPulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+@keyframes timePulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+@keyframes smokeBig {
+    0% { transform: translateY(0) scale(1); opacity: 0.5; }
+    100% { transform: translateY(-70px) scale(3); opacity: 0; }
+}
+@keyframes carDrive {
+    0% { left: -15%; }
+    100% { left: 100%; }
+}
+@keyframes exhaustPuff {
+    0% { transform: scale(1); opacity: 0.5; }
+    100% { transform: translateX(-12px) scale(2); opacity: 0; }
+}
+@keyframes blanketPulse {
+    0%, 100% { border-color: rgba(239,68,68,0.2); box-shadow: 0 0 15px rgba(239,68,68,0.1); }
+    50% { border-color: rgba(239,68,68,0.5); box-shadow: 0 0 25px rgba(239,68,68,0.25); }
+}
+@keyframes rayBounce {
+    0%, 100% { opacity: 0.3; height: 50px; }
+    50% { opacity: 0.8; height: 70px; }
+}
+@keyframes rayTrapped {
+    0%, 100% { opacity: 0; transform: translateY(0); }
+    30% { opacity: 0.8; }
+    60% { opacity: 0.6; transform: translateY(-15px); }
+    100% { opacity: 0; transform: translateY(-25px); }
+}
+@keyframes tempRise {
+    0% { height: 15px; }
+    50% { height: 36px; }
+    100% { height: 15px; }
+}
+@keyframes sweatDrip {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(14px); opacity: 0; }
+}
+@keyframes meltDrip {
+    0%, 100% { width: 22px; opacity: 0.6; }
+    50% { width: 28px; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .trex, .stego, .volcano-smoke span, .smoke-puff,
+    .car, .car-exhaust, .co2-blanket, .sun-ray,
+    .trapped-ray, .thermometer::after, .sweat,
+    .ice-cube::after, .oil-blob, .time-arrow-text,
+    .hope-sun, .hope-turbine-blades,
+    .kids-card, .trex-tail, .trex-leg,
+    .volcano-body::before {
+        animation: none !important;
+        transition: none !important;
+    }
+    .kids-card { opacity: 1; transform: none; }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .kids-hero h1 { font-size: 2rem; }
+    .kids-card { padding: 24px 20px; }
+    .kids-card h2 { font-size: 1.3rem; }
+    .sad-earth-scene { flex-wrap: wrap; gap: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<!-- HEADER -->
+<header class="header">
+    <h1>Dinosaurs &amp; Fossil Fuels</h1>
+    <p class="subtitle">A long, long time ago&hellip; and why it matters today!</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="kids-wrap">
+
+<!-- Hero -->
+<div class="kids-hero">
+    <span class="age-tag">Ages 5 &ndash; 7</span>
+    <h1>What Do Dinosaurs Have to Do with Energy?</h1>
+    <p>A very, very long time ago, dinosaurs walked the Earth. Let&rsquo;s go on an adventure to find out what happened to them &mdash; and why it matters for our sky today!</p>
+</div>
+
+<!-- 1. DINOSAURS! -->
+<div class="kids-card card-dino">
+    <h2>Meet the Dinosaurs!</h2>
+    <div class="illustration dino-scene">
+        <!-- palm trees -->
+        <div class="palm-tree">
+            <div class="palm-leaves"><span></span><span></span><span></span></div>
+            <div class="palm-trunk"></div>
+        </div>
+        <div class="palm-tree">
+            <div class="palm-leaves"><span></span><span></span><span></span></div>
+            <div class="palm-trunk"></div>
+        </div>
+        <!-- volcano -->
+        <div class="volcano">
+            <div class="volcano-smoke"><span></span><span></span><span></span></div>
+            <div class="volcano-body"></div>
+        </div>
+        <!-- T-Rex -->
+        <div class="trex">
+            <div class="trex-body">
+                <div class="trex-head"></div>
+                <div class="trex-arm"></div>
+                <div class="trex-tail"></div>
+                <div class="trex-leg"></div>
+                <div class="trex-leg"></div>
+            </div>
+        </div>
+        <!-- Stegosaurus -->
+        <div class="stego">
+            <div class="stego-body">
+                <div class="stego-head"></div>
+                <div class="stego-plates"><span></span><span></span><span></span><span></span></div>
+                <div class="stego-leg"></div>
+                <div class="stego-leg"></div>
+            </div>
+        </div>
+    </div>
+    <p>Millions and millions of years ago, big dinosaurs walked around everywhere! There were also giant trees, huge ferns, and tiny sea creatures.</p>
+    <p>The Earth was very different back then &mdash; warm, green, and full of life.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#129430;</span>
+        <span><strong>Fun fact:</strong> Some dinosaurs were as tall as a 4-story building! Others were as small as a chicken.</span>
+    </div>
+</div>
+
+<!-- 2. BURIED UNDERGROUND -->
+<div class="kids-card card-buried">
+    <h2>What Happened to Them?</h2>
+    <div class="illustration underground-scene">
+        <div class="underground-label top-label">Ground level</div>
+        <!-- bones -->
+        <div class="bone" style="top: 35%; left: 20%; transform: rotate(25deg);">
+            <div class="bone-shape"></div>
+        </div>
+        <div class="bone" style="top: 50%; left: 60%; transform: rotate(-15deg);">
+            <div class="bone-shape"></div>
+        </div>
+        <!-- leaf fossils -->
+        <div class="fossil-leaf" style="top: 40%; left: 42%;"></div>
+        <div class="fossil-leaf" style="top: 55%; right: 25%; transform: rotate(40deg);"></div>
+        <!-- oil blobs at bottom -->
+        <div class="oil-blob" style="width: 30px; height: 20px; bottom: 12%; left: 25%;"></div>
+        <div class="oil-blob" style="width: 22px; height: 16px; bottom: 8%; right: 30%; animation-delay: 1.5s;"></div>
+        <!-- time arrow -->
+        <div class="time-arrow">
+            <div class="time-arrow-text">Millions of years &darr;</div>
+        </div>
+    </div>
+    <p>When the dinosaurs and old plants died, they got buried deep, deep underground. Dirt and rocks piled on top of them.</p>
+    <p>After millions and millions of years, all that squishing and heat turned them into something new: <strong>coal</strong>, <strong>oil</strong>, and <strong>gas</strong>.</p>
+    <p>We call these <strong>&ldquo;fossil fuels&rdquo;</strong> because they come from old fossils!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#129516;</span>
+        <span><strong>Fun fact:</strong> The oil and coal we use today took hundreds of millions of years to form. That&rsquo;s way before people were even around!</span>
+    </div>
+</div>
+
+<!-- 3. DIGGING IT UP & BURNING IT -->
+<div class="kids-card card-smoke">
+    <h2>People Burn It &mdash; And That Makes Smoke</h2>
+    <div class="illustration factory-scene">
+        <div class="factory">
+            <div class="smokestack"></div>
+            <div class="smokestack"></div>
+            <div class="smokestack"></div>
+            <div class="factory-building"></div>
+            <div class="smoke-puff"></div>
+            <div class="smoke-puff"></div>
+            <div class="smoke-puff"></div>
+            <div class="smoke-puff"></div>
+        </div>
+        <div class="car">
+            <div class="car-body">
+                <div class="car-wheel"></div>
+                <div class="car-wheel"></div>
+            </div>
+            <div class="car-exhaust"></div>
+        </div>
+    </div>
+    <p>People found the coal, oil, and gas underground. They started burning it to make electricity, drive cars, and heat houses.</p>
+    <p>But when you burn fossil fuels, it makes <strong>dirty smoke</strong> that goes up into the sky. You can&rsquo;t always see it, but it&rsquo;s there!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128664;</span>
+        <span><strong>Fun fact:</strong> A regular car puts out about 4 tons of invisible gas into the air every year. That&rsquo;s as heavy as an elephant!</span>
+    </div>
+</div>
+
+<!-- 4. THE INVISIBLE BLANKET -->
+<div class="kids-card card-blanket">
+    <h2>The Invisible Blanket</h2>
+    <div class="illustration blanket-scene">
+        <div class="earth-small"></div>
+        <div class="co2-blanket"></div>
+        <div class="sun-ray"></div>
+        <div class="sun-ray"></div>
+        <div class="sun-ray"></div>
+        <div class="trapped-ray"></div>
+        <div class="trapped-ray"></div>
+        <div class="trapped-ray"></div>
+        <div class="blanket-label">Heat gets trapped!</div>
+    </div>
+    <p>All that invisible smoke goes up and makes a <strong>blanket around the Earth</strong>.</p>
+    <p>When the sun shines on us, some of the heat is supposed to bounce back into space. But the blanket <strong>traps the heat</strong> and keeps it in. That makes the Earth get warmer and warmer.</p>
+    <p>It&rsquo;s like wearing a big coat on a hot day &mdash; you get way too warm!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127777;&#65039;</span>
+        <span><strong>Fun fact:</strong> This invisible gas is called &ldquo;carbon dioxide&rdquo; or CO&#8322; for short. Plants breathe it in, but we&rsquo;re making way too much of it!</span>
+    </div>
+</div>
+
+<!-- 5. EARTH GETS TOO HOT -->
+<div class="kids-card card-sad-earth">
+    <h2>Earth Is Getting Too Warm</h2>
+    <div class="illustration sad-earth-scene">
+        <div class="sad-earth">
+            <div class="sweat"></div>
+            <div class="sweat"></div>
+            <div class="sad-face">
+                <div><span class="sad-eye"></span><span class="sad-eye"></span></div>
+                <div class="sad-mouth"></div>
+            </div>
+        </div>
+        <div class="thermometer">
+            <div class="thermometer-bulb"></div>
+        </div>
+        <div class="ice-effects">
+            <div class="ice-cube"></div>
+            <div class="ice-cube"></div>
+        </div>
+    </div>
+    <p>When Earth gets too warm, it causes problems:</p>
+    <p><strong>Ice melts</strong> &mdash; the ice at the North and South Poles is melting. Polar bears and penguins are losing their homes.</p>
+    <p><strong>Weather goes wild</strong> &mdash; bigger storms, hotter summers, and strange weather.</p>
+    <p><strong>Animals need help</strong> &mdash; some animals can&rsquo;t find food or cool places to live.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#129059;</span>
+        <span><strong>Fun fact:</strong> Polar bears need sea ice to hunt for food. When the ice melts, they have to swim farther and farther. We can help by using less fossil fuel!</span>
+    </div>
+</div>
+
+<!-- 6. WE CAN FIX THIS! -->
+<div class="kids-card card-hope">
+    <h2>We Can Fix This!</h2>
+    <div class="illustration hope-scene">
+        <div class="hope-sun"></div>
+        <div class="hope-turbine" style="position:relative;">
+            <div class="hope-turbine-head">
+                <div class="hope-turbine-blades">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="hope-tower"></div>
+        </div>
+        <div class="hope-panel"></div>
+        <div class="happy-earth-mini">
+            <div class="happy-face">
+                <div><span class="happy-eye"></span><span class="happy-eye"></span></div>
+                <div class="happy-mouth"></div>
+            </div>
+        </div>
+        <div class="hope-tree">
+            <div class="hope-tree-top"></div>
+            <div class="hope-tree-trunk"></div>
+        </div>
+    </div>
+    <p>Here&rsquo;s the good news: <strong>we don&rsquo;t have to keep burning old dinosaur fuel!</strong></p>
+    <p>We can use the <strong>sun</strong>, the <strong>wind</strong>, and <strong>water</strong> to make clean energy instead. No dirty smoke. No invisible blanket. No more making Earth too hot.</p>
+    <p>Every solar panel and wind turbine helps the Earth breathe easier!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127758;</span>
+        <span><strong>Key idea:</strong> Fossil fuels are old, dirty, and make our planet too warm. Clean energy from the sun, wind, and water keeps our air clean and our Earth happy!</span>
+    </div>
+
+    <!-- Quiz -->
+    <div class="quiz-box">
+        <h3>Quick Quiz!</h3>
+        <p style="font-size:0.95rem; color:#5B21B6; margin-bottom:12px;">What happens when we burn fossil fuels?</p>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">A) It makes rainbows</button>
+        <button class="quiz-btn" data-answer="correct" onclick="handleQuiz(this)">B) It puts invisible gas in the sky that makes Earth too warm</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">C) It makes the wind blow harder</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">D) Nothing happens</button>
+        <div class="quiz-result" id="quizResult"></div>
+    </div>
+</div>
+
+<!-- CTA -->
+<div class="kids-cta">
+    <p>Want to learn about the clean energy that can replace fossil fuels?</p>
+    <a class="secondary-cta" href="kids_energy.html">Learn About Clean Energy &rarr;</a>
+    <a href="index.html">See the Full Dashboard &rarr;</a>
+</div>
+
+</div><!-- /kids-wrap -->
+
+<script>
+// Scroll-triggered fade-in
+(function() {
+    var cards = document.querySelectorAll('.kids-card');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15 });
+    cards.forEach(function(card) { observer.observe(card); });
+})();
+
+// Quiz handler
+function handleQuiz(btn) {
+    var box = btn.closest('.quiz-box');
+    var buttons = box.querySelectorAll('.quiz-btn');
+    var result = box.querySelector('.quiz-result');
+    buttons.forEach(function(b) { b.disabled = true; b.style.cursor = 'default'; });
+    if (btn.getAttribute('data-answer') === 'correct') {
+        btn.classList.add('correct');
+        result.textContent = 'Yes! Burning fossil fuels puts CO\u2082 in the air, which traps heat like a blanket!';
+        result.style.background = '#DCFCE7';
+        result.style.color = '#15803D';
+    } else {
+        btn.classList.add('wrong');
+        buttons.forEach(function(b) {
+            if (b.getAttribute('data-answer') === 'correct') b.classList.add('correct');
+        });
+        result.textContent = 'Not quite! Burning fossil fuels puts invisible gas (CO\u2082) into the sky that traps heat and makes Earth too warm.';
+        result.style.background = '#FEF3C7';
+        result.style.color = '#92400E';
+    }
+    result.style.display = 'block';
+}
+</script>
+</body>
+</html>
