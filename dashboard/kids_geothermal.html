@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Geothermal Energy Works — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<style>
+body {
+    background: linear-gradient(180deg, #FEE2E2 0%, #FECACA 20%, #FEF3C7 45%, #DCFCE7 70%, #FEE2E2 100%);
+    background-attachment: fixed;
+}
+.kids-wrap { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+
+.kids-hero { text-align: center; padding: 48px 20px 32px; }
+.kids-hero h1 { font-family: 'Lexend', sans-serif; font-size: 2.8rem; font-weight: 700; color: #1E3A5F; margin-bottom: 8px; line-height: 1.2; }
+.kids-hero .age-tag { display: inline-block; background: #FBBF24; color: #78350F; font-size: 0.85rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; margin-bottom: 16px; font-family: 'Lexend', sans-serif; }
+.kids-hero p { font-size: 1.15rem; color: #374151; max-width: 540px; margin: 0 auto; line-height: 1.6; }
+
+.kids-card { background: #fff; border-radius: 24px; padding: 36px 32px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.kids-card.visible { opacity: 1; transform: translateY(0); }
+.kids-card h2 { font-family: 'Lexend', sans-serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+.kids-card p { font-size: 1.05rem; color: #374151; line-height: 1.7; margin-bottom: 12px; }
+.kids-card p:last-child { margin-bottom: 0; }
+
+.card-hot-earth { border-left: 6px solid #EF4444; }
+.card-hot-earth h2 { color: #DC2626; }
+.card-geyser { border-left: 6px solid #F59E0B; }
+.card-geyser h2 { color: #B45309; }
+.card-geo-plant { border-left: 6px solid #22C55E; }
+.card-geo-plant h2 { color: #15803D; }
+
+.illustration { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 20px 0 8px; min-height: 140px; position: relative; }
+
+/* === EARTH LAYERS SCENE === */
+.layers-scene {
+    border-radius: 16px; min-height: 240px; position: relative; overflow: hidden;
+    background: linear-gradient(to bottom,
+        #86EFAC 0%, #4ADE80 6%,
+        #92400E 6%, #78350F 25%,
+        #B45309 25%, #D97706 50%,
+        #EF4444 50%, #DC2626 75%,
+        #F59E0B 75%, #FBBF24 100%
+    );
+}
+.layer-label {
+    position: absolute;
+    right: 10px;
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+    z-index: 2;
+    background: rgba(0,0,0,0.25);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+.layer-label:nth-child(1) { top: 1%; color: #15803D; background: rgba(255,255,255,0.7); }
+.layer-label:nth-child(2) { top: 14%; }
+.layer-label:nth-child(3) { top: 36%; }
+.layer-label:nth-child(4) { top: 60%; }
+.layer-label:nth-child(5) { top: 85%; }
+/* magma glow */
+.magma-glow {
+    position: absolute;
+    bottom: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px; height: 40px;
+    background: radial-gradient(ellipse, rgba(251,191,36,0.6) 0%, transparent 70%);
+    animation: magmaPulse 3s ease-in-out infinite;
+}
+/* heat arrows */
+.heat-arrow {
+    position: absolute;
+    left: 20%;
+    width: 4px;
+    background: linear-gradient(to top, #FBBF24, transparent);
+    border-radius: 2px;
+    animation: heatRise 2.5s ease-in-out infinite;
+    z-index: 2;
+}
+.heat-arrow:nth-child(7) { height: 30px; bottom: 40%; left: 30%; }
+.heat-arrow:nth-child(8) { height: 25px; bottom: 45%; left: 50%; animation-delay: 0.5s; }
+.heat-arrow:nth-child(9) { height: 35px; bottom: 35%; left: 70%; animation-delay: 1s; }
+/* Rexy exploring */
+.rexy-geo { position: absolute; top: 6px; left: 10%; z-index: 4; }
+.rg-body { width: 40px; height: 24px; background: #16A34A; border-radius: 12px 18px 6px 9px; position: relative; }
+.rg-head { position: absolute; right: -13px; top: -4px; width: 18px; height: 15px; background: #16A34A; border-radius: 8px 10px 4px 3px; }
+.rg-head::before { content: ''; position: absolute; top: 3px; right: 3px; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #1E3A5F; }
+.rg-head::after { content: ''; position: absolute; bottom: 1px; right: 1px; width: 9px; height: 2px; background: #14532D; border-radius: 1px; }
+.rg-arm { position: absolute; right: 1px; top: 7px; width: 6px; height: 3px; background: #15803D; border-radius: 2px; transform: rotate(25deg); }
+.rg-tail { position: absolute; left: -11px; top: 2px; width: 14px; height: 8px; background: #16A34A; border-radius: 8px 0 2px 4px; }
+.rg-leg { position: absolute; bottom: -8px; width: 6px; height: 9px; background: #15803D; border-radius: 0 0 2px 2px; }
+.rg-leg:nth-child(5) { left: 7px; }
+.rg-leg:nth-child(6) { right: 9px; }
+.dino-speech { position: absolute; top: -26px; right: -12px; background: #fff; border-radius: 12px; padding: 4px 10px; font-family: 'Lexend', sans-serif; font-size: 0.65rem; font-weight: 600; color: #1E3A5F; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 5; }
+.dino-speech::after { content: ''; position: absolute; bottom: -6px; left: 16px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid #fff; }
+
+/* === GEYSER SCENE === */
+.geyser-scene {
+    background: linear-gradient(to bottom, #BAE6FD 0%, #7DD3FC 50%, #86EFAC 80%, #4ADE80 100%);
+    border-radius: 16px; min-height: 220px; padding: 16px; position: relative; overflow: hidden;
+}
+/* ground */
+.geyser-scene::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 50px; background: linear-gradient(to bottom, #92400E, #78350F); border-radius: 0 0 16px 16px; }
+/* geyser opening */
+.geyser-hole {
+    position: absolute;
+    bottom: 45px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px; height: 10px;
+    background: #451A03;
+    border-radius: 50%;
+    z-index: 3;
+}
+/* water spray */
+.geyser-spray {
+    position: absolute;
+    bottom: 55px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+}
+.spray-drop {
+    position: absolute;
+    background: #38BDF8;
+    border-radius: 50%;
+    animation: sprayUp 1.5s ease-out infinite;
+}
+.spray-drop:nth-child(1) { width: 8px; height: 8px; left: 0; }
+.spray-drop:nth-child(2) { width: 6px; height: 6px; left: 8px; animation-delay: 0.2s; }
+.spray-drop:nth-child(3) { width: 10px; height: 10px; left: -6px; animation-delay: 0.4s; }
+.spray-drop:nth-child(4) { width: 5px; height: 5px; left: 14px; animation-delay: 0.6s; }
+.spray-drop:nth-child(5) { width: 7px; height: 7px; left: 4px; animation-delay: 0.8s; }
+/* steam cloud above */
+.geyser-steam {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+}
+.geyser-steam-puff {
+    position: absolute;
+    background: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    animation: steamFloat 3s ease-out infinite;
+}
+.geyser-steam-puff:nth-child(1) { width: 20px; height: 20px; left: -10px; }
+.geyser-steam-puff:nth-child(2) { width: 16px; height: 16px; left: 8px; animation-delay: 0.5s; }
+.geyser-steam-puff:nth-child(3) { width: 14px; height: 14px; left: -4px; animation-delay: 1s; }
+/* hot spring pool */
+.hot-spring {
+    position: absolute;
+    bottom: 42px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px; height: 12px;
+    background: linear-gradient(to bottom, #38BDF8, #0EA5E9);
+    border-radius: 50%;
+    z-index: 2;
+    animation: springBubble 2s ease-in-out infinite;
+}
+/* Spike at geyser */
+.spike-geo { position: absolute; bottom: 46px; right: 12%; z-index: 5; }
+.sg-body { width: 36px; height: 20px; background: #F59E0B; border-radius: 10px 8px 5px 8px; position: relative; }
+.sg-head { position: absolute; left: -10px; top: 2px; width: 14px; height: 12px; background: #F59E0B; border-radius: 7px 3px 4px 7px; }
+.sg-head::before { content: ''; position: absolute; top: 3px; left: 3px; width: 4px; height: 4px; background: #fff; border-radius: 50%; box-shadow: inset 2px 0 0 #78350F; }
+.sg-plates { position: absolute; top: -7px; left: 4px; display: flex; gap: 2px; }
+.sg-plates span { width: 5px; height: 8px; background: #D97706; border-radius: 50% 50% 0 0; }
+.sg-leg { position: absolute; bottom: -7px; width: 5px; height: 8px; background: #D97706; border-radius: 0 0 2px 2px; }
+.sg-leg:nth-child(4) { left: 5px; }
+.sg-leg:nth-child(5) { right: 5px; }
+.sg-tail { position: absolute; right: -8px; top: 5px; width: 10px; height: 5px; background: #F59E0B; border-radius: 0 5px 2px 0; }
+
+/* === GEO PLANT SCENE === */
+.geo-plant-scene {
+    border-radius: 16px; min-height: 240px; position: relative; overflow: hidden;
+    background: linear-gradient(to bottom,
+        #BAE6FD 0%, #7DD3FC 35%,
+        #86EFAC 35%, #4ADE80 42%,
+        #92400E 42%, #78350F 60%,
+        #B45309 60%, #EF4444 100%
+    );
+}
+/* power plant building */
+.geo-building {
+    position: absolute;
+    bottom: 60%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+}
+.geo-building-box {
+    width: 60px; height: 35px;
+    background: #6B7280;
+    border-radius: 3px 3px 0 0;
+    position: relative;
+}
+.geo-building-box::before {
+    content: '';
+    position: absolute;
+    top: 6px; left: 6px;
+    width: 8px; height: 8px;
+    background: #FDE68A;
+    border-radius: 1px;
+    box-shadow: 14px 0 0 #FDE68A, 28px 0 0 #FDE68A;
+}
+.geo-chimney {
+    position: absolute;
+    top: -20px; right: 10px;
+    width: 10px; height: 20px;
+    background: #4B5563;
+    border-radius: 2px 2px 0 0;
+}
+.geo-steam-puff {
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 10px; height: 10px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    animation: steamFloat 2.5s ease-out infinite;
+}
+/* underground pipes */
+.pipe {
+    position: absolute;
+    z-index: 2;
+}
+.pipe-down {
+    left: 38%;
+    top: 42%;
+    width: 4px;
+    height: 35%;
+    background: #60A5FA;
+}
+.pipe-up {
+    left: 58%;
+    top: 42%;
+    width: 4px;
+    height: 35%;
+    background: #EF4444;
+}
+.pipe-label {
+    position: absolute;
+    font-family: 'Lexend', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0,0,0,0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 3;
+}
+.pipe-label-cold { left: 10%; top: 55%; }
+.pipe-label-hot { right: 10%; top: 55%; }
+/* water arrows on pipes */
+.pipe-arrow-down {
+    position: absolute;
+    left: 38%;
+    z-index: 3;
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #60A5FA;
+    animation: arrowPulse 1.5s ease-in-out infinite;
+}
+.pipe-arrow-down:nth-child(7) { top: 50%; transform: translateX(-4px); }
+.pipe-arrow-down:nth-child(8) { top: 62%; transform: translateX(-4px); animation-delay: 0.5s; }
+.pipe-arrow-up {
+    position: absolute;
+    left: 58%;
+    z-index: 3;
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 8px solid #EF4444;
+    animation: arrowPulse 1.5s ease-in-out infinite;
+}
+.pipe-arrow-up:nth-child(9) { top: 58%; transform: translateX(-4px); }
+.pipe-arrow-up:nth-child(10) { top: 46%; transform: translateX(-4px); animation-delay: 0.5s; }
+/* hot zone glow */
+.hot-zone {
+    position: absolute;
+    bottom: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 30px;
+    background: radial-gradient(ellipse, rgba(239,68,68,0.4) 0%, transparent 70%);
+    animation: magmaPulse 3s ease-in-out infinite;
+    z-index: 1;
+}
+
+/* Fun facts & Quiz & CTA */
+.fun-fact { background: linear-gradient(135deg, #FEF3C7, #FDE68A); border-radius: 16px; padding: 16px 20px; margin-top: 16px; font-size: 0.95rem; color: #78350F; font-weight: 600; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+.fun-fact-icon { font-size: 1.3rem; flex-shrink: 0; line-height: 1.4; }
+.quiz-box { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); border-radius: 16px; padding: 24px; margin-top: 20px; }
+.quiz-box h3 { font-family: 'Lexend', sans-serif; color: #5B21B6; font-size: 1.15rem; margin-bottom: 12px; }
+.quiz-btn { display: block; width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #fff; border: 2px solid #C4B5FD; border-radius: 12px; font-size: 1rem; font-family: 'Plus Jakarta Sans', sans-serif; color: #374151; cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
+.quiz-btn:hover { background: #F5F3FF; border-color: #8B5CF6; transform: scale(1.01); }
+.quiz-btn.correct { background: #DCFCE7; border-color: #22C55E; color: #15803D; font-weight: 600; }
+.quiz-btn.wrong { background: #FEE2E2; border-color: #EF4444; color: #DC2626; }
+.quiz-result { display: none; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; margin-top: 8px; text-align: center; }
+.kids-cta { text-align: center; padding: 32px 20px; }
+.kids-cta p { font-size: 1.1rem; color: #374151; margin-bottom: 16px; }
+.kids-cta a { display: inline-block; background: #1E3A5F; color: #fff; padding: 14px 28px; border-radius: 12px; font-family: 'Lexend', sans-serif; font-weight: 600; font-size: 1rem; text-decoration: none; transition: background 0.2s, transform 0.1s; margin: 6px; }
+.kids-cta a:hover { background: #2D4A6F; transform: translateY(-2px); }
+.kids-cta a.secondary-cta { background: #EF4444; }
+.kids-cta a.secondary-cta:hover { background: #DC2626; }
+
+/* Animations */
+@keyframes magmaPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes heatRise { 0% { opacity: 0; transform: translateY(10px); } 50% { opacity: 0.8; } 100% { opacity: 0; transform: translateY(-20px); } }
+@keyframes sprayUp { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-80px) scale(0.5); opacity: 0; } }
+@keyframes steamFloat { 0% { transform: translateY(0) scale(1); opacity: 0.6; } 100% { transform: translateY(-25px) scale(1.8); opacity: 0; } }
+@keyframes springBubble { 0%, 100% { transform: translateX(-50%) scaleY(1); } 50% { transform: translateX(-50%) scaleY(1.3); } }
+@keyframes arrowPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+    .magma-glow, .heat-arrow, .spray-drop, .geyser-steam-puff, .hot-spring,
+    .geo-steam-puff, .pipe-arrow-down, .pipe-arrow-up, .hot-zone, .kids-card { animation: none !important; transition: none !important; }
+    .kids-card { opacity: 1; transform: none; }
+}
+@media (max-width: 600px) {
+    .kids-hero h1 { font-size: 2rem; }
+    .kids-card { padding: 24px 20px; }
+    .kids-card h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>How Geothermal Energy Works</h1>
+    <p class="subtitle">The Earth is hot inside! Let&rsquo;s use that heat for clean power.</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="kids-wrap">
+
+<div class="kids-hero">
+    <span class="age-tag">Ages 5 &ndash; 7</span>
+    <h1>Heat From Deep Underground!</h1>
+    <p>Did you know the Earth is super hot on the inside? Deep below your feet, it&rsquo;s so hot that rocks actually melt! We can use that heat to make electricity.</p>
+</div>
+
+<!-- 1. THE EARTH IS HOT INSIDE -->
+<div class="kids-card card-hot-earth">
+    <h2>The Earth Is Like a Giant Oven!</h2>
+    <div class="illustration layers-scene">
+        <div class="layer-label">Grass &amp; trees</div>
+        <div class="layer-label">Crust (cool rocks)</div>
+        <div class="layer-label">Mantle (hot rocks)</div>
+        <div class="layer-label">Outer core (melted metal!)</div>
+        <div class="layer-label">Inner core (super hot!)</div>
+        <div class="magma-glow"></div>
+        <div class="heat-arrow"></div>
+        <div class="heat-arrow"></div>
+        <div class="heat-arrow"></div>
+        <div class="rexy-geo">
+            <div class="dino-speech">It&rsquo;s hot down there!</div>
+            <div class="rg-body">
+                <div class="rg-head"></div>
+                <div class="rg-arm"></div>
+                <div class="rg-tail"></div>
+                <div class="rg-leg"></div>
+                <div class="rg-leg"></div>
+            </div>
+        </div>
+    </div>
+    <p>The Earth is made of <strong>layers</strong> &mdash; like an onion! On the outside it&rsquo;s cool (that&rsquo;s where we live). But deep down, it gets hotter and hotter.</p>
+    <p>At the very center, the Earth&rsquo;s core is as hot as the <strong>surface of the sun</strong> &mdash; about 10,000 degrees! That heat is called <strong>geothermal energy</strong> (&ldquo;geo&rdquo; means earth, &ldquo;thermal&rdquo; means heat).</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#127755;</span>
+        <span><strong>Fun fact:</strong> If you could dig a deep enough hole, the ground gets hotter by about 25&deg;C for every kilometer you go down!</span>
+    </div>
+</div>
+
+<!-- 2. GEYSERS AND HOT SPRINGS -->
+<div class="kids-card card-geyser">
+    <h2>Geysers: Earth&rsquo;s Hot Fountains!</h2>
+    <div class="illustration geyser-scene">
+        <div class="hot-spring"></div>
+        <div class="geyser-hole"></div>
+        <div class="geyser-spray">
+            <div class="spray-drop"></div>
+            <div class="spray-drop"></div>
+            <div class="spray-drop"></div>
+            <div class="spray-drop"></div>
+            <div class="spray-drop"></div>
+        </div>
+        <div class="geyser-steam">
+            <div class="geyser-steam-puff"></div>
+            <div class="geyser-steam-puff"></div>
+            <div class="geyser-steam-puff"></div>
+        </div>
+        <div class="spike-geo">
+            <div class="sg-body">
+                <div class="sg-head"></div>
+                <div class="sg-plates"><span></span><span></span><span></span><span></span></div>
+                <div class="sg-leg"></div>
+                <div class="sg-leg"></div>
+                <div class="sg-tail"></div>
+            </div>
+        </div>
+    </div>
+    <p>Sometimes the Earth&rsquo;s heat makes water underground get really, really hot. When it boils, it shoots up through cracks in the ground. That&rsquo;s a <strong>geyser</strong>!</p>
+    <p>You might have heard of <strong>Old Faithful</strong> in Yellowstone Park &mdash; it shoots hot water 130 feet into the air! Hot springs and geysers are nature&rsquo;s way of showing us there&rsquo;s energy underground.</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#9832;</span>
+        <span><strong>Fun fact:</strong> In Iceland, people heat their homes with hot water from underground. Some pools are naturally warm enough to swim in &mdash; even in winter!</span>
+    </div>
+</div>
+
+<!-- 3. MAKING ELECTRICITY -->
+<div class="kids-card card-geo-plant">
+    <h2>Turning Heat Into Electricity!</h2>
+    <div class="illustration geo-plant-scene">
+        <div class="geo-building">
+            <div class="geo-chimney">
+                <div class="geo-steam-puff"></div>
+            </div>
+            <div class="geo-building-box"></div>
+        </div>
+        <div class="pipe pipe-down"></div>
+        <div class="pipe pipe-up"></div>
+        <div class="pipe-label pipe-label-cold">Cold water goes down</div>
+        <div class="pipe-label pipe-label-hot">Hot water comes up!</div>
+        <div class="pipe-arrow-down"></div>
+        <div class="pipe-arrow-down"></div>
+        <div class="pipe-arrow-up"></div>
+        <div class="pipe-arrow-up"></div>
+        <div class="hot-zone"></div>
+    </div>
+    <p>To make electricity, we drill deep holes into the ground and pump <strong>cold water</strong> down. The hot rocks heat the water up. Then the hot water (or steam) comes back up!</p>
+    <p>That steam spins a turbine &mdash; just like in a nuclear or coal plant &mdash; and the turbine makes <strong>electricity</strong>. But there&rsquo;s no burning, no smoke, and no CO&#8322;!</p>
+    <p>Best of all, geothermal works <strong>all day, all night, rain or shine</strong> &mdash; just like nuclear. The Earth&rsquo;s heat never stops!</p>
+    <div class="fun-fact">
+        <span class="fun-fact-icon">&#128293;</span>
+        <span><strong>Key idea:</strong> Geothermal energy is always on, always clean, and will last for billions of years. The Earth is like a giant rechargeable battery!</span>
+    </div>
+    <div class="quiz-box">
+        <h3>Quick Quiz!</h3>
+        <p style="font-size:0.95rem; color:#5B21B6; margin-bottom:12px;">Where does geothermal energy come from?</p>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">A) The sun</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">B) The wind</button>
+        <button class="quiz-btn" data-answer="correct" onclick="handleQuiz(this)">C) Heat inside the Earth</button>
+        <button class="quiz-btn" data-answer="wrong" onclick="handleQuiz(this)">D) Batteries</button>
+        <div class="quiz-result" id="quizResult"></div>
+    </div>
+</div>
+
+<div class="kids-cta">
+    <p>Want to learn about more clean energy sources?</p>
+    <a class="secondary-cta" href="kids_storage.html">Learn About Storage &rarr;</a>
+    <a href="kids_energy.html">All Clean Energy &rarr;</a>
+</div>
+
+</div>
+
+<script>
+(function() {
+    var cards = document.querySelectorAll('.kids-card');
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
+        });
+    }, { threshold: 0.15 });
+    cards.forEach(function(card) { observer.observe(card); });
+})();
+function handleQuiz(btn) {
+    var box = btn.closest('.quiz-box'), buttons = box.querySelectorAll('.quiz-btn'), result = box.querySelector('.quiz-result');
+    buttons.forEach(function(b) { b.disabled = true; b.style.cursor = 'default'; });
+    if (btn.getAttribute('data-answer') === 'correct') {
+        btn.classList.add('correct');
+        result.textContent = 'That\u2019s right! Geothermal means \u201Cearth heat\u201D \u2014 it comes from deep inside our planet!';
+        result.style.background = '#DCFCE7'; result.style.color = '#15803D';
+    } else {
+        btn.classList.add('wrong');
+        buttons.forEach(function(b) { if (b.getAttribute('data-answer') === 'correct') b.classList.add('correct'); });
+        result.textContent = 'Not quite! \u201CGeo\u201D means earth and \u201Cthermal\u201D means heat. Geothermal energy comes from the heat deep inside the Earth!';
+        result.style.background = '#FEF3C7'; result.style.color = '#92400E';
+    }
+    result.style.display = 'block';
+}
+</script>
+</body>
+</html>
