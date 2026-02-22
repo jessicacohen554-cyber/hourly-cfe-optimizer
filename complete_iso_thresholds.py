@@ -2,6 +2,11 @@
 """Complete remaining thresholds for an ISO from its interim cache.
 
 Usage: python complete_iso_thresholds.py <ISO> <threshold1> <threshold2> ...
+
+Features:
+  - Resumes from mix-level progress checkpoints (no lost work on restart)
+  - Appends partial results to interim at each mix checkpoint (committable)
+  - Merges interim + done files into final per-ISO cache on completion
 """
 import sys, os, time
 import pyarrow as pa
@@ -63,16 +68,28 @@ for _, row in df[['clean_firm','solar','wind','hydro']].drop_duplicates().iterro
 print(f"  {len(cross_feasible):,} feasible mixes from cache")
 del df  # free memory
 
-# Clear checkpoints for remaining thresholds only
+# DO NOT clear existing progress files — we want to resume from them
+# Only clear done files (in case a previous run partially wrote one)
 for t in remaining:
-    for path in [s1._threshold_done_path(iso, t), s1._mix_progress_path(iso, t)]:
-        if os.path.exists(path):
-            os.remove(path)
+    done_path = s1._threshold_done_path(iso, t)
+    if os.path.exists(done_path):
+        os.remove(done_path)
 
 start = time.time()
 prev_pruning = None
 
 for threshold in remaining:
+    # Check for existing progress checkpoint to resume from
+    progress = s1._load_mix_progress(iso, threshold)
+    if progress is not None:
+        n_existing = len(progress.get('candidates', []))
+        phase = progress.get('phase', '1a')
+        cursor = progress.get('mix_cursor', 0)
+        print(f"  Resuming {iso} {threshold}% from checkpoint: "
+              f"{n_existing:,} solutions, phase={phase}, cursor={cursor}")
+    else:
+        print(f"  Starting {iso} {threshold}% fresh")
+
     t_start = time.time()
     candidates, prev_pruning = s1.optimize_threshold(
         iso, threshold, demand_arr, supply_matrix, hydro_cap,
@@ -85,9 +102,14 @@ for threshold in remaining:
     s1._save_threshold_done(iso, threshold, candidates)
     s1.append_threshold_to_cache(iso, threshold, candidates)
 
-# Now merge interim with any new done parquets
+# Now merge interim (which already has partial/full results) with done files
 print(f"\nSaving {iso} cache...")
-tables = [pq.read_table(interim_path)]
+
+# Read the interim (already updated incrementally during the run)
+interim_table = pq.read_table(interim_path)
+
+# Also read done parquets in case append_threshold_to_cache added newer data
+tables = [interim_table]
 for t in remaining:
     done_path = s1._threshold_done_path(iso, t)
     if os.path.exists(done_path):
