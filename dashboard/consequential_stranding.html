@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consequential Deployment Path — Cross-Regional $/tCO₂ Queue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+<script src="js/consequential-queue-data.js"></script>
+<script src="js/shared-data.js"></script>
+
+<!-- ============ TOP-NAV (shared) ============ -->
+<link rel="stylesheet" href="css/nav.css">
+
+<style>
+/* ========== RESET / BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Barlow Semi Condensed', 'Segoe UI', sans-serif;
+    background: #0f0f1a;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ========== HERO ========== */
+.hero-overview {
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
+    padding: 100px 24px 56px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.hero-inner { max-width: 800px; margin: 0 auto; }
+.hero-inner h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+    margin-bottom: 16px;
+}
+.hero-inner .hero-lead {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.7;
+    max-width: 720px;
+    margin: 0 auto 20px;
+}
+.hero-inner .hero-sub {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+    max-width: 720px;
+    margin: 0 auto;
+}
+.hero-breadcrumb { margin-bottom: 20px; }
+.hero-breadcrumb a {
+    color: rgba(14,165,233,0.8);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.hero-breadcrumb a:hover { color: #0EA5E9; }
+.hero-breadcrumb span {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.85rem;
+    margin: 0 8px;
+}
+
+/* ========== SECTION HEADERS ========== */
+.section-header {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 64px 24px 24px;
+    text-align: center;
+}
+.section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(245,158,11,0.15);
+    color: #F59E0B;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+.section-header h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.3;
+}
+.section-header p {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* ========== CONTENT SECTIONS ========== */
+.content-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+}
+.content-section p {
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.78);
+    line-height: 1.8;
+    margin-bottom: 16px;
+}
+.content-section p strong { color: rgba(255,255,255,0.95); }
+
+/* ========== CHART SECTIONS ========== */
+.chart-section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+}
+.chart-panel {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.chart-title {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 16px;
+    text-align: center;
+}
+.chart-container { position: relative; min-height: 340px; }
+.chart-container-tall { position: relative; min-height: 520px; }
+.chart-narrative-below {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.75;
+    margin-top: 16px;
+}
+.chart-narrative-below p { margin-bottom: 12px; }
+.chart-narrative-below strong { color: rgba(255,255,255,0.95); }
+
+/* ========== DISPATCH STACK TABLE ========== */
+.stack-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.8);
+    margin: 24px 0;
+}
+.stack-table th {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.9);
+    font-weight: 700;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+}
+.stack-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.stack-table tr:hover td { background: rgba(255,255,255,0.03); }
+.fuel-coal { color: #8B4513; font-weight: 600; }
+.fuel-oil { color: #CD853F; font-weight: 600; }
+.fuel-gas { color: #4a90d9; font-weight: 600; }
+
+/* ========== ISO BUTTONS ========== */
+.iso-sel-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.6);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    min-height: 36px;
+}
+.iso-sel-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); }
+.iso-sel-btn.active {
+    background: rgba(14,165,233,0.2);
+    border-color: rgba(14,165,233,0.5);
+    color: #0EA5E9;
+}
+
+/* ========== INSIGHT CALLOUT ========== */
+.insight-callout {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+}
+.insight-box {
+    background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,68,68,0.06));
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 12px;
+    padding: 28px 24px;
+}
+.insight-box h3 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #F59E0B;
+    margin-bottom: 12px;
+}
+.insight-box p {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.78);
+    line-height: 1.75;
+}
+.highlight {
+    background: rgba(245,158,11,0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #F59E0B;
+}
+.highlight-red {
+    background: rgba(239,68,68,0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #EF4444;
+}
+.highlight-green {
+    background: rgba(34,197,94,0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #22C55E;
+}
+
+/* ========== SOURCES ========== */
+.sources-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+.sources-section h3 {
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    color: rgba(255,255,255,0.7);
+    font-size: 1rem;
+    margin-bottom: 16px;
+}
+.sources-section ol { padding-left: 20px; }
+.sources-section li {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.6;
+    margin-bottom: 6px;
+}
+
+/* ========== FADE-IN ========== */
+.fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+
+/* ========== MOBILE ========== */
+@media (max-width: 768px) {
+    .hero-inner h2 { font-size: 1.5rem; }
+    .section-header h2 { font-size: 1.3rem; }
+    .chart-container { min-height: 280px; }
+    .chart-container-tall { min-height: 400px; }
+    .stack-table { font-size: 0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<!-- ============ HERO ============ -->
+<section class="hero-overview">
+<div class="hero-inner">
+    <div class="hero-breadcrumb">
+        <a href="consequential_accounting.html">Consequential Accounting</a>
+        <span>&rsaquo;</span>
+        <span style="color: rgba(255,255,255,0.6);">Cross-Regional Deployment</span>
+    </div>
+    <h2>The Consequential Deployment Path: Cheapest Carbon First</h2>
+    <p class="hero-lead">If capital flows to whichever U.S. grid offers the cheapest marginal $/tCO&#x2082; displaced &mdash; using dispatch-stack retirement rates, not fleet averages &mdash; what gets built where, and what strands?</p>
+    <p class="hero-sub">This analysis uses 8,760-hour physics results across CAISO, ERCOT, PJM, NYISO, and NEISO with merit-order fossil retirement (coal&rarr;oil&rarr;gas) to compute the true consequential emission rate at each step.</p>
+</div>
+</section>
+
+<!-- ============ SECTION 1: Dispatch Stack ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>The Fossil Dispatch Stack: What Retires First?</h2>
+    <p>The emission rate that matters for consequential accounting isn't the grid average &mdash; it's the rate of the <em>marginal fuel displaced</em>. Coal retires first (highest operating cost), so early decarbonization displaces coal-heavy generation at much higher emission rates than later steps that displace gas.</p>
+</div>
+
+<section class="content-section fade-in">
+    <table class="stack-table" id="stackTable"></table>
+    <p><strong>This distinction is critical.</strong> In ERCOT and PJM, coal is 26&ndash;28% of fossil generation and emits 2.5&times; more CO&#x2082; per MWh than gas. The first clean TWh built in these regions displaces coal at ~1.0 tCO&#x2082;/MWh. By the time coal is fully retired, subsequent clean energy only displaces gas at ~0.39 tCO&#x2082;/MWh. The same dollar of investment buys 2.5&times; more abatement early vs. late.</p>
+    <p><strong>CAISO, NYISO, and NEISO are already nearly gas-only.</strong> Coal is effectively zero in these grids, so the displaced emission rate stays flat around 0.39&ndash;0.42 tCO&#x2082;/MWh regardless of threshold.</p>
+</section>
+
+<!-- ============ SECTION 2: Deployment Queue ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>The Deployment Queue: 30 Steps Sorted by $/tCO&#x2082;</h2>
+    <p>Each bar represents one decarbonization step in one region. Sorted cheapest-first, this is the path pure consequential accounting would follow.</p>
+</div>
+
+<section class="chart-section fade-in">
+    <div class="chart-panel">
+        <div class="chart-title">Consequential Deployment Queue: All Regions &times; Zones by Marginal $/tCO&#x2082;</div>
+        <div class="chart-container-tall">
+            <canvas id="queueChart"></canvas>
+        </div>
+        <div class="chart-narrative-below" id="queueNarrative"></div>
+    </div>
+</section>
+
+<!-- ============ SECTION 3: Displaced Emission Rates ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>Displaced Emission Rate by Step</h2>
+    <p>The emission rate of the fossil fuel being displaced changes as the stack retires. Coal-heavy regions see a dramatic drop once coal is gone; gas-only regions stay flat.</p>
+</div>
+
+<section class="chart-section fade-in">
+    <div class="chart-panel">
+        <div class="chart-title">Emission Rate of Displaced Fossil (tCO&#x2082;/MWh) by Region and Stage</div>
+        <div class="chart-container">
+            <canvas id="displacedRateChart"></canvas>
+        </div>
+        <div class="chart-narrative-below">
+            <p><strong>ERCOT and PJM show the coal transition:</strong> At 50&rarr;75%, the displaced rate includes coal at ~1.0 tCO&#x2082;/MWh. Past 90%, coal is fully retired and the rate drops to gas-level (~0.4 tCO&#x2082;/MWh). CAISO and NYISO stay flat &mdash; they were already gas-dominated.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ============ SECTION 4: Resource Mix ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
+    <h2>What Gets Built at Each Threshold</h2>
+    <p>Resource mix shifts dramatically as thresholds rise. Variable resources (solar, wind) dominate early stages but give way to firm power (nuclear) at high thresholds.</p>
+</div>
+
+<section class="chart-section fade-in">
+    <div class="chart-panel">
+        <div class="chart-title">Resource Mix by Region (TWh) as Clean Threshold Rises</div>
+        <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
+            <button class="iso-sel-btn active" data-iso="PJM">PJM</button>
+            <button class="iso-sel-btn" data-iso="ERCOT">ERCOT</button>
+            <button class="iso-sel-btn" data-iso="CAISO">CAISO</button>
+            <button class="iso-sel-btn" data-iso="NYISO">NYISO</button>
+            <button class="iso-sel-btn" data-iso="NEISO">NEISO</button>
+        </div>
+        <div class="chart-container-tall">
+            <canvas id="mixChart"></canvas>
+        </div>
+        <div class="chart-narrative-below" id="mixNarrative"></div>
+    </div>
+</section>
+
+<!-- ============ SECTION 5: Stranding ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">5</div>
+    <h2>The Stranding Curve: What Peaks Then Declines</h2>
+    <p>Resources that dominate the optimal mix at 70&ndash;80% clean often shrink by 90%+. The capacity built for early cheap stages becomes excess as the grid's needs shift to firm, dispatchable power.</p>
+</div>
+
+<section class="chart-section fade-in">
+    <div class="chart-panel">
+        <div class="chart-title">Wind Capacity Trajectory by Region (TWh) &mdash; Peak vs. Final</div>
+        <div class="chart-container">
+            <canvas id="strandWindChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-panel">
+        <div class="chart-title">Solar Capacity Trajectory by Region (TWh) &mdash; Peak vs. Final</div>
+        <div class="chart-container">
+            <canvas id="strandSolarChart"></canvas>
+        </div>
+        <div class="chart-narrative-below" id="strandNarrative"></div>
+    </div>
+</section>
+
+<!-- ============ SECTION 6: Cumulative CO₂ ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">6</div>
+    <h2>Cumulative CO&#x2082; Displaced Along the Queue</h2>
+    <p>Following the deployment queue step by step, how much total CO&#x2082; is displaced &mdash; and at what cumulative cost?</p>
+</div>
+
+<section class="chart-section fade-in">
+    <div class="chart-panel">
+        <div class="chart-title">Cumulative CO&#x2082; Displaced vs. Cumulative Annual Cost ($B)</div>
+        <div class="chart-container">
+            <canvas id="cumulChart"></canvas>
+        </div>
+        <div class="chart-narrative-below">
+            <p><strong>The first 5 steps</strong> (queue positions 1&ndash;5) displace <span id="first5co2"></span> MT CO&#x2082; at a cumulative cost of <span id="first5cost"></span>B/year. That covers getting NEISO, ERCOT, and PJM past 75&ndash;90% clean. The final 10 steps add only <span id="last10co2"></span> MT but cost <span id="last10cost"></span>B &mdash; the last mile is where costs explode.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ============ SECTION 7: Demand Growth ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">7</div>
+    <h2>Demand Growth Compounds Everything</h2>
+    <p>SBTi milestones map each threshold to a future year. By 2040 (90% target) and 2050 (net-zero), demand has grown substantially &mdash; amplifying both the investment required and the stranding of early assets as a share of the growing grid.</p>
+</div>
+
+<section class="chart-section fade-in">
+    <div class="chart-panel">
+        <div class="chart-title">Demand Growth by Region: Today vs. 2040 (SBTi 90%) vs. 2050 (Net-Zero)</div>
+        <div class="chart-container">
+            <canvas id="growthChart"></canvas>
+        </div>
+    </div>
+</section>
+
+<!-- ============ INSIGHT CALLOUT ============ -->
+<section class="insight-callout fade-in">
+    <div class="insight-box">
+        <h3>The Dispatch-Stack Insight</h3>
+        <p>Pure consequential accounting says invest where the marginal $/tCO&#x2082; is lowest. The dispatch-stack retirement model reveals <span class="highlight-green">coal displacement is the early bargain</span> &mdash; ERCOT and PJM's first steps displace coal at ~1.0 tCO&#x2082;/MWh, making early decarbonization in these regions 2.5&times; more carbon-effective per dollar than in gas-dominated grids like CAISO and NYISO.</p>
+        <p style="margin-top:12px">But once coal is fully retired (past ~90% clean in coal-heavy regions), <span class="highlight-red">the emission rate drops to gas-level</span> and the cost advantage vanishes. The same regions that were the best investment early become comparable to every other grid.</p>
+        <p style="margin-top:12px"><strong>The first 5 steps in the queue displace 62% of total CO&#x2082; at 37% of total cost.</strong> After that, diminishing returns set in steeply &mdash; not just because costs rise, but because the high-emission fuels being displaced are gone.</p>
+    </div>
+</section>
+
+<!-- ============ SOURCES ========== -->
+<section class="sources-section fade-in">
+    <h3>Data Sources &amp; Methodology</h3>
+    <ol>
+        <li>Resource mixes from hourly CFE optimizer (8,760-hour physics, 13 thresholds &times; 5 ISOs, medium-cost scenario)</li>
+        <li>Fossil fuel mix shares: EIA-930 hourly generation data (2025), coal/gas/oil proportions</li>
+        <li>Emission rates: EPA eGRID (coal, gas, oil CO&#x2082; lb/MWh by balancing authority, converted to tCO&#x2082;/MWh)</li>
+        <li>Merit-order retirement: coal first (highest marginal cost &amp; emission rate), then oil, then gas</li>
+        <li>Marginal MAC = (&#x394;system cost $/yr) / (&#x394;CO&#x2082; displaced tons/yr), using displaced fuel emission rate</li>
+        <li>SBTi milestones: 50% by 2030, 90% by 2040, net-zero by 2050</li>
+        <li>Demand growth: ISO-specific medium rates (ERCOT 3.5%, PJM 2.4%, CAISO 1.8%, NYISO 1.2%, NEISO 1.0%/yr)</li>
+    </ol>
+</section>
+
+<script>
+(function() {
+'use strict';
+
+// ========== DATA FROM PP SCRIPT ==========
+var Q = CQ_DATA;
+var queue = Q.deployment_queue;
+var cumul = Q.cumulative_deployment;
+var strand = Q.stranding_analysis;
+var traj = Q.resource_trajectories;
+var growth = Q.demand_growth_projections;
+var stacks = Q.dispatch_stacks;
+var ISOS = Q.metadata.isos;
+var THRESHOLDS = Q.metadata.thresholds;
+
+var ISO_COLORS = {
+    CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9',
+    NYISO: '#E91E63', NEISO: '#9C27B0'
+};
+var RES_COLORS = {
+    clean_firm: 'rgba(30,58,95,0.75)', solar: 'rgba(245,158,11,0.75)',
+    wind: 'rgba(34,197,94,0.75)', ccs_ccgt: 'rgba(0,188,212,0.75)',
+    hydro: 'rgba(14,165,233,0.75)', battery: 'rgba(139,92,246,0.75)',
+    ldes: 'rgba(236,72,153,0.75)'
+};
+var RES_BORDERS = {
+    clean_firm: '#1E3A5F', solar: '#F59E0B', wind: '#22C55E',
+    ccs_ccgt: '#00BCD4', hydro: '#0EA5E9', battery: '#8B5CF6', ldes: '#EC4899'
+};
+var RES_LABELS = {
+    clean_firm: 'Nuclear', solar: 'Solar', wind: 'Wind', ccs_ccgt: 'CCS',
+    hydro: 'Hydro', battery: 'Battery', ldes: 'LDES'
+};
+var FUEL_COLORS = { coal: '#8B4513', oil: '#CD853F', gas: '#4a90d9' };
+
+// ========== 1. DISPATCH STACK TABLE ==========
+function renderStackTable() {
+    var html = '<tr><th>Region</th><th>Year</th><th>Retirement Order</th></tr>';
+    ISOS.forEach(function(iso) {
+        var s = stacks[iso];
+        var fuelsHtml = s.fuels.map(function(f) {
+            var cls = 'fuel-' + f.type;
+            return '<span class="' + cls + '">' + f.type.charAt(0).toUpperCase() + f.type.slice(1) +
+                   '</span>: ' + (f.share * 100).toFixed(1) + '% @ ' + f.emission_rate.toFixed(3) + ' tCO\u2082/MWh';
+        }).join(' \u2192 ');
+        html += '<tr><td style="font-weight:700;color:' + ISO_COLORS[iso] + '">' + iso +
+                '</td><td>' + s.fuel_year + '</td><td>' + fuelsHtml + '</td></tr>';
+    });
+    document.getElementById('stackTable').innerHTML = html;
+}
+
+// ========== 2. DEPLOYMENT QUEUE CHART ==========
+function renderQueueChart() {
+    var ctx = document.getElementById('queueChart').getContext('2d');
+    var labels = queue.map(function(s) { return '#' + s.queue_position + ' ' + s.iso + ' ' + s.zone_label; });
+    var data = queue.map(function(s) { return Math.min(Math.max(s.marginal_mac, -100), 1500); });
+    var colors = queue.map(function(s) { return s.marginal_mac < 0 ? '#22C55E' : ISO_COLORS[s.iso] + 'CC'; });
+    var borders = queue.map(function(s) { return s.marginal_mac < 0 ? '#22C55E' : ISO_COLORS[s.iso]; });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Marginal MAC ($/tCO\u2082)',
+                data: data,
+                backgroundColor: colors,
+                borderColor: borders,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            var s = queue[ctx.dataIndex];
+                            var fuelStr = s.primary_fuel_displaced ? ' (displaces ' + s.primary_fuel_displaced + ')' : '';
+                            return '$' + s.marginal_mac.toLocaleString() + '/tCO\u2082 | ' +
+                                   s.co2_displaced_mt.toFixed(1) + ' MT | rate: ' +
+                                   s.displaced_emission_rate.toFixed(3) + ' tCO\u2082/MWh' + fuelStr;
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        zeroLine: { type: 'line', xMin: 0, xMax: 0, borderColor: 'rgba(255,255,255,0.3)', borderWidth: 1 },
+                        cheapLine: { type: 'line', xMin: 100, xMax: 100, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1, borderDash: [4,4],
+                            label: { display: true, content: '$100/t', position: 'start', color: '#22C55E', font: { size: 10 } } },
+                        midLine: { type: 'line', xMin: 500, xMax: 500, borderColor: 'rgba(245,158,11,0.4)', borderWidth: 1, borderDash: [4,4],
+                            label: { display: true, content: '$500/t', position: 'start', color: '#F59E0B', font: { size: 10 } } },
+                        expLine: { type: 'line', xMin: 1000, xMax: 1000, borderColor: 'rgba(239,68,68,0.4)', borderWidth: 1, borderDash: [4,4],
+                            label: { display: true, content: '$1000/t', position: 'start', color: '#EF4444', font: { size: 10 } } }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: 'rgba(255,255,255,0.5)', callback: function(v) { return '$' + v; } },
+                    title: { display: true, text: 'Marginal Abatement Cost ($/tCO\u2082)', color: 'rgba(255,255,255,0.4)', font: { size: 11 } }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 9 } }
+                }
+            }
+        }
+    });
+
+    // Narrative
+    var cheap = queue.filter(function(s) { return s.marginal_mac < 100; });
+    var expensive = queue.filter(function(s) { return s.marginal_mac >= 500; });
+    document.getElementById('queueNarrative').innerHTML =
+        '<p><strong>Reading this chart:</strong> Each bar is one decarbonization step in one region, sorted cheapest-first. ' +
+        'Bars left of $0 represent negative-cost abatement (clean energy is cheaper than fossil). ' +
+        'The first ' + cheap.length + ' steps cost under $100/ton and displace ' +
+        cheap.reduce(function(a, s) { return a + s.co2_displaced_mt; }, 0).toFixed(0) + ' MT CO\u2082. ' +
+        'The last ' + expensive.length + ' steps exceed $500/ton and only add ' +
+        expensive.reduce(function(a, s) { return a + s.co2_displaced_mt; }, 0).toFixed(0) + ' MT.</p>';
+}
+
+// ========== 3. DISPLACED EMISSION RATE CHART ==========
+function renderDisplacedRateChart() {
+    var ctx = document.getElementById('displacedRateChart').getContext('2d');
+    var zoneLabels = Q.metadata.zones;
+
+    var datasets = ISOS.map(function(iso) {
+        var isoSteps = queue.filter(function(s) { return s.iso === iso; });
+        isoSteps.sort(function(a, b) { return a.zone_idx - b.zone_idx; });
+        var data = new Array(6).fill(null);
+        isoSteps.forEach(function(s) { data[s.zone_idx] = s.displaced_emission_rate; });
+        return {
+            label: iso,
+            data: data,
+            backgroundColor: ISO_COLORS[iso] + '88',
+            borderColor: ISO_COLORS[iso],
+            borderWidth: 1
+        };
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: { labels: zoneLabels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 }, usePointStyle: true } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            var v = ctx.parsed.y;
+                            return ctx.dataset.label + ': ' + (v ? v.toFixed(3) : 'N/A') + ' tCO\u2082/MWh';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        gasLine: { type: 'line', yMin: 0.40, yMax: 0.40, borderColor: 'rgba(74,144,217,0.5)', borderWidth: 1, borderDash: [6,4],
+                            label: { display: true, content: 'New gas CCGT (~0.40)', position: 'end', color: '#4a90d9', font: { size: 10 } } }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.6)' } },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: 'rgba(255,255,255,0.5)', callback: function(v) { return v.toFixed(2); } },
+                    title: { display: true, text: 'Displaced Emission Rate (tCO\u2082/MWh)', color: 'rgba(255,255,255,0.4)', font: { size: 11 } },
+                    min: 0, max: 1.2
+                }
+            }
+        }
+    });
+}
+
+// ========== 4. RESOURCE MIX STACKED AREA ==========
+var mixChartInstance = null;
+function renderMixChart(iso) {
+    var ctx = document.getElementById('mixChart').getContext('2d');
+    if (mixChartInstance) mixChartInstance.destroy();
+
+    var isoTraj = traj[iso];
+    var labels = isoTraj.map(function(r) { return r.threshold + '%'; });
+    var resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
+
+    var datasets = resources.map(function(res) {
+        var data = isoTraj.map(function(r) { return r[res + '_twh'] || 0; });
+        // Skip if all zeros
+        if (data.every(function(v) { return v === 0; })) return null;
+        return {
+            label: RES_LABELS[res] || res,
+            data: data,
+            backgroundColor: RES_COLORS[res],
+            borderColor: RES_BORDERS[res],
+            borderWidth: 1,
+            fill: true
+        };
+    }).filter(Boolean);
+
+    mixChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels: labels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 }, usePointStyle: true, pointStyle: 'rect' } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + ' TWh'; }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.6)' },
+                     title: { display: true, text: 'Clean Energy Threshold', color: 'rgba(255,255,255,0.4)', font: { size: 11 } } },
+                y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' },
+                     ticks: { color: 'rgba(255,255,255,0.5)', callback: function(v) { return v.toFixed(0) + ' TWh'; } },
+                     title: { display: true, text: 'Resource Output (TWh/yr)', color: 'rgba(255,255,255,0.4)', font: { size: 11 } } }
+            }
+        }
+    });
+
+    // Narrative
+    var s = strand[iso];
+    var windS = s.wind || {};
+    var solarS = s.solar || {};
+    var cfS = s.clean_firm || {};
+    var html = '<p><strong>' + iso + ':</strong> ';
+    if (windS.stranding_ratio > 1.5) {
+        html += 'Wind peaks at <strong>' + windS.peak_twh + ' TWh</strong> (' + windS.peak_threshold +
+                '%) but drops to <strong>' + windS.final_twh + ' TWh</strong> at ' + windS.final_threshold +
+                '% (' + windS.stranding_ratio + '\u00d7 stranding ratio). ';
+    }
+    if (solarS.stranding_ratio > 1.5) {
+        html += 'Solar peaks at <strong>' + solarS.peak_twh + ' TWh</strong> (' + solarS.peak_threshold +
+                '%) but drops to <strong>' + solarS.final_twh + ' TWh</strong> (' + solarS.stranding_ratio + '\u00d7). ';
+    }
+    html += 'Nuclear grows from <strong>' + (cfS.values_by_threshold ? cfS.values_by_threshold[50] || 0 : 0) +
+            ' TWh</strong> at 50% to <strong>' + cfS.final_twh + ' TWh</strong> at ' + cfS.final_threshold + '%. Nuclear never strands.</p>';
+    document.getElementById('mixNarrative').innerHTML = html;
+}
+
+// ========== 5. STRANDING CHARTS ==========
+function renderStrandChart(canvasId, resource) {
+    var ctx = document.getElementById(canvasId).getContext('2d');
+    var datasets = ISOS.map(function(iso) {
+        var vals = strand[iso][resource];
+        if (!vals || vals.peak_twh < 0.5) return null;
+        var data = THRESHOLDS.map(function(t) { return vals.values_by_threshold[t] || 0; });
+        return {
+            label: iso,
+            data: data,
+            borderColor: ISO_COLORS[iso],
+            backgroundColor: ISO_COLORS[iso] + '22',
+            borderWidth: 2,
+            pointRadius: 3,
+            fill: false,
+            tension: 0.3
+        };
+    }).filter(Boolean);
+
+    new Chart(ctx, {
+        type: 'line',
+        data: { labels: THRESHOLDS.map(function(t) { return t + '%'; }), datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 }, usePointStyle: true } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + ' TWh'; }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.6)' } },
+                y: { grid: { color: 'rgba(255,255,255,0.05)' },
+                     ticks: { color: 'rgba(255,255,255,0.5)', callback: function(v) { return v + ' TWh'; } },
+                     title: { display: true, text: (resource === 'wind' ? 'Wind' : 'Solar') + ' Output (TWh/yr)',
+                              color: 'rgba(255,255,255,0.4)', font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+// ========== 6. CUMULATIVE CO₂ CHART ==========
+function renderCumulChart() {
+    var ctx = document.getElementById('cumulChart').getContext('2d');
+    var labels = cumul.map(function(c) {
+        return '#' + c.queue_position + ' ' + c.iso;
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Cumulative CO\u2082 Displaced (MT)',
+                    data: cumul.map(function(c) { return c.cumulative_co2_mt; }),
+                    backgroundColor: 'rgba(34,197,94,0.5)',
+                    borderColor: '#22C55E',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Cumulative Annual Cost ($B)',
+                    data: cumul.map(function(c) { return c.cumulative_cost_bn; }),
+                    type: 'line',
+                    borderColor: '#EF4444',
+                    backgroundColor: 'rgba(239,68,68,0.1)',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    fill: false,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.datasetIndex === 0) return ctx.parsed.y.toFixed(1) + ' MT CO\u2082';
+                            return '$' + ctx.parsed.y.toFixed(1) + 'B/yr';
+                        },
+                        afterBody: function(items) {
+                            var idx = items[0].dataIndex;
+                            var c = cumul[idx];
+                            return ['ISO thresholds: ' + Object.keys(c.iso_thresholds).map(function(k) {
+                                return k + ': ' + c.iso_thresholds[k] + '%';
+                            }).join(', ')];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 8 }, maxRotation: 90 } },
+                y: { position: 'left', grid: { color: 'rgba(255,255,255,0.05)' },
+                     ticks: { color: 'rgba(34,197,94,0.7)', callback: function(v) { return v + ' MT'; } },
+                     title: { display: true, text: 'Cumulative CO\u2082 (MT)', color: 'rgba(34,197,94,0.5)', font: { size: 11 } } },
+                y1: { position: 'right', grid: { display: false },
+                      ticks: { color: 'rgba(239,68,68,0.7)', callback: function(v) { return '$' + v + 'B'; } },
+                      title: { display: true, text: 'Cumulative Cost ($B/yr)', color: 'rgba(239,68,68,0.5)', font: { size: 11 } } }
+            }
+        }
+    });
+
+    // Fill summary numbers
+    var first5 = cumul[4] || cumul[cumul.length - 1];
+    var last10start = cumul[Math.max(0, cumul.length - 11)] || cumul[0];
+    var lastStep = cumul[cumul.length - 1];
+    document.getElementById('first5co2').textContent = first5.cumulative_co2_mt.toFixed(0);
+    document.getElementById('first5cost').textContent = '$' + first5.cumulative_cost_bn.toFixed(0);
+    document.getElementById('last10co2').textContent = (lastStep.cumulative_co2_mt - last10start.cumulative_co2_mt).toFixed(0) + ' MT';
+    document.getElementById('last10cost').textContent = '$' + (lastStep.cumulative_cost_bn - last10start.cumulative_cost_bn).toFixed(0) + 'B';
+}
+
+// ========== 7. DEMAND GROWTH CHART ==========
+function renderGrowthChart() {
+    var ctx = document.getElementById('growthChart').getContext('2d');
+    var years = [2025, 2040, 2050];
+    var yearLabels = ['Today (2025)', 'SBTi 90% (2040)', 'Net-Zero (2050)'];
+
+    var datasets = [];
+    ISOS.forEach(function(iso, idx) {
+        var baseD = growth[iso]['2025'].demand_twh;
+        datasets.push({
+            label: iso + ' (Base)',
+            data: years.map(function() { return baseD; }),
+            backgroundColor: ISO_COLORS[iso] + '99',
+            borderColor: ISO_COLORS[iso],
+            borderWidth: 1,
+            stack: 'stack' + idx
+        });
+        datasets.push({
+            label: iso + ' (Growth)',
+            data: years.map(function(yr) { return growth[iso][String(yr)].growth_twh; }),
+            backgroundColor: ISO_COLORS[iso] + '44',
+            borderColor: ISO_COLORS[iso],
+            borderWidth: 1,
+            stack: 'stack' + idx
+        });
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: { labels: yearLabels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'rgba(255,255,255,0.7)', font: { size: 10 },
+                        generateLabels: function() {
+                            return ISOS.map(function(iso) {
+                                return { text: iso, fillStyle: ISO_COLORS[iso] + '99', strokeStyle: ISO_COLORS[iso], lineWidth: 1 };
+                            });
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + ' TWh'; }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 11, weight: 600 } } },
+                y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' },
+                     ticks: { color: 'rgba(255,255,255,0.5)', callback: function(v) { return v + ' TWh'; } } }
+            }
+        }
+    });
+}
+
+// ========== STRANDING NARRATIVE ==========
+function renderStrandNarrative() {
+    var html = '<p><strong>Stranding hotspots:</strong> ';
+    var items = [];
+    ISOS.forEach(function(iso) {
+        ['wind', 'solar'].forEach(function(res) {
+            var s = strand[iso][res];
+            if (s && s.stranding_ratio > 1.5) {
+                items.push(iso + ' ' + res + ' (' + s.stranding_ratio + '\u00d7 peak/final)');
+            }
+        });
+    });
+    html += items.join(', ') || 'Minimal stranding in solar/wind across most regions.';
+    html += ' Nuclear never strands in any region &mdash; firm power requirements scale monotonically.</p>';
+    document.getElementById('strandNarrative').innerHTML = html;
+}
+
+// ========== INIT ==========
+renderStackTable();
+renderQueueChart();
+renderDisplacedRateChart();
+renderMixChart('PJM');
+renderStrandChart('strandWindChart', 'wind');
+renderStrandChart('strandSolarChart', 'solar');
+renderCumulChart();
+renderGrowthChart();
+renderStrandNarrative();
+
+// ISO buttons
+document.querySelectorAll('.iso-sel-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.iso-sel-btn').forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        renderMixChart(this.dataset.iso);
+    });
+});
+
+// Scroll fade-in
+var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(function(el) { observer.observe(el); });
+
+})();
+</script>
+</body>
+</html>
