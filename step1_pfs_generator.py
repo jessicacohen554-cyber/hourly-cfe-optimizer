@@ -1685,6 +1685,11 @@ def process_iso(args):
             print(f"    {iso} {threshold}%: {len(feasible)} solutions "
                   f"({len(archetypes)} mix archetypes), {t_elapsed:.1f}s")
 
+            # Incremental save: persist results immediately after each threshold
+            # (prevents data loss if process is interrupted during sweep)
+            _save_threshold_done(iso, threshold, feasible)
+            append_threshold_to_cache(iso, threshold, feasible)
+
         return phase_results, found_solutions
 
     def _clear_iso_checkpoints():
@@ -1744,42 +1749,16 @@ def process_iso(args):
 
     fine_results, fine_solutions = _run_threshold_loop("fine", fine_levels)
 
-    # ── Merge coarse + fine results per threshold ──
-    for threshold in THRESHOLDS:
-        t_str = str(threshold)
-        coarse_cands = coarse_results.get(threshold, [])
-        fine_cands = fine_results.get(threshold, [])
-
-        # Dedup by full key
-        seen = set()
-        merged = []
-        for c in coarse_cands + fine_cands:
-            mk = (c['resource_mix']['clean_firm'], c['resource_mix']['solar'],
-                   c['resource_mix']['wind'], c['resource_mix']['hydro'])
-            key = (mk, c['procurement_pct'], c.get('battery_dispatch_pct', 0),
-                    c.get('battery8_dispatch_pct', 0), c.get('ldes_dispatch_pct', 0))
-            if key not in seen:
-                merged.append(c)
-                seen.add(key)
-
-        archetypes = set()
-        for c in merged:
-            archetypes.add(tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES))
-
-        iso_results['thresholds'][t_str] = {
-            'candidates': merged,
-            'candidate_count': len(merged),
-            'mix_archetypes': len(archetypes),
-        }
-
-        # Save final merged results
-        _save_threshold_done(iso, threshold, merged)
-        append_threshold_to_cache(iso, threshold, merged)
-        save_checkpoint(iso, iso_results, t_str)
-
-    total_solutions = sum(
-        len(t.get('candidates', [])) for t in iso_results['thresholds'].values())
-    print(f"    {iso}: Merged total: {total_solutions:,} solutions")
+    # ── Results already saved incrementally during sweep ──
+    # Read total from interim (fast — just row count from parquet metadata)
+    interim_path = os.path.join(CHECKPOINT_DIR, f'{iso}_v4_interim.parquet')
+    if os.path.exists(interim_path) and HAS_PARQUET:
+        interim_table = pq.read_table(interim_path)
+        total_solutions = interim_table.num_rows
+        print(f"    {iso}: Total: {total_solutions:,} solutions (from interim)")
+    else:
+        total_solutions = sum(len(r) for r in fine_results.values())
+        print(f"    {iso}: Total: {total_solutions:,} solutions (from memory)")
 
     iso_elapsed = time.time() - iso_start
     print(f"  {iso} completed in {iso_elapsed:.1f}s")
