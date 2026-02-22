@@ -30,6 +30,16 @@
         '.dropdown-arrow { transition: transform 0.2s; }',
         '.nav-dropdown-toggle[aria-expanded="true"] .dropdown-arrow { transform: rotate(180deg); }',
         '',
+        '/* Separator/group label */',
+        '.nav-separator {',
+        '  padding: 8px 18px 4px; margin-top: 4px;',
+        '  border-top: 1px solid rgba(255,255,255,0.08);',
+        '}',
+        '.nav-separator span {',
+        '  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;',
+        '  letter-spacing: 0.08em; color: rgba(255,255,255,0.35);',
+        '}',
+        '',
         '/* Desktop: hover to open */',
         '@media (min-width: 769px) {',
         '  .nav-dropdown-menu {',
@@ -102,8 +112,9 @@
                 { label: 'New-Build Signals', href: 'newbuild_requirement.html' },
                 { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
                 { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' },
-                { label: 'Consequential Accounting', href: 'consequential_accounting.html' },
-                { label: 'Consequential Deep Dive', href: 'consequential_vacuum.html' },
+                { separator: true, label: 'Consequential Accounting' },
+                { label: 'Overview', href: 'consequential_accounting.html' },
+                { label: 'Failure Modes at Scale', href: 'consequential_vacuum.html' },
                 { label: 'Generator Analysis', href: '../power-gen-decarbonization/site/index.html' }
             ]
         },
@@ -142,7 +153,7 @@
 
     // Check if any child in a dropdown matches the current page
     function hasActiveChild(children) {
-        return children.some(function(child) { return isActive(child.href); });
+        return children.some(function(child) { return child.href && isActive(child.href); });
     }
 
     // Build a single nav link
@@ -159,7 +170,11 @@
         html += item.label + ' ' + DROPDOWN_ARROW + '</button>';
         html += '<div class="nav-dropdown-menu">';
         item.children.forEach(function(child) {
-            html += buildLink(child);
+            if (child.separator) {
+                html += '<div class="nav-separator"><span>' + child.label + '</span></div>';
+            } else {
+                html += buildLink(child);
+            }
         });
         html += '</div></div>';
         return html;
