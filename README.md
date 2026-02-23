@@ -87,7 +87,8 @@ hourly-cfe-optimizer/
 │   ├── pfs_post_ef.parquet       # PFS post-EF (1.8M rows, Step 2 output)
 │   ├── eia_demand_profiles.json
 │   ├── eia_generation_profiles.json
-│   ├── eia_hourly_*.json         # Per-ISO hourly data (2024-2025)
+│   ├── EIA 930 Data/
+│   │   └── eia_hourly_*.json     # Per-ISO hourly data (2024-2025)
 │   ├── egrid_emission_rates.json
 │   └── ...
 ├── dashboard/
