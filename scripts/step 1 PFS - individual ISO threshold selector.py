@@ -107,16 +107,20 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes, max_mixes_per_run):
 
     s1.THRESHOLDS = remaining
 
+    # Accept both new naming ({iso}_step1_pfs_t{t}.parquet) and legacy naming
+    # ({ISO}_t{t}_raw_pfs.parquet) so that existing outputs from either pipeline
+    # version are recognised for storage-bounds inference.
     raw_files = [
         os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f)
         for f in os.listdir(s1.STEP1_RAW_PFS_PARQUET_DIR)
-        if f.startswith(f"{iso}_step1_pfs_t") and f.endswith(".parquet")
+        if (f.startswith(f"{iso}_step1_pfs_t") or f.startswith(f"{iso}_t"))
+        and f.endswith(".parquet")
     ] if os.path.exists(s1.STEP1_RAW_PFS_PARQUET_DIR) else []
 
     if not raw_files:
         raise SystemExit(
             f"No existing parquet files found for {iso} in {s1.STEP1_RAW_PFS_PARQUET_DIR}. "
-            "Run at least one threshold first with the updated parquet naming so storage sweep bounds can be inferred."
+            "Run at least one threshold first so storage sweep bounds can be inferred."
         )
 
     df = pa.concat_tables([pq.read_table(path) for path in raw_files]).to_pandas()
@@ -169,6 +173,16 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes, max_mixes_per_run):
     prev_pruning = None
 
     for threshold in remaining:
+        # Skip if already completed under either naming convention
+        t_str = s1._normalize_threshold_str(threshold)
+        new_done = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f"{iso}_step1_pfs_t{t_str}.parquet")
+        old_done = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f"{iso}_t{t_str}_raw_pfs.parquet")
+        if os.path.exists(new_done) or os.path.exists(old_done):
+            done_path = new_done if os.path.exists(new_done) else old_done
+            rows = pq.read_table(done_path).num_rows
+            print(f"  {iso} {threshold}%: already done ({rows:,} rows in {os.path.basename(done_path)}) — skipping")
+            continue
+
         progress = s1._load_mix_progress(iso, threshold)
         if progress is not None:
             n_existing = len(progress.get("candidates", []))
