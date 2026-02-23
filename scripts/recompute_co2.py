@@ -36,6 +36,7 @@ import os
 import sys
 import numpy as np
 import time
+import argparse
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
@@ -48,6 +49,11 @@ from dispatch_utils import (
     reconstruct_hourly_dispatch,
     build_supply_matrix,
     get_or_compute_dispatch, load_dispatch_cache, save_dispatch_cache,
+)
+
+from parquet_io import (
+    load_from_parquets, save_to_parquets, find_input_dir, find_parquet,
+    ALL_ISOS,
 )
 
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
@@ -323,6 +329,19 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description='Recompute CO₂ abatement with dispatch-stack emission rates.',
+    )
+    parser.add_argument('--iso', dest='isos', action='append', choices=ALL_ISOS,
+                        metavar='ISO',
+                        help=f'ISO to process (repeatable). Choices: {", ".join(ALL_ISOS)}. '
+                             f'Default: all available.')
+    parser.add_argument('--input-dir', type=str, default=None,
+                        help='Directory containing step3/step4 parquets.')
+    parser.add_argument('--output-dir', type=str, default=None,
+                        help='Directory for output parquets with CO2 columns. Default: same as input.')
+    args = parser.parse_args()
+
     print("=" * 70)
     print("  CO₂ RECOMPUTATION — Dispatch-Stack Emission Rates")
     print("  Optimized: match_score fast path + Numba dispatch + cache")
@@ -331,24 +350,37 @@ def main():
     print("\n  Loading data...")
     demand_data, gen_profiles, emission_rates, fossil_mix = load_data()
 
-    if not os.path.exists(RESULTS_PATH):
-        print(f"  ERROR: Results file not found: {RESULTS_PATH}")
-        sys.exit(1)
+    # Determine input source — parquets preferred, JSON fallback
+    input_dir = args.input_dir or find_input_dir(args.isos or ALL_ISOS)
 
-    with open(RESULTS_PATH) as f:
-        results_data = json.load(f)
-    print(f"  Loaded results: {RESULTS_PATH}")
+    if input_dir:
+        run_isos = args.isos or [iso for iso in ALL_ISOS if find_parquet(input_dir, iso)]
+        print(f"  Loading from parquets: {input_dir}")
+        print(f"  ISOs: {run_isos}")
+        results_data = load_from_parquets(input_dir, run_isos)
+    elif os.path.exists(RESULTS_PATH):
+        print(f"  No parquets found, falling back to JSON: {RESULTS_PATH}")
+        with open(RESULTS_PATH) as f:
+            results_data = json.load(f)
+    else:
+        print(f"  ERROR: No parquets found and {RESULTS_PATH} doesn't exist")
+        sys.exit(1)
 
     isos_present = [iso for iso in ISOS if iso in results_data.get('results', {})]
     print(f"  ISOs in results: {isos_present}")
 
     results_data = recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, fossil_mix)
 
-    with open(RESULTS_PATH, 'w') as f:
-        json.dump(results_data, f)
-    print(f"\n  Updated: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
-
-    print(f"  Cache ({CACHE_PATH}) is locked — skipped")
+    # Save results — parquets preferred, JSON fallback
+    output_dir = args.output_dir or input_dir
+    if output_dir:
+        print(f"\n  Saving enriched results to {output_dir}")
+        save_to_parquets(results_data, output_dir, isos_present)
+        print(f"  CO2 columns added to parquets in {output_dir}")
+    elif os.path.exists(RESULTS_PATH):
+        with open(RESULTS_PATH, 'w') as f:
+            json.dump(results_data, f)
+        print(f"\n  Updated: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
 
     print(f"\n{'='*70}")
     print("  CO₂ RECOMPUTATION COMPLETE")
