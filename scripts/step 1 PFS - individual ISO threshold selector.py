@@ -58,6 +58,15 @@ def _parse_run_plan(argv):
             "Set to 0 (default) for no runtime cap."
         ),
     )
+    parser.add_argument(
+        "--max-mixes-per-run",
+        type=int,
+        default=0,
+        help=(
+            "Maximum number of outer-loop mixes to process before checkpointing and exiting. "
+            "Set to 0 (default) for no mix cap."
+        ),
+    )
 
     args = parser.parse_args(argv[1:])
 
@@ -73,7 +82,7 @@ def _parse_run_plan(argv):
         threshold_tokens.extend(args.thresholds_positional)
 
     if not iso and not threshold_tokens:
-        return DEFAULT_REMAINING, args.max_runtime_minutes
+        return DEFAULT_REMAINING, args.max_runtime_minutes, args.max_mixes_per_run
 
     if not iso:
         raise SystemExit(
@@ -88,10 +97,10 @@ def _parse_run_plan(argv):
             f"No thresholds provided for {iso}. "
             "Usage: python \"step 1 PFS - individual ISO threshold selector.py\" --iso <ISO> --threshold <VALUE> [--threshold <VALUE> ...]"
         )
-    return [(iso, thresholds)], args.max_runtime_minutes
+    return [(iso, thresholds)], args.max_runtime_minutes, args.max_mixes_per_run
 
 
-def _run_iso_thresholds(iso, remaining, max_runtime_minutes):
+def _run_iso_thresholds(iso, remaining, max_runtime_minutes, max_mixes_per_run):
     max_runtime_seconds = None
     if max_runtime_minutes and max_runtime_minutes > 0:
         max_runtime_seconds = max_runtime_minutes * 60
@@ -177,6 +186,7 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes):
             cross_feasible_mixes=cross_feasible,
             storage_levels=fine_levels,
             max_runtime_seconds=max_runtime_seconds,
+            max_mixes_per_run=max_mixes_per_run if max_mixes_per_run > 0 else None,
         )
         threshold_completed = prev_pruning.get("completed", True)
         elapsed = time.time() - t_start
@@ -186,7 +196,8 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes):
             s1.append_threshold_to_cache(iso, threshold, candidates)
         else:
             print(
-                f"  {iso} {threshold}% paused at runtime cap ({max_runtime_minutes} min). "
+                f"  {iso} {threshold}% paused at runtime/mix cap "
+                f"(runtime={max_runtime_minutes} min, mixes={max_mixes_per_run}). "
                 "Progress checkpointed for resume."
             )
             break
@@ -220,6 +231,6 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes):
 
 
 if __name__ == "__main__":
-    run_plan, max_runtime_minutes = _parse_run_plan(sys.argv)
+    run_plan, max_runtime_minutes, max_mixes_per_run = _parse_run_plan(sys.argv)
     for iso_name, thresholds in run_plan:
-        _run_iso_thresholds(iso_name, thresholds, max_runtime_minutes)
+        _run_iso_thresholds(iso_name, thresholds, max_runtime_minutes, max_mixes_per_run)
