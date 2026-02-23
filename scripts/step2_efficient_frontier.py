@@ -158,47 +158,56 @@ def load_step1_5_raw_pfs():
         return None
 
     print(f"Loading Step 1.5 raw parquet files from {STEP1_5_RAW_DIR}")
-    rows = []
+    normalized_tables = []
     for path in parquet_files:
         t = pq.read_table(path)
-        p = t.to_pydict()
-        n = t.num_rows
-        for i in range(n):
-            mix = p['mix'][i]
-            if not isinstance(mix, (list, tuple)) or len(mix) != 5:
-                continue
+        mix = t.column('mix')
 
-            raw_proc = p.get('threshold', [None] * n)[i]
-            raw_score = p.get('lcoe', [None] * n)[i]
-            if raw_proc is None or raw_score is None:
-                continue
+        valid_mask = pc.and_(
+            pc.equal(pc.list_value_length(mix), 5),
+            pc.and_(
+                pc.is_valid(t.column('threshold')),
+                pc.is_valid(t.column('lcoe')),
+            ),
+        )
 
-            proc_pct = float(raw_proc) * 100.0 if float(raw_proc) <= 5 else float(raw_proc)
-            score_pct = float(raw_score) * 100.0 if float(raw_score) <= 1.5 else float(raw_score)
-            threshold = float(p.get('source_threshold', [None] * n)[i] or 0.0)
+        filtered = t.filter(valid_mask)
+        n = filtered.num_rows
+        if n == 0:
+            continue
 
-            rows.append({
-                'iso': p['iso'][i],
-                'threshold': threshold,
-                'clean_firm': int(round(float(mix[0]) * 100.0)),
-                'solar': int(round(float(mix[1]) * 100.0)),
-                'wind': int(round(float(mix[2]) * 100.0)),
-                'hydro': int(round(float(mix[3]) * 100.0)),
-                'procurement_pct': int(round(proc_pct)),
-                'battery_dispatch_pct': float(mix[4]) * 100.0,
-                'battery8_dispatch_pct': 0.0,
-                'ldes_dispatch_pct': 0.0,
-                'hourly_match_score': score_pct,
-                'pareto_type': p.get('dispatch_mode', [''])[i] or '',
-            })
+        mix = filtered.column('mix')
+        proc = pc.cast(filtered.column('threshold'), pa.float64())
+        score = pc.cast(filtered.column('lcoe'), pa.float64())
+
+        proc_pct = pc.if_else(pc.less_equal(proc, 5.0), pc.multiply(proc, 100.0), proc)
+        score_pct = pc.if_else(pc.less_equal(score, 1.5), pc.multiply(score, 100.0), score)
+
+        source_threshold = pc.fill_null(filtered.column('source_threshold'), pa.scalar(0.0))
+        dispatch_mode = pc.fill_null(filtered.column('dispatch_mode'), pa.scalar(''))
+
+        normalized_tables.append(pa.table({
+            'iso': filtered.column('iso'),
+            'threshold': pc.cast(source_threshold, pa.float64()),
+            'clean_firm': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 0), 100.0)), pa.int16()),
+            'solar': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 1), 100.0)), pa.int16()),
+            'wind': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 2), 100.0)), pa.int16()),
+            'hydro': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 3), 100.0)), pa.int16()),
+            'procurement_pct': pc.cast(pc.round(proc_pct), pa.int16()),
+            'battery_dispatch_pct': pc.cast(pc.multiply(pc.list_element(mix, 4), 100.0), pa.float64()),
+            'battery8_dispatch_pct': pa.array(np.zeros(n, dtype=np.float64)),
+            'ldes_dispatch_pct': pa.array(np.zeros(n, dtype=np.float64)),
+            'hourly_match_score': pc.cast(score_pct, pa.float64()),
+            'pareto_type': dispatch_mode,
+        }))
 
         size_mb = os.path.getsize(path) / (1024 * 1024)
         print(f"  {os.path.basename(path)}: {n:>10,} rows ({size_mb:.1f} MB)")
 
-    if not rows:
+    if not normalized_tables:
         return None
 
-    table = pa.Table.from_pylist(rows)
+    table = pa.concat_tables(normalized_tables)
     print(f"  Combined Step 1.5 rows: {table.num_rows:,}")
     return table
 
