@@ -1,0 +1,63 @@
+name: Run Step 1.5 Convert Checkpoints To Parquet
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-step1-5:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow
+
+      - name: Ensure output directory exists
+        run: mkdir -p data/step1_raw_pfs_parquets
+
+      - name: Run Step 1.5 checkpoint conversion
+        run: python scripts/step1_5_convert_checkpoints_to_parquet.py
+
+      - name: Commit Step 1.5 parquet outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          BRANCH="step1-5-raw-pfs-parquets"
+          git fetch origin "$BRANCH" || true
+
+          if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+          else
+            git checkout -B "$BRANCH"
+          fi
+
+          git add data/step1_raw_pfs_parquets/
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update Step 1.5 raw PFS parquet exports"
+          fi
+
+          git push origin "$BRANCH"
+
+      - name: Upload Step 1.5 parquet artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: step1-5-raw-pfs-parquets
+          path: data/step1_raw_pfs_parquets/
+          if-no-files-found: error
