@@ -53,7 +53,8 @@ from dispatch_utils import (
 )
 
 LMP_DIR = os.path.join(SCRIPT_DIR, 'data', 'lmp')
-SCENARIOS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_scenarios.parquet')
+STEP3_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step-3-CO-ISO-parquets')
+STEP4_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-CCS')
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FOSSIL MERIT-ORDER STACK — heat rates, VOM, marginal cost
@@ -978,17 +979,48 @@ def compute_lmp_stats(hourly_lmp, hourly_marginal_unit, demand_mw_profile,
 # ══════════════════════════════════════════════════════════════════════════════
 
 def load_scenarios(iso=None, threshold=None):
-    """Load base case (ECF) scenarios from overprocure_scenarios.parquet.
+    """Load scenarios from per-ISO parquets (step4 preferred, step3 fallback).
 
     Returns list of scenario dicts with resource mix, dispatch params, costs.
     """
     import pyarrow.parquet as pq
     import pyarrow.compute as pc
 
-    table = pq.read_table(SCENARIOS_PATH)
+    # Determine input directory
+    input_dir = STEP4_PARQUET_DIR if os.path.isdir(STEP4_PARQUET_DIR) else STEP3_PARQUET_DIR
+
+    def _find_iso_parquet(d, iso_name):
+        for prefix in ['step4_', 'step3_co_']:
+            path = os.path.join(d, f'{prefix}{iso_name}.parquet')
+            if os.path.exists(path):
+                return path
+        return None
 
     if iso:
-        table = table.filter(pc.equal(table.column('iso'), iso))
+        # Load single ISO
+        path = _find_iso_parquet(input_dir, iso)
+        if path is None:
+            # Try other directory
+            other_dir = STEP3_PARQUET_DIR if input_dir == STEP4_PARQUET_DIR else STEP4_PARQUET_DIR
+            path = _find_iso_parquet(other_dir, iso)
+        if path is None:
+            print(f"    WARNING: No parquet found for {iso}")
+            return []
+        table = pq.read_table(path)
+        print(f"    Loaded {os.path.basename(path)}: {table.num_rows:,} rows")
+    else:
+        # Load all ISOs
+        tables = []
+        for iso_name in ISOS:
+            path = _find_iso_parquet(input_dir, iso_name)
+            if path:
+                tables.append(pq.read_table(path))
+        if not tables:
+            print(f"    WARNING: No parquets found in {input_dir}")
+            return []
+        import pyarrow
+        table = pyarrow.concat_tables(tables)
+
     if threshold is not None:
         table = table.filter(pc.equal(table.column('threshold'), float(threshold)))
 

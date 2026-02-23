@@ -34,6 +34,7 @@ at ANY threshold, ensuring no true optimum is lost during Step 3.
 import os
 import time
 import ctypes
+import re
 import tempfile
 import subprocess
 import numpy as np
@@ -244,11 +245,36 @@ def load_iso_tables():
     print(f"Scanning Step 1 raw parquets in {STEP1_RAW_DIR}")
 
     # Group files by ISO prefix (e.g., "ERCOT_t100_raw_pfs.parquet" -> "ERCOT")
+    # Supports both canonical files ({ISO}_t{XX}_raw_pfs.parquet) and
+    # NYISO batch files ({ISO}_t{XX}_raw_pfs_b{N}.parquet). Both naming
+    # patterns share the same ISO prefix and are concatenated together.
+    #
+    # Dedup guard: if both a canonical file and batch files exist for the
+    # same ISO/threshold, prefer batch files to avoid double-counting.
     files_by_iso = {}
     for fname in parquet_files:
         iso_prefix = fname.split('_')[0] if '_' in fname else None
         if iso_prefix and iso_prefix in ISOS:
             files_by_iso.setdefault(iso_prefix, []).append(fname)
+
+    # For each ISO, detect canonical vs batch file overlap and prefer batch
+    for iso, fnames in list(files_by_iso.items()):
+        # Identify batch files per threshold: {ISO}_t{XX}_raw_pfs_b{N}.parquet
+        batch_thresholds = set()
+        for f in fnames:
+            m = re.match(rf'^{re.escape(iso)}_t([\d.]+)_raw_pfs_b\d+\.parquet$', f)
+            if m:
+                batch_thresholds.add(m.group(1))
+        # If batch files exist for a threshold, drop the canonical file for that threshold
+        if batch_thresholds:
+            filtered = []
+            for f in fnames:
+                m_canon = re.match(rf'^{re.escape(iso)}_t([\d.]+)_raw_pfs\.parquet$', f)
+                if m_canon and m_canon.group(1) in batch_thresholds:
+                    print(f"  Skipping canonical {f} (batch files exist for threshold {m_canon.group(1)}%)")
+                    continue
+                filtered.append(f)
+            files_by_iso[iso] = filtered
 
     # Batched read: load all threshold files per ISO, concat once
     for iso, fnames in files_by_iso.items():
