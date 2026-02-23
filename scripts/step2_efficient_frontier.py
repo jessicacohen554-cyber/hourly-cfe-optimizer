@@ -32,10 +32,11 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/physics_cache_v4_{ISO}.parquet per ISO  (PFS, from Step 1)
-        Falls back to legacy data/physics_cache_v4.parquet if per-ISO missing
+Input:  data/step1_raw_pfs_parquets/*.parquet   (flat-schema files from Step 1)
+        Falls back to data/physics_cache_v4_{ISO}.parquet per ISO if directory
+        contains old Step 1.5 format files, then to legacy physics_cache_v4.parquet
 Output: data/step-2-EF-parquets/step2_ef_{ISO}.parquet (per-ISO, threshold-free)
-        data/pfs_post_ef.parquet (merged copy for compatibility)
+        No merged output file — Step 3 reads from the per-ISO directory directly.
 
 The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
@@ -209,6 +210,71 @@ def load_step1_5_raw_pfs():
 
     table = pa.concat_tables(normalized_tables)
     print(f"  Combined Step 1.5 rows: {table.num_rows:,}")
+    return table
+
+
+def load_step1_raw_pfs():
+    """Load Step 1 raw PFS parquets written in the new flat-column schema.
+
+    Accepts both naming conventions written by step1_pfs_generator.py:
+      new: {ISO}_step1_pfs_t{threshold}.parquet
+      old: {ISO}_t{threshold}_raw_pfs.parquet
+
+    Expected columns: iso, threshold, clean_firm, solar, wind, hydro,
+    procurement_pct, battery_dispatch_pct, battery8_dispatch_pct,
+    ldes_dispatch_pct, hourly_match_score, pareto_type.
+
+    Returns a pyarrow.Table on success, or None if the directory is empty or
+    files have a different (Step 1.5) schema.
+    """
+    if not os.path.isdir(STEP1_5_RAW_DIR):
+        return None
+
+    parquet_files = sorted(
+        os.path.join(STEP1_5_RAW_DIR, f)
+        for f in os.listdir(STEP1_5_RAW_DIR)
+        if f.endswith('.parquet')
+    )
+    if not parquet_files:
+        return None
+
+    # Probe first file to distinguish flat schema from old Step 1.5 list-column schema
+    probe = pq.read_table(parquet_files[0], columns=None)
+    if 'mix' in probe.schema.names:
+        # Old Step 1.5 format — handled by load_step1_5_raw_pfs()
+        return None
+
+    # Flat schema — read all files directly (no column translation needed)
+    required = {'iso', 'threshold', 'clean_firm', 'solar', 'wind', 'hydro',
+                'procurement_pct', 'battery_dispatch_pct', 'ldes_dispatch_pct',
+                'hourly_match_score'}
+    if not required.issubset(probe.schema.names):
+        print(f"  WARNING: Step 1 raw PFS file has unexpected schema: {probe.schema.names}")
+        return None
+
+    print(f"Loading Step 1 raw PFS parquets (flat schema) from {STEP1_5_RAW_DIR}")
+    tables = []
+    for path in parquet_files:
+        t = pq.read_table(path)
+        size_mb = os.path.getsize(path) / (1024 * 1024)
+        print(f"  {os.path.basename(path)}: {t.num_rows:>10,} rows ({size_mb:.1f} MB)")
+        tables.append(t)
+
+    if not tables:
+        return None
+
+    # Normalise: ensure battery8_dispatch_pct exists (may be absent in older runs)
+    normed = []
+    for t in tables:
+        if 'battery8_dispatch_pct' not in t.schema.names:
+            t = t.append_column(
+                'battery8_dispatch_pct',
+                pa.array([0.0] * t.num_rows, type=pa.float64()),
+            )
+        normed.append(t)
+
+    table = pa.concat_tables(normed)
+    print(f"  Combined: {table.num_rows:,} rows")
     return table
 
 
@@ -461,11 +527,20 @@ def main():
     print("=" * 70)
 
     total_start = time.time()
-    table = load_step1_5_raw_pfs()
-    if table is None:
-        table = load_pfs()
+
+    # Input source priority:
+    #   1. Step 1 flat-schema parquets in step1_raw_pfs_parquets/ (new pipeline)
+    #   2. Step 1.5 list-column parquets in step1_raw_pfs_parquets/ (legacy pipeline)
+    #   3. Per-ISO physics_cache_v4_{ISO}.parquet files (pre-Step-1 legacy)
+    table = load_step1_raw_pfs()
+    if table is not None:
+        print("Using Step 1 raw PFS parquets (flat schema) as Step 2 input source")
     else:
-        print("Using Step 1.5 raw parquet directory as Step 2 input source")
+        table = load_step1_5_raw_pfs()
+        if table is not None:
+            print("Using Step 1.5 raw parquet directory as Step 2 input source")
+        else:
+            table = load_pfs()
 
     # Step 0: Existing generation utilization filter — DISABLED (Feb 20, 2026)
     # Removed to allow below-floor mixes (hydro=0, low clean_firm) into the EF
@@ -507,23 +582,13 @@ def main():
     if not results:
         raise RuntimeError('Step 2 produced no ISO outputs to write.')
 
-    combined = pa.concat_tables(results)
-
-    # Save per-ISO outputs first
+    # Write per-ISO EF parquets to data/step-2-EF-parquets/ — no merged file
     write_per_iso_outputs(results_by_iso)
 
-    # Save merged compatibility output
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    pq.write_table(combined, OUTPUT_PATH, compression='snappy')
-    file_size = os.path.getsize(OUTPUT_PATH) / (1024 * 1024)
-
     elapsed_total = time.time() - total_start
-    print(f"\n  Output: {OUTPUT_PATH}")
-    print(f"  Size: {file_size:.1f} MB ({combined.num_rows:,} rows)")
-    print(f"  Columns: {combined.column_names}")
-    print(f"  Total time: {elapsed_total:.0f}s")
 
-    # Score distribution summary
+    # Score distribution summary (combine in-memory for reporting only)
+    combined = pa.concat_tables(results)
     scores = combined.column('hourly_match_score').to_numpy()
     for iso in ISOS:
         iso_mask = np.array(combined.column('iso').to_pylist()) == iso
@@ -535,9 +600,12 @@ def main():
                 avail.append(f"{thr:.0f}%:{n:,}")
             print(f"  {iso} mixes per threshold: {', '.join(avail[:6])}...")
 
+    total_rows = sum(t.num_rows for t in results)
+    print(f"\n  Total rows: {total_raw:,} → {total_pareto:,} (EF)")
+    print(f"  Total time: {elapsed_total:.0f}s")
     print("\n" + "=" * 70)
-    print("  STEP 2 COMPLETE — PFS post-EF ready for Step 3")
-    print("  Step 3 filters by score >= threshold for cross-threshold picking")
+    print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step-2-EF-parquets/")
+    print("  Step 3 reads from that directory; no merged output file is written.")
     print("=" * 70)
 
 
