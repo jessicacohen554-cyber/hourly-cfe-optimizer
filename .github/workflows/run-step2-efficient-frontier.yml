@@ -2,39 +2,63 @@ name: Run Step 2 Efficient Frontier Filter
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to read Step 1 parquets from and push Step 2 results to'
+        required: true
+        default: 'work'
 
 jobs:
   run-step2:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Ensure target branch exists locally
+        run: |
+          BRANCH="${{ github.event.inputs.branch }}"
+          git fetch origin "$BRANCH" || true
+          git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      - name: Configure Python runtime
+        run: echo "PYTHONUNBUFFERED=1" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy pandas pyarrow
 
-      - name: Ensure data directory exists
-        run: mkdir -p data
-
-      - name: Run Step 1.5 checkpoint conversion
-        run: python scripts/step1_5_convert_checkpoints_to_parquet.py
+      - name: Ensure output directory exists
+        run: mkdir -p data/step-2-EF-parquets
 
       - name: Run Step 2 Efficient Frontier filter
         run: python scripts/step2_efficient_frontier.py
 
-      - name: Upload Step 2 output artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: pfs-post-ef
-          path: |
-            data/pfs_post_ef.parquet
-            data/step1_raw_pfs_parquets/
-          if-no-files-found: error
+      - name: Commit Step 2 outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          BRANCH="${{ github.event.inputs.branch }}"
+
+          git add -f data/step-2-EF-parquets/
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Step 2 EF: efficient frontier extraction — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          fi
+
+          git push origin "$BRANCH"
