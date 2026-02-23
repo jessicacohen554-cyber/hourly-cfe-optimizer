@@ -667,34 +667,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             </div>
         </div>
 
-        <!-- STEP 1.5 -->
-        <div class="flow-step">
-            <div class="flow-track">
-                <div class="flow-dot step-physics" style="font-size:0.65rem;">1.5</div>
-                <div class="flow-line line-physics"></div>
-            </div>
-            <div class="flow-card">
-                <div class="flow-card-header">
-                    <h3>Storage Re-Sweep</h3>
-                    <span class="flow-tag flow-tag-minutes">~10 min</span>
-                </div>
-                <p>
-                    <code>postprocess_storage_resweep.py</code> &mdash; Re-dispatches battery/LDES for mixes near
-                    EF boundary with finer procurement grid. Appends improved solutions to PFS cache.
-                </p>
-                <div class="flow-files">
-                    <div class="flow-file">
-                        <span class="flow-file-label in">IN</span>
-                        <span class="flow-file-path">data/physics_cache_v4.parquet</span>
-                    </div>
-                    <div class="flow-file">
-                        <span class="flow-file-label out">OUT</span>
-                        <span class="flow-file-path">data/physics_cache_v4.parquet (appended rows)</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- STEP 2 -->
         <div class="flow-step">
             <div class="flow-track">
@@ -1043,7 +1015,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <tr>
                     <td><code>data/physics_cache_v4.parquet</code></td>
                     <td>Parquet</td>
-                    <td>Step 1, Step 1.5</td>
+                    <td>Step 1</td>
                     <td>Step 2</td>
                     <td>21.4M physics-validated resource mixes with match scores and dispatch metrics</td>
                 </tr>
