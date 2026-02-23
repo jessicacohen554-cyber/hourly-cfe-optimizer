@@ -27,7 +27,7 @@ except ImportError:
     print("ERROR: gridstatus not installed. Run: pip install gridstatus")
     sys.exit(1)
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 LMP_DIR = os.path.join(DATA_DIR, 'lmp')
 os.makedirs(LMP_DIR, exist_ok=True)
