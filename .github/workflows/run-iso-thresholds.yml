@@ -34,11 +34,11 @@ jobs:
         pip install pyarrow numba pandas
 
     - name: Create checkpoint directory
-      run: mkdir -p data/checkpoints
+      run: mkdir -p data/checkpoints data/checkpoints_v4
 
     - name: Run script
       run: |
-        python complete_iso_thresholds.py --iso "${{ github.event.inputs.iso }}" --threshold "${{ github.event.inputs.threshold }}"
+        python step1_pfs_generator.py "${{ github.event.inputs.iso }}"
 
     - name: Commit results
       run: |
