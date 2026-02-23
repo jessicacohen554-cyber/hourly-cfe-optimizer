@@ -19,7 +19,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 
 H = 8760
@@ -158,8 +158,8 @@ def normalize_profile(profile):
 
 def fix_generation_profiles():
     """Fix generation profiles: UTC → local time."""
-    input_path = os.path.join(DATA_DIR, 'eia_generation_profiles.json')
-    output_path = os.path.join(DATA_DIR, 'eia_generation_profiles_local.json')
+    input_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles.json')
+    output_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles_local.json')
 
     with open(input_path) as f:
         data = json.load(f)
@@ -202,8 +202,8 @@ def fix_generation_profiles():
 
 def fix_demand_profiles():
     """Fix demand profiles: UTC → local time."""
-    input_path = os.path.join(DATA_DIR, 'eia_demand_profiles.json')
-    output_path = os.path.join(DATA_DIR, 'eia_demand_profiles_local.json')
+    input_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')
+    output_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles_local.json')
 
     with open(input_path) as f:
         data = json.load(f)
@@ -246,8 +246,8 @@ def fix_demand_profiles():
 
 def fix_fossil_mix():
     """Fix fossil mix profiles: UTC → local time."""
-    input_path = os.path.join(DATA_DIR, 'eia_fossil_mix.json')
-    output_path = os.path.join(DATA_DIR, 'eia_fossil_mix_local.json')
+    input_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_fossil_mix.json')
+    output_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_fossil_mix_local.json')
 
     with open(input_path) as f:
         data = json.load(f)
