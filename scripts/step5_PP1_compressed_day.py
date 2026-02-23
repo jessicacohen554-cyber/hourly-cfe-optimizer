@@ -35,7 +35,7 @@ import numpy as np
 # CONSTANTS (must match step1_pfs_generator.py)
 # ============================================================================
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 H = 8760
 LEAP_FEB29_START = 1416
 PROFILE_YEARS = ['2021', '2022', '2023', '2024', '2025']
@@ -114,9 +114,9 @@ def _validate_demand_profile(iso, year, profile):
 def load_data():
     """Load demand and generation profiles (same logic as step1)."""
     print("Loading data...")
-    with open(os.path.join(DATA_DIR, 'eia_demand_profiles.json')) as f:
+    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')) as f:
         demand_raw = json.load(f)
-    with open(os.path.join(DATA_DIR, 'eia_generation_profiles.json')) as f:
+    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles.json')) as f:
         gen_raw = json.load(f)
 
     # Average generation profiles

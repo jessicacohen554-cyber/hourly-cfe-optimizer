@@ -30,10 +30,10 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 | Step | Script | What It Does | When to Re-run |
 |------|--------|-------------|---------------|
-| **Step 1** | `step1_pfs_generator.py` | **PFS Generator** — Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes (clean firm, solar, wind, hydro) × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores. Produces 21.4M physics-validated mixes. | Only if dispatch logic, generation profiles, or demand curves change. |
-| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** — Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
-| **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** — Vectorized cross-evaluation of all EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios. | When cost assumptions, LCOE tables, or sensitivity toggles change. |
-| **Step 4** | `step4_postprocess.py` | **Post-Processing** — NEISO gas constraint, CCS vs LDES crossover analysis, CO₂/MAC calculations. Produces final corrected results. | When Step 3 outputs change. |
+| **Step 1** | `scripts/step1_pfs_generator.py` | **PFS Generator** — Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes (clean firm, solar, wind, hydro) × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores. Produces 21.4M physics-validated mixes. | Only if dispatch logic, generation profiles, or demand curves change. |
+| **Step 2** | `scripts/step2_efficient_frontier.py` | **Efficient Frontier (EF)** — Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
+| **Step 3** | `scripts/step3_cost_optimization.py` | **Cost Optimization** — Vectorized cross-evaluation of all EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios. | When cost assumptions, LCOE tables, or sensitivity toggles change. |
+| **Step 4** | `scripts/step4_gas_ccs_adjustement.py` | **Post-Processing** — NEISO gas constraint, CCS vs LDES crossover analysis, CO₂/MAC calculations. Produces final corrected results. | When Step 3 outputs change. |
 
 **Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 + post-processing are cheap (minutes). Changing cost assumptions only requires Steps 3–4 + post-processing.
 
@@ -41,9 +41,9 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 | Script | What It Does |
 |--------|-------------|
-| `recompute_co2.py` | Dispatch-stack emission model. Merit-order fuel retirement (coal→oil→gas). Coal/oil capped at 2025 absolute TWh. |
-| `compute_mac_stats.py` | MAC statistics: P10/P50/P90 fan, stepwise marginal, ANOVA decomposition, crossover analysis. |
-| `generate_shared_data.py` | Generates `dashboard/js/shared-data.js` with all dashboard data constants. |
+| `scripts/recompute_co2.py` | Dispatch-stack emission model. Merit-order fuel retirement (coal→oil→gas). Coal/oil capped at 2025 absolute TWh. |
+| `scripts/compute_mac_stats.py` | MAC statistics: P10/P50/P90 fan, stepwise marginal, ANOVA decomposition, crossover analysis. |
+| `scripts/generate_shared_data.py` | Generates `dashboard/js/shared-data.js` with all dashboard data constants. |
 
 ### Running the Pipeline
 
@@ -52,21 +52,21 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 pip install numpy pyarrow
 
 # Step 1: Generate PFS (expensive — only if physics change)
-python step1_pfs_generator.py
+python scripts/step1_pfs_generator.py
 
 # Step 2: Extract efficient frontier (~40s)
-python step2_efficient_frontier.py
+python scripts/step2_efficient_frontier.py
 
 # Step 3: Cost optimization (~3 min)
-python step3_cost_optimization.py
+python scripts/step3_cost_optimization.py
 
 # Step 4: Post-processing (~seconds)
-python step4_postprocess.py
+python scripts/step4_gas_ccs_adjustement.py
 
 # Post-processing: CO₂, MAC stats, dashboard data
-python recompute_co2.py
-python compute_mac_stats.py
-python generate_shared_data.py
+python scripts/recompute_co2.py
+python scripts/compute_mac_stats.py
+python scripts/generate_shared_data.py
 ```
 
 ### Key Acronyms
@@ -78,16 +78,16 @@ python generate_shared_data.py
 
 ```
 hourly-cfe-optimizer/
-├── step1_pfs_generator.py        # Step 1: PFS generator (physics)
-├── step2_efficient_frontier.py   # Step 2: Efficient frontier extraction
-├── step3_cost_optimization.py    # Step 3: Cost optimization
-├── step4_postprocess.py          # Step 4: Post-processing
+├── scripts/step1_pfs_generator.py        # Step 1: PFS generator (physics)
+├── scripts/step2_efficient_frontier.py   # Step 2: Efficient frontier extraction
+├── scripts/step3_cost_optimization.py    # Step 3: Cost optimization
+├── scripts/step4_gas_ccs_adjustement.py          # Step 4: Post-processing
 ├── data/
 │   ├── physics_cache_v4.parquet  # PFS (21.4M rows, Step 1 output)
 │   ├── pfs_post_ef.parquet       # PFS post-EF (1.8M rows, Step 2 output)
-│   ├── eia_demand_profiles.json
-│   ├── eia_generation_profiles.json
 │   ├── EIA 930 Data/
+│   │   ├── eia_demand_profiles.json
+│   │   ├── eia_generation_profiles.json
 │   │   ├── eia_hourly_*.json     # Per-ISO hourly generation data
 │   │   └── eia_demand_*.json     # Per-ISO hourly demand data
 │   ├── egrid_emission_rates.json

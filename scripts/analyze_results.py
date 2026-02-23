@@ -16,7 +16,7 @@ import json
 import os
 import sys
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RESULTS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CACHE_PATH = os.path.join(SCRIPT_DIR, 'data', 'optimizer_cache.json')
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'analysis_results.json')
