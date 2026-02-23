@@ -31,6 +31,7 @@ import numpy as np
 import pyarrow.parquet as pq
 from pathlib import Path
 from itertools import product
+from functools import lru_cache
 
 try:
     from numba import njit, prange
@@ -976,6 +977,31 @@ def build_sensitivity_combos(iso):
     return combos
 
 
+@lru_cache(maxsize=None)
+def get_sensitivity_combos(iso):
+    """Cached sensitivity combos for an ISO.
+
+    Combo generation is deterministic and reused across multiple phases
+    (base-year, track variants, and demand-growth sweeps). Caching avoids
+    repeatedly re-allocating thousands of dictionaries per ISO.
+    """
+    return tuple(build_sensitivity_combos(iso))
+
+
+def prepare_threshold_metadata(scores, thresholds):
+    """Build reusable threshold metadata from match scores.
+
+    Returns:
+        active_thresholds: sorted ascending thresholds with at least one feasible mix
+        thresholds_desc: numpy array sorted descending (for bucketed argmin kernel)
+        threshold_pos: mapping threshold -> position in thresholds_desc
+    """
+    active_thresholds = [thr for thr in thresholds if np.any(scores >= thr)]
+    thresholds_desc = np.array(sorted(active_thresholds, reverse=True), dtype=np.float64)
+    threshold_pos = {float(thresholds_desc[k]): k for k in range(len(thresholds_desc))}
+    return active_thresholds, thresholds_desc, threshold_pos
+
+
 # ============================================================================
 # LOAD PFS POST-EF
 # ============================================================================
@@ -1152,16 +1178,11 @@ def main():
             iso, arrays, demand_twh)
         scores = arrays['hourly_match_score'].astype(np.float64)
 
-        all_combos = build_sensitivity_combos(iso)
+        all_combos = get_sensitivity_combos(iso)
         n_combos = len(all_combos)
 
-        active_thresholds = [thr for thr in OUTPUT_THRESHOLDS
-                             if (iso, thr) in thr_indices]
-        # Sorted descending for fused eval+argmin (exploits nested structure)
-        thresholds_desc = np.array(sorted(active_thresholds, reverse=True),
-                                   dtype=np.float64)
-        # Map from position in thresholds_desc back to threshold value
-        thr_pos = {float(thresholds_desc[k]): k for k in range(len(thresholds_desc))}
+        active_thresholds, thresholds_desc, thr_pos = prepare_threshold_metadata(
+            scores, OUTPUT_THRESHOLDS)
 
         thr_data = {}
         thr_arch_sets = {}
@@ -1288,7 +1309,7 @@ def main():
         arrays = pfs[iso]
         N = len(arrays['clean_firm'])
         demand_twh = REGIONAL_DEMAND_TWH[iso]
-        all_combos = build_sensitivity_combos(iso)
+        all_combos = get_sensitivity_combos(iso)
         n_combos = len(all_combos)
         scores_all = arrays['hourly_match_score'].astype(np.float64)
 
@@ -1315,11 +1336,8 @@ def main():
                 nb_cm, nb_const, nb_extras = precompute_base_year_coefficients(
                     iso, nb_arrays, demand_twh)  # uprates ON (default)
 
-                active_thr_nb = sorted(nb_thr_indices.keys())
-                thresholds_desc_nb = np.array(sorted(active_thr_nb, reverse=True),
-                                               dtype=np.float64)
-                thr_pos_nb = {float(thresholds_desc_nb[k]): k
-                              for k in range(len(thresholds_desc_nb))}
+                active_thr_nb, thresholds_desc_nb, thr_pos_nb = prepare_threshold_metadata(
+                    nb_scores, OUTPUT_THRESHOLDS)
 
                 nb_thr_data = {thr: {'scenarios': {}} for thr in active_thr_nb}
                 nb_arch_set = set()
@@ -1368,12 +1386,8 @@ def main():
         rp_cm, rp_const, rp_extras = precompute_base_year_coefficients(
             iso, arrays, demand_twh, uprate_cap_override=0)  # uprates OFF
 
-        active_thr_rp = [thr for thr in OUTPUT_THRESHOLDS
-                          if (iso, thr) in thr_indices]
-        thresholds_desc_rp = np.array(sorted(active_thr_rp, reverse=True),
-                                       dtype=np.float64)
-        thr_pos_rp = {float(thresholds_desc_rp[k]): k
-                      for k in range(len(thresholds_desc_rp))}
+        active_thr_rp, thresholds_desc_rp, thr_pos_rp = prepare_threshold_metadata(
+            scores_all, OUTPUT_THRESHOLDS)
 
         rp_thr_data = {thr: {'scenarios': {}} for thr in active_thr_rp}
         rp_arch_set = set()
@@ -1446,7 +1460,7 @@ def main():
         arrays = pfs[iso]
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         iso_rates = DEMAND_GROWTH_RATES[iso]
-        all_combos = build_sensitivity_combos(iso)
+        all_combos = get_sensitivity_combos(iso)
 
         arch_indices = sorted(archetypes[iso])
         n_arch = len(arch_indices)
@@ -1475,9 +1489,8 @@ def main():
         arch_match_frac = arch_scores_f64 / 100.0
 
         # Thresholds for batched eval (sorted descending)
-        active_thr_dg = sorted(arch_thr_mask.keys())
-        thresholds_desc_dg = np.array(sorted(active_thr_dg, reverse=True), dtype=np.float64)
-        thr_pos_dg = {float(thresholds_desc_dg[k]): k for k in range(len(thresholds_desc_dg))}
+        active_thr_dg, thresholds_desc_dg, thr_pos_dg = prepare_threshold_metadata(
+            arch_scores_f64, OUTPUT_THRESHOLDS)
 
         # Pre-initialize result structure: thr → scenario_key → year_str → growth_level
         for scenario_key, _ in all_combos:
@@ -1569,7 +1582,7 @@ def main():
 
             demand_twh = REGIONAL_DEMAND_TWH[iso]
             iso_rates = DEMAND_GROWTH_RATES[iso]
-            all_combos = build_sensitivity_combos(iso)
+            all_combos = get_sensitivity_combos(iso)
 
             arch_indices = sorted(arch_set)
             n_arch = len(arch_indices)
@@ -1594,9 +1607,8 @@ def main():
             tk_match_frac = tk_scores_f64 / 100.0
 
             # Thresholds for batched eval
-            tk_active_thr = sorted(arch_thr_mask.keys())
-            tk_thr_desc = np.array(sorted(tk_active_thr, reverse=True), dtype=np.float64)
-            tk_thr_pos = {float(tk_thr_desc[k]): k for k in range(len(tk_thr_desc))}
+            _, tk_thr_desc, tk_thr_pos = prepare_threshold_metadata(
+                tk_scores_f64, OUTPUT_THRESHOLDS)
 
             # Pre-initialize result structure
             for scenario_key, _ in all_combos:
