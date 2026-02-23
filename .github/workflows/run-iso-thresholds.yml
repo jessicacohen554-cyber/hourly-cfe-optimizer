@@ -3,6 +3,10 @@ name: Run Step 1 PFS by ISO/threshold
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to run on and push results to'
+        required: true
+        default: 'work'
       iso:
         description: 'ISO to run (e.g., NYISO, CAISO, PJM, ERCOT, NEISO)'
         required: true
@@ -11,10 +15,19 @@ on:
         description: 'Threshold percentage to run (e.g., 100, 95, 92.5)'
         required: true
         default: '100'
+      max_runtime_minutes:
+        description: 'Max runtime in minutes before checkpointing (0 = no cap)'
+        required: false
+        default: '330'
+      max_mixes_per_run:
+        description: 'Max outer-loop mixes before checkpointing (0 = no cap)'
+        required: false
+        default: '0'
 
 jobs:
-  run-script:
+  run-pfs:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
 
     permissions:
       contents: write
@@ -22,10 +35,12 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch }}
 
     - name: Ensure target branch exists locally
       run: |
-        BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
+        BRANCH="${{ github.event.inputs.branch }}"
         git fetch origin "$BRANCH" || true
         git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
 
@@ -37,28 +52,35 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyarrow numba pandas
+        pip install numpy numba pyarrow pandas
 
-    - name: Create checkpoint directory
-      run: mkdir -p data/checkpoints data/checkpoints_v4
-
-    - name: Run script
+    - name: Create output directories
       run: |
-        python scripts/step1_pfs_generator.py "${{ github.event.inputs.iso }}" --threshold "${{ github.event.inputs.threshold }}"
+        mkdir -p data/checkpoints_v4
+        mkdir -p data/step1_raw_pfs_parquets
+
+    - name: Run Step 1 PFS individual ISO/threshold
+      run: |
+        python scripts/step1_pfs_individual_iso_threshold.py \
+          --iso "${{ github.event.inputs.iso }}" \
+          --threshold "${{ github.event.inputs.threshold }}" \
+          --max-runtime-minutes "${{ github.event.inputs.max_runtime_minutes || '330' }}" \
+          --max-mixes-per-run "${{ github.event.inputs.max_mixes_per_run || '0' }}"
 
     - name: Commit results
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
 
-        BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
+        BRANCH="${{ github.event.inputs.branch }}"
 
-        git add data/checkpoints/ data/checkpoints_v4/ data/physics_cache_v4_*.parquet scripts/dashboard/
+        # Add both completed parquets and checkpoint files
+        git add data/step1_raw_pfs_parquets/ data/checkpoints_v4/
 
         if git diff --cached --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Update ${{ github.event.inputs.iso }} ISO threshold ${{ github.event.inputs.threshold }}"
+          git commit -m "Step 1 PFS: ${{ github.event.inputs.iso }} ${{ github.event.inputs.threshold }}% — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
         git push origin "$BRANCH"
