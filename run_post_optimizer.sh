@@ -25,12 +25,12 @@ echo "  Results file: $FSIZE bytes"
 # Step 2: Recompute CO₂ with hourly emission rates
 echo ""
 echo "  Step 1: Recomputing CO₂ with hourly fossil-fuel emission rates..."
-python3 recompute_co2.py
+python3 scripts/recompute_co2.py
 
 # Step 3: Run QA/QC analysis
 echo ""
 echo "  Step 2: Running QA/QC analysis..."
-python3 analyze_results.py
+python3 scripts/analyze_results.py
 
 echo ""
 echo "========================================"

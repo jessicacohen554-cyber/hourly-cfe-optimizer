@@ -642,7 +642,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <span class="flow-tag flow-tag-hours">~4 hrs</span>
                 </div>
                 <p>
-                    <code>step1_pfs_generator.py</code> &mdash; Generates the Physics Feasible Space (PFS).
+                    <code>scripts/step1_pfs_generator.py</code> &mdash; Generates the Physics Feasible Space (PFS).
                     4D adaptive grid search over clean_firm, solar, wind, and hydro resource fractions with
                     procurement sweep. Battery daily-cycle dispatch (4hr, 85% RTE) and LDES multi-day dispatch
                     (100hr, 50% RTE). Produces 21.4M physics-validated resource mixes across 13 thresholds and 5 ISOs.
@@ -653,7 +653,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <div class="flow-files">
                     <div class="flow-file">
                         <span class="flow-file-label in">IN</span>
-                        <span class="flow-file-path">data/eia_generation_profiles.json, data/eia_demand_profiles.json</span>
+                        <span class="flow-file-path">data/EIA 930 Data/eia_generation_profiles.json, data/EIA 930 Data/eia_demand_profiles.json</span>
                     </div>
                     <div class="flow-file">
                         <span class="flow-file-label out">OUT</span>
@@ -707,7 +707,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <span class="flow-tag flow-tag-seconds">~30 sec</span>
                 </div>
                 <p>
-                    <code>step2_efficient_frontier.py</code> &mdash; Extracts the Efficient Frontier (EF)
+                    <code>scripts/step2_efficient_frontier.py</code> &mdash; Extracts the Efficient Frontier (EF)
                     from the PFS. Filters by existing generation utilization, procurement minimization, and
                     strict dominance removal. Reduces 21.4M solutions to ~1.8M Pareto-optimal mixes.
                 </p>
@@ -736,7 +736,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <span class="flow-tag flow-tag-minutes">~20 min</span>
                 </div>
                 <p>
-                    <code>step3_cost_optimization.py</code> &mdash; Vectorized cross-evaluation of EF mixes
+                    <code>scripts/step3_cost_optimization.py</code> &mdash; Vectorized cross-evaluation of EF mixes
                     under 5,832 cost sensitivity combos per region (17,496 for CAISO). Merit-order tranche pricing
                     for clean firm: uprate &rarr; geothermal &rarr; cheapest of nuclear/CCS. Demand growth sweep
                     across 25 years &times; 3 growth rates.
@@ -774,7 +774,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <span class="flow-tag flow-tag-seconds">~60 sec</span>
                 </div>
                 <p>
-                    <code>step4_postprocess.py</code> &mdash; Applies NEISO winter gas pipeline constraint
+                    <code>scripts/step4_gas_ccs_adjustement.py</code> &mdash; Applies NEISO winter gas pipeline constraint
                     (+$13.13/MWh CCS adder), 45Q tax credit correction ($27.5/MWh), without-45Q overlay,
                     gas capacity backup pricing, and resource adequacy margin (15% RA).
                     Also runs CCS vs LDES crossover analysis.
@@ -812,7 +812,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             <span class="flow-tag flow-tag-seconds">~15 sec</span>
                         </div>
                         <p>
-                            <code>recompute_co2.py</code> &mdash; Dispatch-stack emission model. Merit-order
+                            <code>scripts/recompute_co2.py</code> &mdash; Dispatch-stack emission model. Merit-order
                             retirement: coal first, then oil, then gas. Fast path uses pre-computed
                             <code>hourly_match_score</code> (~1000x speedup). Numba-accelerated fallback for
                             full hourly dispatch.
@@ -824,7 +824,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label in">IN</span>
-                                <span class="flow-file-path">data/egrid_emission_rates.json, data/eia_fossil_mix.json</span>
+                                <span class="flow-file-path">data/egrid_emission_rates.json, data/EIA 930 Data/eia_fossil_mix.json</span>
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label out">OUT</span>
@@ -839,7 +839,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             <span class="flow-tag flow-tag-seconds">~30 sec</span>
                         </div>
                         <p>
-                            <code>compute_mac_stats.py</code> &mdash; Computes 6 MAC metrics: average fan
+                            <code>scripts/compute_mac_stats.py</code> &mdash; Computes 6 MAC metrics: average fan
                             (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA
                             sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS.
                         </p>
@@ -872,7 +872,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label in">IN</span>
-                                <span class="flow-file-path">data/eia_generation_profiles.json, data/eia_demand_profiles.json</span>
+                                <span class="flow-file-path">data/EIA 930 Data/eia_generation_profiles.json, data/EIA 930 Data/eia_demand_profiles.json</span>
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label out">OUT</span>
@@ -909,7 +909,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             <span class="flow-tag flow-tag-seconds">~10 sec</span>
                         </div>
                         <p>
-                            <code>step5_compressed_day.py</code> &mdash; Generates 24-hour representative day profiles
+                            <code>scripts/step5_PP1_compressed_day.py</code> &mdash; Generates 24-hour representative day profiles
                             from the full 8,760-hour dispatch data. Compact supply/demand curves for dashboard
                             visualization of daily dispatch patterns.
                         </p>
@@ -920,7 +920,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label in">IN</span>
-                                <span class="flow-file-path">data/eia_generation_profiles.json, data/eia_demand_profiles.json</span>
+                                <span class="flow-file-path">data/EIA 930 Data/eia_generation_profiles.json, data/EIA 930 Data/eia_demand_profiles.json</span>
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label out">OUT</span>
@@ -943,7 +943,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <span class="flow-tag flow-tag-seconds">~5 sec</span>
                 </div>
                 <p>
-                    <code>generate_shared_data.py</code> &mdash; Final pipeline step. Extracts all results into a single JavaScript
+                    <code>scripts/generate_shared_data.py</code> &mdash; Final pipeline step. Extracts all results into a single JavaScript
                     module for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections,
                     LCOE/transmission tables for client-side repricing. All dashboard pages read from this file.
                 </p>
@@ -987,7 +987,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <li>Hydro capped at existing regional capacity</li>
                 <li>Nuclear uprates included at reduced cost</li>
                 <li>5,832 cost scenarios per ISO/threshold</li>
-                <li>Script: <code style="font-family:'Consolas',monospace; font-size:0.75rem; color:rgba(255,255,255,0.6);">step3_cost_optimization.py</code></li>
+                <li>Script: <code style="font-family:'Consolas',monospace; font-size:0.75rem; color:rgba(255,255,255,0.6);">scripts/step3_cost_optimization.py</code></li>
             </ul>
         </div>
 
@@ -1065,7 +1065,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <td><code>dashboard/overprocure_scenarios.parquet</code></td>
                     <td>Parquet</td>
                     <td>Step 3</td>
-                    <td>generate_shared_data.py</td>
+                    <td>scripts/generate_shared_data.py</td>
                     <td>513K scenario rows with hourly_match_score, resource_mix, costs</td>
                 </tr>
                 <tr>
@@ -1079,7 +1079,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <td><code>dashboard/track_results.json</code></td>
                     <td>JSON</td>
                     <td>temp_track.py</td>
-                    <td>generate_shared_data.py</td>
+                    <td>scripts/generate_shared_data.py</td>
                     <td>NB and CTR track cost optimization results</td>
                 </tr>
                 <tr>
@@ -1092,7 +1092,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <tr>
                     <td><code>dashboard/js/mac-stats-data.js</code></td>
                     <td>JS module</td>
-                    <td>compute_mac_stats.py</td>
+                    <td>scripts/compute_mac_stats.py</td>
                     <td>abatement_dashboard.html</td>
                     <td>MAC curve statistics: fans, envelopes, ANOVA decomposition</td>
                 </tr>
@@ -1106,7 +1106,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <tr>
                     <td><code>dashboard/js/shared-data.js</code></td>
                     <td>JS module</td>
-                    <td>generate_shared_data.py</td>
+                    <td>scripts/generate_shared_data.py</td>
                     <td>All dashboard pages</td>
                     <td>Master data file: SBTi milestones, LCOE tables, all extracted results</td>
                 </tr>
@@ -1128,8 +1128,8 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <h3>dispatch_utils.py</h3>
             </div>
             <p>
-                Shared dispatch engine used by <code>recompute_co2.py</code>, <code>compute_lmp_prices.py</code>,
-                and <code>step5_compressed_day.py</code>. Contains Numba-compiled battery and LDES dispatch loops,
+                Shared dispatch engine used by <code>scripts/recompute_co2.py</code>, <code>compute_lmp_prices.py</code>,
+                and <code>scripts/step5_PP1_compressed_day.py</code>. Contains Numba-compiled battery and LDES dispatch loops,
                 supply matrix construction, dispatch cache system, and merit-order fossil retirement model.
             </p>
             <ul style="list-style:none; padding:0; margin:8px 0 0;">

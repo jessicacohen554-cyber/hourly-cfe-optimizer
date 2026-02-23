@@ -25,10 +25,10 @@ jobs:
         run: mkdir -p data
 
       - name: Run Step 1.5 checkpoint conversion
-        run: python step1_5_convert_checkpoints_to_parquet.py
+        run: python scripts/step1_5_convert_checkpoints_to_parquet.py
 
       - name: Run Step 2 Efficient Frontier filter
-        run: python step2_efficient_frontier.py
+        run: python scripts/step2_efficient_frontier.py
 
       - name: Upload Step 2 output artifact
         uses: actions/upload-artifact@v4
