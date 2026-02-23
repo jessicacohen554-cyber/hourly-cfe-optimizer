@@ -960,7 +960,8 @@ def get_seed_combos(hydro_cap):
 
 def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                        prev_pruning=None, cross_feasible_mixes=None,
-                       flush_callback=None, storage_levels=None):
+                       flush_callback=None, storage_levels=None,
+                       max_runtime_seconds=None):
     """Find ALL feasible solutions for a single threshold × ISO.
 
     Uses cross-threshold pruning: mixes that were infeasible at a lower threshold
@@ -987,6 +988,21 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     Returns:
         (candidates, pruning_info) where pruning_info can be passed to next threshold
     """
+    run_start = time.time()
+    timed_out = False
+
+    def _time_limit_hit():
+        return max_runtime_seconds is not None and (time.time() - run_start) >= max_runtime_seconds
+
+    def _checkpoint_and_timeout(phase, cursor):
+        nonlocal timed_out
+        _save_mix_progress(iso, threshold, candidates, phase, cursor,
+                           near_miss_data=near_miss_mixes,
+                           mix_min_proc_data=mix_min_proc)
+        _append_partial_to_interim(iso, threshold, candidates)
+        timed_out = True
+        print(f"      Runtime cap reached for {iso} {threshold}% ({max_runtime_seconds:.0f}s); checkpoint saved.")
+
     # Cap target at 0.999 — demand_arr.sum() ≈ 0.9995 due to float averaging,
     # so a target of 1.0 is unreachable even when every hour is matched.
     # 99.9% is functionally identical to 100% for hourly matching.
@@ -1141,6 +1157,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         all_max_scores = batch_hourly_scores(demand_arr, supply_matrix, mix_fracs, max_pf)
 
         for i in range(phase1a_start, n_combos):
+            if _time_limit_hit():
+                _checkpoint_and_timeout('1a', i)
+                break
+
             mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
                        int(combos_5[i][2]), int(combos_5[i][3]))
             all_mix_keys.add(mix_key)
@@ -1179,6 +1199,15 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                                    near_miss_data=near_miss_mixes,
                                    mix_min_proc_data=mix_min_proc)
                 _append_partial_to_interim(iso, threshold, candidates)
+
+    if timed_out:
+        pruning_info = {
+            'feasible_mixes': feasible_mix_keys,
+            'min_proc': mix_min_proc,
+            'all_mixes': all_mix_keys,
+            'completed': False,
+        }
+        return candidates, pruning_info
 
     # Phase 1a→1b transition checkpoint
     if resume_phase == '1a' and phase1a_start < n_combos:
@@ -1232,6 +1261,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
 
     # Process mixes in batches of MAX_MIX_BATCH
     for batch_start in range(0, len(nm_valid), MAX_MIX_BATCH):
+        if _time_limit_hit():
+            _checkpoint_and_timeout('1b', batch_start + phase1b_start)
+            break
+
         batch_end = min(batch_start + MAX_MIX_BATCH, len(nm_valid))
         batch = nm_valid[batch_start:batch_end]
         n_batch = len(batch)
@@ -1323,6 +1356,15 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                            mix_min_proc_data=mix_min_proc)
         _append_partial_to_interim(iso, threshold, candidates)
 
+    if timed_out:
+        pruning_info = {
+            'feasible_mixes': feasible_mix_keys,
+            'min_proc': mix_min_proc,
+            'all_mixes': all_mix_keys,
+            'completed': False,
+        }
+        return candidates, pruning_info
+
     # ── Phase 2: Refine feasible archetypes to 1% resolution ──
     # Same early-stop logic: per-mix, stop procurement once target is met
     if candidates:
@@ -1332,6 +1374,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
             mix_archetypes.add(m)
 
         for mix_tuple in mix_archetypes:
+            if _time_limit_hit():
+                _checkpoint_and_timeout('2', 0)
+                break
+
             base = np.array(mix_tuple, dtype=np.float64)
             fine_combos = generate_4d_combos_around(base, hydro_cap, step=1, radius=3)
             if len(fine_combos) == 0:
@@ -1455,6 +1501,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         'feasible_mixes': feasible_mix_keys,
         'min_proc': mix_min_proc,
         'all_mixes': all_mix_keys,
+        'completed': not timed_out,
     }
 
     return candidates, pruning_info
