@@ -44,7 +44,10 @@ jobs:
 
     - name: Run script
       run: |
-        python scripts/step1_pfs_generator.py "${{ github.event.inputs.iso }}" --threshold "${{ github.event.inputs.threshold }}"
+        python "scripts/step 1 PFS - individual ISO threshold selector.py" \
+          --iso "${{ github.event.inputs.iso }}" \
+          --threshold "${{ github.event.inputs.threshold }}" \
+          --max-runtime-minutes 0
 
     - name: Commit results
       run: |
