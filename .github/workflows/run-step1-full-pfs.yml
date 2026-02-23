@@ -29,7 +29,7 @@ jobs:
           mkdir -p data/checkpoints_v4
 
       - name: Run Step 1 PFS generator (full run)
-        run: python step1_pfs_generator.py
+        run: python scripts/step1_pfs_generator.py
 
       - name: Upload Step 1 artifacts
         uses: actions/upload-artifact@v4

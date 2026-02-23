@@ -79,7 +79,7 @@ if sys.stdout.encoding != 'utf-8':
 # CONSTANTS
 # ══════════════════════════════════════════════════════════════════════════════
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 DATA_YEAR = '2025'
 PROFILE_YEARS = ['2021', '2022', '2023', '2024', '2025']
 H = 8760
@@ -226,13 +226,13 @@ def load_data():
     """Load demand profiles, generation profiles, emission rates, and fossil mix."""
     print("Loading data...")
 
-    with open(os.path.join(DATA_DIR, 'eia_demand_profiles.json')) as f:
+    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')) as f:
         demand_raw = json.load(f)
-    with open(os.path.join(DATA_DIR, 'eia_generation_profiles.json')) as f:
+    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles.json')) as f:
         gen_raw = json.load(f)
     with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
         emission_rates = json.load(f)
-    with open(os.path.join(DATA_DIR, 'eia_fossil_mix.json')) as f:
+    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_fossil_mix.json')) as f:
         fossil_mix = json.load(f)
 
     # Average generation profiles across PROFILE_YEARS
