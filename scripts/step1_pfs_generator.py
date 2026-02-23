@@ -1643,8 +1643,10 @@ def process_iso(args):
     for threshold in THRESHOLDS:
         t_str = str(threshold)
         if _is_threshold_done(iso, threshold):
-            # Load from done parquet
-            done_path = _threshold_done_path(iso, threshold)
+            # Load from done parquet — use whichever naming convention exists
+            done_path = (_threshold_done_path(iso, threshold)
+                         if os.path.exists(_threshold_done_path(iso, threshold))
+                         else _threshold_done_path_legacy(iso, threshold))
             try:
                 done_table = pq.read_table(done_path)
                 n = done_table.num_rows
@@ -1822,14 +1824,21 @@ def _mix_progress_path(iso, threshold):
 
 
 def _threshold_done_path(iso, threshold):
-    """Path for completed threshold results parquet."""
+    """Path for completed threshold results parquet (new canonical naming)."""
     t_str = _normalize_threshold_str(threshold)
     return os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_step1_pfs_t{t_str}.parquet')
 
 
+def _threshold_done_path_legacy(iso, threshold):
+    """Path for completed threshold results parquet (legacy naming convention)."""
+    t_str = _normalize_threshold_str(threshold)
+    return os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_t{t_str}_raw_pfs.parquet')
+
+
 def _is_threshold_done(iso, threshold):
-    """Check if a threshold has a completed parquet."""
-    return os.path.exists(_threshold_done_path(iso, threshold))
+    """Check if a threshold has a completed parquet (either naming convention)."""
+    return (os.path.exists(_threshold_done_path(iso, threshold)) or
+            os.path.exists(_threshold_done_path_legacy(iso, threshold)))
 
 
 def _save_mix_progress(iso, threshold, candidates, phase, mix_cursor,

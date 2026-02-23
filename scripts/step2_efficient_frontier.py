@@ -35,7 +35,6 @@ Pipeline position: Step 2 of 4
 Input:  data/step1_raw_pfs_parquets/{ISO}_step1_pfs_t{threshold}.parquet  (primary, from Step 1)
         Falls back to data/physics_cache_v4_{ISO}.parquet or legacy merged file
 Output: data/step-2-EF-parquets/step2_ef_{ISO}.parquet (per-ISO, threshold-free)
-        data/pfs_post_ef.parquet (merged copy for compatibility)
 
 The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
@@ -50,7 +49,6 @@ import pyarrow.compute as pc
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
 STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')
 STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step-2-EF-parquets')
 
@@ -569,23 +567,13 @@ def main():
     if not results:
         raise RuntimeError('Step 2 produced no ISO outputs to write.')
 
-    combined = pa.concat_tables(results)
-
-    # Save per-ISO outputs first
+    # Write per-ISO EF parquets to data/step-2-EF-parquets/ — no merged file
     write_per_iso_outputs(results_by_iso)
 
-    # Save merged compatibility output
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    pq.write_table(combined, OUTPUT_PATH, compression='snappy')
-    file_size = os.path.getsize(OUTPUT_PATH) / (1024 * 1024)
-
     elapsed_total = time.time() - total_start
-    print(f"\n  Output: {OUTPUT_PATH}")
-    print(f"  Size: {file_size:.1f} MB ({combined.num_rows:,} rows)")
-    print(f"  Columns: {combined.column_names}")
-    print(f"  Total time: {elapsed_total:.0f}s")
 
-    # Score distribution summary
+    # Score distribution summary (combine in-memory for reporting only)
+    combined = pa.concat_tables(results)
     scores = combined.column('hourly_match_score').to_numpy()
     for iso in ISOS:
         iso_mask = np.array(combined.column('iso').to_pylist()) == iso
@@ -597,9 +585,12 @@ def main():
                 avail.append(f"{thr:.0f}%:{n:,}")
             print(f"  {iso} mixes per threshold: {', '.join(avail[:6])}...")
 
+    total_rows = sum(t.num_rows for t in results)
+    print(f"\n  Total rows: {total_raw:,} → {total_pareto:,} (EF)")
+    print(f"  Total time: {elapsed_total:.0f}s")
     print("\n" + "=" * 70)
-    print("  STEP 2 COMPLETE — PFS post-EF ready for Step 3")
-    print("  Step 3 filters by score >= threshold for cross-threshold picking")
+    print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step-2-EF-parquets/")
+    print("  Step 3 reads from that directory; no merged output file is written.")
     print("=" * 70)
 
 
