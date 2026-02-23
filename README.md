@@ -82,7 +82,14 @@ The workflows now write outputs directly to branches (instead of only uploading 
   - Writes: `data/step-2-EF-parquets/step2_ef_<ISO>.parquet` (per ISO), `data/pfs_post_ef.parquet` (merged compatibility copy)
 - `run-iso-thresholds.yml` → `iso-threshold-<ISO>-<THRESHOLD>`
   - Example: `iso-threshold-NYISO-95`
+  - Includes a tranche selector (`all`, or tranche `1..10`) and `max_mixes_per_tranche` control for checkpoint-sized runs.
   - Writes: `data/checkpoints/`, `data/checkpoints_v4/`, `data/physics_cache_v4_*.parquet`, `scripts/dashboard/`
+- `run-step1-nyiso100-tranches.yml` → `iso-threshold-NYISO-100`
+  - Dedicated NYISO 100 workflow with tranche selector (`all`, `1..6`).
+  - Direction: run tranches 1→6 sequentially for full NYISO 100 completion.
+- `run-step1-caiso100-tranches.yml` → `iso-threshold-CAISO-100`
+  - Dedicated CAISO 100 workflow with tranche selector (`all`, `1..5`).
+  - Direction: run tranches 1→5 sequentially for full CAISO 100 completion.
 
 These branches are safe staging branches for workflow outputs; open PRs from them into `master` when ready.
 
