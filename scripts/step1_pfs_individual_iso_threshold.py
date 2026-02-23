@@ -5,7 +5,7 @@ Runs step1_pfs_generator.optimize_threshold() for a single ISO × threshold pair
 Designed for GitHub Actions workflows where each ISO/threshold is dispatched as
 a separate job, with support for runtime caps and checkpoint-based resume.
 
-Output: data/step1_raw_pfs_parquets/{ISO}_step1_pfs_t{threshold}.parquet
+Output: data/step1_raw_pfs_parquets/{ISO}_t{threshold}_raw_pfs.parquet
 
 Key features:
   - Standalone: no dependency on existing parquets. Loads raw EIA data and runs
@@ -13,7 +13,7 @@ Key features:
   - Tranching: --max-runtime-minutes caps runtime per invocation. Progress is
     checkpointed in data/checkpoints_v4/ and auto-resumed on re-trigger.
   - Consistent output: writes directly to the step1_raw_pfs_parquets/ directory
-    using the canonical {ISO}_step1_pfs_t{threshold}.parquet naming.
+    using the canonical {ISO}_t{threshold}_raw_pfs.parquet naming.
   - GitHub Actions friendly: exit code 0 on clean completion, exit code 0 on
     checkpoint save (partial progress), exit code 1 on error.
 
@@ -149,7 +149,7 @@ def main():
     if os.path.exists(s1.STEP1_RAW_PFS_PARQUET_DIR):
         import pyarrow.parquet as pq
         for fname in os.listdir(s1.STEP1_RAW_PFS_PARQUET_DIR):
-            if fname.startswith(f"{iso}_step1_pfs_t") and fname.endswith(".parquet"):
+            if fname.startswith(f"{iso}_t") and fname.endswith("_raw_pfs.parquet"):
                 try:
                     t = pq.read_table(os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, fname))
                     for row in t.to_pandas()[["clean_firm", "solar", "wind", "hydro"]].drop_duplicates().itertuples(index=False):
