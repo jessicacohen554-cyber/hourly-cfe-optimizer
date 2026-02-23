@@ -2,6 +2,11 @@ name: Run Step 2 Efficient Frontier Filter
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to read Step 1 parquets from and push Step 2 results to'
+        required: true
+        default: 'work'
 
 jobs:
   run-step2:
@@ -13,11 +18,14 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Ensure target branch exists locally
         run: |
-          git fetch origin step2-ef-parquets-results || true
-          git checkout -B step2-ef-parquets-results origin/step2-ef-parquets-results || git checkout -B step2-ef-parquets-results
+          BRANCH="${{ github.event.inputs.branch }}"
+          git fetch origin "$BRANCH" || true
+          git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,11 +40,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy pandas pyarrow
 
-      - name: Ensure data directory exists
+      - name: Ensure output directory exists
         run: mkdir -p data/step-2-EF-parquets
-
-      - name: Run Step 1.5 checkpoint conversion
-        run: python scripts/step1_5_convert_checkpoints_to_parquet.py
 
       - name: Run Step 2 Efficient Frontier filter
         run: python scripts/step2_efficient_frontier.py
@@ -46,12 +51,14 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f data/pfs_post_ef.parquet data/step-2-EF-parquets/ data/step1_raw_pfs_parquets/
+          BRANCH="${{ github.event.inputs.branch }}"
+
+          git add -f data/pfs_post_ef.parquet data/step-2-EF-parquets/
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update Step 2 efficient frontier outputs"
+            git commit -m "Step 2 EF: efficient frontier extraction — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           fi
 
-          git push origin step2-ef-parquets-results
+          git push origin "$BRANCH"
