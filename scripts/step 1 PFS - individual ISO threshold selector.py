@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Complete remaining thresholds for one or more ISOs from interim cache files.
+"""Complete remaining thresholds for one or more ISOs from existing Step 1 parquet outputs.
 
 Usage:
   python "step 1 PFS - individual ISO threshold selector.py" <ISO> <threshold1> <threshold2> ...
@@ -107,8 +107,19 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes, max_mixes_per_run):
 
     s1.THRESHOLDS = remaining
 
-    interim_path = os.path.join(s1.CHECKPOINT_DIR, f"{iso}_v4_interim.parquet")
-    df = pq.read_table(interim_path).to_pandas()
+    raw_files = [
+        os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f)
+        for f in os.listdir(s1.STEP1_RAW_PFS_PARQUET_DIR)
+        if f.startswith(f"{iso}_step1_pfs_t") and f.endswith(".parquet")
+    ] if os.path.exists(s1.STEP1_RAW_PFS_PARQUET_DIR) else []
+
+    if not raw_files:
+        raise SystemExit(
+            f"No existing parquet files found for {iso} in {s1.STEP1_RAW_PFS_PARQUET_DIR}. "
+            "Run at least one threshold first with the updated parquet naming so storage sweep bounds can be inferred."
+        )
+
+    df = pa.concat_tables([pq.read_table(path) for path in raw_files]).to_pandas()
 
     max_bat4 = df["battery_dispatch_pct"].max()
     max_bat8 = df.get("battery8_dispatch_pct", 0)
@@ -151,13 +162,8 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes, max_mixes_per_run):
     cross_feasible = set()
     for _, row in df[["clean_firm", "solar", "wind", "hydro"]].drop_duplicates().iterrows():
         cross_feasible.add((row["clean_firm"], row["solar"], row["wind"], row["hydro"]))
-    print(f"  {len(cross_feasible):,} feasible mixes from cache")
+    print(f"  {len(cross_feasible):,} feasible mixes from existing parquets")
     del df
-
-    for t in remaining:
-        done_path = s1._threshold_done_path(iso, t)
-        if os.path.exists(done_path):
-            os.remove(done_path)
 
     start = time.time()
     prev_pruning = None
@@ -193,7 +199,6 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes, max_mixes_per_run):
         print(f"  {iso} {threshold}%: {len(candidates):,} solutions, {elapsed:.1f}s")
         if threshold_completed:
             s1._save_threshold_done(iso, threshold, candidates)
-            s1.append_threshold_to_cache(iso, threshold, candidates)
         else:
             print(
                 f"  {iso} {threshold}% paused at runtime/mix cap "
@@ -202,31 +207,17 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes, max_mixes_per_run):
             )
             break
 
-    print(f"\nSaving {iso} cache...")
-    interim_table = pq.read_table(interim_path)
-
-    tables = [interim_table]
+    print(f"\nSummarizing {iso} raw parquet outputs...")
+    total_rows = 0
     for t in remaining:
         done_path = s1._threshold_done_path(iso, t)
         if os.path.exists(done_path):
-            tables.append(pq.read_table(done_path))
-
-    merged = pa.concat_tables(tables)
-    merged = s1._dedup_parquet_table(merged)
-
-    cache_path = os.path.join(s1.DATA_DIR, f"physics_cache_v4_{iso}.parquet")
-    pq.write_table(merged, cache_path, compression="snappy")
-    size_mb = os.path.getsize(cache_path) / (1024 * 1024)
-    print(f"  Cache: {cache_path} ({merged.num_rows:,} solutions, {size_mb:.1f} MB)")
-
-    dash_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard", f"physics_results_v4_{iso}.parquet")
-    pq.write_table(merged, dash_path, compression="snappy")
-    print(f"  Dashboard: {dash_path}")
-
-    df_final = merged.to_pandas()
-    for t in sorted(df_final.threshold.unique()):
-        print(f"  {t}%: {len(df_final[df_final.threshold == t]):,}")
-    print(f"  Total: {df_final.shape[0]:,}")
+            rows = pq.read_table(done_path).num_rows
+            total_rows += rows
+            print(f"  {t}%: {rows:,} rows -> {done_path}")
+        else:
+            print(f"  {t}%: no parquet written")
+    print(f"  Total newly written: {total_rows:,}")
     print(f"\nDone in {time.time() - start:.1f}s")
 
 
