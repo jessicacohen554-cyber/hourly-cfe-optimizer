@@ -8,9 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Ensure target branch exists locally
+        run: |
+          git fetch origin step1-full-pfs-results || true
+          git checkout -B step1-full-pfs-results origin/step1-full-pfs-results || git checkout -B step1-full-pfs-results
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,11 +39,18 @@ jobs:
       - name: Run Step 1 PFS generator (full run)
         run: python scripts/step1_pfs_generator.py
 
-      - name: Upload Step 1 artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: step1-pfs-output
-          path: |
-            data/physics_cache_v4.parquet
-            data/checkpoints_v4/
-          if-no-files-found: error
+      - name: Commit Step 1 outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add data/checkpoints_v4/ dashboard/
+          git add data/physics_cache_v4*.parquet || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update Step 1 full PFS outputs"
+          fi
+
+          git push origin step1-full-pfs-results

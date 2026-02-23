@@ -23,6 +23,12 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
+    - name: Ensure target branch exists locally
+      run: |
+        BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
+        git fetch origin "$BRANCH" || true
+        git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -38,7 +44,7 @@ jobs:
 
     - name: Run script
       run: |
-        python scripts/step1_pfs_generator.py "${{ github.event.inputs.iso }}"
+        python scripts/step1_pfs_generator.py "${{ github.event.inputs.iso }}" --threshold "${{ github.event.inputs.threshold }}"
 
     - name: Commit results
       run: |
@@ -46,15 +52,9 @@ jobs:
         git config user.email "github-actions@github.com"
 
         BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
-        git fetch origin "$BRANCH" || true
 
-        if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
-          git checkout -B "$BRANCH" "origin/$BRANCH"
-        else
-          git checkout -B "$BRANCH"
-        fi
-
-        git add data/checkpoints/
+        git add data/checkpoints/ data/checkpoints_v4/ dashboard/
+        git add data/physics_cache_v4_*.parquet || true
 
         if git diff --cached --quiet; then
           echo "No changes to commit"
