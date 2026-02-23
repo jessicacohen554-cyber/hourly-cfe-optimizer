@@ -50,6 +50,7 @@ import pyarrow.compute as pc
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
+STEP1_5_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')
 
 # Per-ISO PFS files (from Step 1 two-phase adaptive sweep)
 # Falls back to legacy single-file if per-ISO files don't exist
@@ -130,6 +131,69 @@ def load_pfs():
         f"No PFS files found. Expected per-ISO files in {PFS_DIR}/ "
         f"(physics_cache_v4_{{ISO}}.parquet) or legacy {LEGACY_PFS_PATH}"
     )
+
+
+def load_step1_5_raw_pfs():
+    """Load Step 1.5 raw parquet checkpoints and normalize to Step 2 schema.
+
+    Input files are produced by step1_5_convert_checkpoints_to_parquet.py and
+    include tuple-decoded fields such as mix/procurement/dispatch mode.
+    """
+    if not os.path.isdir(STEP1_5_RAW_DIR):
+        return None
+
+    parquet_files = sorted(
+        os.path.join(STEP1_5_RAW_DIR, f)
+        for f in os.listdir(STEP1_5_RAW_DIR)
+        if f.endswith('.parquet')
+    )
+    if not parquet_files:
+        return None
+
+    print(f"Loading Step 1.5 raw parquet files from {STEP1_5_RAW_DIR}")
+    rows = []
+    for path in parquet_files:
+        t = pq.read_table(path)
+        p = t.to_pydict()
+        n = t.num_rows
+        for i in range(n):
+            mix = p['mix'][i]
+            if not isinstance(mix, (list, tuple)) or len(mix) != 5:
+                continue
+
+            raw_proc = p.get('threshold', [None] * n)[i]
+            raw_score = p.get('lcoe', [None] * n)[i]
+            if raw_proc is None or raw_score is None:
+                continue
+
+            proc_pct = float(raw_proc) * 100.0 if float(raw_proc) <= 5 else float(raw_proc)
+            score_pct = float(raw_score) * 100.0 if float(raw_score) <= 1.5 else float(raw_score)
+            threshold = float(p.get('source_threshold', [None] * n)[i] or 0.0)
+
+            rows.append({
+                'iso': p['iso'][i],
+                'threshold': threshold,
+                'clean_firm': int(round(float(mix[0]) * 100.0)),
+                'solar': int(round(float(mix[1]) * 100.0)),
+                'wind': int(round(float(mix[2]) * 100.0)),
+                'hydro': int(round(float(mix[3]) * 100.0)),
+                'procurement_pct': int(round(proc_pct)),
+                'battery_dispatch_pct': float(mix[4]) * 100.0,
+                'battery8_dispatch_pct': 0.0,
+                'ldes_dispatch_pct': 0.0,
+                'hourly_match_score': score_pct,
+                'pareto_type': p.get('dispatch_mode', [''])[i] or '',
+            })
+
+        size_mb = os.path.getsize(path) / (1024 * 1024)
+        print(f"  {os.path.basename(path)}: {n:>10,} rows ({size_mb:.1f} MB)")
+
+    if not rows:
+        return None
+
+    table = pa.Table.from_pylist(rows)
+    print(f"  Combined Step 1.5 rows: {table.num_rows:,}")
+    return table
 
 
 def step0_existing_generation_filter(table):
@@ -365,7 +429,11 @@ def main():
     print("=" * 70)
 
     total_start = time.time()
-    table = load_pfs()
+    table = load_step1_5_raw_pfs()
+    if table is None:
+        table = load_pfs()
+    else:
+        print("Using Step 1.5 raw parquet directory as Step 2 input source")
 
     # Step 0: Existing generation utilization filter — DISABLED (Feb 20, 2026)
     # Removed to allow below-floor mixes (hydro=0, low clean_firm) into the EF
