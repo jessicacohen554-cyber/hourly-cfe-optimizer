@@ -16,9 +16,9 @@ print('Dependencies OK: numba, pyarrow')
 PY
 
 echo "Resuming NYISO 100% threshold from checkpoint..."
-python complete_iso_thresholds.py NYISO 100
+python "scripts/step 1 PFS - individual ISO threshold selector.py" NYISO 100
 
 echo "Resuming CAISO 100% threshold from checkpoint..."
-python complete_iso_thresholds.py CAISO 100
+python "scripts/step 1 PFS - individual ISO threshold selector.py" CAISO 100
 
 echo "Done. NYISO and CAISO 100% threshold completion attempted."
