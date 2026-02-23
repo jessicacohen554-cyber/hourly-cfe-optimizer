@@ -15,7 +15,7 @@ Reference data sources:
   - Monitoring Analytics 2024 SOM: https://monitoringanalytics.com/reports/PJM_State_of_the_Market/2024/
   - EIA Wholesale Markets: https://www.eia.gov/electricity/wholesalemarkets/data.php?rto=pjm
   - EIA Hourly Electric Grid Monitor: data/EIA 930 Data/eia_hourly_{ISO}_{YEAR}.json
-  - EIA Hourly Demand: data/eia_demand_{ISO}_{YEAR}.json
+  - EIA Hourly Demand: data/EIA 930 Data/eia_demand_{ISO}_{YEAR}.json
 
 Usage:
   python calibrate_lmp_model.py                  # Weather-normalized calibration
@@ -326,7 +326,7 @@ def run_qa_actual(iso='PJM', year=2025, fuel_level='Medium'):
 
     Instead of weather-normalized model profiles, loads raw EIA hourly files:
       data/EIA 930 Data/eia_hourly_{ISO}_{YEAR}.json  — generation by fuel type (MW per hour)
-      data/eia_demand_{ISO}_{YEAR}.json  — demand (MW per hour)
+      data/EIA 930 Data/eia_demand_{ISO}_{YEAR}.json  — demand (MW per hour)
 
     Computes actual clean %, actual fossil dispatch, then runs LMP engine on
     the actual residual demand. Cross-references model constants against EIA actuals.
@@ -337,7 +337,7 @@ def run_qa_actual(iso='PJM', year=2025, fuel_level='Medium'):
     )
 
     gen_path = os.path.join(EIA_930_DATA_DIR, f'eia_hourly_{iso}_{year}.json')
-    dem_path = os.path.join(DATA_DIR, f'eia_demand_{iso}_{year}.json')
+    dem_path = os.path.join(EIA_930_DATA_DIR, f'eia_demand_{iso}_{year}.json')
 
     if not os.path.exists(gen_path) or not os.path.exists(dem_path):
         print(f"  ERROR: EIA {year} data not found for {iso}")
