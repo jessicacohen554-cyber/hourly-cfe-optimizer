@@ -88,7 +88,8 @@ hourly-cfe-optimizer/
 │   ├── eia_demand_profiles.json
 │   ├── eia_generation_profiles.json
 │   ├── EIA 930 Data/
-│   │   └── eia_hourly_*.json     # Per-ISO hourly data (2024-2025)
+│   │   ├── eia_hourly_*.json     # Per-ISO hourly generation data
+│   │   └── eia_demand_*.json     # Per-ISO hourly demand data
 │   ├── egrid_emission_rates.json
 │   └── ...
 ├── dashboard/
