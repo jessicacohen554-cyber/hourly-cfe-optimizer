@@ -23,6 +23,9 @@ from collections import defaultdict
 
 # ── Paths ──
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+from parquet_io import load_from_parquets, find_input_dir
+
 RESULTS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_results.json')
 JS_OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'js', 'mac-stats-data.js')
 JSON_OUTPUT_PATH = os.path.join(BASE_DIR, 'data', 'mac_stats.json')
@@ -39,9 +42,16 @@ WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 4
 
 
 def load_results():
-    """Load optimizer results JSON."""
-    with open(RESULTS_PATH, 'r') as f:
-        return json.load(f)
+    """Load optimizer results from parquets (preferred) or JSON (fallback)."""
+    input_dir = find_input_dir(ISOS)
+    if input_dir:
+        print(f"Loading from parquets: {input_dir}")
+        return load_from_parquets(input_dir, ISOS)
+    if os.path.exists(RESULTS_PATH):
+        print(f"Loading from JSON: {RESULTS_PATH}")
+        with open(RESULTS_PATH, 'r') as f:
+            return json.load(f)
+    raise FileNotFoundError(f"No parquets found and {RESULTS_PATH} doesn't exist")
 
 
 def medium_key(iso):
