@@ -36,7 +36,7 @@ except ImportError:
             return args[0]
         return decorator
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 
 H = 8760
@@ -134,13 +134,13 @@ FUEL_ADJUSTMENTS = {
 
 def load_common_data():
     """Load all shared data files: demand, gen profiles, emission rates, fossil mix."""
-    with open(os.path.join(DATA_DIR, 'eia_demand_profiles.json')) as f:
+    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')) as f:
         demand_data = json.load(f)
-    with open(os.path.join(DATA_DIR, 'eia_generation_profiles.json')) as f:
+    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles.json')) as f:
         gen_profiles = json.load(f)
     with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
         emission_rates = json.load(f)
-    with open(os.path.join(DATA_DIR, 'eia_fossil_mix.json')) as f:
+    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_fossil_mix.json')) as f:
         fossil_mix = json.load(f)
     return demand_data, gen_profiles, emission_rates, fossil_mix
 
