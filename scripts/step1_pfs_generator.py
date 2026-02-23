@@ -20,7 +20,7 @@ Key features:
   - Parallel ISO execution (multiprocessing)
   - Vectorized batch mix evaluation
 
-Output: data/step1_raw_pfs_parquets/*_step1_pfs_t*.parquet (per ISO/threshold)
+Output: data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet (per ISO/threshold)
 
 Resource types (4D optimization):
   - Clean Firm: nuclear (seasonal-derated) + CCS-CCGT (flat baseload)
@@ -1643,10 +1643,7 @@ def process_iso(args):
     for threshold in THRESHOLDS:
         t_str = str(threshold)
         if _is_threshold_done(iso, threshold):
-            # Load from done parquet — use whichever naming convention exists
-            done_path = (_threshold_done_path(iso, threshold)
-                         if os.path.exists(_threshold_done_path(iso, threshold))
-                         else _threshold_done_path_legacy(iso, threshold))
+            done_path = _threshold_done_path(iso, threshold)
             try:
                 done_table = pq.read_table(done_path)
                 n = done_table.num_rows
@@ -1824,21 +1821,14 @@ def _mix_progress_path(iso, threshold):
 
 
 def _threshold_done_path(iso, threshold):
-    """Path for completed threshold results parquet (new canonical naming)."""
-    t_str = _normalize_threshold_str(threshold)
-    return os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_step1_pfs_t{t_str}.parquet')
-
-
-def _threshold_done_path_legacy(iso, threshold):
-    """Path for completed threshold results parquet (legacy naming convention)."""
+    """Path for completed threshold results parquet: {ISO}_t{XX}_raw_pfs.parquet."""
     t_str = _normalize_threshold_str(threshold)
     return os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_t{t_str}_raw_pfs.parquet')
 
 
 def _is_threshold_done(iso, threshold):
-    """Check if a threshold has a completed parquet (either naming convention)."""
-    return (os.path.exists(_threshold_done_path(iso, threshold)) or
-            os.path.exists(_threshold_done_path_legacy(iso, threshold)))
+    """Check if a threshold has a completed parquet."""
+    return os.path.exists(_threshold_done_path(iso, threshold))
 
 
 def _save_mix_progress(iso, threshold, candidates, phase, mix_cursor,
@@ -2042,33 +2032,6 @@ def _save_threshold_done(iso, threshold, candidates):
         os.remove(progress_path)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# OUTPUT — JSON + Parquet
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _results_to_rows(all_results):
-    """Convert nested results dict to flat list of row dicts for Parquet."""
-    rows = []
-    for iso, iso_data in all_results.items():
-        for t_str, t_data in iso_data.get('thresholds', {}).items():
-            for candidate in t_data.get('candidates', []):
-                rows.append({
-                    'iso': iso,
-                    'threshold': float(t_str),
-                    'clean_firm': candidate['resource_mix']['clean_firm'],
-                    'solar': candidate['resource_mix']['solar'],
-                    'wind': candidate['resource_mix']['wind'],
-                    'hydro': candidate['resource_mix']['hydro'],
-                    'procurement_pct': candidate['procurement_pct'],
-                    'battery_dispatch_pct': candidate['battery_dispatch_pct'],
-                    'battery8_dispatch_pct': candidate.get('battery8_dispatch_pct', 0),
-                    'ldes_dispatch_pct': candidate['ldes_dispatch_pct'],
-                    'hourly_match_score': candidate['hourly_match_score'],
-                    'pareto_type': candidate.get('pareto_type', ''),
-                })
-    return rows
-
-
 def _rows_to_table(rows):
     """Convert list of row dicts to a PyArrow table."""
     if not rows:
@@ -2077,66 +2040,6 @@ def _rows_to_table(rows):
         col: [r[col] for r in rows]
         for col in rows[0].keys()
     })
-
-
-def save_results_parquet(all_results, output_path):
-    """Save results as Parquet."""
-    if not HAS_PARQUET:
-        print("  Parquet skipped — pyarrow not installed")
-        return
-
-    rows = _results_to_rows(all_results)
-    if not rows:
-        print("  Parquet skipped — no results")
-        return
-
-    table = _rows_to_table(rows)
-    pq.write_table(table, output_path, compression='snappy')
-    size_mb = os.path.getsize(output_path) / (1024 * 1024)
-    print(f"  Parquet saved: {output_path} ({size_mb:.1f} MB)")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PERSISTENT SOLUTION CACHE — never lose feasible solutions across runs
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _dedup_parquet_table(table):
-    """Remove duplicate rows from a Parquet table based on solution key columns."""
-    import pyarrow.compute as pc
-
-    # Build composite key for dedup
-    key_cols = ['iso', 'threshold', 'clean_firm', 'solar', 'wind', 'hydro',
-                'procurement_pct', 'battery_dispatch_pct', 'battery8_dispatch_pct',
-                'ldes_dispatch_pct']
-
-    n = table.num_rows
-    cols = {col: table.column(col).to_pylist() for col in key_cols}
-
-    seen = set()
-    keep = []
-    for i in range(n):
-        key = tuple(cols[col][i] for col in key_cols)
-        if key not in seen:
-            seen.add(key)
-            keep.append(i)
-
-    if len(keep) == n:
-        return table  # No duplicates
-
-    deduped = table.take(keep)
-    removed = n - len(keep)
-    if removed > 0:
-        print(f"  Dedup: removed {removed:,} duplicates ({n:,} → {deduped.num_rows:,})")
-    return deduped
-
-
-def _count_solutions(results):
-    """Count total solutions across all ISOs × thresholds."""
-    total = 0
-    for iso_data in results.values():
-        for t_data in iso_data.get('thresholds', {}).values():
-            total += len(t_data.get('candidates', []))
-    return total
 
 
 def _parse_cli_args(argv):
