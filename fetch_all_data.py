@@ -474,7 +474,7 @@ def main():
     for (respondent, year), hourly_array in all_demand.items():
         region = REGION_MAP[respondent]
         filename = f"eia_demand_{region}_{year}.json"
-        filepath = os.path.join(DATA_DIR, filename)
+        filepath = os.path.join(EIA_930_DATA_DIR, filename)
         save_json(filepath, hourly_array)
 
     # Aggregated profiles — merge with existing data (preserves ISOs not fetched)
