@@ -28,7 +28,7 @@ import pandas as pd
 import numpy as np
 
 # Add project root to path for dispatch_utils import
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 
 from dispatch_utils import (
@@ -41,7 +41,7 @@ from dispatch_utils import (
 SCENARIOS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_scenarios.parquet')
 META_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_meta.json')
 EGRID_PATH = os.path.join(BASE_DIR, 'data', 'egrid_emission_rates.json')
-FOSSIL_MIX_PATH = os.path.join(BASE_DIR, 'data', 'eia_fossil_mix.json')
+FOSSIL_MIX_PATH = os.path.join(BASE_DIR, 'data', 'EIA 930 Data', 'eia_fossil_mix.json')
 OUTPUT_JSON = os.path.join(BASE_DIR, 'data', 'consequential_queue.json')
 OUTPUT_JS = os.path.join(BASE_DIR, 'dashboard', 'js', 'consequential-queue-data.js')
 

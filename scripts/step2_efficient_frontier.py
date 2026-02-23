@@ -47,7 +47,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
 STEP1_5_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')

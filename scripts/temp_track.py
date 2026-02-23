@@ -30,7 +30,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
 
 from step3_cost_optimization import (

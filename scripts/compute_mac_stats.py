@@ -22,7 +22,7 @@ import numpy as np
 from collections import defaultdict
 
 # ── Paths ──
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RESULTS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_results.json')
 JS_OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'js', 'mac-stats-data.js')
 JSON_OUTPUT_PATH = os.path.join(BASE_DIR, 'data', 'mac_stats.json')

@@ -43,7 +43,7 @@ except ImportError:
 # CONSTANTS
 # ══════════════════════════════════════════════════════════════════════════════
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 
 BASE_URL = "https://api.eia.gov/v2/electricity/rto/"
@@ -537,7 +537,7 @@ def compute_fossil_shares_hourly(coal_hourly, gas_hourly, oil_hourly):
 
 def load_existing_demand_profiles():
     """Load existing 2025 demand profiles for annual totals."""
-    path = os.path.join(DATA_DIR, 'eia_demand_profiles.json')
+    path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')
     if not os.path.exists(path):
         print(f"WARNING: {path} not found. Cannot scale to 2025 totals.")
         return None
