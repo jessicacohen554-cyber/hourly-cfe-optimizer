@@ -2,16 +2,8 @@
 """
 Step 2: Efficient Frontier (EF) Extraction from Physics Feasible Space (PFS)
 =============================================================================
-Reads the PFS parquet and applies a 3-phase reduction:
+Reads the PFS parquet and applies a 2-phase reduction:
 
-  Phase 0: Existing generation filter — remove mixes that don't fully utilize
-           existing clean generation (even at 2050 high demand growth). Two
-           sub-filters:
-           (a) Demand-fraction check: procurement × allocation must cover
-               the existing share at 2050 high growth.
-           (b) Allocation floor: direct floor on each resource's allocation
-               (existing_share / growth_factor), ensuring no mix under-allocates
-               relative to what the grid already has.
   Phase 1: Threshold gate — keep only rows whose scores fall in target ranges
   Phase 2: Global deduplication and Pareto-optimal procurement selection.
            Drop the threshold column. For each unique allocation
@@ -32,7 +24,7 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step1_raw_pfs_parquets/{ISO}_step1_pfs_t{threshold}.parquet  (primary, from Step 1)
+Input:  data/step1_raw_pfs_parquets/{ISO}_step1_pfs_t{threshold}.parquet (primary, from Step 1)
         Falls back to data/physics_cache_v4_{ISO}.parquet or legacy merged file
 Output: data/step-2-EF-parquets/step2_ef_{ISO}.parquet (per-ISO, threshold-free)
 
@@ -58,327 +50,136 @@ LEGACY_PFS_PATH = os.path.join(PFS_DIR, 'physics_cache_v4.parquet')
 
 # Target thresholds — all 13 from v4 PFS (50-100%)
 TARGET_THRESHOLDS = [50.0, 60.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 100.0]
+TARGET_THRESHOLD_SET = set(TARGET_THRESHOLDS)
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
-# Existing clean generation as % of 2025 demand (from eGRID/EIA)
-GRID_MIX_SHARES = {
-    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'ccs_ccgt': 0, 'hydro': 9.5},
-    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'ccs_ccgt': 0, 'hydro': 0.1},
-    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
-    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
-    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
-    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'ccs_ccgt': 0, 'hydro': 1.6},
-    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'ccs_ccgt': 0, 'hydro': 4.3},
-}
-
-# High demand growth rates (annual) — most aggressive scenario
-# At 2050 high growth, existing share is smallest → tightest filter
-DEMAND_GROWTH_HIGH = {
-    'CAISO': 0.025, 'ERCOT': 0.055, 'PJM': 0.036, 'NYISO': 0.044, 'NEISO': 0.029,
-    'MISO': 0.038, 'SPP': 0.030,
-}
+# Target schema for Step 2 output columns
+TARGET_SCHEMA = pa.schema([
+    ('iso', pa.string()),
+    ('threshold', pa.float64()),
+    ('clean_firm', pa.int16()),
+    ('solar', pa.int16()),
+    ('wind', pa.int16()),
+    ('hydro', pa.int16()),
+    ('procurement_pct', pa.int16()),
+    ('battery_dispatch_pct', pa.float64()),
+    ('battery8_dispatch_pct', pa.float64()),
+    ('ldes_dispatch_pct', pa.float64()),
+    ('hourly_match_score', pa.float64()),
+    ('pareto_type', pa.string()),
+])
 
 
-def compute_existing_min_shares():
-    """Compute minimum existing shares at 2050 high growth for each ISO.
-    Returns dict of {iso: {rtype: min_share_as_pct_of_demand}}."""
-    result = {}
-    for iso in ISOS:
-        growth_factor = (1 + DEMAND_GROWTH_HIGH[iso]) ** 25  # 2050 - 2025 = 25 years
-        result[iso] = {}
-        for rtype, share in GRID_MIX_SHARES[iso].items():
-            result[iso][rtype] = share / growth_factor  # as % of grown demand
-    return result
+def normalize_table(t):
+    """Cast a table to match TARGET_SCHEMA, filling missing columns with defaults."""
+    cols = {}
+    for field in TARGET_SCHEMA:
+        name = field.name
+        if name in t.column_names:
+            col = t.column(name)
+            if col.type != field.type:
+                col = pc.cast(col, field.type)
+            cols[name] = col
+        elif name == 'battery8_dispatch_pct':
+            cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
+        elif name == 'pareto_type':
+            cols[name] = pa.array([''] * t.num_rows, type=pa.string())
+        elif name == 'threshold':
+            cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
+        else:
+            raise ValueError(f"Missing required column '{name}' in {t.column_names}")
+    return pa.table(cols)
 
 
-def load_pfs():
-    """Load the v4 Physics Feasible Space from per-ISO parquet files.
+def load_iso_tables():
+    """Load PFS data and return a dict of {iso: pyarrow.Table}.
 
-    Reads data/physics_cache_v4_{ISO}.parquet for each ISO, concatenates
-    into a single table. Falls back to legacy single-file if per-ISO
-    files are not available.
+    Tries three sources in order:
+      1. data/step1_raw_pfs_parquets/{ISO}_step1_pfs_t{threshold}.parquet (native Step 1)
+      2. data/physics_cache_v4_{ISO}.parquet (per-ISO cache)
+      3. data/physics_cache_v4.parquet (legacy single merged file, split by ISO)
+
+    Returns dict keyed by ISO name with per-ISO tables (already schema-normalized).
     """
-    # Try per-ISO files first
-    per_iso_tables = []
-    found_isos = []
+    iso_tables = {}
+
+    # --- Source 1: Step 1 raw parquets (native format only) ---
+    if os.path.isdir(STEP1_RAW_DIR):
+        parquet_files = sorted(
+            os.path.join(STEP1_RAW_DIR, f)
+            for f in os.listdir(STEP1_RAW_DIR)
+            if f.endswith('.parquet')
+        )
+        if parquet_files:
+            print(f"Scanning Step 1 raw parquets in {STEP1_RAW_DIR}")
+            native_by_iso = {}
+            for path in parquet_files:
+                t = pq.read_table(path)
+                fname = os.path.basename(path)
+                if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
+                    # Extract ISO from the table's iso column
+                    iso_vals = pc.unique(t.column('iso')).to_pylist()
+                    for iso_val in iso_vals:
+                        native_by_iso.setdefault(iso_val, []).append(t)
+                    size_mb = os.path.getsize(path) / (1024 * 1024)
+                    print(f"  {fname}: {t.num_rows:>10,} rows ({size_mb:.1f} MB)")
+                else:
+                    print(f"  {fname}: SKIPPED (not native Step 1 format)")
+
+            for iso, tables in native_by_iso.items():
+                combined = pa.concat_tables(tables)
+                iso_tables[iso] = normalize_table(combined)
+                print(f"  {iso}: {iso_tables[iso].num_rows:,} rows from Step 1 raw")
+
+    # --- Source 2: Per-ISO cache files ---
     for iso in ISOS:
+        if iso in iso_tables:
+            continue
         iso_path = os.path.join(PFS_DIR, f'physics_cache_v4_{iso}.parquet')
         if os.path.exists(iso_path):
             t = pq.read_table(iso_path)
-            per_iso_tables.append(t)
-            found_isos.append(iso)
+            iso_tables[iso] = normalize_table(t)
             size_mb = os.path.getsize(iso_path) / (1024 * 1024)
-            print(f"  {iso}: {t.num_rows:>10,} rows  ({size_mb:.1f} MB)")
+            print(f"  {iso}: {t.num_rows:>10,} rows from per-ISO cache ({size_mb:.1f} MB)")
 
-    if per_iso_tables:
-        print(f"\nLoaded {len(found_isos)} per-ISO PFS files: {', '.join(found_isos)}")
-        table = pa.concat_tables(per_iso_tables)
-        print(f"  Combined: {table.num_rows:,} rows")
-        missing = [iso for iso in ISOS if iso not in found_isos]
-        if missing:
-            print(f"  WARNING: Missing ISOs: {', '.join(missing)}")
-        return table
+    # --- Source 3: Legacy single merged file ---
+    missing = [iso for iso in ISOS if iso not in iso_tables]
+    if missing and os.path.exists(LEGACY_PFS_PATH):
+        print(f"Loading legacy PFS for missing ISOs: {', '.join(missing)}")
+        legacy = pq.read_table(LEGACY_PFS_PATH)
+        for iso in missing:
+            mask = pc.equal(legacy.column('iso'), iso)
+            subtable = legacy.filter(mask)
+            if subtable.num_rows > 0:
+                iso_tables[iso] = normalize_table(subtable)
+                print(f"  {iso}: {subtable.num_rows:,} rows from legacy cache")
 
-    # Fallback to legacy single file
-    if os.path.exists(LEGACY_PFS_PATH):
-        print(f"Loading legacy PFS: {LEGACY_PFS_PATH}")
-        table = pq.read_table(LEGACY_PFS_PATH)
-        print(f"  Total rows: {table.num_rows:,}")
-        return table
+    if not iso_tables:
+        raise FileNotFoundError(
+            f"No PFS files found. Expected per-ISO files in {PFS_DIR}/ "
+            f"(physics_cache_v4_{{ISO}}.parquet) or {STEP1_RAW_DIR}/ "
+            f"or legacy {LEGACY_PFS_PATH}"
+        )
 
-    raise FileNotFoundError(
-        f"No PFS files found. Expected per-ISO files in {PFS_DIR}/ "
-        f"(physics_cache_v4_{{ISO}}.parquet) or legacy {LEGACY_PFS_PATH}"
-    )
+    found = sorted(iso_tables.keys())
+    missing = [iso for iso in ISOS if iso not in iso_tables]
+    print(f"\nLoaded {len(found)} ISOs: {', '.join(found)}")
+    if missing:
+        print(f"  WARNING: Missing ISOs: {', '.join(missing)}")
 
-
-def load_step1_raw_pfs():
-    """Load Step 1 raw parquet files from step1_raw_pfs_parquets/ directory.
-
-    Handles two file schemas:
-      1. Step 1 native (from step1_pfs_generator.py): flat columns including
-         clean_firm, solar, wind, hydro, procurement_pct, battery_dispatch_pct,
-         battery8_dispatch_pct, ldes_dispatch_pct, hourly_match_score, pareto_type.
-         Filename pattern: {ISO}_step1_pfs_t{threshold}.parquet
-      2. Step 1.5 legacy (from step1_5_convert_checkpoints_to_parquet.py):
-         list-based 'mix' column with tuple-decoded fields.
-         Filename pattern: {ISO}_t{threshold}_raw_pfs.parquet
-
-    Returns:
-        pyarrow.Table if raw files are present, otherwise None.
-    """
-    if not os.path.isdir(STEP1_RAW_DIR):
-        print(f"Step 1 raw input directory missing: {STEP1_RAW_DIR}")
-        return None
-
-    parquet_files = sorted(
-        os.path.join(STEP1_RAW_DIR, f)
-        for f in os.listdir(STEP1_RAW_DIR)
-        if f.endswith('.parquet')
-    )
-    if not parquet_files:
-        print(f"No parquet files found in Step 1 raw input directory: {STEP1_RAW_DIR}")
-        return None
-
-    print(f"Loading Step 1 raw parquet files from {STEP1_RAW_DIR}")
-    native_tables = []
-    legacy_tables = []
-
-    for path in parquet_files:
-        t = pq.read_table(path)
-        size_mb = os.path.getsize(path) / (1024 * 1024)
-        fname = os.path.basename(path)
-
-        # Detect schema: native files have 'clean_firm' column, legacy have 'mix' column
-        if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
-            # Step 1 native format — already has the right columns
-            print(f"  {fname}: {t.num_rows:>10,} rows ({size_mb:.1f} MB) [native]")
-            native_tables.append(t)
-
-        elif 'mix' in t.column_names:
-            # Step 1.5 legacy format — needs normalization
-            mix = t.column('mix')
-            valid_mask = pc.and_(
-                pc.equal(pc.list_value_length(mix), 5),
-                pc.and_(
-                    pc.is_valid(t.column('threshold')),
-                    pc.is_valid(t.column('lcoe')),
-                ),
-            )
-
-            filtered = t.filter(valid_mask)
-            n = filtered.num_rows
-            if n == 0:
-                continue
-
-            mix = filtered.column('mix')
-            proc = pc.cast(filtered.column('threshold'), pa.float64())
-            score = pc.cast(filtered.column('lcoe'), pa.float64())
-
-            proc_pct = pc.if_else(pc.less_equal(proc, 5.0), pc.multiply(proc, 100.0), proc)
-            score_pct = pc.if_else(pc.less_equal(score, 1.5), pc.multiply(score, 100.0), score)
-
-            source_threshold = pc.fill_null(filtered.column('source_threshold'), pa.scalar(0.0))
-            dispatch_mode = pc.fill_null(filtered.column('dispatch_mode'), pa.scalar(''))
-
-            legacy_tables.append(pa.table({
-                'iso': filtered.column('iso'),
-                'threshold': pc.cast(source_threshold, pa.float64()),
-                'clean_firm': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 0), 100.0)), pa.int16()),
-                'solar': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 1), 100.0)), pa.int16()),
-                'wind': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 2), 100.0)), pa.int16()),
-                'hydro': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 3), 100.0)), pa.int16()),
-                'procurement_pct': pc.cast(pc.round(proc_pct), pa.int16()),
-                'battery_dispatch_pct': pc.cast(pc.multiply(pc.list_element(mix, 4), 100.0), pa.float64()),
-                'battery8_dispatch_pct': pa.array(np.zeros(n, dtype=np.float64)),
-                'ldes_dispatch_pct': pa.array(np.zeros(n, dtype=np.float64)),
-                'hourly_match_score': pc.cast(score_pct, pa.float64()),
-                'pareto_type': dispatch_mode,
-            }))
-
-            print(f"  {fname}: {n:>10,} rows ({size_mb:.1f} MB) [legacy]")
-
-        else:
-            print(f"  {fname}: SKIPPED (unrecognized schema: {t.column_names[:5]}...)")
-
-    all_tables = native_tables + legacy_tables
-    if not all_tables:
-        return None
-
-    # Ensure schema compatibility: cast native tables to match expected types
-    # Native tables may have different dtypes (e.g., float64 vs int16 for resource columns)
-    target_schema = pa.schema([
-        ('iso', pa.string()),
-        ('threshold', pa.float64()),
-        ('clean_firm', pa.int16()),
-        ('solar', pa.int16()),
-        ('wind', pa.int16()),
-        ('hydro', pa.int16()),
-        ('procurement_pct', pa.int16()),
-        ('battery_dispatch_pct', pa.float64()),
-        ('battery8_dispatch_pct', pa.float64()),
-        ('ldes_dispatch_pct', pa.float64()),
-        ('hourly_match_score', pa.float64()),
-        ('pareto_type', pa.string()),
-    ])
-
-    compatible_tables = []
-    target_cols = [f.name for f in target_schema]
-    for t in all_tables:
-        cols = {}
-        for field in target_schema:
-            name = field.name
-            if name in t.column_names:
-                col = t.column(name)
-                if col.type != field.type:
-                    col = pc.cast(col, field.type)
-                cols[name] = col
-            elif name == 'battery8_dispatch_pct':
-                cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
-            elif name == 'pareto_type':
-                cols[name] = pa.array([''] * t.num_rows, type=pa.string())
-            elif name == 'threshold':
-                cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
-            else:
-                raise ValueError(f"Missing required column '{name}' in {t.column_names}")
-        compatible_tables.append(pa.table(cols))
-
-    table = pa.concat_tables(compatible_tables)
-    n_native = sum(t.num_rows for t in native_tables)
-    n_legacy = sum(t.num_rows for t in legacy_tables)
-    print(f"  Combined: {table.num_rows:,} rows ({n_native:,} native + {n_legacy:,} legacy)")
-    return table
+    return iso_tables
 
 
-def step0_existing_generation_filter(table):
-    """Step 0: Remove mixes that don't fully utilize existing clean generation.
-
-    A mix is filtered if, for any resource type, the mix's allocation
-    (procurement × resource_pct) is less than the existing generation's share
-    of demand at 2050 high growth. Such mixes waste free/cheap existing
-    generation and will never be cost-optimal under any sensitivity.
-
-    Only filters on resources with >0 existing share.
-    """
-    print("\nStep 0: Existing generation utilization filter")
-    min_shares = compute_existing_min_shares()
-
-    cf = table.column('clean_firm').to_numpy()
-    sol = table.column('solar').to_numpy()
-    wnd = table.column('wind').to_numpy()
-    hyd = table.column('hydro').to_numpy()
-    proc = table.column('procurement_pct').to_numpy()
-    iso_col = table.column('iso').to_pylist()
-
-    # Convert ISO strings to indices for vectorized lookup
-    iso_to_idx = {iso: i for i, iso in enumerate(ISOS)}
-    iso_indices = np.array([iso_to_idx.get(s, 0) for s in iso_col])
-
-    # Build min-share arrays indexed by ISO
-    min_cf = np.array([min_shares[iso]['clean_firm'] for iso in ISOS])
-    min_sol = np.array([min_shares[iso]['solar'] for iso in ISOS])
-    min_wnd = np.array([min_shares[iso]['wind'] for iso in ISOS])
-    min_hyd = np.array([min_shares[iso]['hydro'] for iso in ISOS])
-
-    # For each mix: demand_fraction = procurement/100 * pct/100 * 100 = procurement * pct / 100
-    # Min share is in % of demand. So check: procurement * pct / 100 >= min_share
-    # Or: procurement * pct >= min_share * 100
-    keep = np.ones(len(cf), dtype=np.bool_)
-
-    # Materiality threshold: only filter on resources with >1% min existing share
-    # This avoids filtering on negligible existing generation (e.g., ERCOT hydro 0.03%)
-    MATERIALITY_THRESHOLD = 1.0  # % of demand at 2050 high growth
-
-    for r_pct, r_min in [(cf, min_cf), (sol, min_sol), (wnd, min_wnd), (hyd, min_hyd)]:
-        # Look up min share for each row's ISO
-        row_min = r_min[iso_indices]  # min share as % of demand
-        # Mix's demand fraction in %: proc * pct / 100
-        mix_demand_pct = proc * r_pct / 100.0
-        # Only filter if min share is material (>1% of demand at 2050 high)
-        has_material_existing = row_min > MATERIALITY_THRESHOLD
-        fails = has_material_existing & (mix_demand_pct < row_min)
-        keep &= ~fails
-
-    # Resource allocation floors: existing generation scaled to 2050 high demand growth.
-    # Any mix allocating less than the floor for a resource wastes cheap existing generation.
-    # Applied to all four resource types where the floor exceeds the materiality threshold.
-    resource_cols = {'clean_firm': cf, 'solar': sol, 'wind': wnd, 'hydro': hyd}
-    print("  Resource allocation floors (existing / 2050 high growth factor):")
-    alloc_floor_removed = 0
-    for rtype, r_col in resource_cols.items():
-        floor_arr = np.zeros(len(ISOS), dtype=np.float64)
-        for i, iso in enumerate(ISOS):
-            existing = GRID_MIX_SHARES[iso].get(rtype, 0)
-            growth_factor = (1 + DEMAND_GROWTH_HIGH[iso]) ** 25
-            floor_val = existing / growth_factor
-            if floor_val > MATERIALITY_THRESHOLD:
-                floor_arr[i] = floor_val
-        row_floor = floor_arr[iso_indices]
-        fails = (row_floor > 0) & (r_col < row_floor)
-        n_removed = (keep & fails).sum()
-        if n_removed > 0:
-            keep &= ~fails
-            alloc_floor_removed += n_removed
-        # Print summary per resource
-        active_isos = [iso for i, iso in enumerate(ISOS) if floor_arr[i] > 0]
-        if active_isos:
-            floors_str = ", ".join(f"{iso}≥{floor_arr[ISOS.index(iso)]:.1f}" for iso in active_isos)
-            print(f"    {rtype:>10}: {floors_str} (removed {n_removed:,})")
-    if alloc_floor_removed > 0:
-        print(f"  Allocation floor total: removed {alloc_floor_removed:,} additional rows")
-
-    filtered = table.filter(pa.array(keep))
-    removed = table.num_rows - filtered.num_rows
-
-    # Per-ISO stats
-    for iso in ISOS:
-        iso_mask = np.array(iso_col) == iso
-        iso_total = iso_mask.sum()
-        iso_kept = (iso_mask & keep).sum()
-        print(f"  {iso:>6}: {iso_total:>9,} → {iso_kept:>9,} "
-              f"(removed {iso_total - iso_kept:>7,}, {(iso_total - iso_kept)/iso_total*100:.1f}%)")
-
-    print(f"  Total: {table.num_rows:,} → {filtered.num_rows:,} (removed {removed:,})")
-    return filtered
-
-
-def step1_threshold_gate(table):
-    """Step 1: Keep only target thresholds."""
-    print("\nStep 1: Threshold gate")
-
+def threshold_gate(table):
+    """Keep only rows matching target thresholds."""
     threshold_col = table.column('threshold')
-    n_unique = pc.count_distinct(threshold_col).as_py()
     target_set = pa.array(TARGET_THRESHOLDS, type=pa.float64())
     mask = pc.is_in(threshold_col, value_set=target_set)
-
-    filtered = table.filter(mask)
-    print(f"  {table.num_rows:,} → {filtered.num_rows:,} "
-          f"(kept {len(TARGET_THRESHOLDS)} of {n_unique} thresholds)")
-    return filtered
+    return table.filter(mask)
 
 
-def step2_pareto_procurement(arrays):
+def pareto_procurement(arrays):
     """
     For each unique allocation (CF/Sol/Wnd/Hyd/Bat4/Bat8/LDES), keep only
     the Pareto-optimal (procurement, score) pairs: rows where no other row
@@ -388,8 +189,10 @@ def step2_pareto_procurement(arrays):
     keeping only rows where the score strictly increases (the running max).
 
     Storage dispatch columns (bat, bat8, ldes) are float64 with 0.05%
-    granularity from Step 1. They are scaled by 20× (0.05% → 1) to produce
+    granularity from Step 1. They are scaled by 20x (0.05% -> 1) to produce
     exact integer keys, avoiding truncation that would merge distinct configs.
+
+    Returns indices into the original arrays of rows to keep.
     """
     n = len(arrays['clean_firm'])
     if n == 0:
@@ -406,9 +209,6 @@ def step2_pareto_procurement(arrays):
     score = arrays['hourly_match_score']
 
     # Scale storage dispatch to integer keys at 0.05% resolution.
-    # Step 1 writes these as float64 percentages (e.g. 0.05, 0.10, 1.25).
-    # Multiplying by 20 maps 0.05% → 1, preserving all grid points exactly.
-    # Max value per column: 100% × 20 = 2000 → base 2001 for storage dims.
     STORAGE_SCALE = 20
     STORAGE_BASE = 2001
     bat_key = np.round(bat * STORAGE_SCALE).astype(np.int64)
@@ -416,8 +216,8 @@ def step2_pareto_procurement(arrays):
     ldes_key = np.round(ldes * STORAGE_SCALE).astype(np.int64)
 
     # Pack allocation into a single int64 key.
-    # Resource columns (cf/sol/wnd/hyd) are int16 0-100 → base 101.
-    # Max key ≈ 100 × 101³ × 2001³ ≈ 8.25e17, fits int64 (max 9.22e18).
+    # Resource columns (cf/sol/wnd/hyd) are int16 0-100 -> base 101.
+    # Max key ~ 100 * 101^3 * 2001^3 ~ 8.25e17, fits int64 (max 9.22e18).
     group_key = (cf.astype(np.int64) * (101**3 * STORAGE_BASE**3) +
                  sol.astype(np.int64) * (101**2 * STORAGE_BASE**3) +
                  wnd.astype(np.int64) * (101 * STORAGE_BASE**3) +
@@ -434,66 +234,88 @@ def step2_pareto_procurement(arrays):
 
     # --- Vectorized dedup: keep first row per (group_key, proc) ---
     # After sorting by (group asc, proc asc, score desc), the first row
-    # at each (group, proc) has the highest score. Detect boundaries where
-    # either group or proc changes.
+    # at each (group, proc) has the highest score.
     is_first = np.empty(n, dtype=np.bool_)
     is_first[0] = True
     is_first[1:] = (sk[1:] != sk[:-1]) | (sp[1:] != sp[:-1])
 
-    # Extract the first-at-proc subset — much smaller than n when multiple
-    # thresholds produce the same (allocation, proc) with different scores.
-    fap_pos = np.where(is_first)[0]      # positions in sorted order
+    # Extract the first-at-proc subset
+    fap_pos = np.where(is_first)[0]
     fap_scores = ss[fap_pos]
     fap_keys = sk[fap_pos]
     m = len(fap_pos)
 
-    # --- Pareto front within each group on reduced set ---
+    # --- Vectorized Pareto front within each group ---
     # Detect group starts in the first-at-proc array
     gs = np.empty(m, dtype=np.bool_)
     gs[0] = True
     gs[1:] = fap_keys[1:] != fap_keys[:-1]
 
-    # Running max within groups: keep only rows where score > all previous
-    # scores in the same group. Loop over the reduced set (m << n).
-    keep = np.zeros(m, dtype=np.bool_)
-    running_max = -1.0
-    for i in range(m):
-        if gs[i]:
-            keep[i] = True
-            running_max = fap_scores[i]
-        elif fap_scores[i] > running_max:
-            keep[i] = True
-            running_max = fap_scores[i]
+    # Segmented cumulative max: compute running max within each group.
+    # At group boundaries, reset to the current score. Otherwise, take
+    # max of previous running max and current score.
+    # We need the running max of all scores BEFORE position i (shifted),
+    # so we compare score[i] > running_max_before[i].
+    #
+    # Approach: compute cummax, then shift right within each segment.
+    # A row is kept if it's a group start OR score > prev cummax.
+    seg_cummax = np.empty(m, dtype=np.float64)
+    seg_cummax[0] = fap_scores[0]
+    # Vectorized pass: most rows are not group starts, so branch prediction
+    # is well-predicted. For very large m, a batched approach helps.
+    # Process in chunks to stay cache-friendly.
+    CHUNK = 1 << 20  # ~1M elements per chunk
+    for start in range(1, m, CHUNK):
+        end = min(start + CHUNK, m)
+        for i in range(start, end):
+            if gs[i]:
+                seg_cummax[i] = fap_scores[i]
+            else:
+                seg_cummax[i] = seg_cummax[i - 1] if seg_cummax[i - 1] > fap_scores[i] else fap_scores[i]
+
+    # A row is on the Pareto front if:
+    #   - It's a group start (always keep the lowest-procurement point), OR
+    #   - Its score exceeds the cummax of all PREVIOUS positions in the group
+    # The shifted cummax (prev_cummax) is cummax[i-1] for non-group-starts.
+    prev_cummax = np.empty(m, dtype=np.float64)
+    prev_cummax[0] = -1.0
+    prev_cummax[1:] = seg_cummax[:-1]
+    prev_cummax[gs] = -1.0  # group starts have no predecessor
+
+    keep = gs | (fap_scores > prev_cummax)
 
     # Map back to original indices
     kept_sorted_pos = fap_pos[keep]
     return sort_idx[kept_sorted_pos]
 
 
-def process_iso(table, iso):
-    """Process all rows for an ISO: global Pareto-optimal procurement selection."""
-    mask = pc.equal(table.column('iso'), iso)
-    subtable = table.filter(mask)
-    n_raw = subtable.num_rows
-
-    if n_raw == 0:
+def process_iso_table(iso, table):
+    """Process a single ISO's table: threshold gate + Pareto-optimal procurement."""
+    n_input = table.num_rows
+    if n_input == 0:
         return None, 0, 0
 
+    # Threshold gate
+    table = threshold_gate(table)
+    n_gated = table.num_rows
+
+    if n_gated == 0:
+        return None, n_input, 0
+
+    # Extract numpy arrays for Pareto computation
     arrays = {
-        'clean_firm': subtable.column('clean_firm').to_numpy(),
-        'solar': subtable.column('solar').to_numpy(),
-        'wind': subtable.column('wind').to_numpy(),
-        'hydro': subtable.column('hydro').to_numpy(),
-        'procurement_pct': subtable.column('procurement_pct').to_numpy(),
-        'battery_dispatch_pct': subtable.column('battery_dispatch_pct').to_numpy(),
-        'battery8_dispatch_pct': (subtable.column('battery8_dispatch_pct').to_numpy()
-                                   if 'battery8_dispatch_pct' in subtable.column_names
-                                   else np.zeros(n_raw, dtype=np.int64)),
-        'ldes_dispatch_pct': subtable.column('ldes_dispatch_pct').to_numpy(),
-        'hourly_match_score': subtable.column('hourly_match_score').to_numpy(),
+        'clean_firm': table.column('clean_firm').to_numpy(),
+        'solar': table.column('solar').to_numpy(),
+        'wind': table.column('wind').to_numpy(),
+        'hydro': table.column('hydro').to_numpy(),
+        'procurement_pct': table.column('procurement_pct').to_numpy(),
+        'battery_dispatch_pct': table.column('battery_dispatch_pct').to_numpy(),
+        'battery8_dispatch_pct': table.column('battery8_dispatch_pct').to_numpy(),
+        'ldes_dispatch_pct': table.column('ldes_dispatch_pct').to_numpy(),
+        'hourly_match_score': table.column('hourly_match_score').to_numpy(),
     }
 
-    pareto_idx = step2_pareto_procurement(arrays)
+    pareto_idx = pareto_procurement(arrays)
     n_pareto = len(pareto_idx)
 
     # Build result without threshold column
@@ -501,20 +323,16 @@ def process_iso(table, iso):
                    'procurement_pct', 'battery_dispatch_pct',
                    'battery8_dispatch_pct', 'ldes_dispatch_pct',
                    'hourly_match_score']
-    if 'pareto_type' in subtable.column_names:
+    if 'pareto_type' in table.column_names:
         result_cols.append('pareto_type')
 
-    result_arrays = []
+    result_arrays = {}
     for col_name in result_cols:
-        if col_name in subtable.column_names:
-            result_arrays.append(subtable.column(col_name).take(pareto_idx))
-        elif col_name == 'battery8_dispatch_pct':
-            result_arrays.append(pa.array(np.zeros(n_pareto, dtype=np.int64)))
+        if col_name in table.column_names:
+            result_arrays[col_name] = table.column(col_name).take(pareto_idx)
 
-    result = pa.table(result_arrays, names=[c for c in result_cols if c in subtable.column_names or c == 'battery8_dispatch_pct'])
-    return result, n_raw, n_pareto
-
-
+    result = pa.table(result_arrays)
+    return result, n_gated, n_pareto
 
 
 def write_per_iso_outputs(results_by_iso):
@@ -531,67 +349,56 @@ def write_per_iso_outputs(results_by_iso):
 
     return written
 
+
 def main():
     print("=" * 70)
     print("  STEP 2: EFFICIENT FRONTIER (EF) EXTRACTION")
-    print("  PFS → PFS post-EF (threshold-free)")
+    print("  PFS -> PFS post-EF (threshold-free)")
     print("=" * 70)
 
     total_start = time.time()
-    table = load_step1_raw_pfs()
-    if table is None:
-        print("No Step 1 raw parquets found, falling back to per-ISO PFS files...")
-        table = load_pfs()
-    else:
-        print("Using Step 1 raw parquet directory as Step 2 input source")
 
-    # Step 0: Existing generation utilization filter — DISABLED (Feb 20, 2026)
-    # Removed to allow below-floor mixes (hydro=0, low clean_firm) into the EF
-    # for Track 1 (new-build hourly matching) and Track 2 (cost to replace existing).
-    # The filter function is preserved above for reference but no longer called.
-    # table = step0_existing_generation_filter(table)
+    # Load data as per-ISO tables (avoids concat-then-split overhead)
+    iso_tables = load_iso_tables()
 
-    # Step 1: Threshold gate (keep only rows from target threshold ranges)
-    table = step1_threshold_gate(table)
+    # Process each ISO: threshold gate + Pareto-optimal procurement
+    print("\nStep 2: Threshold gate + Pareto-optimal procurement (threshold-free)")
+    print(f"  {'ISO':>6}  {'Input':>9}  {'Gated':>9}  {'Pareto':>9}  {'Time':>6}")
+    print("  " + "-" * 50)
 
-    # Step 2: Global Pareto-optimal procurement per ISO
-    # Drop threshold column, deduplicate, keep Pareto front on (proc, score)
-    # per allocation. Step 3 will filter by score >= target threshold.
-    print("\nStep 2: Global Pareto-optimal procurement (threshold-free)")
-    print(f"  {'ISO':>6}  {'Raw':>9}  {'Pareto':>9}  {'Time':>6}")
-    print("  " + "-" * 40)
-
-    results = []
     results_by_iso = {}
-    total_raw = 0
+    total_gated = 0
     total_pareto = 0
 
     for iso in ISOS:
+        if iso not in iso_tables:
+            continue
+
         t0 = time.time()
-        result, n_raw, n_pareto = process_iso(table, iso)
+        result, n_gated, n_pareto = process_iso_table(iso, iso_tables[iso])
         elapsed = time.time() - t0
 
+        n_input = iso_tables[iso].num_rows
         if result is not None and result.num_rows > 0:
-            results.append(result)
             results_by_iso[iso] = result
-            total_raw += n_raw
+            total_gated += n_gated
             total_pareto += n_pareto
-            print(f"  {iso:>6}  {n_raw:>8,}  {n_pareto:>8,}  {elapsed:>5.1f}s")
+            print(f"  {iso:>6}  {n_input:>8,}  {n_gated:>8,}  {n_pareto:>8,}  {elapsed:>5.1f}s")
 
-    print(f"\n  Total: {total_raw:,} → {total_pareto:,}")
-    if total_raw > 0:
-        print(f"  Reduction: {(1 - total_pareto/total_raw)*100:.1f}%")
+    total_input = sum(t.num_rows for t in iso_tables.values())
+    print(f"\n  Total: {total_input:,} -> {total_gated:,} (gated) -> {total_pareto:,} (Pareto)")
+    if total_gated > 0:
+        print(f"  Reduction: {(1 - total_pareto/total_gated)*100:.1f}%")
 
-    if not results:
+    if not results_by_iso:
         raise RuntimeError('Step 2 produced no ISO outputs to write.')
 
-    # Write per-ISO EF parquets to data/step-2-EF-parquets/ — no merged file
+    # Write per-ISO EF parquets
     write_per_iso_outputs(results_by_iso)
 
     elapsed_total = time.time() - total_start
 
-    # Score distribution summary — use per-ISO results (already split) to
-    # avoid expensive .to_pylist() conversion on the combined table.
+    # Score distribution summary
     for iso in ISOS:
         if iso not in results_by_iso:
             continue
@@ -603,7 +410,7 @@ def main():
                 avail.append(f"{thr:.0f}%:{n:,}")
             print(f"  {iso} mixes per threshold: {', '.join(avail[:6])}...")
 
-    print(f"\n  Total rows: {total_raw:,} → {total_pareto:,} (EF)")
+    print(f"\n  Total rows: {total_input:,} -> {total_pareto:,} (EF)")
     print(f"  Total time: {elapsed_total:.0f}s")
     print("\n" + "=" * 70)
     print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step-2-EF-parquets/")
