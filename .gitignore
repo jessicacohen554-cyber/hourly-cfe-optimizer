@@ -46,5 +46,4 @@ data/track_checkpoint.json
 data/track_checkpoint.json.tmp
 dashboard/track_results.json.tmp
 
-# Step 1.5 raw parquet exports (generated from checkpoint JSONs)
-data/step1_raw_pfs_parquets/*.parquet
+# Step 1.5 raw parquet exports are committed by workflow (source of truth for Step 2)
