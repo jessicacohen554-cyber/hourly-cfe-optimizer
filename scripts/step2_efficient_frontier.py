@@ -367,16 +367,14 @@ def step1_threshold_gate(table):
     """Step 1: Keep only target thresholds."""
     print("\nStep 1: Threshold gate")
 
-    # Build OR filter for target thresholds
     threshold_col = table.column('threshold')
-    mask = None
-    for thr in TARGET_THRESHOLDS:
-        eq = pc.equal(threshold_col, thr)
-        mask = eq if mask is None else pc.or_(mask, eq)
+    n_unique = pc.count_distinct(threshold_col).as_py()
+    target_set = pa.array(TARGET_THRESHOLDS, type=pa.float64())
+    mask = pc.is_in(threshold_col, value_set=target_set)
 
     filtered = table.filter(mask)
     print(f"  {table.num_rows:,} → {filtered.num_rows:,} "
-          f"(kept {len(TARGET_THRESHOLDS)} of {len(pc.unique(threshold_col).to_pylist())} thresholds)")
+          f"(kept {len(TARGET_THRESHOLDS)} of {n_unique} thresholds)")
     return filtered
 
 
@@ -388,6 +386,10 @@ def step2_pareto_procurement(arrays):
 
     Within each allocation group sorted by ascending procurement, this means
     keeping only rows where the score strictly increases (the running max).
+
+    Storage dispatch columns (bat, bat8, ldes) are float64 with 0.05%
+    granularity from Step 1. They are scaled by 20× (0.05% → 1) to produce
+    exact integer keys, avoiding truncation that would merge distinct configs.
     """
     n = len(arrays['clean_firm'])
     if n == 0:
@@ -403,53 +405,69 @@ def step2_pareto_procurement(arrays):
     proc = arrays['procurement_pct']
     score = arrays['hourly_match_score']
 
-    # Pack allocation into a single key
-    group_key = (cf.astype(np.int64) * (101**6) +
-                 sol.astype(np.int64) * (101**5) +
-                 wnd.astype(np.int64) * (101**4) +
-                 hyd.astype(np.int64) * (101**3) +
-                 bat.astype(np.int64) * (101**2) +
-                 bat8.astype(np.int64) * 101 +
-                 ldes.astype(np.int64))
+    # Scale storage dispatch to integer keys at 0.05% resolution.
+    # Step 1 writes these as float64 percentages (e.g. 0.05, 0.10, 1.25).
+    # Multiplying by 20 maps 0.05% → 1, preserving all grid points exactly.
+    # Max value per column: 100% × 20 = 2000 → base 2001 for storage dims.
+    STORAGE_SCALE = 20
+    STORAGE_BASE = 2001
+    bat_key = np.round(bat * STORAGE_SCALE).astype(np.int64)
+    bat8_key = np.round(bat8 * STORAGE_SCALE).astype(np.int64)
+    ldes_key = np.round(ldes * STORAGE_SCALE).astype(np.int64)
+
+    # Pack allocation into a single int64 key.
+    # Resource columns (cf/sol/wnd/hyd) are int16 0-100 → base 101.
+    # Max key ≈ 100 × 101³ × 2001³ ≈ 8.25e17, fits int64 (max 9.22e18).
+    group_key = (cf.astype(np.int64) * (101**3 * STORAGE_BASE**3) +
+                 sol.astype(np.int64) * (101**2 * STORAGE_BASE**3) +
+                 wnd.astype(np.int64) * (101 * STORAGE_BASE**3) +
+                 hyd.astype(np.int64) * (STORAGE_BASE**3) +
+                 bat_key * (STORAGE_BASE**2) +
+                 bat8_key * STORAGE_BASE +
+                 ldes_key)
 
     # Sort by (allocation, procurement ascending, score descending)
-    # Within same (allocation, proc), keep highest score; across proc levels,
-    # keep only where score increases (Pareto front).
     sort_idx = np.lexsort((-score, proc, group_key))
-    sorted_keys = group_key[sort_idx]
-    sorted_proc = proc[sort_idx]
-    sorted_score = score[sort_idx]
+    sk = group_key[sort_idx]
+    sp = proc[sort_idx]
+    ss = score[sort_idx]
 
-    keep_mask = np.zeros(n, dtype=np.bool_)
+    # --- Vectorized dedup: keep first row per (group_key, proc) ---
+    # After sorting by (group asc, proc asc, score desc), the first row
+    # at each (group, proc) has the highest score. Detect boundaries where
+    # either group or proc changes.
+    is_first = np.empty(n, dtype=np.bool_)
+    is_first[0] = True
+    is_first[1:] = (sk[1:] != sk[:-1]) | (sp[1:] != sp[:-1])
 
-    # Walk through sorted rows; within each allocation group, track running max score
-    i = 0
-    while i < n:
-        # Find end of this allocation group
-        j = i + 1
-        while j < n and sorted_keys[j] == sorted_keys[i]:
-            j += 1
+    # Extract the first-at-proc subset — much smaller than n when multiple
+    # thresholds produce the same (allocation, proc) with different scores.
+    fap_pos = np.where(is_first)[0]      # positions in sorted order
+    fap_scores = ss[fap_pos]
+    fap_keys = sk[fap_pos]
+    m = len(fap_pos)
 
-        # Within this group (sorted by proc asc, score desc):
-        # For each unique proc level, keep the first row (highest score).
-        # Across proc levels, keep only if score exceeds running max.
-        running_max = -1.0
-        prev_proc = -1
-        for k in range(i, j):
-            p = sorted_proc[k]
-            s = sorted_score[k]
-            # Skip duplicate proc levels (already took highest score)
-            if p == prev_proc:
-                continue
-            prev_proc = p
-            # Pareto check: keep only if score exceeds all lower-proc points
-            if s > running_max:
-                keep_mask[k] = True
-                running_max = s
+    # --- Pareto front within each group on reduced set ---
+    # Detect group starts in the first-at-proc array
+    gs = np.empty(m, dtype=np.bool_)
+    gs[0] = True
+    gs[1:] = fap_keys[1:] != fap_keys[:-1]
 
-        i = j
+    # Running max within groups: keep only rows where score > all previous
+    # scores in the same group. Loop over the reduced set (m << n).
+    keep = np.zeros(m, dtype=np.bool_)
+    running_max = -1.0
+    for i in range(m):
+        if gs[i]:
+            keep[i] = True
+            running_max = fap_scores[i]
+        elif fap_scores[i] > running_max:
+            keep[i] = True
+            running_max = fap_scores[i]
 
-    return sort_idx[keep_mask]
+    # Map back to original indices
+    kept_sorted_pos = fap_pos[keep]
+    return sort_idx[kept_sorted_pos]
 
 
 def process_iso(table, iso):
@@ -572,12 +590,12 @@ def main():
 
     elapsed_total = time.time() - total_start
 
-    # Score distribution summary (combine in-memory for reporting only)
-    combined = pa.concat_tables(results)
-    scores = combined.column('hourly_match_score').to_numpy()
+    # Score distribution summary — use per-ISO results (already split) to
+    # avoid expensive .to_pylist() conversion on the combined table.
     for iso in ISOS:
-        iso_mask = np.array(combined.column('iso').to_pylist()) == iso
-        iso_scores = scores[iso_mask]
+        if iso not in results_by_iso:
+            continue
+        iso_scores = results_by_iso[iso].column('hourly_match_score').to_numpy()
         if len(iso_scores) > 0:
             avail = []
             for thr in TARGET_THRESHOLDS:
@@ -585,7 +603,6 @@ def main():
                 avail.append(f"{thr:.0f}%:{n:,}")
             print(f"  {iso} mixes per threshold: {', '.join(avail[:6])}...")
 
-    total_rows = sum(t.num_rows for t in results)
     print(f"\n  Total rows: {total_raw:,} → {total_pareto:,} (EF)")
     print(f"  Total time: {elapsed_total:.0f}s")
     print("\n" + "=" * 70)
