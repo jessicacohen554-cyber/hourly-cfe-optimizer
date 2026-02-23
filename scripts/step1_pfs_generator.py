@@ -961,7 +961,8 @@ def get_seed_combos(hydro_cap):
 def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                        prev_pruning=None, cross_feasible_mixes=None,
                        flush_callback=None, storage_levels=None,
-                       max_runtime_seconds=None):
+                       max_runtime_seconds=None,
+                       max_mixes_per_run=None):
     """Find ALL feasible solutions for a single threshold × ISO.
 
     Uses cross-threshold pruning: mixes that were infeasible at a lower threshold
@@ -990,6 +991,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     """
     run_start = time.time()
     timed_out = False
+    mixes_processed = 0
 
     def _time_limit_hit():
         return max_runtime_seconds is not None and (time.time() - run_start) >= max_runtime_seconds
@@ -1002,6 +1004,21 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         _append_partial_to_interim(iso, threshold, candidates)
         timed_out = True
         print(f"      Runtime cap reached for {iso} {threshold}% ({max_runtime_seconds:.0f}s); checkpoint saved.")
+
+    def _mix_limit_hit():
+        return max_mixes_per_run is not None and mixes_processed >= max_mixes_per_run
+
+    def _checkpoint_and_mix_cap(phase, cursor):
+        nonlocal timed_out
+        _save_mix_progress(iso, threshold, candidates, phase, cursor,
+                           near_miss_data=near_miss_mixes,
+                           mix_min_proc_data=mix_min_proc)
+        _append_partial_to_interim(iso, threshold, candidates)
+        timed_out = True
+        print(
+            f"      Mix cap reached for {iso} {threshold}% "
+            f"({max_mixes_per_run} mixes); checkpoint saved."
+        )
 
     # Cap target at 0.999 — demand_arr.sum() ≈ 0.9995 due to float averaging,
     # so a target of 1.0 is unreachable even when every hour is matched.
@@ -1160,9 +1177,13 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
             if _time_limit_hit():
                 _checkpoint_and_timeout('1a', i)
                 break
+            if _mix_limit_hit():
+                _checkpoint_and_mix_cap('1a', i)
+                break
 
             mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
                        int(combos_5[i][2]), int(combos_5[i][3]))
+            mixes_processed += 1
             all_mix_keys.add(mix_key)
 
             max_score = all_max_scores[i]
@@ -1264,6 +1285,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         if _time_limit_hit():
             _checkpoint_and_timeout('1b', batch_start + phase1b_start)
             break
+        if _mix_limit_hit():
+            _checkpoint_and_mix_cap('1b', batch_start + phase1b_start)
+            break
 
         batch_end = min(batch_start + MAX_MIX_BATCH, len(nm_valid))
         batch = nm_valid[batch_start:batch_end]
@@ -1286,6 +1310,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         # Process results per mix: apply per-mix caps, skip infeasible, binary-search
         for bi in range(n_batch):
             nm_idx, i, mix_key, bat4_max_pct, bat8_max_pct, ldes_max_pct, n_sd = batch[bi]
+            mixes_processed += 1
             mix = combos_5[i]
             supply_row = supply_rows[i]
             scores = batch_scores[bi]
