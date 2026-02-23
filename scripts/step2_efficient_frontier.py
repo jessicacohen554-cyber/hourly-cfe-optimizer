@@ -34,7 +34,8 @@ Pipeline position: Step 2 of 4
 
 Input:  data/physics_cache_v4_{ISO}.parquet per ISO  (PFS, from Step 1)
         Falls back to legacy data/physics_cache_v4.parquet if per-ISO missing
-Output: data/pfs_post_ef.parquet  (merged PFS post-EF, threshold-free, all ISOs)
+Output: data/step-2-EF-parquets/step2_ef_{ISO}.parquet (per-ISO, threshold-free)
+        data/pfs_post_ef.parquet (merged copy for compatibility)
 
 The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
@@ -51,6 +52,7 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
 STEP1_5_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')
+STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step-2-EF-parquets')
 
 # Per-ISO PFS files (from Step 1 two-phase adaptive sweep)
 # Falls back to legacy single-file if per-ISO files don't exist
@@ -138,8 +140,12 @@ def load_step1_5_raw_pfs():
 
     Input files are produced by step1_5_convert_checkpoints_to_parquet.py and
     include tuple-decoded fields such as mix/procurement/dispatch mode.
+
+    Returns:
+        pyarrow.Table if raw Step 1.5 files are present, otherwise None.
     """
     if not os.path.isdir(STEP1_5_RAW_DIR):
+        print(f"Step 1 raw input directory missing: {STEP1_5_RAW_DIR}")
         return None
 
     parquet_files = sorted(
@@ -148,6 +154,7 @@ def load_step1_5_raw_pfs():
         if f.endswith('.parquet')
     )
     if not parquet_files:
+        print(f"No parquet files found in Step 1 raw input directory: {STEP1_5_RAW_DIR}")
         return None
 
     print(f"Loading Step 1.5 raw parquet files from {STEP1_5_RAW_DIR}")
@@ -422,6 +429,22 @@ def process_iso(table, iso):
     return result, n_raw, n_pareto
 
 
+
+
+def write_per_iso_outputs(results_by_iso):
+    """Write per-ISO Step 2 EF outputs to data/step-2-EF-parquets."""
+    os.makedirs(STEP2_EF_OUTPUT_DIR, exist_ok=True)
+    written = []
+
+    for iso, table in results_by_iso.items():
+        path = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}.parquet')
+        pq.write_table(table, path, compression='snappy')
+        size_mb = os.path.getsize(path) / (1024 * 1024)
+        print(f"  Per-ISO output: {path} ({table.num_rows:,} rows, {size_mb:.1f} MB)")
+        written.append(path)
+
+    return written
+
 def main():
     print("=" * 70)
     print("  STEP 2: EFFICIENT FRONTIER (EF) EXTRACTION")
@@ -452,6 +475,7 @@ def main():
     print("  " + "-" * 40)
 
     results = []
+    results_by_iso = {}
     total_raw = 0
     total_pareto = 0
 
@@ -462,6 +486,7 @@ def main():
 
         if result is not None and result.num_rows > 0:
             results.append(result)
+            results_by_iso[iso] = result
             total_raw += n_raw
             total_pareto += n_pareto
             print(f"  {iso:>6}  {n_raw:>8,}  {n_pareto:>8,}  {elapsed:>5.1f}s")
@@ -470,9 +495,15 @@ def main():
     if total_raw > 0:
         print(f"  Reduction: {(1 - total_pareto/total_raw)*100:.1f}%")
 
+    if not results:
+        raise RuntimeError('Step 2 produced no ISO outputs to write.')
+
     combined = pa.concat_tables(results)
 
-    # Save
+    # Save per-ISO outputs first
+    write_per_iso_outputs(results_by_iso)
+
+    # Save merged compatibility output
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     pq.write_table(combined, OUTPUT_PATH, compression='snappy')
     file_size = os.path.getsize(OUTPUT_PATH) / (1024 * 1024)
