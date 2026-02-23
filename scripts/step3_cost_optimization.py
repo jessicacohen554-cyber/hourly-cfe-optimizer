@@ -20,6 +20,26 @@ Output: data/step-3-CO-ISO-parquets/step3_co_<ISO>.parquet  (per-ISO cost optimi
 
 Key format: RFS_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M1_M for CAISO all-Medium)
   CAISO: 17,496 combos per threshold. Non-CAISO: 5,832 combos per threshold.
+
+Dependencies
+------------
+Install all required packages before running:
+
+    pip install numpy numba pyarrow pandas
+
+  - numpy   : Vectorized array math for cost evaluation across millions of mixes.
+  - numba   : JIT compilation via @njit decorators for 10-50× speedup over pure numpy.
+              Falls back to numpy if missing, but runs MUCH slower — always install.
+  - pyarrow : Reading/writing Parquet files (Step 2 input, Step 3 output).
+  - pandas  : DataFrame construction for flattening results to Parquet output.
+
+Or install from the project root:
+
+    pip install -r requirements.txt
+
+Verify Numba is working before launching a run:
+
+    python3 -c "from numba import njit; print('Numba OK')"
 """
 
 import json
@@ -37,6 +57,21 @@ try:
     HAS_NUMBA = True
 except ImportError:
     HAS_NUMBA = False
+    import warnings
+    warnings.warn(
+        "\n"
+        "╔══════════════════════════════════════════════════════════════════╗\n"
+        "║  WARNING: Numba is not installed — falling back to pure numpy. ║\n"
+        "║  This will be 10-50× SLOWER. Install it:                       ║\n"
+        "║                                                                 ║\n"
+        "║    pip install numba                                            ║\n"
+        "║                                                                 ║\n"
+        "║  Or install all dependencies:                                   ║\n"
+        "║    pip install -r requirements.txt                              ║\n"
+        "╚══════════════════════════════════════════════════════════════════╝",
+        RuntimeWarning,
+        stacklevel=2,
+    )
 
 # ============================================================================
 # COST TABLES
