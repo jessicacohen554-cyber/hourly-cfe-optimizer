@@ -15,10 +15,19 @@ on:
         description: 'Threshold percentage to run (e.g., 100, 95, 92.5)'
         required: true
         default: '100'
+      max_runtime_minutes:
+        description: 'Max runtime in minutes before checkpointing (0 = no cap)'
+        required: false
+        default: '330'
+      max_mixes_per_run:
+        description: 'Max outer-loop mixes before checkpointing (0 = no cap)'
+        required: false
+        default: '0'
 
 jobs:
-  run-script:
+  run-pfs:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
 
     permissions:
       contents: write
@@ -43,20 +52,20 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyarrow numba pandas
+        pip install numpy numba pyarrow pandas
 
     - name: Create output directories
       run: |
         mkdir -p data/checkpoints_v4
         mkdir -p data/step1_raw_pfs_parquets
 
-    - name: Run script
+    - name: Run Step 1 PFS individual ISO/threshold
       run: |
-        python "scripts/step 1 PFS - individual ISO threshold selector.py" \
+        python scripts/step1_pfs_individual_iso_threshold.py \
           --iso "${{ github.event.inputs.iso }}" \
           --threshold "${{ github.event.inputs.threshold }}" \
-          --max-runtime-minutes 0 \
-          --max-mixes-per-run 0
+          --max-runtime-minutes "${{ github.event.inputs.max_runtime_minutes || '330' }}" \
+          --max-mixes-per-run "${{ github.event.inputs.max_mixes_per_run || '0' }}"
 
     - name: Commit results
       run: |
@@ -65,12 +74,13 @@ jobs:
 
         BRANCH="${{ github.event.inputs.branch }}"
 
-        git add data/checkpoints_v4/ data/step1_raw_pfs_parquets/
+        # Add both completed parquets and checkpoint files
+        git add data/step1_raw_pfs_parquets/ data/checkpoints_v4/
 
         if git diff --cached --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Update ${{ github.event.inputs.iso }} ISO threshold ${{ github.event.inputs.threshold }} parquet outputs"
+          git commit -m "Step 1 PFS: ${{ github.event.inputs.iso }} ${{ github.event.inputs.threshold }}% — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
         git push origin "$BRANCH"
