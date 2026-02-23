@@ -29,6 +29,7 @@ from zoneinfo import ZoneInfo
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
+EIA_930_DATA_DIR = os.path.join(DATA_DIR, 'EIA 930 Data')
 H = 8760
 
 # UTC offsets (standard time hours behind UTC; DST adds 1)
@@ -264,7 +265,7 @@ def fix_profiles():
     for iso, tz in ISO_TIMEZONES.items():
         for year in [2024, 2025]:
             # Fix demand file
-            dem_file = os.path.join(DATA_DIR, f'eia_demand_{iso}_{year}.json')
+            dem_file = os.path.join(EIA_930_DATA_DIR, f'eia_demand_{iso}_{year}.json')
             if os.path.exists(dem_file):
                 with open(dem_file) as f:
                     dem_data = json.load(f)
@@ -288,7 +289,7 @@ def fix_profiles():
                 print(f"  Fixed {dem_file}")
 
             # Fix hourly gen file
-            gen_file = os.path.join(DATA_DIR, f'eia_hourly_{iso}_{year}.json')
+            gen_file = os.path.join(EIA_930_DATA_DIR, f'eia_hourly_{iso}_{year}.json')
             if os.path.exists(gen_file):
                 with open(gen_file) as f:
                     gen_data = json.load(f)
