@@ -26,7 +26,7 @@ jobs:
         run: mkdir -p data/step1_raw_pfs_parquets
 
       - name: Run Step 1.5 checkpoint conversion
-        run: python step1_5_convert_checkpoints_to_parquet.py
+        run: python scripts/step1_5_convert_checkpoints_to_parquet.py
 
       - name: Upload Step 1.5 parquet artifacts
         uses: actions/upload-artifact@v4
