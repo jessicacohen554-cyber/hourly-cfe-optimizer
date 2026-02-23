@@ -2,6 +2,11 @@ name: Run Step 1 Full PFS Generation
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run on and push results to'
+        required: true
+        default: 'work'
 
 jobs:
   run-step1:
@@ -14,22 +19,24 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Ensure target branch exists locally
         run: |
-          git fetch origin step1-full-pfs-results || true
-          git checkout -B step1-full-pfs-results origin/step1-full-pfs-results || git checkout -B step1-full-pfs-results
+          BRANCH="${{ github.event.inputs.branch }}"
+          git fetch origin "$BRANCH" || true
+          git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy numba pyarrow
+          pip install numpy numba pyarrow pandas
 
       - name: Ensure output directories exist
         run: |
@@ -44,12 +51,14 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
+          BRANCH="${{ github.event.inputs.branch }}"
+
           git add data/checkpoints_v4/ data/step1_raw_pfs_parquets/
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update Step 1 full PFS parquet outputs"
+            git commit -m "Step 1 full PFS: all ISOs × all thresholds — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           fi
 
-          git push origin step1-full-pfs-results
+          git push origin "$BRANCH"
