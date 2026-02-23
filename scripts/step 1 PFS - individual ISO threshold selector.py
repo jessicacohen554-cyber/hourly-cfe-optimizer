@@ -2,7 +2,7 @@
 """Complete remaining thresholds for one or more ISOs from interim cache files.
 
 Usage:
-  python complete_iso_thresholds.py <ISO> <threshold1> <threshold2> ...
+  python "step 1 PFS - individual ISO threshold selector.py" <ISO> <threshold1> <threshold2> ...
 
 If no arguments are supplied, this script defaults to the known residual runs:
   - NYISO 100%
@@ -49,6 +49,12 @@ def _parse_run_plan(argv):
             "(e.g., --threshold 95 --threshold 100)"
         ),
     )
+    parser.add_argument(
+        "--max-runtime-minutes",
+        type=float,
+        default=15,
+        help="Maximum runtime per threshold before saving a checkpoint and exiting (default: 15).",
+    )
 
     args = parser.parse_args(argv[1:])
 
@@ -64,11 +70,11 @@ def _parse_run_plan(argv):
         threshold_tokens.extend(args.thresholds_positional)
 
     if not iso and not threshold_tokens:
-        return DEFAULT_REMAINING
+        return DEFAULT_REMAINING, args.max_runtime_minutes
 
     if not iso:
         raise SystemExit(
-            "No ISO provided. Usage: python complete_iso_thresholds.py --iso <ISO> --threshold <VALUE> "
+            "No ISO provided. Usage: python \"step 1 PFS - individual ISO threshold selector.py\" --iso <ISO> --threshold <VALUE> "
             "[--threshold <VALUE> ...]"
         )
 
@@ -77,12 +83,12 @@ def _parse_run_plan(argv):
     if not thresholds:
         raise SystemExit(
             f"No thresholds provided for {iso}. "
-            "Usage: python complete_iso_thresholds.py --iso <ISO> --threshold <VALUE> [--threshold <VALUE> ...]"
+            "Usage: python \"step 1 PFS - individual ISO threshold selector.py\" --iso <ISO> --threshold <VALUE> [--threshold <VALUE> ...]"
         )
-    return [(iso, thresholds)]
+    return [(iso, thresholds)], args.max_runtime_minutes
 
 
-def _run_iso_thresholds(iso, remaining):
+def _run_iso_thresholds(iso, remaining, max_runtime_minutes):
     s1.THRESHOLDS = remaining
 
     interim_path = os.path.join(s1.CHECKPOINT_DIR, f"{iso}_v4_interim.parquet")
@@ -163,11 +169,20 @@ def _run_iso_thresholds(iso, remaining):
             prev_pruning=prev_pruning,
             cross_feasible_mixes=cross_feasible,
             storage_levels=fine_levels,
+            max_runtime_seconds=max_runtime_minutes * 60,
         )
+        threshold_completed = prev_pruning.get("completed", True)
         elapsed = time.time() - t_start
         print(f"  {iso} {threshold}%: {len(candidates):,} solutions, {elapsed:.1f}s")
-        s1._save_threshold_done(iso, threshold, candidates)
-        s1.append_threshold_to_cache(iso, threshold, candidates)
+        if threshold_completed:
+            s1._save_threshold_done(iso, threshold, candidates)
+            s1.append_threshold_to_cache(iso, threshold, candidates)
+        else:
+            print(
+                f"  {iso} {threshold}% paused at runtime cap ({max_runtime_minutes} min). "
+                "Progress checkpointed for resume."
+            )
+            break
 
     print(f"\nSaving {iso} cache...")
     interim_table = pq.read_table(interim_path)
@@ -198,5 +213,6 @@ def _run_iso_thresholds(iso, remaining):
 
 
 if __name__ == "__main__":
-    for iso_name, thresholds in _parse_run_plan(sys.argv):
-        _run_iso_thresholds(iso_name, thresholds)
+    run_plan, max_runtime_minutes = _parse_run_plan(sys.argv)
+    for iso_name, thresholds in run_plan:
+        _run_iso_thresholds(iso_name, thresholds, max_runtime_minutes)
