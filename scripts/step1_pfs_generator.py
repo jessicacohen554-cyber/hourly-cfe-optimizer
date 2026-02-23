@@ -2456,11 +2456,79 @@ def _count_solutions(results):
     return total
 
 
+def _parse_cli_args(argv):
+    """Parse CLI args for ISO and threshold filters.
+
+    Supported threshold forms:
+      --threshold=95
+      --threshold 95
+      --threshold 95,97.5
+    """
+    target_isos = []
+    threshold_tokens = []
+    i = 0
+
+    while i < len(argv):
+        arg = argv[i]
+
+        if arg.startswith('--threshold='):
+            threshold_tokens.extend(part.strip() for part in arg.split('=', 1)[1].split(','))
+            i += 1
+            continue
+
+        if arg == '--threshold':
+            if i + 1 >= len(argv):
+                raise ValueError("--threshold requires a value")
+            threshold_tokens.extend(part.strip() for part in argv[i + 1].split(','))
+            i += 2
+            continue
+
+        if arg.startswith('-'):
+            raise ValueError(f"Unknown argument: {arg}")
+
+        iso = arg.upper()
+        if iso in ISOS:
+            target_isos.append(iso)
+        else:
+            raise ValueError(f"Unknown ISO argument: {arg}")
+        i += 1
+
+    # Preserve order while deduplicating
+    target_isos = list(dict.fromkeys(target_isos))
+
+    target_thresholds = []
+    if threshold_tokens:
+        for token in threshold_tokens:
+            if not token:
+                continue
+            try:
+                value = float(token)
+            except ValueError as exc:
+                raise ValueError(f"Invalid threshold value: {token}") from exc
+
+            matched = None
+            for threshold in THRESHOLDS:
+                if abs(float(threshold) - value) < 1e-9:
+                    matched = threshold
+                    break
+
+            if matched is None:
+                raise ValueError(
+                    f"Unsupported threshold {token}. Allowed values: {', '.join(str(t) for t in THRESHOLDS)}"
+                )
+
+            target_thresholds.append(matched)
+
+    target_thresholds = list(dict.fromkeys(target_thresholds))
+    return target_isos, target_thresholds
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main():
+    global THRESHOLDS
     start_time = time.time()
     print("=" * 70)
     print("  v4.0 Physics Optimizer — Fresh Rebuild")
@@ -2498,12 +2566,14 @@ def main():
                                      2, 2, 2, 0.85, 0.85, 0.50, 4, 8, 100, 168, 48)
         print("  JIT compilation complete")
 
-    # Parse CLI args for target ISOs
-    target_isos = None
-    if len(sys.argv) > 1:
-        target_isos = [a.upper() for a in sys.argv[1:] if a.upper() in ISOS]
-        if target_isos:
-            print(f"  Target ISOs: {target_isos}")
+    target_isos, target_thresholds = _parse_cli_args(sys.argv[1:])
+
+    if target_thresholds:
+        THRESHOLDS = target_thresholds
+        print(f"  Target thresholds: {THRESHOLDS}")
+
+    if target_isos:
+        print(f"  Target ISOs: {target_isos}")
 
     run_isos = target_isos if target_isos else ISOS
 
