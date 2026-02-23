@@ -77,8 +77,9 @@ The workflows now write outputs directly to branches (instead of only uploading 
   - Writes: `data/step1_raw_pfs_parquets/`
 - `run-step1-full-pfs.yml` → `step1-full-pfs-results`
   - Writes: `data/physics_cache_v4*.parquet`, `data/checkpoints_v4/`, `scripts/dashboard/`
-- `run-step2-efficient-frontier.yml` → `step2-efficient-frontier-results`
-  - Writes: `data/pfs_post_ef.parquet`, `data/step1_raw_pfs_parquets/`
+- `run-step2-efficient-frontier.yml` → `step2-ef-parquets-results`
+  - Reads from: `data/step1_raw_pfs_parquets/`
+  - Writes: `data/step-2-EF-parquets/step2_ef_<ISO>.parquet` (per ISO), `data/pfs_post_ef.parquet` (merged compatibility copy)
 - `run-iso-thresholds.yml` → `iso-threshold-<ISO>-<THRESHOLD>`
   - Example: `iso-threshold-NYISO-95`
   - Writes: `data/checkpoints/`, `data/checkpoints_v4/`, `data/physics_cache_v4_*.parquet`, `scripts/dashboard/`
