@@ -38,7 +38,7 @@ jobs:
 
     - name: Run script
       run: |
-        python step1_pfs_generator.py "${{ github.event.inputs.iso }}"
+        python scripts/step1_pfs_generator.py "${{ github.event.inputs.iso }}"
 
     - name: Commit results
       run: |

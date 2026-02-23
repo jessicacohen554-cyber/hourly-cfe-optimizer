@@ -47,7 +47,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pandas as pd
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 PFS_PATH = os.path.join(DATA_DIR, 'physics_cache_v4.parquet')
 CHECKPOINT_DIR = os.path.join(DATA_DIR, 'resweep_checkpoints')
