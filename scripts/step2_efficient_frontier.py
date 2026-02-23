@@ -34,6 +34,9 @@ at ANY threshold, ensuring no true optimum is lost during Step 3.
 
 import os
 import time
+import ctypes
+import tempfile
+import subprocess
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -70,6 +73,131 @@ TARGET_SCHEMA = pa.schema([
     ('pareto_type', pa.string()),
 ])
 
+# ---------------------------------------------------------------------------
+# Segmented cumulative maximum — 3-tier acceleration
+# ---------------------------------------------------------------------------
+# The segmented cummax is the performance-critical inner loop. It computes a
+# running maximum within contiguous groups, resetting at group boundaries.
+# This is inherently sequential (each element depends on the prior), so we
+# need compiled code. Three strategies, tried in priority order:
+#   1. Numba JIT  (fastest, ~1ns/element)
+#   2. ctypes/gcc (compiled C via shared lib, ~1ns/element)
+#   3. Pure Python fallback (~200ns/element — last resort)
+# ---------------------------------------------------------------------------
+
+_segmented_cummax_fn = None  # will be set at module load
+
+def _init_segmented_cummax():
+    """Initialize the fastest available segmented cummax implementation."""
+    global _segmented_cummax_fn
+
+    # --- Tier 1: Numba JIT ---
+    try:
+        from numba import njit
+
+        @njit(cache=True)
+        def _segcummax_numba(scores, group_starts, out):
+            out[0] = scores[0]
+            for i in range(1, len(scores)):
+                if group_starts[i]:
+                    out[i] = scores[i]
+                else:
+                    out[i] = out[i - 1] if out[i - 1] > scores[i] else scores[i]
+            return out
+
+        # Warm up JIT compilation with a tiny array
+        _warmup_s = np.array([1.0, 2.0, 0.5], dtype=np.float64)
+        _warmup_g = np.array([True, False, True], dtype=np.bool_)
+        _warmup_o = np.empty(3, dtype=np.float64)
+        _segcummax_numba(_warmup_s, _warmup_g, _warmup_o)
+
+        def segcummax_numba(scores, group_starts):
+            out = np.empty(len(scores), dtype=np.float64)
+            _segcummax_numba(scores, group_starts, out)
+            return out
+
+        _segmented_cummax_fn = segcummax_numba
+        print("  [perf] Segmented cummax: Numba JIT")
+        return
+    except (ImportError, Exception) as e:
+        pass
+
+    # --- Tier 2: ctypes/gcc compiled C ---
+    try:
+        c_code = r"""
+#include <stdint.h>
+void segcummax(const double *scores, const int8_t *gs, double *out, int64_t n) {
+    if (n <= 0) return;
+    out[0] = scores[0];
+    for (int64_t i = 1; i < n; i++) {
+        if (gs[i]) {
+            out[i] = scores[i];
+        } else {
+            out[i] = out[i-1] > scores[i] ? out[i-1] : scores[i];
+        }
+    }
+}
+"""
+        tmpdir = tempfile.mkdtemp(prefix='step2_ef_')
+        c_path = os.path.join(tmpdir, 'segcummax.c')
+        so_path = os.path.join(tmpdir, 'segcummax.so')
+        with open(c_path, 'w') as f:
+            f.write(c_code)
+        result = subprocess.run(
+            ['gcc', '-O3', '-shared', '-fPIC', '-o', so_path, c_path],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"gcc failed: {result.stderr}")
+
+        lib = ctypes.CDLL(so_path)
+        lib.segcummax.argtypes = [
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_int8),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.c_int64,
+        ]
+        lib.segcummax.restype = None
+
+        def segcummax_ctypes(scores, group_starts):
+            n = len(scores)
+            out = np.empty(n, dtype=np.float64)
+            gs_i8 = group_starts.view(np.int8) if group_starts.dtype == np.bool_ else group_starts.astype(np.int8)
+            lib.segcummax(
+                scores.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                gs_i8.ctypes.data_as(ctypes.POINTER(ctypes.c_int8)),
+                out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_int64(n),
+            )
+            return out
+
+        # Verify correctness
+        _ts = np.array([1.0, 3.0, 2.0, 5.0, 1.0], dtype=np.float64)
+        _tg = np.array([True, False, False, True, False], dtype=np.bool_)
+        _to = segcummax_ctypes(_ts, _tg)
+        assert np.allclose(_to, [1.0, 3.0, 3.0, 5.0, 5.0]), f"ctypes verification failed: {_to}"
+
+        _segmented_cummax_fn = segcummax_ctypes
+        print("  [perf] Segmented cummax: ctypes/gcc (C compiled)")
+        return
+    except (OSError, RuntimeError, AssertionError, Exception) as e:
+        pass
+
+    # --- Tier 3: Pure Python fallback (slow but correct) ---
+    def segcummax_python(scores, group_starts):
+        n = len(scores)
+        out = np.empty(n, dtype=np.float64)
+        out[0] = scores[0]
+        for i in range(1, n):
+            if group_starts[i]:
+                out[i] = scores[i]
+            else:
+                out[i] = out[i - 1] if out[i - 1] > scores[i] else scores[i]
+        return out
+
+    _segmented_cummax_fn = segcummax_python
+    print("  [perf] Segmented cummax: pure Python fallback (SLOW — install numba or gcc)")
+
 
 def normalize_table(t):
     """Cast a table to match TARGET_SCHEMA, filling missing columns with defaults."""
@@ -105,32 +233,53 @@ def load_iso_tables():
     iso_tables = {}
 
     # --- Source 1: Step 1 raw parquets (native format only) ---
+    # Group files by ISO from filename to enable batched reads per ISO.
     if os.path.isdir(STEP1_RAW_DIR):
         parquet_files = sorted(
-            os.path.join(STEP1_RAW_DIR, f)
-            for f in os.listdir(STEP1_RAW_DIR)
-            if f.endswith('.parquet')
+            f for f in os.listdir(STEP1_RAW_DIR) if f.endswith('.parquet')
         )
         if parquet_files:
             print(f"Scanning Step 1 raw parquets in {STEP1_RAW_DIR}")
-            native_by_iso = {}
-            for path in parquet_files:
-                t = pq.read_table(path)
-                fname = os.path.basename(path)
-                if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
-                    # Extract ISO from the table's iso column
-                    iso_vals = pc.unique(t.column('iso')).to_pylist()
-                    for iso_val in iso_vals:
-                        native_by_iso.setdefault(iso_val, []).append(t)
-                    size_mb = os.path.getsize(path) / (1024 * 1024)
-                    print(f"  {fname}: {t.num_rows:>10,} rows ({size_mb:.1f} MB)")
-                else:
-                    print(f"  {fname}: SKIPPED (not native Step 1 format)")
+            # Group files by ISO prefix for batched loading
+            files_by_iso = {}
+            for fname in parquet_files:
+                # Extract ISO from filename (e.g., "ERCOT_t100_raw_pfs.parquet")
+                iso_prefix = fname.split('_')[0] if '_' in fname else None
+                if iso_prefix and iso_prefix in ISOS:
+                    files_by_iso.setdefault(iso_prefix, []).append(fname)
 
-            for iso, tables in native_by_iso.items():
-                combined = pa.concat_tables(tables)
-                iso_tables[iso] = normalize_table(combined)
-                print(f"  {iso}: {iso_tables[iso].num_rows:,} rows from Step 1 raw")
+            if files_by_iso:
+                # Batched read: read all files for each ISO, concat once
+                for iso, fnames in files_by_iso.items():
+                    iso_subtables = []
+                    total_rows = 0
+                    for fname in fnames:
+                        path = os.path.join(STEP1_RAW_DIR, fname)
+                        t = pq.read_table(path)
+                        if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
+                            iso_subtables.append(t)
+                            total_rows += t.num_rows
+                    if iso_subtables:
+                        combined = pa.concat_tables(iso_subtables) if len(iso_subtables) > 1 else iso_subtables[0]
+                        iso_tables[iso] = normalize_table(combined)
+                        print(f"  {iso}: {total_rows:>10,} rows from {len(fnames)} Step 1 files")
+            else:
+                # Fallback: filenames don't follow ISO_t{thr} pattern — read all and split by iso column
+                native_by_iso = {}
+                for fname in parquet_files:
+                    path = os.path.join(STEP1_RAW_DIR, fname)
+                    t = pq.read_table(path)
+                    if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
+                        iso_vals = pc.unique(t.column('iso')).to_pylist()
+                        for iso_val in iso_vals:
+                            native_by_iso.setdefault(iso_val, []).append(t)
+                        size_mb = os.path.getsize(path) / (1024 * 1024)
+                        print(f"  {fname}: {t.num_rows:>10,} rows ({size_mb:.1f} MB)")
+
+                for iso, tables in native_by_iso.items():
+                    combined = pa.concat_tables(tables)
+                    iso_tables[iso] = normalize_table(combined)
+                    print(f"  {iso}: {iso_tables[iso].num_rows:,} rows from Step 1 raw")
 
     # --- Source 2: Per-ISO cache files ---
     for iso in ISOS:
@@ -245,33 +394,15 @@ def pareto_procurement(arrays):
     fap_keys = sk[fap_pos]
     m = len(fap_pos)
 
-    # --- Vectorized Pareto front within each group ---
+    # --- Pareto front within each group via segmented cummax ---
     # Detect group starts in the first-at-proc array
     gs = np.empty(m, dtype=np.bool_)
     gs[0] = True
     gs[1:] = fap_keys[1:] != fap_keys[:-1]
 
-    # Segmented cumulative max: compute running max within each group.
-    # At group boundaries, reset to the current score. Otherwise, take
-    # max of previous running max and current score.
-    # We need the running max of all scores BEFORE position i (shifted),
-    # so we compare score[i] > running_max_before[i].
-    #
-    # Approach: compute cummax, then shift right within each segment.
-    # A row is kept if it's a group start OR score > prev cummax.
-    seg_cummax = np.empty(m, dtype=np.float64)
-    seg_cummax[0] = fap_scores[0]
-    # Vectorized pass: most rows are not group starts, so branch prediction
-    # is well-predicted. For very large m, a batched approach helps.
-    # Process in chunks to stay cache-friendly.
-    CHUNK = 1 << 20  # ~1M elements per chunk
-    for start in range(1, m, CHUNK):
-        end = min(start + CHUNK, m)
-        for i in range(start, end):
-            if gs[i]:
-                seg_cummax[i] = fap_scores[i]
-            else:
-                seg_cummax[i] = seg_cummax[i - 1] if seg_cummax[i - 1] > fap_scores[i] else fap_scores[i]
+    # Compute segmented cumulative max using the fastest available backend
+    # (numba JIT > ctypes/gcc > pure Python fallback)
+    seg_cummax = _segmented_cummax_fn(fap_scores, gs)
 
     # A row is on the Pareto front if:
     #   - It's a group start (always keep the lowest-procurement point), OR
@@ -357,6 +488,9 @@ def main():
     print("=" * 70)
 
     total_start = time.time()
+
+    # Initialize the segmented cummax accelerator (numba > ctypes > python)
+    _init_segmented_cummax()
 
     # Load data as per-ISO tables (avoids concat-then-split overhead)
     iso_tables = load_iso_tables()
