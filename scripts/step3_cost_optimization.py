@@ -27,6 +27,7 @@ Key format: RFS_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M1_M for CAISO all-Medium)
 import json
 import os
 import time
+import argparse
 import numpy as np
 import pyarrow.parquet as pq
 from pathlib import Path
@@ -1007,15 +1008,34 @@ def prepare_threshold_metadata(scores, thresholds):
 # ============================================================================
 
 PFS_POST_EF_PATH = Path('data/pfs_post_ef.parquet')
+PFS_POST_EF_DIR = Path('data/step-2-EF-parquets')
 RESULTS_PATH = Path('dashboard/overprocure_results.json')
 DG_RESULTS_PATH = Path('dashboard/demand_growth_results.json')
 TRACK_RESULTS_PATH = Path('dashboard/track_results.json')
+STEP3_ISO_OUTPUT_DIR = Path('data/step-3-CO-ISO-parquets')
 
 # Thresholds to include in backward-compat output
 OUTPUT_THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 
 
-def load_pfs_post_ef():
+def _table_to_arrays(table):
+    """Convert an Arrow table into in-memory numpy arrays."""
+    return {
+        'clean_firm': table.column('clean_firm').to_numpy(),
+        'solar': table.column('solar').to_numpy(),
+        'wind': table.column('wind').to_numpy(),
+        'hydro': table.column('hydro').to_numpy(),
+        'procurement_pct': table.column('procurement_pct').to_numpy(),
+        'battery_dispatch_pct': table.column('battery_dispatch_pct').to_numpy(),
+        'battery8_dispatch_pct': (table.column('battery8_dispatch_pct').to_numpy()
+                                  if 'battery8_dispatch_pct' in table.column_names
+                                  else np.zeros(table.num_rows, dtype=np.int64)),
+        'ldes_dispatch_pct': table.column('ldes_dispatch_pct').to_numpy(),
+        'hourly_match_score': table.column('hourly_match_score').to_numpy(),
+    }
+
+
+def load_pfs_post_ef(input_dir=PFS_POST_EF_DIR, selected_isos=None):
     """Load PFS post-EF (threshold-free) and organize by ISO.
 
     The post-EF data has no threshold column — each unique mix is stored once
@@ -1026,36 +1046,54 @@ def load_pfs_post_ef():
         pfs: dict keyed by ISO → numpy arrays of all mixes
         thr_indices: dict keyed by (ISO, threshold) → index array of qualifying mixes
     """
+    pfs = {}
+    thr_indices = {}
+    isos_to_load = selected_isos or ISOS
+
+    loaded_from_iso_files = False
+
+    if input_dir.exists():
+        for iso in isos_to_load:
+            iso_path = input_dir / f'step2_ef_{iso}.parquet'
+            if not iso_path.exists():
+                continue
+
+            sub = pq.read_table(iso_path)
+            if sub.num_rows == 0:
+                continue
+
+            loaded_from_iso_files = True
+            arrays = _table_to_arrays(sub)
+            pfs[iso] = arrays
+
+            scores = arrays['hourly_match_score']
+            for thr in OUTPUT_THRESHOLDS:
+                idx = np.where(scores >= thr)[0]
+                if len(idx) > 0:
+                    thr_indices[(iso, thr)] = idx
+
+            print(f"  {iso}: loaded {sub.num_rows:,} mixes from {iso_path}")
+
+    if loaded_from_iso_files:
+        return pfs, thr_indices
+
     if not PFS_POST_EF_PATH.exists():
-        raise FileNotFoundError(f"Run Step 2 first: {PFS_POST_EF_PATH}")
+        raise FileNotFoundError(
+            f"Run Step 2 first: missing both {input_dir}/*.parquet and {PFS_POST_EF_PATH}"
+        )
 
     table = pq.read_table(PFS_POST_EF_PATH)
-    print(f"Loaded PFS post-EF: {table.num_rows:,} rows")
+    print(f"Loaded fallback post-EF file: {table.num_rows:,} rows from {PFS_POST_EF_PATH}")
 
     import pyarrow.compute as pc
 
-    pfs = {}
-    thr_indices = {}
-
-    for iso in ISOS:
+    for iso in isos_to_load:
         mask = pc.equal(table.column('iso'), iso)
         sub = table.filter(mask)
         if sub.num_rows == 0:
             continue
 
-        arrays = {
-            'clean_firm': sub.column('clean_firm').to_numpy(),
-            'solar': sub.column('solar').to_numpy(),
-            'wind': sub.column('wind').to_numpy(),
-            'hydro': sub.column('hydro').to_numpy(),
-            'procurement_pct': sub.column('procurement_pct').to_numpy(),
-            'battery_dispatch_pct': sub.column('battery_dispatch_pct').to_numpy(),
-            'battery8_dispatch_pct': (sub.column('battery8_dispatch_pct').to_numpy()
-                                      if 'battery8_dispatch_pct' in sub.column_names
-                                      else np.zeros(sub.num_rows, dtype=np.int64)),
-            'ldes_dispatch_pct': sub.column('ldes_dispatch_pct').to_numpy(),
-            'hourly_match_score': sub.column('hourly_match_score').to_numpy(),
-        }
+        arrays = _table_to_arrays(sub)
         pfs[iso] = arrays
 
         # Pre-compute threshold index arrays (score >= threshold)
@@ -1092,19 +1130,41 @@ def arrays_to_mix_dict(arrays, idx):
     }
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Step 3 cost optimization runner.')
+    parser.add_argument(
+        '--iso',
+        dest='isos',
+        action='append',
+        choices=ISOS,
+        help='ISO to run (repeatable). Defaults to all ISOs.'
+    )
+    parser.add_argument(
+        '--input-dir',
+        type=Path,
+        default=PFS_POST_EF_DIR,
+        help=f'Directory containing step2_ef_<ISO>.parquet files (default: {PFS_POST_EF_DIR}).'
+    )
+    return parser.parse_args()
+
+
 # ============================================================================
 # MAIN PIPELINE
 # ============================================================================
 
 def main():
+    args = parse_args()
+    run_isos = args.isos if args.isos else ISOS
+
     print("=" * 70)
     print("  STEP 3: COST OPTIMIZATION (v4 — vectorized, threshold-free PFS)")
     print("=" * 70)
+    print(f"  Requested ISOs: {', '.join(run_isos)}")
 
     total_start = time.time()
 
     # Load PFS post-EF (threshold-free: one set of mixes per ISO)
-    pfs, thr_indices = load_pfs_post_ef()
+    pfs, thr_indices = load_pfs_post_ef(input_dir=args.input_dir, selected_isos=run_isos)
     print(f"  ISOs loaded: {len(pfs)}")
 
     # Build output structure
@@ -1160,7 +1220,7 @@ def main():
     # Archetypes per ISO (union of winners across all thresholds) for Phase 2
     archetypes = {}
 
-    for iso in ISOS:
+    for iso in run_isos:
         if iso not in pfs:
             continue
 
@@ -1302,7 +1362,7 @@ def main():
     # Track archetypes for Phase 2 demand growth
     track_archetypes = {'newbuild': {}, 'replace': {}}
 
-    for iso in ISOS:
+    for iso in run_isos:
         if iso not in pfs:
             continue
 
@@ -1452,7 +1512,7 @@ def main():
         'results': {},
     }
 
-    for iso in ISOS:
+    for iso in run_isos:
         if iso not in pfs or iso not in archetypes:
             continue
 
@@ -1571,7 +1631,7 @@ def main():
     track_dg = {'newbuild': {}, 'replace': {}}
 
     for track_name in ['newbuild', 'replace']:
-        for iso in ISOS:
+        for iso in run_isos:
             if iso not in track_archetypes[track_name]:
                 continue
 
@@ -1733,6 +1793,17 @@ def main():
     print(f"  overprocure_scenarios.parquet: {len(df_sc)} rows, "
           f"{os.path.getsize('dashboard/overprocure_scenarios.parquet') / 1e6:.1f} MB")
 
+
+    # 2.5 ISO-specific Step 3 scenario outputs (for workflow checkpointing)
+    STEP3_ISO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for iso in run_isos:
+        df_iso = df_sc[df_sc['iso'] == iso]
+        if df_iso.empty:
+            continue
+        iso_out = STEP3_ISO_OUTPUT_DIR / f'step3_co_{iso}.parquet'
+        df_iso.to_parquet(iso_out, index=False, compression='zstd')
+        print(f"  {iso_out}: {len(df_iso)} rows, {os.path.getsize(iso_out) / 1e6:.1f} MB")
+
     # 2. Feasible mixes parquet
     mix_rows = []
     for iso, iso_data in output['results'].items():
@@ -1798,7 +1869,9 @@ def main():
 
     # Print Medium scenario summary (ISO-aware medium key)
     print("\nAll-Medium (45Q=ON) summary — Baseline:")
-    for iso in ISOS:
+    for iso in run_isos:
+        if iso not in output['results']:
+            continue
         mk = medium_key(iso)
         print(f"\n  {iso} (key={mk}):")
         for thr in OUTPUT_THRESHOLDS:
@@ -1818,7 +1891,7 @@ def main():
     for track_name in ['newbuild', 'replace']:
         label = 'New-Build (no hydro, +uprates)' if track_name == 'newbuild' else 'Replace (with hydro, no uprates)'
         print(f"\nAll-Medium (45Q=ON) summary — {label}:")
-        for iso in ISOS:
+        for iso in run_isos:
             iso_track = track_output.get('results', {}).get(iso, {}).get(track_name, {})
             if not iso_track:
                 print(f"\n  {iso}: no data")

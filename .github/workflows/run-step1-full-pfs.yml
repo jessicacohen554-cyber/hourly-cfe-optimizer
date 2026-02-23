@@ -2,40 +2,63 @@ name: Run Step 1 Full PFS Generation
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run on and push results to'
+        required: true
+        default: 'work'
 
 jobs:
   run-step1:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Ensure target branch exists locally
+        run: |
+          BRANCH="${{ github.event.inputs.branch }}"
+          git fetch origin "$BRANCH" || true
+          git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy numba pyarrow
+          pip install numpy numba pyarrow pandas
 
       - name: Ensure output directories exist
         run: |
-          mkdir -p data
           mkdir -p data/checkpoints_v4
+          mkdir -p data/step1_raw_pfs_parquets
 
       - name: Run Step 1 PFS generator (full run)
         run: python scripts/step1_pfs_generator.py
 
-      - name: Upload Step 1 artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: step1-pfs-output
-          path: |
-            data/physics_cache_v4.parquet
-            data/checkpoints_v4/
-          if-no-files-found: error
+      - name: Commit Step 1 outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          BRANCH="${{ github.event.inputs.branch }}"
+
+          git add data/checkpoints_v4/ data/step1_raw_pfs_parquets/
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Step 1 full PFS: all ISOs × all thresholds — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          fi
+
+          git push origin "$BRANCH"
