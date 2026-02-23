@@ -11,6 +11,7 @@ If no arguments are supplied, this script defaults to the known residual runs:
 import os
 import sys
 import time
+import argparse
 
 import numpy as np
 import pyarrow as pa
@@ -25,15 +26,58 @@ DEFAULT_REMAINING = [
 
 
 def _parse_run_plan(argv):
-    if len(argv) <= 1:
+    parser = argparse.ArgumentParser(
+        description="Complete one or more thresholds for a single ISO.",
+    )
+    parser.add_argument(
+        "iso_positional",
+        nargs="?",
+        help="ISO name (legacy positional style: <ISO> <threshold1> <threshold2> ...)",
+    )
+    parser.add_argument(
+        "thresholds_positional",
+        nargs="*",
+        help="Threshold values in percent for positional style.",
+    )
+    parser.add_argument("--iso", dest="iso_flag", help="ISO name (e.g., CAISO, NYISO, PJM, ERCOT, NEISO)")
+    parser.add_argument(
+        "--threshold",
+        dest="threshold_flags",
+        action="append",
+        help=(
+            "Threshold value. Pass multiple times for multiple thresholds "
+            "(e.g., --threshold 95 --threshold 100)"
+        ),
+    )
+
+    args = parser.parse_args(argv[1:])
+
+    if args.iso_flag and args.iso_positional:
+        raise SystemExit("Provide ISO only once: use either positional ISO or --iso, not both.")
+
+    iso = args.iso_flag or args.iso_positional
+    threshold_tokens = []
+
+    if args.threshold_flags:
+        threshold_tokens.extend(args.threshold_flags)
+    if args.thresholds_positional:
+        threshold_tokens.extend(args.thresholds_positional)
+
+    if not iso and not threshold_tokens:
         return DEFAULT_REMAINING
 
-    iso = argv[1]
-    thresholds = [float(t) for t in argv[2:]]
+    if not iso:
+        raise SystemExit(
+            "No ISO provided. Usage: python complete_iso_thresholds.py --iso <ISO> --threshold <VALUE> "
+            "[--threshold <VALUE> ...]"
+        )
+
+    thresholds = [float(t) for t in threshold_tokens]
+
     if not thresholds:
         raise SystemExit(
             f"No thresholds provided for {iso}. "
-            "Usage: python complete_iso_thresholds.py <ISO> <threshold1> <threshold2> ..."
+            "Usage: python complete_iso_thresholds.py --iso <ISO> --threshold <VALUE> [--threshold <VALUE> ...]"
         )
     return [(iso, thresholds)]
 

@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO to run (NYISO or CAISO)'
+        description: 'ISO to run (e.g., NYISO, CAISO, PJM, ERCOT, NEISO)'
         required: true
         default: 'NYISO'
+      threshold:
+        description: 'Threshold percentage to run (e.g., 100, 95, 92.5)'
+        required: true
+        default: '100'
 
 jobs:
   run-script:
@@ -34,13 +38,13 @@ jobs:
 
     - name: Run script
       run: |
-        python complete_iso_thresholds.py --iso ${{ github.event.inputs.iso }} --threshold 100
+        python complete_iso_thresholds.py --iso "${{ github.event.inputs.iso }}" --threshold "${{ github.event.inputs.threshold }}"
 
     - name: Commit results
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git checkout -B iso-threshold-${{ github.event.inputs.iso }}
+        git checkout -B iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}
         git add data/checkpoints/
-        git commit -m "Update ${{ github.event.inputs.iso }} ISO thresholds" || echo "No changes"
-        git push origin iso-threshold-${{ github.event.inputs.iso }}
+        git commit -m "Update ${{ github.event.inputs.iso }} ISO threshold ${{ github.event.inputs.threshold }}" || echo "No changes"
+        git push origin iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}
