@@ -32,11 +32,9 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step1_raw_pfs_parquets/*.parquet   (flat-schema files from Step 1)
-        Falls back to data/physics_cache_v4_{ISO}.parquet per ISO if directory
-        contains old Step 1.5 format files, then to legacy physics_cache_v4.parquet
+Input:  data/step1_raw_pfs_parquets/{ISO}_step1_pfs_t{threshold}.parquet  (primary, from Step 1)
+        Falls back to data/physics_cache_v4_{ISO}.parquet or legacy merged file
 Output: data/step-2-EF-parquets/step2_ef_{ISO}.parquet (per-ISO, threshold-free)
-        No merged output file — Step 3 reads from the per-ISO directory directly.
 
 The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
@@ -51,8 +49,7 @@ import pyarrow.compute as pc
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
-STEP1_5_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')
+STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')
 STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step-2-EF-parquets')
 
 # Per-ISO PFS files (from Step 1 two-phase adaptive sweep)
@@ -136,146 +133,141 @@ def load_pfs():
     )
 
 
-def load_step1_5_raw_pfs():
-    """Load Step 1.5 raw parquet checkpoints and normalize to Step 2 schema.
+def load_step1_raw_pfs():
+    """Load Step 1 raw parquet files from step1_raw_pfs_parquets/ directory.
 
-    Input files are produced by step1_5_convert_checkpoints_to_parquet.py and
-    include tuple-decoded fields such as mix/procurement/dispatch mode.
+    Handles two file schemas:
+      1. Step 1 native (from step1_pfs_generator.py): flat columns including
+         clean_firm, solar, wind, hydro, procurement_pct, battery_dispatch_pct,
+         battery8_dispatch_pct, ldes_dispatch_pct, hourly_match_score, pareto_type.
+         Filename pattern: {ISO}_step1_pfs_t{threshold}.parquet
+      2. Step 1.5 legacy (from step1_5_convert_checkpoints_to_parquet.py):
+         list-based 'mix' column with tuple-decoded fields.
+         Filename pattern: {ISO}_t{threshold}_raw_pfs.parquet
 
     Returns:
-        pyarrow.Table if raw Step 1.5 files are present, otherwise None.
+        pyarrow.Table if raw files are present, otherwise None.
     """
-    if not os.path.isdir(STEP1_5_RAW_DIR):
-        print(f"Step 1 raw input directory missing: {STEP1_5_RAW_DIR}")
+    if not os.path.isdir(STEP1_RAW_DIR):
+        print(f"Step 1 raw input directory missing: {STEP1_RAW_DIR}")
         return None
 
     parquet_files = sorted(
-        os.path.join(STEP1_5_RAW_DIR, f)
-        for f in os.listdir(STEP1_5_RAW_DIR)
+        os.path.join(STEP1_RAW_DIR, f)
+        for f in os.listdir(STEP1_RAW_DIR)
         if f.endswith('.parquet')
     )
     if not parquet_files:
-        print(f"No parquet files found in Step 1 raw input directory: {STEP1_5_RAW_DIR}")
+        print(f"No parquet files found in Step 1 raw input directory: {STEP1_RAW_DIR}")
         return None
 
-    print(f"Loading Step 1.5 raw parquet files from {STEP1_5_RAW_DIR}")
-    normalized_tables = []
-    for path in parquet_files:
-        t = pq.read_table(path)
-        mix = t.column('mix')
+    print(f"Loading Step 1 raw parquet files from {STEP1_RAW_DIR}")
+    native_tables = []
+    legacy_tables = []
 
-        valid_mask = pc.and_(
-            pc.equal(pc.list_value_length(mix), 5),
-            pc.and_(
-                pc.is_valid(t.column('threshold')),
-                pc.is_valid(t.column('lcoe')),
-            ),
-        )
-
-        filtered = t.filter(valid_mask)
-        n = filtered.num_rows
-        if n == 0:
-            continue
-
-        mix = filtered.column('mix')
-        proc = pc.cast(filtered.column('threshold'), pa.float64())
-        score = pc.cast(filtered.column('lcoe'), pa.float64())
-
-        proc_pct = pc.if_else(pc.less_equal(proc, 5.0), pc.multiply(proc, 100.0), proc)
-        score_pct = pc.if_else(pc.less_equal(score, 1.5), pc.multiply(score, 100.0), score)
-
-        source_threshold = pc.fill_null(filtered.column('source_threshold'), pa.scalar(0.0))
-        dispatch_mode = pc.fill_null(filtered.column('dispatch_mode'), pa.scalar(''))
-
-        normalized_tables.append(pa.table({
-            'iso': filtered.column('iso'),
-            'threshold': pc.cast(source_threshold, pa.float64()),
-            'clean_firm': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 0), 100.0)), pa.int16()),
-            'solar': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 1), 100.0)), pa.int16()),
-            'wind': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 2), 100.0)), pa.int16()),
-            'hydro': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 3), 100.0)), pa.int16()),
-            'procurement_pct': pc.cast(pc.round(proc_pct), pa.int16()),
-            'battery_dispatch_pct': pc.cast(pc.multiply(pc.list_element(mix, 4), 100.0), pa.float64()),
-            'battery8_dispatch_pct': pa.array(np.zeros(n, dtype=np.float64)),
-            'ldes_dispatch_pct': pa.array(np.zeros(n, dtype=np.float64)),
-            'hourly_match_score': pc.cast(score_pct, pa.float64()),
-            'pareto_type': dispatch_mode,
-        }))
-
-        size_mb = os.path.getsize(path) / (1024 * 1024)
-        print(f"  {os.path.basename(path)}: {n:>10,} rows ({size_mb:.1f} MB)")
-
-    if not normalized_tables:
-        return None
-
-    table = pa.concat_tables(normalized_tables)
-    print(f"  Combined Step 1.5 rows: {table.num_rows:,}")
-    return table
-
-
-def load_step1_raw_pfs():
-    """Load Step 1 raw PFS parquets written in the new flat-column schema.
-
-    Accepts both naming conventions written by step1_pfs_generator.py:
-      new: {ISO}_step1_pfs_t{threshold}.parquet
-      old: {ISO}_t{threshold}_raw_pfs.parquet
-
-    Expected columns: iso, threshold, clean_firm, solar, wind, hydro,
-    procurement_pct, battery_dispatch_pct, battery8_dispatch_pct,
-    ldes_dispatch_pct, hourly_match_score, pareto_type.
-
-    Returns a pyarrow.Table on success, or None if the directory is empty or
-    files have a different (Step 1.5) schema.
-    """
-    if not os.path.isdir(STEP1_5_RAW_DIR):
-        return None
-
-    parquet_files = sorted(
-        os.path.join(STEP1_5_RAW_DIR, f)
-        for f in os.listdir(STEP1_5_RAW_DIR)
-        if f.endswith('.parquet')
-    )
-    if not parquet_files:
-        return None
-
-    # Probe first file's schema (metadata only — no data read) to distinguish
-    # flat schema from old Step 1.5 list-column schema
-    probe_schema = pq.read_schema(parquet_files[0])
-    if 'mix' in probe_schema.names:
-        # Old Step 1.5 format — handled by load_step1_5_raw_pfs()
-        return None
-
-    # Flat schema — read all files directly (no column translation needed)
-    required = {'iso', 'threshold', 'clean_firm', 'solar', 'wind', 'hydro',
-                'procurement_pct', 'battery_dispatch_pct', 'ldes_dispatch_pct',
-                'hourly_match_score'}
-    if not required.issubset(probe_schema.names):
-        print(f"  WARNING: Step 1 raw PFS file has unexpected schema: {probe_schema.names}")
-        return None
-
-    print(f"Loading Step 1 raw PFS parquets (flat schema) from {STEP1_5_RAW_DIR}")
-    tables = []
     for path in parquet_files:
         t = pq.read_table(path)
         size_mb = os.path.getsize(path) / (1024 * 1024)
-        print(f"  {os.path.basename(path)}: {t.num_rows:>10,} rows ({size_mb:.1f} MB)")
-        tables.append(t)
+        fname = os.path.basename(path)
 
-    if not tables:
-        return None
+        # Detect schema: native files have 'clean_firm' column, legacy have 'mix' column
+        if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
+            # Step 1 native format — already has the right columns
+            print(f"  {fname}: {t.num_rows:>10,} rows ({size_mb:.1f} MB) [native]")
+            native_tables.append(t)
 
-    # Normalise: ensure battery8_dispatch_pct exists (may be absent in older runs)
-    normed = []
-    for t in tables:
-        if 'battery8_dispatch_pct' not in t.schema.names:
-            t = t.append_column(
-                'battery8_dispatch_pct',
-                pa.array(np.zeros(t.num_rows, dtype=np.float64)),
+        elif 'mix' in t.column_names:
+            # Step 1.5 legacy format — needs normalization
+            mix = t.column('mix')
+            valid_mask = pc.and_(
+                pc.equal(pc.list_value_length(mix), 5),
+                pc.and_(
+                    pc.is_valid(t.column('threshold')),
+                    pc.is_valid(t.column('lcoe')),
+                ),
             )
-        normed.append(t)
 
-    table = pa.concat_tables(normed)
-    print(f"  Combined: {table.num_rows:,} rows")
+            filtered = t.filter(valid_mask)
+            n = filtered.num_rows
+            if n == 0:
+                continue
+
+            mix = filtered.column('mix')
+            proc = pc.cast(filtered.column('threshold'), pa.float64())
+            score = pc.cast(filtered.column('lcoe'), pa.float64())
+
+            proc_pct = pc.if_else(pc.less_equal(proc, 5.0), pc.multiply(proc, 100.0), proc)
+            score_pct = pc.if_else(pc.less_equal(score, 1.5), pc.multiply(score, 100.0), score)
+
+            source_threshold = pc.fill_null(filtered.column('source_threshold'), pa.scalar(0.0))
+            dispatch_mode = pc.fill_null(filtered.column('dispatch_mode'), pa.scalar(''))
+
+            legacy_tables.append(pa.table({
+                'iso': filtered.column('iso'),
+                'threshold': pc.cast(source_threshold, pa.float64()),
+                'clean_firm': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 0), 100.0)), pa.int16()),
+                'solar': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 1), 100.0)), pa.int16()),
+                'wind': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 2), 100.0)), pa.int16()),
+                'hydro': pc.cast(pc.round(pc.multiply(pc.list_element(mix, 3), 100.0)), pa.int16()),
+                'procurement_pct': pc.cast(pc.round(proc_pct), pa.int16()),
+                'battery_dispatch_pct': pc.cast(pc.multiply(pc.list_element(mix, 4), 100.0), pa.float64()),
+                'battery8_dispatch_pct': pa.array(np.zeros(n, dtype=np.float64)),
+                'ldes_dispatch_pct': pa.array(np.zeros(n, dtype=np.float64)),
+                'hourly_match_score': pc.cast(score_pct, pa.float64()),
+                'pareto_type': dispatch_mode,
+            }))
+
+            print(f"  {fname}: {n:>10,} rows ({size_mb:.1f} MB) [legacy]")
+
+        else:
+            print(f"  {fname}: SKIPPED (unrecognized schema: {t.column_names[:5]}...)")
+
+    all_tables = native_tables + legacy_tables
+    if not all_tables:
+        return None
+
+    # Ensure schema compatibility: cast native tables to match expected types
+    # Native tables may have different dtypes (e.g., float64 vs int16 for resource columns)
+    target_schema = pa.schema([
+        ('iso', pa.string()),
+        ('threshold', pa.float64()),
+        ('clean_firm', pa.int16()),
+        ('solar', pa.int16()),
+        ('wind', pa.int16()),
+        ('hydro', pa.int16()),
+        ('procurement_pct', pa.int16()),
+        ('battery_dispatch_pct', pa.float64()),
+        ('battery8_dispatch_pct', pa.float64()),
+        ('ldes_dispatch_pct', pa.float64()),
+        ('hourly_match_score', pa.float64()),
+        ('pareto_type', pa.string()),
+    ])
+
+    compatible_tables = []
+    target_cols = [f.name for f in target_schema]
+    for t in all_tables:
+        cols = {}
+        for field in target_schema:
+            name = field.name
+            if name in t.column_names:
+                col = t.column(name)
+                if col.type != field.type:
+                    col = pc.cast(col, field.type)
+                cols[name] = col
+            elif name == 'battery8_dispatch_pct':
+                cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
+            elif name == 'pareto_type':
+                cols[name] = pa.array([''] * t.num_rows, type=pa.string())
+            elif name == 'threshold':
+                cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
+            else:
+                raise ValueError(f"Missing required column '{name}' in {t.column_names}")
+        compatible_tables.append(pa.table(cols))
+
+    table = pa.concat_tables(compatible_tables)
+    n_native = sum(t.num_rows for t in native_tables)
+    n_legacy = sum(t.num_rows for t in legacy_tables)
+    print(f"  Combined: {table.num_rows:,} rows ({n_native:,} native + {n_legacy:,} legacy)")
     return table
 
 
@@ -546,20 +538,12 @@ def main():
     print("=" * 70)
 
     total_start = time.time()
-
-    # Input source priority:
-    #   1. Step 1 flat-schema parquets in step1_raw_pfs_parquets/ (new pipeline)
-    #   2. Step 1.5 list-column parquets in step1_raw_pfs_parquets/ (legacy pipeline)
-    #   3. Per-ISO physics_cache_v4_{ISO}.parquet files (pre-Step-1 legacy)
     table = load_step1_raw_pfs()
-    if table is not None:
-        print("Using Step 1 raw PFS parquets (flat schema) as Step 2 input source")
+    if table is None:
+        print("No Step 1 raw parquets found, falling back to per-ISO PFS files...")
+        table = load_pfs()
     else:
-        table = load_step1_5_raw_pfs()
-        if table is not None:
-            print("Using Step 1.5 raw parquet directory as Step 2 input source")
-        else:
-            table = load_pfs()
+        print("Using Step 1 raw parquet directory as Step 2 input source")
 
     # Step 0: Existing generation utilization filter — DISABLED (Feb 20, 2026)
     # Removed to allow below-floor mixes (hydro=0, low clean_firm) into the EF
