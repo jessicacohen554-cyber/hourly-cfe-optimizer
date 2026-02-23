@@ -1,0 +1,118 @@
+name: Run NYISO PFS Batched
+
+on:
+  workflow_dispatch:
+    inputs:
+      threshold:
+        description: 'Threshold percentage to run (e.g., 100, 95, 92.5)'
+        required: true
+        default: '100'
+      batch_size:
+        description: 'Mixes per batch (default 10000)'
+        required: false
+        default: '10000'
+      max_runtime_minutes:
+        description: 'Runtime safety cap in minutes (0 = no cap)'
+        required: false
+        default: '330'
+
+env:
+  TARGET_BRANCH: step1-PFS-ISO-parquets
+
+jobs:
+  run-nyiso-batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Switch to target branch
+      run: |
+        git fetch origin "$TARGET_BRANCH" || true
+        if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
+          git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+        else
+          git checkout -B "$TARGET_BRANCH"
+        fi
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy numba pyarrow pandas
+
+    - name: Create output directories
+      run: |
+        mkdir -p data/checkpoints_v4
+        mkdir -p data/step1_raw_pfs_parquets
+
+    - name: Detect batch number (pre-run)
+      id: detect
+      run: |
+        MANIFEST="data/step1_raw_pfs_parquets/NYISO_batch_manifest.json"
+        if [ -f "$MANIFEST" ]; then
+          BATCH=$(python3 -c "
+        import json
+        m = json.load(open('$MANIFEST'))
+        t_key = '${{ github.event.inputs.threshold }}'.replace('.0','').rstrip('0').rstrip('.')
+        # Try exact key first, then normalized
+        for k in ['${{ github.event.inputs.threshold }}', t_key]:
+            if k in m.get('thresholds', {}):
+                ts = m['thresholds'][k]
+                if ts.get('completed', False):
+                    print('DONE')
+                else:
+                    print(ts.get('batches_completed', 0) + 1)
+                break
+        else:
+            print(1)
+        ")
+          if [ "$BATCH" = "DONE" ]; then
+            echo "batch=DONE" >> "$GITHUB_OUTPUT"
+            echo "NYISO ${{ github.event.inputs.threshold }}% already completed."
+          else
+            echo "batch=$BATCH" >> "$GITHUB_OUTPUT"
+            echo "Will produce batch #$BATCH"
+          fi
+        else
+          echo "batch=1" >> "$GITHUB_OUTPUT"
+          echo "No manifest found — starting at batch #1"
+        fi
+
+    - name: Run NYISO batched PFS
+      if: steps.detect.outputs.batch != 'DONE'
+      run: |
+        python scripts/step1_pfs_nyiso_batched.py \
+          --threshold "${{ github.event.inputs.threshold }}" \
+          --batch-size "${{ github.event.inputs.batch_size || '10000' }}" \
+          --max-runtime-minutes "${{ github.event.inputs.max_runtime_minutes || '330' }}"
+
+    - name: Commit batch results
+      if: steps.detect.outputs.batch != 'DONE'
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+
+        # Add batch parquets, manifest, and checkpoint files
+        git add -f data/step1_raw_pfs_parquets/ data/checkpoints_v4/
+
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          BATCH="${{ steps.detect.outputs.batch }}"
+          git commit -m "NYISO PFS batch #${BATCH}: threshold ${{ github.event.inputs.threshold }}% — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        fi
+
+        git pull --rebase origin "$TARGET_BRANCH" || true
+        git push origin "$TARGET_BRANCH"
