@@ -16,8 +16,8 @@ jobs:
 
       - name: Ensure target branch exists locally
         run: |
-          git fetch origin step2-efficient-frontier-results || true
-          git checkout -B step2-efficient-frontier-results origin/step2-efficient-frontier-results || git checkout -B step2-efficient-frontier-results
+          git fetch origin step2-ef-parquets-results || true
+          git checkout -B step2-ef-parquets-results origin/step2-ef-parquets-results || git checkout -B step2-ef-parquets-results
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,7 +30,7 @@ jobs:
           pip install numpy pandas pyarrow
 
       - name: Ensure data directory exists
-        run: mkdir -p data
+        run: mkdir -p data/step-2-EF-parquets
 
       - name: Run Step 1.5 checkpoint conversion
         run: python scripts/step1_5_convert_checkpoints_to_parquet.py
@@ -43,7 +43,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f data/pfs_post_ef.parquet data/step1_raw_pfs_parquets/
+          git add -f data/pfs_post_ef.parquet data/step-2-EF-parquets/ data/step1_raw_pfs_parquets/
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -51,4 +51,4 @@ jobs:
             git commit -m "Update Step 2 efficient frontier outputs"
           fi
 
-          git push origin step2-efficient-frontier-results
+          git push origin step2-ef-parquets-results
