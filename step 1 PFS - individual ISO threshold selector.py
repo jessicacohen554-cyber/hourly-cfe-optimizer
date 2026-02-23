@@ -2,7 +2,7 @@
 """Complete remaining thresholds for one or more ISOs from interim cache files.
 
 Usage:
-  python complete_iso_thresholds.py <ISO> <threshold1> <threshold2> ...
+  python "step 1 PFS - individual ISO threshold selector.py" <ISO> <threshold1> <threshold2> ...
 
 If no arguments are supplied, this script defaults to the known residual runs:
   - NYISO 100%
@@ -74,7 +74,7 @@ def _parse_run_plan(argv):
 
     if not iso:
         raise SystemExit(
-            "No ISO provided. Usage: python complete_iso_thresholds.py --iso <ISO> --threshold <VALUE> "
+            "No ISO provided. Usage: python \"step 1 PFS - individual ISO threshold selector.py\" --iso <ISO> --threshold <VALUE> "
             "[--threshold <VALUE> ...]"
         )
 
@@ -83,7 +83,7 @@ def _parse_run_plan(argv):
     if not thresholds:
         raise SystemExit(
             f"No thresholds provided for {iso}. "
-            "Usage: python complete_iso_thresholds.py --iso <ISO> --threshold <VALUE> [--threshold <VALUE> ...]"
+            "Usage: python \"step 1 PFS - individual ISO threshold selector.py\" --iso <ISO> --threshold <VALUE> [--threshold <VALUE> ...]"
         )
     return [(iso, thresholds)], args.max_runtime_minutes
 
