@@ -265,7 +265,7 @@ def fix_profiles():
     for iso, tz in ISO_TIMEZONES.items():
         for year in [2024, 2025]:
             # Fix demand file
-            dem_file = os.path.join(DATA_DIR, f'eia_demand_{iso}_{year}.json')
+            dem_file = os.path.join(EIA_930_DATA_DIR, f'eia_demand_{iso}_{year}.json')
             if os.path.exists(dem_file):
                 with open(dem_file) as f:
                     dem_data = json.load(f)
