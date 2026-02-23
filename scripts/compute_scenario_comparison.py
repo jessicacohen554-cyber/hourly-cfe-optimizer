@@ -738,7 +738,7 @@ def main():
     # Load egrid and fossil mix data
     with open('data/egrid_emission_rates.json') as f:
         egrid = json.load(f)
-    with open('data/eia_fossil_mix.json') as f:
+    with open('data/EIA 930 Data/eia_fossil_mix.json') as f:
         fossil_mix = json.load(f)
 
     # Parse feasible mixes

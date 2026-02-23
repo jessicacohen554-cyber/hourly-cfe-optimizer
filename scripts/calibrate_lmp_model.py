@@ -14,8 +14,8 @@ Two calibration modes:
 Reference data sources:
   - Monitoring Analytics 2024 SOM: https://monitoringanalytics.com/reports/PJM_State_of_the_Market/2024/
   - EIA Wholesale Markets: https://www.eia.gov/electricity/wholesalemarkets/data.php?rto=pjm
-  - EIA Hourly Electric Grid Monitor: data/eia_hourly_{ISO}_{YEAR}.json
-  - EIA Hourly Demand: data/eia_demand_{ISO}_{YEAR}.json
+  - EIA Hourly Electric Grid Monitor: data/EIA 930 Data/eia_hourly_{ISO}_{YEAR}.json
+  - EIA Hourly Demand: data/EIA 930 Data/eia_demand_{ISO}_{YEAR}.json
 
 Usage:
   python calibrate_lmp_model.py                  # Weather-normalized calibration
@@ -30,7 +30,7 @@ import time
 import argparse
 import numpy as np
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
 
 from dispatch_utils import (
@@ -45,6 +45,7 @@ from compute_lmp_prices import (
 )
 
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
+EIA_930_DATA_DIR = os.path.join(DATA_DIR, 'EIA 930 Data')
 LMP_DIR = os.path.join(DATA_DIR, 'lmp')
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -324,8 +325,8 @@ def run_qa_actual(iso='PJM', year=2025, fuel_level='Medium'):
     """QA test using actual (non-normalized) EIA hourly generation + demand data.
 
     Instead of weather-normalized model profiles, loads raw EIA hourly files:
-      data/eia_hourly_{ISO}_{YEAR}.json  — generation by fuel type (MW per hour)
-      data/eia_demand_{ISO}_{YEAR}.json  — demand (MW per hour)
+      data/EIA 930 Data/eia_hourly_{ISO}_{YEAR}.json  — generation by fuel type (MW per hour)
+      data/EIA 930 Data/eia_demand_{ISO}_{YEAR}.json  — demand (MW per hour)
 
     Computes actual clean %, actual fossil dispatch, then runs LMP engine on
     the actual residual demand. Cross-references model constants against EIA actuals.
@@ -335,8 +336,8 @@ def run_qa_actual(iso='PJM', year=2025, fuel_level='Medium'):
         RESOURCE_ADEQUACY_MARGIN, GAS_AVAILABILITY_FACTOR,
     )
 
-    gen_path = os.path.join(DATA_DIR, f'eia_hourly_{iso}_{year}.json')
-    dem_path = os.path.join(DATA_DIR, f'eia_demand_{iso}_{year}.json')
+    gen_path = os.path.join(EIA_930_DATA_DIR, f'eia_hourly_{iso}_{year}.json')
+    dem_path = os.path.join(EIA_930_DATA_DIR, f'eia_demand_{iso}_{year}.json')
 
     if not os.path.exists(gen_path) or not os.path.exists(dem_path):
         print(f"  ERROR: EIA {year} data not found for {iso}")

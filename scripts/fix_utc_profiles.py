@@ -27,8 +27,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
+EIA_930_DATA_DIR = os.path.join(DATA_DIR, 'EIA 930 Data')
 H = 8760
 
 # UTC offsets (standard time hours behind UTC; DST adds 1)
@@ -159,8 +160,8 @@ def fix_profiles():
     """Fix both demand and generation profiles from UTC to local time."""
 
     # Load current profiles
-    demand_path = os.path.join(DATA_DIR, 'eia_demand_profiles.json')
-    gen_path = os.path.join(DATA_DIR, 'eia_generation_profiles.json')
+    demand_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')
+    gen_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles.json')
 
     with open(demand_path) as f:
         demand_profiles = json.load(f)
@@ -179,8 +180,8 @@ def fix_profiles():
                     verify_alignment(iso, raw, f'{year} demand')
 
     # Backup originals
-    backup_demand = os.path.join(DATA_DIR, 'eia_demand_profiles_utc_backup.json')
-    backup_gen = os.path.join(DATA_DIR, 'eia_generation_profiles_utc_backup.json')
+    backup_demand = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles_utc_backup.json')
+    backup_gen = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles_utc_backup.json')
 
     if not os.path.exists(backup_demand):
         with open(backup_demand, 'w') as f:
@@ -264,7 +265,7 @@ def fix_profiles():
     for iso, tz in ISO_TIMEZONES.items():
         for year in [2024, 2025]:
             # Fix demand file
-            dem_file = os.path.join(DATA_DIR, f'eia_demand_{iso}_{year}.json')
+            dem_file = os.path.join(EIA_930_DATA_DIR, f'eia_demand_{iso}_{year}.json')
             if os.path.exists(dem_file):
                 with open(dem_file) as f:
                     dem_data = json.load(f)
@@ -288,7 +289,7 @@ def fix_profiles():
                 print(f"  Fixed {dem_file}")
 
             # Fix hourly gen file
-            gen_file = os.path.join(DATA_DIR, f'eia_hourly_{iso}_{year}.json')
+            gen_file = os.path.join(EIA_930_DATA_DIR, f'eia_hourly_{iso}_{year}.json')
             if os.path.exists(gen_file):
                 with open(gen_file) as f:
                     gen_data = json.load(f)
@@ -342,7 +343,7 @@ def fix_profiles():
 
 def verify_only():
     """Just check current alignment without fixing."""
-    demand_path = os.path.join(DATA_DIR, 'eia_demand_profiles.json')
+    demand_path = os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')
     with open(demand_path) as f:
         demand_profiles = json.load(f)
 

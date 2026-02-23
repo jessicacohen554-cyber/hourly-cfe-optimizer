@@ -1,4 +1,4 @@
-name: Run ISO Threshold Script
+name: Run Step 1 PFS by ISO/threshold
 
 on:
   workflow_dispatch:
@@ -34,17 +34,32 @@ jobs:
         pip install pyarrow numba pandas
 
     - name: Create checkpoint directory
-      run: mkdir -p data/checkpoints
+      run: mkdir -p data/checkpoints data/checkpoints_v4
 
     - name: Run script
       run: |
-        python complete_iso_thresholds.py --iso "${{ github.event.inputs.iso }}" --threshold "${{ github.event.inputs.threshold }}"
+        python scripts/step1_pfs_generator.py "${{ github.event.inputs.iso }}"
 
     - name: Commit results
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git checkout -B iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}
+
+        BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
+        git fetch origin "$BRANCH" || true
+
+        if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+          git checkout -B "$BRANCH" "origin/$BRANCH"
+        else
+          git checkout -B "$BRANCH"
+        fi
+
         git add data/checkpoints/
-        git commit -m "Update ${{ github.event.inputs.iso }} ISO threshold ${{ github.event.inputs.threshold }}" || echo "No changes"
-        git push origin iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}
+
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "Update ${{ github.event.inputs.iso }} ISO threshold ${{ github.event.inputs.threshold }}"
+        fi
+
+        git push origin "$BRANCH"
