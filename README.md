@@ -69,6 +69,22 @@ python scripts/compute_mac_stats.py
 python scripts/generate_shared_data.py
 ```
 
+### Workflow Output Branches (GitHub Actions)
+
+The workflows now write outputs directly to branches (instead of only uploading zip artifacts), so results are versioned in Git and can be merged into `master`:
+
+- `run-step1-5-convert-checkpoints.yml` → `step1-5-raw-pfs-parquets`
+  - Writes: `data/step1_raw_pfs_parquets/`
+- `run-step1-full-pfs.yml` → `step1-full-pfs-results`
+  - Writes: `data/physics_cache_v4*.parquet`, `data/checkpoints_v4/`, `scripts/dashboard/`
+- `run-step2-efficient-frontier.yml` → `step2-efficient-frontier-results`
+  - Writes: `data/pfs_post_ef.parquet`, `data/step1_raw_pfs_parquets/`
+- `run-iso-thresholds.yml` → `iso-threshold-<ISO>-<THRESHOLD>`
+  - Example: `iso-threshold-NYISO-95`
+  - Writes: `data/checkpoints/`, `data/checkpoints_v4/`, `data/physics_cache_v4_*.parquet`, `scripts/dashboard/`
+
+These branches are safe staging branches for workflow outputs; open PRs from them into `master` when ready.
+
 ### Key Acronyms
 
 - **PFS** — Physics Feasible Space: the full set of physically valid resource mixes (Step 1 output)
