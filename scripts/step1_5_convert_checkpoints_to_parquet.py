@@ -10,12 +10,45 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import math
+import os
 import re
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import pandas as pd
 
 FILENAME_RE = re.compile(r"^(?P<iso>[A-Z0-9]+)_cache_(?P<threshold>[0-9.]+)\.json$")
+KEY_RE = re.compile(
+    r"^\('(?P<dispatch_mode>[a-z]+)',\s*(?P<mix>\([^)]*\)|\[[^\]]*\]),\s*(?P<threshold>[^,\)]+)(?:,\s*(?P<arg3>[^,\)]+))?(?:,\s*(?P<arg4>[^,\)]+))?\)$"
+)
+
+
+def _parse_number(value: str):
+    value = value.strip()
+    try:
+        number = float(value)
+    except ValueError:
+        return None
+    return int(number) if number.is_integer() else number
+
+
+def _parse_mix(mix_blob: str):
+    trimmed = mix_blob.strip()
+    if len(trimmed) < 2:
+        return None
+
+    inner = trimmed[1:-1].strip()
+    if not inner:
+        return []
+
+    mix_values = []
+    for part in inner.split(","):
+        parsed = _parse_number(part)
+        if parsed is None:
+            return None
+        mix_values.append(parsed)
+    return mix_values
 
 
 def parse_key(key: str) -> dict:
@@ -35,6 +68,25 @@ def parse_key(key: str) -> dict:
         "battery_hours": None,
     }
 
+    m = KEY_RE.match(key)
+    if m:
+        parsed_mix = _parse_mix(m.group("mix"))
+        threshold = _parse_number(m.group("threshold"))
+        if parsed_mix is not None and threshold is not None:
+            parsed["dispatch_mode"] = m.group("dispatch_mode")
+            parsed["mix"] = parsed_mix
+            parsed["threshold"] = threshold
+
+            arg3 = m.group("arg3")
+            arg4 = m.group("arg4")
+            if arg4 is None and arg3 is not None:
+                parsed["battery_hours"] = _parse_number(arg3)
+            elif arg4 is not None:
+                parsed["ldes_hours"] = _parse_number(arg3)
+                parsed["battery_hours"] = _parse_number(arg4)
+            return parsed
+
+    # Fallback parser for unexpected key shapes.
     try:
         key_tuple = ast.literal_eval(key)
     except (ValueError, SyntaxError):
@@ -101,6 +153,15 @@ def convert_file(path: Path, output_dir: Path) -> Path:
     return output_path
 
 
+def convert_files(checkpoint_files: list[Path], output_dir: Path, workers: int) -> list[Path]:
+    if workers <= 1:
+        return [convert_file(fp, output_dir) for fp in checkpoint_files]
+
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        futures = [executor.submit(convert_file, fp, output_dir) for fp in checkpoint_files]
+        return [future.result() for future in futures]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Convert Step 1 JSON checkpoints to parquet")
     parser.add_argument("--input-dir", default="data/checkpoints", help="Directory with *_cache_*.json files")
@@ -108,6 +169,12 @@ def main() -> None:
         "--output-dir",
         default="data/step1_raw_pfs_parquets",
         help="Directory where parquet outputs are written",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        help="Number of worker processes to use across files (0 = auto, 1 = sequential)",
     )
     args = parser.parse_args()
 
@@ -119,13 +186,15 @@ def main() -> None:
     if not checkpoint_files:
         raise SystemExit(f"No checkpoint JSON files found in: {input_dir}")
 
-    converted = []
-    for fp in checkpoint_files:
-        out = convert_file(fp, output_dir)
-        converted.append(out)
+    auto_workers = max(1, math.ceil((os.cpu_count() or 1) * 0.75))
+    max_workers = args.workers or min(len(checkpoint_files), auto_workers)
+    max_workers = max(1, min(max_workers, len(checkpoint_files)))
+
+    converted = convert_files(checkpoint_files, output_dir, workers=max_workers)
+    for fp, out in zip(checkpoint_files, converted):
         print(f"Converted {fp} -> {out}")
 
-    print(f"Done. Converted {len(converted)} files into {output_dir}")
+    print(f"Done. Converted {len(converted)} files into {output_dir} using {max_workers} worker(s)")
 
 
 if __name__ == "__main__":

@@ -49,8 +49,9 @@ PAGE_SIZE = 5000
 MAX_RETRIES = 3
 CALL_DELAY = 0.5
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, "data")
+EIA_930_DATA_DIR = os.path.join(DATA_DIR, "EIA 930 Data")
 
 
 def hours_in_year(year):
@@ -462,24 +463,25 @@ def main():
     print()
 
     # Per-ISO-year generation files
+    os.makedirs(EIA_930_DATA_DIR, exist_ok=True)
     for (respondent, year), hourly_array in all_gen.items():
         region = REGION_MAP[respondent]
         filename = f"eia_hourly_{region}_{year}.json"
-        filepath = os.path.join(DATA_DIR, filename)
+        filepath = os.path.join(EIA_930_DATA_DIR, filename)
         save_json(filepath, hourly_array)
 
     # Per-ISO-year demand files
     for (respondent, year), hourly_array in all_demand.items():
         region = REGION_MAP[respondent]
         filename = f"eia_demand_{region}_{year}.json"
-        filepath = os.path.join(DATA_DIR, filename)
+        filepath = os.path.join(EIA_930_DATA_DIR, filename)
         save_json(filepath, hourly_array)
 
     # Aggregated profiles — merge with existing data (preserves ISOs not fetched)
     print()
-    gen_path = os.path.join(DATA_DIR, "eia_generation_profiles.json")
-    fossil_path = os.path.join(DATA_DIR, "eia_fossil_mix.json")
-    demand_path = os.path.join(DATA_DIR, "eia_demand_profiles.json")
+    gen_path = os.path.join(DATA_DIR, "EIA 930 Data", "eia_generation_profiles.json")
+    fossil_path = os.path.join(DATA_DIR, "EIA 930 Data", "eia_fossil_mix.json")
+    demand_path = os.path.join(DATA_DIR, "EIA 930 Data", "eia_demand_profiles.json")
 
     print("Building generation profiles...")
     new_profiles = build_generation_profiles(all_gen)
