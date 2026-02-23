@@ -2,11 +2,9 @@ name: Run Step 2 Efficient Frontier Filter
 
 on:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to read Step 1 parquets from and push Step 2 results to'
-        required: true
-        default: 'work'
+
+env:
+  TARGET_BRANCH: step-2-EF-ISO-parquets
 
 jobs:
   run-step2:
@@ -19,13 +17,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0
 
-      - name: Ensure target branch exists locally
+      - name: Switch to target branch
         run: |
-          BRANCH="${{ github.event.inputs.branch }}"
-          git fetch origin "$BRANCH" || true
-          git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
+          git fetch origin "$TARGET_BRANCH" || true
+          if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
+            git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          else
+            git checkout -B "$TARGET_BRANCH"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,8 +52,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          BRANCH="${{ github.event.inputs.branch }}"
-
           git add -f data/step-2-EF-parquets/
 
           if git diff --cached --quiet; then
@@ -61,4 +60,4 @@ jobs:
             git commit -m "Step 2 EF: efficient frontier extraction — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           fi
 
-          git push origin "$BRANCH"
+          git push origin "$TARGET_BRANCH"
