@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Temp track analysis: Compute newbuild + replace tracks incrementally.
+Track 2-3: New-Build (NB) + Cost-to-Replace (CTR) analysis.
 Does NOT rerun baseline — preserves existing overprocure_results.json.
 
-Track 1 (newbuild): hydro=0 mixes, uprates ON
-  Source: expanded EF (27M), filtered to hydro=0 (~7.2M mixes)
-  Purpose: What does hourly matching incentivize?
+Track 2 (newbuild / NB): hydro=0 mixes, uprates ON
+  Source: per-ISO EF parquets (data/step-2-EF-parquets/step2_ef_{ISO}.parquet)
+  Filtered to hydro=0 mixes.
+  Purpose: What does hourly matching incentivize from scratch?
 
-Track 2 (replace): all mixes (hydro≤existing), uprates OFF
-  Source: original EF backup (8.6M mixes with floor filter)
+Track 3 (cost-to-replace / CTR): all mixes (hydro≤existing), uprates OFF
+  Source: per-ISO EF parquets (data/step-2-EF-parquets/step2_ef_{ISO}.parquet)
   Purpose: Cost to replace existing clean generation
 
 Checkpoint: Parquet-based. After each (iso, track) completes, results are
@@ -16,9 +17,9 @@ Checkpoint: Parquet-based. After each (iso, track) completes, results are
   are read from the parquet header — no full data load needed.
 
 Usage:
-  python temp_track.py              # Medium-only (fast, ~30s)
-  python temp_track.py --full       # All 5,832+ combos (hours)
-  python temp_track.py --iso PJM    # Single ISO
+  python track2-3_nb_ctr.py              # Medium-only (fast, ~30s)
+  python track2-3_nb_ctr.py --full       # All 5,832+ combos (hours)
+  python track2-3_nb_ctr.py --iso PJM    # Single ISO
 """
 
 import os
@@ -49,8 +50,8 @@ from step3_cost_optimization import (
     _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4, _COL_BAT8, _COL_LDES,
 )
 
-EF_EXPANDED_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef.parquet')
-EF_BACKUP_PATH = os.path.join(SCRIPT_DIR, 'data', 'pfs_post_ef_backup.parquet')
+# Per-ISO EF parquet directory (Step 2 output)
+EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step-2-EF-parquets')
 
 # Parquet paths — these ARE the checkpoints
 PQ_SCENARIOS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
@@ -153,12 +154,20 @@ def append_to_parquet(new_rows, pq_path):
     return len(df)
 
 
-def load_iso_arrays(table, iso):
-    """Load numpy arrays for a single ISO from a pyarrow table."""
-    mask = pc.equal(table.column('iso'), iso)
-    sub = table.filter(mask)
+def load_iso_ef_parquet(iso):
+    """Load numpy arrays for a single ISO from its per-ISO EF parquet.
+
+    Reads from data/step-2-EF-parquets/step2_ef_{ISO}.parquet (Step 2 output).
+    Returns None if the file doesn't exist or is empty.
+    """
+    path = os.path.join(EF_ISO_DIR, f'step2_ef_{iso}.parquet')
+    if not os.path.exists(path):
+        print(f"  WARNING: EF parquet not found for {iso}: {path}")
+        return None
+    sub = pq.read_table(path)
     if sub.num_rows == 0:
         return None
+    print(f"  {iso}: loaded {sub.num_rows:,} EF mixes from {path}")
     return {
         'clean_firm': sub.column('clean_firm').to_numpy(),
         'solar': sub.column('solar').to_numpy(),
@@ -396,8 +405,9 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("  INCREMENTAL TRACK ANALYSIS")
+    print("  TRACK 2-3: NEW-BUILD (NB) + COST-TO-REPLACE (CTR)")
     print(f"  Mode: {'Full sweep (all combos)' if args.full else 'Medium-only (fast)'}")
+    print(f"  EF source: {EF_ISO_DIR}")
     print(f"  Checkpoint: Parquet-based ({PQ_SCENARIOS_PATH})")
     print("=" * 70)
     total_start = time.time()
@@ -423,14 +433,15 @@ def main():
         _batch_eval_and_argmin(_dcm, _dc, _dpm, _ds, _dt)
         print(f"  Numba JIT warmup complete (batched mode)")
 
-    # Load EF sources
-    print("\nLoading EF sources...")
-    ef_expanded = pq.read_table(EF_EXPANDED_PATH)
-    print(f"  Expanded EF: {ef_expanded.num_rows:,} rows")
-
     run_isos = [args.iso] if args.iso else ISOS
     for iso in run_isos:
         demand_twh = REGIONAL_DEMAND_TWH[iso]
+
+        # Load per-ISO EF parquet (Step 2 output)
+        iso_arrays = load_iso_ef_parquet(iso)
+        if iso_arrays is None:
+            print(f"  {iso:>6}: no EF data, skipping")
+            continue
 
         # Build combos
         if args.full:
@@ -444,84 +455,82 @@ def main():
 
         # Greenfield existing override: all clean resources zeroed
         greenfield_all = {'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0, 'hydro': 0}
-        # Replace override: hydro stays at existing floor, everything else zeroed
+        # CTR override: hydro stays at existing floor, everything else zeroed
         existing_shares = GRID_MIX_SHARES[iso]
         greenfield_keep_hydro = {
             'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0,
             'hydro': existing_shares['hydro'],
         }
 
-        # Track 1: newbuild (hydro=0, all existing zeroed, uprates ON)
+        # Track 2: newbuild / NB (hydro=0, all existing zeroed, uprates ON)
         if (iso, 'newbuild') not in completed_tracks:
-            all_arrays = load_iso_arrays(ef_expanded, iso)
-            if all_arrays is not None:
-                h0_mask = all_arrays['hydro'] == 0
-                n_h0 = h0_mask.sum()
-                if n_h0 > 0:
-                    h0_idx = np.where(h0_mask)[0]
-                    nb_arrays = {k: all_arrays[k][h0_idx] for k in all_arrays}
+            h0_mask = iso_arrays['hydro'] == 0
+            n_h0 = h0_mask.sum()
+            if n_h0 > 0:
+                h0_idx = np.where(h0_mask)[0]
+                nb_arrays = {k: iso_arrays[k][h0_idx] for k in iso_arrays}
 
-                    nb_data, nb_arch = run_track(
-                        'newbuild', iso, nb_arrays, demand_twh, combos,
+                nb_data, nb_arch = run_track(
+                    'newbuild', iso, nb_arrays, demand_twh, combos,
+                    existing_override=greenfield_all)
+
+                # Save to parquet immediately
+                sc_rows = flatten_track_rows(iso, 'newbuild', nb_data)
+                append_to_parquet(sc_rows, PQ_SCENARIOS_PATH)
+
+                if nb_arch:
+                    nb_dg = run_track_demand_growth(
+                        'newbuild', iso, nb_arrays, nb_arch, combos,
                         existing_override=greenfield_all)
-
-                    # Save to parquet immediately
-                    sc_rows = flatten_track_rows(iso, 'newbuild', nb_data)
-                    append_to_parquet(sc_rows, PQ_SCENARIOS_PATH)
-
-                    if nb_arch:
-                        nb_dg = run_track_demand_growth(
-                            'newbuild', iso, nb_arrays, nb_arch, combos,
-                            existing_override=greenfield_all)
-                        dg_rows = flatten_dg_rows(iso, 'newbuild', nb_dg)
-                        if dg_rows:
-                            append_to_parquet(dg_rows, PQ_DG_PATH)
-                else:
-                    print(f"  {iso:>6}   newbuild: no hydro=0 mixes")
+                    dg_rows = flatten_dg_rows(iso, 'newbuild', nb_dg)
+                    if dg_rows:
+                        append_to_parquet(dg_rows, PQ_DG_PATH)
+            else:
+                print(f"  {iso:>6}   newbuild: no hydro=0 mixes")
         else:
             print(f"  {iso:>6}   newbuild: skipped (in parquet)")
 
-        # Track 2: replace (hydro at existing floor, everything else zeroed, uprates OFF)
-        if (iso, 'replace') not in completed_tracks:
-            rp_arrays = load_iso_arrays(ef_expanded, iso)
-            if rp_arrays is not None:
-                # Compute 2050 high-demand hydro floor
-                hydro_existing_share = GRID_MIX_SHARES[iso]['hydro']
-                high_rate = DEMAND_GROWTH_RATES[iso].get('High',
-                            DEMAND_GROWTH_RATES[iso].get('high', 0))
-                target_year = max(DEMAND_GROWTH_YEARS) if DEMAND_GROWTH_YEARS else 2050
-                years_of_growth = target_year - 2025
-                demand_scale_2050 = (1 + high_rate) ** years_of_growth
-                hydro_floor = hydro_existing_share / demand_scale_2050 if demand_scale_2050 > 0 else 0
-                n_before = len(rp_arrays['hydro'])
-                h_mask = rp_arrays['hydro'] >= hydro_floor
-                n_pass = int(h_mask.sum())
-                if n_pass > 0 and n_pass < n_before:
-                    h_idx = np.where(h_mask)[0]
-                    rp_arrays = {k: rp_arrays[k][h_idx] for k in rp_arrays}
-                    print(f"    {iso} replace: hydro>={hydro_floor:.1f}% (2050 high-demand floor) "
-                          f"{n_before:,} → {n_pass:,} ({100*(n_before-n_pass)/n_before:.1f}% pruned)")
-                elif n_pass == 0:
-                    print(f"    {iso} replace: no mixes with hydro>={hydro_floor:.1f}%, skipping")
-                    continue
+        # Track 3: cost-to-replace / CTR (hydro at existing floor, everything else zeroed, uprates OFF)
+        if (iso, 'cost_to_replace') not in completed_tracks:
+            # Compute 2050 high-demand hydro floor
+            hydro_existing_share = GRID_MIX_SHARES[iso]['hydro']
+            high_rate = DEMAND_GROWTH_RATES[iso].get('High',
+                        DEMAND_GROWTH_RATES[iso].get('high', 0))
+            target_year = max(DEMAND_GROWTH_YEARS) if DEMAND_GROWTH_YEARS else 2050
+            years_of_growth = target_year - 2025
+            demand_scale_2050 = (1 + high_rate) ** years_of_growth
+            hydro_floor = hydro_existing_share / demand_scale_2050 if demand_scale_2050 > 0 else 0
+            n_before = len(iso_arrays['hydro'])
+            h_mask = iso_arrays['hydro'] >= hydro_floor
+            n_pass = int(h_mask.sum())
+            if n_pass > 0 and n_pass < n_before:
+                h_idx = np.where(h_mask)[0]
+                ctr_arrays = {k: iso_arrays[k][h_idx] for k in iso_arrays}
+                print(f"    {iso} cost_to_replace: hydro>={hydro_floor:.1f}% (2050 high-demand floor) "
+                      f"{n_before:,} → {n_pass:,} ({100*(n_before-n_pass)/n_before:.1f}% pruned)")
+            elif n_pass == 0:
+                print(f"    {iso} cost_to_replace: no mixes with hydro>={hydro_floor:.1f}%, skipping")
+                continue
+            else:
+                ctr_arrays = iso_arrays
 
-                rp_data, rp_arch = run_track(
-                    'replace', iso, rp_arrays, demand_twh, combos,
+            ctr_data, ctr_arch = run_track(
+                'cost_to_replace', iso, ctr_arrays, demand_twh, combos,
+                uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+
+            # Save to parquet immediately
+            sc_rows = flatten_track_rows(iso, 'cost_to_replace', ctr_data)
+            append_to_parquet(sc_rows, PQ_SCENARIOS_PATH)
+
+            if ctr_arch:
+                ctr_dg = run_track_demand_growth(
+                    'cost_to_replace', iso, ctr_arrays, ctr_arch, combos,
                     uprate_cap_override=0, existing_override=greenfield_keep_hydro)
-
-                # Save to parquet immediately
-                sc_rows = flatten_track_rows(iso, 'replace', rp_data)
-                append_to_parquet(sc_rows, PQ_SCENARIOS_PATH)
-
-                if rp_arch:
-                    rp_dg = run_track_demand_growth(
-                        'replace', iso, rp_arrays, rp_arch, combos,
-                        uprate_cap_override=0, existing_override=greenfield_keep_hydro)
-                    dg_rows = flatten_dg_rows(iso, 'replace', rp_dg)
-                    if dg_rows:
-                        append_to_parquet(dg_rows, PQ_DG_PATH)
+                dg_rows = flatten_dg_rows(iso, 'cost_to_replace', ctr_dg)
+                if dg_rows:
+                    append_to_parquet(dg_rows, PQ_DG_PATH)
         else:
-            print(f"  {iso:>6}    replace: skipped (in parquet)")
+            print(f"  {iso:>6}    cost_to_replace: skipped (in parquet)")
 
     total_elapsed = time.time() - total_start
     pq_size = os.path.getsize(PQ_SCENARIOS_PATH) / (1024 * 1024) if os.path.exists(PQ_SCENARIOS_PATH) else 0
