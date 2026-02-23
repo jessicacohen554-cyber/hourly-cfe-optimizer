@@ -52,8 +52,11 @@ def _parse_run_plan(argv):
     parser.add_argument(
         "--max-runtime-minutes",
         type=float,
-        default=15,
-        help="Maximum runtime per threshold before saving a checkpoint and exiting (default: 15).",
+        default=0,
+        help=(
+            "Maximum runtime per threshold before saving a checkpoint and exiting. "
+            "Set to 0 (default) for no runtime cap."
+        ),
     )
 
     args = parser.parse_args(argv[1:])
@@ -89,6 +92,10 @@ def _parse_run_plan(argv):
 
 
 def _run_iso_thresholds(iso, remaining, max_runtime_minutes):
+    max_runtime_seconds = None
+    if max_runtime_minutes and max_runtime_minutes > 0:
+        max_runtime_seconds = max_runtime_minutes * 60
+
     s1.THRESHOLDS = remaining
 
     interim_path = os.path.join(s1.CHECKPOINT_DIR, f"{iso}_v4_interim.parquet")
@@ -169,7 +176,7 @@ def _run_iso_thresholds(iso, remaining, max_runtime_minutes):
             prev_pruning=prev_pruning,
             cross_feasible_mixes=cross_feasible,
             storage_levels=fine_levels,
-            max_runtime_seconds=max_runtime_minutes * 60,
+            max_runtime_seconds=max_runtime_seconds,
         )
         threshold_completed = prev_pruning.get("completed", True)
         elapsed = time.time() - t_start
