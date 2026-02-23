@@ -47,3 +47,7 @@ data/track_checkpoint.json.tmp
 dashboard/track_results.json.tmp
 
 # Step 1.5 raw parquet exports are committed by workflow (source of truth for Step 2)
+
+# Step 1.5 raw parquet exports are ignored locally; CI commits them with git add -f
+data/step1_raw_pfs_parquets/*
+!data/step1_raw_pfs_parquets/.gitkeep
