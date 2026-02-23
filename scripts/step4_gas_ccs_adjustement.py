@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Step 4: Post-Processing — Corrections & Overlays
-==================================================
+Step 4: Post-Processing — Gas & CCS Corrections & Overlays
+============================================================
 Applies corrections to Step 3 cost optimization results.
 
 Pipeline position: Step 4 of 4
@@ -13,24 +13,53 @@ Pipeline position: Step 4 of 4
 Corrections:
   1. NEISO winter gas pipeline constraint (+$13/MWh CCS, +$4/MWh wholesale)
   2. CCS vs LDES crossover analysis
-  3. CO₂ calculations, MAC calculations
+  3. Gas capacity backup & resource adequacy
 
-Reads:  dashboard/overprocure_results.json (from Step 3)
-Writes: dashboard/overprocure_results.json (corrected)
-        data/postprocess_analysis.json (analysis output)
+Input:  data/step-3-CO-ISO-parquets/step3_co_<ISO>.parquet (per-ISO, from Step 3)
+Output: data/step-3.5-preprocessed/step4_<ISO>.parquet (per-ISO, corrected)
+        data/step-3.5-preprocessed/step4_analysis.json (crossover/RA analysis)
+
+Usage:
+  python scripts/step4_gas_ccs_adjustement.py                 # Process all ISOs
+  python scripts/step4_gas_ccs_adjustement.py --iso ERCOT     # Process single ISO
+  python scripts/step4_gas_ccs_adjustement.py --iso ERCOT --iso PJM  # Multiple ISOs
+  python scripts/step4_gas_ccs_adjustement.py --all            # Explicit all (default)
+
+Dependencies: pandas, pyarrow (same as Step 3)
 
 See SPEC.md for methodology documentation.
 """
 
+import argparse
 import json
 import os
 import sys
+import time
+from pathlib import Path
+
+try:
+    import pandas as pd
+except ImportError:
+    print("ERROR: pandas is required. Install: pip install pandas pyarrow")
+    sys.exit(1)
+
+try:
+    import pyarrow.parquet as pq
+except ImportError:
+    print("ERROR: pyarrow is required. Install: pip install pyarrow")
+    sys.exit(1)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PATHS
+# ══════════════════════════════════════════════════════════════════════════════
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RESULTS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
-ANALYSIS_PATH = os.path.join(SCRIPT_DIR, 'data', 'postprocess_analysis.json')
+DEFAULT_INPUT_DIR = os.path.join(SCRIPT_DIR, 'data', 'step-3-CO-ISO-parquets')
+DEFAULT_OUTPUT_DIR = os.path.join(SCRIPT_DIR, 'data', 'step-3.5-preprocessed')
+ANALYSIS_PATH = os.path.join(SCRIPT_DIR, 'data', 'step-3.5-preprocessed', 'step4_analysis.json')
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -157,58 +186,325 @@ CCS_REFERENCE_CF = 0.85     # NETL reference capacity factor
 NEISO_CCS_GAS_ADDER = 13.13    # $/MWh annualized: 7 HR × $7.50 premium × 0.25 winter fraction
 NEISO_WHOLESALE_ADDER = 4.0    # $/MWh annualized: winter gas on marginal pricing
 
+# ══════════════════════════════════════════════════════════════════════════════
+# GAS CAPACITY BACKUP & RESOURCE ADEQUACY
+# ══════════════════════════════════════════════════════════════════════════════
 
-def load_results():
-    """Load Step 2 results from dashboard JSON. Postprocess runs AFTER Step 2."""
-    if os.path.exists(RESULTS_PATH):
-        with open(RESULTS_PATH) as f:
-            data = json.load(f)
-        print(f"  Loaded: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
-        return data
-    print("ERROR: No results file found! Run Step 2 first.")
-    sys.exit(1)
+RESOURCE_ADEQUACY_MARGIN = 0.15  # 15% reserve margin
 
+PEAK_DEMAND_MW = {
+    'CAISO': 43860, 'ERCOT': 83597, 'PJM': 160560, 'NYISO': 31857, 'NEISO': 25898,
+    'MISO': 127125, 'SPP': 54368,
+}
+
+EXISTING_GAS_CAPACITY_MW = {
+    'CAISO': 37000, 'ERCOT': 55000, 'PJM': 75000, 'NYISO': 18000,
+    'NEISO': 14000, 'MISO': 68000, 'SPP': 32000,
+}
+
+NEW_CCGT_COST_KW_YR = {
+    'CAISO': 112, 'ERCOT': 89, 'PJM': 99, 'NYISO': 114,
+    'NEISO': 105, 'MISO': 95, 'SPP': 88,
+}
+
+EXISTING_GAS_FOM_KW_YR = {
+    'CAISO': 16, 'ERCOT': 13, 'PJM': 14, 'NYISO': 17, 'NEISO': 15,
+    'MISO': 14, 'SPP': 13,
+}
+
+PEAK_CAPACITY_CREDITS = {
+    'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
+    'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
+}
+
+GAS_AVAILABILITY_FACTOR = {
+    'CAISO': 0.88, 'ERCOT': 0.83, 'PJM': 0.82, 'NYISO': 0.82,
+    'NEISO': 0.85, 'MISO': 0.84, 'SPP': 0.84,
+}
+
+NEISO_PIPELINE_GAS_CAPACITY_MW = 8300
+NEISO_PIPELINE_EXPANSION_COST_MW_YR = 2400
+
+# Regional demand (TWh → MWh) for ISOs not yet in parquet
+REGIONAL_DEMAND_MWH = {
+    'CAISO': 224.039e6, 'ERCOT': 488.020e6, 'PJM': 843.331e6,
+    'NYISO': 151.599e6, 'NEISO': 115.336e6, 'MISO': 660.000e6, 'SPP': 296.000e6,
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PARQUET I/O — Load per-ISO parquets → nested dict
+# ══════════════════════════════════════════════════════════════════════════════
+
+def load_from_parquets(input_dir, isos):
+    """
+    Read per-ISO Step 3 parquets and reconstruct the nested dict format
+    used by all processing functions.
+
+    Parquet schema (flat):
+        iso, threshold, scenario, annual_demand_mwh,
+        mix_clean_firm, mix_solar, mix_wind, mix_ccs_ccgt, mix_hydro,
+        procurement_pct, hourly_match_score,
+        battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct,
+        cost_total_cost, cost_effective_cost, cost_incremental, cost_wholesale,
+        tranche_cf_existing_twh, tranche_uprate_twh, tranche_geo_twh,
+        tranche_nuclear_newbuild_twh, tranche_ccs_tranche_twh, tranche_new_cf_twh,
+        gas_gas_backup_needed_mw, gas_existing_gas_used_mw, gas_new_gas_build_mw,
+        gas_gas_cost_per_mwh, gas_clean_peak_capacity_mw, gas_ra_peak_mw
+
+    Nested dict output:
+        data['results'][iso]['annual_demand_mwh'] = float
+        data['results'][iso]['thresholds'][t_str]['scenarios'][scenario_key] = {
+            'resource_mix': {clean_firm, solar, wind, ccs_ccgt, hydro},
+            'costs': {total_cost, effective_cost, incremental, wholesale},
+            'tranche_costs': {cf_existing_twh, uprate_twh, ...},
+            'procurement_pct', 'hourly_match_score',
+            'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct',
+            'gas_backup_step3': {gas_backup_needed_mw, ...},
+        }
+    """
+    data = {'results': {}}
+    loaded_count = 0
+
+    for iso in isos:
+        parquet_path = os.path.join(input_dir, f'step3_co_{iso}.parquet')
+        if not os.path.exists(parquet_path):
+            print(f"  WARNING: {parquet_path} not found — skipping {iso}")
+            continue
+
+        df = pd.read_parquet(parquet_path)
+        print(f"  Loaded {iso}: {len(df):,} rows from {parquet_path} "
+              f"({os.path.getsize(parquet_path) / 1024:.0f} KB)")
+
+        # Extract annual_demand_mwh (same for all rows of this ISO)
+        annual_demand = float(df['annual_demand_mwh'].iloc[0]) if 'annual_demand_mwh' in df.columns else REGIONAL_DEMAND_MWH.get(iso, 0)
+
+        iso_data = {
+            'annual_demand_mwh': annual_demand,
+            'thresholds': {},
+        }
+
+        # Group by threshold
+        for threshold, thr_group in df.groupby('threshold'):
+            t_str = str(threshold) if threshold != int(threshold) else str(int(threshold))
+            # Handle float thresholds like 87.5, 92.5, 97.5
+            if isinstance(threshold, float) and threshold != int(threshold):
+                t_str = str(threshold)
+            else:
+                t_str = str(int(threshold))
+
+            scenarios = {}
+            for _, row in thr_group.iterrows():
+                sc_key = row['scenario']
+
+                # Reconstruct resource_mix
+                resource_mix = {}
+                for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+                    col = f'mix_{rtype}'
+                    resource_mix[rtype] = int(row[col]) if col in row.index else 0
+
+                # Reconstruct costs
+                costs = {}
+                for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+                    col = f'cost_{ckey}'
+                    costs[ckey] = float(row[col]) if col in row.index else 0.0
+
+                # Reconstruct tranche_costs
+                tranche_costs = {}
+                tranche_cols = [c for c in row.index if c.startswith('tranche_')]
+                for col in tranche_cols:
+                    key = col[len('tranche_'):]  # Strip prefix
+                    val = row[col]
+                    if pd.notna(val):
+                        tranche_costs[key] = float(val)
+
+                # Reconstruct gas_backup from step 3 (preserved as gas_backup_step3)
+                gas_step3 = {}
+                gas_cols = [c for c in row.index if c.startswith('gas_')]
+                for col in gas_cols:
+                    key = col[len('gas_'):]  # Strip 'gas_' prefix
+                    val = row[col]
+                    if pd.notna(val):
+                        gas_step3[key] = float(val) if isinstance(val, float) else int(val)
+
+                scenario = {
+                    'resource_mix': resource_mix,
+                    'costs': costs,
+                    'tranche_costs': tranche_costs,
+                    'procurement_pct': int(row['procurement_pct']) if 'procurement_pct' in row.index else 100,
+                    'hourly_match_score': float(row['hourly_match_score']) if 'hourly_match_score' in row.index else 0.0,
+                    'battery_dispatch_pct': int(row['battery_dispatch_pct']) if 'battery_dispatch_pct' in row.index else 0,
+                    'battery8_dispatch_pct': int(row['battery8_dispatch_pct']) if 'battery8_dispatch_pct' in row.index else 0,
+                    'ldes_dispatch_pct': int(row['ldes_dispatch_pct']) if 'ldes_dispatch_pct' in row.index else 0,
+                    'gas_backup_step3': gas_step3,
+                }
+
+                scenarios[sc_key] = scenario
+
+            iso_data['thresholds'][t_str] = {'scenarios': scenarios}
+
+        data['results'][iso] = iso_data
+        loaded_count += 1
+
+    print(f"  Loaded {loaded_count} ISOs from parquet files")
+    return data
+
+
+def save_to_parquets(data, output_dir, isos):
+    """
+    Flatten the nested dict back to per-ISO parquets with step 4 additions.
+
+    New columns added by step 4 (beyond step 3's original columns):
+        neiso_gas_adj_total_cost, neiso_gas_adj_effective_cost,
+        neiso_gas_adj_incremental, neiso_gas_adj_wholesale,
+        neiso_gas_no45q_total_cost, neiso_gas_no45q_effective_cost,
+        neiso_gas_no45q_incremental, neiso_gas_no45q_wholesale,
+        no45q_total_cost, no45q_effective_cost, no45q_incremental, no45q_wholesale,
+        no45q_crossover_cf, no45q_ccs_no45q_baseload, no45q_ldes_cost,
+        ra_peak_demand_mw, ra_ra_peak_mw, ra_clean_peak_capacity_mw,
+        ra_gas_backup_needed_mw, ra_existing_gas_used_mw, ra_new_gas_build_mw,
+        ra_existing_gas_cost_per_mwh, ra_new_gas_cost_per_mwh,
+        ra_gas_backup_cost_per_mwh, ra_total_system_cost_per_mwh,
+        ra_incremental_with_new_gas, ra_clean_coverage_pct, ra_gas_availability_factor,
+        ra_pipeline_deliverable_mw, ra_pipeline_shortfall_mw,
+        ra_pipeline_expansion_cost_per_mwh, ra_pipeline_constrained,
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    for iso in isos:
+        if iso not in data.get('results', {}):
+            continue
+
+        iso_data = data['results'][iso]
+        annual_demand = iso_data.get('annual_demand_mwh', 0)
+        rows = []
+
+        for t_str, t_data in iso_data.get('thresholds', {}).items():
+            for sc_key, sc in t_data.get('scenarios', {}).items():
+                row = {
+                    'iso': iso,
+                    'threshold': float(t_str),
+                    'scenario': sc_key,
+                    'annual_demand_mwh': annual_demand,
+                }
+
+                # Resource mix
+                mix = sc.get('resource_mix', {})
+                for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+                    row[f'mix_{rtype}'] = mix.get(rtype, 0)
+
+                # Physics
+                row['procurement_pct'] = sc.get('procurement_pct', 100)
+                row['hourly_match_score'] = sc.get('hourly_match_score', 0.0)
+                row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct', 0)
+                row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct', 0)
+                row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct', 0)
+
+                # Costs (may have been updated by NEISO gas constraint)
+                costs = sc.get('costs', {})
+                for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+                    row[f'cost_{ckey}'] = costs.get(ckey, 0.0)
+
+                # Tranche costs (passthrough from step 3)
+                for k, v in sc.get('tranche_costs', {}).items():
+                    row[f'tranche_{k}'] = v
+
+                # Step 3 gas backup (passthrough)
+                for k, v in sc.get('gas_backup_step3', {}).items():
+                    row[f'gas_{k}'] = v
+
+                # --- Step 4 additions ---
+
+                # NEISO gas adjusted costs
+                neiso_gas = sc.get('neiso_gas_adjusted', {})
+                for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+                    row[f'neiso_gas_adj_{ckey}'] = neiso_gas.get(ckey, None)
+
+                # NEISO gas + no-45Q costs
+                neiso_no45q = sc.get('neiso_gas_no45q', {})
+                for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+                    row[f'neiso_gas_no45q_{ckey}'] = neiso_no45q.get(ckey, None)
+
+                # No-45Q overlay costs
+                no45q = sc.get('no_45q_costs', {})
+                for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+                    row[f'no45q_{ckey}'] = no45q.get(ckey, None)
+
+                # CCS vs LDES crossover
+                crossover = no45q.get('ccs_vs_ldes', {})
+                row['no45q_crossover_cf'] = crossover.get('crossover_cf', None)
+                row['no45q_ccs_no45q_baseload'] = crossover.get('ccs_no45q_baseload', None)
+                row['no45q_ldes_cost'] = crossover.get('ldes_cost', None)
+
+                # Resource adequacy (step 4's own gas backup calculation)
+                gb = sc.get('gas_backup', {})
+                ra_fields = [
+                    'peak_demand_mw', 'ra_peak_mw', 'clean_peak_capacity_mw',
+                    'gas_backup_needed_mw', 'existing_gas_used_mw', 'new_gas_build_mw',
+                    'existing_gas_cost_per_mwh', 'new_gas_cost_per_mwh',
+                    'gas_backup_cost_per_mwh', 'total_system_cost_per_mwh',
+                    'incremental_with_new_gas', 'clean_coverage_pct',
+                    'resource_adequacy_margin', 'gas_availability_factor',
+                ]
+                for field in ra_fields:
+                    row[f'ra_{field}'] = gb.get(field, None)
+
+                # NEISO pipeline constraint
+                pipeline = gb.get('pipeline_constraint', {})
+                row['ra_pipeline_deliverable_mw'] = pipeline.get('pipeline_deliverable_mw', None)
+                row['ra_pipeline_shortfall_mw'] = pipeline.get('pipeline_shortfall_mw', None)
+                row['ra_pipeline_expansion_cost_per_mwh'] = pipeline.get('pipeline_expansion_cost_per_mwh', None)
+                row['ra_pipeline_constrained'] = pipeline.get('pipeline_constrained', None)
+
+                rows.append(row)
+
+        if not rows:
+            continue
+
+        df_out = pd.DataFrame(rows)
+        out_path = os.path.join(output_dir, f'step4_{iso}.parquet')
+        df_out.to_parquet(out_path, index=False, compression='zstd')
+        print(f"  {out_path}: {len(df_out):,} rows, "
+              f"{os.path.getsize(out_path) / 1e6:.1f} MB")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PROCESSING FUNCTIONS (unchanged logic from original step 4)
+# ══════════════════════════════════════════════════════════════════════════════
 
 def medium_key(iso):
-    """Return the all-Medium scenario key for an ISO.
-    9-dim format: RFBL_FF_TX_CCSq45_GEO (R=ren, F=firm, B=batt, L=ldes)
-    """
+    """Return the all-Medium scenario key for an ISO."""
     geo = 'M' if iso == 'CAISO' else 'X'
     return f'MMMM_M_M_M1_{geo}'
 
 
 def decode_scenario_key(key):
     """Decode scenario key into toggle levels.
-    Handles 9-dim (RFBL_FF_TX_CCSq45_GEO), 8-dim (RFS_FF_TX_CCSq45_GEO),
-    and old 5-dim (RFS_FF_TX) formats.
     Returns: (renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo)
     """
     level_map = {'L': 'Low', 'M': 'Medium', 'H': 'High', 'N': 'None', 'X': None}
     parts = key.split('_')
-    gen_part = parts[0]  # 4 chars (9-dim) or 3 chars (8-dim/5-dim)
+    gen_part = parts[0]
     renewable = level_map.get(gen_part[0], 'Medium')
     firm = level_map.get(gen_part[1], 'Medium')
 
     if len(gen_part) >= 4:
-        # 9-dim format: RFBL (ren, firm, battery, ldes)
         battery = level_map.get(gen_part[2], 'Medium')
         ldes = level_map.get(gen_part[3], 'Medium')
     else:
-        # 8-dim or 5-dim: RFS (ren, firm, storage) — storage controls both battery+ldes
         battery = level_map.get(gen_part[2], 'Medium')
-        ldes = battery  # Same toggle controlled both
+        ldes = battery
 
     fuel = level_map.get(parts[1], 'Medium')
     tx = level_map.get(parts[2], 'Medium')
 
     if len(parts) >= 5:
-        ccs_q45 = parts[3]  # e.g., 'M1' or 'H0'
+        ccs_q45 = parts[3]
         ccs = level_map.get(ccs_q45[0], 'Medium')
         q45 = ccs_q45[1] if len(ccs_q45) > 1 else '1'
         geo_code = parts[4]
         geo = level_map.get(geo_code, None)
     else:
-        # Old 5-dim format: default CCS=firm, 45Q=ON, Geo=None
         ccs = firm
         q45 = '1'
         geo = None
@@ -219,33 +515,22 @@ def decode_scenario_key(key):
 def ccs_lcoe_corrected_45q(iso, firm_level):
     """Get CCS LCOE with corrected 45Q offset ($27.5 instead of $29)."""
     table_lcoe = FULL_LCOE_TABLES['ccs_ccgt'][firm_level][iso]
-    # Tables have $29 offset baked in. To correct to $27.5, add $1.5
     return table_lcoe + (FOURTY_FIVE_Q_OFFSET_ORIGINAL - FOURTY_FIVE_Q_OFFSET_CORRECTED)
 
 
 def ccs_lcoe_no45q(iso, firm_level):
     """Get CCS LCOE without any 45Q offset (gross LCOE)."""
     table_lcoe = FULL_LCOE_TABLES['ccs_ccgt'][firm_level][iso]
-    # Tables have $29 offset baked in. Add it back to get gross/pre-45Q LCOE
     return table_lcoe + FOURTY_FIVE_Q_OFFSET_ORIGINAL
 
 
 def ccs_lcoe_dispatchable(lcoe_no45q, capacity_factor):
-    """
-    CCS LCOE at a given capacity factor (dispatchable operation).
-
-    Without 45Q, CCS has no incentive for baseload dispatch.
-    Capital + fixed O&M costs scale inversely with CF.
-    Fuel + variable O&M costs are constant per MWh.
-
-    Formula: LCOE(CF) = LCOE_ref × ((fixed_share × CF_ref / CF) + variable_share)
-    Where fixed_share = capital + fixed_OM = 0.63, variable_share = fuel + VOM = 0.37
-    """
-    fixed_share = CCS_CAPITAL_SHARE + CCS_FIXED_OM_SHARE  # 0.63
-    variable_share = CCS_FUEL_SHARE + CCS_VOM_TS_SHARE     # 0.37
+    """CCS LCOE at a given capacity factor (dispatchable operation)."""
+    fixed_share = CCS_CAPITAL_SHARE + CCS_FIXED_OM_SHARE   # 0.63
+    variable_share = CCS_FUEL_SHARE + CCS_VOM_TS_SHARE      # 0.37
 
     if capacity_factor <= 0.01:
-        return lcoe_no45q * 10  # Effectively infinite at near-zero CF
+        return lcoe_no45q * 10
 
     cf_ratio = CCS_REFERENCE_CF / capacity_factor
     return lcoe_no45q * (fixed_share * cf_ratio + variable_share)
@@ -255,18 +540,9 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
                                 ldes_pct, match_score, scenario_key,
                                 apply_45q=True, neiso_gas_adder=False,
                                 tranche_cf_lcoe=None):
-    """
-    Recalculate costs for a scenario with optional corrections.
-
-    Args:
-        apply_45q: If False, remove 45Q offset and use CF-dependent CCS LCOE
-        neiso_gas_adder: If True, apply NEISO winter gas pipeline constraint
-        tranche_cf_lcoe: If provided, use this LCOE for clean_firm instead of
-                         blended table lookup (from Step 2 tranche repricing)
-    """
+    """Recalculate costs for a scenario with optional corrections."""
     renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo = decode_scenario_key(scenario_key)
 
-    # Build LCOE map
     lcoe_map = {
         'solar': FULL_LCOE_TABLES['solar'][renewable][iso],
         'wind': FULL_LCOE_TABLES['wind'][renewable][iso],
@@ -276,52 +552,31 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
         'hydro': 0,
     }
 
-    # CCS LCOE depends on 45Q toggle
     if apply_45q:
-        # Use corrected 45Q offset ($27.5 instead of $29) → +$1.5/MWh vs original tables
         lcoe_map['ccs_ccgt'] = ccs_lcoe_corrected_45q(iso, firm)
     else:
-        # No 45Q: use base LCOE + CF-dependent adjustment
         base_no45q = ccs_lcoe_no45q(iso, firm)
         ccs_share = resource_mix.get('ccs_ccgt', 0) / 100.0
         procurement_factor = procurement_pct / 100.0
-
-        # CCS effective CF = CCS share × procurement / 100
-        # In baseload model, CCS runs all hours. Without 45Q, it dispatches
-        # only during gap hours. Approximate CF = what fraction of demand
-        # hours CCS actually needs to fill.
-        #
-        # Conservative estimate: CCS dispatch CF ≈ (1 - match_without_ccs) / ccs_contribution
-        # Since we don't have match_without_ccs, use: CF = min(1.0, gap_fraction / ccs_fraction)
-        # where gap_fraction ≈ 1 - (match_score/100 - ccs_contribution)
-        # Simplified: assume CCS dispatches proportional to its share, capped at its gap-filling role
         ccs_fraction_of_demand = ccs_share * procurement_factor
         if ccs_fraction_of_demand > 0.01:
-            # Approximate: CCS doesn't run baseload, it fills gaps
-            # Gap hours ≈ (100 - match_score + ccs_contribution × 100) / 100
-            # CCS CF ≈ gap_hours / 8760 — but we approximate by comparing
-            # CCS's demand fraction to total gaps
             estimated_cf = min(0.85, max(0.20, ccs_fraction_of_demand * 0.8))
             lcoe_map['ccs_ccgt'] = ccs_lcoe_dispatchable(base_no45q, estimated_cf)
         else:
             lcoe_map['ccs_ccgt'] = base_no45q
 
-    # Transmission adders
     tx_map = {}
     for rtype in FULL_TRANSMISSION_TABLES:
         tx_map[rtype] = FULL_TRANSMISSION_TABLES[rtype][tx][iso]
 
-    # Wholesale price with fuel adjustment
     wholesale = WHOLESALE_PRICES[iso] + WHOLESALE_FUEL_ADJUSTMENTS[iso][fuel]
     wholesale = max(5, wholesale)
 
-    # NEISO gas adder
     if neiso_gas_adder and iso == 'NEISO':
         wholesale += NEISO_WHOLESALE_ADDER
 
     grid_shares = GRID_MIX_SHARES[iso]
     procurement_factor = procurement_pct / 100.0
-
     total_cost_per_demand = 0.0
 
     for rtype in RESOURCE_TYPES:
@@ -331,7 +586,6 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
 
         resource_fraction = procurement_factor * (pct / 100.0)
         resource_pct_of_demand = resource_fraction * 100.0
-
         existing_share = grid_shares.get(rtype, 0)
         existing_pct = min(resource_pct_of_demand, existing_share)
         new_pct = max(0, resource_pct_of_demand - existing_share)
@@ -340,27 +594,21 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
             cost_per_demand = resource_pct_of_demand / 100.0 * wholesale
         else:
             new_build_cost = lcoe_map.get(rtype, 0) + tx_map.get(rtype, 0)
-
-            # NEISO gas adder on CCS fuel costs
             if neiso_gas_adder and iso == 'NEISO' and rtype == 'ccs_ccgt':
                 new_build_cost += NEISO_CCS_GAS_ADDER
-
             cost_per_demand = (existing_pct / 100.0 * wholesale) + \
                               (new_pct / 100.0 * new_build_cost)
 
         total_cost_per_demand += cost_per_demand
 
-    # Battery storage cost
     battery_cost_rate = lcoe_map['battery'] + tx_map.get('battery', 0)
     battery_cost = (battery_pct / 100.0) * battery_cost_rate
     total_cost_per_demand += battery_cost
 
-    # LDES storage cost
     ldes_cost_rate = lcoe_map['ldes'] + tx_map.get('ldes', 0)
     ldes_cost = (ldes_pct / 100.0) * ldes_cost_rate
     total_cost_per_demand += ldes_cost
 
-    # Effective cost per useful MWh
     matched_fraction = match_score / 100.0 if match_score > 0 else 1.0
     effective_cost = total_cost_per_demand / matched_fraction
 
@@ -373,177 +621,17 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
 
 
 def get_tranche_cf_lcoe(scenario):
-    """Extract tranche-effective clean firm LCOE from Step 2 data, if available."""
+    """Extract tranche-effective clean firm LCOE from tranche data, if available."""
     tc = scenario.get('tranche_costs', {})
     lcoe = tc.get('effective_new_cf_lcoe')
-    # Only use if non-zero (zero means no new clean firm in the mix)
     if lcoe and lcoe > 0:
         return lcoe
     return None
 
 
-def fix_co2_monotonicity(data):
-    """Enforce CO₂ non-decreasing across thresholds (running-max)."""
-    print("\n  [1] CO₂ Monotonicity Enforcement")
-    fixes = 0
-
-    for iso in ISOS:
-        if iso not in data['results']:
-            continue
-        thresholds_data = data['results'][iso].get('thresholds', {})
-
-        # Collect all scenario keys
-        all_keys = set()
-        for t_str in thresholds_data:
-            all_keys.update(thresholds_data[t_str].get('scenarios', {}).keys())
-
-        for sk in all_keys:
-            prev_co2 = 0
-            for threshold in THRESHOLDS:
-                t_str = str(threshold)
-                if t_str not in thresholds_data:
-                    continue
-                scenario = thresholds_data[t_str].get('scenarios', {}).get(sk)
-                if not scenario:
-                    continue
-
-                co2 = scenario.get('co2_abated', {})
-                if not isinstance(co2, dict):
-                    continue
-
-                current = co2.get('total_co2_abated_tons', 0)
-                if isinstance(current, (int, float)) and current < prev_co2:
-                    co2['total_co2_abated_tons'] = prev_co2
-                    co2['monotonicity_corrected'] = True
-                    co2['original_total_co2_abated_tons'] = current
-                    fixes += 1
-
-                prev_co2 = max(prev_co2, current if isinstance(current, (int, float)) else 0)
-
-    print(f"      {fixes} CO₂ values corrected across all scenarios")
-    return fixes
-
-
-def fix_45q_offset(data):
-    """Apply 45Q offset correction (+$1.5/MWh to CCS costs) to existing results."""
-    print("\n  [2] 45Q Offset Correction ($29 → $27.5)")
-    corrections = 0
-
-    for iso in ISOS:
-        if iso not in data['results']:
-            continue
-        thresholds_data = data['results'][iso].get('thresholds', {})
-
-        for t_str in thresholds_data:
-            scenarios = thresholds_data[t_str].get('scenarios', {})
-            for sk, scenario in scenarios.items():
-                # Use source scenario key for overridden MMM_M_M scenarios
-                # so LCOE lookups match the actual mix origin
-                effective_key = sk
-
-                mix = scenario.get('resource_mix', {})
-                ccs_pct = mix.get('ccs_ccgt', 0)
-                if ccs_pct <= 0:
-                    continue
-
-                # CCS exists in mix — recalculate costs with corrected 45Q
-                # Use tranche LCOE for clean_firm if Step 2 data exists
-                costs = compute_costs_for_scenario(
-                    iso, mix,
-                    scenario.get('procurement_pct', 100),
-                    scenario.get('battery_dispatch_pct', 0),
-                    scenario.get('ldes_dispatch_pct', 0),
-                    scenario.get('hourly_match_score', 0),
-                    effective_key,
-                    apply_45q=True,
-                    neiso_gas_adder=False,
-                    tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
-                )
-
-                # Update simplified costs dict
-                scenario['costs'] = costs
-
-                # Also update costs_detail if present (Medium scenario has both)
-                if 'costs_detail' in scenario:
-                    detail = scenario['costs_detail']
-                    detail['effective_cost_per_useful_mwh'] = costs['effective_cost']
-                    detail['total_cost_per_demand_mwh'] = costs['total_cost']
-                    detail['incremental_above_baseline'] = costs['incremental']
-                    detail['baseline_wholesale_cost'] = costs['wholesale']
-
-                corrections += 1
-
-    print(f"      {corrections} scenario costs recalculated with corrected 45Q")
-    return corrections
-
-
-def add_no45q_overlay(data):
-    """Add without-45Q cost overlay to every scenario with CCS in the mix."""
-    print("\n  [3] Without-45Q Toggle Layer")
-    overlays = 0
-
-    for iso in ISOS:
-        if iso not in data['results']:
-            continue
-        thresholds_data = data['results'][iso].get('thresholds', {})
-
-        for t_str in thresholds_data:
-            scenarios = thresholds_data[t_str].get('scenarios', {})
-            for sk, scenario in scenarios.items():
-                effective_key = sk
-                mix = scenario.get('resource_mix', {})
-                ccs_pct = mix.get('ccs_ccgt', 0)
-
-                # Always compute no-45Q costs (even if CCS=0, to have consistent data)
-                no45q_costs = compute_costs_for_scenario(
-                    iso, mix,
-                    scenario.get('procurement_pct', 100),
-                    scenario.get('battery_dispatch_pct', 0),
-                    scenario.get('ldes_dispatch_pct', 0),
-                    scenario.get('hourly_match_score', 0),
-                    effective_key,
-                    apply_45q=False,
-                    neiso_gas_adder=False,
-                    tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
-                )
-
-                scenario['no_45q_costs'] = no45q_costs
-
-                if ccs_pct > 0:
-                    # Also compute the CCS vs LDES crossover info
-                    renewable, firm, battery_lvl, ldes_lvl, fuel, tx, ccs, q45, geo = decode_scenario_key(effective_key)
-                    ldes_cost = FULL_LCOE_TABLES['ldes'][ldes_lvl][iso] + \
-                                FULL_TRANSMISSION_TABLES['ldes'][tx][iso]
-                    ccs_no45q_base = ccs_lcoe_no45q(iso, firm)
-                    ccs_tx = FULL_TRANSMISSION_TABLES['ccs_ccgt'][tx][iso]
-
-                    # Find crossover CF where CCS = LDES
-                    # LCOE(CF) = base × (0.63 × 0.85/CF + 0.37) + tx = ldes_cost
-                    # Solve: base × 0.63 × 0.85/CF = ldes_cost - tx - base × 0.37
-                    rhs = ldes_cost - ccs_tx - ccs_no45q_base * 0.37
-                    if rhs > 0:
-                        crossover_cf = ccs_no45q_base * 0.63 * 0.85 / rhs
-                        crossover_cf = round(min(1.0, max(0.0, crossover_cf)), 3)
-                    else:
-                        crossover_cf = 0.0  # LDES always cheaper (CCS variable costs alone exceed LDES)
-
-                    scenario['no_45q_costs']['ccs_vs_ldes'] = {
-                        'ccs_no45q_baseload': round(ccs_no45q_base + ccs_tx, 2),
-                        'ldes_cost': round(ldes_cost, 2),
-                        'crossover_cf': crossover_cf,
-                        'ccs_cheaper_above_cf': crossover_cf,
-                        'ldes_cheaper_below_cf': crossover_cf,
-                    }
-
-                overlays += 1
-
-    print(f"      {overlays} scenarios with no-45Q overlay added")
-    return overlays
-
-
 def add_neiso_gas_constraint(data):
     """Apply NEISO winter gas pipeline constraint."""
-    print("\n  [4] NEISO Winter Gas Pipeline Constraint")
+    print("\n  [1] NEISO Winter Gas Pipeline Constraint")
 
     iso = 'NEISO'
     if iso not in data['results']:
@@ -559,7 +647,6 @@ def add_neiso_gas_constraint(data):
             effective_key = scenario.get('tranche_optimal_source', sk)
             mix = scenario.get('resource_mix', {})
 
-            # Compute NEISO-adjusted costs (with gas constraint)
             tcl = get_tranche_cf_lcoe(scenario)
             neiso_costs = compute_costs_for_scenario(
                 iso, mix,
@@ -573,7 +660,6 @@ def add_neiso_gas_constraint(data):
                 tranche_cf_lcoe=tcl,
             )
 
-            # Also compute no-45Q + gas constraint
             neiso_no45q_costs = compute_costs_for_scenario(
                 iso, mix,
                 scenario.get('procurement_pct', 100),
@@ -588,11 +674,8 @@ def add_neiso_gas_constraint(data):
 
             scenario['neiso_gas_adjusted'] = neiso_costs
             scenario['neiso_gas_no45q'] = neiso_no45q_costs
-
-            # Overwrite main costs with gas-adjusted values so dashboard displays them
             scenario['costs'] = neiso_costs
 
-            # Also update costs_detail if present
             if 'costs_detail' in scenario:
                 detail = scenario['costs_detail']
                 detail['effective_cost_per_useful_mwh'] = neiso_costs['effective_cost']
@@ -600,22 +683,83 @@ def add_neiso_gas_constraint(data):
                 detail['incremental_above_baseline'] = neiso_costs['incremental']
                 detail['baseline_wholesale_cost'] = neiso_costs['wholesale']
 
-            # Overwrite no_45q_costs with gas-adjusted version too
             scenario['no_45q_costs'] = neiso_no45q_costs
-
             adjustments += 1
 
     print(f"      {adjustments} NEISO scenarios adjusted for gas pipeline constraint")
     return adjustments
 
 
-def analyze_crossover(data):
+def add_no45q_overlay(data, run_isos):
+    """Add without-45Q cost overlay to every scenario with CCS in the mix."""
+    print("\n  [2] Without-45Q Toggle Layer")
+    overlays = 0
+
+    for iso in run_isos:
+        if iso not in data['results']:
+            continue
+        # NEISO already handled by add_neiso_gas_constraint (its no_45q includes gas adder)
+        if iso == 'NEISO':
+            continue
+
+        thresholds_data = data['results'][iso].get('thresholds', {})
+
+        for t_str in thresholds_data:
+            scenarios = thresholds_data[t_str].get('scenarios', {})
+            for sk, scenario in scenarios.items():
+                effective_key = sk
+                mix = scenario.get('resource_mix', {})
+                ccs_pct = mix.get('ccs_ccgt', 0)
+
+                no45q_costs = compute_costs_for_scenario(
+                    iso, mix,
+                    scenario.get('procurement_pct', 100),
+                    scenario.get('battery_dispatch_pct', 0),
+                    scenario.get('ldes_dispatch_pct', 0),
+                    scenario.get('hourly_match_score', 0),
+                    effective_key,
+                    apply_45q=False,
+                    neiso_gas_adder=False,
+                    tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
+                )
+
+                scenario['no_45q_costs'] = no45q_costs
+
+                if ccs_pct > 0:
+                    renewable, firm, battery_lvl, ldes_lvl, fuel, tx, ccs, q45, geo = decode_scenario_key(effective_key)
+                    ldes_cost = FULL_LCOE_TABLES['ldes'][ldes_lvl][iso] + \
+                                FULL_TRANSMISSION_TABLES['ldes'][tx][iso]
+                    ccs_no45q_base = ccs_lcoe_no45q(iso, firm)
+                    ccs_tx = FULL_TRANSMISSION_TABLES['ccs_ccgt'][tx][iso]
+
+                    rhs = ldes_cost - ccs_tx - ccs_no45q_base * 0.37
+                    if rhs > 0:
+                        crossover_cf = ccs_no45q_base * 0.63 * 0.85 / rhs
+                        crossover_cf = round(min(1.0, max(0.0, crossover_cf)), 3)
+                    else:
+                        crossover_cf = 0.0
+
+                    scenario['no_45q_costs']['ccs_vs_ldes'] = {
+                        'ccs_no45q_baseload': round(ccs_no45q_base + ccs_tx, 2),
+                        'ldes_cost': round(ldes_cost, 2),
+                        'crossover_cf': crossover_cf,
+                        'ccs_cheaper_above_cf': crossover_cf,
+                        'ldes_cheaper_below_cf': crossover_cf,
+                    }
+
+                overlays += 1
+
+    print(f"      {overlays} scenarios with no-45Q overlay added")
+    return overlays
+
+
+def analyze_crossover(data, run_isos):
     """Analyze CCS vs LDES crossover and without-45Q cost curve impact."""
-    print("\n  [5] CCS vs LDES Crossover Analysis")
+    print("\n  [3] CCS vs LDES Crossover Analysis")
 
     analysis = {'crossover_by_iso': {}, 'cost_curve_impact': {}}
 
-    for iso in ISOS:
+    for iso in run_isos:
         if iso not in data['results']:
             continue
 
@@ -626,13 +770,13 @@ def analyze_crossover(data):
         curve_impact = []
 
         for threshold in THRESHOLDS:
-            t_str = str(threshold)
+            t_str = str(threshold) if threshold != int(threshold) else str(int(threshold))
             if t_str not in thresholds_data:
                 continue
             scenarios = thresholds_data[t_str].get('scenarios', {})
             scenario = (scenarios.get(med_key) or
-                        scenarios.get('MMM_M_M_M1_M') or scenarios.get('MMM_M_M_M1_X') or  # 8-dim legacy
-                        scenarios.get('MMM_M_M'))  # 5-dim legacy
+                        scenarios.get('MMM_M_M_M1_M') or scenarios.get('MMM_M_M_M1_X') or
+                        scenarios.get('MMM_M_M'))
             if not scenario:
                 continue
 
@@ -653,7 +797,6 @@ def analyze_crossover(data):
                 'cost_increase_pct': round((eff_without - eff_with) / eff_with * 100, 1) if eff_with > 0 else 0,
             }
 
-            # Crossover data
             crossover_data = costs_without.get('ccs_vs_ldes', {})
             if crossover_data:
                 entry['crossover_cf'] = crossover_data.get('crossover_cf', 0)
@@ -673,7 +816,7 @@ def analyze_crossover(data):
     # Print summary
     print("\n      CCS vs LDES Crossover (Medium scenario):")
     print(f"      {'ISO':>6}  {'Avg CF':>7}  {'Range':>15}  {'Interpretation':>30}")
-    for iso in ISOS:
+    for iso in run_isos:
         cr = analysis['crossover_by_iso'].get(iso, {})
         avg_cf = cr.get('avg_crossover_cf', 0)
         min_cf = cr.get('min_crossover_cf', 0)
@@ -686,7 +829,7 @@ def analyze_crossover(data):
 
     print("\n      Without-45Q Cost Impact (Medium, effective $/MWh):")
     print(f"      {'ISO':>6}  {'Thr':>5}  {'With 45Q':>9}  {'No 45Q':>9}  {'Delta':>7}  {'%':>6}  {'CCS%':>5}")
-    for iso in ISOS:
+    for iso in run_isos:
         for entry in analysis['cost_curve_impact'].get(iso, []):
             if entry['threshold'] in [75, 90, 95, 99]:
                 print(f"      {iso:>6}  {entry['threshold']:>4}%  "
@@ -695,12 +838,12 @@ def analyze_crossover(data):
                       f"{entry['ccs_pct']:>4}%")
 
     # NEISO gas constraint impact
-    print("\n      NEISO Gas Constraint Impact (Medium, effective $/MWh):")
-    if 'NEISO' in data['results']:
+    if 'NEISO' in data['results'] and 'NEISO' in run_isos:
+        print("\n      NEISO Gas Constraint Impact (Medium, effective $/MWh):")
         thresholds_data = data['results']['NEISO'].get('thresholds', {})
         neiso_impact = []
         for threshold in THRESHOLDS:
-            t_str = str(threshold)
+            t_str = str(threshold) if threshold != int(threshold) else str(int(threshold))
             neiso_mk = medium_key('NEISO')
             scenarios = thresholds_data.get(t_str, {}).get('scenarios', {})
             scenario = (scenarios.get(neiso_mk) or
@@ -712,11 +855,8 @@ def analyze_crossover(data):
             gas_no45q = scenario.get('neiso_gas_no45q', {}).get('effective_cost', 0)
             ccs = scenario.get('resource_mix', {}).get('ccs_ccgt', 0)
             neiso_impact.append({
-                'threshold': threshold,
-                'base': base,
-                'gas_adjusted': gas_adj,
-                'gas_no45q': gas_no45q,
-                'ccs_pct': ccs,
+                'threshold': threshold, 'base': base, 'gas_adjusted': gas_adj,
+                'gas_no45q': gas_no45q, 'ccs_pct': ccs,
             })
 
         print(f"      {'Thr':>5}  {'Base':>8}  {'+ Gas':>8}  {'+ Gas-No45Q':>12}  {'CCS%':>5}")
@@ -728,120 +868,24 @@ def analyze_crossover(data):
     return analysis
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# GAS CAPACITY BACKUP & RESOURCE ADEQUACY
-# ══════════════════════════════════════════════════════════════════════════════
-# Resource adequacy margin: 15% above peak demand (PJM/ERCOT standard)
-# New-build CCGT LCOE: $55-75/MWh depending on region and utilization
-# Existing gas: priced at wholesale (already operating)
-
-RESOURCE_ADEQUACY_MARGIN = 0.15  # 15% reserve margin
-
-# Peak demand (MW) from EIA data — updated from eia_demand_profiles.json
-PEAK_DEMAND_MW = {
-    'CAISO': 43860, 'ERCOT': 83597, 'PJM': 160560, 'NYISO': 31857, 'NEISO': 25898,
-    'MISO': 127125, 'SPP': 54368,
-}
-
-# Existing gas capacity (MW) — approximated from fossil fleet share × peak
-# Source: EIA-860 2023 (existing operable gas capacity in each ISO)
-EXISTING_GAS_CAPACITY_MW = {
-    'CAISO': 37000,   # ~37 GW gas fleet
-    'ERCOT': 55000,   # ~55 GW gas fleet
-    'PJM': 75000,     # ~75 GW gas fleet
-    'NYISO': 18000,   # ~18 GW gas fleet
-    'NEISO': 14000,   # ~14 GW gas fleet
-    'MISO': 68000,    # ~68 GW gas fleet
-    'SPP': 32000,     # ~32 GW gas fleet
-}
-
-# New-build CCGT annualized capacity cost ($/kW-yr)
-# Source: Lazard LCOE v16.0 — CCGT overnight $700-1,100/kW
-# Annualized: midpoint $900/kW × 9.4% CRF (25yr, 8% WACC) + $14/kW-yr FOM ≈ $99/kW-yr
-# Regional adjustment ±10-15% for construction costs
-NEW_CCGT_COST_KW_YR = {
-    'CAISO': 112,   # +13% (CA permitting, labor, seismic)
-    'ERCOT': 89,    # -10% (TX lower permitting, established gas infra)
-    'PJM': 99,      # Baseline (Lazard mid)
-    'NYISO': 114,   # +15% (NY permitting, density, interconnection)
-    'NEISO': 105,   # +6% (NE construction costs)
-    'MISO': 95,     # -4% (Midwest lower construction costs)
-    'SPP': 88,      # -11% (Plains states, established gas infra)
-}
-
-# Existing gas fixed O&M to maintain capacity ($/kW-yr)
-# Source: Lazard LCOE v16.0 — existing CCGT FOM $11.5-$16.5/kW-yr
-EXISTING_GAS_FOM_KW_YR = {
-    'CAISO': 16, 'ERCOT': 13, 'PJM': 14, 'NYISO': 17, 'NEISO': 15,
-    'MISO': 14, 'SPP': 13,
-}
-
-# Capacity credit for variable resources at system peak
-PEAK_CAPACITY_CREDITS = {
-    'clean_firm': 1.0,    # Nuclear/geothermal: dispatchable, full credit
-    'solar': 0.30,        # ~30% average at system peak (summer afternoons for most ISOs)
-    'wind': 0.10,         # ~10% at system peak (often low correlation)
-    'ccs_ccgt': 0.90,     # Dispatchable but planned outage risk
-    'hydro': 0.50,        # Limited by water availability/reservoir
-    'battery': 0.95,      # 4hr battery near-full credit for peak events
-    'battery8': 0.95,     # 8hr battery near-full credit for peak events
-    'ldes': 0.90,         # 100hr iron-air, high duration = high credit
-}
-
-# Gas Availability Factor (GAF) — forced outages + correlated weather risk
-# Sources: PJM ELCC Class Ratings (2024/25), NERC GADS EFORd, FERC Winter Storm reports.
-# NEISO uses mechanical+weather only (pipeline constraint handled separately).
-GAS_AVAILABILITY_FACTOR = {
-    'CAISO': 0.88,  # 12% deration — summer ambient derate + mechanical outages
-    'ERCOT': 0.83,  # 17% deration — extreme weather both seasons, gas supply correlation
-    'PJM':   0.82,  # 18% deration — PJM ELCC data, Winter Storm Elliott evidence
-    'NYISO': 0.82,  # 18% deration — pipeline constraints, winter gas competition
-    'NEISO': 0.85,  # 15% deration — mechanical + weather only (pipeline separate)
-    'MISO':  0.84,  # 16% deration — polar vortex exposure, gas supply correlation
-    'SPP':   0.84,  # 16% deration — extreme weather both seasons
-}
-
-# NEISO pipeline capacity constraint — absolute MW ceiling on gas deliverability
-# during winter peak after heating demand is served.
-# Source: ISO-NE Gas Availability Study (2025), ~4.5 BCF/day total NE pipeline,
-# heating consumes ~3.0 BCF/day at peak, leaving ~1.5 BCF/day for power.
-# 1.5 BCF/day ÷ ~7.5 MMBtu/MWh heat rate ≈ ~8,300 MW deliverable gas at peak.
-NEISO_PIPELINE_GAS_CAPACITY_MW = 8300
-
-# Pipeline expansion cost estimate ($/MW-yr annualized)
-# Source: FERC pipeline project filings, NE region. ~$150M/BCF-day new pipeline,
-# 30-yr amortization at 8% WACC → ~$13.3M/yr per BCF-day.
-# 1 BCF/day ≈ 5,500 MW at CCGT heat rate → ~$2,400/MW-yr
-NEISO_PIPELINE_EXPANSION_COST_MW_YR = 2400
-
-
-def compute_gas_capacity_and_ra(data):
+def compute_gas_capacity_and_ra(data, run_isos):
     """
-    For each scenario, compute:
-    1. Peak demand with RA margin: peak_demand × (1 + 15%)
-    2. Clean firm capacity at peak: sum of (resource MW × capacity credit)
-    3. Gas backup needed: RA requirement - clean capacity at peak
-    4. Gas cost: existing gas at wholesale, new-build at CCGT LCOE
-    5. Total system cost: clean procurement cost + gas backup cost
+    For each scenario, compute gas capacity backup & resource adequacy.
     """
-    print("\n  [6] Gas Capacity Backup & Resource Adequacy")
+    print("\n  [4] Gas Capacity Backup & Resource Adequacy")
 
     total_computed = 0
-    for iso in ISOS:
+    for iso in run_isos:
         if iso not in data.get('results', {}):
             continue
 
         iso_data = data['results'][iso]
-        peak_mw = PEAK_DEMAND_MW.get(iso, iso_data.get('peak_demand_mw', 0))
-        demand_mwh = iso_data.get('annual_demand_mwh', 0)
+        peak_mw = PEAK_DEMAND_MW.get(iso, 0)
+        demand_mwh = iso_data.get('annual_demand_mwh', REGIONAL_DEMAND_MWH.get(iso, 0))
         existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
         wholesale = WHOLESALE_PRICES[iso]
 
-        # Peak demand with resource adequacy margin
         ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
-
-        # Capacity factor for converting % of demand to MW
-        # avg_demand_mw = demand_mwh / 8760
         avg_demand_mw = demand_mwh / 8760
 
         thresholds_data = iso_data.get('thresholds', {})
@@ -854,52 +898,34 @@ def compute_gas_capacity_and_ra(data):
                 batt8 = scenario.get('battery8_dispatch_pct', 0)
                 ldes = scenario.get('ldes_dispatch_pct', 0)
 
-                # Calculate clean capacity contribution at peak (MW)
                 clean_peak_mw = 0
                 for rtype in RESOURCE_TYPES:
                     pct = mix.get(rtype, 0)
-                    # Resource MW = procurement_factor × mix_share × avg_demand (as proxy for nameplate)
                     resource_mw = (proc / 100.0) * (pct / 100.0) * avg_demand_mw
                     credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
                     clean_peak_mw += resource_mw * credit
 
-                # Add battery/battery8/LDES peak capacity
                 batt_mw = (batt / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
                 batt8_mw = (batt8 / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8']
                 ldes_mw = (ldes / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
                 clean_peak_mw += batt_mw + batt8_mw + ldes_mw
 
-                # Gas backup needed = RA requirement - clean peak capacity, derated by GAF
                 gaf = GAS_AVAILABILITY_FACTOR[iso]
                 gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
 
-                # Cost bifurcation: existing gas at wholesale, new-build at CCGT LCOE
                 existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
                 new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
 
-                # Annualized gas backup cost ($/MWh of demand)
-                # Use $/kW-yr capacity cost, NOT energy LCOE — gas backup is a capacity product
-                # Existing gas: just fixed O&M to maintain availability (already built)
-                # New-build CCGT: full annualized capital + FOM
-                existing_gas_cost_annual = existing_gas_used_mw * 1000 * EXISTING_GAS_FOM_KW_YR[iso] / 1000  # MW→kW→$
-                new_gas_cost_annual = new_gas_mw * 1000 * NEW_CCGT_COST_KW_YR[iso] / 1000  # MW→kW→$
-                # Note: MW * 1000 = kW; * $/kW-yr / 1000 simplifies to MW * $/kW-yr
-                # Actually: cost = MW × $/kW-yr × 1000 kW/MW → annual $
-                existing_gas_cost_annual = existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000  # $/yr
-                new_gas_cost_annual = new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000  # $/yr
+                existing_gas_cost_annual = existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000
+                new_gas_cost_annual = new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
                 gas_backup_cost_annual = existing_gas_cost_annual + new_gas_cost_annual
                 gas_backup_cost_per_mwh = gas_backup_cost_annual / demand_mwh if demand_mwh > 0 else 0
 
-                # Split out: new-build gas cost only (for incremental cost tile)
                 new_gas_cost_per_mwh = new_gas_cost_annual / demand_mwh if demand_mwh > 0 else 0
-                # Existing gas cost only
                 existing_gas_cost_per_mwh = existing_gas_cost_annual / demand_mwh if demand_mwh > 0 else 0
 
-                # Total system cost = clean cost + ALL gas backup cost (existing + new)
                 clean_cost = scenario.get('costs', {}).get('effective_cost', 0)
                 total_system_cost = clean_cost + gas_backup_cost_per_mwh
-
-                # Incremental cost = clean cost + new-build gas only (not existing wholesale)
                 incremental_with_new_gas = clean_cost + new_gas_cost_per_mwh
 
                 scenario['gas_backup'] = {
@@ -919,7 +945,6 @@ def compute_gas_capacity_and_ra(data):
                     'gas_availability_factor': gaf,
                 }
 
-                # NEISO pipeline constraint: informational metric
                 if iso == 'NEISO':
                     pipeline_cap = NEISO_PIPELINE_GAS_CAPACITY_MW
                     pipeline_shortfall_mw = max(0, gas_needed_mw - pipeline_cap)
@@ -961,57 +986,146 @@ def compute_gas_capacity_and_ra(data):
     return total_computed
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# CLI & MAIN
+# ══════════════════════════════════════════════════════════════════════════════
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='Step 4: Gas & CCS post-processing with per-ISO parquet I/O.',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s                          # Process all available ISOs (default)
+  %(prog)s --all                    # Explicit all
+  %(prog)s --iso ERCOT              # Process single ISO
+  %(prog)s --iso ERCOT --iso PJM    # Process multiple ISOs
+  %(prog)s --iso NEISO              # Process NEISO (includes gas constraint)
+        """,
+    )
+    parser.add_argument(
+        '--iso',
+        dest='isos',
+        action='append',
+        choices=ALL_ISOS,
+        metavar='ISO',
+        help=f'ISO to process (repeatable). Choices: {", ".join(ALL_ISOS)}. '
+             f'Default: all available ISOs.',
+    )
+    parser.add_argument(
+        '--all',
+        dest='run_all',
+        action='store_true',
+        default=False,
+        help='Process all ISOs (default if no --iso given).',
+    )
+    parser.add_argument(
+        '--input-dir',
+        type=str,
+        default=DEFAULT_INPUT_DIR,
+        help=f'Directory containing step3_co_<ISO>.parquet files (default: {DEFAULT_INPUT_DIR}).',
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default=DEFAULT_OUTPUT_DIR,
+        help=f'Directory for step4_<ISO>.parquet output (default: {DEFAULT_OUTPUT_DIR}).',
+    )
+    return parser.parse_args()
+
+
 def main():
-    print("=" * 70)
-    print("  POST-PROCESSING CORRECTIONS & OVERLAYS")
-    print("=" * 70)
+    args = parse_args()
 
-    data = load_results()
+    # Determine which ISOs to process
+    if args.isos and not args.run_all:
+        run_isos = list(dict.fromkeys(args.isos))  # Dedupe, preserve order
+    else:
+        # Default: all ISOs that have parquet files in the input directory
+        run_isos = []
+        for iso in ALL_ISOS:
+            pq_path = os.path.join(args.input_dir, f'step3_co_{iso}.parquet')
+            if os.path.exists(pq_path):
+                run_isos.append(iso)
+        if not run_isos:
+            print(f"ERROR: No step3_co_*.parquet files found in {args.input_dir}")
+            print(f"  Available ISOs: {ALL_ISOS}")
+            print(f"  Run Step 3 first to generate per-ISO parquets.")
+            sys.exit(1)
 
-    # Verify we have results
-    isos_present = [iso for iso in ISOS if iso in data.get('results', {})]
-    print(f"  ISOs: {isos_present}")
+    print("=" * 70)
+    print("  STEP 4: GAS & CCS POST-PROCESSING")
+    print("=" * 70)
+    print(f"  ISOs:       {', '.join(run_isos)}")
+    print(f"  Input dir:  {args.input_dir}")
+    print(f"  Output dir: {args.output_dir}")
+
+    start = time.time()
+
+    # Load per-ISO parquets → nested dict
+    data = load_from_parquets(args.input_dir, run_isos)
+
+    isos_present = [iso for iso in run_isos if iso in data.get('results', {})]
+    if not isos_present:
+        print("  ERROR: No ISO data loaded. Check input files.")
+        sys.exit(1)
+    print(f"  ISOs loaded: {isos_present}")
 
     # Apply corrections in order
-    # NOTE: 45Q offset correction and no-45Q overlay are now handled in Step 2
-    # cost model (step2_cost_optimization.py) using full tranche pricing with
-    # CCS_LCOE_45Q_ON/OFF tables. No longer done here as a flat-offset hack.
-    # NOTE: CO2 monotonicity enforcement removed — CO2 data should reflect
-    # actual physics results, not forced monotonicity. If non-monotonic CO2
-    # appears, it reflects real trade-offs at that threshold, not an error.
-    co2_fixes = 0
-    neiso_count = add_neiso_gas_constraint(data)
-    analysis = analyze_crossover(data)
-    gas_count = compute_gas_capacity_and_ra(data)
+    # [1] NEISO gas constraint (only if NEISO is in run set)
+    neiso_count = 0
+    if 'NEISO' in isos_present:
+        neiso_count = add_neiso_gas_constraint(data)
+
+    # [2] Without-45Q overlay (all non-NEISO ISOs; NEISO handled in step 1)
+    no45q_count = add_no45q_overlay(data, isos_present)
+
+    # [3] Crossover analysis
+    analysis = analyze_crossover(data, isos_present)
+
+    # [4] Gas capacity backup & resource adequacy
+    gas_count = compute_gas_capacity_and_ra(data, isos_present)
 
     # Add metadata
     data['postprocessing'] = {
         'applied': True,
+        'isos_processed': isos_present,
         'corrections': {
-            'co2_monotonicity_fixes': co2_fixes,
             'neiso_gas_adjustments': neiso_count,
+            'no45q_overlays': no45q_count,
+            'gas_ra_computed': gas_count,
         },
         'parameters': {
             'neiso_ccs_gas_adder': NEISO_CCS_GAS_ADDER,
             'neiso_wholesale_adder': NEISO_WHOLESALE_ADDER,
+            'resource_adequacy_margin': RESOURCE_ADEQUACY_MARGIN,
         },
     }
 
-    # Save corrected results
-    with open(RESULTS_PATH, 'w') as f:
-        json.dump(data, f, separators=(',', ':'))
-    print(f"\n  Corrected results → {RESULTS_PATH} "
-          f"({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
+    # Save corrected per-ISO parquets
+    print(f"\n  Saving corrected results to {args.output_dir}")
+    os.makedirs(args.output_dir, exist_ok=True)
+    save_to_parquets(data, args.output_dir, isos_present)
 
-    # Save analysis
-    os.makedirs(os.path.dirname(ANALYSIS_PATH), exist_ok=True)
-    with open(ANALYSIS_PATH, 'w') as f:
+    # Save analysis JSON
+    analysis_path = os.path.join(args.output_dir, 'step4_analysis.json')
+    with open(analysis_path, 'w') as f:
         json.dump(analysis, f, indent=2)
-    print(f"  Analysis → {ANALYSIS_PATH}")
+    print(f"  Analysis → {analysis_path}")
 
-    print("\n" + "=" * 70)
-    print("  POST-PROCESSING COMPLETE")
-    print("=" * 70)
+    # Save metadata JSON
+    meta_path = os.path.join(args.output_dir, 'step4_meta.json')
+    meta = {k: v for k, v in data.items() if k != 'results'}
+    with open(meta_path, 'w') as f:
+        json.dump(meta, f, indent=2)
+    print(f"  Metadata → {meta_path}")
+
+    elapsed = time.time() - start
+    print(f"\n{'=' * 70}")
+    print(f"  STEP 4 COMPLETE in {elapsed:.1f}s")
+    print(f"  Processed: {', '.join(isos_present)}")
+    print(f"  Output:    {args.output_dir}")
+    print(f"{'=' * 70}")
 
 
 if __name__ == '__main__':
