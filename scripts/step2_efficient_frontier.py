@@ -39,6 +39,11 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
 
+try:
+    from numba import njit
+except ImportError:  # pragma: no cover - workflow installs numba; local fallback
+    njit = None
+
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')
@@ -91,6 +96,53 @@ def normalize_table(t):
             raise ValueError(f"Missing required column '{name}' in {t.column_names}")
     return pa.table(cols)
 
+def normalize_legacy_step1_raw_table(t):
+    """Convert legacy Step 1 raw parquet schema to TARGET_SCHEMA columns."""
+    required = {'iso', 'source_threshold', 'mix', 'threshold', 'dispatch_mode', 'battery_hours', 'ldes_hours', 'lcoe'}
+    if not required.issubset(set(t.column_names)):
+        return None
+
+    mix_vals = t.column('mix').to_pylist()
+    mix_np = np.asarray(mix_vals, dtype=np.float64)
+    if mix_np.ndim != 2 or mix_np.shape[1] != 5:
+        raise ValueError(f"Unsupported legacy mix shape: {mix_np.shape}")
+
+    # Legacy mixes are [clean_firm_base, solar, wind, hydro, clean_firm_extra],
+    # all as fractions summing to 1.0. Merge base+extra into clean_firm.
+    clean_firm = np.rint((mix_np[:, 0] + mix_np[:, 4]) * 100.0).astype(np.int16)
+    solar = np.rint(mix_np[:, 1] * 100.0).astype(np.int16)
+    wind = np.rint(mix_np[:, 2] * 100.0).astype(np.int16)
+    hydro = np.rint(mix_np[:, 3] * 100.0).astype(np.int16)
+
+    # Legacy `threshold` is procurement ratio (0.75-2.00), while
+    # `source_threshold` is the target score threshold (50-100).
+    procurement_pct = np.rint(t.column('threshold').to_numpy() * 100.0).astype(np.int16)
+    threshold = t.column('source_threshold').to_numpy().astype(np.float64)
+
+    dispatch_mode = np.asarray(t.column('dispatch_mode').to_pylist())
+    battery_hours = np.nan_to_num(t.column('battery_hours').to_numpy(), nan=0.0)
+    ldes_hours = np.nan_to_num(t.column('ldes_hours').to_numpy(), nan=0.0)
+
+    battery_dispatch_pct = np.where(np.isin(dispatch_mode, ['b', 'bl']), battery_hours, 0.0).astype(np.float64)
+    ldes_dispatch_pct = np.where(np.isin(dispatch_mode, ['l', 'bl']), ldes_hours, 0.0).astype(np.float64)
+
+    cols = {
+        'iso': pc.cast(t.column('iso'), pa.string()),
+        'threshold': pa.array(threshold, type=pa.float64()),
+        'clean_firm': pa.array(clean_firm, type=pa.int16()),
+        'solar': pa.array(solar, type=pa.int16()),
+        'wind': pa.array(wind, type=pa.int16()),
+        'hydro': pa.array(hydro, type=pa.int16()),
+        'procurement_pct': pa.array(procurement_pct, type=pa.int16()),
+        'battery_dispatch_pct': pa.array(battery_dispatch_pct, type=pa.float64()),
+        'battery8_dispatch_pct': pa.array(np.zeros(t.num_rows, dtype=np.float64), type=pa.float64()),
+        'ldes_dispatch_pct': pa.array(ldes_dispatch_pct, type=pa.float64()),
+        # Legacy `lcoe` is stored as ratio, convert to percent score scale.
+        'hourly_match_score': pa.array(t.column('lcoe').to_numpy() * 100.0, type=pa.float64()),
+        'pareto_type': pa.array([''] * t.num_rows, type=pa.string()),
+    }
+    return pa.table(cols)
+
 
 def load_iso_tables():
     """Load PFS data and return a dict of {iso: pyarrow.Table}.
@@ -117,15 +169,24 @@ def load_iso_tables():
             for path in parquet_files:
                 t = pq.read_table(path)
                 fname = os.path.basename(path)
+                normalized = None
                 if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
-                    # Extract ISO from the table's iso column
-                    iso_vals = pc.unique(t.column('iso')).to_pylist()
-                    for iso_val in iso_vals:
-                        native_by_iso.setdefault(iso_val, []).append(t)
-                    size_mb = os.path.getsize(path) / (1024 * 1024)
-                    print(f"  {fname}: {t.num_rows:>10,} rows ({size_mb:.1f} MB)")
-                else:
-                    print(f"  {fname}: SKIPPED (not native Step 1 format)")
+                    normalized = normalize_table(t)
+                elif 'source_threshold' in t.column_names and 'mix' in t.column_names:
+                    normalized = normalize_legacy_step1_raw_table(t)
+
+                if normalized is None:
+                    print(f"  {fname}: SKIPPED (unrecognized Step 1 schema)")
+                    continue
+
+                iso_vals = pc.unique(normalized.column('iso')).to_pylist()
+                for iso_val in iso_vals:
+                    iso_sub = normalized.filter(pc.equal(normalized.column('iso'), iso_val))
+                    native_by_iso.setdefault(iso_val, []).append(iso_sub)
+
+                size_mb = os.path.getsize(path) / (1024 * 1024)
+                fmt = 'native' if 'clean_firm' in t.column_names else 'legacy-raw'
+                print(f"  {fname}: {t.num_rows:>10,} rows ({size_mb:.1f} MB), format={fmt}, isos={len(iso_vals)}")
 
             for iso, tables in native_by_iso.items():
                 combined = pa.concat_tables(tables)
@@ -251,42 +312,45 @@ def pareto_procurement(arrays):
     gs[0] = True
     gs[1:] = fap_keys[1:] != fap_keys[:-1]
 
-    # Segmented cumulative max: compute running max within each group.
-    # At group boundaries, reset to the current score. Otherwise, take
-    # max of previous running max and current score.
-    # We need the running max of all scores BEFORE position i (shifted),
-    # so we compare score[i] > running_max_before[i].
-    #
-    # Approach: compute cummax, then shift right within each segment.
-    # A row is kept if it's a group start OR score > prev cummax.
-    seg_cummax = np.empty(m, dtype=np.float64)
-    seg_cummax[0] = fap_scores[0]
-    # Vectorized pass: most rows are not group starts, so branch prediction
-    # is well-predicted. For very large m, a batched approach helps.
-    # Process in chunks to stay cache-friendly.
-    CHUNK = 1 << 20  # ~1M elements per chunk
-    for start in range(1, m, CHUNK):
-        end = min(start + CHUNK, m)
-        for i in range(start, end):
-            if gs[i]:
-                seg_cummax[i] = fap_scores[i]
-            else:
-                seg_cummax[i] = seg_cummax[i - 1] if seg_cummax[i - 1] > fap_scores[i] else fap_scores[i]
-
-    # A row is on the Pareto front if:
-    #   - It's a group start (always keep the lowest-procurement point), OR
-    #   - Its score exceeds the cummax of all PREVIOUS positions in the group
-    # The shifted cummax (prev_cummax) is cummax[i-1] for non-group-starts.
-    prev_cummax = np.empty(m, dtype=np.float64)
-    prev_cummax[0] = -1.0
-    prev_cummax[1:] = seg_cummax[:-1]
-    prev_cummax[gs] = -1.0  # group starts have no predecessor
-
-    keep = gs | (fap_scores > prev_cummax)
+    keep = pareto_keep_mask(fap_scores, gs)
 
     # Map back to original indices
     kept_sorted_pos = fap_pos[keep]
     return sort_idx[kept_sorted_pos]
+
+
+def _pareto_keep_mask_numpy(scores, group_starts):
+    """Numpy fallback for environments without numba."""
+    m = len(scores)
+    keep = np.empty(m, dtype=np.bool_)
+    running = -1.0
+    for i in range(m):
+        if group_starts[i]:
+            running = -1.0
+        keep_i = scores[i] > running
+        keep[i] = keep_i
+        if keep_i:
+            running = scores[i]
+    return keep
+
+
+if njit is not None:
+    @njit(cache=True)
+    def pareto_keep_mask(scores, group_starts):
+        """JIT-compiled segmented strict-cummax mask for Pareto filtering."""
+        m = len(scores)
+        keep = np.empty(m, dtype=np.bool_)
+        running = -1.0
+        for i in range(m):
+            if group_starts[i]:
+                running = -1.0
+            keep_i = scores[i] > running
+            keep[i] = keep_i
+            if keep_i:
+                running = scores[i]
+        return keep
+else:
+    pareto_keep_mask = _pareto_keep_mask_numpy
 
 
 def process_iso_table(iso, table):

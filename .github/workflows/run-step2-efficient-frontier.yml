@@ -38,7 +38,22 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy pandas pyarrow
+          pip install numpy pandas pyarrow numba
+
+      - name: Validate Step 1 parquet inputs
+        run: |
+          if [ ! -d data/step1_raw_pfs_parquets ]; then
+            echo "Missing input directory: data/step1_raw_pfs_parquets"
+            exit 1
+          fi
+
+          INPUT_COUNT=$(find data/step1_raw_pfs_parquets -maxdepth 1 -name '*.parquet' | wc -l)
+          if [ "$INPUT_COUNT" -eq 0 ]; then
+            echo "No Step 1 parquet inputs found in data/step1_raw_pfs_parquets"
+            exit 1
+          fi
+
+          echo "Found $INPUT_COUNT Step 1 parquet files"
 
       - name: Ensure output directory exists
         run: mkdir -p data/step-2-EF-parquets
