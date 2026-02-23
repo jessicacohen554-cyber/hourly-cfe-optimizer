@@ -33,8 +33,8 @@ jobs:
 
       - name: Ensure output directories exist
         run: |
-          mkdir -p data
           mkdir -p data/checkpoints_v4
+          mkdir -p data/step1_raw_pfs_parquets
 
       - name: Run Step 1 PFS generator (full run)
         run: python scripts/step1_pfs_generator.py
@@ -44,12 +44,12 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add data/physics_cache_v4*.parquet data/checkpoints_v4/ scripts/dashboard/
+          git add data/checkpoints_v4/ data/step1_raw_pfs_parquets/
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update Step 1 full PFS outputs"
+            git commit -m "Update Step 1 full PFS parquet outputs"
           fi
 
           git push origin step1-full-pfs-results
