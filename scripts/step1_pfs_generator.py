@@ -961,7 +961,8 @@ def get_seed_combos(hydro_cap):
 def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                        prev_pruning=None, cross_feasible_mixes=None,
                        flush_callback=None, storage_levels=None,
-                       max_runtime_seconds=None):
+                       max_runtime_seconds=None,
+                       max_mixes_per_run=None):
     """Find ALL feasible solutions for a single threshold × ISO.
 
     Uses cross-threshold pruning: mixes that were infeasible at a lower threshold
@@ -990,6 +991,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     """
     run_start = time.time()
     timed_out = False
+    mixes_processed = 0
 
     def _time_limit_hit():
         return max_runtime_seconds is not None and (time.time() - run_start) >= max_runtime_seconds
@@ -1002,6 +1004,21 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         _append_partial_to_interim(iso, threshold, candidates)
         timed_out = True
         print(f"      Runtime cap reached for {iso} {threshold}% ({max_runtime_seconds:.0f}s); checkpoint saved.")
+
+    def _mix_limit_hit():
+        return max_mixes_per_run is not None and mixes_processed >= max_mixes_per_run
+
+    def _checkpoint_and_mix_cap(phase, cursor):
+        nonlocal timed_out
+        _save_mix_progress(iso, threshold, candidates, phase, cursor,
+                           near_miss_data=near_miss_mixes,
+                           mix_min_proc_data=mix_min_proc)
+        _append_partial_to_interim(iso, threshold, candidates)
+        timed_out = True
+        print(
+            f"      Mix cap reached for {iso} {threshold}% "
+            f"({max_mixes_per_run} mixes); checkpoint saved."
+        )
 
     # Cap target at 0.999 — demand_arr.sum() ≈ 0.9995 due to float averaging,
     # so a target of 1.0 is unreachable even when every hour is matched.
@@ -1160,9 +1177,13 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
             if _time_limit_hit():
                 _checkpoint_and_timeout('1a', i)
                 break
+            if _mix_limit_hit():
+                _checkpoint_and_mix_cap('1a', i)
+                break
 
             mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
                        int(combos_5[i][2]), int(combos_5[i][3]))
+            mixes_processed += 1
             all_mix_keys.add(mix_key)
 
             max_score = all_max_scores[i]
@@ -1264,6 +1285,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         if _time_limit_hit():
             _checkpoint_and_timeout('1b', batch_start + phase1b_start)
             break
+        if _mix_limit_hit():
+            _checkpoint_and_mix_cap('1b', batch_start + phase1b_start)
+            break
 
         batch_end = min(batch_start + MAX_MIX_BATCH, len(nm_valid))
         batch = nm_valid[batch_start:batch_end]
@@ -1286,6 +1310,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         # Process results per mix: apply per-mix caps, skip infeasible, binary-search
         for bi in range(n_batch):
             nm_idx, i, mix_key, bat4_max_pct, bat8_max_pct, ldes_max_pct, n_sd = batch[bi]
+            mixes_processed += 1
             mix = combos_5[i]
             supply_row = supply_rows[i]
             scores = batch_scores[bi]
@@ -2456,11 +2481,79 @@ def _count_solutions(results):
     return total
 
 
+def _parse_cli_args(argv):
+    """Parse CLI args for ISO and threshold filters.
+
+    Supported threshold forms:
+      --threshold=95
+      --threshold 95
+      --threshold 95,97.5
+    """
+    target_isos = []
+    threshold_tokens = []
+    i = 0
+
+    while i < len(argv):
+        arg = argv[i]
+
+        if arg.startswith('--threshold='):
+            threshold_tokens.extend(part.strip() for part in arg.split('=', 1)[1].split(','))
+            i += 1
+            continue
+
+        if arg == '--threshold':
+            if i + 1 >= len(argv):
+                raise ValueError("--threshold requires a value")
+            threshold_tokens.extend(part.strip() for part in argv[i + 1].split(','))
+            i += 2
+            continue
+
+        if arg.startswith('-'):
+            raise ValueError(f"Unknown argument: {arg}")
+
+        iso = arg.upper()
+        if iso in ISOS:
+            target_isos.append(iso)
+        else:
+            raise ValueError(f"Unknown ISO argument: {arg}")
+        i += 1
+
+    # Preserve order while deduplicating
+    target_isos = list(dict.fromkeys(target_isos))
+
+    target_thresholds = []
+    if threshold_tokens:
+        for token in threshold_tokens:
+            if not token:
+                continue
+            try:
+                value = float(token)
+            except ValueError as exc:
+                raise ValueError(f"Invalid threshold value: {token}") from exc
+
+            matched = None
+            for threshold in THRESHOLDS:
+                if abs(float(threshold) - value) < 1e-9:
+                    matched = threshold
+                    break
+
+            if matched is None:
+                raise ValueError(
+                    f"Unsupported threshold {token}. Allowed values: {', '.join(str(t) for t in THRESHOLDS)}"
+                )
+
+            target_thresholds.append(matched)
+
+    target_thresholds = list(dict.fromkeys(target_thresholds))
+    return target_isos, target_thresholds
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main():
+    global THRESHOLDS
     start_time = time.time()
     print("=" * 70)
     print("  v4.0 Physics Optimizer — Fresh Rebuild")
@@ -2498,12 +2591,14 @@ def main():
                                      2, 2, 2, 0.85, 0.85, 0.50, 4, 8, 100, 168, 48)
         print("  JIT compilation complete")
 
-    # Parse CLI args for target ISOs
-    target_isos = None
-    if len(sys.argv) > 1:
-        target_isos = [a.upper() for a in sys.argv[1:] if a.upper() in ISOS]
-        if target_isos:
-            print(f"  Target ISOs: {target_isos}")
+    target_isos, target_thresholds = _parse_cli_args(sys.argv[1:])
+
+    if target_thresholds:
+        THRESHOLDS = target_thresholds
+        print(f"  Target thresholds: {THRESHOLDS}")
+
+    if target_isos:
+        print(f"  Target ISOs: {target_isos}")
 
     run_isos = target_isos if target_isos else ISOS
 

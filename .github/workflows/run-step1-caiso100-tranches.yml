@@ -1,21 +1,13 @@
-name: Run Step 1 PFS by ISO/threshold
+name: Run Step 1 PFS CAISO 100 (Tranches)
 
 on:
   workflow_dispatch:
     inputs:
-      iso:
-        description: 'ISO to run (e.g., NYISO, CAISO, PJM, ERCOT, NEISO)'
-        required: true
-        default: 'NYISO'
-      threshold:
-        description: 'Threshold percentage to run (e.g., 100, 95, 92.5)'
-        required: true
-        default: '100'
       tranche:
-        description: 'Run scope: all mixes, or a single checkpoint tranche (1-10).'
+        description: 'Choose tranche 1-5 (recommended total for CAISO 100) or all.'
         required: true
         type: choice
-        default: 'all'
+        default: '1'
         options:
           - all
           - '1'
@@ -23,20 +15,10 @@ on:
           - '3'
           - '4'
           - '5'
-          - '6'
-          - '7'
-          - '8'
-          - '9'
-          - '10'
-      max_mixes_per_tranche:
-        description: 'Mixes per tranche when tranche != all (default 250).'
-        required: false
-        default: '250'
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
 
@@ -46,7 +28,7 @@ jobs:
 
     - name: Ensure target branch exists locally
       run: |
-        BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
+        BRANCH="iso-threshold-CAISO-100"
         git fetch origin "$BRANCH" || true
         git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
 
@@ -69,15 +51,16 @@ jobs:
           echo "MAX_MIXES=0" >> "$GITHUB_ENV"
           echo "TRANCHE_LABEL=all" >> "$GITHUB_ENV"
         else
-          echo "MAX_MIXES=${{ github.event.inputs.max_mixes_per_tranche }}" >> "$GITHUB_ENV"
-          echo "TRANCHE_LABEL=tranche-${{ github.event.inputs.tranche }}" >> "$GITHUB_ENV"
+          # CAISO 100 guidance: run tranches 1-5 sequentially for complete phase-1 sweep.
+          echo "MAX_MIXES=220" >> "$GITHUB_ENV"
+          echo "TRANCHE_LABEL=tranche-${{ github.event.inputs.tranche }}-of-5" >> "$GITHUB_ENV"
         fi
 
-    - name: Run script
+    - name: Run CAISO 100 tranche
       run: |
         python "scripts/step 1 PFS - individual ISO threshold selector.py" \
-          --iso "${{ github.event.inputs.iso }}" \
-          --threshold "${{ github.event.inputs.threshold }}" \
+          --iso "CAISO" \
+          --threshold "100" \
           --max-runtime-minutes 0 \
           --max-mixes-per-run "$MAX_MIXES"
 
@@ -86,14 +69,13 @@ jobs:
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
 
-        BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
-
+        BRANCH="iso-threshold-CAISO-100"
         git add data/checkpoints/ data/checkpoints_v4/ data/physics_cache_v4_*.parquet scripts/dashboard/
 
         if git diff --cached --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Update ${{ github.event.inputs.iso }} ISO threshold ${{ github.event.inputs.threshold }} (${TRANCHE_LABEL})"
+          git commit -m "Update CAISO threshold 100 (${TRANCHE_LABEL})"
         fi
 
         git push origin "$BRANCH"

@@ -28,6 +28,11 @@ jobs:
       - name: Ensure output directory exists
         run: mkdir -p data/step1_raw_pfs_parquets
 
+      - name: Ensure target branch exists locally
+        run: |
+          git fetch origin step1-5-raw-pfs-parquets || true
+          git checkout -B step1-5-raw-pfs-parquets origin/step1-5-raw-pfs-parquets || git checkout -B step1-5-raw-pfs-parquets
+
       - name: Run Step 1.5 checkpoint conversion
         run: python scripts/step1_5_convert_checkpoints_to_parquet.py
 
@@ -37,15 +42,7 @@ jobs:
           git config user.email "github-actions@github.com"
 
           BRANCH="step1-5-raw-pfs-parquets"
-          git fetch origin "$BRANCH" || true
-
-          if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
-            git checkout -B "$BRANCH" "origin/$BRANCH"
-          else
-            git checkout -B "$BRANCH"
-          fi
-
-          git add data/step1_raw_pfs_parquets/
+          git add -f data/step1_raw_pfs_parquets/
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -55,9 +52,3 @@ jobs:
 
           git push origin "$BRANCH"
 
-      - name: Upload Step 1.5 parquet artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: step1-5-raw-pfs-parquets
-          path: data/step1_raw_pfs_parquets/
-          if-no-files-found: error
