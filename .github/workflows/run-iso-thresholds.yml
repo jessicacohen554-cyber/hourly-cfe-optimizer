@@ -3,6 +3,10 @@ name: Run Step 1 PFS by ISO/threshold
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to run on and push results to'
+        required: true
+        default: 'work'
       iso:
         description: 'ISO to run (e.g., NYISO, CAISO, PJM, ERCOT, NEISO)'
         required: true
@@ -11,27 +15,6 @@ on:
         description: 'Threshold percentage to run (e.g., 100, 95, 92.5)'
         required: true
         default: '100'
-      tranche:
-        description: 'Run scope: all mixes, or a single checkpoint tranche (1-10).'
-        required: true
-        type: choice
-        default: 'all'
-        options:
-          - all
-          - '1'
-          - '2'
-          - '3'
-          - '4'
-          - '5'
-          - '6'
-          - '7'
-          - '8'
-          - '9'
-          - '10'
-      max_mixes_per_tranche:
-        description: 'Mixes per tranche when tranche != all (default 250).'
-        required: false
-        default: '250'
 
 jobs:
   run-script:
@@ -43,10 +26,12 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch }}
 
     - name: Ensure target branch exists locally
       run: |
-        BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
+        BRANCH="${{ github.event.inputs.branch }}"
         git fetch origin "$BRANCH" || true
         git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
 
@@ -60,18 +45,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyarrow numba pandas
 
-    - name: Create checkpoint directory
-      run: mkdir -p data/checkpoints data/checkpoints_v4
-
-    - name: Set tranche controls
+    - name: Create output directories
       run: |
-        if [ "${{ github.event.inputs.tranche }}" = "all" ]; then
-          echo "MAX_MIXES=0" >> "$GITHUB_ENV"
-          echo "TRANCHE_LABEL=all" >> "$GITHUB_ENV"
-        else
-          echo "MAX_MIXES=${{ github.event.inputs.max_mixes_per_tranche }}" >> "$GITHUB_ENV"
-          echo "TRANCHE_LABEL=tranche-${{ github.event.inputs.tranche }}" >> "$GITHUB_ENV"
-        fi
+        mkdir -p data/checkpoints_v4
+        mkdir -p data/step1_raw_pfs_parquets
 
     - name: Run script
       run: |
@@ -79,21 +56,21 @@ jobs:
           --iso "${{ github.event.inputs.iso }}" \
           --threshold "${{ github.event.inputs.threshold }}" \
           --max-runtime-minutes 0 \
-          --max-mixes-per-run "$MAX_MIXES"
+          --max-mixes-per-run 0
 
     - name: Commit results
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
 
-        BRANCH="iso-threshold-${{ github.event.inputs.iso }}-${{ github.event.inputs.threshold }}"
+        BRANCH="${{ github.event.inputs.branch }}"
 
-        git add data/checkpoints/ data/checkpoints_v4/ data/physics_cache_v4_*.parquet scripts/dashboard/
+        git add data/checkpoints_v4/ data/step1_raw_pfs_parquets/
 
         if git diff --cached --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Update ${{ github.event.inputs.iso }} ISO threshold ${{ github.event.inputs.threshold }} (${TRANCHE_LABEL})"
+          git commit -m "Update ${{ github.event.inputs.iso }} ISO threshold ${{ github.event.inputs.threshold }} parquet outputs"
         fi
 
         git push origin "$BRANCH"
