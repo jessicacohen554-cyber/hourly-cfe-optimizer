@@ -36,6 +36,9 @@ import numpy as np
 # ============================================================================
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+sys.path.insert(0, os.path.dirname(DATA_DIR))
+from parquet_io import load_from_parquets, find_input_dir
+
 H = 8760
 LEAP_FEB29_START = 1416
 PROFILE_YEARS = ['2021', '2022', '2023', '2024', '2025']
@@ -476,10 +479,18 @@ def main():
     # Load hourly profiles
     demand_data, gen_profiles = load_data()
 
-    # Load results to get ALL feasible mixes
-    print("\nLoading overprocure_results.json...")
-    with open('dashboard/overprocure_results.json') as f:
-        results = json.load(f)
+    # Load results — parquets preferred, JSON fallback
+    input_dir = find_input_dir(ISOS)
+    if input_dir:
+        print(f"\nLoading from parquets: {input_dir}")
+        results = load_from_parquets(input_dir, ISOS)
+    elif os.path.exists('dashboard/overprocure_results.json'):
+        print("\nLoading overprocure_results.json...")
+        with open('dashboard/overprocure_results.json') as f:
+            results = json.load(f)
+    else:
+        print("ERROR: No parquets or overprocure_results.json found")
+        sys.exit(1)
 
     # Dashboard thresholds (same as shared-data.js FEASIBLE_MIXES)
     DASHBOARD_THRESHOLDS = ['50', '60', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
@@ -539,6 +550,19 @@ def main():
                     mk = mix_key(rm, proc, batt, ldes)
                     if mk not in unique_mixes:
                         unique_mixes[mk] = (rm, proc, batt, ldes)
+
+            # Extract from scenarios (parquet format — winning mixes across cost combos)
+            scenarios = t_data.get('scenarios', {})
+            for sc_key, sc in scenarios.items():
+                rm = sc.get('resource_mix', {})
+                if not rm or 'clean_firm' not in rm:
+                    continue
+                proc = sc.get('procurement_pct', 100)
+                batt = sc.get('battery_dispatch_pct', 0)
+                ldes = sc.get('ldes_dispatch_pct', 0)
+                mk = mix_key(rm, proc, batt, ldes)
+                if mk not in unique_mixes:
+                    unique_mixes[mk] = (rm, proc, batt, ldes)
 
         n_unique = len(unique_mixes)
         total_mixes += n_unique
