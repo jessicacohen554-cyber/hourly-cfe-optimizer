@@ -24,9 +24,8 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step1_raw_pfs_parquets/{ISO}_step1_pfs_t{threshold}.parquet (primary, from Step 1)
-        Falls back to data/physics_cache_v4_{ISO}.parquet or legacy merged file
-Output: data/step-2-EF-parquets/step2_ef_{ISO}.parquet (per-ISO, threshold-free)
+Input:  data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet (from Step 1)
+Output: data/step-2-EF-parquets/step2_ef_{ISO}.parquet (per-ISO, all thresholds combined)
 
 The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
@@ -46,10 +45,6 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')
 STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step-2-EF-parquets')
-
-# Per-ISO PFS files (from Step 1 two-phase adaptive sweep)
-# Falls back to legacy single-file if per-ISO files don't exist
-LEGACY_PFS_PATH = os.path.join(PFS_DIR, 'physics_cache_v4.parquet')
 
 # Target thresholds — all 13 from v4 PFS (50-100%)
 TARGET_THRESHOLDS = [50.0, 60.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 100.0]
@@ -223,92 +218,57 @@ def normalize_table(t):
 def load_iso_tables():
     """Load PFS data and return a dict of {iso: pyarrow.Table}.
 
-    Tries three sources in order:
-      1. data/step1_raw_pfs_parquets/{ISO}_step1_pfs_t{threshold}.parquet (native Step 1)
-      2. data/physics_cache_v4_{ISO}.parquet (per-ISO cache)
-      3. data/physics_cache_v4.parquet (legacy single merged file, split by ISO)
+    Reads from data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet.
+    Groups files by ISO prefix, concatenates all threshold files per ISO.
 
     Returns dict keyed by ISO name with per-ISO tables (already schema-normalized).
     """
     iso_tables = {}
 
-    # --- Source 1: Step 1 raw parquets (native format only) ---
-    # Group files by ISO from filename to enable batched reads per ISO.
-    if os.path.isdir(STEP1_RAW_DIR):
-        parquet_files = sorted(
-            f for f in os.listdir(STEP1_RAW_DIR) if f.endswith('.parquet')
+    if not os.path.isdir(STEP1_RAW_DIR):
+        raise FileNotFoundError(
+            f"Step 1 output directory not found: {STEP1_RAW_DIR}\n"
+            f"Run step1_pfs_generator.py first to produce "
+            f"{{ISO}}_t{{XX}}_raw_pfs.parquet files."
         )
-        if parquet_files:
-            print(f"Scanning Step 1 raw parquets in {STEP1_RAW_DIR}")
-            # Group files by ISO prefix for batched loading
-            files_by_iso = {}
-            for fname in parquet_files:
-                # Extract ISO from filename (e.g., "ERCOT_t100_raw_pfs.parquet")
-                iso_prefix = fname.split('_')[0] if '_' in fname else None
-                if iso_prefix and iso_prefix in ISOS:
-                    files_by_iso.setdefault(iso_prefix, []).append(fname)
 
-            if files_by_iso:
-                # Batched read: read all files for each ISO, concat once
-                for iso, fnames in files_by_iso.items():
-                    iso_subtables = []
-                    total_rows = 0
-                    for fname in fnames:
-                        path = os.path.join(STEP1_RAW_DIR, fname)
-                        t = pq.read_table(path)
-                        if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
-                            iso_subtables.append(t)
-                            total_rows += t.num_rows
-                    if iso_subtables:
-                        combined = pa.concat_tables(iso_subtables) if len(iso_subtables) > 1 else iso_subtables[0]
-                        iso_tables[iso] = normalize_table(combined)
-                        print(f"  {iso}: {total_rows:>10,} rows from {len(fnames)} Step 1 files")
-            else:
-                # Fallback: filenames don't follow ISO_t{thr} pattern — read all and split by iso column
-                native_by_iso = {}
-                for fname in parquet_files:
-                    path = os.path.join(STEP1_RAW_DIR, fname)
-                    t = pq.read_table(path)
-                    if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
-                        iso_vals = pc.unique(t.column('iso')).to_pylist()
-                        for iso_val in iso_vals:
-                            native_by_iso.setdefault(iso_val, []).append(t)
-                        size_mb = os.path.getsize(path) / (1024 * 1024)
-                        print(f"  {fname}: {t.num_rows:>10,} rows ({size_mb:.1f} MB)")
+    parquet_files = sorted(
+        f for f in os.listdir(STEP1_RAW_DIR) if f.endswith('.parquet')
+    )
+    if not parquet_files:
+        raise FileNotFoundError(
+            f"No parquet files found in {STEP1_RAW_DIR}.\n"
+            f"Run step1_pfs_generator.py first."
+        )
 
-                for iso, tables in native_by_iso.items():
-                    combined = pa.concat_tables(tables)
-                    iso_tables[iso] = normalize_table(combined)
-                    print(f"  {iso}: {iso_tables[iso].num_rows:,} rows from Step 1 raw")
+    print(f"Scanning Step 1 raw parquets in {STEP1_RAW_DIR}")
 
-    # --- Source 2: Per-ISO cache files ---
-    for iso in ISOS:
-        if iso in iso_tables:
-            continue
-        iso_path = os.path.join(PFS_DIR, f'physics_cache_v4_{iso}.parquet')
-        if os.path.exists(iso_path):
-            t = pq.read_table(iso_path)
-            iso_tables[iso] = normalize_table(t)
-            size_mb = os.path.getsize(iso_path) / (1024 * 1024)
-            print(f"  {iso}: {t.num_rows:>10,} rows from per-ISO cache ({size_mb:.1f} MB)")
+    # Group files by ISO prefix (e.g., "ERCOT_t100_raw_pfs.parquet" -> "ERCOT")
+    files_by_iso = {}
+    for fname in parquet_files:
+        iso_prefix = fname.split('_')[0] if '_' in fname else None
+        if iso_prefix and iso_prefix in ISOS:
+            files_by_iso.setdefault(iso_prefix, []).append(fname)
 
-    # --- Source 3: Legacy single merged file ---
-    missing = [iso for iso in ISOS if iso not in iso_tables]
-    if missing and os.path.exists(LEGACY_PFS_PATH):
-        print(f"Loading legacy PFS for missing ISOs: {', '.join(missing)}")
-        legacy = pq.read_table(LEGACY_PFS_PATH)
-        for iso in missing:
-            mask = pc.equal(legacy.column('iso'), iso)
-            subtable = legacy.filter(mask)
-            if subtable.num_rows > 0:
-                iso_tables[iso] = normalize_table(subtable)
-                print(f"  {iso}: {subtable.num_rows:,} rows from legacy cache")
+    # Batched read: load all threshold files per ISO, concat once
+    for iso, fnames in files_by_iso.items():
+        iso_subtables = []
+        total_rows = 0
+        for fname in fnames:
+            path = os.path.join(STEP1_RAW_DIR, fname)
+            t = pq.read_table(path)
+            if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
+                iso_subtables.append(t)
+                total_rows += t.num_rows
+        if iso_subtables:
+            combined = pa.concat_tables(iso_subtables) if len(iso_subtables) > 1 else iso_subtables[0]
+            iso_tables[iso] = normalize_table(combined)
+            print(f"  {iso}: {total_rows:>10,} rows from {len(fnames)} threshold files")
 
     if not iso_tables:
         raise FileNotFoundError(
-            f"No PFS files found. Expected per-ISO files in {PFS_DIR}/ "
-            f"(physics_cache_v4_{{ISO}}.parquet) or {STEP1_RAW_DIR}/ "
-            f"or legacy {LEGACY_PFS_PATH}"
+            f"No valid Step 1 parquet files found in {STEP1_RAW_DIR}.\n"
+            f"Files must contain 'clean_firm' and 'hourly_match_score' columns."
         )
 
     found = sorted(iso_tables.keys())
