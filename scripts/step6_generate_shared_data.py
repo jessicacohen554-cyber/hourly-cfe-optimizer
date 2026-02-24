@@ -1230,61 +1230,109 @@ if dg_mac:
 else:
     print("  No DG MAC data in mac_stats.json — skipping")
 
-print("Extracting FEASIBLE_MIXES...")
-# Strategy: extract unique optimal mixes from the co2 batch scenario results.
-# Each threshold/ISO has 5,832+ cost scenarios (17,496 for CAISO), each selecting
-# its own optimal mix from the EF.  We collect the distinct mixes that were optimal
-# under at least one cost scenario — these are the only candidates the dashboard's
-# client-side repricing needs to evaluate.
+print("Extracting FEASIBLE_MIXES from Step 3 parquets...")
+# Strategy: extract unique optimal mixes from ALL Step 3 outputs — base cost
+# optimization, demand growth scenarios, and track (newbuild/replace) results.
+# Each parquet row is the cheapest mix for one cost scenario.  Different scenarios
+# select different mixes, so the union of winners across all scenarios gives the
+# complete set of candidates the dashboard needs for client-side repricing.
+#
+# For t=100: the pipeline only runs thresholds up to 99.  We use an effective gate
+# of 99.5% — any mix from t=99 data that scores >=99.5% is also valid for t=100.
+# This matches the effective_gate() logic used in Step 3.
+
+import pandas as pd
+
+STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
+MIX_COLS_PARQUET = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_ccs_ccgt', 'mix_hydro']
+EXTRA_COLS = ['procurement_pct', 'hourly_match_score',
+              'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+
+def _extract_mixes_from_parquets(iso, threshold_num):
+    """Collect unique optimal mixes from all Step 3 parquets for an ISO/threshold."""
+    seen = set()
+    rows = []
+
+    # Threshold string for filenames (e.g. "87.5" or "99")
+    t_str = str(threshold_num) if threshold_num != int(threshold_num) else str(int(threshold_num))
+
+    # Gather all relevant parquet files for this ISO/threshold
+    patterns = [
+        f'step3_co_{iso}.parquet',                          # base CO (all thresholds)
+        f'step3_dg_{iso}_t{t_str}.parquet',                 # demand growth
+        f'step3_track_dg_{iso}_t{t_str}_newbuild.parquet',  # track: newbuild
+        f'step3_track_dg_{iso}_t{t_str}_replace.parquet',   # track: replace
+    ]
+
+    for pat in patterns:
+        fp = os.path.join(STEP3_DIR, pat)
+        if not os.path.exists(fp):
+            continue
+        df = pd.read_parquet(fp)
+
+        # Base CO file has all thresholds; filter to the one we want
+        if 'threshold' in df.columns and pat.startswith('step3_co_'):
+            df = df[df['threshold'] == threshold_num]
+
+        # Ensure required columns exist (some older parquets may lack bat8/ldes)
+        for col in EXTRA_COLS:
+            if col not in df.columns:
+                df[col] = 0.0
+
+        for _, row in df.iterrows():
+            tup = (
+                row.get('mix_clean_firm', 0), row.get('mix_solar', 0),
+                row.get('mix_wind', 0), row.get('mix_ccs_ccgt', 0),
+                row.get('mix_hydro', 0), row.get('procurement_pct', 0),
+                round(row.get('hourly_match_score', 0), 1),
+                row.get('battery_dispatch_pct', 0),
+                row.get('battery8_dispatch_pct', 0),
+                row.get('ldes_dispatch_pct', 0),
+            )
+            if tup not in seen:
+                seen.add(tup)
+                rows.append(list(tup))
+    return rows
+
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
 lines.append('// Each mix: [clean_firm%, solar%, wind%, ccs_ccgt%, hydro%, procurement%, match%, battery%, battery8%, ldes%]')
+lines.append('// Extracted from ALL Step 3 outputs (base CO + demand growth + tracks).')
+lines.append('// t=100 uses effective gate >=99.5% from t=99 data.')
 lines.append('const FEASIBLE_MIXES = {')
 total_fm = 0
 for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    {iso}: {{')
     for t_idx, t in enumerate(THRESHOLDS):
-        mix_rows = []
+        t_num = float(t)
 
-        # Primary: extract unique mixes from scenario results (co2 batch or monolithic)
-        scenarios = data['results'].get(iso, {}).get('thresholds', {}).get(t, {}).get('scenarios', {})
-        if scenarios:
-            seen = set()
-            for sc_key, sc in scenarios.items():
-                rm = sc.get('resource_mix', {})
-                tup = (rm.get('clean_firm', 0), rm.get('solar', 0), rm.get('wind', 0),
-                       rm.get('ccs_ccgt', 0), rm.get('hydro', 0),
-                       sc.get('procurement_pct', 0), round(sc.get('hourly_match_score', 0), 1),
-                       sc.get('battery_dispatch_pct', 0), sc.get('battery8_dispatch_pct', 0),
-                       sc.get('ldes_dispatch_pct', 0))
-                if tup not in seen:
-                    seen.add(tup)
-                    mix_rows.append(list(tup))
+        if t_num == 100.0:
+            # t=100: use t=99 mixes that score >= 99.5% (effective gate)
+            mix_rows = _extract_mixes_from_parquets(iso, 99.0)
+            mix_rows = [m for m in mix_rows if m[6] >= 99.5]  # index 6 = match score
+            # Also pull from EF parquet for any configs scoring >= 99.5%
+            ef_path = os.path.join(SCRIPT_DIR, '..', 'data', 'step2-ef-parquets', f'step2_ef_{iso}.parquet')
+            if os.path.exists(ef_path) and len(mix_rows) == 0:
+                ef_df = pd.read_parquet(ef_path)
+                ef_high = ef_df[ef_df['hourly_match_score'] >= 99.5]
+                # Take minimum-procurement per unique 4D+storage combo
+                group_cols = ['clean_firm', 'solar', 'wind', 'hydro',
+                              'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+                if len(ef_high) > 0:
+                    compact = ef_high.loc[ef_high.groupby(group_cols)['procurement_pct'].idxmin()]
+                    # Cap at 500 to keep JS file manageable
+                    if len(compact) > 500:
+                        compact = compact.nsmallest(500, 'procurement_pct')
+                    for _, row in compact.iterrows():
+                        mix_rows.append([
+                            row['clean_firm'], row['solar'], row['wind'],
+                            0,  # ccs_ccgt (not in EF; Step 3 splits this from clean_firm)
+                            row['hydro'], row['procurement_pct'],
+                            round(row['hourly_match_score'], 1),
+                            row['battery_dispatch_pct'], row['battery8_dispatch_pct'],
+                            row['ldes_dispatch_pct'],
+                        ])
         else:
-            # Fallback: check for explicit feasible_mixes key (legacy format)
-            t_data = data['results'].get(iso, {}).get('thresholds', {}).get(t, {})
-            fmixes = t_data.get('feasible_mixes', {})
-            if isinstance(fmixes, dict) and 'clean_firm' in fmixes:
-                n_mixes = len(fmixes['clean_firm'])
-                for i in range(n_mixes):
-                    mix_rows.append([
-                        fmixes['clean_firm'][i], fmixes['solar'][i], fmixes['wind'][i],
-                        fmixes['ccs_ccgt'][i], fmixes['hydro'][i],
-                        fmixes['procurement_pct'][i],
-                        round(fmixes['hourly_match_score'][i], 1),
-                        fmixes.get('battery_dispatch_pct', [0] * n_mixes)[i],
-                        fmixes.get('battery8_dispatch_pct', [0] * n_mixes)[i],
-                        fmixes.get('ldes_dispatch_pct', [0] * n_mixes)[i],
-                    ])
-            elif isinstance(fmixes, list):
-                for m in fmixes:
-                    rm_legacy = m.get('resource_mix', {})
-                    mix_rows.append([
-                        rm_legacy.get('clean_firm', 0), rm_legacy.get('solar', 0), rm_legacy.get('wind', 0),
-                        rm_legacy.get('ccs_ccgt', 0), rm_legacy.get('hydro', 0),
-                        m.get('procurement_pct', 100), round(m.get('hourly_match_score', 0), 1),
-                        m.get('battery_dispatch_pct', 0), m.get('battery8_dispatch_pct', 0),
-                        m.get('ldes_dispatch_pct', 0),
-                    ])
+            mix_rows = _extract_mixes_from_parquets(iso, t_num)
 
         total_fm += len(mix_rows)
         lines.append(f'        "{t}": [')

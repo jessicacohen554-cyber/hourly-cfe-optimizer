@@ -383,8 +383,18 @@ def get_supply_profiles(iso, gen_profiles):
 
 
 def prepare_numpy_profiles(demand_norm, supply_profiles):
-    """Convert to numpy arrays + build supply matrix (4, 8760)."""
+    """Convert to numpy arrays + build supply matrix (4, 8760).
+
+    Re-normalizes demand_arr to sum to exactly 1.0 to fix a scaling issue
+    where leap-year profiles (2024) were normalized over 8784 hours then
+    truncated to 8760, causing the average to sum to ~0.9995 instead of 1.0.
+    Without this fix, hourly_match_score caps at 99.95% even with perfect
+    hourly matching.
+    """
     demand_arr = np.array(demand_norm[:H], dtype=np.float64)
+    dsum = demand_arr.sum()
+    if dsum > 0 and abs(dsum - 1.0) > 1e-9:
+        demand_arr *= (1.0 / dsum)
     supply_matrix = np.stack([
         np.array(supply_profiles[rt][:H], dtype=np.float64)
         for rt in RESOURCE_TYPES
@@ -1021,10 +1031,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
             f"({max_mixes_per_run} mixes); checkpoint saved."
         )
 
-    # Cap target at 0.999 — demand_arr.sum() ≈ 0.9995 due to float averaging,
-    # so a target of 1.0 is unreachable even when every hour is matched.
-    # 99.9% is functionally identical to 100% for hourly matching.
-    target = min(threshold / 100.0, 0.999)
+    # With demand_arr re-normalized to sum to exactly 1.0 (see
+    # prepare_numpy_profiles), a score of 1.0 is now reachable when every
+    # hour is fully matched.  No cap needed.
+    target = threshold / 100.0
     proc_min, proc_max = PROCUREMENT_BOUNDS.get(threshold, (70, 200))
 
     # Storage constants
