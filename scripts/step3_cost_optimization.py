@@ -42,6 +42,7 @@ Verify Numba is working before launching a run:
     python3 -c "from numba import njit; print('Numba OK')"
 """
 
+import gc
 import json
 import os
 import time
@@ -50,7 +51,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 from pathlib import Path
-from itertools import product
+from itertools import chain, product
 from functools import lru_cache
 
 try:
@@ -1749,8 +1750,7 @@ def main():
     print("\n--- Saving per-ISO parquet outputs ---")
 
     def _flatten_scenarios(iso, iso_data, track_name=None):
-        """Flatten scenario results into rows for parquet output."""
-        rows = []
+        """Yield scenario result rows for parquet output (generator)."""
         annual = iso_data.get('annual_demand_mwh', 0)
         thresholds_dict = iso_data.get('thresholds', {})
         for t_str, thr_data in thresholds_dict.items():
@@ -1772,17 +1772,15 @@ def main():
                     row[f'tranche_{k}'] = v
                 for k, v in sc.get('gas_backup', {}).items():
                     row[f'gas_{k}'] = v
-                rows.append(row)
-        return rows
+                yield row
 
     def _flatten_demand_growth(iso, iso_thrs):
-        """Flatten demand growth results into rows for parquet output."""
-        rows = []
+        """Yield demand growth result rows for parquet output (generator)."""
         for t_str, thr_scenarios in iso_thrs.items():
             for sc_key, year_data in thr_scenarios.items():
                 for year_str, growth_data in year_data.items():
                     for g_level, vals in growth_data.items():
-                        rows.append({
+                        yield {
                             'iso': iso,
                             'threshold': float(t_str),
                             'scenario': sc_key,
@@ -1792,12 +1790,10 @@ def main():
                             'total_cost': vals[1],
                             'effective_cost': vals[2],
                             'incremental': vals[3],
-                        })
-        return rows
+                        }
 
     def _flatten_feasible_mixes(iso, iso_data):
-        """Flatten feasible mixes into rows for parquet output."""
-        rows = []
+        """Yield feasible mix rows for parquet output (generator)."""
         for t_str, thr_data in iso_data.get('thresholds', {}).items():
             fm = thr_data.get('feasible_mixes', {})
             if not fm:
@@ -1807,101 +1803,126 @@ def main():
                 row = {'iso': iso, 'threshold': float(t_str)}
                 for k, vals in fm.items():
                     row[k] = vals[i]
-                rows.append(row)
-        return rows
+                yield row
 
-    def _rows_to_parquet(rows, path):
-        """Write list-of-dicts to parquet via pyarrow (no pandas)."""
-        if not rows:
-            return 0
-        # Collect all keys across all rows to handle sparse dicts
-        all_keys = list(dict.fromkeys(k for r in rows for k in r))
-        arrays = []
-        for key in all_keys:
-            col_vals = [r.get(key) for r in rows]
-            arrays.append(pa.array(col_vals))
-        table = pa.table(dict(zip(all_keys, arrays)))
-        pq.write_table(table, str(path), compression='zstd')
-        return len(rows)
+    def _rows_to_parquet(row_iter, path, chunk_size=250_000):
+        """Write rows from an iterable to parquet in chunks (low memory).
+
+        Uses pq.ParquetWriter to stream chunks so we never hold the full
+        dataset in memory as both list-of-dicts AND columnar arrays.
+        """
+        writer = None
+        total = 0
+
+        def _flush(chunk):
+            nonlocal writer
+            all_keys = list(dict.fromkeys(k for r in chunk for k in r))
+            arrays = {key: pa.array([r.get(key) for r in chunk])
+                      for key in all_keys}
+            tbl = pa.table(arrays)
+            if writer is None:
+                writer = pq.ParquetWriter(str(path), tbl.schema,
+                                          compression='zstd')
+            writer.write_table(tbl)
+            return len(chunk)
+
+        buf = []
+        for row in row_iter:
+            buf.append(row)
+            if len(buf) >= chunk_size:
+                total += _flush(buf)
+                buf = []
+        if buf:
+            total += _flush(buf)
+        if writer is not None:
+            writer.close()
+        return total
 
     for iso in run_isos:
         if iso not in output['results']:
             continue
 
         iso_data = output['results'][iso]
+        annual = iso_data.get('annual_demand_mwh', 0)
 
-        # --- 1. Baseline scenarios ---
-        sc_rows = _flatten_scenarios(iso, iso_data)
+        # --- 1. Baseline scenarios (generator → chunked write) ---
+        iso_out = output_dir / f'step3_co_{iso}.parquet'
+        n = _rows_to_parquet(_flatten_scenarios(iso, iso_data), iso_out)
+        print(f"  {iso_out}: {n:,} scenario rows, "
+              f"{os.path.getsize(iso_out) / 1e6:.1f} MB")
+        gc.collect()
 
-        # --- 2. Track scenarios (newbuild + replace) ---
-        track_rows = []
+        # --- 2. Track scenarios (chain newbuild + replace generators) ---
         iso_track_data = track_output.get('results', {}).get(iso, {})
+        track_iters = []
         for track_name in ['newbuild', 'replace']:
             track_thresholds = iso_track_data.get(track_name, {})
             if track_thresholds:
                 track_iso_data = {
-                    'annual_demand_mwh': iso_data.get('annual_demand_mwh', 0),
+                    'annual_demand_mwh': annual,
                     'thresholds': track_thresholds,
                 }
-                track_rows.extend(_flatten_scenarios(iso, track_iso_data, track_name=track_name))
+                track_iters.append(
+                    _flatten_scenarios(iso, track_iso_data, track_name=track_name))
+        if track_iters:
+            tracks_out = output_dir / f'step3_tracks_{iso}.parquet'
+            n = _rows_to_parquet(chain(*track_iters), tracks_out)
+            print(f"  {tracks_out}: {n:,} track rows, "
+                  f"{os.path.getsize(tracks_out) / 1e6:.1f} MB")
+            gc.collect()
 
-        # --- 3. Demand growth ---
-        dg_rows = _flatten_demand_growth(iso, dg_output.get('results', {}).get(iso, {}))
+        # --- 3. Demand growth (generator → chunked write) ---
+        iso_dg = dg_output.get('results', {}).get(iso, {})
+        if iso_dg:
+            dg_out = output_dir / f'step3_dg_{iso}.parquet'
+            n = _rows_to_parquet(_flatten_demand_growth(iso, iso_dg), dg_out)
+            print(f"  {dg_out}: {n:,} demand growth rows, "
+                  f"{os.path.getsize(dg_out) / 1e6:.1f} MB")
+            del iso_dg
+            gc.collect()
 
-        # --- 4. Track demand growth ---
-        track_dg_rows = []
+        # --- 4. Track demand growth (chain generators per track) ---
+        def _flatten_track_dg(iso, track_name, iso_tdg):
+            """Yield track demand growth rows (generator)."""
+            for t_str, thr_scenarios in iso_tdg.items():
+                for sc_key, year_data in thr_scenarios.items():
+                    for year_str, growth_data in year_data.items():
+                        for g_level, vals in growth_data.items():
+                            yield {
+                                'iso': iso,
+                                'track': track_name,
+                                'threshold': float(t_str),
+                                'scenario': sc_key,
+                                'year': int(year_str),
+                                'growth_level': g_level,
+                                'mix_idx': vals[0],
+                                'total_cost': vals[1],
+                                'effective_cost': vals[2],
+                                'incremental': vals[3],
+                            }
+
+        tdg_iters = []
         for track_name in ['newbuild', 'replace']:
             iso_tdg = track_dg.get(track_name, {}).get(iso, {})
             if iso_tdg:
-                for t_str, thr_scenarios in iso_tdg.items():
-                    for sc_key, year_data in thr_scenarios.items():
-                        for year_str, growth_data in year_data.items():
-                            for g_level, vals in growth_data.items():
-                                track_dg_rows.append({
-                                    'iso': iso,
-                                    'track': track_name,
-                                    'threshold': float(t_str),
-                                    'scenario': sc_key,
-                                    'year': int(year_str),
-                                    'growth_level': g_level,
-                                    'mix_idx': vals[0],
-                                    'total_cost': vals[1],
-                                    'effective_cost': vals[2],
-                                    'incremental': vals[3],
-                                })
-
-        # --- 5. Feasible mixes ---
-        mix_rows = _flatten_feasible_mixes(iso, iso_data)
-
-        # --- Write per-ISO parquet files ---
-        iso_out = output_dir / f'step3_co_{iso}.parquet'
-        n = _rows_to_parquet(sc_rows, iso_out)
-        print(f"  {iso_out}: {n:,} scenario rows, "
-              f"{os.path.getsize(iso_out) / 1e6:.1f} MB")
-
-        if track_rows:
-            tracks_out = output_dir / f'step3_tracks_{iso}.parquet'
-            n = _rows_to_parquet(track_rows, tracks_out)
-            print(f"  {tracks_out}: {n:,} track rows, "
-                  f"{os.path.getsize(tracks_out) / 1e6:.1f} MB")
-
-        if dg_rows:
-            dg_out = output_dir / f'step3_dg_{iso}.parquet'
-            n = _rows_to_parquet(dg_rows, dg_out)
-            print(f"  {dg_out}: {n:,} demand growth rows, "
-                  f"{os.path.getsize(dg_out) / 1e6:.1f} MB")
-
-        if track_dg_rows:
+                tdg_iters.append(_flatten_track_dg(iso, track_name, iso_tdg))
+        if tdg_iters:
             track_dg_out = output_dir / f'step3_track_dg_{iso}.parquet'
-            n = _rows_to_parquet(track_dg_rows, track_dg_out)
+            n = _rows_to_parquet(chain(*tdg_iters), track_dg_out)
             print(f"  {track_dg_out}: {n:,} track DG rows, "
                   f"{os.path.getsize(track_dg_out) / 1e6:.1f} MB")
+            gc.collect()
 
-        if mix_rows:
-            mix_out = output_dir / f'step3_feasible_{iso}.parquet'
-            n = _rows_to_parquet(mix_rows, mix_out)
+        # --- 5. Feasible mixes (generator → chunked write) ---
+        mix_out = output_dir / f'step3_feasible_{iso}.parquet'
+        n = _rows_to_parquet(_flatten_feasible_mixes(iso, iso_data), mix_out)
+        if n > 0:
             print(f"  {mix_out}: {n:,} feasible mix rows, "
                   f"{os.path.getsize(mix_out) / 1e6:.1f} MB")
+
+        # Free this ISO's source data before processing the next one
+        del output['results'][iso]
+        gc.collect()
 
     # Save config metadata as JSON (small, one file for all ISOs)
     meta = {k: output[k] for k in output if k != 'results'}
