@@ -24,8 +24,8 @@ jobs:
       - name: Generate unique branch name
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          echo "TARGET_BRANCH=auto/${BRANCH_PREFIX}-${TIMESTAMP}" >> "$GITHUB_ENV"
-          echo "Branch: auto/${BRANCH_PREFIX}-${TIMESTAMP}"
+          echo "TARGET_BRANCH=auto/${TIMESTAMP}-${BRANCH_PREFIX}" >> "$GITHUB_ENV"
+          echo "Branch: auto/${TIMESTAMP}-${BRANCH_PREFIX}"
 
       - name: Create fresh branch from master
         run: |
