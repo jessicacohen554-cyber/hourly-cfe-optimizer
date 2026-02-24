@@ -863,54 +863,29 @@ fetch('track_results.json')
 // EXTRACT REPLACE TRACK DATA
 // ============================================================================
 function getReplaceEffectiveCost(iso) {
-    // Attempt to read from track_results.json
-    // Expected structure: { [iso]: { thresholds: { [thr]: { medium: { effective_cost: N } } } } }
-    // or: { results: { [iso]: { ... } } }
-    // or: { [iso]: [ ...array matching THRESHOLDS... ] }
+    // Structure: { results: { ISO: { cost_to_replace: { "90": { scenarios: { KEY: { costs: {...} } } } } } } }
     if (!trackData) return null;
 
-    // Try flat array per ISO
-    if (Array.isArray(trackData[iso])) {
-        return trackData[iso];
-    }
-
-    // Try nested results object
     var root = trackData.results || trackData;
     var isoData = root[iso];
     if (!isoData) return null;
 
-    // If it has a thresholds map
-    if (isoData.thresholds) {
-        return THR.map(function(t) {
-            var thrKey = String(t);
-            var thrData = isoData.thresholds[thrKey] || isoData.thresholds[t];
-            if (!thrData) return null;
-            // Try medium scenario
-            if (thrData.medium && thrData.medium.effective_cost != null) return thrData.medium.effective_cost;
-            if (thrData.effective_cost != null) return thrData.effective_cost;
-            // Try scenarios map with medium key
-            if (thrData.scenarios) {
-                var keys = Object.keys(thrData.scenarios);
-                for (var i = 0; i < keys.length; i++) {
-                    var s = thrData.scenarios[keys[i]];
-                    if (s && s.costs && s.costs.effective_cost != null) return s.costs.effective_cost;
-                }
-            }
-            return null;
-        });
-    }
+    // Navigate to cost_to_replace track data
+    var ctr = isoData.cost_to_replace || isoData.thresholds;
+    if (!ctr) return null;
 
-    // Try replace_track or new_build_track keys
-    var track = isoData.replace_track || isoData.new_build || isoData.replace;
-    if (track) {
-        if (Array.isArray(track)) return track;
-        if (track.effective_cost && Array.isArray(track.effective_cost)) return track.effective_cost;
-    }
-
-    // Try effective_cost directly
-    if (Array.isArray(isoData.effective_cost)) return isoData.effective_cost;
-
-    return null;
+    return THR.map(function(t) {
+        var thrKey = String(t % 1 === 0 ? Math.floor(t) : t);
+        var thrData = ctr[thrKey];
+        if (!thrData || !thrData.scenarios) return null;
+        // Return first scenario's effective_cost (medium scenario)
+        var keys = Object.keys(thrData.scenarios);
+        for (var i = 0; i < keys.length; i++) {
+            var s = thrData.scenarios[keys[i]];
+            if (s && s.costs && s.costs.effective_cost != null) return s.costs.effective_cost;
+        }
+        return null;
+    });
 }
 
 // Get full scenario sweep data for P10/P50/P90 bands if available
@@ -920,47 +895,40 @@ function getReplaceSweepData(iso) {
     var isoData = root[iso];
     if (!isoData) return null;
 
-    // Check for mode=full sweep data with percentiles
-    if (isoData.sweep || isoData.percentiles) {
-        var sweep = isoData.sweep || isoData.percentiles;
-        return {
-            p10: sweep.p10 || null,
-            p50: sweep.p50 || sweep.median || null,
-            p90: sweep.p90 || null
-        };
-    }
+    // Navigate to cost_to_replace track
+    var ctr = isoData.cost_to_replace || isoData.thresholds;
+    if (!ctr) return null;
 
-    // Check per-threshold scenario data for computing percentiles
-    if (isoData.thresholds) {
-        var p10 = [], p50 = [], p90 = [];
-        var hasMultiple = false;
-        THR.forEach(function(t) {
-            var thrData = isoData.thresholds[String(t)] || isoData.thresholds[t];
-            if (!thrData || !thrData.scenarios) {
-                p10.push(null); p50.push(null); p90.push(null);
-                return;
-            }
-            var costs = [];
-            Object.keys(thrData.scenarios).forEach(function(k) {
-                var s = thrData.scenarios[k];
-                var c = (s && s.costs && s.costs.effective_cost != null) ? s.costs.effective_cost : null;
-                if (c != null) costs.push(c);
-            });
-            if (costs.length > 1) {
-                hasMultiple = true;
-                costs.sort(function(a, b) { return a - b; });
-                p10.push(costs[Math.floor(costs.length * 0.1)]);
-                p50.push(costs[Math.floor(costs.length * 0.5)]);
-                p90.push(costs[Math.floor(costs.length * 0.9)]);
-            } else if (costs.length === 1) {
-                p10.push(costs[0]); p50.push(costs[0]); p90.push(costs[0]);
+    // Check per-threshold precomputed sweep percentiles
+    var p10 = [], p50 = [], p90 = [];
+    var hasSweep = false;
+    THR.forEach(function(t) {
+        var thrKey = String(t % 1 === 0 ? Math.floor(t) : t);
+        var thrData = ctr[thrKey];
+        if (!thrData) {
+            p10.push(null); p50.push(null); p90.push(null);
+            return;
+        }
+        // Use precomputed sweep if available
+        if (thrData.sweep) {
+            hasSweep = true;
+            p10.push(thrData.sweep.p10 ? thrData.sweep.p10.effective_cost : null);
+            p50.push(thrData.sweep.p50 ? thrData.sweep.p50.effective_cost : null);
+            p90.push(thrData.sweep.p90 ? thrData.sweep.p90.effective_cost : null);
+        } else if (thrData.scenarios) {
+            // Fallback: single scenario → use as all percentiles
+            var keys = Object.keys(thrData.scenarios);
+            if (keys.length >= 1) {
+                var c = thrData.scenarios[keys[0]].costs.effective_cost;
+                p10.push(c); p50.push(c); p90.push(c);
             } else {
                 p10.push(null); p50.push(null); p90.push(null);
             }
-        });
-        if (hasMultiple) return { p10: p10, p50: p50, p90: p90 };
-    }
-
+        } else {
+            p10.push(null); p50.push(null); p90.push(null);
+        }
+    });
+    if (hasSweep) return { p10: p10, p50: p50, p90: p90 };
     return null;
 }
 
