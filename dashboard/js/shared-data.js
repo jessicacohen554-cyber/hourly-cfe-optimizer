@@ -2,7 +2,7 @@
 // SHARED DATA MODULE — Single source of truth for all dashboard pages
 // ============================================================================
 // RULE: No data constants defined in HTML files. Change here, propagates everywhere.
-// Generated: 2026-02-24 23:09 by generate_shared_data.py
+// Generated: 2026-02-24 23:14 by generate_shared_data.py
 // Source: overprocure_results.json (Step 2 tranche-repriced + postprocess + CO2)
 // ============================================================================
 
@@ -2134,34 +2134,43 @@ const CCS_LCOE_45Q_OFF = {
 const UPRATE_LCOE = { L: 15, M: 25, H: 40 };
 
 // --- Wholesale Prices ($/MWh) ---
-const WHOLESALE_PRICES = { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 };
+const WHOLESALE_PRICES = { CAISO: 30, ERCOT: 27, PJM: 34, NYISO: 42, NEISO: 41 };
+
+// --- Fossil Fuel Price Adjustments ($/MWh delta from wholesale) ---
+const FUEL_ADJUSTMENTS = {
+    CAISO: { Low: -5, Medium: 0, High: 10 },
+    ERCOT: { Low: -7, Medium: 0, High: 12 },
+    PJM: { Low: -6, Medium: 0, High: 11 },
+    NYISO: { Low: -4, Medium: 0, High: 8 },
+    NEISO: { Low: -4, Medium: 0, High: 8 }
+};
 
 // --- LCOE Tables ($/MWh) for client-side repricing ---
 const LCOE_TABLES = {
     solar: {
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 45, ERCOT: 40, PJM: 50, NYISO: 70, NEISO: 62 },
+        Medium: { CAISO: 60, ERCOT: 54, PJM: 65, NYISO: 92, NEISO: 82 },
+        High: { CAISO: 78, ERCOT: 70, PJM: 85, NYISO: 120, NEISO: 107 }
     },
     wind: {
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 55, ERCOT: 30, PJM: 47, NYISO: 61, NEISO: 55 },
+        Medium: { CAISO: 73, ERCOT: 40, PJM: 62, NYISO: 81, NEISO: 73 },
+        High: { CAISO: 95, ERCOT: 52, PJM: 81, NYISO: 105, NEISO: 95 }
     },
     battery: {
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 77, ERCOT: 69, PJM: 74, NYISO: 81, NEISO: 79 },
+        Medium: { CAISO: 102, ERCOT: 92, PJM: 98, NYISO: 108, NEISO: 105 },
+        High: { CAISO: 133, ERCOT: 120, PJM: 127, NYISO: 140, NEISO: 137 }
     },
     battery8: {
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 85, ERCOT: 77, PJM: 82, NYISO: 90, NEISO: 88 },
+        Medium: { CAISO: 125, ERCOT: 113, PJM: 120, NYISO: 132, NEISO: 129 },
+        High: { CAISO: 165, ERCOT: 149, PJM: 159, NYISO: 175, NEISO: 170 }
     },
     ldes: {
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 135, ERCOT: 116, PJM: 128, NYISO: 150, NEISO: 143 },
+        Medium: { CAISO: 180, ERCOT: 155, PJM: 170, NYISO: 200, NEISO: 190 },
+        High: { CAISO: 234, ERCOT: 202, PJM: 221, NYISO: 260, NEISO: 247 }
     }
 };
 
@@ -2172,55 +2181,79 @@ const HAS_BATTERY8 = true;
 const TX_TABLES = {
     solar: {
         None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 1, ERCOT: 1, PJM: 2, NYISO: 3, NEISO: 3 },
+        Medium: { CAISO: 3, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 },
+        High: { CAISO: 6, ERCOT: 5, PJM: 9, NYISO: 12, NEISO: 10 }
     },
     wind: {
         None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 },
+        Medium: { CAISO: 8, ERCOT: 6, PJM: 10, NYISO: 14, NEISO: 12 },
+        High: { CAISO: 14, ERCOT: 10, PJM: 18, NYISO: 22, NEISO: 20 }
     },
     clean_firm: {
         None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 },
+        Medium: { CAISO: 3, ERCOT: 2, PJM: 3, NYISO: 5, NEISO: 4 },
+        High: { CAISO: 6, ERCOT: 4, PJM: 6, NYISO: 9, NEISO: 7 }
     },
     ccs_ccgt: {
         None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 },
+        Medium: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 },
+        High: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 }
     },
     battery: {
         None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 1, NEISO: 1 },
+        Medium: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 },
+        High: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 }
     },
     battery8: {
         None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 1, NEISO: 1 },
+        Medium: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 },
+        High: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 }
     },
     ldes: {
         None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Low: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        Medium: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-        High: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
+        Low: { CAISO: 1, ERCOT: 1, PJM: 1, NYISO: 2, NEISO: 2 },
+        Medium: { CAISO: 2, ERCOT: 2, PJM: 3, NYISO: 4, NEISO: 3 },
+        High: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6 }
     }
 };
 
+// --- Nuclear New-Build LCOE ($/MWh) by firm gen toggle ---
+const NUCLEAR_NEWBUILD_LCOE = {
+    L: { CAISO: 70, ERCOT: 68, PJM: 72, NYISO: 75, NEISO: 73 },
+    M: { CAISO: 95, ERCOT: 90, PJM: 105, NYISO: 110, NEISO: 108 },
+    H: { CAISO: 140, ERCOT: 135, PJM: 160, NYISO: 170, NEISO: 165 }
+};
+
+// --- CCS-CCGT LCOE ($/MWh) with/without 45Q ---
+const CCS_LCOE_45Q_ON = {
+    L: { CAISO: 58, ERCOT: 52, PJM: 62, NYISO: 78, NEISO: 75 },
+    M: { CAISO: 86, ERCOT: 71, PJM: 79, NYISO: 99, NEISO: 96 },
+    H: { CAISO: 115, ERCOT: 92, PJM: 102, NYISO: 128, NEISO: 122 }
+};
+const CCS_LCOE_45Q_OFF = {
+    L: { CAISO: 87, ERCOT: 81, PJM: 91, NYISO: 107, NEISO: 104 },
+    M: { CAISO: 115, ERCOT: 100, PJM: 108, NYISO: 128, NEISO: 125 },
+    H: { CAISO: 144, ERCOT: 121, PJM: 131, NYISO: 157, NEISO: 151 }
+};
+
+// --- Geothermal LCOE ($/MWh, CAISO only) ---
+const GEOTHERMAL_LCOE = { L: 63, M: 88, H: 110 };
+const GEO_CAP_TWH = 39.0;
+
 // --- Grid Mix Shares (% of demand — existing generation) ---
+// This is the EXISTING clean energy floor: priced at wholesale, not LCOE.
 const GRID_MIX_SHARES = {
-    CAISO: { clean_firm: 0, solar: 0, wind: 0, ccs_ccgt: 0, hydro: 0 },
-    ERCOT: { clean_firm: 0, solar: 0, wind: 0, ccs_ccgt: 0, hydro: 0 },
-    PJM: { clean_firm: 0, solar: 0, wind: 0, ccs_ccgt: 0, hydro: 0 },
-    NYISO: { clean_firm: 0, solar: 0, wind: 0, ccs_ccgt: 0, hydro: 0 },
-    NEISO: { clean_firm: 0, solar: 0, wind: 0, ccs_ccgt: 0, hydro: 0 }
+    CAISO: { clean_firm: 7.9, solar: 22.3, wind: 8.8, ccs_ccgt: 0, hydro: 9.5 },
+    ERCOT: { clean_firm: 8.6, solar: 13.8, wind: 23.6, ccs_ccgt: 0, hydro: 0.1 },
+    PJM: { clean_firm: 32.1, solar: 2.9, wind: 3.8, ccs_ccgt: 0, hydro: 1.8 },
+    NYISO: { clean_firm: 18.4, solar: 0.0, wind: 4.7, ccs_ccgt: 0, hydro: 15.9 },
+    NEISO: { clean_firm: 23.8, solar: 1.4, wind: 3.9, ccs_ccgt: 0, hydro: 4.4 }
 };
 
 // --- Regional Annual Demand (TWh) ---

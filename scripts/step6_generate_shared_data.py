@@ -13,7 +13,25 @@ Output: dashboard/js/shared-data.js                        (complete rewrite)
 
 import json
 import os
+import sys
 from datetime import datetime
+
+# Import cost tables directly from Step 3 (single source of truth)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from step3_cost_optimization import (
+    GRID_MIX_SHARES as _GRID_MIX_SHARES,
+    WHOLESALE_PRICES as _WHOLESALE_PRICES,
+    FUEL_ADJUSTMENTS as _FUEL_ADJUSTMENTS,
+    LCOE_TABLES as _LCOE_TABLES,
+    TX_TABLES as _TX_TABLES,
+    UPRATE_LCOE as _UPRATE_LCOE,
+    NUCLEAR_NEWBUILD_LCOE as _NUCLEAR_NEWBUILD_LCOE,
+    CCS_LCOE_45Q_ON as _CCS_LCOE_45Q_ON,
+    CCS_LCOE_45Q_OFF as _CCS_LCOE_45Q_OFF,
+    GEOTHERMAL_LCOE as _GEOTHERMAL_LCOE,
+    GEO_CAP_TWH as _GEO_CAP_TWH,
+    REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH,
+)
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
@@ -927,18 +945,28 @@ uprate_lcoe = tranche_model.get('uprate_lcoe', {'L': 15, 'M': 25, 'H': 40})
 lines.append(f'const UPRATE_LCOE = {{ L: {uprate_lcoe.get("L", 15)}, M: {uprate_lcoe.get("M", 25)}, H: {uprate_lcoe.get("H", 40)} }};')
 lines.append('')
 
-# Wholesale prices + fuel adjustments
+# Wholesale prices (from Step 3 constants — single source of truth)
 lines.append('// --- Wholesale Prices ($/MWh) ---')
-wp = data.get('config', {}).get('wholesale_prices', {})
-parts = [f'{iso}: {wp.get(iso, 0)}' for iso in ISOS]
+parts = [f'{iso}: {_WHOLESALE_PRICES.get(iso, 0)}' for iso in ISOS]
 lines.append(f'const WHOLESALE_PRICES = {{ {", ".join(parts)} }};')
 lines.append('')
 
-# LCOE tables (solar, wind, battery, LDES)
+# Fuel adjustments
+lines.append('// --- Fossil Fuel Price Adjustments ($/MWh delta from wholesale) ---')
+lines.append('const FUEL_ADJUSTMENTS = {')
+for iso_idx, iso in enumerate(ISOS):
+    fa = _FUEL_ADJUSTMENTS.get(iso, {})
+    parts = [f'{lev}: {fa.get(lev, 0)}' for lev in ['Low', 'Medium', 'High']]
+    comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    {iso}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('')
+
+# LCOE tables (solar, wind, battery, battery8, LDES — from Step 3 constants)
 lines.append('// --- LCOE Tables ($/MWh) for client-side repricing ---')
 lines.append('const LCOE_TABLES = {')
 for res in ['solar', 'wind', 'battery', 'battery8', 'ldes']:
-    rt = data.get('config', {}).get('lcoe_tables', {}).get(res, {})
+    rt = _LCOE_TABLES.get(res, {})
     lines.append(f'    {res}: {{')
     for lev_idx, lev in enumerate(['Low', 'Medium', 'High']):
         vals = rt.get(lev, {})
@@ -955,12 +983,11 @@ lines.append('// --- Battery 8hr storage flag ---')
 lines.append('const HAS_BATTERY8 = true;')
 lines.append('')
 
-# Transmission tables
+# Transmission tables (from Step 3 constants)
 lines.append('// --- Transmission Adders ($/MWh) ---')
-tx = data.get('config', {}).get('transmission_tables', {})
 lines.append('const TX_TABLES = {')
 for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes']):
-    rt = tx.get(res, {})
+    rt = _TX_TABLES.get(res, {})
     lines.append(f'    {res}: {{')
     tx_levels = ['None', 'Low', 'Medium', 'High']
     for lev_idx, lev in enumerate(tx_levels):
@@ -976,23 +1003,61 @@ for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'batte
 lines.append('};')
 lines.append('')
 
-# Grid mix shares (existing)
+# Nuclear new-build LCOE
+lines.append('// --- Nuclear New-Build LCOE ($/MWh) by firm gen toggle ---')
+lines.append('const NUCLEAR_NEWBUILD_LCOE = {')
+for lev_idx, lev in enumerate(['L', 'M', 'H']):
+    vals = _NUCLEAR_NEWBUILD_LCOE.get(lev, {})
+    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
+    comma = ',' if lev_idx < 2 else ''
+    lines.append(f'    {lev}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('')
+
+# CCS LCOE (with and without 45Q)
+lines.append('// --- CCS-CCGT LCOE ($/MWh) with/without 45Q ---')
+lines.append('const CCS_LCOE_45Q_ON = {')
+for lev_idx, lev in enumerate(['L', 'M', 'H']):
+    vals = _CCS_LCOE_45Q_ON.get(lev, {})
+    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
+    comma = ',' if lev_idx < 2 else ''
+    lines.append(f'    {lev}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('const CCS_LCOE_45Q_OFF = {')
+for lev_idx, lev in enumerate(['L', 'M', 'H']):
+    vals = _CCS_LCOE_45Q_OFF.get(lev, {})
+    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
+    comma = ',' if lev_idx < 2 else ''
+    lines.append(f'    {lev}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('')
+
+# Geothermal (CAISO only)
+lines.append('// --- Geothermal LCOE ($/MWh, CAISO only) ---')
+lines.append(f'const GEOTHERMAL_LCOE = {{ L: {_GEOTHERMAL_LCOE["L"]}, M: {_GEOTHERMAL_LCOE["M"]}, H: {_GEOTHERMAL_LCOE["H"]} }};')
+lines.append(f'const GEO_CAP_TWH = {_GEO_CAP_TWH};')
+lines.append('')
+
+# Grid mix shares (existing clean generation — from Step 3 constants)
 lines.append('// --- Grid Mix Shares (% of demand — existing generation) ---')
-gm = data.get('config', {}).get('grid_mix_shares', {})
+lines.append('// This is the EXISTING clean energy floor: priced at wholesale, not LCOE.')
 lines.append('const GRID_MIX_SHARES = {')
 for iso_idx, iso in enumerate(ISOS):
-    shares = gm.get(iso, {})
+    shares = _GRID_MIX_SHARES.get(iso, {})
     parts = [f'{res}: {shares.get(res, 0)}' for res in RESOURCES]
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    {iso}: {{ {", ".join(parts)} }}{comma}')
 lines.append('};')
 lines.append('')
 
-# Regional demand (TWh)
+# Regional demand (TWh — from Step 3 constants, falling back to co2 batch results)
 lines.append('// --- Regional Annual Demand (TWh) ---')
 lines.append('const REGIONAL_DEMAND_TWH = {')
 for iso_idx, iso in enumerate(ISOS):
+    # Prefer co2 batch value (has the actual year's demand), fall back to Step 3 constant
     demand_twh = round(data.get('results', {}).get(iso, {}).get('annual_demand_mwh', 0) / 1e6, 3)
+    if demand_twh == 0:
+        demand_twh = _REGIONAL_DEMAND_TWH.get(iso, 0)
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    {iso}: {demand_twh}{comma}')
 lines.append('};')
