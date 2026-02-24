@@ -71,11 +71,16 @@ GROWTH_RATES = {
     'CAISO': 1.8, 'ERCOT': 3.5, 'PJM': 2.4, 'NYISO': 1.2, 'NEISO': 1.0,
 }
 
-SBTI_YEAR_MAP = {
-    50: 2025, 55: 2026, 60: 2027, 65: 2028, 70: 2029, 75: 2030, 80: 2032,
-    85: 2035, 87.5: 2036, 90: 2040, 92.5: 2042,
-    95: 2045, 97.5: 2047, 99: 2049, 100: 2050,
-}
+# Import canonical threshold-year mapping from Step 3
+try:
+    from step3_cost_optimization import THRESHOLD_TARGET_YEARS
+    SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS
+except ImportError:
+    SBTI_YEAR_MAP = {
+        50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
+        85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
+        95: 2045, 97.5: 2048, 99: 2049, 100: 2050,
+    }
 
 
 def load_data():
