@@ -13,11 +13,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; color: #fff; }
+body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; color: #1E293B; }
 
 /* ===== HERO ===== */
 .hero-section {
-    background: radial-gradient(ellipse at 50% 0%, rgba(30,58,95,0.5) 0%, #0B1120 70%);
+    background: radial-gradient(ellipse at 50% 0%, rgba(74,144,217,0.06) 0%, #F7F8FC 70%);
     padding: 80px 24px 48px;
     text-align: center;
 }
@@ -30,18 +30,18 @@ body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 .hero-inner h1 {
     font-family: 'Barlow Semi Condensed', sans-serif;
     font-size: 2.4rem; font-weight: 800; line-height: 1.15; margin: 0 0 16px;
-    color: #fff;
+    color: #1E293B;
 }
 .hero-inner h1 .accent { color: #F59E0B; }
 .hero-desc {
-    font-size: 0.95rem; color: rgba(255,255,255,0.65); line-height: 1.7;
+    font-size: 0.95rem; color: rgba(15,23,42,0.6); line-height: 1.7;
     max-width: 700px; margin: 0 auto 32px;
 }
 .stats-row {
     display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
 }
 .stat-card {
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.07);
     border-radius: 12px; padding: 16px 24px; min-width: 120px; text-align: center;
 }
 .stat-value {
@@ -51,7 +51,7 @@ body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 .stat-value.amber { color: #F59E0B; }
 .stat-value.slate { color: #94A3B8; }
 .stat-value.green { color: #22C55E; }
-.stat-label { font-size: 0.72rem; color: rgba(255,255,255,0.45); margin-top: 4px; font-weight: 500; }
+.stat-label { font-size: 0.72rem; color: rgba(15,23,42,0.4); margin-top: 4px; font-weight: 500; }
 
 /* ===== NARRATIVE ===== */
 .narrative-section {
@@ -62,12 +62,12 @@ body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 }
 .narrative-inner h2 {
     font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.5rem; font-weight: 700; margin: 0 0 14px; color: #fff;
+    font-size: 1.5rem; font-weight: 700; margin: 0 0 14px; color: #1E293B;
 }
 .narrative-inner p {
-    font-size: 0.9rem; color: rgba(255,255,255,0.6); line-height: 1.75; margin: 0 0 12px;
+    font-size: 0.9rem; color: rgba(15,23,42,0.55); line-height: 1.75; margin: 0 0 12px;
 }
-.narrative-inner p strong { color: rgba(255,255,255,0.85); }
+.narrative-inner p strong { color: rgba(15,23,42,0.85); }
 .narrative-inner p em { color: #F59E0B; font-style: normal; font-weight: 500; }
 
 /* ===== CHART SECTIONS ===== */
@@ -81,15 +81,15 @@ body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 .chart-section-inner.reverse { grid-template-columns: 1fr 1.3fr; }
 .chart-panel {
     backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.2); border-radius: 16px;
-    padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    border: 1px solid rgba(74,144,217,0.12); border-radius: 16px;
+    padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
 .chart-panel h3 {
     font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.05rem; font-weight: 700; margin: 0 0 4px; color: #fff;
+    font-size: 1.05rem; font-weight: 700; margin: 0 0 4px; color: #1E293B;
 }
 .chart-panel .chart-subtitle {
-    font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-bottom: 16px;
+    font-size: 0.78rem; color: rgba(15,23,42,0.35); margin-bottom: 16px;
 }
 .chart-container { position: relative; width: 100%; min-height: 360px; }
 .chart-container canvas { width: 100% !important; }
@@ -101,35 +101,35 @@ body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 .iso-selector { display: flex; gap: 6px; flex-wrap: wrap; }
 .iso-btn {
     padding: 7px 18px; border-radius: 24px;
-    border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
-    color: rgba(255,255,255,0.6); font-family: 'Barlow Semi Condensed', sans-serif;
+    border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);
+    color: rgba(15,23,42,0.55); font-family: 'Barlow Semi Condensed', sans-serif;
     font-size: 0.82rem; font-weight: 600; cursor: pointer;
     transition: all 0.3s; min-height: 36px;
 }
-.iso-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); }
-.iso-btn.active { color: #fff; }
+.iso-btn:hover { background: rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.14); }
+.iso-btn.active { color: #1E293B; }
 .iso-btn.active[data-iso="PJM"]   { background: rgba(74,144,217,0.25); border-color: #4a90d9; }
-.iso-btn.active[data-iso="ERCOT"] { background: rgba(34,197,94,0.25);  border-color: #22C55E; }
-.iso-btn.active[data-iso="CAISO"] { background: rgba(245,158,11,0.25); border-color: #F59E0B; }
+.iso-btn.active[data-iso="ERCOT"] { background: rgba(34,197,94,0.2);  border-color: #22C55E; }
+.iso-btn.active[data-iso="CAISO"] { background: rgba(245,158,11,0.18); border-color: #F59E0B; }
 .iso-btn.active[data-iso="NYISO"] { background: rgba(233,30,99,0.25);  border-color: #E91E63; }
 .iso-btn.active[data-iso="NEISO"] { background: rgba(156,39,176,0.25); border-color: #9C27B0; }
 
 /* ===== GROWTH TOGGLE ===== */
 .growth-toggle {
     display: flex; align-items: center; gap: 8px; cursor: pointer;
-    font-size: 0.78rem; color: rgba(255,255,255,0.5); font-weight: 500;
+    font-size: 0.78rem; color: rgba(15,23,42,0.45); font-weight: 500;
     user-select: none;
 }
 .growth-toggle input[type="checkbox"] { display: none; }
 .toggle-track {
     width: 36px; height: 20px; border-radius: 10px;
-    background: rgba(255,255,255,0.12); position: relative; transition: background 0.3s;
+    background: rgba(0,0,0,0.08); position: relative; transition: background 0.3s;
     flex-shrink: 0;
 }
 .toggle-track::after {
     content: ''; position: absolute; top: 3px; left: 3px;
     width: 14px; height: 14px; border-radius: 50%;
-    background: rgba(255,255,255,0.5); transition: transform 0.3s, background 0.3s;
+    background: rgba(15,23,42,0.45); transition: transform 0.3s, background 0.3s;
 }
 .growth-toggle input:checked + .toggle-track {
     background: rgba(245,158,11,0.35);
@@ -140,30 +140,30 @@ body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 
 /* ===== NARRATIVE CARD (alongside chart) ===== */
 .narrative-card {
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.015); border: 1px solid rgba(0,0,0,0.07);
     border-radius: 16px; padding: 28px; align-self: start;
 }
 .narrative-card h4 {
     font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 1rem; font-weight: 700; margin: 0 0 12px; color: #fff;
+    font-size: 1rem; font-weight: 700; margin: 0 0 12px; color: #1E293B;
 }
 .narrative-card p {
-    font-size: 0.84rem; color: rgba(255,255,255,0.55); line-height: 1.7; margin: 0 0 10px;
+    font-size: 0.84rem; color: rgba(15,23,42,0.5); line-height: 1.7; margin: 0 0 10px;
 }
 .narrative-card p:last-child { margin-bottom: 0; }
-.narrative-card strong { color: rgba(255,255,255,0.8); }
+.narrative-card strong { color: rgba(15,23,42,0.75); }
 .insight-badge {
     display: inline-block; padding: 5px 12px; border-radius: 6px;
     font-size: 0.75rem; font-weight: 600; margin-top: 8px;
 }
-.insight-badge.red   { background: rgba(239,68,68,0.15); color: #f87171; }
-.insight-badge.amber { background: rgba(245,158,11,0.15); color: #fbbf24; }
-.insight-badge.green { background: rgba(34,197,94,0.15);  color: #4ade80; }
+.insight-badge.red   { background: rgba(239,68,68,0.1); color: #dc2626; }
+.insight-badge.amber { background: rgba(245,158,11,0.1); color: #d97706; }
+.insight-badge.green { background: rgba(34,197,94,0.1);  color: #16a34a; }
 
 /* ===== CHART LEGEND ===== */
 .chart-legend {
     display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px;
-    font-size: 0.72rem; color: rgba(255,255,255,0.45);
+    font-size: 0.72rem; color: rgba(15,23,42,0.4);
 }
 .legend-item { display: flex; align-items: center; gap: 5px; }
 .legend-swatch {
@@ -178,7 +178,7 @@ body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
     max-width: 740px; margin: 0 auto; text-align: center;
 }
 .takeaway-box {
-    background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+    background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.18);
     border-radius: 16px; padding: 32px;
 }
 .takeaway-box h3 {
@@ -186,18 +186,18 @@ body { background: #0B1120; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
     font-size: 1.15rem; font-weight: 700; color: #F59E0B; margin: 0 0 12px;
 }
 .takeaway-box p {
-    font-size: 0.88rem; color: rgba(255,255,255,0.6); line-height: 1.7; margin: 0;
+    font-size: 0.88rem; color: rgba(15,23,42,0.55); line-height: 1.7; margin: 0;
 }
 
 /* ===== FOOTER ===== */
 .page-footer {
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
     padding: 32px 24px; text-align: center;
 }
 .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
-.footer-links a { color: rgba(255,255,255,0.4); text-decoration: none; font-size: 0.8rem; transition: color 0.3s; }
-.footer-links a:hover { color: rgba(255,255,255,0.7); }
-.footer-note { font-size: 0.72rem; color: rgba(255,255,255,0.25); }
+.footer-links a { color: rgba(15,23,42,0.35); text-decoration: none; font-size: 0.8rem; transition: color 0.3s; }
+.footer-links a:hover { color: rgba(15,23,42,0.65); }
+.footer-note { font-size: 0.72rem; color: rgba(0,0,0,0.14); }
 .bottom-banner { height: 4px; background: linear-gradient(90deg, #F59E0B, #EF4444, #8B5CF6, #3B82F6); }
 
 /* ===== RESPONSIVE ===== */
@@ -500,16 +500,16 @@ function buildFossilStack() {
                     stacked: true,
                     ticks: {
                         callback: function(v) { return v + ' TWh'; },
-                        color: 'rgba(255,255,255,0.5)', font: { size: 10 }
+                        color: 'rgba(15,23,42,0.45)', font: { size: 10 }
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: 'Annual Generation (TWh)', color: 'rgba(255,255,255,0.35)', font: { size: 10 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Annual Generation (TWh)', color: 'rgba(15,23,42,0.35)', font: { size: 10 } }
                 },
                 y: {
                     stacked: true,
                     ticks: {
-                        color: 'rgba(255,255,255,0.7)', font: { size: 11, weight: 600 }
+                        color: 'rgba(15,23,42,0.65)', font: { size: 11, weight: 600 }
                     },
                     grid: { display: false },
                     border: { display: false }
@@ -519,7 +519,7 @@ function buildFossilStack() {
                 legend: { display: false },
                 datalabels: {
                     display: function(ctx) { return ctx.dataset.data[ctx.dataIndex] > 10; },
-                    color: '#fff', font: { size: 10, weight: 600 },
+                    color: '#1E293B', font: { size: 10, weight: 600 },
                     formatter: function(v) { return Math.round(v); },
                     anchor: 'center', align: 'center'
                 },
@@ -576,8 +576,8 @@ function buildRetirementChart(iso, withGrowth) {
             borderColor: 'rgba(239,68,68,0.4)', borderWidth: 1.5, borderDash: [4, 4],
             label: {
                 display: true, content: 'Coal & oil fully retired',
-                position: 'start', backgroundColor: 'rgba(239,68,68,0.15)',
-                color: '#f87171', font: { size: 9, weight: 600 },
+                position: 'start', backgroundColor: 'rgba(239,68,68,0.1)',
+                color: '#dc2626', font: { size: 9, weight: 600 },
                 padding: { left: 6, right: 6, top: 3, bottom: 3 },
                 borderRadius: 4
             }
@@ -600,8 +600,8 @@ function buildRetirementChart(iso, withGrowth) {
                 borderColor: 'rgba(245,158,11,0.4)', borderWidth: 1.5, borderDash: [4, 4],
                 label: {
                     display: true, content: 'Gas exceeds today',
-                    position: 'end', backgroundColor: 'rgba(245,158,11,0.15)',
-                    color: '#fbbf24', font: { size: 9, weight: 600 },
+                    position: 'end', backgroundColor: 'rgba(245,158,11,0.1)',
+                    color: '#d97706', font: { size: 9, weight: 600 },
                     padding: { left: 6, right: 6, top: 3, bottom: 3 },
                     borderRadius: 4
                 }
@@ -658,22 +658,22 @@ function buildRetirementChart(iso, withGrowth) {
                         callback: function(v) {
                             return [v + '%', YEAR_LABEL[v] || ''];
                         },
-                        color: 'rgba(255,255,255,0.5)', font: { size: 10 }, maxRotation: 0
+                        color: 'rgba(15,23,42,0.45)', font: { size: 10 }, maxRotation: 0
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: 'Clean Energy Target / SBTi Year', color: 'rgba(255,255,255,0.35)', font: { size: 10 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Clean Energy Target / SBTi Year', color: 'rgba(15,23,42,0.35)', font: { size: 10 } }
                 },
                 y: {
                     stacked: true,
                     min: 0, max: yMax,
                     ticks: {
                         callback: function(v) { return v + ' TWh'; },
-                        color: 'rgba(255,255,255,0.5)', font: { size: 10 }
+                        color: 'rgba(15,23,42,0.45)', font: { size: 10 }
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: 'Annual Generation (TWh)', color: 'rgba(255,255,255,0.35)', font: { size: 10 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Annual Generation (TWh)', color: 'rgba(15,23,42,0.35)', font: { size: 10 } }
                 }
             },
             plugins: {

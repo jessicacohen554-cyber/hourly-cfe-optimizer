@@ -14,18 +14,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 /* Page-specific background */
-body { background: #0B1120; }
+body { background: #F7F8FC; }
 
 /* ========== FOOTER ========== */
 .page-footer {
-    background: #0F1A2E;
-    color: rgba(255,255,255,0.7);
+    background: #F0F2F5;
+    color: rgba(15,23,42,0.65);
     padding: 32px 24px;
     text-align: center;
 }
 .footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
 .footer-links a {
-    color: rgba(255,255,255,0.65);
+    color: rgba(15,23,42,0.6);
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -35,8 +35,8 @@ body { background: #0B1120; }
     align-items: center;
     padding: 8px 4px;
 }
-.footer-links a:hover { color: #ffffff; }
-.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+.footer-links a:hover { color: #1E293B; }
+.footer-note { font-size: 0.78rem; color: rgba(15,23,42,0.35); }
 
 .bottom-banner {
     height: 4px;
@@ -45,7 +45,7 @@ body { background: #0B1120; }
 
 /* ========== HERO OVERVIEW SECTION ========== */
 .hero-overview {
-    background: linear-gradient(180deg, #0B1120 0%, #13203D 100%);
+    background: linear-gradient(180deg, #F7F8FC 0%, #EEF1F8 100%);
     position: relative;
     overflow: hidden;
     padding: 48px 24px;
@@ -54,7 +54,7 @@ body { background: #0B1120; }
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.08) 0%, transparent 60%),
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.04) 0%, transparent 60%),
                 radial-gradient(ellipse at 70% 80%, rgba(233,30,99,0.06) 0%, transparent 60%);
     pointer-events: none;
 }
@@ -74,14 +74,14 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 2rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 16px;
     line-height: 1.2;
     letter-spacing: -0.5px;
 }
 .hero-text-block p {
     font-size: 0.95rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 16px;
 }
@@ -93,17 +93,17 @@ body { background: #0B1120; }
 .chart-panel {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.2);
+    border: 1px solid rgba(74,144,217,0.12);
     border-radius: 16px;
     padding: 28px 24px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     width: 100%;
     box-sizing: border-box;
 }
 .chart-panel-overview,
 .chart-panel-region {
-    background: rgba(15,26,46,0.95);
-    border-color: rgba(74,144,217,0.2);
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.12);
 }
 .chart-panel-overview {
     min-height: 400px;
@@ -117,7 +117,7 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 0.85rem;
     font-weight: 700;
-    color: rgba(255,255,255,0.85);
+    color: rgba(15,23,42,0.85);
     text-align: center;
     margin-bottom: 10px;
     letter-spacing: 0.02em;
@@ -125,16 +125,16 @@ body { background: #0B1120; }
 .hero-chart-subtitle {
     font-family: 'Barlow Semi Condensed', sans-serif;
     font-size: 0.72rem;
-    color: rgba(255,255,255,0.45);
+    color: rgba(15,23,42,0.4);
     text-align: center;
     margin-top: 6px;
 }
 
 /* ========== REGION SECTIONS ========== */
 .region-section {
-    background: #0B1120;
+    background: #F7F8FC;
     position: relative;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .region-section-inner {
     max-width: 1320px;
@@ -151,8 +151,8 @@ body { background: #0B1120; }
     padding: 32px;
 }
 .chart-panel-region {
-    background: rgba(15,26,46,0.95);
-    border-color: rgba(74,144,217,0.15);
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.10);
     min-height: 400px;
 }
 .chart-panel-region .chart-container {
@@ -167,10 +167,10 @@ body { background: #0B1120; }
     justify-content: center;
 }
 .region-step-card {
-    background: rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.025);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(0,0,0,0.08);
     border-radius: 16px;
     padding: 32px;
     opacity: 0;
@@ -186,14 +186,14 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.5rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.25;
     letter-spacing: -0.3px;
 }
 .region-step-card p {
     font-size: 0.92rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 0;
 }
@@ -207,24 +207,24 @@ body { background: #0B1120; }
     font-weight: 700;
 }
 .step-stat-green {
-    background: rgba(34,197,94,0.12);
-    border: 1px solid rgba(34,197,94,0.25);
-    color: #4ade80;
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.2);
+    color: #16a34a;
 }
 .step-stat-amber {
-    background: rgba(245,158,11,0.12);
-    border: 1px solid rgba(245,158,11,0.25);
-    color: #fbbf24;
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.18);
+    color: #d97706;
 }
 .step-stat-red {
-    background: rgba(239,68,68,0.12);
-    border: 1px solid rgba(239,68,68,0.25);
-    color: #f87171;
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #dc2626;
 }
 .step-stat-blue {
-    background: rgba(14,165,233,0.12);
-    border: 1px solid rgba(14,165,233,0.25);
-    color: #38bdf8;
+    background: rgba(14,165,233,0.08);
+    border: 1px solid rgba(14,165,233,0.2);
+    color: #0284c7;
 }
 .region-tag {
     display: inline-block;
@@ -240,9 +240,9 @@ body { background: #0B1120; }
 
 /* ========== SYNTHESIS SECTION ========== */
 .synthesis-section {
-    background: #0B1120;
+    background: #F7F8FC;
     padding: 64px 24px;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .synthesis-inner {
     max-width: 1320px;
@@ -252,10 +252,10 @@ body { background: #0B1120; }
     gap: 32px;
 }
 .synthesis-card {
-    background: rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.025);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(0,0,0,0.08);
     border-radius: 16px;
     padding: 32px;
     opacity: 0;
@@ -271,13 +271,13 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.3rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.25;
 }
 .synthesis-card p {
     font-size: 0.92rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 0;
 }
@@ -306,7 +306,7 @@ body { background: #0B1120; }
     gap: 6px;
     font-family: 'Barlow Semi Condensed', sans-serif;
     font-size: 0.7rem;
-    color: rgba(255,255,255,0.6);
+    color: rgba(15,23,42,0.55);
     white-space: nowrap;
 }
 .chart-legend-swatch {
@@ -327,7 +327,7 @@ body { background: #0B1120; }
     width: 18px;
     height: 10px;
     border-radius: 2px;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(0,0,0,0.1);
 }
 .swatch-dot-line {
     width: 18px;
@@ -350,7 +350,7 @@ body { background: #0B1120; }
 .chart-legend-divider {
     width: 1px;
     height: 12px;
-    background: rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.1);
     align-self: center;
 }
 
@@ -551,7 +551,7 @@ html, body {
 <!-- TOP NAV (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:#0B1120;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:#F7F8FC;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:rgba(15,23,42,0.65);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER BANNER -->
 <header class="header">
@@ -581,7 +581,7 @@ html, body {
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>NYISO</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>NEISO</span>
                     <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(255,255,255,0.12);"></span>P10&ndash;P90 band</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.08);"></span>P10&ndash;P90 band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6344;"></span>DAC Opt. / Cons.</span>
@@ -603,7 +603,7 @@ html, body {
                 </div>
                 <div class="chart-legend">
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#22C55E;"></span>Stepwise envelope (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.2);"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
@@ -612,7 +612,7 @@ html, body {
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(34,197,94,0.15);color:#22C55E;">ERCOT</span>
+                <span class="region-tag" style="background:rgba(34,197,94,0.1);color:#22C55E;">ERCOT</span>
                 <h3>Renewable tax credits make ERCOT a no-regrets bet to 97.5%</h3>
                 <p>At medium costs, ERCOT's grid decarb beats central DAC through 97.5%. With low renewable costs — the trajectory sustained by IRA tax credits — the crossover extends to 99%. Even under all-high cost assumptions, grid investment wins to 97.5%. ERCOT is the strongest case for continued grid investment: deep solar/wind resources mean no plausible future where DAC is cheaper before ~95%.</p>
                 <span class="step-stat step-stat-green">Low renewables: grid wins to 99% &middot; All High: still wins to 97.5%</span>
@@ -641,7 +641,7 @@ html, body {
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(74,144,217,0.15);color:#4a90d9;">PJM</span>
+                <span class="region-tag" style="background:rgba(74,144,217,0.10);color:#4a90d9;">PJM</span>
                 <h3>PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points</h3>
                 <p>At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs (achieved nuclear/geothermal) extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. The policy signal: PJM's path past 90% depends entirely on whether new nuclear generation achieves cost learning — renewables alone aren't enough at these penetration levels.</p>
                 <span class="step-stat step-stat-amber">Low firm gen: grid wins to 92.5% &middot; High firm + high RE: only 87.5%</span>
@@ -661,7 +661,7 @@ html, body {
                 </div>
                 <div class="chart-legend">
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#F59E0B;"></span>Stepwise envelope (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
@@ -670,7 +670,7 @@ html, body {
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(245,158,11,0.15);color:#F59E0B;">CAISO</span>
+                <span class="region-tag" style="background:rgba(245,158,11,0.1);color:#F59E0B;">CAISO</span>
                 <h3>CAISO: High marginal cost volatility, but grid still wins deep under medium costs</h3>
                 <p>CAISO shows extreme marginal cost swings — $738/metric ton at 75% under medium costs, yet grid still beats DAC central through 99% because later steps are cheap. The variance is driven by how clean firm resources dispatch. Low firm + low renewable costs extend the crossover to 97.5%. High firm + high renewable costs mean grid never beats even optimistic DAC. The lesson: CAISO's path past 90% is a bet on firm generation, not more solar.</p>
                 <span class="step-stat step-stat-red">High firm + high RE: grid never beats optimistic DAC &middot; Low combo: wins to 97.5%</span>
@@ -728,7 +728,7 @@ html, body {
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(156,39,176,0.15);color:#9C27B0;">NEISO</span>
+                <span class="region-tag" style="background:rgba(156,39,176,0.1);color:#9C27B0;">NEISO</span>
                 <h3>NEISO: The strongest case for nuclear — 15-point gain from cheap firm generation</h3>
                 <p>New England faces the steepest marginal cost curve of any region. At medium costs, grid decarb only beats DAC central through 70% — the lowest crossover of any ISO. But low firm + low renewable costs push this to 85%, a 15-point gain that represents the largest catalytic effect anywhere in the study. NEISO's winter gas pipeline constraints add $13/MWh to CCS costs, making nuclear and enhanced geothermal the decisive technologies. Without firm generation cost reductions, New England hits a hard economic wall at 70%.</p>
                 <span class="step-stat step-stat-red">Medium: only 70% &middot; Low firm + low RE: 85% (15-point catalytic gain)</span>
@@ -757,9 +757,9 @@ html, body {
 
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
-    <details style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px 20px;">
-        <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
-        <ol style="font-size:0.8rem;color:rgba(255,255,255,0.55);line-height:1.8;padding-left:20px;margin-top:12px;">
+    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
+        <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
             <li>EPA eGRID 2022 &mdash; regional emission rates and CO&#8322; intensity by balancing authority.</li>
             <li>EPA Social Cost of Carbon &mdash; Technical Support Document (2020), central estimate $51/metric ton.</li>
             <li>Rennert, K. et al. (2022). &ldquo;Comprehensive evidence implies a higher social cost of CO&#8322;.&rdquo; <em>Nature</em>, 610, 687&ndash;692. $185/metric ton.</li>
@@ -905,18 +905,18 @@ function buildHeroChart() {
                             var yearMap = { 50: "'30", 60: "'32", 70: "'35", 80: "'37", 90: "'40", 95: "'45", 100: "'50" };
                             return [v + '%', yearMap[v] || ''];
                         },
-                        font: { size: 9 }, color: 'rgba(255,255,255,0.5)', maxRotation: 0
+                        font: { size: 9 }, color: 'rgba(15,23,42,0.45)', maxRotation: 0
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 },
                 y: {
                     min: 0, max: yMaxHero,
-                    ticks: { callback: function(v) { return '$' + v; }, font: { size: 9 }, color: 'rgba(255,255,255,0.5)', stepSize: 100 },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: '$/metric ton CO\u2082', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                    ticks: { callback: function(v) { return '$' + v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.45)', stepSize: 100 },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: '$/metric ton CO\u2082', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 }
             },
             plugins: {
@@ -1015,18 +1015,18 @@ function buildRegionalChart(iso) {
                             var yearMap = { 50: "'30", 60: "'32", 70: "'35", 80: "'37", 90: "'40", 95: "'45", 100: "'50" };
                             return [v + '%', yearMap[v] || ''];
                         },
-                        font: { size: 9 }, color: 'rgba(255,255,255,0.55)', maxRotation: 0
+                        font: { size: 9 }, color: 'rgba(15,23,42,0.5)', maxRotation: 0
                     },
-                    grid: { color: 'rgba(255,255,255,0.08)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.2)' },
-                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(255,255,255,0.4)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.07)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.12)' },
+                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 },
                 y: {
                     min: 0, max: dataYMax,
-                    ticks: { callback: function(v) { return '$' + v; }, font: { size: 9 }, color: 'rgba(255,255,255,0.55)', stepSize: 100 },
-                    grid: { color: 'rgba(255,255,255,0.08)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.2)' },
-                    title: { display: true, text: '$/metric ton CO\u2082', color: 'rgba(255,255,255,0.4)', font: { size: 9 } }
+                    ticks: { callback: function(v) { return '$' + v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.5)', stepSize: 100 },
+                    grid: { color: 'rgba(0,0,0,0.07)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.12)' },
+                    title: { display: true, text: '$/metric ton CO\u2082', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 }
             },
             plugins: {
