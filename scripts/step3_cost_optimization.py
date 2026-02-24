@@ -15,13 +15,31 @@ Pipeline position: Step 3 of 4
   Step 3 — Cost optimization (this file)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/pfs_post_ef.parquet       (from Step 2)
-Output: dashboard/overprocure_results.json  (full 9-dim factorial keys + feasible mixes)
-        dashboard/demand_growth_results.json (full factorial: all combos × years × growth)
-        data/cf_split_table.json            (tranche breakdown)
+Input:  data/step-2-EF-parquets/step2_ef_<ISO>.parquet  (from Step 2, per-ISO)
+Output: data/step-3-CO-ISO-parquets/step3_co_<ISO>.parquet  (per-ISO cost optimization results)
 
 Key format: RFS_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M1_M for CAISO all-Medium)
   CAISO: 17,496 combos per threshold. Non-CAISO: 5,832 combos per threshold.
+
+Dependencies
+------------
+Install all required packages before running:
+
+    pip install numpy numba pyarrow pandas
+
+  - numpy   : Vectorized array math for cost evaluation across millions of mixes.
+  - numba   : JIT compilation via @njit decorators for 10-50× speedup over pure numpy.
+              Falls back to numpy if missing, but runs MUCH slower — always install.
+  - pyarrow : Reading/writing Parquet files (Step 2 input, Step 3 output).
+  - pandas  : DataFrame construction for flattening results to Parquet output.
+
+Or install from the project root:
+
+    pip install -r requirements.txt
+
+Verify Numba is working before launching a run:
+
+    python3 -c "from numba import njit; print('Numba OK')"
 """
 
 import json
@@ -39,6 +57,21 @@ try:
     HAS_NUMBA = True
 except ImportError:
     HAS_NUMBA = False
+    import warnings
+    warnings.warn(
+        "\n"
+        "╔══════════════════════════════════════════════════════════════════╗\n"
+        "║  WARNING: Numba is not installed — falling back to pure numpy. ║\n"
+        "║  This will be 10-50× SLOWER. Install it:                       ║\n"
+        "║                                                                 ║\n"
+        "║    pip install numba                                            ║\n"
+        "║                                                                 ║\n"
+        "║  Or install all dependencies:                                   ║\n"
+        "║    pip install -r requirements.txt                              ║\n"
+        "╚══════════════════════════════════════════════════════════════════╝",
+        RuntimeWarning,
+        stacklevel=2,
+    )
 
 # ============================================================================
 # COST TABLES
@@ -942,11 +975,6 @@ def medium_key(iso):
     return f'MMMM_M_M_M1_{geo}'
 
 
-def make_old_key(r, f, s, ff, tx):
-    """Build old 5-dim scenario key like MMM_M_M (backward compat)."""
-    return f"{r}{f}{s}_{ff}_{tx}"
-
-
 def build_sensitivity_combos(iso):
     """Build all sensitivity combos for an ISO.
     Returns list of (scenario_key, sens_dict) tuples.
@@ -1007,14 +1035,10 @@ def prepare_threshold_metadata(scores, thresholds):
 # LOAD PFS POST-EF
 # ============================================================================
 
-PFS_POST_EF_PATH = Path('data/pfs_post_ef.parquet')
-PFS_POST_EF_DIR = Path('data/step-2-EF-parquets')
-RESULTS_PATH = Path('dashboard/overprocure_results.json')
-DG_RESULTS_PATH = Path('dashboard/demand_growth_results.json')
-TRACK_RESULTS_PATH = Path('dashboard/track_results.json')
-STEP3_ISO_OUTPUT_DIR = Path('data/step-3-CO-ISO-parquets')
+INPUT_DIR = Path('data/step-2-EF-parquets')
+OUTPUT_DIR = Path('data/step-3-CO-ISO-parquets')
 
-# Thresholds to include in backward-compat output
+# Thresholds to evaluate
 OUTPUT_THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 
 
@@ -1035,76 +1059,53 @@ def _table_to_arrays(table):
     }
 
 
-def load_pfs_post_ef(input_dir=PFS_POST_EF_DIR, selected_isos=None):
-    """Load PFS post-EF (threshold-free) and organize by ISO.
+def load_pfs_post_ef(input_dir, selected_isos=None):
+    """Load PFS post-EF from per-ISO parquet files in input_dir.
 
-    The post-EF data has no threshold column — each unique mix is stored once
-    with its actual match score. Step 3 filters by score >= threshold at
-    evaluation time, enabling cross-threshold picking.
+    Reads exclusively from data/step-2-EF-parquets/step2_ef_<ISO>.parquet.
+    No fallback to legacy monolithic parquet.
 
     Returns:
         pfs: dict keyed by ISO → numpy arrays of all mixes
         thr_indices: dict keyed by (ISO, threshold) → index array of qualifying mixes
     """
+    if not input_dir.exists():
+        raise FileNotFoundError(
+            f"Input directory does not exist: {input_dir}\n"
+            f"Run Step 2 first to generate per-ISO EF parquets."
+        )
+
     pfs = {}
     thr_indices = {}
     isos_to_load = selected_isos or ISOS
 
-    loaded_from_iso_files = False
-
-    if input_dir.exists():
-        for iso in isos_to_load:
-            iso_path = input_dir / f'step2_ef_{iso}.parquet'
-            if not iso_path.exists():
-                continue
-
-            sub = pq.read_table(iso_path)
-            if sub.num_rows == 0:
-                continue
-
-            loaded_from_iso_files = True
-            arrays = _table_to_arrays(sub)
-            pfs[iso] = arrays
-
-            scores = arrays['hourly_match_score']
-            for thr in OUTPUT_THRESHOLDS:
-                idx = np.where(scores >= thr)[0]
-                if len(idx) > 0:
-                    thr_indices[(iso, thr)] = idx
-
-            print(f"  {iso}: loaded {sub.num_rows:,} mixes from {iso_path}")
-
-    if loaded_from_iso_files:
-        return pfs, thr_indices
-
-    if not PFS_POST_EF_PATH.exists():
-        raise FileNotFoundError(
-            f"Run Step 2 first: missing both {input_dir}/*.parquet and {PFS_POST_EF_PATH}"
-        )
-
-    table = pq.read_table(PFS_POST_EF_PATH)
-    print(f"Loaded fallback post-EF file: {table.num_rows:,} rows from {PFS_POST_EF_PATH}")
-
-    import pyarrow.compute as pc
-
     for iso in isos_to_load:
-        mask = pc.equal(table.column('iso'), iso)
-        sub = table.filter(mask)
+        iso_path = input_dir / f'step2_ef_{iso}.parquet'
+        if not iso_path.exists():
+            print(f"  WARNING: {iso_path} not found — skipping {iso}")
+            continue
+
+        sub = pq.read_table(iso_path)
         if sub.num_rows == 0:
+            print(f"  WARNING: {iso_path} is empty — skipping {iso}")
             continue
 
         arrays = _table_to_arrays(sub)
         pfs[iso] = arrays
 
-        # Pre-compute threshold index arrays (score >= threshold)
         scores = arrays['hourly_match_score']
         for thr in OUTPUT_THRESHOLDS:
             idx = np.where(scores >= thr)[0]
             if len(idx) > 0:
                 thr_indices[(iso, thr)] = idx
 
-        print(f"  {iso}: {sub.num_rows:,} mixes, "
-              f"thresholds with data: {sum(1 for t in OUTPUT_THRESHOLDS if (iso, t) in thr_indices)}")
+        print(f"  {iso}: loaded {sub.num_rows:,} mixes from {iso_path}")
+
+    if not pfs:
+        raise FileNotFoundError(
+            f"No valid EF parquet files found in {input_dir} for ISOs: {isos_to_load}\n"
+            f"Run Step 2 first to generate per-ISO EF parquets."
+        )
 
     return pfs, thr_indices
 
@@ -1142,8 +1143,14 @@ def parse_args():
     parser.add_argument(
         '--input-dir',
         type=Path,
-        default=PFS_POST_EF_DIR,
-        help=f'Directory containing step2_ef_<ISO>.parquet files (default: {PFS_POST_EF_DIR}).'
+        default=INPUT_DIR,
+        help=f'Directory containing step2_ef_<ISO>.parquet files (default: {INPUT_DIR}).'
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=Path,
+        default=OUTPUT_DIR,
+        help=f'Directory for per-ISO output parquets (default: {OUTPUT_DIR}).'
     )
     return parser.parse_args()
 
@@ -1155,17 +1162,23 @@ def parse_args():
 def main():
     args = parse_args()
     run_isos = args.isos if args.isos else ISOS
+    output_dir = args.output_dir
 
     print("=" * 70)
     print("  STEP 3: COST OPTIMIZATION (v4 — vectorized, threshold-free PFS)")
     print("=" * 70)
     print(f"  Requested ISOs: {', '.join(run_isos)}")
+    print(f"  Input dir:  {args.input_dir}")
+    print(f"  Output dir: {output_dir}")
 
     total_start = time.time()
 
     # Load PFS post-EF (threshold-free: one set of mixes per ISO)
     pfs, thr_indices = load_pfs_post_ef(input_dir=args.input_dir, selected_isos=run_isos)
     print(f"  ISOs loaded: {len(pfs)}")
+
+    # Ensure output directory exists
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Build output structure
     output = {
@@ -1192,8 +1205,6 @@ def main():
         },
         'results': {},
     }
-    cf_split_table = []
-
     # ================================================================
     # PHASE 1: Base year cross-evaluation (pre-computed + Numba)
     # ================================================================
@@ -1732,47 +1743,22 @@ def main():
     print(f"\nPhase 2.5 complete: {phase25_elapsed:.0f}s")
 
     # ================================================================
-    # SAVE OUTPUTS
+    # SAVE OUTPUTS — Per-ISO parquets only
     # ================================================================
-    print("\n--- Saving outputs ---")
-
-    # Results JSON
-    os.makedirs(RESULTS_PATH.parent, exist_ok=True)
-    with open(RESULTS_PATH, 'w') as f:
-        json.dump(output, f, separators=(',', ':'))
-    r_size = os.path.getsize(RESULTS_PATH) / (1024 * 1024)
-    print(f"  {RESULTS_PATH} ({r_size:.1f} MB)")
-
-    # Demand growth results
-    with open(DG_RESULTS_PATH, 'w') as f:
-        json.dump(dg_output, f, separators=(',', ':'))
-    dg_size = os.path.getsize(DG_RESULTS_PATH) / (1024 * 1024)
-    print(f"  {DG_RESULTS_PATH} ({dg_size:.1f} MB)")
-
-    # CF split table
-    with open('data/cf_split_table.json', 'w') as f:
-        json.dump(cf_split_table, f, indent=2)
-
-    # Track results JSON (newbuild + replace analysis)
-    with open(TRACK_RESULTS_PATH, 'w') as f:
-        json.dump(track_output, f, separators=(',', ':'))
-    tr_size = os.path.getsize(TRACK_RESULTS_PATH) / (1024 * 1024)
-    print(f"  {TRACK_RESULTS_PATH} ({tr_size:.1f} MB)")
-
-    # ================================================================
-    # SAVE PARQUET OUTPUTS (compact, git-friendly)
-    # ================================================================
-    print("\n--- Saving parquet outputs ---")
+    print("\n--- Saving per-ISO parquet outputs ---")
     import pandas as pd
 
-    # 1. Scenarios parquet: flatten ISO × threshold × scenario → rows
-    sc_rows = []
-    for iso, iso_data in output['results'].items():
+    def _flatten_scenarios(iso, iso_data, track_name=None):
+        """Flatten scenario results into rows for parquet output."""
+        rows = []
         annual = iso_data.get('annual_demand_mwh', 0)
-        for t_str, thr_data in iso_data.get('thresholds', {}).items():
+        thresholds_dict = iso_data.get('thresholds', {})
+        for t_str, thr_data in thresholds_dict.items():
             for sc_key, sc in thr_data.get('scenarios', {}).items():
                 row = {'iso': iso, 'threshold': float(t_str),
                        'scenario': sc_key, 'annual_demand_mwh': annual}
+                if track_name:
+                    row['track'] = track_name
                 for k, v in sc.get('resource_mix', {}).items():
                     row[f'mix_{k}'] = v
                 row['procurement_pct'] = sc.get('procurement_pct')
@@ -1786,58 +1772,17 @@ def main():
                     row[f'tranche_{k}'] = v
                 for k, v in sc.get('gas_backup', {}).items():
                     row[f'gas_{k}'] = v
-                sc_rows.append(row)
-    df_sc = pd.DataFrame(sc_rows)
-    df_sc.to_parquet('dashboard/overprocure_scenarios.parquet',
-                     index=False, compression='zstd')
-    print(f"  overprocure_scenarios.parquet: {len(df_sc)} rows, "
-          f"{os.path.getsize('dashboard/overprocure_scenarios.parquet') / 1e6:.1f} MB")
+                rows.append(row)
+        return rows
 
-
-    # 2.5 ISO-specific Step 3 scenario outputs (for workflow checkpointing)
-    STEP3_ISO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    for iso in run_isos:
-        df_iso = df_sc[df_sc['iso'] == iso]
-        if df_iso.empty:
-            continue
-        iso_out = STEP3_ISO_OUTPUT_DIR / f'step3_co_{iso}.parquet'
-        df_iso.to_parquet(iso_out, index=False, compression='zstd')
-        print(f"  {iso_out}: {len(df_iso)} rows, {os.path.getsize(iso_out) / 1e6:.1f} MB")
-
-    # 2. Feasible mixes parquet
-    mix_rows = []
-    for iso, iso_data in output['results'].items():
-        for t_str, thr_data in iso_data.get('thresholds', {}).items():
-            fm = thr_data.get('feasible_mixes', {})
-            if not fm:
-                continue
-            n = len(list(fm.values())[0])
-            for i in range(n):
-                row = {'iso': iso, 'threshold': float(t_str)}
-                for k, vals in fm.items():
-                    row[k] = vals[i]
-                mix_rows.append(row)
-    df_mix = pd.DataFrame(mix_rows)
-    df_mix.to_parquet('dashboard/overprocure_feasible_mixes.parquet',
-                      index=False, compression='zstd')
-    print(f"  overprocure_feasible_mixes.parquet: {len(df_mix)} rows, "
-          f"{os.path.getsize('dashboard/overprocure_feasible_mixes.parquet') / 1e6:.1f} MB")
-
-    # 3. Overprocure meta (config + postprocessing, small JSON)
-    meta = {k: output[k] for k in output if k != 'results'}
-    with open('dashboard/overprocure_meta.json', 'w') as f:
-        json.dump(meta, f, indent=2)
-    print(f"  overprocure_meta.json: "
-          f"{os.path.getsize('dashboard/overprocure_meta.json') / 1e3:.1f} KB")
-
-    # 4. Demand growth parquet
-    dg_rows = []
-    for iso, iso_thrs in dg_output.get('results', {}).items():
+    def _flatten_demand_growth(iso, iso_thrs):
+        """Flatten demand growth results into rows for parquet output."""
+        rows = []
         for t_str, thr_scenarios in iso_thrs.items():
             for sc_key, year_data in thr_scenarios.items():
                 for year_str, growth_data in year_data.items():
                     for g_level, vals in growth_data.items():
-                        dg_rows.append({
+                        rows.append({
                             'iso': iso,
                             'threshold': float(t_str),
                             'scenario': sc_key,
@@ -1848,16 +1793,113 @@ def main():
                             'effective_cost': vals[2],
                             'incremental': vals[3],
                         })
-    df_dg = pd.DataFrame(dg_rows)
-    df_dg.to_parquet('dashboard/demand_growth_results.parquet',
-                     index=False, compression='zstd')
-    print(f"  demand_growth_results.parquet: {len(df_dg)} rows, "
-          f"{os.path.getsize('dashboard/demand_growth_results.parquet') / 1e6:.1f} MB")
+        return rows
 
-    # 5. Demand growth meta
-    dg_meta = dg_output.get('meta', {})
-    with open('dashboard/demand_growth_meta.json', 'w') as f:
-        json.dump(dg_meta, f, indent=2)
+    def _flatten_feasible_mixes(iso, iso_data):
+        """Flatten feasible mixes into rows for parquet output."""
+        rows = []
+        for t_str, thr_data in iso_data.get('thresholds', {}).items():
+            fm = thr_data.get('feasible_mixes', {})
+            if not fm:
+                continue
+            n = len(list(fm.values())[0])
+            for i in range(n):
+                row = {'iso': iso, 'threshold': float(t_str)}
+                for k, vals in fm.items():
+                    row[k] = vals[i]
+                rows.append(row)
+        return rows
+
+    for iso in run_isos:
+        if iso not in output['results']:
+            continue
+
+        iso_data = output['results'][iso]
+
+        # --- 1. Baseline scenarios ---
+        sc_rows = _flatten_scenarios(iso, iso_data)
+        df_sc = pd.DataFrame(sc_rows)
+
+        # --- 2. Track scenarios (newbuild + replace) ---
+        track_rows = []
+        iso_track_data = track_output.get('results', {}).get(iso, {})
+        for track_name in ['newbuild', 'replace']:
+            track_thresholds = iso_track_data.get(track_name, {})
+            if track_thresholds:
+                track_iso_data = {
+                    'annual_demand_mwh': iso_data.get('annual_demand_mwh', 0),
+                    'thresholds': track_thresholds,
+                }
+                track_rows.extend(_flatten_scenarios(iso, track_iso_data, track_name=track_name))
+        df_tracks = pd.DataFrame(track_rows) if track_rows else pd.DataFrame()
+
+        # --- 3. Demand growth ---
+        dg_rows = _flatten_demand_growth(iso, dg_output.get('results', {}).get(iso, {}))
+        df_dg = pd.DataFrame(dg_rows) if dg_rows else pd.DataFrame()
+
+        # --- 4. Track demand growth ---
+        track_dg_rows = []
+        for track_name in ['newbuild', 'replace']:
+            iso_tdg = track_dg.get(track_name, {}).get(iso, {})
+            if iso_tdg:
+                for t_str, thr_scenarios in iso_tdg.items():
+                    for sc_key, year_data in thr_scenarios.items():
+                        for year_str, growth_data in year_data.items():
+                            for g_level, vals in growth_data.items():
+                                track_dg_rows.append({
+                                    'iso': iso,
+                                    'track': track_name,
+                                    'threshold': float(t_str),
+                                    'scenario': sc_key,
+                                    'year': int(year_str),
+                                    'growth_level': g_level,
+                                    'mix_idx': vals[0],
+                                    'total_cost': vals[1],
+                                    'effective_cost': vals[2],
+                                    'incremental': vals[3],
+                                })
+        df_track_dg = pd.DataFrame(track_dg_rows) if track_dg_rows else pd.DataFrame()
+
+        # --- 5. Feasible mixes ---
+        mix_rows = _flatten_feasible_mixes(iso, iso_data)
+        df_mix = pd.DataFrame(mix_rows) if mix_rows else pd.DataFrame()
+
+        # --- Write per-ISO parquet files ---
+        iso_out = output_dir / f'step3_co_{iso}.parquet'
+        df_sc.to_parquet(iso_out, index=False, compression='zstd')
+        print(f"  {iso_out}: {len(df_sc):,} scenario rows, "
+              f"{os.path.getsize(iso_out) / 1e6:.1f} MB")
+
+        if not df_tracks.empty:
+            tracks_out = output_dir / f'step3_tracks_{iso}.parquet'
+            df_tracks.to_parquet(tracks_out, index=False, compression='zstd')
+            print(f"  {tracks_out}: {len(df_tracks):,} track rows, "
+                  f"{os.path.getsize(tracks_out) / 1e6:.1f} MB")
+
+        if not df_dg.empty:
+            dg_out = output_dir / f'step3_dg_{iso}.parquet'
+            df_dg.to_parquet(dg_out, index=False, compression='zstd')
+            print(f"  {dg_out}: {len(df_dg):,} demand growth rows, "
+                  f"{os.path.getsize(dg_out) / 1e6:.1f} MB")
+
+        if not df_track_dg.empty:
+            track_dg_out = output_dir / f'step3_track_dg_{iso}.parquet'
+            df_track_dg.to_parquet(track_dg_out, index=False, compression='zstd')
+            print(f"  {track_dg_out}: {len(df_track_dg):,} track DG rows, "
+                  f"{os.path.getsize(track_dg_out) / 1e6:.1f} MB")
+
+        if not df_mix.empty:
+            mix_out = output_dir / f'step3_feasible_{iso}.parquet'
+            df_mix.to_parquet(mix_out, index=False, compression='zstd')
+            print(f"  {mix_out}: {len(df_mix):,} feasible mix rows, "
+                  f"{os.path.getsize(mix_out) / 1e6:.1f} MB")
+
+    # Save config metadata as JSON (small, one file for all ISOs)
+    meta = {k: output[k] for k in output if k != 'results'}
+    meta_path = output_dir / 'step3_meta.json'
+    with open(meta_path, 'w') as f:
+        json.dump(meta, f, indent=2)
+    print(f"  {meta_path}: {os.path.getsize(meta_path) / 1e3:.1f} KB")
 
     # ================================================================
     # SUMMARY
@@ -1865,6 +1907,7 @@ def main():
     total_elapsed = time.time() - total_start
     print(f"\n{'='*70}")
     print(f"  STEP 3 COMPLETE in {total_elapsed:.0f}s")
+    print(f"  Output: {output_dir}/")
     print(f"{'='*70}")
 
     # Print Medium scenario summary (ISO-aware medium key)

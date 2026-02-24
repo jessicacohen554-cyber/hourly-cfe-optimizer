@@ -1,0 +1,118 @@
+name: Run Track 2-3 NB + CTR
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO to run (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP — or ALL)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      mode:
+        description: 'Sensitivity mode'
+        required: true
+        default: 'medium'
+        type: choice
+        options:
+          - medium
+          - full
+
+env:
+  TARGET_BRANCH: tracks-2+3-NB+CTR
+
+jobs:
+  run-track2-3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 480
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch input data from step-2 branch
+        run: |
+          git fetch origin step-2-EF-ISO-parquets || true
+          git checkout origin/step-2-EF-ISO-parquets -- data/step-2-EF-parquets/ || {
+            echo "ERROR: Could not fetch step-2 EF parquets from branch step-2-EF-ISO-parquets"
+            echo "Run Step 2 workflow first."
+            exit 1
+          }
+          echo "Step-2 EF parquets restored:"
+          ls -lh data/step-2-EF-parquets/
+
+      - name: Switch to target branch
+        run: |
+          git fetch origin "$TARGET_BRANCH" || true
+          if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
+            git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+            # Re-apply step-2 data (may have been overwritten by branch switch)
+            git checkout origin/step-2-EF-ISO-parquets -- data/step-2-EF-parquets/ || true
+          else
+            git checkout -B "$TARGET_BRANCH"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure Python runtime
+        run: echo "PYTHONUNBUFFERED=1" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy numba pyarrow pandas
+
+      - name: Ensure output directories exist
+        run: mkdir -p dashboard
+
+      - name: Build run arguments
+        id: run-args
+        run: |
+          INPUT_ISO="${{ github.event.inputs.iso }}"
+          INPUT_MODE="${{ github.event.inputs.mode }}"
+
+          FLAGS=""
+          if [ "$INPUT_ISO" != "ALL" ]; then
+            FLAGS="--iso $INPUT_ISO"
+          fi
+          if [ "$INPUT_MODE" = "full" ]; then
+            FLAGS="$FLAGS --full"
+          fi
+          echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Run Track 2-3 NB + CTR
+        run: |
+          python scripts/track2-3_nb_ctr.py ${{ steps.run-args.outputs.flags }}
+
+      - name: Commit Track 2-3 outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f dashboard/track_scenarios.parquet dashboard/track_demand_growth.parquet
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            ISO_LABEL="${{ github.event.inputs.iso }}"
+            MODE_LABEL="${{ github.event.inputs.mode }}"
+            git commit -m "Track 2-3 NB+CTR: ${ISO_LABEL} (${MODE_LABEL}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          fi
+
+          git push origin "$TARGET_BRANCH"
