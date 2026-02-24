@@ -124,8 +124,9 @@ body { background: #F3F4F8; }
     <h1>Pure Consequential vs Hourly Matching</h1>
     <p class="subtitle">
         Two procurement strategies. One chases the cheapest $/tCO<sub>2</sub> at each step — locking in
-        resources that can't be unbuilt. The other targets 95% CFE directly via hourly matching, with
-        clean firm deployed along the FOAK&rarr;NOAK learning curve. Same physics, same feasible mixes — radically different outcomes.
+        resources that can't be unbuilt. The other invests in clean firm technologies along the FOAK&rarr;NOAK
+        learning curve — less early on when costs are high, gradually increasing deployment as Wright's Law
+        drives costs down. Same physics, same feasible mixes — radically different outcomes.
     </p>
 </section>
 
@@ -136,7 +137,7 @@ body { background: #F3F4F8; }
 <section class="content-section">
     <div class="scenario-legend">
         <div class="legend-item"><div class="legend-dot scn-a"></div><span class="legend-label">Pure Consequential</span><span class="legend-desc">&mdash; sequential, cheapest $/tCO₂ first, path-dependent lock-in</span></div>
-        <div class="legend-item"><div class="legend-dot scn-b"></div><span class="legend-label">Hourly Matching</span><span class="legend-desc">&mdash; target 95% CFE directly, clean firm deployed along FOAK→NOAK learning curve</span></div>
+        <div class="legend-item"><div class="legend-dot scn-b"></div><span class="legend-label">Hourly Matching</span><span class="legend-desc">&mdash; graduated clean firm deployment along FOAK&rarr;NOAK learning curve, increasing over time</span></div>
     </div>
 
     <div class="scenario-cards">
@@ -152,13 +153,14 @@ body { background: #F3F4F8; }
         </div>
         <div class="scenario-card" style="border-color: rgba(22,163,74,0.2);">
             <span class="scenario-tag tag-b">Hourly Matching</span>
-            <h3>Target 95% CFE via Hourly Matching</h3>
-            <div class="toggles">Ren: Low | Firm: Low | CCS: Low | LDES: Low | Geo: Low | Battery: Low | Fuel: Med | Tx: Med</div>
-            <p>All buyers target 95% hourly CFE simultaneously. New nuclear and clean firm sources are
-            deployed along the FOAK&rarr;NOAK learning curve — costs start high but decline with each
-            deployment doubling per Wright's Law. The optimizer selects the globally optimal portfolio for 95% —
-            a balanced mix of clean firm, renewables, and storage that achieves reliable hourly matching
-            at a fraction of the pure consequential path's cost.</p>
+            <h3>Graduated Clean Firm Deployment via Learning Curve</h3>
+            <div class="toggles">Ren: Low | Firm: H&rarr;L (learning curve) | CCS: H&rarr;L | LDES: H&rarr;L | Geo: H&rarr;L | Battery: Low | Fuel: Med | Tx: Med</div>
+            <p>Clean firm, CCS, and LDES costs start at FOAK (High) and decline toward NOAK (Low) over the
+            SBTi timeline as cumulative deployment drives Wright's Law cost reductions. Early thresholds
+            see less clean firm investment — costs are high — but enough to seed the learning curve.
+            As costs decline at each subsequent milestone, the optimizer deploys increasing amounts of
+            clean firm, producing a naturally rising deployment trajectory. Mature tech (solar, wind, battery)
+            remains at Low cost throughout.</p>
         </div>
     </div>
 </section>
@@ -190,9 +192,9 @@ body { background: #F3F4F8; }
 <section class="content-section">
     <h2 class="section-title">What Gets Deployed at Each Zone?</h2>
     <p class="section-subtitle">The consequential path deploys resources sequentially — locked-in at each threshold before
-    optimizing the next. By contrast, the hourly matching path procures a single balanced portfolio targeting 95% CFE. The sequential
-    path shows escalating renewable overbuilding as each step inherits prior commitments; the hourly matching path shows stable deployment
-    because it's one optimized portfolio from the start.</p>
+    optimizing the next. The hourly matching path invests in clean firm along the FOAK&rarr;NOAK learning curve — less early when costs
+    are high, ramping up as learning drives costs toward NOAK. The sequential path shows escalating renewable overbuilding;
+    the hourly matching path shows a graduated increase in clean firm as the technology matures.</p>
 
     <div class="iso-selector" id="deployIsoSelector"></div>
 
@@ -204,9 +206,9 @@ body { background: #F3F4F8; }
             <div class="deploy-chart-container"><canvas id="deployChartA"></canvas></div>
         </div>
         <div class="chart-box">
-            <span class="scenario-tag tag-b">Hourly Matching 95%</span>
+            <span class="scenario-tag tag-b">Hourly Matching</span>
             <h3 id="deployTitleB">PJM — Resources at Each Threshold (TWh)</h3>
-            <p class="chart-note">Single target portfolio — same resource mix at every threshold.</p>
+            <p class="chart-note">Graduated deployment — clean firm increases as FOAK&rarr;NOAK learning drives costs down.</p>
             <div class="deploy-chart-container"><canvas id="deployChartB"></canvas></div>
         </div>
     </div>
@@ -251,7 +253,8 @@ body { background: #F3F4F8; }
 <section class="content-section">
     <h2 class="section-title">What Gets Built: Path-Dependent vs. Target Portfolio</h2>
     <p class="section-subtitle">The sequential path's resource mix evolves erratically as each threshold inherits prior overbuilds.
-    The hourly matching target is a single stable portfolio — the same optimized mix at every point because that's what everyone is building toward.</p>
+    The hourly matching path shows a graduated transition — increasing clean firm as FOAK&rarr;NOAK learning reduces costs,
+    with the optimizer selecting more balanced portfolios at each threshold.</p>
 
     <div class="iso-selector" id="mixIsoSelector"></div>
 
@@ -272,8 +275,9 @@ body { background: #F3F4F8; }
 <!-- 5. Effective System Cost Overlay -->
 <section class="content-section">
     <h2 class="section-title">Effective System Cost: The Learning Curve Dividend</h2>
-    <p class="section-subtitle">$/MWh effective system cost at each milestone. The sequential path escalates 3-5&times; as locked-in
-    renewables saturate. The hourly matching 95% target is a flat line — one portfolio, one cost — dramatically cheaper at every threshold.</p>
+    <p class="section-subtitle">$/MWh effective system cost at each milestone. The sequential path escalates as locked-in
+    renewables saturate. The hourly matching path rises gradually as clean firm costs decline along the learning curve —
+    more expensive early (FOAK), converging on NOAK pricing at higher thresholds.</p>
 
     <div class="iso-selector" id="costIsoSelector"></div>
 
@@ -288,7 +292,8 @@ body { background: #F3F4F8; }
 <section class="content-section">
     <h2 class="section-title">Clean Firm Deployment: Early Entry vs. Last-Minute Cliff</h2>
     <p class="section-subtitle">Total clean firm generation (nuclear + CCS + geothermal) at each threshold.
-    The sequential path eventually needs massive clean firm at extreme thresholds; the hourly matching target gets it right from the start.</p>
+    The sequential path eventually needs massive clean firm at extreme thresholds; the hourly matching path builds it
+    gradually — seeding the learning curve early and ramping up as NOAK pricing kicks in.</p>
 
     <div class="iso-selector" id="firmIsoSelector"></div>
 
@@ -301,10 +306,11 @@ body { background: #F3F4F8; }
     <div class="callout" style="background: rgba(220,38,38,0.05); border-color: rgba(220,38,38,0.15);">
         <div class="callout-title" style="color: #DC2626;">The Path-Dependent Trap</div>
         <p>The sequential path's clean firm deployment is erratic — forced into large buildouts at certain thresholds
-        where the inherited renewable base simply can't achieve hourly matching. PJM needs 1,000+ TWh of clean firm
-        at 90% in the sequential path vs. 815 TWh in the hourly matching target. The difference: the hourly matching portfolio was
-        <em>designed</em> for 95% reliability from the start. The sequential path has to compensate for
-        a renewable-heavy legacy that wasn't designed for high-threshold hourly matching.</p>
+        where the inherited renewable base simply can't achieve hourly matching. The hourly matching path
+        shows a steady ramp: small but deliberate clean firm investment early (FOAK pricing) that seeds the
+        learning curve, growing into large-scale deployment as costs decline toward NOAK. The sequential path
+        has to compensate for a renewable-heavy legacy; the hourly matching path builds the right technologies
+        from the start, just at a pace that tracks the learning curve.</p>
     </div>
 </section>
 
@@ -352,9 +358,11 @@ body { background: #F3F4F8; }
         <table class="domino-table" id="dominoTableA"></table>
     </div>
     <div class="insight" style="margin-top: 16px;">
-        <p><strong>No queue for the hourly matching path.</strong> In the target-95% scenario, there's no sequential deployment —
-        every buyer procures the same optimized portfolio simultaneously. The "queue" concept only applies
-        to the sequential strategy, where each step depends on what was locked in before.</p>
+        <p><strong>The hourly matching path has no lock-in queue.</strong> While clean firm deployment increases
+        at each threshold, it's driven by declining costs along the learning curve — not by inheriting
+        locked-in resources from prior steps. Each threshold is independently optimized at its learning-curve
+        cost level. The "queue" concept only applies to the sequential strategy, where prior commitments
+        constrain future options.</p>
     </div>
 </section>
 
@@ -362,20 +370,20 @@ body { background: #F3F4F8; }
 <section class="content-section">
     <h2 class="section-title">Bottom Line: Pure Consequential Fails — Hourly Matching Wins</h2>
     <div class="insight green">
-        <p><strong>Targeting 95% CFE directly costs 3-5&times; less per MWh than getting there sequentially.</strong>
-        At 95%, PJM pays $290/MWh through the sequential path vs. $63/MWh targeting directly — a $227/MWh gap
-        on 833 TWh of demand. Across all 5 ISOs, the sequential path to 95% costs ~$255B more per year in
-        effective system cost. The "cheap" sequential strategy — always buying the next cheapest $/tCO<sub>2</sub> —
-        is a textbook local optimization that produces a globally suboptimal outcome.</p>
+        <p><strong>Investing in clean firm along the learning curve dramatically outperforms the sequential path.</strong>
+        The hourly matching strategy pays more early on — FOAK clean firm is expensive — but those early investments
+        seed the learning curve. By mid-range thresholds (80-90%), costs have declined enough for the optimizer
+        to deploy significant clean firm, and by 95% the learning curve delivers near-NOAK pricing. The sequential
+        path, locked into renewable overbuilds, pays far more to achieve the same CFE targets.</p>
     </div>
     <div class="insight">
-        <p><strong>The mechanism is path dependency.</strong> Resources deployed at 50% are locked in at 60%.
-        Because renewables are cheapest at each step (clean firm is expensive at high LCOE), the sequential
-        strategy builds massive renewable portfolios that saturate the sunny/windy hours. At higher thresholds,
-        the hard hours — winter nights, low-wind weeks — need firm generation. But the optimizer is trapped:
-        it can't unwind the renewable overbuilding, so it piles on even more at escalating cost.
-        The hourly matching path avoids this by targeting a high threshold from the start — the optimizer naturally selects
-        a balanced mix of firm + renewables + storage because that's what hourly matching requires.</p>
+        <p><strong>The mechanism is path dependency vs. learning investment.</strong> The sequential strategy
+        builds massive renewable portfolios because they're cheapest at each step (clean firm is expensive at
+        High LCOE). Those locked-in renewables saturate the sunny/windy hours. At higher thresholds,
+        the hard hours — winter nights, low-wind weeks — need firm generation, but the optimizer can't unwind
+        the overbuilding. The hourly matching path invests in clean firm from the start — less early on,
+        more as costs decline — building a balanced portfolio where firm generation covers the hours
+        that no amount of renewables can reach.</p>
     </div>
 </section>
 
@@ -410,11 +418,16 @@ body { background: #F3F4F8; }
     minimum violation is selected. The floor ratchets up using the element-wise maximum of the old floor and new deployment.</p>
 
     <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #1A2744; margin: 24px 0 8px;">Scenario B: Hourly Matching</h3>
-    <p>The hourly matching scenario models collective procurement where all buyers target <strong>95% hourly CFE simultaneously</strong>.
-    New nuclear and clean firm sources are deployed along the FOAK&rarr;NOAK learning curve, driving costs to Low LCOE. The optimizer finds the single
-    cheapest feasible mix at the 95% threshold — that portfolio IS the target everyone is building toward.
-    Every threshold on the trajectory charts shows this same 95% target mix, because the procurement strategy is
-    "build the right portfolio for 95% and deploy it."</p>
+    <p>The hourly matching scenario models <strong>graduated clean firm deployment along the FOAK&rarr;NOAK learning curve</strong>.
+    At each threshold, clean firm / CCS / LDES / geothermal costs are interpolated between High (FOAK) and Low (NOAK) based
+    on the threshold's position on the SBTi timeline, using a convex ramp function: <code>frac = 0.05 + 0.95 &times; ((t&minus;50)/50)<sup>1.8</sup></code>.
+    Mature technologies (solar, wind, battery) remain at Low cost throughout — they're already down their learning curves.</p>
+    <p>At each threshold, the optimizer independently selects the cheapest feasible mix given the interpolated costs.
+    Early thresholds see less clean firm (costs are near FOAK), but the 5% floor ensures some investment begins —
+    enough to seed the learning curve. As cumulative deployment drives Wright's Law doublings, costs decline and the
+    optimizer naturally selects more clean firm at each subsequent milestone. There is no path-dependency floor; the
+    increasing deployment emerges from the interaction of declining costs and increasing physics requirements for firm
+    generation at higher CFE thresholds.</p>
 
     <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #1A2744; margin: 24px 0 8px;">Cost Toggle Comparison</h3>
 
@@ -428,10 +441,10 @@ body { background: #F3F4F8; }
         </thead>
         <tbody>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Renewable Gen (Solar/Wind LCOE)</td><td style="text-align:center; padding:6px;">Low</td><td style="text-align:center; padding:6px;">Low</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Firm Gen (Nuclear new-build LCOE)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">CCS-CCGT (w/ 45Q offset)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">LDES (100hr iron-air storage)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Geothermal (CAISO only)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Firm Gen (Nuclear new-build LCOE)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">High&rarr;Low (learning curve)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">CCS-CCGT (w/ 45Q offset)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">High&rarr;Low (learning curve)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">LDES (100hr iron-air storage)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">High&rarr;Low (learning curve)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Geothermal (CAISO only)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">High&rarr;Low (learning curve)</td></tr>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Battery (4hr Li-ion)</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Fossil Fuel (wholesale price)</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Transmission</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
@@ -440,8 +453,10 @@ body { background: #F3F4F8; }
     </table>
 
     <p>In the pure consequential scenario, clean firm technologies are at <strong>High cost</strong> — FOAK pricing before learning curves.
-    Renewables and battery are cheap. In the hourly matching scenario, clean firm is deployed along the FOAK&rarr;NOAK
-    learning curve, and <strong>all</strong> clean technologies reach Low cost through Wright's Law deployment doublings.</p>
+    Renewables and battery are cheap. In the hourly matching scenario, clean firm / CCS / LDES costs are <strong>interpolated
+    from High to Low</strong> along the SBTi timeline — reflecting the FOAK&rarr;NOAK learning curve. Less clean firm is deployed
+    early (costs are still high), but investment begins immediately to seed the learning curve, with deployment
+    increasing as costs decline toward NOAK. Mature tech (solar, wind, battery) remains at Low cost throughout.</p>
 
     <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #1A2744; margin: 24px 0 8px;">Cost Function (Both Scenarios)</h3>
     <p>Effective system cost = total procurement cost / hourly match fraction, including:</p>
