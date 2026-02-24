@@ -19,7 +19,7 @@ on:
           - SPP
 
 env:
-  TARGET_BRANCH: step3-CO-ISO-parquets
+  TARGET_BRANCH: step3-cost-opt-parquets
 
 jobs:
   run-step3:
@@ -38,15 +38,15 @@ jobs:
 
       - name: Fetch input data from step-2 branch
         run: |
-          git fetch origin step-2-EF-ISO-parquets || true
+          git fetch origin step2-ef-parquets || true
           # Restore step-2 EF parquets from the step-2 branch into working tree
-          git checkout origin/step-2-EF-ISO-parquets -- data/step-2-EF-parquets/ || {
-            echo "ERROR: Could not fetch step-2 EF parquets from branch step-2-EF-ISO-parquets"
+          git checkout origin/step2-ef-parquets -- data/step2-ef-parquets/ || {
+            echo "ERROR: Could not fetch step-2 EF parquets from branch step2-ef-parquets"
             echo "Run Step 2 workflow first."
             exit 1
           }
           echo "Step-2 EF parquets restored:"
-          ls -lh data/step-2-EF-parquets/
+          ls -lh data/step2-ef-parquets/
 
       - name: Switch to target branch
         run: |
@@ -54,7 +54,7 @@ jobs:
           if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
             # Re-apply step-2 data (may have been overwritten by branch switch)
-            git checkout origin/step-2-EF-ISO-parquets -- data/step-2-EF-parquets/ || true
+            git checkout origin/step2-ef-parquets -- data/step2-ef-parquets/ || true
           else
             git checkout -B "$TARGET_BRANCH"
           fi
@@ -83,7 +83,7 @@ jobs:
           pip install numpy numba pyarrow
 
       - name: Ensure output directory exists
-        run: mkdir -p data/step-3-CO-ISO-parquets
+        run: mkdir -p data/step3-cost-opt-parquets
 
       - name: Build ISO arguments
         id: iso-args
@@ -104,7 +104,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f data/step-3-CO-ISO-parquets/
+          git add -f data/step3-cost-opt-parquets/
 
           if git diff --cached --quiet; then
             echo "No changes to commit"

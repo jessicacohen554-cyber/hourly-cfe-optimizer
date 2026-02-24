@@ -657,7 +657,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     </div>
                     <div class="flow-file">
                         <span class="flow-file-label out">OUT</span>
-                        <span class="flow-file-path">data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet</span>
+                        <span class="flow-file-path">data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet</span>
                     </div>
                     <div class="flow-file">
                         <span class="flow-file-label out">OUT</span>
@@ -686,7 +686,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <div class="flow-files">
                     <div class="flow-file">
                         <span class="flow-file-label in">IN</span>
-                        <span class="flow-file-path">data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet</span>
+                        <span class="flow-file-path">data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet</span>
                     </div>
                     <div class="flow-file">
                         <span class="flow-file-label out">OUT</span>
@@ -784,7 +784,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             <span class="flow-tag flow-tag-seconds">~15 sec</span>
                         </div>
                         <p>
-                            <code>scripts/recompute_co2.py</code> &mdash; Dispatch-stack emission model. Merit-order
+                            <code>scripts/step5_PP4_recompute_co2.py</code> &mdash; Dispatch-stack emission model. Merit-order
                             retirement: coal first, then oil, then gas. Fast path uses pre-computed
                             <code>hourly_match_score</code> (~1000x speedup). Numba-accelerated fallback for
                             full hourly dispatch.
@@ -811,7 +811,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             <span class="flow-tag flow-tag-seconds">~30 sec</span>
                         </div>
                         <p>
-                            <code>scripts/compute_mac_stats.py</code> &mdash; Computes 6 MAC metrics: average fan
+                            <code>scripts/step5_PP5_compute_mac_stats.py</code> &mdash; Computes 6 MAC metrics: average fan
                             (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA
                             sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS.
                         </p>
@@ -833,7 +833,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             <span class="flow-tag flow-tag-seconds">~10 sec</span>
                         </div>
                         <p>
-                            <code>compute_lmp_prices.py</code> &mdash; Wholesale energy market simulation.
+                            <code>step5_PP6_compute_lmp_prices.py</code> &mdash; Wholesale energy market simulation.
                             Dispatch-stack LMP model with merit-order fuel retirement. Computes price distributions,
                             nuclear breakeven analysis, and revenue adequacy metrics.
                         </p>
@@ -915,7 +915,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <span class="flow-tag flow-tag-seconds">~5 sec</span>
                 </div>
                 <p>
-                    <code>scripts/generate_shared_data.py</code> &mdash; Final pipeline step. Extracts all results into a single JavaScript
+                    <code>scripts/step6_generate_shared_data.py</code> &mdash; Final pipeline step. Extracts all results into a single JavaScript
                     module for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections,
                     LCOE/transmission tables for client-side repricing. All dashboard pages read from this file.
                 </p>
@@ -1013,7 +1013,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             </thead>
             <tbody>
                 <tr>
-                    <td><code>data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet</code></td>
+                    <td><code>data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet</code></td>
                     <td>Parquet</td>
                     <td>Step 1</td>
                     <td>Step 2</td>
@@ -1037,7 +1037,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <td><code>dashboard/overprocure_scenarios.parquet</code></td>
                     <td>Parquet</td>
                     <td>Step 3</td>
-                    <td>scripts/generate_shared_data.py</td>
+                    <td>scripts/step6_generate_shared_data.py</td>
                     <td>513K scenario rows with hourly_match_score, resource_mix, costs</td>
                 </tr>
                 <tr>
@@ -1051,20 +1051,20 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <td><code>dashboard/track_results.json</code></td>
                     <td>JSON</td>
                     <td>temp_track.py</td>
-                    <td>scripts/generate_shared_data.py</td>
+                    <td>scripts/step6_generate_shared_data.py</td>
                     <td>NB and CTR track cost optimization results</td>
                 </tr>
                 <tr>
                     <td><code>dashboard/lmp_analysis_results.json</code></td>
                     <td>JSON</td>
-                    <td>compute_lmp_prices.py</td>
+                    <td>step5_PP6_compute_lmp_prices.py</td>
                     <td>lmp_trends.html</td>
                     <td>Wholesale price distributions, nuclear breakeven, revenue adequacy</td>
                 </tr>
                 <tr>
                     <td><code>dashboard/js/mac-stats-data.js</code></td>
                     <td>JS module</td>
-                    <td>scripts/compute_mac_stats.py</td>
+                    <td>scripts/step5_PP5_compute_mac_stats.py</td>
                     <td>abatement_dashboard.html</td>
                     <td>MAC curve statistics: fans, envelopes, ANOVA decomposition</td>
                 </tr>
@@ -1078,7 +1078,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <tr>
                     <td><code>dashboard/js/shared-data.js</code></td>
                     <td>JS module</td>
-                    <td>scripts/generate_shared_data.py</td>
+                    <td>scripts/step6_generate_shared_data.py</td>
                     <td>All dashboard pages</td>
                     <td>Master data file: SBTi milestones, LCOE tables, all extracted results</td>
                 </tr>
@@ -1100,7 +1100,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <h3>dispatch_utils.py</h3>
             </div>
             <p>
-                Shared dispatch engine used by <code>scripts/recompute_co2.py</code>, <code>compute_lmp_prices.py</code>,
+                Shared dispatch engine used by <code>scripts/step5_PP4_recompute_co2.py</code>, <code>step5_PP6_compute_lmp_prices.py</code>,
                 and <code>scripts/step5_PP1_compressed_day.py</code>. Contains Numba-compiled battery and LDES dispatch loops,
                 supply matrix construction, dispatch cache system, and merit-order fossil retirement model.
             </p>

@@ -44,14 +44,14 @@ jobs:
 
       - name: Fetch input data from step-2 branch
         run: |
-          git fetch origin step-2-EF-ISO-parquets || true
-          git checkout origin/step-2-EF-ISO-parquets -- data/step-2-EF-parquets/ || {
-            echo "ERROR: Could not fetch step-2 EF parquets from branch step-2-EF-ISO-parquets"
+          git fetch origin step2-ef-parquets || true
+          git checkout origin/step2-ef-parquets -- data/step2-ef-parquets/ || {
+            echo "ERROR: Could not fetch step-2 EF parquets from branch step2-ef-parquets"
             echo "Run Step 2 workflow first."
             exit 1
           }
           echo "Step-2 EF parquets restored:"
-          ls -lh data/step-2-EF-parquets/
+          ls -lh data/step2-ef-parquets/
 
       - name: Switch to target branch
         run: |
@@ -59,7 +59,7 @@ jobs:
           if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
             # Re-apply step-2 data (may have been overwritten by branch switch)
-            git checkout origin/step-2-EF-ISO-parquets -- data/step-2-EF-parquets/ || true
+            git checkout origin/step2-ef-parquets -- data/step2-ef-parquets/ || true
           else
             git checkout -B "$TARGET_BRANCH"
           fi
@@ -107,7 +107,7 @@ jobs:
 
       - name: Run Track 2-3 NB + CTR
         run: |
-          python scripts/track2-3_nb_ctr.py ${{ steps.run-args.outputs.flags }}
+          python scripts/step3_track_nb_ctr.py ${{ steps.run-args.outputs.flags }}
 
       - name: Commit Track 2-3 outputs
         run: |
