@@ -961,7 +961,20 @@ lines.append('')
 
 print("\nGenerating SBTi timeline + DAC trajectory data...")
 
-# SBTi threshold-to-year mapping (from policy_context.html + SPEC.md §7.3)
+# Canonical threshold → target year mapping (SBTi-interpolated, from Step 3)
+# Each of 15 thresholds maps to the year when it's expected to be achieved
+try:
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    from step3_cost_optimization import THRESHOLD_TARGET_YEARS
+except ImportError:
+    THRESHOLD_TARGET_YEARS = {
+        50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
+        85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
+        95: 2045, 97.5: 2048, 99: 2049, 100: 2050,
+    }
+
+# SBTi milestone anchors (sparse, for dashboard display)
 SBTI_MILESTONES = [
     {'year': 2025, 'threshold': 0,   'label': 'Today'},
     {'year': 2030, 'threshold': 50,  'label': 'SBTi 50%'},
@@ -993,6 +1006,16 @@ lines.append('const SBTI_MILESTONES = [')
 for ms in SBTI_MILESTONES:
     lines.append(f"    {{ year: {ms['year']}, threshold: {ms['threshold']}, label: '{ms['label']}' }},")
 lines.append('];')
+lines.append('')
+
+# Full threshold → year mapping (all 15 thresholds, SBTi-interpolated)
+lines.append('// Full threshold-year mapping: each of 15 thresholds paired with its target year')
+lines.append('// Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, 100%→2050)')
+lines.append('const THRESHOLD_TARGET_YEARS = {')
+for t in THRESHOLDS_NUM:
+    year = THRESHOLD_TARGET_YEARS.get(t, 2050)
+    lines.append(f'    {t}: {year},')
+lines.append('};')
 lines.append('')
 lines.append('// DAC cost trajectories ($/ton CO₂ net DACCS, 2024 USD)')
 lines.append('// Optimistic: 15-20% learning rate, R&D breakthroughs, <$20/MWh renewables')
@@ -1064,57 +1087,79 @@ DEMAND_GROWTH_RATES_PY = {
 }
 NEW_GAS_EMISSION_RATE = 0.35  # tCO₂/MWh (new CCGT counterfactual)
 
-# For each SBTi milestone year, compute growth MWh and counterfactual emissions
+# For each threshold/target-year pair, compute growth MWh and counterfactual emissions
+# This replaces the sparse SBTi-only calculation with all 15 thresholds
 growth_counterfactual = {}
 for iso in ISOS:
     iso_cf = {}
     base_twh = REGIONAL_DEMAND_TWH_PY[iso]
-    for ms in SBTI_MILESTONES:
-        year = ms['year']
-        t = ms['threshold']
+    for t in THRESHOLDS_NUM:
+        year = THRESHOLD_TARGET_YEARS.get(t, 2050)
         level_data = {}
         for level in ['Low', 'Medium', 'High']:
             rate = DEMAND_GROWTH_RATES_PY[iso][level]
             years_from_base = year - 2025
             if years_from_base <= 0:
                 growth_twh = 0
+                gf = 1.0
             else:
-                grown_twh = base_twh * ((1 + rate) ** years_from_base)
+                gf = (1 + rate) ** years_from_base
+                grown_twh = base_twh * gf
                 growth_twh = grown_twh - base_twh
             growth_mwh = growth_twh * 1e6
             cf_tons = growth_mwh * NEW_GAS_EMISSION_RATE
             level_data[level] = {
                 'growth_twh': round(growth_twh, 1),
-                'counterfactual_mt': round(cf_tons / 1e6, 2),  # megatons
+                'counterfactual_mt': round(cf_tons / 1e6, 2),
+                'growth_factor': round(gf, 4),
+                'demand_mwh': round(base_twh * gf * 1e6, 0),
             }
-        iso_cf[str(year)] = level_data
+        iso_cf[str(t)] = {'year': year, **level_data}
     growth_counterfactual[iso] = iso_cf
-    med_2040 = iso_cf['2040']['Medium']
-    print(f"  {iso}: 2040 Medium growth={med_2040['growth_twh']} TWh, counterfactual={med_2040['counterfactual_mt']} MtCO₂")
+    t90_data = iso_cf.get('90', {}).get('Medium', {})
+    print(f"  {iso}: 90% (2040) Medium growth={t90_data.get('growth_twh', 0)} TWh, "
+          f"counterfactual={t90_data.get('counterfactual_mt', 0)} MtCO₂")
 
 lines.append('// ============================================================================')
-lines.append('// DEMAND GROWTH COUNTERFACTUAL (SPEC.md §7.2)')
+lines.append('// DEMAND GROWTH COUNTERFACTUAL (threshold-year paired)')
 lines.append('// ============================================================================')
-lines.append('// Without clean procurement, demand growth MWh would be met by new gas at')
-lines.append('// 350 kg/MWh (0.35 tCO₂/MWh) — standard new CCGT emission rate.')
+lines.append('// Each threshold paired with its SBTi target year. Without clean procurement,')
+lines.append('// demand growth MWh would be met by new gas at 350 kg/MWh (0.35 tCO₂/MWh).')
 lines.append('// growth_twh = baseTWh × ((1 + rate)^(year-2025) - 1)')
-lines.append('// counterfactual_mt = growth_twh × 1e6 × 0.35 / 1e6 (megatons)')
+lines.append('// Keyed by threshold (not year) for easy lookup alongside cost/mix data.')
 lines.append(f'const NEW_GAS_EMISSION_RATE = {NEW_GAS_EMISSION_RATE}; // tCO₂/MWh')
 lines.append('')
 lines.append('const GROWTH_COUNTERFACTUAL = {')
 for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    {iso}: {{')
-    for ms_idx, ms in enumerate(SBTI_MILESTONES):
-        y = str(ms['year'])
-        yd = growth_counterfactual[iso][y]
-        ms_comma = ',' if ms_idx < len(SBTI_MILESTONES) - 1 else ''
-        lines.append(f'        {y}: {{ Low: {{ twh: {yd["Low"]["growth_twh"]}, mt: {yd["Low"]["counterfactual_mt"]} }}, '
-                     f'Medium: {{ twh: {yd["Medium"]["growth_twh"]}, mt: {yd["Medium"]["counterfactual_mt"]} }}, '
-                     f'High: {{ twh: {yd["High"]["growth_twh"]}, mt: {yd["High"]["counterfactual_mt"]} }} }}{ms_comma}')
+    for t_idx, t in enumerate(THRESHOLDS_NUM):
+        t_str = str(t) if t != int(t) else str(int(t))
+        td = growth_counterfactual[iso][str(t)]
+        year = td['year']
+        t_comma = ',' if t_idx < len(THRESHOLDS_NUM) - 1 else ''
+        lines.append(
+            f'        "{t_str}": {{ year: {year}, '
+            f'Low: {{ twh: {td["Low"]["growth_twh"]}, mt: {td["Low"]["counterfactual_mt"]}, gf: {td["Low"]["growth_factor"]} }}, '
+            f'Medium: {{ twh: {td["Medium"]["growth_twh"]}, mt: {td["Medium"]["counterfactual_mt"]}, gf: {td["Medium"]["growth_factor"]} }}, '
+            f'High: {{ twh: {td["High"]["growth_twh"]}, mt: {td["High"]["counterfactual_mt"]}, gf: {td["High"]["growth_factor"]} }} }}{t_comma}')
     iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    }}{iso_comma}')
 lines.append('};')
 lines.append('')
+
+# DG MAC data from mac_stats.json (if available)
+dg_mac = mac_stats.get('demand_growth_mac', {})
+if dg_mac:
+    print("Adding demand growth MAC data to shared-data.js...")
+    lines.append('// ============================================================================')
+    lines.append('// DEMAND GROWTH MAC (threshold-year paired, P10/P50/P90)')
+    lines.append('// ============================================================================')
+    lines.append('// MAC percentiles for demand growth scenarios at each threshold/year.')
+    lines.append('// Keyed: ISO → threshold → growth_level → {mac_p10, mac_p50, mac_p90, year, gf}')
+    lines.append(f'const DG_MAC = {json.dumps(dg_mac)};')
+    lines.append('')
+else:
+    print("  No DG MAC data in mac_stats.json — skipping")
 
 print("Extracting FEASIBLE_MIXES...")
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
