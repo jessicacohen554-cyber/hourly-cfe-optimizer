@@ -52,6 +52,7 @@ import pandas as pd
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PQ_SCENARIOS = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
 OUT_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_results.json')
+STEP5_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing-results')
 
 # Known medium scenario keys (non-CAISO and CAISO variants)
 MEDIUM_KEYS = {'MMMM_M_M_M1_X', 'MMMM_M_M_M1_M'}
@@ -199,9 +200,16 @@ def main():
     with open(OUT_PATH, 'w') as f:
         json.dump(output, f, separators=(',', ':'))
 
+    # Archive canonical copy to step5 results directory
+    os.makedirs(STEP5_DIR, exist_ok=True)
+    step5_out = os.path.join(STEP5_DIR, 'track_results.json')
+    with open(step5_out, 'w') as f:
+        json.dump(output, f, separators=(',', ':'))
+
     file_size = os.path.getsize(OUT_PATH) / 1024 / 1024
     elapsed = time.time() - t0
     print(f"Done: {file_size:.2f} MB, {elapsed:.1f}s")
+    print(f"Archived: {step5_out}")
 
 
 if __name__ == '__main__':

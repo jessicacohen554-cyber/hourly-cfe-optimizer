@@ -10,8 +10,8 @@ Reads existing optimizer results (16,200 scenarios) and computes:
 4. Path-constrained reference MAC (monotonic resource deployment)
 
 Outputs:
-  - dashboard/js/mac-stats-data.js   (JavaScript constants for dashboard)
-  - data/mac_stats.json              (full JSON for programmatic use)
+  - dashboard/js/mac-stats-data.js                       (JavaScript constants for dashboard)
+  - data/step5-post-processing-results/mac_stats.json    (full JSON for programmatic use)
 """
 
 import json
@@ -28,7 +28,8 @@ from parquet_io import load_from_parquets, find_input_dir
 
 RESULTS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_results.json')
 JS_OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'js', 'mac-stats-data.js')
-JSON_OUTPUT_PATH = os.path.join(BASE_DIR, 'data', 'mac_stats.json')
+STEP5_DIR = os.path.join(BASE_DIR, 'data', 'step5-post-processing-results')
+JSON_OUTPUT_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
@@ -663,7 +664,8 @@ def main():
         f.write(js_content)
     print(f"Wrote {JS_OUTPUT_PATH}")
 
-    # Write JSON output
+    # Write JSON output to step5 results directory
+    os.makedirs(STEP5_DIR, exist_ok=True)
     json_output = {
         'fan_chart': fan_data,
         'stepwise_fan': stepwise_fan,

@@ -5,9 +5,10 @@ Replaces the entire file with fresh data from the latest pipeline run.
 
 Pipeline order: Step 1 (physics) → Step 2 (tranche) → postprocess → co2 → mac_stats → THIS
 
-Input:  dashboard/overprocure_results.json  (final pipeline output)
-        data/mac_stats.json                 (MAC statistics from compute_mac_stats.py)
-Output: dashboard/js/shared-data.js         (complete rewrite)
+Input:  dashboard/overprocure_results.json                  (final pipeline output)
+        data/step5-post-processing-results/mac_stats.json  (MAC statistics from compute_mac_stats.py)
+Output: dashboard/js/shared-data.js                        (complete rewrite)
+        data/step5-post-processing-results/shared_data.json (canonical JSON archive)
 """
 
 import json
@@ -45,14 +46,20 @@ def get_scenario(iso_data, threshold, iso):
 # LOAD DATA
 # ============================================================================
 
+STEP5_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'step5-post-processing-results')
+MAC_STATS_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
+# Fallback to legacy path if step5 dir doesn't have mac_stats yet
+if not os.path.exists(MAC_STATS_PATH):
+    MAC_STATS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'mac_stats.json')
+
 print("Loading data...")
 with open('dashboard/overprocure_results.json') as f:
     data = json.load(f)
-with open('data/mac_stats.json') as f:
+with open(MAC_STATS_PATH) as f:
     mac_stats = json.load(f)
 
 print(f"  Results: {os.path.getsize('dashboard/overprocure_results.json') / 1024:.0f} KB")
-print(f"  MAC stats: {os.path.getsize('data/mac_stats.json') / 1024:.0f} KB")
+print(f"  MAC stats: {os.path.getsize(MAC_STATS_PATH) / 1024:.0f} KB")
 
 # ============================================================================
 # EXTRACT MAC_DATA (average MAC — medium/low/high)
@@ -1172,6 +1179,26 @@ file_size = os.path.getsize(output_path)
 print(f"\nWrote {output_path}")
 print(f"  Lines: {len(lines)}")
 print(f"  Size: {file_size:,} bytes ({file_size/1024:.1f} KB)")
+
+# Archive canonical JSON to step5 results directory
+os.makedirs(STEP5_DIR, exist_ok=True)
+shared_json_path = os.path.join(STEP5_DIR, 'shared_data.json')
+shared_json = {
+    'thresholds': THRESHOLDS_NUM,
+    'isos': ISOS,
+    'mac_data': mac_data,
+    'marginal_mac_data': marginal_mac_data,
+    'effective_cost_data': effective_cost_data,
+    'system_cost_data': system_cost_data,
+    'resource_mix_data': resource_mix_data,
+    'gas_backup_data': gas_backup_data,
+    'cf_tranche_data': cf_tranche_data,
+    'growth_counterfactual': growth_counterfactual,
+}
+with open(shared_json_path, 'w') as f:
+    json.dump(shared_json, f, indent=2)
+shared_size = os.path.getsize(shared_json_path)
+print(f"Archived: {shared_json_path} ({shared_size:,} bytes, {shared_size/1024:.1f} KB)")
 
 # ============================================================================
 # VERIFICATION
