@@ -24,8 +24,8 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet (from Step 1)
-Output: data/step-2-EF-parquets/step2_ef_{ISO}.parquet (per-ISO, all thresholds combined)
+Input:  data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (from Step 1)
+Output: data/step2-ef-parquets/step2_ef_{ISO}.parquet (per-ISO, all thresholds combined)
 
 The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
@@ -44,8 +44,8 @@ import pyarrow.compute as pc
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
-STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1_raw_pfs_parquets')
-STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step-2-EF-parquets')
+STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1-pfs-parquets')
+STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-parquets')
 
 # Target thresholds — all 15 from v4.1 PFS (50-100%, added 55/65)
 TARGET_THRESHOLDS = [50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 100.0]
@@ -219,7 +219,7 @@ def normalize_table(t):
 def load_iso_tables():
     """Load PFS data and return a dict of {iso: pyarrow.Table}.
 
-    Reads from data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet.
+    Reads from data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet.
     Groups files by ISO prefix, concatenates all threshold files per ISO.
 
     Returns dict keyed by ISO name with per-ISO tables (already schema-normalized).
@@ -453,7 +453,7 @@ def process_iso_table(iso, table):
 
 
 def write_per_iso_outputs(results_by_iso):
-    """Write per-ISO Step 2 EF outputs to data/step-2-EF-parquets."""
+    """Write per-ISO Step 2 EF outputs to data/step2-ef-parquets."""
     os.makedirs(STEP2_EF_OUTPUT_DIR, exist_ok=True)
     written = []
 
@@ -533,7 +533,7 @@ def main():
     print(f"\n  Total rows: {total_input:,} -> {total_pareto:,} (EF)")
     print(f"  Total time: {elapsed_total:.0f}s")
     print("\n" + "=" * 70)
-    print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step-2-EF-parquets/")
+    print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step2-ef-parquets/")
     print("  Step 3 reads from that directory; no merged output file is written.")
     print("=" * 70)
 
