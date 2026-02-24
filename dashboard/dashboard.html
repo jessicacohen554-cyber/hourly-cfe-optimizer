@@ -4060,6 +4060,32 @@ function resolveEntry(region, thresholdKey) {
         }
         if (scenario) {
             const normalized = normalizeEntry(scenario);
+
+            // Enrich with per-resource cost breakdown if missing.
+            // Co2 batch results have aggregate costs but no resource_costs detail.
+            // Compute it from the mix + cost tables (same math as priceMix).
+            if (!normalized.costs?.resource_costs && normalized.resource_mix) {
+                const rm = normalized.resource_mix;
+                const mixArr = [
+                    rm.clean_firm || 0, rm.solar || 0, rm.wind || 0,
+                    rm.ccs_ccgt || 0, rm.hydro || 0,
+                    normalized.procurement_pct || 100,
+                    normalized.hourly_match_score || 0,
+                    normalized.battery_dispatch_pct || 0,
+                    normalized.battery8_dispatch_pct || 0,
+                    normalized.ldes_dispatch_pct || 0,
+                ];
+                const baseDemandTwh = (REGIONAL_DEMAND_TWH || {})[iso] || 200;
+                const { targetYear, growthRate } = getRepricingGrowthParams(iso);
+                const repriced = priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate);
+                if (repriced?.resource_costs) {
+                    normalized.costs.resource_costs = repriced.resource_costs;
+                }
+                if (repriced?.gas_backup && !normalized.gas_backup) {
+                    normalized.gas_backup = repriced.gas_backup;
+                }
+            }
+
             normalized.compressed_day = getCompressedDayProfile(iso, normalized);
             return normalized;
         }
