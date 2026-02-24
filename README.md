@@ -76,14 +76,14 @@ The workflows now write outputs directly to branches (instead of only uploading 
 - `run-step1-5-convert-checkpoints.yml` → `step1-5-raw-pfs-parquets`
   - Writes: `data/step1_raw_pfs_parquets/`
 - `run-step1-full-pfs.yml` → `step1-full-pfs-results`
-  - Writes: `data/physics_cache_v4*.parquet`, `data/checkpoints_v4/`, `scripts/dashboard/`
+  - Writes: `data/step1_raw_pfs_parquets/`, `data/checkpoints_v4/`, `scripts/dashboard/`
 - `run-step2-efficient-frontier.yml` → `step2-ef-parquets-results`
   - Reads from: `data/step1_raw_pfs_parquets/`
   - Writes: `data/step-2-EF-parquets/step2_ef_<ISO>.parquet` (per ISO), `data/pfs_post_ef.parquet` (merged compatibility copy)
 - `run-iso-thresholds.yml` → `iso-threshold-<ISO>-<THRESHOLD>`
   - Example: `iso-threshold-NYISO-95`
   - Includes a tranche selector (`all`, or tranche `1..10`) and `max_mixes_per_tranche` control for checkpoint-sized runs.
-  - Writes: `data/checkpoints/`, `data/checkpoints_v4/`, `data/physics_cache_v4_*.parquet`, `scripts/dashboard/`
+  - Writes: `data/checkpoints/`, `data/checkpoints_v4/`, `data/step1_raw_pfs_parquets/`, `scripts/dashboard/`
 - `run-step1-nyiso100-tranches.yml` → `iso-threshold-NYISO-100`
   - Dedicated NYISO 100 workflow with tranche selector (`all`, `1..6`).
   - Direction: run tranches 1→6 sequentially for full NYISO 100 completion.
@@ -107,7 +107,7 @@ hourly-cfe-optimizer/
 ├── scripts/step3_cost_optimization.py    # Step 3: Cost optimization
 ├── scripts/step4_gas_ccs_adjustement.py          # Step 4: Post-processing
 ├── data/
-│   ├── physics_cache_v4.parquet  # PFS (21.4M rows, Step 1 output)
+│   ├── step1_raw_pfs_parquets/   # PFS per-ISO/threshold (Step 1 output)
 │   ├── pfs_post_ef.parquet       # PFS post-EF (1.8M rows, Step 2 output)
 │   ├── EIA 930 Data/
 │   │   ├── eia_demand_profiles.json
