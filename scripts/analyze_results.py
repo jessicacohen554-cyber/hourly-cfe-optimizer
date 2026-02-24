@@ -21,7 +21,7 @@ RESULTS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CACHE_PATH = os.path.join(SCRIPT_DIR, 'data', 'optimizer_cache.json')
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'analysis_results.json')
 
-THRESHOLDS = [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 def medium_key(iso):
     """Return the all-Medium scenario key for a given ISO (9-dim format)."""
