@@ -232,19 +232,19 @@ h3 {
 
 /* ========== SHARED LAYOUT PRIMITIVES ========== */
 .page-footer {
-    background: #F3F4F6;
-    color: #6B7280;
+    background: linear-gradient(135deg, #0F1A2E 0%, #1A2744 100%);
+    color: rgba(255,255,255,0.6);
     text-align: center;
     padding: var(--pad-section) var(--pad-page);
     font-size: 0.82rem;
-    border-top: 1px solid #E5E7EB;
+    border-top: none;
 }
 .page-footer a {
-    color: #4B5563;
+    color: rgba(255,255,255,0.7);
     text-decoration: none;
     margin: 0 12px;
 }
-.page-footer a:hover { color: #111827; }
+.page-footer a:hover { color: #ffffff; }
 
 /* ========== CHART FIGURE DEFAULTS ========== */
 /* Full saturation outlines, opaque fills using the palette */
@@ -317,7 +317,7 @@ h3 {
     .nav-brand {
         display: flex;
         align-items: center;
-        color: #1A2744;
+        color: #ffffff;
         font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
         font-size: 0.9rem;
         font-weight: 700;
