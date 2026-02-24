@@ -105,7 +105,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy numba pyarrow pandas
+          pip install numpy numba pyarrow
 
       - name: Build ISO arguments
         id: iso-args
