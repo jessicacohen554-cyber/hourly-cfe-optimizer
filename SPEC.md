@@ -124,36 +124,90 @@
 - **LMP runs on ECF track only** (base case with existing clean floor). NB/CTR tracks are separate analysis, not priced through LMP.
 - **Data sources**: PJM Manual 15 Rev. 47, Monitoring Analytics 2024 SOM, EIA Electric Power Annual Table 8.1, EPA eGRID 2022
 
-#### Decision 5: Three Analysis Tracks (5C — Updated Feb 21, 2026)
-Three distinct tracks with standardized naming:
+#### Decision 5: Three Analysis Tracks (5C — Updated Feb 24, 2026)
+Three distinct tracks with standardized naming. Each track represents a different set of assumptions about what existing clean energy is credited vs. what must be procured new.
 
-**Track 1 — ECF (Existing Clean Floor)**: Base case
-- The standard optimizer output with existing generation credited at wholesale
+**Track 1 — ECF (Existing Clean Floor)**: Baseline case
+- Cost optimization built on **2025 absolute existing clean generation** — the "existing clean floor"
+- Existing clean TWh remain constant across all demand growth scenarios (absolute TWh steady; share of total generation declines over time as demand grows)
+- All existing resources credited at wholesale prices
+- New-build procurement optimized on top of the existing floor to hit each target threshold
 - Source: `overprocure_scenarios.parquet` (baseline results)
-- LMP module runs on this track first
+- LMP module runs on this track
 - Files/caches use `ecf_` prefix
 
-**Track 2 — NB (New-Build)**: What hourly matching incentivizes
-- Hydro: **excluded** (hydro=0 mixes only)
-- All existing clean: **zeroed** (GRID_MIX_SHARES = 0 for CF, solar, wind, CCS)
-- Uprates: **on** (uprate tranche active — cheapest new-build option)
+**Track 2 — NB (New-Build / Greenfield)**: What hourly matching incentivizes to build
+- **Ignores ALL existing clean energy** — no existing solar, wind, nuclear, CCS, or hydro credited
+- Hydro: **excluded** (hydro=0 mixes only, not considered at all)
+- Uprates: **on** (uprate tranche active — cheapest new-build option, part of greenfield procurement)
+- All resources must be procured as new-build (except uprates which are allowed)
 - Purpose: What does hourly matching incentivize you to BUILD from scratch?
 - Files/caches use `nb_` prefix
 
-**Track 3 — CTR (Cost to Replace)**: True greenfield replacement cost
-- Hydro: **included** (existing floor, wholesale-priced)
-- All other existing clean: **zeroed** (CF, solar, wind, CCS all priced as new-build)
+**Track 3 — CTR (Cost to Replace Clean Firm)**: What it costs to replace existing dispatchable clean
+- **Does NOT include** existing clean firm (nuclear) or uprates — these are what's being "replaced"
+- **Does NOT include** existing CCS (near-zero in most ISOs, but conceptually part of what's replaced)
 - Uprates: **off** (uprate_cap=0, no uprate tranche)
-- Purpose: True greenfield cost of replacing all existing clean generation
+- Hydro: **included** (existing floor, wholesale-priced)
+- Existing solar: **included** (existing floor, wholesale-priced)
+- Existing wind: **included** (existing floor, wholesale-priced)
+- Purpose: True cost of replacing existing dispatchable clean generation (nuclear/CCS), while keeping existing renewables and hydro as the floor
 - Files/caches use `ctr_` prefix
 
 **Naming convention**: All file names, cache keys, code comments, and output fields use ECF/NB/CTR abbreviations consistently. File rename deferred until NB/CTR sweep completes.
 
 **Output**: Data files only. No research paper update yet — discuss findings with user first, then write.
 **Architecture**: Step 3 runs 2 additional passes per (ISO, threshold):
-  - Pass "NB": filter EF to hydro=0, uprate tranche on → new-build hourly matching results
-  - Pass "CTR": full EF (hydro≤existing), uprate tranche off → replacement cost results
+  - Pass "NB": filter EF to hydro=0, zero all existing clean, uprate tranche on → pure greenfield results
+  - Pass "CTR": keep hydro + solar + wind floors, zero clean firm + CCS existing, uprate tranche off → replacement cost results
   - Plus existing pass "ECF": full EF, all features on → current behavior (preserved)
+
+#### Decision 5b: Track-to-Page Assignment (Feb 24, 2026)
+Each dashboard page uses a specific track (or combination) for its data and visualizations:
+
+**Track 1 (ECF) exclusively:**
+| Page | File | Notes |
+|---|---|---|
+| Home | `index.html` | Scrollytelling narrative, key findings |
+| Grid Simulation | `dashboard.html` | Interactive optimizer with all sensitivity toggles |
+| CO₂ Abatement | `abatement_dashboard.html` | MAC curves, abatement ladders |
+| Wholesale Price Assessment | `lmp_trends.html` | **PJM only** — LMP trends and price impact |
+| Fossil Fuel Deep Dive | `fossil_fuel_deepdive.html` | Fossil retirement, fuel switching |
+
+**Track 2 (NB) + Track 3 (CTR) compared against Track 1 (ECF):**
+| Page | File | Notes |
+|---|---|---|
+| New-Build Incentive | `newbuild_requirement.html` | NB vs ECF — what hourly matching incentivizes |
+| Cost to Replace | `cost_to_replace.html` | CTR vs ECF — replacement cost of dispatchable clean |
+
+#### Decision 5c: Visual Differentiation — Existing vs New-Build vs Curtailment (Feb 24, 2026)
+All resource mix figures across the entire site must visually differentiate existing vs new-build generation:
+
+- **Existing resources**: Full saturation fill (solid, opaque colors from the standard palette)
+- **New-build resources**: Transparent fill with full-saturation outline (same hue, reduced opacity interior, solid border)
+- **Curtailment**: Transparent fill with diagonal cross-hatching (curtailment is almost always from new-build)
+
+This applies to ALL charts showing resource mixes (stacked bars, stacked areas, waterfall, etc.) across all pages and all ISOs.
+
+#### Decision 5d: Resource Differentiation & Color Palette (Feb 24, 2026)
+All resource mix figures must differentiate ALL individual resources (not aggregate categories). The following resources must each have a distinct, consistent color across the entire site and all ISOs:
+
+| Resource | Color | Hex | Notes |
+|---|---|---|---|
+| Nuclear | Navy | `#1E3A5F` | Existing dispatchable clean |
+| CCS-CCGT | Teal | `#0D9488` | Carbon capture gas |
+| Geothermal | Ochre/Brown | `#B45309` | CAISO only |
+| Wind | Green | `#22C55E` | Onshore wind |
+| Solar | Amber | `#F59E0B` | Utility-scale PV |
+| Hydro | Cyan | `#0EA5E9` | Existing only, wholesale-priced |
+| LDES (100hr) | Pink | `#EC4899` | Iron-air, 50% RTE |
+| Battery (4hr) | Purple | `#8B5CF6` | Li-ion, 85% RTE |
+| Battery (8hr) | Light Purple | `#A78BFA` | Li-ion extended duration |
+| Curtailment | Gray + cross-hatch | `#D1D5DB` | Diagonal hatching pattern |
+
+**Bar chart styling**: ALL bar charts across the entire site must have **rounded corners** (`borderRadius` in Chart.js).
+
+**Consistency rule**: These colors and styling rules apply to every page, every ISO, every chart type. No page-specific overrides unless explicitly approved.
 
 ### Columnar JSON Format for Feasible Mixes (Feb 19, 2026)
 
