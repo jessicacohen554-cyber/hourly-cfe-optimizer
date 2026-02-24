@@ -461,12 +461,43 @@ def main():
             json.dump(results_data, f)
         print(f"\n  Updated: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
 
-    # Save canonical copy to step5 results directory
-    os.makedirs(STEP5_DIR, exist_ok=True)
-    co2_out = os.path.join(STEP5_DIR, 'co2_results.json')
-    with open(co2_out, 'w') as f:
-        json.dump(results_data, f)
-    print(f"  Archived: {co2_out} ({os.path.getsize(co2_out) / 1024:.0f} KB)")
+    # Save batched co2 results (per ISO/threshold/year) to stay under GitHub's
+    # 100 MB per-file limit.  One file per (ISO, threshold, year) triple, plus
+    # a _config.json and per-ISO _meta files for sweep / demand data.
+    co2_batch_dir = os.path.join(STEP5_DIR, 'co2_results')
+    os.makedirs(co2_batch_dir, exist_ok=True)
+
+    # Config (everything except 'results')
+    config_path = os.path.join(co2_batch_dir, '_config.json')
+    with open(config_path, 'w') as f:
+        json.dump({k: v for k, v in results_data.items() if k != 'results'}, f)
+
+    total_bytes = os.path.getsize(config_path)
+    file_count = 1
+
+    for iso in isos_present:
+        iso_data = results_data['results'].get(iso, {})
+
+        # Per-threshold files
+        for t_str, t_data in iso_data.get('thresholds', {}).items():
+            fname = f"{iso}_{t_str}_{DATA_YEAR}.json"
+            fpath = os.path.join(co2_batch_dir, fname)
+            with open(fpath, 'w') as f:
+                json.dump(t_data, f)
+            total_bytes += os.path.getsize(fpath)
+            file_count += 1
+
+        # ISO-level metadata (sweep, annual_demand_mwh, etc.)
+        meta = {k: v for k, v in iso_data.items() if k != 'thresholds'}
+        if meta:
+            meta_path = os.path.join(co2_batch_dir, f"{iso}_meta_{DATA_YEAR}.json")
+            with open(meta_path, 'w') as f:
+                json.dump(meta, f)
+            total_bytes += os.path.getsize(meta_path)
+            file_count += 1
+
+    print(f"  Batched CO2 results → {co2_batch_dir}/")
+    print(f"    {file_count} files, {total_bytes / 1024 / 1024:.1f} MB total")
 
     # Demand growth CO₂ recompute (uses fast match_score path)
     dg_output_dir = output_dir or input_dir

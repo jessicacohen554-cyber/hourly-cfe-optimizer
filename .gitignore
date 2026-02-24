@@ -41,6 +41,10 @@ data/track_checkpoint.json
 data/track_checkpoint.json.tmp
 dashboard/track_results.json.tmp
 
+# Monolithic co2_results.json exceeds GitHub 100 MB limit.
+# Batched per-ISO/threshold/year files in co2_results/ are used instead.
+data/step5-post-processing/co2_results.json
+
 # Dispatch cache temp files (real .npz is kept, .tmp.npz is not)
 data/step5-post-processing/dispatch_cache/*.tmp.npz
 
