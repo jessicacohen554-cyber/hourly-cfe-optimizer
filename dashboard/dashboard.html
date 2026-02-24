@@ -3601,10 +3601,7 @@ const RESOURCE_LABELS = {
 // Canonical threshold→year mapping aligned to SBTi milestones.
 // Anchors: 50%→2030, 70%→2035, 90%→2040, 95%→2045, 100%→2050.
 // Intermediate thresholds interpolated per SPEC.md decision (Feb 19, 2026).
-const THRESHOLD_TARGET_YEARS = {
-    50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
-    85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043, 95: 2045, 97.5: 2048, 99: 2049, 100: 2050
-};
+// THRESHOLD_TARGET_YEARS is defined in shared-data.js (single source of truth)
 function thresholdToSbtiYear(threshold) {
     const t = parseFloat(threshold);
     if (THRESHOLD_TARGET_YEARS[t] !== undefined) return THRESHOLD_TARGET_YEARS[t];
@@ -4017,7 +4014,7 @@ function buildOldScenarioKey() {
     const q45 = show45Q ? '1' : '0';
     const iso = document.getElementById('regionSelect')?.value || '';
     const geo = iso === 'CAISO' ? (levelMap[sensitivityState.geothermal_cost] || 'M') : 'X';
-    return `${r}${f}${b}_${d}_${ff}_${tx}_${ccs}${q45}_${geo}`;
+    return `${rg}${fg}${st}_${tx}_${ccs}${q45}_${geo}`;
 }
 
 // ISO-aware medium key
