@@ -14,16 +14,70 @@ Outputs:
 
 import json
 import os
+import sys
+import glob as glob_mod
 import numpy as np
 from collections import defaultdict
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, SCRIPT_DIR)
+
 TRACK_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_results.json')
 BASELINE_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
+CO2_BATCH_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing', 'co2_results')
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS_STR = [str(t) for t in THRESHOLDS]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+
+
+def load_from_co2_batches(batch_dir):
+    """Reassemble results dict from batched co2 result files."""
+    config_path = os.path.join(batch_dir, '_config.json')
+    if not os.path.exists(config_path):
+        return None
+    with open(config_path) as f:
+        data = json.load(f)
+    data.setdefault('results', {})
+    for iso in ISOS:
+        iso_entry = {}
+        for mf in sorted(glob_mod.glob(os.path.join(batch_dir, f'{iso}_meta_*.json'))):
+            with open(mf) as f:
+                iso_entry.update(json.load(f))
+        iso_entry.setdefault('thresholds', {})
+        for t in THRESHOLDS_STR:
+            matches = sorted(glob_mod.glob(os.path.join(batch_dir, f'{iso}_{t}_*.json')))
+            if matches:
+                with open(matches[0]) as f:
+                    iso_entry['thresholds'][t] = json.load(f)
+        if iso_entry.get('thresholds') or 'annual_demand_mwh' in iso_entry:
+            data['results'][iso] = iso_entry
+    return data
+
+
+def load_baseline():
+    """Load baseline results: monolithic JSON → batched co2 → parquets."""
+    if os.path.exists(BASELINE_PATH):
+        with open(BASELINE_PATH) as f:
+            return json.load(f)
+    if os.path.isdir(CO2_BATCH_DIR):
+        data = load_from_co2_batches(CO2_BATCH_DIR)
+        if data and data.get('results'):
+            print(f"  Baseline loaded from batched co2 results ({len(data['results'])} ISOs)")
+            return data
+    # Parquet fallback
+    try:
+        from parquet_io import load_from_parquets, find_input_dir
+        input_dir = find_input_dir(ISOS)
+        if input_dir:
+            data = load_from_parquets(input_dir, ISOS)
+            print(f"  Baseline loaded from parquets: {input_dir}")
+            return data
+    except ImportError:
+        pass
+    raise FileNotFoundError(
+        f"No baseline found. Checked:\n  {BASELINE_PATH}\n  {CO2_BATCH_DIR}/\n  parquet dirs")
 
 
 def extract_costs_and_mixes(scenarios):
@@ -53,8 +107,7 @@ def main():
     print("Loading results...")
     with open(TRACK_PATH) as f:
         tracks = json.load(f)
-    with open(BASELINE_PATH) as f:
-        baseline = json.load(f)
+    baseline = load_baseline()
 
     mode = tracks.get('meta', {}).get('mode', 'unknown')
     print(f"Track mode: {mode}")
