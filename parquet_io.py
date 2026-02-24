@@ -283,3 +283,135 @@ def save_to_parquets(data, output_dir, isos, file_prefix='step4_'):
         df_out.to_parquet(out_path, index=False, compression='zstd')
         print(f"  {os.path.basename(out_path)}: {len(df_out):,} rows, "
               f"{os.path.getsize(out_path) / 1e6:.1f} MB")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DEMAND GROWTH PARQUET I/O
+# ══════════════════════════════════════════════════════════════════════════════
+
+def find_dg_parquets(input_dir, iso, prefix='step4_dg_'):
+    """Find all DG parquet files for an ISO in the given directory.
+
+    Tries step4_dg_ first (post-processed), then step3_dg_ (raw).
+    Returns list of file paths sorted by threshold.
+    """
+    import glob as glob_mod
+    for pfx in [prefix, 'step4_dg_', 'step3_dg_']:
+        pattern = os.path.join(input_dir, f'{pfx}{iso}_t*.parquet')
+        files = sorted(glob_mod.glob(pattern))
+        if files:
+            return files
+    return []
+
+
+def load_dg_from_parquets(input_dir, isos, prefix='step4_dg_'):
+    """Load demand growth parquets into nested dict format.
+
+    Tries step4 DG files first, falls back to step3 DG files.
+
+    Returns:
+        dg_data: {
+            iso: {
+                threshold_str: {
+                    (year, growth_level): {
+                        scenario_key: {
+                            'resource_mix': {...},
+                            'costs': {...},
+                            'no_45q_costs': {...},      # if step4
+                            'gas_backup': {...},          # if step4
+                            'procurement_pct': int,
+                            'hourly_match_score': float,
+                            'growth_factor': float,
+                            'annual_demand_mwh': float,
+                            'year': int,
+                            'growth_level': str,
+                        }
+                    }
+                }
+            }
+        }
+    """
+    dg_data = {}
+
+    for iso in isos:
+        files = find_dg_parquets(input_dir, iso, prefix)
+        if not files:
+            # Also check step3 input directory
+            for alt_dir in DEFAULT_INPUT_DIRS:
+                files = find_dg_parquets(alt_dir, iso, 'step3_dg_')
+                if files:
+                    break
+        if not files:
+            continue
+
+        iso_dg = {}
+        total_rows = 0
+
+        for fpath in files:
+            df = pd.read_parquet(fpath)
+            total_rows += len(df)
+
+            for threshold, thr_group in df.groupby('threshold'):
+                t_str = str(threshold) if threshold != int(threshold) else str(int(threshold))
+                if t_str not in iso_dg:
+                    iso_dg[t_str] = {}
+
+                for _, row in thr_group.iterrows():
+                    year = int(row['year']) if 'year' in row.index else 2025
+                    g_level = str(row['growth_level']) if 'growth_level' in row.index else 'Medium'
+                    sc_key = row['scenario']
+                    dg_key = (year, g_level)
+
+                    if dg_key not in iso_dg[t_str]:
+                        iso_dg[t_str][dg_key] = {}
+
+                    # Build scenario dict
+                    resource_mix = {}
+                    for rtype in RESOURCE_TYPES:
+                        col = f'mix_{rtype}'
+                        resource_mix[rtype] = int(row[col]) if col in row.index else 0
+
+                    costs = {}
+                    for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+                        col = f'cost_{ckey}'
+                        costs[ckey] = float(row[col]) if col in row.index and pd.notna(row[col]) else 0.0
+
+                    scenario = {
+                        'resource_mix': resource_mix,
+                        'costs': costs,
+                        'procurement_pct': int(row['procurement_pct']) if 'procurement_pct' in row.index else 100,
+                        'hourly_match_score': float(row['hourly_match_score']) if 'hourly_match_score' in row.index else 0.0,
+                        'growth_factor': float(row['growth_factor']) if 'growth_factor' in row.index and pd.notna(row['growth_factor']) else 1.0,
+                        'annual_demand_mwh': float(row['annual_demand_mwh']) if 'annual_demand_mwh' in row.index and pd.notna(row['annual_demand_mwh']) else 0,
+                        'year': year,
+                        'growth_level': g_level,
+                    }
+
+                    # Step 4 additions (if present)
+                    no45q = {}
+                    for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+                        col = f'no45q_{ckey}'
+                        if col in row.index and pd.notna(row[col]):
+                            no45q[ckey] = float(row[col])
+                    if no45q:
+                        scenario['no_45q_costs'] = no45q
+
+                    gb = {}
+                    ra_cols = [c for c in row.index if c.startswith('ra_')]
+                    for col in ra_cols:
+                        key = col[len('ra_'):]
+                        val = row[col]
+                        if pd.notna(val):
+                            gb[key] = float(val)
+                    if gb:
+                        scenario['gas_backup'] = gb
+
+                    iso_dg[t_str][dg_key][sc_key] = scenario
+
+        if iso_dg:
+            dg_data[iso] = iso_dg
+            n_dg_combos = sum(len(v) for v in iso_dg.values())
+            print(f"  DG loaded {iso}: {total_rows:,} rows, "
+                  f"{len(iso_dg)} thresholds, {n_dg_combos} (year,growth) combos")
+
+    return dg_data
