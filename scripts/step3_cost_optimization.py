@@ -47,7 +47,7 @@ import os
 import time
 import argparse
 import numpy as np
-import pandas as pd
+import pyarrow as pa
 import pyarrow.parquet as pq
 from pathlib import Path
 from itertools import product
@@ -1810,6 +1810,20 @@ def main():
                 rows.append(row)
         return rows
 
+    def _rows_to_parquet(rows, path):
+        """Write list-of-dicts to parquet via pyarrow (no pandas)."""
+        if not rows:
+            return 0
+        # Collect all keys across all rows to handle sparse dicts
+        all_keys = list(dict.fromkeys(k for r in rows for k in r))
+        arrays = []
+        for key in all_keys:
+            col_vals = [r.get(key) for r in rows]
+            arrays.append(pa.array(col_vals))
+        table = pa.table(dict(zip(all_keys, arrays)))
+        pq.write_table(table, str(path), compression='zstd')
+        return len(rows)
+
     for iso in run_isos:
         if iso not in output['results']:
             continue
@@ -1818,7 +1832,6 @@ def main():
 
         # --- 1. Baseline scenarios ---
         sc_rows = _flatten_scenarios(iso, iso_data)
-        df_sc = pd.DataFrame(sc_rows)
 
         # --- 2. Track scenarios (newbuild + replace) ---
         track_rows = []
@@ -1831,11 +1844,9 @@ def main():
                     'thresholds': track_thresholds,
                 }
                 track_rows.extend(_flatten_scenarios(iso, track_iso_data, track_name=track_name))
-        df_tracks = pd.DataFrame(track_rows) if track_rows else pd.DataFrame()
 
         # --- 3. Demand growth ---
         dg_rows = _flatten_demand_growth(iso, dg_output.get('results', {}).get(iso, {}))
-        df_dg = pd.DataFrame(dg_rows) if dg_rows else pd.DataFrame()
 
         # --- 4. Track demand growth ---
         track_dg_rows = []
@@ -1858,40 +1869,38 @@ def main():
                                     'effective_cost': vals[2],
                                     'incremental': vals[3],
                                 })
-        df_track_dg = pd.DataFrame(track_dg_rows) if track_dg_rows else pd.DataFrame()
 
         # --- 5. Feasible mixes ---
         mix_rows = _flatten_feasible_mixes(iso, iso_data)
-        df_mix = pd.DataFrame(mix_rows) if mix_rows else pd.DataFrame()
 
         # --- Write per-ISO parquet files ---
         iso_out = output_dir / f'step3_co_{iso}.parquet'
-        df_sc.to_parquet(iso_out, index=False, compression='zstd')
-        print(f"  {iso_out}: {len(df_sc):,} scenario rows, "
+        n = _rows_to_parquet(sc_rows, iso_out)
+        print(f"  {iso_out}: {n:,} scenario rows, "
               f"{os.path.getsize(iso_out) / 1e6:.1f} MB")
 
-        if not df_tracks.empty:
+        if track_rows:
             tracks_out = output_dir / f'step3_tracks_{iso}.parquet'
-            df_tracks.to_parquet(tracks_out, index=False, compression='zstd')
-            print(f"  {tracks_out}: {len(df_tracks):,} track rows, "
+            n = _rows_to_parquet(track_rows, tracks_out)
+            print(f"  {tracks_out}: {n:,} track rows, "
                   f"{os.path.getsize(tracks_out) / 1e6:.1f} MB")
 
-        if not df_dg.empty:
+        if dg_rows:
             dg_out = output_dir / f'step3_dg_{iso}.parquet'
-            df_dg.to_parquet(dg_out, index=False, compression='zstd')
-            print(f"  {dg_out}: {len(df_dg):,} demand growth rows, "
+            n = _rows_to_parquet(dg_rows, dg_out)
+            print(f"  {dg_out}: {n:,} demand growth rows, "
                   f"{os.path.getsize(dg_out) / 1e6:.1f} MB")
 
-        if not df_track_dg.empty:
+        if track_dg_rows:
             track_dg_out = output_dir / f'step3_track_dg_{iso}.parquet'
-            df_track_dg.to_parquet(track_dg_out, index=False, compression='zstd')
-            print(f"  {track_dg_out}: {len(df_track_dg):,} track DG rows, "
+            n = _rows_to_parquet(track_dg_rows, track_dg_out)
+            print(f"  {track_dg_out}: {n:,} track DG rows, "
                   f"{os.path.getsize(track_dg_out) / 1e6:.1f} MB")
 
-        if not df_mix.empty:
+        if mix_rows:
             mix_out = output_dir / f'step3_feasible_{iso}.parquet'
-            df_mix.to_parquet(mix_out, index=False, compression='zstd')
-            print(f"  {mix_out}: {len(df_mix):,} feasible mix rows, "
+            n = _rows_to_parquet(mix_rows, mix_out)
+            print(f"  {mix_out}: {n:,} feasible mix rows, "
                   f"{os.path.getsize(mix_out) / 1e6:.1f} MB")
 
     # Save config metadata as JSON (small, one file for all ISOs)
