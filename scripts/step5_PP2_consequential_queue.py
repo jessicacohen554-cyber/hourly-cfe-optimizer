@@ -112,7 +112,7 @@ def load_data():
                 print(f"  WARNING: No parquet found for {iso} — skipping")
 
     import pyarrow
-    df = pyarrow.concat_tables(tables).to_pandas() if tables else pq.read_table(
+    df = pyarrow.concat_tables(tables, promote_extras="default").to_pandas() if tables else pq.read_table(
         os.path.join(BASE_DIR, 'dashboard', 'overprocure_scenarios.parquet')).to_pandas()
     print(f"  {len(df):,} total scenario rows loaded")
 
