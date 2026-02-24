@@ -1,0 +1,190 @@
+name: Run Step 5 Consequential Post-Processors
+
+on:
+  workflow_dispatch:
+    inputs:
+      scripts:
+        description: 'Which consequential post-processors to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - consequential_queue
+          - scenario_comparison
+          - eac_scarcity
+
+env:
+  BRANCH_PREFIX: step5-consequential
+
+jobs:
+  run-consequential:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo (from master)
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Generate unique branch name
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          SCRIPTS_LABEL="${{ github.event.inputs.scripts }}"
+          echo "TARGET_BRANCH=auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPTS_LABEL}" >> "$GITHUB_ENV"
+          echo "Branch: auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPTS_LABEL}"
+
+      - name: Create fresh branch from master
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify upstream data exists
+        run: |
+          HAS_DATA=false
+
+          # PP2 (consequential_queue) needs step4 or step3 parquets
+          if [ -d "data/step4-gas-ccs-parquets" ] && ls data/step4-gas-ccs-parquets/*.parquet >/dev/null 2>&1; then
+            echo "Step-4 Gas CCS parquets found"
+            HAS_DATA=true
+          elif [ -d "data/step3-cost-opt-parquets" ] && ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            echo "Step-3 Cost-Opt parquets found (fallback)"
+            HAS_DATA=true
+          fi
+
+          # PP3 (scenario_comparison) needs shared-data.js
+          if [ -f "dashboard/js/shared-data.js" ]; then
+            echo "shared-data.js found"
+          else
+            echo "WARNING: dashboard/js/shared-data.js not found — PP3 (scenario_comparison) will fail"
+            echo "Run Step 6 (generate_shared_data) first and merge to master."
+            if [ "${{ github.event.inputs.scripts }}" = "scenario_comparison" ]; then
+              echo "ERROR: scenario_comparison selected but shared-data.js missing."
+              exit 1
+            fi
+          fi
+
+          # PP7 (eac_scarcity) needs overprocure_results.json
+          if [ -f "dashboard/overprocure_results.json" ]; then
+            echo "overprocure_results.json found"
+          else
+            echo "WARNING: dashboard/overprocure_results.json not found — PP7 (eac_scarcity) will fail"
+            if [ "${{ github.event.inputs.scripts }}" = "eac_scarcity" ]; then
+              echo "ERROR: eac_scarcity selected but overprocure_results.json missing."
+              exit 1
+            fi
+          fi
+
+          if [ "$HAS_DATA" = "false" ]; then
+            echo "ERROR: Neither step-4 nor step-3 parquets found."
+            echo "Run Step 3 or Step 4 workflow first and merge results to master."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure Python runtime
+        run: echo "PYTHONUNBUFFERED=1" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas pyarrow
+
+      - name: Ensure output directories exist
+        run: |
+          mkdir -p data/step5-post-processing
+          mkdir -p dashboard/js
+
+      # ── PP2: Consequential Deployment Queue ──
+      - name: Run Consequential Queue (PP2)
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'consequential_queue' }}
+        run: |
+          echo "Running PP2: Consequential Deployment Queue..."
+          python scripts/step5_PP2_consequential_queue.py
+
+      # ── PP3: Scenario Comparison (depends on PP2 output + shared-data.js) ──
+      - name: Run Scenario Comparison (PP3)
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'scenario_comparison' }}
+        run: |
+          echo "Running PP3: Scenario Comparison..."
+          python scripts/step5_PP3_scenario_comparison.py
+
+      # ── PP7: EAC Scarcity Analysis ──
+      - name: Run EAC Scarcity (PP7)
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'eac_scarcity' }}
+        run: |
+          echo "Running PP7: EAC Scarcity Analysis..."
+          python scripts/step5_PP7_compute_eac_scarcity.py
+
+      - name: Commit and push outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          # Stage all possible outputs
+          # PP2 outputs
+          git add -f data/step5-post-processing/consequential_queue.json 2>/dev/null || true
+          git add -f dashboard/js/consequential-queue-data.js 2>/dev/null || true
+          # PP3 outputs
+          git add -f data/step5-post-processing/scenario_comparison.json 2>/dev/null || true
+          git add -f dashboard/js/scenario-comparison-data.js 2>/dev/null || true
+          # PP7 outputs
+          git add -f dashboard/eac_scarcity_results.json 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          SCRIPTS_LABEL="${{ github.event.inputs.scripts }}"
+          git commit -m "Step 5 Consequential Post-Processing: ${SCRIPTS_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Push with retry for transient network errors
+          MAX_RETRIES=5
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            PUSH_OUTPUT=$(git push -u origin "$TARGET_BRANCH" 2>&1) && {
+              echo "Push succeeded on attempt $i"
+              break
+            }
+            echo "$PUSH_OUTPUT"
+
+            # Fail immediately on large-file rejection (not recoverable by retry)
+            if echo "$PUSH_OUTPUT" | grep -q "GH001"; then
+              echo "ERROR: Push rejected due to large files (GH001). Not retryable."
+              echo "Check file sizes — GitHub limit is 100 MB per file."
+              exit 1
+            fi
+
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+
+            BACKOFF=$((2 ** i))
+            echo "Push failed (transient). Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SCRIPTS_LABEL="${{ github.event.inputs.scripts }}"
+          PR_BODY="## Summary"$'\n'"- Step 5 **consequential** post-processing (**${SCRIPTS_LABEL}**)"$'\n'"- Scripts: PP2 (Consequential Queue), PP3 (Scenario Comparison), PP7 (EAC Scarcity)"$'\n'"- Auto-generated by GitHub Actions workflow run"
+          gh pr create \
+            --title "Step 5 Consequential: ${SCRIPTS_LABEL}" \
+            --body "$PR_BODY" \
+            --base master \
+            --head "$TARGET_BRANCH" || echo "PR creation skipped (no diff or already exists)"
