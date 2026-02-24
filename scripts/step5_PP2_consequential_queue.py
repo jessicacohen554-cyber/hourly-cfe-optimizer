@@ -15,7 +15,7 @@ The MARGINAL emission rate between two thresholds is computed as the delta
 CO₂ displaced divided by the delta clean TWh — capturing the shift from
 coal-heavy to gas-only displacement as the stack retires.
 
-Reads: dashboard/overprocure_scenarios.parquet, dashboard/overprocure_meta.json,
+Reads: data/step4-gas-ccs-parquets/step4_*.parquet (or step3 fallback),
        data/egrid_emission_rates.json, data/eia_fossil_mix.json
 Writes: data/step5-post-processing/consequential_queue.json, dashboard/js/consequential-queue-data.js
 """
@@ -38,8 +38,9 @@ from dispatch_utils import (
 )
 
 # ========== PATHS ==========
-SCENARIOS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_scenarios.parquet')
-META_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_meta.json')
+STEP4_PARQUET_DIR = os.path.join(BASE_DIR, 'data', 'step4-gas-ccs-parquets')
+STEP3_PARQUET_DIR = os.path.join(BASE_DIR, 'data', 'step3-cost-opt-parquets')
+META_PATH = os.path.join(BASE_DIR, 'data', 'step4-gas-ccs-parquets', 'step4_meta.json')
 EGRID_PATH = os.path.join(BASE_DIR, 'data', 'egrid_emission_rates.json')
 FOSSIL_MIX_PATH = os.path.join(BASE_DIR, 'data', 'EIA 930 Data', 'eia_fossil_mix.json')
 OUTPUT_JSON = os.path.join(BASE_DIR, 'data', 'step5-post-processing', 'consequential_queue.json')
@@ -84,13 +85,42 @@ except ImportError:
 
 
 def load_data():
-    """Load all input data."""
-    print("Loading optimizer scenarios...")
-    df = pq.read_table(SCENARIOS_PATH).to_pandas()
-    print(f"  {len(df):,} scenario rows loaded")
+    """Load all input data from Step 4 per-ISO parquets (Step 3 fallback)."""
+    print("Loading optimizer scenarios from per-ISO parquets...")
 
-    with open(META_PATH) as f:
-        meta = json.load(f)
+    input_dir = STEP4_PARQUET_DIR if os.path.isdir(STEP4_PARQUET_DIR) else STEP3_PARQUET_DIR
+    tables = []
+    for iso in ISOS:
+        for prefix in ['step4_', 'step3_co_']:
+            path = os.path.join(input_dir, f'{prefix}{iso}.parquet')
+            if os.path.exists(path):
+                t = pq.read_table(path)
+                tables.append(t)
+                print(f"  Loaded {os.path.basename(path)}: {t.num_rows:,} rows")
+                break
+        else:
+            # Try alternate directory
+            alt_dir = STEP3_PARQUET_DIR if input_dir == STEP4_PARQUET_DIR else STEP4_PARQUET_DIR
+            for prefix in ['step4_', 'step3_co_']:
+                path = os.path.join(alt_dir, f'{prefix}{iso}.parquet')
+                if os.path.exists(path):
+                    t = pq.read_table(path)
+                    tables.append(t)
+                    print(f"  Loaded {os.path.basename(path)}: {t.num_rows:,} rows (fallback)")
+                    break
+            else:
+                print(f"  WARNING: No parquet found for {iso} — skipping")
+
+    import pyarrow
+    df = pyarrow.concat_tables(tables).to_pandas() if tables else pq.read_table(
+        os.path.join(BASE_DIR, 'dashboard', 'overprocure_scenarios.parquet')).to_pandas()
+    print(f"  {len(df):,} total scenario rows loaded")
+
+    meta = {}
+    if os.path.exists(META_PATH):
+        with open(META_PATH) as f:
+            meta = json.load(f)
+
     with open(EGRID_PATH) as f:
         egrid = json.load(f)
     with open(FOSSIL_MIX_PATH) as f:
