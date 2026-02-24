@@ -24,7 +24,7 @@ from collections import defaultdict
 # ── Paths ──
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
-from parquet_io import load_from_parquets, find_input_dir
+from parquet_io import load_from_parquets, find_input_dir, load_dg_from_parquets
 
 RESULTS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_results.json')
 JS_OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'js', 'mac-stats-data.js')
@@ -636,6 +636,82 @@ def format_js_output(fan_data, stepwise_fan, envelope_data, path_mac, anova, cro
     return '\n'.join(lines) + '\n'
 
 
+def compute_dg_mac(input_dir, isos):
+    """Compute MAC fan chart for demand growth scenarios (threshold-year paired).
+
+    For each ISO and (year, growth_level) combination, computes P10/P50/P90
+    MAC across all scenarios at that threshold. Since each threshold maps to
+    exactly one year, the output is keyed by threshold with the year embedded.
+
+    Returns:
+        dg_mac: {
+            iso: {
+                threshold_str: {
+                    growth_level: {
+                        'mac_p10': float, 'mac_p50': float, 'mac_p90': float,
+                        'year': int, 'growth_factor': float,
+                        'demand_mwh': float, 'n_scenarios': int,
+                    }
+                }
+            }
+        }
+    """
+    dg_data = load_dg_from_parquets(input_dir, isos)
+    if not dg_data:
+        print("  No DG data found for MAC computation")
+        return {}
+
+    dg_mac = {}
+    for iso in isos:
+        if iso not in dg_data:
+            continue
+
+        iso_mac = {}
+        for t_str, dg_combos in dg_data[iso].items():
+            thr_mac = {}
+            for (year, g_level), scenarios in dg_combos.items():
+                macs = []
+                demand_mwh_sample = 0
+                gf_sample = 1.0
+
+                for sc_key, sc in scenarios.items():
+                    costs = sc.get('costs', {})
+                    co2 = sc.get('co2_abated', {})
+                    incremental = costs.get('incremental', 0)
+                    co2_tons = co2.get('total_co2_abated_tons', 0)
+                    demand_mwh = sc.get('annual_demand_mwh', 0)
+                    if demand_mwh <= 0:
+                        demand_mwh = WHOLESALE_PRICES.get(iso, 30) * 1e6  # rough fallback
+                    demand_mwh_sample = demand_mwh
+                    gf_sample = sc.get('growth_factor', 1.0)
+
+                    if co2_tons > 0 and incremental is not None:
+                        mac = (incremental * demand_mwh) / co2_tons
+                        macs.append(mac)
+
+                if macs:
+                    arr = np.array(macs)
+                    thr_mac[g_level] = {
+                        'mac_p10': round(float(np.percentile(arr, 10)), 1),
+                        'mac_p50': round(float(np.percentile(arr, 50)), 1),
+                        'mac_p90': round(float(np.percentile(arr, 90)), 1),
+                        'year': year,
+                        'growth_factor': round(gf_sample, 4),
+                        'demand_mwh': round(demand_mwh_sample, 0),
+                        'n_scenarios': len(macs),
+                    }
+
+            if thr_mac:
+                iso_mac[t_str] = thr_mac
+
+        if iso_mac:
+            dg_mac[iso] = iso_mac
+            n_combos = sum(len(v) for v in iso_mac.values())
+            print(f"  {iso}: DG MAC computed for {len(iso_mac)} thresholds, {n_combos} (thr,growth) combos")
+
+    return dg_mac
+
+
 def main():
     print("Loading optimizer results...")
     data = load_results()
@@ -658,8 +734,17 @@ def main():
     print("Computing crossover analysis...")
     crossovers = compute_crossover_analysis(fan_data, envelope_data)
 
+    # Compute DG MAC (threshold-year paired demand growth scenarios)
+    print("\nComputing demand growth MAC (threshold-year paired)...")
+    input_dir = find_input_dir(ISOS)
+    dg_mac = compute_dg_mac(input_dir, ISOS) if input_dir else {}
+
     # Write JavaScript output
     js_content = format_js_output(fan_data, stepwise_fan, envelope_data, path_mac, anova, crossovers)
+    # Append DG MAC data if available
+    if dg_mac:
+        js_content += f'\n// --- Demand Growth MAC (threshold-year paired, P10/P50/P90) ---\n'
+        js_content += f'const MAC_DEMAND_GROWTH = {json.dumps(dg_mac, indent=4)};\n'
     with open(JS_OUTPUT_PATH, 'w') as f:
         f.write(js_content)
     print(f"Wrote {JS_OUTPUT_PATH}")
@@ -673,11 +758,13 @@ def main():
         'path_constrained': {iso: path_mac[iso] for iso in ISOS},
         'anova': anova,
         'crossovers': crossovers,
+        'demand_growth_mac': dg_mac,
         'metadata': {
             'thresholds': THRESHOLDS,
             'isos': ISOS,
             'scenario_count': 324,
             'methodology': 'Option B: Statistical post-processing + path-constrained reference',
+            'demand_growth': 'Threshold-year paired: each threshold at its SBTi target year × L/M/H',
         }
     }
     with open(JSON_OUTPUT_PATH, 'w') as f:

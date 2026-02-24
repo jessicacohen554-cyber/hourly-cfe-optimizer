@@ -53,6 +53,7 @@ from dispatch_utils import (
 
 from parquet_io import (
     load_from_parquets, save_to_parquets, find_input_dir, find_parquet,
+    load_dg_from_parquets, find_dg_parquets,
     ALL_ISOS,
 )
 
@@ -329,6 +330,83 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
     return results_data
 
 
+def recompute_dg_co2(input_dir, output_dir, run_isos, emission_rates, fossil_mix):
+    """Recompute CO₂ for demand growth scenarios using fast match_score path.
+
+    DG scenarios use grown demand (annual_demand_mwh from parquet) and the
+    threshold-based emission rate from the dispatch-stack retirement model.
+    The emission rate is still determined by the threshold % clean energy —
+    more clean energy → more fossil retired → different marginal emission rate.
+    """
+    import glob as glob_mod
+    import pyarrow.parquet as pq
+    import pyarrow as pa
+    import pandas as pd
+
+    print(f"\n  [DG CO2] Recomputing CO₂ for demand growth scenarios...")
+    total_processed = 0
+    rate_cache = {}
+
+    for iso in run_isos:
+        # Find DG parquets (step4_dg_ preferred, step3_dg_ fallback)
+        files = find_dg_parquets(input_dir, iso, 'step4_dg_')
+        if not files:
+            files = find_dg_parquets(input_dir, iso, 'step3_dg_')
+        if not files:
+            continue
+
+        iso_processed = 0
+        for fpath in files:
+            df = pd.read_parquet(fpath)
+            if df.empty:
+                continue
+
+            # Add CO2 columns
+            co2_total = []
+            co2_rate_per_mwh = []
+            co2_emission_rate = []
+
+            for _, row in df.iterrows():
+                threshold_pct = float(row['threshold'])
+                match_score = float(row.get('hourly_match_score', threshold_pct))
+                demand_mwh = float(row.get('annual_demand_mwh', 0))
+                if demand_mwh <= 0:
+                    demand_mwh = BASE_DEMAND_TWH.get(iso, 0) * 1e6
+                procurement_pct = int(row.get('procurement_pct', 100))
+
+                resource_mix = {}
+                for rtype in RESOURCE_TYPES:
+                    col = f'mix_{rtype}'
+                    resource_mix[rtype] = int(row[col]) if col in df.columns else 0
+
+                co2 = fast_co2_from_match_score(
+                    match_score, resource_mix, procurement_pct,
+                    threshold_pct, iso, emission_rates, fossil_mix,
+                    demand_mwh, rate_cache)
+
+                co2_total.append(round(co2['total_co2_abated_tons'], 0))
+                co2_rate_per_mwh.append(round(co2['co2_rate_per_mwh'], 4))
+                co2_emission_rate.append(round(co2['emission_rate_tco2_mwh'], 4))
+
+            df['co2_total_abated_tons'] = co2_total
+            df['co2_rate_per_mwh'] = co2_rate_per_mwh
+            df['co2_emission_rate_tco2_mwh'] = co2_emission_rate
+            iso_processed += len(df)
+
+            # Write back to output dir
+            out_path = os.path.join(output_dir, os.path.basename(fpath))
+            df.to_parquet(out_path, index=False, compression='zstd')
+
+        if iso_processed > 0:
+            print(f"    {iso}: {iso_processed:,} DG scenarios with CO₂")
+        total_processed += iso_processed
+
+    print(f"  [DG CO2] Total: {total_processed:,} DG scenarios recomputed")
+    return total_processed
+
+    return results_data
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Recompute CO₂ abatement with dispatch-stack emission rates.',
@@ -389,6 +467,12 @@ def main():
     with open(co2_out, 'w') as f:
         json.dump(results_data, f)
     print(f"  Archived: {co2_out} ({os.path.getsize(co2_out) / 1024:.0f} KB)")
+
+    # Demand growth CO₂ recompute (uses fast match_score path)
+    dg_output_dir = output_dir or input_dir
+    if dg_output_dir:
+        recompute_dg_co2(dg_output_dir, dg_output_dir, isos_present,
+                         emission_rates, fossil_mix)
 
     print(f"\n{'='*70}")
     print("  CO₂ RECOMPUTATION COMPLETE")
