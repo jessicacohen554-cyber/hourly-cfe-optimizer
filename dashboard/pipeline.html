@@ -657,7 +657,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     </div>
                     <div class="flow-file">
                         <span class="flow-file-label out">OUT</span>
-                        <span class="flow-file-path">data/physics_cache_v4.parquet</span>
+                        <span class="flow-file-path">data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet</span>
                     </div>
                     <div class="flow-file">
                         <span class="flow-file-label out">OUT</span>
@@ -686,7 +686,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <div class="flow-files">
                     <div class="flow-file">
                         <span class="flow-file-label in">IN</span>
-                        <span class="flow-file-path">data/physics_cache_v4.parquet</span>
+                        <span class="flow-file-path">data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet</span>
                     </div>
                     <div class="flow-file">
                         <span class="flow-file-label out">OUT</span>
@@ -1013,11 +1013,11 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             </thead>
             <tbody>
                 <tr>
-                    <td><code>data/physics_cache_v4.parquet</code></td>
+                    <td><code>data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet</code></td>
                     <td>Parquet</td>
                     <td>Step 1</td>
                     <td>Step 2</td>
-                    <td>21.4M physics-validated resource mixes with match scores and dispatch metrics</td>
+                    <td>Per-ISO/threshold physics-validated resource mixes with match scores and dispatch metrics</td>
                 </tr>
                 <tr>
                     <td><code>data/pfs_post_ef.parquet</code></td>
