@@ -784,14 +784,16 @@ def argmin_indexed(tc, idx):
 def eval_and_argmin_all(coeff_matrix, constant, prices, scores, thresholds_desc):
     """Parallel cost eval + bucketed multi-threshold argmin."""
     tc = eval_cost_fast(coeff_matrix, constant, prices)
+    # Use effective gates (100% → 99.5%) for score comparison
+    gates = np.where(thresholds_desc == 100, 99.5, thresholds_desc)
     if HAS_NUMBA:
-        return _argmin_bucketed(tc, scores, thresholds_desc)
+        return _argmin_bucketed(tc, scores, gates)
     # Numpy fallback
-    n_thr = len(thresholds_desc)
+    n_thr = len(gates)
     best_idxs = np.zeros(n_thr, dtype=np.int64)
     best_vals = np.full(n_thr, np.inf)
     for k in range(n_thr):
-        qualifying = np.where(scores >= thresholds_desc[k])[0]
+        qualifying = np.where(scores >= gates[k])[0]
         if len(qualifying) > 0:
             local_best = int(np.argmin(tc[qualifying]))
             best_idxs[k] = qualifying[local_best]
@@ -908,16 +910,18 @@ def batch_eval_and_argmin_all(coeff_matrix, constant, price_matrix, scores, thre
         all_best_vals: (B, T) float64 — best cost per combo × threshold
     """
     if HAS_NUMBA:
-        return _batch_eval_and_argmin(coeff_matrix, constant, price_matrix, scores, thresholds_desc)
+        gates = np.where(thresholds_desc == 100, 99.5, thresholds_desc)
+        return _batch_eval_and_argmin(coeff_matrix, constant, price_matrix, scores, gates)
     # Numpy fallback: sequential per-combo
     B = price_matrix.shape[0]
-    n_thr = len(thresholds_desc)
+    gates = np.where(thresholds_desc == 100, 99.5, thresholds_desc)
+    n_thr = len(gates)
     all_best_idxs = np.zeros((B, n_thr), dtype=np.int64)
     all_best_vals = np.full((B, n_thr), np.inf)
     for j in range(B):
         tc = coeff_matrix @ price_matrix[j] + constant
         for k in range(n_thr):
-            qualifying = np.where(scores >= thresholds_desc[k])[0]
+            qualifying = np.where(scores >= gates[k])[0]
             if len(qualifying) > 0:
                 local_best = int(np.argmin(tc[qualifying]))
                 all_best_idxs[j, k] = qualifying[local_best]
@@ -1109,7 +1113,7 @@ def prepare_threshold_metadata(scores, thresholds):
         thresholds_desc: numpy array sorted descending (for bucketed argmin kernel)
         threshold_pos: mapping threshold -> position in thresholds_desc
     """
-    active_thresholds = [thr for thr in thresholds if np.any(scores >= thr)]
+    active_thresholds = [thr for thr in thresholds if np.any(scores >= effective_gate(thr))]
     thresholds_desc = np.array(sorted(active_thresholds, reverse=True), dtype=np.float64)
     threshold_pos = {float(thresholds_desc[k]): k for k in range(len(thresholds_desc))}
     return active_thresholds, thresholds_desc, threshold_pos
@@ -1124,6 +1128,16 @@ OUTPUT_DIR = Path('data/step3-cost-opt-parquets')
 
 # Thresholds to evaluate
 OUTPUT_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+
+
+def effective_gate(thr):
+    """Map nominal threshold to effective gate for score comparison.
+
+    The 100% threshold is physically unreachable due to float precision —
+    Step 1 caps hourly match at 99.9%, so the best mixes score ~99.5-99.95%.
+    We gate 100% at 99.5% to include those near-perfect mixes.
+    """
+    return 99.5 if thr == 100 else float(thr)
 
 
 def _table_to_arrays(table):
@@ -1179,7 +1193,7 @@ def load_pfs_post_ef(input_dir, selected_isos=None):
 
         scores = arrays['hourly_match_score']
         for thr in OUTPUT_THRESHOLDS:
-            idx = np.where(scores >= thr)[0]
+            idx = np.where(scores >= effective_gate(thr))[0]
             if len(idx) > 0:
                 thr_indices[(iso, thr)] = idx
 
@@ -1483,7 +1497,7 @@ def main():
             # Pre-compute threshold indices for newbuild mixes
             nb_thr_indices = {}
             for thr in OUTPUT_THRESHOLDS:
-                idx = np.where(nb_scores >= thr)[0]
+                idx = np.where(nb_scores >= effective_gate(thr))[0]
                 if len(idx) > 0:
                     nb_thr_indices[thr] = idx
 
@@ -1633,7 +1647,7 @@ def main():
         arch_scores = arch_arrays['hourly_match_score']
         arch_thr_mask = {}  # thr → indices into arch_arrays that qualify
         for thr in OUTPUT_THRESHOLDS:
-            qualifying = np.where(arch_scores >= thr)[0]
+            qualifying = np.where(arch_scores >= effective_gate(thr))[0]
             if len(qualifying) > 0:
                 arch_thr_mask[thr] = qualifying
 
@@ -1772,7 +1786,7 @@ def main():
             arch_scores = arch_arrays['hourly_match_score']
             arch_thr_mask = {}
             for thr in OUTPUT_THRESHOLDS:
-                qualifying = np.where(arch_scores >= thr)[0]
+                qualifying = np.where(arch_scores >= effective_gate(thr))[0]
                 if len(qualifying) > 0:
                     arch_thr_mask[thr] = qualifying
 
