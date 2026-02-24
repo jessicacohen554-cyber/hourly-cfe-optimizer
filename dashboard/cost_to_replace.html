@@ -14,18 +14,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 /* Page-specific background */
-body { background: #0B1120; }
+body { background: #F7F8FC; }
 
 /* ========== FOOTER ========== */
 .page-footer {
-    background: #0F1A2E;
-    color: rgba(255,255,255,0.7);
+    background: #F0F2F5;
+    color: rgba(15,23,42,0.65);
     padding: 32px 24px;
     text-align: center;
 }
 .footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
 .footer-links a {
-    color: rgba(255,255,255,0.65);
+    color: rgba(15,23,42,0.6);
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -35,8 +35,8 @@ body { background: #0B1120; }
     align-items: center;
     padding: 8px 4px;
 }
-.footer-links a:hover { color: #ffffff; }
-.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+.footer-links a:hover { color: #1E293B; }
+.footer-note { font-size: 0.78rem; color: rgba(15,23,42,0.35); }
 
 .bottom-banner {
     height: 4px;
@@ -55,7 +55,7 @@ body { background: #0B1120; }
 
 /* ========== HERO OVERVIEW SECTION ========== */
 .hero-overview {
-    background: linear-gradient(180deg, #0B1120 0%, #13203D 100%);
+    background: linear-gradient(180deg, #F7F8FC 0%, #EEF1F8 100%);
     position: relative;
     overflow: hidden;
     padding: 48px 24px;
@@ -64,8 +64,8 @@ body { background: #0B1120; }
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.08) 0%, transparent 60%),
-                radial-gradient(ellipse at 70% 80%, rgba(245,158,11,0.06) 0%, transparent 60%);
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(245,158,11,0.03) 0%, transparent 60%);
     pointer-events: none;
 }
 .hero-overview-inner {
@@ -92,20 +92,20 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 2rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 16px;
     line-height: 1.2;
     letter-spacing: -0.5px;
 }
 .hero-text-block p {
     font-size: 0.95rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 16px;
 }
 .hero-text-block .lead-text {
     font-size: 1rem;
-    color: rgba(255,255,255,0.82);
+    color: rgba(15,23,42,0.78);
     line-height: 1.75;
     margin-bottom: 20px;
 }
@@ -121,9 +121,9 @@ body { background: #0B1120; }
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    background: rgba(14,165,233,0.15);
-    border: 1px solid rgba(14,165,233,0.3);
-    color: #38bdf8;
+    background: rgba(14,165,233,0.07);
+    border: 1px solid rgba(14,165,233,0.2);
+    color: #0284c7;
     margin-bottom: 14px;
 }
 
@@ -131,8 +131,8 @@ body { background: #0B1120; }
 .hero-callout {
     margin-top: 24px;
     padding: 20px 24px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.02);
+    border: 1px solid rgba(0,0,0,0.08);
     border-radius: 12px;
     text-align: center;
 }
@@ -146,7 +146,7 @@ body { background: #0B1120; }
 }
 .hero-callout .counter-label {
     font-size: 0.82rem;
-    color: rgba(255,255,255,0.55);
+    color: rgba(15,23,42,0.5);
     margin-top: 6px;
     display: block;
 }
@@ -155,17 +155,17 @@ body { background: #0B1120; }
 .chart-panel {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.2);
+    border: 1px solid rgba(74,144,217,0.12);
     border-radius: 16px;
     padding: 28px 24px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     width: 100%;
     box-sizing: border-box;
 }
 .chart-panel-overview,
 .chart-panel-region {
-    background: rgba(15,26,46,0.95);
-    border-color: rgba(74,144,217,0.2);
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.12);
 }
 .chart-panel-overview {
     min-height: 400px;
@@ -179,7 +179,7 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 0.85rem;
     font-weight: 700;
-    color: rgba(255,255,255,0.85);
+    color: rgba(15,23,42,0.85);
     text-align: center;
     margin-bottom: 10px;
     letter-spacing: 0.02em;
@@ -187,16 +187,16 @@ body { background: #0B1120; }
 .hero-chart-subtitle {
     font-family: 'Barlow Semi Condensed', sans-serif;
     font-size: 0.72rem;
-    color: rgba(255,255,255,0.45);
+    color: rgba(15,23,42,0.4);
     text-align: center;
     margin-top: 6px;
 }
 
 /* ========== REGION SECTIONS ========== */
 .region-section {
-    background: #0B1120;
+    background: #F7F8FC;
     position: relative;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .region-section-inner {
     max-width: 1320px;
@@ -213,8 +213,8 @@ body { background: #0B1120; }
     padding: 32px;
 }
 .chart-panel-region {
-    background: rgba(15,26,46,0.95);
-    border-color: rgba(74,144,217,0.15);
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.10);
     min-height: 400px;
 }
 .chart-panel-region .chart-container {
@@ -229,10 +229,10 @@ body { background: #0B1120; }
     justify-content: center;
 }
 .region-step-card {
-    background: rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.025);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(0,0,0,0.08);
     border-radius: 16px;
     padding: 32px;
     opacity: 0;
@@ -248,14 +248,14 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.5rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.25;
     letter-spacing: -0.3px;
 }
 .region-step-card p {
     font-size: 0.92rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 0;
 }
@@ -269,29 +269,29 @@ body { background: #0B1120; }
     font-weight: 700;
 }
 .step-stat-green {
-    background: rgba(34,197,94,0.12);
-    border: 1px solid rgba(34,197,94,0.25);
-    color: #4ade80;
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.2);
+    color: #16a34a;
 }
 .step-stat-amber {
-    background: rgba(245,158,11,0.12);
-    border: 1px solid rgba(245,158,11,0.25);
-    color: #fbbf24;
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.18);
+    color: #d97706;
 }
 .step-stat-red {
-    background: rgba(239,68,68,0.12);
-    border: 1px solid rgba(239,68,68,0.25);
-    color: #f87171;
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #dc2626;
 }
 .step-stat-blue {
-    background: rgba(14,165,233,0.12);
-    border: 1px solid rgba(14,165,233,0.25);
-    color: #38bdf8;
+    background: rgba(14,165,233,0.08);
+    border: 1px solid rgba(14,165,233,0.2);
+    color: #0284c7;
 }
 .step-stat-purple {
-    background: rgba(156,39,176,0.12);
+    background: rgba(156,39,176,0.08);
     border: 1px solid rgba(156,39,176,0.25);
-    color: #CE93D8;
+    color: #9C27B0;
 }
 .region-tag {
     display: inline-block;
@@ -307,15 +307,15 @@ body { background: #0B1120; }
 
 /* ========== SYNTHESIS SECTION ========== */
 .synthesis-section {
-    background: #0B1120;
+    background: #F7F8FC;
     padding: 64px 24px;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .synthesis-section-title {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.8rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     text-align: center;
     margin-bottom: 40px;
     letter-spacing: -0.3px;
@@ -328,10 +328,10 @@ body { background: #0B1120; }
     gap: 32px;
 }
 .synthesis-card {
-    background: rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.025);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(0,0,0,0.08);
     border-radius: 16px;
     padding: 32px;
     opacity: 0;
@@ -347,13 +347,13 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.3rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.25;
 }
 .synthesis-card p {
     font-size: 0.92rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 0;
 }
@@ -382,7 +382,7 @@ body { background: #0B1120; }
     gap: 6px;
     font-family: 'Barlow Semi Condensed', sans-serif;
     font-size: 0.7rem;
-    color: rgba(255,255,255,0.6);
+    color: rgba(15,23,42,0.55);
     white-space: nowrap;
 }
 .chart-legend-swatch {
@@ -403,7 +403,7 @@ body { background: #0B1120; }
     width: 18px;
     height: 10px;
     border-radius: 2px;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(0,0,0,0.1);
 }
 
 /* ========== RESPONSIVE — Prevent horizontal overflow ========== */
@@ -589,7 +589,7 @@ html, body {
 <!-- TOP NAV (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:#0B1120;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:#F7F8FC;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:rgba(15,23,42,0.65);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER BANNER -->
 <header class="header">
@@ -622,7 +622,7 @@ html, body {
                 <div class="chart-legend">
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Baseline (existing fleet)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Replace (all new-build)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.25);"></span>Replacement premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>Replacement premium</span>
                 </div>
                 <div class="hero-chart-subtitle">Effective $/MWh &middot; Medium cost sensitivities &middot; All thresholds</div>
             </div>
@@ -654,7 +654,7 @@ html, body {
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(74,144,217,0.15);color:#4a90d9;">PJM</span>
+                <span class="region-tag" style="background:rgba(74,144,217,0.10);color:#4a90d9;">PJM</span>
                 <h3>PJM: Nuclear dominance means the highest replacement cost</h3>
                 <p>PJM's grid is anchored by 32.1% existing clean firm generation &mdash; overwhelmingly nuclear. These plants dispatch at wholesale rates (~$30/MWh), but new nuclear construction costs $75&ndash;120/MWh. Replacing this fleet from scratch roughly doubles the effective cost at moderate thresholds and pushes higher targets into prohibitively expensive territory. PJM illustrates why preserving existing nuclear capacity is among the most cost-effective decarbonization strategies available.</p>
                 <span class="step-stat step-stat-red" id="statPJM">Premium at 90%: loading...</span>
@@ -675,13 +675,13 @@ html, body {
                 <div class="chart-legend">
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Baseline</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#22C55E;"></span>Replace</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.25);"></span>Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.2);"></span>Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(34,197,94,0.15);color:#22C55E;">ERCOT</span>
+                <span class="region-tag" style="background:rgba(34,197,94,0.1);color:#22C55E;">ERCOT</span>
                 <h3>ERCOT: Minimal existing clean firm means a small premium</h3>
                 <p>With only 8.6% existing clean firm capacity (nuclear), ERCOT has the least to lose from a greenfield rebuild. The existing fleet is dominated by gas and wind &mdash; resources where new-build costs are closest to wholesale. The replacement premium stays modest across all thresholds, making ERCOT the region least penalized by a full-replacement scenario. The lesson: when most of your clean fleet is already renewable, the greenfield penalty is small.</p>
                 <span class="step-stat step-stat-green" id="statERCOT">Premium at 90%: loading...</span>
@@ -704,13 +704,13 @@ html, body {
                 <div class="chart-legend">
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Baseline</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Replace</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.25);"></span>Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(245,158,11,0.15);color:#F59E0B;">CAISO</span>
+                <span class="region-tag" style="background:rgba(245,158,11,0.1);color:#F59E0B;">CAISO</span>
                 <h3>CAISO: Diablo Canyon + hydro create a moderate premium</h3>
                 <p>California's grid carries 7.9% nuclear (Diablo Canyon, since relicensed) and 9.5% hydro. Both operate well below new-build costs. Replacing them at greenfield prices layers a moderate premium onto an already-expensive grid. The premium widens at higher thresholds as the optimizer can no longer lean on cheap existing dispatchable resources. CAISO's geothermal potential (The Geysers, Salton Sea) helps offset some replacement cost, but nuclear remains the biggest swing factor.</p>
                 <span class="step-stat step-stat-amber" id="statCAISO">Premium at 90%: loading...</span>
@@ -766,7 +766,7 @@ html, body {
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(156,39,176,0.15);color:#9C27B0;">NEISO</span>
+                <span class="region-tag" style="background:rgba(156,39,176,0.1);color:#9C27B0;">NEISO</span>
                 <h3>NEISO: Millstone anchors the fleet &mdash; losing it would be catastrophic</h3>
                 <p>New England runs 23.8% of its clean energy from nuclear (Millstone, Seabrook). These plants provide baseload capacity through harsh winters when gas pipeline constraints already spike energy costs. Replacing this nuclear capacity at new-build prices would push NEISO's already-steep cost curve even higher. The winter gas constraint means CCS-CCGT replacement carries an additional $13/MWh adder, compounding the premium. NEISO demonstrates that existing nuclear is not just cheap &mdash; it's irreplaceable in constrained grids.</p>
                 <span class="step-stat step-stat-purple" id="statNEISO">Premium at 90%: loading...</span>
@@ -798,9 +798,9 @@ html, body {
 
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
-    <details style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px 20px;">
-        <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
-        <ol style="font-size:0.8rem;color:rgba(255,255,255,0.55);line-height:1.8;padding-left:20px;margin-top:12px;">
+    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
+        <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
             <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; technology costs for wind, solar, storage, nuclear, CCS, geothermal.</li>
             <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) &mdash; generation technology cost benchmarks.</li>
             <li>EIA Hourly Electric Grid Monitor &mdash; hourly generation data by fuel type and balancing authority.</li>
@@ -1050,12 +1050,12 @@ function buildHeroChart() {
                     ticks: {
                         callback: function(v) { return v + '%'; },
                         font: { size: 9 },
-                        color: 'rgba(255,255,255,0.5)',
+                        color: 'rgba(15,23,42,0.45)',
                         maxRotation: 0
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 },
                 y: {
                     min: 0,
@@ -1063,11 +1063,11 @@ function buildHeroChart() {
                     ticks: {
                         callback: function(v) { return '$' + v; },
                         font: { size: 9 },
-                        color: 'rgba(255,255,255,0.5)'
+                        color: 'rgba(15,23,42,0.45)'
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 }
             },
             plugins: {
@@ -1260,12 +1260,12 @@ function buildRegionalChart(iso) {
                     ticks: {
                         callback: function(v) { return v + '%'; },
                         font: { size: 9 },
-                        color: 'rgba(255,255,255,0.55)',
+                        color: 'rgba(15,23,42,0.5)',
                         maxRotation: 0
                     },
-                    grid: { color: 'rgba(255,255,255,0.08)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.2)' },
-                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(255,255,255,0.4)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.07)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.12)' },
+                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 },
                 y: {
                     min: 0,
@@ -1273,11 +1273,11 @@ function buildRegionalChart(iso) {
                     ticks: {
                         callback: function(v) { return '$' + v; },
                         font: { size: 9 },
-                        color: 'rgba(255,255,255,0.55)'
+                        color: 'rgba(15,23,42,0.5)'
                     },
-                    grid: { color: 'rgba(255,255,255,0.08)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.2)' },
-                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(255,255,255,0.4)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.07)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.12)' },
+                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 }
             },
             plugins: {
