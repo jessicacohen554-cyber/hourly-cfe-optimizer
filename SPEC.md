@@ -10,7 +10,7 @@
 **Completed:**
 - Energy-based battery caps (replaces power-based formula): `bat4_cap = max_daily_surplus`, `bat8_cap = max_2day_surplus`, `ldes_cap = max_7day_surplus`
 - Two-phase adaptive storage sweep: Phase 1 coarse (0.25% steps) → analyze saturation → Phase 2 fine (0.05% steps) within saturation range
-- Per-ISO/threshold output files: `data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet`
+- Per-ISO/threshold output files: `data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet`
 - ERCOT: 2,033,961 solutions (complete)
 - CAISO: Running (Phase 2 in progress)
 
@@ -33,7 +33,7 @@
 
 **Completed:**
 - `dispatch_utils.py` — shared dispatch module (constants, profiles, battery/LDES dispatch, fossil retirement, hourly dispatch cache)
-- `compute_lmp_prices.py` — core LMP engine with:
+- `step5_PP6_compute_lmp_prices.py` — core LMP engine with:
   - Merit-order fossil stack: PJM Manual 15 cost-based offer formula (HR × fuel + VOM + CO2 + 10% adder)
   - Heat rates calibrated to PJM SOM 2024 benchmarks (CCGT 7.0, CT 10.5, coal 10.0 MMBtu/MWh)
   - CO2 allowance costs (RGGI-weighted: L/M/H = $3/$5.50/$14 per ton)
@@ -43,9 +43,9 @@
   - Demand-quantile pricing: congestion, scarcity tail, off-peak compression
   - ISO-specific price formation: PJM (RPM), ERCOT (ORDC), CAISO (RA), NYISO (ICAP), NEISO (FCM + winter gas)
   - Archetype deduplication: (mix, fuel_level, threshold) → ~7,800 unique per ISO
-  - Dispatch cache: append-mode NPZ per ISO, shared with recompute_co2.py
+  - Dispatch cache: append-mode NPZ per ISO, shared with step5_PP4_recompute_co2.py
 - `calibrate_lmp_model.py` — validation framework with embedded PJM IMM/EIA reference data
-- `recompute_co2.py` — refactored to import from dispatch_utils.py (identical behavior)
+- `step5_PP4_recompute_co2.py` — refactored to import from dispatch_utils.py (identical behavior)
 
 **PJM v9 Calibration Results (2024 baseline, Medium fuel/CO2):**
 
@@ -181,7 +181,7 @@ Three distinct tracks with standardized naming:
 **Files changed**:
 - `step3_cost_optimization.py` — writes columnar format
 - `step5_compressed_day.py` — reads both columnar (new) and row (legacy) formats
-- `generate_shared_data.py` — reads both columnar (new) and row (legacy) formats
+- `step6_generate_shared_data.py` — reads both columnar (new) and row (legacy) formats
 - Dashboard JS (`shared-data.js`) — already used compact arrays `[cf, sol, wnd, ccs, hyd, proc, match, bat, ldes]`; no change needed
 
 **Backward compat**: Step 5 and generate_shared_data both auto-detect format (`isinstance(fmixes, dict)` vs `isinstance(fmixes, list)`).
@@ -276,16 +276,16 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 | **Step 4** | `step4_postprocess.py` | **Post-Processing** | NEISO gas constraint, CCS vs LDES crossover analysis, CO₂ calculations, MAC calculations. Produces final corrected results for the dashboard. | When Step 3 outputs change, or when CO₂ methodology changes. |
 
 **Key acronyms**:
-- **PFS** — Physics Feasible Space: the full set of physically valid resource mixes (Step 1 output, `data/step1_raw_pfs_parquets/`)
+- **PFS** — Physics Feasible Space: the full set of physically valid resource mixes (Step 1 output, `data/step1-pfs-parquets/`)
 - **EF** — Efficient Frontier: the reduced set of non-dominated mixes (Step 2 output, `data/pfs_post_ef.parquet`)
 
 **Post-processing scripts** (run after Step 4):
 
 | Script | Name | What It Does |
 |--------|------|-------------|
-| `recompute_co2.py` | **CO₂ Dispatch-Stack Model** | Merit-order fuel retirement (coal→oil→gas). Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average displaced emission rate for CO₂ abated. Demand-growth-aware. |
-| `compute_mac_stats.py` | **MAC Statistics** | 6 MAC metrics: average fan (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA sensitivity decomposition. Crossover analysis vs DAC/SCC/ETS benchmarks. |
-| `generate_shared_data.py` | **Dashboard Data** | Extracts all results into `dashboard/js/shared-data.js`. SBTi milestone mapping, DAC trajectories, LCOE tables for client-side repricing. |
+| `step5_PP4_recompute_co2.py` | **CO₂ Dispatch-Stack Model** | Merit-order fuel retirement (coal→oil→gas). Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average displaced emission rate for CO₂ abated. Demand-growth-aware. |
+| `step5_PP5_compute_mac_stats.py` | **MAC Statistics** | 6 MAC metrics: average fan (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA sensitivity decomposition. Crossover analysis vs DAC/SCC/ETS benchmarks. |
+| `step6_generate_shared_data.py` | **Dashboard Data** | Extracts all results into `dashboard/js/shared-data.js`. SBTi milestone mapping, DAC trajectories, LCOE tables for client-side repricing. |
 
 **Key principle**: Step 1 is expensive (hours of compute). Step 2 takes ~40 seconds. Steps 3–4 + post-processing are cheap (minutes). Changing cost assumptions only requires Steps 3–4 + post-processing.
 
@@ -300,7 +300,7 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 - [x] Merged methodology into research paper (Appendix B with 7 sub-sections)
 - [x] Tagline: "Most climate solutions depend on" across all pages
 - [x] **CO₂ methodology fixed**: Hourly fossil-fuel emission rates (eGRID per-fuel × EIA hourly mix) replacing flat rate
-- [x] **Post-optimizer pipeline**: `recompute_co2.py`, `analyze_results.py`, `run_post_optimizer.sh`
+- [x] **Post-optimizer pipeline**: `step5_PP4_recompute_co2.py`, `analyze_results.py`, `run_post_optimizer.sh`
 - [x] **Multi-year data infra**: `fetch_eia_multiyear.py` (2021-2025 EIA API + DST + averaging)
 - [x] **Phase 3 re-optimizer**: `optimize_phase3_only.py` (±5% neighborhood refinement)
 - [x] **DST fix script**: `fix_dst_profiles.py` (UTC → local prevailing time conversion)
@@ -396,7 +396,7 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 **Warm-start bias**: Non-Medium scenarios start from Medium optimum + ±17pp reach. 4 extreme archetypes get full exploration. Cross-pollination covers remaining risk.
 
 ### Pipeline when optimizer completes
-1. Run `recompute_co2.py` → hourly CO₂ correction
+1. Run `step5_PP4_recompute_co2.py` → hourly CO₂ correction
 2. Run `analyze_results.py` → monotonicity, literature alignment, VRE waste, DAC inputs
 3. Update dashboards with real data, update narratives
 4. Path-constrained MAC runs (50 targeted optimizations)
@@ -581,21 +581,21 @@ Before launching `step1_pfs_generator.py`, the following must be verified:
 
 **Purpose**: Compute synthetic hourly LMP (Locational Marginal Prices) for each winning scenario by reconstructing 8760-hour dispatch and applying ISO-specific price formation models. Enables cost-of-energy analysis that accounts for how clean energy penetration reshapes wholesale electricity prices.
 
-**Pipeline position**: Downstream of Step 4. Reads Step 3/4 outputs, writes to `data/lmp/`. No changes to Steps 1–4.
+**Pipeline position**: Downstream of Step 4. Reads Step 3/4 outputs, writes to `data/step5-post-processing/lmp/`. No changes to Steps 1–4.
 
 ```
 Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Postprocess)
                                                       ↓
-                                          compute_lmp_prices.py    ← NEW
+                                          step5_PP6_compute_lmp_prices.py    ← NEW
                                                       ↓
-                              data/lmp/{ISO}_lmp.parquet   (per-ISO output)
-                              data/lmp/{ISO}_archetypes.parquet
-                              data/lmp/lmp_summary.json  (dashboard-ready)
+                              data/step5-post-processing/lmp/{ISO}_lmp.parquet   (per-ISO output)
+                              data/step5-post-processing/lmp/{ISO}_archetypes.parquet
+                              data/step5-post-processing/lmp/lmp_summary.json  (dashboard-ready)
 ```
 
 #### Shared Architecture: `dispatch_utils.py`
 
-Extracted from `recompute_co2.py` to create a single source of truth for dispatch reconstruction, fossil retirement, and profile loading. Both `recompute_co2.py` and `compute_lmp_prices.py` import from this module. Step 1 Numba JIT dispatch functions also consolidated here.
+Extracted from `step5_PP4_recompute_co2.py` to create a single source of truth for dispatch reconstruction, fossil retirement, and profile loading. Both `step5_PP4_recompute_co2.py` and `step5_PP6_compute_lmp_prices.py` import from this module. Step 1 Numba JIT dispatch functions also consolidated here.
 
 ```
 dispatch_utils.py (shared)
@@ -605,19 +605,19 @@ dispatch_utils.py (shared)
 ├── compute_fossil_retirement(iso, clean_pct, ...)      ← remaining capacity at threshold
 └── load_common_data()                                  ← demand, gen profiles, emission rates, fossil mix
 
-recompute_co2.py (imports dispatch_utils — refactored, identical behavior)
+step5_PP4_recompute_co2.py (imports dispatch_utils — refactored, identical behavior)
 ├── compute_dispatch_stack_emission_rate()
 ├── compute_co2_hourly()
 └── recompute_all_co2()
 
-compute_lmp_prices.py (imports dispatch_utils)
+step5_PP6_compute_lmp_prices.py (imports dispatch_utils)
 ├── PriceModel classes (ISO-specific)
 ├── build_merit_order_stack()
 ├── compute_lmp_stats()
 └── calibration framework
 ```
 
-**Compatibility requirement**: After refactor, `recompute_co2.py` must produce bit-identical results. Verified via automated test.
+**Compatibility requirement**: After refactor, `step5_PP4_recompute_co2.py` must produce bit-identical results. Verified via automated test.
 
 #### Design Decisions (Locked)
 
@@ -625,7 +625,7 @@ compute_lmp_prices.py (imports dispatch_utils)
 |---|----------|--------|-----------|
 | 1 | Merit-order stack walk | `np.searchsorted` step-function | More accurate than `np.interp` linear interpolation — discrete units don't interpolate. Same performance. |
 | 2 | Archetype dedup key | `(mix_tuple, fuel_level, threshold)` | Threshold affects fossil stack (retirement changes available capacity). ~7,800 unique calcs per ISO. Still fast with Numba (<30s). |
-| 3 | Dispatch functions | Shared module (`dispatch_utils.py`) | Single source of truth. Extracted from `recompute_co2.py` + Step 1 Numba JIT. Compatibility test required. |
+| 3 | Dispatch functions | Shared module (`dispatch_utils.py`) | Single source of truth. Extracted from `step5_PP4_recompute_co2.py` + Step 1 Numba JIT. Compatibility test required. |
 | 4 | Surplus pricing | Calibrated empirical curve from start | Parameterized with calibration targets; "reasonable defaults" before actual LMP data. Phase 2 tunes parameters, no refactoring. |
 | 5 | Calibration LMP source | Day-ahead LMP | Cleaner, better for structural model. RT sensitivity via `rt_sensitivity_factor` parameter baked in. |
 
@@ -640,13 +640,13 @@ compute_lmp_prices.py (imports dispatch_utils)
 - Step 3/4 constants — wholesale prices, fuel adjustments, gas capacity (imported at runtime, NOT hardcoded)
 
 **New inputs (Phase 2 — calibration)**:
-- `data/lmp/actual_lmp_PJM.json` — PJM Data Miner 2 API (Western Hub, 2021-2025)
+- `data/step5-post-processing/lmp/actual_lmp_PJM.json` — PJM Data Miner 2 API (Western Hub, 2021-2025)
 
 **Outputs**:
-- `data/lmp/{ISO}_lmp.parquet` — summary stats per (threshold, scenario), ~2 MB/ISO
-- `data/lmp/{ISO}_archetypes.parquet` — 8760h profiles for unique archetypes, ~15-20 MB/ISO
-- `data/lmp/{ISO}_checkpoint.json` — resume state (transient, deleted on completion)
-- `data/lmp/lmp_summary.json` — dashboard-ready cross-ISO summary, <500 KB
+- `data/step5-post-processing/lmp/{ISO}_lmp.parquet` — summary stats per (threshold, scenario), ~2 MB/ISO
+- `data/step5-post-processing/lmp/{ISO}_archetypes.parquet` — 8760h profiles for unique archetypes, ~15-20 MB/ISO
+- `data/step5-post-processing/lmp/{ISO}_checkpoint.json` — resume state (transient, deleted on completion)
+- `data/step5-post-processing/lmp/lmp_summary.json` — dashboard-ready cross-ISO summary, <500 KB
 - `dashboard/js/lmp-data.js` — client-side visualization data (Phase 4)
 
 #### Hourly Dispatch Reconstruction
@@ -697,7 +697,7 @@ Each ISO gets its own `PriceModel` class with calibratable parameters:
 
 #### Output Schema
 
-**Per-ISO stats: `data/lmp/{ISO}_lmp.parquet`**
+**Per-ISO stats: `data/step5-post-processing/lmp/{ISO}_lmp.parquet`**
 
 | Column | Type | Description |
 |---|---|---|
@@ -716,7 +716,7 @@ Each ISO gets its own `PriceModel` class with calibratable parameters:
 | `net_peak_price` | float32 | Price at max net demand hour |
 | `fossil_revenue_mwh` | float32 | Avg $/MWh earned by remaining fossil |
 
-**Per-ISO archetype profiles: `data/lmp/{ISO}_archetypes.parquet`**
+**Per-ISO archetype profiles: `data/step5-post-processing/lmp/{ISO}_archetypes.parquet`**
 
 | Column | Type |
 |---|---|
@@ -759,23 +759,23 @@ Size: ~15-20 MB/ISO compressed. Total all ISOs: ~75-100 MB.
 
 | Phase | Scope | Files | Size |
 |---|---|---|---|
-| **0** | Extract `dispatch_utils.py` from `recompute_co2.py` + compatibility test | `dispatch_utils.py`, `recompute_co2.py` | ~300 lines extracted |
-| **1a** | Core engine — PJM only, Medium fuel, no calibration | `compute_lmp_prices.py` | ~400 lines |
+| **0** | Extract `dispatch_utils.py` from `step5_PP4_recompute_co2.py` + compatibility test | `dispatch_utils.py`, `step5_PP4_recompute_co2.py` | ~300 lines extracted |
+| **1a** | Core engine — PJM only, Medium fuel, no calibration | `step5_PP6_compute_lmp_prices.py` | ~400 lines |
 | **1b** | Full fuel sensitivity sweep (L/M/H) + all thresholds + checkpointing | Same | +~150 lines |
 | **1c** | All 5 ISOs with market-specific models | Same | +~200 lines |
 | **2a** | PJM LMP data fetch | `fetch_pjm_lmp.py` | ~150 lines |
 | **2b** | Calibration + validation | `calibrate_lmp_model.py` | ~200 lines |
 | **3** | All-ISO calibration data fetch | Per-ISO fetch scripts | ~150 lines |
-| **4** | Dashboard integration | `generate_shared_data.py` + JS | ~150 lines |
+| **4** | Dashboard integration | `step6_generate_shared_data.py` + JS | ~150 lines |
 
 #### New Files
 
 ```
 dispatch_utils.py              # Shared dispatch/retirement/profiles (~300 lines)
-compute_lmp_prices.py          # Main LMP script (~750 lines)
+step5_PP6_compute_lmp_prices.py  # Main LMP script (~750 lines)
 fetch_pjm_lmp.py               # Phase 2: LMP data fetcher (~150 lines)
 calibrate_lmp_model.py         # Phase 2: Parameter calibration (~200 lines)
-data/lmp/                      # Output directory
+data/step5-post-processing/lmp/                      # Output directory
   ├── {ISO}_lmp.parquet        # ~2 MB each
   ├── {ISO}_archetypes.parquet # ~15-20 MB each
   ├── {ISO}_checkpoint.json    # Transient
@@ -1442,7 +1442,7 @@ counterfactual_growth_emissions = growth_mwh × 0.35
 total_co2_abated = existing_grid_displacement + counterfactual_growth_emissions
 ```
 
-**Implementation**: Add growth counterfactual to `recompute_co2.py`. Growth rates from `step3_cost_optimization.py` DEMAND_GROWTH_RATES (CAISO 1.4–2.5%, ERCOT 2.0–5.5%, PJM 1.5–3.6%, NYISO 1.3–4.4%, NEISO 0.9–2.9%). New gas rate is 350 kg/MWh (representative CCGT heat rate ~6,400 BTU/kWh, pipeline gas). This is a post-hoc calculation — doesn't change resource mix or cost optimization.
+**Implementation**: Add growth counterfactual to `step5_PP4_recompute_co2.py`. Growth rates from `step3_cost_optimization.py` DEMAND_GROWTH_RATES (CAISO 1.4–2.5%, ERCOT 2.0–5.5%, PJM 1.5–3.6%, NYISO 1.3–4.4%, NEISO 0.9–2.9%). New gas rate is 350 kg/MWh (representative CCGT heat rate ~6,400 BTU/kWh, pipeline gas). This is a post-hoc calculation — doesn't change resource mix or cost optimization.
 
 ### 7.3 SBTi Timeline-Indexed DAC Learning Curve (Decision: Feb 19, 2026)
 
@@ -1596,7 +1596,7 @@ Narrower bounds at low thresholds where targets are easily met; wider at high th
 
 **Cross-threshold pruning**: Thresholds are processed in ascending order (50% → 100%). After each threshold, the optimizer records which mixes were infeasible even at maximum procurement. These mixes are eliminated from all higher thresholds (if it can't hit 50%, it can't hit 85%). Additionally, each mix's minimum-feasible procurement from the previous threshold becomes the floor for the next threshold (no point starting below the level needed for a lower target). This dramatically narrows the search space for high thresholds.
 
-**Persistent solution cache**: Results are accumulated in `data/step1_raw_pfs_parquets/` as per-ISO/threshold parquet files across runs. Each run merges new solutions with existing results — deduplicating by (mix, procurement, battery, ldes) key but never deleting previously found solutions. This means iterating on parameter bounds, procurement ceilings, or grid resolution adds to the feasible solution space without losing work from prior runs. The cost model in Step 3 always operates on the EF extracted in Step 2.
+**Persistent solution cache**: Results are accumulated in `data/step1-pfs-parquets/` as per-ISO/threshold parquet files across runs. Each run merges new solutions with existing results — deduplicating by (mix, procurement, battery, ldes) key but never deleting previously found solutions. This means iterating on parameter bounds, procurement ceilings, or grid resolution adds to the feasible solution space without losing work from prior runs. The cost model in Step 3 always operates on the EF extracted in Step 2.
 
 ### 11.2 Edge Case Seed Mixes
 
@@ -2329,7 +2329,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 **Results per ISO:**
 - ERCOT: 2,033,961 solutions (Phase 1: 226K coarse → Phase 2: 1.8M fine), 11 min
 - CAISO: ~1.8M solutions (saturation: bat4=1.00%, bat8=2.00%), ~25 min
-- Output: Per-ISO/threshold parquet files (`data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet`)
+- Output: Per-ISO/threshold parquet files (`data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet`)
 
 **Scientific rigor preserved:** Every level from 0 to saturation+margin is swept at 0.05% resolution. No levels are skipped or short-circuited. The coarse phase just identifies WHERE the fine sweep should focus.
 

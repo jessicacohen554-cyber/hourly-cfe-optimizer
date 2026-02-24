@@ -31,8 +31,8 @@ REGIONAL_DEMAND_MWH = {
 
 # Default parquet directories (in priority order)
 DEFAULT_INPUT_DIRS = [
-    os.path.join(SCRIPT_DIR, 'data', 'step4-gas-CCS'),
-    os.path.join(SCRIPT_DIR, 'data', 'step-3-CO-ISO-parquets'),
+    os.path.join(SCRIPT_DIR, 'data', 'step4-gas-ccs-parquets'),
+    os.path.join(SCRIPT_DIR, 'data', 'step3-cost-opt-parquets'),
 ]
 
 
