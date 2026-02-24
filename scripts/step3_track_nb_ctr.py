@@ -157,12 +157,25 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                     }
                     # Resolve resource mix from PFS arrays if available
                     if arrays is not None:
-                        for rtype in ['clean_firm', 'solar', 'wind',
-                                      'ccs_ccgt', 'hydro']:
-                            row[f'mix_{rtype}'] = int(arrays[rtype][mix_idx])
+                        cf = int(arrays['clean_firm'][mix_idx])
+                        sol = int(arrays['solar'][mix_idx])
+                        wnd = int(arrays['wind'][mix_idx])
+                        hyd = int(arrays['hydro'][mix_idx])
+                        ccs = max(0, 100 - (cf + sol + wnd + hyd))
+                        row['mix_clean_firm'] = cf
+                        row['mix_solar'] = sol
+                        row['mix_wind'] = wnd
+                        row['mix_ccs_ccgt'] = ccs
+                        row['mix_hydro'] = hyd
                         row['procurement_pct'] = int(arrays['procurement'][mix_idx])
                         row['hourly_match_score'] = float(
                             arrays['hourly_match_score'][mix_idx])
+                        row['battery_dispatch_pct'] = int(
+                            arrays.get('battery_dispatch_pct', np.zeros(1))[mix_idx])
+                        row['battery8_dispatch_pct'] = int(
+                            arrays.get('battery8_dispatch_pct', np.zeros(1))[mix_idx])
+                        row['ldes_dispatch_pct'] = int(
+                            arrays.get('ldes_dispatch_pct', np.zeros(1))[mix_idx])
                     else:
                         row['best_mix_idx'] = mix_idx
                     rows.append(row)
