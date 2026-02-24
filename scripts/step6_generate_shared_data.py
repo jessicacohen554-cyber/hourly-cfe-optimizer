@@ -46,19 +46,78 @@ def get_scenario(iso_data, threshold, iso):
 # LOAD DATA
 # ============================================================================
 
-STEP5_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'step5-post-processing')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+STEP5_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step5-post-processing')
 MAC_STATS_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
 # Fallback to legacy path if step5 dir doesn't have mac_stats yet
 if not os.path.exists(MAC_STATS_PATH):
-    MAC_STATS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'mac_stats.json')
+    MAC_STATS_PATH = os.path.join(SCRIPT_DIR, '..', 'data', 'mac_stats.json')
+
+RESULTS_JSON = os.path.join(SCRIPT_DIR, '..', 'dashboard', 'overprocure_results.json')
+CO2_BATCH_DIR = os.path.join(STEP5_DIR, 'co2_results')
+
+
+def load_from_co2_batches(batch_dir, isos, thresholds):
+    """Reassemble results dict from batched co2 result files.
+
+    Reads _config.json, per-ISO meta files, and per-ISO/threshold files
+    written by step5_PP4_recompute_co2.py.
+    """
+    import glob as _glob
+
+    config_path = os.path.join(batch_dir, '_config.json')
+    if not os.path.exists(config_path):
+        return None
+
+    with open(config_path) as f:
+        data = json.load(f)
+
+    data.setdefault('results', {})
+
+    for iso in isos:
+        iso_entry = {}
+
+        # Load ISO-level metadata (sweep, annual_demand_mwh, etc.)
+        meta_files = sorted(_glob.glob(os.path.join(batch_dir, f'{iso}_meta_*.json')))
+        for mf in meta_files:
+            with open(mf) as f:
+                iso_entry.update(json.load(f))
+
+        # Load per-threshold files
+        iso_entry.setdefault('thresholds', {})
+        for t in thresholds:
+            pattern = os.path.join(batch_dir, f'{iso}_{t}_*.json')
+            matches = sorted(_glob.glob(pattern))
+            if matches:
+                with open(matches[0]) as f:
+                    iso_entry['thresholds'][t] = json.load(f)
+
+        if iso_entry.get('thresholds') or 'annual_demand_mwh' in iso_entry:
+            data['results'][iso] = iso_entry
+
+    return data
+
 
 print("Loading data...")
-with open('dashboard/overprocure_results.json') as f:
-    data = json.load(f)
+
+# Primary: monolithic JSON.  Fallback: reassemble from batched co2 results.
+if os.path.exists(RESULTS_JSON):
+    with open(RESULTS_JSON) as f:
+        data = json.load(f)
+    print(f"  Results: {os.path.getsize(RESULTS_JSON) / 1024:.0f} KB (monolithic JSON)")
+elif os.path.isdir(CO2_BATCH_DIR):
+    data = load_from_co2_batches(CO2_BATCH_DIR, ISOS, THRESHOLDS)
+    if data is None:
+        raise FileNotFoundError(
+            f"Neither {RESULTS_JSON} nor valid batched data in {CO2_BATCH_DIR} found")
+    n_isos = len(data.get('results', {}))
+    print(f"  Results: reassembled from {CO2_BATCH_DIR}/ ({n_isos} ISOs)")
+else:
+    raise FileNotFoundError(
+        f"No results found. Checked:\n  {RESULTS_JSON}\n  {CO2_BATCH_DIR}/")
+
 with open(MAC_STATS_PATH) as f:
     mac_stats = json.load(f)
-
-print(f"  Results: {os.path.getsize('dashboard/overprocure_results.json') / 1024:.0f} KB")
 print(f"  MAC stats: {os.path.getsize(MAC_STATS_PATH) / 1024:.0f} KB")
 
 # ============================================================================
