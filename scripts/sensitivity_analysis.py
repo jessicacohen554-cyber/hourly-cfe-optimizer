@@ -6,25 +6,43 @@ Answers:
 1. Which sensitivity toggles most influence final outcomes?
 2. What are "no regrets" resources across all sensitivities?
 3. Under low demand growth, what's the floor for new wind?
+
+Reads from: data/step5-post-processing/co2_results/{ISO}_{threshold}_2025.json
 """
 
 import json
+import os
+import sys
 import numpy as np
 from collections import defaultdict
 
-# Load results
-with open("dashboard/overprocure_results.json") as f:
-    DATA = json.load(f)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CO2_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step5-post-processing', 'co2_results')
+
+# Import constants from step3
+sys.path.insert(0, SCRIPT_DIR)
+from step3_cost_optimization import (
+    GRID_MIX_SHARES,
+    REGIONAL_DEMAND_TWH,
+)
 
 REGIONS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
 RESOURCES = ["clean_firm", "solar", "wind", "ccs_ccgt", "hydro"]
-# Key thresholds to analyze
 KEY_THRESHOLDS = ["50", "55", "60", "65", "70", "75", "80", "85", "87.5", "90", "92.5", "95", "97.5", "99", "100"]
 
-# Scenario code: RRR_F_T
-# R[0] = Renewable (L/M/H), R[1] = Nuclear (L/M/H), R[2] = Storage (L/M/H)
-# F = Fossil (L/M/H), T = Transmission (N/L/M/H)
 TOGGLE_NAMES = ["Renewable Gen", "Nuclear", "Storage", "Fossil Fuel", "Transmission"]
+
+
+def load_scenarios(region, threshold):
+    """Load scenarios from co2 batch result JSON."""
+    fname = f"{region}_{threshold}_2025.json"
+    fpath = os.path.join(CO2_DIR, fname)
+    if not os.path.exists(fpath):
+        return {}
+    with open(fpath) as f:
+        data = json.load(f)
+    return data.get('scenarios', {})
+
 
 def parse_scenario_code(code):
     """Parse scenario key -> dict of toggle -> level.
@@ -45,18 +63,10 @@ def parse_scenario_code(code):
         result["45Q"] = ccs_q45[1] if len(ccs_q45) > 1 else '1'
         result["Geothermal"] = parts[4]  # L/M/H or X
     else:
-        # Old 5-dim: default CCS=firm, 45Q=ON, Geo=X
         result["CCS"] = result["Nuclear"]
         result["45Q"] = '1'
         result["Geothermal"] = 'X'
     return result
-
-def get_scenarios(region, threshold):
-    """Get all 324 scenarios for a region/threshold."""
-    try:
-        return DATA["results"][region]["thresholds"][threshold]["scenarios"]
-    except KeyError:
-        return {}
 
 
 # =============================================================================
@@ -72,16 +82,14 @@ for metric_name, metric_key in [("Effective Cost ($/MWh)", "effective_cost"),
     print(f"{'Toggle':<18} {'Region':<8} {'Threshold':<10} {'Low→High Swing':<18} {'% of Range':<12}")
     print("-" * 70)
 
-    # For each region & threshold, compute the range attributable to each toggle
-    toggle_importance = defaultdict(list)  # toggle -> list of (swing, pct_of_range)
+    toggle_importance = defaultdict(list)
 
     for region in REGIONS:
-        for thresh in ["90", "95", "100"]:  # Focus on key thresholds
-            scenarios = get_scenarios(region, thresh)
+        for thresh in ["90", "95", "100"]:
+            scenarios = load_scenarios(region, thresh)
             if not scenarios:
                 continue
 
-            # Get all costs
             all_costs = []
             for code, sc in scenarios.items():
                 c = sc.get("costs", {}).get(metric_key)
@@ -94,7 +102,6 @@ for metric_name, metric_key in [("Effective Cost ($/MWh)", "effective_cost"),
             if total_range == 0:
                 continue
 
-            # For each toggle, compute avg cost at each level
             for toggle in TOGGLE_NAMES:
                 level_costs = defaultdict(list)
                 for code, sc in scenarios.items():
@@ -104,7 +111,6 @@ for metric_name, metric_key in [("Effective Cost ($/MWh)", "effective_cost"),
                     if c is not None:
                         level_costs[level].append(c)
 
-                # Compute mean at each level
                 level_means = {lvl: np.mean(vals) for lvl, vals in level_costs.items()}
                 if len(level_means) < 2:
                     continue
@@ -113,7 +119,6 @@ for metric_name, metric_key in [("Effective Cost ($/MWh)", "effective_cost"),
                 pct = swing / total_range * 100
                 toggle_importance[toggle].append((region, thresh, swing, pct))
 
-    # Summarize: average influence per toggle
     print(f"\n{'Toggle':<18} {'Avg Swing $/MWh':<18} {'Avg % of Range':<16} {'Max Swing':<12}")
     print("-" * 65)
     toggle_avg = {}
@@ -126,7 +131,6 @@ for metric_name, metric_key in [("Effective Cost ($/MWh)", "effective_cost"),
             toggle_avg[toggle] = avg_pct
             print(f"{toggle:<18} ${avg_swing:<17.2f} {avg_pct:<15.1f}% ${max_swing:.2f}")
 
-    # Rank
     ranked = sorted(toggle_avg.items(), key=lambda x: -x[1])
     print(f"\nRanking (most → least influential on {metric_name}):")
     for i, (t, pct) in enumerate(ranked, 1):
@@ -145,7 +149,7 @@ for resource in RESOURCES:
 
     for region in REGIONS:
         for thresh in ["90", "95", "100"]:
-            scenarios = get_scenarios(region, thresh)
+            scenarios = load_scenarios(region, thresh)
             if not scenarios:
                 continue
 
@@ -192,7 +196,7 @@ for resource in RESOURCES:
 # ANALYSIS 3: "NO REGRETS" RESOURCES — minimum across ALL sensitivities
 # =============================================================================
 print("\n" + "=" * 80)
-print("ANALYSIS 3: 'NO REGRETS' RESOURCES — MINIMUM MIX ACROSS ALL 324 SCENARIOS")
+print("ANALYSIS 3: 'NO REGRETS' RESOURCES — MINIMUM MIX ACROSS ALL SCENARIOS")
 print("=" * 80)
 print("(Floor = minimum % of demand for this resource across ALL sensitivity combos)")
 print("(If floor > 0, this resource appears in EVERY optimal mix regardless of assumptions)\n")
@@ -201,27 +205,21 @@ for region in REGIONS:
     print(f"\n{'='*50}")
     print(f"  {region}")
     print(f"{'='*50}")
-    print(f"{'Threshold':<12}", end="")
-    for r in RESOURCES:
-        print(f"{'Min '+r:<14}", end="")
-    print(f"{'Max '+r:<14}" if False else "")
     print(f"{'Threshold':<12} {'clean_firm':<14} {'solar':<14} {'wind':<14} {'ccs_ccgt':<14} {'hydro':<14}  |  {'Median Cost':<14}")
     print("-" * 100)
 
     for thresh in KEY_THRESHOLDS:
-        scenarios = get_scenarios(region, thresh)
+        scenarios = load_scenarios(region, thresh)
         if not scenarios:
             continue
 
         mins = {}
         maxs = {}
-        medians = {}
         costs = []
         for r in RESOURCES:
             vals = [sc["resource_mix"].get(r, 0) for sc in scenarios.values()]
             mins[r] = min(vals) if vals else 0
             maxs[r] = max(vals) if vals else 0
-            medians[r] = np.median(vals) if vals else 0
 
         for sc in scenarios.values():
             c = sc.get("costs", {}).get("effective_cost")
@@ -250,19 +248,17 @@ print("Filtering to scenarios where Fossil Fuel toggle = Low (implies low demand
 print("Shows the MINIMUM wind % across all remaining sensitivities\n")
 
 for region in REGIONS:
-    demand_mwh = DATA["results"][region].get("annual_demand_mwh", 0)
-    demand_twh = demand_mwh / 1e6
+    demand_twh = REGIONAL_DEMAND_TWH.get(region, 0)
 
     print(f"\n--- {region} (Demand: {demand_twh:.1f} TWh) ---")
     print(f"{'Threshold':<12} {'Min Wind %':<12} {'Min Wind TWh':<14} {'Max Wind %':<12} {'Max Wind TWh':<14} {'Median Wind %':<14}")
     print("-" * 80)
 
     for thresh in KEY_THRESHOLDS:
-        scenarios = get_scenarios(region, thresh)
+        scenarios = load_scenarios(region, thresh)
         if not scenarios:
             continue
 
-        # Filter: Fossil = Low (low demand growth, low gas prices)
         low_growth_wind = []
         for code, sc in scenarios.items():
             parsed = parse_scenario_code(code)
@@ -286,15 +282,12 @@ for region in REGIONS:
 print("\n" + "=" * 80)
 print("ANALYSIS 5: WIND — TRULY 'NO REGRETS' NEW BUILD (FLOOR ACROSS ALL SCENARIOS)")
 print("=" * 80)
-print("For each region/threshold: min wind across ALL 324 scenarios = safe new-build floor")
+print("For each region/threshold: min wind across ALL scenarios = safe new-build floor")
 print("'New wind' = wind% minus existing wind share from grid mix\n")
 
-grid_mix = DATA.get("config", {}).get("grid_mix_shares", {})
-
 for region in REGIONS:
-    demand_mwh = DATA["results"][region].get("annual_demand_mwh", 0)
-    demand_twh = demand_mwh / 1e6
-    existing_wind_pct = grid_mix.get(region, {}).get("wind", 0)
+    demand_twh = REGIONAL_DEMAND_TWH.get(region, 0)
+    existing_wind_pct = GRID_MIX_SHARES.get(region, {}).get("wind", 0)
     existing_wind_twh = existing_wind_pct / 100 * demand_twh
 
     print(f"\n--- {region} (Demand: {demand_twh:.1f} TWh, Existing Wind: {existing_wind_pct}% = {existing_wind_twh:.2f} TWh) ---")
@@ -302,7 +295,7 @@ for region in REGIONS:
     print("-" * 76)
 
     for thresh in KEY_THRESHOLDS:
-        scenarios = get_scenarios(region, thresh)
+        scenarios = load_scenarios(region, thresh)
         if not scenarios:
             continue
 
@@ -311,7 +304,6 @@ for region in REGIONS:
         min_new_wind = max(0, min_wind - existing_wind_pct)
         new_wind_twh = min_new_wind / 100 * demand_twh
 
-        # Under low demand growth specifically
         low_growth_wind = []
         for code, sc in scenarios.items():
             parsed = parse_scenario_code(code)
@@ -333,9 +325,8 @@ print("ANALYSIS 6: SOLAR — 'NO REGRETS' NEW BUILD FLOOR")
 print("=" * 80)
 
 for region in REGIONS:
-    demand_mwh = DATA["results"][region].get("annual_demand_mwh", 0)
-    demand_twh = demand_mwh / 1e6
-    existing_solar_pct = grid_mix.get(region, {}).get("solar", 0)
+    demand_twh = REGIONAL_DEMAND_TWH.get(region, 0)
+    existing_solar_pct = GRID_MIX_SHARES.get(region, {}).get("solar", 0)
     existing_solar_twh = existing_solar_pct / 100 * demand_twh
 
     print(f"\n--- {region} (Demand: {demand_twh:.1f} TWh, Existing Solar: {existing_solar_pct}% = {existing_solar_twh:.2f} TWh) ---")
@@ -343,7 +334,7 @@ for region in REGIONS:
     print("-" * 60)
 
     for thresh in KEY_THRESHOLDS:
-        scenarios = get_scenarios(region, thresh)
+        scenarios = load_scenarios(region, thresh)
         if not scenarios:
             continue
 
@@ -368,7 +359,7 @@ for region in REGIONS:
     print("-" * 76)
 
     for thresh in KEY_THRESHOLDS:
-        scenarios = get_scenarios(region, thresh)
+        scenarios = load_scenarios(region, thresh)
         if not scenarios:
             continue
 
