@@ -34,9 +34,9 @@ body { background: #F7F8FC; }
     background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
 }
 
-/* ========== HERO SECTION ========== */
+/* ========== HERO SECTION (dark navy intro) ========== */
 .hero-section {
-    background: linear-gradient(180deg, #F7F8FC 0%, #EEF1F8 100%);
+    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
     position: relative;
     overflow: hidden;
     padding: 56px 24px 48px;
@@ -45,7 +45,7 @@ body { background: #F7F8FC; }
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 25% 15%, rgba(14,165,233,0.07) 0%, transparent 55%),
+    background: radial-gradient(ellipse at 25% 15%, rgba(14,165,233,0.08) 0%, transparent 55%),
                 radial-gradient(ellipse at 75% 85%, rgba(34,197,94,0.06) 0%, transparent 55%);
     pointer-events: none;
 }
@@ -67,22 +67,22 @@ body { background: #F7F8FC; }
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #0EA5E9;
+    color: #38bdf8;
     margin-bottom: 12px;
 }
 .hero-text h1 {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 2.2rem;
     font-weight: 800;
-    color: #1E293B;
+    color: #ffffff;
     margin-bottom: 20px;
     line-height: 1.15;
     letter-spacing: -0.5px;
 }
-.hero-text h1 span.accent { color: #0EA5E9; }
+.hero-text h1 span.accent { color: #38bdf8; }
 .hero-text p {
     font-size: 0.95rem;
-    color: rgba(15,23,42,0.68);
+    color: rgba(255,255,255,0.7);
     line-height: 1.75;
     margin-bottom: 14px;
 }
@@ -93,8 +93,8 @@ body { background: #F7F8FC; }
     flex-wrap: wrap;
 }
 .hero-stat {
-    background: rgba(255,255,255,0.92);
-    border: 1px solid rgba(74,144,217,0.12);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
     padding: 16px 20px;
     min-width: 140px;
@@ -104,16 +104,16 @@ body { background: #F7F8FC; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.6rem;
     font-weight: 800;
-    color: #1E293B;
+    color: #ffffff;
     line-height: 1.1;
 }
-.hero-stat-value.green { color: #16a34a; }
-.hero-stat-value.amber { color: #d97706; }
-.hero-stat-value.red { color: #dc2626; }
-.hero-stat-value.blue { color: #0284c7; }
+.hero-stat-value.green { color: #4ade80; }
+.hero-stat-value.amber { color: #fbbf24; }
+.hero-stat-value.red { color: #f87171; }
+.hero-stat-value.blue { color: #38bdf8; }
 .hero-stat-label {
     font-size: 0.72rem;
-    color: rgba(15,23,42,0.45);
+    color: rgba(255,255,255,0.5);
     margin-top: 4px;
     line-height: 1.3;
 }
