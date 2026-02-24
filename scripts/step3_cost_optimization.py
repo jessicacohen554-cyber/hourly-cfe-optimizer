@@ -49,6 +49,7 @@ import time
 import argparse
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from pathlib import Path
 from itertools import chain, product
@@ -1838,6 +1839,49 @@ def main():
             writer.close()
         return total
 
+    # GitHub rejects files > 100 MB; warn at > 50 MB.  When a parquet
+    # exceeds MAX_PARQUET_MB we split it by the ``threshold`` column into
+    # per-threshold files and remove the monolithic original.
+    MAX_PARQUET_MB = 50
+
+    def _split_if_oversized(path, split_col='threshold'):
+        """Split a parquet file by *split_col* if it exceeds MAX_PARQUET_MB.
+
+        Produces files named  ``<stem>_t<value>.parquet`` next to the
+        original.  Returns the list of written paths (empty if no split
+        was needed).
+        """
+        size_mb = os.path.getsize(path) / 1e6
+        if size_mb <= MAX_PARQUET_MB:
+            return []
+
+        print(f"    {Path(path).name} is {size_mb:.1f} MB (>{MAX_PARQUET_MB} MB) — "
+              f"splitting by {split_col}...")
+        table = pq.read_table(str(path))
+        col = table.column(split_col)
+        unique_vals = sorted(set(col.to_pylist()))
+
+        stem = Path(path).stem          # e.g. step3_dg_CAISO
+        parent = Path(path).parent
+        written = []
+        for val in unique_vals:
+            mask = pc.equal(col, val)
+            subset = table.filter(mask)
+            # Format threshold: 87.5 → "87.5", 90.0 → "90"
+            val_str = f"{val:g}" if isinstance(val, float) else str(val)
+            part_path = parent / f"{stem}_t{val_str}.parquet"
+            pq.write_table(subset, str(part_path), compression='zstd')
+            written.append(part_path)
+            part_mb = os.path.getsize(part_path) / 1e6
+            print(f"      {part_path.name}: {len(subset):,} rows, {part_mb:.1f} MB")
+
+        # Remove the oversized original
+        os.remove(path)
+        print(f"    Removed oversized {Path(path).name}, "
+              f"wrote {len(written)} split files")
+        gc.collect()
+        return written
+
     for iso in run_isos:
         if iso not in output['results']:
             continue
@@ -1878,6 +1922,7 @@ def main():
             n = _rows_to_parquet(_flatten_demand_growth(iso, iso_dg), dg_out)
             print(f"  {dg_out}: {n:,} demand growth rows, "
                   f"{os.path.getsize(dg_out) / 1e6:.1f} MB")
+            _split_if_oversized(dg_out)
             del iso_dg
             gc.collect()
 
@@ -1911,6 +1956,7 @@ def main():
             n = _rows_to_parquet(chain(*tdg_iters), track_dg_out)
             print(f"  {track_dg_out}: {n:,} track DG rows, "
                   f"{os.path.getsize(track_dg_out) / 1e6:.1f} MB")
+            _split_if_oversized(track_dg_out)
             gc.collect()
 
         # --- 5. Feasible mixes (generator → chunked write) ---
