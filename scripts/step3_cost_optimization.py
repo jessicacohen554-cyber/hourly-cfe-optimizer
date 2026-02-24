@@ -1041,7 +1041,7 @@ INPUT_DIR = Path('data/step-2-EF-parquets')
 OUTPUT_DIR = Path('data/step-3-CO-ISO-parquets')
 
 # Thresholds to evaluate
-OUTPUT_THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+OUTPUT_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 
 
 def _table_to_arrays(table):
