@@ -16,8 +16,8 @@ import os
 from datetime import datetime
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = ['50', '60', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
-THRESHOLDS_NUM = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
+THRESHOLDS_NUM = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
 
@@ -83,14 +83,14 @@ for iso in ISOS:
 # ============================================================================
 # EXTRACT MARGINAL_MAC_DATA (6-zone stepwise — medium/low/high)
 # ============================================================================
-# With 13 thresholds [50,60,70,75,80,85,87.5,90,92.5,95,97.5,99,100]:
-#   stepwise_envelope indices: 0=None, 1=50→60, 2=60→70, 3=70→75,
-#     4=75→80, 5=80→85, 6=85→87.5, 7=87.5→90,
-#     8=90→92.5, 9=92.5→95, 10=95→97.5, 11=97.5→99, 12=99→100
+# With 15 thresholds [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,100]:
+#   stepwise_envelope indices: 0=None, 1=50→55, 2=55→60, 3=60→65,
+#     4=65→70, 5=70→75, 6=75→80, 7=80→85, 8=85→87.5, 9=87.5→90,
+#     10=90→92.5, 11=92.5→95, 12=95→97.5, 13=97.5→99, 14=99→100
 # Zones:
-#   Zone 0: 50→75%  (aggregate steps 1-3)
-#   Zone 1: 75→90%  (aggregate steps 4-7)
-#   Zone 2-5: 90→92.5, 92.5→95, 95→97.5, 97.5→99 (steps 8-11)
+#   Zone 0: 50→75%  (aggregate steps 1-5)
+#   Zone 1: 75→90%  (aggregate steps 6-9)
+#   Zone 2-5: 90→92.5, 92.5→95, 95→97.5, 97.5→99 (steps 10-13)
 
 print("\nExtracting MARGINAL_MAC_DATA...")
 marginal_mac_data = {'medium': {}, 'low': {}, 'high': {}}
@@ -106,27 +106,27 @@ def aggregate_zone(sw, start, end):
 for iso in ISOS:
     # Medium: use stepwise_envelope (monotonic)
     sw_env = mac_stats['envelope'][iso]['stepwise_envelope']
-    zone_entry = aggregate_zone(sw_env, 1, 4)   # 50→75% (steps 1-3)
-    zone_backbone = aggregate_zone(sw_env, 4, 8)  # 75→90% (steps 4-7)
+    zone_entry = aggregate_zone(sw_env, 1, 6)   # 50→75% (steps 1-5)
+    zone_backbone = aggregate_zone(sw_env, 6, 10)  # 75→90% (steps 6-9)
     zones = [zone_entry, zone_backbone]
     # Zones 2-5: granular steps 90→92.5, 92.5→95, 95→97.5, 97.5→99
-    for step_idx in range(8, 12):
+    for step_idx in range(10, 14):
         v = sw_env[step_idx] if step_idx < len(sw_env) else None
         zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['medium'][iso] = zones
 
     # Low: use stepwise_fan P10
     sw_lo = mac_stats['stepwise_fan'][iso]['p10']
-    lo_zones = [aggregate_zone(sw_lo, 1, 4), aggregate_zone(sw_lo, 4, 8)]
-    for step_idx in range(8, 12):
+    lo_zones = [aggregate_zone(sw_lo, 1, 6), aggregate_zone(sw_lo, 6, 10)]
+    for step_idx in range(10, 14):
         v = sw_lo[step_idx] if step_idx < len(sw_lo) else None
         lo_zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['low'][iso] = lo_zones
 
     # High: use stepwise_fan P90
     sw_hi = mac_stats['stepwise_fan'][iso]['p90']
-    hi_zones = [aggregate_zone(sw_hi, 1, 4), aggregate_zone(sw_hi, 4, 8)]
-    for step_idx in range(8, 12):
+    hi_zones = [aggregate_zone(sw_hi, 1, 6), aggregate_zone(sw_hi, 6, 10)]
+    for step_idx in range(10, 14):
         v = sw_hi[step_idx] if step_idx < len(sw_hi) else None
         hi_zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['high'][iso] = hi_zones

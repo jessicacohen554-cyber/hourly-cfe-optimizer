@@ -47,7 +47,7 @@ OUTPUT_JS = os.path.join(BASE_DIR, 'dashboard', 'js', 'consequential-queue-data.
 
 # ========== CONSTANTS ==========
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
-THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
 MEDIUM_KEYS = {
@@ -72,7 +72,7 @@ GROWTH_RATES = {
 }
 
 SBTI_YEAR_MAP = {
-    50: 2025, 60: 2027, 70: 2029, 75: 2030, 80: 2032,
+    50: 2025, 55: 2026, 60: 2027, 65: 2028, 70: 2029, 75: 2030, 80: 2032,
     85: 2035, 87.5: 2036, 90: 2040, 92.5: 2042,
     95: 2045, 97.5: 2047, 99: 2049, 100: 2050,
 }
