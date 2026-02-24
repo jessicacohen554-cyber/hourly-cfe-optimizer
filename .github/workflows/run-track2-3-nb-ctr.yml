@@ -55,14 +55,22 @@ jobs:
 
       - name: Switch to target branch
         run: |
+          # Stash any uncommitted changes (e.g. step-2 data fetched above)
+          # so the branch switch doesn't fail on conflicts
+          git stash --include-untracked || true
+
           git fetch origin "$TARGET_BRANCH" || true
           if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
-            # Re-apply step-2 data (may have been overwritten by branch switch)
-            git checkout origin/step2-ef-parquets -- data/step2-ef-parquets/ || true
           else
             git checkout -B "$TARGET_BRANCH"
           fi
+
+          # Drop the stash — we'll re-apply step-2 data fresh below
+          git stash drop || true
+
+          # Re-apply step-2 EF parquets onto the target branch
+          git checkout origin/step2-ef-parquets -- data/step2-ef-parquets/ || true
 
       - name: Merge latest from master
         run: |
