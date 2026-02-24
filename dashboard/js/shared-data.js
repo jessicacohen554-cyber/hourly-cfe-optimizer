@@ -2,7 +2,7 @@
 // SHARED DATA MODULE — Single source of truth for all dashboard pages
 // ============================================================================
 // RULE: No data constants defined in HTML files. Change here, propagates everywhere.
-// Generated: 2026-02-24 23:14 by generate_shared_data.py
+// Generated: 2026-02-24 23:40 by generate_shared_data.py
 // Source: overprocure_results.json (Step 2 tranche-repriced + postprocess + CO2)
 // ============================================================================
 
@@ -2101,34 +2101,7 @@ const GAS_BACKUP_DATA = {
 // The dashboard uses these to reprice feasible mixes when new toggles change.
 // This avoids pre-computing 40k+ sensitivity combos.
 
-// --- Nuclear New-Build LCOE ($/MWh) by Nuclear toggle ---
-// Low = nth-of-a-kind SMR target ($70/MWh)
-const NUCLEAR_NEWBUILD_LCOE = {
-    L: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-    M: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-    H: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
-};
-
-// --- Geothermal LCOE ($/MWh) — CAISO only ---
 const GEOTHERMAL_CAP_TWH = 39.0;
-const GEOTHERMAL_LCOE = {
-    L: { CAISO: 0 },
-    M: { CAISO: 0 },
-    H: { CAISO: 0 }
-};
-
-// --- CCS-CCGT LCOE ($/MWh) by CCS toggle + 45Q switch ---
-const CCS_LCOE_45Q_ON = {
-    L: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-    M: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-    H: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
-};
-
-const CCS_LCOE_45Q_OFF = {
-    L: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-    M: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 },
-    H: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0 }
-};
 
 // --- Nuclear Uprate LCOE ($/MWh) by Nuclear toggle ---
 const UPRATE_LCOE = { L: 15, M: 25, H: 40 };
