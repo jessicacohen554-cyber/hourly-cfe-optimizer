@@ -1019,7 +1019,7 @@ def load_scenarios(iso=None, threshold=None):
             print(f"    WARNING: No parquets found in {input_dir}")
             return []
         import pyarrow
-        table = pyarrow.concat_tables(tables)
+        table = pyarrow.concat_tables(tables, promote_extras="default")
 
     if threshold is not None:
         table = table.filter(pc.equal(table.column('threshold'), float(threshold)))
