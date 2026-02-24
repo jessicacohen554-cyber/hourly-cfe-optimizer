@@ -4038,20 +4038,38 @@ function getRepricingGrowthParams(overrideIso) {
     return { targetYear, growthRate };
 }
 
-// Resolves a threshold entry using client-side repricing when FEASIBLE_MIXES is available,
-// falling back to pre-computed scenario lookup otherwise.
+// Resolves a threshold entry.
+// Primary: pre-computed scenario lookup from Step 3 (exact match for toggle state).
+// Fallback: client-side repricing via FEASIBLE_MIXES (only when no scenario match).
 function resolveEntry(region, thresholdKey) {
     const thresholdData = region.thresholds?.[thresholdKey];
     if (!thresholdData) return null;
 
     const iso = region.label || document.getElementById('regionSelect').value;
 
-    // Client-side repricing path: use FEASIBLE_MIXES to find optimal mix
+    // Primary: pre-computed scenario lookup (Step 3 already optimized every 9-dim combo)
+    if (thresholdData.scenarios) {
+        const key = buildScenarioKey();
+        let scenario = thresholdData.scenarios[key];
+        if (!scenario) scenario = thresholdData.scenarios[buildOldScenarioKey()];
+        if (!scenario) scenario = thresholdData.scenarios[getMediumKey(iso)];
+        if (!scenario) scenario = thresholdData.scenarios['MMM_M_M'];
+        if (!scenario) {
+            const keys = Object.keys(thresholdData.scenarios);
+            if (keys.length > 0) scenario = thresholdData.scenarios[keys[0]];
+        }
+        if (scenario) {
+            const normalized = normalizeEntry(scenario);
+            normalized.compressed_day = getCompressedDayProfile(iso, normalized);
+            return normalized;
+        }
+    }
+
+    // Fallback: client-side repricing (for thresholds/scenarios not in Step 3 output)
     if (typeof FEASIBLE_MIXES !== 'undefined' && FEASIBLE_MIXES[iso]) {
         const { targetYear, growthRate } = getRepricingGrowthParams(iso);
         const optimal = findOptimalMix(iso, thresholdKey, targetYear, growthRate);
         if (optimal) {
-            // Build a normalized entry from repricing result
             const entry = {
                 resource_mix: optimal.resource_mix,
                 procurement_pct: optimal.procurement_pct,
@@ -4075,45 +4093,10 @@ function resolveEntry(region, thresholdKey) {
                     resource_costs: optimal.resource_costs
                 }
             };
-
-            // Carry over gas_backup from repricing
-            if (optimal.gas_backup) {
-                entry.gas_backup = optimal.gas_backup;
-            }
-
-            // Carry over CO2 data from the pre-computed medium scenario if available
-            if (thresholdData.scenarios) {
-                const mk = getMediumKey(iso);
-                const refScenario = thresholdData.scenarios[mk] || thresholdData.scenarios['MMM_M_M'] || thresholdData.scenarios[Object.keys(thresholdData.scenarios)[0]];
-                if (refScenario?.co2_abated) {
-                    entry.co2_abated = refScenario.co2_abated;
-                    entry.co2_abated_tons = refScenario.co2_abated?.total_co2_abated_tons;
-                }
-            }
-
-            // Attach compressed day profile from Step 5 pre-computed data
+            if (optimal.gas_backup) entry.gas_backup = optimal.gas_backup;
             entry.compressed_day = getCompressedDayProfile(iso, entry);
-
             return entry;
         }
-    }
-
-    // Fallback: pre-computed scenario lookup (8-dim key → old 5-dim → medium → first)
-    if (thresholdData.scenarios) {
-        const key = buildScenarioKey();
-        let scenario = thresholdData.scenarios[key];
-        if (!scenario) scenario = thresholdData.scenarios[buildOldScenarioKey()];
-        if (!scenario) scenario = thresholdData.scenarios[getMediumKey(iso)];
-        if (!scenario) scenario = thresholdData.scenarios['MMM_M_M'];
-        if (!scenario) {
-            const keys = Object.keys(thresholdData.scenarios);
-            if (keys.length > 0) scenario = thresholdData.scenarios[keys[0]];
-        }
-        if (!scenario) return null;
-        const normalized = normalizeEntry(scenario);
-        // Attach compressed day profile from Step 5 pre-computed data
-        normalized.compressed_day = getCompressedDayProfile(iso, normalized);
-        return normalized;
     }
 
     // Legacy flat format
