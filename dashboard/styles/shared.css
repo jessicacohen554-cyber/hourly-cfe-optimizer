@@ -99,7 +99,7 @@ h3 {
 
 /* ========== TOP NAVIGATION BAR ========== */
 .top-nav {
-    background: #FFFFFF;
+    background: #1a1a2e;
     padding: 0 var(--pad-page);
     display: flex;
     align-items: center;
@@ -107,9 +107,9 @@ h3 {
     position: sticky;
     top: 0;
     z-index: 999;
-    border-bottom: 1px solid #E5E7EB;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
     min-height: 48px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .top-nav-inner {
     display: flex;
@@ -120,7 +120,7 @@ h3 {
     justify-content: center;
 }
 .top-nav a {
-    color: #4B5563;
+    color: rgba(255,255,255,0.75);
     text-decoration: none;
     font-family: var(--font-heading);
     font-size: 0.85rem;
@@ -132,19 +132,19 @@ h3 {
     white-space: nowrap;
 }
 .top-nav a:hover {
-    color: #111827;
-    background: rgba(0,0,0,0.04);
+    color: #ffffff;
+    background: rgba(255,255,255,0.08);
 }
 .top-nav a.nav-active {
-    color: #0284C7;
-    border-bottom-color: var(--hydro);
-    background: rgba(14,165,233,0.08);
+    color: #38bdf8;
+    border-bottom-color: #38bdf8;
+    background: rgba(56,189,248,0.1);
 }
 .nav-hamburger {
     display: none;
     background: none;
     border: none;
-    color: #374151;
+    color: rgba(255,255,255,0.85);
     font-size: 1.5rem;
     cursor: pointer;
     padding: 10px;
@@ -213,7 +213,7 @@ h3 {
     z-index: 3;
     text-shadow: none;
     line-height: 1.15;
-    color: #1A2744;
+    color: #ffffff;
 }
 .header .subtitle {
     font-family: var(--font-body);
@@ -227,7 +227,7 @@ h3 {
     z-index: 3;
     text-shadow: none;
     line-height: 1.55;
-    color: #374151;
+    color: rgba(255,255,255,0.85);
 }
 
 /* ========== SHARED LAYOUT PRIMITIVES ========== */
