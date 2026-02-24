@@ -4,19 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO to process (CAISO, ERCOT, PJM, NYISO, NEISO — or ALL)'
+        description: 'ISOs to process (comma-separated: CAISO,ERCOT,PJM — or ALL)'
         required: true
         default: 'ALL'
-        type: choice
-        options:
-          - ALL
-          - CAISO
-          - ERCOT
-          - PJM
-          - NYISO
-          - NEISO
-          - MISO
-          - SPP
+        type: string
 
 env:
   BRANCH_PREFIX: step4-gas-ccs
@@ -83,7 +74,15 @@ jobs:
           if [ "$INPUT_ISO" = "ALL" ]; then
             echo "iso_flags=--all" >> "$GITHUB_OUTPUT"
           else
-            echo "iso_flags=--iso $INPUT_ISO" >> "$GITHUB_OUTPUT"
+            # Convert comma-separated ISOs to repeated --iso flags
+            FLAGS=""
+            for ISO in $(echo "$INPUT_ISO" | tr ',' ' '); do
+              ISO_TRIMMED=$(echo "$ISO" | xargs)
+              if [ -n "$ISO_TRIMMED" ]; then
+                FLAGS="$FLAGS --iso $ISO_TRIMMED"
+              fi
+            done
+            echo "iso_flags=$FLAGS" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run Step 4 Gas CCS Post-Processing
