@@ -16,16 +16,9 @@
 /* Page-specific background */
 body { background: #F7F8FC; }
 
-/* ========== FOOTER ========== */
-.page-footer {
-    background: #F0F2F5;
-    color: rgba(15,23,42,0.65);
-    padding: 32px 24px;
-    text-align: center;
-}
+/* ========== FOOTER — uses shared.css dark navy .page-footer ========== */
 .footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
 .footer-links a {
-    color: rgba(15,23,42,0.6);
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -35,8 +28,7 @@ body { background: #F7F8FC; }
     align-items: center;
     padding: 8px 4px;
 }
-.footer-links a:hover { color: #1E293B; }
-.footer-note { font-size: 0.78rem; color: rgba(15,23,42,0.35); }
+.footer-note { font-size: 0.78rem; }
 
 .bottom-banner {
     height: 4px;
@@ -53,9 +45,9 @@ body { background: #F7F8FC; }
     opacity: 0.5;
 }
 
-/* ========== HERO OVERVIEW SECTION ========== */
+/* ========== HERO OVERVIEW SECTION (dark navy intro) ========== */
 .hero-overview {
-    background: linear-gradient(180deg, #F7F8FC 0%, #EEF1F8 100%);
+    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
     position: relative;
     overflow: hidden;
     padding: 48px 24px;
@@ -64,8 +56,8 @@ body { background: #F7F8FC; }
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.04) 0%, transparent 60%),
-                radial-gradient(ellipse at 70% 80%, rgba(245,158,11,0.03) 0%, transparent 60%);
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(245,158,11,0.04) 0%, transparent 60%);
     pointer-events: none;
 }
 .hero-overview-inner {
@@ -92,20 +84,20 @@ body { background: #F7F8FC; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 2rem;
     font-weight: 800;
-    color: #1E293B;
+    color: #ffffff;
     margin-bottom: 16px;
     line-height: 1.2;
     letter-spacing: -0.5px;
 }
 .hero-text-block p {
     font-size: 0.95rem;
-    color: rgba(15,23,42,0.7);
+    color: rgba(255,255,255,0.7);
     line-height: 1.75;
     margin-bottom: 16px;
 }
 .hero-text-block .lead-text {
     font-size: 1rem;
-    color: rgba(15,23,42,0.78);
+    color: rgba(255,255,255,0.8);
     line-height: 1.75;
     margin-bottom: 20px;
 }
@@ -121,9 +113,9 @@ body { background: #F7F8FC; }
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    background: rgba(14,165,233,0.07);
-    border: 1px solid rgba(14,165,233,0.2);
-    color: #0284c7;
+    background: rgba(56,189,248,0.12);
+    border: 1px solid rgba(56,189,248,0.3);
+    color: #38bdf8;
     margin-bottom: 14px;
 }
 
@@ -131,8 +123,8 @@ body { background: #F7F8FC; }
 .hero-callout {
     margin-top: 24px;
     padding: 20px 24px;
-    background: rgba(0,0,0,0.02);
-    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
     text-align: center;
 }
@@ -140,19 +132,20 @@ body { background: #F7F8FC; }
     font-family: 'Barlow Semi Condensed', sans-serif;
     font-size: 2.5rem;
     font-weight: 800;
-    color: #F59E0B;
+    color: #fbbf24;
     display: block;
     line-height: 1.1;
 }
 .hero-callout .counter-label {
     font-size: 0.82rem;
-    color: rgba(15,23,42,0.5);
+    color: rgba(255,255,255,0.5);
     margin-top: 6px;
     display: block;
 }
 
 /* ========== CHART PANELS ========== */
 .chart-panel {
+    background: rgba(255,255,255,0.97);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(74,144,217,0.12);
