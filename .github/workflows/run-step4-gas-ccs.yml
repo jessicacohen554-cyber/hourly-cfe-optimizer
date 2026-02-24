@@ -36,27 +36,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch input data from step-3 branch
+      - name: Verify step-3 CO parquets exist
         run: |
-          git fetch origin step3-cost-opt-parquets || true
-          git checkout origin/step3-cost-opt-parquets -- data/step3-cost-opt-parquets/ || {
-            echo "ERROR: Could not fetch step-3 CO parquets from branch step3-cost-opt-parquets"
-            echo "Run Step 3 workflow first."
+          if [ ! -d data/step3-cost-opt-parquets ] || [ -z "$(ls data/step3-cost-opt-parquets/*.parquet 2>/dev/null)" ]; then
+            echo "ERROR: Step-3 CO parquets not found in data/step3-cost-opt-parquets/"
+            echo "Run Step 3 workflow first and merge results to master."
             exit 1
-          }
-          echo "Step-3 CO parquets restored:"
+          fi
+          echo "Step-3 CO parquets found:"
           ls -lh data/step3-cost-opt-parquets/
 
       - name: Switch to target branch
         run: |
+          git stash --include-untracked || true
+
           git fetch origin "$TARGET_BRANCH" || true
           if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
-            # Re-apply step-3 data (may have been overwritten by branch switch)
-            git checkout origin/step3-cost-opt-parquets -- data/step3-cost-opt-parquets/ || true
           else
             git checkout -B "$TARGET_BRANCH"
           fi
+
+          git stash drop || true
 
       - name: Merge latest from master
         run: |

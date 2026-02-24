@@ -21,41 +21,32 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch step-5 post-processing outputs
+      - name: Verify step-5 and step-4 data exist
         run: |
-          # Step 5 branch has co2-enriched parquets, mac_stats, compressed day, etc.
-          git fetch origin step5-post-processing || true
-          if git rev-parse --verify "origin/step5-post-processing" >/dev/null 2>&1; then
-            git checkout origin/step5-post-processing -- data/step5-post-processing/ 2>/dev/null || true
-            git checkout origin/step5-post-processing -- data/step4-gas-ccs-parquets/ 2>/dev/null || true
-            git checkout origin/step5-post-processing -- dashboard/js/mac-stats-data.js 2>/dev/null || true
-            git checkout origin/step5-post-processing -- dashboard/compressed_day_profiles.json 2>/dev/null || true
-            git checkout origin/step5-post-processing -- dashboard/overprocure_results.json 2>/dev/null || true
-            echo "Step-5 outputs restored"
-          fi
-
-          # Also try step-4 as fallback for gas CCS data
-          git fetch origin step4-gas-ccs-parquets || true
-          if git rev-parse --verify "origin/step4-gas-ccs-parquets" >/dev/null 2>&1; then
-            git checkout origin/step4-gas-ccs-parquets -- data/step4-gas-ccs-parquets/ 2>/dev/null || true
-            echo "Step-4 Gas CCS fallback restored"
-          fi
-
           echo "Available inputs:"
           ls -lh data/step5-post-processing/ 2>/dev/null || echo "  No step5 results dir"
+          ls -lh data/step4-gas-ccs-parquets/ 2>/dev/null || echo "  No step4 parquets"
           ls -lh dashboard/overprocure_results.json 2>/dev/null || echo "  No overprocure_results.json"
+
+          # At minimum we need step4 or step5 parquets
+          if [ ! -d "data/step4-gas-ccs-parquets" ] && [ ! -d "data/step5-post-processing" ]; then
+            echo "ERROR: No step-4 or step-5 data found."
+            echo "Run earlier pipeline steps first and merge results to master."
+            exit 1
+          fi
 
       - name: Switch to target branch
         run: |
+          git stash --include-untracked || true
+
           git fetch origin "$TARGET_BRANCH" || true
           if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
-            # Re-apply data (may have been overwritten by branch switch)
-            git checkout origin/step5-post-processing -- data/step5-post-processing/ 2>/dev/null || true
-            git checkout origin/step5-post-processing -- dashboard/overprocure_results.json 2>/dev/null || true
           else
             git checkout -B "$TARGET_BRANCH"
           fi
+
+          git stash drop || true
 
       - name: Merge latest from master
         run: |

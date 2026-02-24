@@ -42,21 +42,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch input data from step-2 branch
+      - name: Verify step-2 EF parquets exist
         run: |
-          git fetch origin step2-ef-parquets || true
-          git checkout origin/step2-ef-parquets -- data/step2-ef-parquets/ || {
-            echo "ERROR: Could not fetch step-2 EF parquets from branch step2-ef-parquets"
-            echo "Run Step 2 workflow first."
+          if [ ! -d data/step2-ef-parquets ] || [ -z "$(ls data/step2-ef-parquets/*.parquet 2>/dev/null)" ]; then
+            echo "ERROR: Step-2 EF parquets not found in data/step2-ef-parquets/"
+            echo "Run Step 2 workflow first and merge results to master."
             exit 1
-          }
-          echo "Step-2 EF parquets restored:"
+          fi
+          echo "Step-2 EF parquets found:"
           ls -lh data/step2-ef-parquets/
 
       - name: Switch to target branch
         run: |
-          # Stash any uncommitted changes (e.g. step-2 data fetched above)
-          # so the branch switch doesn't fail on conflicts
+          # Stash any uncommitted changes so branch switch doesn't conflict
           git stash --include-untracked || true
 
           git fetch origin "$TARGET_BRANCH" || true
@@ -66,11 +64,7 @@ jobs:
             git checkout -B "$TARGET_BRANCH"
           fi
 
-          # Drop the stash — we'll re-apply step-2 data fresh below
           git stash drop || true
-
-          # Re-apply step-2 EF parquets onto the target branch
-          git checkout origin/step2-ef-parquets -- data/step2-ef-parquets/ || true
 
       - name: Merge latest from master
         run: |

@@ -47,42 +47,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch step-4 data (preferred) or step-3 fallback
+      - name: Verify step-4 or step-3 parquets exist
         run: |
-          # Try step-4 first
-          git fetch origin step4-gas-ccs-parquets || true
-          if git rev-parse --verify "origin/step4-gas-ccs-parquets" >/dev/null 2>&1; then
-            git checkout origin/step4-gas-ccs-parquets -- data/step4-gas-ccs-parquets/ || true
-            echo "Step-4 Gas CCS parquets restored:"
-            ls -lh data/step4-gas-ccs-parquets/ 2>/dev/null || echo "  (empty)"
+          HAS_DATA=false
+          if [ -d "data/step4-gas-ccs-parquets" ] && ls data/step4-gas-ccs-parquets/*.parquet >/dev/null 2>&1; then
+            echo "Step-4 Gas CCS parquets found:"
+            ls -lh data/step4-gas-ccs-parquets/
+            HAS_DATA=true
           fi
-
-          # Also fetch step-3 as fallback
-          git fetch origin step3-cost-opt-parquets || true
-          if git rev-parse --verify "origin/step3-cost-opt-parquets" >/dev/null 2>&1; then
-            git checkout origin/step3-cost-opt-parquets -- data/step3-cost-opt-parquets/ || true
-            echo "Step-3 CO parquets restored:"
-            ls -lh data/step3-cost-opt-parquets/ 2>/dev/null || echo "  (empty)"
+          if [ -d "data/step3-cost-opt-parquets" ] && ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            echo "Step-3 CO parquets found:"
+            ls -lh data/step3-cost-opt-parquets/
+            HAS_DATA=true
           fi
-
-          # Verify at least one source exists
-          if [ ! -d "data/step4-gas-ccs-parquets" ] && [ ! -d "data/step3-cost-opt-parquets" ]; then
-            echo "ERROR: Neither step-4 nor step-3 parquets available."
-            echo "Run Step 3 or Step 4 workflow first."
+          if [ "$HAS_DATA" = "false" ]; then
+            echo "ERROR: Neither step-4 nor step-3 parquets found."
+            echo "Run Step 3 or Step 4 workflow first and merge results to master."
             exit 1
           fi
 
       - name: Switch to target branch
         run: |
+          git stash --include-untracked || true
+
           git fetch origin "$TARGET_BRANCH" || true
           if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
-            # Re-apply parquet data (may have been overwritten by branch switch)
-            git checkout origin/step4-gas-ccs-parquets -- data/step4-gas-ccs-parquets/ 2>/dev/null || true
-            git checkout origin/step3-cost-opt-parquets -- data/step3-cost-opt-parquets/ 2>/dev/null || true
           else
             git checkout -B "$TARGET_BRANCH"
           fi
+
+          git stash drop || true
 
       - name: Merge latest from master
         run: |
