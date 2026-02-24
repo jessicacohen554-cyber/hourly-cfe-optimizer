@@ -898,7 +898,16 @@ const NB_RESOURCE_LABELS = {
     ccs_ccgt: 'CCS-CCGT',
     hydro: 'Hydro'
 };
-const MEDIUM_KEY = 'MMMM_M_N_M1_M';
+// Medium scenario keys: CAISO uses geo suffix (M), non-CAISO uses X
+const MEDIUM_KEYS = ['MMMM_M_M_M1_X', 'MMMM_M_M_M1_M', 'MMMM_M_N_M1_M'];
+function findMediumKey(scenarios) {
+    for (var i = 0; i < MEDIUM_KEYS.length; i++) {
+        if (scenarios[MEDIUM_KEYS[i]]) return MEDIUM_KEYS[i];
+    }
+    // Fallback: return first available key
+    var keys = Object.keys(scenarios);
+    return keys.length > 0 ? keys[0] : null;
+}
 
 // --- State ---
 let trackData = null;
@@ -950,11 +959,13 @@ function getMediumMixData(iso) {
     var mixes = [];
     NB_THRESHOLDS.forEach(function(t) {
         var tKey = String(t);
-        if (!nb[tKey] || !nb[tKey].scenarios || !nb[tKey].scenarios[MEDIUM_KEY]) {
+        if (!nb[tKey] || !nb[tKey].scenarios) {
             mixes.push(null);
             return;
         }
-        var s = nb[tKey].scenarios[MEDIUM_KEY];
+        var medKey = findMediumKey(nb[tKey].scenarios);
+        if (!medKey) { mixes.push(null); return; }
+        var s = nb[tKey].scenarios[medKey];
         mixes.push({
             threshold: t,
             mix: s.resource_mix,
@@ -974,26 +985,37 @@ function getCostFan(iso) {
     var p10 = [], p50 = [], p90 = [], med = [];
     NB_THRESHOLDS.forEach(function(t) {
         var tKey = String(t);
-        if (!nb[tKey] || !nb[tKey].scenarios) {
+        if (!nb[tKey]) {
             p10.push(null); p50.push(null); p90.push(null); med.push(null);
             return;
         }
-        var costs = [];
-        var scenarios = nb[tKey].scenarios;
-        for (var k in scenarios) {
-            if (scenarios.hasOwnProperty(k)) {
-                costs.push(scenarios[k].costs.effective_cost);
+        // Use precomputed sweep percentiles if available
+        if (nb[tKey].sweep) {
+            var sw = nb[tKey].sweep;
+            p10.push(sw.p10 ? sw.p10.effective_cost : null);
+            p50.push(sw.p50 ? sw.p50.effective_cost : null);
+            p90.push(sw.p90 ? sw.p90.effective_cost : null);
+        } else if (nb[tKey].scenarios) {
+            // Fallback: single scenario, use as all percentiles
+            var scenarios = nb[tKey].scenarios;
+            var keys = Object.keys(scenarios);
+            if (keys.length > 0) {
+                var c = scenarios[keys[0]].costs.effective_cost;
+                p10.push(c); p50.push(c); p90.push(c);
+            } else {
+                p10.push(null); p50.push(null); p90.push(null);
             }
+        } else {
+            p10.push(null); p50.push(null); p90.push(null);
         }
-        costs.sort(function(a, b) { return a - b; });
-        var n = costs.length;
-        p10.push(costs[Math.floor(n * 0.1)]);
-        p50.push(costs[Math.floor(n * 0.5)]);
-        p90.push(costs[Math.floor(n * 0.9)]);
-
-        // Medium scenario
-        if (scenarios[MEDIUM_KEY]) {
-            med.push(scenarios[MEDIUM_KEY].costs.effective_cost);
+        // Medium scenario cost
+        if (nb[tKey].scenarios) {
+            var medKey = findMediumKey(nb[tKey].scenarios);
+            if (medKey) {
+                med.push(nb[tKey].scenarios[medKey].costs.effective_cost);
+            } else {
+                med.push(p50[p50.length - 1]);
+            }
         } else {
             med.push(p50[p50.length - 1]);
         }
