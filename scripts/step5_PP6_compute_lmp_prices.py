@@ -26,7 +26,7 @@ Pipeline position:
 Usage:
   python step5_PP6_compute_lmp_prices.py --iso PJM                    # PJM only, all thresholds
   python step5_PP6_compute_lmp_prices.py --iso PJM --test             # PJM test: 2025/50%/95%
-  python step5_PP6_compute_lmp_prices.py                              # All ISOs
+  python step5_PP6_compute_lmp_prices.py                              # PJM only (default)
   python step5_PP6_compute_lmp_prices.py --iso PJM --fuel-level M     # Medium fuel only
 """
 
@@ -1328,7 +1328,8 @@ def main():
     print("  LMP PRICE CALCULATION MODULE")
     print("=" * 70)
 
-    isos_to_run = [args.iso] if args.iso else ISOS
+    # LMP calculations are PJM-only (calibrated against PJM SOM data)
+    isos_to_run = [args.iso] if args.iso else ['PJM']
     fuel_levels = [args.fuel_level] if args.fuel_level else ['Low', 'Medium', 'High']
 
     demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
