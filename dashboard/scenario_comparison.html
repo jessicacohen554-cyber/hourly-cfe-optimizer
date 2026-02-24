@@ -1069,7 +1069,7 @@ renderCostChart('PJM');
 // ===== 6. CLEAN FIRM DEPLOYMENT CHART =====
 let firmChart;
 function renderFirmChart(iso) {
-    document.getElementById('firmChartTitle').textContent = iso + ' \u2014 Clean Firm + CCS Deployment (TWh)';
+    document.getElementById('firmChartTitle').textContent = iso + ' \u2014 New Clean Firm + CCS Deployment (TWh)';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
     const trajB = DATA.trajectories.hourly_matching[iso] || [];
     const labels = trajA.map(yearLabel);
@@ -1123,7 +1123,7 @@ function renderFirmChart(iso) {
                 y: {
                     ticks: { color: 'rgba(0,0,0,0.5)' },
                     grid: { color: 'rgba(0,0,0,0.08)' },
-                    title: { display: true, text: 'Clean Firm + CCS (TWh)', color: 'rgba(0,0,0,0.5)' },
+                    title: { display: true, text: 'New Clean Firm + CCS (TWh)', color: 'rgba(0,0,0,0.5)' },
                 }
             }
         }
