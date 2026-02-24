@@ -5,7 +5,7 @@ Runs step1_pfs_generator.optimize_threshold() for one or more ISO × threshold
 pairs. Designed for GitHub Actions workflows where each ISO/threshold combo is
 dispatched as a job, with support for runtime caps and checkpoint-based resume.
 
-Output: data/step1_raw_pfs_parquets/{ISO}_t{threshold}_raw_pfs.parquet
+Output: data/step1-pfs-parquets/{ISO}_t{threshold}_raw_pfs.parquet
 
 Key features:
   - Multi-threshold: pass a comma-separated list or "all" to run multiple
@@ -16,7 +16,7 @@ Key features:
     the full PFS grid search for the requested threshold(s).
   - Tranching: --max-runtime-minutes caps runtime per threshold. Progress is
     checkpointed in data/checkpoints_v4/ and auto-resumed on re-trigger.
-  - Consistent output: writes directly to the step1_raw_pfs_parquets/ directory
+  - Consistent output: writes directly to the step1-pfs-parquets/ directory
     using the canonical {ISO}_t{threshold}_raw_pfs.parquet naming.
   - GitHub Actions friendly: exit code 0 on clean completion, exit code 0 on
     checkpoint save (partial progress), exit code 1 on error.

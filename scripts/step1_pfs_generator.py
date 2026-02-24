@@ -20,7 +20,7 @@ Key features:
   - Parallel ISO execution (multiprocessing)
   - Vectorized batch mix evaluation
 
-Output: data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet (per ISO/threshold)
+Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per ISO/threshold)
 
 Resource types (4D optimization):
   - Clean Firm: nuclear (seasonal-derated) + CCS-CCGT (flat baseload)
@@ -169,7 +169,7 @@ NUCLEAR_MONTHLY_CF = {
 
 # Checkpoint directory
 CHECKPOINT_DIR = os.path.join(DATA_DIR, 'checkpoints_v4')
-STEP1_RAW_PFS_PARQUET_DIR = os.path.join(DATA_DIR, 'step1_raw_pfs_parquets')
+STEP1_RAW_PFS_PARQUET_DIR = os.path.join(DATA_DIR, 'step1-pfs-parquets')
 
 # Mix-level checkpoint interval: save progress every N outer-loop mixes
 # within a single threshold. Protects against mid-threshold crashes.

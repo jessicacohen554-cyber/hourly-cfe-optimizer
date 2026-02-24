@@ -50,23 +50,23 @@ jobs:
       - name: Fetch step-4 data (preferred) or step-3 fallback
         run: |
           # Try step-4 first
-          git fetch origin step4-gas-CCS-parquets || true
-          if git rev-parse --verify "origin/step4-gas-CCS-parquets" >/dev/null 2>&1; then
-            git checkout origin/step4-gas-CCS-parquets -- data/step4-gas-CCS/ || true
+          git fetch origin step4-gas-ccs-parquets || true
+          if git rev-parse --verify "origin/step4-gas-ccs-parquets" >/dev/null 2>&1; then
+            git checkout origin/step4-gas-ccs-parquets -- data/step4-gas-ccs-parquets/ || true
             echo "Step-4 Gas CCS parquets restored:"
-            ls -lh data/step4-gas-CCS/ 2>/dev/null || echo "  (empty)"
+            ls -lh data/step4-gas-ccs-parquets/ 2>/dev/null || echo "  (empty)"
           fi
 
           # Also fetch step-3 as fallback
-          git fetch origin step3-CO-ISO-parquets || true
-          if git rev-parse --verify "origin/step3-CO-ISO-parquets" >/dev/null 2>&1; then
-            git checkout origin/step3-CO-ISO-parquets -- data/step-3-CO-ISO-parquets/ || true
+          git fetch origin step3-cost-opt-parquets || true
+          if git rev-parse --verify "origin/step3-cost-opt-parquets" >/dev/null 2>&1; then
+            git checkout origin/step3-cost-opt-parquets -- data/step3-cost-opt-parquets/ || true
             echo "Step-3 CO parquets restored:"
-            ls -lh data/step-3-CO-ISO-parquets/ 2>/dev/null || echo "  (empty)"
+            ls -lh data/step3-cost-opt-parquets/ 2>/dev/null || echo "  (empty)"
           fi
 
           # Verify at least one source exists
-          if [ ! -d "data/step4-gas-CCS" ] && [ ! -d "data/step-3-CO-ISO-parquets" ]; then
+          if [ ! -d "data/step4-gas-ccs-parquets" ] && [ ! -d "data/step3-cost-opt-parquets" ]; then
             echo "ERROR: Neither step-4 nor step-3 parquets available."
             echo "Run Step 3 or Step 4 workflow first."
             exit 1
@@ -78,8 +78,8 @@ jobs:
           if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
             # Re-apply parquet data (may have been overwritten by branch switch)
-            git checkout origin/step4-gas-CCS-parquets -- data/step4-gas-CCS/ 2>/dev/null || true
-            git checkout origin/step3-CO-ISO-parquets -- data/step-3-CO-ISO-parquets/ 2>/dev/null || true
+            git checkout origin/step4-gas-ccs-parquets -- data/step4-gas-ccs-parquets/ 2>/dev/null || true
+            git checkout origin/step3-cost-opt-parquets -- data/step3-cost-opt-parquets/ 2>/dev/null || true
           else
             git checkout -B "$TARGET_BRANCH"
           fi
@@ -119,21 +119,21 @@ jobs:
 
       - name: Ensure output directories exist
         run: |
-          mkdir -p data/step4-gas-CCS
-          mkdir -p data/lmp
+          mkdir -p data/step4-gas-ccs-parquets
+          mkdir -p data/step5-post-processing/lmp
           mkdir -p dashboard/js
 
       # ── Step 5a: CO₂ Recomputation (must run first — enriches parquets) ──
       - name: Run CO₂ Recomputation
         if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'co2' }}
         run: |
-          python scripts/recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
+          python scripts/step5_PP4_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
 
       # ── Step 5b: MAC Statistics (depends on CO₂ data) ──
       - name: Run MAC Statistics
         if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'mac' }}
         run: |
-          python scripts/compute_mac_stats.py
+          python scripts/step5_PP5_compute_mac_stats.py
 
       # ── Step 5c: LMP Price Calculation ──
       - name: Run LMP Price Calculation
@@ -141,9 +141,9 @@ jobs:
         run: |
           INPUT_ISO="${{ github.event.inputs.iso }}"
           if [ "$INPUT_ISO" = "ALL" ]; then
-            python scripts/compute_lmp_prices.py
+            python scripts/step5_PP6_compute_lmp_prices.py
           else
-            python scripts/compute_lmp_prices.py --iso "$INPUT_ISO"
+            python scripts/step5_PP6_compute_lmp_prices.py --iso "$INPUT_ISO"
           fi
 
       # ── Step 5d: Compressed Day Profiles ──
@@ -158,9 +158,9 @@ jobs:
           git config user.email "github-actions@github.com"
 
           # Stage all possible outputs
-          git add -f data/step4-gas-CCS/ 2>/dev/null || true
-          git add -f data/lmp/ 2>/dev/null || true
-          git add -f data/step5-post-processing-results/ 2>/dev/null || true
+          git add -f data/step4-gas-ccs-parquets/ 2>/dev/null || true
+          git add -f data/step5-post-processing/lmp/ 2>/dev/null || true
+          git add -f data/step5-post-processing/ 2>/dev/null || true
           git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
           git add -f dashboard/compressed_day_profiles.json 2>/dev/null || true
 
