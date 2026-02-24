@@ -3,7 +3,7 @@
 LMP Price Calculation Module — Synthetic Hourly LMP from Dispatch Reconstruction
 =================================================================================
 Downstream of Step 4. Reads base case (ECF — existing clean floor) results from
-overprocure_scenarios.parquet, reconstructs 8760-hour dispatch for each winning
+step4 per-ISO parquets (step3 fallback), reconstructs 8760-hour dispatch for each winning
 mix, builds fossil merit-order stack, and computes synthetic hourly LMP.
 
 Three analysis tracks:

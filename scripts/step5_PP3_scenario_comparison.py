@@ -1035,10 +1035,11 @@ def main():
                     else:
                         stepwise_mac = 9999
 
-                # Clean firm TWh (nuclear + geothermal + CCS combined)
+                # Clean firm TWh — NEW BUILD ONLY (subtract existing clean firm)
                 cf_twh = d['resource_twh'].get('clean_firm', 0)
                 ccs_twh = d['resource_twh'].get('ccs_ccgt', 0)
-                firm_total_twh = cf_twh + ccs_twh
+                existing_cf_twh = GRID_MIX_SHARES[iso].get('clean_firm', 0) / 100.0 * BASE_DEMAND_TWH[iso]
+                firm_total_twh = max(0, cf_twh - existing_cf_twh) + ccs_twh
 
                 iso_traj.append({
                     'threshold': t,
