@@ -100,7 +100,7 @@ jobs:
 
       - name: Run Track 2-3 NB + CTR
         run: |
-          python scripts/step3_track_nb_ctr.py ${{ steps.run-args.outputs.flags }}
+          python scripts/step3_track_nb_ctr.py --fresh ${{ steps.run-args.outputs.flags }}
 
       - name: Commit and push Track 2-3 outputs
         run: |
