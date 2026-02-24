@@ -43,7 +43,7 @@ from step3_cost_optimization import (
     eval_cost_fast, eval_and_argmin_all, build_winner_scenario,
     build_sensitivity_combos, medium_key, price_mix_batch,
     precompute_all_prices, batch_eval_and_argmin_all,
-    HAS_NUMBA,
+    HAS_NUMBA, effective_gate,
 )
 
 from step3_cost_optimization import (
@@ -289,7 +289,7 @@ def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
     max_prices = np.array([50, 82, 83, 164, 15, 116, 84, 144, 179, 267], dtype=np.float64)
 
     for thr in thresholds:
-        qual_mask = (scores >= thr) & keep
+        qual_mask = (scores >= effective_gate(thr)) & keep
         qual_idx = np.where(qual_mask)[0]
         Q = len(qual_idx)
         if Q < 2:
@@ -332,7 +332,7 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
     # Pre-compute threshold indices
     thr_indices = {}
     for thr in OUTPUT_THRESHOLDS:
-        idx = np.where(scores >= thr)[0]
+        idx = np.where(scores >= effective_gate(thr))[0]
         if len(idx) > 0:
             thr_indices[thr] = idx
 
@@ -364,7 +364,7 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
             # Recompute threshold indices on pruned arrays
             thr_indices = {}
             for thr in OUTPUT_THRESHOLDS:
-                idx = np.where(scores >= thr)[0]
+                idx = np.where(scores >= effective_gate(thr))[0]
                 if len(idx) > 0:
                     thr_indices[thr] = idx
 
@@ -436,7 +436,7 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
 
     arch_thr_mask = {}
     for thr in OUTPUT_THRESHOLDS:
-        qualifying = np.where(arch_scores >= thr)[0]
+        qualifying = np.where(arch_scores >= effective_gate(thr))[0]
         if len(qualifying) > 0:
             arch_thr_mask[thr] = qualifying
 
