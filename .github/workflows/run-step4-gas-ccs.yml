@@ -19,7 +19,7 @@ on:
           - SPP
 
 env:
-  TARGET_BRANCH: step4-gas-CCS-parquets
+  TARGET_BRANCH: step4-gas-ccs-parquets
 
 jobs:
   run-step4:
@@ -38,14 +38,14 @@ jobs:
 
       - name: Fetch input data from step-3 branch
         run: |
-          git fetch origin step3-CO-ISO-parquets || true
-          git checkout origin/step3-CO-ISO-parquets -- data/step-3-CO-ISO-parquets/ || {
-            echo "ERROR: Could not fetch step-3 CO parquets from branch step3-CO-ISO-parquets"
+          git fetch origin step3-cost-opt-parquets || true
+          git checkout origin/step3-cost-opt-parquets -- data/step3-cost-opt-parquets/ || {
+            echo "ERROR: Could not fetch step-3 CO parquets from branch step3-cost-opt-parquets"
             echo "Run Step 3 workflow first."
             exit 1
           }
           echo "Step-3 CO parquets restored:"
-          ls -lh data/step-3-CO-ISO-parquets/
+          ls -lh data/step3-cost-opt-parquets/
 
       - name: Switch to target branch
         run: |
@@ -53,7 +53,7 @@ jobs:
           if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
             # Re-apply step-3 data (may have been overwritten by branch switch)
-            git checkout origin/step3-CO-ISO-parquets -- data/step-3-CO-ISO-parquets/ || true
+            git checkout origin/step3-cost-opt-parquets -- data/step3-cost-opt-parquets/ || true
           else
             git checkout -B "$TARGET_BRANCH"
           fi
@@ -82,7 +82,7 @@ jobs:
           pip install numpy pyarrow
 
       - name: Ensure output directory exists
-        run: mkdir -p data/step4-gas-CCS
+        run: mkdir -p data/step4-gas-ccs-parquets
 
       - name: Build ISO arguments
         id: iso-args
@@ -103,7 +103,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f data/step4-gas-CCS/
+          git add -f data/step4-gas-ccs-parquets/
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
