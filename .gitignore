@@ -25,7 +25,7 @@ desktop.ini
 .env.local
 
 # Checkpoint directories — crash-recovery artifacts only, not used downstream.
-# Final outputs live in data/step1_raw_pfs_parquets/ and data/step-2-EF-parquets/.
+# Final outputs live in data/step1-pfs-parquets/ and data/step2-ef-parquets/.
 data/checkpoints/
 data/checkpoints_v4/
 dashboard/physics_results_v4.json
@@ -42,7 +42,7 @@ data/track_checkpoint.json.tmp
 dashboard/track_results.json.tmp
 
 # Dispatch cache temp files (real .npz is kept, .tmp.npz is not)
-data/dispatch_cache/*.tmp.npz
+data/step5-post-processing/dispatch_cache/*.tmp.npz
 
 # Dashboard parquets — not consumed by any HTML/JS; data lives in shared-data.js
 dashboard/physics_results_v4*.parquet
@@ -52,5 +52,5 @@ dashboard/eac_scarcity_results.json
 scripts/dashboard/
 
 # Step 1 raw parquet exports are ignored locally; CI commits them with git add -f
-data/step1_raw_pfs_parquets/*
-!data/step1_raw_pfs_parquets/.gitkeep
+data/step1-pfs-parquets/*
+!data/step1-pfs-parquets/.gitkeep

@@ -4,12 +4,12 @@ Track 2-3: New-Build (NB) + Cost-to-Replace (CTR) analysis.
 Does NOT rerun baseline — preserves existing overprocure_results.json.
 
 Track 2 (newbuild / NB): hydro=0 mixes, uprates ON
-  Source: per-ISO EF parquets (data/step-2-EF-parquets/step2_ef_{ISO}.parquet)
+  Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}.parquet)
   Filtered to hydro=0 mixes.
   Purpose: What does hourly matching incentivize from scratch?
 
 Track 3 (cost-to-replace / CTR): all mixes (hydro≤existing), uprates OFF
-  Source: per-ISO EF parquets (data/step-2-EF-parquets/step2_ef_{ISO}.parquet)
+  Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}.parquet)
   Purpose: Cost to replace existing clean generation
 
 Checkpoint: Parquet-based. After each (iso, track) completes, results are
@@ -17,9 +17,9 @@ Checkpoint: Parquet-based. After each (iso, track) completes, results are
   are read from the parquet header — no full data load needed.
 
 Usage:
-  python track2-3_nb_ctr.py              # Medium-only (fast, ~30s)
-  python track2-3_nb_ctr.py --full       # All 5,832+ combos (hours)
-  python track2-3_nb_ctr.py --iso PJM    # Single ISO
+  python step3_track_nb_ctr.py              # Medium-only (fast, ~30s)
+  python step3_track_nb_ctr.py --full       # All 5,832+ combos (hours)
+  python step3_track_nb_ctr.py --iso PJM    # Single ISO
 """
 
 import os
@@ -51,7 +51,7 @@ from step3_cost_optimization import (
 )
 
 # Per-ISO EF parquet directory (Step 2 output)
-EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step-2-EF-parquets')
+EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2-ef-parquets')
 
 # Parquet paths — these ARE the checkpoints
 PQ_SCENARIOS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
@@ -192,7 +192,7 @@ def append_to_parquet(new_rows, pq_path):
 def load_iso_ef_parquet(iso):
     """Load numpy arrays for a single ISO from its per-ISO EF parquet.
 
-    Reads from data/step-2-EF-parquets/step2_ef_{ISO}.parquet (Step 2 output).
+    Reads from data/step2-ef-parquets/step2_ef_{ISO}.parquet (Step 2 output).
     Returns None if the file doesn't exist or is empty.
     """
     path = os.path.join(EF_ISO_DIR, f'step2_ef_{iso}.parquet')

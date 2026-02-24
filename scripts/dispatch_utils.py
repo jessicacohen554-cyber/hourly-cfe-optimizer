@@ -2,7 +2,7 @@
 """
 Shared Dispatch Utilities — Single source of truth for hourly dispatch reconstruction.
 ======================================================================================
-Extracted from recompute_co2.py to avoid duplicating dispatch logic between the CO2
+Extracted from step5_PP4_recompute_co2.py to avoid duplicating dispatch logic between the CO2
 model and the LMP pricing module. Both import from here.
 
 Provides:
@@ -165,7 +165,7 @@ def get_demand_profile(iso, demand_data):
 def get_supply_profiles(iso, gen_profiles):
     """Get generation shape profiles — Step 1 version with nuclear seasonal derate.
 
-    This is the authoritative version. recompute_co2.py's simpler version (flat
+    This is the authoritative version. step5_PP4_recompute_co2.py's simpler version (flat
     clean_firm) is preserved for backward compatibility but new code should use this.
     """
     profiles = {}
@@ -260,7 +260,7 @@ def get_supply_profiles(iso, gen_profiles):
 def get_supply_profiles_simple(iso, gen_profiles):
     """Simplified supply profiles (flat clean_firm, no DST correction).
 
-    Backward-compatible with recompute_co2.py's original implementation.
+    Backward-compatible with step5_PP4_recompute_co2.py's original implementation.
     Use get_supply_profiles() for new code.
     """
     profiles = {}
@@ -713,7 +713,7 @@ def compute_fossil_capacity_at_threshold(iso, clean_pct, demand_growth_factor=1.
 # HOURLY DISPATCH CACHE — append-mode, keyed by archetype hash
 # ══════════════════════════════════════════════════════════════════════════════
 
-DISPATCH_CACHE_DIR = os.path.join(DATA_DIR, 'dispatch_cache')
+DISPATCH_CACHE_DIR = os.path.join(DATA_DIR, 'step5-post-processing', 'dispatch_cache')
 
 
 def _archetype_key(iso, resource_pcts, procurement_pct, battery_dispatch_pct,
