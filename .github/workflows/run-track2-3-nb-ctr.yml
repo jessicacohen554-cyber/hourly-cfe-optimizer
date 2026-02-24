@@ -25,7 +25,7 @@ on:
           - full
 
 env:
-  TARGET_BRANCH: tracks-2+3-NB+CTR
+  TARGET_BRANCH: tracks-2-3-NB-CTR
 
 jobs:
   run-track2-3:
@@ -114,7 +114,14 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f dashboard/track_scenarios.parquet dashboard/track_demand_growth.parquet
+          # Add output files if they exist (script may skip ISOs with no EF data)
+          for f in dashboard/track_scenarios.parquet dashboard/track_demand_growth.parquet; do
+            if [ -f "$f" ]; then
+              git add -f "$f"
+            else
+              echo "WARNING: $f not found — script may not have produced output"
+            fi
+          done
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -124,6 +131,7 @@ jobs:
             git commit -m "Track 2-3 NB+CTR: ${ISO_LABEL} (${MODE_LABEL}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           fi
 
+          git pull --rebase origin "$TARGET_BRANCH" || true
           git push origin "$TARGET_BRANCH"
 
       - name: Create or update pull request
