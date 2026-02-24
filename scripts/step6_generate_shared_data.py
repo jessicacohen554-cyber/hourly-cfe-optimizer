@@ -891,58 +891,13 @@ lines.append('// The dashboard uses these to reprice feasible mixes when new tog
 lines.append('// This avoids pre-computing 40k+ sensitivity combos.')
 lines.append('')
 
-# Nuclear new-build LCOE
-lines.append('// --- Nuclear New-Build LCOE ($/MWh) by Nuclear toggle ---')
-lines.append('// Low = nth-of-a-kind SMR target ($70/MWh)')
-nuc_lcoe = tranche_model.get('nuclear_newbuild_lcoe', {})
-lines.append('const NUCLEAR_NEWBUILD_LCOE = {')
-for level in ['L', 'M', 'H']:
-    vals = nuc_lcoe.get(level, {})
-    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
-    comma = ',' if level != 'H' else ''
-    lines.append(f'    {level}: {{ {", ".join(parts)} }}{comma}')
-lines.append('};')
+# Geothermal cap (alias used by some dashboard code)
+lines.append(f'const GEOTHERMAL_CAP_TWH = {_GEO_CAP_TWH};')
 lines.append('')
 
-# Geothermal LCOE (CAISO only)
-lines.append('// --- Geothermal LCOE ($/MWh) — CAISO only ---')
-geo_lcoe = tranche_model.get('geothermal_lcoe', {})
-geo_cap = tranche_model.get('geothermal_cap_twh', 39.0)
-lines.append(f'const GEOTHERMAL_CAP_TWH = {geo_cap};')
-lines.append('const GEOTHERMAL_LCOE = {')
-for level in ['L', 'M', 'H']:
-    val = geo_lcoe.get(level, {}).get('CAISO', 0)
-    comma = ',' if level != 'H' else ''
-    lines.append(f'    {level}: {{ CAISO: {val} }}{comma}')
-lines.append('};')
-lines.append('')
-
-# CCS LCOE with/without 45Q
-lines.append('// --- CCS-CCGT LCOE ($/MWh) by CCS toggle + 45Q switch ---')
-ccs_on = tranche_model.get('ccs_lcoe_45q_on', {})
-lines.append('const CCS_LCOE_45Q_ON = {')
-for level in ['L', 'M', 'H']:
-    vals = ccs_on.get(level, {})
-    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
-    comma = ',' if level != 'H' else ''
-    lines.append(f'    {level}: {{ {", ".join(parts)} }}{comma}')
-lines.append('};')
-lines.append('')
-
-ccs_off = tranche_model.get('ccs_lcoe_45q_off', {})
-lines.append('const CCS_LCOE_45Q_OFF = {')
-for level in ['L', 'M', 'H']:
-    vals = ccs_off.get(level, {})
-    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
-    comma = ',' if level != 'H' else ''
-    lines.append(f'    {level}: {{ {", ".join(parts)} }}{comma}')
-lines.append('};')
-lines.append('')
-
-# Uprate LCOE
+# Uprate LCOE (from Step 3 constants)
 lines.append('// --- Nuclear Uprate LCOE ($/MWh) by Nuclear toggle ---')
-uprate_lcoe = tranche_model.get('uprate_lcoe', {'L': 15, 'M': 25, 'H': 40})
-lines.append(f'const UPRATE_LCOE = {{ L: {uprate_lcoe.get("L", 15)}, M: {uprate_lcoe.get("M", 25)}, H: {uprate_lcoe.get("H", 40)} }};')
+lines.append(f'const UPRATE_LCOE = {{ L: {_UPRATE_LCOE.get("L", 15)}, M: {_UPRATE_LCOE.get("M", 25)}, H: {_UPRATE_LCOE.get("H", 40)} }};')
 lines.append('')
 
 # Wholesale prices (from Step 3 constants — single source of truth)
