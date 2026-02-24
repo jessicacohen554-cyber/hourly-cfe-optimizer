@@ -1008,7 +1008,8 @@ def load_dg_parquets(input_dir, iso):
     Returns list of dicts (one per DG row) with columns:
         iso, threshold, scenario, year, growth_level, growth_factor,
         annual_demand_mwh, mix_*, procurement_pct, hourly_match_score,
-        battery_dispatch_pct, ldes_dispatch_pct, cost_*
+        battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct,
+        tranche_*, ra_*, cost_*
     """
     import glob as glob_mod
     pattern = os.path.join(input_dir, f'step3_dg_{iso}_t*.parquet')
@@ -1108,9 +1109,11 @@ def process_dg_corrections(dg_rows, run_isos):
             resource_mw = (procurement_pct / 100.0) * (pct / 100.0) * avg_demand_mw
             credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
             clean_peak_mw += resource_mw * credit
+        battery8_pct = row.get('battery8_dispatch_pct', 0) or 0
         batt_mw = (battery_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
+        batt8_mw = (battery8_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('battery8', PEAK_CAPACITY_CREDITS['battery'])
         ldes_mw = (ldes_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
-        clean_peak_mw += batt_mw + ldes_mw
+        clean_peak_mw += batt_mw + batt8_mw + ldes_mw
 
         existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
         gaf = GAS_AVAILABILITY_FACTOR[iso]
