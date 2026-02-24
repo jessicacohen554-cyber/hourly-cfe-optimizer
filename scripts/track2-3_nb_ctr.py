@@ -68,30 +68,36 @@ def load_completed_tracks(pq_path):
     """
     if not os.path.exists(pq_path):
         return set()
-    import pandas as pd
-    df = pd.read_parquet(pq_path, columns=['iso', 'track'])
+    table = pq.read_table(pq_path, columns=['iso', 'track'])
+    iso_col = table.column('iso').to_pylist()
+    track_col = table.column('track').to_pylist()
 
     # Clean up stale 'replace' track name from older runs
     VALID_TRACKS = {'newbuild', 'cost_to_replace'}
-    stale_mask = ~df['track'].isin(VALID_TRACKS)
-    n_stale = stale_mask.sum()
-    if n_stale > 0:
-        stale_names = df.loc[stale_mask, 'track'].unique().tolist()
-        print(f"  Cleaning {n_stale:,} stale rows with track names: {stale_names}")
-        # Re-read full file, drop stale rows, rewrite
-        df_full = pd.read_parquet(pq_path)
-        df_full = df_full[df_full['track'].isin(VALID_TRACKS)]
+    stale_indices = [i for i, t in enumerate(track_col) if t not in VALID_TRACKS]
+    if stale_indices:
+        stale_names = list(set(track_col[i] for i in stale_indices))
+        print(f"  Cleaning {len(stale_indices):,} stale rows with track names: {stale_names}")
+        # Re-read full file, filter valid rows, rewrite
+        full_table = pq.read_table(pq_path)
+        full_track = full_table.column('track').to_pylist()
+        keep_mask = pa.array([t in VALID_TRACKS for t in full_track])
+        full_table = full_table.filter(keep_mask)
         tmp = pq_path + '.tmp'
-        df_full.to_parquet(tmp, index=False, compression='zstd')
+        pq.write_table(full_table, tmp, compression='zstd')
         os.replace(tmp, pq_path)
-        print(f"  Rewrote checkpoint: {len(df_full):,} rows (removed {n_stale:,} stale)")
-        df = df_full[['iso', 'track']]
+        print(f"  Rewrote checkpoint: {full_table.num_rows:,} rows (removed {len(stale_indices):,} stale)")
+        iso_col = full_table.column('iso').to_pylist()
+        track_col = full_table.column('track').to_pylist()
 
-    completed = set(zip(df['iso'], df['track']))
+    completed = set(zip(iso_col, track_col))
     print(f"  Parquet checkpoint: {len(completed)} (iso, track) pairs completed")
-    for iso, track in sorted(completed):
-        n = len(df[(df['iso'] == iso) & (df['track'] == track)])
-        print(f"    {iso}/{track}: {n:,} scenarios")
+    # Count per pair
+    pair_counts = {}
+    for iso_val, track_val in zip(iso_col, track_col):
+        pair_counts[(iso_val, track_val)] = pair_counts.get((iso_val, track_val), 0) + 1
+    for (iso_val, track_val), n in sorted(pair_counts.items()):
+        print(f"    {iso_val}/{track_val}: {n:,} scenarios")
     return completed
 
 
@@ -147,30 +153,40 @@ def flatten_dg_rows(iso, track_name, dg_dict):
 
 def append_to_parquet(new_rows, pq_path):
     """Append rows to parquet, replacing any existing data for the same (iso, track) pairs."""
-    import pandas as pd
-
-    df_new = pd.DataFrame(new_rows)
-    if len(df_new) == 0:
+    if not new_rows:
         return 0
 
+    # Build pyarrow table from new rows
+    all_keys = list(dict.fromkeys(k for r in new_rows for k in r))
+    new_table = pa.table({k: pa.array([r.get(k) for r in new_rows]) for k in all_keys})
+
     if os.path.exists(pq_path):
-        df_existing = pd.read_parquet(pq_path)
-        new_keys = set(zip(df_new['iso'], df_new['track']))
-        mask = ~pd.Series(list(zip(df_existing['iso'], df_existing['track']))).apply(
-            lambda x: x in new_keys)
-        df_keep = df_existing[mask.values]
-        df = pd.concat([df_keep, df_new], ignore_index=True)
-        print(f"    Parquet merge: kept {len(df_keep):,} + added {len(df_new):,} = {len(df):,} total")
+        existing_table = pq.read_table(pq_path)
+        # Find (iso, track) pairs in new data to replace
+        new_iso = new_table.column('iso').to_pylist()
+        new_track = new_table.column('track').to_pylist()
+        new_keys = set(zip(new_iso, new_track))
+        # Filter out existing rows that match new keys
+        ex_iso = existing_table.column('iso').to_pylist()
+        ex_track = existing_table.column('track').to_pylist()
+        keep_mask = pa.array([(i, t) not in new_keys for i, t in zip(ex_iso, ex_track)])
+        keep_table = existing_table.filter(keep_mask)
+        # Unify schemas before concat
+        combined_schema = pa.unify_schemas([keep_table.schema, new_table.schema])
+        keep_table = keep_table.cast(combined_schema)
+        new_table = new_table.cast(combined_schema)
+        merged = pa.concat_tables([keep_table, new_table])
+        print(f"    Parquet merge: kept {keep_table.num_rows:,} + added {new_table.num_rows:,} = {merged.num_rows:,} total")
     else:
-        df = df_new
+        merged = new_table
 
     # Atomic write
     tmp = pq_path + '.tmp'
-    df.to_parquet(tmp, index=False, compression='zstd')
+    pq.write_table(merged, tmp, compression='zstd')
     os.replace(tmp, pq_path)
     size_mb = os.path.getsize(pq_path) / (1024 * 1024)
-    print(f"    Saved: {pq_path} ({len(df):,} rows, {size_mb:.1f} MB)")
-    return len(df)
+    print(f"    Saved: {pq_path} ({merged.num_rows:,} rows, {size_mb:.1f} MB)")
+    return merged.num_rows
 
 
 def load_iso_ef_parquet(iso):
