@@ -63,11 +63,30 @@ def load_completed_tracks(pq_path):
 
     Only reads the iso and track columns — O(rows) but tiny memory since
     it's just two string columns from a ~1MB file.
+
+    Also cleans up stale track names (e.g., 'replace' → 'cost_to_replace').
     """
     if not os.path.exists(pq_path):
         return set()
     import pandas as pd
     df = pd.read_parquet(pq_path, columns=['iso', 'track'])
+
+    # Clean up stale 'replace' track name from older runs
+    VALID_TRACKS = {'newbuild', 'cost_to_replace'}
+    stale_mask = ~df['track'].isin(VALID_TRACKS)
+    n_stale = stale_mask.sum()
+    if n_stale > 0:
+        stale_names = df.loc[stale_mask, 'track'].unique().tolist()
+        print(f"  Cleaning {n_stale:,} stale rows with track names: {stale_names}")
+        # Re-read full file, drop stale rows, rewrite
+        df_full = pd.read_parquet(pq_path)
+        df_full = df_full[df_full['track'].isin(VALID_TRACKS)]
+        tmp = pq_path + '.tmp'
+        df_full.to_parquet(tmp, index=False, compression='zstd')
+        os.replace(tmp, pq_path)
+        print(f"  Rewrote checkpoint: {len(df_full):,} rows (removed {n_stale:,} stale)")
+        df = df_full[['iso', 'track']]
+
     completed = set(zip(df['iso'], df['track']))
     print(f"  Parquet checkpoint: {len(completed)} (iso, track) pairs completed")
     for iso, track in sorted(completed):
@@ -499,19 +518,26 @@ def main():
             target_year = max(DEMAND_GROWTH_YEARS) if DEMAND_GROWTH_YEARS else 2050
             years_of_growth = target_year - 2025
             demand_scale_2050 = (1 + high_rate) ** years_of_growth
-            hydro_floor = hydro_existing_share / demand_scale_2050 if demand_scale_2050 > 0 else 0
+            hydro_floor_raw = hydro_existing_share / demand_scale_2050 if demand_scale_2050 > 0 else 0
+            # Physics grid uses integer % steps — snap floor down to match
+            hydro_floor = int(hydro_floor_raw)
             n_before = len(iso_arrays['hydro'])
             h_mask = iso_arrays['hydro'] >= hydro_floor
             n_pass = int(h_mask.sum())
-            if n_pass > 0 and n_pass < n_before:
+            if hydro_floor > 0 and n_pass > 0 and n_pass < n_before:
                 h_idx = np.where(h_mask)[0]
                 ctr_arrays = {k: iso_arrays[k][h_idx] for k in iso_arrays}
-                print(f"    {iso} cost_to_replace: hydro>={hydro_floor:.1f}% (2050 high-demand floor) "
+                print(f"    {iso} cost_to_replace: hydro>={hydro_floor}% (2050 high-demand floor, "
+                      f"raw={hydro_floor_raw:.2f}%) "
                       f"{n_before:,} → {n_pass:,} ({100*(n_before-n_pass)/n_before:.1f}% pruned)")
-            elif n_pass == 0:
-                print(f"    {iso} cost_to_replace: no mixes with hydro>={hydro_floor:.1f}%, skipping")
+            elif hydro_floor > 0 and n_pass == 0:
+                print(f"    {iso} cost_to_replace: no mixes with hydro>={hydro_floor}%, skipping")
                 continue
             else:
+                # hydro_floor == 0 or all mixes qualify — use all mixes
+                if hydro_floor == 0:
+                    print(f"    {iso} cost_to_replace: hydro floor rounds to 0% "
+                          f"(raw={hydro_floor_raw:.2f}%) — using all {n_before:,} mixes")
                 ctr_arrays = iso_arrays
 
             ctr_data, ctr_arch = run_track(
