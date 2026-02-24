@@ -73,7 +73,7 @@
 
 **Track Sweep Status:**
 - CAISO: Complete (NB + replace, 12 thresholds × 209,952 scenarios each)
-- ERCOT: NB partial (10/13 thresholds), replace not started
+- ERCOT: NB partial (10/15 thresholds), replace not started
 - PJM, NYISO, NEISO: Not started
 - Checkpoint: `data/track_checkpoint.json` (partial results)
 - Parquet export: `dashboard/track_scenarios.parquet` (CAISO only)
@@ -233,7 +233,7 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 | 2 | Solution output | **2B — Pareto frontier** | 3-5 points per mix along procurement/storage tradeoff (not single-point optimal). |
 | 3 | Procurement bounds | **3C — Threshold-adaptive** | Narrow bounds at low thresholds (e.g., 100-110% at 50%), wider at high (100-150% at 99-100%). |
 | 4 | min_dispatchable constraint | **4B — Drop it** | No dispatchable floor. Let physics prove/disprove — constraint was potentially biasing results. |
-| 5 | Thresholds | **5D — 13 total** | Current 10 + 50%, 60%, 70%. Full list: 50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100. |
+| 5 | Thresholds | **5E — 15 total** | v4.0 list + 55%, 65% for finer low-range granularity. Full list: 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100. |
 | 6 | CCS-CCGT resource | **6D — Collapse into Clean Firm** | Merge CCS into Clean Firm allocation. Reduces resource space from 5D to 4D. CCS retains its own cost profile and dispatch characteristics within the merged allocation — the optimizer determines sub-allocation internally. |
 | 7 | Storage parameters | **7A — Keep current** | Battery: 4hr Li-ion, 85% RT, daily cycle. LDES: 100hr iron-air, 50% RT, 7-day window. |
 | 8 | Output format | **8C — Both** | JSON (backward compat) + Parquet (analytics). |
@@ -249,7 +249,7 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 | D | Numba JIT (try/fallback) | Compile storage scoring to machine code; fall back to B+C if install fails | 10-50× on storage (if available) |
 | F | Shared memory cache | `multiprocessing.shared_memory` for parallel ISO workers to share data | Enables A |
 
-**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (5,832 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 21,060 cost-coupled optimizations to 65 physics-only sweeps (13 thresholds × 5 ISOs), each finding the Pareto frontier of feasible mixes.
+**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (5,832 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 21,060 cost-coupled optimizations to 75 physics-only sweeps (15 thresholds × 5 ISOs), each finding the Pareto frontier of feasible mixes.
 
 **Projected runtime**: ~1-3 min with Numba (installed successfully). Down from multi-hour current architecture.
 
@@ -270,7 +270,7 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 | Step | Script | Name | What It Does | When to Re-run |
 |------|--------|------|-------------|---------------|
-| **Step 1** | `step1_pfs_generator.py` | **PFS Generator** | Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces 21.4M physics-validated mixes across 5 ISOs × 13 thresholds. | Only if dispatch logic, generation curves, or demand curves change. |
+| **Step 1** | `step1_pfs_generator.py` | **PFS Generator** | Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces physics-validated mixes across 5 ISOs × 15 thresholds. | Only if dispatch logic, generation curves, or demand curves change. |
 | **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** | Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement per allocation, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
 | **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** | Vectorized cross-evaluation of all EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios (25 years × 3 growth rates). | When cost assumptions, tranche caps, LCOE tables, or sensitivity toggles change. |
 | **Step 4** | `step4_postprocess.py` | **Post-Processing** | NEISO gas constraint, CCS vs LDES crossover analysis, CO₂ calculations, MAC calculations. Produces final corrected results for the dashboard. | When Step 3 outputs change, or when CO₂ methodology changes. |
@@ -828,13 +828,13 @@ data/lmp/                      # Output directory
 
 ---
 
-## 3. Thresholds (13 total — v4.0 rebuild: expanded from 10)
+## 3. Thresholds (15 total — v4.1: added 55%, 65% for finer low-range granularity)
 
 ```
-50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
+50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
 ```
 
-- **50%, 60%, 70%** (v4.0 addition): Captures the easy-to-achieve baseline region where most mixes succeed. Provides context for "how cheap is partial decarbonization" and anchors the cost curve left side. These thresholds run fast (most mixes hit target, narrow procurement bounds).
+- **50%, 55%, 60%, 65%, 70%** (v4.0+v4.1): Captures the easy-to-achieve baseline region where most mixes succeed. 55% and 65% added for finer resolution in the low-cost transition zone. Provides context for "how cheap is partial decarbonization" and anchors the cost curve left side. These thresholds run fast (most mixes hit target, narrow procurement bounds).
 - 5% intervals from 75-85 (captures broad trend)
 - 2.5% intervals from 87.5-97.5 (captures steep cost inflection zone)
 - 99% and 100% anchor the extreme end
@@ -927,7 +927,7 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 
 ### 4.2 Scenario Pruning & Adaptive Resampling Pipeline
 
-**Problem**: 5,832 cost scenarios × 13 thresholds × 5 ISOs = 378,780 co-optimizations. Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
+**Problem**: 5,832 cost scenarios × 15 thresholds × 5 ISOs = 437,400 co-optimizations. Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
 
 **Solution**: 5-stage pipeline runs 44 representative scenarios, then fills the remaining ~5,788 via cross-pollination, with adaptive resampling as a safety net.
 
@@ -1563,10 +1563,10 @@ For each resource:
 - **Vectorized storage dispatch (B)**: Battery and LDES scoring use NumPy reshape/vectorized ops instead of Python day-loops. `surplus.reshape(365, 24)` for battery, vectorized rolling windows for LDES.
 - **Batch mix evaluation (C)**: Grid search evaluates all combos in a single matrix multiply: `(N, 4) @ (4, 8760) = (N, 8760)`. Eliminates Python loop over individual mixes.
 - **Numba JIT with fallback (D)**: Storage scoring functions compiled to machine code via Numba. If Numba unavailable, falls back to B+C (vectorized NumPy).
-- **Checkpointing**: Saves after each threshold (13 per ISO); resumes from checkpoint on restart
+- **Checkpointing**: Saves after each threshold (15 per ISO); resumes from checkpoint on restart
 - **Score caching**: Matching scores cached across 5,832 cost scenarios per threshold (physics reuse — cost-independent)
 - **Cross-pollination**: After representative scenarios run per threshold, every unique mix re-evaluated against all scenarios
-- **13 thresholds × 5 regions × 5,832 scenarios** — incremental saves essential for reliability
+- **15 thresholds × 5 regions × 5,832 scenarios** — incremental saves essential for reliability
 
 ### 11.1 Adaptive Procurement Bounds (v4.0 — Decision 3C: Threshold-Adaptive)
 
