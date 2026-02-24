@@ -36,8 +36,8 @@ jobs:
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
           SCRIPTS_LABEL="${{ github.event.inputs.scripts }}"
-          echo "TARGET_BRANCH=auto/${BRANCH_PREFIX}-${SCRIPTS_LABEL}-${TIMESTAMP}" >> "$GITHUB_ENV"
-          echo "Branch: auto/${BRANCH_PREFIX}-${SCRIPTS_LABEL}-${TIMESTAMP}"
+          echo "TARGET_BRANCH=auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPTS_LABEL}" >> "$GITHUB_ENV"
+          echo "Branch: auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPTS_LABEL}"
 
       - name: Create fresh branch from master
         run: |
