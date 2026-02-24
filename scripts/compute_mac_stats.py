@@ -32,7 +32,7 @@ STEP5_DIR = os.path.join(BASE_DIR, 'data', 'step5-post-processing-results')
 JSON_OUTPUT_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 THRESHOLD_STRS = [str(t) for t in THRESHOLDS]
 
 # Toggle factor names for ANOVA (6 paired dimensions — Battery/LDES split from Storage)
