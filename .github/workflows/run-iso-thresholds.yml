@@ -4,9 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO to run (e.g., NYISO, CAISO, PJM, ERCOT, NEISO)'
+        description: 'ISO to run'
         required: true
         default: 'NYISO'
+        type: choice
+        options:
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
       thresholds:
         description: 'Comma-separated thresholds (e.g., "100", "95,92.5,90", "all")'
         required: true
