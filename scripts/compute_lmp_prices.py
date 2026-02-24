@@ -1161,16 +1161,19 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
 
 def save_iso_results(iso, results, archetypes):
     """Save LMP results and archetype profiles for an ISO."""
-    import pandas as pd
+    import pyarrow as pa
+    import pyarrow.parquet as pq
 
     os.makedirs(LMP_DIR, exist_ok=True)
 
     # Stats parquet
     if results:
-        df = pd.DataFrame(results)
+        all_keys = list(dict.fromkeys(k for r in results for k in r))
+        arrays = [pa.array([r.get(k) for r in results]) for k in all_keys]
+        table = pa.table(dict(zip(all_keys, arrays)))
         stats_path = os.path.join(LMP_DIR, f'{iso}_lmp.parquet')
-        df.to_parquet(stats_path, index=False, compression='zstd')
-        print(f"    {iso}_lmp.parquet: {len(df)} rows, "
+        pq.write_table(table, stats_path, compression='zstd')
+        print(f"    {iso}_lmp.parquet: {table.num_rows} rows, "
               f"{os.path.getsize(stats_path) / 1024:.0f} KB")
 
     # Archetype profiles parquet (8760 arrays as list columns)
@@ -1185,10 +1188,12 @@ def save_iso_results(iso, results, archetypes):
                 'hourly_residual_mw': arch['hourly_residual_mw'].tolist(),
                 'hourly_marginal_unit': arch['hourly_marginal_unit'].tolist(),
             })
-        df_arch = pd.DataFrame(arch_rows)
+        all_keys = list(dict.fromkeys(k for r in arch_rows for k in r))
+        arrays = [pa.array([r.get(k) for r in arch_rows]) for k in all_keys]
+        arch_table = pa.table(dict(zip(all_keys, arrays)))
         arch_path = os.path.join(LMP_DIR, f'{iso}_archetypes.parquet')
-        df_arch.to_parquet(arch_path, index=False, compression='zstd')
-        print(f"    {iso}_archetypes.parquet: {len(df_arch)} archetypes, "
+        pq.write_table(arch_table, arch_path, compression='zstd')
+        print(f"    {iso}_archetypes.parquet: {arch_table.num_rows} archetypes, "
               f"{os.path.getsize(arch_path) / (1024*1024):.1f} MB")
 
 
