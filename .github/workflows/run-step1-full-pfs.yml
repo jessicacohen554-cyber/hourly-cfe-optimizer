@@ -2,11 +2,9 @@ name: Run Step 1 Full PFS Generation
 
 on:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to run on and push results to'
-        required: true
-        default: 'work'
+
+env:
+  TARGET_BRANCH: step1-PFS-ISO-parquets
 
 jobs:
   run-step1:
@@ -20,13 +18,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0
 
-      - name: Ensure target branch exists locally
+      - name: Switch to target branch
         run: |
-          BRANCH="${{ github.event.inputs.branch }}"
-          git fetch origin "$BRANCH" || true
-          git checkout -B "$BRANCH" "origin/$BRANCH" || git checkout -B "$BRANCH"
+          git fetch origin "$TARGET_BRANCH" || true
+          if git rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
+            git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          else
+            git checkout -B "$TARGET_BRANCH"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,9 +52,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          BRANCH="${{ github.event.inputs.branch }}"
-
-          git add data/checkpoints_v4/ data/step1_raw_pfs_parquets/
+          git add -f data/checkpoints_v4/ data/step1_raw_pfs_parquets/
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -61,4 +60,5 @@ jobs:
             git commit -m "Step 1 full PFS: all ISOs × all thresholds — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           fi
 
-          git push origin "$BRANCH"
+          git pull --rebase origin "$TARGET_BRANCH" || true
+          git push origin "$TARGET_BRANCH"
