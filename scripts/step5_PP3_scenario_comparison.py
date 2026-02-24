@@ -144,7 +144,11 @@ GROWTH_RATES = {'CAISO': 1.9, 'ERCOT': 3.5, 'PJM': 2.4, 'NYISO': 2.0, 'NEISO': 1
 
 # Zone definitions for consequential queue
 ZONES = [
-    {'label': '50→75%', 'start': 50, 'end': 75},
+    {'label': '50→55%', 'start': 50, 'end': 55},
+    {'label': '55→60%', 'start': 55, 'end': 60},
+    {'label': '60→65%', 'start': 60, 'end': 65},
+    {'label': '65→70%', 'start': 65, 'end': 70},
+    {'label': '70→75%', 'start': 70, 'end': 75},
     {'label': '75→90%', 'start': 75, 'end': 90},
     {'label': '90→95%', 'start': 90, 'end': 95},
     {'label': '95→97.5%', 'start': 95, 'end': 97.5},
