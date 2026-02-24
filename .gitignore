@@ -44,6 +44,16 @@ data/track_checkpoint.json
 data/track_checkpoint.json.tmp
 dashboard/track_results.json.tmp
 
+# Dispatch cache temp files (real .npz is kept, .tmp.npz is not)
+data/dispatch_cache/*.tmp.npz
+
+# Dashboard parquets — not consumed by any HTML/JS; data lives in shared-data.js
+dashboard/physics_results_v4*.parquet
+dashboard/eac_scarcity_results.json
+
+# Stale copy location — scripts should write to dashboard/ or data/, not here
+scripts/dashboard/
+
 # Step 1 raw parquet exports are ignored locally; CI commits them with git add -f
 data/step1_raw_pfs_parquets/*
 !data/step1_raw_pfs_parquets/.gitkeep
