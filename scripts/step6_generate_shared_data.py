@@ -1231,42 +1231,62 @@ else:
     print("  No DG MAC data in mac_stats.json — skipping")
 
 print("Extracting FEASIBLE_MIXES...")
+# Strategy: extract unique optimal mixes from the co2 batch scenario results.
+# Each threshold/ISO has 5,832+ cost scenarios (17,496 for CAISO), each selecting
+# its own optimal mix from the EF.  We collect the distinct mixes that were optimal
+# under at least one cost scenario — these are the only candidates the dashboard's
+# client-side repricing needs to evaluate.
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
 lines.append('// Each mix: [clean_firm%, solar%, wind%, ccs_ccgt%, hydro%, procurement%, match%, battery%, battery8%, ldes%]')
 lines.append('const FEASIBLE_MIXES = {')
+total_fm = 0
 for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    {iso}: {{')
     for t_idx, t in enumerate(THRESHOLDS):
-        t_data = data['results'][iso]['thresholds'].get(t, {})
-        fmixes = t_data.get('feasible_mixes', {})
-
-        # Support both columnar format (new: {col: [vals...]}) and row format (old: [{col: val}...])
         mix_rows = []
-        if isinstance(fmixes, dict) and 'clean_firm' in fmixes:
-            # Columnar format
-            n_mixes = len(fmixes['clean_firm'])
-            for i in range(n_mixes):
-                mix_rows.append([
-                    fmixes['clean_firm'][i], fmixes['solar'][i], fmixes['wind'][i],
-                    fmixes['ccs_ccgt'][i], fmixes['hydro'][i],
-                    fmixes['procurement_pct'][i],
-                    round(fmixes['hourly_match_score'][i], 1),
-                    fmixes.get('battery_dispatch_pct', [0] * n_mixes)[i],
-                    fmixes.get('battery8_dispatch_pct', [0] * n_mixes)[i],
-                    fmixes.get('ldes_dispatch_pct', [0] * n_mixes)[i],
-                ])
-        elif isinstance(fmixes, list):
-            # Legacy row format
-            for m in fmixes:
-                rm = m.get('resource_mix', {})
-                mix_rows.append([
-                    rm.get('clean_firm', 0), rm.get('solar', 0), rm.get('wind', 0),
-                    rm.get('ccs_ccgt', 0), rm.get('hydro', 0),
-                    m.get('procurement_pct', 100), round(m.get('hourly_match_score', 0), 1),
-                    m.get('battery_dispatch_pct', 0), m.get('battery8_dispatch_pct', 0),
-                    m.get('ldes_dispatch_pct', 0),
-                ])
 
+        # Primary: extract unique mixes from scenario results (co2 batch or monolithic)
+        scenarios = data['results'].get(iso, {}).get('thresholds', {}).get(t, {}).get('scenarios', {})
+        if scenarios:
+            seen = set()
+            for sc_key, sc in scenarios.items():
+                rm = sc.get('resource_mix', {})
+                tup = (rm.get('clean_firm', 0), rm.get('solar', 0), rm.get('wind', 0),
+                       rm.get('ccs_ccgt', 0), rm.get('hydro', 0),
+                       sc.get('procurement_pct', 0), round(sc.get('hourly_match_score', 0), 1),
+                       sc.get('battery_dispatch_pct', 0), sc.get('battery8_dispatch_pct', 0),
+                       sc.get('ldes_dispatch_pct', 0))
+                if tup not in seen:
+                    seen.add(tup)
+                    mix_rows.append(list(tup))
+        else:
+            # Fallback: check for explicit feasible_mixes key (legacy format)
+            t_data = data['results'].get(iso, {}).get('thresholds', {}).get(t, {})
+            fmixes = t_data.get('feasible_mixes', {})
+            if isinstance(fmixes, dict) and 'clean_firm' in fmixes:
+                n_mixes = len(fmixes['clean_firm'])
+                for i in range(n_mixes):
+                    mix_rows.append([
+                        fmixes['clean_firm'][i], fmixes['solar'][i], fmixes['wind'][i],
+                        fmixes['ccs_ccgt'][i], fmixes['hydro'][i],
+                        fmixes['procurement_pct'][i],
+                        round(fmixes['hourly_match_score'][i], 1),
+                        fmixes.get('battery_dispatch_pct', [0] * n_mixes)[i],
+                        fmixes.get('battery8_dispatch_pct', [0] * n_mixes)[i],
+                        fmixes.get('ldes_dispatch_pct', [0] * n_mixes)[i],
+                    ])
+            elif isinstance(fmixes, list):
+                for m in fmixes:
+                    rm_legacy = m.get('resource_mix', {})
+                    mix_rows.append([
+                        rm_legacy.get('clean_firm', 0), rm_legacy.get('solar', 0), rm_legacy.get('wind', 0),
+                        rm_legacy.get('ccs_ccgt', 0), rm_legacy.get('hydro', 0),
+                        m.get('procurement_pct', 100), round(m.get('hourly_match_score', 0), 1),
+                        m.get('battery_dispatch_pct', 0), m.get('battery8_dispatch_pct', 0),
+                        m.get('ldes_dispatch_pct', 0),
+                    ])
+
+        total_fm += len(mix_rows)
         lines.append(f'        "{t}": [')
         for m_idx, arr in enumerate(mix_rows):
             comma = ',' if m_idx < len(mix_rows) - 1 else ''
@@ -1278,7 +1298,7 @@ for iso_idx, iso in enumerate(ISOS):
 lines.append('};')
 lines.append('')
 
-print(f"  Feasible mixes extracted for {len(ISOS)} ISOs × {len(THRESHOLDS)} thresholds")
+print(f"  Feasible mixes: {total_fm} total across {len(ISOS)} ISOs × {len(THRESHOLDS)} thresholds")
 
 # ============================================================================
 # WRITE OUTPUT
