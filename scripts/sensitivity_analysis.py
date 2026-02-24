@@ -19,7 +19,7 @@ with open("dashboard/overprocure_results.json") as f:
 REGIONS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
 RESOURCES = ["clean_firm", "solar", "wind", "ccs_ccgt", "hydro"]
 # Key thresholds to analyze
-KEY_THRESHOLDS = ["75", "80", "85", "90", "95", "97.5", "99", "100"]
+KEY_THRESHOLDS = ["50", "55", "60", "65", "70", "75", "80", "85", "87.5", "90", "92.5", "95", "97.5", "99", "100"]
 
 # Scenario code: RRR_F_T
 # R[0] = Renewable (L/M/H), R[1] = Nuclear (L/M/H), R[2] = Storage (L/M/H)
