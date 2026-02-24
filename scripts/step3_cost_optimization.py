@@ -1994,8 +1994,12 @@ def main():
 
                 def _dg_threshold_gen(iso_, t_str_, thr_sc_, arrs_, combos_):
                     """Yield DG rows with full resource mix + tranche breakdown."""
-                    # Build scenario key → combo index for nuclear/CCS split lookup
-                    combo_lookup = {c[0]: i for i, c in enumerate(combos_)}
+                    # Pre-compute nuclear-vs-CCS decision per scenario (only depends on
+                    # iso + sensitivity toggles, not mix or year/growth).
+                    t3_cache = {}
+                    for ci, (skey, sens) in enumerate(combos_):
+                        _, _, nuc_price, ccs_price = get_scenario_prices(iso_, sens)
+                        t3_cache[skey] = nuc_price <= ccs_price
 
                     for sc_key, year_data in thr_sc_.items():
                         for year_str, growth_data in year_data.items():
@@ -2041,19 +2045,9 @@ def main():
                                     row['tranche_geo_twh'] = round(tranche['geo_twh'], 3)
                                     row['tranche_new_cf_twh'] = round(tranche['new_cf_twh'], 3)
 
-                                    # Tranche 3 split: nuclear vs CCS (scenario-dependent)
+                                    # Tranche 3 split: nuclear vs CCS (cached per scenario)
                                     remaining_twh = tranche['remaining_twh']
-                                    ci = combo_lookup.get(sc_key)
-                                    if ci is not None:
-                                        # nuclear_price and ccs_tranche_price from precompute
-                                        _, _, nuc_p, ccs_p = precompute_all_prices(
-                                            iso_, [combos_[ci]], return_detail=False) if False else (None, None, 0, 0)
-                                        # Use get_scenario_prices for the specific combo
-                                        _, _, nuc_price, ccs_price = get_scenario_prices(
-                                            iso_, combos_[ci][1])
-                                        t3_is_nuclear = nuc_price <= ccs_price
-                                    else:
-                                        t3_is_nuclear = False
+                                    t3_is_nuclear = t3_cache.get(sc_key, False)
                                     row['tranche_nuclear_newbuild_twh'] = round(
                                         remaining_twh if t3_is_nuclear else 0.0, 3)
                                     row['tranche_ccs_tranche_twh'] = round(
@@ -2085,7 +2079,12 @@ def main():
         def _flatten_track_dg_threshold(iso_, track_name_, t_str_, thr_sc_,
                                         tarrs_, combos_):
             """Yield track DG rows with full resource mix + tranche breakdown."""
-            combo_lookup = {c[0]: i for i, c in enumerate(combos_)}
+            # Pre-compute nuclear-vs-CCS decision per scenario
+            t3_cache = {}
+            for _ci, (skey, sens) in enumerate(combos_):
+                _, _, nuc_price, ccs_price = get_scenario_prices(iso_, sens)
+                t3_cache[skey] = nuc_price <= ccs_price
+
             for sc_key, year_data in thr_sc_.items():
                 for year_str, growth_data in year_data.items():
                     for g_level, vals in growth_data.items():
@@ -2127,13 +2126,7 @@ def main():
                             row['tranche_geo_twh'] = round(tranche['geo_twh'], 3)
                             row['tranche_new_cf_twh'] = round(tranche['new_cf_twh'], 3)
                             remaining_twh = tranche['remaining_twh']
-                            ci = combo_lookup.get(sc_key)
-                            if ci is not None:
-                                _, _, nuc_price, ccs_price = get_scenario_prices(
-                                    iso_, combos_[ci][1])
-                                t3_is_nuclear = nuc_price <= ccs_price
-                            else:
-                                t3_is_nuclear = False
+                            t3_is_nuclear = t3_cache.get(sc_key, False)
                             row['tranche_nuclear_newbuild_twh'] = round(
                                 remaining_twh if t3_is_nuclear else 0.0, 3)
                             row['tranche_ccs_tranche_twh'] = round(
