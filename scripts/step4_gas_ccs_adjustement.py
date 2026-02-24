@@ -15,9 +15,9 @@ Corrections:
   2. CCS vs LDES crossover analysis
   3. Gas capacity backup & resource adequacy
 
-Input:  data/step-3-CO-ISO-parquets/step3_co_<ISO>.parquet (per-ISO, from Step 3)
-Output: data/step4-gas-CCS/step4_<ISO>.parquet (per-ISO, corrected)
-        data/step4-gas-CCS/step4_analysis.json (crossover/RA analysis)
+Input:  data/step3-cost-opt-parquets/step3_co_<ISO>.parquet (per-ISO, from Step 3)
+Output: data/step4-gas-ccs-parquets/step4_<ISO>.parquet (per-ISO, corrected)
+        data/step4-gas-ccs-parquets/step4_analysis.json (crossover/RA analysis)
 
 Usage:
   python scripts/step4_gas_ccs_adjustement.py                 # Process all ISOs
@@ -46,9 +46,9 @@ import pyarrow.parquet as pq
 # ══════════════════════════════════════════════════════════════════════════════
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_INPUT_DIR = os.path.join(SCRIPT_DIR, 'data', 'step-3-CO-ISO-parquets')
-DEFAULT_OUTPUT_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-CCS')
-ANALYSIS_PATH = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-CCS', 'step4_analysis.json')
+DEFAULT_INPUT_DIR = os.path.join(SCRIPT_DIR, 'data', 'step3-cost-opt-parquets')
+DEFAULT_OUTPUT_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-ccs-parquets')
+ANALYSIS_PATH = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-ccs-parquets', 'step4_analysis.json')
 
 ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]

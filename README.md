@@ -41,9 +41,9 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 | Script | What It Does |
 |--------|-------------|
-| `scripts/recompute_co2.py` | Dispatch-stack emission model. Merit-order fuel retirement (coal→oil→gas). Coal/oil capped at 2025 absolute TWh. |
-| `scripts/compute_mac_stats.py` | MAC statistics: P10/P50/P90 fan, stepwise marginal, ANOVA decomposition, crossover analysis. |
-| `scripts/generate_shared_data.py` | Generates `dashboard/js/shared-data.js` with all dashboard data constants. |
+| `scripts/step5_PP4_recompute_co2.py` | Dispatch-stack emission model. Merit-order fuel retirement (coal→oil→gas). Coal/oil capped at 2025 absolute TWh. |
+| `scripts/step5_PP5_compute_mac_stats.py` | MAC statistics: P10/P50/P90 fan, stepwise marginal, ANOVA decomposition, crossover analysis. |
+| `scripts/step6_generate_shared_data.py` | Generates `dashboard/js/shared-data.js` with all dashboard data constants. |
 
 ### Running the Pipeline
 
@@ -63,10 +63,12 @@ python scripts/step3_cost_optimization.py
 # Step 4: Post-processing (~seconds)
 python scripts/step4_gas_ccs_adjustement.py
 
-# Post-processing: CO₂, MAC stats, dashboard data
-python scripts/recompute_co2.py
-python scripts/compute_mac_stats.py
-python scripts/generate_shared_data.py
+# Step 5: Post-processing — CO₂, MAC stats
+python scripts/step5_PP4_recompute_co2.py
+python scripts/step5_PP5_compute_mac_stats.py
+
+# Step 6: Generate dashboard data
+python scripts/step6_generate_shared_data.py
 ```
 
 ### Workflow Output Branches (GitHub Actions)
@@ -74,16 +76,16 @@ python scripts/generate_shared_data.py
 The workflows now write outputs directly to branches (instead of only uploading zip artifacts), so results are versioned in Git and can be merged into `master`:
 
 - `run-step1-5-convert-checkpoints.yml` → `step1-5-raw-pfs-parquets`
-  - Writes: `data/step1_raw_pfs_parquets/`
+  - Writes: `data/step1-pfs-parquets/`
 - `run-step1-full-pfs.yml` → `step1-full-pfs-results`
-  - Writes: `data/step1_raw_pfs_parquets/`, `data/checkpoints_v4/`, `scripts/dashboard/`
+  - Writes: `data/step1-pfs-parquets/`, `data/checkpoints_v4/`, `scripts/dashboard/`
 - `run-step2-efficient-frontier.yml` → `step2-ef-parquets-results`
-  - Reads from: `data/step1_raw_pfs_parquets/`
-  - Writes: `data/step-2-EF-parquets/step2_ef_<ISO>.parquet` (per ISO), `data/pfs_post_ef.parquet` (merged compatibility copy)
+  - Reads from: `data/step1-pfs-parquets/`
+  - Writes: `data/step2-ef-parquets/step2_ef_<ISO>.parquet` (per ISO), `data/pfs_post_ef.parquet` (merged compatibility copy)
 - `run-iso-thresholds.yml` → `iso-threshold-<ISO>-<THRESHOLD>`
   - Example: `iso-threshold-NYISO-95`
   - Includes a tranche selector (`all`, or tranche `1..10`) and `max_mixes_per_tranche` control for checkpoint-sized runs.
-  - Writes: `data/checkpoints/`, `data/checkpoints_v4/`, `data/step1_raw_pfs_parquets/`, `scripts/dashboard/`
+  - Writes: `data/checkpoints/`, `data/checkpoints_v4/`, `data/step1-pfs-parquets/`, `scripts/dashboard/`
 - `run-step1-nyiso100-tranches.yml` → `iso-threshold-NYISO-100`
   - Dedicated NYISO 100 workflow with tranche selector (`all`, `1..6`).
   - Direction: run tranches 1→6 sequentially for full NYISO 100 completion.
@@ -107,7 +109,7 @@ hourly-cfe-optimizer/
 ├── scripts/step3_cost_optimization.py    # Step 3: Cost optimization
 ├── scripts/step4_gas_ccs_adjustement.py          # Step 4: Post-processing
 ├── data/
-│   ├── step1_raw_pfs_parquets/   # PFS per-ISO/threshold (Step 1 output)
+│   ├── step1-pfs-parquets/       # PFS per-ISO/threshold (Step 1 output)
 │   ├── pfs_post_ef.parquet       # PFS post-EF (1.8M rows, Step 2 output)
 │   ├── EIA 930 Data/
 │   │   ├── eia_demand_profiles.json

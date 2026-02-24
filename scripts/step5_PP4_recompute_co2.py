@@ -60,7 +60,7 @@ DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 DATA_YEAR = '2025'
 RESULTS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CACHE_PATH = os.path.join(DATA_DIR, 'optimizer_cache.json')
-STEP5_DIR = os.path.join(DATA_DIR, 'step5-post-processing-results')
+STEP5_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
 
 
 def load_data():
