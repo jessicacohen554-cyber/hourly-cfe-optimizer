@@ -120,11 +120,13 @@ with open(MAC_STATS_PATH) as f:
     mac_stats = json.load(f)
 print(f"  MAC stats: {os.path.getsize(MAC_STATS_PATH) / 1024:.0f} KB")
 
-# Filter ISOS to only those present in results
-available_isos = [iso for iso in ISOS if iso in data.get('results', {})]
+# Filter ISOS to only those present in BOTH results and mac_stats
+results_isos = set(data.get('results', {}).keys())
+mac_isos = set(mac_stats.get('envelope', {}).keys())
+available_isos = [iso for iso in ISOS if iso in results_isos and iso in mac_isos]
 if set(available_isos) != set(ISOS):
     missing = set(ISOS) - set(available_isos)
-    print(f"  WARNING: Missing ISOs in results: {missing}")
+    print(f"  WARNING: Skipping ISOs not in both results & mac_stats: {missing}")
     ISOS = available_isos
 print(f"  Processing ISOs: {ISOS}")
 
@@ -294,7 +296,10 @@ for iso in ISOS:
 # ============================================================================
 
 print("\nExtracting COMPRESSED_DAY_DATA...")
-cd_profiles_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard', 'compressed_day_profiles.json')
+cd_profiles_path = os.path.join(SCRIPT_DIR, '..', 'dashboard', 'compressed_day_profiles.json')
+# Fallback to step5-post-processing dir
+if not os.path.exists(cd_profiles_path):
+    cd_profiles_path = os.path.join(STEP5_DIR, 'compressed_day_profiles.json')
 cd_profiles = {}
 if os.path.exists(cd_profiles_path):
     with open(cd_profiles_path) as f:
@@ -1156,12 +1161,12 @@ NEW_GAS_EMISSION_RATE = 0.35  # tCO₂/MWh (new CCGT counterfactual)
 growth_counterfactual = {}
 for iso in ISOS:
     iso_cf = {}
-    base_twh = REGIONAL_DEMAND_TWH_PY[iso]
+    base_twh = REGIONAL_DEMAND_TWH_PY.get(iso, 0)
     for t in THRESHOLDS_NUM:
         year = THRESHOLD_TARGET_YEARS.get(t, 2050)
         level_data = {}
         for level in ['Low', 'Medium', 'High']:
-            rate = DEMAND_GROWTH_RATES_PY[iso][level]
+            rate = DEMAND_GROWTH_RATES_PY.get(iso, {}).get(level, 0.02)
             years_from_base = year - 2025
             if years_from_base <= 0:
                 growth_twh = 0
@@ -1280,7 +1285,8 @@ print(f"  Feasible mixes extracted for {len(ISOS)} ISOs × {len(THRESHOLDS)} thr
 # ============================================================================
 
 js_content = '\n'.join(lines) + '\n'
-output_path = 'dashboard/js/shared-data.js'
+output_path = os.path.join(SCRIPT_DIR, '..', 'dashboard', 'js', 'shared-data.js')
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
 with open(output_path, 'w') as f:
     f.write(js_content)
 
