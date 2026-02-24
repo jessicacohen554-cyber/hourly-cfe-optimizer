@@ -13,7 +13,25 @@ Output: dashboard/js/shared-data.js                        (complete rewrite)
 
 import json
 import os
+import sys
 from datetime import datetime
+
+# Import cost tables directly from Step 3 (single source of truth)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from step3_cost_optimization import (
+    GRID_MIX_SHARES as _GRID_MIX_SHARES,
+    WHOLESALE_PRICES as _WHOLESALE_PRICES,
+    FUEL_ADJUSTMENTS as _FUEL_ADJUSTMENTS,
+    LCOE_TABLES as _LCOE_TABLES,
+    TX_TABLES as _TX_TABLES,
+    UPRATE_LCOE as _UPRATE_LCOE,
+    NUCLEAR_NEWBUILD_LCOE as _NUCLEAR_NEWBUILD_LCOE,
+    CCS_LCOE_45Q_ON as _CCS_LCOE_45Q_ON,
+    CCS_LCOE_45Q_OFF as _CCS_LCOE_45Q_OFF,
+    GEOTHERMAL_LCOE as _GEOTHERMAL_LCOE,
+    GEO_CAP_TWH as _GEO_CAP_TWH,
+    REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH,
+)
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
@@ -927,18 +945,28 @@ uprate_lcoe = tranche_model.get('uprate_lcoe', {'L': 15, 'M': 25, 'H': 40})
 lines.append(f'const UPRATE_LCOE = {{ L: {uprate_lcoe.get("L", 15)}, M: {uprate_lcoe.get("M", 25)}, H: {uprate_lcoe.get("H", 40)} }};')
 lines.append('')
 
-# Wholesale prices + fuel adjustments
+# Wholesale prices (from Step 3 constants — single source of truth)
 lines.append('// --- Wholesale Prices ($/MWh) ---')
-wp = data.get('config', {}).get('wholesale_prices', {})
-parts = [f'{iso}: {wp.get(iso, 0)}' for iso in ISOS]
+parts = [f'{iso}: {_WHOLESALE_PRICES.get(iso, 0)}' for iso in ISOS]
 lines.append(f'const WHOLESALE_PRICES = {{ {", ".join(parts)} }};')
 lines.append('')
 
-# LCOE tables (solar, wind, battery, LDES)
+# Fuel adjustments
+lines.append('// --- Fossil Fuel Price Adjustments ($/MWh delta from wholesale) ---')
+lines.append('const FUEL_ADJUSTMENTS = {')
+for iso_idx, iso in enumerate(ISOS):
+    fa = _FUEL_ADJUSTMENTS.get(iso, {})
+    parts = [f'{lev}: {fa.get(lev, 0)}' for lev in ['Low', 'Medium', 'High']]
+    comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    {iso}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('')
+
+# LCOE tables (solar, wind, battery, battery8, LDES — from Step 3 constants)
 lines.append('// --- LCOE Tables ($/MWh) for client-side repricing ---')
 lines.append('const LCOE_TABLES = {')
 for res in ['solar', 'wind', 'battery', 'battery8', 'ldes']:
-    rt = data.get('config', {}).get('lcoe_tables', {}).get(res, {})
+    rt = _LCOE_TABLES.get(res, {})
     lines.append(f'    {res}: {{')
     for lev_idx, lev in enumerate(['Low', 'Medium', 'High']):
         vals = rt.get(lev, {})
@@ -955,12 +983,11 @@ lines.append('// --- Battery 8hr storage flag ---')
 lines.append('const HAS_BATTERY8 = true;')
 lines.append('')
 
-# Transmission tables
+# Transmission tables (from Step 3 constants)
 lines.append('// --- Transmission Adders ($/MWh) ---')
-tx = data.get('config', {}).get('transmission_tables', {})
 lines.append('const TX_TABLES = {')
 for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes']):
-    rt = tx.get(res, {})
+    rt = _TX_TABLES.get(res, {})
     lines.append(f'    {res}: {{')
     tx_levels = ['None', 'Low', 'Medium', 'High']
     for lev_idx, lev in enumerate(tx_levels):
@@ -976,23 +1003,61 @@ for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'batte
 lines.append('};')
 lines.append('')
 
-# Grid mix shares (existing)
+# Nuclear new-build LCOE
+lines.append('// --- Nuclear New-Build LCOE ($/MWh) by firm gen toggle ---')
+lines.append('const NUCLEAR_NEWBUILD_LCOE = {')
+for lev_idx, lev in enumerate(['L', 'M', 'H']):
+    vals = _NUCLEAR_NEWBUILD_LCOE.get(lev, {})
+    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
+    comma = ',' if lev_idx < 2 else ''
+    lines.append(f'    {lev}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('')
+
+# CCS LCOE (with and without 45Q)
+lines.append('// --- CCS-CCGT LCOE ($/MWh) with/without 45Q ---')
+lines.append('const CCS_LCOE_45Q_ON = {')
+for lev_idx, lev in enumerate(['L', 'M', 'H']):
+    vals = _CCS_LCOE_45Q_ON.get(lev, {})
+    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
+    comma = ',' if lev_idx < 2 else ''
+    lines.append(f'    {lev}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('const CCS_LCOE_45Q_OFF = {')
+for lev_idx, lev in enumerate(['L', 'M', 'H']):
+    vals = _CCS_LCOE_45Q_OFF.get(lev, {})
+    parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
+    comma = ',' if lev_idx < 2 else ''
+    lines.append(f'    {lev}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('')
+
+# Geothermal (CAISO only)
+lines.append('// --- Geothermal LCOE ($/MWh, CAISO only) ---')
+lines.append(f'const GEOTHERMAL_LCOE = {{ L: {_GEOTHERMAL_LCOE["L"]}, M: {_GEOTHERMAL_LCOE["M"]}, H: {_GEOTHERMAL_LCOE["H"]} }};')
+lines.append(f'const GEO_CAP_TWH = {_GEO_CAP_TWH};')
+lines.append('')
+
+# Grid mix shares (existing clean generation — from Step 3 constants)
 lines.append('// --- Grid Mix Shares (% of demand — existing generation) ---')
-gm = data.get('config', {}).get('grid_mix_shares', {})
+lines.append('// This is the EXISTING clean energy floor: priced at wholesale, not LCOE.')
 lines.append('const GRID_MIX_SHARES = {')
 for iso_idx, iso in enumerate(ISOS):
-    shares = gm.get(iso, {})
+    shares = _GRID_MIX_SHARES.get(iso, {})
     parts = [f'{res}: {shares.get(res, 0)}' for res in RESOURCES]
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    {iso}: {{ {", ".join(parts)} }}{comma}')
 lines.append('};')
 lines.append('')
 
-# Regional demand (TWh)
+# Regional demand (TWh — from Step 3 constants, falling back to co2 batch results)
 lines.append('// --- Regional Annual Demand (TWh) ---')
 lines.append('const REGIONAL_DEMAND_TWH = {')
 for iso_idx, iso in enumerate(ISOS):
+    # Prefer co2 batch value (has the actual year's demand), fall back to Step 3 constant
     demand_twh = round(data.get('results', {}).get(iso, {}).get('annual_demand_mwh', 0) / 1e6, 3)
+    if demand_twh == 0:
+        demand_twh = _REGIONAL_DEMAND_TWH.get(iso, 0)
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    {iso}: {demand_twh}{comma}')
 lines.append('};')
@@ -1230,61 +1295,70 @@ if dg_mac:
 else:
     print("  No DG MAC data in mac_stats.json — skipping")
 
-print("Extracting FEASIBLE_MIXES...")
-# Strategy: extract unique optimal mixes from the co2 batch scenario results.
-# Each threshold/ISO has 5,832+ cost scenarios (17,496 for CAISO), each selecting
-# its own optimal mix from the EF.  We collect the distinct mixes that were optimal
-# under at least one cost scenario — these are the only candidates the dashboard's
-# client-side repricing needs to evaluate.
+print("Extracting FEASIBLE_MIXES from Step 3 feasible-mix parquets...")
+# Strategy: Step 3 already generates step3_feasible_{ISO}.parquet files containing
+# up to 500 EF-sampled mixes per threshold plus all archetype winners.  These are
+# the candidate set the dashboard needs for client-side repricing.
+#
+# For t=100: the pipeline only runs thresholds up to 99.  We use mixes from the
+# feasible set that score >=99.5% (matching Step 3's effective_gate logic).
+
+import pandas as pd
+
+STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
+MIX_FIELDS = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
+              'procurement_pct', 'hourly_match_score',
+              'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
 lines.append('// Each mix: [clean_firm%, solar%, wind%, ccs_ccgt%, hydro%, procurement%, match%, battery%, battery8%, ldes%]')
+lines.append('// Source: step3_feasible_{ISO}.parquet — ~500 EF-sampled mixes + archetype winners per threshold.')
+lines.append('// t=100 uses mixes scoring >=99.5% from the feasible set (effective gate).')
 lines.append('const FEASIBLE_MIXES = {')
 total_fm = 0
 for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    {iso}: {{')
-    for t_idx, t in enumerate(THRESHOLDS):
-        mix_rows = []
 
-        # Primary: extract unique mixes from scenario results (co2 batch or monolithic)
-        scenarios = data['results'].get(iso, {}).get('thresholds', {}).get(t, {}).get('scenarios', {})
-        if scenarios:
-            seen = set()
-            for sc_key, sc in scenarios.items():
-                rm = sc.get('resource_mix', {})
-                tup = (rm.get('clean_firm', 0), rm.get('solar', 0), rm.get('wind', 0),
-                       rm.get('ccs_ccgt', 0), rm.get('hydro', 0),
-                       sc.get('procurement_pct', 0), round(sc.get('hourly_match_score', 0), 1),
-                       sc.get('battery_dispatch_pct', 0), sc.get('battery8_dispatch_pct', 0),
-                       sc.get('ldes_dispatch_pct', 0))
-                if tup not in seen:
-                    seen.add(tup)
-                    mix_rows.append(list(tup))
+    # Load the feasible parquet for this ISO (all thresholds in one file)
+    feasible_path = os.path.join(STEP3_DIR, f'step3_feasible_{iso}.parquet')
+    if os.path.exists(feasible_path):
+        feas_df = pd.read_parquet(feasible_path)
+        # Ensure all expected columns exist
+        for col in MIX_FIELDS:
+            if col not in feas_df.columns:
+                feas_df[col] = 0
+        print(f"  {iso}: loaded {len(feas_df)} feasible mixes from step3_feasible_{iso}.parquet")
+    else:
+        feas_df = pd.DataFrame()
+        print(f"  WARNING: step3_feasible_{iso}.parquet not found — {iso} will have empty FEASIBLE_MIXES")
+
+    for t_idx, t in enumerate(THRESHOLDS):
+        t_num = float(t)
+
+        if t_num == 100.0:
+            # t=100: use mixes from t=99 feasible set that score >=99.5%
+            if len(feas_df) > 0:
+                t99 = feas_df[feas_df['threshold'] == 99.0]
+                high_score = t99[t99['hourly_match_score'] >= 99.5]
+                if len(high_score) == 0:
+                    # Fallback: take the highest-scoring mixes from ANY threshold
+                    high_score = feas_df[feas_df['hourly_match_score'] >= 99.5]
+                sub = high_score
+            else:
+                sub = pd.DataFrame()
         else:
-            # Fallback: check for explicit feasible_mixes key (legacy format)
-            t_data = data['results'].get(iso, {}).get('thresholds', {}).get(t, {})
-            fmixes = t_data.get('feasible_mixes', {})
-            if isinstance(fmixes, dict) and 'clean_firm' in fmixes:
-                n_mixes = len(fmixes['clean_firm'])
-                for i in range(n_mixes):
-                    mix_rows.append([
-                        fmixes['clean_firm'][i], fmixes['solar'][i], fmixes['wind'][i],
-                        fmixes['ccs_ccgt'][i], fmixes['hydro'][i],
-                        fmixes['procurement_pct'][i],
-                        round(fmixes['hourly_match_score'][i], 1),
-                        fmixes.get('battery_dispatch_pct', [0] * n_mixes)[i],
-                        fmixes.get('battery8_dispatch_pct', [0] * n_mixes)[i],
-                        fmixes.get('ldes_dispatch_pct', [0] * n_mixes)[i],
-                    ])
-            elif isinstance(fmixes, list):
-                for m in fmixes:
-                    rm_legacy = m.get('resource_mix', {})
-                    mix_rows.append([
-                        rm_legacy.get('clean_firm', 0), rm_legacy.get('solar', 0), rm_legacy.get('wind', 0),
-                        rm_legacy.get('ccs_ccgt', 0), rm_legacy.get('hydro', 0),
-                        m.get('procurement_pct', 100), round(m.get('hourly_match_score', 0), 1),
-                        m.get('battery_dispatch_pct', 0), m.get('battery8_dispatch_pct', 0),
-                        m.get('ldes_dispatch_pct', 0),
-                    ])
+            sub = feas_df[feas_df['threshold'] == t_num] if len(feas_df) > 0 else pd.DataFrame()
+
+        mix_rows = []
+        if len(sub) > 0:
+            for _, row in sub.iterrows():
+                mix_rows.append([
+                    row['clean_firm'], row['solar'], row['wind'],
+                    row['ccs_ccgt'], row['hydro'], row['procurement_pct'],
+                    round(row['hourly_match_score'], 1),
+                    row['battery_dispatch_pct'], row['battery8_dispatch_pct'],
+                    row['ldes_dispatch_pct'],
+                ])
 
         total_fm += len(mix_rows)
         lines.append(f'        "{t}": [')
