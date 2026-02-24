@@ -120,6 +120,14 @@ with open(MAC_STATS_PATH) as f:
     mac_stats = json.load(f)
 print(f"  MAC stats: {os.path.getsize(MAC_STATS_PATH) / 1024:.0f} KB")
 
+# Filter ISOS to only those present in results
+available_isos = [iso for iso in ISOS if iso in data.get('results', {})]
+if set(available_isos) != set(ISOS):
+    missing = set(ISOS) - set(available_isos)
+    print(f"  WARNING: Missing ISOs in results: {missing}")
+    ISOS = available_isos
+print(f"  Processing ISOs: {ISOS}")
+
 # ============================================================================
 # EXTRACT MAC_DATA (average MAC — medium/low/high)
 # ============================================================================
@@ -636,7 +644,7 @@ lines.append('};')
 lines.append('')
 
 # UPRATE_CAPS_TWH
-uprate_caps = data['config'].get('tranche_model', {}).get('uprate_caps_twh', {})
+uprate_caps = data.get('config', {}).get('tranche_model', {}).get('uprate_caps_twh', {})
 if not uprate_caps:
     uprate_caps = {'CAISO': 0.907, 'ERCOT': 1.064, 'PJM': 12.614, 'NYISO': 1.340, 'NEISO': 1.380}
 lines.append("// --- Nuclear Uprate Caps (TWh/yr) — 5% of existing nuclear at 90% CF ---")
@@ -850,7 +858,7 @@ lines.append('};')
 
 print("\nExtracting cost tables for client-side repricing...")
 
-tranche_model = data['config'].get('tranche_model', {})
+tranche_model = data.get('config', {}).get('tranche_model', {})
 
 lines.append('')
 lines.append('// ============================================================================')
@@ -916,7 +924,7 @@ lines.append('')
 
 # Wholesale prices + fuel adjustments
 lines.append('// --- Wholesale Prices ($/MWh) ---')
-wp = data['config'].get('wholesale_prices', {})
+wp = data.get('config', {}).get('wholesale_prices', {})
 parts = [f'{iso}: {wp.get(iso, 0)}' for iso in ISOS]
 lines.append(f'const WHOLESALE_PRICES = {{ {", ".join(parts)} }};')
 lines.append('')
@@ -925,7 +933,7 @@ lines.append('')
 lines.append('// --- LCOE Tables ($/MWh) for client-side repricing ---')
 lines.append('const LCOE_TABLES = {')
 for res in ['solar', 'wind', 'battery', 'battery8', 'ldes']:
-    rt = data['config'].get('lcoe_tables', {}).get(res, {})
+    rt = data.get('config', {}).get('lcoe_tables', {}).get(res, {})
     lines.append(f'    {res}: {{')
     for lev_idx, lev in enumerate(['Low', 'Medium', 'High']):
         vals = rt.get(lev, {})
@@ -944,7 +952,7 @@ lines.append('')
 
 # Transmission tables
 lines.append('// --- Transmission Adders ($/MWh) ---')
-tx = data['config'].get('transmission_tables', {})
+tx = data.get('config', {}).get('transmission_tables', {})
 lines.append('const TX_TABLES = {')
 for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes']):
     rt = tx.get(res, {})
@@ -965,7 +973,7 @@ lines.append('')
 
 # Grid mix shares (existing)
 lines.append('// --- Grid Mix Shares (% of demand — existing generation) ---')
-gm = data['config'].get('grid_mix_shares', {})
+gm = data.get('config', {}).get('grid_mix_shares', {})
 lines.append('const GRID_MIX_SHARES = {')
 for iso_idx, iso in enumerate(ISOS):
     shares = gm.get(iso, {})
@@ -979,7 +987,7 @@ lines.append('')
 lines.append('// --- Regional Annual Demand (TWh) ---')
 lines.append('const REGIONAL_DEMAND_TWH = {')
 for iso_idx, iso in enumerate(ISOS):
-    demand_twh = round(data['results'][iso]['annual_demand_mwh'] / 1e6, 3)
+    demand_twh = round(data.get('results', {}).get(iso, {}).get('annual_demand_mwh', 0) / 1e6, 3)
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    {iso}: {demand_twh}{comma}')
 lines.append('};')
