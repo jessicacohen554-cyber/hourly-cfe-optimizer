@@ -21,10 +21,10 @@ body { background: #F3F4F8; }
 .footer-note { font-size: 0.78rem; color: rgba(0,0,0,0.35); }
 .bottom-banner { height: 4px; background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%); }
 
-/* Hero */
-.hero { background: linear-gradient(180deg, #F3F4F8 0%, #E8ECF4 100%); padding: 48px 24px 40px; text-align: center; }
-.hero h1 { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 2.2rem; font-weight: 800; color: #1A2744; margin-bottom: 12px; letter-spacing: -0.5px; }
-.hero .subtitle { font-size: 1.05rem; color: rgba(0,0,0,0.6); max-width: 860px; margin: 0 auto 24px; line-height: 1.7; }
+/* Hero (article intro below dark header) */
+.hero { background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%); padding: 48px 24px 40px; text-align: center; }
+.hero h1 { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 2.2rem; font-weight: 800; color: #ffffff; margin-bottom: 12px; letter-spacing: -0.5px; }
+.hero .subtitle { font-size: 1.05rem; color: rgba(255,255,255,0.7); max-width: 860px; margin: 0 auto 24px; line-height: 1.7; }
 
 /* Headline cards */
 .headline-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; max-width: 1200px; margin: 0 auto 40px; padding: 0 24px; }
@@ -118,6 +118,13 @@ body { background: #F3F4F8; }
 </head>
 <body>
 <nav id="topNav"></nav>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle">Pure Consequential vs Hourly Matching &mdash; two procurement strategies, radically different outcomes</p>
+    <div class="header-accent"></div>
+</header>
 
 <!-- Hero -->
 <section class="hero">
