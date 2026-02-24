@@ -60,6 +60,7 @@ DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 DATA_YEAR = '2025'
 RESULTS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CACHE_PATH = os.path.join(DATA_DIR, 'optimizer_cache.json')
+STEP5_DIR = os.path.join(DATA_DIR, 'step5-post-processing-results')
 
 
 def load_data():
@@ -381,6 +382,13 @@ def main():
         with open(RESULTS_PATH, 'w') as f:
             json.dump(results_data, f)
         print(f"\n  Updated: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
+
+    # Save canonical copy to step5 results directory
+    os.makedirs(STEP5_DIR, exist_ok=True)
+    co2_out = os.path.join(STEP5_DIR, 'co2_results.json')
+    with open(co2_out, 'w') as f:
+        json.dump(results_data, f)
+    print(f"  Archived: {co2_out} ({os.path.getsize(co2_out) / 1024:.0f} KB)")
 
     print(f"\n{'='*70}")
     print("  CO₂ RECOMPUTATION COMPLETE")
