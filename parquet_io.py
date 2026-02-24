@@ -158,7 +158,10 @@ def load_from_parquets(input_dir, isos):
                         key = col[len('co2_'):]
                         val = row[col]
                         if pd.notna(val):
-                            co2[key] = float(val)
+                            try:
+                                co2[key] = float(val)
+                            except (ValueError, TypeError):
+                                co2[key] = val
                     if co2:
                         scenario['co2_abated'] = co2
 
