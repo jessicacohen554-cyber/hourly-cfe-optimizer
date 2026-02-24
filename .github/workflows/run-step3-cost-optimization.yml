@@ -41,8 +41,8 @@ jobs:
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
           ISO_LABEL="${{ github.event.inputs.iso }}"
-          echo "TARGET_BRANCH=auto/${BRANCH_PREFIX}-${ISO_LABEL}-${TIMESTAMP}" >> "$GITHUB_ENV"
-          echo "Branch: auto/${BRANCH_PREFIX}-${ISO_LABEL}-${TIMESTAMP}"
+          echo "TARGET_BRANCH=auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LABEL}" >> "$GITHUB_ENV"
+          echo "Branch: auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LABEL}"
 
       - name: Create fresh branch from master
         run: |
