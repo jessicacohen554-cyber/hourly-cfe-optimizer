@@ -6,9 +6,9 @@ Replaces the entire file with fresh data from the latest pipeline run.
 Pipeline order: Step 1 (physics) → Step 2 (tranche) → postprocess → co2 → mac_stats → THIS
 
 Input:  dashboard/overprocure_results.json                  (final pipeline output)
-        data/step5-post-processing-results/mac_stats.json  (MAC statistics from compute_mac_stats.py)
+        data/step5-post-processing/mac_stats.json  (MAC statistics from step5_PP5_compute_mac_stats.py)
 Output: dashboard/js/shared-data.js                        (complete rewrite)
-        data/step5-post-processing-results/shared_data.json (canonical JSON archive)
+        data/step5-post-processing/shared_data.json (canonical JSON archive)
 """
 
 import json
@@ -46,7 +46,7 @@ def get_scenario(iso_data, threshold, iso):
 # LOAD DATA
 # ============================================================================
 
-STEP5_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'step5-post-processing-results')
+STEP5_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'step5-post-processing')
 MAC_STATS_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
 # Fallback to legacy path if step5 dir doesn't have mac_stats yet
 if not os.path.exists(MAC_STATS_PATH):
