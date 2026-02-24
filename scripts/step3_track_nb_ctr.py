@@ -193,6 +193,21 @@ def append_to_parquet(new_rows, pq_path):
 
     if os.path.exists(pq_path):
         existing_table = pq.read_table(pq_path)
+        # Normalize large_string → string to avoid schema merge failures
+        def _normalize_schema(table):
+            new_fields = []
+            needs_cast = False
+            for field in table.schema:
+                if field.type == pa.large_string():
+                    new_fields.append(pa.field(field.name, pa.string(), nullable=field.nullable))
+                    needs_cast = True
+                else:
+                    new_fields.append(field)
+            if needs_cast:
+                table = table.cast(pa.schema(new_fields))
+            return table
+        existing_table = _normalize_schema(existing_table)
+        new_table = _normalize_schema(new_table)
         # Find (iso, track) pairs in new data to replace
         new_iso = new_table.column('iso').to_pylist()
         new_track = new_table.column('track').to_pylist()
@@ -497,6 +512,11 @@ def main():
     if args.fresh:
         print("  --fresh flag: ignoring existing parquet checkpoint")
         completed_tracks = set()
+        # Remove existing parquet files so append_to_parquet starts clean
+        for _fp in (PQ_SCENARIOS_PATH, PQ_DG_PATH):
+            if os.path.exists(_fp):
+                os.remove(_fp)
+                print(f"    Removed stale {_fp}")
     else:
         completed_tracks = load_completed_tracks(PQ_SCENARIOS_PATH)
 
