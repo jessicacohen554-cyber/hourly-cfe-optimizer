@@ -146,13 +146,18 @@ def main():
     # Seed cross_feasible_mixes from any existing completed parquets for this ISO
     # (helps with pruning if lower thresholds were run first, but NOT required)
     cross_feasible = set()
+    CROSS_POLL_COLS = {"clean_firm", "solar", "wind", "hydro"}
     if os.path.exists(s1.STEP1_RAW_PFS_PARQUET_DIR):
         import pyarrow.parquet as pq
         for fname in os.listdir(s1.STEP1_RAW_PFS_PARQUET_DIR):
             if fname.startswith(f"{iso}_t") and fname.endswith("_raw_pfs.parquet"):
+                fpath = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, fname)
                 try:
-                    t = pq.read_table(os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, fname))
-                    for row in t.to_pandas()[["clean_firm", "solar", "wind", "hydro"]].drop_duplicates().itertuples(index=False):
+                    schema = pq.read_schema(fpath)
+                    if not CROSS_POLL_COLS.issubset(schema.names):
+                        continue  # Old-schema parquet, skip silently
+                    t = pq.read_table(fpath, columns=list(CROSS_POLL_COLS))
+                    for row in t.to_pandas().drop_duplicates().itertuples(index=False):
                         cross_feasible.add((row.clean_firm, row.solar, row.wind, row.hydro))
                 except Exception as e:
                     print(f"  Warning: Could not read {fname} for cross-pollination: {e}")
