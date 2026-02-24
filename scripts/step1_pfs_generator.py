@@ -14,7 +14,7 @@ Pipeline position: Step 1 of 4
 Key features:
   - 4D resource space: clean_firm (absorbs CCS), solar, wind, hydro
   - 13 thresholds: 50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
-  - Adaptive grid search: 5% → 1% refinement
+  - Adaptive grid search: 5% → 1% refinement (±4% radius)
   - Pareto frontier: 3-5 points per threshold×ISO (procurement/storage tradeoff)
   - Numba JIT-compiled scoring functions
   - Parallel ISO execution (multiprocessing)
@@ -1401,7 +1401,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
                 break
 
             base = np.array(mix_tuple, dtype=np.float64)
-            fine_combos = generate_4d_combos_around(base, hydro_cap, step=1, radius=3)
+            fine_combos = generate_4d_combos_around(base, hydro_cap, step=1, radius=4)
             if len(fine_combos) == 0:
                 continue
 
