@@ -13,18 +13,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
 /* Page-specific dark background */
-body { background: #0B1120; }
+body { background: #F7F8FC; }
 
 /* ========== FOOTER ========== */
 .page-footer {
-    background: #0F1A2E;
-    color: rgba(255,255,255,0.7);
+    background: #F0F2F5;
+    color: rgba(15,23,42,0.65);
     padding: 32px 24px;
     text-align: center;
 }
 .footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
 .footer-links a {
-    color: rgba(255,255,255,0.65);
+    color: rgba(15,23,42,0.6);
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -34,8 +34,8 @@ body { background: #0B1120; }
     align-items: center;
     padding: 8px 4px;
 }
-.footer-links a:hover { color: #ffffff; }
-.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+.footer-links a:hover { color: #1E293B; }
+.footer-note { font-size: 0.78rem; color: rgba(15,23,42,0.35); }
 
 .bottom-banner {
     height: 4px;
@@ -44,7 +44,7 @@ body { background: #0B1120; }
 
 /* ========== HERO SECTION ========== */
 .hero-section {
-    background: linear-gradient(180deg, #0B1120 0%, #0F1D35 100%);
+    background: linear-gradient(180deg, #F7F8FC 0%, #EEF1F8 100%);
     position: relative;
     overflow: hidden;
     padding: 56px 24px 48px;
@@ -53,7 +53,7 @@ body { background: #0B1120; }
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 25% 15%, rgba(14,165,233,0.1) 0%, transparent 55%),
+    background: radial-gradient(ellipse at 25% 15%, rgba(14,165,233,0.07) 0%, transparent 55%),
                 radial-gradient(ellipse at 75% 85%, rgba(34,197,94,0.06) 0%, transparent 55%);
     pointer-events: none;
 }
@@ -82,7 +82,7 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 2.2rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 20px;
     line-height: 1.15;
     letter-spacing: -0.5px;
@@ -90,7 +90,7 @@ body { background: #0B1120; }
 .hero-text h1 span.accent { color: #0EA5E9; }
 .hero-text p {
     font-size: 0.95rem;
-    color: rgba(255,255,255,0.72);
+    color: rgba(15,23,42,0.68);
     line-height: 1.75;
     margin-bottom: 14px;
 }
@@ -101,8 +101,8 @@ body { background: #0B1120; }
     flex-wrap: wrap;
 }
 .hero-stat {
-    background: rgba(15,26,46,0.8);
-    border: 1px solid rgba(74,144,217,0.2);
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(74,144,217,0.12);
     border-radius: 12px;
     padding: 16px 20px;
     min-width: 140px;
@@ -112,16 +112,16 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.6rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     line-height: 1.1;
 }
-.hero-stat-value.green { color: #4ade80; }
-.hero-stat-value.amber { color: #fbbf24; }
-.hero-stat-value.red { color: #f87171; }
-.hero-stat-value.blue { color: #38bdf8; }
+.hero-stat-value.green { color: #16a34a; }
+.hero-stat-value.amber { color: #d97706; }
+.hero-stat-value.red { color: #dc2626; }
+.hero-stat-value.blue { color: #0284c7; }
 .hero-stat-label {
     font-size: 0.72rem;
-    color: rgba(255,255,255,0.5);
+    color: rgba(15,23,42,0.45);
     margin-top: 4px;
     line-height: 1.3;
 }
@@ -133,17 +133,17 @@ body { background: #0B1120; }
 .chart-panel {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.2);
+    border: 1px solid rgba(74,144,217,0.12);
     border-radius: 16px;
     padding: 24px 20px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     width: 100%;
 }
 .chart-title {
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 0.85rem;
     font-weight: 700;
-    color: rgba(255,255,255,0.85);
+    color: rgba(15,23,42,0.85);
     letter-spacing: 0.02em;
     margin-bottom: 12px;
 }
@@ -158,7 +158,7 @@ body { background: #0B1120; }
     gap: 6px 16px;
     margin-top: 12px;
     font-size: 0.7rem;
-    color: rgba(255,255,255,0.55);
+    color: rgba(15,23,42,0.5);
     font-family: 'Plus Jakarta Sans', sans-serif;
 }
 .chart-legend-item {
@@ -169,12 +169,12 @@ body { background: #0B1120; }
 }
 .chart-legend-swatch { display: inline-block; }
 .swatch-line { width: 18px; height: 3px; border-radius: 1.5px; }
-.swatch-band { width: 18px; height: 10px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.15); }
+.swatch-band { width: 18px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1); }
 .swatch-dashed { width: 18px; height: 0; border-top: 2px dashed; }
 .chart-legend-divider {
     width: 1px;
     height: 12px;
-    background: rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.1);
     margin: 0 4px;
     align-self: center;
 }
@@ -191,7 +191,7 @@ body { background: #0B1120; }
     gap: 48px;
     align-items: start;
     padding: 64px 0;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .scroll-chart-col {
     position: sticky;
@@ -205,8 +205,8 @@ body { background: #0B1120; }
 
 /* ========== NARRATIVE CARDS ========== */
 .narrative-card {
-    background: rgba(15,26,46,0.85);
-    border: 1px solid rgba(74,144,217,0.15);
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(74,144,217,0.10);
     border-radius: 14px;
     padding: 28px 24px;
     opacity: 0;
@@ -222,14 +222,14 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.25rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.25;
     letter-spacing: -0.3px;
 }
 .narrative-card p {
     font-size: 0.9rem;
-    color: rgba(255,255,255,0.72);
+    color: rgba(15,23,42,0.68);
     line-height: 1.75;
     margin-bottom: 12px;
 }
@@ -256,17 +256,17 @@ body { background: #0B1120; }
     margin-top: 8px;
     line-height: 1.4;
 }
-.stat-badge-green { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); color: #4ade80; }
-.stat-badge-amber { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); color: #fbbf24; }
-.stat-badge-red { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #f87171; }
-.stat-badge-blue { background: rgba(14,165,233,0.12); border: 1px solid rgba(14,165,233,0.25); color: #38bdf8; }
+.stat-badge-green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #16a34a; }
+.stat-badge-amber { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.18); color: #d97706; }
+.stat-badge-red { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: #dc2626; }
+.stat-badge-blue { background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
 
 /* ========== SYNTHESIS SECTION ========== */
 .synthesis-section {
     max-width: 1320px;
     margin: 0 auto;
     padding: 64px 24px;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .synthesis-grid {
     display: grid;
@@ -274,8 +274,8 @@ body { background: #0B1120; }
     gap: 24px;
 }
 .synthesis-card {
-    background: rgba(15,26,46,0.85);
-    border: 1px solid rgba(74,144,217,0.15);
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(74,144,217,0.10);
     border-radius: 14px;
     padding: 28px 24px;
     opacity: 0;
@@ -291,13 +291,13 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.15rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.25;
 }
 .synthesis-card p {
     font-size: 0.88rem;
-    color: rgba(255,255,255,0.72);
+    color: rgba(15,23,42,0.68);
     line-height: 1.75;
 }
 
@@ -308,8 +308,8 @@ body { background: #0B1120; }
     padding: 0 24px;
 }
 .nuclear-callout-inner {
-    background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(245,158,11,0.06) 100%);
-    border: 1px solid rgba(239,68,68,0.25);
+    background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(245,158,11,0.05) 100%);
+    border: 1px solid rgba(239,68,68,0.2);
     border-left: 4px solid #EF4444;
     border-radius: 14px;
     padding: 24px 28px;
@@ -329,24 +329,24 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 0.95rem;
     font-weight: 800;
-    color: #f87171;
+    color: #dc2626;
     margin-bottom: 6px;
     letter-spacing: -0.2px;
 }
 .nuclear-callout-text p {
     font-size: 0.85rem;
-    color: rgba(255,255,255,0.7);
+    color: rgba(15,23,42,0.65);
     line-height: 1.65;
     margin: 0;
 }
-.nuclear-callout-text strong { color: #fbbf24; }
+.nuclear-callout-text strong { color: #d97706; }
 
 /* ========== NUCLEAR DEEP-DIVE SECTION ========== */
 .nuclear-section {
     max-width: 1320px;
     margin: 0 auto;
     padding: 64px 24px;
-    border-top: 1px solid rgba(239,68,68,0.15);
+    border-top: 1px solid rgba(239,68,68,0.1);
 }
 .nuclear-section-header {
     margin-bottom: 40px;
@@ -355,14 +355,14 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.7rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.2;
     letter-spacing: -0.5px;
 }
 .nuclear-section-header p {
     font-size: 0.92rem;
-    color: rgba(255,255,255,0.65);
+    color: rgba(15,23,42,0.6);
     line-height: 1.7;
     max-width: 780px;
 }
@@ -388,8 +388,8 @@ body { background: #0B1120; }
     margin-top: 24px;
 }
 .nuclear-metric {
-    background: rgba(15,26,46,0.85);
-    border: 1px solid rgba(74,144,217,0.15);
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(74,144,217,0.10);
     border-radius: 10px;
     padding: 16px;
     text-align: center;
@@ -402,13 +402,13 @@ body { background: #0B1120; }
 }
 .nuclear-metric-label {
     font-size: 0.7rem;
-    color: rgba(255,255,255,0.5);
+    color: rgba(15,23,42,0.45);
     margin-top: 6px;
     line-height: 1.35;
 }
 .nuclear-paradox {
-    background: rgba(15,26,46,0.9);
-    border: 1px solid rgba(245,158,11,0.25);
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(245,158,11,0.18);
     border-radius: 14px;
     padding: 28px 24px;
     margin-top: 12px;
@@ -425,12 +425,12 @@ body { background: #0B1120; }
     font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
     font-size: 1.15rem;
     font-weight: 800;
-    color: #fbbf24;
+    color: #d97706;
     margin-bottom: 12px;
 }
 .nuclear-paradox p {
     font-size: 0.88rem;
-    color: rgba(255,255,255,0.72);
+    color: rgba(15,23,42,0.68);
     line-height: 1.75;
     margin-bottom: 12px;
 }
@@ -555,13 +555,13 @@ body { background: #0B1120; }
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Medium fuel</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>High fuel</span>
                     <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(255,255,255,0.2);"></span>P10&ndash;P90 within each</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.12);"></span>P10&ndash;P90 within each</span>
                 </div>
             </div>
         </div>
         <div class="scroll-narrative-col">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(14,165,233,0.12);color:#38bdf8;">Price Drivers</span>
+                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#38bdf8;">Price Drivers</span>
                 <h3>Fuel prices explain 88&ndash;100% of wholesale cost variation — until they don't</h3>
                 <p>From 50% to 95% clean energy, the single biggest determinant of wholesale prices is the fossil fuel price assumption. At 50% clean, fuel level explains <strong>100%</strong> of the variance in average LMP. At 80%, it still accounts for <strong>88%</strong>.</p>
                 <p>The gap between Low and High fuel scenarios in PJM is massive: at 80% clean, Low fuel yields $17/MWh while High fuel yields $37/MWh — a 2.2&times; difference driven entirely by what marginal gas plants cost to run.</p>
@@ -590,16 +590,16 @@ body { background: #0B1120; }
                 </div>
                 <div class="chart-legend">
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Zero-price hours (P50)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(14,165,233,0.3);"></span>Zero-price P50&ndash;P90</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(14,165,233,0.2);"></span>Zero-price P50&ndash;P90</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>Scarcity hours (&gt;$200)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.25);"></span>Scarcity P50&ndash;P90</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.2);"></span>Scarcity P50&ndash;P90</span>
                 </div>
             </div>
         </div>
         <div class="scroll-narrative-col">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(34,197,94,0.12);color:#4ade80;">Market Structure</span>
+                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#4ade80;">Market Structure</span>
                 <h3>PJM zero-price hours explode from 265 to 7,980 — and the market flips inside out</h3>
                 <p>At 50% clean, PJM sees about 265 zero-or-negative-price hours per year — roughly 3% of the time, typically overnight with must-run nuclear surplus. By 95%, that figure hits <strong>4,268 hours</strong> — nearly half the year. At 100%, it's <strong>7,980 hours</strong>: 91% of all hours produce free or negatively-priced electricity.</p>
                 <p>This isn't a gradual shift. The curve accelerates sharply past 75%, as each incremental percentage of clean energy adds more zero-marginal-cost generation to hours where fossil was already barely dispatching.</p>
@@ -630,13 +630,13 @@ body { background: #0B1120; }
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Peak (weekday 7am&ndash;10pm)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Off-peak</span>
                     <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(255,255,255,0.15);"></span>Peak&ndash;off-peak spread</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.1);"></span>Peak&ndash;off-peak spread</span>
                 </div>
             </div>
         </div>
         <div class="scroll-narrative-col">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(245,158,11,0.12);color:#fbbf24;">Price Structure</span>
+                <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;">Price Structure</span>
                 <h3>The peak premium persists — and that's the arbitrage signal</h3>
                 <p>Off-peak prices crash faster than peak: at 95% clean, off-peak hits $14/MWh while peak holds at $22/MWh. The median spread between peak and off-peak actually <em>widens</em> from 80% to 97.5% before collapsing only at 100%.</p>
                 <p>For storage operators and demand-response providers, this is the signal: the economic case for time-shifting energy <strong>strengthens</strong> through most of the clean energy transition, even as absolute prices fall.</p>
@@ -656,7 +656,7 @@ body { background: #0B1120; }
 <!-- ================================================================ -->
 <section class="nuclear-section" id="nuclear-deepdive">
     <div class="nuclear-section-header">
-        <span class="section-tag" style="background:rgba(239,68,68,0.12);color:#f87171;">PJM Nuclear Economics</span>
+        <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">PJM Nuclear Economics</span>
         <h2>The Clean Energy Paradox: Decarbonization Destroys the Price Signal That Keeps Nuclear Alive</h2>
         <p>PJM's 32 GW existing nuclear fleet is the cheapest firm clean energy on the grid at $34/MWh wholesale. But the very renewable buildout needed to decarbonize the grid collapses wholesale prices below nuclear operating costs &mdash; creating a retirement risk for the resource you need most at high clean energy targets.</p>
     </div>
@@ -691,7 +691,7 @@ body { background: #0B1120; }
 
         <div class="nuclear-narrative-col">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(239,68,68,0.12);color:#f87171;">Retirement Threshold</span>
+                <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">Retirement Threshold</span>
                 <h3>The breakeven line: ~85% clean energy (~2038)</h3>
                 <p>Nuclear plants need $25&ndash;30/MWh to cover fuel ($6&ndash;8), fixed O&amp;M ($15&ndash;20), and variable O&amp;M ($3&ndash;5). PJM's median wholesale price crosses below $28/MWh at <strong>85% clean (~2038)</strong> and drops to $20/MWh by the SBTi 2040 milestone (90%).</p>
                 <p>Under <strong>low fuel prices</strong> &mdash; the scenario where cheap renewables are most likely &mdash; LMP drops to $16/MWh at 90% clean (2040). Nuclear loses $9&ndash;14 on every MWh sold.</p>
@@ -824,7 +824,7 @@ var LMP = {
 
 // ===== CHART DEFAULTS =====
 Chart.defaults.font.family = "'Plus Jakarta Sans', 'Helvetica Neue', sans-serif";
-Chart.defaults.color = 'rgba(255,255,255,0.55)';
+Chart.defaults.color = 'rgba(15,23,42,0.5)';
 
 var BLUE = '#0EA5E9';
 var GREEN = '#22C55E';
@@ -846,10 +846,10 @@ function sbtiAnnotations(yPos) {
     SBTI.forEach(function(ms) {
         annots['sbti_' + ms.year] = {
             type: 'line', xMin: ms.threshold, xMax: ms.threshold,
-            borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderDash: [3, 3],
+            borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [3, 3],
             label: { display: true, content: ms.label, position: 'start',
-                color: 'rgba(255,255,255,0.4)', font: { size: 9, weight: '600' },
-                backgroundColor: 'rgba(11,17,32,0.7)', padding: 3, yAdjust: -4 }
+                color: 'rgba(15,23,42,0.35)', font: { size: 9, weight: '600' },
+                backgroundColor: 'rgba(255,255,255,0.92)', padding: 3, yAdjust: -4 }
         };
     });
     return annots;
@@ -864,11 +864,11 @@ function baseScales(yLabel, yMin, yMax) {
         x: {
             type: 'linear',
             min: 48, max: 101,
-            title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
-            grid: { color: 'rgba(255,255,255,0.06)' },
+            title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+            grid: { color: 'rgba(0,0,0,0.025)' },
             ticks: {
                 callback: function(v) { return v + '%'; },
-                color: 'rgba(255,255,255,0.45)',
+                color: 'rgba(15,23,42,0.4)',
                 font: { size: 10 }
             },
             afterBuildTicks: function(axis) {
@@ -876,9 +876,9 @@ function baseScales(yLabel, yMin, yMax) {
             }
         },
         y: {
-            title: { display: true, text: yLabel, color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
-            grid: { color: 'rgba(255,255,255,0.06)' },
-            ticks: { color: 'rgba(255,255,255,0.45)', font: { size: 10 } },
+            title: { display: true, text: yLabel, color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+            grid: { color: 'rgba(0,0,0,0.025)' },
+            ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
             min: yMin,
             max: yMax
         }
@@ -887,10 +887,10 @@ function baseScales(yLabel, yMin, yMax) {
 
 function baseTooltip() {
     return {
-        backgroundColor: 'rgba(15,26,46,0.95)',
-        titleColor: '#fff',
-        bodyColor: 'rgba(255,255,255,0.8)',
-        borderColor: 'rgba(74,144,217,0.3)',
+        backgroundColor: 'rgba(255,255,255,0.97)',
+        titleColor: '#1E293B',
+        bodyColor: 'rgba(15,23,42,0.7)',
+        borderColor: 'rgba(0,0,0,0.1)',
         borderWidth: 1,
         padding: 12,
         cornerRadius: 8,
@@ -946,7 +946,7 @@ function baseTooltip() {
                 tooltip: baseTooltip(),
                 annotation: {
                     annotations: Object.assign({
-                        zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderDash: [6, 4] }
+                        zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(0,0,0,0.12)', borderWidth: 1, borderDash: [6, 4] }
                     }, sbtiAnnotations())
                 }
             }
@@ -988,7 +988,7 @@ function baseTooltip() {
                 tooltip: baseTooltip(),
                 annotation: {
                     annotations: Object.assign({
-                        zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderDash: [6, 4] }
+                        zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(0,0,0,0.12)', borderWidth: 1, borderDash: [6, 4] }
                     }, sbtiAnnotations())
                 }
             }
@@ -1026,9 +1026,9 @@ function baseTooltip() {
             scales: {
                 x: baseScales('', 0, 0).x,
                 y: {
-                    title: { display: true, text: 'Hours per Year', color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    ticks: { color: 'rgba(255,255,255,0.45)', font: { size: 10 },
+                    title: { display: true, text: 'Hours per Year', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 },
                         callback: function(v) { return v >= 1000 ? (v/1000).toFixed(1) + 'k' : v; }
                     },
                     min: 0, max: 8500
@@ -1037,10 +1037,10 @@ function baseTooltip() {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(15,26,46,0.95)',
+                    backgroundColor: 'rgba(255,255,255,0.98)',
                     titleColor: '#fff',
-                    bodyColor: 'rgba(255,255,255,0.8)',
-                    borderColor: 'rgba(74,144,217,0.3)',
+                    bodyColor: 'rgba(15,23,42,0.75)',
+                    borderColor: 'rgba(74,144,217,0.18)',
                     borderWidth: 1,
                     padding: 12, cornerRadius: 8,
                     filter: function(item) { return item.dataset._type !== 'band'; },
@@ -1054,8 +1054,8 @@ function baseTooltip() {
                 },
                 annotation: {
                     annotations: Object.assign({
-                        halfYear: { type: 'line', yMin: 4380, yMax: 4380, borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderDash: [6, 4],
-                            label: { display: true, content: '50% of year', position: 'end', color: 'rgba(255,255,255,0.4)', font: { size: 10 }, backgroundColor: 'transparent' }
+                        halfYear: { type: 'line', yMin: 4380, yMax: 4380, borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, borderDash: [6, 4],
+                            label: { display: true, content: '50% of year', position: 'end', color: 'rgba(15,23,42,0.35)', font: { size: 10 }, backgroundColor: 'transparent' }
                         }
                     }, sbtiAnnotations())
                 }
@@ -1091,7 +1091,7 @@ LMP.nuclear = {
             datasets: [
                 // Spread fill between peak and offpeak
                 { label: 'Peak P50', data: pts(T, P.peakP50), borderColor: 'transparent',
-                  backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 0, pointRadius: 0,
+                  backgroundColor: 'rgba(0,0,0,0.025)', borderWidth: 0, pointRadius: 0,
                   fill: '+1', tension: 0.35, order: 12, _type: 'band' },
                 // Off-peak lower bound for spread fill
                 { label: 'Offpeak P50 (fill target)', data: pts(T, P.offpeakP50), borderColor: 'transparent',
@@ -1116,7 +1116,7 @@ LMP.nuclear = {
                 tooltip: baseTooltip(),
                 annotation: {
                     annotations: Object.assign({
-                        zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderDash: [6, 4] }
+                        zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(0,0,0,0.12)', borderWidth: 1, borderDash: [6, 4] }
                     }, sbtiAnnotations())
                 }
             }
@@ -1172,7 +1172,7 @@ LMP.nuclear = {
                 annotation: {
                     annotations: Object.assign({
                         zeroLine: { type: 'line', yMin: 0, yMax: 0,
-                            borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderDash: [6, 4] },
+                            borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, borderDash: [6, 4] },
                         nucLabel: { type: 'label',
                             xValue: 100, yValue: 27.5,
                             content: ['Nuclear', 'operating cost'],
@@ -1183,7 +1183,7 @@ LMP.nuclear = {
                         crossover85: { type: 'line', xMin: 85, xMax: 85,
                             borderColor: 'rgba(245,158,11,0.3)', borderWidth: 1.5, borderDash: [4,4],
                             label: { display: true, content: 'Breakeven ~2038', position: 'start',
-                                color: 'rgba(245,158,11,0.6)', font: { size: 9, weight: '600' }, backgroundColor: 'rgba(11,17,32,0.7)', padding: 3 }
+                                color: 'rgba(245,158,11,0.6)', font: { size: 9, weight: '600' }, backgroundColor: 'rgba(255,255,255,0.92)', padding: 3 }
                         }
                     }, sbtiAnnotations())
                 }
@@ -1222,7 +1222,7 @@ LMP.nuclear = {
                 y: {
                     position: 'left',
                     title: { display: true, text: 'Off-Peak LMP ($/MWh)', color: PURPLE + '99', font: { size: 11 } },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
                     ticks: { color: PURPLE + '99', font: { size: 10 } },
                     min: -15, max: 35
                 },
@@ -1239,10 +1239,10 @@ LMP.nuclear = {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(15,26,46,0.95)',
+                    backgroundColor: 'rgba(255,255,255,0.98)',
                     titleColor: '#fff',
-                    bodyColor: 'rgba(255,255,255,0.8)',
-                    borderColor: 'rgba(74,144,217,0.3)',
+                    bodyColor: 'rgba(15,23,42,0.75)',
+                    borderColor: 'rgba(74,144,217,0.18)',
                     borderWidth: 1, padding: 12, cornerRadius: 8,
                     callbacks: {
                         title: function(items) { return items[0] ? items[0].raw.x + '% Clean Energy' : ''; },
@@ -1260,9 +1260,9 @@ LMP.nuclear = {
                                 color: 'rgba(239,68,68,0.6)', font: { size: 9 }, backgroundColor: 'transparent' }
                         },
                         halfYear: { type: 'line', yMin: 4380, yMax: 4380, yScaleID: 'y1',
-                            borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderDash: [4,4],
+                            borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4],
                             label: { display: true, content: '50% of year', position: 'start',
-                                color: 'rgba(255,255,255,0.35)', font: { size: 9 }, backgroundColor: 'transparent' }
+                                color: 'rgba(15,23,42,0.35)', font: { size: 9 }, backgroundColor: 'transparent' }
                         }
                     }, sbtiAnnotations())
                 }

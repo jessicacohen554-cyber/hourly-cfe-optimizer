@@ -14,18 +14,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 /* Page-specific background */
-body { background: #0B1120; }
+body { background: #F7F8FC; }
 
 /* ========== FOOTER ========== */
 .page-footer {
-    background: #0F1A2E;
-    color: rgba(255,255,255,0.7);
+    background: #F0F2F5;
+    color: rgba(15,23,42,0.65);
     padding: 32px 24px;
     text-align: center;
 }
 .footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
 .footer-links a {
-    color: rgba(255,255,255,0.65);
+    color: rgba(15,23,42,0.6);
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -35,8 +35,8 @@ body { background: #0B1120; }
     align-items: center;
     padding: 8px 4px;
 }
-.footer-links a:hover { color: #ffffff; }
-.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.4); }
+.footer-links a:hover { color: #1E293B; }
+.footer-note { font-size: 0.78rem; color: rgba(15,23,42,0.35); }
 
 .bottom-banner {
     height: 4px;
@@ -51,7 +51,7 @@ body { background: #0B1120; }
 
 /* ========== HERO OVERVIEW SECTION ========== */
 .hero-overview {
-    background: linear-gradient(180deg, #0B1120 0%, #13203D 100%);
+    background: linear-gradient(180deg, #F7F8FC 0%, #EEF1F8 100%);
     position: relative;
     overflow: hidden;
     padding: 48px 24px;
@@ -80,9 +80,9 @@ body { background: #0B1120; }
     display: inline-block;
     padding: 5px 14px;
     border-radius: 8px;
-    background: rgba(245,158,11,0.12);
-    border: 1px solid rgba(245,158,11,0.25);
-    color: #fbbf24;
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.18);
+    color: #d97706;
     font-family: var(--font-heading);
     font-size: 0.72rem;
     font-weight: 700;
@@ -94,14 +94,14 @@ body { background: #0B1120; }
     font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 16px;
     line-height: 1.2;
     letter-spacing: -0.5px;
 }
 .hero-text-block p {
     font-size: 0.95rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 16px;
 }
@@ -110,12 +110,12 @@ body { background: #0B1120; }
     margin-top: 8px;
     padding: 10px 18px;
     border-radius: 10px;
-    background: rgba(245,158,11,0.12);
-    border: 1px solid rgba(245,158,11,0.25);
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.18);
     font-family: var(--font-heading);
     font-size: 0.92rem;
     font-weight: 700;
-    color: #fbbf24;
+    color: #d97706;
 }
 .hero-chart-block {
     z-index: 1;
@@ -125,17 +125,17 @@ body { background: #0B1120; }
 .chart-panel {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.2);
+    border: 1px solid rgba(74,144,217,0.12);
     border-radius: 16px;
     padding: 28px 24px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     width: 100%;
     box-sizing: border-box;
 }
 .chart-panel-overview,
 .chart-panel-region {
-    background: rgba(15,26,46,0.95);
-    border-color: rgba(74,144,217,0.2);
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.12);
 }
 .chart-panel-overview {
     min-height: 400px;
@@ -149,7 +149,7 @@ body { background: #0B1120; }
     font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
-    color: rgba(255,255,255,0.85);
+    color: rgba(15,23,42,0.85);
     text-align: center;
     margin-bottom: 10px;
     letter-spacing: 0.02em;
@@ -157,7 +157,7 @@ body { background: #0B1120; }
 .chart-subtitle {
     font-family: var(--font-heading);
     font-size: 0.72rem;
-    color: rgba(255,255,255,0.45);
+    color: rgba(15,23,42,0.4);
     text-align: center;
     margin-top: 6px;
 }
@@ -172,44 +172,44 @@ body { background: #0B1120; }
 }
 .iso-btn {
     padding: 5px 12px;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(0,0,0,0.1);
     border-radius: 6px;
-    background: rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.025);
     font-family: var(--font-heading);
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.5px;
     cursor: pointer;
     transition: all 0.2s;
-    color: rgba(255,255,255,0.5);
+    color: rgba(15,23,42,0.45);
     min-width: 44px;
     min-height: 34px;
 }
 .iso-btn:hover {
-    background: rgba(14,165,233,0.12);
-    border-color: rgba(14,165,233,0.3);
-    color: rgba(255,255,255,0.8);
+    background: rgba(14,165,233,0.08);
+    border-color: rgba(14,165,233,0.2);
+    color: rgba(15,23,42,0.75);
 }
 .iso-btn.active {
     background: rgba(14,165,233,0.2);
-    color: #fff;
-    border-color: rgba(14,165,233,0.5);
+    color: #1E293B;
+    border-color: rgba(14,165,233,0.35);
 }
 .iso-btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
 }
 .iso-btn:disabled:hover {
-    background: rgba(255,255,255,0.06);
-    border-color: rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.5);
+    background: rgba(0,0,0,0.025);
+    border-color: rgba(0,0,0,0.1);
+    color: rgba(15,23,42,0.45);
 }
 
 /* ========== REGION SECTIONS (Scrollytell) ========== */
 .region-section {
-    background: #0B1120;
+    background: #F7F8FC;
     position: relative;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .region-section-inner {
     max-width: 1320px;
@@ -226,8 +226,8 @@ body { background: #0B1120; }
     padding: 32px;
 }
 .chart-panel-region {
-    background: rgba(15,26,46,0.95);
-    border-color: rgba(74,144,217,0.15);
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.10);
     min-height: 400px;
 }
 .chart-panel-region .chart-container {
@@ -243,10 +243,10 @@ body { background: #0B1120; }
     gap: 24px;
 }
 .region-step-card {
-    background: rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.025);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(0,0,0,0.08);
     border-radius: 16px;
     padding: 32px;
     opacity: 0;
@@ -262,14 +262,14 @@ body { background: #0B1120; }
     font-family: var(--font-heading);
     font-size: 1.4rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.25;
     letter-spacing: -0.3px;
 }
 .region-step-card p {
     font-size: 0.92rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 0;
 }
@@ -283,24 +283,24 @@ body { background: #0B1120; }
     font-weight: 700;
 }
 .step-stat-green {
-    background: rgba(34,197,94,0.12);
-    border: 1px solid rgba(34,197,94,0.25);
-    color: #4ade80;
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.2);
+    color: #16a34a;
 }
 .step-stat-amber {
-    background: rgba(245,158,11,0.12);
-    border: 1px solid rgba(245,158,11,0.25);
-    color: #fbbf24;
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.18);
+    color: #d97706;
 }
 .step-stat-red {
-    background: rgba(239,68,68,0.12);
-    border: 1px solid rgba(239,68,68,0.25);
-    color: #f87171;
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #dc2626;
 }
 .step-stat-blue {
-    background: rgba(14,165,233,0.12);
-    border: 1px solid rgba(14,165,233,0.25);
-    color: #38bdf8;
+    background: rgba(14,165,233,0.08);
+    border: 1px solid rgba(14,165,233,0.2);
+    color: #0284c7;
 }
 .step-num {
     display: inline-block;
@@ -315,23 +315,23 @@ body { background: #0B1120; }
     margin-bottom: 10px;
 }
 .step-num-amber {
-    background: rgba(245,158,11,0.15);
-    color: #fbbf24;
+    background: rgba(245,158,11,0.1);
+    color: #d97706;
 }
 .step-num-red {
-    background: rgba(239,68,68,0.15);
-    color: #f87171;
+    background: rgba(239,68,68,0.1);
+    color: #dc2626;
 }
 .step-num-blue {
-    background: rgba(14,165,233,0.15);
-    color: #38bdf8;
+    background: rgba(14,165,233,0.07);
+    color: #0284c7;
 }
 
 /* ========== STANDALONE CHART SECTION ========== */
 .chart-section {
-    background: #0B1120;
+    background: #F7F8FC;
     padding: 56px 24px;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .chart-section-inner {
     max-width: 900px;
@@ -345,13 +345,13 @@ body { background: #0B1120; }
     font-family: var(--font-heading);
     font-size: 1.6rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 8px;
     letter-spacing: -0.3px;
 }
 .chart-section-header p {
     font-size: 0.88rem;
-    color: rgba(255,255,255,0.55);
+    color: rgba(15,23,42,0.5);
     max-width: 700px;
     margin: 0 auto;
     line-height: 1.6;
@@ -359,9 +359,9 @@ body { background: #0B1120; }
 
 /* ========== SYNTHESIS SECTION ========== */
 .synthesis-section {
-    background: #0B1120;
+    background: #F7F8FC;
     padding: 64px 24px;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid rgba(0,0,0,0.025);
 }
 .synthesis-inner {
     max-width: 1320px;
@@ -371,10 +371,10 @@ body { background: #0B1120; }
     gap: 32px;
 }
 .synthesis-card {
-    background: rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.025);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(0,0,0,0.08);
     border-radius: 16px;
     padding: 32px;
     opacity: 0;
@@ -390,13 +390,13 @@ body { background: #0B1120; }
     font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 12px;
     line-height: 1.25;
 }
 .synthesis-card p {
     font-size: 0.92rem;
-    color: rgba(255,255,255,0.75);
+    color: rgba(15,23,42,0.7);
     line-height: 1.75;
     margin-bottom: 0;
 }
@@ -425,7 +425,7 @@ body { background: #0B1120; }
     gap: 6px;
     font-family: var(--font-heading);
     font-size: 0.7rem;
-    color: rgba(255,255,255,0.6);
+    color: rgba(15,23,42,0.55);
     white-space: nowrap;
 }
 .chart-legend-swatch {
@@ -446,12 +446,12 @@ body { background: #0B1120; }
     width: 18px;
     height: 10px;
     border-radius: 2px;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(0,0,0,0.1);
 }
 .chart-legend-divider {
     width: 1px;
     height: 12px;
-    background: rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.1);
     align-self: center;
 }
 
@@ -468,8 +468,8 @@ body { background: #0B1120; }
     height: 32px;
     line-height: 32px;
     border-radius: 50%;
-    background: rgba(245,158,11,0.15);
-    color: #fbbf24;
+    background: rgba(245,158,11,0.1);
+    color: #d97706;
     font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 800;
@@ -480,13 +480,13 @@ body { background: #0B1120; }
     font-family: var(--font-heading);
     font-size: 1.6rem;
     font-weight: 800;
-    color: #fff;
+    color: #1E293B;
     margin-bottom: 8px;
     letter-spacing: -0.3px;
 }
 .section-header p {
     font-size: 0.88rem;
-    color: rgba(255,255,255,0.55);
+    color: rgba(15,23,42,0.5);
     max-width: 700px;
     margin: 0 auto;
     line-height: 1.6;
@@ -682,7 +682,7 @@ html, body {
 <!-- TOP NAV (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:#0B1120;padding:8px 24px;"><a href="index.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:#F7F8FC;padding:8px 24px;"><a href="index.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(15,23,42,0.65);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER BANNER -->
 <header class="header">
@@ -713,7 +713,7 @@ html, body {
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#22C55E;"></span>Wind</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#06B6D4;"></span>Hydro</span>
                     <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(255,255,255,0.25);"></span>With Existing</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(0,0,0,0.14);"></span>With Existing</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(245,158,11,0.6);border-top:2px solid #F59E0B;height:0;"></span>Greenfield</span>
                 </div>
                 <div class="chart-subtitle">CAISO at medium cost assumptions</div>
@@ -810,9 +810,9 @@ html, body {
             </div>
             <div class="chart-legend">
                 <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Greenfield (no existing)</span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.2);"></span>Greenfield P10&ndash;P90</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>Greenfield P10&ndash;P90</span>
                 <span class="chart-legend-divider"></span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:rgba(255,255,255,0.5);"></span>With existing resources</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:rgba(15,23,42,0.45);"></span>With existing resources</span>
             </div>
             <div class="chart-subtitle">The gap between curves = the cost of ignoring existing clean generation</div>
         </div>
@@ -826,8 +826,8 @@ html, body {
 <section class="synthesis-section">
     <div style="max-width:1320px;margin:0 auto;text-align:center;margin-bottom:32px;">
         <div class="section-number">3</div>
-        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:8px;letter-spacing:-0.3px;">Price In Your Starting Point — Or Risk Stranded Assets</h2>
-        <p style="font-size:0.88rem;color:rgba(255,255,255,0.55);max-width:700px;margin:0 auto;line-height:1.6;">The difference between building the right portfolio and the wrong one comes down to one question: did you account for what's already on the grid?</p>
+        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:800;color:#1E293B;margin-bottom:8px;letter-spacing:-0.3px;">Price In Your Starting Point — Or Risk Stranded Assets</h2>
+        <p style="font-size:0.88rem;color:rgba(15,23,42,0.5);max-width:700px;margin:0 auto;line-height:1.6;">The difference between building the right portfolio and the wrong one comes down to one question: did you account for what's already on the grid?</p>
     </div>
     <div class="synthesis-inner">
         <div class="synthesis-card">
@@ -847,10 +847,10 @@ html, body {
 
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
-    <details style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px 20px;">
-        <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
-        <div style="font-size:0.82rem;color:rgba(255,255,255,0.55);line-height:1.8;margin-top:12px;">
-            <p><strong style="color:rgba(255,255,255,0.7);">New-build track methodology:</strong> The optimizer was run with all existing clean generation zeroed (nuclear, solar, wind, CCS, and hydro set to 0) to isolate the greenfield case — what a buyer would procure if they ignored existing grid resources. Uprate tranches remain active as the cheapest new-build option. Results are compared against the baseline track (which builds on top of existing generation) to quantify the cost and compositional distortion of ignoring the starting point.</p>
+    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
+        <div style="font-size:0.82rem;color:rgba(15,23,42,0.5);line-height:1.8;margin-top:12px;">
+            <p><strong style="color:rgba(15,23,42,0.65);">New-build track methodology:</strong> The optimizer was run with all existing clean generation zeroed (nuclear, solar, wind, CCS, and hydro set to 0) to isolate the greenfield case — what a buyer would procure if they ignored existing grid resources. Uprate tranches remain active as the cheapest new-build option. Results are compared against the baseline track (which builds on top of existing generation) to quantify the cost and compositional distortion of ignoring the starting point.</p>
             <ol style="padding-left:20px;margin-top:8px;">
                 <li>NREL Annual Technology Baseline (ATB) 2024 — new-build costs for solar, wind, nuclear, CCS, storage.</li>
                 <li>EIA Hourly Electric Grid Monitor — hourly demand and generation profiles by ISO.</li>
@@ -923,11 +923,11 @@ const DARK_SCALES_X = {
     afterBuildTicks: function(axis) {
         axis.ticks = [50, 60, 70, 80, 90, 95, 100].map(function(v) { return { value: v }; });
     },
-    ticks: { font: { size: 9 }, color: 'rgba(255,255,255,0.5)', maxRotation: 0,
+    ticks: { font: { size: 9 }, color: 'rgba(15,23,42,0.45)', maxRotation: 0,
              callback: function(v) { return v + '%'; } },
-    grid: { color: 'rgba(255,255,255,0.06)' },
-    border: { display: true, color: 'rgba(255,255,255,0.15)' },
-    title: { display: true, text: 'Clean Energy Target', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+    grid: { color: 'rgba(0,0,0,0.025)' },
+    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
 };
 const DARK_TOOLTIP = {
     backgroundColor: 'rgba(0,0,0,0.85)',
@@ -1090,21 +1090,21 @@ function buildHeroComparisonChart() {
             scales: {
                 x: {
                     stacked: true,
-                    ticks: { font: { size: 10, weight: 600 }, color: 'rgba(255,255,255,0.6)' },
+                    ticks: { font: { size: 10, weight: 600 }, color: 'rgba(15,23,42,0.55)' },
                     grid: { display: false },
-                    border: { display: true, color: 'rgba(255,255,255,0.15)' }
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' }
                 },
                 y: {
                     stacked: true,
                     max: 100,
                     ticks: {
                         callback: function(v) { return v + '%'; },
-                        font: { size: 9 }, color: 'rgba(255,255,255,0.5)',
+                        font: { size: 9 }, color: 'rgba(15,23,42,0.45)',
                         stepSize: 25
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: '% of Resource Mix', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: '% of Resource Mix', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 }
             },
             plugins: {
@@ -1195,12 +1195,12 @@ function buildMixAreaChart() {
                     max: 100,
                     ticks: {
                         callback: function(v) { return v + '%'; },
-                        font: { size: 9 }, color: 'rgba(255,255,255,0.5)',
+                        font: { size: 9 }, color: 'rgba(15,23,42,0.45)',
                         stepSize: 20
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: '% of Resource Mix', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: '% of Resource Mix', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 }
             },
             plugins: {
@@ -1285,7 +1285,7 @@ function buildCostComparisonChart() {
         label: 'P90',
         data: p90pts,
         borderColor: 'transparent',
-        backgroundColor: 'rgba(245,158,11,0.15)',
+        backgroundColor: 'rgba(245,158,11,0.1)',
         borderWidth: 0,
         pointRadius: 0,
         fill: '+1',
@@ -1341,7 +1341,7 @@ function buildCostComparisonChart() {
         datasets.push({
             label: 'With Existing (Medium)',
             data: basePts,
-            borderColor: 'rgba(255,255,255,0.5)',
+            borderColor: 'rgba(15,23,42,0.45)',
             backgroundColor: 'transparent',
             borderWidth: 2,
             borderDash: [6, 4],
@@ -1374,11 +1374,11 @@ function buildCostComparisonChart() {
                     min: yMin, max: yMax,
                     ticks: {
                         callback: function(v) { return '$' + v; },
-                        font: { size: 9 }, color: 'rgba(255,255,255,0.5)'
+                        font: { size: 9 }, color: 'rgba(15,23,42,0.45)'
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
-                    border: { display: true, color: 'rgba(255,255,255,0.15)' },
-                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(255,255,255,0.35)', font: { size: 9 } }
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 }
             },
             plugins: {
