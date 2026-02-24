@@ -24,12 +24,10 @@ desktop.ini
 .env
 .env.local
 
-# Optimizer generated data (large binary files — old JSON checkpoints only)
-data/checkpoints/CAISO_cache_*.json
-# Checkpoint JSONs grow huge during Step 1 runs (full threshold data embedded)
-# Strip to just completed list before committing, or gitignore them
-data/checkpoints_v4/*_checkpoint.json
-# Note: data/checkpoints_v4/*.parquet must NOT be ignored — bank interim results
+# Checkpoint directories — crash-recovery artifacts only, not used downstream.
+# Final outputs (physics_cache_v4.parquet, pfs_post_ef.parquet) are what matters.
+data/checkpoints/
+data/checkpoints_v4/
 # CRITICAL: Do NOT gitignore physics_cache_v4.parquet — it must be committed
 # to prevent data loss across sessions. Previous loss of 21M solutions was
 # caused by gitignoring this file.
@@ -45,6 +43,16 @@ dashboard/track_results.json
 data/track_checkpoint.json
 data/track_checkpoint.json.tmp
 dashboard/track_results.json.tmp
+
+# Dispatch cache temp files (real .npz is kept, .tmp.npz is not)
+data/dispatch_cache/*.tmp.npz
+
+# Dashboard parquets — not consumed by any HTML/JS; data lives in shared-data.js
+dashboard/physics_results_v4*.parquet
+dashboard/eac_scarcity_results.json
+
+# Stale copy location — scripts should write to dashboard/ or data/, not here
+scripts/dashboard/
 
 # Step 1 raw parquet exports are ignored locally; CI commits them with git add -f
 data/step1_raw_pfs_parquets/*
