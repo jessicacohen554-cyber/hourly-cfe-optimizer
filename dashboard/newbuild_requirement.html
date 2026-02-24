@@ -16,16 +16,9 @@
 /* Page-specific background */
 body { background: #F7F8FC; }
 
-/* ========== FOOTER ========== */
-.page-footer {
-    background: #F0F2F5;
-    color: rgba(15,23,42,0.65);
-    padding: 32px 24px;
-    text-align: center;
-}
+/* ========== FOOTER — uses shared.css dark navy .page-footer ========== */
 .footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
 .footer-links a {
-    color: rgba(15,23,42,0.6);
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -35,8 +28,7 @@ body { background: #F7F8FC; }
     align-items: center;
     padding: 8px 4px;
 }
-.footer-links a:hover { color: #1E293B; }
-.footer-note { font-size: 0.78rem; color: rgba(15,23,42,0.35); }
+.footer-note { font-size: 0.78rem; }
 
 .bottom-banner {
     height: 4px;
@@ -51,7 +43,7 @@ body { background: #F7F8FC; }
 
 /* ========== HERO OVERVIEW SECTION ========== */
 .hero-overview {
-    background: linear-gradient(180deg, #F7F8FC 0%, #EEF1F8 100%);
+    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
     position: relative;
     overflow: hidden;
     padding: 48px 24px;
@@ -60,8 +52,8 @@ body { background: #F7F8FC; }
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 30% 20%, rgba(245,158,11,0.08) 0%, transparent 60%),
-                radial-gradient(ellipse at 70% 80%, rgba(239,68,68,0.06) 0%, transparent 60%);
+    background: radial-gradient(ellipse at 30% 20%, rgba(245,158,11,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(239,68,68,0.04) 0%, transparent 60%);
     pointer-events: none;
 }
 .hero-overview-inner {
@@ -80,9 +72,9 @@ body { background: #F7F8FC; }
     display: inline-block;
     padding: 5px 14px;
     border-radius: 8px;
-    background: rgba(245,158,11,0.08);
-    border: 1px solid rgba(245,158,11,0.18);
-    color: #d97706;
+    background: rgba(251,191,36,0.12);
+    border: 1px solid rgba(251,191,36,0.3);
+    color: #fbbf24;
     font-family: var(--font-heading);
     font-size: 0.72rem;
     font-weight: 700;
@@ -94,14 +86,14 @@ body { background: #F7F8FC; }
     font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 800;
-    color: #1E293B;
+    color: #ffffff;
     margin-bottom: 16px;
     line-height: 1.2;
     letter-spacing: -0.5px;
 }
 .hero-text-block p {
     font-size: 0.95rem;
-    color: rgba(15,23,42,0.7);
+    color: rgba(255,255,255,0.7);
     line-height: 1.75;
     margin-bottom: 16px;
 }
@@ -110,12 +102,12 @@ body { background: #F7F8FC; }
     margin-top: 8px;
     padding: 10px 18px;
     border-radius: 10px;
-    background: rgba(245,158,11,0.08);
-    border: 1px solid rgba(245,158,11,0.18);
+    background: rgba(251,191,36,0.12);
+    border: 1px solid rgba(251,191,36,0.3);
     font-family: var(--font-heading);
     font-size: 0.92rem;
     font-weight: 700;
-    color: #d97706;
+    color: #fbbf24;
 }
 .hero-chart-block {
     z-index: 1;
@@ -123,6 +115,7 @@ body { background: #F7F8FC; }
 
 /* ========== CHART PANELS ========== */
 .chart-panel {
+    background: rgba(255,255,255,0.97);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(74,144,217,0.12);
