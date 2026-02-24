@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Dual-scenario consequential accounting comparison.
+Dual-scenario comparison: Pure Consequential vs Hourly Matching.
 
 Compares two procurement strategies:
-  Scenario A (Consequential): chase cheapest $/tCO₂ sequentially,
+  Scenario A (Pure Consequential): chase cheapest $/tCO₂ sequentially,
     locking in prior resource commitments at each threshold step.
   Scenario B (Hourly Matching): target a high CFE threshold directly,
-    co-optimizing the full resource mix with low clean technology costs.
+    co-optimizing the full resource mix with clean firm deployed along
+    the FOAK→NOAK learning curve.
 
 Uses feasible mixes from shared-data.js pipeline output + cost tables
 from step3, then traces through dispatch_utils for emission rates.
@@ -156,11 +157,11 @@ ZONES = [
 # SCENARIO DEFINITIONS
 # ============================================================================
 
-# Scenario A: "Consequential"
+# Scenario A: "Pure Consequential"
 # Sequential path-dependent procurement — chase cheapest $/tCO₂ at each step
 SCENARIO_A = {
-    'name': 'Consequential',
-    'short': 'consequential',
+    'name': 'Pure Consequential',
+    'short': 'pure_consequential',
     'description': 'Sequential procurement chasing cheapest $/tCO₂ — resources lock in at each threshold step',
     'toggles': {
         'ren': 'L',        # Low renewable (cheap solar/wind)
@@ -180,7 +181,7 @@ SCENARIO_A = {
 SCENARIO_B = {
     'name': 'Hourly Matching',
     'short': 'hourly_matching',
-    'description': 'Direct hourly matching — co-optimize full resource mix at target threshold with low clean tech costs',
+    'description': 'Direct hourly matching — co-optimize full resource mix at target threshold with clean firm on FOAK→NOAK learning curve',
     'toggles': {
         'ren': 'L',        # Low renewable (still cheap)
         'firm': 'L',       # Low firm gen (cheap nuclear from learning curve)
@@ -730,9 +731,9 @@ def compute_domino_sequence(queue_a, queue_b):
 
 def main():
     print("=" * 80)
-    print("DUAL-SCENARIO COMPARISON: CONSEQUENTIAL vs HOURLY MATCHING")
-    print("  A: Consequential — sequential cheapest $/tCO₂ procurement")
-    print("  B: Hourly Matching — direct target with low clean tech costs")
+    print("DUAL-SCENARIO COMPARISON: PURE CONSEQUENTIAL vs HOURLY MATCHING")
+    print("  A: Pure Consequential — sequential cheapest $/tCO₂ procurement")
+    print("  B: Hourly Matching — direct hourly matching with clean firm on FOAK→NOAK curve")
     print("=" * 80)
 
     # Load egrid and fossil mix data
@@ -748,8 +749,8 @@ def main():
                       for mixes in iso_data.values())
     print(f"  Loaded {total_mixes:,} feasible mixes across {len(ISOS)} ISOs × {len(THRESHOLDS)} thresholds")
 
-    # Scenario A: Consequential — path-dependent sequential optimization
-    print("\nScenario A (Consequential): path-dependent sequential optimization...")
+    # Scenario A: Pure Consequential — path-dependent sequential optimization
+    print("\nScenario A (Pure Consequential): path-dependent sequential optimization...")
     results_a = find_optimal_mixes_sequential(feasible_mixes, SCENARIO_A, BASE_DEMAND_TWH)
 
     # Scenario B: Hourly Matching — target 95% CFE directly
@@ -898,7 +899,7 @@ def main():
 
     # Build resource trajectories with per-threshold stepwise MAC
     trajectories = {}
-    for scenario, results, label in [(SCENARIO_A, results_a, 'consequential'),
+    for scenario, results, label in [(SCENARIO_A, results_a, 'pure_consequential'),
                                       (SCENARIO_B, results_b, 'hourly_matching')]:
         traj = {}
         for iso in ISOS:
@@ -958,20 +959,20 @@ def main():
 
     output = {
         'metadata': {
-            'description': 'Dual-scenario comparison: Consequential vs Hourly Matching',
+            'description': 'Dual-scenario comparison: Pure Consequential vs Hourly Matching',
             'scenario_a': {
                 'name': SCENARIO_A['name'],
                 'description': SCENARIO_A['description'],
                 'toggles': SCENARIO_A['toggles'],
                 'method': 'path_dependent_sequential',
-                'method_description': 'Consequential: sequential optimization where resources deployed at each threshold become the floor for the next. Cheapest $/tCO2 at each step, locked into prior commitments.',
+                'method_description': 'Pure consequential: sequential optimization where resources deployed at each threshold become the floor for the next. Cheapest $/tCO2 at each step, locked into prior commitments.',
             },
             'scenario_b': {
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
                 'method': 'target_threshold_direct',
-                'method_description': 'Hourly Matching: co-optimize full resource mix at target CFE threshold with low clean technology costs.',
+                'method_description': 'Hourly matching: all buyers target 95% CFE simultaneously. Clean firm deployed along FOAK→NOAK learning curve, reaching Low costs via Wright\'s Law.',
                 'target_threshold': 95,
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
@@ -997,8 +998,8 @@ def main():
     os.makedirs(os.path.dirname(out_js), exist_ok=True)
     with open(out_js, 'w') as f:
         f.write("// Auto-generated by compute_scenario_comparison.py\n")
-        f.write("// Dual-scenario comparison: Consequential vs Hourly Matching\n")
-        f.write("// A: Consequential  B: Hourly Matching\n\n")
+        f.write("// Dual-scenario comparison: Pure Consequential vs Hourly Matching\n")
+        f.write("// A: Pure Consequential  B: Hourly Matching\n\n")
         f.write(f"const SCENARIO_COMPARISON = {json.dumps(output, indent=2, default=str)};\n")
     print(f"JS:   {out_js} ({os.path.getsize(out_js) / 1024:.0f} KB)")
 
