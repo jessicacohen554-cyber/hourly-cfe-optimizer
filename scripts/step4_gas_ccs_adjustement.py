@@ -37,17 +37,8 @@ import sys
 import time
 from pathlib import Path
 
-try:
-    import pandas as pd
-except ImportError:
-    print("ERROR: pandas is required. Install: pip install pandas pyarrow")
-    sys.exit(1)
-
-try:
-    import pyarrow.parquet as pq
-except ImportError:
-    print("ERROR: pyarrow is required. Install: pip install pyarrow")
-    sys.exit(1)
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -272,21 +263,34 @@ def load_from_parquets(input_dir, isos):
             print(f"  WARNING: {parquet_path} not found — skipping {iso}")
             continue
 
-        df = pd.read_parquet(parquet_path)
-        print(f"  Loaded {iso}: {len(df):,} rows from {parquet_path} "
+        table = pq.read_table(parquet_path)
+        col_names = table.column_names
+        print(f"  Loaded {iso}: {table.num_rows:,} rows from {parquet_path} "
               f"({os.path.getsize(parquet_path) / 1024:.0f} KB)")
 
+        # Convert to column dict for fast row-wise access
+        col_data = {name: table.column(name).to_pylist() for name in col_names}
+        n_rows = table.num_rows
+
         # Extract annual_demand_mwh (same for all rows of this ISO)
-        annual_demand = float(df['annual_demand_mwh'].iloc[0]) if 'annual_demand_mwh' in df.columns else REGIONAL_DEMAND_MWH.get(iso, 0)
+        annual_demand = float(col_data['annual_demand_mwh'][0]) if 'annual_demand_mwh' in col_names else REGIONAL_DEMAND_MWH.get(iso, 0)
 
         iso_data = {
             'annual_demand_mwh': annual_demand,
             'thresholds': {},
         }
 
-        # Group by threshold
-        for threshold, thr_group in df.groupby('threshold'):
-            t_str = str(threshold) if threshold != int(threshold) else str(int(threshold))
+        # Identify prefix-based columns once
+        tranche_cols = [c for c in col_names if c.startswith('tranche_')]
+        gas_cols = [c for c in col_names if c.startswith('gas_')]
+
+        # Group by threshold using a dict
+        threshold_groups = {}  # threshold_val -> [row_indices]
+        for i in range(n_rows):
+            thr = col_data['threshold'][i]
+            threshold_groups.setdefault(thr, []).append(i)
+
+        for threshold, row_indices in threshold_groups.items():
             # Handle float thresholds like 87.5, 92.5, 97.5
             if isinstance(threshold, float) and threshold != int(threshold):
                 t_str = str(threshold)
@@ -294,48 +298,46 @@ def load_from_parquets(input_dir, isos):
                 t_str = str(int(threshold))
 
             scenarios = {}
-            for _, row in thr_group.iterrows():
-                sc_key = row['scenario']
+            for i in row_indices:
+                sc_key = col_data['scenario'][i]
 
                 # Reconstruct resource_mix
                 resource_mix = {}
                 for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
                     col = f'mix_{rtype}'
-                    resource_mix[rtype] = int(row[col]) if col in row.index else 0
+                    resource_mix[rtype] = int(col_data[col][i]) if col in col_names else 0
 
                 # Reconstruct costs
                 costs = {}
                 for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
                     col = f'cost_{ckey}'
-                    costs[ckey] = float(row[col]) if col in row.index else 0.0
+                    costs[ckey] = float(col_data[col][i]) if col in col_names else 0.0
 
                 # Reconstruct tranche_costs
                 tranche_costs = {}
-                tranche_cols = [c for c in row.index if c.startswith('tranche_')]
                 for col in tranche_cols:
-                    key = col[len('tranche_'):]  # Strip prefix
-                    val = row[col]
-                    if pd.notna(val):
+                    key = col[len('tranche_'):]
+                    val = col_data[col][i]
+                    if val is not None:
                         tranche_costs[key] = float(val)
 
                 # Reconstruct gas_backup from step 3 (preserved as gas_backup_step3)
                 gas_step3 = {}
-                gas_cols = [c for c in row.index if c.startswith('gas_')]
                 for col in gas_cols:
-                    key = col[len('gas_'):]  # Strip 'gas_' prefix
-                    val = row[col]
-                    if pd.notna(val):
+                    key = col[len('gas_'):]
+                    val = col_data[col][i]
+                    if val is not None:
                         gas_step3[key] = float(val) if isinstance(val, float) else int(val)
 
                 scenario = {
                     'resource_mix': resource_mix,
                     'costs': costs,
                     'tranche_costs': tranche_costs,
-                    'procurement_pct': int(row['procurement_pct']) if 'procurement_pct' in row.index else 100,
-                    'hourly_match_score': float(row['hourly_match_score']) if 'hourly_match_score' in row.index else 0.0,
-                    'battery_dispatch_pct': int(row['battery_dispatch_pct']) if 'battery_dispatch_pct' in row.index else 0,
-                    'battery8_dispatch_pct': int(row['battery8_dispatch_pct']) if 'battery8_dispatch_pct' in row.index else 0,
-                    'ldes_dispatch_pct': int(row['ldes_dispatch_pct']) if 'ldes_dispatch_pct' in row.index else 0,
+                    'procurement_pct': int(col_data['procurement_pct'][i]) if 'procurement_pct' in col_names else 100,
+                    'hourly_match_score': float(col_data['hourly_match_score'][i]) if 'hourly_match_score' in col_names else 0.0,
+                    'battery_dispatch_pct': int(col_data['battery_dispatch_pct'][i]) if 'battery_dispatch_pct' in col_names else 0,
+                    'battery8_dispatch_pct': int(col_data['battery8_dispatch_pct'][i]) if 'battery8_dispatch_pct' in col_names else 0,
+                    'ldes_dispatch_pct': int(col_data['ldes_dispatch_pct'][i]) if 'ldes_dispatch_pct' in col_names else 0,
                     'gas_backup_step3': gas_step3,
                 }
 
@@ -461,10 +463,13 @@ def save_to_parquets(data, output_dir, isos):
         if not rows:
             continue
 
-        df_out = pd.DataFrame(rows)
+        # Build pyarrow table from list-of-dicts (no pandas)
+        all_keys = list(dict.fromkeys(k for r in rows for k in r))
+        arrays = [pa.array([r.get(k) for r in rows]) for k in all_keys]
+        table = pa.table(dict(zip(all_keys, arrays)))
         out_path = os.path.join(output_dir, f'step4_{iso}.parquet')
-        df_out.to_parquet(out_path, index=False, compression='zstd')
-        print(f"  {out_path}: {len(df_out):,} rows, "
+        pq.write_table(table, out_path, compression='zstd')
+        print(f"  {out_path}: {len(rows):,} rows, "
               f"{os.path.getsize(out_path) / 1e6:.1f} MB")
 
 
