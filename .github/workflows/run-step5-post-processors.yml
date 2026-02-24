@@ -160,8 +160,9 @@ jobs:
           # Stage all possible outputs
           git add -f data/step4-gas-CCS/ 2>/dev/null || true
           git add -f data/lmp/ 2>/dev/null || true
-          git add -f data/mac_stats.json 2>/dev/null || true
+          git add -f data/step5-post-processing-results/ 2>/dev/null || true
           git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
+          git add -f dashboard/js/shared-data.js 2>/dev/null || true
           git add -f dashboard/compressed_day_profiles.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
