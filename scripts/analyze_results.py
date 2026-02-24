@@ -2,32 +2,52 @@
 """
 Post-Optimizer Analysis Script
 ================================
-Runs after optimize_overprocure.py completes. Performs:
+Runs after the pipeline completes. Performs:
 1. QA/QC: monotonicity validation, literature alignment checks
 2. Resource mix analysis: VRE waste between lower and >90% targets
 3. Curtailment quantification: inputs for DAC-VRE co-optimization
 4. Summary statistics for dashboard/narrative updates
 
-Reads: dashboard/overprocure_results.json (or data/optimizer_cache.json)
+Reads from: data/step5-post-processing/co2_results/{ISO}_{threshold}_2025.json
 Outputs: analysis summary to stdout + data/analysis_results.json
 """
 
 import json
 import os
 import sys
+import numpy as np
 
-SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RESULTS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
-CACHE_PATH = os.path.join(SCRIPT_DIR, 'data', 'optimizer_cache.json')
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'data', 'analysis_results.json')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+CO2_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing', 'co2_results')
+OUTPUT_PATH = os.path.join(ROOT_DIR, 'data', 'analysis_results.json')
+
+# Import constants from step3
+sys.path.insert(0, SCRIPT_DIR)
+from step3_cost_optimization import REGIONAL_DEMAND_TWH
 
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+
+
 def medium_key(iso):
     """Return the all-Medium scenario key for a given ISO (9-dim format)."""
     return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
 
 OLD_MEDIUM_KEYS = ['MMM_M_M_M_M1_M', 'MMM_M_M_M_M1_X', 'MMM_M_M']
+
+
+def load_scenarios(iso, threshold):
+    """Load scenarios from co2 batch result JSON."""
+    t_str = str(threshold)
+    fname = f"{iso}_{t_str}_2025.json"
+    fpath = os.path.join(CO2_DIR, fname)
+    if not os.path.exists(fpath):
+        return {}
+    with open(fpath) as f:
+        data = json.load(f)
+    return data.get('scenarios', {})
+
 
 def get_medium_scenario(scenarios, iso):
     """Get medium scenario data with fallback to old key formats."""
@@ -39,10 +59,10 @@ def get_medium_scenario(scenarios, iso):
             return scenarios[fallback]
     return None
 
+
 # Literature reference ranges for validation ($/MWh effective cost at Medium scenario)
 # Sources: NREL ATB 2024, Lazard LCOE 16.0, LBNL Utility-Scale Solar/Wind 2024
 LITERATURE_RANGES = {
-    # (min_cost, max_cost) at 90% hourly matching, Medium scenario
     '90': {
         'CAISO': (55, 100),
         'ERCOT': (45, 85),
@@ -50,7 +70,6 @@ LITERATURE_RANGES = {
         'NYISO': (65, 120),
         'NEISO': (60, 115),
     },
-    # Very rough ranges for 95% matching
     '95': {
         'CAISO': (70, 140),
         'ERCOT': (55, 120),
@@ -61,24 +80,8 @@ LITERATURE_RANGES = {
 }
 
 
-def load_results():
-    """Load optimizer results from either the dashboard file or cache."""
-    for path in [RESULTS_PATH, CACHE_PATH]:
-        if os.path.exists(path):
-            with open(path) as f:
-                data = json.load(f)
-            print(f"Loaded results from: {path}")
-            print(f"  File size: {os.path.getsize(path) / 1024:.0f} KB")
-            return data
-    print("ERROR: No results file found!")
-    sys.exit(1)
-
-
-def check_monotonicity(data):
-    """
-    Check that cost is non-decreasing across thresholds for each scenario.
-    Returns dict of violations by ISO.
-    """
+def check_monotonicity():
+    """Check that cost is non-decreasing across thresholds for each scenario."""
     print("\n" + "=" * 70)
     print("  1. MONOTONICITY VALIDATION")
     print("=" * 70)
@@ -88,35 +91,27 @@ def check_monotonicity(data):
     total_violations = 0
 
     for iso in ISOS:
-        if iso not in data['results']:
-            continue
-
-        iso_data = data['results'][iso]
-        thresholds_data = iso_data.get('thresholds', {})
-        violations = []
-
-        # Collect all scenario keys across thresholds
+        # Collect all scenario keys and costs across thresholds
+        threshold_scenarios = {}
         all_scenario_keys = set()
-        for t_str in thresholds_data:
-            scenarios = thresholds_data[t_str].get('scenarios', {})
+        for threshold in THRESHOLDS:
+            scenarios = load_scenarios(iso, threshold)
+            threshold_scenarios[threshold] = scenarios
             all_scenario_keys.update(scenarios.keys())
 
+        violations = []
         for sk in sorted(all_scenario_keys):
             prev_cost = None
             prev_t = None
             for threshold in THRESHOLDS:
-                t_str = str(threshold)
-                if t_str not in thresholds_data:
-                    continue
-                scenarios = thresholds_data[t_str].get('scenarios', {})
+                scenarios = threshold_scenarios[threshold]
                 if sk not in scenarios:
                     continue
                 result = scenarios[sk]
                 if 'costs' not in result:
                     continue
 
-                cost = result['costs'].get('effective_cost',
-                       result['costs'].get('effective_cost_per_useful_mwh', 0))
+                cost = result['costs'].get('effective_cost', 0)
                 total_checks += 1
 
                 if prev_cost is not None and cost < prev_cost - 0.01:
@@ -147,7 +142,7 @@ def check_monotonicity(data):
     return all_violations
 
 
-def check_literature_alignment(data):
+def check_literature_alignment():
     """Check Medium scenario costs against published literature ranges."""
     print("\n" + "=" * 70)
     print("  2. LITERATURE ALIGNMENT CHECK")
@@ -156,26 +151,17 @@ def check_literature_alignment(data):
     warnings = []
 
     for iso in ISOS:
-        if iso not in data['results']:
-            continue
-
-        iso_data = data['results'][iso]
-        thresholds_data = iso_data.get('thresholds', {})
         print(f"\n  {iso}:")
 
         for t_check in ['90', '95']:
-            if t_check not in thresholds_data:
+            scenarios = load_scenarios(iso, t_check)
+            if not scenarios:
                 continue
-            scenarios = thresholds_data[t_check].get('scenarios', {})
-            if get_medium_scenario(scenarios, iso) is None:
-                continue
-
             result = get_medium_scenario(scenarios, iso)
-            if 'costs' not in result:
+            if result is None or 'costs' not in result:
                 continue
 
-            cost = result['costs'].get('effective_cost',
-                   result['costs'].get('effective_cost_per_useful_mwh', 0))
+            cost = result['costs'].get('effective_cost', 0)
             expected = LITERATURE_RANGES.get(t_check, {}).get(iso, (0, 999))
 
             status = "OK" if expected[0] <= cost <= expected[1] else "WARNING"
@@ -185,14 +171,14 @@ def check_literature_alignment(data):
                 warnings.append(f"{iso} {t_check}%: ${cost:.2f} outside [{expected[0]}, {expected[1]}]")
 
     if warnings:
-        print(f"\n  ⚠ {len(warnings)} warning(s) — review these costs against sources")
+        print(f"\n  {len(warnings)} warning(s) — review these costs against sources")
     else:
         print(f"\n  All Medium scenario costs within expected literature ranges")
 
     return warnings
 
 
-def analyze_resource_mixes(data):
+def analyze_resource_mixes():
     """Analyze resource mix evolution across thresholds — identify VRE waste."""
     print("\n" + "=" * 70)
     print("  3. RESOURCE MIX ANALYSIS — VRE WASTE BETWEEN TARGETS")
@@ -201,32 +187,24 @@ def analyze_resource_mixes(data):
     mix_analysis = {}
 
     for iso in ISOS:
-        if iso not in data['results']:
-            continue
-
-        iso_data = data['results'][iso]
-        thresholds_data = iso_data.get('thresholds', {})
-
         print(f"\n  {iso}:")
         print(f"    {'Threshold':>10}  {'CF':>5} {'Sol':>5} {'Wnd':>5} {'CCS':>5} {'Hyd':>5} "
-              f"{'Batt':>5} {'LDES':>5} {'Proc%':>6} {'Cost':>8} {'Curt%':>6}")
-        print(f"    {'-'*80}")
+              f"{'Batt':>5} {'LDES':>5} {'Proc%':>6} {'Cost':>8}")
+        print(f"    {'-'*70}")
 
         iso_mixes = {}
         for threshold in THRESHOLDS:
-            t_str = str(threshold)
-            if t_str not in thresholds_data:
-                continue
-
-            scenarios = thresholds_data[t_str].get('scenarios', {})
-            if get_medium_scenario(scenarios, iso) is None:
+            scenarios = load_scenarios(iso, threshold)
+            if not scenarios:
                 continue
 
             result = get_medium_scenario(scenarios, iso)
+            if result is None:
+                continue
+
             mix = result.get('resource_mix', {})
             costs = result.get('costs', {})
-            cost_val = costs.get('effective_cost', costs.get('effective_cost_per_useful_mwh', 0))
-            curt = costs.get('curtailment_pct', 0)
+            cost_val = costs.get('effective_cost', 0)
             proc = result.get('procurement_pct', 0)
             batt = result.get('battery_dispatch_pct', 0)
             ldes = result.get('ldes_dispatch_pct', 0)
@@ -234,33 +212,27 @@ def analyze_resource_mixes(data):
             iso_mixes[threshold] = {
                 'mix': mix,
                 'cost': cost_val,
-                'curtailment_pct': curt,
                 'procurement_pct': proc,
                 'battery_pct': batt,
                 'ldes_pct': ldes,
             }
 
-            vre_pct = mix.get('solar', 0) + mix.get('wind', 0)
             print(f"    {threshold:>8}%  "
                   f"{mix.get('clean_firm', 0):>5} {mix.get('solar', 0):>5} {mix.get('wind', 0):>5} "
                   f"{mix.get('ccs_ccgt', 0):>5} {mix.get('hydro', 0):>5} "
                   f"{batt:>5.1f} {ldes:>5.1f} "
-                  f"{proc:>6.1f} ${cost_val:>7.2f} {curt:>5.1f}%")
+                  f"{proc:>6.1f} ${cost_val:>7.2f}")
 
-        # Compute VRE waste: how much of the VRE capacity at lower thresholds
-        # becomes underutilized or stranded at higher thresholds
+        # Compute VRE waste: 90→95 transition
         if 90 in iso_mixes and 95 in iso_mixes:
             mix_90 = iso_mixes[90]['mix']
             mix_95 = iso_mixes[95]['mix']
             vre_90 = mix_90.get('solar', 0) + mix_90.get('wind', 0)
             vre_95 = mix_95.get('solar', 0) + mix_95.get('wind', 0)
-            curt_90 = iso_mixes[90]['curtailment_pct']
-            curt_95 = iso_mixes[95]['curtailment_pct']
             cost_jump = iso_mixes[95]['cost'] - iso_mixes[90]['cost']
 
             print(f"\n    90%→95% transition:")
             print(f"      VRE share: {vre_90}% → {vre_95}% (Δ {vre_95 - vre_90:+.1f}%)")
-            print(f"      Curtailment: {curt_90:.1f}% → {curt_95:.1f}% (Δ {curt_95 - curt_90:+.1f}%)")
             print(f"      Cost jump: ${cost_jump:+.2f}/MWh")
 
         mix_analysis[iso] = iso_mixes
@@ -268,7 +240,7 @@ def analyze_resource_mixes(data):
     return mix_analysis
 
 
-def analyze_curtailment_for_dac(data):
+def analyze_curtailment_for_dac():
     """Quantify curtailed energy at each threshold — inputs for DAC-VRE analysis."""
     print("\n" + "=" * 70)
     print("  4. CURTAILMENT ANALYSIS — DAC-VRE CO-OPTIMIZATION INPUTS")
@@ -277,111 +249,85 @@ def analyze_curtailment_for_dac(data):
     dac_inputs = {}
 
     for iso in ISOS:
-        if iso not in data['results']:
-            continue
+        annual_demand_mwh = REGIONAL_DEMAND_TWH.get(iso, 0) * 1e6
 
-        iso_data = data['results'][iso]
-        thresholds_data = iso_data.get('thresholds', {})
-        annual_demand = iso_data.get('annual_demand_mwh', 0)
-
-        print(f"\n  {iso} (annual demand: {annual_demand/1e6:.1f} TWh):")
-        print(f"    {'Threshold':>10} {'Proc%':>7} {'Match%':>7} {'Curt%':>7} "
-              f"{'Curt TWh':>9} {'DAC Mt':>7} {'MAC':>8}")
-        print(f"    {'-'*65}")
+        print(f"\n  {iso} (annual demand: {annual_demand_mwh/1e6:.1f} TWh):")
+        print(f"    {'Threshold':>10} {'Proc%':>7} {'Match%':>7} "
+              f"{'MAC':>8}")
+        print(f"    {'-'*45}")
 
         iso_dac = {}
         for threshold in THRESHOLDS:
-            t_str = str(threshold)
-            if t_str not in thresholds_data:
-                continue
-
-            scenarios = thresholds_data[t_str].get('scenarios', {})
-            if get_medium_scenario(scenarios, iso) is None:
+            scenarios = load_scenarios(iso, threshold)
+            if not scenarios:
                 continue
 
             result = get_medium_scenario(scenarios, iso)
+            if result is None:
+                continue
+
             costs = result.get('costs', {})
             proc = result.get('procurement_pct', 0)
             match_score = result.get('hourly_match_score', 0)
-            curt = costs.get('curtailment_pct', 0)
 
-            # Curtailed energy in MWh
-            proc_factor = proc / 100.0
-            match_factor = match_score / 100.0
-            total_procured = annual_demand * proc_factor
-            curtailed_mwh = total_procured * (curt / 100.0) if curt > 0 else 0
-
-            # DAC capacity at 2 MWh/ton CO2
-            dac_tons = curtailed_mwh / 2.0
-
-            # MAC (marginal abatement cost): cost increase per % of threshold increase
-            cost_val = costs.get('effective_cost', costs.get('effective_cost_per_useful_mwh', 0))
+            # MAC from co2_abated
             co2 = result.get('co2_abated', {})
             co2_tons = co2.get('tons_co2_abated', 0) if isinstance(co2, dict) else 0
-
-            # MAC = incremental cost / incremental CO2 (approximate)
             mac = 0
-            if co2_tons > 0 and annual_demand > 0:
-                incremental = costs.get('incremental_above_baseline', 0)
-                mac = (incremental * annual_demand) / co2_tons if co2_tons > 0 else 0
+            if co2_tons > 0 and annual_demand_mwh > 0:
+                incremental = costs.get('incremental', 0)
+                mac = (incremental * annual_demand_mwh) / co2_tons if co2_tons > 0 else 0
 
             iso_dac[threshold] = {
                 'procurement_pct': proc,
-                'curtailment_pct': curt,
-                'curtailed_mwh': round(curtailed_mwh),
-                'dac_potential_tons': round(dac_tons),
                 'mac_per_ton': round(mac, 2),
             }
 
-            print(f"    {threshold:>8}%  {proc:>6.1f} {match_score:>6.1f} {curt:>6.1f} "
-                  f"{curtailed_mwh/1e6:>8.3f}  {dac_tons/1e6:>6.3f} ${mac:>7.0f}")
+            print(f"    {threshold:>8}%  {proc:>6.1f} {match_score:>6.1f} "
+                  f"${mac:>7.0f}")
 
         dac_inputs[iso] = iso_dac
 
     return dac_inputs
 
 
-def print_summary(data):
+def print_summary():
     """Print high-level summary statistics."""
     print("\n" + "=" * 70)
     print("  5. SUMMARY STATISTICS")
     print("=" * 70)
 
     for iso in ISOS:
-        if iso not in data['results']:
-            continue
-
-        iso_data = data['results'][iso]
-        thresholds_data = iso_data.get('thresholds', {})
-        total_scenarios = sum(
-            thresholds_data[t].get('scenario_count', len(thresholds_data[t].get('scenarios', {})))
-            for t in thresholds_data
-        )
-
-        print(f"\n  {iso}:")
-        print(f"    Thresholds computed: {len(thresholds_data)}")
-        print(f"    Total scenario-results: {total_scenarios}")
-        print(f"    Annual demand: {iso_data.get('annual_demand_mwh', 0)/1e6:.1f} TWh")
-
-        # Min/max cost at Medium scenario across thresholds
+        scenario_count = 0
+        threshold_count = 0
         costs = []
+
         for threshold in THRESHOLDS:
-            t_str = str(threshold)
-            if t_str not in thresholds_data:
+            scenarios = load_scenarios(iso, threshold)
+            if not scenarios:
                 continue
-            scenarios = thresholds_data[t_str].get('scenarios', {})
-            if get_medium_scenario(scenarios, iso) is not None:
-                result = get_medium_scenario(scenarios, iso)
+            threshold_count += 1
+            scenario_count += len(scenarios)
+
+            result = get_medium_scenario(scenarios, iso)
+            if result is not None:
                 c = result.get('costs', {})
-                cost_val = c.get('effective_cost', c.get('effective_cost_per_useful_mwh', 0))
+                cost_val = c.get('effective_cost', 0)
                 if cost_val > 0:
                     costs.append((threshold, cost_val))
+
+        demand_twh = REGIONAL_DEMAND_TWH.get(iso, 0)
+        print(f"\n  {iso}:")
+        print(f"    Thresholds computed: {threshold_count}")
+        print(f"    Total scenario-results: {scenario_count}")
+        print(f"    Annual demand: {demand_twh:.1f} TWh")
 
         if costs:
             min_c = min(costs, key=lambda x: x[1])
             max_c = max(costs, key=lambda x: x[1])
             print(f"    Cost range (Medium): ${min_c[1]:.2f}/MWh ({min_c[0]}%) → ${max_c[1]:.2f}/MWh ({max_c[0]}%)")
-            print(f"    Cost multiplier: {max_c[1]/min_c[1]:.1f}x")
+            if min_c[1] > 0:
+                print(f"    Cost multiplier: {max_c[1]/min_c[1]:.1f}x")
 
 
 def main():
@@ -389,23 +335,25 @@ def main():
     print("  POST-OPTIMIZER ANALYSIS")
     print("=" * 70)
 
-    data = load_results()
+    if not os.path.isdir(CO2_DIR):
+        print(f"ERROR: co2_results directory not found: {CO2_DIR}")
+        sys.exit(1)
 
-    # Check what we got
-    results = data.get('results', {})
-    isos_present = [iso for iso in ISOS if iso in results]
-    print(f"  ISOs in results: {isos_present}")
-
-    for iso in isos_present:
-        thresholds_present = sorted([float(t) for t in results[iso].get('thresholds', {}).keys()])
+    # Check which ISOs/thresholds are available
+    for iso in ISOS:
+        thresholds_present = []
+        for t in THRESHOLDS:
+            fpath = os.path.join(CO2_DIR, f"{iso}_{t}_2025.json")
+            if os.path.exists(fpath):
+                thresholds_present.append(t)
         print(f"  {iso} thresholds: {thresholds_present}")
 
     # Run all analyses
-    violations = check_monotonicity(data)
-    warnings = check_literature_alignment(data)
-    mix_analysis = analyze_resource_mixes(data)
-    dac_inputs = analyze_curtailment_for_dac(data)
-    print_summary(data)
+    violations = check_monotonicity()
+    warnings = check_literature_alignment()
+    mix_analysis = analyze_resource_mixes()
+    dac_inputs = analyze_curtailment_for_dac()
+    print_summary()
 
     # Save analysis results
     output = {
@@ -416,7 +364,6 @@ def main():
         'dac_inputs': dac_inputs,
     }
 
-    # Convert mix analysis (has non-serializable keys)
     for iso, mixes in mix_analysis.items():
         output['mix_analysis'][iso] = {
             str(k): v for k, v in mixes.items()
