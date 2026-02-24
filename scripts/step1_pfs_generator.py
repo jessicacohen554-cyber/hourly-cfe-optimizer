@@ -13,7 +13,7 @@ Pipeline position: Step 1 of 4
 
 Key features:
   - 4D resource space: clean_firm (absorbs CCS), solar, wind, hydro
-  - 13 thresholds: 50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
+  - 15 thresholds: 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
   - Adaptive grid search: 5% → 1% refinement
   - Pareto frontier: 3-5 points per threshold×ISO (procurement/storage tradeoff)
   - Numba JIT-compiled scoring functions
@@ -115,8 +115,8 @@ HYDRO_CAPS = {
     'MISO': 1.6, 'SPP': 4.3,
 }
 
-# 13 thresholds (v4.0: added 50, 60, 70)
-THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+# 15 thresholds (v4.1: added 55, 65 for finer low-range granularity)
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 
 # Threshold-adaptive procurement bounds (Decision 3C, expanded)
 # 90-99%: capped at 250% per user direction (high enough for extreme renewables,
@@ -126,7 +126,9 @@ THRESHOLDS = [50, 60, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 # hit 80%+ targets — the old caps (150-200%) blocked this solution space.
 PROCUREMENT_BOUNDS = {
     50:   (50, 200),
+    55:   (55, 212),
     60:   (60, 225),
+    65:   (65, 237),
     70:   (70, 250),
     75:   (75, 250),
     80:   (80, 250),
