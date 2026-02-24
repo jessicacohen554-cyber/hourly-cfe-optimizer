@@ -2026,7 +2026,7 @@ def main():
                                 row['mix_wind'] = wnd
                                 row['mix_ccs_ccgt'] = ccs_alloc
                                 row['mix_hydro'] = hyd
-                                row['procurement_pct'] = int(arrs_['procurement'][mix_idx])
+                                row['procurement_pct'] = int(arrs_['procurement_pct'][mix_idx])
                                 row['hourly_match_score'] = float(
                                     arrs_['hourly_match_score'][mix_idx])
 
@@ -2110,7 +2110,7 @@ def main():
                         row['mix_wind'] = wnd
                         row['mix_ccs_ccgt'] = ccs
                         row['mix_hydro'] = hyd
-                        row['procurement_pct'] = int(tarrs_['procurement'][mix_idx])
+                        row['procurement_pct'] = int(tarrs_['procurement_pct'][mix_idx])
                         row['hourly_match_score'] = float(
                             tarrs_['hourly_match_score'][mix_idx])
                         row['battery_dispatch_pct'] = int(
