@@ -17,17 +17,17 @@ track_results.json with the same pricing engine.
 Pipeline position:
   Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Postprocess)
                                                       ↓
-                                          compute_lmp_prices.py  ← THIS
+                                          step5_PP6_compute_lmp_prices.py  ← THIS
                                                       ↓
-                              data/lmp/{ISO}_lmp.parquet   (per-ISO output)
-                              data/lmp/{ISO}_archetypes.parquet
-                              data/lmp/lmp_summary.json
+                              data/step5-post-processing/lmp/{ISO}_lmp.parquet   (per-ISO output)
+                              data/step5-post-processing/lmp/{ISO}_archetypes.parquet
+                              data/step5-post-processing/lmp/lmp_summary.json
 
 Usage:
-  python compute_lmp_prices.py --iso PJM                    # PJM only, all thresholds
-  python compute_lmp_prices.py --iso PJM --test             # PJM test: 2025/50%/95%
-  python compute_lmp_prices.py                              # All ISOs
-  python compute_lmp_prices.py --iso PJM --fuel-level M     # Medium fuel only
+  python step5_PP6_compute_lmp_prices.py --iso PJM                    # PJM only, all thresholds
+  python step5_PP6_compute_lmp_prices.py --iso PJM --test             # PJM test: 2025/50%/95%
+  python step5_PP6_compute_lmp_prices.py                              # All ISOs
+  python step5_PP6_compute_lmp_prices.py --iso PJM --fuel-level M     # Medium fuel only
 """
 
 import json
@@ -52,9 +52,9 @@ from dispatch_utils import (
     load_dispatch_cache, save_dispatch_cache, get_or_compute_dispatch,
 )
 
-LMP_DIR = os.path.join(SCRIPT_DIR, 'data', 'lmp')
-STEP3_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step-3-CO-ISO-parquets')
-STEP4_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-CCS')
+LMP_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing', 'lmp')
+STEP3_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step3-cost-opt-parquets')
+STEP4_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-ccs-parquets')
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FOSSIL MERIT-ORDER STACK — heat rates, VOM, marginal cost

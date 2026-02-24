@@ -88,15 +88,29 @@
 ### Pipeline Architecture (Critical — Know What You're Changing)
 
 **Core pipeline (Steps 1–4):**
-- **Step 1: PFS Generator** (`scripts/step1_pfs_generator.py`) — Generates the Physics Feasible Space (PFS). 4D adaptive grid search (clean_firm, solar, wind, hydro) with procurement sweep, battery daily-cycle dispatch (4hr, 85% RTE), LDES multi-day dispatch (100hr, 50% RTE). Produces physics-validated resource mixes across 15 thresholds × 5 ISOs. **Only re-run if dispatch logic, generation curves, or demand curves change.**
-- **Step 2: Efficient Frontier** (`scripts/step2_efficient_frontier.py`) — Extracts the Efficient Frontier (EF) from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. 21.4M → ~1.8M rows. **Only re-run if PFS changes or filtering criteria change.**
-- **Step 3: Cost Optimization** (`scripts/step3_cost_optimization.py`) — Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos (non-CAISO; 17,496 for CAISO). Merit-order tranche pricing for clean firm (uprate → geothermal → cheapest of nuclear/CCS). Demand growth sweep (25 years × 3 growth rates). **Run when cost assumptions change. No physics re-run needed.**
-- **Step 4: Post-Processing** (`scripts/step4_gas_ccs_adjustement.py`) — NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh), without-45Q overlay, gas capacity backup & resource adequacy (15% RA margin), CCS vs LDES crossover analysis. **Run when Step 3 outputs change.**
+- **Step 1: PFS Generator** (`scripts/step1_pfs_generator.py`) — Generates the Physics Feasible Space (PFS). 4D adaptive grid search (clean_firm, solar, wind, hydro) with procurement sweep, battery daily-cycle dispatch (4hr, 85% RTE), LDES multi-day dispatch (100hr, 50% RTE). Produces physics-validated resource mixes across 15 thresholds × 5 ISOs. Output: `data/step1-pfs-parquets/`. **Only re-run if dispatch logic, generation curves, or demand curves change.**
+- **Step 2: Efficient Frontier** (`scripts/step2_efficient_frontier.py`) — Extracts the Efficient Frontier (EF) from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. 21.4M → ~1.8M rows. Output: `data/step2-ef-parquets/`. **Only re-run if PFS changes or filtering criteria change.**
+- **Step 3: Cost Optimization** (`scripts/step3_cost_optimization.py`) — Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos (non-CAISO; 17,496 for CAISO). Merit-order tranche pricing for clean firm (uprate → geothermal → cheapest of nuclear/CCS). Demand growth sweep (25 years × 3 growth rates). Output: `data/step3-cost-opt-parquets/`. Also: `scripts/step3_track_nb_ctr.py` (Track 2 newbuild + Track 3 cost-to-replace). **Run when cost assumptions change. No physics re-run needed.**
+- **Step 4: Post-Processing** (`scripts/step4_gas_ccs_adjustement.py`) — NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh), without-45Q overlay, gas capacity backup & resource adequacy (15% RA margin), CCS vs LDES crossover analysis. Output: `data/step4-gas-ccs-parquets/`. **Run when Step 3 outputs change.**
 
-**Post-processing scripts (run after Step 4):**
-- **`scripts/recompute_co2.py`** — Dispatch-stack emission model. Merit-order retirement: coal first, then oil, then gas. Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average rate of DISPLACED fossil (not remaining fleet) for CO₂ abated calculation. Demand-growth-aware.
-- **`scripts/compute_mac_stats.py`** — Computes 6 MAC metrics: average MAC fan (P10/P50/P90), stepwise marginal MAC, monotonic envelope, path-constrained MAC. ANOVA sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS benchmarks.
-- **`scripts/generate_shared_data.py`** — Extracts all results into `dashboard/js/shared-data.js` for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing.
+**Step 5: Post-processing scripts (run after Step 4, all output to `data/step5-post-processing/`):**
+- **`scripts/step5_PP1_compressed_day.py`** — 24-hour representative day profiles for each unique mix.
+- **`scripts/step5_PP2_consequential_queue.py`** — Cross-regional deployment path under consequential accounting; merit-order fuel retirement.
+- **`scripts/step5_PP3_scenario_comparison.py`** — Consequential vs. hourly matching strategy comparison.
+- **`scripts/step5_PP4_recompute_co2.py`** — Dispatch-stack emission model. Merit-order retirement: coal first, then oil, then gas. Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average rate of DISPLACED fossil (not remaining fleet) for CO₂ abated calculation. Demand-growth-aware.
+- **`scripts/step5_PP5_compute_mac_stats.py`** — Computes 6 MAC metrics: average MAC fan (P10/P50/P90), stepwise marginal MAC, monotonic envelope, path-constrained MAC. ANOVA sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS benchmarks.
+- **`scripts/step5_PP6_compute_lmp_prices.py`** — Reconstructs 8760-hour dispatch per scenario; synthetic hourly LMP from merit-order fossil stack. Output: `data/step5-post-processing/lmp/`.
+- **`scripts/step5_PP7_compute_eac_scarcity.py`** — EAC supply scarcity analysis under RPS + voluntary demand.
+- **`scripts/step5_PP8_export_track_results.py`** — Exports track parquets (NB + CTR) to `track_results.json` for dashboard.
+- **`scripts/step5_PP9_analyze_tracks.py`** — Track result analysis: cost envelopes (P10/P50/P90), resource mix differentials.
+
+**Step 6: Dashboard Data Generation:**
+- **`scripts/step6_generate_shared_data.py`** — Extracts all results into `dashboard/js/shared-data.js` for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing. Aggregates Step 5 outputs (mac_stats, etc.). Runs last.
+
+**Step 0: Data Fetch/Prep** (scripts prefixed `step0_`):
+- `step0_fetch_eia_master.py`, `step0_fetch_all_data.py`, `step0_fetch_egrid.py`, `step0_fetch_eia_multiyear.py`, `step0_fetch_lmp_2025.py`, `step0_fix_dst_profiles.py`, `step0_fix_utc_profiles.py`
+
+**Utility scripts** (no step prefix): `dispatch_utils.py`, `anthropic_image_utils.py`, `extract_shared_data.py`, `calibrate_lmp_model.py`, `analyze_pjm_lmp.py`, `analyze_results.py`, `sensitivity_analysis.py`
 
 **Data contract**: Step 3 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields.
 - Steps 2–4 + post-processing scripts are cheap (seconds to minutes). Step 1 is expensive (hours). Default to Steps 3–4 unless physics assumptions change.
@@ -262,9 +276,9 @@ When facing compute vs. rigor tradeoffs:
 - **Social cost of carbon references**: EPA $51/ton + Rennert et al. $185/ton + EU ETS $60-100/ton range — all three shown on charts
 
 ### Data Persistence (Critical — Never Lose Compute Results)
-- **NEVER gitignore compute-intensive outputs** — `data/step1_raw_pfs_parquets/`, `data/step-2-EF-parquets/`, and downstream parquets must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring cache files.
+- **NEVER gitignore compute-intensive outputs** — `data/step1-pfs-parquets/`, `data/step2-ef-parquets/`, and downstream parquets must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring cache files.
 - **Commit parquet caches immediately after optimizer runs** — the moment Step 1 completes, commit and push before doing anything else. This is higher priority than any code changes.
-- **After any Step 1 run**: `git add data/step1_raw_pfs_parquets/ && git commit -m "Bank PFS cache" && git push`
+- **After any Step 1 run**: `git add data/step1-pfs-parquets/ && git commit -m "Bank PFS cache" && git push`
 - **Checkpoint directories (`data/checkpoints/`, `data/checkpoints_v4/`)** are gitignored and removed from the repo — they're crash-recovery artifacts not used downstream. The main parquet outputs are sacred.
 
 ### Build Process

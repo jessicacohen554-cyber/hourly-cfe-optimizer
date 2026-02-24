@@ -70,7 +70,7 @@ jobs:
     - name: Create output directories
       run: |
         mkdir -p data/checkpoints_v4
-        mkdir -p data/step1_raw_pfs_parquets
+        mkdir -p data/step1-pfs-parquets
 
     - name: Run Step 1 PFS for each threshold
       run: |
@@ -86,7 +86,7 @@ jobs:
         git config user.email "github-actions@github.com"
 
         # Add both completed parquets and checkpoint files (-f to override .gitignore)
-        git add -f data/step1_raw_pfs_parquets/ data/checkpoints_v4/
+        git add -f data/step1-pfs-parquets/ data/checkpoints_v4/
 
         if git diff --cached --quiet; then
           echo "No changes to commit"

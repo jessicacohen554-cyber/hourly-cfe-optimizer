@@ -15,8 +15,8 @@ Pipeline position: Step 3 of 4
   Step 3 — Cost optimization (this file)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step-2-EF-parquets/step2_ef_<ISO>.parquet  (from Step 2, per-ISO)
-Output: data/step-3-CO-ISO-parquets/step3_co_<ISO>.parquet  (per-ISO cost optimization results)
+Input:  data/step2-ef-parquets/step2_ef_<ISO>.parquet  (from Step 2, per-ISO)
+Output: data/step3-cost-opt-parquets/step3_co_<ISO>.parquet  (per-ISO cost optimization results)
 
 Key format: RFS_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M1_M for CAISO all-Medium)
   CAISO: 17,496 combos per threshold. Non-CAISO: 5,832 combos per threshold.
@@ -1037,8 +1037,8 @@ def prepare_threshold_metadata(scores, thresholds):
 # LOAD PFS POST-EF
 # ============================================================================
 
-INPUT_DIR = Path('data/step-2-EF-parquets')
-OUTPUT_DIR = Path('data/step-3-CO-ISO-parquets')
+INPUT_DIR = Path('data/step2-ef-parquets')
+OUTPUT_DIR = Path('data/step3-cost-opt-parquets')
 
 # Thresholds to evaluate
 OUTPUT_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
@@ -1064,7 +1064,7 @@ def _table_to_arrays(table):
 def load_pfs_post_ef(input_dir, selected_isos=None):
     """Load PFS post-EF from per-ISO parquet files in input_dir.
 
-    Reads exclusively from data/step-2-EF-parquets/step2_ef_<ISO>.parquet.
+    Reads exclusively from data/step2-ef-parquets/step2_ef_<ISO>.parquet.
     No fallback to legacy monolithic parquet.
 
     Returns:
