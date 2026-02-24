@@ -1775,23 +1775,6 @@ def main():
                     row[f'gas_{k}'] = v
                 yield row
 
-    def _flatten_demand_growth(iso, iso_thrs):
-        """Yield demand growth result rows for parquet output (generator)."""
-        for t_str, thr_scenarios in iso_thrs.items():
-            for sc_key, year_data in thr_scenarios.items():
-                for year_str, growth_data in year_data.items():
-                    for g_level, vals in growth_data.items():
-                        yield {
-                            'iso': iso,
-                            'threshold': float(t_str),
-                            'scenario': sc_key,
-                            'year': int(year_str),
-                            'growth_level': g_level,
-                            'mix_idx': vals[0],
-                            'total_cost': vals[1],
-                            'effective_cost': vals[2],
-                            'incremental': vals[3],
-                        }
 
     def _flatten_feasible_mixes(iso, iso_data):
         """Yield feasible mix rows for parquet output (generator)."""
@@ -1839,49 +1822,6 @@ def main():
             writer.close()
         return total
 
-    # GitHub rejects files > 100 MB; warn at > 50 MB.  When a parquet
-    # exceeds MAX_PARQUET_MB we split it by the ``threshold`` column into
-    # per-threshold files and remove the monolithic original.
-    MAX_PARQUET_MB = 50
-
-    def _split_if_oversized(path, split_col='threshold'):
-        """Split a parquet file by *split_col* if it exceeds MAX_PARQUET_MB.
-
-        Produces files named  ``<stem>_t<value>.parquet`` next to the
-        original.  Returns the list of written paths (empty if no split
-        was needed).
-        """
-        size_mb = os.path.getsize(path) / 1e6
-        if size_mb <= MAX_PARQUET_MB:
-            return []
-
-        print(f"    {Path(path).name} is {size_mb:.1f} MB (>{MAX_PARQUET_MB} MB) — "
-              f"splitting by {split_col}...")
-        table = pq.read_table(str(path))
-        col = table.column(split_col)
-        unique_vals = sorted(set(col.to_pylist()))
-
-        stem = Path(path).stem          # e.g. step3_dg_CAISO
-        parent = Path(path).parent
-        written = []
-        for val in unique_vals:
-            mask = pc.equal(col, val)
-            subset = table.filter(mask)
-            # Format threshold: 87.5 → "87.5", 90.0 → "90"
-            val_str = f"{val:g}" if isinstance(val, float) else str(val)
-            part_path = parent / f"{stem}_t{val_str}.parquet"
-            pq.write_table(subset, str(part_path), compression='zstd')
-            written.append(part_path)
-            part_mb = os.path.getsize(part_path) / 1e6
-            print(f"      {part_path.name}: {len(subset):,} rows, {part_mb:.1f} MB")
-
-        # Remove the oversized original
-        os.remove(path)
-        print(f"    Removed oversized {Path(path).name}, "
-              f"wrote {len(written)} split files")
-        gc.collect()
-        return written
-
     for iso in run_isos:
         if iso not in output['results']:
             continue
@@ -1915,49 +1855,76 @@ def main():
                   f"{os.path.getsize(tracks_out) / 1e6:.1f} MB")
             gc.collect()
 
-        # --- 3. Demand growth (generator → chunked write) ---
+        # --- 3. Demand growth (per-threshold files) ---
+        # Write one parquet per threshold to keep individual file sizes
+        # small (avoids OOM during splitting and GitHub 100 MB limit).
         iso_dg = dg_output.get('results', {}).get(iso, {})
         if iso_dg:
-            dg_out = output_dir / f'step3_dg_{iso}.parquet'
-            n = _rows_to_parquet(_flatten_demand_growth(iso, iso_dg), dg_out)
-            print(f"  {dg_out}: {n:,} demand growth rows, "
-                  f"{os.path.getsize(dg_out) / 1e6:.1f} MB")
-            _split_if_oversized(dg_out)
+            dg_total = 0
+            for t_str, thr_scenarios in iso_dg.items():
+                t_label = f"{float(t_str):g}"
+                dg_t_out = output_dir / f'step3_dg_{iso}_t{t_label}.parquet'
+
+                def _dg_threshold_gen(iso_, t_str_, thr_sc_):
+                    for sc_key, year_data in thr_sc_.items():
+                        for year_str, growth_data in year_data.items():
+                            for g_level, vals in growth_data.items():
+                                yield {
+                                    'iso': iso_,
+                                    'threshold': float(t_str_),
+                                    'scenario': sc_key,
+                                    'year': int(year_str),
+                                    'growth_level': g_level,
+                                    'mix_idx': vals[0],
+                                    'total_cost': vals[1],
+                                    'effective_cost': vals[2],
+                                    'incremental': vals[3],
+                                }
+
+                n = _rows_to_parquet(
+                    _dg_threshold_gen(iso, t_str, thr_scenarios), dg_t_out)
+                dg_total += n
+            print(f"  step3_dg_{iso}: {dg_total:,} demand growth rows "
+                  f"across {len(iso_dg)} threshold files")
             del iso_dg
             gc.collect()
 
-        # --- 4. Track demand growth (chain generators per track) ---
-        def _flatten_track_dg(iso, track_name, iso_tdg):
-            """Yield track demand growth rows (generator)."""
-            for t_str, thr_scenarios in iso_tdg.items():
-                for sc_key, year_data in thr_scenarios.items():
-                    for year_str, growth_data in year_data.items():
-                        for g_level, vals in growth_data.items():
-                            yield {
-                                'iso': iso,
-                                'track': track_name,
-                                'threshold': float(t_str),
-                                'scenario': sc_key,
-                                'year': int(year_str),
-                                'growth_level': g_level,
-                                'mix_idx': vals[0],
-                                'total_cost': vals[1],
-                                'effective_cost': vals[2],
-                                'incremental': vals[3],
-                            }
+        # --- 4. Track demand growth (per-threshold files) ---
+        def _flatten_track_dg_threshold(iso_, track_name_, t_str_, thr_sc_):
+            """Yield track demand growth rows for one threshold."""
+            for sc_key, year_data in thr_sc_.items():
+                for year_str, growth_data in year_data.items():
+                    for g_level, vals in growth_data.items():
+                        yield {
+                            'iso': iso_,
+                            'track': track_name_,
+                            'threshold': float(t_str_),
+                            'scenario': sc_key,
+                            'year': int(year_str),
+                            'growth_level': g_level,
+                            'mix_idx': vals[0],
+                            'total_cost': vals[1],
+                            'effective_cost': vals[2],
+                            'incremental': vals[3],
+                        }
 
-        tdg_iters = []
+        tdg_total = 0
+        tdg_thresholds = set()
         for track_name in ['newbuild', 'replace']:
             iso_tdg = track_dg.get(track_name, {}).get(iso, {})
-            if iso_tdg:
-                tdg_iters.append(_flatten_track_dg(iso, track_name, iso_tdg))
-        if tdg_iters:
-            track_dg_out = output_dir / f'step3_track_dg_{iso}.parquet'
-            n = _rows_to_parquet(chain(*tdg_iters), track_dg_out)
-            print(f"  {track_dg_out}: {n:,} track DG rows, "
-                  f"{os.path.getsize(track_dg_out) / 1e6:.1f} MB")
-            _split_if_oversized(track_dg_out)
-            gc.collect()
+            for t_str, thr_scenarios in iso_tdg.items():
+                tdg_thresholds.add(t_str)
+                t_label = f"{float(t_str):g}"
+                tdg_t_out = output_dir / f'step3_track_dg_{iso}_t{t_label}_{track_name}.parquet'
+                n = _rows_to_parquet(
+                    _flatten_track_dg_threshold(
+                        iso, track_name, t_str, thr_scenarios),
+                    tdg_t_out)
+                tdg_total += n
+        if tdg_total > 0:
+            print(f"  step3_track_dg_{iso}: {tdg_total:,} track DG rows "
+                  f"across {len(tdg_thresholds)} thresholds")
+        gc.collect()
 
         # --- 5. Feasible mixes (generator → chunked write) ---
         mix_out = output_dir / f'step3_feasible_{iso}.parquet'
