@@ -544,8 +544,15 @@ def ccs_lcoe_dispatchable(lcoe_no45q, capacity_factor):
 def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
                                 ldes_pct, match_score, scenario_key,
                                 apply_45q=True, neiso_gas_adder=False,
-                                tranche_cf_lcoe=None):
-    """Recalculate costs for a scenario with optional corrections."""
+                                tranche_cf_lcoe=None,
+                                existing_shares_override=None):
+    """Recalculate costs for a scenario with optional corrections.
+
+    Args:
+        existing_shares_override: If provided, overrides GRID_MIX_SHARES[iso]
+            for demand-growth scenarios where existing generation is a smaller
+            fraction of total demand.
+    """
     renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo = decode_scenario_key(scenario_key)
 
     lcoe_map = {
@@ -580,7 +587,7 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
     if neiso_gas_adder and iso == 'NEISO':
         wholesale += NEISO_WHOLESALE_ADDER
 
-    grid_shares = GRID_MIX_SHARES[iso]
+    grid_shares = existing_shares_override if existing_shares_override else GRID_MIX_SHARES[iso]
     procurement_factor = procurement_pct / 100.0
     total_cost_per_demand = 0.0
 
@@ -992,6 +999,189 @@ def compute_gas_capacity_and_ra(data, run_isos):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# DEMAND GROWTH PROCESSING
+# ══════════════════════════════════════════════════════════════════════════════
+
+def load_dg_parquets(input_dir, iso):
+    """Load all step3_dg_<ISO>_t*.parquet files for an ISO.
+
+    Returns list of dicts (one per DG row) with columns:
+        iso, threshold, scenario, year, growth_level, growth_factor,
+        annual_demand_mwh, mix_*, procurement_pct, hourly_match_score,
+        battery_dispatch_pct, ldes_dispatch_pct, cost_*
+    """
+    import glob as glob_mod
+    pattern = os.path.join(input_dir, f'step3_dg_{iso}_t*.parquet')
+    files = sorted(glob_mod.glob(pattern))
+    if not files:
+        return []
+
+    rows = []
+    for fpath in files:
+        table = pq.read_table(fpath)
+        col_names = table.column_names
+        col_data = {name: table.column(name).to_pylist() for name in col_names}
+        n = table.num_rows
+        for i in range(n):
+            rows.append({name: col_data[name][i] for name in col_names})
+    return rows
+
+
+def process_dg_corrections(dg_rows, run_isos):
+    """Apply Step 4 corrections to demand growth rows.
+
+    For each DG row:
+      - NEISO gas constraint (if NEISO)
+      - No-45Q overlay (all ISOs)
+      - Gas backup & resource adequacy (with scaled peak demand)
+
+    Modifies rows in-place, adding correction columns.
+    """
+    if not dg_rows:
+        return 0
+
+    print(f"\n  [DG] Processing {len(dg_rows):,} demand growth rows")
+    processed = 0
+
+    for row in dg_rows:
+        iso = row['iso']
+        if iso not in run_isos:
+            continue
+
+        scenario_key = row['scenario']
+        growth_factor = row.get('growth_factor', 1.0) or 1.0
+        dg_demand_mwh = row.get('annual_demand_mwh') or REGIONAL_DEMAND_MWH.get(iso, 0)
+
+        # Build resource_mix dict from flat columns
+        resource_mix = {}
+        for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+            resource_mix[rtype] = row.get(f'mix_{rtype}', 0) or 0
+
+        procurement_pct = row.get('procurement_pct', 100) or 100
+        battery_pct = row.get('battery_dispatch_pct', 0) or 0
+        ldes_pct = row.get('ldes_dispatch_pct', 0) or 0
+        match_score = row.get('hourly_match_score', 0) or 0
+
+        # Scale existing shares for demand growth
+        existing_shares_scaled = {
+            k: min(v / growth_factor, 100.0)
+            for k, v in GRID_MIX_SHARES[iso].items()
+        }
+
+        # [1] NEISO gas constraint
+        if iso == 'NEISO':
+            neiso_costs = compute_costs_for_scenario(
+                iso, resource_mix, procurement_pct, battery_pct, ldes_pct,
+                match_score, scenario_key, apply_45q=True, neiso_gas_adder=True,
+                existing_shares_override=existing_shares_scaled)
+            neiso_no45q = compute_costs_for_scenario(
+                iso, resource_mix, procurement_pct, battery_pct, ldes_pct,
+                match_score, scenario_key, apply_45q=False, neiso_gas_adder=True,
+                existing_shares_override=existing_shares_scaled)
+            for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+                row[f'neiso_gas_adj_{ckey}'] = neiso_costs.get(ckey)
+                row[f'neiso_gas_no45q_{ckey}'] = neiso_no45q.get(ckey)
+            # Update base costs to gas-adjusted
+            row['cost_total_cost'] = neiso_costs['total_cost']
+            row['cost_effective_cost'] = neiso_costs['effective_cost']
+            row['cost_incremental'] = neiso_costs['incremental']
+
+        # [2] No-45Q overlay (non-NEISO already handled; NEISO above)
+        if iso != 'NEISO':
+            no45q_costs = compute_costs_for_scenario(
+                iso, resource_mix, procurement_pct, battery_pct, ldes_pct,
+                match_score, scenario_key, apply_45q=False, neiso_gas_adder=False,
+                existing_shares_override=existing_shares_scaled)
+        else:
+            no45q_costs = neiso_no45q  # Already computed above
+        for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+            row[f'no45q_{ckey}'] = no45q_costs.get(ckey)
+
+        # [3] Gas backup & resource adequacy (scaled peak demand)
+        peak_mw = PEAK_DEMAND_MW.get(iso, 0) * growth_factor
+        ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+        avg_demand_mw = dg_demand_mwh / 8760
+
+        clean_peak_mw = 0
+        for rtype in RESOURCE_TYPES:
+            pct = resource_mix.get(rtype, 0)
+            resource_mw = (procurement_pct / 100.0) * (pct / 100.0) * avg_demand_mw
+            credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
+            clean_peak_mw += resource_mw * credit
+        batt_mw = (battery_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
+        ldes_mw = (ldes_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+        clean_peak_mw += batt_mw + ldes_mw
+
+        existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+        gaf = GAS_AVAILABILITY_FACTOR[iso]
+        gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+        existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
+        new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
+
+        existing_gas_cost_annual = existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000
+        new_gas_cost_annual = new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
+        gas_backup_cost_annual = existing_gas_cost_annual + new_gas_cost_annual
+        gas_backup_per_mwh = gas_backup_cost_annual / dg_demand_mwh if dg_demand_mwh > 0 else 0
+
+        clean_cost = row.get('cost_effective_cost', 0)
+        row['ra_peak_demand_mw'] = round(peak_mw)
+        row['ra_ra_peak_mw'] = round(ra_peak_mw)
+        row['ra_clean_peak_capacity_mw'] = round(clean_peak_mw)
+        row['ra_gas_backup_needed_mw'] = round(gas_needed_mw)
+        row['ra_existing_gas_used_mw'] = round(existing_gas_used_mw)
+        row['ra_new_gas_build_mw'] = round(new_gas_mw)
+        row['ra_existing_gas_cost_per_mwh'] = round(
+            existing_gas_cost_annual / dg_demand_mwh if dg_demand_mwh > 0 else 0, 2)
+        row['ra_new_gas_cost_per_mwh'] = round(
+            new_gas_cost_annual / dg_demand_mwh if dg_demand_mwh > 0 else 0, 2)
+        row['ra_gas_backup_cost_per_mwh'] = round(gas_backup_per_mwh, 2)
+        row['ra_total_system_cost_per_mwh'] = round(clean_cost + gas_backup_per_mwh, 2)
+        row['ra_clean_coverage_pct'] = round(
+            clean_peak_mw / ra_peak_mw * 100, 1) if ra_peak_mw > 0 else 0
+
+        processed += 1
+
+    print(f"      Processed {processed:,} DG rows with corrections")
+    return processed
+
+
+def save_dg_parquets(dg_rows, output_dir, isos):
+    """Save corrected DG rows to per-ISO per-threshold parquets."""
+    if not dg_rows:
+        return
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Group rows by (iso, threshold)
+    groups = {}
+    for row in dg_rows:
+        iso = row.get('iso')
+        if iso not in isos:
+            continue
+        thr = row.get('threshold', 0)
+        key = (iso, thr)
+        groups.setdefault(key, []).append(row)
+
+    for (iso, thr), rows in sorted(groups.items()):
+        t_label = f"{thr:g}"
+        out_path = os.path.join(output_dir, f'step4_dg_{iso}_t{t_label}.parquet')
+        all_keys = list(dict.fromkeys(k for r in rows for k in r))
+        arrays = [pa.array([r.get(k) for r in rows]) for k in all_keys]
+        table = pa.table(dict(zip(all_keys, arrays)))
+        pq.write_table(table, out_path, compression='zstd')
+
+    # Summary
+    iso_counts = {}
+    for row in dg_rows:
+        iso = row.get('iso')
+        if iso in isos:
+            iso_counts[iso] = iso_counts.get(iso, 0) + 1
+    for iso, count in sorted(iso_counts.items()):
+        thr_count = len(set(r['threshold'] for r in dg_rows if r['iso'] == iso))
+        print(f"  step4_dg_{iso}: {count:,} corrected DG rows across {thr_count} thresholds")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # CLI & MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1107,10 +1297,27 @@ def main():
         },
     }
 
-    # Save corrected per-ISO parquets
-    print(f"\n  Saving corrected results to {args.output_dir}")
+    # Save corrected per-ISO parquets (baseline)
+    print(f"\n  Saving corrected baseline results to {args.output_dir}")
     os.makedirs(args.output_dir, exist_ok=True)
     save_to_parquets(data, args.output_dir, isos_present)
+
+    # ── Demand Growth processing ──
+    # Load DG parquets from Step 3, apply same corrections, save to Step 4 output
+    print(f"\n  Processing demand growth scenarios...")
+    all_dg_rows = []
+    for iso in isos_present:
+        iso_dg = load_dg_parquets(args.input_dir, iso)
+        if iso_dg:
+            print(f"    Loaded {len(iso_dg):,} DG rows for {iso}")
+            all_dg_rows.extend(iso_dg)
+
+    if all_dg_rows:
+        dg_count = process_dg_corrections(all_dg_rows, isos_present)
+        save_dg_parquets(all_dg_rows, args.output_dir, isos_present)
+        data['postprocessing']['corrections']['dg_rows_processed'] = dg_count
+    else:
+        print("    No DG parquets found — skipping demand growth processing")
 
     # Save analysis JSON
     analysis_path = os.path.join(args.output_dir, 'step4_analysis.json')
@@ -1129,6 +1336,8 @@ def main():
     print(f"\n{'=' * 70}")
     print(f"  STEP 4 COMPLETE in {elapsed:.1f}s")
     print(f"  Processed: {', '.join(isos_present)}")
+    if all_dg_rows:
+        print(f"  DG rows:   {len(all_dg_rows):,}")
     print(f"  Output:    {args.output_dir}")
     print(f"{'=' * 70}")
 

@@ -213,8 +213,25 @@ DEMAND_GROWTH_RATES = {
     'MISO':   {'Low': 0.012, 'Medium': 0.022, 'High': 0.038},
     'SPP':    {'Low': 0.010, 'Medium': 0.018, 'High': 0.030},
 }
-DEMAND_GROWTH_YEARS = list(range(2026, 2051))
+DEMAND_GROWTH_YEARS = list(range(2026, 2051))  # kept for backward compat
 DEMAND_GROWTH_LEVELS = ['Low', 'Medium', 'High']
+
+# Threshold → target achievement year (interpolated from SBTi milestones:
+# 2030→50%, 2035→70%, 2040→90%, 2045→95%, 2050→100%)
+# Each threshold is paired with the year when that clean energy % is expected.
+# DG sweep evaluates each threshold only at its matched year × L/M/H growth.
+THRESHOLD_TARGET_YEARS = {
+    50: 2030, 55: 2031, 60: 2033, 65: 2034,
+    70: 2035, 75: 2036, 80: 2037, 85: 2038, 87.5: 2039,
+    90: 2040, 92.5: 2043,
+    95: 2045, 97.5: 2048, 99: 2049, 100: 2050,
+}
+
+# Unique DG years (for efficient batching — group thresholds that share a year)
+_DG_YEAR_TO_THRESHOLDS = {}
+for _thr, _yr in THRESHOLD_TARGET_YEARS.items():
+    _DG_YEAR_TO_THRESHOLDS.setdefault(_yr, []).append(_thr)
+DG_UNIQUE_YEARS = sorted(_DG_YEAR_TO_THRESHOLDS.keys())
 
 
 # ── Gas Capacity Backup (resource adequacy) ──
@@ -1505,23 +1522,27 @@ def main():
     print(f"\nPhase 1.5 complete: {phase15_elapsed:.0f}s")
 
     # ================================================================
-    # PHASE 2: Demand growth sweep on archetypes (vectorized)
+    # PHASE 2: Demand growth sweep on archetypes (threshold-year paired)
     # ================================================================
-    # Archetypes are the union of all winning mixes per ISO across all thresholds.
-    # Evaluate all archetypes once per (scenario, year, growth), then pick best
-    # per threshold using score-based filtering.
-    print("\n--- PHASE 2: Demand growth sweep (vectorized, cross-threshold) ---")
+    # Each threshold is paired with its SBTi-interpolated target year.
+    # Instead of 25 years × 3 growth × all thresholds (75 evals), we do
+    # 14 unique years × 3 growth levels = 42 evals, extracting only the
+    # threshold(s) that map to each year. Produces 15 × 3 = 45 DG results
+    # per ISO per scenario combo.
+    n_dg_evals = len(DG_UNIQUE_YEARS) * len(DEMAND_GROWTH_LEVELS)
+    print(f"\n--- PHASE 2: Demand growth sweep (threshold-year paired, {n_dg_evals} evals) ---")
     phase2_start = time.time()
 
     dg_output = {
         'meta': {
-            'years': DEMAND_GROWTH_YEARS,
+            'threshold_target_years': THRESHOLD_TARGET_YEARS,
             'growth_levels': DEMAND_GROWTH_LEVELS,
             'growth_rates': DEMAND_GROWTH_RATES,
             'base_year': 2025,
-            'fields': ['mix_idx', 'total_cost', 'effective_cost', 'incremental'],
-            'note': 'Full 9-dim factorial: RFBL_FF_TX_CCSq45_GEO keys (R=ren,F=firm,B=batt,L=ldes). '
-                    'CAISO: 17,496 combos. Non-CAISO: 5,832 combos.',
+            'fields': ['mix_idx', 'total_cost', 'effective_cost', 'incremental',
+                        'growth_factor', 'annual_demand_mwh'],
+            'note': 'Threshold-year paired DG: each threshold evaluated at its SBTi target year only. '
+                    'Full resource mix stored for downstream pipeline (Step 4+).',
         },
         'results': {},
     }
@@ -1566,24 +1587,31 @@ def main():
         active_thr_dg, thresholds_desc_dg, thr_pos_dg = prepare_threshold_metadata(
             arch_scores_f64, OUTPUT_THRESHOLDS)
 
-        # Pre-initialize result structure: thr → scenario_key → year_str → growth_level
+        # Pre-initialize result structure: thr → scenario_key → {year_str → {growth_level → vals}}
         for scenario_key, _ in all_combos:
             for thr in arch_thr_mask:
                 thr_dg[thr][scenario_key] = {}
 
-        # Batched demand growth: 75 unique (year, growth) × single Numba kernel each
-        # Replaces 437K+ price_mix_batch() calls with 75 coefficient precomputes + 75 batched evals
+        # Batched demand growth: iterate unique DG years × 3 growth levels
+        # Each year maps to specific threshold(s); only store results for matched thresholds
         dg_iso_start = time.time()
         existing_base = GRID_MIX_SHARES[iso]
         n_growth_evals = 0
 
-        for year in DEMAND_GROWTH_YEARS:
+        for year in DG_UNIQUE_YEARS:
             years_out = year - 2025
+            # Which thresholds map to this year?
+            matched_thresholds = [t for t in _DG_YEAR_TO_THRESHOLDS[year]
+                                  if t in arch_thr_mask]
+            if not matched_thresholds:
+                continue
+
             for g_level in DEMAND_GROWTH_LEVELS:
                 g_rate = iso_rates[g_level]
                 gf = (1 + g_rate) ** years_out
                 demand_grown = demand_twh * gf
                 existing_scale = 1.0 / gf
+                demand_grown_mwh = demand_grown * 1e6
 
                 # Scale existing shares for this growth factor
                 scaled_existing = {k: min(v * existing_scale, 100.0)
@@ -1597,12 +1625,12 @@ def main():
                 dg_best_idxs, dg_best_vals = batch_eval_and_argmin_all(
                     cm_g, const_g, dg_price_matrix, arch_scores_f64, thresholds_desc_dg)
 
-                # Extract winners
+                # Extract winners — ONLY for thresholds that map to this year
                 yr_str = str(year)
                 for combo_i in range(len(all_combos)):
                     ws = float(dg_ws_arr[combo_i])
                     scenario_key = all_combos[combo_i][0]
-                    for thr in arch_thr_mask:
+                    for thr in matched_thresholds:
                         k = thr_pos_dg[float(thr)]
                         if dg_best_vals[combo_i, k] == np.inf:
                             continue
@@ -1615,15 +1643,16 @@ def main():
                         if yr_str not in thr_dg[thr][scenario_key]:
                             thr_dg[thr][scenario_key][yr_str] = {}
                         thr_dg[thr][scenario_key][yr_str][g_level] = [
-                            full_idx, round(tc, 2), round(ec, 2), round(ec - ws, 2)]
+                            full_idx, round(tc, 2), round(ec, 2), round(ec - ws, 2),
+                            round(gf, 6), round(demand_grown_mwh, 0)]
 
                 n_growth_evals += 1
-                if n_growth_evals % 15 == 0:
+                if n_growth_evals % 10 == 0:
                     elapsed = time.time() - dg_iso_start
                     rate = n_growth_evals / elapsed if elapsed > 0 else 1
-                    remaining_evals = 75 - n_growth_evals
-                    print(f"    {iso}: {n_growth_evals}/75 growth evals "
-                          f"({elapsed:.0f}s, ~{remaining_evals/rate:.0f}s left)")
+                    remaining = n_dg_evals - n_growth_evals
+                    print(f"    {iso}: {n_growth_evals}/{n_dg_evals} growth evals "
+                          f"({elapsed:.0f}s, ~{remaining/rate:.0f}s left)")
 
         for thr in arch_thr_mask:
             dg_output['results'][iso][str(thr)] = thr_dg[thr]
@@ -1631,7 +1660,7 @@ def main():
         dg_iso_elapsed = time.time() - dg_iso_start
         print(f"  {iso:>6}: {n_arch} archetypes, "
               f"{len(arch_thr_mask)} thresholds, "
-              f"{len(all_combos)} scenarios × 75 growth evals — {dg_iso_elapsed:.0f}s")
+              f"{len(all_combos)} scenarios × {n_dg_evals} growth evals — {dg_iso_elapsed:.0f}s")
 
     phase2_elapsed = time.time() - phase2_start
     print(f"\nPhase 2 complete: {phase2_elapsed:.0f}s")
@@ -1689,17 +1718,24 @@ def main():
                 for thr in arch_thr_mask:
                     thr_dg[thr][scenario_key] = {}
 
-            # Batched demand growth: 75 unique evals
+            # Batched demand growth: threshold-year paired (same as Phase 2)
             tk_existing_base = GRID_MIX_SHARES[iso]
             tk_dg_start = time.time()
+            tk_n_evals = 0
 
-            for year in DEMAND_GROWTH_YEARS:
+            for year in DG_UNIQUE_YEARS:
                 years_out = year - 2025
+                matched_thresholds = [t for t in _DG_YEAR_TO_THRESHOLDS[year]
+                                      if t in arch_thr_mask]
+                if not matched_thresholds:
+                    continue
+
                 for g_level in DEMAND_GROWTH_LEVELS:
                     g_rate = iso_rates[g_level]
                     gf = (1 + g_rate) ** years_out
                     demand_grown = demand_twh * gf
                     existing_scale = 1.0 / gf
+                    demand_grown_mwh = demand_grown * 1e6
 
                     scaled_existing = {k: min(v * existing_scale, 100.0)
                                        for k, v in tk_existing_base.items()}
@@ -1716,7 +1752,7 @@ def main():
                     for combo_i in range(len(all_combos)):
                         ws = float(tk_ws_arr[combo_i])
                         scenario_key = all_combos[combo_i][0]
-                        for thr in arch_thr_mask:
+                        for thr in matched_thresholds:
                             k = tk_thr_pos[float(thr)]
                             if tk_best_vals[combo_i, k] == np.inf:
                                 continue
@@ -1729,7 +1765,10 @@ def main():
                             if yr_str not in thr_dg[thr][scenario_key]:
                                 thr_dg[thr][scenario_key][yr_str] = {}
                             thr_dg[thr][scenario_key][yr_str][g_level] = [
-                                full_idx, round(tc, 2), round(ec, 2), round(ec - ws, 2)]
+                                full_idx, round(tc, 2), round(ec, 2), round(ec - ws, 2),
+                                round(gf, 6), round(demand_grown_mwh, 0)]
+
+                    tk_n_evals += 1
 
             if iso not in track_dg[track_name]:
                 track_dg[track_name][iso] = {}
@@ -1738,7 +1777,7 @@ def main():
 
             tk_dg_elapsed = time.time() - tk_dg_start
             print(f"  {iso:>6} {track_name}: {n_arch} archetypes, "
-                  f"{len(arch_thr_mask)} thresholds, 75 growth evals — {tk_dg_elapsed:.0f}s")
+                  f"{len(arch_thr_mask)} thresholds, {tk_n_evals} growth evals — {tk_dg_elapsed:.0f}s")
 
     track_output['demand_growth'] = track_dg
 
@@ -1855,70 +1894,105 @@ def main():
                   f"{os.path.getsize(tracks_out) / 1e6:.1f} MB")
             gc.collect()
 
-        # --- 3. Demand growth (per-threshold files) ---
-        # Write one parquet per threshold to keep individual file sizes
-        # small (avoids OOM during splitting and GitHub 100 MB limit).
+        # --- 3. Demand growth (per-threshold files, full resource mix) ---
+        # Write one parquet per threshold. Schema matches step3_co plus
+        # year, growth_level, growth_factor columns for downstream pipeline.
         iso_dg = dg_output.get('results', {}).get(iso, {})
-        if iso_dg:
+        iso_arrays = pfs.get(iso, {})  # PFS arrays for resolving mix_idx
+        if iso_dg and iso_arrays:
             dg_total = 0
             for t_str, thr_scenarios in iso_dg.items():
                 t_label = f"{float(t_str):g}"
                 dg_t_out = output_dir / f'step3_dg_{iso}_t{t_label}.parquet'
 
-                def _dg_threshold_gen(iso_, t_str_, thr_sc_):
+                def _dg_threshold_gen(iso_, t_str_, thr_sc_, arrs_):
+                    """Yield DG rows with full resource mix resolved from PFS."""
                     for sc_key, year_data in thr_sc_.items():
                         for year_str, growth_data in year_data.items():
                             for g_level, vals in growth_data.items():
-                                yield {
+                                mix_idx = vals[0]
+                                row = {
                                     'iso': iso_,
                                     'threshold': float(t_str_),
                                     'scenario': sc_key,
                                     'year': int(year_str),
                                     'growth_level': g_level,
-                                    'mix_idx': vals[0],
-                                    'total_cost': vals[1],
-                                    'effective_cost': vals[2],
-                                    'incremental': vals[3],
+                                    'growth_factor': vals[4],
+                                    'annual_demand_mwh': vals[5],
                                 }
+                                # Resolve resource mix from PFS arrays
+                                for rtype in ['clean_firm', 'solar', 'wind',
+                                              'ccs_ccgt', 'hydro']:
+                                    row[f'mix_{rtype}'] = int(arrs_[rtype][mix_idx])
+                                row['procurement_pct'] = int(arrs_['procurement'][mix_idx])
+                                row['hourly_match_score'] = float(
+                                    arrs_['hourly_match_score'][mix_idx])
+                                row['battery_dispatch_pct'] = int(
+                                    arrs_.get('battery_dispatch', arrs_.get('battery', np.zeros(1)))[mix_idx])
+                                row['ldes_dispatch_pct'] = int(
+                                    arrs_.get('ldes_dispatch', arrs_.get('ldes', np.zeros(1)))[mix_idx])
+                                # Costs (already computed for grown demand)
+                                row['cost_total_cost'] = vals[1]
+                                row['cost_effective_cost'] = vals[2]
+                                row['cost_incremental'] = vals[3]
+                                yield row
 
                 n = _rows_to_parquet(
-                    _dg_threshold_gen(iso, t_str, thr_scenarios), dg_t_out)
+                    _dg_threshold_gen(iso, t_str, thr_scenarios, iso_arrays),
+                    dg_t_out)
                 dg_total += n
             print(f"  step3_dg_{iso}: {dg_total:,} demand growth rows "
                   f"across {len(iso_dg)} threshold files")
             del iso_dg
             gc.collect()
 
-        # --- 4. Track demand growth (per-threshold files) ---
-        def _flatten_track_dg_threshold(iso_, track_name_, t_str_, thr_sc_):
-            """Yield track demand growth rows for one threshold."""
+        # --- 4. Track demand growth (per-threshold files, full resource mix) ---
+        # Track archetypes use different PFS arrays (newbuild: hydro=0, replace: uprates=OFF)
+        def _flatten_track_dg_threshold(iso_, track_name_, t_str_, thr_sc_, tarrs_):
+            """Yield track DG rows with full resource mix resolved from track PFS."""
             for sc_key, year_data in thr_sc_.items():
                 for year_str, growth_data in year_data.items():
                     for g_level, vals in growth_data.items():
-                        yield {
+                        mix_idx = vals[0]
+                        row = {
                             'iso': iso_,
                             'track': track_name_,
                             'threshold': float(t_str_),
                             'scenario': sc_key,
                             'year': int(year_str),
                             'growth_level': g_level,
-                            'mix_idx': vals[0],
-                            'total_cost': vals[1],
-                            'effective_cost': vals[2],
-                            'incremental': vals[3],
+                            'growth_factor': vals[4],
+                            'annual_demand_mwh': vals[5],
                         }
+                        for rtype in ['clean_firm', 'solar', 'wind',
+                                      'ccs_ccgt', 'hydro']:
+                            row[f'mix_{rtype}'] = int(tarrs_[rtype][mix_idx])
+                        row['procurement_pct'] = int(tarrs_['procurement'][mix_idx])
+                        row['hourly_match_score'] = float(
+                            tarrs_['hourly_match_score'][mix_idx])
+                        row['battery_dispatch_pct'] = int(
+                            tarrs_.get('battery_dispatch', tarrs_.get('battery', np.zeros(1)))[mix_idx])
+                        row['ldes_dispatch_pct'] = int(
+                            tarrs_.get('ldes_dispatch', tarrs_.get('ldes', np.zeros(1)))[mix_idx])
+                        row['cost_total_cost'] = vals[1]
+                        row['cost_effective_cost'] = vals[2]
+                        row['cost_incremental'] = vals[3]
+                        yield row
 
         tdg_total = 0
         tdg_thresholds = set()
         for track_name in ['newbuild', 'replace']:
             iso_tdg = track_dg.get(track_name, {}).get(iso, {})
+            # Get the track's PFS arrays for resolving mix_idx
+            ta = track_archetypes.get(track_name, {}).get(iso)
+            track_pfs_arrays = ta['arrays'] if ta else iso_arrays
             for t_str, thr_scenarios in iso_tdg.items():
                 tdg_thresholds.add(t_str)
                 t_label = f"{float(t_str):g}"
                 tdg_t_out = output_dir / f'step3_track_dg_{iso}_t{t_label}_{track_name}.parquet'
                 n = _rows_to_parquet(
                     _flatten_track_dg_threshold(
-                        iso, track_name, t_str, thr_scenarios),
+                        iso, track_name, t_str, thr_scenarios, track_pfs_arrays),
                     tdg_t_out)
                 tdg_total += n
         if tdg_total > 0:
