@@ -25,12 +25,9 @@ desktop.ini
 .env.local
 
 # Checkpoint directories — crash-recovery artifacts only, not used downstream.
-# Final outputs (physics_cache_v4.parquet, pfs_post_ef.parquet) are what matters.
+# Final outputs live in data/step1_raw_pfs_parquets/ and data/step-2-EF-parquets/.
 data/checkpoints/
 data/checkpoints_v4/
-# CRITICAL: Do NOT gitignore physics_cache_v4.parquet — it must be committed
-# to prevent data loss across sessions. Previous loss of 21M solutions was
-# caused by gitignoring this file.
 dashboard/physics_results_v4.json
 
 # Large JSON results (>100MB, exceed GitHub limit) — use parquet versions instead
