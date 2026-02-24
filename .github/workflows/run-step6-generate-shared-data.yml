@@ -89,7 +89,7 @@ jobs:
         run: |
           python scripts/step6_generate_shared_data.py
 
-      - name: Commit Step 6 outputs
+      - name: Commit and push Step 6 outputs (with retry)
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
@@ -99,11 +99,31 @@ jobs:
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
-          else
-            git commit -m "Step 6 Generate Shared Data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            exit 0
           fi
 
-          git push origin "$TARGET_BRANCH"
+          git commit -m "Step 6 Generate Shared Data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Retry push with pull-rebase to handle concurrent pushes
+          MAX_RETRIES=5
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            if git push origin "$TARGET_BRANCH"; then
+              echo "Push succeeded on attempt $i"
+              break
+            fi
+
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+
+            BACKOFF=$((2 ** i))
+            echo "Push rejected. Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+
+            git pull --rebase origin "$TARGET_BRANCH"
+          done
 
       - name: Create or update pull request
         env:
