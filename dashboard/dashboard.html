@@ -513,6 +513,20 @@ body {
     box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.12);
 }
 
+.year-display {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.0rem;
+    padding: 11px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f8f8f8);
+    color: var(--navy);
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    font-weight: 600;
+}
+
 .region-context {
     margin-left: auto;
     display: flex;
@@ -3129,38 +3143,14 @@ body {
             </select>
         </div>
         <div class="control-group">
-            <label for="interimYear">Interim Year</label>
-            <select id="interimYear">
-                <option value="2027">2027</option>
-                <option value="2028">2028</option>
-                <option value="2029">2029</option>
-                <option value="2030">2030</option>
-                <option value="2031">2031</option>
-                <option value="2032" selected>2032</option>
-                <option value="2033">2033</option>
-                <option value="2034">2034</option>
-                <option value="2035">2035</option>
-            </select>
+            <label>Interim Year <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Auto-derived from the SBTi milestone timeline based on your interim target threshold.</span></span></label>
+            <span id="interimYearDisplay" class="year-display">—</span>
+            <input type="hidden" id="interimYear" value="2036">
         </div>
         <div class="control-group">
-            <label for="longtermYear">Long-term Year</label>
-            <select id="longtermYear">
-                <option value="2036">2036</option>
-                <option value="2037">2037</option>
-                <option value="2038">2038</option>
-                <option value="2039">2039</option>
-                <option value="2040">2040</option>
-                <option value="2041">2041</option>
-                <option value="2042">2042</option>
-                <option value="2043">2043</option>
-                <option value="2044">2044</option>
-                <option value="2045" selected>2045</option>
-                <option value="2046">2046</option>
-                <option value="2047">2047</option>
-                <option value="2048">2048</option>
-                <option value="2049">2049</option>
-                <option value="2050">2050</option>
-            </select>
+            <label>Long-term Year <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Auto-derived from the SBTi milestone timeline based on your long-term target threshold.</span></span></label>
+            <span id="longtermYearDisplay" class="year-display">—</span>
+            <input type="hidden" id="longtermYear" value="2050">
         </div>
         <!-- Legacy cfCostSelect hidden for backward compat -->
         <div class="control-group" style="display:none;">
@@ -3606,6 +3596,56 @@ const RESOURCE_LABELS = {
     ldes: 'LDES (100hr)',
     storage: 'Storage'
 };
+
+// ---- SBTi year ↔ threshold mapping ----
+// Canonical threshold→year mapping aligned to SBTi milestones.
+// Anchors: 50%→2030, 70%→2035, 90%→2040, 95%→2045, 100%→2050.
+// Intermediate thresholds interpolated per SPEC.md decision (Feb 19, 2026).
+const THRESHOLD_TARGET_YEARS = {
+    50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
+    85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043, 95: 2045, 97.5: 2048, 99: 2049, 100: 2050
+};
+function thresholdToSbtiYear(threshold) {
+    const t = parseFloat(threshold);
+    if (THRESHOLD_TARGET_YEARS[t] !== undefined) return THRESHOLD_TARGET_YEARS[t];
+    // Fallback: interpolate from SBTI_MILESTONES for any non-standard threshold
+    if (typeof SBTI_MILESTONES !== 'undefined' && SBTI_MILESTONES.length) {
+        const ms = SBTI_MILESTONES;
+        if (t <= ms[0].threshold) return ms[0].year;
+        if (t >= ms[ms.length - 1].threshold) return ms[ms.length - 1].year;
+        for (let i = 0; i < ms.length - 1; i++) {
+            if (t >= ms[i].threshold && t <= ms[i + 1].threshold) {
+                const frac = (t - ms[i].threshold) / (ms[i + 1].threshold - ms[i].threshold || 1);
+                return Math.round(ms[i].year + frac * (ms[i + 1].year - ms[i].year));
+            }
+        }
+    }
+    return 2050;
+}
+
+// Sync year displays and hidden inputs from current threshold selections
+function syncSbtiYears() {
+    const interimThresh = parseFloat(document.getElementById('thresholdSelect')?.value || '75');
+    const longtermVal = document.getElementById('longtermTarget')?.value;
+    const longtermThresh = longtermVal ? parseFloat(longtermVal) : null;
+
+    const interimYear = thresholdToSbtiYear(interimThresh);
+    document.getElementById('interimYear').value = interimYear;
+    document.getElementById('interimYearDisplay').textContent =
+        `${interimYear}  (${interimThresh}% CFE)`;
+
+    if (longtermThresh !== null) {
+        const ltYear = thresholdToSbtiYear(longtermThresh);
+        document.getElementById('longtermYear').value = ltYear;
+        document.getElementById('longtermYearDisplay').textContent =
+            `${ltYear}  (${longtermThresh}% CFE)`;
+    } else {
+        // "Same as Interim" — use interim year
+        document.getElementById('longtermYear').value = interimYear;
+        document.getElementById('longtermYearDisplay').textContent =
+            `${interimYear}  (same as interim)`;
+    }
+}
 
 // Nuclear/Geothermal energy split for existing clean firm capacity.
 // CLEAN_FIRM_ENERGY_SPLIT now lives in shared-data.js (single source of truth)
@@ -4375,6 +4415,9 @@ function initDashboard() {
     });
     // Default to 75% interim
     threshSel.value = '75';
+
+    // Sync SBTi years from initial threshold selection
+    syncSbtiYears();
 
     // Bind events
     regionSel.addEventListener('change', updateAll);
@@ -7283,8 +7326,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const baseDemandTwh = (REGIONAL_DEMAND_TWH || {})[iso] || annualDemandTWh;
 
     // Time horizons and demand growth
-    const interimYear = parseInt(document.getElementById('interimYear')?.value || '2029', 10);
-    const longtermYear = parseInt(document.getElementById('longtermYear')?.value || '2042', 10);
+    const interimYear = parseInt(document.getElementById('interimYear')?.value || '2036', 10);
+    const longtermYear = parseInt(document.getElementById('longtermYear')?.value || '2049', 10);
     const yearsToInterim = Math.max(1, interimYear - 2025);
     const yearsToLongterm = Math.max(1, longtermYear - 2025);
 
@@ -8019,18 +8062,19 @@ function initPathwayAnalysis() {
 
     interimSel.addEventListener('change', () => {
         populateLongtermOptions();
+        syncSbtiYears();
         triggerRerender();
     });
     regionSel.addEventListener('change', () => {
         populateLongtermOptions();
+        syncSbtiYears();
         triggerRerender();
     });
     longtermSel.addEventListener('change', () => {
+        syncSbtiYears();
         triggerRerender();
         if (DATA) updateAll();
     });
-    document.getElementById('interimYear')?.addEventListener('change', triggerRerender);
-    document.getElementById('longtermYear')?.addEventListener('change', triggerRerender);
 
     const demandGrowthBtns = document.querySelectorAll('button[data-toggle-group="demand_growth"]');
     demandGrowthBtns.forEach(btn => {
@@ -8047,6 +8091,7 @@ function initPathwayAnalysis() {
         if (longtermSel.querySelector('option[value="99"]')) {
             longtermSel.value = '99';
         }
+        syncSbtiYears();
         updateDemandGrowthLabel();
     }
 }
