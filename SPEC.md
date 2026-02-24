@@ -10,7 +10,7 @@
 **Completed:**
 - Energy-based battery caps (replaces power-based formula): `bat4_cap = max_daily_surplus`, `bat8_cap = max_2day_surplus`, `ldes_cap = max_7day_surplus`
 - Two-phase adaptive storage sweep: Phase 1 coarse (0.25% steps) → analyze saturation → Phase 2 fine (0.05% steps) within saturation range
-- Per-ISO output files: `data/physics_cache_v4_{ISO}.parquet` (avoids 100MB+ merged files)
+- Per-ISO/threshold output files: `data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet`
 - ERCOT: 2,033,961 solutions (complete)
 - CAISO: Running (Phase 2 in progress)
 
@@ -276,7 +276,7 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 | **Step 4** | `step4_postprocess.py` | **Post-Processing** | NEISO gas constraint, CCS vs LDES crossover analysis, CO₂ calculations, MAC calculations. Produces final corrected results for the dashboard. | When Step 3 outputs change, or when CO₂ methodology changes. |
 
 **Key acronyms**:
-- **PFS** — Physics Feasible Space: the full set of physically valid resource mixes (Step 1 output, `data/physics_cache_v4.parquet`)
+- **PFS** — Physics Feasible Space: the full set of physically valid resource mixes (Step 1 output, `data/step1_raw_pfs_parquets/`)
 - **EF** — Efficient Frontier: the reduced set of non-dominated mixes (Step 2 output, `data/pfs_post_ef.parquet`)
 
 **Post-processing scripts** (run after Step 4):
@@ -1596,7 +1596,7 @@ Narrower bounds at low thresholds where targets are easily met; wider at high th
 
 **Cross-threshold pruning**: Thresholds are processed in ascending order (50% → 100%). After each threshold, the optimizer records which mixes were infeasible even at maximum procurement. These mixes are eliminated from all higher thresholds (if it can't hit 50%, it can't hit 85%). Additionally, each mix's minimum-feasible procurement from the previous threshold becomes the floor for the next threshold (no point starting below the level needed for a lower target). This dramatically narrows the search space for high thresholds.
 
-**Persistent solution cache**: Results are accumulated in `data/physics_cache_v4.json` across runs. Each run merges new solutions with the existing cache — deduplicating by (mix, procurement, battery, ldes) key but never deleting previously found solutions. This means iterating on parameter bounds, procurement ceilings, or grid resolution adds to the feasible solution space without losing work from prior runs. The cost model in Step 3 always operates on the EF extracted in Step 2.
+**Persistent solution cache**: Results are accumulated in `data/step1_raw_pfs_parquets/` as per-ISO/threshold parquet files across runs. Each run merges new solutions with existing results — deduplicating by (mix, procurement, battery, ldes) key but never deleting previously found solutions. This means iterating on parameter bounds, procurement ceilings, or grid resolution adds to the feasible solution space without losing work from prior runs. The cost model in Step 3 always operates on the EF extracted in Step 2.
 
 ### 11.2 Edge Case Seed Mixes
 
@@ -2329,7 +2329,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 **Results per ISO:**
 - ERCOT: 2,033,961 solutions (Phase 1: 226K coarse → Phase 2: 1.8M fine), 11 min
 - CAISO: ~1.8M solutions (saturation: bat4=1.00%, bat8=2.00%), ~25 min
-- Output: Per-ISO parquet files (`physics_cache_v4_{ISO}.parquet`) to avoid exceeding 100MB
+- Output: Per-ISO/threshold parquet files (`data/step1_raw_pfs_parquets/{ISO}_t{XX}_raw_pfs.parquet`)
 
 **Scientific rigor preserved:** Every level from 0 to saturation+margin is swept at 0.05% resolution. No levels are skipped or short-circuited. The coarse phase just identifies WHERE the fine sweep should focus.
 

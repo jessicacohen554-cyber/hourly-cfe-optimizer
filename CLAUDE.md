@@ -262,9 +262,9 @@ When facing compute vs. rigor tradeoffs:
 - **Social cost of carbon references**: EPA $51/ton + Rennert et al. $185/ton + EU ETS $60-100/ton range — all three shown on charts
 
 ### Data Persistence (Critical — Never Lose Compute Results)
-- **NEVER gitignore compute-intensive outputs** — `physics_cache_v4.parquet`, `pfs_post_ef.parquet`, and `dashboard/physics_results_v4.parquet` must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring the cache file.
-- **Commit parquet caches immediately after optimizer runs** — the moment Step 1 completes and the cache is merged, commit and push it before doing anything else. This is higher priority than any code changes.
-- **After any Step 1 run**: `git add data/physics_cache_v4.parquet data/pfs_post_ef.parquet && git commit -m "Bank PFS cache" && git push`
+- **NEVER gitignore compute-intensive outputs** — `data/step1_raw_pfs_parquets/`, `data/step-2-EF-parquets/`, and downstream parquets must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring cache files.
+- **Commit parquet caches immediately after optimizer runs** — the moment Step 1 completes, commit and push before doing anything else. This is higher priority than any code changes.
+- **After any Step 1 run**: `git add data/step1_raw_pfs_parquets/ && git commit -m "Bank PFS cache" && git push`
 - **Checkpoint directories (`data/checkpoints/`, `data/checkpoints_v4/`)** are gitignored and removed from the repo — they're crash-recovery artifacts not used downstream. The main parquet outputs are sacred.
 
 ### Build Process
