@@ -577,10 +577,17 @@ def main():
 
         output[iso] = {'profiles': iso_profiles}
 
-    # Write output
+    # Write output to dashboard (consumed by HTML pages)
     out_path = 'dashboard/compressed_day_profiles.json'
     print(f"\nWriting {out_path}...")
     with open(out_path, 'w') as f:
+        json.dump(output, f, separators=(',', ':'))
+
+    # Archive canonical copy to step5 results directory
+    step5_dir = os.path.join(DATA_DIR, 'step5-post-processing-results')
+    os.makedirs(step5_dir, exist_ok=True)
+    step5_out = os.path.join(step5_dir, 'compressed_day_profiles.json')
+    with open(step5_out, 'w') as f:
         json.dump(output, f, separators=(',', ':'))
 
     file_size = os.path.getsize(out_path) / 1024 / 1024
@@ -589,6 +596,7 @@ def main():
     print(f"\n{'='*70}")
     print(f"  Done! {total_computed} profiles computed for {total_mixes} unique mixes")
     print(f"  Output: {out_path} ({file_size:.1f} MB)")
+    print(f"  Archived: {step5_out}")
     print(f"  Elapsed: {elapsed:.1f}s")
     print(f"{'='*70}")
 
