@@ -111,9 +111,14 @@ def load_data():
             else:
                 print(f"  WARNING: No parquet found for {iso} — skipping")
 
-    import pyarrow
-    df = pyarrow.concat_tables(tables, promote_extras="default").to_pandas() if tables else pq.read_table(
-        os.path.join(BASE_DIR, 'dashboard', 'overprocure_scenarios.parquet')).to_pandas()
+    if tables:
+        # Convert each table to pandas individually, then concat — handles schema
+        # differences across ISOs (e.g. NEISO has extra pipeline columns).
+        dfs = [t.to_pandas() for t in tables]
+        df = pd.concat(dfs, ignore_index=True)
+    else:
+        df = pq.read_table(
+            os.path.join(BASE_DIR, 'dashboard', 'overprocure_scenarios.parquet')).to_pandas()
     print(f"  {len(df):,} total scenario rows loaded")
 
     meta = {}
@@ -221,9 +226,9 @@ def extract_medium_scenarios(df):
                 'battery_twh': row['battery_dispatch_pct'] / 100 * demand_twh,
                 'ldes_twh': row['ldes_dispatch_pct'] / 100 * demand_twh,
                 'resource_pct': {res: float(row[f'mix_{res}']) for res in RESOURCES},
-                'gas_backup_mw': float(row['gas_gas_backup_needed_mw']),
-                'new_gas_mw': float(row['gas_new_gas_build_mw']),
-                'gas_cost': float(row['gas_gas_cost_per_mwh']),
+                'gas_backup_mw': float(row['ra_gas_backup_needed_mw']),
+                'new_gas_mw': float(row['ra_new_gas_build_mw']),
+                'gas_cost': float(row['ra_gas_backup_cost_per_mwh']),
                 'tranche_existing_twh': float(row['tranche_cf_existing_twh']),
                 'tranche_uprate_twh': float(row['tranche_uprate_twh']),
                 'tranche_geo_twh': float(row['tranche_geo_twh']),
