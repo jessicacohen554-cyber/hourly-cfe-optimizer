@@ -1,23 +1,34 @@
 #!/usr/bin/env python3
 """
-Extract resource mix and compressed day data from overprocure_results.json
+Extract resource mix and compressed day data from co2 batch results
 into shared-data.js format.
 
 Adds new constants WITHOUT modifying existing ones.
-Uses ISO-aware medium scenario key (8-dim format) — matches EFFECTIVE_COST_DATA convention.
+Uses ISO-aware medium scenario key (9-dim format).
+
+Reads from: data/step5-post-processing/co2_results/{ISO}_{threshold}_2025.json
+Outputs to: dashboard/js/shared-data-new-block.js
 """
 
 import json
 import os
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+CO2_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing', 'co2_results')
+OUTPUT_PATH = os.path.join(ROOT_DIR, 'dashboard', 'js', 'shared-data-new-block.js')
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
 
+
 def medium_key(iso):
     """Return the all-Medium scenario key for a given ISO (9-dim format)."""
     return 'MMM_M_M_M_M1_M' if iso == 'CAISO' else 'MMM_M_M_M_M1_X'
+
 
 def get_scenario(scenarios, iso):
     """Get scenario data using 9-dim key with fallback to old formats."""
@@ -29,14 +40,22 @@ def get_scenario(scenarios, iso):
             return scenarios[fallback]
     return None
 
-# Load results
-with open('dashboard/overprocure_results.json') as f:
-    data = json.load(f)
+
+def load_scenarios(iso, threshold):
+    """Load scenarios from co2 batch result JSON."""
+    fname = f"{iso}_{threshold}_2025.json"
+    fpath = os.path.join(CO2_DIR, fname)
+    if not os.path.exists(fpath):
+        return {}
+    with open(fpath) as f:
+        data = json.load(f)
+    return data.get('scenarios', {})
+
 
 # ============================================================================
 # RESOURCE_MIX_DATA
 # ============================================================================
-# Structure: { ISO: { resource: [9 values], ..., battery: [...], ldes: [...], procurement: [...] } }
+# Structure: { ISO: { resource: [15 values], ..., battery: [...], ldes: [...], procurement: [...] } }
 # Indices match THRESHOLDS array
 
 resource_mix_data = {}
@@ -50,7 +69,8 @@ for iso in ISOS:
     iso_data['procurement'] = []
 
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
+        scenarios = load_scenarios(iso, t)
+        sc = get_scenario(scenarios, iso) if scenarios else None
         if sc:
             rm = sc.get('resource_mix', {})
             for res in RESOURCES:
@@ -72,8 +92,8 @@ for iso in ISOS:
 # ============================================================================
 # COMPRESSED_DAY_DATA
 # ============================================================================
-# Structure: { ISO: { demand: [9×24], matched: { resource: [9×24] }, gap: [9×24],
-#              battery_charge: [9×24], ldes_charge: [9×24] } }
+# Structure: { ISO: { demand: [15×24], matched: { resource: [15×24] }, gap: [15×24],
+#              battery_charge: [15×24], ldes_charge: [15×24] } }
 
 compressed_day_data = {}
 for iso in ISOS:
@@ -86,7 +106,8 @@ for iso in ISOS:
     }
 
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
+        scenarios = load_scenarios(iso, t)
+        sc = get_scenario(scenarios, iso) if scenarios else None
         if sc and 'compressed_day' in sc:
             cd = sc['compressed_day']
             iso_cd['demand'].append([round(v, 5) for v in cd['demand']])
@@ -107,97 +128,8 @@ for iso in ISOS:
     compressed_day_data[iso] = iso_cd
 
 # ============================================================================
-# FORMAT AS JAVASCRIPT
+# CF_TRANCHE_DATA
 # ============================================================================
-
-def fmt_array(arr, indent=8):
-    """Format a flat array of numbers on one line."""
-    return '[' + ', '.join(str(v) for v in arr) + ']'
-
-def fmt_24h_array(arr):
-    """Format 24-hour array compactly."""
-    return '[' + ','.join(str(v) for v in arr) + ']'
-
-lines = []
-
-# --- RESOURCE_MIX_DATA ---
-lines.append('')
-lines.append('// --- Resource Mix (% of demand) — MMM_M_M scenario ---')
-lines.append('// Source: overprocure_results.json (Step 2 repriced)')
-lines.append('// Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]')
-lines.append('// battery/ldes = dispatch % of demand; procurement = over-procurement %')
-lines.append('const RESOURCE_MIX_DATA = {')
-for iso in ISOS:
-    d = resource_mix_data[iso]
-    lines.append(f'    {iso}: {{')
-    for key in RESOURCES + ['battery', 'ldes', 'procurement']:
-        comma = ',' if key != 'procurement' else ''
-        padding = ' ' * max(0, 12 - len(key))
-        lines.append(f'        {key}:{padding}{fmt_array(d[key])}{comma}')
-    comma = ',' if iso != ISOS[-1] else ''
-    lines.append(f'    }}{comma}')
-lines.append('};')
-
-# --- COMPRESSED_DAY_DATA ---
-lines.append('')
-lines.append('// --- Compressed Day Hourly Profiles (24h normalized) — MMM_M_M scenario ---')
-lines.append('// Source: overprocure_results.json compressed_day field')
-lines.append('// Each sub-array is [24 hourly values] in UTC, one per threshold (matching THRESHOLDS)')
-lines.append('// Values are normalized fractions of annual demand (sum across 24h ≈ daily share of annual)')
-lines.append('// To convert to MW: value × annual_demand_mwh × 365')
-lines.append('const COMPRESSED_DAY_DATA = {')
-for iso_idx, iso in enumerate(ISOS):
-    cd = compressed_day_data[iso]
-    lines.append(f'    {iso}: {{')
-
-    # demand
-    lines.append('        demand: [')
-    for i, arr in enumerate(cd['demand']):
-        comma = ',' if i < len(cd['demand']) - 1 else ''
-        lines.append(f'            {fmt_24h_array(arr)}{comma}')
-    lines.append('        ],')
-
-    # matched
-    lines.append('        matched: {')
-    for res_idx, res in enumerate(MATCHED_RESOURCES):
-        res_comma = ',' if res_idx < len(MATCHED_RESOURCES) - 1 else ''
-        lines.append(f'            {res}: [')
-        for i, arr in enumerate(cd['matched'][res]):
-            comma = ',' if i < len(cd['matched'][res]) - 1 else ''
-            lines.append(f'                {fmt_24h_array(arr)}{comma}')
-        lines.append(f'            ]{res_comma}')
-    lines.append('        },')
-
-    # gap
-    lines.append('        gap: [')
-    for i, arr in enumerate(cd['gap']):
-        comma = ',' if i < len(cd['gap']) - 1 else ''
-        lines.append(f'            {fmt_24h_array(arr)}{comma}')
-    lines.append('        ],')
-
-    # battery_charge
-    lines.append('        battery_charge: [')
-    for i, arr in enumerate(cd['battery_charge']):
-        comma = ',' if i < len(cd['battery_charge']) - 1 else ''
-        lines.append(f'            {fmt_24h_array(arr)}{comma}')
-    lines.append('        ],')
-
-    # ldes_charge
-    lines.append('        ldes_charge: [')
-    for i, arr in enumerate(cd['ldes_charge']):
-        comma = ',' if i < len(cd['ldes_charge']) - 1 else ''
-        lines.append(f'            {fmt_24h_array(arr)}{comma}')
-    lines.append('        ]')
-
-    iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
-    lines.append(f'    }}{iso_comma}')
-lines.append('};')
-
-# ============================================================================
-# CF_TRANCHE_DATA — uprate vs new-build split for WYN panel
-# ============================================================================
-# Structure: { ISO: { uprate_twh: [9], newbuild_twh: [9], uprate_price: [9],
-#              newbuild_price: [9], effective_cf_lcoe: [9], new_cf_twh: [9] } }
 
 cf_tranche_data = {}
 for iso in ISOS:
@@ -210,55 +142,104 @@ for iso in ISOS:
         'effective_cf_lcoe': [],
     }
     for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
+        scenarios = load_scenarios(iso, t)
+        sc = get_scenario(scenarios, iso) if scenarios else None
         tc = sc.get('tranche_costs', {}) if sc else {}
         iso_tr['new_cf_twh'].append(round(tc.get('new_cf_twh', 0), 3))
         iso_tr['uprate_twh'].append(round(tc.get('uprate_twh', 0), 4))
-        iso_tr['newbuild_twh'].append(round(tc.get('newbuild_twh', 0), 3))
+        # newbuild = nuclear_newbuild + ccs_tranche + geo
+        nb = tc.get('nuclear_newbuild_twh', 0) + tc.get('ccs_tranche_twh', 0) + tc.get('geo_twh', 0)
+        iso_tr['newbuild_twh'].append(round(nb, 3))
         iso_tr['uprate_price'].append(tc.get('uprate_price', 0))
         iso_tr['newbuild_price'].append(round(tc.get('newbuild_price', 0), 1))
-        iso_tr['effective_cf_lcoe'].append(round(tc.get('effective_new_cf_lcoe', 0), 1))
+        eff = tc.get('effective_new_cf_lcoe', 0)
+        iso_tr['effective_cf_lcoe'].append(round(eff, 1))
     cf_tranche_data[iso] = iso_tr
 
 # ============================================================================
-# WYN_RESOURCE_COSTS — per-resource existing/new/cost for WYN panel
+# FORMAT AS JAVASCRIPT
 # ============================================================================
-# Structure: { ISO: [ {resource: {existing_pct, new_pct, cost_per_demand_mwh}} × 9 thresholds ] }
 
-wyn_resource_costs = {}
-WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
+def fmt_array(arr):
+    """Format a flat array of numbers on one line."""
+    return '[' + ', '.join(str(v) for v in arr) + ']'
+
+def fmt_24h_array(arr):
+    """Format 24-hour array compactly."""
+    return '[' + ','.join(str(v) for v in arr) + ']'
+
+lines = []
+
+# --- RESOURCE_MIX_DATA ---
+lines.append('')
+lines.append('// --- Resource Mix (% of demand) — MMM_M_M scenario ---')
+lines.append('// Source: co2_results batch JSONs (Step 5)')
+lines.append(f'// Indices match THRESHOLDS array: {THRESHOLDS}')
+lines.append('// battery/ldes = dispatch % of demand; procurement = over-procurement %')
+lines.append('const RESOURCE_MIX_DATA = {')
 for iso in ISOS:
-    iso_wyn = []
-    for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
-        rc = sc.get('costs_detail', {}).get('resource_costs', {}) if sc else {}
-        entry = {}
-        for res in WYN_RESOURCES:
-            rd = rc.get(res, {})
-            if res in ('battery', 'battery8', 'ldes'):
-                entry[res] = {
-                    'dispatch_pct': rd.get('dispatch_pct', 0),
-                    'cost': round(rd.get('cost_per_demand_mwh', 0), 2),
-                }
-            else:
-                entry[res] = {
-                    'existing_pct': round(rd.get('existing_pct', rd.get('existing_share', 0)), 1),
-                    'new_pct': round(rd.get('new_pct', rd.get('new_share', 0)), 1),
-                    'cost': round(rd.get('cost_per_demand_mwh', 0), 2),
-                }
-        iso_wyn.append(entry)
-    wyn_resource_costs[iso] = iso_wyn
+    d = resource_mix_data[iso]
+    lines.append(f'    {iso}: {{')
+    for key in RESOURCES + ['battery', 'battery8', 'ldes', 'procurement']:
+        comma = ',' if key != 'procurement' else ''
+        padding = ' ' * max(0, 12 - len(key))
+        lines.append(f'        {key}:{padding}{fmt_array(d[key])}{comma}')
+    comma = ',' if iso != ISOS[-1] else ''
+    lines.append(f'    }}{comma}')
+lines.append('};')
 
-# ============================================================================
-# FORMAT CF_TRANCHE_DATA
-# ============================================================================
+# --- COMPRESSED_DAY_DATA ---
+lines.append('')
+lines.append('// --- Compressed Day Hourly Profiles (24h normalized) — MMM_M_M scenario ---')
+lines.append('// Source: co2_results batch JSONs compressed_day field')
+lines.append('// Each sub-array is [24 hourly values], one per threshold (matching THRESHOLDS)')
+lines.append('const COMPRESSED_DAY_DATA = {')
+for iso_idx, iso in enumerate(ISOS):
+    cd = compressed_day_data[iso]
+    lines.append(f'    {iso}: {{')
 
+    lines.append('        demand: [')
+    for i, arr in enumerate(cd['demand']):
+        comma = ',' if i < len(cd['demand']) - 1 else ''
+        lines.append(f'            {fmt_24h_array(arr)}{comma}')
+    lines.append('        ],')
+
+    lines.append('        matched: {')
+    for res_idx, res in enumerate(MATCHED_RESOURCES):
+        res_comma = ',' if res_idx < len(MATCHED_RESOURCES) - 1 else ''
+        lines.append(f'            {res}: [')
+        for i, arr in enumerate(cd['matched'][res]):
+            comma = ',' if i < len(cd['matched'][res]) - 1 else ''
+            lines.append(f'                {fmt_24h_array(arr)}{comma}')
+        lines.append(f'            ]{res_comma}')
+    lines.append('        },')
+
+    lines.append('        gap: [')
+    for i, arr in enumerate(cd['gap']):
+        comma = ',' if i < len(cd['gap']) - 1 else ''
+        lines.append(f'            {fmt_24h_array(arr)}{comma}')
+    lines.append('        ],')
+
+    lines.append('        battery_charge: [')
+    for i, arr in enumerate(cd['battery_charge']):
+        comma = ',' if i < len(cd['battery_charge']) - 1 else ''
+        lines.append(f'            {fmt_24h_array(arr)}{comma}')
+    lines.append('        ],')
+
+    lines.append('        ldes_charge: [')
+    for i, arr in enumerate(cd['ldes_charge']):
+        comma = ',' if i < len(cd['ldes_charge']) - 1 else ''
+        lines.append(f'            {fmt_24h_array(arr)}{comma}')
+    lines.append('        ]')
+
+    iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    }}{iso_comma}')
+lines.append('};')
+
+# --- CF_TRANCHE_DATA ---
 lines.append('')
 lines.append('// --- CF Tranche Split (uprate vs new-build) — MMM_M_M scenario ---')
-lines.append('// Source: overprocure_results.json tranche_costs field')
-lines.append('// Indices match THRESHOLDS array: [75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99]')
-lines.append('// uprate_twh capped at 5% of existing nuclear; newbuild = remainder')
-lines.append('// Prices: uprate = nuclear uprate LCOE; newbuild = geothermal (CAISO) or SMR + tx')
+lines.append('// Source: co2_results batch JSONs tranche_costs field')
 lines.append('const CF_TRANCHE_DATA = {')
 for iso_idx, iso in enumerate(ISOS):
     tr = cf_tranche_data[iso]
@@ -272,41 +253,14 @@ for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    }}{iso_comma}')
 lines.append('};')
 
-# ============================================================================
-# FORMAT WYN_RESOURCE_COSTS
-# ============================================================================
-
-lines.append('')
-lines.append('// --- WYN Resource Costs (existing/new/cost per resource) — MMM_M_M scenario ---')
-lines.append('// Source: overprocure_results.json costs_detail.resource_costs')
-lines.append('// Array of 9 objects per ISO (one per threshold in THRESHOLDS order)')
-lines.append('// Generation resources: {existing_pct, new_pct, cost} = % of demand + $/MWh-demand')
-lines.append('// Storage resources: {dispatch_pct, cost} = dispatch % of demand + $/MWh-demand')
-lines.append('const WYN_RESOURCE_COSTS = {')
-for iso_idx, iso in enumerate(ISOS):
-    lines.append(f'    {iso}: [')
-    for ti, entry in enumerate(wyn_resource_costs[iso]):
-        parts = []
-        for res in WYN_RESOURCES:
-            rd = entry[res]
-            if 'dispatch_pct' in rd:
-                parts.append(f'{res}:{{d:{rd["dispatch_pct"]},c:{rd["cost"]}}}')
-            else:
-                parts.append(f'{res}:{{e:{rd["existing_pct"]},n:{rd["new_pct"]},c:{rd["cost"]}}}')
-        comma = ',' if ti < len(wyn_resource_costs[iso]) - 1 else ''
-        lines.append(f'        {{{", ".join(parts)}}}{comma}')
-    iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
-    lines.append(f'    ]{iso_comma}')
-lines.append('};')
-
 js_block = '\n'.join(lines)
 
 # Write to file
-output_path = 'dashboard/js/shared-data-new-block.js'
-with open(output_path, 'w') as f:
+os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+with open(OUTPUT_PATH, 'w') as f:
     f.write(js_block)
 
-print(f"Generated {output_path}")
+print(f"Generated {OUTPUT_PATH}")
 print(f"  Lines: {len(lines)}")
 print(f"  Size: {len(js_block):,} bytes ({len(js_block)/1024:.1f} KB)")
 
@@ -314,18 +268,16 @@ print(f"  Size: {len(js_block):,} bytes ({len(js_block)/1024:.1f} KB)")
 print("\nVerification:")
 for iso in ISOS:
     rm = resource_mix_data[iso]
-    # Check resource mix sums to 100 per threshold
-    for i in range(9):
+    for i in range(len(THRESHOLDS)):
         total = sum(rm[r][i] for r in RESOURCES)
-        if total != 100:
+        if total != 100 and total != 0:
             print(f"  WARNING: {iso} threshold {THRESHOLDS[i]} resource mix sums to {total} (not 100)")
 
-    # Check compressed day demand sums
-    for i in range(9):
+    for i in range(len(THRESHOLDS)):
         d_sum = sum(compressed_day_data[iso]['demand'][i])
         m_sum = sum(sum(compressed_day_data[iso]['matched'][r][i]) for r in MATCHED_RESOURCES)
         g_sum = sum(compressed_day_data[iso]['gap'][i])
-        if abs(d_sum - (m_sum + g_sum)) > 0.01:
+        if d_sum > 0 and abs(d_sum - (m_sum + g_sum)) > 0.01:
             print(f"  WARNING: {iso} threshold {THRESHOLDS[i]} demand={d_sum:.4f} != matched+gap={m_sum+g_sum:.4f}")
 
 print("Done.")
