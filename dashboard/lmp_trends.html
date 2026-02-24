@@ -919,10 +919,10 @@ function baseTooltip() {
         data: {
             datasets: [
                 // P10-P90 band (outer)
-                { label: 'P90', data: pts(T, E.p90), borderColor: 'transparent', backgroundColor: BLUE + '30',
+                { label: 'P90', data: pts(T, E.p90), borderColor: 'transparent', backgroundColor: BLUE + '18',
                   borderWidth: 0, pointRadius: 0, fill: '+3', tension: 0.35, order: 12, _type: 'band' },
                 // P25-P75 band (inner)
-                { label: 'P75', data: pts(T, E.p75), borderColor: 'transparent', backgroundColor: BLUE + '40',
+                { label: 'P75', data: pts(T, E.p75), borderColor: 'transparent', backgroundColor: BLUE + '22',
                   borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 11, _type: 'band' },
                 // P50 line (median)
                 { label: 'Median (P50)', data: pts(T, E.p50), borderColor: BLUE, backgroundColor: BLUE + '20',
@@ -967,7 +967,7 @@ function baseTooltip() {
         var c = fuelColors[fl];
         // Band
         datasets.push({ label: fl + ' P90', data: pts(T, B[fl].p90), borderColor: 'transparent',
-            backgroundColor: c + '28', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 12, _type: 'band' });
+            backgroundColor: c + '15', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 12, _type: 'band' });
         // Line
         datasets.push({ label: fl + ' fuel', data: pts(T, F[fl].p50), borderColor: c, backgroundColor: c + '18',
             borderWidth: 2.5, pointRadius: 2, pointBackgroundColor: c, fill: false, tension: 0.35, order: 5 });
@@ -1008,13 +1008,13 @@ function baseTooltip() {
             datasets: [
                 // Zero-price band P50-P90
                 { label: 'Zero P90', data: pts(T, R.zeroP90), borderColor: 'transparent',
-                  backgroundColor: BLUE + '35', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 12, _type: 'band', _unit: 'hrs' },
+                  backgroundColor: BLUE + '1A', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 12, _type: 'band', _unit: 'hrs' },
                 { label: 'Zero-price hours', data: pts(T, R.zeroP50), borderColor: BLUE,
                   backgroundColor: BLUE + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: BLUE,
                   fill: false, tension: 0.35, order: 5, _unit: 'hrs' },
                 // Scarcity band P50-P90
                 { label: 'Scarcity P90', data: pts(T, R.scarcityP90), borderColor: 'transparent',
-                  backgroundColor: RED + '30', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 12, _type: 'band', _unit: 'hrs' },
+                  backgroundColor: RED + '18', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 12, _type: 'band', _unit: 'hrs' },
                 { label: 'Scarcity hours (>$200)', data: pts(T, R.scarcityP50), borderColor: RED,
                   backgroundColor: RED + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RED,
                   fill: false, tension: 0.35, order: 5, _unit: 'hrs' }
@@ -1091,7 +1091,7 @@ LMP.nuclear = {
             datasets: [
                 // Spread fill between peak and offpeak
                 { label: 'Peak P50', data: pts(T, P.peakP50), borderColor: 'transparent',
-                  backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 0, pointRadius: 0,
+                  backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 0, pointRadius: 0,
                   fill: '+1', tension: 0.35, order: 12, _type: 'band' },
                 // Off-peak lower bound for spread fill
                 { label: 'Offpeak P50 (fill target)', data: pts(T, P.offpeakP50), borderColor: 'transparent',
@@ -1139,7 +1139,7 @@ LMP.nuclear = {
             datasets: [
                 // Nuclear operating cost band (upper)
                 { label: 'Nuclear cost ceiling', data: pts(T, costBandUpper),
-                  borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.28)',
+                  borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.14)',
                   borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 12, _type: 'band' },
                 // Nuclear operating cost band (lower)
                 { label: 'Nuclear cost floor', data: pts(T, costBandLower),
@@ -1209,7 +1209,7 @@ LMP.nuclear = {
                   fill: false, tension: 0.35, yAxisID: 'y', order: 2 },
                 // Zero/neg hours (right axis)
                 { label: 'Zero/negative price hours', data: pts(T, N.zeroP50),
-                  borderColor: BLUE, backgroundColor: BLUE + '25',
+                  borderColor: BLUE, backgroundColor: BLUE + '14',
                   borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: BLUE,
                   fill: true, tension: 0.35, yAxisID: 'y1', order: 3, _unit: 'hrs' }
             ]

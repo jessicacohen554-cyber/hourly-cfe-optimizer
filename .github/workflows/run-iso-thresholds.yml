@@ -80,7 +80,7 @@ jobs:
           --max-runtime-minutes "${{ github.event.inputs.max_runtime_minutes || '330' }}" \
           --max-mixes-per-run "${{ github.event.inputs.max_mixes_per_run || '0' }}"
 
-    - name: Commit results
+    - name: Commit and push results (with retry for concurrent runs)
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
@@ -90,12 +90,31 @@ jobs:
 
         if git diff --cached --quiet; then
           echo "No changes to commit"
-        else
-          git commit -m "Step 1 PFS: ${{ github.event.inputs.iso }} thresholds=${{ github.event.inputs.thresholds }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          exit 0
         fi
 
-        git pull --rebase origin "$TARGET_BRANCH" || true
-        git push origin "$TARGET_BRANCH"
+        git commit -m "Step 1 PFS: ${{ github.event.inputs.iso }} thresholds=${{ github.event.inputs.thresholds }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+        # Retry push with pull-rebase to handle concurrent ISO jobs pushing
+        MAX_RETRIES=5
+        for i in $(seq 1 $MAX_RETRIES); do
+          echo "Push attempt $i/$MAX_RETRIES..."
+          if git push origin "$TARGET_BRANCH"; then
+            echo "Push succeeded on attempt $i"
+            break
+          fi
+
+          if [ "$i" -eq "$MAX_RETRIES" ]; then
+            echo "ERROR: Push failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+          BACKOFF=$((2 ** i))
+          echo "Push rejected — another ISO job pushed first. Retrying in ${BACKOFF}s..."
+          sleep "$BACKOFF"
+
+          git pull --rebase origin "$TARGET_BRANCH"
+        done
 
     - name: Create or update pull request
       env:
