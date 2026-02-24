@@ -2,29 +2,33 @@
 """
 Option B: Statistical Post-Processing + Path-Constrained MAC
 =============================================================
-Reads existing optimizer results (16,200 scenarios) and computes:
+Reads existing optimizer results and computes:
 
 1. Monotonic envelope MAC (convex hull of cost vs CO2 per ISO)
-2. MAC uncertainty fan (P10/P25/P50/P75/P90 across 324 scenarios)
+2. MAC uncertainty fan (P10/P25/P50/P75/P90 across scenarios)
 3. ANOVA sensitivity decomposition (which toggles drive MAC variance)
 4. Path-constrained reference MAC (monotonic resource deployment)
 
 Outputs:
-  - dashboard/js/mac-stats-data.js                       (JavaScript constants for dashboard)
+  - dashboard/js/mac-stats-data.js              (JavaScript constants for dashboard)
   - data/step5-post-processing/mac_stats.json    (full JSON for programmatic use)
+
+Performance: Uses vectorized pandas/numpy operations throughout.
+Data is loaded as DataFrames and never converted to nested dicts.
 """
 
 import json
 import os
 import sys
-import math
+import time
 import numpy as np
-from collections import defaultdict
+import pandas as pd
 
 # ── Paths ──
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
-from parquet_io import load_from_parquets, find_input_dir, load_dg_from_parquets
+from parquet_io import (find_input_dir, find_parquet, find_dg_parquets,
+                        DEFAULT_INPUT_DIRS, RESOURCE_TYPES, REGIONAL_DEMAND_MWH)
 
 RESULTS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_results.json')
 JS_OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'js', 'mac-stats-data.js')
@@ -33,209 +37,188 @@ JSON_OUTPUT_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
-THRESHOLD_STRS = [str(t) for t in THRESHOLDS]
+THRESHOLD_STRS = [str(t) if t != int(t) else str(int(t)) for t in THRESHOLDS]
 
 # Toggle factor names for ANOVA (6 paired dimensions — Battery/LDES split from Storage)
 TOGGLE_NAMES = ['Renewable Gen', 'Nuclear', 'Battery Cost', 'LDES Cost', 'Fossil Fuel', 'Transmission']
+TOGGLE_COLS = ['toggle_ren', 'toggle_nuc', 'toggle_batt', 'toggle_ldes', 'toggle_fuel', 'toggle_tx']
+
+# Medium scenario keys (any of these is acceptable)
+MEDIUM_KEYS_SET = frozenset({
+    'MMMM_M_M_M1_X', 'MMMM_M_M_M1_M',
+    'MMM_M_M_M1_M', 'MMM_M_M_M1_X', 'MMM_M_M',
+})
 
 # Wholesale prices (duplicated from optimizer for standalone use)
 WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
 
 
-def load_results():
-    """Load optimizer results from parquets (preferred) or JSON (fallback)."""
-    input_dir = find_input_dir(ISOS)
-    if input_dir:
-        print(f"Loading from parquets: {input_dir}")
-        return load_from_parquets(input_dir, ISOS)
-    if os.path.exists(RESULTS_PATH):
-        print(f"Loading from JSON: {RESULTS_PATH}")
-        with open(RESULTS_PATH, 'r') as f:
-            return json.load(f)
-    raise FileNotFoundError(f"No parquets found and {RESULTS_PATH} doesn't exist")
+# ══════════════════════════════════════════════════════════════════════════════
+# DATA LOADING — Direct DataFrame (no dict conversion)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def load_combined_df(input_dir, isos):
+    """Load all ISO parquets into a single DataFrame.
+
+    Skips the dict conversion entirely — all computation works on the DataFrame.
+    """
+    frames = []
+    for iso in isos:
+        parquet_path = find_parquet(input_dir, iso)
+        if parquet_path is None:
+            continue
+        df = pd.read_parquet(parquet_path)
+        if 'iso' not in df.columns:
+            df['iso'] = iso
+        sz = os.path.getsize(parquet_path) / 1024
+        print(f"  Loaded {iso}: {len(df):,} rows ({sz:.0f} KB)")
+        frames.append(df)
+
+    if not frames:
+        raise FileNotFoundError(f"No parquet files found in {input_dir}")
+
+    df = pd.concat(frames, ignore_index=True)
+
+    # Ensure annual_demand_mwh exists (fallback to regional constants)
+    if 'annual_demand_mwh' not in df.columns:
+        df['annual_demand_mwh'] = df['iso'].map(REGIONAL_DEMAND_MWH).fillna(0)
+    else:
+        # Fill NaN values with regional constants
+        mask = df['annual_demand_mwh'].isna() | (df['annual_demand_mwh'] == 0)
+        df.loc[mask, 'annual_demand_mwh'] = df.loc[mask, 'iso'].map(REGIONAL_DEMAND_MWH)
+
+    # Ensure CO2 column exists
+    if 'co2_total_co2_abated_tons' not in df.columns:
+        df['co2_total_co2_abated_tons'] = 0.0
+
+    return df
+
+
+def add_mac_column(df):
+    """Add MAC column: (cost_incremental × annual_demand_mwh) / co2_total_co2_abated_tons."""
+    co2 = df['co2_total_co2_abated_tons']
+    valid = (co2 > 0) & df['cost_incremental'].notna()
+    df['mac'] = np.where(
+        valid,
+        (df['cost_incremental'] * df['annual_demand_mwh']) / co2,
+        np.nan,
+    )
+    return df
+
+
+def parse_toggle_levels(df):
+    """Parse scenario keys into 6 toggle-level columns (vectorized).
+
+    Handles 9-dim (RFBL_F_TX_...) and 8-dim/5-dim (RFS_F_TX_...) formats.
+    L=0, M=1, H=2, N=0.
+    """
+    level_map = {'L': 0, 'M': 1, 'H': 2, 'N': 0}
+
+    parts = df['scenario'].str.split('_')
+    gen = parts.str[0]   # e.g., "MMMM" or "MMM"
+    fuel = parts.str[1]  # e.g., "M"
+    tx = parts.str[2]    # e.g., "M"
+
+    has_4 = gen.str.len() >= 4
+
+    df['toggle_ren'] = gen.str[0].map(level_map).fillna(1).astype(np.int8)
+    df['toggle_nuc'] = gen.str[1].map(level_map).fillna(1).astype(np.int8)
+
+    # gen[2] is battery for 4-char, or storage for 3-char
+    char2 = gen.str[2].map(level_map).fillna(1)
+    # gen[3] only exists for 4-char keys (NaN for 3-char)
+    char3 = gen.str[3].map(level_map).fillna(1)
+
+    df['toggle_batt'] = char2.astype(np.int8)
+    # For 4-char: LDES = gen[3]; for 3-char: LDES = same as battery (storage)
+    df['toggle_ldes'] = np.where(has_4, char3, char2).astype(np.int8)
+    df['toggle_fuel'] = fuel.map(level_map).fillna(1).astype(np.int8)
+    df['toggle_tx'] = tx.map(level_map).fillna(1).astype(np.int8)
+
+    return df
+
+
+def fmt_threshold(t):
+    """50.0 → '50', 87.5 → '87.5'"""
+    return str(t) if t != int(t) else str(int(t))
 
 
 def medium_key(iso):
-    """Return the all-Medium 9-dim scenario key for an ISO.
-    Format: RFBL_FF_TX_CCSq45_GEO (R=ren, F=firm, B=batt, L=ldes)
-    """
+    """Return the all-Medium 9-dim scenario key for an ISO."""
     geo = 'M' if iso == 'CAISO' else 'X'
     return f'MMMM_M_M_M1_{geo}'
 
 
-def scenario_key_to_levels(key):
-    """Parse scenario key → (renew, firm, battery, ldes, fuel, tx) indices.
-    Handles 9-dim (RFBL_F_TX_...), 8-dim (RFS_F_TX_...), and 5-dim (RFS_F_TX) formats.
-    L=0, M=1, H=2; tx: N=0, L=1, M=2, H=3
-    Returns 6 dimensions for ANOVA (CCS/45Q/Geo handled separately).
-    """
-    level_map = {'L': 0, 'M': 1, 'H': 2, 'N': 0}
-    parts = key.split('_')
-    gen = parts[0]
-    fuel = parts[1]
-    tx = parts[2]
-    if len(gen) >= 4:
-        # 9-dim: R, F, B, L
-        return (level_map.get(gen[0], 1), level_map.get(gen[1], 1),
-                level_map.get(gen[2], 1), level_map.get(gen[3], 1),
-                level_map.get(fuel, 1), level_map.get(tx, 1))
-    else:
-        # 8-dim or 5-dim: R, F, S — replicate S for both battery and LDES
-        s = level_map.get(gen[2], 1) if len(gen) >= 3 else 1
-        return (level_map.get(gen[0], 1), level_map.get(gen[1], 1),
-                s, s,
-                level_map.get(fuel, 1), level_map.get(tx, 1))
+# ══════════════════════════════════════════════════════════════════════════════
+# COMPUTE FUNCTIONS — All vectorized on DataFrames
+# ══════════════════════════════════════════════════════════════════════════════
 
+def compute_fan_chart(df):
+    """Compute P10/P25/P50/P75/P90 MAC percentiles per ISO/threshold.
 
-def compute_mac_for_scenario(iso_data, scenario_key, thresholds):
-    """Compute average MAC ($/ton) at each threshold for one scenario.
-    MAC = (incremental_cost × demand_mwh) / total_co2_abated_tons
-    """
-    demand_mwh = iso_data.get('annual_demand_mwh', 1)
-    macs = []
-
-    for t_str in thresholds:
-        t_data = iso_data.get('thresholds', {}).get(t_str, {})
-        scenarios = t_data.get('scenarios', {})
-        sc = scenarios.get(scenario_key)
-        if not sc:
-            macs.append(None)
-            continue
-
-        costs = sc.get('costs', {})
-        co2 = sc.get('co2_abated', {})
-        incremental = costs.get('incremental', costs.get('incremental_above_baseline', 0))
-        co2_tons = co2.get('total_co2_abated_tons', 0)
-
-        if co2_tons > 0 and incremental is not None:
-            mac = (incremental * demand_mwh) / co2_tons
-            macs.append(round(mac, 1))
-        else:
-            macs.append(None)
-
-    return macs
-
-
-def compute_stepwise_mac(iso_data, scenario_key, thresholds):
-    """Compute stepwise marginal MAC between adjacent thresholds.
-    Returns list where index i = MAC of step from threshold[i-1] to threshold[i].
-    Index 0 = None (no prior step).
-    """
-    demand_mwh = iso_data.get('annual_demand_mwh', 1)
-    step_macs = [None]  # No step for first threshold
-
-    for i in range(1, len(thresholds)):
-        t_prev = thresholds[i - 1]
-        t_curr = thresholds[i]
-
-        t_prev_data = iso_data.get('thresholds', {}).get(t_prev, {}).get('scenarios', {}).get(scenario_key)
-        t_curr_data = iso_data.get('thresholds', {}).get(t_curr, {}).get('scenarios', {}).get(scenario_key)
-
-        if not t_prev_data or not t_curr_data:
-            step_macs.append(None)
-            continue
-
-        cost_prev = t_prev_data.get('costs', {}).get('incremental', 0)
-        cost_curr = t_curr_data.get('costs', {}).get('incremental', 0)
-        co2_prev = t_prev_data.get('co2_abated', {}).get('total_co2_abated_tons', 0)
-        co2_curr = t_curr_data.get('co2_abated', {}).get('total_co2_abated_tons', 0)
-
-        delta_cost = (cost_curr - cost_prev) * demand_mwh
-        delta_co2 = co2_curr - co2_prev
-
-        if delta_co2 > 0 and delta_cost >= 0:
-            step_macs.append(round(delta_cost / delta_co2, 1))
-        else:
-            step_macs.append(None)
-
-    return step_macs
-
-
-def compute_fan_chart(data):
-    """Compute P10/P25/P50/P75/P90 MAC percentiles across all 324 scenarios per ISO/threshold.
-
-    Each scenario now has its own CO2 abatement (computed with fuel-switching elasticity).
-    The fossil fuel toggle shifts marginal emission rates, so MAC = f(cost, CO2) varies
-    on BOTH axes across scenarios.
+    Each scenario has its own CO2 abatement (from fuel-switching elasticity),
+    so MAC = f(cost, CO2) varies on BOTH axes across scenarios.
     """
     fan_data = {}
+    pcts = [10, 25, 50, 75, 90]
+    pct_names = ['p10', 'p25', 'p50', 'p75', 'p90']
+    valid = df[df['mac'].notna()]
 
     for iso in ISOS:
-        iso_data = data['results'].get(iso, {})
-        fan_data[iso] = {'p10': [], 'p25': [], 'p50': [], 'p75': [], 'p90': []}
-        demand_mwh = iso_data.get('annual_demand_mwh', 1)
+        iso_df = valid[valid['iso'] == iso]
+        fan_data[iso] = {p: [] for p in pct_names}
 
-        for t_str in THRESHOLD_STRS:
-            t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            scenarios = t_data.get('scenarios', {})
-
-            macs = []
-            for sc_key, sc in scenarios.items():
-                incremental = sc.get('costs', {}).get('incremental', 0)
-                co2 = sc.get('co2_abated', {})
-                co2_tons = co2.get('total_co2_abated_tons', 0)
-
-                if co2_tons > 0 and incremental is not None:
-                    mac = (incremental * demand_mwh) / co2_tons
-                    macs.append(mac)
-
-            if macs:
-                arr = np.array(macs)
-                fan_data[iso]['p10'].append(round(float(np.percentile(arr, 10)), 1))
-                fan_data[iso]['p25'].append(round(float(np.percentile(arr, 25)), 1))
-                fan_data[iso]['p50'].append(round(float(np.percentile(arr, 50)), 1))
-                fan_data[iso]['p75'].append(round(float(np.percentile(arr, 75)), 1))
-                fan_data[iso]['p90'].append(round(float(np.percentile(arr, 90)), 1))
+        for t in THRESHOLDS:
+            t_macs = iso_df.loc[iso_df['threshold'] == t, 'mac'].values
+            if len(t_macs) > 0:
+                vals = np.percentile(t_macs, pcts)
+                for name, val in zip(pct_names, vals):
+                    fan_data[iso][name].append(round(float(val), 1))
             else:
-                for p in ['p10', 'p25', 'p50', 'p75', 'p90']:
-                    fan_data[iso][p].append(None)
+                for name in pct_names:
+                    fan_data[iso][name].append(None)
 
     return fan_data
 
 
-def compute_stepwise_fan(data):
-    """Compute P10/P50/P90 of stepwise marginal MAC across scenarios.
+def compute_stepwise_fan(df):
+    """Compute P10/P50/P90 of stepwise marginal MAC between adjacent thresholds.
 
-    Each scenario has its own CO2 (from fuel-switching elasticity), so both cost
-    and CO2 vary. Step MAC = delta_cost / delta_co2 per scenario.
+    Step MAC = delta_cost / delta_co2 per scenario, computed via DataFrame merge.
     """
     fan_data = {}
 
     for iso in ISOS:
-        iso_data = data['results'].get(iso, {})
-        demand_mwh = iso_data.get('annual_demand_mwh', 1)
+        iso_df = df[df['iso'] == iso]
         fan_data[iso] = {'p10': [None], 'p50': [None], 'p90': [None]}
 
         for i in range(1, len(THRESHOLDS)):
-            t_prev = THRESHOLD_STRS[i - 1]
-            t_curr = THRESHOLD_STRS[i]
+            t_prev, t_curr = THRESHOLDS[i - 1], THRESHOLDS[i]
 
-            prev_scenarios = iso_data.get('thresholds', {}).get(t_prev, {}).get('scenarios', {})
-            curr_scenarios = iso_data.get('thresholds', {}).get(t_curr, {}).get('scenarios', {})
+            prev = iso_df.loc[iso_df['threshold'] == t_prev,
+                              ['scenario', 'cost_incremental', 'co2_total_co2_abated_tons',
+                               'annual_demand_mwh']].set_index('scenario')
+            curr = iso_df.loc[iso_df['threshold'] == t_curr,
+                              ['scenario', 'cost_incremental',
+                               'co2_total_co2_abated_tons']].set_index('scenario')
 
-            step_macs = []
-            for sc_key in curr_scenarios:
-                sc_prev = prev_scenarios.get(sc_key)
-                sc_curr = curr_scenarios.get(sc_key)
-                if not sc_prev or not sc_curr:
-                    continue
+            merged = prev.join(curr, rsuffix='_next', how='inner')
+            if merged.empty:
+                for p in ['p10', 'p50', 'p90']:
+                    fan_data[iso][p].append(None)
+                continue
 
-                cost_prev = sc_prev.get('costs', {}).get('incremental', 0)
-                cost_curr = sc_curr.get('costs', {}).get('incremental', 0)
-                co2_prev = sc_prev.get('co2_abated', {}).get('total_co2_abated_tons', 0)
-                co2_curr = sc_curr.get('co2_abated', {}).get('total_co2_abated_tons', 0)
+            delta_cost = ((merged['cost_incremental_next'] - merged['cost_incremental'])
+                          * merged['annual_demand_mwh'])
+            delta_co2 = (merged['co2_total_co2_abated_tons_next']
+                         - merged['co2_total_co2_abated_tons'])
 
-                delta_cost = (cost_curr - cost_prev) * demand_mwh
-                delta_co2 = co2_curr - co2_prev
+            valid = (delta_co2 > 0) & (delta_cost >= 0)
+            step_macs = (delta_cost[valid] / delta_co2[valid]).values
 
-                if delta_co2 > 0 and delta_cost >= 0:
-                    step_macs.append(delta_cost / delta_co2)
-
-            if step_macs:
-                arr = np.array(step_macs)
-                fan_data[iso]['p10'].append(round(float(np.percentile(arr, 10)), 1))
-                fan_data[iso]['p50'].append(round(float(np.percentile(arr, 50)), 1))
-                fan_data[iso]['p90'].append(round(float(np.percentile(arr, 90)), 1))
+            if len(step_macs) > 0:
+                for p, pct in [('p10', 10), ('p50', 50), ('p90', 90)]:
+                    fan_data[iso][p].append(round(float(np.percentile(step_macs, pct)), 1))
             else:
                 for p in ['p10', 'p50', 'p90']:
                     fan_data[iso][p].append(None)
@@ -243,43 +226,38 @@ def compute_stepwise_fan(data):
     return fan_data
 
 
-def compute_monotonic_envelope(data):
+def compute_monotonic_envelope(df):
     """Compute monotonic envelope MAC — running max to enforce non-decreasing MAC.
-    This is the convex-hull-inspired approach: at each threshold, the envelope MAC
-    is max(MAC[t], envelope[t-1]). Smooths portfolio rebalancing artifacts.
+
+    Filters to medium scenario only (one row per threshold per ISO).
     """
     envelope = {}
+    med_df = df[df['scenario'].isin(MEDIUM_KEYS_SET)]
 
     for iso in ISOS:
-        iso_data = data['results'].get(iso, {})
-        demand_mwh = iso_data.get('annual_demand_mwh', 1)
-        mk = medium_key(iso)
+        iso_med = med_df[med_df['iso'] == iso].sort_values('threshold')
+        demand_mwh = iso_med['annual_demand_mwh'].iloc[0] if len(iso_med) > 0 else 1
 
-        # Compute raw average MAC at Medium scenario
         raw_macs = []
         costs_at_t = []
         co2_at_t = []
-        med_key = medium_key(iso)
 
-        for t_str in THRESHOLD_STRS:
-            t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            sc = (t_data.get('scenarios', {}).get(mk) or
-             t_data.get('scenarios', {}).get('MMM_M_M_M1_M') or
-             t_data.get('scenarios', {}).get('MMM_M_M_M1_X') or
-             t_data.get('scenarios', {}).get('MMM_M_M'))
-            if not sc:
+        for t in THRESHOLDS:
+            t_rows = iso_med[iso_med['threshold'] == t]
+            if len(t_rows) == 0:
                 raw_macs.append(None)
                 costs_at_t.append(None)
                 co2_at_t.append(None)
                 continue
 
-            incremental = sc.get('costs', {}).get('incremental', 0)
-            co2_tons = sc.get('co2_abated', {}).get('total_co2_abated_tons', 0)
+            row = t_rows.iloc[0]
+            incremental = float(row['cost_incremental'])
+            co2_tons = float(row['co2_total_co2_abated_tons'])
 
             costs_at_t.append(incremental)
-            co2_at_t.append(co2_tons)
+            co2_at_t.append(co2_tons if pd.notna(co2_tons) else 0)
 
-            if co2_tons > 0:
+            if pd.notna(co2_tons) and co2_tons > 0:
                 raw_macs.append(round((incremental * demand_mwh) / co2_tons, 1))
             else:
                 raw_macs.append(None)
@@ -298,9 +276,9 @@ def compute_monotonic_envelope(data):
         step_env = [None]
         step_running_max = 0
         for i in range(1, len(THRESHOLDS)):
-            if costs_at_t[i] is not None and costs_at_t[i-1] is not None:
-                delta_cost = (costs_at_t[i] - costs_at_t[i-1]) * demand_mwh
-                delta_co2 = (co2_at_t[i] or 0) - (co2_at_t[i-1] or 0)
+            if costs_at_t[i] is not None and costs_at_t[i - 1] is not None:
+                delta_cost = (costs_at_t[i] - costs_at_t[i - 1]) * demand_mwh
+                delta_co2 = (co2_at_t[i] or 0) - (co2_at_t[i - 1] or 0)
                 if delta_co2 > 0 and delta_cost >= 0:
                     step_mac = delta_cost / delta_co2
                     step_running_max = max(step_running_max, step_mac)
@@ -319,80 +297,65 @@ def compute_monotonic_envelope(data):
     return envelope
 
 
-def compute_path_constrained_mac(data):
-    """Compute path-constrained reference MAC from existing results.
+def compute_path_constrained_mac(df):
+    """Compute path-constrained reference MAC from medium scenario.
 
-    Methodology: For each ISO at Medium costs, enforce that absolute resource deployment
-    (procurement_pct × mix_share) is non-decreasing across thresholds. When the optimizer's
-    independent optimization would reduce a resource, we hold it at its prior level and
-    recompute the effective cost.
-
-    This produces a monotonic-by-construction MAC curve that represents the true marginal
-    cost of incremental resource additions.
+    Enforces that absolute resource deployment (procurement_pct × mix_share)
+    is non-decreasing across thresholds, producing a monotonic-by-construction
+    MAC curve.
     """
     path_mac = {}
+    med_df = df[df['scenario'].isin(MEDIUM_KEYS_SET)]
 
     for iso in ISOS:
-        iso_data = data['results'].get(iso, {})
-        demand_mwh = iso_data.get('annual_demand_mwh', 1)
-        wholesale = WHOLESALE_PRICES[iso]
-        mk = medium_key(iso)
+        iso_med = med_df[med_df['iso'] == iso].sort_values('threshold')
+        demand_mwh = iso_med['annual_demand_mwh'].iloc[0] if len(iso_med) > 0 else 1
 
-        # Collect Medium scenario results across thresholds
-        results_by_t = {}
-        for t_str in THRESHOLD_STRS:
-            t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            sc = (t_data.get('scenarios', {}).get(mk) or
-             t_data.get('scenarios', {}).get('MMM_M_M_M1_M') or
-             t_data.get('scenarios', {}).get('MMM_M_M_M1_X') or
-             t_data.get('scenarios', {}).get('MMM_M_M'))
-            if sc:
-                results_by_t[t_str] = sc
-
-        if not results_by_t:
-            path_mac[iso] = {'mac': [None] * len(THRESHOLDS),
-                             'mixes': [None] * len(THRESHOLDS),
-                             'costs': [None] * len(THRESHOLDS)}
+        if len(iso_med) == 0:
+            path_mac[iso] = {
+                'mac': [None] * len(THRESHOLDS),
+                'mixes': [None] * len(THRESHOLDS),
+                'costs': [None] * len(THRESHOLDS),
+            }
             continue
 
-        # Build path-constrained resource deployment
-        prev_abs = {'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0, 'hydro': 0}
+        # Build threshold lookup
+        results_by_t = {}
+        for _, row in iso_med.iterrows():
+            t_str = fmt_threshold(row['threshold'])
+            results_by_t[t_str] = row
+
+        prev_abs = {r: 0 for r in RESOURCE_TYPES}
         prev_batt = 0
         prev_ldes = 0
         prev_proc = 0
+        prev_cost = 0
+        prev_co2 = 0
 
         path_macs = []
         path_mixes = []
         path_costs = []
-        prev_cost = 0
-        prev_co2 = 0
 
         for t_idx, t_str in enumerate(THRESHOLD_STRS):
-            sc = results_by_t.get(t_str)
-            if not sc:
+            row = results_by_t.get(t_str)
+            if row is None:
                 path_macs.append(None)
                 path_mixes.append(None)
                 path_costs.append(None)
                 continue
 
-            mix = sc['resource_mix']
-            proc = sc['procurement_pct']
-            batt = sc['battery_dispatch_pct']
-            ldes = sc['ldes_dispatch_pct']
-            co2_data = sc.get('co2_abated', {})
-            co2_tons = co2_data.get('total_co2_abated_tons', 0)
+            mix = {r: int(row[f'mix_{r}']) for r in RESOURCE_TYPES}
+            proc = int(row['procurement_pct'])
+            batt = int(row['battery_dispatch_pct'])
+            ldes = int(row['ldes_dispatch_pct'])
+            co2_tons = float(row['co2_total_co2_abated_tons'])
+            incremental = float(row['cost_incremental'])
 
             # Compute absolute deployment for this threshold's optimal mix
-            curr_abs = {}
-            for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
-                curr_abs[rtype] = proc * mix.get(rtype, 0) / 100.0
+            curr_abs = {r: proc * mix[r] / 100.0 for r in RESOURCE_TYPES}
 
             # Enforce monotonicity: each resource's absolute deployment >= previous
-            constrained_abs = {}
-            for rtype in curr_abs:
-                constrained_abs[rtype] = max(curr_abs[rtype], prev_abs[rtype])
-
-            # Constrained procurement and storage
+            constrained_abs = {r: max(curr_abs[r], prev_abs[r]) for r in RESOURCE_TYPES}
             constrained_proc = max(proc, prev_proc)
             constrained_batt = max(batt, prev_batt)
             constrained_ldes = max(ldes, prev_ldes)
@@ -402,36 +365,17 @@ def compute_path_constrained_mac(data):
             if total_abs > 0:
                 constrained_mix = {r: round(constrained_abs[r] / total_abs * 100, 1)
                                    for r in constrained_abs}
-                eff_proc = total_abs  # This is the effective procurement factor
             else:
                 constrained_mix = mix
-                eff_proc = proc
 
-            # Compute cost from constrained deployment using the cost model
-            # (simplified version matching compute_costs logic)
-            cost_data = sc.get('costs', {})
-            incremental = cost_data.get('incremental', 0)
-
-            # Adjustment: if we're holding extra resources from prior thresholds,
-            # the cost is at least as high as the previous constrained cost
+            # Cost is at least as high as previous constrained cost
             constrained_incremental = max(incremental, prev_cost)
 
-            # Average MAC = (constrained_incremental × demand) / co2
+            # Average MAC
             if co2_tons > 0:
                 avg_mac = round((constrained_incremental * demand_mwh) / co2_tons, 1)
             else:
                 avg_mac = None
-
-            # Stepwise MAC (from previous to current)
-            if t_idx > 0 and prev_co2 > 0:
-                delta_cost = (constrained_incremental - prev_cost) * demand_mwh
-                delta_co2 = co2_tons - prev_co2
-                if delta_co2 > 0:
-                    step_mac = round(delta_cost / delta_co2, 1)
-                else:
-                    step_mac = None
-            else:
-                step_mac = None if t_idx > 0 else None
 
             path_macs.append(avg_mac)
             path_mixes.append(constrained_mix)
@@ -454,87 +398,50 @@ def compute_path_constrained_mac(data):
     return path_mac
 
 
-def compute_anova(data):
+def compute_anova(df):
     """ANOVA-style sensitivity decomposition: fraction of MAC variance explained
     by each toggle group.
 
-    Uses the 324 factorial design (3×3×3×3×4 = 324 scenarios) as a balanced
-    experiment. For each ISO and threshold, decomposes total MAC variance into
-    contributions from each of the 5 toggle groups.
-
-    Returns: {iso: {toggle_name: fraction_of_variance}} averaged across thresholds.
+    Uses vectorized toggle-level columns (parsed once) and pandas groupby
+    for between-group SS computation. No per-scenario string parsing.
     """
     anova_results = {}
+    valid = df[df['mac'].notna()]
 
     for iso in ISOS:
-        iso_data = data['results'].get(iso, {})
-        demand_mwh = iso_data.get('annual_demand_mwh', 1)
+        iso_df = valid[valid['iso'] == iso]
+        toggle_contributions = {name: [] for name in TOGGLE_NAMES}
 
-        # Collect MACs across all scenarios and thresholds
-        toggle_contributions = defaultdict(list)
-
-        for t_str in THRESHOLD_STRS:
-            t_data = iso_data.get('thresholds', {}).get(t_str, {})
-            scenarios = t_data.get('scenarios', {})
-
-            if not scenarios:
+        for t in THRESHOLDS:
+            t_df = iso_df[iso_df['threshold'] == t]
+            if len(t_df) < 10:
                 continue
 
-            # Build MAC array indexed by scenario
-            mac_by_scenario = {}
-            for sc_key, sc in scenarios.items():
-                costs = sc.get('costs', {})
-                co2 = sc.get('co2_abated', {})
-                incremental = costs.get('incremental', 0)
-                co2_tons = co2.get('total_co2_abated_tons', 0)
-
-                if co2_tons > 0 and incremental is not None:
-                    mac_by_scenario[sc_key] = (incremental * demand_mwh) / co2_tons
-
-            if len(mac_by_scenario) < 10:
-                continue
-
-            all_macs = np.array(list(mac_by_scenario.values()))
+            all_macs = t_df['mac'].values
             total_var = np.var(all_macs)
-
             if total_var < 1e-6:
                 continue
 
-            # For each toggle, compute between-group variance (SS_between / SS_total)
-            for toggle_idx, toggle_name in enumerate(TOGGLE_NAMES):
-                groups = defaultdict(list)
+            ss_total = total_var * len(all_macs)
+            grand_mean = np.mean(all_macs)
 
-                for sc_key, mac in mac_by_scenario.items():
-                    levels = scenario_key_to_levels(sc_key)
-                    group_level = levels[toggle_idx]
-                    groups[group_level].append(mac)
-
-                # Between-group sum of squares
-                grand_mean = np.mean(all_macs)
-                ss_between = sum(
-                    len(g) * (np.mean(g) - grand_mean) ** 2
-                    for g in groups.values()
-                )
-                ss_total = total_var * len(all_macs)
-
-                if ss_total > 0:
-                    eta_squared = ss_between / ss_total
-                    toggle_contributions[toggle_name].append(eta_squared)
+            for toggle_name, toggle_col in zip(TOGGLE_NAMES, TOGGLE_COLS):
+                group_stats = t_df.groupby(toggle_col)['mac'].agg(['mean', 'count'])
+                ss_between = (group_stats['count'] * (group_stats['mean'] - grand_mean) ** 2).sum()
+                eta_squared = ss_between / ss_total
+                toggle_contributions[toggle_name].append(eta_squared)
 
         # Average across thresholds
         anova_results[iso] = {}
         for toggle_name in TOGGLE_NAMES:
-            vals = toggle_contributions.get(toggle_name, [])
-            if vals:
-                anova_results[iso][toggle_name] = round(float(np.mean(vals)), 3)
-            else:
-                anova_results[iso][toggle_name] = 0.0
+            vals = toggle_contributions[toggle_name]
+            anova_results[iso][toggle_name] = round(float(np.mean(vals)), 3) if vals else 0.0
 
     return anova_results
 
 
 def compute_crossover_analysis(fan_data, envelope_data):
-    """Compute threshold where MAC crosses key benchmarks, using envelope and fan data."""
+    """Compute threshold where MAC crosses key benchmarks."""
     benchmarks = {
         'scc_epa_190': 190,
         'scc_rennert_185': 185,
@@ -551,14 +458,12 @@ def compute_crossover_analysis(fan_data, envelope_data):
         p50 = fan_data.get(iso, {}).get('p50', [])
 
         for bm_name, bm_cost in benchmarks.items():
-            # Find first threshold where envelope MAC exceeds benchmark
             env_cross = '>99'
             for i, mac in enumerate(env):
                 if mac is not None and mac > bm_cost:
                     env_cross = THRESHOLDS[i]
                     break
 
-            # Find first threshold where P50 MAC exceeds benchmark
             p50_cross = '>99'
             for i, mac in enumerate(p50):
                 if mac is not None and mac > bm_cost:
@@ -572,6 +477,78 @@ def compute_crossover_analysis(fan_data, envelope_data):
 
     return crossovers
 
+
+def compute_dg_mac(input_dir, isos):
+    """Compute demand growth MAC directly from parquet DataFrames.
+
+    Loads DG parquets as DataFrames and uses vectorized MAC + groupby percentiles.
+    """
+    dg_mac = {}
+
+    for iso in isos:
+        files = find_dg_parquets(input_dir, iso)
+        if not files:
+            for alt_dir in DEFAULT_INPUT_DIRS:
+                files = find_dg_parquets(alt_dir, iso, 'step3_dg_')
+                if files:
+                    break
+        if not files:
+            continue
+
+        # Load all DG files for this ISO into one DataFrame
+        frames = [pd.read_parquet(f) for f in files]
+        dg_df = pd.concat(frames, ignore_index=True)
+
+        # Check required columns
+        co2_col = 'co2_total_co2_abated_tons'
+        demand_col = 'annual_demand_mwh'
+        if co2_col not in dg_df.columns or demand_col not in dg_df.columns:
+            continue
+        if 'year' not in dg_df.columns or 'growth_level' not in dg_df.columns:
+            continue
+
+        # Vectorized MAC computation
+        valid = ((dg_df[co2_col] > 0) & dg_df['cost_incremental'].notna()
+                 & (dg_df[demand_col] > 0))
+        dg_valid = dg_df[valid].copy()
+        if dg_valid.empty:
+            continue
+
+        dg_valid['mac'] = ((dg_valid['cost_incremental'] * dg_valid[demand_col])
+                           / dg_valid[co2_col])
+
+        iso_mac = {}
+        for (threshold, year, g_level), grp in dg_valid.groupby(
+                ['threshold', 'year', 'growth_level']):
+            t_str = fmt_threshold(threshold)
+            arr = grp['mac'].values
+            demand_sample = float(grp[demand_col].iloc[0])
+            gf_sample = float(grp['growth_factor'].iloc[0]) if 'growth_factor' in grp.columns else 1.0
+
+            if t_str not in iso_mac:
+                iso_mac[t_str] = {}
+
+            iso_mac[t_str][g_level] = {
+                'mac_p10': round(float(np.percentile(arr, 10)), 1),
+                'mac_p50': round(float(np.percentile(arr, 50)), 1),
+                'mac_p90': round(float(np.percentile(arr, 90)), 1),
+                'year': int(year),
+                'growth_factor': round(float(gf_sample), 4),
+                'demand_mwh': round(demand_sample, 0),
+                'n_scenarios': len(arr),
+            }
+
+        if iso_mac:
+            dg_mac[iso] = iso_mac
+            n_combos = sum(len(v) for v in iso_mac.values())
+            print(f"  {iso}: DG MAC computed for {len(iso_mac)} thresholds, {n_combos} (thr,growth) combos")
+
+    return dg_mac
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# OUTPUT FORMATTING
+# ══════════════════════════════════════════════════════════════════════════════
 
 def format_js_output(fan_data, stepwise_fan, envelope_data, path_mac, anova, crossovers):
     """Format all computed data as JavaScript constants for dashboard use."""
@@ -636,112 +613,65 @@ def format_js_output(fan_data, stepwise_fan, envelope_data, path_mac, anova, cro
     return '\n'.join(lines) + '\n'
 
 
-def compute_dg_mac(input_dir, isos):
-    """Compute MAC fan chart for demand growth scenarios (threshold-year paired).
-
-    For each ISO and (year, growth_level) combination, computes P10/P50/P90
-    MAC across all scenarios at that threshold. Since each threshold maps to
-    exactly one year, the output is keyed by threshold with the year embedded.
-
-    Returns:
-        dg_mac: {
-            iso: {
-                threshold_str: {
-                    growth_level: {
-                        'mac_p10': float, 'mac_p50': float, 'mac_p90': float,
-                        'year': int, 'growth_factor': float,
-                        'demand_mwh': float, 'n_scenarios': int,
-                    }
-                }
-            }
-        }
-    """
-    dg_data = load_dg_from_parquets(input_dir, isos)
-    if not dg_data:
-        print("  No DG data found for MAC computation")
-        return {}
-
-    dg_mac = {}
-    for iso in isos:
-        if iso not in dg_data:
-            continue
-
-        iso_mac = {}
-        for t_str, dg_combos in dg_data[iso].items():
-            thr_mac = {}
-            for (year, g_level), scenarios in dg_combos.items():
-                macs = []
-                demand_mwh_sample = 0
-                gf_sample = 1.0
-
-                for sc_key, sc in scenarios.items():
-                    costs = sc.get('costs', {})
-                    co2 = sc.get('co2_abated', {})
-                    incremental = costs.get('incremental', 0)
-                    co2_tons = co2.get('total_co2_abated_tons', 0)
-                    demand_mwh = sc.get('annual_demand_mwh', 0)
-                    if demand_mwh <= 0:
-                        demand_mwh = WHOLESALE_PRICES.get(iso, 30) * 1e6  # rough fallback
-                    demand_mwh_sample = demand_mwh
-                    gf_sample = sc.get('growth_factor', 1.0)
-
-                    if co2_tons > 0 and incremental is not None:
-                        mac = (incremental * demand_mwh) / co2_tons
-                        macs.append(mac)
-
-                if macs:
-                    arr = np.array(macs)
-                    thr_mac[g_level] = {
-                        'mac_p10': round(float(np.percentile(arr, 10)), 1),
-                        'mac_p50': round(float(np.percentile(arr, 50)), 1),
-                        'mac_p90': round(float(np.percentile(arr, 90)), 1),
-                        'year': year,
-                        'growth_factor': round(gf_sample, 4),
-                        'demand_mwh': round(demand_mwh_sample, 0),
-                        'n_scenarios': len(macs),
-                    }
-
-            if thr_mac:
-                iso_mac[t_str] = thr_mac
-
-        if iso_mac:
-            dg_mac[iso] = iso_mac
-            n_combos = sum(len(v) for v in iso_mac.values())
-            print(f"  {iso}: DG MAC computed for {len(iso_mac)} thresholds, {n_combos} (thr,growth) combos")
-
-    return dg_mac
-
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    print("Loading optimizer results...")
-    data = load_results()
+    t0 = time.time()
 
-    print("Computing MAC fan chart (P10-P90 across 324 scenarios)...")
-    fan_data = compute_fan_chart(data)
+    print("Loading optimizer results from parquets...")
+    input_dir = find_input_dir(ISOS)
+    if not input_dir:
+        raise FileNotFoundError("No parquet input directory found")
 
+    df = load_combined_df(input_dir, ISOS)
+    n_isos = df['iso'].nunique()
+    print(f"  Total: {len(df):,} rows across {n_isos} ISOs")
+
+    # Precompute MAC column and toggle levels (once for all computations)
+    t1 = time.time()
+    add_mac_column(df)
+    parse_toggle_levels(df)
+    mac_valid = df['mac'].notna().sum()
+    print(f"  Precomputed MAC ({mac_valid:,} valid) + toggle levels in {time.time()-t1:.1f}s")
+
+    t1 = time.time()
+    print("\nComputing MAC fan chart (P10-P90 across scenarios)...")
+    fan_data = compute_fan_chart(df)
+    print(f"  Done in {time.time()-t1:.1f}s")
+
+    t1 = time.time()
     print("Computing stepwise marginal MAC fan...")
-    stepwise_fan = compute_stepwise_fan(data)
+    stepwise_fan = compute_stepwise_fan(df)
+    print(f"  Done in {time.time()-t1:.1f}s")
 
+    t1 = time.time()
     print("Computing monotonic envelope MAC...")
-    envelope_data = compute_monotonic_envelope(data)
+    envelope_data = compute_monotonic_envelope(df)
+    print(f"  Done in {time.time()-t1:.1f}s")
 
+    t1 = time.time()
     print("Computing path-constrained reference MAC...")
-    path_mac = compute_path_constrained_mac(data)
+    path_mac = compute_path_constrained_mac(df)
+    print(f"  Done in {time.time()-t1:.1f}s")
 
+    t1 = time.time()
     print("Computing ANOVA sensitivity decomposition...")
-    anova = compute_anova(data)
+    anova = compute_anova(df)
+    print(f"  Done in {time.time()-t1:.1f}s")
 
     print("Computing crossover analysis...")
     crossovers = compute_crossover_analysis(fan_data, envelope_data)
 
     # Compute DG MAC (threshold-year paired demand growth scenarios)
+    t1 = time.time()
     print("\nComputing demand growth MAC (threshold-year paired)...")
-    input_dir = find_input_dir(ISOS)
-    dg_mac = compute_dg_mac(input_dir, ISOS) if input_dir else {}
+    dg_mac = compute_dg_mac(input_dir, ISOS)
+    print(f"  Done in {time.time()-t1:.1f}s")
 
     # Write JavaScript output
     js_content = format_js_output(fan_data, stepwise_fan, envelope_data, path_mac, anova, crossovers)
-    # Append DG MAC data if available
     if dg_mac:
         js_content += f'\n// --- Demand Growth MAC (threshold-year paired, P10/P50/P90) ---\n'
         js_content += f'const MAC_DEMAND_GROWTH = {json.dumps(dg_mac, indent=4)};\n'
@@ -772,26 +702,27 @@ def main():
     print(f"Wrote {JSON_OUTPUT_PATH}")
 
     # Print summary
-    print("\n" + "=" * 70)
-    print("MAC STATISTICS SUMMARY")
+    elapsed = time.time() - t0
+    print(f"\n{'=' * 70}")
+    print(f"MAC STATISTICS COMPLETE — {elapsed:.1f}s total")
     print("=" * 70)
 
     for iso in ISOS:
-        print(f"\n--- {iso} ---")
         p50 = fan_data[iso]['p50']
         p10 = fan_data[iso]['p10']
         p90 = fan_data[iso]['p90']
         env = envelope_data[iso]['envelope']
         pc = path_mac[iso]['mac']
 
-        print(f"  Fan P50: {[x for x in p50]}")
-        print(f"  Fan P10: {[x for x in p10]}")
-        print(f"  Fan P90: {[x for x in p90]}")
+        print(f"\n--- {iso} ---")
+        print(f"  Fan P50: {p50}")
+        print(f"  Fan P10: {p10}")
+        print(f"  Fan P90: {p90}")
         print(f"  Envelope: {env}")
         print(f"  Path-constrained: {pc}")
         print(f"  ANOVA: {anova[iso]}")
 
-    print("\n" + "=" * 70)
+    print(f"\n{'=' * 70}")
     print("CROSSOVER THRESHOLDS (where MAC exceeds benchmark)")
     print("=" * 70)
     for iso in ISOS:
