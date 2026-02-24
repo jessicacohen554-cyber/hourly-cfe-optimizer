@@ -47,6 +47,7 @@ import os
 import time
 import argparse
 import numpy as np
+import pandas as pd
 import pyarrow.parquet as pq
 from pathlib import Path
 from itertools import product
@@ -1746,7 +1747,6 @@ def main():
     # SAVE OUTPUTS — Per-ISO parquets only
     # ================================================================
     print("\n--- Saving per-ISO parquet outputs ---")
-    import pandas as pd
 
     def _flatten_scenarios(iso, iso_data, track_name=None):
         """Flatten scenario results into rows for parquet output."""
