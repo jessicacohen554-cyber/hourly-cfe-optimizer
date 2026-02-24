@@ -177,25 +177,56 @@ SCENARIO_A = {
 }
 
 # Scenario B: "Hourly Matching"
-# Target a high CFE threshold directly with low clean technology costs
+# Graduated clean firm deployment along FOAK→NOAK learning curve.
+# Early thresholds see higher clean firm costs (FOAK), later thresholds
+# reach NOAK pricing as cumulative deployment drives learning.
+# Mature tech (solar, wind, battery) stays at Low cost throughout.
 SCENARIO_B = {
     'name': 'Hourly Matching',
     'short': 'hourly_matching',
-    'description': 'Direct hourly matching — co-optimize full resource mix at target threshold with clean firm on FOAK→NOAK learning curve',
+    'description': 'Hourly matching with graduated clean firm deployment — FOAK→NOAK learning curve drives costs from High to Low over the SBTi timeline, yielding increasing clean firm investment at each threshold',
     'toggles': {
-        'ren': 'L',        # Low renewable (still cheap)
-        'firm': 'L',       # Low firm gen (cheap nuclear from learning curve)
-        'batt': 'L',       # Low battery
-        'ldes_lvl': 'L',   # Low LDES
+        'ren': 'L',        # Low renewable (mature tech, already cheap)
+        'firm': 'L',       # Target NOAK (learning curve interpolates H→L per threshold)
+        'batt': 'L',       # Low battery (mature tech)
+        'ldes_lvl': 'L',   # Target NOAK (learning curve interpolates H→L)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
-        'ccs': 'L',        # Low CCS
+        'ccs': 'L',        # Target NOAK (learning curve interpolates H→L)
         'q45': '1',        # 45Q on
-        'geo': 'L',        # Low geothermal (CAISO only)
+        'geo': 'L',        # Target NOAK (CAISO only, learning curve interpolates H→L)
     },
 }
 
 SCENARIOS = [SCENARIO_A, SCENARIO_B]
+
+
+# ============================================================================
+# LEARNING CURVE FRACTION
+# ============================================================================
+
+def learning_fraction(threshold):
+    """Map CFE threshold to FOAK→NOAK learning curve fraction [0, 1].
+
+    0 = pure FOAK (High cost), 1 = full NOAK (Low cost).
+    Uses a slightly convex ramp with a 5% floor — ensures some early
+    investment to seed the learning curve, with accelerating cost reduction
+    as cumulative deployment drives Wright's Law doublings.
+
+    Resulting nuclear LCOE trajectory (PJM example, H=$160 → L=$72):
+      50% (2025): $156/MWh — FOAK, expensive but invested
+      70% (2029): $140/MWh — early learning
+      80% (2032): $121/MWh — significant cost reduction
+      90% (2040): $98/MWh  — approaching NOAK
+      95% (2045): $86/MWh  — near NOAK
+      100%(2050): $72/MWh  — full NOAK
+    """
+    t_norm = (threshold - 50) / 50  # 50%→0, 100%→1
+    # Floor of 5% ensures some cost reduction even at earliest thresholds,
+    # reflecting minimum FOAK investment to begin the learning curve.
+    # Exponent 1.8 creates a convex ramp: slow start, accelerating through
+    # mid-range (80-95%), converging on NOAK at high thresholds.
+    return 0.05 + 0.95 * (t_norm ** 1.8)
 
 
 # ============================================================================
@@ -248,11 +279,13 @@ def get_tx(rtype, tx_level, iso):
     return val
 
 
-def compute_mix_cost(mix, sens, iso, demand_twh):
+def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None):
     """
     Compute total system cost per MWh for a single mix under a sensitivity scenario.
 
     mix: [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    overrides: optional dict with explicit LCOE values (bypasses toggle lookups):
+        nuclear_lcoe, ccs_lcoe, geo_lcoe, ldes_lcoe, uprate_lcoe
     Returns: dict with cost details + gas backup
     """
     cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
@@ -276,19 +309,28 @@ def compute_mix_cost(mix, sens, iso, demand_twh):
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
 
     # CCS price
-    ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else None
-    ccs_lcoe = ccs_table[ccs_lev][iso]
+    if overrides and 'ccs_lcoe' in overrides:
+        ccs_lcoe = overrides['ccs_lcoe']
+    else:
+        ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else None
+        ccs_lcoe = ccs_table[ccs_lev][iso]
     ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
     ccs_price = ccs_lcoe + ccs_tx
 
     # Nuclear price
-    nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
+    if overrides and 'nuclear_lcoe' in overrides:
+        nuclear_price = overrides['nuclear_lcoe'] + get_tx('clean_firm', tx_name, iso)
+    else:
+        nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
     remaining_price = min(nuclear_price, ccs_price)
 
     # Geothermal price
     geo_price = 0.0
     if iso == 'CAISO' and geo_lev:
-        geo_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
+        if overrides and 'geo_lcoe' in overrides:
+            geo_price = overrides['geo_lcoe'] + get_tx('clean_firm', tx_name, iso)
+        else:
+            geo_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
 
     # Demand-weighted percentages
     sol_demand = proc * sol_pct
@@ -346,6 +388,13 @@ def compute_mix_cost(mix, sens, iso, demand_twh):
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
     ) / demand_mwh
 
+    # Uprate and LDES prices (with optional override support)
+    uprate_price = overrides.get('uprate_lcoe', UPRATE_LCOE[firm_lev]) if overrides else UPRATE_LCOE[firm_lev]
+    if overrides and 'ldes_lcoe' in overrides:
+        ldes_price = overrides['ldes_lcoe'] + get_tx('ldes', tx_name, iso)
+    else:
+        ldes_price = LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
+
     # Total cost = Σ(coefficient × price) + gas_cost
     # Coefficients: fraction of demand priced at each source
     total_cost = (
@@ -353,12 +402,12 @@ def compute_mix_cost(mix, sens, iso, demand_twh):
         sol_new / 100.0 * (LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso)) +
         wnd_new / 100.0 * (LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso)) +
         ccs_new / 100.0 * ccs_price +
-        uprate_twh / demand_twh * UPRATE_LCOE[firm_lev] +
+        uprate_twh / demand_twh * uprate_price +
         geo_twh / demand_twh * geo_price +
         remaining_after_geo / demand_twh * remaining_price +
         bat4_pct / 100.0 * (LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)) +
         bat8_pct / 100.0 * (LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso)) +
-        ldes_pct / 100.0 * (LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)) +
+        ldes_pct / 100.0 * ldes_price +
         gas_cost
     )
 
@@ -530,12 +579,22 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
     return results
 
 
-def find_optimal_mix_at_target(feasible_mixes, scenario, demand_twh_map, target_threshold=95):
-    """Hourly Matching scenario: optimize at a single target threshold.
+def find_optimal_mixes_learning_curve(feasible_mixes, scenario, demand_twh_map):
+    """Hourly Matching scenario: graduated clean firm deployment along FOAK→NOAK curve.
 
-    Co-optimize the full resource mix at the target CFE threshold
-    with low clean technology costs.  Returns results dict with the
-    target mix replicated at every threshold for charting.
+    At each threshold, clean firm / CCS / LDES / geothermal costs are
+    interpolated between High (FOAK) and Low (NOAK) based on position
+    on the SBTi timeline via learning_fraction().  Mature technologies
+    (solar, wind, battery) stay at Low cost throughout.
+
+    This produces:
+      - Less clean firm at early thresholds (expensive FOAK pricing)
+      - Gradually increasing clean firm as learning drives costs down
+      - Near-full NOAK deployment at high thresholds (95-100%)
+
+    Each threshold is optimized independently (no path-dependency floor).
+    The increasing deployment emerges naturally from declining costs +
+    increasing physics requirements for firm generation at higher CFE.
     """
     results = {}
     sens = scenario['toggles']
@@ -547,22 +606,54 @@ def find_optimal_mix_at_target(feasible_mixes, scenario, demand_twh_map, target_
             iso_sens['geo'] = None
 
         demand_twh = demand_twh_map[iso]
-        t_str = str(int(target_threshold)) if target_threshold == int(target_threshold) else str(target_threshold)
-        mixes = feasible_mixes.get(iso, {}).get(t_str, [])
 
-        # Find cheapest mix at the target threshold
-        best_cost = float('inf')
-        best_result = None
+        for t in THRESHOLDS:
+            t_str = str(int(t)) if t == int(t) else str(t)
+            mixes = feasible_mixes.get(iso, {}).get(t_str, [])
+            if not mixes:
+                continue
 
-        for mix in mixes:
-            result = compute_mix_cost(mix, iso_sens, iso, demand_twh)
-            if result['effective_cost'] < best_cost:
-                best_cost = result['effective_cost']
-                best_result = result
+            # Learning curve fraction: how far along FOAK→NOAK
+            frac = learning_fraction(t)
 
-        if best_result:
-            # The target mix IS the portfolio at every threshold for display
-            for t in THRESHOLDS:
+            # Build LCOE overrides: interpolate between High and Low
+            overrides = {}
+
+            # Nuclear new-build
+            nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
+            nuc_l = NUCLEAR_NEWBUILD_LCOE['L'][iso]
+            overrides['nuclear_lcoe'] = nuc_h + frac * (nuc_l - nuc_h)
+
+            # Nuclear uprate
+            overrides['uprate_lcoe'] = UPRATE_LCOE['H'] + frac * (UPRATE_LCOE['L'] - UPRATE_LCOE['H'])
+
+            # CCS-CCGT (with 45Q)
+            ccs_h = CCS_LCOE_45Q_ON['H'][iso]
+            ccs_l = CCS_LCOE_45Q_ON['L'][iso]
+            overrides['ccs_lcoe'] = ccs_h + frac * (ccs_l - ccs_h)
+
+            # Geothermal (CAISO only)
+            if iso == 'CAISO':
+                geo_h = GEOTHERMAL_LCOE['H']
+                geo_l = GEOTHERMAL_LCOE['L']
+                overrides['geo_lcoe'] = geo_h + frac * (geo_l - geo_h)
+
+            # LDES (100hr iron-air — emerging tech, also on learning curve)
+            ldes_h = LCOE_TABLES['ldes']['High'][iso]
+            ldes_l = LCOE_TABLES['ldes']['Low'][iso]
+            overrides['ldes_lcoe'] = ldes_h + frac * (ldes_l - ldes_h)
+
+            # Find cheapest mix at this threshold with interpolated costs
+            best_cost = float('inf')
+            best_result = None
+
+            for mix in mixes:
+                result = compute_mix_cost(mix, iso_sens, iso, demand_twh, overrides=overrides)
+                if result['effective_cost'] < best_cost:
+                    best_cost = result['effective_cost']
+                    best_result = result
+
+            if best_result:
                 iso_results[t] = best_result
 
         results[iso] = iso_results
@@ -753,9 +844,11 @@ def main():
     print("\nScenario A (Pure Consequential): path-dependent sequential optimization...")
     results_a = find_optimal_mixes_sequential(feasible_mixes, SCENARIO_A, BASE_DEMAND_TWH)
 
-    # Scenario B: Hourly Matching — target 95% CFE directly
-    print("\nScenario B (Hourly Matching): target 95% optimization...")
-    results_b = find_optimal_mix_at_target(feasible_mixes, SCENARIO_B, BASE_DEMAND_TWH, target_threshold=95)
+    # Scenario B: Hourly Matching — graduated FOAK→NOAK learning curve deployment
+    print("\nScenario B (Hourly Matching): graduated FOAK→NOAK learning curve optimization...")
+    print("  Learning curve: clean firm/CCS/LDES interpolated High→Low per threshold")
+    print("  Mature tech (solar, wind, battery) at Low cost throughout")
+    results_b = find_optimal_mixes_learning_curve(feasible_mixes, SCENARIO_B, BASE_DEMAND_TWH)
     print("  Done.")
 
     # Build consequential queues
@@ -971,9 +1064,9 @@ def main():
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
-                'method': 'target_threshold_direct',
-                'method_description': 'Hourly matching: all buyers target 95% CFE simultaneously. Clean firm deployed along FOAK→NOAK learning curve, reaching Low costs via Wright\'s Law.',
-                'target_threshold': 95,
+                'method': 'learning_curve_graduated',
+                'method_description': 'Hourly matching with graduated FOAK→NOAK deployment. At each threshold, clean firm/CCS/LDES costs are interpolated between High (FOAK) and Low (NOAK) based on SBTi timeline position. Early thresholds see less clean firm (expensive); deployment increases as learning drives costs down. Mature tech (solar, wind, battery) at Low cost throughout.',
+                'learning_curve': 'convex ramp: 0.05 + 0.95 * ((t-50)/50)^1.8',
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
