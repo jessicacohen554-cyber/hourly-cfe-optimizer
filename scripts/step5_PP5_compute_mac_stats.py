@@ -148,6 +148,10 @@ def fmt_threshold(t):
     return str(t) if t != int(t) else str(int(t))
 
 
+# Pre-computed threshold string lookup (avoids repeated fmt_threshold calls in loops)
+THRESHOLD_FMT = {t: fmt_threshold(t) for t in THRESHOLDS}
+
+
 def medium_key(iso):
     """Return the all-Medium 9-dim scenario key for an ISO."""
     geo = 'M' if iso == 'CAISO' else 'X'
@@ -158,32 +162,70 @@ def medium_key(iso):
 # COMPUTE FUNCTIONS — All vectorized on DataFrames
 # ══════════════════════════════════════════════════════════════════════════════
 
-def compute_fan_chart(df):
-    """Compute P10/P25/P50/P75/P90 MAC percentiles per ISO/threshold.
+def compute_fan_and_anova(df):
+    """Compute fan chart percentiles AND ANOVA decomposition in a single pass.
 
-    Each scenario has its own CO2 abatement (from fuel-switching elasticity),
-    so MAC = f(cost, CO2) varies on BOTH axes across scenarios.
+    Consolidates what were previously two separate groupby iterations over
+    (iso, threshold) into one loop, halving the groupby overhead.
+
+    Fan chart: P10/P25/P50/P75/P90 MAC percentiles per ISO/threshold.
+    ANOVA: Eta-squared decomposition of MAC variance by toggle group.
     """
     fan_data = {}
+    anova_results = {}
     pcts = [10, 25, 50, 75, 90]
     pct_names = ['p10', 'p25', 'p50', 'p75', 'p90']
     valid = df[df['mac'].notna()]
 
+    # Initialize output structures
     for iso in ISOS:
-        iso_df = valid[valid['iso'] == iso]
         fan_data[iso] = {p: [] for p in pct_names}
+        anova_results[iso] = {}
 
-        for t in THRESHOLDS:
-            t_macs = iso_df.loc[iso_df['threshold'] == t, 'mac'].values
-            if len(t_macs) > 0:
-                vals = np.percentile(t_macs, pcts)
-                for name, val in zip(pct_names, vals):
-                    fan_data[iso][name].append(round(float(val), 1))
-            else:
-                for name in pct_names:
-                    fan_data[iso][name].append(None)
+    # Track per-iso toggle contributions across thresholds for ANOVA averaging
+    toggle_contributions = {iso: {name: [] for name in TOGGLE_NAMES} for iso in ISOS}
 
-    return fan_data
+    # Build a lookup of threshold index for ordered insertion into fan lists
+    threshold_index = {t: i for i, t in enumerate(THRESHOLDS)}
+
+    # Pre-fill fan_data with None lists so we can assign by index
+    for iso in ISOS:
+        for p in pct_names:
+            fan_data[iso][p] = [None] * len(THRESHOLDS)
+
+    # Single pass: group by (iso, threshold), compute both fan + ANOVA per group
+    for (iso, t), grp in valid.groupby(['iso', 'threshold']):
+        if iso not in threshold_index or t not in threshold_index:
+            continue
+        t_idx = threshold_index[t]
+        t_macs = grp['mac'].values
+
+        # ── Fan chart percentiles ──
+        if len(t_macs) > 0:
+            vals = np.percentile(t_macs, pcts)
+            for name, val in zip(pct_names, vals):
+                fan_data[iso][name][t_idx] = round(float(val), 1)
+
+        # ── ANOVA: eta-squared per toggle ──
+        if len(t_macs) >= 10:
+            total_var = np.var(t_macs)
+            if total_var >= 1e-6:
+                ss_total = total_var * len(t_macs)
+                grand_mean = np.mean(t_macs)
+
+                for toggle_name, toggle_col in zip(TOGGLE_NAMES, TOGGLE_COLS):
+                    group_stats = grp.groupby(toggle_col)['mac'].agg(['mean', 'count'])
+                    ss_between = (group_stats['count'] * (group_stats['mean'] - grand_mean) ** 2).sum()
+                    eta_squared = ss_between / ss_total
+                    toggle_contributions[iso][toggle_name].append(eta_squared)
+
+    # Average ANOVA contributions across thresholds
+    for iso in ISOS:
+        for toggle_name in TOGGLE_NAMES:
+            vals = toggle_contributions[iso][toggle_name]
+            anova_results[iso][toggle_name] = round(float(np.mean(vals)), 3) if vals else 0.0
+
+    return fan_data, anova_results
 
 
 def compute_stepwise_fan(df):
@@ -222,8 +264,10 @@ def compute_stepwise_fan(df):
             step_macs = (delta_cost[valid] / delta_co2[valid]).values
 
             if len(step_macs) > 0:
-                for p, pct in [('p10', 10), ('p50', 50), ('p90', 90)]:
-                    fan_data[iso][p].append(round(float(np.percentile(step_macs, pct)), 1))
+                p10, p50, p90 = np.percentile(step_macs, [10, 50, 90])
+                fan_data[iso]['p10'].append(round(float(p10), 1))
+                fan_data[iso]['p50'].append(round(float(p50), 1))
+                fan_data[iso]['p90'].append(round(float(p90), 1))
             else:
                 for p in ['p10', 'p50', 'p90']:
                     fan_data[iso][p].append(None)
@@ -231,28 +275,57 @@ def compute_stepwise_fan(df):
     return fan_data
 
 
-def compute_monotonic_envelope(df):
-    """Compute monotonic envelope MAC — running max to enforce non-decreasing MAC.
+def compute_envelope_and_path(df):
+    """Compute monotonic envelope MAC AND path-constrained MAC in a single pass.
 
-    Filters to medium scenario only (one row per threshold per ISO).
+    Consolidates compute_monotonic_envelope() and compute_path_constrained_mac()
+    which both filter to medium scenario and iterate over the same ISO/threshold
+    pairs. One medium-scenario filter, one ISO loop, one threshold loop.
+
+    Envelope: running max to enforce non-decreasing MAC.
+    Path-constrained: enforces non-decreasing absolute resource deployment.
     """
     envelope = {}
+    path_mac = {}
     med_df = df[df['scenario'].isin(MEDIUM_KEYS_SET)]
 
     for iso in ISOS:
         iso_med = med_df[med_df['iso'] == iso].sort_values('threshold')
         demand_mwh = iso_med['annual_demand_mwh'].iloc[0] if len(iso_med) > 0 else 1
 
+        # Build threshold lookup once for both computations
+        results_by_t = {}
+        for _, row in iso_med.iterrows():
+            results_by_t[row['threshold']] = row
+
+        # ── Envelope + path state ──
         raw_macs = []
         costs_at_t = []
         co2_at_t = []
 
+        prev_abs = {r: 0 for r in RESOURCE_TYPES}
+        prev_batt = 0
+        prev_ldes = 0
+        prev_proc = 0
+        prev_cost = 0
+        prev_co2 = 0
+
+        path_macs = []
+        path_mixes = []
+        path_costs = []
+
+        has_any_row = len(iso_med) > 0
+
+        # Single pass over thresholds: compute both envelope inputs and path-constrained
         for t in THRESHOLDS:
-            t_rows = iso_med[iso_med['threshold'] == t]
-            if len(t_rows) == 0:
+            row = results_by_t.get(t)
+            if row is None:
                 raw_macs.append(None)
                 costs_at_t.append(None)
                 co2_at_t.append(None)
+                path_macs.append(None)
+                path_mixes.append(None)
+                path_costs.append(None)
                 continue
 
             row = t_rows.iloc[0]
@@ -260,6 +333,11 @@ def compute_monotonic_envelope(df):
             co2_tons = float(row['co2_total_co2_abated_tons'])
 
             costs_at_t.append(eff_cost)
+            incremental = float(row['cost_incremental'])
+            co2_tons = float(row['co2_total_co2_abated_tons'])
+
+            # ── Envelope data collection ──
+            costs_at_t.append(incremental)
             co2_at_t.append(co2_tons if pd.notna(co2_tons) else 0)
 
             if pd.notna(co2_tons) and co2_tons > 0:
@@ -267,6 +345,56 @@ def compute_monotonic_envelope(df):
             else:
                 raw_macs.append(None)
 
+            # ── Path-constrained computation ──
+            if has_any_row:
+                mix = {r: int(row[f'mix_{r}']) for r in RESOURCE_TYPES}
+                proc = int(row['procurement_pct'])
+                batt = int(row['battery_dispatch_pct'])
+                ldes = int(row['ldes_dispatch_pct'])
+
+                # Compute absolute deployment for this threshold's optimal mix
+                curr_abs = {r: proc * mix[r] / 100.0 for r in RESOURCE_TYPES}
+
+                # Enforce monotonicity: each resource's absolute deployment >= previous
+                constrained_abs = {r: max(curr_abs[r], prev_abs[r]) for r in RESOURCE_TYPES}
+                constrained_proc = max(proc, prev_proc)
+                constrained_batt = max(batt, prev_batt)
+                constrained_ldes = max(ldes, prev_ldes)
+
+                # Reconstruct mix percentages from constrained absolute values
+                total_abs = sum(constrained_abs.values())
+                if total_abs > 0:
+                    constrained_mix = {r: round(constrained_abs[r] / total_abs * 100, 1)
+                                       for r in constrained_abs}
+                else:
+                    constrained_mix = mix
+
+                # Cost is at least as high as previous constrained cost
+                constrained_incremental = max(incremental, prev_cost)
+
+                # Average MAC
+                if co2_tons > 0:
+                    avg_mac = round((constrained_incremental * demand_mwh) / co2_tons, 1)
+                else:
+                    avg_mac = None
+
+                path_macs.append(avg_mac)
+                path_mixes.append(constrained_mix)
+                path_costs.append(round(constrained_incremental, 2))
+
+                # Update state for next threshold
+                prev_abs = constrained_abs
+                prev_batt = constrained_batt
+                prev_ldes = constrained_ldes
+                prev_proc = constrained_proc
+                prev_cost = constrained_incremental
+                prev_co2 = co2_tons
+            else:
+                path_macs.append(None)
+                path_mixes.append(None)
+                path_costs.append(None)
+
+        # ── Post-loop: build envelope from collected data ──
         # Monotonic envelope (running max)
         env_macs = []
         running_max = 0
@@ -299,55 +427,18 @@ def compute_monotonic_envelope(df):
             'stepwise_envelope': step_env,
         }
 
-    return envelope
-
-
-def compute_path_constrained_mac(df):
-    """Compute path-constrained reference MAC from medium scenario.
-
-    Enforces that absolute resource deployment (procurement_pct × mix_share)
-    is non-decreasing across thresholds, producing a monotonic-by-construction
-    MAC curve.
-    """
-    path_mac = {}
-    med_df = df[df['scenario'].isin(MEDIUM_KEYS_SET)]
-
-    for iso in ISOS:
-        iso_med = med_df[med_df['iso'] == iso].sort_values('threshold')
-        demand_mwh = iso_med['annual_demand_mwh'].iloc[0] if len(iso_med) > 0 else 1
-
-        if len(iso_med) == 0:
+        if not has_any_row:
             path_mac[iso] = {
                 'mac': [None] * len(THRESHOLDS),
                 'mixes': [None] * len(THRESHOLDS),
                 'costs': [None] * len(THRESHOLDS),
             }
-            continue
-
-        # Build threshold lookup
-        results_by_t = {}
-        for _, row in iso_med.iterrows():
-            t_str = fmt_threshold(row['threshold'])
-            results_by_t[t_str] = row
-
-        prev_abs = {r: 0 for r in RESOURCE_TYPES}
-        prev_batt = 0
-        prev_ldes = 0
-        prev_proc = 0
-        prev_cost = 0
-        prev_co2 = 0
-
-        path_macs = []
-        path_mixes = []
-        path_costs = []
-
-        for t_idx, t_str in enumerate(THRESHOLD_STRS):
-            row = results_by_t.get(t_str)
-            if row is None:
-                path_macs.append(None)
-                path_mixes.append(None)
-                path_costs.append(None)
-                continue
+        else:
+            path_mac[iso] = {
+                'mac': path_macs,
+                'mixes': path_mixes,
+                'costs': path_costs,
+            }
 
             mix = {r: int(row[f'mix_{r}']) for r in RESOURCE_TYPES}
             proc = int(row['procurement_pct'])
@@ -355,23 +446,17 @@ def compute_path_constrained_mac(df):
             ldes = int(row['ldes_dispatch_pct'])
             co2_tons = float(row['co2_total_co2_abated_tons'])
             eff_cost = float(row['cost_effective_cost'])
+    return envelope, path_mac
 
-            # Compute absolute deployment for this threshold's optimal mix
-            curr_abs = {r: proc * mix[r] / 100.0 for r in RESOURCE_TYPES}
 
-            # Enforce monotonicity: each resource's absolute deployment >= previous
-            constrained_abs = {r: max(curr_abs[r], prev_abs[r]) for r in RESOURCE_TYPES}
-            constrained_proc = max(proc, prev_proc)
-            constrained_batt = max(batt, prev_batt)
-            constrained_ldes = max(ldes, prev_ldes)
+def compute_monotonic_envelope(df):
+    """Compute monotonic envelope MAC — running max to enforce non-decreasing MAC.
 
-            # Reconstruct mix percentages from constrained absolute values
-            total_abs = sum(constrained_abs.values())
-            if total_abs > 0:
-                constrained_mix = {r: round(constrained_abs[r] / total_abs * 100, 1)
-                                   for r in constrained_abs}
-            else:
-                constrained_mix = mix
+    Delegates to compute_envelope_and_path() which consolidates both envelope
+    and path-constrained computation in a single pass over medium-scenario data.
+    """
+    envelope, _ = compute_envelope_and_path(df)
+    return envelope
 
             # Cost is at least as high as previous constrained cost
             constrained_eff_cost = max(eff_cost, prev_cost)
@@ -400,48 +485,23 @@ def compute_path_constrained_mac(df):
             'costs': path_costs,
         }
 
+def compute_path_constrained_mac(df):
+    """Compute path-constrained reference MAC from medium scenario.
+
+    Delegates to compute_envelope_and_path() which consolidates both envelope
+    and path-constrained computation in a single pass over medium-scenario data.
+    """
+    _, path_mac = compute_envelope_and_path(df)
     return path_mac
 
 
 def compute_anova(df):
-    """ANOVA-style sensitivity decomposition: fraction of MAC variance explained
-    by each toggle group.
+    """ANOVA-style sensitivity decomposition (standalone fallback).
 
-    Uses vectorized toggle-level columns (parsed once) and pandas groupby
-    for between-group SS computation. No per-scenario string parsing.
+    Prefer compute_fan_and_anova() which consolidates this with fan chart
+    computation in a single groupby pass.
     """
-    anova_results = {}
-    valid = df[df['mac'].notna()]
-
-    for iso in ISOS:
-        iso_df = valid[valid['iso'] == iso]
-        toggle_contributions = {name: [] for name in TOGGLE_NAMES}
-
-        for t in THRESHOLDS:
-            t_df = iso_df[iso_df['threshold'] == t]
-            if len(t_df) < 10:
-                continue
-
-            all_macs = t_df['mac'].values
-            total_var = np.var(all_macs)
-            if total_var < 1e-6:
-                continue
-
-            ss_total = total_var * len(all_macs)
-            grand_mean = np.mean(all_macs)
-
-            for toggle_name, toggle_col in zip(TOGGLE_NAMES, TOGGLE_COLS):
-                group_stats = t_df.groupby(toggle_col)['mac'].agg(['mean', 'count'])
-                ss_between = (group_stats['count'] * (group_stats['mean'] - grand_mean) ** 2).sum()
-                eta_squared = ss_between / ss_total
-                toggle_contributions[toggle_name].append(eta_squared)
-
-        # Average across thresholds
-        anova_results[iso] = {}
-        for toggle_name in TOGGLE_NAMES:
-            vals = toggle_contributions[toggle_name]
-            anova_results[iso][toggle_name] = round(float(np.mean(vals)), 3) if vals else 0.0
-
+    _, anova_results = compute_fan_and_anova(df)
     return anova_results
 
 
@@ -525,7 +585,7 @@ def compute_dg_mac(input_dir, isos):
         iso_mac = {}
         for (threshold, year, g_level), grp in dg_valid.groupby(
                 ['threshold', 'year', 'growth_level']):
-            t_str = fmt_threshold(threshold)
+            t_str = THRESHOLD_FMT.get(threshold, fmt_threshold(threshold))
             arr = grp['mac'].values
             demand_sample = float(grp[demand_col].iloc[0])
             gf_sample = float(grp['growth_factor'].iloc[0]) if 'growth_factor' in grp.columns else 1.0
@@ -533,10 +593,11 @@ def compute_dg_mac(input_dir, isos):
             if t_str not in iso_mac:
                 iso_mac[t_str] = {}
 
+            p10, p50, p90 = np.percentile(arr, [10, 50, 90])
             iso_mac[t_str][g_level] = {
-                'mac_p10': round(float(np.percentile(arr, 10)), 1),
-                'mac_p50': round(float(np.percentile(arr, 50)), 1),
-                'mac_p90': round(float(np.percentile(arr, 90)), 1),
+                'mac_p10': round(float(p10), 1),
+                'mac_p50': round(float(p50), 1),
+                'mac_p90': round(float(p90), 1),
                 'year': int(year),
                 'growth_factor': round(float(gf_sample), 4),
                 'demand_mwh': round(demand_sample, 0),
@@ -642,8 +703,8 @@ def main():
     print(f"  Precomputed MAC ({mac_valid:,} valid) + toggle levels in {time.time()-t1:.1f}s")
 
     t1 = time.time()
-    print("\nComputing MAC fan chart (P10-P90 across scenarios)...")
-    fan_data = compute_fan_chart(df)
+    print("\nComputing MAC fan chart + ANOVA (consolidated single pass)...")
+    fan_data, anova = compute_fan_and_anova(df)
     print(f"  Done in {time.time()-t1:.1f}s")
 
     t1 = time.time()
@@ -652,18 +713,8 @@ def main():
     print(f"  Done in {time.time()-t1:.1f}s")
 
     t1 = time.time()
-    print("Computing monotonic envelope MAC...")
-    envelope_data = compute_monotonic_envelope(df)
-    print(f"  Done in {time.time()-t1:.1f}s")
-
-    t1 = time.time()
-    print("Computing path-constrained reference MAC...")
-    path_mac = compute_path_constrained_mac(df)
-    print(f"  Done in {time.time()-t1:.1f}s")
-
-    t1 = time.time()
-    print("Computing ANOVA sensitivity decomposition...")
-    anova = compute_anova(df)
+    print("Computing monotonic envelope + path-constrained MAC (consolidated pass)...")
+    envelope_data, path_mac = compute_envelope_and_path(df)
     print(f"  Done in {time.time()-t1:.1f}s")
 
     print("Computing crossover analysis...")
