@@ -1035,3 +1035,146 @@ function computeAggregateFossilMetrics() {
     }
     return agg;
 }
+
+/**
+ * Compute company-specific nameplate capacity, dispatch, and capacity factor
+ * at each SBTi threshold. Unlike computeFleetMixOverTime (which scales capacity
+ * by dispatch fraction), this separates physical nameplate from economic dispatch:
+ *   - Coal/oil nameplate: binary — full capacity until regional dispatch → 0, then retired
+ *   - Gas nameplate: ALWAYS full (plants stay on grid as capacity resources)
+ *   - Clean nameplate: ALWAYS full (unaffected by fossil dispatch decline)
+ *   - Dispatch: merit-order model (same as computeFleetMixOverTime)
+ *   - CF: dispatch / (nameplate × 8760h)
+ */
+function computeCompanyCapacityDispatch(company) {
+    const allFuels = [...new Set(company.plants.map(p => p.fuel))];
+    const out = {
+        thresholds: [], years: [], fuels: allFuels,
+        nameplate_gw: {}, dispatch_twh: {}, capacity_factor_pct: {},
+    };
+    allFuels.forEach(f => {
+        out.nameplate_gw[f] = [];
+        out.dispatch_twh[f] = [];
+        out.capacity_factor_pct[f] = [];
+    });
+    out.nameplate_gw.total = [];
+    out.dispatch_twh.total = [];
+
+    // Also track by ISO for regional breakdown over time
+    const isos = [...new Set(company.plants.map(p => p.iso))];
+    out.isos = isos;
+    out.nameplate_by_iso = {};
+    out.dispatch_by_iso = {};
+    isos.forEach(iso => {
+        out.nameplate_by_iso[iso] = [];
+        out.dispatch_by_iso[iso] = [];
+    });
+
+    FLEET_THRESHOLDS.forEach(t => {
+        const year = FLEET_THRESHOLD_YEARS[t];
+        out.thresholds.push(t);
+        out.years.push(year);
+
+        let totalNp = 0, totalDisp = 0;
+        const isoNp = {}, isoDisp = {};
+        isos.forEach(iso => { isoNp[iso] = 0; isoDisp[iso] = 0; });
+        const fuelNpAcc = {}, fuelDispAcc = {};
+        allFuels.forEach(f => { fuelNpAcc[f] = 0; fuelDispAcc[f] = 0; });
+
+        company.plants.forEach(plant => {
+            const iso = plant.iso;
+            const decline = FOSSIL_DISPATCH_DECLINE[iso];
+
+            if (CLEAN_FUELS.includes(plant.fuel)) {
+                fuelNpAcc[plant.fuel] += plant.capacity_mw;
+                fuelDispAcc[plant.fuel] += plant.generation_twh;
+                isoNp[iso] = (isoNp[iso] || 0) + plant.capacity_mw;
+                isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh;
+                return;
+            }
+
+            if (!decline) {
+                fuelNpAcc[plant.fuel] += plant.capacity_mw;
+                fuelDispAcc[plant.fuel] += plant.generation_twh;
+                isoNp[iso] = (isoNp[iso] || 0) + plant.capacity_mw;
+                isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh;
+                return;
+            }
+
+            const tData = decline.thresholds[String(t)];
+            if (!tData) return;
+            const remaining = tData.p50;
+
+            if (plant.fuel === 'coal') {
+                const coalFrac = decline.coal_cap_twh > 0 ?
+                    Math.min(1, remaining.coal / decline.coal_cap_twh) : 0;
+                // Nameplate: binary — running or retired
+                const np = remaining.coal > 0.01 ? plant.capacity_mw : 0;
+                fuelNpAcc[plant.fuel] += np;
+                fuelDispAcc[plant.fuel] += plant.generation_twh * coalFrac;
+                isoNp[iso] = (isoNp[iso] || 0) + np;
+                isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh * coalFrac;
+            } else if (plant.fuel === 'oil') {
+                const oilFrac = decline.oil_cap_twh > 0 ?
+                    Math.min(1, (remaining.oil || 0) / decline.oil_cap_twh) : 0;
+                const np = (remaining.oil || 0) > 0.01 ? plant.capacity_mw : 0;
+                fuelNpAcc[plant.fuel] += np;
+                fuelDispAcc[plant.fuel] += plant.generation_twh * oilFrac;
+                isoNp[iso] = (isoNp[iso] || 0) + np;
+                isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh * oilFrac;
+            } else if (plant.fuel === 'gas_ccgt' || plant.fuel === 'gas_peaker') {
+                // Gas: nameplate ALWAYS stays (no physical retirement)
+                fuelNpAcc[plant.fuel] += plant.capacity_mw;
+                isoNp[iso] = (isoNp[iso] || 0) + plant.capacity_mw;
+
+                // Dispatch: merit-order (same logic as computeFleetMixOverTime)
+                const gas_remaining = remaining.gas;
+                const iso_ccgt_gen = company.plants
+                    .filter(p => p.iso === iso && p.fuel === 'gas_ccgt')
+                    .reduce((s, p) => s + p.generation_twh, 0);
+                const iso_peaker_gen = company.plants
+                    .filter(p => p.iso === iso && p.fuel === 'gas_peaker')
+                    .reduce((s, p) => s + p.generation_twh, 0);
+                const iso_total_gas = iso_ccgt_gen + iso_peaker_gen;
+                const bfp = (100 - decline.baseline_clean_pct) / 100;
+                const total_regional_gas = decline.base_demand_twh * bfp -
+                    decline.coal_cap_twh - (decline.oil_cap_twh || 0);
+                const rgf = total_regional_gas > 0 ?
+                    Math.min(1, gas_remaining / total_regional_gas) : 0;
+
+                let frac;
+                if (plant.fuel === 'gas_ccgt') {
+                    const ps = iso_total_gas > 0 ? iso_peaker_gen / iso_total_gas : 0;
+                    frac = ps < 1 ? Math.min(1, rgf / (1 - ps)) : rgf;
+                } else {
+                    const cs = iso_total_gas > 0 ? iso_ccgt_gen / iso_total_gas : 0;
+                    const ac = Math.max(0, rgf - cs);
+                    frac = cs < 1 ? Math.min(1, ac / (1 - cs)) : 0;
+                }
+                fuelDispAcc[plant.fuel] += plant.generation_twh * Math.min(1, frac);
+                isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh * Math.min(1, frac);
+            }
+        });
+
+        // Store results
+        allFuels.forEach(f => {
+            const np = fuelNpAcc[f];
+            const disp = fuelDispAcc[f];
+            out.nameplate_gw[f].push(+(np / 1000).toFixed(3));
+            out.dispatch_twh[f].push(+disp.toFixed(2));
+            const cf = np > 0 ? +((disp * 1e6) / (np * 8760) * 100).toFixed(1) : 0;
+            out.capacity_factor_pct[f].push(cf);
+            totalNp += np;
+            totalDisp += disp;
+        });
+        out.nameplate_gw.total.push(+(totalNp / 1000).toFixed(3));
+        out.dispatch_twh.total.push(+totalDisp.toFixed(2));
+
+        isos.forEach(iso => {
+            out.nameplate_by_iso[iso].push(+((isoNp[iso] || 0) / 1000).toFixed(3));
+            out.dispatch_by_iso[iso].push(+((isoDisp[iso] || 0)).toFixed(2));
+        });
+    });
+
+    return out;
+}
