@@ -863,3 +863,175 @@ function getFleetBreakdown(company) {
         clean_pct: total_capacity > 0 ? (clean_capacity / total_capacity * 100) : 0,
     };
 }
+
+// ============================================================================
+// REGIONAL FOSSIL FLEET — Nameplate Capacity & Dispatch Model
+// ============================================================================
+// Sources:
+//   - Installed capacity: EIA Form 860 (2024), PP6 LMP module estimates
+//   - Capacity shares: PP6 FOSSIL_CAPACITY_SHARES
+//   - Coal retirements: EIA planned retirements + company announcements (Vistra, NRG, Talen, etc.)
+//   - Dispatch decline: FOSSIL_DISPATCH_DECLINE above (Step 4/PP4 merit-order)
+
+const REGIONAL_FOSSIL_MW = {
+    PJM:   { total: 127800, coal: 37062, gas_ccgt: 47286, gas_ct: 39618, oil: 3834 },
+    ERCOT: { total: 80000,  coal: 17600, gas_ccgt: 40000, gas_ct: 22400, oil: 0 },
+    CAISO: { total: 47000,  coal: 0,     gas_ccgt: 25850, gas_ct: 18800, oil: 2350 },
+    NYISO: { total: 28000,  coal: 0,     gas_ccgt: 13440, gas_ct: 11200, oil: 3360 },
+    NEISO: { total: 16000,  coal: 640,   gas_ccgt: 8000,  gas_ct: 6400,  oil: 960 },
+};
+
+// Baseline CCGT share of total gas dispatch (calibrated from EIA capacity factors)
+const CCGT_GAS_DISPATCH_SHARE = {
+    PJM: 0.79, ERCOT: 0.80, CAISO: 0.78, NYISO: 0.75, NEISO: 0.80
+};
+
+// Cumulative coal MW retired by year [year, cumulative_mw]
+// Sources: Vistra (Martin Lake, Coleto Creek, IL fleet), NRG (Parish, Limestone),
+//          Talen (Brandon Shores RMR→2029, Brunner Island), EPA GHG rule compliance
+const COAL_RETIREMENT_SCHEDULE = {
+    PJM:   [[2026, 3000], [2027, 8000], [2028, 12000], [2030, 20000], [2033, 37062]],
+    ERCOT: [[2027, 4500], [2028, 7500], [2030, 12500], [2033, 17600]],
+    CAISO: [],
+    NYISO: [],
+    NEISO: [[2026, 640]],
+};
+
+/**
+ * Compute regional fossil fleet metrics at each SBTi threshold (P50 only).
+ * Returns { thresholds, years, nameplate_gw, dispatch_twh, capacity_factor_pct, ... }
+ * Each metric is keyed by fuel type: coal, gas_ccgt, gas_ct, oil, total.
+ */
+function computeRegionalFossilMetrics(iso) {
+    const decline = FOSSIL_DISPATCH_DECLINE[iso];
+    const cap = REGIONAL_FOSSIL_MW[iso];
+    if (!decline || !cap) return null;
+
+    const retirements = COAL_RETIREMENT_SCHEDULE[iso] || [];
+    const ccgtShare = CCGT_GAS_DISPATCH_SHARE[iso] || 0.78;
+
+    // Baseline gas dispatch from regional data
+    const fossilFrac = (100 - decline.baseline_clean_pct) / 100;
+    const baselineFossilTwh = decline.base_demand_twh * fossilFrac;
+    const baselineGasTwh = baselineFossilTwh - decline.coal_cap_twh - (decline.oil_cap_twh || 0);
+    const baselineCcgtTwh = baselineGasTwh * ccgtShare;
+    const baselineCtTwh = baselineGasTwh * (1 - ccgtShare);
+
+    const out = {
+        iso,
+        thresholds: [], years: [],
+        nameplate_gw: { coal: [], gas_ccgt: [], gas_ct: [], oil: [], total: [] },
+        dispatch_twh: { coal: [], gas_ccgt: [], gas_ct: [], oil: [], total: [] },
+        capacity_factor_pct: { coal: [], gas_ccgt: [], gas_ct: [], oil: [] },
+        baseline_gas_twh: baselineGasTwh,
+        baseline_ccgt_twh: baselineCcgtTwh,
+        baseline_ct_twh: baselineCtTwh,
+    };
+
+    FLEET_THRESHOLDS.forEach(t => {
+        const year = FLEET_THRESHOLD_YEARS[t];
+        const d = decline.thresholds[String(t)];
+        if (!d) return;
+
+        out.thresholds.push(t);
+        out.years.push(year);
+
+        // --- Nameplate capacity (coal declines with retirements, gas stays flat) ---
+        let coalRetired = 0;
+        retirements.forEach(([yr, cum]) => { if (yr <= year) coalRetired = Math.max(coalRetired, cum); });
+        const npCoal = Math.max(0, cap.coal - coalRetired);
+        const npCcgt = cap.gas_ccgt;
+        const npCt = cap.gas_ct;
+        const npOil = cap.oil;
+
+        out.nameplate_gw.coal.push(+(npCoal / 1000).toFixed(2));
+        out.nameplate_gw.gas_ccgt.push(+(npCcgt / 1000).toFixed(2));
+        out.nameplate_gw.gas_ct.push(+(npCt / 1000).toFixed(2));
+        out.nameplate_gw.oil.push(+(npOil / 1000).toFixed(2));
+        out.nameplate_gw.total.push(+((npCoal + npCcgt + npCt + npOil) / 1000).toFixed(2));
+
+        // --- Dispatch (merit-order split: CCGT first, then CT) ---
+        const coalDisp = d.p50.coal;
+        const oilDisp = d.p50.oil || 0;
+        const totalGas = d.p50.gas;
+
+        let ccgtDisp, ctDisp;
+        if (totalGas >= baselineGasTwh) {
+            const excess = totalGas - baselineGasTwh;
+            ccgtDisp = baselineCcgtTwh + excess * 0.7;
+            ctDisp = baselineCtTwh + excess * 0.3;
+        } else if (totalGas >= baselineCcgtTwh) {
+            ccgtDisp = baselineCcgtTwh;
+            ctDisp = totalGas - baselineCcgtTwh;
+        } else {
+            ccgtDisp = totalGas;
+            ctDisp = 0;
+        }
+
+        out.dispatch_twh.coal.push(+coalDisp.toFixed(1));
+        out.dispatch_twh.gas_ccgt.push(+ccgtDisp.toFixed(1));
+        out.dispatch_twh.gas_ct.push(+ctDisp.toFixed(1));
+        out.dispatch_twh.oil.push(+oilDisp.toFixed(1));
+        out.dispatch_twh.total.push(+(coalDisp + ccgtDisp + ctDisp + oilDisp).toFixed(1));
+
+        // --- Capacity Factors (%) ---
+        const cfPct = (twh, mw) => mw > 0 ? +((twh * 1e6) / (mw * 8760) * 100).toFixed(1) : 0;
+        out.capacity_factor_pct.coal.push(cfPct(coalDisp, npCoal));
+        out.capacity_factor_pct.gas_ccgt.push(cfPct(ccgtDisp, npCcgt));
+        out.capacity_factor_pct.gas_ct.push(cfPct(ctDisp, npCt));
+        out.capacity_factor_pct.oil.push(cfPct(oilDisp, npOil));
+    });
+
+    return out;
+}
+
+/**
+ * Compute aggregate (all ISOs) fossil fleet metrics.
+ */
+function computeAggregateFossilMetrics() {
+    const isoData = {};
+    ISO_LIST.forEach(iso => { isoData[iso] = computeRegionalFossilMetrics(iso); });
+
+    const agg = {
+        iso: 'ALL',
+        thresholds: FLEET_THRESHOLDS.slice(),
+        years: FLEET_THRESHOLDS.map(t => FLEET_THRESHOLD_YEARS[t]),
+        nameplate_gw: { coal: [], gas_ccgt: [], gas_ct: [], oil: [], total: [] },
+        dispatch_twh: { coal: [], gas_ccgt: [], gas_ct: [], oil: [], total: [] },
+        capacity_factor_pct: { coal: [], gas_ccgt: [], gas_ct: [], oil: [] },
+    };
+
+    for (let i = 0; i < FLEET_THRESHOLDS.length; i++) {
+        let npC = 0, npG = 0, npT = 0, npO = 0;
+        let dC = 0, dG = 0, dT = 0, dO = 0;
+        ISO_LIST.forEach(iso => {
+            const m = isoData[iso];
+            if (!m) return;
+            npC += m.nameplate_gw.coal[i] || 0;
+            npG += m.nameplate_gw.gas_ccgt[i] || 0;
+            npT += m.nameplate_gw.gas_ct[i] || 0;
+            npO += m.nameplate_gw.oil[i] || 0;
+            dC += m.dispatch_twh.coal[i] || 0;
+            dG += m.dispatch_twh.gas_ccgt[i] || 0;
+            dT += m.dispatch_twh.gas_ct[i] || 0;
+            dO += m.dispatch_twh.oil[i] || 0;
+        });
+        agg.nameplate_gw.coal.push(+npC.toFixed(2));
+        agg.nameplate_gw.gas_ccgt.push(+npG.toFixed(2));
+        agg.nameplate_gw.gas_ct.push(+npT.toFixed(2));
+        agg.nameplate_gw.oil.push(+npO.toFixed(2));
+        agg.nameplate_gw.total.push(+(npC + npG + npT + npO).toFixed(2));
+        agg.dispatch_twh.coal.push(+dC.toFixed(1));
+        agg.dispatch_twh.gas_ccgt.push(+dG.toFixed(1));
+        agg.dispatch_twh.gas_ct.push(+dT.toFixed(1));
+        agg.dispatch_twh.oil.push(+dO.toFixed(1));
+        agg.dispatch_twh.total.push(+(dC + dG + dT + dO).toFixed(1));
+
+        const cfPct = (twh, gw) => gw > 0 ? +((twh * 1000) / (gw * 8760) * 100).toFixed(1) : 0;
+        agg.capacity_factor_pct.coal.push(cfPct(dC, npC));
+        agg.capacity_factor_pct.gas_ccgt.push(cfPct(dG, npG));
+        agg.capacity_factor_pct.gas_ct.push(cfPct(dT, npT));
+        agg.capacity_factor_pct.oil.push(cfPct(dO, npO));
+    }
+    return agg;
+}
