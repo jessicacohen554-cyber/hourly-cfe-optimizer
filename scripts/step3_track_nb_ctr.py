@@ -26,6 +26,7 @@ import os
 import sys
 import time
 import argparse
+from functools import lru_cache
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -50,6 +51,27 @@ from step3_cost_optimization import (
     _N_COEFFS, _COL_WHOLESALE, _COL_SOL_NEW, _COL_WND_NEW, _COL_CCS_NEW,
     _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4, _COL_BAT8, _COL_LDES,
 )
+
+# Additional constants needed for DG coefficient computation
+from step3_cost_optimization import (
+    UPRATE_CAP_TWH, GEO_CAP_TWH,
+    PEAK_DEMAND_MW, RESOURCE_ADEQUACY_MARGIN, PEAK_CAPACITY_CREDITS,
+    GAS_AVAILABILITY_FACTOR, EXISTING_GAS_CAPACITY_MW,
+    EXISTING_GAS_FOM_KW_YR, NEW_CCGT_COST_KW_YR,
+)
+
+# ── Pre-computed threshold lookups (avoid repeated function calls) ──
+# effective_gate values for each threshold, computed once at import
+_EFFECTIVE_GATES = {thr: effective_gate(thr) for thr in OUTPUT_THRESHOLDS}
+# Pre-computed str(thr) for each threshold (avoids repeated float→str conversion)
+_THR_STR = {thr: str(thr) for thr in OUTPUT_THRESHOLDS}
+# Pre-computed str(year) for DG years
+_YEAR_STR = {yr: str(yr) for yr in DG_UNIQUE_YEARS}
+
+# Pareto pruning price bounds (module-level constant, avoid per-call allocation)
+# Cols: wholesale, sol_new, wnd_new, ccs_new, uprate, geo, remaining, bat4, bat8, ldes
+_PARETO_MIN_PRICES = np.array([20, 40, 30, 52, 15, 0, 52, 69, 77, 116], dtype=np.float64)
+_PARETO_MAX_PRICES = np.array([50, 82, 83, 164, 15, 116, 84, 144, 179, 267], dtype=np.float64)
 
 # Per-ISO EF parquet directory (Step 2 output)
 EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2-ef-parquets')
@@ -103,29 +125,46 @@ def load_completed_tracks(pq_path):
 
 
 def flatten_track_rows(iso, track_name, result_dict):
-    """Flatten nested track result dict into flat rows for parquet."""
+    """Flatten nested track result dict into flat rows for parquet.
+
+    Optimized: pre-computes threshold float conversion per outer loop iteration,
+    uses direct dict access with .get() defaults to avoid repeated lookups.
+    """
     rows = []
+    _get = dict.get  # local reference for faster attribute resolution
     for thr_str, thr_val in result_dict.items():
-        for sc_key, sc in thr_val.get('scenarios', {}).items():
+        thr_float = float(thr_str)
+        scenarios = _get(thr_val, 'scenarios', None)
+        if not scenarios:
+            continue
+        for sc_key, sc in scenarios.items():
             row = {
                 'iso': iso,
                 'track': track_name,
-                'threshold': float(thr_str),
+                'threshold': thr_float,
                 'scenario': sc_key,
             }
-            for k, v in sc.get('resource_mix', {}).items():
-                row[f'mix_{k}'] = v
-            row['procurement_pct'] = sc.get('procurement_pct')
-            row['hourly_match_score'] = sc.get('hourly_match_score')
-            row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct')
-            row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct')
-            row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct')
-            for k, v in sc.get('costs', {}).items():
-                row[f'cost_{k}'] = v
-            for k, v in sc.get('tranche_costs', {}).items():
-                row[f'tranche_{k}'] = v
-            for k, v in sc.get('gas_backup', {}).items():
-                row[f'gas_{k}'] = v
+            resource_mix = _get(sc, 'resource_mix', None)
+            if resource_mix:
+                for k, v in resource_mix.items():
+                    row[f'mix_{k}'] = v
+            row['procurement_pct'] = _get(sc, 'procurement_pct', None)
+            row['hourly_match_score'] = _get(sc, 'hourly_match_score', None)
+            row['battery_dispatch_pct'] = _get(sc, 'battery_dispatch_pct', None)
+            row['battery8_dispatch_pct'] = _get(sc, 'battery8_dispatch_pct', None)
+            row['ldes_dispatch_pct'] = _get(sc, 'ldes_dispatch_pct', None)
+            costs = _get(sc, 'costs', None)
+            if costs:
+                for k, v in costs.items():
+                    row[f'cost_{k}'] = v
+            tranche_costs = _get(sc, 'tranche_costs', None)
+            if tranche_costs:
+                for k, v in tranche_costs.items():
+                    row[f'tranche_{k}'] = v
+            gas_backup = _get(sc, 'gas_backup', None)
+            if gas_backup:
+                for k, v in gas_backup.items():
+                    row[f'gas_{k}'] = v
             rows.append(row)
     return rows
 
@@ -135,19 +174,36 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
 
     If arrays (PFS arrays) are provided, resolves mix_idx to full resource mix
     for downstream pipeline compatibility.
+
+    Optimized: uses direct indexing with pre-checked vals length (always 6 in
+    current pipeline), avoids repeated .get() on arrays dict.
     """
     rows = []
+    # Pre-resolve array references once (avoids repeated dict lookups in inner loop)
+    if arrays is not None:
+        arr_cf = arrays['clean_firm']
+        arr_sol = arrays['solar']
+        arr_wnd = arrays['wind']
+        arr_hyd = arrays['hydro']
+        arr_proc = arrays.get('procurement', arrays.get('procurement_pct', None))
+        arr_score = arrays['hourly_match_score']
+        arr_bat = arrays.get('battery_dispatch_pct', np.zeros(1))
+        arr_bat8 = arrays.get('battery8_dispatch_pct', np.zeros(1))
+        arr_ldes = arrays.get('ldes_dispatch_pct', np.zeros(1))
+
     for thr_str, sc_dict in dg_dict.items():
+        thr_float = float(thr_str)
         for sc_key, year_data in sc_dict.items():
             for year_str, growth_data in year_data.items():
+                year_int = int(year_str)
                 for g_level, vals in growth_data.items():
                     mix_idx = vals[0]
                     row = {
                         'iso': iso,
                         'track': track_name,
-                        'threshold': float(thr_str),
+                        'threshold': thr_float,
                         'scenario': sc_key,
-                        'year': int(year_str),
+                        'year': year_int,
                         'growth_level': g_level,
                         'growth_factor': vals[4] if len(vals) > 4 else None,
                         'annual_demand_mwh': vals[5] if len(vals) > 5 else None,
@@ -155,31 +211,65 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                         'cost_effective_cost': vals[2],
                         'cost_incremental': vals[3],
                     }
-                    # Resolve resource mix from PFS arrays if available
                     if arrays is not None:
-                        cf = int(arrays['clean_firm'][mix_idx])
-                        sol = int(arrays['solar'][mix_idx])
-                        wnd = int(arrays['wind'][mix_idx])
-                        hyd = int(arrays['hydro'][mix_idx])
-                        ccs = max(0, 100 - (cf + sol + wnd + hyd))
+                        cf = int(arr_cf[mix_idx])
+                        sol = int(arr_sol[mix_idx])
+                        wnd = int(arr_wnd[mix_idx])
+                        hyd = int(arr_hyd[mix_idx])
                         row['mix_clean_firm'] = cf
                         row['mix_solar'] = sol
                         row['mix_wind'] = wnd
-                        row['mix_ccs_ccgt'] = ccs
+                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd))
                         row['mix_hydro'] = hyd
-                        row['procurement_pct'] = int(arrays['procurement'][mix_idx])
-                        row['hourly_match_score'] = float(
-                            arrays['hourly_match_score'][mix_idx])
-                        row['battery_dispatch_pct'] = int(
-                            arrays.get('battery_dispatch_pct', np.zeros(1))[mix_idx])
-                        row['battery8_dispatch_pct'] = int(
-                            arrays.get('battery8_dispatch_pct', np.zeros(1))[mix_idx])
-                        row['ldes_dispatch_pct'] = int(
-                            arrays.get('ldes_dispatch_pct', np.zeros(1))[mix_idx])
+                        if arr_proc is not None:
+                            row['procurement_pct'] = int(arr_proc[mix_idx])
+                        row['hourly_match_score'] = float(arr_score[mix_idx])
+                        row['battery_dispatch_pct'] = int(arr_bat[mix_idx])
+                        row['battery8_dispatch_pct'] = int(arr_bat8[mix_idx])
+                        row['ldes_dispatch_pct'] = int(arr_ldes[mix_idx])
                     else:
                         row['best_mix_idx'] = mix_idx
                     rows.append(row)
     return rows
+
+
+# Module-level type constants (avoid re-creating per call)
+_LARGE_STRING = pa.large_string()
+_STRING = pa.string()
+
+# Cache normalized schemas by original schema fingerprint to avoid redundant iteration
+_SCHEMA_CACHE = {}
+
+
+def _normalize_schema(table):
+    """Normalize large_string → string in a PyArrow table to avoid schema merge failures.
+
+    Uses a schema cache keyed on the original schema to skip re-computation when
+    the same column layout is seen again (common during iterative appends).
+    """
+    orig_schema = table.schema
+    cache_key = str(orig_schema)
+    if cache_key in _SCHEMA_CACHE:
+        cached = _SCHEMA_CACHE[cache_key]
+        if cached is None:
+            return table  # No cast needed
+        return table.cast(cached)
+
+    new_fields = []
+    needs_cast = False
+    for field in orig_schema:
+        if field.type == _LARGE_STRING:
+            new_fields.append(pa.field(field.name, _STRING, nullable=field.nullable))
+            needs_cast = True
+        else:
+            new_fields.append(field)
+    if needs_cast:
+        new_schema = pa.schema(new_fields)
+        _SCHEMA_CACHE[cache_key] = new_schema
+        table = table.cast(new_schema)
+    else:
+        _SCHEMA_CACHE[cache_key] = None  # Sentinel: no cast needed
+    return table
 
 
 def append_to_parquet(new_rows, pq_path):
@@ -193,30 +283,31 @@ def append_to_parquet(new_rows, pq_path):
 
     if os.path.exists(pq_path):
         existing_table = pq.read_table(pq_path)
-        # Normalize large_string → string to avoid schema merge failures
-        def _normalize_schema(table):
-            new_fields = []
-            needs_cast = False
-            for field in table.schema:
-                if field.type == pa.large_string():
-                    new_fields.append(pa.field(field.name, pa.string(), nullable=field.nullable))
-                    needs_cast = True
-                else:
-                    new_fields.append(field)
-            if needs_cast:
-                table = table.cast(pa.schema(new_fields))
-            return table
         existing_table = _normalize_schema(existing_table)
         new_table = _normalize_schema(new_table)
-        # Find (iso, track) pairs in new data to replace
-        new_iso = new_table.column('iso').to_pylist()
-        new_track = new_table.column('track').to_pylist()
-        new_keys = set(zip(new_iso, new_track))
-        # Filter out existing rows that match new keys
-        ex_iso = existing_table.column('iso').to_pylist()
-        ex_track = existing_table.column('track').to_pylist()
-        keep_mask = pa.array([(i, t) not in new_keys for i, t in zip(ex_iso, ex_track)])
-        keep_table = existing_table.filter(keep_mask)
+        # Find (iso, track) pairs in new data to replace.
+        # Build composite key strings for fast set-membership via PyArrow compute.
+        new_iso = new_table.column('iso')
+        new_track = new_table.column('track')
+        new_keys = set(zip(new_iso.to_pylist(), new_track.to_pylist()))
+
+        # Fast path: if new data has only one (iso, track) pair (common case),
+        # use PyArrow compute filters directly instead of Python iteration
+        if len(new_keys) == 1:
+            iso_val, track_val = next(iter(new_keys))
+            iso_match = pc.equal(existing_table.column('iso'), iso_val)
+            track_match = pc.equal(existing_table.column('track'), track_val)
+            drop_mask = pc.and_(iso_match, track_match)
+            keep_mask = pc.invert(drop_mask)
+            keep_table = existing_table.filter(keep_mask)
+        else:
+            # Multiple pairs: build composite key for existing rows
+            ex_iso = existing_table.column('iso').to_pylist()
+            ex_track = existing_table.column('track').to_pylist()
+            keep_np = np.array([(i, t) not in new_keys for i, t in zip(ex_iso, ex_track)], dtype=bool)
+            keep_mask = pa.array(keep_np, type=pa.bool_())
+            keep_table = existing_table.filter(keep_mask)
+
         # Unify schemas before concat
         combined_schema = pa.unify_schemas([keep_table.schema, new_table.schema])
         keep_table = keep_table.cast(combined_schema)
@@ -273,7 +364,7 @@ def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
     2. Find the best mix's max_cost (upper bound on best achievable)
     3. Prune any mix whose min_cost > that bound (can never win)
 
-    Uses precomputed price ranges from sensitivity combos. O(N) per threshold.
+    Uses module-level precomputed price ranges. O(N) per threshold.
 
     Returns: boolean mask of NON-dominated mixes (True = keep)
     """
@@ -283,13 +374,9 @@ def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
 
     keep = np.ones(N, dtype=bool)
 
-    # Price ranges across all ISOs and sensitivity combos (empirically measured)
-    # Cols: wholesale, sol_new, wnd_new, ccs_new, uprate, geo, remaining, bat4, bat8, ldes
-    min_prices = np.array([20, 40, 30, 52, 15, 0, 52, 69, 77, 116], dtype=np.float64)
-    max_prices = np.array([50, 82, 83, 164, 15, 116, 84, 144, 179, 267], dtype=np.float64)
-
     for thr in thresholds:
-        qual_mask = (scores >= effective_gate(thr)) & keep
+        gate = _EFFECTIVE_GATES.get(thr, effective_gate(thr))
+        qual_mask = (scores >= gate) & keep
         qual_idx = np.where(qual_mask)[0]
         Q = len(qual_idx)
         if Q < 2:
@@ -299,9 +386,9 @@ def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
         q_const = constant[qual_idx]      # (Q,)
 
         # Min possible cost = q_coeff @ min_prices + q_const
-        min_cost = q_coeff @ min_prices + q_const
+        min_cost = q_coeff @ _PARETO_MIN_PRICES + q_const
         # Max possible cost = q_coeff @ max_prices + q_const
-        max_cost = q_coeff @ max_prices + q_const
+        max_cost = q_coeff @ _PARETO_MAX_PRICES + q_const
 
         # Best achievable upper bound: lowest max_cost among qualifying mixes
         best_max_cost = np.min(max_cost)
@@ -329,10 +416,11 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
 
     scores = arrays['hourly_match_score'].astype(np.float64)
 
-    # Pre-compute threshold indices
+    # Pre-compute threshold indices using cached effective_gate values
     thr_indices = {}
     for thr in OUTPUT_THRESHOLDS:
-        idx = np.where(scores >= effective_gate(thr))[0]
+        gate = _EFFECTIVE_GATES[thr]
+        idx = np.where(scores >= gate)[0]
         if len(idx) > 0:
             thr_indices[thr] = idx
 
@@ -364,7 +452,8 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
             # Recompute threshold indices on pruned arrays
             thr_indices = {}
             for thr in OUTPUT_THRESHOLDS:
-                idx = np.where(scores >= effective_gate(thr))[0]
+                gate = _EFFECTIVE_GATES[thr]
+                idx = np.where(scores >= gate)[0]
                 if len(idx) > 0:
                     thr_indices[thr] = idx
 
@@ -409,22 +498,181 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
     build_elapsed = time.time() - build_start
     print(f"    {iso} {track_name}: winner scenarios built in {build_elapsed:.1f}s")
 
-    result = {str(thr): thr_data[thr] for thr in active_thresholds}
+    result = {_THR_STR.get(thr, str(thr)): thr_data[thr] for thr in active_thresholds}
     elapsed = time.time() - iso_start
     print(f"  {iso:>6} {track_name:>10}: {N:,} mixes, "
           f"{len(active_thresholds)} thresholds, {len(arch_set)} archetypes — {elapsed:.0f}s")
     return result, arch_set
 
 
+def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
+                                 uprate_cap_override=None, existing_override=None):
+    """Pre-compute demand-growth-adjusted coefficient matrices for all unique (year, growth_level) pairs.
+
+    Instead of calling price_mix_batch (which recomputes arrays from scratch) for each
+    (year, growth_level) combo, this function pre-computes the coefficient matrices once
+    for all 42 unique growth scenarios (14 years × 3 levels).
+
+    Hoists growth-invariant array computations (proc, demand pcts, ccs_pct, storage pcts)
+    outside the loop, recomputing only the growth-dependent existing/new splits and gas backup.
+
+    Returns:
+        dg_coeffs: dict of (year, g_level) → (coeff_matrix, constant, match_frac)
+        dg_meta: dict of (year, g_level) → (gf, demand_grown_mwh)
+    """
+    iso_rates = DEMAND_GROWTH_RATES[iso]
+    dg_coeffs = {}
+    dg_meta = {}
+
+    # ── Growth-INVARIANT computations (hoisted outside loop) ──
+    N = len(arch_arrays['clean_firm'])
+    existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
+
+    proc = arch_arrays['procurement_pct'] / 100.0
+    match_frac = arch_arrays['hourly_match_score'] / 100.0
+
+    cf_pct = arch_arrays['clean_firm']
+    sol_pct = arch_arrays['solar']
+    wnd_pct = arch_arrays['wind']
+    hyd_pct = arch_arrays['hydro']
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
+    bat_pct = arch_arrays['battery_dispatch_pct']
+    bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
+    ldes_pct = arch_arrays['ldes_dispatch_pct']
+
+    # Demand pcts (proc × alloc) — invariant across growth scenarios
+    sol_demand_pct = proc * sol_pct
+    wnd_demand_pct = proc * wnd_pct
+    hyd_demand_pct = proc * hyd_pct
+    ccs_demand_pct = proc * ccs_pct
+    cf_demand_pct = proc * cf_pct
+
+    # Storage coefficients are fully growth-invariant (columns 7-9)
+    bat4_coeff = bat_pct / 100.0
+    bat8_coeff = bat8_pct / 100.0
+    ldes_coeff = ldes_pct / 100.0
+
+    # Uprate cap and geo cap are per-ISO constants
+    uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
+    is_caiso = (iso == 'CAISO')
+
+    # Gas backup constants (per-ISO, invariant)
+    peak_mw = PEAK_DEMAND_MW[iso]
+    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+    gas_fom = EXISTING_GAS_FOM_KW_YR[iso] * 1000
+    new_ccgt_cost = NEW_CCGT_COST_KW_YR[iso] * 1000
+
+    # Pre-compute peak capacity coefficient (invariant factor for clean_peak_mw / avg_demand_mw)
+    # clean_peak_mw = peak_coeff_per_avg_mw * avg_demand_mw
+    # where peak_coeff_per_avg_mw is independent of demand growth
+    peak_coeff = (
+        proc * cf_pct / 100.0 * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        proc * sol_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar'] +
+        proc * wnd_pct / 100.0 * PEAK_CAPACITY_CREDITS['wind'] +
+        proc * ccs_pct / 100.0 * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        proc * hyd_pct / 100.0 * PEAK_CAPACITY_CREDITS['hydro'] +
+        bat_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
+    )
+
+    # Base existing shares (before scaling)
+    ex_sol_base = existing['solar']
+    ex_wnd_base = existing['wind']
+    ex_ccs_base = existing.get('ccs_ccgt', 0)
+    ex_cf_base = existing['clean_firm']
+
+    # ── Growth-DEPENDENT loop ──
+    for year in DG_UNIQUE_YEARS:
+        years_out = year - 2025
+        for g_level in DEMAND_GROWTH_LEVELS:
+            g_rate = iso_rates[g_level]
+            gf = (1 + g_rate) ** years_out
+            demand_grown = demand_twh * gf
+            demand_grown_mwh = demand_grown * 1e6
+            existing_scale = 1.0 / gf
+
+            # Existing/new splits with growth-adjusted existing share
+            sol_ex = min(ex_sol_base * existing_scale, 100.0)
+            sol_existing_pct = np.minimum(sol_demand_pct, sol_ex)
+            sol_new_pct = np.maximum(0, sol_demand_pct - sol_ex)
+
+            wnd_ex = min(ex_wnd_base * existing_scale, 100.0)
+            wnd_existing_pct = np.minimum(wnd_demand_pct, wnd_ex)
+            wnd_new_pct = np.maximum(0, wnd_demand_pct - wnd_ex)
+
+            ccs_ex = min(ex_ccs_base * existing_scale, 100.0)
+            ccs_existing_pct = np.minimum(ccs_demand_pct, ccs_ex)
+            ccs_new_pct = np.maximum(0, ccs_demand_pct - ccs_ex)
+
+            cf_ex = min(ex_cf_base * existing_scale, 100.0)
+            cf_existing_pct = np.minimum(cf_demand_pct, cf_ex)
+            cf_new_pct = np.maximum(0, cf_demand_pct - cf_ex)
+
+            # Clean firm tranche allocation
+            new_cf_twh = cf_new_pct / 100.0 * demand_grown
+            uprate_twh = np.minimum(new_cf_twh, uprate_cap)
+            remaining_after_uprate = np.maximum(0, new_cf_twh - uprate_twh)
+
+            if is_caiso:
+                geo_twh = np.minimum(remaining_after_uprate, GEO_CAP_TWH)
+                remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_twh)
+            else:
+                geo_twh = np.zeros(N)
+                remaining_after_geo = remaining_after_uprate
+
+            # Gas backup: clean_peak_mw = peak_coeff * avg_demand_mw
+            avg_demand_mw = demand_grown_mwh / 8760
+            clean_peak_mw = peak_coeff * avg_demand_mw
+
+            gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw) / gaf
+            existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
+            new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
+
+            constant = (
+                existing_gas_used_mw * gas_fom +
+                new_gas_mw * new_ccgt_cost
+            ) / demand_grown_mwh
+
+            # Build coefficient matrix (N, 10)
+            coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
+            coeff_matrix[:, _COL_WHOLESALE] = (sol_existing_pct + wnd_existing_pct +
+                                                hyd_demand_pct + ccs_existing_pct +
+                                                cf_existing_pct) / 100.0
+            coeff_matrix[:, _COL_SOL_NEW] = sol_new_pct / 100.0
+            coeff_matrix[:, _COL_WND_NEW] = wnd_new_pct / 100.0
+            coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
+            coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_grown
+            coeff_matrix[:, _COL_GEO] = geo_twh / demand_grown
+            coeff_matrix[:, _COL_REMAINING] = remaining_after_geo / demand_grown
+            coeff_matrix[:, _COL_BAT4] = bat4_coeff
+            coeff_matrix[:, _COL_BAT8] = bat8_coeff
+            coeff_matrix[:, _COL_LDES] = ldes_coeff
+
+            dg_coeffs[(year, g_level)] = (coeff_matrix, constant, match_frac)
+            dg_meta[(year, g_level)] = (gf, demand_grown_mwh)
+
+    return dg_coeffs, dg_meta
+
+
 def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
                              uprate_cap_override=None, existing_override=None):
     """Run demand growth sweep for track archetypes (threshold-year paired).
 
-    Each threshold is evaluated only at its SBTi-interpolated target year × L/M/H,
-    producing 15 × 3 = 45 DG results per ISO per scenario combo.
+    Each threshold is evaluated only at its SBTi-interpolated target year x L/M/H,
+    producing 15 x 3 = 45 DG results per ISO per scenario combo.
+
+    Optimized with two levels of batching:
+    1. Pre-computes coefficient matrices for all ~42 unique (year, growth_level) pairs
+       (scenario-INVARIANT), with growth-invariant computations hoisted out.
+    2. For each (year, g_level), uses batch_eval_and_argmin_all to evaluate ALL combos
+       in a single Numba-accelerated call instead of sequential eval_cost_fast calls.
+    3. Loop order inverted: (year, g_level) outer, all combos inner -- each coefficient
+       matrix is loaded once and evaluated against all price vectors simultaneously.
     """
     demand_twh = REGIONAL_DEMAND_TWH[iso]
-    iso_rates = DEMAND_GROWTH_RATES[iso]
 
     arch_indices = sorted(arch_set)
     n_arch = len(arch_indices)
@@ -433,60 +681,106 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
 
     arch_arrays = {k: arrays[k][arch_indices] for k in arrays}
     arch_scores = arch_arrays['hourly_match_score']
+    match_frac = arch_scores / 100.0
 
+    # Pre-compute threshold qualifying masks using cached effective gates
     arch_thr_mask = {}
     for thr in OUTPUT_THRESHOLDS:
-        qualifying = np.where(arch_scores >= effective_gate(thr))[0]
+        gate = _EFFECTIVE_GATES[thr]
+        qualifying = np.where(arch_scores >= gate)[0]
         if len(qualifying) > 0:
             arch_thr_mask[thr] = qualifying
 
+    if not arch_thr_mask:
+        return {}
+
     thr_dg = {thr: {} for thr in arch_thr_mask}
+    n_combos = len(combos)
 
-    for scenario_key, sens in combos:
-        wholesale = max(5, WHOLESALE_PRICES[iso] +
-                        FUEL_ADJUSTMENTS[iso][LEVEL_NAME[sens['fuel']]])
-        thr_year_results = {thr: {} for thr in arch_thr_mask}
+    # Pre-compute which years have matching thresholds (avoid recomputing per combo)
+    year_thr_map = {}
+    for year in DG_UNIQUE_YEARS:
+        matched = [t for t in _DG_YEAR_TO_THRESHOLDS[year] if t in arch_thr_mask]
+        if matched:
+            year_thr_map[year] = matched
 
-        # Threshold-year paired: each unique year evaluated once,
-        # results stored only for matching thresholds
-        for year in DG_UNIQUE_YEARS:
-            matched_thresholds = [t for t in _DG_YEAR_TO_THRESHOLDS[year]
-                                  if t in arch_thr_mask]
-            if not matched_thresholds:
-                continue
+    if not year_thr_map:
+        return {}
 
-            for g_level in DEMAND_GROWTH_LEVELS:
-                g_rate = iso_rates[g_level]
-                gf = (1 + g_rate) ** (year - 2025)
-                demand_grown_mwh = demand_twh * gf * 1e6
-                tc, ec, _ = price_mix_batch(
-                    iso, arch_arrays, sens, demand_twh,
-                    target_year=year, growth_rate=g_rate,
-                    uprate_cap_override=uprate_cap_override,
-                    existing_override=existing_override
-                )
+    # Pre-compute all price vectors + wholesale for all combos (once)
+    price_matrix, wholesale_arr, _, _ = precompute_all_prices(iso, combos)
+
+    # Build active thresholds for DG (only those with matched years)
+    dg_active_thresholds = set()
+    for _year, matched in year_thr_map.items():
+        dg_active_thresholds.update(matched)
+    dg_active_thresholds = sorted(dg_active_thresholds)
+
+    # Descending thresholds for batch_eval_and_argmin_all
+    dg_thr_desc = np.array(sorted(dg_active_thresholds, reverse=True), dtype=np.float64)
+    dg_thr_pos = {float(dg_thr_desc[k]): k for k in range(len(dg_thr_desc))}
+
+    # Pre-compute DG coefficient matrices for all (year, g_level) pairs
+    # These are scenario-INVARIANT: depend on physical arrays and demand growth,
+    # not on price sensitivities. Computed once, reused for every combo.
+    dg_coeffs, dg_meta = _precompute_dg_coefficients(
+        iso, arch_arrays, demand_twh,
+        uprate_cap_override=uprate_cap_override,
+        existing_override=existing_override)
+
+    # Initialize per-combo result storage
+    combo_results = [{thr: {} for thr in arch_thr_mask} for _ in range(n_combos)]
+
+    # Inverted loop: iterate (year, g_level) in outer loop, batch all combos.
+    # Each batch_eval_and_argmin_all call evaluates n_combos price vectors
+    # against one coefficient matrix in a single Numba kernel.
+    for year, matched_thresholds in year_thr_map.items():
+        yr_str = _YEAR_STR[year]
+
+        for g_level in DEMAND_GROWTH_LEVELS:
+            coeff_matrix, constant, _mf = dg_coeffs[(year, g_level)]
+            gf, demand_grown_mwh = dg_meta[(year, g_level)]
+            gf_rounded = round(gf, 6)
+            demand_grown_rounded = round(demand_grown_mwh, 0)
+
+            # Batch-evaluate all combos at once via Numba-accelerated kernel
+            all_best_idxs, all_best_vals = batch_eval_and_argmin_all(
+                coeff_matrix, constant, price_matrix, arch_scores, dg_thr_desc)
+
+            # Extract results per combo per matched threshold
+            for j in range(n_combos):
+                wholesale_j = float(wholesale_arr[j])
                 for thr in matched_thresholds:
-                    qual_idx = arch_thr_mask[thr]
-                    best_local = int(qual_idx[np.argmin(tc[qual_idx])])
+                    k = dg_thr_pos[float(thr)]
+                    if all_best_vals[j, k] == np.inf:
+                        continue
+                    best_local = int(all_best_idxs[j, k])
                     full_idx = arch_indices[best_local]
-                    if str(year) not in thr_year_results[thr]:
-                        thr_year_results[thr][str(year)] = {}
-                    thr_year_results[thr][str(year)][g_level] = [
+                    tc_val = float(all_best_vals[j, k])
+                    mf = float(match_frac[best_local])
+                    ec_val = tc_val / mf if mf > 0 else 0.0
+
+                    if yr_str not in combo_results[j][thr]:
+                        combo_results[j][thr][yr_str] = {}
+                    combo_results[j][thr][yr_str][g_level] = [
                         full_idx,
-                        round(float(tc[best_local]), 2),
-                        round(float(ec[best_local]), 2),
-                        round(float(ec[best_local]) - wholesale, 2),
-                        round(gf, 6),
-                        round(demand_grown_mwh, 0),
+                        round(tc_val, 2),
+                        round(ec_val, 2),
+                        round(ec_val - wholesale_j, 2),
+                        gf_rounded,
+                        demand_grown_rounded,
                     ]
 
+    # Assemble into output structure
+    for j, (scenario_key, _sens) in enumerate(combos):
         for thr in arch_thr_mask:
-            thr_dg[thr][scenario_key] = thr_year_results[thr]
+            thr_dg[thr][scenario_key] = combo_results[j][thr]
 
     n_dg_evals = len(DG_UNIQUE_YEARS) * len(DEMAND_GROWTH_LEVELS)
-    result = {str(thr): thr_dg[thr] for thr in arch_thr_mask}
+    result = {_THR_STR.get(thr, str(thr)): thr_dg[thr] for thr in arch_thr_mask}
     print(f"  {iso:>6} {track_name:>10} DG: {n_arch} archetypes, "
-          f"{len(arch_thr_mask)} thresholds, {n_dg_evals} paired evals")
+          f"{len(arch_thr_mask)} thresholds, {n_dg_evals} paired evals, "
+          f"{n_combos} combos (batched)")
     return result
 
 
