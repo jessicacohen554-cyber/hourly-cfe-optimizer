@@ -267,7 +267,7 @@ body { background: #F3F4F8; }
 <h2 class="section-title">What Gets Built: Scenario A vs Scenario B</h2>
 <p class="section-subtitle">Resource mix in absolute TWh at each threshold. Scenario A's mix evolves erratically as each threshold inherits prior overbuilds.
 Scenario B shows a graduated transition — increasing clean firm as FOAK&rarr;NOAK learning reduces costs.
-<strong>Dashed line = total demand</strong> — generation above the line is overbuilt/curtailed.</p>
+<strong>Dashed line = CFE target</strong> (threshold &times; demand) — solid bars below = utilized generation, hatched bars above = curtailed.</p>
 
 <div class="chart-pair">
     <div class="chart-box">
@@ -1028,6 +1028,23 @@ function renderMixCharts(iso) {
             return splitCleanFirm(iso, totalCf, existingNuclearTwh);
         });
 
+        // Pre-compute curtailment per trajectory point so we can subtract
+        // it from resource bars (showing only utilized) and add it as hatched bars
+        const curtailData = traj.map(d => {
+            const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+            const matched = d.threshold / 100 * (d.demand_twh || baseDemandTwh);
+            const totalCurtailed = Math.max(0, totalProcured - matched);
+            const newSol = Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0));
+            const newWnd = Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0));
+            const totalVRE = newSol + newWnd;
+            return {
+                total: totalCurtailed,
+                solar: totalVRE >= 1 ? totalCurtailed * (newSol / totalVRE) : 0,
+                wind: totalVRE >= 1 ? totalCurtailed * (newWnd / totalVRE) : 0,
+                matched: matched,
+            };
+        });
+
         // === 1) EXISTING RESOURCES (transparent, bottom of stack) ===
 
         // Nuclear (existing)
@@ -1055,15 +1072,20 @@ function renderMixCharts(iso) {
         }
 
         // === 2) NEW BUILD RESOURCES (solid, middle of stack) ===
+        // Subtract curtailed portion from solar/wind so bars show only UTILIZED generation.
+        // This ensures the demand line sits exactly at the boundary between utilized and curtailed.
 
-        // Non-nuclear/non-CF new builds (solar, wind, hydro, battery, ldes, ccs_ccgt)
         for (const res of NEWBUILD_RES) {
             datasets.push({
                 label: (RES_LABELS[res] || res) + ' (new)',
-                data: traj.map(d => {
+                data: traj.map((d, i) => {
                     const total = d.resource_twh[res] || 0;
                     const ex = existingTwh[res] || 0;
-                    return Math.max(0, Math.round(total - ex));
+                    let newBuild = Math.max(0, total - ex);
+                    // Subtract curtailed portion for VRE resources
+                    if (res === 'solar') newBuild = Math.max(0, newBuild - curtailData[i].solar);
+                    if (res === 'wind') newBuild = Math.max(0, newBuild - curtailData[i].wind);
+                    return Math.round(newBuild);
                 }),
                 backgroundColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.55)',
                 borderColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',1)',
@@ -1092,21 +1114,15 @@ function renderMixCharts(iso) {
         }
 
         // === 3) CURTAILMENT (diagonal stripes, top of stack) ===
+        // These sit on top of the utilized resource bars. The demand line below
+        // marks the boundary between utilized and curtailed.
         const curtailRes = ['solar', 'wind'];
         for (const res of curtailRes) {
             datasets.push({
                 label: (RES_LABELS[res] || res) + ' (curtailed)',
-                data: traj.map(d => {
-                    const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
-                    const matched = d.threshold / 100 * (d.demand_twh || baseDemandTwh);
-                    const totalCurtailed = Math.max(0, totalProcured - matched);
-                    if (totalCurtailed < 1) return 0;
-                    const newSol = Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0));
-                    const newWnd = Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0));
-                    const totalVRE = newSol + newWnd;
-                    if (totalVRE < 1) return 0;
-                    const share = res === 'solar' ? newSol / totalVRE : newWnd / totalVRE;
-                    return Math.round(totalCurtailed * share);
+                data: curtailData.map(c => {
+                    const v = res === 'solar' ? c.solar : c.wind;
+                    return v >= 1 ? Math.round(v) : 0;
                 }),
                 backgroundColor: createStripePattern(ctx, RES_RGB[res]),
                 borderColor: 'rgba(' + RES_RGB[res] + ',0.4)',
@@ -1114,10 +1130,11 @@ function renderMixCharts(iso) {
             });
         }
 
-        // === 4) DEMAND LINE OVERLAY ===
+        // === 4) CFE TARGET LINE (matched demand) ===
+        // Sits at threshold% × demand — the boundary between utilized and curtailed generation.
         datasets.push({
-            label: 'Demand',
-            data: traj.map(d => Math.round(d.demand_twh || baseDemandTwh)),
+            label: 'CFE Target',
+            data: curtailData.map(c => Math.round(c.matched)),
             type: 'line',
             borderColor: 'rgba(0,0,0,0.7)', borderWidth: 2, borderDash: [6, 3],
             pointRadius: 0, pointHoverRadius: 4, pointBackgroundColor: 'rgba(0,0,0,0.7)',
@@ -1128,13 +1145,12 @@ function renderMixCharts(iso) {
     }
 
     // Compute shared y-axis max across BOTH trajectories for equal scaling
+    // Stack = totalProcured (utilized bars + curtailed bars, no double-count)
     function computeMaxStack(traj) {
         let maxV = 0;
         traj.forEach(d => {
-            const totalRes = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
-            const matched = d.threshold / 100 * (d.demand_twh || baseDemandTwh);
-            const curtailed = Math.max(0, totalRes - matched);
-            maxV = Math.max(maxV, totalRes + curtailed);
+            const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+            maxV = Math.max(maxV, totalProcured);
         });
         return maxV;
     }
@@ -1159,8 +1175,8 @@ function renderMixCharts(iso) {
                     label: ctx => {
                         const v = ctx.parsed.y;
                         if (v === 0) return null;
-                        if (ctx.dataset.label === 'Demand')
-                            return 'Demand: ' + v.toLocaleString() + ' TWh';
+                        if (ctx.dataset.label === 'CFE Target')
+                            return 'CFE Target: ' + v.toLocaleString() + ' TWh';
                         return ctx.dataset.label + ': ' + v.toLocaleString() + ' TWh';
                     }
                 }
