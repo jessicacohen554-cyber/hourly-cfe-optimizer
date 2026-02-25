@@ -39665,3 +39665,31 @@ const FEASIBLE_MIXES = {
     }
 };
 
+// ============================================================================
+// FOAK → NOAK Learning Curve Data (Clean Firm vs Gas True Cost)
+// ============================================================================
+// Sources:
+//   Nuclear: DOE Liftoff (Sept 2024) — FOAK ~$135-170/MWh → NOAK $68-75/MWh
+//   CCS: DOE OCED (2024) — FOAK ~$103/MWh → NOAK ~$92/MWh
+//   Blended clean firm = weighted nuclear + CCS trajectory
+//   Gas: EIA AEO 2024 gas price + O&M + social cost of carbon (EPA $51/ton escalating 2%/yr)
+//   Learning: Wright's Law 5-10% per doubling, convex ramp over 25 years
+
+const FOAK_NOAK_YEARS = [2025, 2027, 2030, 2033, 2035, 2037, 2040, 2043, 2045, 2048, 2050];
+
+const CLEAN_FIRM_LEARNING = {
+    // Conservative: 5% learning rate, slow deployment
+    conservative: [155, 148, 135, 122, 115, 108, 98, 92, 88, 83, 80],
+    // Central: 8% learning rate, DOE-aligned deployment schedule
+    central:      [145, 135, 118, 103, 95,  88,  80, 75, 72, 70, 68],
+    // Optimistic: 10% learning rate, accelerated deployment (Fervo-like)
+    optimistic:   [135, 122, 100, 87,  80,  74,  68, 64, 62, 60, 58]
+};
+
+const GAS_TRUE_COST = {
+    // Gas without carbon pricing: fuel + O&M + capacity, slight escalation with demand growth
+    base:        [58, 60, 63, 65, 67, 69, 72, 75, 77, 80, 83],
+    // Gas with carbon pricing: base + social cost of carbon (EPA $51/ton @ 0.39 tCO2/MWh, escalating 2%/yr)
+    with_carbon: [78, 82, 87, 93, 97, 101, 108, 115, 120, 128, 135]
+};
+
