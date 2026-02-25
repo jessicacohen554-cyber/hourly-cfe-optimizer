@@ -118,6 +118,20 @@ body { background: #F3F4F8; }
 /* Deploy bar chart containers */
 .deploy-chart-container { position: relative; height: 380px; }
 
+/* Key findings hero panel */
+.key-findings { background: linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(14,165,233,0.06) 100%); border: 1px solid rgba(14,165,233,0.15); border-radius: 14px; padding: 28px 32px; max-width: 1200px; margin: -24px auto 20px; position: relative; z-index: 5; }
+.key-findings-title { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.78rem; color: #0284C7; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 16px; }
+.key-findings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.kf-item { display: flex; gap: 12px; align-items: flex-start; }
+.kf-icon { font-size: 1.4rem; flex-shrink: 0; width: 32px; text-align: center; line-height: 1; padding-top: 2px; }
+.kf-text { font-size: 0.85rem; color: rgba(0,0,0,0.7); line-height: 1.6; }
+.kf-text strong { color: #1A2744; font-weight: 700; }
+.kf-text .kf-num { font-family: 'Rajdhani','Barlow Semi Condensed',monospace; font-weight: 700; font-size: 0.95rem; }
+@media (max-width: 768px) {
+    .key-findings-grid { grid-template-columns: 1fr; gap: 14px; }
+    .key-findings { margin: -16px 16px 16px; padding: 20px; }
+}
+
 @media (max-width: 768px) {
     .hero h1 { font-size: 1.5rem; }
     .chart-pair, .scenario-cards { grid-template-columns: 1fr; }
@@ -151,6 +165,39 @@ body { background: #F3F4F8; }
         drives costs down. Same physics, same feasible mixes — radically different outcomes.
     </p>
 </section>
+
+<!-- Key findings hero panel (data-driven, updates with target slider) -->
+<div style="padding: 0 24px;">
+    <div class="key-findings" id="keyFindings">
+        <div class="key-findings-title">Key Findings at <span id="kfThresholdLabel">95%</span> CFE Target</div>
+        <div class="key-findings-grid">
+            <div class="kf-item">
+                <div class="kf-icon" style="color:#DC2626;">&#9888;</div>
+                <div class="kf-text" id="kfCostTrap">
+                    <strong>The cost trap is real.</strong> Consequential procurement costs
+                    <span class="kf-num" id="kfMultiplier">—</span>&times; more than hourly matching at the target —
+                    <span class="kf-num" id="kfSavings">—</span> in annual savings across all ISOs.
+                </div>
+            </div>
+            <div class="kf-item">
+                <div class="kf-icon" style="color:#16A34A;">&#9889;</div>
+                <div class="kf-text" id="kfFirmInvest">
+                    <strong>Clean firm pays off.</strong> Hourly matching deploys
+                    <span class="kf-num" id="kfFirmTwh">—</span> of firm generation, driving FOAK&rarr;NOAK learning.
+                    Consequential locks in renewables and faces a cost cliff when firm is finally needed.
+                </div>
+            </div>
+            <div class="kf-item">
+                <div class="kf-icon" style="color:#0284C7;">&#128176;</div>
+                <div class="kf-text" id="kfNPV">
+                    <strong>25-year commitment.</strong> The NPV difference is
+                    <span class="kf-num" id="kfNPVDiff">—</span> (at 5% WACC) — the cumulative cost of
+                    deferring clean firm investment until it's too late.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Target threshold slider -->
 <div class="target-slider-section">
@@ -548,6 +595,7 @@ const currentIso = { mac: 'PJM', gas: 'PJM', mix: 'PJM', cost: 'PJM', firm: 'PJM
 slider.addEventListener('input', () => {
     updateSliderDisplay();
     buildHeadlineCards();
+    updateKeyFindings();
     renderMacTimeline(currentIso.mac);
     renderGasChart(currentIso.gas);
     renderMixCharts(currentIso.mix);
@@ -644,12 +692,29 @@ function buildHeadlineCards() {
     const solarOverPJM = aT_PJM ? Math.round(aT_PJM.resource_twh.solar) : 0;
     const solarHM_PJM = bT_PJM ? Math.round(bT_PJM.resource_twh.solar) : 0;
 
+    // 25-year NPV savings
+    const annuityFactor = (1 - Math.pow(1.05, -25)) / 0.05;
+    const npvSavings = Math.round(savingsB * annuityFactor);
+
+    // New gas capacity needed (cross-ISO)
+    let newGasA = 0, newGasB = 0;
+    ISOS.forEach(iso => {
+        const trajA = DATA.trajectories.pure_consequential[iso] || [];
+        const trajB = getScenarioB(iso);
+        const aT = trajA.find(d => d.threshold === t);
+        const bT = trajB.find(d => d.threshold === t);
+        if (aT) newGasA += (aT.new_gas_mw || 0);
+        if (bT) newGasB += (bT.new_gas_mw || 0);
+    });
+    const gasAvoidedGW = Math.round((newGasA - newGasB) / 1000);
+
     const tLabel = t === Math.floor(t) ? t + '%' : t + '%';
     container.innerHTML = `
-        <div class="headline-card"><div class="val red">${costMultiplier}&times;</div><div class="lbl">Consequential vs. Hourly Matching at ${tLabel}</div></div>
-        <div class="headline-card"><div class="val amber">$${savingsB}B</div><div class="lbl">Annual Savings From Hourly Matching</div></div>
+        <div class="headline-card"><div class="val red">${costMultiplier}&times;</div><div class="lbl">Consequential Cost Multiple at ${tLabel}</div></div>
+        <div class="headline-card"><div class="val amber">$${savingsB}B/yr</div><div class="lbl">Annual Savings (All ISOs)</div></div>
+        <div class="headline-card"><div class="val green">$${npvSavings}B</div><div class="lbl">25-Year NPV Savings (5% WACC)</div></div>
         <div class="headline-card"><div class="val blue">$${costGapPJM}/MWh</div><div class="lbl">PJM Cost Gap at ${tLabel}</div></div>
-        <div class="headline-card"><div class="val cyan">${solarOverPJM} TWh</div><div class="lbl">PJM Solar in Consequential (vs. ${solarHM_PJM} Hourly)</div></div>
+        <div class="headline-card"><div class="val cyan">${gasAvoidedGW > 0 ? gasAvoidedGW + ' GW' : '—'}</div><div class="lbl">New Gas Build Avoided by Hourly Matching</div></div>
     `;
 
     // Update gas callout text
@@ -657,6 +722,50 @@ function buildHeadlineCards() {
     if (gapEl && bT_PJM) gapEl.textContent = Math.round(bT_PJM.gas_backup_mw / 1000) + ' GW';
 }
 buildHeadlineCards();
+
+// ===== KEY FINDINGS HERO PANEL =====
+function updateKeyFindings() {
+    const t = targetThreshold;
+    const tLabel = t === Math.floor(t) ? t + '%' : t + '%';
+    const el = id => document.getElementById(id);
+
+    // Label
+    const kfLabel = el('kfThresholdLabel');
+    if (kfLabel) kfLabel.textContent = tLabel;
+
+    // Cross-ISO aggregated costs
+    let annualCostA_B = 0, annualCostB_B = 0;
+    let firmTwhB = 0;
+    const annuityFactor = (1 - Math.pow(1.05, -25)) / 0.05; // ~14.09
+
+    ISOS.forEach(iso => {
+        const trajA = DATA.trajectories.pure_consequential[iso] || [];
+        const trajB = getScenarioB(iso);
+        const demandTwh = DATA.metadata.base_demand_twh[iso] || 0;
+        const aT = trajA.find(d => d.threshold === t);
+        const bT = trajB.find(d => d.threshold === t);
+        if (aT && bT) {
+            annualCostA_B += aT.effective_cost * demandTwh / 1000; // $B
+            annualCostB_B += bT.effective_cost * demandTwh / 1000;
+        }
+        if (bT) firmTwhB += (bT.firm_total_twh || 0);
+    });
+
+    const savingsAnnual = annualCostA_B - annualCostB_B;
+    const multiplier = annualCostB_B > 0 ? (annualCostA_B / annualCostB_B).toFixed(1) : '—';
+    const npvDiff = savingsAnnual * annuityFactor;
+
+    // Update text
+    const kfMult = el('kfMultiplier');
+    if (kfMult) kfMult.textContent = multiplier;
+    const kfSav = el('kfSavings');
+    if (kfSav) kfSav.textContent = '$' + Math.round(savingsAnnual) + 'B/yr';
+    const kfFirm = el('kfFirmTwh');
+    if (kfFirm) kfFirm.textContent = Math.round(firmTwhB) + ' TWh';
+    const kfNPV = el('kfNPVDiff');
+    if (kfNPV) kfNPV.textContent = '$' + Math.round(npvDiff) + 'B';
+}
+updateKeyFindings();
 
 // ===== ISO SELECTOR FACTORY =====
 function createIsoSelector(containerId, defaultIso, onChange) {
