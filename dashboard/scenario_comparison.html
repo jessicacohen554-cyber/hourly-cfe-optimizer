@@ -511,8 +511,7 @@ function renderAll(iso) {
     renderMacTimeline(iso);
     renderFirmChart(iso);
     renderGasChart(iso);
-    buildHeadlineCards();
-    updateKeyFindings();
+    buildMetricTiles();
 }
 
 slider.addEventListener('input', () => {
@@ -603,111 +602,107 @@ const CHART_DEFAULTS = {
 function yearLabel(d) { return d.year + '\n(' + d.threshold + '%)'; }
 function pctLabel(d) { return d.threshold + '%'; }
 
-// ===== HEADLINE CARDS (dynamic from data + slider target) =====
-function buildHeadlineCards() {
-    const container = document.getElementById('headlineCards');
-    const t = targetThreshold;
-
-    // Compare effective system cost at target threshold
-    let annualCostA = 0, annualCostB = 0;
+// ===== HERO STATS (all-region aggregates at 95%, static) =====
+function buildHeroStats() {
+    const container = document.getElementById('heroStats');
+    if (!container) return;
+    const t = 95;
+    let costA = 0, costB = 0, gasA = 0, gasB = 0;
     ISOS.forEach(iso => {
         const trajA = DATA.trajectories.pure_consequential[iso] || [];
-        const trajB = getScenarioB(iso);
-        const demandTwh = DATA.metadata.base_demand_twh[iso] || 0;
+        const trajB = DATA.trajectories.hourly_matching[iso] || [];
         const aT = trajA.find(d => d.threshold === t);
         const bT = trajB.find(d => d.threshold === t);
         if (aT && bT) {
-            annualCostA += aT.effective_cost * demandTwh;
-            annualCostB += bT.effective_cost * demandTwh;
+            costA += aT.effective_cost * (aT.demand_twh || DEMAND_TWH[iso]);
+            costB += bT.effective_cost * (bT.demand_twh || DEMAND_TWH[iso]);
+            gasA += (aT.new_gas_mw || 0);
+            gasB += (bT.new_gas_mw || 0);
         }
     });
-    const savingsB = Math.round((annualCostA - annualCostB) / 1000);
-
-    // PJM cost gap at target
-    const trajA_PJM = DATA.trajectories.pure_consequential.PJM || [];
-    const trajB_PJM = getScenarioB('PJM');
-    const aT_PJM = trajA_PJM.find(d => d.threshold === t);
-    const bT_PJM = trajB_PJM.find(d => d.threshold === t);
-    const costGapPJM = aT_PJM && bT_PJM ? Math.round(aT_PJM.effective_cost - bT_PJM.effective_cost) : 0;
-
-    // Cost multiplier — ratio of A to B
-    const costMultiplier = (annualCostB > 0) ? (annualCostA / annualCostB).toFixed(1) : '-';
-
-    // PJM solar overbuilding at target
-    const solarOverPJM = aT_PJM ? Math.round(aT_PJM.resource_twh.solar) : 0;
-    const solarHM_PJM = bT_PJM ? Math.round(bT_PJM.resource_twh.solar) : 0;
-
-    // 25-year NPV savings
-    const annuityFactor = (1 - Math.pow(1.05, -25)) / 0.05;
-    const npvSavings = Math.round(savingsB * annuityFactor);
-
-    // New gas capacity needed (cross-ISO)
-    let newGasA = 0, newGasB = 0;
-    ISOS.forEach(iso => {
-        const trajA = DATA.trajectories.pure_consequential[iso] || [];
-        const trajB = getScenarioB(iso);
-        const aT = trajA.find(d => d.threshold === t);
-        const bT = trajB.find(d => d.threshold === t);
-        if (aT) newGasA += (aT.new_gas_mw || 0);
-        if (bT) newGasB += (bT.new_gas_mw || 0);
-    });
-    const gasAvoidedGW = Math.round((newGasA - newGasB) / 1000);
-
-    const tLabel = t === Math.floor(t) ? t + '%' : t + '%';
+    const mult = costB > 0 ? (costA / costB).toFixed(2) : '—';
+    const savB = Math.round((costA - costB) / 1000);
+    const annuity = (1 - Math.pow(1.05, -25)) / 0.05;
+    const npv = Math.round(savB * annuity);
+    const gasGW = Math.round((gasA - gasB) / 1000);
     container.innerHTML = `
-        <div class="headline-card"><div class="val red">${costMultiplier}&times;</div><div class="lbl">Scenario A Cost Multiple at ${tLabel}</div></div>
-        <div class="headline-card"><div class="val amber">$${savingsB}B/yr</div><div class="lbl">Annual Savings (All ISOs)</div></div>
-        <div class="headline-card"><div class="val green">$${npvSavings}B</div><div class="lbl">25-Year NPV Savings (5% WACC)</div></div>
-        <div class="headline-card"><div class="val blue">$${costGapPJM}/MWh</div><div class="lbl">PJM Cost Gap at ${tLabel}</div></div>
-        <div class="headline-card"><div class="val cyan">${gasAvoidedGW > 0 ? gasAvoidedGW + ' GW' : '—'}</div><div class="lbl">New Gas Build Avoided by Scenario B</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#FF6B6B;">${mult}&times;</div><div class="stat-label">Cost Multiple (All Regions, 95%)</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#FCD34D;">$${savB}B/yr</div><div class="stat-label">Annual Savings</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#6EE7B7;">$${npv}B</div><div class="stat-label">25-Year NPV (5% WACC)</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#93C5FD;">${gasGW} GW</div><div class="stat-label">New Gas Build Avoided</div></div>
     `;
-
-    // Update gas callout text
-    const gapEl = document.getElementById('gasGapPJM');
-    if (gapEl && bT_PJM) gapEl.textContent = Math.round(bT_PJM.gas_backup_mw / 1000) + ' GW';
 }
 
-// ===== KEY FINDINGS HERO PANEL =====
-function updateKeyFindings() {
+// ===== METRIC TILES (region-specific, updates with ISO + slider) =====
+function buildMetricTiles() {
+    const container = document.getElementById('metricTiles');
+    if (!container) return;
+    const iso = globalIso;
     const t = targetThreshold;
-    const tLabel = t === Math.floor(t) ? t + '%' : t + '%';
-    const el = id => document.getElementById(id);
+    const tLabel = t + '%';
+    const trajA = DATA.trajectories.pure_consequential[iso] || [];
+    const trajB = getScenarioB(iso);
+    const aT = trajA.find(d => d.threshold === t);
+    const bT = trajB.find(d => d.threshold === t);
+    if (!aT || !bT) { container.innerHTML = ''; return; }
 
-    // Label
-    const kfLabel = el('kfThresholdLabel');
-    if (kfLabel) kfLabel.textContent = tLabel;
+    const demA = aT.demand_twh || DEMAND_TWH[iso];
+    const demB = bT.demand_twh || DEMAND_TWH[iso];
+    const annuity = (1 - Math.pow(1.05, -25)) / 0.05;
 
-    // Cross-ISO aggregated costs
-    let annualCostA_B = 0, annualCostB_B = 0;
-    let firmTwhB = 0;
-    const annuityFactor = (1 - Math.pow(1.05, -25)) / 0.05; // ~14.09
+    // 1. Cost multiplier
+    const mult = bT.effective_cost > 0 ? (aT.effective_cost / bT.effective_cost) : 1;
+    const multStr = mult.toFixed(2);
 
-    ISOS.forEach(iso => {
-        const trajA = DATA.trajectories.pure_consequential[iso] || [];
-        const trajB = getScenarioB(iso);
-        const demandTwh = DATA.metadata.base_demand_twh[iso] || 0;
-        const aT = trajA.find(d => d.threshold === t);
-        const bT = trajB.find(d => d.threshold === t);
-        if (aT && bT) {
-            annualCostA_B += aT.effective_cost * demandTwh / 1000; // $B
-            annualCostB_B += bT.effective_cost * demandTwh / 1000;
-        }
-        if (bT) firmTwhB += (bT.firm_total_twh || 0);
-    });
+    // 2. Annual savings (this region)
+    const annSave = (aT.effective_cost - bT.effective_cost) * demA; // $/MWh * TWh = $M
+    const annSaveB = (annSave / 1000).toFixed(1); // $B
 
-    const savingsAnnual = annualCostA_B - annualCostB_B;
-    const multiplier = annualCostB_B > 0 ? (annualCostA_B / annualCostB_B).toFixed(1) : '—';
-    const npvDiff = savingsAnnual * annuityFactor;
+    // 3. NPV savings
+    const npvB = (annSave * annuity / 1000).toFixed(0); // $B
 
-    // Update text
-    const kfMult = el('kfMultiplier');
-    if (kfMult) kfMult.textContent = multiplier;
-    const kfSav = el('kfSavings');
-    if (kfSav) kfSav.textContent = '$' + Math.round(savingsAnnual) + 'B/yr';
-    const kfFirm = el('kfFirmTwh');
-    if (kfFirm) kfFirm.textContent = Math.round(firmTwhB) + ' TWh';
-    const kfNPV = el('kfNPVDiff');
-    if (kfNPV) kfNPV.textContent = '$' + Math.round(npvDiff) + 'B';
+    // 4. Cost gap $/MWh
+    const gap = (aT.effective_cost - bT.effective_cost).toFixed(1);
+
+    // 5. Gas avoided
+    const gasA = aT.new_gas_mw || 0;
+    const gasB = bT.new_gas_mw || 0;
+    const gasAvoided = ((gasA - gasB) / 1000).toFixed(1);
+
+    // 6. Stranded clean gen (curtailment)
+    const totalResA = Object.values(aT.resource_twh).reduce((s,v) => s + v, 0);
+    const totalResB = Object.values(bT.resource_twh).reduce((s,v) => s + v, 0);
+    const matchedA = t / 100 * demA;
+    const matchedB = t / 100 * demB;
+    const strandCleanA = Math.max(0, totalResA - matchedA);
+    const strandCleanB = Math.max(0, totalResB - matchedB);
+
+    // 7. Stranded gas capacity (total gas backup)
+    const totalGasA = aT.gas_backup_mw || 0;
+    const totalGasB = bT.gas_backup_mw || 0;
+
+    // Winner logic
+    const bWins = mult > 1.01;
+    const aWins = mult < 0.99;
+    const winBadge = bWins
+        ? '<span class="winner-badge b-wins">B Wins</span>'
+        : aWins ? '<span class="winner-badge a-wins">A Wins</span>'
+        : '<span class="winner-badge tie">Tie</span>';
+
+    function tile(label, val, valColor, sub) {
+        return `<div class="metric-tile"><div class="tile-label">${label}</div><div class="tile-val" style="color:${valColor};">${val}</div><div class="tile-sub">${sub}</div></div>`;
+    }
+
+    container.innerHTML = [
+        tile('Cost Multiple at ' + tLabel, multStr + '&times;', mult > 1.01 ? '#DC2626' : mult < 0.99 ? '#16A34A' : '#6B7280', iso + ' &mdash; Scenario A vs B'),
+        tile(iso + ' Annual Savings', '$' + annSaveB + 'B/yr', parseFloat(annSaveB) > 0 ? '#16A34A' : '#DC2626', 'Scenario B saves ' + gap + ' $/MWh'),
+        tile(iso + ' NPV Savings (25yr)', '$' + npvB + 'B', parseFloat(npvB) > 0 ? '#16A34A' : '#DC2626', 'At 5% WACC discount rate'),
+        tile(iso + ' Cost Gap', '$' + gap + '/MWh', parseFloat(gap) > 0 ? '#DC2626' : '#16A34A', 'A: $' + aT.effective_cost.toFixed(1) + ' vs B: $' + bT.effective_cost.toFixed(1)),
+        tile('New Gas Build Avoided', gasAvoided + ' GW', parseFloat(gasAvoided) > 0 ? '#16A34A' : '#DC2626', '<span class="tile-tag tag-a">A: ' + (gasA/1000).toFixed(0) + ' GW</span> <span class="tile-tag tag-b">B: ' + (gasB/1000).toFixed(0) + ' GW</span>'),
+        tile('Stranded Clean Gen', Math.round(strandCleanA - strandCleanB) + ' TWh', strandCleanA > strandCleanB ? '#DC2626' : '#16A34A', '<span class="tile-tag tag-a">A: ' + Math.round(strandCleanA) + ' TWh</span> <span class="tile-tag tag-b">B: ' + Math.round(strandCleanB) + ' TWh</span>'),
+        tile('Gas Capacity', Math.round((totalGasA - totalGasB)/1000) + ' GW gap', totalGasA > totalGasB ? '#DC2626' : '#16A34A', '<span class="tile-tag tag-a">A: ' + (totalGasA/1000).toFixed(0) + ' GW</span> <span class="tile-tag tag-b">B: ' + (totalGasB/1000).toFixed(0) + ' GW</span>'),
+        tile('Winner at ' + tLabel, winBadge, '#1A2744', 'Delta: ' + Math.abs(parseFloat(gap)).toFixed(1) + ' $/MWh &middot; ' + Math.abs(parseFloat(annSaveB)).toFixed(1) + 'B/yr'),
+    ].join('');
 }
 
 // ===== ISO SELECTOR FACTORY =====
@@ -1288,19 +1283,100 @@ function renderFirmChart(iso) {
 }
 // Firm init called from global renderAll()
 
-// ===== 7. DOMINO TABLES =====
-function buildDominoTable(tableId, queue) {
-    const table = document.getElementById(tableId);
+// ===== 7. SEQUENTIAL DEPLOYMENT QUEUE =====
+// Build queue from trajectory data with sequential constraint per ISO.
+// Each ISO must complete prior thresholds before advancing.
+// First step per ISO = existing grid mix → 50%.
+function buildSequentialQueue() {
+    const isoSteps = {};
+    const WHOLESALE_EST = { CAISO: 45, ERCOT: 30, PJM: 35, NYISO: 40, NEISO: 38 };
+    const EMISSION_EST = 0.45; // tCO2/MWh average displaced
+
+    ISOS.forEach(iso => {
+        const traj = DATA.trajectories.pure_consequential[iso] || [];
+        if (traj.length < 2) return;
+        const steps = [];
+        const gridMix = GRID_MIX[iso] || {};
+        const existingCleanPct = Object.values(gridMix).reduce((s, v) => s + v, 0);
+        const baseDem = DEMAND_TWH[iso];
+
+        // Step 0: existing → 50%
+        const first = traj[0];
+        const deltaRes0 = {};
+        for (const res of Object.keys(first.resource_twh)) {
+            const existing = (gridMix[res] || 0) / 100 * baseDem;
+            deltaRes0[res] = Math.max(0, (first.resource_twh[res] || 0) - existing);
+        }
+        const pctGain = Math.max(0, 50 - existingCleanPct);
+        const wholCost = WHOLESALE_EST[iso] || 35;
+        const costDelta0 = Math.max(0, first.effective_cost - wholCost) * (first.demand_twh || baseDem);
+        const co2Delta0 = pctGain / 100 * (first.demand_twh || baseDem) * EMISSION_EST;
+        const mac0 = co2Delta0 > 0.01 ? costDelta0 / co2Delta0 : 0;
+
+        steps.push({
+            iso: iso,
+            zone_label: Math.round(existingCleanPct) + '\u219250%',
+            marginal_mac: mac0,
+            delta_resources: deltaRes0,
+            delta_gas_mw: (first.gas_backup_mw || 0) - (first.gas_backup_mw || 0), // net 0 for base
+            is_base: true,
+        });
+
+        // Consecutive threshold steps
+        for (let i = 0; i < traj.length - 1; i++) {
+            const from = traj[i];
+            const to = traj[i + 1];
+            const dr = {};
+            for (const res of Object.keys(to.resource_twh)) {
+                dr[res] = (to.resource_twh[res] || 0) - (from.resource_twh[res] || 0);
+            }
+            steps.push({
+                iso: iso,
+                zone_label: from.threshold + '\u2192' + to.threshold + '%',
+                marginal_mac: to.stepwise_mac || 0,
+                delta_resources: dr,
+                delta_gas_mw: (to.gas_backup_mw || 0) - (from.gas_backup_mw || 0),
+            });
+        }
+        isoSteps[iso] = steps;
+    });
+
+    // Merge with sequential constraint: greedy cheapest-MAC first, but each ISO's
+    // steps must be taken in order (can't do 55→60% before 50→55%).
+    const ptrs = {};
+    ISOS.forEach(iso => { ptrs[iso] = 0; });
+    const queue = [];
+    const maxRows = 45;
+    while (queue.length < maxRows) {
+        let bestStep = null, bestIso = null, bestMac = Infinity;
+        for (const iso of ISOS) {
+            const steps = isoSteps[iso];
+            if (!steps || ptrs[iso] >= steps.length) continue;
+            const step = steps[ptrs[iso]];
+            const mac = step.marginal_mac;
+            if (mac < bestMac || (mac === bestMac && !bestStep)) {
+                bestMac = mac;
+                bestStep = step;
+                bestIso = iso;
+            }
+        }
+        if (!bestStep) break;
+        queue.push(bestStep);
+        ptrs[bestIso]++;
+    }
+    return queue;
+}
+
+function renderDominoTable() {
+    const table = document.getElementById('dominoTableA');
     if (!table) return;
-    let html = '<thead><tr><th>#</th><th>ISO</th><th>Zone</th><th>MAC</th><th>Primary Resource</th><th>&Delta;Gas</th></tr></thead><tbody>';
-    let cumCo2 = 0;
+    const queue = buildSequentialQueue();
+    let html = '<thead><tr><th>#</th><th>ISO</th><th>Zone</th><th>MAC</th><th>Primary Resource</th><th>\u0394Gas</th></tr></thead><tbody>';
     queue.forEach((step, i) => {
-        if (i >= 29) return;
-        cumCo2 += step.co2_displaced_mt;
-        const mac = step.marginal_mac >= 9999 ? '&infin;' : '$' + Math.round(step.marginal_mac).toLocaleString();
+        const mac = step.marginal_mac >= 9999 ? '\u221E' : '$' + Math.round(step.marginal_mac).toLocaleString();
         const macClass = step.marginal_mac < 0 ? 'mac-cheap' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
 
-        const deltas = step.delta_resources;
+        const deltas = step.delta_resources || {};
         const sorted = Object.entries(deltas).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
         let primaryParts = [];
         sorted.forEach(([res, val]) => {
@@ -1310,21 +1386,23 @@ function buildDominoTable(tableId, queue) {
             primaryParts.push(name + ' ' + (val > 0 ? '+' : '') + Math.round(val));
         });
 
-        const gasDir = step.delta_gas_mw > 0 ? 'positive' : step.delta_gas_mw < 0 ? 'negative' : '';
-        html += `<tr>
+        const dg = step.delta_gas_mw || 0;
+        const gasDir = dg > 500 ? 'positive' : dg < -500 ? 'negative' : '';
+        const baseTag = step.is_base ? ' style="background:rgba(14,165,233,0.04);"' : '';
+        html += `<tr${baseTag}>
             <td class="num">${i+1}</td>
             <td>${step.iso}</td>
             <td>${step.zone_label}</td>
             <td class="${macClass} num">${mac}</td>
             <td>${primaryParts.join(', ')}</td>
-            <td class="${gasDir} num">${step.delta_gas_mw > 0 ? '+' : ''}${(step.delta_gas_mw/1000).toFixed(1)}k</td>
+            <td class="${gasDir} num">${Math.abs(dg) < 500 ? '—' : (dg > 0 ? '+' : '') + (dg/1000).toFixed(1) + 'k'}</td>
         </tr>`;
     });
     html += '</tbody>';
     table.innerHTML = html;
 }
 
-buildDominoTable('dominoTableA', DATA.queue_a);
+renderDominoTable();
 
 // ===== 8. FOAK → NOAK LEARNING CURVE CHART =====
 // Uses data from shared-data.js: FOAK_NOAK_YEARS, CLEAN_FIRM_LEARNING, GAS_TRUE_COST
@@ -1458,6 +1536,7 @@ function renderFoakNOAKChart() {
     });
 }
 renderFoakNOAKChart();
+buildHeroStats();
 
 // ===== GLOBAL ISO SELECTOR — single toggle for ALL charts =====
 createIsoSelector('globalIsoSelector', 'PJM', iso => renderAll(iso));
