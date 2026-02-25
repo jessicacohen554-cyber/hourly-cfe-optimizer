@@ -256,24 +256,31 @@ def learning_fraction(threshold):
     """Map CFE threshold to FOAK→NOAK learning curve fraction [0, 1].
 
     0 = pure FOAK (High cost), 1 = full NOAK (Low cost).
-    Uses a slightly convex ramp with a 5% floor — ensures some early
-    investment to seed the learning curve, with accelerating cost reduction
-    as cumulative deployment drives Wright's Law doublings.
+    No real learning below 70% (pre-2030) — first SMRs won't deploy until
+    ~2030, so costs stay at FOAK floor. Once deployment begins at ~70%/2029,
+    concave ramp (exponent 0.8) reflects Wright's Law: early factory
+    doublings (1→2→4→8 units) drive rapid cost decline, decelerating as
+    each subsequent doubling requires larger cumulative deployment.
 
     Resulting nuclear LCOE trajectory (PJM example, H=$160 → L=$72):
-      50% (2025): $156/MWh — FOAK, expensive but invested
-      70% (2029): $140/MWh — early learning
-      80% (2032): $121/MWh — significant cost reduction
-      90% (2040): $98/MWh  — approaching NOAK
-      95% (2045): $86/MWh  — near NOAK
+      50% (2025): $156/MWh — FOAK, no SMR deployment yet
+      60% (2027): $156/MWh — FOAK, still pre-deployment
+      70% (2029): $156/MWh — FOAK, first units just starting
+      80% (2032): $136/MWh — early learning (first doublings)
+      90% (2040): $95/MWh  — significant cost reduction
+      95% (2045): $83/MWh  — near NOAK
       100%(2050): $72/MWh  — full NOAK
     """
     t_norm = (threshold - 50) / 50  # 50%→0, 100%→1
-    # Floor of 5% ensures some cost reduction even at earliest thresholds,
-    # reflecting minimum FOAK investment to begin the learning curve.
-    # Exponent 1.8 creates a convex ramp: slow start, accelerating through
-    # mid-range (80-95%), converging on NOAK at high thresholds.
-    return 0.05 + 0.95 * (t_norm ** 1.8)
+    # No real learning below 70% — SMRs not yet deployed, FOAK floor only.
+    if t_norm <= 0.4:  # ≤70% (pre-2030)
+        return 0.05
+    # Active learning range: 70%→100%, rescaled to 0→1.
+    # Exponent 0.8 creates a concave ramp: fast early learning as initial
+    # factory doublings drive rapid cost decline, decelerating as later
+    # doublings require larger cumulative deployment volumes.
+    active = (t_norm - 0.4) / 0.6  # 70%→0, 100%→1
+    return 0.05 + 0.95 * (active ** 0.8)
 
 
 # ============================================================================
@@ -2041,6 +2048,13 @@ def main():
                 ccs_twh = d['resource_twh'].get('ccs_ccgt', 0)
                 existing_cf_twh = GRID_MIX_SHARES[iso].get('clean_firm', 0) / 100.0 * base_demand_twh
                 firm_total_twh = max(0, cf_twh - existing_cf_twh) + ccs_twh
+                # Annual cost ($B) = effective_cost ($/MWh) × demand (TWh) × 1e6 / 1e9
+                annual_cost_billion = d['effective_cost'] * demand_twh / 1000.0
+                # 25-year NPV ($B) at 5% real WACC
+                # Annuity factor = (1 - (1+r)^-n) / r
+                _r, _n = 0.05, 25
+                annuity_factor = (1 - (1 + _r) ** -_n) / _r  # ~14.09
+                npv_25yr_billion = annual_cost_billion * annuity_factor
                 iso_traj.append({
                     'threshold': t,
                     'year': SBTI_YEAR_MAP.get(t, 2050),
@@ -2048,6 +2062,8 @@ def main():
                     'effective_cost': d['effective_cost'],
                     'total_cost': d['total_cost'],
                     'incremental': d['incremental'],
+                    'annual_cost_billion': round(annual_cost_billion, 2),
+                    'npv_25yr_billion': round(npv_25yr_billion, 1),
                     'resource_twh': d['resource_twh'],
                     'battery_twh': d.get('battery_twh', 0) + d.get('battery8_twh', 0),
                     'ldes_twh': d.get('ldes_twh', 0),
