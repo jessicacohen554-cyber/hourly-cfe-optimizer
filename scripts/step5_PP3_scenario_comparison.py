@@ -214,7 +214,7 @@ SCENARIO_A = {
     'toggles': {
         'ren': 'L',        # Low renewable (cheap solar/wind — what they chase)
         'firm': 'H',       # High firm gen (FOAK — never invested, no learning)
-        'batt': 'M',       # Medium battery
+        'batt': 'L',       # Low battery (mature tech, already down learning curve)
         'ldes_lvl': 'H',   # High LDES (FOAK — no learning curve)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
@@ -239,7 +239,7 @@ SCENARIO_B = {
     'toggles': {
         'ren': 'L',        # Low renewable (mature tech, already cheap)
         'firm': 'H',       # High firm gen (FOAK at start, learning curve drives to NOAK)
-        'batt': 'M',       # Medium battery
+        'batt': 'L',       # Low battery (mature tech, already down learning curve)
         'ldes_lvl': 'H',   # High LDES (FOAK → NOAK via learning)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
@@ -1484,7 +1484,7 @@ def find_scenario_b_mixes(feasible_mixes):
     # For finding the 95% target, use NOAK (Low) prices — this is what the grid
     # looks like when learning curve investments have paid off
     NOAK_SENS = {
-        'ren': 'L', 'firm': 'L', 'batt': 'M', 'ldes_lvl': 'L',
+        'ren': 'L', 'firm': 'L', 'batt': 'L', 'ldes_lvl': 'L',
         'fuel': 'M', 'tx': 'M', 'ccs': 'L', 'q45': '1', 'geo': 'L',
     }
 
