@@ -493,6 +493,62 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 **Files changed**: `scripts/step5_PP5_compute_mac_stats.py` — all MAC computation functions (`add_mac_column`, `compute_stepwise_fan`, `compute_monotonic_envelope`, `compute_path_constrained_mac`, demand-growth MAC) now use `cost_effective_cost` instead of `cost_incremental`. No changes to Steps 1-4 or parquet outputs needed — only PP5 re-run required.
 
+### FOAK→NOAK Learning Curve — Concave Ramp with Delayed Start (Feb 25, 2026)
+
+**Decision**: Changed learning curve from convex (exponent 1.8) to concave (exponent 0.8) with delayed start — no learning below 70% threshold (~2029). First SMRs won't deploy until ~2030, so costs stay at FOAK floor through the early thresholds.
+
+**Rationale**: Wright's Law doublings happen fast early (1→2→4→8 factory-built SMR units) then slow down. But learning can't begin before deployment — NRC SMR licensing timeline means first commercial units ~2030. The concave ramp reflects rapid cost decline once factory production begins, with no learning in the pre-deployment period.
+
+**Implementation**: `learning_fraction()` returns flat 0.05 (FOAK floor) for thresholds ≤70%, then concave ramp (exponent 0.8) from 70%→100% reaching full NOAK.
+
+**Nuclear LCOE trajectory (PJM, H=$160 → L=$72)**:
+| Threshold | Year | Fraction | LCOE |
+|---|---|---|---|
+| 50% | 2025 | 0.05 | $156 |
+| 60% | 2027 | 0.05 | $156 |
+| 70% | 2029 | 0.05 | $156 |
+| 75% | 2030 | 0.28 | $136 |
+| 80% | 2032 | 0.44 | $121 |
+| 90% | 2040 | 0.74 | $95 |
+| 95% | 2045 | 0.87 | $83 |
+| 100% | 2050 | 1.00 | $72 |
+
+**Impact**: Scenario B (Hourly Matching) firm costs stay high through 70%/2029 (same as Scenario A), then decline rapidly. The cost advantage of Scenario B over A emerges at 75%+ when learning kicks in. More realistic timeline — no free FOAK cost reduction before deployment exists.
+
+**Files changed**: `scripts/step5_PP3_scenario_comparison.py` — `learning_fraction()` function. PP3 re-run required.
+
+### Compressed Day Chart — Curtailment Double-Count Fix (Feb 25, 2026)
+
+**Decision**: Fix the compressed day chart to:
+1. Show "Total Generation" line (total clean energy output before curtailment) instead of "Demand" line
+2. Net out storage charging from displayed surplus to eliminate double-count
+
+**Problem**: Per-resource surplus arrays included energy absorbed by storage (battery/LDES charging). That same energy was also shown as negative charging bars below the x-axis — double-counting the same energy.
+
+**Fix**:
+- Compute net curtailment factor: `(grossSurplus - totalCharging) / grossSurplus` per hour
+- Apply proportionally to each resource's surplus so only TRUE curtailment (not stored) is shown as hatched area
+- Replace "Demand" line with "Total Generation" = sum of primary resource matched + gross surplus (total clean output before curtailment/storage)
+
+**Files changed**: `dashboard/dashboard.html` — compressed day chart rendering. No PP1 changes needed.
+
+### Annual Cost + 25-Year NPV Metrics (Feb 25, 2026)
+
+**Decision**: Add `annual_cost_billion` ($B/yr) and `npv_25yr_billion` ($B, 25-year NPV) to PP3 trajectory entries alongside existing $/MWh metrics.
+
+**Formulas**:
+- `annual_cost_billion = effective_cost ($/MWh) × demand_twh / 1000`
+- `npv_25yr_billion = annual_cost × annuity_factor(5%, 25)` where annuity factor ≈ 14.09
+- Uses 5% real WACC (standard utility/infrastructure discount rate)
+
+**Rationale**: $/MWh is useful for comparison but doesn't convey scale. Annual $B shows the absolute commitment at each threshold. 25-year NPV shows the total investment required, useful for investment framing and policy cost-benefit analysis.
+
+**Files changed**: `scripts/step5_PP3_scenario_comparison.py` — trajectory entry construction. PP3 re-run required.
+
+### Gas Capacity Costs — Already Integrated (Feb 25, 2026)
+
+**Status**: Gas backup capacity costs (both existing FOM and new CCGT build) are already fully integrated into total system cost in PP3's `compute_mix_cost()`. New CCGT costs range from $88-114/kW-yr by ISO. No additional changes needed.
+
 ### Optimizer Statistical Properties (Feb 16, 2026)
 
 **Search architecture**: 3-phase hierarchical grid search (10% → 5% → 1% resolution)
