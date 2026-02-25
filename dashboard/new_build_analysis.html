@@ -524,8 +524,8 @@ body { background: #F7F8FC; }
         <div class="track-panel ecf">
             <h3>With Existing Clean</h3>
             <p class="panel-sub">Existing nuclear, hydro, solar, wind credited at wholesale + EAC premium</p>
-            <div class="cost-big" id="ecfCost">$72.3 <span class="unit">$/MWh</span></div>
-            <div class="cost-range" id="ecfRange">Medium cost scenario</div>
+            <div class="cost-big" id="ecfCost">$75.5 <span class="unit">$/MWh</span></div>
+            <div class="cost-range" id="ecfRange">Base: $72.3 + $3.2 EAC premium</div>
             <div class="mix-bar-wrap">
                 <div class="mix-bar-label">Resource Mix</div>
                 <div class="mix-bar" id="ecfMixBar"></div>
@@ -536,7 +536,7 @@ body { background: #F7F8FC; }
         <!-- Delta -->
         <div class="delta-panel">
             <div class="delta-arrow">&#8644;</div>
-            <div class="delta-value" id="deltaValue">+$17.4</div>
+            <div class="delta-value" id="deltaValue">+$21.1</div>
             <div class="delta-label">New-build premium<br>per MWh</div>
         </div>
 
@@ -544,8 +544,8 @@ body { background: #F7F8FC; }
         <div class="track-panel nb">
             <h3>New Build Only</h3>
             <p class="panel-sub">All generation from new solar, wind, clean firm, storage — priced at LCOE</p>
-            <div class="cost-big" id="nbCost">$89.7 <span class="unit">$/MWh</span></div>
-            <div class="cost-range" id="nbRange">P10: $75 &mdash; P50: $90 &mdash; P90: $118</div>
+            <div class="cost-big" id="nbCost">$96.6 <span class="unit">$/MWh</span></div>
+            <div class="cost-range" id="nbRange">P10: $77 &mdash; P50: $89 &mdash; P90: $113</div>
             <div class="mix-bar-wrap">
                 <div class="mix-bar-label">Resource Mix</div>
                 <div class="mix-bar" id="nbMixBar"></div>
@@ -717,15 +717,15 @@ body { background: #F7F8FC; }
     <h2>4. The Bottom Line</h2>
     <div class="metric-strip" style="margin-bottom:24px;">
         <div class="metric-item" style="background:rgba(255,255,255,0.08);">
-            <div class="val" style="color:#38bdf8;" id="blEcfCost">$72</div>
+            <div class="val" style="color:#38bdf8;" id="blEcfCost">$76</div>
             <div class="lbl" style="color:rgba(255,255,255,0.6);">With Existing at 75%</div>
         </div>
         <div class="metric-item" style="background:rgba(255,255,255,0.08);">
-            <div class="val" style="color:#F59E0B;" id="blNbCost">$90</div>
+            <div class="val" style="color:#F59E0B;" id="blNbCost">$97</div>
             <div class="lbl" style="color:rgba(255,255,255,0.6);">New Build Only at 75%</div>
         </div>
         <div class="metric-item" style="background:rgba(255,255,255,0.08);">
-            <div class="val" style="color:#22C55E;" id="blSaving">$18</div>
+            <div class="val" style="color:#22C55E;" id="blSaving">$21</div>
             <div class="lbl" style="color:rgba(255,255,255,0.6);">Savings per MWh</div>
         </div>
         <div class="metric-item" style="background:rgba(255,255,255,0.08);">
@@ -733,7 +733,7 @@ body { background: #F7F8FC; }
             <div class="lbl" style="color:rgba(255,255,255,0.6);">Merchant supply ceiling</div>
         </div>
     </div>
-    <p>Procuring from existing clean generation is significantly cheaper — but only while supply lasts. PJM has roughly 90 TWh of uncontracted merchant clean energy. As aggregate corporate demand approaches that ceiling, the cost advantage narrows and eventually disappears.</p>
+    <p>Procuring from existing clean generation saves ~$21/MWh compared to an all new-build portfolio — but only while supply lasts. PJM has roughly 90 TWh of uncontracted merchant clean energy. As aggregate corporate demand approaches that ceiling, the cost advantage narrows and eventually disappears.</p>
     <p style="margin-top:12px;">The economically rational strategy: <strong>secure existing clean generation through EAC premiums now</strong> while those premiums are low ($3–15/MWh), and <strong>complement with new-build</strong> where existing supply is insufficient. Attempting to procure only new-build accelerates wholesale price decline, threatens existing nuclear viability, and ultimately increases total system cost.</p>
     <p style="margin-top:12px;">Clean premiums are not a subsidy — they're a <strong>market signal</strong> that existing clean generation has value beyond the wholesale energy market. Without that signal, the cheapest clean electrons in the system retire, and everyone pays more.</p>
 </div>
@@ -767,9 +767,36 @@ var NUCLEAR_OP_COST = 33;
 var WHOLESALE_PJM = 34;
 var LMP_BY_THR = {50:36.86,55:35.53,60:34.13,65:32.64,70:33.27,75:31.55,80:29.78,85:25.0,87.5:24.88,90:23.57,92.5:20.31,95:18.82,97.5:11.36,99:6.80};
 
-var ECF_COSTS = typeof EFFECTIVE_COST_DATA !== 'undefined' ? EFFECTIVE_COST_DATA.PJM : [];
-var ECF_MIX = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA.PJM : {};
-var ALL_THR = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,100];
+var ALL_THR = [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,100];
+
+// Inline PJM data (authoritative — from optimizer results, embedded to avoid CDN/load failures)
+var ECF_COSTS_INLINE = [72.3, 72.3, 72.3, 72.3, 72.3, 72.3, 72.3, 73.1, 73.1, 73.1, 74.7, 75.1, 79.9, 85.5, null];
+var ECF_MIX_INLINE = {
+    clean_firm: [62, 67, 74, 79, 83, 88, 88, 81, 87, 91, 88, 92, 87, 86, 0],
+    solar:      [30, 25, 19, 14, 10,  6,  4, 14,  8,  4,  7,  3,  8, 10, 0],
+    wind:       [ 7,  7,  6,  6,  6,  5,  7,  4,  4,  4,  4,  4,  4,  3, 0],
+    ccs_ccgt:   [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0],
+    hydro:      [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 0],
+    battery:    [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0],
+    ldes:       [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0]
+};
+var NB_INLINE = {
+    '50':   {cost:110.31, mix:{clean_firm:72,solar:28}, p10:86.52, p50:97.58, p90:119.55},
+    '55':   {cost:106.53, mix:{clean_firm:79,solar:21}, p10:83.57, p50:94.69, p90:116.68},
+    '60':   {cost:103.48, mix:{clean_firm:84,solar:16}, p10:81.08, p50:92.24, p90:114.26},
+    '65':   {cost:100.82, mix:{clean_firm:89,solar:11}, p10:78.95, p50:91.73, p90:112.18},
+    '70':   {cost:98.59,  mix:{clean_firm:93,solar:7},  p10:77.94, p50:90.42, p90:112.09},
+    '75':   {cost:96.63,  mix:{clean_firm:97,solar:3},  p10:76.51, p50:88.85, p90:112.69},
+    '80':   {cost:95.0,   mix:{clean_firm:100},         p10:76.97, p50:88.28, p90:114.3},
+    '85':   {cost:97.02,  mix:{clean_firm:86,solar:14}, p10:76.11, p50:89.08, p90:115.56},
+    '87.5': {cost:94.17,  mix:{clean_firm:93,solar:7},  p10:75.53, p50:88.94, p90:115.25},
+    '90':   {cost:93.37,  mix:{clean_firm:97,solar:3},  p10:75.39, p50:89.73, p90:117.7},
+    '92.5': {cost:94.7,   mix:{clean_firm:86,solar:7,wind:7}, p10:77.44, p50:92.84, p90:121.58}
+};
+
+// Use shared-data.js if loaded, otherwise fall back to inline
+var ECF_COSTS = (typeof EFFECTIVE_COST_DATA !== 'undefined' && EFFECTIVE_COST_DATA.PJM) ? EFFECTIVE_COST_DATA.PJM : ECF_COSTS_INLINE;
+var ECF_MIX = (typeof RESOURCE_MIX_DATA !== 'undefined' && RESOURCE_MIX_DATA.PJM) ? RESOURCE_MIX_DATA.PJM : ECF_MIX_INLINE;
 
 var MIX_COLORS = {
     clean_firm: '#1E3A5F', solar: '#F59E0B', wind: '#22C55E',
@@ -788,15 +815,25 @@ var PJM_AVAILABLE = 90;
 var PJM_CI_SHARE = 0.62;
 var PJM_DEMAND = 800;
 
+// track_results.json is optional — inline data is the primary source now
+// If track_results.json loads, it can override inline data
 var trackData = null;
 
 // ============================================================================
-// DATA LOADING
+// DATA LOADING — start rendering immediately with inline data
 // ============================================================================
+// Init immediately with inline data (no waiting for fetch)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { initPage(); });
+} else {
+    initPage();
+}
+
+// Optionally fetch track_results.json in background (not required)
 fetch('track_results.json')
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(d) { trackData = d; initPage(); })
-    .catch(function(err) { console.warn('track_results.json:', err); initPage(); });
+    .then(function(d) { trackData = d; })
+    .catch(function(err) { console.warn('track_results.json not loaded (OK — using inline data):', err.message); });
 
 // ============================================================================
 // INITIALIZATION
@@ -952,45 +989,57 @@ function renderMixBar(barEl, legendEl, segs) {
 // TRACK DATA HELPERS
 // ============================================================================
 function getNbCost(thr) {
-    if (!trackData || !trackData.results || !trackData.results.PJM) return null;
-    var nb = trackData.results.PJM.newbuild;
-    if (!nb) return null;
     var key = String(thr % 1 === 0 ? Math.floor(thr) : thr);
-    var d = nb[key];
-    if (!d || !d.scenarios) return null;
-    var keys = Object.keys(d.scenarios);
-    for (var i = 0; i < keys.length; i++) {
-        if (d.scenarios[keys[i]] && d.scenarios[keys[i]].costs)
-            return d.scenarios[keys[i]].costs.effective_cost;
+    // Try inline data first (always available)
+    if (NB_INLINE[key]) return NB_INLINE[key].cost;
+    // Fallback to track_results.json if loaded
+    if (trackData && trackData.results && trackData.results.PJM && trackData.results.PJM.newbuild) {
+        var d = trackData.results.PJM.newbuild[key];
+        if (d && d.scenarios) {
+            var sKeys = Object.keys(d.scenarios);
+            for (var i = 0; i < sKeys.length; i++) {
+                if (d.scenarios[sKeys[i]] && d.scenarios[sKeys[i]].costs)
+                    return d.scenarios[sKeys[i]].costs.effective_cost;
+            }
+        }
     }
     return null;
 }
 
 function getNbSweep(thr) {
-    if (!trackData || !trackData.results || !trackData.results.PJM) return null;
-    var nb = trackData.results.PJM.newbuild;
-    if (!nb) return null;
     var key = String(thr % 1 === 0 ? Math.floor(thr) : thr);
-    var d = nb[key];
-    if (!d || !d.sweep) return null;
-    return {
-        p10: d.sweep.p10 ? d.sweep.p10.effective_cost : null,
-        p50: d.sweep.p50 ? d.sweep.p50.effective_cost : null,
-        p90: d.sweep.p90 ? d.sweep.p90.effective_cost : null
-    };
+    // Try inline data first
+    if (NB_INLINE[key]) {
+        return { p10: NB_INLINE[key].p10, p50: NB_INLINE[key].p50, p90: NB_INLINE[key].p90 };
+    }
+    // Fallback to track_results.json
+    if (trackData && trackData.results && trackData.results.PJM && trackData.results.PJM.newbuild) {
+        var d = trackData.results.PJM.newbuild[key];
+        if (d && d.sweep) {
+            return {
+                p10: d.sweep.p10 ? d.sweep.p10.effective_cost : null,
+                p50: d.sweep.p50 ? d.sweep.p50.effective_cost : null,
+                p90: d.sweep.p90 ? d.sweep.p90.effective_cost : null
+            };
+        }
+    }
+    return null;
 }
 
 function getNbMix(thr) {
-    if (!trackData || !trackData.results || !trackData.results.PJM) return null;
-    var nb = trackData.results.PJM.newbuild;
-    if (!nb) return null;
     var key = String(thr % 1 === 0 ? Math.floor(thr) : thr);
-    var d = nb[key];
-    if (!d || !d.scenarios) return null;
-    var keys = Object.keys(d.scenarios);
-    for (var i = 0; i < keys.length; i++) {
-        if (d.scenarios[keys[i]] && d.scenarios[keys[i]].resource_mix)
-            return d.scenarios[keys[i]].resource_mix;
+    // Try inline data first
+    if (NB_INLINE[key]) return NB_INLINE[key].mix;
+    // Fallback to track_results.json
+    if (trackData && trackData.results && trackData.results.PJM && trackData.results.PJM.newbuild) {
+        var d = trackData.results.PJM.newbuild[key];
+        if (d && d.scenarios) {
+            var sKeys = Object.keys(d.scenarios);
+            for (var i = 0; i < sKeys.length; i++) {
+                if (d.scenarios[sKeys[i]] && d.scenarios[sKeys[i]].resource_mix)
+                    return d.scenarios[sKeys[i]].resource_mix;
+            }
+        }
     }
     return null;
 }
