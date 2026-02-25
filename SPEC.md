@@ -178,6 +178,53 @@ Each dashboard page uses a specific track (or combination) for its data and visu
 | Page | File | Notes |
 |---|---|---|
 | Cost to Replace | `cost_to_replace.html` | CTR vs ECF — replacement cost of dispatchable clean |
+| New Build Analysis | `new_build_analysis.html` | NB vs ECF — procurement strategy, EAC scarcity scaling, LMP feedback loop (**PJM only**) |
+
+#### Decision 5e: New Build Analysis Page Design (Feb 25, 2026)
+
+**Page**: `new_build_analysis.html` — "The Build-or-Buy Decision"
+**Scope**: PJM only. Scrollytell hybrid (Sections 1–2 interactive, Section 3 narrative scroll).
+
+**Section 1: The Procurement Choice** (interactive)
+- Target slider: range input snapping to 11 PJM thresholds (50–92.5%)
+- SBTi year label displayed alongside slider value
+- Side-by-side comparison: Track 1 (ECF, "With Existing Clean") vs Track 2 (NB, "New Build Only")
+- Each side shows: effective cost ($/MWh), resource mix stacked bar, P10/P50/P90 sweep bands
+- EAC premium sliders with dynamic defaults:
+  - Nuclear: auto = max(0, $33/MWh operating cost + 10% margin − LMP(threshold))
+  - Hydro: $3/MWh default
+  - Existing solar/wind: $5/MWh default (REC market proxy)
+- New-build resources priced at LCOE; existing resources at wholesale + EAC premium
+- "Additionality Premium" callout: $/MWh delta between tracks
+
+**Section 2: The Scaling Curve** (interactive)
+- X-axis: % of C&I load participating in hourly CFE (0–100%)
+- Y-axis: effective cost $/MWh
+- Two curves: "With Existing" (Track 1) and "New Build Only" (Track 2) converging
+- PJM supply stack: 280 TWh total clean → 95 SSS-fixed → 70 RPS → 25 existing PPAs → ~90 TWh available
+- Vertical marker at ~90 TWh showing where existing merchant supply exhausts
+- L/M/H cost sensitivity bands (P10/P50/P90)
+- As participation scales, existing supply exhausts → Track A cost rises toward Track B
+
+**Section 3: The Economic Feedback Loop** (scrollytell narrative)
+- Step 1: LMP decline chart — PJM LMP from $36.86 (50%) to $6.80 (99%), with nuclear operating cost line ($33/MWh)
+- Step 2: The widening gap IS the clean premium — above ~80% threshold, LMP < nuclear cost
+- Step 3: PJM clean supply waterfall — 280 TWh total → decomposition
+- Step 4: IL ZEC/CMC 2027 expiry callout — 94 TWh at risk of retirement
+- Step 5: 45U PTC evidence — $15/MWh production tax credit as bridge, but expires; without policy backstop, LMP decline threatens existing nuclear viability
+- Step 6: The paradox — new-build-only procurement accelerates LMP decline → existing nuclear uneconomic → retirements → more new build needed at higher cost
+
+**Section 4: Bottom Line** (static summary)
+- Cost delta summary at key thresholds
+- Policy implication: procurement strategy must account for systemic feedback effects
+- Clean premiums as market signal for existing nuclear viability
+
+**Data sources**:
+- `track_results.json` (Track 2 NB + Track 3 CTR vs baseline)
+- `shared-data.js` (ECF baseline: EFFECTIVE_COST_DATA, RESOURCE_MIX_DATA)
+- `lmp_summary.json` (PJM LMP trajectory by threshold)
+- EAC scarcity parameters inline (from step5_PP7 constants)
+- Nuclear operating cost: $33/MWh (fuel ~$5.5 + fixed O&M ~$25 + VOM ~$2.5)
 
 #### Decision 5c: Visual Differentiation — Existing vs New-Build vs Curtailment (Feb 24, 2026)
 All resource mix figures across the entire site must visually differentiate existing vs new-build generation:
