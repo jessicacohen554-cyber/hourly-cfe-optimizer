@@ -669,6 +669,8 @@ body { background: #F7F8FC; }
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.35);border-color:rgba(239,68,68,0.5);"></span>Cash ops ($25&ndash;30)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.35);"></span>All-in sustaining ($33&ndash;40)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);"></span>Viable w/ 10% margin ($36&ndash;44)</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(96,165,250,0.7);"></span>45U effective floor ($40, thru 2032)</span>
                 </div>
             </div>
 
@@ -1224,6 +1226,14 @@ LMP.nuclear = {
                             color: 'rgba(245,158,11,0.6)',
                             font: { size: 9, weight: '600' },
                             position: 'start'
+                        },
+                        // 45U effective floor: $15/MWh credit guarantees ~$40/MWh total revenue
+                        // (phases out above $25/MWh gross receipts; through 2032)
+                        ptcFloor: { type: 'line', yMin: 40, yMax: 40,
+                            borderColor: 'rgba(96,165,250,0.45)', borderWidth: 2, borderDash: [8,4],
+                            label: { display: true, content: '45U effective floor $40 (thru 2032)',
+                                position: 'start', color: 'rgba(96,165,250,0.7)',
+                                font: { size: 9, weight: '600' }, backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 }
                         },
                         // Crossover: where HIGH fuel LMP drops below viable floor ($36)
                         // High fuel: $37.26 at 70% → $35.29 at 75% — crosses ~72%
