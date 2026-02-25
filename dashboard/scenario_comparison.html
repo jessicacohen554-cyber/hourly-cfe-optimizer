@@ -173,30 +173,27 @@ body { background: #F3F4F8; }
 <section class="content-section">
     <div class="scenario-legend">
         <div class="legend-item"><div class="legend-dot scn-a"></div><span class="legend-label">Pure Consequential</span><span class="legend-desc">&mdash; sequential, cheapest $/tCO₂ first, path-dependent lock-in</span></div>
-        <div class="legend-item"><div class="legend-dot scn-b"></div><span class="legend-label">Hourly Matching</span><span class="legend-desc">&mdash; graduated clean firm deployment along FOAK&rarr;NOAK learning curve, increasing over time</span></div>
+        <div class="legend-item"><div class="legend-dot scn-b"></div><span class="legend-label">Hourly Matching</span><span class="legend-desc">&mdash; early clean firm commitment at FOAK prices, locked in toward the end target</span></div>
     </div>
 
     <div class="scenario-cards">
         <div class="scenario-card" style="border-color: rgba(220,38,38,0.2);">
             <span class="scenario-tag tag-a">Pure Consequential</span>
-            <h3>Sequential Path-Dependent Optimization</h3>
-            <div class="toggles">Ren: Low | Firm: High | CCS: High | LDES: High | Geo: High | Battery: Med | Fuel: Med | Tx: Med</div>
-            <p>At each threshold (50% → 60% → 75% → ... → 100%), buy the cheapest resources to reach
-            that target. Resources deployed at each step are <strong>locked in</strong> as committed infrastructure —
-            they can't be unbuilt. The optimizer can only add on top.
-            Result: early renewable overbuilding creates path dependency that makes later thresholds
-            dramatically more expensive.</p>
+            <h3>Cheapest $/tCO₂ First</h3>
+            <div class="toggles">Ren: Low | Firm: Low (NOAK) | CCS: Low | LDES: Low | Geo: Low | Battery: Low | Fuel: Med | Tx: Med</div>
+            <p>At each threshold (50% → 60% → 75% → ... → 100%), buy the cheapest $/tCO₂ resources first.
+            Uses NOAK (mature) pricing — the consequential buyer gravitates to the cheapest available technology.
+            Resources deployed at each step are <strong>locked in</strong> as committed infrastructure.
+            Result: low MAC at early thresholds (cheap renewables), rising as you exhaust cheap abatement.</p>
         </div>
         <div class="scenario-card" style="border-color: rgba(22,163,74,0.2);">
             <span class="scenario-tag tag-b">Hourly Matching</span>
-            <h3>Graduated Clean Firm Deployment via Learning Curve</h3>
-            <div class="toggles">Ren: Low | Firm: H&rarr;L (learning curve) | CCS: H&rarr;L | LDES: H&rarr;L | Geo: H&rarr;L | Battery: Low | Fuel: Med | Tx: Med</div>
-            <p>Clean firm, CCS, and LDES costs start at FOAK (High) and decline toward NOAK (Low) over the
-            SBTi timeline as cumulative deployment drives Wright's Law cost reductions. Early thresholds
-            see less clean firm investment — costs are high — but enough to seed the learning curve.
-            As costs decline at each subsequent milestone, the optimizer deploys increasing amounts of
-            clean firm, producing a naturally rising deployment trajectory. Mature tech (solar, wind, battery)
-            remains at Low cost throughout.</p>
+            <h3>Early Clean Firm Commitment at FOAK Prices</h3>
+            <div class="toggles">Ren: Low | Firm: High (FOAK) | CCS: High | LDES: High | Geo: High | Battery: Low | Fuel: Med | Tx: Med</div>
+            <p>Hourly matching requires firm generation for nighttime and wind-lull coverage. The buyer
+            commits to clean firm at <strong>FOAK prices</strong> — paying the premium before the learning
+            curve matures. Resources deployed at each step are locked in toward the end target.
+            Result: higher MAC at early thresholds (FOAK firm costs), but building toward the matching goal.</p>
         </div>
     </div>
 </section>
@@ -442,22 +439,22 @@ body { background: #F3F4F8; }
         </thead>
         <tbody>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Renewable Gen (Solar/Wind LCOE)</td><td style="text-align:center; padding:6px;">Low</td><td style="text-align:center; padding:6px;">Low</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Firm Gen (Nuclear new-build LCOE)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">High&rarr;Low (learning curve)</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">CCS-CCGT (w/ 45Q offset)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">High&rarr;Low (learning curve)</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">LDES (100hr iron-air storage)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">High&rarr;Low (learning curve)</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Geothermal (CAISO only)</td><td style="text-align:center; padding:6px; color:#EF4444;">High</td><td style="text-align:center; padding:6px; color:#22C55E;">High&rarr;Low (learning curve)</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Battery (4hr Li-ion)</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px; color:#22C55E;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Firm Gen (Nuclear new-build LCOE)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">CCS-CCGT (w/ 45Q offset)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">LDES (100hr iron-air storage)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Geothermal (CAISO only)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Battery (4hr Li-ion)</td><td style="text-align:center; padding:6px;">Low</td><td style="text-align:center; padding:6px;">Low</td></tr>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Fossil Fuel (wholesale price)</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Transmission</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
             <tr><td style="padding:6px 8px;">45Q Tax Credit</td><td style="text-align:center; padding:6px;">On</td><td style="text-align:center; padding:6px;">On</td></tr>
         </tbody>
     </table>
 
-    <p>In the pure consequential scenario, clean firm technologies are at <strong>High cost</strong> — FOAK pricing before learning curves.
-    Renewables and battery are cheap. In the hourly matching scenario, clean firm / CCS / LDES costs are <strong>interpolated
-    from High to Low</strong> along the SBTi timeline — reflecting the FOAK&rarr;NOAK learning curve. Less clean firm is deployed
-    early (costs are still high), but investment begins immediately to seed the learning curve, with deployment
-    increasing as costs decline toward NOAK. Mature tech (solar, wind, battery) remains at Low cost throughout.</p>
+    <p>In the pure consequential scenario, all technologies are at <strong>Low (NOAK) cost</strong> — the consequential buyer
+    gravitates to the cheapest available $/tCO₂, which means mature-market pricing for all resources.
+    In the hourly matching scenario, clean firm / CCS / LDES are at <strong>High (FOAK) cost</strong> — hourly matching
+    requires firm generation, and the buyer commits early at premium FOAK prices before the learning curve matures.
+    Mature tech (solar, wind, battery) remains at Low cost in both scenarios.</p>
 
     <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #1A2744; margin: 24px 0 8px;">Cost Function (Both Scenarios)</h3>
     <p>Effective system cost = total procurement cost / hourly match fraction, including:</p>

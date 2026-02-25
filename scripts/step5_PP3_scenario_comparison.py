@@ -194,43 +194,46 @@ ZONES = [
 # ============================================================================
 
 # Scenario A: "Pure Consequential"
-# Sequential path-dependent procurement — chase cheapest $/tCO₂ at each step
+# Sequential path-dependent procurement — chase cheapest $/tCO₂ at each step.
+# Uses Low (NOAK) cost toggles: the consequential buyer naturally gravitates
+# to the cheapest available technology, which at mature/NOAK prices gives
+# the lowest marginal abatement cost at each step.
 SCENARIO_A = {
     'name': 'Pure Consequential',
     'short': 'pure_consequential',
     'description': 'Sequential procurement chasing cheapest $/tCO₂ — resources lock in at each threshold step',
     'toggles': {
         'ren': 'L',        # Low renewable (cheap solar/wind)
-        'firm': 'H',       # High firm gen (expensive nuclear)
+        'firm': 'L',       # Low firm gen (NOAK — consequential buys cheapest)
         'batt': 'L',       # Low battery
-        'ldes_lvl': 'H',   # High LDES (expensive)
+        'ldes_lvl': 'L',   # Low LDES (NOAK)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
-        'ccs': 'H',        # High CCS (expensive)
+        'ccs': 'L',        # Low CCS (NOAK)
         'q45': '1',        # 45Q on
-        'geo': 'H',        # High geothermal (CAISO only)
+        'geo': 'L',        # Low geothermal (CAISO only, NOAK)
     },
 }
 
 # Scenario B: "Hourly Matching"
-# Graduated clean firm deployment along FOAK→NOAK learning curve.
-# Early thresholds see higher clean firm costs (FOAK), later thresholds
-# reach NOAK pricing as cumulative deployment drives learning.
-# Mature tech (solar, wind, battery) stays at Low cost throughout.
+# Early commitment to clean firm deployment at FOAK prices — hourly matching
+# requires firm generation to cover nighttime/wind-lull hours, so the buyer
+# pays premium FOAK costs for nuclear/CCS/LDES before the learning curve
+# matures. Higher MAC at low thresholds reflects the cost of early commitment.
 SCENARIO_B = {
     'name': 'Hourly Matching',
     'short': 'hourly_matching',
-    'description': 'Hourly matching with graduated clean firm deployment — FOAK→NOAK learning curve drives costs from High to Low over the SBTi timeline, yielding increasing clean firm investment at each threshold',
+    'description': 'Hourly matching with early clean firm commitment at FOAK prices — higher upfront MAC reflects the cost of locking in firm generation before learning curve maturation',
     'toggles': {
         'ren': 'L',        # Low renewable (mature tech, already cheap)
-        'firm': 'L',       # Target NOAK (learning curve interpolates H→L per threshold)
+        'firm': 'H',       # High firm gen (FOAK — early commitment premium)
         'batt': 'L',       # Low battery (mature tech)
-        'ldes_lvl': 'L',   # Target NOAK (learning curve interpolates H→L)
+        'ldes_lvl': 'H',   # High LDES (FOAK)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
-        'ccs': 'L',        # Target NOAK (learning curve interpolates H→L)
+        'ccs': 'H',        # High CCS (FOAK)
         'q45': '1',        # 45Q on
-        'geo': 'L',        # Target NOAK (CAISO only, learning curve interpolates H→L)
+        'geo': 'H',        # High geothermal (CAISO only, FOAK)
     },
 }
 
@@ -997,20 +1000,19 @@ def _apply_floor_ratchet(step3_results, iso, sens):
 
 
 def find_scenario_b_from_step3(scenario):
-    """Scenario B: Forward-looking hourly matching, mined from step 3.
+    """Scenario B: Hourly matching with early firm commitment at FOAK prices.
 
     Strategy:
-      1. Read step 3 cost-optimal results at Scenario B toggles (Low for all).
-         Step 3 already did full cost optimization with tranching (uprates →
-         geothermal → newbuild nuclear/CCS). This gives us the single-threshold
-         optimal mix at each ISO × threshold.
+      1. Read step 3 cost-optimal results at Scenario B toggles (High firm/CCS/LDES).
+         Hourly matching requires firm generation to cover nighttime/wind-lull hours,
+         so the buyer pays FOAK prices for nuclear/CCS/LDES before the learning
+         curve matures. This gives higher MAC at low thresholds.
       2. Apply path-dependent floor ratchet: resources deployed at each threshold
          become the floor for the next. Can't un-build what was deployed.
-      3. Deploy cheapest resources first by region — step 3 already handles this
-         via its merit-order tranching (uprate → geo → cheapest of nuclear/CCS).
-      4. Uprates ($15-25/MWh) are the first clean firm tranche at every threshold,
-         so they're leveraged immediately even at 50% where existing nuclear
-         capacity dominates.
+      3. Step 3's merit-order tranching (uprate → geo → cheapest of nuclear/CCS)
+         still applies — uprates are cheap even at FOAK.
+      4. Uprates ($15-40/MWh at FOAK) are the first clean firm tranche at every
+         threshold.
     """
     results = {}
     sens = scenario['toggles']
@@ -1045,17 +1047,15 @@ def find_scenario_a_from_step3(scenario):
     """Scenario A: Consequential deployment ordered by $/tCO₂.
 
     Strategy:
-      1. Read step 3 cost-optimal results at Scenario A toggles (High firm/CCS/LDES).
-         Step 3 already did full cost optimization with tranching (uprates → geo →
-         nuclear/CCS) at each ISO × threshold.
+      1. Read step 3 cost-optimal results at Scenario A toggles (Low/NOAK costs).
+         The consequential buyer gravitates to the cheapest available technology,
+         so NOAK pricing reflects mature-market procurement costs.
       2. Apply path-dependent floor ratchet per ISO: resources deployed at threshold N
          become the floor for threshold N+1.
       3. The cross-regional deployment ORDER by $/tCO₂ (= marginal_LCOE / CO₂_displacement_rate)
-         is computed downstream by build_consequential_queue(). A cheap resource that
-         displaces gas (low CO₂ rate ~0.4 t/MWh) may rank worse than an expensive one
-         displacing coal (high CO₂ rate ~1.0 t/MWh).
-      4. Uprates ($15-40/MWh) are the first clean firm tranche at every threshold
-         (built into step 3's merit-order tranching).
+         is computed downstream by build_consequential_queue().
+      4. Uprates ($15-25/MWh at NOAK) are the first clean firm tranche at every
+         threshold (built into step 3's merit-order tranching).
     """
     results = {}
     sens = scenario['toggles']
@@ -1271,13 +1271,13 @@ def main():
     # Scenario A: Mine step 3 results at Scenario A toggles + floor ratchet
     # Cross-regional deployment ordering by $/tCO₂ is computed by build_consequential_queue()
     print("\nScenario A (Pure Consequential): mining step 3 results...")
-    print(f"  Toggles: {_build_scenario_key(SCENARIO_A, 'PJM')} (high firm/CCS/LDES)")
+    print(f"  Toggles: {_build_scenario_key(SCENARIO_A, 'PJM')} (low/NOAK — cheapest $/tCO₂)")
     results_a = find_scenario_a_from_step3(SCENARIO_A)
 
     # Scenario B: Mine step 3 results at Scenario B toggles + floor ratchet
     # Forward-looking path with uprate-first tranching at NOAK cost targets
     print("\nScenario B (Hourly Matching): mining step 3 results...")
-    print(f"  Toggles: {_build_scenario_key(SCENARIO_B, 'PJM')} (low/NOAK costs)")
+    print(f"  Toggles: {_build_scenario_key(SCENARIO_B, 'PJM')} (high/FOAK — early firm commitment)")
     results_b = find_scenario_b_from_step3(SCENARIO_B)
 
     # Build consequential queues
@@ -1528,14 +1528,14 @@ def main():
                 'description': SCENARIO_A['description'],
                 'toggles': SCENARIO_A['toggles'],
                 'method': 'step3_consequential',
-                'method_description': 'Pure consequential: mined from step 3 cost optimization at High firm/CCS/LDES toggles. Cross-regional deployment ordered by $/tCO₂ (= resource LCOE ÷ CO₂ displacement rate). Uprates first at every threshold. Floor ratchet locks in prior deployments.',
+                'method_description': 'Pure consequential: mined from step 3 cost optimization at Low (NOAK) cost toggles — consequential buyer gravitates to cheapest available $/tCO₂. Cross-regional deployment ordered by $/tCO₂ (= resource LCOE ÷ CO₂ displacement rate). Uprates first at every threshold. Floor ratchet locks in prior deployments.',
             },
             'scenario_b': {
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
                 'method': 'step3_hourly_matching',
-                'method_description': 'Forward-looking hourly matching: mined from step 3 cost optimization at Low (NOAK) cost toggles. Uprate-first tranching leverages cheap existing nuclear capacity. Path-dependent floor ratchet prevents un-building. Resources deployed cheapest-first by region via step 3 merit-order tranching.',
+                'method_description': 'Hourly matching with early firm commitment: mined from step 3 cost optimization at High (FOAK) firm/CCS/LDES toggles — hourly matching requires firm generation, paid at premium FOAK prices before learning curve matures. Uprate-first tranching. Floor ratchet locks in prior deployments.',
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
