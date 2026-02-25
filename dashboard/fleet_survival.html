@@ -59,6 +59,19 @@
         .method-note h3 { font-family: var(--font-heading); font-size: 0.95rem; color: #6B7280; margin-bottom: 6px; }
         .method-note p { color: #6B7280; font-size: 0.82rem; line-height: 1.6; margin-bottom: 5px; }
 
+        /* ISO Selector */
+        .iso-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .iso-pill { padding: 8px 18px; border: 1px solid #D4D8E0; border-radius: 20px; background: #fff; color: #6B7280; cursor: pointer; font-size: 0.84rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-heading); }
+        .iso-pill:hover { border-color: #10B981; color: #10B981; }
+        .iso-pill.active { background: #10B981; border-color: #10B981; color: #fff; }
+
+        /* Plant Table */
+        .plant-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .plant-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid #E5E7EB; color: #6B7280; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .plant-table td { padding: 9px 12px; border-bottom: 1px solid #F3F4F6; color: #374151; }
+        .plant-table tr:hover td { background: rgba(59,130,246,0.03); }
+        .plant-table .fuel-tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+
         @media (max-width: 768px) {
             .grid-2 { grid-template-columns: 1fr; }
             .container { padding: 18px 12px; }
@@ -148,6 +161,70 @@
                 <div class="chart-wrap" style="height: 380px;">
                     <canvas id="chartCCGTFocus"></canvas>
                 </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- ISO DRILL-DOWN SECTION -->
+        <!-- ============================================================ -->
+        <div class="panel" style="margin-top: 12px; padding-bottom: 8px;">
+            <div class="panel-title" style="font-size: 1.18rem; margin-bottom: 4px;">Regional Drill-Down</div>
+            <div class="panel-subtitle" id="isoDrillSub">Select an ISO to see this company's fleet in that region</div>
+            <div class="iso-selector" id="isoSelector"></div>
+        </div>
+
+        <!-- ISO Stats Row -->
+        <div class="stats-row" id="isoStats" style="display: none;">
+            <div class="stat-card"><div class="label">ISO Capacity</div><div class="value" id="isCapVal">—</div><div class="sub" id="isCapSub">—</div></div>
+            <div class="stat-card"><div class="label">Fossil</div><div class="value" id="isFossilVal">—</div><div class="sub" id="isFossilSub">—</div></div>
+            <div class="stat-card"><div class="label">Clean</div><div class="value" id="isCleanVal">—</div><div class="sub" id="isCleanSub">—</div></div>
+            <div class="stat-card"><div class="label">Plants</div><div class="value" id="isPlantCnt">—</div><div class="sub">in this ISO</div></div>
+        </div>
+
+        <!-- ISO Charts: Nameplate + Dispatch -->
+        <div class="grid-2" id="isoChartsRow" style="display: none;">
+            <div class="panel">
+                <div class="panel-title" id="isoNpTitle">ISO Nameplate Capacity</div>
+                <div class="panel-subtitle" id="isoNpSub">Capacity by fuel over SBTi trajectory</div>
+                <div class="chart-wrap" style="height: 360px;">
+                    <canvas id="chartIsoNameplate"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title" id="isoDispTitle">ISO Dispatch by Fuel</div>
+                <div class="panel-subtitle" id="isoDispSub">Generation by fuel over SBTi trajectory</div>
+                <div class="chart-wrap" style="height: 360px;">
+                    <canvas id="chartIsoDispatch"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ISO Chart: Capacity Factor -->
+        <div class="panel" id="isoCfPanel" style="display: none;">
+            <div class="panel-title" id="isoCfTitle">ISO Capacity Factor by Fuel</div>
+            <div class="panel-subtitle">Fossil fuel utilization in this ISO | 15% = economic retirement threshold</div>
+            <div class="chart-wrap" style="height: 340px;">
+                <canvas id="chartIsoCF"></canvas>
+            </div>
+        </div>
+
+        <!-- ISO Plant Table -->
+        <div class="panel" id="isoPlantPanel" style="display: none;">
+            <div class="panel-title" id="isoPlantTitle">Plants in ISO</div>
+            <div class="panel-subtitle">Individual plant-level data for this company in the selected region</div>
+            <div style="overflow-x: auto;">
+                <table class="plant-table" id="isoPlantTable">
+                    <thead>
+                        <tr>
+                            <th>Plant</th>
+                            <th>Fuel</th>
+                            <th>Capacity (MW)</th>
+                            <th>Generation (TWh)</th>
+                            <th>CO2 (MT/yr)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="isoPlantBody"></tbody>
+                </table>
             </div>
         </div>
 
@@ -258,6 +335,9 @@
 
         // --- Dynamic Narrative ---
         renderNarrative(c, cd, ms, bd);
+
+        // --- ISO Drill-Down Pills ---
+        buildIsoPills(c);
     }
 
     // ========================================================================
@@ -579,6 +659,227 @@
         }
 
         el.innerHTML = html;
+    }
+
+    // ========================================================================
+    // ISO DRILL-DOWN
+    // ========================================================================
+    let selIso = null;
+    let isoCharts = { nameplate: null, dispatch: null, cf: null };
+
+    function buildIsoPills(company) {
+        const el = document.getElementById('isoSelector');
+        el.innerHTML = '';
+        selIso = null;
+        const isos = [...new Set(company.plants.map(p => p.iso))].sort();
+        isos.forEach(iso => {
+            const btn = document.createElement('button');
+            btn.className = 'iso-pill';
+            btn.textContent = iso;
+            btn.onclick = () => selectIso(iso, company);
+            el.appendChild(btn);
+        });
+        // Hide ISO charts until an ISO is selected
+        document.getElementById('isoStats').style.display = 'none';
+        document.getElementById('isoChartsRow').style.display = 'none';
+        document.getElementById('isoCfPanel').style.display = 'none';
+        document.getElementById('isoPlantPanel').style.display = 'none';
+    }
+
+    function selectIso(iso, company) {
+        if (!company) company = FLEET_COMPANIES[selIdx];
+        selIso = iso;
+        document.querySelectorAll('.iso-pill').forEach(p => p.classList.toggle('active', p.textContent === iso));
+        document.getElementById('isoStats').style.display = '';
+        document.getElementById('isoChartsRow').style.display = '';
+        document.getElementById('isoCfPanel').style.display = '';
+        document.getElementById('isoPlantPanel').style.display = '';
+        renderIsoDrillDown(company, iso);
+    }
+
+    function renderIsoDrillDown(company, iso) {
+        const cd = computeCompanyCapacityDispatch(company);
+        const plants = company.plants.filter(p => p.iso === iso);
+        const allFuels = cd.fuels;
+
+        // --- ISO Stats ---
+        const totalCap = plants.reduce((s, p) => s + p.capacity_mw, 0);
+        const fossilCap = plants.filter(p => !CLEAN_FUELS.includes(p.fuel)).reduce((s, p) => s + p.capacity_mw, 0);
+        const cleanCap = totalCap - fossilCap;
+        document.getElementById('isCapVal').textContent = (totalCap / 1000).toFixed(1) + ' GW';
+        document.getElementById('isCapSub').textContent = 'in ' + iso;
+        document.getElementById('isFossilVal').textContent = (fossilCap / 1000).toFixed(1) + ' GW';
+        document.getElementById('isFossilSub').textContent = totalCap > 0 ? (fossilCap / totalCap * 100).toFixed(0) + '% fossil' : '—';
+        document.getElementById('isCleanVal').textContent = (cleanCap / 1000).toFixed(1) + ' GW';
+        document.getElementById('isCleanSub').textContent = totalCap > 0 ? (cleanCap / totalCap * 100).toFixed(0) + '% clean' : '—';
+        document.getElementById('isPlantCnt').textContent = plants.length;
+
+        document.getElementById('isoDrillSub').textContent = company.shortName + ' fleet in ' + iso + ' — ' + plants.length + ' plants, ' + (totalCap / 1000).toFixed(1) + ' GW';
+
+        // --- ISO Nameplate Chart ---
+        renderIsoNameplate(company, cd, iso, allFuels);
+        renderIsoDispatch(company, cd, iso, allFuels);
+        renderIsoCF(company, cd, iso, allFuels);
+        renderIsoPlantTable(company, iso, plants);
+    }
+
+    function renderIsoNameplate(company, cd, iso, allFuels) {
+        if (isoCharts.nameplate) isoCharts.nameplate.destroy();
+        const ctx = document.getElementById('chartIsoNameplate').getContext('2d');
+        document.getElementById('isoNpTitle').textContent = company.shortName + ' in ' + iso + ' — Nameplate';
+        document.getElementById('isoNpSub').textContent = 'Capacity by fuel over SBTi trajectory';
+        const labels = cd.years.map(y => String(y));
+        const npData = cd.nameplate_by_iso_fuel[iso];
+        if (!npData) return;
+
+        const ordered = FUEL_ORDER.filter(f => allFuels.includes(f) && npData[f] && npData[f].some(v => v > 0.003));
+        const datasets = ordered.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: npData[f],
+            backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+            borderColor: (FS[f] || {}).border || '#666',
+            borderWidth: 2, borderRadius: 4, borderSkipped: false,
+        }));
+
+        isoCharts.nameplate = new Chart(ctx, {
+            type: 'bar', data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
+                scales: {
+                    x: { stacked: true, grid: { color: gColL }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { stacked: true, grid: { color: gCol }, ticks: { font: { size: 10 }, padding: 4 }, beginAtZero: true,
+                         title: { display: true, text: 'Nameplate (GW)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } },
+                    tooltip: { mode: 'index', callbacks: {
+                        label: item => item.dataset.label + ': ' + item.raw.toFixed(2) + ' GW',
+                        footer: items => 'Total: ' + items.reduce((s, i) => s + i.raw, 0).toFixed(2) + ' GW'
+                    }}
+                }
+            }
+        });
+    }
+
+    function renderIsoDispatch(company, cd, iso, allFuels) {
+        if (isoCharts.dispatch) isoCharts.dispatch.destroy();
+        const ctx = document.getElementById('chartIsoDispatch').getContext('2d');
+        document.getElementById('isoDispTitle').textContent = company.shortName + ' in ' + iso + ' — Dispatch';
+        document.getElementById('isoDispSub').textContent = 'Generation by fuel over SBTi trajectory';
+        const labels = cd.years.map(y => String(y));
+        const dispData = cd.dispatch_by_iso_fuel[iso];
+        if (!dispData) return;
+
+        const ordered = FUEL_ORDER.filter(f => allFuels.includes(f) && dispData[f] && dispData[f].some(v => v > 0.03));
+        const datasets = ordered.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: dispData[f],
+            backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+            borderColor: (FS[f] || {}).border || '#666',
+            borderWidth: 2, borderRadius: 4, borderSkipped: false,
+        }));
+
+        isoCharts.dispatch = new Chart(ctx, {
+            type: 'bar', data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
+                scales: {
+                    x: { stacked: true, grid: { color: gColL }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { stacked: true, grid: { color: gCol }, ticks: { font: { size: 10 }, padding: 4 }, beginAtZero: true,
+                         title: { display: true, text: 'Dispatch (TWh/yr)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } },
+                    tooltip: { mode: 'index', callbacks: {
+                        label: item => item.dataset.label + ': ' + item.raw.toFixed(2) + ' TWh',
+                        footer: items => 'Total: ' + items.reduce((s, i) => s + i.raw, 0).toFixed(1) + ' TWh'
+                    }}
+                }
+            }
+        });
+    }
+
+    function renderIsoCF(company, cd, iso, allFuels) {
+        if (isoCharts.cf) isoCharts.cf.destroy();
+        const ctx = document.getElementById('chartIsoCF').getContext('2d');
+        document.getElementById('isoCfTitle').textContent = company.shortName + ' in ' + iso + ' — Capacity Factor';
+        const cfData = cd.cf_by_iso_fuel[iso];
+        if (!cfData) return;
+
+        const fossilFuels = ['coal', 'gas_ccgt', 'gas_peaker', 'oil'];
+        const datasets = [];
+        fossilFuels.forEach(f => {
+            if (!allFuels.includes(f) || !cfData[f]) return;
+            if (cfData[f].every(v => v === 0)) return;
+            datasets.push({
+                label: FUEL_LABELS[f] || f,
+                data: cd.years.map((y, i) => ({ x: y, y: cfData[f][i] })),
+                borderColor: (FS[f] || {}).border || '#666',
+                backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+                borderWidth: 2.5, fill: true, tension: 0.3,
+                pointRadius: 4, pointBackgroundColor: (FS[f] || {}).border || '#666',
+                pointBorderColor: '#fff', pointBorderWidth: 1.5, pointHoverRadius: 7,
+            });
+        });
+
+        if (datasets.length === 0) {
+            // No fossil fuels in this ISO
+            isoCharts.cf = new Chart(ctx, {
+                type: 'bar', data: { labels: ['No fossil fleet in ' + iso], datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+            });
+            return;
+        }
+
+        isoCharts.cf = new Chart(ctx, {
+            type: 'line', data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 8, right: 16, bottom: 4, left: 4 } },
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, ticks: { stepSize: 5, font: { size: 10 } }, grid: { color: gCol },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%', font: { size: 10 }, padding: 4 }, grid: { color: gCol },
+                         title: { display: true, text: 'Capacity Factor (%)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 12, usePointStyle: true, font: { size: 10 } } },
+                    tooltip: { callbacks: {
+                        title: items => 'Year: ' + Math.round(items[0].parsed.x),
+                        label: item => item.dataset.label + ': ' + item.parsed.y.toFixed(1) + '% CF'
+                    }},
+                    annotation: { annotations: {
+                        retLine: { type: 'line', yMin: 15, yMax: 15, borderColor: '#EF444455', borderWidth: 2, borderDash: [8, 4],
+                            label: { display: true, content: '~15% Economic Retirement', position: 'end', font: { size: 9 }, color: '#EF4444', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
+                    }}
+                }
+            }
+        });
+    }
+
+    function renderIsoPlantTable(company, iso, plants) {
+        document.getElementById('isoPlantTitle').textContent = company.shortName + ' Plants in ' + iso;
+        const tbody = document.getElementById('isoPlantBody');
+        tbody.innerHTML = '';
+        const sorted = [...plants].sort((a, b) => b.capacity_mw - a.capacity_mw);
+        sorted.forEach(p => {
+            const tr = document.createElement('tr');
+            const fuelColor = (FS[p.fuel] || {}).border || '#666';
+            const fuelBg = (FS[p.fuel] || {}).fill || 'rgba(100,100,100,0.15)';
+            tr.innerHTML =
+                '<td>' + p.name + '</td>' +
+                '<td><span class="fuel-tag" style="background:' + fuelBg + ';color:' + fuelColor + ';">' + (FUEL_LABELS[p.fuel] || p.fuel) + '</span></td>' +
+                '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + p.capacity_mw.toLocaleString() + '</td>' +
+                '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + p.generation_twh.toFixed(1) + '</td>' +
+                '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + (p.co2_mt || 0).toFixed(1) + '</td>';
+            tbody.appendChild(tr);
+        });
     }
 
     // ========================================================================
