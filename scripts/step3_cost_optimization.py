@@ -199,9 +199,10 @@ CCS_LCOE_45Q_OFF = {
     'H': {'CAISO': 144, 'ERCOT': 121, 'PJM': 131, 'NYISO': 157, 'NEISO': 151, 'MISO': 125, 'SPP': 117},
 }
 
-# Uprate cap: 5% of existing nuclear × 90% CF → TWh/yr
+# Uprate cap: 8% of existing nuclear × 90% CF → TWh/yr
+# Includes MUR + stretch + good EPU opportunities across fleet
 EXISTING_NUCLEAR_GW = {'CAISO': 2.3, 'ERCOT': 2.7, 'PJM': 32.0, 'NYISO': 3.4, 'NEISO': 3.5, 'MISO': 12.0, 'SPP': 1.2}
-UPRATE_CAP_TWH = {iso: round(gw * 0.05 * 0.90 * 8760 / 1e3, 3) for iso, gw in EXISTING_NUCLEAR_GW.items()}
+UPRATE_CAP_TWH = {iso: round(gw * 0.08 * 0.90 * 8760 / 1e3, 3) for iso, gw in EXISTING_NUCLEAR_GW.items()}
 
 # Demand growth
 DEMAND_GROWTH_RATES = {
