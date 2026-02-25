@@ -686,16 +686,34 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
             if not target_passing:
                 target_passing = list(mixes)
 
-            # 2b. Find cheapest EF mix at this threshold (from target-filtered set)
-            best_cost = float('inf')
+            # 2b. Score ALL mixes by augmented cost (EF cost + floor excess penalty).
+            #     This ensures we pick the mix that maximizes use of locked-in resources
+            #     from prior steps, not just the cheapest mix in isolation.
+            best_augmented_cost = float('inf')
             best_result = None
             best_mix = None
+            best_excess_twh = None
+            best_excess_per_mwh = 0
+
             for mix in target_passing:
                 result = compute_mix_cost(mix, iso_sens, iso, demand_twh, growth_factor=gf)
-                if result['effective_cost'] < best_cost:
-                    best_cost = result['effective_cost']
+
+                # Compute augmented cost: how expensive is this mix INCLUDING floor excess?
+                ef_deployed = _mix_resource_twh(mix, demand_twh)
+                mix_excess_per_mwh = 0.0
+                for res in floor:
+                    excess = max(0, floor.get(res, 0) - ef_deployed.get(res, 0))
+                    if excess > 0.01:
+                        lcoe = _resource_new_build_lcoe(res, iso_sens, iso)
+                        mix_excess_per_mwh += excess / demand_twh * lcoe
+
+                augmented_eff = (result['total_cost'] + mix_excess_per_mwh) / (result['match_score'] / 100) if result['match_score'] > 0 else float('inf')
+
+                if augmented_eff < best_augmented_cost:
+                    best_augmented_cost = augmented_eff
                     best_result = result
                     best_mix = mix
+                    best_excess_per_mwh = mix_excess_per_mwh
 
             if not best_result:
                 continue
@@ -711,16 +729,9 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
                 excess_twh[res] = max(0, floor_val - ef_val)
 
             total_excess = sum(excess_twh.values())
+            excess_cost_per_mwh = best_excess_per_mwh
 
-            # 4. Compute excess cost: locked-in resources above EF target, priced at LCOE
-            excess_cost_per_mwh = 0.0
-            for res, twh in excess_twh.items():
-                if twh < 0.01:
-                    continue
-                lcoe = _resource_new_build_lcoe(res, iso_sens, iso)
-                excess_cost_per_mwh += twh / demand_twh * lcoe
-
-            # 5. Build augmented result — EF cost + excess cost penalty
+            # 4. Build augmented result — EF cost + excess cost penalty
             augmented_result = dict(best_result)
             augmented_result['total_cost'] = round(best_result['total_cost'] + excess_cost_per_mwh, 2)
             match_frac = best_result['match_score'] / 100
@@ -735,7 +746,7 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
             augmented_result['battery_twh'] = augmented.get('battery', 0)
             augmented_result['ldes_twh'] = augmented.get('ldes', 0)
 
-            # 6. Recompute gas backup from augmented clean capacity
+            # 5. Recompute gas backup from augmented clean capacity
             clean_peak_mw = 0
             for r, twh in augmented_result['resource_twh'].items():
                 pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
@@ -764,7 +775,7 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
 
             iso_results[t] = augmented_result
 
-            # 7. Update floor: augmented resources become the new locked-in floor
+            # 6. Update floor: augmented resources become the new locked-in floor
             floor = dict(augmented)
 
         results[iso] = iso_results
