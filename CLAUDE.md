@@ -20,6 +20,13 @@
 - **Deploy as many agents as possible in parallel** for non-dependent tasks to maximize efficiency
 - Run searches, builds, file edits, and validations concurrently whenever they don't depend on each other
 
+### Compute Execution (Critical — Preserve Token Budget)
+- **NEVER run optimizer scripts, pipeline steps, or data-generation scripts locally in the session.** This includes Step 1–6 scripts, post-processing (PP1–PP9), and any script that processes parquets or generates dashboard data. Running these burns session tokens on compute that should happen outside the session.
+- **Instead, create or update GitHub Actions workflows** so the user can trigger execution independently. Write the workflow YAML, commit it, push it — then the user runs it from the GitHub Actions UI.
+- **Session compute should be limited to**: syntax checks (`python -c "import py_compile; ..."`), quick verification reads (checking a parquet schema, confirming a constant value), and lightweight validation that takes <5 seconds.
+- **If a script needs to be tested**: create a workflow for it. If a workflow already exists, tell the user to trigger it. Do not run the script locally "just to check."
+- **This rule exists because**: Previous sessions burned significant token budget running multi-minute optimizer scripts locally when the same compute could have been done for free via GitHub Actions. The user's token budget is finite and expensive — treat every CPU cycle in-session as a cost.
+
 ### Git & Commits
 - **3-minute commit cadence** — commit work every 3 minutes during active development to avoid losing work. Don't wait for a feature to be "done" to commit — frequent incremental commits protect against session interruptions and token limits. Squash into a clean commit before pushing.
 - **CRITICAL — Commit before session expiration**: Always commit all work-in-progress before the session ends or runs out of context. Uncommitted changes are lost forever when a session expires. If the session is approaching limits, immediately commit and push whatever is done — partial progress is infinitely better than lost progress. This is the #1 cause of wasted work across sessions.
