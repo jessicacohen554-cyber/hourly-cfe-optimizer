@@ -195,46 +195,52 @@ ZONES = [
 
 # Scenario A: "Pure Consequential"
 # Sequential path-dependent procurement — chase cheapest $/tCO₂ at each step.
-# Uses Low (NOAK) cost toggles: the consequential buyer naturally gravitates
-# to the cheapest available technology, which at mature/NOAK prices gives
-# the lowest marginal abatement cost at each step.
+# Uses Low renewables (cheap) but HIGH clean firm/CCS/LDES (FOAK).
+# The consequential buyer chases cheap $/tCO₂ with renewables and never invests
+# in clean firm development. When firm generation is finally needed at high
+# thresholds, there's been no learning curve — costs remain at FOAK.
+# Uprates are Medium: existing nuclear uprates don't depend on technology learning.
 SCENARIO_A = {
     'name': 'Pure Consequential',
     'short': 'pure_consequential',
-    'description': 'Sequential procurement chasing cheapest $/tCO₂ — resources lock in at each threshold step',
+    'description': 'Sequential procurement chasing cheapest $/tCO₂ — no clean firm investment means FOAK prices when firm is finally needed',
     'toggles': {
-        'ren': 'L',        # Low renewable (cheap solar/wind)
-        'firm': 'L',       # Low firm gen (NOAK — consequential buys cheapest)
-        'batt': 'L',       # Low battery
-        'ldes_lvl': 'L',   # Low LDES (NOAK)
-        'fuel': 'M',       # Medium fossil fuel
-        'tx': 'M',         # Medium transmission
-        'ccs': 'L',        # Low CCS (NOAK)
-        'q45': '1',        # 45Q on
-        'geo': 'L',        # Low geothermal (CAISO only, NOAK)
-    },
-}
-
-# Scenario B: "Hourly Matching"
-# Early commitment to clean firm deployment at FOAK prices — hourly matching
-# requires firm generation to cover nighttime/wind-lull hours, so the buyer
-# pays premium FOAK costs for nuclear/CCS/LDES before the learning curve
-# matures. Higher MAC at low thresholds reflects the cost of early commitment.
-SCENARIO_B = {
-    'name': 'Hourly Matching',
-    'short': 'hourly_matching',
-    'description': 'Hourly matching with early clean firm commitment at FOAK prices — higher upfront MAC reflects the cost of locking in firm generation before learning curve maturation',
-    'toggles': {
-        'ren': 'L',        # Low renewable (mature tech, already cheap)
-        'firm': 'H',       # High firm gen (FOAK — early commitment premium)
+        'ren': 'L',        # Low renewable (cheap solar/wind — what they chase)
+        'firm': 'H',       # High firm gen (FOAK — never invested, no learning)
         'batt': 'L',       # Low battery (mature tech)
-        'ldes_lvl': 'H',   # High LDES (FOAK)
+        'ldes_lvl': 'H',   # High LDES (FOAK — no learning curve)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
-        'ccs': 'H',        # High CCS (FOAK)
+        'ccs': 'H',        # High CCS (FOAK — no learning curve)
         'q45': '1',        # 45Q on
         'geo': 'H',        # High geothermal (CAISO only, FOAK)
     },
+    'uprate_level': 'M',   # Uprates at Medium — existing plants, no FOAK/NOAK dependency
+}
+
+# Scenario B: "Hourly Matching"
+# Early commitment to clean firm deployment at FOAK prices in the late 2020s /
+# early-to-mid 2030s. Pays premium FOAK costs upfront but drives the learning
+# curve (Wright's Law) — by the 2040s firm costs decline to NOAK as cumulative
+# deployment drives cost reduction. Overall system cost is LOWER because early
+# investment enables cheaper deployment at scale when it matters most.
+# Uprates are Medium: existing nuclear uprates don't depend on technology learning.
+SCENARIO_B = {
+    'name': 'Hourly Matching',
+    'short': 'hourly_matching',
+    'description': 'Early clean firm investment at FOAK prices drives learning curve — higher upfront cost but NOAK pricing by 2040s makes overall system cost lower',
+    'toggles': {
+        'ren': 'L',        # Low renewable (mature tech, already cheap)
+        'firm': 'H',       # High firm gen (FOAK at start, learning curve drives to NOAK)
+        'batt': 'L',       # Low battery (mature tech)
+        'ldes_lvl': 'H',   # High LDES (FOAK → NOAK via learning)
+        'fuel': 'M',       # Medium fossil fuel
+        'tx': 'M',         # Medium transmission
+        'ccs': 'H',        # High CCS (FOAK → NOAK via learning)
+        'q45': '1',        # 45Q on
+        'geo': 'H',        # High geothermal (CAISO only, FOAK → NOAK)
+    },
+    'uprate_level': 'M',   # Uprates at Medium — existing plants, no FOAK/NOAK dependency
 }
 
 SCENARIOS = [SCENARIO_A, SCENARIO_B]
@@ -786,12 +792,16 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
 
 
 def _build_learning_overrides(iso, frac):
-    """Build LCOE overrides interpolated between High (FOAK) and Low (NOAK)."""
+    """Build LCOE overrides interpolated between High (FOAK) and Low (NOAK).
+
+    frac: 0 = pure FOAK, 1 = full NOAK.
+    Uprate always at Medium — existing nuclear uprates don't depend on learning.
+    """
     overrides = {}
     nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
     nuc_l = NUCLEAR_NEWBUILD_LCOE['L'][iso]
     overrides['nuclear_lcoe'] = nuc_h + frac * (nuc_l - nuc_h)
-    overrides['uprate_lcoe'] = UPRATE_LCOE['H'] + frac * (UPRATE_LCOE['L'] - UPRATE_LCOE['H'])
+    overrides['uprate_lcoe'] = UPRATE_LCOE['M']  # Always Medium
     ccs_h = CCS_LCOE_45Q_ON['H'][iso]
     ccs_l = CCS_LCOE_45Q_ON['L'][iso]
     overrides['ccs_lcoe'] = ccs_h + frac * (ccs_l - ccs_h)
@@ -803,6 +813,117 @@ def _build_learning_overrides(iso, frac):
     ldes_l = LCOE_TABLES['ldes']['Low'][iso]
     overrides['ldes_lcoe'] = ldes_h + frac * (ldes_l - ldes_h)
     return overrides
+
+
+def _adjust_costs_no_learning(results, scenario):
+    """Scenario A: No learning curve. Clean firm stays at FOAK/High forever.
+
+    Only adjustment: override uprate price to Medium (existing plants don't
+    depend on FOAK/NOAK learning). Step 3 costs were computed at firm='H',
+    which prices uprates at $40/MWh (High). Adjust to $25/MWh (Medium).
+    """
+    uprate_level = scenario.get('uprate_level', 'M')
+    uprate_target = UPRATE_LCOE[uprate_level]
+    uprate_step3 = UPRATE_LCOE[scenario['toggles']['firm']]  # What step 3 used
+    uprate_delta = uprate_target - uprate_step3  # negative: cheaper
+
+    for iso in results:
+        for t in results[iso]:
+            r = results[iso][t]
+            uprate_twh = r.get('tranche_uprate_twh', 0)
+            demand_twh = r['demand_twh']
+            if demand_twh > 0 and uprate_twh > 0 and abs(uprate_delta) > 0.01:
+                cost_adj = uprate_delta * uprate_twh / demand_twh
+                r['total_cost'] = round(r['total_cost'] + cost_adj, 2)
+                match_frac = r['match_score'] / 100
+                r['effective_cost'] = round(
+                    r['total_cost'] / match_frac if match_frac > 0 else 0, 2)
+                r['incremental'] = round(
+                    r['effective_cost'] - r.get('wholesale', WHOLESALE_PRICES[iso]), 2)
+    return results
+
+
+def _adjust_costs_with_learning(results, scenario):
+    """Scenario B: Apply learning curve — FOAK at early thresholds, NOAK by 2040s+.
+
+    At each threshold, compute learning_fraction → interpolate all firm/CCS/LDES
+    costs between High (FOAK) and Low (NOAK). Uprate always Medium.
+    Step 3 costs were computed at full FOAK (firm='H', ldes='H', ccs='H').
+    We compute the cost delta from FOAK to the learning-curve-adjusted price
+    for each resource tranche and apply it.
+    """
+    for iso in results:
+        for t in results[iso]:
+            r = results[iso][t]
+            demand_twh = r['demand_twh']
+            if demand_twh <= 0:
+                continue
+
+            frac = learning_fraction(t)
+            overrides = _build_learning_overrides(iso, frac)
+
+            total_delta = 0.0
+
+            # 1. Uprate: step3 used H ($40), target is M ($25)
+            uprate_twh = r.get('tranche_uprate_twh', 0)
+            if uprate_twh > 0:
+                uprate_delta = UPRATE_LCOE['M'] - UPRATE_LCOE['H']
+                total_delta += uprate_delta * uprate_twh / demand_twh
+
+            # 2. Nuclear newbuild: step3 used H, learning curve gives interpolated
+            nuc_twh = r.get('tranche_nuclear_newbuild_twh', 0)
+            if nuc_twh > 0:
+                nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
+                nuc_delta = overrides['nuclear_lcoe'] - nuc_h
+                total_delta += nuc_delta * nuc_twh / demand_twh
+
+            # 3. CCS new-build
+            # CCS TWh from mix minus existing
+            existing_ccs_frac = GRID_MIX_SHARES[iso].get('ccs_ccgt', 0) / 100.0
+            gf = demand_twh / BASE_DEMAND_TWH[iso]
+            existing_ccs_twh = existing_ccs_frac * BASE_DEMAND_TWH[iso]
+            proc = r['procurement_pct'] / 100.0
+            total_ccs_twh = r['resource_twh'].get('ccs_ccgt', 0)
+            ccs_new_twh = max(0, total_ccs_twh - existing_ccs_twh)
+            if ccs_new_twh > 0:
+                ccs_h = CCS_LCOE_45Q_ON['H'][iso]
+                ccs_delta = overrides['ccs_lcoe'] - ccs_h
+                total_delta += ccs_delta * ccs_new_twh / demand_twh
+
+            # 4. Geothermal (CAISO only)
+            if iso == 'CAISO' and 'geo_lcoe' in overrides:
+                geo_twh = r.get('tranche_geo_twh', 0)
+                if geo_twh > 0:
+                    geo_h = GEOTHERMAL_LCOE['H']
+                    geo_delta = overrides['geo_lcoe'] - geo_h
+                    total_delta += geo_delta * geo_twh / demand_twh
+
+            # 5. LDES (all new-build)
+            ldes_twh = r.get('ldes_twh', 0)
+            if ldes_twh > 0:
+                ldes_h = LCOE_TABLES['ldes']['High'][iso]
+                ldes_delta = overrides['ldes_lcoe'] - ldes_h
+                total_delta += ldes_delta * ldes_twh / demand_twh
+
+            # Apply total delta
+            if abs(total_delta) > 0.001:
+                r['total_cost'] = round(r['total_cost'] + total_delta, 2)
+                match_frac = r['match_score'] / 100
+                r['effective_cost'] = round(
+                    r['total_cost'] / match_frac if match_frac > 0 else 0, 2)
+                r['incremental'] = round(
+                    r['effective_cost'] - r.get('wholesale', WHOLESALE_PRICES[iso]), 2)
+                # Update new-build cost tracking
+                r['new_build_cost_total'] = r.get('new_build_cost_total', 0) + \
+                    total_delta * demand_twh * 1e6
+
+            # Store learning curve metadata
+            r['learning_fraction'] = round(frac, 3)
+            r['learning_nuclear_lcoe'] = round(overrides['nuclear_lcoe'], 1)
+            r['learning_ccs_lcoe'] = round(overrides['ccs_lcoe'], 1)
+            r['learning_ldes_lcoe'] = round(overrides['ldes_lcoe'], 1)
+
+    return results
 
 
 def _build_scenario_key(scenario, iso):
@@ -1000,19 +1121,18 @@ def _apply_floor_ratchet(step3_results, iso, sens):
 
 
 def find_scenario_b_from_step3(scenario):
-    """Scenario B: Hourly matching with early firm commitment at FOAK prices.
+    """Scenario B: Hourly matching with early clean firm investment + learning curve.
 
     Strategy:
-      1. Read step 3 cost-optimal results at Scenario B toggles (High firm/CCS/LDES).
-         Hourly matching requires firm generation to cover nighttime/wind-lull hours,
-         so the buyer pays FOAK prices for nuclear/CCS/LDES before the learning
-         curve matures. This gives higher MAC at low thresholds.
-      2. Apply path-dependent floor ratchet: resources deployed at each threshold
-         become the floor for the next. Can't un-build what was deployed.
-      3. Step 3's merit-order tranching (uprate → geo → cheapest of nuclear/CCS)
-         still applies — uprates are cheap even at FOAK.
-      4. Uprates ($15-40/MWh at FOAK) are the first clean firm tranche at every
-         threshold.
+      1. Load step 3 results at FOAK toggles (firm='H', ldes='H', ccs='H').
+      2. Apply floor ratchet (path-dependent lock-in).
+      3. Apply learning curve: early thresholds (50-70%) pay near-FOAK prices,
+         costs decline via Wright's Law as cumulative deployment grows,
+         approaching NOAK by 2040s (90%+). This models proactive investment
+         in the late 2020s / early-to-mid 2030s driving the cost curve down.
+      4. Uprates at Medium ($25/MWh) — existing plants, no learning dependency.
+      5. Overall system cost is LOWER than Scenario A because early investment
+         enables cheaper firm deployment at scale when it matters most.
     """
     results = {}
     sens = scenario['toggles']
@@ -1028,15 +1148,21 @@ def find_scenario_b_from_step3(scenario):
             results[iso] = {}
             continue
 
-        print(f" {len(step3)} thresholds, applying floor ratchet...")
+        print(f" {len(step3)} thresholds, applying floor ratchet + learning curve...")
         results[iso] = _apply_floor_ratchet(step3, iso, iso_sens)
 
-        for t in sorted(results[iso].keys()):
+    # Apply learning curve cost adjustments (FOAK → NOAK over time)
+    _adjust_costs_with_learning(results, scenario)
+
+    for iso in ISOS:
+        for t in sorted(results.get(iso, {}).keys()):
             r = results[iso][t]
             rt = r['resource_twh']
             uprate = r.get('tranche_uprate_twh', 0)
+            lf = r.get('learning_fraction', 0)
             print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
                   f"Wnd={rt['wind']:6.0f} Up={uprate:5.1f} "
+                  f"LF={lf:.2f} "
                   f"Proc={r['procurement_pct']:3.0f}% "
                   f"${r['effective_cost']:.0f}/MWh")
 
@@ -1044,18 +1170,17 @@ def find_scenario_b_from_step3(scenario):
 
 
 def find_scenario_a_from_step3(scenario):
-    """Scenario A: Consequential deployment ordered by $/tCO₂.
+    """Scenario A: Consequential deployment — chase cheapest $/tCO₂, no firm learning.
 
     Strategy:
-      1. Read step 3 cost-optimal results at Scenario A toggles (Low/NOAK costs).
-         The consequential buyer gravitates to the cheapest available technology,
-         so NOAK pricing reflects mature-market procurement costs.
-      2. Apply path-dependent floor ratchet per ISO: resources deployed at threshold N
-         become the floor for threshold N+1.
-      3. The cross-regional deployment ORDER by $/tCO₂ (= marginal_LCOE / CO₂_displacement_rate)
-         is computed downstream by build_consequential_queue().
-      4. Uprates ($15-25/MWh at NOAK) are the first clean firm tranche at every
-         threshold (built into step 3's merit-order tranching).
+      1. Load step 3 results at FOAK toggles (firm='H', ldes='H', ccs='H').
+         The consequential buyer chases cheap renewables and never invests in
+         clean firm development. Firm costs stay at FOAK at ALL thresholds.
+      2. Apply floor ratchet (path-dependent lock-in).
+      3. NO learning curve — when firm gen is finally needed at high thresholds
+         (90%+), it hits a cost cliff because there was no early investment
+         to drive learning. This is the "scrambling" scenario.
+      4. Uprates at Medium ($25/MWh) — existing plants, no learning dependency.
     """
     results = {}
     sens = scenario['toggles']
@@ -1071,17 +1196,21 @@ def find_scenario_a_from_step3(scenario):
             results[iso] = {}
             continue
 
-        print(f" {len(step3)} thresholds, applying floor ratchet...")
+        print(f" {len(step3)} thresholds, applying floor ratchet (no learning curve)...")
         results[iso] = _apply_floor_ratchet(step3, iso, iso_sens)
 
-        for t in sorted(results[iso].keys()):
+    # Adjust uprate to Medium only (no learning curve — firm stays at FOAK)
+    _adjust_costs_no_learning(results, scenario)
+
+    for iso in ISOS:
+        for t in sorted(results.get(iso, {}).keys()):
             r = results[iso][t]
             rt = r['resource_twh']
             uprate = r.get('tranche_uprate_twh', 0)
             print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
                   f"Wnd={rt['wind']:6.0f} Up={uprate:5.1f} "
                   f"Proc={r['procurement_pct']:3.0f}% "
-                  f"${r['effective_cost']:.0f}/MWh")
+                  f"${r['effective_cost']:.0f}/MWh (FOAK, no learning)")
 
     return results
 
@@ -1258,8 +1387,8 @@ def compute_domino_sequence(queue_a, queue_b):
 def main():
     print("=" * 80)
     print("DUAL-SCENARIO COMPARISON: PURE CONSEQUENTIAL vs HOURLY MATCHING")
-    print("  A: Pure Consequential — step 3 mined, $/tCO₂ ordered, uprate-first")
-    print("  B: Hourly Matching — step 3 mined, NOAK costs, uprate-first")
+    print("  A: Pure Consequential — FOAK firm costs (no learning), cheap $/tCO₂ first")
+    print("  B: Hourly Matching — FOAK→NOAK learning curve, early firm investment")
     print("=" * 80)
 
     # Load egrid and fossil mix data
@@ -1268,16 +1397,18 @@ def main():
     with open('data/EIA 930 Data/eia_fossil_mix.json') as f:
         fossil_mix = json.load(f)
 
-    # Scenario A: Mine step 3 results at Scenario A toggles + floor ratchet
-    # Cross-regional deployment ordering by $/tCO₂ is computed by build_consequential_queue()
-    print("\nScenario A (Pure Consequential): mining step 3 results...")
-    print(f"  Toggles: {_build_scenario_key(SCENARIO_A, 'PJM')} (low/NOAK — cheapest $/tCO₂)")
+    # Scenario A: FOAK firm costs, no learning curve, chase cheapest $/tCO₂
+    # Clean firm never invested → stays at FOAK forever → cost cliff at high thresholds
+    print("\nScenario A (Pure Consequential): FOAK firm, no learning curve...")
+    print(f"  Toggles: {_build_scenario_key(SCENARIO_A, 'PJM')} (FOAK firm — no development)")
+    print(f"  Uprate override: Medium (${UPRATE_LCOE['M']}/MWh)")
     results_a = find_scenario_a_from_step3(SCENARIO_A)
 
-    # Scenario B: Mine step 3 results at Scenario B toggles + floor ratchet
-    # Forward-looking path with uprate-first tranching at NOAK cost targets
-    print("\nScenario B (Hourly Matching): mining step 3 results...")
-    print(f"  Toggles: {_build_scenario_key(SCENARIO_B, 'PJM')} (high/FOAK — early firm commitment)")
+    # Scenario B: Early firm investment drives FOAK→NOAK learning curve
+    # Higher upfront cost but cheaper at scale by 2040s
+    print("\nScenario B (Hourly Matching): FOAK→NOAK via learning curve...")
+    print(f"  Toggles: {_build_scenario_key(SCENARIO_B, 'PJM')} (FOAK → NOAK learning)")
+    print(f"  Uprate override: Medium (${UPRATE_LCOE['M']}/MWh)")
     results_b = find_scenario_b_from_step3(SCENARIO_B)
 
     # Build consequential queues
@@ -1528,14 +1659,14 @@ def main():
                 'description': SCENARIO_A['description'],
                 'toggles': SCENARIO_A['toggles'],
                 'method': 'step3_consequential',
-                'method_description': 'Pure consequential: mined from step 3 cost optimization at Low (NOAK) cost toggles — consequential buyer gravitates to cheapest available $/tCO₂. Cross-regional deployment ordered by $/tCO₂ (= resource LCOE ÷ CO₂ displacement rate). Uprates first at every threshold. Floor ratchet locks in prior deployments.',
+                'method_description': 'Pure consequential: chases cheapest $/tCO₂ with renewables, never invests in clean firm development. Firm/CCS/LDES costs stay at FOAK at all thresholds — no learning curve. When firm is finally needed at high thresholds, hits a cost cliff. Uprates at Medium (existing plants). Floor ratchet locks in prior deployments.',
             },
             'scenario_b': {
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
                 'method': 'step3_hourly_matching',
-                'method_description': 'Hourly matching with early firm commitment: mined from step 3 cost optimization at High (FOAK) firm/CCS/LDES toggles — hourly matching requires firm generation, paid at premium FOAK prices before learning curve matures. Uprate-first tranching. Floor ratchet locks in prior deployments.',
+                'method_description': 'Hourly matching with early clean firm investment: pays FOAK prices in late 2020s/early 2030s but drives Wright\'s Law learning curve. Firm/CCS/LDES costs decline from FOAK→NOAK as cumulative deployment grows. By 2040s, firm costs at competitive NOAK levels. Overall system cost lower than Scenario A. Uprates at Medium. Floor ratchet locks in prior deployments.',
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
