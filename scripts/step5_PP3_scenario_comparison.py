@@ -422,6 +422,16 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None):
         gas_cost
     )
 
+    # New-build cost tracking (for MAC = LCOE / displaced_rate)
+    existing_cost_per_mwh = (sol_existing + wnd_existing + hyd_demand + ccs_existing + cf_existing) / 100.0 * wholesale
+    new_build_per_mwh = total_cost - existing_cost_per_mwh - gas_cost
+    new_gen_twh = (sol_new + wnd_new + ccs_new + cf_new) / 100.0 * demand_twh
+    new_build_cost_total = new_build_per_mwh * demand_mwh
+    if new_gen_twh > 0.01:
+        blended_new_lcoe = new_build_per_mwh * demand_twh / new_gen_twh
+    else:
+        blended_new_lcoe = 0.0
+
     eff_cost = total_cost / match_frac if match_frac > 0 else 0
     incremental = eff_cost - wholesale
 
@@ -447,6 +457,9 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None):
         'new_gas_mw': round(new_gas_mw),
         'existing_gas_used_mw': round(existing_gas_used_mw),
         'clean_peak_mw': round(clean_peak_mw),
+        'new_build_cost_total': new_build_cost_total,
+        'new_gen_twh': round(new_gen_twh, 3),
+        'blended_new_lcoe': round(blended_new_lcoe, 2),
     }
 
 
@@ -550,11 +563,16 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
             iso_sens['geo'] = None
 
         demand_twh = demand_twh_map[iso]
-        # Floor starts at zero — existing grid resources are already accounted
-        # for in the cost function (wholesale pricing for existing share).
+        # Floor starts at existing resource levels — cannot shrink below current grid.
+        # These are absolute TWh floors locked in from existing infrastructure.
+        existing = GRID_MIX_SHARES[iso]
         floor = {
-            'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0,
-            'hydro': 0, 'battery': 0, 'ldes': 0,
+            'clean_firm': existing.get('clean_firm', 0) / 100.0 * demand_twh,
+            'solar': existing.get('solar', 0) / 100.0 * demand_twh,
+            'wind': existing.get('wind', 0) / 100.0 * demand_twh,
+            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * demand_twh,
+            'hydro': existing.get('hydro', 0) / 100.0 * demand_twh,
+            'battery': 0, 'ldes': 0,
         }
 
         for t in THRESHOLDS:
@@ -618,6 +636,17 @@ def find_optimal_mixes_learning_curve(feasible_mixes, scenario, demand_twh_map):
 
         demand_twh = demand_twh_map[iso]
 
+        # Existing resource floor — cannot shrink below current grid (absolute TWh)
+        existing = GRID_MIX_SHARES[iso]
+        existing_floor = {
+            'clean_firm': existing.get('clean_firm', 0) / 100.0 * demand_twh,
+            'solar': existing.get('solar', 0) / 100.0 * demand_twh,
+            'wind': existing.get('wind', 0) / 100.0 * demand_twh,
+            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * demand_twh,
+            'hydro': existing.get('hydro', 0) / 100.0 * demand_twh,
+            'battery': 0, 'ldes': 0,
+        }
+
         for t in THRESHOLDS:
             t_str = str(int(t)) if t == int(t) else str(t)
             mixes = feasible_mixes.get(iso, {}).get(t_str, [])
@@ -654,11 +683,20 @@ def find_optimal_mixes_learning_curve(feasible_mixes, scenario, demand_twh_map):
             ldes_l = LCOE_TABLES['ldes']['Low'][iso]
             overrides['ldes_lcoe'] = ldes_h + frac * (ldes_l - ldes_h)
 
+            # Filter mixes that respect existing resource floor
+            floor_passing = []
+            for mix in mixes:
+                violation = _floor_violation_score(mix, existing_floor, demand_twh)
+                if violation < 1.0:
+                    floor_passing.append(mix)
+            if not floor_passing:
+                floor_passing = mixes  # Fall back if none pass
+
             # Find cheapest mix at this threshold with interpolated costs
             best_cost = float('inf')
             best_result = None
 
-            for mix in mixes:
+            for mix in floor_passing:
                 result = compute_mix_cost(mix, iso_sens, iso, demand_twh, overrides=overrides)
                 if result['effective_cost'] < best_cost:
                     best_cost = result['effective_cost']
@@ -693,24 +731,31 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix):
             start = iso_data[t_start]
             end = iso_data[t_end]
 
-            # Cost delta
+            # Cost delta (for reporting only — NOT used in MAC)
             delta_cost_per_mwh = end['effective_cost'] - start['effective_cost']
 
-            # CO₂ displaced (using dispatch_utils)
+            # CO₂ displaced using merit-order dispatch (coal → oil → gas)
             clean_twh_start = max(0, (t_start - baseline_clean) / 100.0 * demand_twh)
             clean_twh_end = max(0, (t_end - baseline_clean) / 100.0 * demand_twh)
             delta_clean_twh = clean_twh_end - clean_twh_start
 
-            # Get marginal emission rate via dispatch_utils
             rate_start, _ = compute_fossil_retirement(iso, t_start, egrid, fossil_mix)
             rate_end, _ = compute_fossil_retirement(iso, t_end, egrid, fossil_mix)
             avg_rate = (rate_start + rate_end) / 2
 
             co2_displaced_mt = delta_clean_twh * avg_rate
 
-            # Marginal MAC
-            if co2_displaced_mt > 0.01:
-                marginal_mac = (delta_cost_per_mwh * demand_mwh) / (co2_displaced_mt * 1e6)
+            # MAC = LCOE / displaced_emission_rate
+            # LCOE = marginal new-build cost per MWh of new clean generation
+            delta_new_cost = end['new_build_cost_total'] - start['new_build_cost_total']
+            delta_new_gen = end['new_gen_twh'] - start['new_gen_twh']
+            if delta_new_gen > 0.01:
+                marginal_lcoe = delta_new_cost / (delta_new_gen * 1e6)
+            else:
+                marginal_lcoe = end.get('blended_new_lcoe', 0)
+
+            if avg_rate > 0.001 and marginal_lcoe > 0:
+                marginal_mac = marginal_lcoe / avg_rate
             else:
                 marginal_mac = float('inf')
 
@@ -1017,21 +1062,21 @@ def main():
                 if not d:
                     continue
 
-                # Stepwise MAC from previous threshold
+                # Stepwise MAC = marginal LCOE / displaced emission rate
                 stepwise_mac = None
                 if prev_t is not None and prev_t in results.get(iso, {}):
                     prev_d = results[iso][prev_t]
-                    delta_cost = d['effective_cost'] - prev_d['effective_cost']
-                    # CO2 displaced in this step
-                    clean_twh_prev = max(0, (prev_t - baseline_clean) / 100.0 * demand_twh)
-                    clean_twh_cur = max(0, (t - baseline_clean) / 100.0 * demand_twh)
-                    delta_clean = clean_twh_cur - clean_twh_prev
-                    rate_prev, _ = compute_fossil_retirement(iso, prev_t, egrid, fossil_mix)
+                    # Marginal LCOE of incremental new-build resources
+                    delta_new_cost = d['new_build_cost_total'] - prev_d['new_build_cost_total']
+                    delta_new_gen = d['new_gen_twh'] - prev_d['new_gen_twh']
+                    if delta_new_gen > 0.01:
+                        marginal_lcoe = delta_new_cost / (delta_new_gen * 1e6)
+                    else:
+                        marginal_lcoe = d.get('blended_new_lcoe', 0)
+                    # Displaced emission rate from merit-order dispatch
                     rate_cur, _ = compute_fossil_retirement(iso, t, egrid, fossil_mix)
-                    avg_rate = (rate_prev + rate_cur) / 2
-                    co2_mt = delta_clean * avg_rate
-                    if co2_mt > 0.001:
-                        stepwise_mac = round((delta_cost * demand_mwh) / (co2_mt * 1e6), 1)
+                    if rate_cur > 0.001 and marginal_lcoe > 0:
+                        stepwise_mac = round(marginal_lcoe / rate_cur, 1)
                     else:
                         stepwise_mac = 9999
 
@@ -1057,9 +1102,59 @@ def main():
                     'firm_total_twh': round(firm_total_twh, 1),
                     'procurement_pct': d.get('procurement_pct', 100),
                     'stepwise_mac': stepwise_mac,
+                    'blended_new_lcoe': d.get('blended_new_lcoe', 0),
+                    'new_gen_twh': d.get('new_gen_twh', 0),
+                    'new_build_cost_total': d.get('new_build_cost_total', 0),
                 })
                 prev_t = t
             traj[iso] = iso_traj
+
+        # Post-process: enforce strict monotonicity for Scenario A
+        # Resources can only go UP (path-dependent lock-in). If the feasible set forced
+        # a soft-floor violation, the prior locked-in resources still physically exist.
+        # Recompute gas backup from the floor-enforced resource levels.
+        if label == 'pure_consequential':
+            for iso in ISOS:
+                if iso not in traj:
+                    continue
+                running_max = {}
+                for entry in traj[iso]:
+                    # Enforce monotonic resource_twh
+                    for res in list(entry['resource_twh'].keys()):
+                        val = entry['resource_twh'][res]
+                        if res in running_max:
+                            entry['resource_twh'][res] = max(running_max[res], val)
+                        running_max[res] = entry['resource_twh'][res]
+
+                    # Enforce monotonic battery/LDES
+                    for field in ['battery_twh', 'ldes_twh']:
+                        val = entry.get(field, 0)
+                        old_max = running_max.get(field, 0)
+                        entry[field] = max(old_max, val)
+                        running_max[field] = entry[field]
+
+                    # Recompute gas backup from floor-enforced resources
+                    clean_peak_mw = 0
+                    for r, twh in entry['resource_twh'].items():
+                        pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
+                        if pcc > 0 and twh > 0:
+                            clean_peak_mw += (twh * 1e6 / 8760) * pcc
+                    clean_peak_mw += (entry.get('battery_twh', 0) * 1e6 / 8760) * PEAK_CAPACITY_CREDITS.get('battery', 0.95)
+                    clean_peak_mw += (entry.get('ldes_twh', 0) * 1e6 / 8760) * PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
+
+                    ra_peak_mw = PEAK_DEMAND_MW[iso] * (1 + RESOURCE_ADEQUACY_MARGIN)
+                    gaf = GAS_AVAILABILITY_FACTOR[iso]
+                    gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+                    entry['gas_backup_mw'] = round(gas_needed_mw)
+                    entry['new_gas_mw'] = round(max(0, gas_needed_mw - EXISTING_GAS_CAPACITY_MW[iso]))
+                    entry['clean_peak_mw'] = round(clean_peak_mw)
+
+                    # Recompute firm_total_twh from floor-enforced values
+                    cf_twh = entry['resource_twh'].get('clean_firm', 0)
+                    ccs_twh = entry['resource_twh'].get('ccs_ccgt', 0)
+                    existing_cf_twh = GRID_MIX_SHARES[iso].get('clean_firm', 0) / 100.0 * BASE_DEMAND_TWH[iso]
+                    entry['firm_total_twh'] = round(max(0, cf_twh - existing_cf_twh) + ccs_twh, 1)
+
         trajectories[label] = traj
 
     output = {
