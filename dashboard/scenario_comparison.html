@@ -601,19 +601,47 @@ const COLORS = {
     A85: 'rgba(220,38,38,0.85)', B85: 'rgba(22,163,74,0.85)',
     A_fill: 'rgba(220,38,38,0.08)', B_fill: 'rgba(22,163,74,0.08)',
     A_area: 'rgba(220,38,38,0.12)', B_area: 'rgba(22,163,74,0.12)',
-    clean_firm: '#1E3A5F', solar: '#D97706', wind: '#16A34A',
+    nuclear: '#1E3A5F', geothermal: '#8B5CF6', solar: '#D97706', wind: '#16A34A',
     ccs: '#0D9488', hydro: '#0284C7', battery: '#7C3AED', ldes: '#DB2777',
     gas: '#6B7280',
 };
 const RES_RGB = {
-    clean_firm: '30,58,95',  solar: '245,158,11', wind: '34,197,94',
-    ccs_ccgt: '13,148,136',  hydro: '14,165,233', battery: '139,92,246', ldes: '236,72,153',
+    nuclear: '30,58,95', geothermal: '139,92,246', solar: '245,158,11', wind: '34,197,94',
+    ccs_ccgt: '13,148,136', hydro: '14,165,233', battery: '139,92,246', ldes: '236,72,153',
     gas: '107,114,128',
 };
 const RES_LABELS = {
-    clean_firm: 'Nuclear', ccs_ccgt: 'CCS-CCGT', solar: 'Solar', wind: 'Wind',
+    nuclear: 'Nuclear', geothermal: 'Geothermal', ccs_ccgt: 'CCS-CCGT', solar: 'Solar', wind: 'Wind',
     hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas: 'Gas Backup',
 };
+
+// Clean firm tranche breakdown constants (from Step 3 cost optimization)
+const EXISTING_NUCLEAR_GW = { CAISO: 2.3, ERCOT: 2.7, PJM: 32.0, NYISO: 3.4, NEISO: 3.5, MISO: 12.0, SPP: 1.2 };
+const UPRATE_CAP_TWH = {};
+for (const [iso, gw] of Object.entries(EXISTING_NUCLEAR_GW)) {
+    UPRATE_CAP_TWH[iso] = Math.round(gw * 0.08 * 0.90 * 8760 / 1e3 * 1000) / 1000;
+}
+const GEO_CAP_TWH = 39.0; // CAISO only
+
+// Split clean_firm TWh into nuclear (existing + uprate + new build) and geothermal
+function splitCleanFirm(iso, totalCfTwh, existingCfTwh) {
+    const existTwh = Math.min(totalCfTwh, existingCfTwh);
+    const newCfTwh = Math.max(0, totalCfTwh - existTwh);
+    const uprateTwh = Math.min(newCfTwh, UPRATE_CAP_TWH[iso] || 0);
+    let remaining = Math.max(0, newCfTwh - uprateTwh);
+    let geoTwh = 0;
+    if (iso === 'CAISO') {
+        geoTwh = Math.min(remaining, GEO_CAP_TWH);
+        remaining = Math.max(0, remaining - geoTwh);
+    }
+    // remaining = new nuclear (or CCS from tranche 3, but for display we label it nuclear)
+    return {
+        nuclear_existing: existTwh,
+        nuclear_uprate: uprateTwh,
+        geothermal: geoTwh,
+        nuclear_new: remaining,
+    };
+}
 const GRID_MIX = DATA.metadata.grid_mix_shares;
 const DEMAND_TWH = DATA.metadata.base_demand_twh;
 
@@ -964,8 +992,11 @@ function createStripePattern(ctx, rgb) {
     return ctx.createPattern(pCanvas, 'repeat');
 }
 
-const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
-const NEWBUILD_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt', 'clean_firm'];
+// Resources that have existing grid share (for "existing" bars)
+const EXISTING_RES = ['ccs_ccgt', 'hydro', 'wind', 'solar']; // nuclear existing handled by splitCleanFirm
+// New-build resources (stacking order, bottom → top)
+const NEWBUILD_RES = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt'];
+// Nuclear/geothermal are built from the clean_firm breakdown, rendered separately
 
 let mixChartA, mixChartB;
 function renderMixCharts(iso) {
@@ -976,22 +1007,42 @@ function renderMixCharts(iso) {
     const trajB = getScenarioB(iso);
     const labels = trajA.map(d => d.year + '\n' + d.threshold + '%');
     const baseDemandTwh = DEMAND_TWH[iso];
-    const existShares = GRID_MIX || {};
-    const isoShares = existShares[iso] || {};
+    const isoShares = (GRID_MIX || {})[iso] || {};
 
-    // Compute existing TWh per resource (fixed at 2025 base — existing infra doesn't grow)
+    // Compute existing TWh per non-nuclear resource
     const existingTwh = {};
-    for (const res of EXISTING_ORDER) {
+    for (const res of EXISTING_RES) {
         existingTwh[res] = (isoShares[res] || 0) / 100 * baseDemandTwh;
     }
+    // Existing nuclear TWh (used by splitCleanFirm)
+    const existingNuclearTwh = (isoShares['clean_firm'] || 0) / 100 * baseDemandTwh;
 
     function makeDatasets(traj, canvasId) {
         const canvas = document.getElementById(canvasId);
         const ctx = canvas.getContext('2d');
         const datasets = [];
 
-        // 1) Existing resources (transparent/light, bottom of stack)
-        for (const res of EXISTING_ORDER) {
+        // Pre-compute clean_firm breakdown for each trajectory point
+        const cfBreakdown = traj.map(d => {
+            const totalCf = d.resource_twh.clean_firm || 0;
+            return splitCleanFirm(iso, totalCf, existingNuclearTwh);
+        });
+
+        // === 1) EXISTING RESOURCES (transparent, bottom of stack) ===
+
+        // Nuclear (existing)
+        if (existingNuclearTwh >= 0.5) {
+            datasets.push({
+                label: 'Nuclear (existing)',
+                data: cfBreakdown.map(b => Math.round(b.nuclear_existing)),
+                backgroundColor: 'rgba(' + RES_RGB.nuclear + ',0.18)',
+                borderColor: 'rgba(' + RES_RGB.nuclear + ',0.45)',
+                borderWidth: 1.5, borderRadius: 6, stack: 'mix',
+            });
+        }
+
+        // Other existing resources
+        for (const res of EXISTING_RES) {
             const ex = existingTwh[res] || 0;
             if (ex < 0.5) continue;
             datasets.push({
@@ -999,14 +1050,14 @@ function renderMixCharts(iso) {
                 data: traj.map(() => Math.round(ex)),
                 backgroundColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.18)',
                 borderColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.45)',
-                borderWidth: 1.5,
-                borderRadius: 6,
-                stack: 'mix',
+                borderWidth: 1.5, borderRadius: 6, stack: 'mix',
             });
         }
 
-        // 2) New build resources (saturated/solid, middle)
-        for (const res of NEWBUILD_ORDER) {
+        // === 2) NEW BUILD RESOURCES (solid, middle of stack) ===
+
+        // Non-nuclear/non-CF new builds (solar, wind, hydro, battery, ldes, ccs_ccgt)
+        for (const res of NEWBUILD_RES) {
             datasets.push({
                 label: (RES_LABELS[res] || res) + ' (new)',
                 data: traj.map(d => {
@@ -1016,16 +1067,31 @@ function renderMixCharts(iso) {
                 }),
                 backgroundColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.55)',
                 borderColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',1)',
-                borderWidth: 1.5,
-                borderRadius: 6,
-                borderSkipped: 'start',
-                stack: 'mix',
+                borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
             });
         }
 
-        // 3) Curtailment (diagonal stripes, top of stack)
-        // Curtailed = total procured - threshold-matched demand
-        // Allocate proportionally to solar and wind (variable renewables are curtailed)
+        // Nuclear uprate + new build (combined as "Nuclear (new)")
+        datasets.push({
+            label: 'Nuclear (new)',
+            data: cfBreakdown.map(b => Math.round(b.nuclear_uprate + b.nuclear_new)),
+            backgroundColor: 'rgba(' + RES_RGB.nuclear + ',0.65)',
+            borderColor: 'rgba(' + RES_RGB.nuclear + ',1)',
+            borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+        });
+
+        // Geothermal (CAISO only — will be 0 for all other ISOs)
+        if (iso === 'CAISO') {
+            datasets.push({
+                label: 'Geothermal (new)',
+                data: cfBreakdown.map(b => Math.round(b.geothermal)),
+                backgroundColor: 'rgba(' + RES_RGB.geothermal + ',0.55)',
+                borderColor: 'rgba(' + RES_RGB.geothermal + ',1)',
+                borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
+        // === 3) CURTAILMENT (diagonal stripes, top of stack) ===
         const curtailRes = ['solar', 'wind'];
         for (const res of curtailRes) {
             datasets.push({
@@ -1035,7 +1101,6 @@ function renderMixCharts(iso) {
                     const matched = d.threshold / 100 * (d.demand_twh || baseDemandTwh);
                     const totalCurtailed = Math.max(0, totalProcured - matched);
                     if (totalCurtailed < 1) return 0;
-                    // Allocate to this VRE proportionally
                     const newSol = Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0));
                     const newWnd = Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0));
                     const totalVRE = newSol + newWnd;
@@ -1045,28 +1110,18 @@ function renderMixCharts(iso) {
                 }),
                 backgroundColor: createStripePattern(ctx, RES_RGB[res]),
                 borderColor: 'rgba(' + RES_RGB[res] + ',0.4)',
-                borderWidth: 1,
-                borderRadius: 6,
-                borderSkipped: 'start',
-                stack: 'mix',
+                borderWidth: 1, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
             });
         }
 
-        // 4) Demand line overlay — horizontal reference line showing total demand
+        // === 4) DEMAND LINE OVERLAY ===
         datasets.push({
             label: 'Demand',
             data: traj.map(d => Math.round(d.demand_twh || baseDemandTwh)),
             type: 'line',
-            borderColor: 'rgba(0,0,0,0.7)',
-            borderWidth: 2,
-            borderDash: [6, 3],
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointBackgroundColor: 'rgba(0,0,0,0.7)',
-            fill: false,
-            tension: 0,
-            yAxisID: 'y',
-            order: -2,
+            borderColor: 'rgba(0,0,0,0.7)', borderWidth: 2, borderDash: [6, 3],
+            pointRadius: 0, pointHoverRadius: 4, pointBackgroundColor: 'rgba(0,0,0,0.7)',
+            fill: false, tension: 0, yAxisID: 'y', order: -2,
         });
 
         return datasets;
@@ -1092,8 +1147,7 @@ function renderMixCharts(iso) {
                 labels: {
                     color: 'rgba(0,0,0,0.6)', font: { size: 10 },
                     filter: item => {
-                        if (item.text.includes('(existing)') && !item.text.startsWith('Nuclear'))
-                            return false;
+                        // Show representative legend items, not every duplicate
                         if (item.text.includes('(curtailed)') && !item.text.startsWith('Solar'))
                             return false;
                         return true;
@@ -1115,11 +1169,9 @@ function renderMixCharts(iso) {
         scales: {
             x: { stacked: true, ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 9 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
             y: { stacked: true, max: sharedYMax, ticks: { color: 'rgba(0,0,0,0.5)' }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.5)' } },
-            // yDemand axis removed — demand now uses main y axis as a line overlay
         }
     };
 
-    // Add target annotation to mix chart options
     const mixAnnotations = targetAnnotation(labels, trajA);
     const optsA = { ...opts, plugins: { ...opts.plugins, annotation: { annotations: mixAnnotations } } };
     const optsB = { ...opts, plugins: { ...opts.plugins, annotation: { annotations: mixAnnotations } } };
