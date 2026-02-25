@@ -1065,9 +1065,21 @@ function computeCompanyCapacityDispatch(company) {
     out.isos = isos;
     out.nameplate_by_iso = {};
     out.dispatch_by_iso = {};
+    // Per-ISO per-fuel breakdowns for ISO drill-down
+    out.nameplate_by_iso_fuel = {};
+    out.dispatch_by_iso_fuel = {};
+    out.cf_by_iso_fuel = {};
     isos.forEach(iso => {
         out.nameplate_by_iso[iso] = [];
         out.dispatch_by_iso[iso] = [];
+        out.nameplate_by_iso_fuel[iso] = {};
+        out.dispatch_by_iso_fuel[iso] = {};
+        out.cf_by_iso_fuel[iso] = {};
+        allFuels.forEach(f => {
+            out.nameplate_by_iso_fuel[iso][f] = [];
+            out.dispatch_by_iso_fuel[iso][f] = [];
+            out.cf_by_iso_fuel[iso][f] = [];
+        });
     });
 
     FLEET_THRESHOLDS.forEach(t => {
@@ -1080,6 +1092,13 @@ function computeCompanyCapacityDispatch(company) {
         isos.forEach(iso => { isoNp[iso] = 0; isoDisp[iso] = 0; });
         const fuelNpAcc = {}, fuelDispAcc = {};
         allFuels.forEach(f => { fuelNpAcc[f] = 0; fuelDispAcc[f] = 0; });
+        // Per-ISO per-fuel accumulators
+        const isoFuelNp = {}, isoFuelDisp = {};
+        isos.forEach(iso => {
+            isoFuelNp[iso] = {};
+            isoFuelDisp[iso] = {};
+            allFuels.forEach(f => { isoFuelNp[iso][f] = 0; isoFuelDisp[iso][f] = 0; });
+        });
 
         company.plants.forEach(plant => {
             const iso = plant.iso;
@@ -1090,6 +1109,7 @@ function computeCompanyCapacityDispatch(company) {
                 fuelDispAcc[plant.fuel] += plant.generation_twh;
                 isoNp[iso] = (isoNp[iso] || 0) + plant.capacity_mw;
                 isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh;
+                if (isoFuelNp[iso]) { isoFuelNp[iso][plant.fuel] += plant.capacity_mw; isoFuelDisp[iso][plant.fuel] += plant.generation_twh; }
                 return;
             }
 
@@ -1098,6 +1118,7 @@ function computeCompanyCapacityDispatch(company) {
                 fuelDispAcc[plant.fuel] += plant.generation_twh;
                 isoNp[iso] = (isoNp[iso] || 0) + plant.capacity_mw;
                 isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh;
+                if (isoFuelNp[iso]) { isoFuelNp[iso][plant.fuel] += plant.capacity_mw; isoFuelDisp[iso][plant.fuel] += plant.generation_twh; }
                 return;
             }
 
@@ -1110,22 +1131,27 @@ function computeCompanyCapacityDispatch(company) {
                     Math.min(1, remaining.coal / decline.coal_cap_twh) : 0;
                 // Nameplate: binary — running or retired
                 const np = remaining.coal > 0.01 ? plant.capacity_mw : 0;
+                const disp = plant.generation_twh * coalFrac;
                 fuelNpAcc[plant.fuel] += np;
-                fuelDispAcc[plant.fuel] += plant.generation_twh * coalFrac;
+                fuelDispAcc[plant.fuel] += disp;
                 isoNp[iso] = (isoNp[iso] || 0) + np;
-                isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh * coalFrac;
+                isoDisp[iso] = (isoDisp[iso] || 0) + disp;
+                if (isoFuelNp[iso]) { isoFuelNp[iso][plant.fuel] += np; isoFuelDisp[iso][plant.fuel] += disp; }
             } else if (plant.fuel === 'oil') {
                 const oilFrac = decline.oil_cap_twh > 0 ?
                     Math.min(1, (remaining.oil || 0) / decline.oil_cap_twh) : 0;
                 const np = (remaining.oil || 0) > 0.01 ? plant.capacity_mw : 0;
+                const disp = plant.generation_twh * oilFrac;
                 fuelNpAcc[plant.fuel] += np;
-                fuelDispAcc[plant.fuel] += plant.generation_twh * oilFrac;
+                fuelDispAcc[plant.fuel] += disp;
                 isoNp[iso] = (isoNp[iso] || 0) + np;
-                isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh * oilFrac;
+                isoDisp[iso] = (isoDisp[iso] || 0) + disp;
+                if (isoFuelNp[iso]) { isoFuelNp[iso][plant.fuel] += np; isoFuelDisp[iso][plant.fuel] += disp; }
             } else if (plant.fuel === 'gas_ccgt' || plant.fuel === 'gas_peaker') {
                 // Gas: nameplate ALWAYS stays (no physical retirement)
                 fuelNpAcc[plant.fuel] += plant.capacity_mw;
                 isoNp[iso] = (isoNp[iso] || 0) + plant.capacity_mw;
+                if (isoFuelNp[iso]) { isoFuelNp[iso][plant.fuel] += plant.capacity_mw; }
 
                 // Dispatch: merit-order (same logic as computeFleetMixOverTime)
                 const gas_remaining = remaining.gas;
@@ -1151,8 +1177,10 @@ function computeCompanyCapacityDispatch(company) {
                     const ac = Math.max(0, rgf - cs);
                     frac = cs < 1 ? Math.min(1, ac / (1 - cs)) : 0;
                 }
-                fuelDispAcc[plant.fuel] += plant.generation_twh * Math.min(1, frac);
-                isoDisp[iso] = (isoDisp[iso] || 0) + plant.generation_twh * Math.min(1, frac);
+                const disp = plant.generation_twh * Math.min(1, frac);
+                fuelDispAcc[plant.fuel] += disp;
+                isoDisp[iso] = (isoDisp[iso] || 0) + disp;
+                if (isoFuelDisp[iso]) { isoFuelDisp[iso][plant.fuel] += disp; }
             }
         });
 
@@ -1173,6 +1201,15 @@ function computeCompanyCapacityDispatch(company) {
         isos.forEach(iso => {
             out.nameplate_by_iso[iso].push(+((isoNp[iso] || 0) / 1000).toFixed(3));
             out.dispatch_by_iso[iso].push(+((isoDisp[iso] || 0)).toFixed(2));
+            // Per-ISO per-fuel
+            allFuels.forEach(f => {
+                const np = (isoFuelNp[iso] && isoFuelNp[iso][f]) || 0;
+                const disp = (isoFuelDisp[iso] && isoFuelDisp[iso][f]) || 0;
+                out.nameplate_by_iso_fuel[iso][f].push(+(np / 1000).toFixed(3));
+                out.dispatch_by_iso_fuel[iso][f].push(+disp.toFixed(2));
+                const cf = np > 0 ? +((disp * 1e6) / (np * 8760) * 100).toFixed(1) : 0;
+                out.cf_by_iso_fuel[iso][f].push(cf);
+            });
         });
     });
 
