@@ -496,6 +496,51 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 
 
 # ============================================================================
+# EXISTING CLEAN FLOOR FILTER
+# ============================================================================
+# For the baseline (Phase 1), existing clean assets must be part of the mix
+# no matter what.  A PFS mix with solar < existing solar is infeasible under
+# the mandate that you can't un-build existing clean generation.  This filter
+# removes mixes where any resource is below the existing share.
+#
+# Tracks (newbuild, CTR) bypass this filter via their own existing_override.
+
+def apply_existing_clean_floor(arrays, iso):
+    """Filter PFS arrays to keep only mixes where each resource >= existing share.
+
+    Args:
+        arrays: dict of numpy arrays keyed by resource name + dispatch fields
+        iso: region string
+
+    Returns:
+        filtered_arrays: same structure, with sub-existing mixes removed
+        n_removed: count of mixes removed
+    """
+    existing = GRID_MIX_SHARES[iso]
+    N = len(arrays['clean_firm'])
+
+    mask = np.ones(N, dtype=bool)
+    for resource in ['clean_firm', 'solar', 'wind', 'hydro']:
+        floor = existing.get(resource, 0)
+        if floor > 0:
+            mask &= arrays[resource].astype(np.float64) >= floor
+
+    n_kept = int(mask.sum())
+    n_removed = N - n_kept
+
+    if n_removed == 0:
+        return arrays, 0
+
+    filtered = {}
+    for key, arr in arrays.items():
+        if isinstance(arr, np.ndarray) and len(arr) == N:
+            filtered[key] = arr[mask]
+        else:
+            filtered[key] = arr
+    return filtered, n_removed
+
+
+# ============================================================================
 # PRE-COMPUTED COEFFICIENT MODEL (Phase 1 acceleration)
 # ============================================================================
 # For base year (no growth), total_cost decomposes into:
@@ -1333,8 +1378,14 @@ def main():
         if iso not in pfs:
             continue
 
-        arrays = pfs[iso]
+        # Apply existing clean floor filter: mandate existing clean in every mix
+        raw_arrays = pfs[iso]
+        arrays, n_filtered = apply_existing_clean_floor(raw_arrays, iso)
+        N_raw = len(raw_arrays['clean_firm'])
         N = len(arrays['clean_firm'])
+        if n_filtered > 0:
+            print(f"    {iso}: existing clean floor filter removed {n_filtered:,} / {N_raw:,} mixes "
+                  f"({n_filtered/N_raw*100:.1f}%) — {N:,} remaining")
         demand_twh = REGIONAL_DEMAND_TWH[iso]
 
         output['results'][iso] = {
