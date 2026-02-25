@@ -595,7 +595,7 @@ html, body {
                     <canvas id="regionChart_ERCOT"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#22C55E;"></span>Stepwise envelope (Medium cost)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#22C55E;"></span>Stepwise marginal MAC (Medium cost)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.2);"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
@@ -624,7 +624,7 @@ html, body {
                     <canvas id="regionChart_PJM"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#4a90d9;"></span>Stepwise envelope (Medium cost)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#4a90d9;"></span>Stepwise marginal MAC (Medium cost)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(74,144,217,0.25);"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
@@ -653,7 +653,7 @@ html, body {
                     <canvas id="regionChart_CAISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#F59E0B;"></span>Stepwise envelope (Medium cost)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#F59E0B;"></span>Stepwise marginal MAC (Medium cost)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
@@ -682,7 +682,7 @@ html, body {
                     <canvas id="regionChart_NYISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#E91E63;"></span>Stepwise envelope (Medium cost)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#E91E63;"></span>Stepwise marginal MAC (Medium cost)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.25);"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
@@ -711,7 +711,7 @@ html, body {
                     <canvas id="regionChart_NEISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#9C27B0;"></span>Stepwise envelope (Medium cost)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#9C27B0;"></span>Stepwise marginal MAC (Medium cost)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(156,39,176,0.25);"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
@@ -834,26 +834,24 @@ function buildHeroChart() {
     const colors = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0' };
 
     const stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
-    const stepEnv = typeof MAC_ENVELOPE_DATA !== 'undefined' ? MAC_ENVELOPE_DATA : null;
     const avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
 
     const datasets = [];
     regions.forEach((iso) => {
         const fan = stepFan?.[iso];
-        const env = stepEnv?.[iso]?.stepwise_envelope;
         const fb = avgFan?.[iso];
-        if (!fan && !env) return;
+        if (!fan) return;
         const c = colors[iso];
 
-        const p90pts = (fan?.p90 || []).map((v, i) => {
+        const p90pts = (fan.p90 || []).map((v, i) => {
             const val = v ?? fb?.p90?.[i] ?? null;
             return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
         }).filter(d => d.y != null);
-        const p10pts = (fan?.p10 || []).map((v, i) => {
+        const p10pts = (fan.p10 || []).map((v, i) => {
             const val = v ?? fb?.p10?.[i] ?? null;
             return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
         }).filter(d => d.y != null);
-        const envPts = (env || fan?.p50 || []).map((v, i) => {
+        const envPts = (fan.p50 || []).map((v, i) => {
             const val = v ?? fb?.p50?.[i] ?? null;
             return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
         }).filter(d => d.y != null);
@@ -950,27 +948,24 @@ function buildRegionalChart(iso) {
     if (!ctx) return;
 
     var stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
-    var stepEnv = typeof MAC_ENVELOPE_DATA !== 'undefined' ? MAC_ENVELOPE_DATA : null;
     var avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
 
     var fan = stepFan?.[iso];
-    var env = stepEnv?.[iso]?.stepwise_envelope;
     var fb = avgFan?.[iso];
-    if (!fan && !env) return;
+    if (!fan) return;
 
     var c = REGION_COLORS[iso];
     var yMax = 1200;
 
-    var p90 = (fan?.p90 || []).map(function(v, i) {
+    var p90 = (fan.p90 || []).map(function(v, i) {
         var val = v ?? fb?.p90?.[i] ?? null;
         return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMax) : null };
     }).filter(function(d) { return d.y != null; });
-    var p10 = (fan?.p10 || []).map(function(v, i) {
+    var p10 = (fan.p10 || []).map(function(v, i) {
         var val = v ?? fb?.p10?.[i] ?? null;
         return { x: THRESHOLDS[i], y: val };
     }).filter(function(d) { return d.y != null; });
-    var midSrc = env || fan?.p50 || [];
-    var p50 = midSrc.map(function(v, i) {
+    var p50 = (fan.p50 || []).map(function(v, i) {
         var val = v ?? fb?.p50?.[i] ?? null;
         return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMax) : null };
     }).filter(function(d) { return d.y != null; });
