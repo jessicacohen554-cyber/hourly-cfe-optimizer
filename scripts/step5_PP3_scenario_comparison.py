@@ -209,7 +209,7 @@ SCENARIO_A = {
     'toggles': {
         'ren': 'L',        # Low renewable (cheap solar/wind — what they chase)
         'firm': 'H',       # High firm gen (FOAK — never invested, no learning)
-        'batt': 'L',       # Low battery (mature tech)
+        'batt': 'M',       # Medium battery
         'ldes_lvl': 'H',   # High LDES (FOAK — no learning curve)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
@@ -234,7 +234,7 @@ SCENARIO_B = {
     'toggles': {
         'ren': 'L',        # Low renewable (mature tech, already cheap)
         'firm': 'H',       # High firm gen (FOAK at start, learning curve drives to NOAK)
-        'batt': 'L',       # Low battery (mature tech)
+        'batt': 'M',       # Medium battery
         'ldes_lvl': 'H',   # High LDES (FOAK → NOAK via learning)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
@@ -817,6 +817,210 @@ def _build_learning_overrides(iso, frac):
     return overrides
 
 
+def _get_excess_lcoe(res, sens, iso, overrides):
+    """Get LCOE for pricing floor excess resources, using scenario-specific overrides.
+
+    When the floor has more of a resource than the selected mix deploys,
+    the excess must still be paid for. This function returns the $/MWh LCOE
+    for that excess, respecting any learning-curve overrides.
+    """
+    tx_name = LEVEL_NAME[sens['tx']]
+
+    if res == 'clean_firm':
+        if overrides and 'nuclear_lcoe' in overrides:
+            return overrides['nuclear_lcoe'] + get_tx('clean_firm', tx_name, iso)
+        return NUCLEAR_NEWBUILD_LCOE[sens['firm']][iso] + get_tx('clean_firm', tx_name, iso)
+    elif res == 'ccs_ccgt':
+        if overrides and 'ccs_lcoe' in overrides:
+            return overrides['ccs_lcoe'] + get_tx('ccs_ccgt', tx_name, iso)
+        ccs_table = CCS_LCOE_45Q_ON if sens.get('q45') == '1' else None
+        if ccs_table:
+            return ccs_table[sens['ccs']][iso] + get_tx('ccs_ccgt', tx_name, iso)
+        return 0
+    elif res == 'ldes':
+        if overrides and 'ldes_lcoe' in overrides:
+            return overrides['ldes_lcoe'] + get_tx('ldes', tx_name, iso)
+        ldes_name = LEVEL_NAME[sens['ldes_lvl']]
+        return LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
+    elif res == 'solar':
+        ren_name = LEVEL_NAME[sens['ren']]
+        return LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso)
+    elif res == 'wind':
+        ren_name = LEVEL_NAME[sens['ren']]
+        return LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso)
+    elif res == 'battery':
+        batt_name = LEVEL_NAME[sens['batt']]
+        return LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)
+    elif res == 'hydro':
+        return 0
+    return 0
+
+
+def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
+    """Core forward-stepping optimizer with floor ratchet.
+
+    Evaluates ALL feasible EF mixes at each threshold under scenario-specific
+    cost assumptions. Selects the cheapest augmented effective cost. Floor
+    ratchets prevent un-building prior resource commitments.
+
+    This is the key function that produces DIFFERENT resource mixes for
+    Scenario A vs B — because different cost assumptions (via get_overrides_fn)
+    make different mixes optimal at each step.
+
+    Args:
+        feasible_mixes: from parse_feasible_mixes()
+        sens: sensitivity toggle dict (defines base cost lookups)
+        get_overrides_fn: fn(iso, threshold) → dict of LCOE overrides
+            Scenario A: static FOAK (returns only uprate override)
+            Scenario B: learning-curve interpolated FOAK→NOAK prices
+        label: 'A' or 'B' for logging
+
+    Returns: dict[iso][threshold] → result dict (same format as old step3-based approach)
+    """
+    results = {}
+
+    for iso in ISOS:
+        iso_sens = dict(sens)
+        if iso != 'CAISO':
+            iso_sens['geo'] = None
+
+        base_demand = BASE_DEMAND_TWH[iso]
+        existing = GRID_MIX_SHARES[iso]
+
+        # Floor = 2025 existing clean resource levels in absolute TWh
+        floor = {
+            'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand,
+            'solar': existing.get('solar', 0) / 100.0 * base_demand,
+            'wind': existing.get('wind', 0) / 100.0 * base_demand,
+            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * base_demand,
+            'hydro': existing.get('hydro', 0) / 100.0 * base_demand,
+            'battery': 0, 'ldes': 0,
+        }
+
+        iso_results = {}
+
+        for t in THRESHOLDS:
+            t_str = str(int(t)) if t == int(t) else str(t)
+            mixes = feasible_mixes.get(iso, {}).get(t_str, [])
+            if not mixes:
+                continue
+
+            gf = get_demand_growth_factor(iso, t)
+            demand_twh = base_demand * gf
+            demand_mwh = demand_twh * 1e6
+
+            overrides = get_overrides_fn(iso, t)
+
+            # Evaluate ALL feasible mixes under this scenario's cost assumptions
+            best_augmented_eff = float('inf')
+            best_result = None
+            best_mix = None
+            best_excess_per_mwh = 0.0
+
+            for mix in mixes:
+                result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
+                                         overrides=overrides, growth_factor=gf)
+
+                deployed = _mix_resource_twh(mix, demand_twh)
+
+                # Floor excess cost: resources locked in from prior steps that
+                # this mix doesn't use. Priced at scenario-specific LCOEs.
+                excess_per_mwh = 0.0
+                for res in floor:
+                    excess = max(0, floor.get(res, 0) - deployed.get(res, 0))
+                    if excess > 0.01:
+                        lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
+                        excess_per_mwh += excess / demand_twh * lcoe
+
+                augmented_eff = (result['total_cost'] + excess_per_mwh) / \
+                    (result['match_score'] / 100.0) if result['match_score'] > 0 else float('inf')
+
+                if augmented_eff < best_augmented_eff:
+                    best_augmented_eff = augmented_eff
+                    best_result = result
+                    best_mix = mix
+                    best_excess_per_mwh = excess_per_mwh
+
+            if not best_result or not best_mix:
+                continue
+
+            # Build augmented result: resources = max(floor, EF deployed)
+            deployed = _mix_resource_twh(best_mix, demand_twh)
+            augmented = {}
+            excess_twh = {}
+            for res in floor:
+                ef_val = deployed.get(res, 0)
+                floor_val = floor.get(res, 0)
+                augmented[res] = max(ef_val, floor_val)
+                excess_twh[res] = max(0, floor_val - ef_val)
+
+            total_excess = sum(excess_twh.values())
+
+            # Build result dict
+            aug = dict(best_result)
+            aug['total_cost'] = round(best_result['total_cost'] + best_excess_per_mwh, 2)
+            match_frac = best_result['match_score'] / 100.0
+            aug['effective_cost'] = round(
+                aug['total_cost'] / match_frac if match_frac > 0 else 0, 2)
+            aug['incremental'] = round(
+                aug['effective_cost'] - best_result['wholesale'], 2)
+
+            # Augmented resource TWh (locked-in floor + new EF deployment)
+            aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
+            aug['battery_twh'] = augmented.get('battery', 0)
+            aug['battery8_twh'] = 0  # Not tracked separately post-augmentation
+            aug['ldes_twh'] = augmented.get('ldes', 0)
+            aug['demand_twh'] = demand_twh
+            aug['mix_raw'] = list(best_mix)
+
+            # Recompute gas backup from augmented clean capacity
+            clean_peak_mw = 0
+            for r, twh in aug['resource_twh'].items():
+                pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
+                if pcc > 0 and twh > 0:
+                    clean_peak_mw += (twh * 1e6 / 8760) * pcc
+            clean_peak_mw += (augmented.get('battery', 0) * 1e6 / 8760) * \
+                PEAK_CAPACITY_CREDITS.get('battery', 0.95)
+            clean_peak_mw += (augmented.get('ldes', 0) * 1e6 / 8760) * \
+                PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
+
+            ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
+            gaf = GAS_AVAILABILITY_FACTOR[iso]
+            gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+            aug['gas_backup_mw'] = round(gas_needed_mw)
+            aug['new_gas_mw'] = round(max(0, gas_needed_mw - EXISTING_GAS_CAPACITY_MW[iso]))
+            aug['clean_peak_mw'] = round(clean_peak_mw)
+            aug['existing_gas_used_mw'] = round(min(gas_needed_mw, EXISTING_GAS_CAPACITY_MW[iso]))
+
+            # New-build cost tracking (for MAC calculation)
+            aug['new_build_cost_total'] = (
+                best_result['new_build_cost_total'] +
+                best_excess_per_mwh * demand_mwh)
+            aug['new_gen_twh'] = round(
+                best_result['new_gen_twh'] +
+                sum(v for k, v in excess_twh.items() if k != 'hydro'), 3)
+
+            if total_excess > 1.0:
+                print(f"  ↗ {iso} {t}% [{label}]: {total_excess:.0f} TWh excess "
+                      f"(+${best_excess_per_mwh:.1f}/MWh)")
+
+            iso_results[t] = aug
+            floor = dict(augmented)
+
+        # Print trajectory summary
+        for t in sorted(iso_results.keys()):
+            r = iso_results[t]
+            rt = r['resource_twh']
+            print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
+                  f"Wnd={rt['wind']:6.0f} CCS={rt.get('ccs_ccgt', 0):6.0f} "
+                  f"Proc={r['procurement_pct']:3.0f}% "
+                  f"${r['effective_cost']:.0f}/MWh [{label}]")
+
+        results[iso] = iso_results
+
+    return results
+
+
 def _adjust_costs_no_learning(results, scenario):
     """Scenario A: No learning curve. Clean firm stays at FOAK/High forever.
 
@@ -1165,83 +1369,64 @@ def _process_iso_step3(scenario, iso):
     return iso, _apply_floor_ratchet(step3, iso, iso_sens)
 
 
-def find_scenario_b_from_step3(scenario):
-    """Scenario B: Hourly matching with early clean firm investment + learning curve.
+def find_scenario_b_mixes(feasible_mixes):
+    """Scenario B: Hourly Matching — forward-stepping with FOAK→NOAK learning curve.
 
-    Strategy:
-      1. Load step 3 results at FOAK toggles (firm='H', ldes='H', ccs='H').
-      2. Apply floor ratchet (path-dependent lock-in).
-      3. Apply learning curve: early thresholds (50-70%) pay near-FOAK prices,
-         costs decline via Wright's Law as cumulative deployment grows,
-         approaching NOAK by 2040s (90%+). This models proactive investment
-         in the late 2020s / early-to-mid 2030s driving the cost curve down.
-      4. Uprates at Medium ($25/MWh) — existing plants, no learning dependency.
-      5. Overall system cost is LOWER than Scenario A because early investment
-         enables cheaper firm deployment at scale when it matters most.
+    At each threshold, evaluates ALL feasible EF mixes under learning-curve-adjusted
+    prices and picks the cheapest augmented effective cost. Floor ratchets.
+
+    With declining firm costs (FOAK→NOAK via Wright's Law), the optimizer includes
+    more firm clean at each step than Scenario A does. This models proactive
+    investment in the late 2020s / early-to-mid 2030s to drive the cost curve down.
+
+    By 2040s (90%+ thresholds), firm approaches NOAK pricing, making the total cost
+    trajectory smoother and cheaper than Scenario A's late-threshold FOAK spike.
+
+    Cost: Low renewables, Medium batteries/uprates/tx, FOAK→NOAK firm/CCS/LDES/geo.
     """
-    print("  Loading step 3 results + floor ratchet (5 ISOs parallel)...")
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        futures = {iso: pool.submit(_process_iso_step3, scenario, iso) for iso in ISOS}
-        results = {}
-        for iso in ISOS:
-            ret_iso, ret_data = futures[iso].result()
-            results[ret_iso] = ret_data
-            print(f"    {ret_iso}: {len(ret_data)} thresholds")
+    def get_overrides_b(iso, threshold):
+        frac = learning_fraction(threshold)
+        return _build_learning_overrides(iso, frac)
+        # _build_learning_overrides already sets uprate_lcoe to Medium
 
-    # Apply learning curve cost adjustments (FOAK → NOAK over time)
-    _adjust_costs_with_learning(results, scenario)
+    print(f"  Cost: ren=Low, batt=Med, tx=Med, uprate=Med, firm/CCS/LDES/geo=FOAK→NOAK")
+    results = _forward_step_optimization(
+        feasible_mixes, SCENARIO_B['toggles'], get_overrides_b, 'B')
 
-    for iso in ISOS:
-        for t in sorted(results.get(iso, {}).keys()):
-            r = results[iso][t]
-            rt = r['resource_twh']
-            uprate = r.get('tranche_uprate_twh', 0)
-            lf = r.get('learning_fraction', 0)
-            print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
-                  f"Wnd={rt['wind']:6.0f} Up={uprate:5.1f} "
-                  f"LF={lf:.2f} "
-                  f"Proc={r['procurement_pct']:3.0f}% "
-                  f"${r['effective_cost']:.0f}/MWh")
+    # Add learning curve metadata to results
+    for iso in results:
+        for t in results[iso]:
+            frac = learning_fraction(t)
+            overrides = _build_learning_overrides(iso, frac)
+            results[iso][t]['learning_fraction'] = round(frac, 3)
+            results[iso][t]['learning_nuclear_lcoe'] = round(overrides['nuclear_lcoe'], 1)
+            results[iso][t]['learning_ccs_lcoe'] = round(overrides['ccs_lcoe'], 1)
+            results[iso][t]['learning_ldes_lcoe'] = round(overrides['ldes_lcoe'], 1)
 
     return results
 
 
-def find_scenario_a_from_step3(scenario):
-    """Scenario A: Consequential deployment — chase cheapest $/tCO₂, no firm learning.
+def find_scenario_a_mixes(feasible_mixes):
+    """Scenario A: Pure Consequential — forward-stepping with static FOAK firm costs.
 
-    Strategy:
-      1. Load step 3 results at FOAK toggles (firm='H', ldes='H', ccs='H').
-         The consequential buyer chases cheap renewables and never invests in
-         clean firm development. Firm costs stay at FOAK at ALL thresholds.
-      2. Apply floor ratchet (path-dependent lock-in).
-      3. NO learning curve — when firm gen is finally needed at high thresholds
-         (90%+), it hits a cost cliff because there was no early investment
-         to drive learning. This is the "scrambling" scenario.
-      4. Uprates at Medium ($25/MWh) — existing plants, no learning dependency.
+    At each threshold, evaluates ALL feasible EF mixes under static cost assumptions
+    and picks the cheapest augmented effective cost. Floor ratchets.
+
+    With expensive firm (FOAK forever), the optimizer gravitates toward renewable-heavy
+    mixes at early thresholds. At late thresholds (90%+), firm becomes unavoidable
+    but stays at FOAK prices — creating the cost cliff, renewable overbuilding, and
+    asset stranding that characterizes the "chase cheap carbon" strategy.
+
+    Cost: Low renewables, Medium batteries/uprates/tx, High (static FOAK) firm/CCS/LDES/geo.
     """
-    print("  Loading step 3 results + floor ratchet (5 ISOs parallel)...")
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        futures = {iso: pool.submit(_process_iso_step3, scenario, iso) for iso in ISOS}
-        results = {}
-        for iso in ISOS:
-            ret_iso, ret_data = futures[iso].result()
-            results[ret_iso] = ret_data
-            print(f"    {ret_iso}: {len(ret_data)} thresholds")
+    def get_overrides_a(iso, threshold):
+        # Only override: uprate at Medium ($25/MWh) — existing plants
+        # Firm/CCS/LDES/geo stay at FOAK (High) at ALL thresholds — no learning
+        return {'uprate_lcoe': UPRATE_LCOE['M']}
 
-    # Adjust uprate to Medium only (no learning curve — firm stays at FOAK)
-    _adjust_costs_no_learning(results, scenario)
-
-    for iso in ISOS:
-        for t in sorted(results.get(iso, {}).keys()):
-            r = results[iso][t]
-            rt = r['resource_twh']
-            uprate = r.get('tranche_uprate_twh', 0)
-            print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
-                  f"Wnd={rt['wind']:6.0f} Up={uprate:5.1f} "
-                  f"Proc={r['procurement_pct']:3.0f}% "
-                  f"${r['effective_cost']:.0f}/MWh (FOAK, no learning)")
-
-    return results
+    print(f"  Cost: ren=Low, batt=Med, tx=Med, uprate=Med, firm/CCS/LDES/geo=High (static FOAK)")
+    return _forward_step_optimization(
+        feasible_mixes, SCENARIO_A['toggles'], get_overrides_a, 'A')
 
 
 # ============================================================================
@@ -1422,25 +1607,36 @@ def main():
     print("  B: Hourly Matching — FOAK→NOAK learning curve, early firm investment")
     print("=" * 80)
 
+    # Load feasible mixes from shared-data.js (physics-validated EF mixes)
+    print("\nLoading feasible mixes from shared-data.js...")
+    feasible_mixes = parse_feasible_mixes()
+    total_mixes = sum(len(v) for iso_data in feasible_mixes.values()
+                      for v in iso_data.values())
+    print(f"  Loaded {total_mixes} feasible mixes across {len(feasible_mixes)} ISOs")
+
     # Load egrid and fossil mix data
     with open('data/egrid_emission_rates.json') as f:
         egrid = json.load(f)
     with open('data/EIA 930 Data/eia_fossil_mix.json') as f:
         fossil_mix = json.load(f)
 
-    # Scenario A: FOAK firm costs, no learning curve, chase cheapest $/tCO₂
-    # Clean firm never invested → stays at FOAK forever → cost cliff at high thresholds
-    print("\nScenario A (Pure Consequential): FOAK firm, no learning curve...")
-    print(f"  Toggles: {_build_scenario_key(SCENARIO_A, 'PJM')} (FOAK firm — no development)")
-    print(f"  Uprate override: Medium (${UPRATE_LCOE['M']}/MWh)")
-    results_a = find_scenario_a_from_step3(SCENARIO_A)
+    # ==========================================================================
+    # Scenario A: Pure Consequential — greedy forward-stepping, static FOAK firm
+    # Evaluates ALL feasible EF mixes under static cost assumptions.
+    # With expensive firm (High/FOAK forever), optimizer picks renewable-heavy
+    # mixes at each step. Hits cost cliff when firm is finally needed at 90%+.
+    # ==========================================================================
+    print("\nScenario A (Pure Consequential): Forward-stepping, FOAK firm...")
+    results_a = find_scenario_a_mixes(feasible_mixes)
 
-    # Scenario B: Early firm investment drives FOAK→NOAK learning curve
-    # Higher upfront cost but cheaper at scale by 2040s
-    print("\nScenario B (Hourly Matching): FOAK→NOAK via learning curve...")
-    print(f"  Toggles: {_build_scenario_key(SCENARIO_B, 'PJM')} (FOAK → NOAK learning)")
-    print(f"  Uprate override: Medium (${UPRATE_LCOE['M']}/MWh)")
-    results_b = find_scenario_b_from_step3(SCENARIO_B)
+    # ==========================================================================
+    # Scenario B: Hourly Matching — forward-stepping with FOAK→NOAK learning curve
+    # Evaluates ALL feasible EF mixes under learning-curve-adjusted prices.
+    # With declining firm costs, optimizer includes more firm at each step,
+    # yielding smoother cost trajectory and less stranding than Scenario A.
+    # ==========================================================================
+    print("\nScenario B (Hourly Matching): Forward-stepping, FOAK→NOAK learning...")
+    results_b = find_scenario_b_mixes(feasible_mixes)
 
     # Memoize compute_fossil_retirement — egrid/fossil_mix are constant across all calls
     _cfr_cache = {}
@@ -1698,15 +1894,15 @@ def main():
                 'name': SCENARIO_A['name'],
                 'description': SCENARIO_A['description'],
                 'toggles': SCENARIO_A['toggles'],
-                'method': 'step3_consequential',
-                'method_description': 'Pure consequential: chases cheapest $/tCO₂ with renewables, never invests in clean firm development. Firm/CCS/LDES costs stay at FOAK at all thresholds — no learning curve. When firm is finally needed at high thresholds, hits a cost cliff. Uprates at Medium (existing plants). Floor ratchet locks in prior deployments.',
+                'method': 'ef_forward_step_foak',
+                'method_description': 'Pure consequential: greedy forward-stepping through feasible EF mixes. At each threshold, evaluates all EF mixes under static cost assumptions (Low renewables, Med batteries/uprates/tx, High firm/CCS/LDES/geo). With expensive firm, optimizer picks renewable-heavy mixes. At 90%+, firm is unavoidable at FOAK prices — cost cliff. Floor ratchet locks in prior deployments. Each step is deterministic of the next.',
             },
             'scenario_b': {
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
-                'method': 'step3_hourly_matching',
-                'method_description': 'Hourly matching with early clean firm investment: pays FOAK prices in late 2020s/early 2030s but drives Wright\'s Law learning curve. Firm/CCS/LDES costs decline from FOAK→NOAK as cumulative deployment grows. By 2040s, firm costs at competitive NOAK levels. Overall system cost lower than Scenario A. Uprates at Medium. Floor ratchet locks in prior deployments.',
+                'method': 'ef_forward_step_learning',
+                'method_description': 'Hourly matching with FOAK→NOAK learning curve: greedy forward-stepping through feasible EF mixes with declining firm costs. At each threshold, firm/CCS/LDES costs interpolate from FOAK→NOAK via Wright\'s Law. Early investment in firm (even at FOAK) drives the learning curve down. By 2040s, firm at competitive NOAK levels. Produces more balanced mixes with less stranding than Scenario A.',
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
