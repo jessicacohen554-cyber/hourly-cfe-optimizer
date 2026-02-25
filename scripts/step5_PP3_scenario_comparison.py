@@ -40,6 +40,11 @@ ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
+# Hydro is ALWAYS existing-only: capped at 2025 absolute TWh on the
+# 2021-2026 weather-normalized curve.  Never grows with demand.
+HYDRO_CAP_TWH = {iso: GRID_MIX_SHARES[iso].get('hydro', 0) / 100.0 * BASE_DEMAND_TWH[iso]
+                 for iso in ISOS}
+
 WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41}
 FUEL_ADJUSTMENTS = {
     'CAISO': {'Low': -5, 'Medium': 0, 'High': 10},
@@ -429,9 +434,13 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     # Demand-weighted percentages
     sol_demand = proc * sol_pct
     wnd_demand = proc * wnd_pct
-    hyd_demand = proc * hyd_pct
     ccs_demand = proc * ccs_pct
     cf_demand = proc * cf_pct
+    # Hydro is existing-only: cap at 2025 absolute TWh.
+    # Convert mix percentage to TWh, cap, then back to demand-weighted pct points.
+    hydro_twh_raw = proc * hyd_pct / 100.0 * demand_twh
+    hydro_twh_capped = min(hydro_twh_raw, HYDRO_CAP_TWH[iso])
+    hyd_demand = hydro_twh_capped / demand_twh * 100.0  # capped pct-points of demand
 
     # Existing/new splits
     sol_existing = min(sol_demand, existing['solar'])
@@ -461,12 +470,14 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     peak_mw = PEAK_DEMAND_MW[iso] * growth_factor
     ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
 
+    # Hydro peak capacity from capped TWh (not inflated demand)
+    hydro_avg_mw = hydro_twh_capped * 1e6 / 8760
     clean_peak_mw = (
         proc * cf_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
         proc * sol_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
         proc * wnd_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
         proc * ccs_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
-        proc * hyd_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+        hydro_avg_mw * PEAK_CAPACITY_CREDITS['hydro'] +
         bat4_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
@@ -519,10 +530,13 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     eff_cost = total_cost / match_frac if match_frac > 0 else 0
     incremental = eff_cost - wholesale
 
-    # Resource TWh
+    # Resource TWh (hydro capped at 2025 absolute)
     resource_twh = {}
     for res, pct in zip(RESOURCES, [cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct]):
-        resource_twh[res] = pct / 100.0 * proc * demand_twh
+        if res == 'hydro':
+            resource_twh[res] = hydro_twh_capped
+        else:
+            resource_twh[res] = pct / 100.0 * proc * demand_twh
 
     return {
         'total_cost': round(total_cost, 2),
@@ -584,21 +598,25 @@ def find_optimal_mixes(feasible_mixes, scenario, demand_twh_map):
     return results
 
 
-def _mix_resource_twh(mix, demand_twh):
+def _mix_resource_twh(mix, demand_twh, iso=None):
     """Extract deployed resource TWh from a raw mix vector for floor comparison.
 
     mix = [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    iso: required — used to cap hydro at 2025 absolute TWh.
     Returns dict of resource → TWh deployed.
     """
     cf, sol, wnd, ccs, hyd, proc_pct = mix[0], mix[1], mix[2], mix[3], mix[4], mix[5]
     bat4, bat8, ldes = mix[7], mix[8], mix[9]
     proc = proc_pct / 100.0
+    # Hydro is existing-only: cap at 2025 absolute TWh regardless of demand growth
+    hydro_twh = min(proc * hyd / 100.0 * demand_twh,
+                    HYDRO_CAP_TWH[iso]) if iso else proc * hyd / 100.0 * demand_twh
     return {
         'clean_firm': proc * cf / 100.0 * demand_twh,
         'solar':      proc * sol / 100.0 * demand_twh,
         'wind':       proc * wnd / 100.0 * demand_twh,
         'ccs_ccgt':   proc * ccs / 100.0 * demand_twh,
-        'hydro':      proc * hyd / 100.0 * demand_twh,
+        'hydro':      hydro_twh,
         'battery':    (bat4 + bat8) / 100.0 * demand_twh,
         'ldes':       ldes / 100.0 * demand_twh,
     }
@@ -650,7 +668,7 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
                 best_95_mix = mix
 
         # Resource caps from 95% target (with 20% slack for thresholds > 95%)
-        target_95_deployed = _mix_resource_twh(best_95_mix, demand_95) if best_95_mix else {}
+        target_95_deployed = _mix_resource_twh(best_95_mix, demand_95, iso) if best_95_mix else {}
         if target_95_deployed:
             print(f"  {iso} 95% target: CF={target_95_deployed['clean_firm']:.0f} TWh, "
                   f"Sol={target_95_deployed['solar']:.0f}, Wnd={target_95_deployed['wind']:.0f}, "
@@ -689,7 +707,7 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
 
             if target_95_deployed:
                 def _within_target(mix):
-                    deployed = _mix_resource_twh(mix, demand_twh)
+                    deployed = _mix_resource_twh(mix, demand_twh, iso)
                     for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt']:
                         cap = target_95_deployed.get(res, 0) * demand_ratio * slack
                         if cap > 1.0 and deployed.get(res, 0) > cap:
@@ -717,7 +735,7 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
                 result = compute_mix_cost(mix, iso_sens, iso, demand_twh, growth_factor=gf)
 
                 # Compute augmented cost: how expensive is this mix INCLUDING floor excess?
-                ef_deployed = _mix_resource_twh(mix, demand_twh)
+                ef_deployed = _mix_resource_twh(mix, demand_twh, iso)
                 mix_excess_per_mwh = 0.0
                 for res in floor:
                     excess = max(0, floor.get(res, 0) - ef_deployed.get(res, 0))
@@ -737,7 +755,7 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
                 continue
 
             # 3. Compute augmented resources = max(floor, EF_target) per resource
-            ef_deployed = _mix_resource_twh(best_mix, demand_twh)
+            ef_deployed = _mix_resource_twh(best_mix, demand_twh, iso)
             augmented = {}
             excess_twh = {}
             for res in floor:
@@ -928,7 +946,7 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
                 result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
                                          overrides=overrides, growth_factor=gf)
 
-                deployed = _mix_resource_twh(mix, demand_twh)
+                deployed = _mix_resource_twh(mix, demand_twh, iso)
 
                 # Floor excess cost: resources locked in from prior steps that
                 # this mix doesn't use. Priced at scenario-specific LCOEs.
@@ -952,7 +970,7 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
                 continue
 
             # Build augmented result: resources = max(floor, EF deployed)
-            deployed = _mix_resource_twh(best_mix, demand_twh)
+            deployed = _mix_resource_twh(best_mix, demand_twh, iso)
             augmented = {}
             excess_twh = {}
             for res in floor:
@@ -1444,7 +1462,7 @@ def find_scenario_b_mixes(feasible_mixes):
             results[iso] = {}
             continue
 
-        target_deployed = _mix_resource_twh(best_mix_95, demand_95)
+        target_deployed = _mix_resource_twh(best_mix_95, demand_95, iso)
 
         # Firm resources at target (nuclear + CCS — the resources needing learning curve)
         target_cf_twh = target_deployed.get('clean_firm', 0)
@@ -1513,7 +1531,7 @@ def find_scenario_b_mixes(feasible_mixes):
                 result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
                                          overrides=overrides, growth_factor=gf)
 
-                deployed = _mix_resource_twh(mix, demand_twh)
+                deployed = _mix_resource_twh(mix, demand_twh, iso)
 
                 # Floor excess cost
                 excess_per_mwh = 0.0
@@ -1557,7 +1575,7 @@ def find_scenario_b_mixes(feasible_mixes):
                 continue
 
             # Build augmented result
-            deployed = _mix_resource_twh(sel_mix, demand_twh)
+            deployed = _mix_resource_twh(sel_mix, demand_twh, iso)
             augmented = {}
             excess_twh = {}
             for res in floor:
