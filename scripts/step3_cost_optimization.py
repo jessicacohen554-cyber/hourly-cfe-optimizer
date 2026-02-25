@@ -275,6 +275,59 @@ GAS_AVAILABILITY_FACTOR = {
     'SPP':   0.84,  # 16% deration — extreme weather both seasons, similar to MISO
 }
 
+# Resource capacity factors by ISO (EIA Form 923, eGRID 2022-2024 fleet averages)
+# Used to convert average generation MW → installed MW for RA peak calculations
+RESOURCE_CAPACITY_FACTORS = {
+    'clean_firm': {'CAISO': 0.90, 'ERCOT': 0.93, 'PJM': 0.93, 'NYISO': 0.90,
+                   'NEISO': 0.90, 'MISO': 0.92, 'SPP': 0.92},
+    'solar':      {'CAISO': 0.28, 'ERCOT': 0.24, 'PJM': 0.17, 'NYISO': 0.15,
+                   'NEISO': 0.15, 'MISO': 0.19, 'SPP': 0.22},
+    'wind':       {'CAISO': 0.25, 'ERCOT': 0.38, 'PJM': 0.30, 'NYISO': 0.28,
+                   'NEISO': 0.30, 'MISO': 0.36, 'SPP': 0.42},
+    'ccs_ccgt':   {'CAISO': 0.85, 'ERCOT': 0.85, 'PJM': 0.85, 'NYISO': 0.85,
+                   'NEISO': 0.85, 'MISO': 0.85, 'SPP': 0.85},
+    'hydro':      {'CAISO': 0.40, 'ERCOT': 0.30, 'PJM': 0.35, 'NYISO': 0.40,
+                   'NEISO': 0.40, 'MISO': 0.35, 'SPP': 0.30},
+}
+
+# Existing clean generation in absolute TWh (constant, does NOT change with demand growth)
+EXISTING_CLEAN_TWH = {}
+for _iso, _shares in GRID_MIX_SHARES.items():
+    _dem = REGIONAL_DEMAND_TWH[_iso]
+    EXISTING_CLEAN_TWH[_iso] = {k: round(v / 100.0 * _dem, 3) for k, v in _shares.items()}
+
+
+def _compute_existing_clean_peak_mw(iso):
+    """Compute 2025 existing fleet peak capacity contribution (MW).
+
+    Converts energy-based shares to installed capacity using capacity factors,
+    then applies capacity credits to get peak contribution.
+    """
+    avg_demand_mw = REGIONAL_DEMAND_TWH[iso] * 1e6 / 8760
+    total = 0.0
+    for resource in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+        share_pct = GRID_MIX_SHARES[iso].get(resource, 0)
+        if share_pct == 0:
+            continue
+        avg_mw = share_pct / 100.0 * avg_demand_mw
+        cf = RESOURCE_CAPACITY_FACTORS[resource][iso]
+        cc = PEAK_CAPACITY_CREDITS[resource]
+        installed = avg_mw / cf
+        total += installed * cc
+    return total
+
+
+EXISTING_CLEAN_PEAK_MW = {iso: _compute_existing_clean_peak_mw(iso)
+                          for iso in REGIONAL_DEMAND_TWH}
+
+# 2025 baseline gas_raw for delta RA calibration
+# At base year, total_gas must equal EXISTING_GAS_CAPACITY_MW (calibrated to reality)
+GAS_RAW_2025 = {
+    iso: max(0, (PEAK_DEMAND_MW[iso] * (1 + RESOURCE_ADEQUACY_MARGIN)
+                 - EXISTING_CLEAN_PEAK_MW[iso]) / GAS_AVAILABILITY_FACTOR[iso])
+    for iso in PEAK_DEMAND_MW
+}
+
 
 def get_tx(rtype, tx_name, iso):
     """Lookup transmission adder for a resource type."""
@@ -352,29 +405,29 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N)).astype(np.float64)
     ldes_pct = arrays['ldes_dispatch_pct'].astype(np.float64)
 
-    # --- Solar ---
+    # --- Solar (existing = $0, only new-build costs money) ---
     sol_demand_pct = proc * sol_pct
     sol_existing = min(existing['solar'] * existing_scale, 100.0)
     sol_existing_pct = np.minimum(sol_demand_pct, sol_existing)
     sol_new_pct = np.maximum(0, sol_demand_pct - sol_existing)
     sol_lcoe = LCOE_TABLES['solar'][ren_name][iso]
     sol_tx = get_tx('solar', tx_name, iso)
-    total_cost += sol_existing_pct / 100.0 * wholesale + sol_new_pct / 100.0 * (sol_lcoe + sol_tx)
+    total_cost += sol_new_pct / 100.0 * (sol_lcoe + sol_tx)
 
-    # --- Wind ---
+    # --- Wind (existing = $0, only new-build costs money) ---
     wnd_demand_pct = proc * wnd_pct
     wnd_existing = min(existing['wind'] * existing_scale, 100.0)
     wnd_existing_pct = np.minimum(wnd_demand_pct, wnd_existing)
     wnd_new_pct = np.maximum(0, wnd_demand_pct - wnd_existing)
     wnd_lcoe = LCOE_TABLES['wind'][ren_name][iso]
     wnd_tx = get_tx('wind', tx_name, iso)
-    total_cost += wnd_existing_pct / 100.0 * wholesale + wnd_new_pct / 100.0 * (wnd_lcoe + wnd_tx)
+    total_cost += wnd_new_pct / 100.0 * (wnd_lcoe + wnd_tx)
 
-    # --- Hydro (always existing, wholesale-priced, $0 tx) ---
+    # --- Hydro (always existing, $0 cost — sunk fleet) ---
     hyd_demand_pct = proc * hyd_pct
-    total_cost += hyd_demand_pct / 100.0 * wholesale
+    # No cost added for hydro (existing fleet, $0 price)
 
-    # --- CCS-CCGT ---
+    # --- CCS-CCGT (existing = $0, only new-build costs money) ---
     ccs_demand_pct = proc * ccs_pct
     ccs_existing = min(existing.get('ccs_ccgt', 0) * existing_scale, 100.0)
     ccs_existing_pct = np.minimum(ccs_demand_pct, ccs_existing)
@@ -382,15 +435,13 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
     ccs_lcoe = ccs_table[ccs_lev][iso]
     ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
-    total_cost += ccs_existing_pct / 100.0 * wholesale + ccs_new_pct / 100.0 * (ccs_lcoe + ccs_tx)
+    total_cost += ccs_new_pct / 100.0 * (ccs_lcoe + ccs_tx)
 
-    # --- Clean Firm (merit-order tranche pricing) ---
+    # --- Clean Firm (existing = $0, new = merit-order tranche pricing) ---
     cf_demand_pct = proc * cf_pct
     cf_existing = min(existing['clean_firm'] * existing_scale, 100.0)
     cf_existing_pct = np.minimum(cf_demand_pct, cf_existing)
     cf_new_pct = np.maximum(0, cf_demand_pct - cf_existing)
-
-    existing_cost = cf_existing_pct / 100.0 * wholesale
 
     # New CF in TWh for tranche pricing
     new_cf_twh = cf_new_pct / 100.0 * demand
@@ -426,7 +477,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 
     cf_total_new_cost = uprate_cost + geo_cost + tranche3_cost
     cf_cost_per_demand = cf_total_new_cost / demand
-    total_cost += existing_cost + cf_cost_per_demand
+    total_cost += cf_cost_per_demand  # existing CF = $0
 
     # --- Storage (battery toggle = 4hr + 8hr paired; LDES toggle = independent) ---
     bat4_lcoe = LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)
@@ -436,35 +487,48 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
                    bat8_pct / 100.0 * bat8_lcoe +
                    ldes_pct / 100.0 * ldes_lcoe)
 
-    # --- Gas Capacity Backup (resource adequacy) ---
-    # Compute clean peak capacity contribution, then gas backup needed, then cost
-    peak_mw = PEAK_DEMAND_MW[iso]
-    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+    # --- Gas Capacity Backup (delta RA approach) ---
+    # Calibrated to 2025 reality: gas = EXISTING_GAS at base year.
+    # Compute incremental gas from demand growth net of new clean peak capacity.
     demand_mwh = demand * 1e6  # TWh → MWh
     avg_demand_mw = demand_mwh / 8760
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
 
-    # Clean peak capacity from each resource (vectorized)
-    clean_peak_mw = (
-        proc * cf_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
-        proc * sol_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
-        proc * wnd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
-        proc * ccs_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
-        proc * hyd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+    # Peak scales with demand growth
+    peak_grown = PEAK_DEMAND_MW[iso] * gf
+    ra_peak_grown = peak_grown * (1 + RESOURCE_ADEQUACY_MARGIN)
+
+    # New-build clean peak capacity: energy → installed MW → peak MW
+    # Only new-build above existing floor contributes incremental peak
+    new_clean_peak_mw = np.zeros(N, dtype=np.float64)
+    for _res, _new_pct in [('clean_firm', cf_new_pct), ('solar', sol_new_pct),
+                           ('wind', wnd_new_pct), ('ccs_ccgt', ccs_new_pct)]:
+        _cf_r = RESOURCE_CAPACITY_FACTORS[_res][iso]
+        _cc_r = PEAK_CAPACITY_CREDITS[_res]
+        _new_avg_mw = _new_pct / 100.0 * avg_demand_mw
+        _new_installed = _new_avg_mw / _cf_r
+        new_clean_peak_mw += _new_installed * _cc_r
+
+    # Storage provides additional peak capacity (keep existing formula for storage)
+    new_clean_peak_mw += (
         bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
     )
 
-    # Gas backup needed, derated by Gas Availability Factor (GAF)
-    # GAF accounts for forced outages + correlated weather performance
-    gaf = GAS_AVAILABILITY_FACTOR[iso]
-    gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw) / gaf
+    # Total system clean peak = existing (constant) + new-build
+    total_clean_peak = EXISTING_CLEAN_PEAK_MW[iso] + new_clean_peak_mw
+
+    # Gas raw for this scenario vs 2025 baseline
+    gas_raw = np.maximum(0, ra_peak_grown - total_clean_peak) / gaf
+    gas_delta = gas_raw - GAS_RAW_2025[iso]
+    gas_needed_mw = np.maximum(0, EXISTING_GAS_CAPACITY_MW[iso] + gas_delta)
+
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
-    new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
+    new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_mw)
 
     # Annualized capacity cost: existing gas FOM + new CCGT full cost ($/yr)
-    # Convert to $/MWh of demand: (MW × $/kW-yr × 1000) / demand_mwh
     gas_cost_per_mwh = (
         existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
@@ -476,6 +540,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     effective_cost = np.where(match_frac > 0, total_cost / match_frac, 0)
 
     # Build tranche breakdown (per-mix arrays, shape N)
+    ra_peak_mw = ra_peak_grown  # for output
     tranche_data = {
         'cf_existing_twh': cf_existing_pct / 100.0 * demand,
         'uprate_twh': uprate_twh,
@@ -483,12 +548,12 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         'nuclear_newbuild_twh': nuclear_newbuild_twh,
         'ccs_tranche_twh': ccs_tranche_twh,
         'new_cf_twh': new_cf_twh,
-        # Gas backup fields (post-GAF deration)
+        # Gas backup fields (delta RA, post-GAF)
         'gas_backup_mw': gas_needed_mw,
         'existing_gas_used_mw': existing_gas_used_mw,
         'new_gas_build_mw': new_gas_mw,
         'gas_cost_per_mwh': gas_cost_per_mwh,
-        'clean_peak_mw': clean_peak_mw,
+        'clean_peak_mw': total_clean_peak,
         'ra_peak_mw': np.full(N, ra_peak_mw),
     }
 
@@ -505,7 +570,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 # gas backup for every scenario — just 10 scalar-vector multiplies.
 
 # Coefficient column indices
-_COL_WHOLESALE = 0  # existing generation priced at wholesale
+_COL_WHOLESALE = 0  # existing generation — $0 (sunk fleet, coefficient zeroed out)
 _COL_SOL_NEW   = 1  # new solar (LCOE + tx)
 _COL_WND_NEW   = 2  # new wind (LCOE + tx)
 _COL_CCS_NEW   = 3  # new CCS-CCGT standalone (LCOE + tx)
@@ -588,29 +653,46 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         geo_twh = np.minimum(remaining_after_uprate, GEO_CAP_TWH)
         remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_twh)
 
-    # Gas backup (entirely scenario-invariant for base year)
-    peak_mw = PEAK_DEMAND_MW[iso]
-    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+    # --- Gas backup (delta RA approach, scenario-invariant) ---
+    # Infer growth factor from demand: gf = demand_twh / base_demand
+    _base_demand = REGIONAL_DEMAND_TWH[iso]
+    _gf = demand_twh / _base_demand if _base_demand > 0 else 1.0
     demand_mwh = demand_twh * 1e6
     avg_demand_mw = demand_mwh / 8760
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
 
-    clean_peak_mw = (
-        proc * cf_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
-        proc * sol_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
-        proc * wnd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
-        proc * ccs_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
-        proc * hyd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+    # Peak scales with demand growth
+    peak_grown = PEAK_DEMAND_MW[iso] * _gf
+    ra_peak_grown = peak_grown * (1 + RESOURCE_ADEQUACY_MARGIN)
+
+    # New-build clean peak capacity: energy → installed MW → peak MW
+    new_clean_peak_mw = np.zeros(N, dtype=np.float64)
+    for _res, _new_pct in [('clean_firm', cf_new_pct), ('solar', sol_new_pct),
+                           ('wind', wnd_new_pct), ('ccs_ccgt', ccs_new_pct)]:
+        _cf_r = RESOURCE_CAPACITY_FACTORS[_res][iso]
+        _cc_r = PEAK_CAPACITY_CREDITS[_res]
+        _new_avg_mw = _new_pct / 100.0 * avg_demand_mw
+        _new_installed = _new_avg_mw / _cf_r
+        new_clean_peak_mw += _new_installed * _cc_r
+
+    # Storage peak capacity (keep existing formula for storage)
+    new_clean_peak_mw += (
         bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
     )
 
-    # Gas backup derated by Gas Availability Factor (GAF)
-    gaf = GAS_AVAILABILITY_FACTOR[iso]
-    gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw) / gaf
+    # Total system clean peak = existing (constant) + new-build
+    total_clean_peak = EXISTING_CLEAN_PEAK_MW[iso] + new_clean_peak_mw
+
+    # Gas raw for this scenario vs 2025 baseline (delta approach)
+    gas_raw = np.maximum(0, ra_peak_grown - total_clean_peak) / gaf
+    gas_delta = gas_raw - GAS_RAW_2025[iso]
+    gas_needed_mw = np.maximum(0, EXISTING_GAS_CAPACITY_MW[iso] + gas_delta)
+
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
-    new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
+    new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_mw)
 
     constant = (
         existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
@@ -619,9 +701,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
 
     # Build coefficient matrix (N, 10)
     coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
-    coeff_matrix[:, _COL_WHOLESALE] = (sol_existing_pct + wnd_existing_pct +
-                                        hyd_demand_pct + ccs_existing_pct +
-                                        cf_existing_pct) / 100.0
+    # Existing clean resources = $0 (sunk fleet, no cost to buyer)
+    coeff_matrix[:, _COL_WHOLESALE] = 0.0
     coeff_matrix[:, _COL_SOL_NEW] = sol_new_pct / 100.0
     coeff_matrix[:, _COL_WND_NEW] = wnd_new_pct / 100.0
     coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
@@ -631,6 +712,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     coeff_matrix[:, _COL_BAT4] = bat_pct / 100.0
     coeff_matrix[:, _COL_BAT8] = bat8_pct / 100.0
     coeff_matrix[:, _COL_LDES] = ldes_pct / 100.0
+
+    ra_peak_mw = ra_peak_grown  # for output
 
     extras = {
         'match_frac': match_frac,
@@ -642,8 +725,13 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         'gas_needed_mw': gas_needed_mw,
         'existing_gas_used_mw': existing_gas_used_mw,
         'new_gas_mw': new_gas_mw,
-        'clean_peak_mw': clean_peak_mw,
+        'clean_peak_mw': total_clean_peak,
         'ra_peak_mw': ra_peak_mw,
+        # Constant existing TWh available (does NOT depend on mix or demand growth)
+        'existing_cf_twh_available': EXISTING_CLEAN_TWH[iso]['clean_firm'],
+        'existing_solar_twh_available': EXISTING_CLEAN_TWH[iso]['solar'],
+        'existing_wind_twh_available': EXISTING_CLEAN_TWH[iso]['wind'],
+        'existing_hydro_twh_available': EXISTING_CLEAN_TWH[iso]['hydro'],
     }
 
     return coeff_matrix, constant, extras
@@ -1457,7 +1545,7 @@ def main():
                 },
                 'replace': {
                     'description': 'Cost to replace existing clean generation',
-                    'hydro': 'included (up to existing floor, wholesale-priced)',
+                    'hydro': 'included (up to existing floor, $0 — sunk fleet)',
                     'uprates': 'off (uprate_cap=0, all new CF at new-build prices)',
                     'purpose': 'True cost of replacing existing nuclear/firm with new-build',
                 },
@@ -2052,6 +2140,13 @@ def main():
                                 row['ldes_dispatch_pct'] = int(
                                     arrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx])
 
+                                # Existing clean TWh available (constant, independent of mix/growth)
+                                _ex = EXISTING_CLEAN_TWH[iso_]
+                                row['existing_cf_twh_available'] = _ex['clean_firm']
+                                row['existing_solar_twh_available'] = _ex['solar']
+                                row['existing_wind_twh_available'] = _ex['wind']
+                                row['existing_hydro_twh_available'] = _ex['hydro']
+
                                 # Tranche breakdown (from precompute extras)
                                 if tranche:
                                     row['tranche_cf_existing_twh'] = round(tranche['cf_existing_twh'], 3)
@@ -2133,6 +2228,13 @@ def main():
                             tarrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx])
                         row['ldes_dispatch_pct'] = int(
                             tarrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx])
+
+                        # Existing clean TWh available (constant)
+                        _ex = EXISTING_CLEAN_TWH[iso_]
+                        row['existing_cf_twh_available'] = _ex['clean_firm']
+                        row['existing_solar_twh_available'] = _ex['solar']
+                        row['existing_wind_twh_available'] = _ex['wind']
+                        row['existing_hydro_twh_available'] = _ex['hydro']
 
                         if tranche:
                             row['tranche_cf_existing_twh'] = round(tranche['cf_existing_twh'], 3)
