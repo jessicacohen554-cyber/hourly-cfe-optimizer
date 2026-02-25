@@ -215,12 +215,14 @@ body { background: #F7F8FC; }
 .svg-chart-wrap {
     position: relative;
     width: 100%;
-    overflow: visible;
+    overflow: hidden;
     margin: 16px 0;
+    min-height: 280px;
 }
 .svg-chart-wrap svg {
     width: 100%;
     height: auto;
+    max-width: 100%;
     display: block;
 }
 .chart-title {
@@ -464,6 +466,7 @@ body { background: #F7F8FC; }
     .callout-box p { font-size: 0.8rem; line-height: 1.5; }
     .scroll-step { margin-bottom: 24px; }
     .scroll-heading { font-size: 0.95rem; }
+    .svg-chart-wrap { min-height: 200px; overflow: hidden; }
     .target-slider-section { padding: 12px 16px 8px; margin-top: -12px; }
     .target-slider-card { padding: 14px 16px; }
     .footer-links { gap: 8px 16px; }
@@ -761,6 +764,20 @@ body { background: #F7F8FC; }
 // CONSTANTS & DATA — all inline, no CDN dependencies
 // ============================================================================
 var isMobile = window.innerWidth < 768;
+
+// Rebuild charts on resize/orientation change
+var _resizeTimer = null;
+window.addEventListener('resize', function() {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(function() {
+        var wasMobile = isMobile;
+        isMobile = window.innerWidth < 768;
+        if (wasMobile !== isMobile) {
+            try { buildScalingChart(); } catch(e) {}
+            try { buildLmpChart(); } catch(e) {}
+        }
+    }, 250);
+});
 var THR_SLIDER = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5];
 var SBTI_YEARS = {50:'2030',55:'2031',60:'2032',65:'2033',70:'2034',75:'2036',80:'2038',85:'2040',87.5:'2041',90:'2042',92.5:'2044',95:'2046',97.5:'2048',99:'2049',100:'2050'};
 var NUCLEAR_OP_COST = 33;
@@ -1049,7 +1066,20 @@ function getNbMix(thr) {
 // ============================================================================
 function buildScalingChart() {
     var wrap = document.getElementById('scalingChartWrap');
-    var W = 600, H = 280, PAD_L = 50, PAD_R = 20, PAD_T = 20, PAD_B = 50;
+    if (!wrap) return;
+
+    // Mobile-adaptive dimensions: use more compact padding and larger text
+    var W = isMobile ? 380 : 600;
+    var H = isMobile ? 260 : 280;
+    var PAD_L = isMobile ? 42 : 50;
+    var PAD_R = isMobile ? 12 : 20;
+    var PAD_T = isMobile ? 24 : 20;
+    var PAD_B = isMobile ? 44 : 50;
+    var fontSize = isMobile ? 12 : 10;
+    var axisFont = isMobile ? 12 : 11;
+    var dotR = isMobile ? 4 : 3;
+    var lineW = isMobile ? 3 : 2.5;
+
     var plotW = W - PAD_L - PAD_R;
     var plotH = H - PAD_T - PAD_B;
 
@@ -1094,42 +1124,43 @@ function buildScalingChart() {
     yTicks.forEach(function(v) {
         var y = yPos(v);
         yTicksSvg += '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="#e5e7eb" stroke-width="1"/>';
-        yTicksSvg += '<text x="' + (PAD_L - 6) + '" y="' + (y + 3) + '" text-anchor="end" fill="#9ca3af" font-size="10">$' + v + '</text>';
+        yTicksSvg += '<text x="' + (PAD_L - 6) + '" y="' + (y + 4) + '" text-anchor="end" fill="#9ca3af" font-size="' + fontSize + '">$' + v + '</text>';
     });
 
-    // X-axis labels
+    // X-axis labels — show fewer on mobile to prevent crowding
     var xLabelsSvg = '';
     participationPcts.forEach(function(p, i) {
-        if (isMobile && i % 2 !== 0 && i !== participationPcts.length - 1) return;
-        xLabelsSvg += '<text x="' + xPos(i) + '" y="' + (H - PAD_B + 18) + '" text-anchor="middle" fill="#9ca3af" font-size="10">' + p + '%</text>';
+        if (isMobile && p !== 0 && p !== 25 && p !== 50 && p !== 75 && p !== 100) return;
+        xLabelsSvg += '<text x="' + xPos(i) + '" y="' + (H - PAD_B + 18) + '" text-anchor="middle" fill="#9ca3af" font-size="' + fontSize + '">' + p + '%</text>';
     });
 
     // Data point dots for ECF
     var ecfDots = '';
     ecfCurve.forEach(function(v, i) {
-        ecfDots += '<circle cx="' + xPos(i) + '" cy="' + yPos(v) + '" r="3" fill="#0EA5E9"/>';
+        ecfDots += '<circle cx="' + xPos(i) + '" cy="' + yPos(v) + '" r="' + dotR + '" fill="#0EA5E9"/>';
     });
 
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="font-family:\'Plus Jakarta Sans\',sans-serif;">';
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="font-family:\'Plus Jakarta Sans\',sans-serif;">';
     svg += yTicksSvg;
     svg += xLabelsSvg;
 
     // Axis labels
-    svg += '<text x="' + (PAD_L + plotW / 2) + '" y="' + (H - 4) + '" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="600">C&amp;I Load Participating (%)</text>';
-    svg += '<text x="14" y="' + (PAD_T + plotH / 2) + '" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="600" transform="rotate(-90,14,' + (PAD_T + plotH / 2) + ')">$/MWh</text>';
+    svg += '<text x="' + (PAD_L + plotW / 2) + '" y="' + (H - 4) + '" text-anchor="middle" fill="#6b7280" font-size="' + axisFont + '" font-weight="600">C&amp;I Load Participating (%)</text>';
+    svg += '<text x="' + (isMobile ? 10 : 14) + '" y="' + (PAD_T + plotH / 2) + '" text-anchor="middle" fill="#6b7280" font-size="' + axisFont + '" font-weight="600" transform="rotate(-90,' + (isMobile ? 10 : 14) + ',' + (PAD_T + plotH / 2) + ')">$/MWh</text>';
 
     // Supply ceiling line
+    var ceilLabelW = isMobile ? 84 : 110;
     svg += '<line x1="' + ceilX + '" y1="' + PAD_T + '" x2="' + ceilX + '" y2="' + (H - PAD_B) + '" stroke="#EF4444" stroke-width="2" stroke-dasharray="6,3"/>';
-    svg += '<rect x="' + (ceilX - (isMobile ? 40 : 55)) + '" y="' + (PAD_T + 2) + '" width="' + (isMobile ? 80 : 110) + '" height="18" rx="4" fill="rgba(239,68,68,0.85)"/>';
-    svg += '<text x="' + ceilX + '" y="' + (PAD_T + 14) + '" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">' + (isMobile ? 'Supply ceiling' : 'Supply ceiling ~' + exhaustPct + '%') + '</text>';
+    svg += '<rect x="' + (ceilX - ceilLabelW / 2) + '" y="' + (PAD_T + 2) + '" width="' + ceilLabelW + '" height="' + (isMobile ? 20 : 18) + '" rx="4" fill="rgba(239,68,68,0.85)"/>';
+    svg += '<text x="' + ceilX + '" y="' + (PAD_T + (isMobile ? 16 : 14)) + '" text-anchor="middle" fill="#fff" font-size="' + (isMobile ? 10 : 9) + '" font-weight="700">' + (isMobile ? 'Supply ceiling' : 'Supply ceiling ~' + exhaustPct + '%') + '</text>';
 
     // NB line (dashed)
-    svg += '<path d="' + nbPath + '" fill="none" stroke="#F59E0B" stroke-width="2.5" stroke-dasharray="8,4"/>';
+    svg += '<path d="' + nbPath + '" fill="none" stroke="#F59E0B" stroke-width="' + lineW + '" stroke-dasharray="8,4"/>';
 
     // ECF line + fill
     var fillPath = ecfPath + ' L' + xPos(participationPcts.length - 1) + ',' + yPos(yMin) + ' L' + xPos(0) + ',' + yPos(yMin) + ' Z';
     svg += '<path d="' + fillPath + '" fill="rgba(14,165,233,0.08)"/>';
-    svg += '<path d="' + ecfPath + '" fill="none" stroke="#0EA5E9" stroke-width="2.5"/>';
+    svg += '<path d="' + ecfPath + '" fill="none" stroke="#0EA5E9" stroke-width="' + lineW + '"/>';
     svg += ecfDots;
 
     svg += '</svg>';
@@ -1141,7 +1172,20 @@ function buildScalingChart() {
 // ============================================================================
 function buildLmpChart() {
     var wrap = document.getElementById('lmpChartWrap');
-    var W = 600, H = 280, PAD_L = 50, PAD_R = 20, PAD_T = 20, PAD_B = 50;
+    if (!wrap) return;
+
+    // Mobile-adaptive dimensions
+    var W = isMobile ? 380 : 600;
+    var H = isMobile ? 260 : 280;
+    var PAD_L = isMobile ? 42 : 50;
+    var PAD_R = isMobile ? 12 : 20;
+    var PAD_T = isMobile ? 24 : 20;
+    var PAD_B = isMobile ? 44 : 50;
+    var fontSize = isMobile ? 12 : 10;
+    var axisFont = isMobile ? 12 : 11;
+    var dotR = isMobile ? 4 : 3;
+    var lineW = isMobile ? 3 : 2.5;
+
     var plotW = W - PAD_L - PAD_R;
     var plotH = H - PAD_T - PAD_B;
 
@@ -1177,30 +1221,29 @@ function buildLmpChart() {
     yTicks.forEach(function(v) {
         var y = yPos(v);
         yTicksSvg += '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="#e5e7eb" stroke-width="1"/>';
-        yTicksSvg += '<text x="' + (PAD_L - 6) + '" y="' + (y + 3) + '" text-anchor="end" fill="#9ca3af" font-size="10">$' + v + '</text>';
+        yTicksSvg += '<text x="' + (PAD_L - 6) + '" y="' + (y + 4) + '" text-anchor="end" fill="#9ca3af" font-size="' + fontSize + '">$' + v + '</text>';
     });
 
-    // X labels
+    // X labels — show fewer on mobile
     var xLabelsSvg = '';
     thresholds.forEach(function(t, i) {
-        // On mobile show fewer labels
         if (isMobile && t !== 50 && t !== 75 && t !== 90 && t !== 99) return;
-        xLabelsSvg += '<text x="' + xPos(i) + '" y="' + (H - PAD_B + 18) + '" text-anchor="middle" fill="#9ca3af" font-size="10">' + t + '%</text>';
+        xLabelsSvg += '<text x="' + xPos(i) + '" y="' + (H - PAD_B + 18) + '" text-anchor="middle" fill="#9ca3af" font-size="' + fontSize + '">' + t + '%</text>';
     });
 
     // LMP dots
     var dots = '';
     lmpValues.forEach(function(v, i) {
-        dots += '<circle cx="' + xPos(i) + '" cy="' + yPos(v) + '" r="3" fill="#0EA5E9"/>';
+        dots += '<circle cx="' + xPos(i) + '" cy="' + yPos(v) + '" r="' + dotR + '" fill="#0EA5E9"/>';
     });
 
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="font-family:\'Plus Jakarta Sans\',sans-serif;">';
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="font-family:\'Plus Jakarta Sans\',sans-serif;">';
     svg += yTicksSvg;
     svg += xLabelsSvg;
 
     // Axis labels
-    svg += '<text x="' + (PAD_L + plotW / 2) + '" y="' + (H - 4) + '" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="600">Hourly Clean Energy Target (%)</text>';
-    svg += '<text x="14" y="' + (PAD_T + plotH / 2) + '" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="600" transform="rotate(-90,14,' + (PAD_T + plotH / 2) + ')">$/MWh</text>';
+    svg += '<text x="' + (PAD_L + plotW / 2) + '" y="' + (H - 4) + '" text-anchor="middle" fill="#6b7280" font-size="' + axisFont + '" font-weight="600">Hourly Clean Energy Target (%)</text>';
+    svg += '<text x="' + (isMobile ? 10 : 14) + '" y="' + (PAD_T + plotH / 2) + '" text-anchor="middle" fill="#6b7280" font-size="' + axisFont + '" font-weight="600" transform="rotate(-90,' + (isMobile ? 10 : 14) + ',' + (PAD_T + plotH / 2) + ')">$/MWh</text>';
 
     // Gap fill (red zone below nuclear cost, after crossover)
     svg += '<rect x="' + xPos(crossIdx) + '" y="' + nucY + '" width="' + (xPos(thresholds.length - 1) - xPos(crossIdx)) + '" height="' + (yPos(yMin) - nucY) + '" fill="rgba(239,68,68,0.08)"/>';
@@ -1210,15 +1253,15 @@ function buildLmpChart() {
 
     // LMP fill + line
     svg += '<path d="' + fillPath + '" fill="rgba(14,165,233,0.12)"/>';
-    svg += '<path d="' + lmpPath + '" fill="none" stroke="#0EA5E9" stroke-width="2.5"/>';
+    svg += '<path d="' + lmpPath + '" fill="none" stroke="#0EA5E9" stroke-width="' + lineW + '"/>';
     svg += dots;
 
     // Crossover point
-    svg += '<circle cx="' + xPos(crossIdx) + '" cy="' + nucY + '" r="6" fill="#EF4444" stroke="#fff" stroke-width="2"/>';
+    svg += '<circle cx="' + xPos(crossIdx) + '" cy="' + nucY + '" r="' + (isMobile ? 7 : 6) + '" fill="#EF4444" stroke="#fff" stroke-width="2"/>';
 
     // Label
-    var labelX = xPos(Math.min(crossIdx + 2, thresholds.length - 1));
-    svg += '<text x="' + labelX + '" y="' + (nucY - 8) + '" fill="#EF4444" font-size="10" font-weight="700">Needs premium</text>';
+    var labelX = xPos(Math.min(crossIdx + (isMobile ? 1 : 2), thresholds.length - 1));
+    svg += '<text x="' + labelX + '" y="' + (nucY - 10) + '" fill="#EF4444" font-size="' + (isMobile ? 12 : 10) + '" font-weight="700">Needs premium</text>';
 
     svg += '</svg>';
     wrap.innerHTML = svg;
@@ -1266,13 +1309,26 @@ function updateBottomLine(sliderIdx) {
 // SCROLL OBSERVER
 // ============================================================================
 function initScrollObserver() {
+    // Use lower threshold on mobile for more reliable triggering
+    var threshold = isMobile ? 0.01 : 0.1;
+    var rootMargin = isMobile ? '0px 0px 0px 0px' : '0px 0px -30px 0px';
     var obs = new IntersectionObserver(function(entries) {
         entries.forEach(function(e) {
             if (e.isIntersecting) e.target.classList.add('visible');
         });
-    }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+    }, { threshold: threshold, rootMargin: rootMargin });
 
     document.querySelectorAll('.scroll-step').forEach(function(el) { obs.observe(el); });
+
+    // Fallback: make all scroll-steps visible after 2s on mobile
+    // (prevents charts from being permanently hidden if observer fails)
+    if (isMobile) {
+        setTimeout(function() {
+            document.querySelectorAll('.scroll-step').forEach(function(el) {
+                el.classList.add('visible');
+            });
+        }, 2000);
+    }
 }
 </script>
 </body>
