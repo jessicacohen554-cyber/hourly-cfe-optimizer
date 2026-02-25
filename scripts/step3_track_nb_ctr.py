@@ -661,15 +661,18 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
                              uprate_cap_override=None, existing_override=None):
     """Run demand growth sweep for track archetypes (threshold-year paired).
 
-    Each threshold is evaluated only at its SBTi-interpolated target year × L/M/H,
-    producing 15 × 3 = 45 DG results per ISO per scenario combo.
+    Each threshold is evaluated only at its SBTi-interpolated target year x L/M/H,
+    producing 15 x 3 = 45 DG results per ISO per scenario combo.
 
-    Optimized: pre-computes coefficient matrices for all 42 unique (year, growth_level)
-    pairs, then evaluates each combo with a fast matrix-vector multiply instead of
-    calling price_mix_batch per (year, growth_level).
+    Optimized with two levels of batching:
+    1. Pre-computes coefficient matrices for all ~42 unique (year, growth_level) pairs
+       (scenario-INVARIANT), with growth-invariant computations hoisted out.
+    2. For each (year, g_level), uses batch_eval_and_argmin_all to evaluate ALL combos
+       in a single Numba-accelerated call instead of sequential eval_cost_fast calls.
+    3. Loop order inverted: (year, g_level) outer, all combos inner -- each coefficient
+       matrix is loaded once and evaluated against all price vectors simultaneously.
     """
     demand_twh = REGIONAL_DEMAND_TWH[iso]
-    iso_rates = DEMAND_GROWTH_RATES[iso]
 
     arch_indices = sorted(arch_set)
     n_arch = len(arch_indices)
@@ -678,7 +681,9 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
 
     arch_arrays = {k: arrays[k][arch_indices] for k in arrays}
     arch_scores = arch_arrays['hourly_match_score']
+    match_frac = arch_scores / 100.0
 
+    # Pre-compute threshold qualifying masks using cached effective gates
     arch_thr_mask = {}
     for thr in OUTPUT_THRESHOLDS:
         gate = _EFFECTIVE_GATES[thr]
@@ -686,7 +691,11 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
         if len(qualifying) > 0:
             arch_thr_mask[thr] = qualifying
 
+    if not arch_thr_mask:
+        return {}
+
     thr_dg = {thr: {} for thr in arch_thr_mask}
+    n_combos = len(combos)
 
     # Pre-compute which years have matching thresholds (avoid recomputing per combo)
     year_thr_map = {}
@@ -698,56 +707,80 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
     if not year_thr_map:
         return {}
 
-    # Pre-compute DG coefficient matrices for all (year, g_level) pairs — O(42 × N)
-    # This is the key optimization: these matrices are scenario-INVARIANT (they depend
-    # on the physical arrays and demand growth, not on price sensitivities). We compute
-    # them once and reuse for every combo, replacing len(combos) × 42 price_mix_batch
-    # calls with 42 precompute calls + len(combos) × 42 fast matmul evals.
+    # Pre-compute all price vectors + wholesale for all combos (once)
+    price_matrix, wholesale_arr, _, _ = precompute_all_prices(iso, combos)
+
+    # Build active thresholds for DG (only those with matched years)
+    dg_active_thresholds = set()
+    for _year, matched in year_thr_map.items():
+        dg_active_thresholds.update(matched)
+    dg_active_thresholds = sorted(dg_active_thresholds)
+
+    # Descending thresholds for batch_eval_and_argmin_all
+    dg_thr_desc = np.array(sorted(dg_active_thresholds, reverse=True), dtype=np.float64)
+    dg_thr_pos = {float(dg_thr_desc[k]): k for k in range(len(dg_thr_desc))}
+
+    # Pre-compute DG coefficient matrices for all (year, g_level) pairs
+    # These are scenario-INVARIANT: depend on physical arrays and demand growth,
+    # not on price sensitivities. Computed once, reused for every combo.
     dg_coeffs, dg_meta = _precompute_dg_coefficients(
         iso, arch_arrays, demand_twh,
         uprate_cap_override=uprate_cap_override,
         existing_override=existing_override)
 
-    for scenario_key, sens in combos:
-        # Get scenario prices (10 scalars) — computed once per combo
-        prices, wholesale, _, _ = get_scenario_prices(iso, sens)
+    # Initialize per-combo result storage
+    combo_results = [{thr: {} for thr in arch_thr_mask} for _ in range(n_combos)]
 
-        thr_year_results = {thr: {} for thr in arch_thr_mask}
+    # Inverted loop: iterate (year, g_level) in outer loop, batch all combos.
+    # Each batch_eval_and_argmin_all call evaluates n_combos price vectors
+    # against one coefficient matrix in a single Numba kernel.
+    for year, matched_thresholds in year_thr_map.items():
+        yr_str = _YEAR_STR[year]
 
-        for year, matched_thresholds in year_thr_map.items():
-            year_str = _YEAR_STR[year]
+        for g_level in DEMAND_GROWTH_LEVELS:
+            coeff_matrix, constant, _mf = dg_coeffs[(year, g_level)]
+            gf, demand_grown_mwh = dg_meta[(year, g_level)]
+            gf_rounded = round(gf, 6)
+            demand_grown_rounded = round(demand_grown_mwh, 0)
 
-            for g_level in DEMAND_GROWTH_LEVELS:
-                coeff_matrix, constant, match_frac = dg_coeffs[(year, g_level)]
-                gf, demand_grown_mwh = dg_meta[(year, g_level)]
+            # Batch-evaluate all combos at once via Numba-accelerated kernel
+            all_best_idxs, all_best_vals = batch_eval_and_argmin_all(
+                coeff_matrix, constant, price_matrix, arch_scores, dg_thr_desc)
 
-                # Fast cost evaluation: tc = coeff_matrix @ prices + constant
-                tc = eval_cost_fast(coeff_matrix, constant, prices)
-                # Effective cost = total_cost / match_fraction
-                ec = np.where(match_frac > 0, tc / match_frac, 0.0)
-
+            # Extract results per combo per matched threshold
+            for j in range(n_combos):
+                wholesale_j = float(wholesale_arr[j])
                 for thr in matched_thresholds:
-                    qual_idx = arch_thr_mask[thr]
-                    best_local = int(qual_idx[np.argmin(tc[qual_idx])])
+                    k = dg_thr_pos[float(thr)]
+                    if all_best_vals[j, k] == np.inf:
+                        continue
+                    best_local = int(all_best_idxs[j, k])
                     full_idx = arch_indices[best_local]
-                    if year_str not in thr_year_results[thr]:
-                        thr_year_results[thr][year_str] = {}
-                    thr_year_results[thr][year_str][g_level] = [
+                    tc_val = float(all_best_vals[j, k])
+                    mf = float(match_frac[best_local])
+                    ec_val = tc_val / mf if mf > 0 else 0.0
+
+                    if yr_str not in combo_results[j][thr]:
+                        combo_results[j][thr][yr_str] = {}
+                    combo_results[j][thr][yr_str][g_level] = [
                         full_idx,
-                        round(float(tc[best_local]), 2),
-                        round(float(ec[best_local]), 2),
-                        round(float(ec[best_local]) - wholesale, 2),
-                        round(gf, 6),
-                        round(demand_grown_mwh, 0),
+                        round(tc_val, 2),
+                        round(ec_val, 2),
+                        round(ec_val - wholesale_j, 2),
+                        gf_rounded,
+                        demand_grown_rounded,
                     ]
 
+    # Assemble into output structure
+    for j, (scenario_key, _sens) in enumerate(combos):
         for thr in arch_thr_mask:
-            thr_dg[thr][scenario_key] = thr_year_results[thr]
+            thr_dg[thr][scenario_key] = combo_results[j][thr]
 
     n_dg_evals = len(DG_UNIQUE_YEARS) * len(DEMAND_GROWTH_LEVELS)
     result = {_THR_STR.get(thr, str(thr)): thr_dg[thr] for thr in arch_thr_mask}
     print(f"  {iso:>6} {track_name:>10} DG: {n_arch} archetypes, "
-          f"{len(arch_thr_mask)} thresholds, {n_dg_evals} paired evals")
+          f"{len(arch_thr_mask)} thresholds, {n_dg_evals} paired evals, "
+          f"{n_combos} combos (batched)")
     return result
 
 
