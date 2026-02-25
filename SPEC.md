@@ -177,7 +177,6 @@ Each dashboard page uses a specific track (or combination) for its data and visu
 **Track 2 (NB) + Track 3 (CTR) compared against Track 1 (ECF):**
 | Page | File | Notes |
 |---|---|---|
-| New-Build Incentive | `newbuild_requirement.html` | NB vs ECF — what hourly matching incentivizes |
 | Cost to Replace | `cost_to_replace.html` | CTR vs ECF — replacement cost of dispatchable clean |
 
 #### Decision 5c: Visual Differentiation — Existing vs New-Build vs Curtailment (Feb 24, 2026)
