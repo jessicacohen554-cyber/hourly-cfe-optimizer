@@ -115,7 +115,7 @@ CCS_LCOE_45Q_ON = {
 }
 
 EXISTING_NUCLEAR_GW = {'CAISO': 2.3, 'ERCOT': 2.7, 'PJM': 32.0, 'NYISO': 3.4, 'NEISO': 3.5}
-UPRATE_CAP_TWH = {iso: round(gw * 0.05 * 0.90 * 8760 / 1e3, 3)
+UPRATE_CAP_TWH = {iso: round(gw * 0.08 * 0.90 * 8760 / 1e3, 3)
                   for iso, gw in EXISTING_NUCLEAR_GW.items()}
 
 PEAK_DEMAND_MW = {'CAISO': 43860, 'ERCOT': 83597, 'PJM': 160560, 'NYISO': 31857, 'NEISO': 25898}
@@ -802,120 +802,287 @@ def _build_learning_overrides(iso, frac):
     return overrides
 
 
-def find_optimal_mixes_learning_curve(feasible_mixes, scenario, demand_twh_map,
-                                     target_threshold=95):
-    """Scenario B: Forward-looking hourly matching with graduated clean firm deployment.
+def _build_scenario_key(scenario, iso):
+    """Build the step 3 parquet scenario key from scenario toggles."""
+    s = scenario['toggles']
+    ren = s['ren']
+    firm = s['firm']
+    batt = s['batt']
+    ldes = s['ldes_lvl']
+    fuel = s['fuel']
+    tx = s['tx']
+    ccs = s['ccs']
+    q45 = s['q45']
+    geo = s.get('geo', 'X')
+    if iso != 'CAISO':
+        geo = 'X'
+    tx_map = {'L': 'L', 'M': 'M', 'H': 'H', 'N': 'N'}
+    return f"{ren}{firm}{batt}{ldes}_{fuel}_{tx_map.get(tx, tx)}_{ccs}{q45}_{geo}"
 
-    Strategy: select cost-optimal mix at the target threshold (near-NOAK pricing) as
-    the deployment "north star", then work backwards to deploy resources gradually:
 
-      - Clean firm / CCS: deployed along FOAK→NOAK learning curve, starting low
-        and accelerating as costs decline. At each threshold, the target clean firm
-        is proportional to the target mix × learning_fraction(t)/learning_fraction(target).
-      - Wind / solar / uprates: deployed per pure cost optimization (cheapest $/tCO₂).
-        These are mature technologies at Low cost from day one.
-      - LDES: also on learning curve (emerging technology).
+def _load_step3_results(scenario, iso):
+    """Load step 3 cost optimization results for a given scenario and ISO.
 
-    No path-dependency floor — each threshold optimized independently.
-    No fallback — physics-feasible EF mixes scored by cost + alignment with
-    the graduated clean firm deployment target.
+    Returns dict: threshold → row dict with all step 3 columns.
+    """
+    parquet_path = Path(__file__).parent.parent / f'data/step3-cost-opt-parquets/step3_co_{iso}.parquet'
+    if not parquet_path.exists():
+        print(f"  ⚠ Step 3 parquet not found: {parquet_path}")
+        return {}
 
-    Demand grows year-over-year per SBTI timeline (medium growth rate).
+    df = pd.read_parquet(parquet_path)
+    key = _build_scenario_key(scenario, iso)
+    subset = df[df['scenario'] == key].sort_values('threshold')
+    if len(subset) == 0:
+        print(f"  ⚠ No step 3 results for {iso} scenario {key}")
+        return {}
 
-    Parameters:
-        target_threshold: the CFE% target to work backwards from (default 95).
+    results = {}
+    for _, row in subset.iterrows():
+        t = row['threshold']
+        demand_twh = row['annual_demand_mwh'] / 1e6
+        proc = row['procurement_pct'] / 100.0
+        results[t] = {
+            'threshold': t,
+            'mix_raw': [row['mix_clean_firm'], row['mix_solar'], row['mix_wind'],
+                        row['mix_ccs_ccgt'], row['mix_hydro'], row['procurement_pct'],
+                        row['hourly_match_score'], row['battery_dispatch_pct'],
+                        row['battery8_dispatch_pct'], row['ldes_dispatch_pct']],
+            'demand_twh': demand_twh,
+            'effective_cost': row['cost_effective_cost'],
+            'total_cost': row['cost_total_cost'],
+            'incremental': row['cost_incremental'],
+            'wholesale': row['cost_wholesale'],
+            'match_score': row['hourly_match_score'],
+            'procurement_pct': row['procurement_pct'],
+            'resource_twh': {
+                'clean_firm': proc * row['mix_clean_firm'] / 100.0 * demand_twh,
+                'solar': proc * row['mix_solar'] / 100.0 * demand_twh,
+                'wind': proc * row['mix_wind'] / 100.0 * demand_twh,
+                'ccs_ccgt': proc * row['mix_ccs_ccgt'] / 100.0 * demand_twh,
+                'hydro': proc * row['mix_hydro'] / 100.0 * demand_twh,
+            },
+            'battery_twh': row['battery_dispatch_pct'] / 100.0 * demand_twh,
+            'battery8_twh': row['battery8_dispatch_pct'] / 100.0 * demand_twh,
+            'ldes_twh': row['ldes_dispatch_pct'] / 100.0 * demand_twh,
+            'gas_backup_mw': round(row['gas_gas_backup_needed_mw']),
+            'new_gas_mw': round(row['gas_new_gas_build_mw']),
+            'existing_gas_used_mw': round(row['gas_existing_gas_used_mw']),
+            'clean_peak_mw': round(row['gas_clean_peak_capacity_mw']),
+            'tranche_uprate_twh': row['tranche_uprate_twh'],
+            'tranche_nuclear_newbuild_twh': row['tranche_nuclear_newbuild_twh'],
+            'tranche_ccs_tranche_twh': row.get('tranche_ccs_tranche_twh', 0),
+            'tranche_geo_twh': row.get('tranche_geo_twh', 0),
+            'tranche_new_cf_twh': row['tranche_new_cf_twh'],
+        }
+        # Compute new-build cost tracking (for MAC calculation)
+        existing_pct = {k: v for k, v in GRID_MIX_SHARES[iso].items()}
+        gf = demand_twh / BASE_DEMAND_TWH[iso]
+        ex_scaled = {k: v / gf for k, v in existing_pct.items()}
+        cf_new_pct = max(0, proc * row['mix_clean_firm'] - ex_scaled.get('clean_firm', 0))
+        sol_new_pct = max(0, proc * row['mix_solar'] - ex_scaled.get('solar', 0))
+        wnd_new_pct = max(0, proc * row['mix_wind'] - ex_scaled.get('wind', 0))
+        ccs_new_pct = max(0, proc * row['mix_ccs_ccgt'] * 100 - ex_scaled.get('ccs_ccgt', 0))
+        new_gen_twh = (cf_new_pct + sol_new_pct + wnd_new_pct + ccs_new_pct) / 100.0 * demand_twh
+        existing_cost = (row['cost_total_cost'] - row['gas_gas_cost_per_mwh'])
+        # Approximate new-build cost from total cost minus existing wholesale
+        wholesale = row['cost_wholesale']
+        ex_frac = sum(min(proc * results[t]['resource_twh'].get(k, 0) / demand_twh,
+                         ex_scaled.get(k, 0) / 100.0)
+                      for k in existing_pct) if demand_twh > 0 else 0
+        new_build_per_mwh = max(0, row['cost_total_cost'] - ex_frac * wholesale
+                                - row['gas_gas_cost_per_mwh'])
+        results[t]['new_gen_twh'] = round(new_gen_twh, 3)
+        results[t]['new_build_cost_total'] = new_build_per_mwh * demand_twh * 1e6
+        results[t]['blended_new_lcoe'] = round(
+            new_build_per_mwh * demand_twh / new_gen_twh if new_gen_twh > 0.01 else 0, 2)
+
+    return results
+
+
+def _apply_floor_ratchet(step3_results, iso, sens):
+    """Apply path-dependent floor ratchet to step 3 single-threshold results.
+
+    At each threshold, augmented resources = max(floor, step3_target).
+    Floor ratchets upward — you can't un-build what was deployed.
+    Excess (floor > step3_target) is priced at new-build LCOE.
+
+    Returns dict: threshold → augmented result dict.
+    """
+    base_demand_twh = BASE_DEMAND_TWH[iso]
+    existing_twh = {k: v / 100.0 * base_demand_twh
+                    for k, v in GRID_MIX_SHARES[iso].items()}
+    existing_twh.setdefault('battery', 0)
+    existing_twh.setdefault('ldes', 0)
+    floor = dict(existing_twh)
+
+    augmented_results = {}
+
+    for t in THRESHOLDS:
+        if t not in step3_results:
+            continue
+
+        s3 = step3_results[t]
+        demand_twh = s3['demand_twh']
+        demand_mwh = demand_twh * 1e6
+
+        # Step 3 deployed resources
+        deployed = dict(s3['resource_twh'])
+        deployed['battery'] = s3['battery_twh'] + s3.get('battery8_twh', 0)
+        deployed['ldes'] = s3['ldes_twh']
+
+        # Augment: max(floor, step3_deployed)
+        augmented = {}
+        excess_twh = {}
+        excess_per_mwh = 0.0
+        for res in floor:
+            ef_val = deployed.get(res, 0)
+            floor_val = floor.get(res, 0)
+            augmented[res] = max(ef_val, floor_val)
+            excess = max(0, floor_val - ef_val)
+            excess_twh[res] = excess
+            if excess > 0.01:
+                lcoe = _resource_new_build_lcoe(res, sens, iso)
+                excess_per_mwh += excess / demand_twh * lcoe
+
+        total_excess = sum(excess_twh.values())
+
+        # Build augmented result
+        result = dict(s3)
+        result['total_cost'] = round(s3['total_cost'] + excess_per_mwh, 2)
+        match_frac = s3['match_score'] / 100
+        result['effective_cost'] = round(
+            result['total_cost'] / match_frac if match_frac > 0 else 0, 2)
+        result['incremental'] = round(
+            result['effective_cost'] - s3['wholesale'], 2)
+
+        result['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
+        result['battery_twh'] = augmented.get('battery', 0)
+        result['ldes_twh'] = augmented.get('ldes', 0)
+
+        # Recompute gas backup from augmented clean capacity
+        clean_peak_mw = 0
+        for r, twh in result['resource_twh'].items():
+            pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
+            if pcc > 0 and twh > 0:
+                clean_peak_mw += (twh * 1e6 / 8760) * pcc
+        clean_peak_mw += (augmented.get('battery', 0) * 1e6 / 8760) * \
+            PEAK_CAPACITY_CREDITS.get('battery', 0.95)
+        clean_peak_mw += (augmented.get('ldes', 0) * 1e6 / 8760) * \
+            PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
+
+        gf = demand_twh / base_demand_twh
+        ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
+        gaf = GAS_AVAILABILITY_FACTOR[iso]
+        gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+        result['gas_backup_mw'] = round(gas_needed_mw)
+        result['new_gas_mw'] = round(max(0, gas_needed_mw - EXISTING_GAS_CAPACITY_MW[iso]))
+        result['clean_peak_mw'] = round(clean_peak_mw)
+
+        # Track new-build cost (for MAC)
+        result['new_build_cost_total'] = (
+            s3['new_build_cost_total'] + excess_per_mwh * demand_mwh)
+        result['new_gen_twh'] = round(
+            s3['new_gen_twh'] +
+            sum(v for k, v in excess_twh.items() if k != 'hydro'), 3)
+
+        if total_excess > 1.0:
+            print(f"    ↗ {iso} {t}%: {total_excess:.0f} TWh floor excess "
+                  f"(+${excess_per_mwh:.1f}/MWh)")
+
+        augmented_results[t] = result
+        floor = dict(augmented)
+
+    return augmented_results
+
+
+def find_scenario_b_from_step3(scenario):
+    """Scenario B: Forward-looking hourly matching, mined from step 3.
+
+    Strategy:
+      1. Read step 3 cost-optimal results at Scenario B toggles (Low for all).
+         Step 3 already did full cost optimization with tranching (uprates →
+         geothermal → newbuild nuclear/CCS). This gives us the single-threshold
+         optimal mix at each ISO × threshold.
+      2. Apply path-dependent floor ratchet: resources deployed at each threshold
+         become the floor for the next. Can't un-build what was deployed.
+      3. Deploy cheapest resources first by region — step 3 already handles this
+         via its merit-order tranching (uprate → geo → cheapest of nuclear/CCS).
+      4. Uprates ($15-25/MWh) are the first clean firm tranche at every threshold,
+         so they're leveraged immediately even at 50% where existing nuclear
+         capacity dominates.
     """
     results = {}
     sens = scenario['toggles']
-    FRAC_TARGET = learning_fraction(target_threshold)
-    CF_ALIGNMENT_WEIGHT = 5.0
 
     for iso in ISOS:
-        iso_results = {}
         iso_sens = dict(sens)
         if iso != 'CAISO':
             iso_sens['geo'] = None
 
-        base_demand_twh = demand_twh_map[iso]
-
-        # ------------------------------------------------------------------
-        # Step 1: Find cost-optimal mix at target threshold as deployment target
-        # ------------------------------------------------------------------
-        t_str = str(int(target_threshold)) if target_threshold == int(target_threshold) else str(target_threshold)
-        t_mixes = feasible_mixes.get(iso, {}).get(t_str, [])
-        gf_target = get_demand_growth_factor(iso, target_threshold)
-        demand_target = base_demand_twh * gf_target
-        overrides_target = _build_learning_overrides(iso, FRAC_TARGET)
-
-        best_target_cost = float('inf')
-        best_target_mix = None
-        for mix in t_mixes:
-            result = compute_mix_cost(mix, iso_sens, iso, demand_target,
-                                      overrides=overrides_target, growth_factor=gf_target)
-            if result['effective_cost'] < best_target_cost:
-                best_target_cost = result['effective_cost']
-                best_target_mix = mix
-
-        if not best_target_mix:
+        print(f"  {iso}: loading step 3 results...", end='')
+        step3 = _load_step3_results(scenario, iso)
+        if not step3:
             results[iso] = {}
             continue
 
-        target_deployed = _mix_resource_twh(best_target_mix, demand_target)
+        print(f" {len(step3)} thresholds, applying floor ratchet...")
+        results[iso] = _apply_floor_ratchet(step3, iso, iso_sens)
 
-        # ------------------------------------------------------------------
-        # Step 2: At each threshold, optimize with learning-curve costs
-        # and alignment scoring toward the target
-        # ------------------------------------------------------------------
-        for t in THRESHOLDS:
-            t_str = str(int(t)) if t == int(t) else str(t)
-            mixes = feasible_mixes.get(iso, {}).get(t_str, [])
-            if not mixes:
-                continue
+        for t in sorted(results[iso].keys()):
+            r = results[iso][t]
+            rt = r['resource_twh']
+            uprate = r.get('tranche_uprate_twh', 0)
+            print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
+                  f"Wnd={rt['wind']:6.0f} Up={uprate:5.1f} "
+                  f"Proc={r['procurement_pct']:3.0f}% "
+                  f"${r['effective_cost']:.0f}/MWh")
 
-            gf = get_demand_growth_factor(iso, t)
-            demand_twh = base_demand_twh * gf
-            frac = learning_fraction(t)
+    return results
 
-            # Learning-curve LCOE overrides
-            overrides = _build_learning_overrides(iso, frac)
 
-            # Target clean firm deployment at this threshold:
-            # Proportional to target mix × learning curve position.
-            cf_scale = frac / FRAC_TARGET  # 0→1 over 50→target, >1 above target
-            target_cf_twh = target_deployed['clean_firm'] * cf_scale * (demand_twh / demand_target)
-            target_ccs_twh = target_deployed['ccs_ccgt'] * cf_scale * (demand_twh / demand_target)
-            target_firm_twh = target_cf_twh + target_ccs_twh
+def find_scenario_a_from_step3(scenario):
+    """Scenario A: Consequential deployment ordered by $/tCO₂.
 
-            # Score each mix: cost + clean firm alignment penalty
-            best_score = float('inf')
-            best_result = None
+    Strategy:
+      1. Read step 3 cost-optimal results at Scenario A toggles (High firm/CCS/LDES).
+         Step 3 already did full cost optimization with tranching (uprates → geo →
+         nuclear/CCS) at each ISO × threshold.
+      2. Apply path-dependent floor ratchet per ISO: resources deployed at threshold N
+         become the floor for threshold N+1.
+      3. The cross-regional deployment ORDER by $/tCO₂ (= marginal_LCOE / CO₂_displacement_rate)
+         is computed downstream by build_consequential_queue(). A cheap resource that
+         displaces gas (low CO₂ rate ~0.4 t/MWh) may rank worse than an expensive one
+         displacing coal (high CO₂ rate ~1.0 t/MWh).
+      4. Uprates ($15-40/MWh) are the first clean firm tranche at every threshold
+         (built into step 3's merit-order tranching).
+    """
+    results = {}
+    sens = scenario['toggles']
 
-            for mix in mixes:
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
-                                          overrides=overrides, growth_factor=gf)
+    for iso in ISOS:
+        iso_sens = dict(sens)
+        if iso != 'CAISO':
+            iso_sens['geo'] = None
 
-                # Clean firm alignment: penalize deviation from graduated target
-                actual_cf_twh = result['resource_twh'].get('clean_firm', 0)
-                actual_ccs_twh = result['resource_twh'].get('ccs_ccgt', 0)
-                actual_firm_twh = actual_cf_twh + actual_ccs_twh
+        print(f"  {iso}: loading step 3 results...", end='')
+        step3 = _load_step3_results(scenario, iso)
+        if not step3:
+            results[iso] = {}
+            continue
 
-                if target_firm_twh > 1.0:
-                    # Relative deviation from target (0 = perfect alignment)
-                    deviation = abs(actual_firm_twh - target_firm_twh) / target_firm_twh
-                else:
-                    deviation = 0.0
+        print(f" {len(step3)} thresholds, applying floor ratchet...")
+        results[iso] = _apply_floor_ratchet(step3, iso, iso_sens)
 
-                alignment_penalty = deviation * CF_ALIGNMENT_WEIGHT
-                score = result['effective_cost'] + alignment_penalty
+        for t in sorted(results[iso].keys()):
+            r = results[iso][t]
+            rt = r['resource_twh']
+            uprate = r.get('tranche_uprate_twh', 0)
+            print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
+                  f"Wnd={rt['wind']:6.0f} Up={uprate:5.1f} "
+                  f"Proc={r['procurement_pct']:3.0f}% "
+                  f"${r['effective_cost']:.0f}/MWh")
 
-                if score < best_score:
-                    best_score = score
-                    best_result = result
-
-            if best_result:
-                iso_results[t] = best_result
-
-        results[iso] = iso_results
     return results
 
 
@@ -1091,8 +1258,8 @@ def compute_domino_sequence(queue_a, queue_b):
 def main():
     print("=" * 80)
     print("DUAL-SCENARIO COMPARISON: PURE CONSEQUENTIAL vs HOURLY MATCHING")
-    print("  A: Pure Consequential — sequential cheapest $/tCO₂ procurement")
-    print("  B: Hourly Matching — direct hourly matching with clean firm on FOAK→NOAK curve")
+    print("  A: Pure Consequential — step 3 mined, $/tCO₂ ordered, uprate-first")
+    print("  B: Hourly Matching — step 3 mined, NOAK costs, uprate-first")
     print("=" * 80)
 
     # Load egrid and fossil mix data
@@ -1101,33 +1268,17 @@ def main():
     with open('data/EIA 930 Data/eia_fossil_mix.json') as f:
         fossil_mix = json.load(f)
 
-    # Parse feasible mixes
-    print("\nParsing feasible mixes from shared-data.js...")
-    feasible_mixes = parse_feasible_mixes()
-    total_mixes = sum(len(mixes) for iso_data in feasible_mixes.values()
-                      for mixes in iso_data.values())
-    print(f"  Loaded {total_mixes:,} feasible mixes across {len(ISOS)} ISOs × {len(THRESHOLDS)} thresholds")
+    # Scenario A: Mine step 3 results at Scenario A toggles + floor ratchet
+    # Cross-regional deployment ordering by $/tCO₂ is computed by build_consequential_queue()
+    print("\nScenario A (Pure Consequential): mining step 3 results...")
+    print(f"  Toggles: {_build_scenario_key(SCENARIO_A, 'PJM')} (high firm/CCS/LDES)")
+    results_a = find_scenario_a_from_step3(SCENARIO_A)
 
-    # Scenario A: Pure Consequential — path-dependent sequential optimization
-    print("\nScenario A (Pure Consequential): path-dependent sequential optimization...")
-    results_a = find_optimal_mixes_sequential(feasible_mixes, SCENARIO_A, BASE_DEMAND_TWH)
-
-    # Scenario B: Hourly Matching — compute for each possible target threshold
-    # This is parametric: the slider in the dashboard lets users pick the target,
-    # and Scenario B recalculates its deployment path working backwards from that target.
-    print("\nScenario B (Hourly Matching): pre-computing for all target thresholds...")
-    print("  Learning curve: clean firm/CCS/LDES interpolated High→Low per threshold")
-    print("  Mature tech (solar, wind, battery) at Low cost throughout")
-
-    results_b_by_target = {}
-    for target_t in THRESHOLDS:
-        print(f"  Target {target_t}%...", end='')
-        results_b_by_target[target_t] = find_optimal_mixes_learning_curve(
-            feasible_mixes, SCENARIO_B, BASE_DEMAND_TWH, target_threshold=target_t)
-        print(" done")
-
-    # Default Scenario B at 95% for backward compatibility
-    results_b = results_b_by_target[95]
+    # Scenario B: Mine step 3 results at Scenario B toggles + floor ratchet
+    # Forward-looking path with uprate-first tranching at NOAK cost targets
+    print("\nScenario B (Hourly Matching): mining step 3 results...")
+    print(f"  Toggles: {_build_scenario_key(SCENARIO_B, 'PJM')} (low/NOAK costs)")
+    results_b = find_scenario_b_from_step3(SCENARIO_B)
 
     # Build consequential queues
     print("\nBuilding consequential queues...")
@@ -1361,12 +1512,13 @@ def main():
     trajectories['pure_consequential'] = _build_trajectory(results_a, enforce_monotonic=True)
     trajectories['hourly_matching'] = _build_trajectory(results_b, enforce_monotonic=False)
 
-    # Build per-target Scenario B trajectories for the dashboard slider
+    # Build per-target Scenario B trajectories for dashboard slider compatibility
+    # With step3-mining approach, all targets produce the same trajectory
+    hourly_traj = trajectories['hourly_matching']
     trajectories_b_by_target = {}
     for target_t in THRESHOLDS:
         t_key = str(int(target_t)) if target_t == int(target_t) else str(target_t)
-        trajectories_b_by_target[t_key] = _build_trajectory(
-            results_b_by_target[target_t], enforce_monotonic=False)
+        trajectories_b_by_target[t_key] = hourly_traj
 
     output = {
         'metadata': {
@@ -1375,16 +1527,15 @@ def main():
                 'name': SCENARIO_A['name'],
                 'description': SCENARIO_A['description'],
                 'toggles': SCENARIO_A['toggles'],
-                'method': 'path_dependent_sequential',
-                'method_description': 'Pure consequential: sequential optimization where resources deployed at each threshold become the floor for the next. Cheapest $/tCO2 at each step, locked into prior commitments.',
+                'method': 'step3_consequential',
+                'method_description': 'Pure consequential: mined from step 3 cost optimization at High firm/CCS/LDES toggles. Cross-regional deployment ordered by $/tCO₂ (= resource LCOE ÷ CO₂ displacement rate). Uprates first at every threshold. Floor ratchet locks in prior deployments.',
             },
             'scenario_b': {
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
-                'method': 'learning_curve_graduated',
-                'method_description': 'Hourly matching with graduated FOAK→NOAK deployment. At each threshold, clean firm/CCS/LDES costs are interpolated between High (FOAK) and Low (NOAK) based on SBTi timeline position. Early thresholds see less clean firm (expensive); deployment increases as learning drives costs down. Mature tech (solar, wind, battery) at Low cost throughout.',
-                'learning_curve': 'convex ramp: 0.05 + 0.95 * ((t-50)/50)^1.8',
+                'method': 'step3_hourly_matching',
+                'method_description': 'Forward-looking hourly matching: mined from step 3 cost optimization at Low (NOAK) cost toggles. Uprate-first tranching leverages cheap existing nuclear capacity. Path-dependent floor ratchet prevents un-building. Resources deployed cheapest-first by region via step 3 merit-order tranching.',
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
