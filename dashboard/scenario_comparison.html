@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pure Consequential vs Hourly Matching — Procurement Strategy Comparison</title>
+<title>Scenario A vs Scenario B — Procurement Strategy Comparison</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -87,6 +87,15 @@ body { background: #F3F4F8; }
 .iso-btn:hover { background: rgba(255,255,255,0.95); color: #1A2744; }
 .iso-btn.active { background: rgba(14,165,233,0.12); border-color: rgba(14,165,233,0.4); color: #0284C7; }
 
+/* Global ISO bar — sticky */
+.global-iso-bar { background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 14px 24px; position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.global-iso-bar .bar-label { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.82rem; color: #1A2744; font-weight: 700; white-space: nowrap; }
+
+/* Dashboard grid */
+.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1320px; margin: 0 auto; padding: 0 24px 40px; }
+.dashboard-grid > .span-2 { grid-column: 1 / -1; }
+@media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
 /* Target threshold slider */
 .target-slider-section { max-width: 1200px; margin: -20px auto 0; padding: 20px 24px 12px; position: relative; z-index: 10; }
 .target-slider-card { background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 20px 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
@@ -151,13 +160,13 @@ body { background: #F3F4F8; }
 <!-- HEADER BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">Pure Consequential vs Hourly Matching &mdash; two procurement strategies, radically different outcomes</p>
+    <p class="subtitle">Scenario A vs Scenario B &mdash; two procurement strategies, radically different outcomes</p>
     <div class="header-accent"></div>
 </header>
 
 <!-- Hero -->
 <section class="hero">
-    <h1>Pure Consequential vs Hourly Matching</h1>
+    <h1>Scenario A vs Scenario B</h1>
     <p class="subtitle">
         Two procurement strategies. One chases the cheapest $/tCO<sub>2</sub> at each step — locking in
         resources that can't be unbuilt. The other invests in clean firm technologies along the FOAK&rarr;NOAK
@@ -166,40 +175,36 @@ body { background: #F3F4F8; }
     </p>
 </section>
 
-<!-- Key findings hero panel (data-driven, updates with target slider) -->
-<div style="padding: 0 24px;">
-    <div class="key-findings" id="keyFindings">
-        <div class="key-findings-title">Key Findings at <span id="kfThresholdLabel">95%</span> CFE Target</div>
-        <div class="key-findings-grid">
-            <div class="kf-item">
-                <div class="kf-icon" style="color:#DC2626;">&#9888;</div>
-                <div class="kf-text" id="kfCostTrap">
-                    <strong>The cost trap is real.</strong> Consequential procurement costs
-                    <span class="kf-num" id="kfMultiplier">—</span>&times; more than hourly matching at the target —
-                    <span class="kf-num" id="kfSavings">—</span> in annual savings across all ISOs.
-                </div>
-            </div>
-            <div class="kf-item">
-                <div class="kf-icon" style="color:#16A34A;">&#9889;</div>
-                <div class="kf-text" id="kfFirmInvest">
-                    <strong>Clean firm pays off.</strong> Hourly matching deploys
-                    <span class="kf-num" id="kfFirmTwh">—</span> of firm generation, driving FOAK&rarr;NOAK learning.
-                    Consequential locks in renewables and faces a cost cliff when firm is finally needed.
-                </div>
-            </div>
-            <div class="kf-item">
-                <div class="kf-icon" style="color:#0284C7;">&#128176;</div>
-                <div class="kf-text" id="kfNPV">
-                    <strong>25-year commitment.</strong> The NPV difference is
-                    <span class="kf-num" id="kfNPVDiff">—</span> (at 5% WACC) — the cumulative cost of
-                    deferring clean firm investment until it's too late.
-                </div>
-            </div>
+<!-- Scenario description cards -->
+<section class="content-section" style="padding-bottom: 0;">
+    <div class="scenario-legend">
+        <div class="legend-item"><div class="legend-dot scn-a"></div><span class="legend-label">Scenario A</span><span class="legend-desc">&mdash; sequential, cheapest $/tCO₂ first, path-dependent lock-in</span></div>
+        <div class="legend-item"><div class="legend-dot scn-b"></div><span class="legend-label">Scenario B</span><span class="legend-desc">&mdash; early clean firm commitment at FOAK prices, locked in toward the end target</span></div>
+    </div>
+
+    <div class="scenario-cards">
+        <div class="scenario-card" style="border-color: rgba(220,38,38,0.2);">
+            <span class="scenario-tag tag-a">Scenario A &mdash; Pure Consequential</span>
+            <h3>Cheapest $/tCO₂ First</h3>
+            <div class="toggles">Ren: Low | Firm: Low (NOAK) | CCS: Low | LDES: Low | Geo: Low | Battery: Low | Fuel: Med | Tx: Med</div>
+            <p>At each threshold (50% → 60% → 75% → ... → 100%), buy the cheapest $/tCO₂ resources first.
+            Uses NOAK (mature) pricing — the consequential buyer gravitates to the cheapest available technology.
+            Resources deployed at each step are <strong>locked in</strong> as committed infrastructure.
+            Result: low MAC at early thresholds (cheap renewables), rising as you exhaust cheap abatement.</p>
+        </div>
+        <div class="scenario-card" style="border-color: rgba(22,163,74,0.2);">
+            <span class="scenario-tag tag-b">Scenario B &mdash; Hourly Matching</span>
+            <h3>Early Clean Firm Commitment at FOAK Prices</h3>
+            <div class="toggles">Ren: Low | Firm: High (FOAK) | CCS: High | LDES: High | Geo: High | Battery: Low | Fuel: Med | Tx: Med</div>
+            <p>Hourly matching requires firm generation for nighttime and wind-lull coverage. The buyer
+            commits to clean firm at <strong>FOAK prices</strong> — paying the premium before the learning
+            curve matures. Resources deployed at each step are locked in toward the end target.
+            Result: higher MAC at early thresholds (FOAK firm costs), but building toward the matching goal.</p>
         </div>
     </div>
-</div>
+</section>
 
-<!-- Target threshold slider -->
+<!-- Target threshold slider + headline tiles (right below scenario cards) -->
 <div class="target-slider-section">
     <div class="target-slider-card">
         <div class="target-slider-label">Target CFE Threshold</div>
@@ -216,220 +221,177 @@ body { background: #F3F4F8; }
 <!-- Dynamic headline cards -->
 <div class="headline-row" id="headlineCards"></div>
 
-<!-- Scenario descriptions -->
-<section class="content-section">
-    <div class="scenario-legend">
-        <div class="legend-item"><div class="legend-dot scn-a"></div><span class="legend-label">Pure Consequential</span><span class="legend-desc">&mdash; sequential, cheapest $/tCO₂ first, path-dependent lock-in</span></div>
-        <div class="legend-item"><div class="legend-dot scn-b"></div><span class="legend-label">Hourly Matching</span><span class="legend-desc">&mdash; early clean firm commitment at FOAK prices, locked in toward the end target</span></div>
-    </div>
-
-    <div class="scenario-cards">
-        <div class="scenario-card" style="border-color: rgba(220,38,38,0.2);">
-            <span class="scenario-tag tag-a">Pure Consequential</span>
-            <h3>Cheapest $/tCO₂ First</h3>
-            <div class="toggles">Ren: Low | Firm: Low (NOAK) | CCS: Low | LDES: Low | Geo: Low | Battery: Low | Fuel: Med | Tx: Med</div>
-            <p>At each threshold (50% → 60% → 75% → ... → 100%), buy the cheapest $/tCO₂ resources first.
-            Uses NOAK (mature) pricing — the consequential buyer gravitates to the cheapest available technology.
-            Resources deployed at each step are <strong>locked in</strong> as committed infrastructure.
-            Result: low MAC at early thresholds (cheap renewables), rising as you exhaust cheap abatement.</p>
-        </div>
-        <div class="scenario-card" style="border-color: rgba(22,163,74,0.2);">
-            <span class="scenario-tag tag-b">Hourly Matching</span>
-            <h3>Early Clean Firm Commitment at FOAK Prices</h3>
-            <div class="toggles">Ren: Low | Firm: High (FOAK) | CCS: High | LDES: High | Geo: High | Battery: Low | Fuel: Med | Tx: Med</div>
-            <p>Hourly matching requires firm generation for nighttime and wind-lull coverage. The buyer
-            commits to clean firm at <strong>FOAK prices</strong> — paying the premium before the learning
-            curve matures. Resources deployed at each step are locked in toward the end target.
-            Result: higher MAC at early thresholds (FOAK firm costs), but building toward the matching goal.</p>
-        </div>
-    </div>
-</section>
-
-<!-- 1. SBTi Timeline: MAC Comparison -->
-<section class="content-section">
-    <h2 class="section-title">Marginal Abatement Cost on the SBTi Timeline</h2>
-    <p class="section-subtitle">Stepwise $/tCO<sub>2</sub> at each SBTi milestone. The pure consequential path costs more per ton displaced at every threshold above 90%.</p>
-
-    <div class="iso-selector" id="macIsoSelector"></div>
-
-    <div class="chart-wide">
-        <h3 id="macTimelineTitle">PJM — Marginal $/tCO<sub>2</sub> by SBTi Year</h3>
-        <p class="chart-note">Red = Pure Consequential | Green = Hourly Matching. Capped at $2,000/tCO₂. Hover for exact values.</p>
-        <div class="chart-container-wide"><canvas id="macTimelineChart"></canvas></div>
-    </div>
-
-    <div class="insight">
-        <p><strong>The path-dependent trap reveals itself above 80%.</strong> The sequential strategy locks in massive
-        renewable overbuilds early (they're the cheapest $/tCO<sub>2</sub> at each step). But those locked-in renewables
-        have declining marginal value for hourly matching — you've already saturated the sunny and windy hours.
-        To reach higher thresholds, the optimizer is forced into even more extreme overbuilding because clean firm
-        is expensive at High LCOE. The hourly matching 95% target achieves the same physics with a balanced portfolio —
-        clean firm provides the nighttime/winter hours that no amount of renewables can cover.</p>
-    </div>
-</section>
-
-<!-- 2. Gas Capacity: The Stranding Story -->
-<section class="content-section">
-    <h2 class="section-title">Gas Capacity: Overbuilding vs. Efficient Displacement</h2>
-    <p class="section-subtitle">Gas backup capacity at each milestone. The sequential path's massive renewable overbuilding
-    eventually eliminates gas through sheer overcapacity — but at 3-5&times; the cost. The hourly matching path maintains
-    some gas at 95% but achieves near-full decarbonization at a fraction of the system cost.</p>
-
-    <div class="iso-selector" id="gasIsoSelector"></div>
-
-    <div class="chart-wide">
-        <h3 id="gasChartTitle">PJM — Gas Backup Capacity (MW)</h3>
-        <p class="chart-note">Red = Pure Consequential | Green = Hourly Matching. Shaded gap = avoided gas infrastructure.</p>
-        <div class="chart-container-wide"><canvas id="gasChart"></canvas></div>
-    </div>
-
-    <div class="insight green">
-        <p><strong>The gas story is counterintuitive.</strong> The sequential path's extreme renewable overbuilding
-        actually eliminates gas at high thresholds — PJM hits 0 MW gas at 90% because it's deployed so much
-        solar and wind that capacity credits exceed the RA requirement. But this comes at
-        $252/MWh vs. the hourly matching path's $63/MWh. The hourly matching 95% target retains ~<span id="gasGapPJM">110 GW</span> of gas
-        in PJM but achieves 95% CFE at 4&times; lower cost. The efficient path doesn't require eliminating every MW of gas —
-        it requires matching clean energy to demand hourly.</p>
-    </div>
-</section>
-
-<!-- 4. Resource Mix Side-by-Side -->
-<section class="content-section">
-    <h2 class="section-title">What Gets Built: Path-Dependent vs. Target Portfolio</h2>
-    <p class="section-subtitle">The sequential path's resource mix evolves erratically as each threshold inherits prior overbuilds.
-    The hourly matching path shows a graduated transition — increasing clean firm as FOAK&rarr;NOAK learning reduces costs,
-    with the optimizer selecting more balanced portfolios at each threshold.
-    <strong>Dashed line = total demand</strong> (identical for both scenarios) — generation above the line is overbuilt/curtailed.</p>
-
-    <div class="iso-selector" id="mixIsoSelector"></div>
-
-    <div class="chart-pair">
-        <div class="chart-box">
-            <span class="scenario-tag tag-a">Pure Consequential</span>
-            <h3 id="mixTitleA">PJM — Resource Mix (TWh)</h3>
-            <div class="chart-container"><canvas id="mixChartA"></canvas></div>
-        </div>
-        <div class="chart-box">
-            <span class="scenario-tag tag-b">Hourly Matching</span>
-            <h3 id="mixTitleB">PJM — Resource Mix (TWh)</h3>
-            <div class="chart-container"><canvas id="mixChartB"></canvas></div>
+<!-- Key findings hero panel (data-driven, updates with target slider) -->
+<div style="padding: 0 24px;">
+    <div class="key-findings" id="keyFindings">
+        <div class="key-findings-title">Key Findings at <span id="kfThresholdLabel">95%</span> CFE Target</div>
+        <div class="key-findings-grid">
+            <div class="kf-item">
+                <div class="kf-icon" style="color:#DC2626;">&#9888;</div>
+                <div class="kf-text" id="kfCostTrap">
+                    <strong>The cost trap is real.</strong> Scenario A costs
+                    <span class="kf-num" id="kfMultiplier">—</span>&times; more than Scenario B at the target —
+                    <span class="kf-num" id="kfSavings">—</span> in annual savings across all ISOs.
+                </div>
+            </div>
+            <div class="kf-item">
+                <div class="kf-icon" style="color:#16A34A;">&#9889;</div>
+                <div class="kf-text" id="kfFirmInvest">
+                    <strong>Clean firm pays off.</strong> Scenario B deploys
+                    <span class="kf-num" id="kfFirmTwh">—</span> of firm generation, driving FOAK&rarr;NOAK learning.
+                    Scenario A locks in renewables and faces a cost cliff when firm is finally needed.
+                </div>
+            </div>
+            <div class="kf-item">
+                <div class="kf-icon" style="color:#0284C7;">&#128176;</div>
+                <div class="kf-text" id="kfNPV">
+                    <strong>25-year commitment.</strong> The NPV difference is
+                    <span class="kf-num" id="kfNPVDiff">—</span> (at 5% WACC) — the cumulative cost of
+                    deferring clean firm investment until it's too late.
+                </div>
+            </div>
         </div>
     </div>
-</section>
+</div>
 
-<!-- 5. Effective System Cost Overlay -->
-<section class="content-section">
-    <h2 class="section-title">Effective System Cost: The Learning Curve Dividend</h2>
-    <p class="section-subtitle">$/MWh effective system cost at each milestone. The sequential path escalates as locked-in
-    renewables saturate. The hourly matching path rises gradually as clean firm costs decline along the learning curve —
-    more expensive early (FOAK), converging on NOAK pricing at higher thresholds.</p>
+<!-- GLOBAL ISO SELECTOR — one toggle for ALL figures -->
+<div class="global-iso-bar">
+    <span class="bar-label">Region:</span>
+    <div class="iso-selector" id="globalIsoSelector" style="margin-bottom:0;"></div>
+</div>
 
-    <div class="iso-selector" id="costIsoSelector"></div>
+<!-- ===== DASHBOARD GRID: All figures tiled below ===== -->
+<section class="content-section" style="padding-top: 24px;">
 
-    <div class="chart-wide">
+<!-- 1. What Gets Built (FIRST) — Resource Mix Side-by-Side -->
+<h2 class="section-title">What Gets Built: Scenario A vs Scenario B</h2>
+<p class="section-subtitle">Resource mix in absolute TWh at each threshold. Scenario A's mix evolves erratically as each threshold inherits prior overbuilds.
+Scenario B shows a graduated transition — increasing clean firm as FOAK&rarr;NOAK learning reduces costs.
+<strong>Dashed line = total demand</strong> — generation above the line is overbuilt/curtailed.</p>
+
+<div class="chart-pair">
+    <div class="chart-box">
+        <span class="scenario-tag tag-a">Scenario A</span>
+        <h3 id="mixTitleA">PJM — Resource Mix (TWh)</h3>
+        <div class="chart-container"><canvas id="mixChartA"></canvas></div>
+    </div>
+    <div class="chart-box">
+        <span class="scenario-tag tag-b">Scenario B</span>
+        <h3 id="mixTitleB">PJM — Resource Mix (TWh)</h3>
+        <div class="chart-container"><canvas id="mixChartB"></canvas></div>
+    </div>
+</div>
+
+<!-- 2. Effective System Cost -->
+<h2 class="section-title">Effective System Cost: The Learning Curve Dividend</h2>
+<p class="section-subtitle">$/MWh effective system cost at each milestone. Scenario A escalates as locked-in
+renewables saturate. Scenario B rises gradually as clean firm costs decline along the learning curve.</p>
+
+<div class="dashboard-grid">
+    <div class="chart-wide span-2" style="margin-bottom:0;">
         <h3 id="costChartTitle">PJM — Effective System Cost ($/MWh)</h3>
-        <p class="chart-note">Red = Pure Consequential | Green = Hourly Matching. Shaded gap = savings from learning curve investment.</p>
+        <p class="chart-note">Red = Scenario A | Green = Scenario B. Shaded gap = savings from learning curve investment.</p>
         <div class="chart-container-wide"><canvas id="costChart"></canvas></div>
     </div>
-</section>
+</div>
 
-<!-- 6. Clean Firm Deployment Comparison -->
-<section class="content-section">
-    <h2 class="section-title">Clean Firm Deployment: Early Entry vs. Last-Minute Cliff</h2>
-    <p class="section-subtitle">Total clean firm generation (nuclear + CCS + geothermal) at each threshold.
-    The sequential path eventually needs massive clean firm at extreme thresholds; the hourly matching path builds it
-    gradually — seeding the learning curve early and ramping up as NOAK pricing kicks in.</p>
+<!-- 3. MAC Timeline -->
+<h2 class="section-title" style="margin-top:32px;">Marginal Abatement Cost on the SBTi Timeline</h2>
+<p class="section-subtitle">Stepwise $/tCO<sub>2</sub> at each SBTi milestone. Scenario A costs more per ton displaced at every threshold above 90%.</p>
 
-    <div class="iso-selector" id="firmIsoSelector"></div>
+<div class="chart-wide">
+    <h3 id="macTimelineTitle">PJM — Marginal $/tCO<sub>2</sub> by SBTi Year</h3>
+    <p class="chart-note">Red = Scenario A | Green = Scenario B. Capped at $2,000/tCO₂. Hover for exact values.</p>
+    <div class="chart-container-wide"><canvas id="macTimelineChart"></canvas></div>
+</div>
 
-    <div class="chart-wide">
-        <h3 id="firmChartTitle">PJM — Clean Firm + CCS Deployment (TWh)</h3>
-        <p class="chart-note">Red = Pure Consequential | Green = Hourly Matching. The hourly matching path builds clean firm 2-3x earlier.</p>
-        <div class="chart-container-wide"><canvas id="firmChart"></canvas></div>
-    </div>
+<!-- 4. Clean Firm Deployment -->
+<h2 class="section-title" style="margin-top:32px;">Clean Firm Deployment: Early Entry vs. Last-Minute Cliff</h2>
+<p class="section-subtitle">Total clean firm generation (nuclear + CCS + geothermal) at each threshold.</p>
 
-    <div class="callout" style="background: rgba(220,38,38,0.05); border-color: rgba(220,38,38,0.15);">
-        <div class="callout-title" style="color: #DC2626;">The Path-Dependent Trap</div>
-        <p>The sequential path's clean firm deployment is erratic — forced into large buildouts at certain thresholds
-        where the inherited renewable base simply can't achieve hourly matching. The hourly matching path
-        shows a steady ramp: small but deliberate clean firm investment early (FOAK pricing) that seeds the
-        learning curve, growing into large-scale deployment as costs decline toward NOAK. The sequential path
-        has to compensate for a renewable-heavy legacy; the hourly matching path builds the right technologies
-        from the start, just at a pace that tracks the learning curve.</p>
-    </div>
-</section>
+<div class="chart-wide">
+    <h3 id="firmChartTitle">PJM — Clean Firm + CCS Deployment (TWh)</h3>
+    <p class="chart-note">Red = Scenario A | Green = Scenario B. Scenario B builds clean firm 2-3x earlier.</p>
+    <div class="chart-container-wide"><canvas id="firmChart"></canvas></div>
+</div>
 
-<!-- 7. FOAK → NOAK Learning Curve -->
-<section class="content-section">
-    <h2 class="section-title">The FOAK&rarr;NOAK Learning Curve: Why Hourly Matching Gets Cheaper</h2>
-    <p class="section-subtitle">Scenario B assumes new nuclear and clean firm are deployed along Wright's Law learning curves.
-    Costs start at FOAK levels ($135&ndash;170/MWh) and decline ~40% after 10&ndash;20 deployments, converging on
-    NOAK pricing ($68&ndash;75/MWh) by the late 2030s &mdash; while gas costs rise with fuel prices and carbon pricing.</p>
+<div class="callout" style="background: rgba(220,38,38,0.05); border-color: rgba(220,38,38,0.15);">
+    <div class="callout-title" style="color: #DC2626;">The Path-Dependent Trap</div>
+    <p>Scenario A's clean firm deployment is erratic — forced into large buildouts at certain thresholds
+    where the inherited renewable base simply can't achieve hourly matching. Scenario B
+    shows a steady ramp: small but deliberate clean firm investment early (FOAK pricing) that seeds the
+    learning curve, growing into large-scale deployment as costs decline toward NOAK.</p>
+</div>
 
-    <div class="chart-wide">
-        <h3>Clean Firm LCOE Trajectory vs. Rising Gas Cost</h3>
-        <p class="chart-note">Green band = learning curve range (conservative to optimistic). Red = gas with carbon pricing. Dashed = gas without carbon price. Crossover marks when clean firm becomes cheaper than gas.</p>
-        <div class="chart-container-wide"><canvas id="foakNOAKChart"></canvas></div>
-    </div>
+<!-- 5. Gas Capacity -->
+<h2 class="section-title" style="margin-top:32px;">Gas Capacity: Overbuilding vs. Efficient Displacement</h2>
+<p class="section-subtitle">Gas backup capacity at each milestone.</p>
 
-    <div class="insight green">
-        <p><strong>The learning curve is the mechanism behind the hourly matching scenario.</strong>
-        Scenario B's Low clean firm costs ($68&ndash;75/MWh) aren't hypothetical &mdash; they correspond to the NOAK endpoint
-        of documented learning curves. DOE's Liftoff report projects ~40% cost reduction after 5&ndash;10 reactors per design,
-        reaching $3,600/kW and ~$66/MWh. NREL ATB 2024 models nuclear learning at 8&ndash;9.5% per doubling.
-        CCS follows a parallel trajectory (DOE OCED: ~25% CAPEX reduction FOAK&rarr;NOAK). The hourly matching strategy
-        is an investment thesis: pay the FOAK premium today to unlock NOAK pricing for all subsequent deployments.</p>
-    </div>
+<div class="chart-wide">
+    <h3 id="gasChartTitle">PJM — Gas Backup Capacity (MW)</h3>
+    <p class="chart-note">Red = Scenario A | Green = Scenario B. Shaded gap = avoided gas infrastructure.</p>
+    <div class="chart-container-wide"><canvas id="gasChart"></canvas></div>
+</div>
 
-    <div class="callout">
-        <div class="callout-title">Sources</div>
-        <p>DOE (2024) &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; &bull;
-        NREL ATB 2024 (8&ndash;9.5% learning per doubling) &bull;
-        MIT Advanced Nuclear Power Program (2024): AP1000 NOAK $66/MWh &bull;
-        Lazard LCOE+ v18 (2025): new nuclear $141&ndash;220/MWh &bull;
-        EIA AEO 2025: gas $3.50&rarr;$4.95/MMBtu &bull;
-        GridLab (2025): gas CAPEX $2,200&ndash;2,600/kW</p>
-    </div>
-</section>
+<div class="insight green">
+    <p><strong>The gas story is counterintuitive.</strong> Scenario A's extreme renewable overbuilding
+    actually eliminates gas at high thresholds — but at 3-5x the system cost. Scenario B retains ~<span id="gasGapPJM">110 GW</span> of gas
+    but achieves 95% CFE at a fraction of the cost. The efficient path doesn't require eliminating every MW of gas —
+    it requires matching clean energy to demand hourly.</p>
+</div>
 
-<!-- 8. Domino Sequence Tables -->
-<section class="content-section">
-    <h2 class="section-title">The Sequential Deployment Queue</h2>
-    <p class="section-subtitle">The consequential path deploys resources step-by-step, ordered by cheapest $/tCO<sub>2</sub> first.
-    Each row inherits all prior resource commitments. The hourly matching path has no queue — it's a single portfolio targeting 95%.</p>
+<!-- 6. FOAK → NOAK Learning Curve -->
+<h2 class="section-title" style="margin-top:32px;">The FOAK&rarr;NOAK Learning Curve: Why Scenario B Gets Cheaper</h2>
+<p class="section-subtitle">Scenario B assumes clean firm deployment along Wright's Law learning curves.
+Costs start at FOAK levels ($135&ndash;170/MWh) and decline ~40% after 10&ndash;20 deployments, converging on
+NOAK pricing ($68&ndash;75/MWh) by the late 2030s.</p>
 
-    <div class="chart-wide" style="overflow-x: auto;">
-        <span class="scenario-tag tag-a">Pure Consequential — Sequential Queue</span>
-        <table class="domino-table" id="dominoTableA"></table>
-    </div>
-    <div class="insight" style="margin-top: 16px;">
-        <p><strong>The hourly matching path has no lock-in queue.</strong> While clean firm deployment increases
-        at each threshold, it's driven by declining costs along the learning curve — not by inheriting
-        locked-in resources from prior steps. Each threshold is independently optimized at its learning-curve
-        cost level. The "queue" concept only applies to the sequential strategy, where prior commitments
-        constrain future options.</p>
-    </div>
-</section>
+<div class="chart-wide">
+    <h3>Clean Firm LCOE Trajectory vs. Rising Gas Cost</h3>
+    <p class="chart-note">Green band = learning curve range. Red = gas with carbon pricing. Dashed = gas without carbon price.</p>
+    <div class="chart-container-wide"><canvas id="foakNOAKChart"></canvas></div>
+</div>
+
+<div class="callout">
+    <div class="callout-title">Sources</div>
+    <p>DOE (2024) &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; &bull;
+    NREL ATB 2024 (8&ndash;9.5% learning per doubling) &bull;
+    MIT Advanced Nuclear Power Program (2024): AP1000 NOAK $66/MWh &bull;
+    Lazard LCOE+ v18 (2025): new nuclear $141&ndash;220/MWh &bull;
+    EIA AEO 2025: gas $3.50&rarr;$4.95/MMBtu &bull;
+    GridLab (2025): gas CAPEX $2,200&ndash;2,600/kW</p>
+</div>
+
+<!-- 7. Domino Sequence Tables -->
+<h2 class="section-title" style="margin-top:32px;">The Sequential Deployment Queue</h2>
+<p class="section-subtitle">Scenario A deploys resources step-by-step, ordered by cheapest $/tCO<sub>2</sub> first.
+Each row inherits all prior commitments. Scenario B has no queue — it targets 95% directly.</p>
+
+<div class="chart-wide" style="overflow-x: auto;">
+    <span class="scenario-tag tag-a">Scenario A — Sequential Queue</span>
+    <table class="domino-table" id="dominoTableA"></table>
+</div>
+<div class="insight" style="margin-top: 16px;">
+    <p><strong>Scenario B has no lock-in queue.</strong> Clean firm deployment increases
+    at each threshold driven by declining costs along the learning curve — not by inheriting
+    locked-in resources from prior steps.</p>
+</div>
 
 <!-- Bottom line -->
-<section class="content-section">
-    <h2 class="section-title">Bottom Line: Pure Consequential Fails — Hourly Matching Wins</h2>
-    <div class="insight green">
-        <p><strong>Investing in clean firm along the learning curve dramatically outperforms the sequential path.</strong>
-        The hourly matching strategy pays more early on — FOAK clean firm is expensive — but those early investments
-        seed the learning curve. By mid-range thresholds (80-90%), costs have declined enough for the optimizer
-        to deploy significant clean firm, and by 95% the learning curve delivers near-NOAK pricing. The sequential
-        path, locked into renewable overbuilds, pays far more to achieve the same CFE targets.</p>
-    </div>
-    <div class="insight">
-        <p><strong>The mechanism is path dependency vs. learning investment.</strong> The sequential strategy
-        builds massive renewable portfolios because they're cheapest at each step (clean firm is expensive at
-        High LCOE). Those locked-in renewables saturate the sunny/windy hours. At higher thresholds,
-        the hard hours — winter nights, low-wind weeks — need firm generation, but the optimizer can't unwind
-        the overbuilding. The hourly matching path invests in clean firm from the start — less early on,
-        more as costs decline — building a balanced portfolio where firm generation covers the hours
-        that no amount of renewables can reach.</p>
-    </div>
+<h2 class="section-title" style="margin-top:32px;">Bottom Line: Scenario A Fails — Scenario B Wins</h2>
+<div class="insight green">
+    <p><strong>Investing in clean firm along the learning curve dramatically outperforms the sequential path.</strong>
+    Scenario B pays more early on — FOAK clean firm is expensive — but those early investments
+    seed the learning curve. By 95% the learning curve delivers near-NOAK pricing. Scenario A,
+    locked into renewable overbuilds, pays far more to achieve the same CFE targets.</p>
+</div>
+<div class="insight">
+    <p><strong>The mechanism is path dependency vs. learning investment.</strong> Scenario A
+    builds massive renewable portfolios because they're cheapest at each step. Those locked-in renewables saturate the sunny/windy hours.
+    At higher thresholds, firm generation is needed but the optimizer can't unwind the overbuilding. Scenario B invests in clean firm from the start — building a balanced portfolio where firm generation covers the hours
+    that no amount of renewables can reach.</p>
+</div>
+
 </section>
 
 <!-- Methodology -->
@@ -480,8 +442,8 @@ body { background: #F3F4F8; }
         <thead>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.15);">
                 <th style="text-align:left; padding: 8px; color: rgba(0,0,0,0.45); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">Toggle</th>
-                <th style="text-align:center; padding: 8px; color: #DC2626; font-size: 0.72rem; text-transform: uppercase;">Pure Consequential</th>
-                <th style="text-align:center; padding: 8px; color: #16A34A; font-size: 0.72rem; text-transform: uppercase;">Hourly Matching</th>
+                <th style="text-align:center; padding: 8px; color: #DC2626; font-size: 0.72rem; text-transform: uppercase;">Scenario A</th>
+                <th style="text-align:center; padding: 8px; color: #16A34A; font-size: 0.72rem; text-transform: uppercase;">Scenario B</th>
             </tr>
         </thead>
         <tbody>
@@ -497,9 +459,9 @@ body { background: #F3F4F8; }
         </tbody>
     </table>
 
-    <p>In the pure consequential scenario, all technologies are at <strong>Low (NOAK) cost</strong> — the consequential buyer
+    <p>In Scenario A, all technologies are at <strong>Low (NOAK) cost</strong> — the consequential buyer
     gravitates to the cheapest available $/tCO₂, which means mature-market pricing for all resources.
-    In the hourly matching scenario, clean firm / CCS / LDES are at <strong>High (FOAK) cost</strong> — hourly matching
+    In Scenario B, clean firm / CCS / LDES are at <strong>High (FOAK) cost</strong> — hourly matching
     requires firm generation, and the buyer commits early at premium FOAK prices before the learning curve matures.
     Mature tech (solar, wind, battery) remains at Low cost in both scenarios.</p>
 
@@ -589,18 +551,23 @@ function updateSliderDisplay() {
 }
 updateSliderDisplay();
 
-// Track current ISO per chart section for re-render on slider change
-const currentIso = { mac: 'PJM', gas: 'PJM', mix: 'PJM', cost: 'PJM', firm: 'PJM' };
+// Single global ISO — all charts use this
+let globalIso = 'PJM';
+
+function renderAll(iso) {
+    globalIso = iso;
+    renderMixCharts(iso);
+    renderCostChart(iso);
+    renderMacTimeline(iso);
+    renderFirmChart(iso);
+    renderGasChart(iso);
+    buildHeadlineCards();
+    updateKeyFindings();
+}
 
 slider.addEventListener('input', () => {
     updateSliderDisplay();
-    buildHeadlineCards();
-    updateKeyFindings();
-    renderMacTimeline(currentIso.mac);
-    renderGasChart(currentIso.gas);
-    renderMixCharts(currentIso.mix);
-    renderCostChart(currentIso.cost);
-    renderFirmChart(currentIso.firm);
+    renderAll(globalIso);
 });
 
 // Helper: get annotation config for the target threshold vertical line
@@ -710,18 +677,17 @@ function buildHeadlineCards() {
 
     const tLabel = t === Math.floor(t) ? t + '%' : t + '%';
     container.innerHTML = `
-        <div class="headline-card"><div class="val red">${costMultiplier}&times;</div><div class="lbl">Consequential Cost Multiple at ${tLabel}</div></div>
+        <div class="headline-card"><div class="val red">${costMultiplier}&times;</div><div class="lbl">Scenario A Cost Multiple at ${tLabel}</div></div>
         <div class="headline-card"><div class="val amber">$${savingsB}B/yr</div><div class="lbl">Annual Savings (All ISOs)</div></div>
         <div class="headline-card"><div class="val green">$${npvSavings}B</div><div class="lbl">25-Year NPV Savings (5% WACC)</div></div>
         <div class="headline-card"><div class="val blue">$${costGapPJM}/MWh</div><div class="lbl">PJM Cost Gap at ${tLabel}</div></div>
-        <div class="headline-card"><div class="val cyan">${gasAvoidedGW > 0 ? gasAvoidedGW + ' GW' : '—'}</div><div class="lbl">New Gas Build Avoided by Hourly Matching</div></div>
+        <div class="headline-card"><div class="val cyan">${gasAvoidedGW > 0 ? gasAvoidedGW + ' GW' : '—'}</div><div class="lbl">New Gas Build Avoided by Scenario B</div></div>
     `;
 
     // Update gas callout text
     const gapEl = document.getElementById('gasGapPJM');
     if (gapEl && bT_PJM) gapEl.textContent = Math.round(bT_PJM.gas_backup_mw / 1000) + ' GW';
 }
-buildHeadlineCards();
 
 // ===== KEY FINDINGS HERO PANEL =====
 function updateKeyFindings() {
@@ -765,7 +731,6 @@ function updateKeyFindings() {
     const kfNPV = el('kfNPVDiff');
     if (kfNPV) kfNPV.textContent = '$' + Math.round(npvDiff) + 'B';
 }
-updateKeyFindings();
 
 // ===== ISO SELECTOR FACTORY =====
 function createIsoSelector(containerId, defaultIso, onChange) {
@@ -797,7 +762,6 @@ function getScenarioB(iso) {
 // ===== 1. MAC TIMELINE CHART =====
 let macTimelineChart;
 function renderMacTimeline(iso) {
-    currentIso.mac = iso;
     document.getElementById('macTimelineTitle').innerHTML = iso + ' &mdash; Marginal $/tCO<sub>2</sub> by SBTi Year';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
     const trajB = getScenarioB(iso);
@@ -847,7 +811,7 @@ function renderMacTimeline(iso) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Pure Consequential',
+                    label: 'Scenario A',
                     data: ptsA.map(d => d.stepwise_mac >= 9999 ? infCapVal : d.stepwise_mac),
                     backgroundColor: ptsA.map(d => d.stepwise_mac >= 9999 ? 'rgba(220,38,38,0.15)' : 'rgba(220,38,38,0.45)'),
                     borderColor: ptsA.map(d => d.stepwise_mac >= 9999 ? 'rgba(220,38,38,0.5)' : COLORS.A),
@@ -858,7 +822,7 @@ function renderMacTimeline(iso) {
                     categoryPercentage: 0.85,
                 },
                 {
-                    label: 'Hourly Matching',
+                    label: 'Scenario B',
                     data: ptsB.map(d => d.stepwise_mac >= 9999 ? infCapVal : d.stepwise_mac),
                     backgroundColor: ptsB.map(d => d.stepwise_mac >= 9999 ? 'rgba(22,163,74,0.15)' : 'rgba(22,163,74,0.45)'),
                     borderColor: ptsB.map(d => d.stepwise_mac >= 9999 ? 'rgba(22,163,74,0.5)' : COLORS.B),
@@ -903,13 +867,11 @@ function renderMacTimeline(iso) {
         }
     });
 }
-createIsoSelector('macIsoSelector', 'PJM', iso => { currentIso.mac = iso; renderMacTimeline(iso); });
-renderMacTimeline('PJM');
+// MAC init called from global renderAll()
 
 // ===== 2. GAS BACKUP CHART =====
 let gasChart;
 function renderGasChart(iso) {
-    currentIso.gas = iso;
     document.getElementById('gasChartTitle').textContent = iso + ' \u2014 Gas Backup Capacity (MW)';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
     const trajB = getScenarioB(iso);
@@ -922,7 +884,7 @@ function renderGasChart(iso) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Pure Consequential',
+                    label: 'Scenario A',
                     data: trajA.map(d => d.gas_backup_mw),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_area,
@@ -933,7 +895,7 @@ function renderGasChart(iso) {
                     borderWidth: 2.5,
                 },
                 {
-                    label: 'Hourly Matching',
+                    label: 'Scenario B',
                     data: trajB.map(d => d.gas_backup_mw),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
@@ -978,8 +940,7 @@ function renderGasChart(iso) {
         }
     });
 }
-createIsoSelector('gasIsoSelector', 'PJM', iso => { currentIso.gas = iso; renderGasChart(iso); });
-renderGasChart('PJM');
+// Gas init called from global renderAll()
 
 // ===== 4. WYN-PANEL RESOURCE MIX: existing (transparent) + new (saturated) + curtailment (striped) =====
 
@@ -1008,9 +969,8 @@ const NEWBUILD_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt',
 
 let mixChartA, mixChartB;
 function renderMixCharts(iso) {
-    currentIso.mix = iso;
-    document.getElementById('mixTitleA').textContent = iso + ' \u2014 Resource Mix (TWh)';
-    document.getElementById('mixTitleB').textContent = iso + ' \u2014 Resource Mix (TWh)';
+    document.getElementById('mixTitleA').textContent = iso + ' \u2014 Scenario A Resource Mix (TWh)';
+    document.getElementById('mixTitleB').textContent = iso + ' \u2014 Scenario B Resource Mix (TWh)';
 
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
     const trajB = getScenarioB(iso);
@@ -1169,13 +1129,11 @@ function renderMixCharts(iso) {
     mixChartA = new Chart(document.getElementById('mixChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA, 'mixChartA') }, options: optsA });
     mixChartB = new Chart(document.getElementById('mixChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB, 'mixChartB') }, options: optsB });
 }
-createIsoSelector('mixIsoSelector', 'PJM', iso => { currentIso.mix = iso; renderMixCharts(iso); });
-renderMixCharts('PJM');
+// Mix init called from global renderAll()
 
 // ===== 5. EFFECTIVE COST OVERLAY =====
 let costChart;
 function renderCostChart(iso) {
-    currentIso.cost = iso;
     document.getElementById('costChartTitle').textContent = iso + ' \u2014 Effective System Cost ($/MWh)';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
     const trajB = getScenarioB(iso);
@@ -1188,7 +1146,7 @@ function renderCostChart(iso) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Pure Consequential',
+                    label: 'Scenario A',
                     data: trajA.map(d => d.effective_cost),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_area,
@@ -1199,7 +1157,7 @@ function renderCostChart(iso) {
                     borderWidth: 2.5,
                 },
                 {
-                    label: 'Hourly Matching',
+                    label: 'Scenario B',
                     data: trajB.map(d => d.effective_cost),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
@@ -1244,13 +1202,11 @@ function renderCostChart(iso) {
         }
     });
 }
-createIsoSelector('costIsoSelector', 'PJM', iso => { currentIso.cost = iso; renderCostChart(iso); });
-renderCostChart('PJM');
+// Cost init called from global renderAll()
 
 // ===== 6. CLEAN FIRM DEPLOYMENT CHART =====
 let firmChart;
 function renderFirmChart(iso) {
-    currentIso.firm = iso;
     document.getElementById('firmChartTitle').textContent = iso + ' \u2014 New Clean Firm + CCS Deployment (TWh)';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
     const trajB = getScenarioB(iso);
@@ -1263,7 +1219,7 @@ function renderFirmChart(iso) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Pure Consequential',
+                    label: 'Scenario A',
                     data: trajA.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_fill,
@@ -1274,7 +1230,7 @@ function renderFirmChart(iso) {
                     borderWidth: 2.5,
                 },
                 {
-                    label: 'Hourly Matching',
+                    label: 'Scenario B',
                     data: trajB.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
@@ -1312,8 +1268,7 @@ function renderFirmChart(iso) {
         }
     });
 }
-createIsoSelector('firmIsoSelector', 'PJM', iso => { currentIso.firm = iso; renderFirmChart(iso); });
-renderFirmChart('PJM');
+// Firm init called from global renderAll()
 
 // ===== 7. DOMINO TABLES =====
 function buildDominoTable(tableId, queue) {
@@ -1485,6 +1440,10 @@ function renderFoakNOAKChart() {
     });
 }
 renderFoakNOAKChart();
+
+// ===== GLOBAL ISO SELECTOR — single toggle for ALL charts =====
+createIsoSelector('globalIsoSelector', 'PJM', iso => renderAll(iso));
+renderAll('PJM');
 
 })();
 </script>
