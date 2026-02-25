@@ -4865,6 +4865,7 @@ function updateCompressedDay(entry, region, iso) {
         const fallback = CLEAN_FIRM_ENERGY_SPLIT[iso] || { nuclear: 1.0, geothermal: 0.0 };
         cfGeoFrac = fallback.geothermal;
     }
+    const hasGeo = cfGeoFrac > 0;
     const matchedNuclear = matchedCleanFirmRaw.map(v => v * (1 - cfGeoFrac));
     const matchedGeothermal = matchedCleanFirmRaw.map(v => v * cfGeoFrac);
     const matchedCCS = r(cd.matched.ccs_ccgt || z24);
@@ -4881,13 +4882,36 @@ function updateCompressedDay(entry, region, iso) {
     const ldesCharge = rRaw(cd.ldes_charge || z24);
 
     // Per-resource surplus (curtailed) — in MWh, local time
-    const surplusSolar = rRaw(cd.surplus?.solar || z24);
-    const surplusWind = rRaw(cd.surplus?.wind || z24);
-    const surplusHydro = rRaw(cd.surplus?.hydro || z24);
+    const surplusSolarRaw = rRaw(cd.surplus?.solar || z24);
+    const surplusWindRaw = rRaw(cd.surplus?.wind || z24);
+    const surplusHydroRaw = rRaw(cd.surplus?.hydro || z24);
     const surplusCleanFirmRaw = rRaw(cd.surplus?.clean_firm || z24);
-    const surplusNuclear = surplusCleanFirmRaw.map(v => v * (1 - cfGeoFrac));
-    const surplusGeothermal = surplusCleanFirmRaw.map(v => v * cfGeoFrac);
-    const surplusCCS = rRaw(cd.surplus?.ccs_ccgt || z24);
+    const surplusNuclearRaw = surplusCleanFirmRaw.map(v => v * (1 - cfGeoFrac));
+    const surplusGeothermalRaw = surplusCleanFirmRaw.map(v => v * cfGeoFrac);
+    const surplusCCSRaw = rRaw(cd.surplus?.ccs_ccgt || z24);
+
+    // Fix double-count: surplus includes energy that went to storage charging,
+    // but charging is also shown as negative bars. Net out charging from surplus
+    // so the same energy isn't shown twice (once as curtailment, once as charge).
+    const grossSurplusPerHour = hours.map((_, i) =>
+        Math.abs(surplusSolarRaw[i]) + Math.abs(surplusWindRaw[i]) + Math.abs(surplusHydroRaw[i]) +
+        Math.abs(surplusCCSRaw[i]) + Math.abs(surplusNuclearRaw[i]) +
+        (hasGeo ? Math.abs(surplusGeothermalRaw[i]) : 0)
+    );
+    const totalChargingPerHour = hours.map((_, i) =>
+        Math.abs(batteryCharge[i]) + Math.abs(battery8Charge[i]) + Math.abs(ldesCharge[i])
+    );
+    // Net curtailment factor: fraction of surplus that is TRUE curtailment (not stored)
+    const netCurtailFactor = grossSurplusPerHour.map((gs, i) =>
+        gs > 0.001 ? Math.max(0, gs - totalChargingPerHour[i]) / gs : 0
+    );
+    // Apply net factor to each resource's surplus
+    const surplusSolar = surplusSolarRaw.map((v, i) => v * netCurtailFactor[i]);
+    const surplusWind = surplusWindRaw.map((v, i) => v * netCurtailFactor[i]);
+    const surplusHydro = surplusHydroRaw.map((v, i) => v * netCurtailFactor[i]);
+    const surplusNuclear = surplusNuclearRaw.map((v, i) => v * netCurtailFactor[i]);
+    const surplusGeothermal = surplusGeothermalRaw.map((v, i) => v * netCurtailFactor[i]);
+    const surplusCCS = surplusCCSRaw.map((v, i) => v * netCurtailFactor[i]);
 
     // Gap (unmatched) — in MWh, local time
     const gap = rRaw(cd.gap);
@@ -4909,7 +4933,6 @@ function updateCompressedDay(entry, region, iso) {
 
     // Build cumulative stacking arrays (bottom to top)
     // nuclear → geothermal → ccs_ccgt → hydro → wind → solar → battery → battery8 → ldes
-    const hasGeo = cfGeoFrac > 0;
     const stack0 = matchedNuclear;
     const stack0b = hasGeo ? stack0.map((v, i) => v + matchedGeothermal[i]) : stack0;
     const stack1 = stack0b.map((v, i) => v + matchedCCS[i]);
@@ -4984,13 +5007,20 @@ function updateCompressedDay(entry, region, iso) {
         });
     }
 
-    // Demand line FIRST — serves as the visual boundary between consumption and curtailment
-    // Must be computed before curtailment so curtailment can stack from demand upward
+    // Total Generation line — shows total clean energy output (before curtailment)
+    // This is the sum of all primary resource generation (matched + surplus, pre-storage).
+    // Curtailment (net of storage charging) is shown as a separate hatched layer above.
+    const primaryMatchedTotal = hours.map((_, i) =>
+        matchedNuclear[i] + (hasGeo ? matchedGeothermal[i] : 0) + matchedCCS[i] +
+        matchedHydro[i] + matchedWind[i] + matchedSolar[i]
+    );
+    const totalGenLine = primaryMatchedTotal.map((pm, i) => pm + grossSurplusPerHour[i]);
+    // Keep actual demand for gap/tooltip calculations (gap = unmet demand, not generation)
     const demandLocal = rotateToLocal(cd.demand).map(v => toMWh(v));
     const demandDsIdx = datasets.length;
     datasets.push({
-        label: 'Demand',
-        data: demandLocal,
+        label: 'Total Generation',
+        data: totalGenLine,
         backgroundColor: 'transparent',
         borderColor: '#1A2744',
         borderWidth: 2.5,
