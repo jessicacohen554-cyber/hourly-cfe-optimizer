@@ -257,35 +257,44 @@ SCENARIOS = [SCENARIO_A, SCENARIO_B]
 # LEARNING CURVE FRACTION
 # ============================================================================
 
-def learning_fraction(threshold):
+def learning_fraction(threshold, scenario='B'):
     """Map CFE threshold to FOAK→NOAK learning curve fraction [0, 1].
 
     0 = pure FOAK (High cost), 1 = full NOAK (Low cost).
-    No real learning below 70% (pre-2030) — first SMRs won't deploy until
-    ~2030, so costs stay at FOAK floor. Once deployment begins at ~70%/2029,
-    concave ramp (exponent 0.8) reflects Wright's Law: early factory
-    doublings (1→2→4→8 units) drive rapid cost decline, decelerating as
-    each subsequent doubling requires larger cumulative deployment.
+    Year-based curves differentiated by scenario:
 
-    Resulting nuclear LCOE trajectory (PJM example, H=$160 → L=$72):
-      50% (2025): $156/MWh — FOAK, no SMR deployment yet
-      60% (2027): $156/MWh — FOAK, still pre-deployment
-      70% (2029): $156/MWh — FOAK, first units just starting
-      80% (2032): $136/MWh — early learning (first doublings)
-      90% (2040): $95/MWh  — significant cost reduction
-      95% (2045): $83/MWh  — near NOAK
-      100%(2050): $72/MWh  — full NOAK
+    Scenario B (Hourly Matching — aggressive deployment):
+      - FOAK starts: 2029. Learning period: 2028-2038 (10 years).
+      - NOAK by 2038, stable through 2050.
+      - Sources: INL SOAK data (15% unit 2), NEA (-18 to -55% by unit 8),
+        DOE Liftoff (NOAK early 2030s). Compressed sequential learning.
+
+    Scenario A (Pure Consequential — delayed deployment):
+      - FOAK starts: 2036 (5-year delay). Learning period: 2036-2048 (12 years).
+      - Same concave shape, stretched across longer timeline.
+      - Less investment → fewer units/year → slower learning.
+
+    Both use concave exponent 0.6 — steep front-end matching Wright's Law
+    unit-doubling data (INL/NEA), asymptotic tail toward NOAK.
     """
-    t_norm = (threshold - 50) / 50  # 50%→0, 100%→1
-    # No real learning below 70% — SMRs not yet deployed, FOAK floor only.
-    if t_norm <= 0.4:  # ≤70% (pre-2030)
-        return 0.05
-    # Active learning range: 70%→100%, rescaled to 0→1.
-    # Exponent 0.8 creates a concave ramp: fast early learning as initial
-    # factory doublings drive rapid cost decline, decelerating as later
-    # doublings require larger cumulative deployment volumes.
-    active = (t_norm - 0.4) / 0.6  # 70%→0, 100%→1
-    return 0.05 + 0.95 * (active ** 0.8)
+    year = SBTI_YEAR_MAP.get(threshold, 2050)
+
+    if scenario == 'B':
+        foak_start = 2028  # Learning begins (construction/supply chain), first SMR operational ~2029
+        noak_year = 2038   # 10-year learning period (2028-2038)
+    else:  # Scenario A
+        foak_start = 2036  # 5-year delay: less investment, slower regulatory
+        noak_year = 2048   # 12-year learning period (stretched)
+
+    if year < foak_start:
+        return 0.0  # Pure FOAK, no deployment yet
+    if year >= noak_year:
+        return 1.0  # Full NOAK achieved
+
+    # Concave ramp: steep front-end (Wright's Law early doublings), asymptotic tail.
+    # Exponent 0.6 reflects INL data: 15% at SOAK, 20% by unit 4, then gradual.
+    active = (year - foak_start) / (noak_year - foak_start)  # 0→1
+    return active ** 0.6
 
 
 # ============================================================================
@@ -1047,41 +1056,14 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
 
 
 def _adjust_costs_no_learning(results, scenario):
-    """Scenario A: No learning curve. Clean firm stays at FOAK/High forever.
+    """Scenario A: Delayed learning curve — FOAK until 2036, NOAK by 2048.
 
-    Only adjustment: override uprate price to Medium (existing plants don't
-    depend on FOAK/NOAK learning). Step 3 costs were computed at firm='H',
-    which prices uprates at $40/MWh (High). Adjust to $25/MWh (Medium).
-    """
-    uprate_level = scenario.get('uprate_level', 'M')
-    uprate_target = UPRATE_LCOE[uprate_level]
-    uprate_step3 = UPRATE_LCOE[scenario['toggles']['firm']]  # What step 3 used
-    uprate_delta = uprate_target - uprate_step3  # negative: cheaper
+    Same interpolation machinery as Scenario B, but with delayed start (2036)
+    and stretched timeline (12 years vs 10). Less deployment → slower learning.
 
-    for iso in results:
-        for t in results[iso]:
-            r = results[iso][t]
-            uprate_twh = r.get('tranche_uprate_twh', 0)
-            demand_twh = r['demand_twh']
-            if demand_twh > 0 and uprate_twh > 0 and abs(uprate_delta) > 0.01:
-                cost_adj = uprate_delta * uprate_twh / demand_twh
-                r['total_cost'] = round(r['total_cost'] + cost_adj, 2)
-                match_frac = r['match_score'] / 100
-                r['effective_cost'] = round(
-                    r['total_cost'] / match_frac if match_frac > 0 else 0, 2)
-                r['incremental'] = round(
-                    r['effective_cost'] - r.get('wholesale', WHOLESALE_PRICES[iso]), 2)
-    return results
-
-
-def _adjust_costs_with_learning(results, scenario):
-    """Scenario B: Apply learning curve — FOAK at early thresholds, NOAK by 2040s+.
-
-    At each threshold, compute learning_fraction → interpolate all firm/CCS/LDES
-    costs between High (FOAK) and Low (NOAK). Uprate always Medium.
-    Step 3 costs were computed at full FOAK (firm='H', ldes='H', ccs='H').
-    We compute the cost delta from FOAK to the learning-curve-adjusted price
-    for each resource tranche and apply it.
+    Sources: INL SOAK data, NEA learning ranges, DOE Liftoff projections.
+    In a lower-investment scenario, first SMRs don't deploy until ~2036,
+    and fewer units per year means the learning curve takes 12 years to NOAK.
     """
     for iso in results:
         for t in results[iso]:
@@ -1090,7 +1072,86 @@ def _adjust_costs_with_learning(results, scenario):
             if demand_twh <= 0:
                 continue
 
-            frac = learning_fraction(t)
+            frac = learning_fraction(t, scenario='A')
+            overrides = _build_learning_overrides(iso, frac)
+
+            total_delta = 0.0
+
+            # 1. Uprate: step3 used H ($40), target is M ($25)
+            uprate_twh = r.get('tranche_uprate_twh', 0)
+            if uprate_twh > 0:
+                uprate_delta = UPRATE_LCOE['M'] - UPRATE_LCOE['H']
+                total_delta += uprate_delta * uprate_twh / demand_twh
+
+            # 2. Nuclear newbuild: step3 used H, learning curve gives interpolated
+            nuc_twh = r.get('tranche_nuclear_newbuild_twh', 0)
+            if nuc_twh > 0:
+                nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
+                nuc_delta = overrides['nuclear_lcoe'] - nuc_h
+                total_delta += nuc_delta * nuc_twh / demand_twh
+
+            # 3. CCS new-build
+            existing_ccs_frac = GRID_MIX_SHARES[iso].get('ccs_ccgt', 0) / 100.0
+            existing_ccs_twh = existing_ccs_frac * BASE_DEMAND_TWH[iso]
+            total_ccs_twh = r['resource_twh'].get('ccs_ccgt', 0)
+            ccs_new_twh = max(0, total_ccs_twh - existing_ccs_twh)
+            if ccs_new_twh > 0:
+                ccs_h = CCS_LCOE_45Q_ON['H'][iso]
+                ccs_delta = overrides['ccs_lcoe'] - ccs_h
+                total_delta += ccs_delta * ccs_new_twh / demand_twh
+
+            # 4. Geothermal (CAISO only)
+            if iso == 'CAISO' and 'geo_lcoe' in overrides:
+                geo_twh = r.get('tranche_geo_twh', 0)
+                if geo_twh > 0:
+                    geo_h = GEOTHERMAL_LCOE['H']
+                    geo_delta = overrides['geo_lcoe'] - geo_h
+                    total_delta += geo_delta * geo_twh / demand_twh
+
+            # 5. LDES (all new-build)
+            ldes_twh = r.get('ldes_twh', 0)
+            if ldes_twh > 0:
+                ldes_h = LCOE_TABLES['ldes']['High'][iso]
+                ldes_delta = overrides['ldes_lcoe'] - ldes_h
+                total_delta += ldes_delta * ldes_twh / demand_twh
+
+            # Apply total delta
+            if abs(total_delta) > 0.001:
+                r['total_cost'] = round(r['total_cost'] + total_delta, 2)
+                match_frac = r['match_score'] / 100
+                r['effective_cost'] = round(
+                    r['total_cost'] / match_frac if match_frac > 0 else 0, 2)
+                r['incremental'] = round(
+                    r['effective_cost'] - r.get('wholesale', WHOLESALE_PRICES[iso]), 2)
+
+            # Store learning curve metadata
+            r['learning_fraction'] = round(frac, 3)
+            r['learning_nuclear_lcoe'] = round(overrides['nuclear_lcoe'], 1)
+            r['learning_ccs_lcoe'] = round(overrides['ccs_lcoe'], 1)
+            r['learning_ldes_lcoe'] = round(overrides['ldes_lcoe'], 1)
+    return results
+
+
+def _adjust_costs_with_learning(results, scenario):
+    """Scenario B: Apply learning curve — FOAK starts 2029, NOAK by 2038.
+
+    At each threshold, compute learning_fraction(scenario='B') → interpolate
+    all firm/CCS/LDES costs between High (FOAK) and Low (NOAK). Uprate always Medium.
+    Step 3 costs were computed at full FOAK (firm='H', ldes='H', ccs='H').
+    We compute the cost delta from FOAK to the learning-curve-adjusted price
+    for each resource tranche and apply it.
+
+    10-year learning period (2029-2038), concave ramp (exponent 0.6).
+    Sources: INL SOAK data, NEA learning ranges, DOE Liftoff.
+    """
+    for iso in results:
+        for t in results[iso]:
+            r = results[iso][t]
+            demand_twh = r['demand_twh']
+            if demand_twh <= 0:
+                continue
+
+            frac = learning_fraction(t, scenario='B')
             overrides = _build_learning_overrides(iso, frac)
 
             total_delta = 0.0
@@ -1504,8 +1565,8 @@ def find_scenario_b_mixes(feasible_mixes):
             demand_twh = base_demand * gf
             demand_mwh = demand_twh * 1e6
 
-            # Learning-curve overrides at this threshold
-            frac = learning_fraction(t)
+            # Learning-curve overrides at this threshold (Scenario B)
+            frac = learning_fraction(t, scenario='B')
             overrides = _build_learning_overrides(iso, frac)
 
             # Paced firm investment floor: linear ramp from existing to 95% target.
