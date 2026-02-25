@@ -736,11 +736,19 @@ var PJM_DEMAND = 800;        // TWh approximate total demand
 var trackData = null;
 var charts = {};
 
+// Disable datalabels plugin globally (matches dashboard.html/index.html pattern)
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.set('plugins.datalabels', { display: false });
+}
+
 // ============================================================================
 // DATA LOADING
 // ============================================================================
 fetch('track_results.json')
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
     .then(function(d) { trackData = d; initPage(); })
     .catch(function(err) {
         console.warn('track_results.json not loaded:', err);
@@ -751,13 +759,20 @@ fetch('track_results.json')
 // INITIALIZATION
 // ============================================================================
 function initPage() {
-    initTargetSlider();
-    initPremiumSliders();
-    updateSection1(5); // default: 75%
-    buildScalingChart();
-    buildLmpChart();
-    updateMetrics();
-    updateBottomLine(5);
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js not loaded — charts will not render');
+        document.querySelectorAll('.chart-wrap, .mix-chart-wrap').forEach(function(el) {
+            el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:0.85rem;">Chart library failed to load. Check your internet connection.</div>';
+        });
+        return;
+    }
+    try { initTargetSlider(); } catch(e) { console.error('initTargetSlider:', e); }
+    try { initPremiumSliders(); } catch(e) { console.error('initPremiumSliders:', e); }
+    try { updateSection1(5); } catch(e) { console.error('updateSection1:', e); }
+    try { buildScalingChart(); } catch(e) { console.error('buildScalingChart:', e); }
+    try { buildLmpChart(); } catch(e) { console.error('buildLmpChart:', e); }
+    try { updateMetrics(); } catch(e) { console.error('updateMetrics:', e); }
+    try { updateBottomLine(5); } catch(e) { console.error('updateBottomLine:', e); }
     initScrollObserver();
 }
 
@@ -847,8 +862,8 @@ function updateSection1(sliderIdx) {
     // (premium sliders have their own listeners)
 
     // Resource mix charts
-    updateMixChart('ecf', thrIdx);
-    updateNbMixChart(thr);
+    try { updateMixChart('ecf', thrIdx); } catch(e) { console.error('ecfMixChart:', e); }
+    try { updateNbMixChart(thr); } catch(e) { console.error('nbMixChart:', e); }
 }
 
 function getNbCost(thr) {
