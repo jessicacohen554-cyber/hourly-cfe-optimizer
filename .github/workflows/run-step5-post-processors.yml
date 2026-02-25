@@ -110,21 +110,51 @@ jobs:
           mkdir -p data/step5-post-processing/lmp
           mkdir -p dashboard/js
 
-      # ── Step 5a: CO₂ Recomputation (must run first — enriches parquets) ──
-      - name: Run CO₂ Recomputation
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'co2' }}
+      # ── Concurrent execution when ALL scripts selected ──
+      # Dependency chain: CO₂ → MAC (sequential), LMP + Compressed Day (independent)
+      # LMP and Compressed Day start immediately in background alongside CO₂.
+      # MAC waits for CO₂ to finish, then runs in background.
+      # Final wait collects all exit codes.
+      - name: Run ALL post-processors concurrently
+        if: ${{ github.event.inputs.scripts == 'ALL' }}
         run: |
+          echo "=== Starting LMP (background) ==="
+          python scripts/step5_PP6_compute_lmp_prices.py ${{ steps.iso-args.outputs.iso_flags }} &
+          PID_LMP=$!
+
+          echo "=== Starting Compressed Day (background) ==="
+          python scripts/step5_PP1_compressed_day.py &
+          PID_CD=$!
+
+          echo "=== Starting CO₂ Recomputation (foreground — MAC depends on it) ==="
           python scripts/step5_PP4_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
 
-      # ── Step 5b: MAC Statistics (depends on CO₂ data) ──
-      - name: Run MAC Statistics
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'mac' }}
-        run: |
-          python scripts/step5_PP5_compute_mac_stats.py
+          echo "=== CO₂ done — starting MAC Statistics (background) ==="
+          python scripts/step5_PP5_compute_mac_stats.py &
+          PID_MAC=$!
 
-      # ── Step 5c: LMP Price Calculation ──
+          FAIL=0
+          wait $PID_LMP  || { echo "ERROR: LMP failed"; FAIL=1; }
+          wait $PID_CD   || { echo "ERROR: Compressed Day failed"; FAIL=1; }
+          wait $PID_MAC  || { echo "ERROR: MAC Statistics failed"; FAIL=1; }
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo "One or more post-processors failed"
+            exit 1
+          fi
+          echo "=== All post-processors completed successfully ==="
+
+      # ── Individual script runs (when a single script is selected) ──
+      - name: Run CO₂ Recomputation
+        if: ${{ github.event.inputs.scripts == 'co2' }}
+        run: python scripts/step5_PP4_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
+
+      - name: Run MAC Statistics
+        if: ${{ github.event.inputs.scripts == 'mac' }}
+        run: python scripts/step5_PP5_compute_mac_stats.py
+
       - name: Run LMP Price Calculation
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'lmp' }}
+        if: ${{ github.event.inputs.scripts == 'lmp' }}
         run: |
           INPUT_ISO="${{ github.event.inputs.iso }}"
           if [ "$INPUT_ISO" = "ALL" ]; then
@@ -133,11 +163,9 @@ jobs:
             python scripts/step5_PP6_compute_lmp_prices.py --iso "$INPUT_ISO"
           fi
 
-      # ── Step 5d: Compressed Day Profiles ──
       - name: Run Compressed Day Profiles
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'compressed_day' }}
-        run: |
-          python scripts/step5_PP1_compressed_day.py
+        if: ${{ github.event.inputs.scripts == 'compressed_day' }}
+        run: python scripts/step5_PP1_compressed_day.py
 
       - name: Commit and push Step 5 outputs
         run: |
