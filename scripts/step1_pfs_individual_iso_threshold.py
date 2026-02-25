@@ -246,6 +246,7 @@ def main():
                                 0.01, 0.0025, 0.85, 0.01, 0.00125, 0.85,
                                 0.01, 0.0001, 0.50, 168)
         s1._compute_storage_caps(dd, ds, 1.0, 4, 8, 100)
+        s1._batch_compute_storage_caps(dd, ds2, 1.0, 2, 4, 8, 100)
         dl = np.array([0.0, 0.1], dtype=np.float64)
         s1._batch_storage_scores(dd, ds, 1.0, dl, dl, dl, 2, 2, 2,
                                  0.85, 0.85, 0.50, 4, 8, 100, 168, 48)

@@ -336,22 +336,23 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
     existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
-    proc = arrays['procurement_pct'].astype(np.float64) / 100.0
-    match_frac = arrays['hourly_match_score'].astype(np.float64) / 100.0
+    # Arrays are pre-converted to float64 in _table_to_arrays — no .astype() needed
+    proc = arrays['procurement_pct'] / 100.0
+    match_frac = arrays['hourly_match_score'] / 100.0
 
     total_cost = np.zeros(N, dtype=np.float64)
 
     # CCS pct = 100 - (cf + sol + wnd + hyd) -- implicit 5th resource
-    cf_pct = arrays['clean_firm'].astype(np.float64)
-    sol_pct = arrays['solar'].astype(np.float64)
-    wnd_pct = arrays['wind'].astype(np.float64)
-    hyd_pct = arrays['hydro'].astype(np.float64)
+    cf_pct = arrays['clean_firm']
+    sol_pct = arrays['solar']
+    wnd_pct = arrays['wind']
+    hyd_pct = arrays['hydro']
     ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct)
     ccs_pct = np.maximum(ccs_pct, 0.0)
 
-    bat_pct = arrays['battery_dispatch_pct'].astype(np.float64)
-    bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N)).astype(np.float64)
-    ldes_pct = arrays['ldes_dispatch_pct'].astype(np.float64)
+    bat_pct = arrays['battery_dispatch_pct']
+    bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
+    ldes_pct = arrays['ldes_dispatch_pct']
 
     # --- Solar ---
     sol_demand_pct = proc * sol_pct
@@ -588,18 +589,19 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     """
     N = len(arrays['clean_firm'])
 
-    proc = arrays['procurement_pct'].astype(np.float64) / 100.0
-    match_frac = arrays['hourly_match_score'].astype(np.float64) / 100.0
+    # Arrays are pre-converted to float64 in _table_to_arrays — no .astype() needed
+    proc = arrays['procurement_pct'] / 100.0
+    match_frac = arrays['hourly_match_score'] / 100.0
 
-    cf_pct = arrays['clean_firm'].astype(np.float64)
-    sol_pct = arrays['solar'].astype(np.float64)
-    wnd_pct = arrays['wind'].astype(np.float64)
-    hyd_pct = arrays['hydro'].astype(np.float64)
+    cf_pct = arrays['clean_firm']
+    sol_pct = arrays['solar']
+    wnd_pct = arrays['wind']
+    hyd_pct = arrays['hydro']
     ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
 
-    bat_pct = arrays['battery_dispatch_pct'].astype(np.float64)
-    bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N)).astype(np.float64)
-    ldes_pct = arrays['ldes_dispatch_pct'].astype(np.float64)
+    bat_pct = arrays['battery_dispatch_pct']
+    bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
+    ldes_pct = arrays['ldes_dispatch_pct']
 
     existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
@@ -852,6 +854,9 @@ def eval_and_argmin_all(coeff_matrix, constant, prices, scores, thresholds_desc)
 def precompute_all_prices(iso, all_combos):
     """Pre-compute price vectors + metadata for all sensitivity combos at once.
 
+    Inlines price lookups and fills the pre-allocated matrix directly, avoiding
+    ~5,832-17,496 temporary np.array allocations from get_scenario_prices().
+
     Returns:
         price_matrix: (B, 10) float64 price vectors
         wholesale_arr: (B,) float64 wholesale prices
@@ -864,9 +869,60 @@ def precompute_all_prices(iso, all_combos):
     nuclear_arr = np.empty(B, dtype=np.float64)
     ccs_arr = np.empty(B, dtype=np.float64)
 
+    # Pre-resolve ISO-specific lookup tables to avoid repeated dict lookups
+    _ws_base = WHOLESALE_PRICES[iso]
+    _fuel_adj = FUEL_ADJUSTMENTS[iso]
+    _ccs_on_iso = {lev: CCS_LCOE_45Q_ON[lev][iso] for lev in LMH}
+    _ccs_off_iso = {lev: CCS_LCOE_45Q_OFF[lev][iso] for lev in LMH}
+    _nuc_nb_iso = {lev: NUCLEAR_NEWBUILD_LCOE[lev][iso] for lev in LMH}
+    _sol_lcoe_iso = {name: LCOE_TABLES['solar'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _wnd_lcoe_iso = {name: LCOE_TABLES['wind'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _bat_lcoe_iso = {name: LCOE_TABLES['battery'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _bat8_lcoe_iso = {name: LCOE_TABLES['battery8'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _ldes_lcoe_iso = {name: LCOE_TABLES['ldes'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _is_caiso = (iso == 'CAISO')
+
+    # Pre-resolve transmission adders for all (resource, tx_level) combos for this ISO
+    _tx_cache = {}
+    for rtype in ['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes']:
+        for tx_name in ['None', 'Low', 'Medium', 'High']:
+            _tx_cache[(rtype, tx_name)] = get_tx(rtype, tx_name, iso)
+
     for j, (scenario_key, sens) in enumerate(all_combos):
-        prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
-        price_matrix[j] = prices
+        ren_name = LEVEL_NAME[sens['ren']]
+        batt_name = LEVEL_NAME[sens['batt']]
+        ldes_name = LEVEL_NAME[sens['ldes_lvl']]
+        fuel_name = LEVEL_NAME[sens['fuel']]
+        tx_name = LEVEL_NAME[sens['tx']]
+        firm_lev = sens['firm']
+        ccs_lev = sens['ccs']
+        q45 = sens['q45']
+        geo_lev = sens.get('geo')
+
+        wholesale = max(5, _ws_base + _fuel_adj[fuel_name])
+        ccs_lcoe = _ccs_on_iso[ccs_lev] if q45 == '1' else _ccs_off_iso[ccs_lev]
+        ccs_tx = _tx_cache[('ccs_ccgt', tx_name)]
+        ccs_price = ccs_lcoe + ccs_tx
+
+        tx_cf = _tx_cache[('clean_firm', tx_name)]
+        nuclear_price = _nuc_nb_iso[firm_lev] + tx_cf
+        remaining_price = min(nuclear_price, ccs_price)
+
+        geo_price = 0.0
+        if _is_caiso and geo_lev:
+            geo_price = GEOTHERMAL_LCOE[geo_lev] + tx_cf
+
+        # Fill directly into pre-allocated matrix (avoids np.array() allocation per call)
+        price_matrix[j, _COL_WHOLESALE] = wholesale
+        price_matrix[j, _COL_SOL_NEW] = _sol_lcoe_iso[ren_name] + _tx_cache[('solar', tx_name)]
+        price_matrix[j, _COL_WND_NEW] = _wnd_lcoe_iso[ren_name] + _tx_cache[('wind', tx_name)]
+        price_matrix[j, _COL_CCS_NEW] = ccs_price
+        price_matrix[j, _COL_UPRATE] = UPRATE_LCOE[firm_lev]
+        price_matrix[j, _COL_GEO] = geo_price
+        price_matrix[j, _COL_REMAINING] = remaining_price
+        price_matrix[j, _COL_BAT4] = _bat_lcoe_iso[batt_name] + _tx_cache[('battery', tx_name)]
+        price_matrix[j, _COL_BAT8] = _bat8_lcoe_iso[batt_name] + _tx_cache[('battery8', tx_name)]
+        price_matrix[j, _COL_LDES] = _ldes_lcoe_iso[ldes_name] + _tx_cache[('ldes', tx_name)]
         wholesale_arr[j] = wholesale
         nuclear_arr[j] = nuclear_price
         ccs_arr[j] = ccs_price
@@ -977,25 +1033,186 @@ def batch_eval_and_argmin_all(coeff_matrix, constant, price_matrix, scores, thre
     return all_best_idxs, all_best_vals
 
 
+def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
+    """Batch-extract mix + tranche + gas data for all unique winning indices at once.
+
+    Instead of per-element array indexing in build_winner_scenario (called ~87K times
+    per ISO), this extracts data for all unique winners (~100-2000) in one vectorized
+    pass using numpy fancy indexing. Returns a dict keyed by index for O(1) lookup.
+
+    Speedup: eliminates ~87K x 17 individual array element accesses, replacing them
+    with ~2000 x 17 bulk extractions + dict lookups. ~1.5-2x faster for winner extraction.
+    """
+    if not unique_indices:
+        return {}
+
+    idx_arr = np.array(sorted(unique_indices), dtype=np.int64)
+    n = len(idx_arr)
+
+    # Batch extract from arrays (one fancy-index op per field, not per-element)
+    cf_vals = arrays['clean_firm'][idx_arr]
+    sol_vals = arrays['solar'][idx_arr]
+    wnd_vals = arrays['wind'][idx_arr]
+    hyd_vals = arrays['hydro'][idx_arr]
+    proc_vals = arrays['procurement_pct'][idx_arr]
+    match_vals = arrays['hourly_match_score'][idx_arr]
+    bat_vals = arrays['battery_dispatch_pct'][idx_arr]
+    bat8_arr = arrays.get('battery8_dispatch_pct')
+    bat8_vals = bat8_arr[idx_arr] if bat8_arr is not None else np.zeros(n)
+    ldes_vals = arrays['ldes_dispatch_pct'][idx_arr]
+
+    # CCS = 100 - sum of other resources (int arithmetic for consistency)
+    ccs_vals = np.maximum(0, 100 - (cf_vals.astype(np.int64) + sol_vals.astype(np.int64) +
+                                     wnd_vals.astype(np.int64) + hyd_vals.astype(np.int64)))
+
+    # Batch extract from extras
+    match_frac_vals = extras['match_frac'][idx_arr]
+    cf_existing_twh_vals = extras['cf_existing_twh'][idx_arr]
+    new_cf_twh_vals = extras['new_cf_twh'][idx_arr]
+    uprate_twh_vals = extras['uprate_twh'][idx_arr]
+    geo_twh_vals = extras['geo_twh'][idx_arr]
+    remaining_twh_vals = extras['remaining_twh'][idx_arr]
+    gas_needed_mw_vals = extras['gas_needed_mw'][idx_arr]
+    existing_gas_used_mw_vals = extras['existing_gas_used_mw'][idx_arr]
+    new_gas_mw_vals = extras['new_gas_mw'][idx_arr]
+    clean_peak_mw_vals = extras['clean_peak_mw'][idx_arr]
+    ra_peak_mw = float(extras['ra_peak_mw'])
+
+    # Pre-compute gas cost per MWh for all unique indices at once
+    demand_mwh = demand_twh * 1e6
+    gas_cost_per_mwh_vals = (
+        existing_gas_used_mw_vals * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
+        new_gas_mw_vals * NEW_CCGT_COST_KW_YR[iso] * 1000
+    ) / demand_mwh
+
+    # Build lookup dict: original_index -> pre-extracted data tuple
+    # Tuple layout: [0]resource_mix, [1]proc, [2]match_score, [3]bat4, [4]bat8,
+    #   [5]ldes, [6]match_frac, [7]cf_ex_twh, [8]uprate_twh, [9]geo_twh,
+    #   [10]remaining_twh, [11]new_cf_twh, [12]gas_needed_mw, [13]ex_gas_used_mw,
+    #   [14]new_gas_mw, [15]gas_cost_mwh, [16]clean_peak_mw, [17]ra_peak_mw
+    winner_data = {}
+    for pos in range(n):
+        winner_data[int(idx_arr[pos])] = (
+            {'clean_firm': int(cf_vals[pos]), 'solar': int(sol_vals[pos]),
+             'wind': int(wnd_vals[pos]), 'ccs_ccgt': int(ccs_vals[pos]),
+             'hydro': int(hyd_vals[pos])},
+            int(proc_vals[pos]),
+            round(float(match_vals[pos]), 4),
+            int(bat_vals[pos]),
+            int(bat8_vals[pos]),
+            int(ldes_vals[pos]),
+            float(match_frac_vals[pos]),
+            round(float(cf_existing_twh_vals[pos]), 3),
+            round(float(uprate_twh_vals[pos]), 3),
+            round(float(geo_twh_vals[pos]), 3),
+            round(float(remaining_twh_vals[pos]), 3),
+            round(float(new_cf_twh_vals[pos]), 3),
+            round(float(gas_needed_mw_vals[pos])),
+            round(float(existing_gas_used_mw_vals[pos])),
+            round(float(new_gas_mw_vals[pos])),
+            round(float(gas_cost_per_mwh_vals[pos]), 2),
+            round(float(clean_peak_mw_vals[pos])),
+            round(ra_peak_mw),
+        )
+
+    return winner_data
+
+
+def build_winner_scenario_from_cache(winner_cache, best_idx, tc_val, wholesale,
+                                      nuclear_price, ccs_price):
+    """Build scenario result dict from pre-extracted winner data cache.
+
+    Uses O(1) dict lookup instead of per-element array indexing. The winner_cache
+    is populated by preextract_winner_data() which does batch numpy fancy indexing.
+    """
+    w = winner_cache[best_idx]
+    match_frac = w[6]
+    ec_val = tc_val / match_frac if match_frac > 0 else 0.0
+    tranche3_is_nuclear = nuclear_price <= ccs_price
+    remaining_twh = w[10]
+
+    return {
+        'resource_mix': w[0],
+        'procurement_pct': w[1],
+        'hourly_match_score': w[2],
+        'battery_dispatch_pct': w[3],
+        'battery8_dispatch_pct': w[4],
+        'ldes_dispatch_pct': w[5],
+        'costs': {
+            'total_cost': round(tc_val, 2),
+            'effective_cost': round(ec_val, 2),
+            'incremental': round(ec_val - wholesale, 2),
+            'wholesale': wholesale,
+        },
+        'tranche_costs': {
+            'cf_existing_twh': w[7],
+            'uprate_twh': w[8],
+            'geo_twh': w[9],
+            'nuclear_newbuild_twh': remaining_twh if tranche3_is_nuclear else 0.0,
+            'ccs_tranche_twh': 0.0 if tranche3_is_nuclear else remaining_twh,
+            'new_cf_twh': w[11],
+        },
+        'gas_backup': {
+            'gas_backup_needed_mw': w[12],
+            'existing_gas_used_mw': w[13],
+            'new_gas_build_mw': w[14],
+            'gas_cost_per_mwh': w[15],
+            'clean_peak_capacity_mw': w[16],
+            'ra_peak_mw': w[17],
+        },
+    }
+
+
 def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
-                          tc_val, wholesale, nuclear_price, ccs_price):
-    """Build scenario result dict for a single winning mix."""
+                          tc_val, wholesale, nuclear_price, ccs_price,
+                          gas_fom=None, gas_ccgt=None, demand_mwh_inv=None):
+    """Build scenario result dict for a single winning mix.
+
+    Performance: inlines array indexing instead of calling arrays_to_mix_dict,
+    and accepts pre-computed gas cost constants to avoid redundant lookups.
+
+    Args:
+        gas_fom: EXISTING_GAS_FOM_KW_YR[iso] * 1000 (pre-computed by caller)
+        gas_ccgt: NEW_CCGT_COST_KW_YR[iso] * 1000 (pre-computed by caller)
+        demand_mwh_inv: 1.0 / (demand_twh * 1e6) (pre-computed by caller)
+    """
     match_frac = extras['match_frac'][best_idx]
     ec_val = tc_val / match_frac if match_frac > 0 else 0.0
 
-    best_mix = arrays_to_mix_dict(arrays, best_idx)
+    # Inline array indexing (avoids arrays_to_mix_dict function call + intermediate dict)
+    cf = int(arrays['clean_firm'][best_idx])
+    sol = int(arrays['solar'][best_idx])
+    wnd = int(arrays['wind'][best_idx])
+    hyd = int(arrays['hydro'][best_idx])
+    ccs_alloc = max(0, 100 - (cf + sol + wnd + hyd))
+    bat8_arr = arrays.get('battery8_dispatch_pct')
 
     # Tranche detail (scenario-dependent: which is cheaper, nuclear or CCS?)
     tranche3_is_nuclear = nuclear_price <= ccs_price
     remaining_twh = float(extras['remaining_twh'][best_idx])
 
+    # Gas backup cost (use pre-computed constants if provided)
+    ex_gas = float(extras['existing_gas_used_mw'][best_idx])
+    new_gas = float(extras['new_gas_mw'][best_idx])
+    if gas_fom is not None:
+        gas_cost = (ex_gas * gas_fom + new_gas * gas_ccgt) * demand_mwh_inv
+    else:
+        gas_cost = (ex_gas * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
+                    new_gas * NEW_CCGT_COST_KW_YR[iso] * 1000) / (demand_twh * 1e6)
+
     return {
-        'resource_mix': best_mix['resource_mix'],
-        'procurement_pct': best_mix['procurement_pct'],
-        'hourly_match_score': best_mix['hourly_match_score'],
-        'battery_dispatch_pct': best_mix['battery_dispatch_pct'],
-        'battery8_dispatch_pct': best_mix['battery8_dispatch_pct'],
-        'ldes_dispatch_pct': best_mix['ldes_dispatch_pct'],
+        'resource_mix': {
+            'clean_firm': cf,
+            'solar': sol,
+            'wind': wnd,
+            'ccs_ccgt': ccs_alloc,
+            'hydro': hyd,
+        },
+        'procurement_pct': int(arrays['procurement_pct'][best_idx]),
+        'hourly_match_score': round(float(arrays['hourly_match_score'][best_idx]), 4),
+        'battery_dispatch_pct': int(arrays['battery_dispatch_pct'][best_idx]),
+        'battery8_dispatch_pct': int(bat8_arr[best_idx]) if bat8_arr is not None else 0,
+        'ldes_dispatch_pct': int(arrays['ldes_dispatch_pct'][best_idx]),
         'costs': {
             'total_cost': round(tc_val, 2),
             'effective_cost': round(ec_val, 2),
@@ -1012,12 +1229,9 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
         },
         'gas_backup': {
             'gas_backup_needed_mw': round(float(extras['gas_needed_mw'][best_idx])),
-            'existing_gas_used_mw': round(float(extras['existing_gas_used_mw'][best_idx])),
-            'new_gas_build_mw': round(float(extras['new_gas_mw'][best_idx])),
-            'gas_cost_per_mwh': round(float(
-                (extras['existing_gas_used_mw'][best_idx] * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
-                 extras['new_gas_mw'][best_idx] * NEW_CCGT_COST_KW_YR[iso] * 1000)
-                / (demand_twh * 1e6)), 2),
+            'existing_gas_used_mw': round(ex_gas),
+            'new_gas_build_mw': round(new_gas),
+            'gas_cost_per_mwh': round(gas_cost, 2),
             'clean_peak_capacity_mw': round(float(extras['clean_peak_mw'][best_idx])),
             'ra_peak_mw': round(float(extras['ra_peak_mw'])),
         },
@@ -1189,19 +1403,24 @@ def effective_gate(thr):
 
 
 def _table_to_arrays(table):
-    """Convert an Arrow table into in-memory numpy arrays."""
+    """Convert an Arrow table into in-memory numpy arrays.
+
+    All arrays are pre-converted to float64 to avoid repeated .astype(np.float64)
+    calls in downstream functions (precompute_base_year_coefficients, price_mix_batch,
+    etc.). Integer fields like clean_firm are stored as float64 but remain integer-valued.
+    """
     return {
-        'clean_firm': table.column('clean_firm').to_numpy(),
-        'solar': table.column('solar').to_numpy(),
-        'wind': table.column('wind').to_numpy(),
-        'hydro': table.column('hydro').to_numpy(),
-        'procurement_pct': table.column('procurement_pct').to_numpy(),
-        'battery_dispatch_pct': table.column('battery_dispatch_pct').to_numpy(),
-        'battery8_dispatch_pct': (table.column('battery8_dispatch_pct').to_numpy()
+        'clean_firm': table.column('clean_firm').to_numpy().astype(np.float64),
+        'solar': table.column('solar').to_numpy().astype(np.float64),
+        'wind': table.column('wind').to_numpy().astype(np.float64),
+        'hydro': table.column('hydro').to_numpy().astype(np.float64),
+        'procurement_pct': table.column('procurement_pct').to_numpy().astype(np.float64),
+        'battery_dispatch_pct': table.column('battery_dispatch_pct').to_numpy().astype(np.float64),
+        'battery8_dispatch_pct': (table.column('battery8_dispatch_pct').to_numpy().astype(np.float64)
                                   if 'battery8_dispatch_pct' in table.column_names
-                                  else np.zeros(table.num_rows, dtype=np.int64)),
-        'ldes_dispatch_pct': table.column('ldes_dispatch_pct').to_numpy(),
-        'hourly_match_score': table.column('hourly_match_score').to_numpy(),
+                                  else np.zeros(table.num_rows, dtype=np.float64)),
+        'ldes_dispatch_pct': table.column('ldes_dispatch_pct').to_numpy().astype(np.float64),
+        'hourly_match_score': table.column('hourly_match_score').to_numpy().astype(np.float64),
     }
 
 
@@ -1377,6 +1596,12 @@ def main():
     # Archetypes per ISO (union of winners across all thresholds) for Phase 2
     archetypes = {}
 
+    # Cache price matrices per ISO — precompute_all_prices depends only on
+    # (iso, sensitivity_combos), not on arrays, uprate settings, or demand growth.
+    # Caching avoids recomputing the same price lookups in Phase 1.5 tracks,
+    # Phase 2 demand growth, and Phase 2.5 track DG sweeps.
+    iso_price_cache = {}  # iso → (price_matrix, wholesale_arr, nuclear_arr, ccs_arr)
+
     for iso in run_isos:
         if iso not in pfs:
             continue
@@ -1407,7 +1632,8 @@ def main():
         # Pre-compute coefficient matrix + constant (one-time per ISO)
         coeff_matrix, constant, extras = precompute_base_year_coefficients(
             iso, arrays, demand_twh)
-        scores = arrays['hourly_match_score'].astype(np.float64)
+        # Already float64 from _table_to_arrays
+        scores = arrays['hourly_match_score']
 
         all_combos = get_sensitivity_combos(iso)
         n_combos = len(all_combos)
@@ -1425,32 +1651,50 @@ def main():
         iso_start = time.time()
 
         # Batched evaluation: all combos at once via Numba kernel
+        # Cache price matrix for reuse in Phase 1.5, 2, and 2.5
         price_matrix, wholesale_arr, nuclear_arr, ccs_arr = precompute_all_prices(
             iso, all_combos)
+        iso_price_cache[iso] = (price_matrix, wholesale_arr, nuclear_arr, ccs_arr)
         eval_start = time.time()
         all_best_idxs, all_best_vals = batch_eval_and_argmin_all(
             coeff_matrix, constant, price_matrix, scores, thresholds_desc)
         eval_elapsed = time.time() - eval_start
         print(f"    {iso}: batched eval {n_combos} combos × {N:,} mixes — {eval_elapsed:.1f}s")
 
-        # Extract winners from batched results
+        # Two-pass winner extraction:
+        # Pass 1: Collect unique winning indices + archetype sets (fast, no array access)
+        # Pass 2: Batch-extract all unique winner data, then build scenarios from cache
+        # This avoids ~87K redundant per-element array accesses (only ~100-2000 unique winners).
+        n_thr = len(active_thresholds)
+        thr_k_map = [thr_pos[float(thr)] for thr in active_thresholds]
+        for combo_i in range(n_combos):
+            for ti in range(n_thr):
+                k = thr_k_map[ti]
+                if all_best_vals[combo_i, k] == np.inf:
+                    continue
+                best_idx = int(all_best_idxs[combo_i, k])
+                thr_arch_sets[active_thresholds[ti]].add(best_idx)
+                iso_arch_set.add(best_idx)
+
+        # Batch pre-extract all unique winner data using numpy fancy indexing
+        winner_cache = preextract_winner_data(arrays, extras, iso_arch_set, iso, demand_twh)
+        print(f"    {iso}: {len(iso_arch_set)} unique winners pre-extracted")
+
+        # Build scenario dicts from cache (O(1) dict lookup per winner, no array indexing)
         for combo_i, (scenario_key, sens) in enumerate(all_combos):
-            for thr in active_thresholds:
-                k = thr_pos[float(thr)]
+            ws = float(wholesale_arr[combo_i])
+            nuc = float(nuclear_arr[combo_i])
+            ccs_p = float(ccs_arr[combo_i])
+            for ti in range(n_thr):
+                k = thr_k_map[ti]
                 if all_best_vals[combo_i, k] == np.inf:
                     continue
                 best_idx = int(all_best_idxs[combo_i, k])
                 tc_val = float(all_best_vals[combo_i, k])
 
-                thr_arch_sets[thr].add(best_idx)
-                iso_arch_set.add(best_idx)
-
-                scenario = build_winner_scenario(
-                    arrays, extras, best_idx, sens, iso, demand_twh,
-                    tc_val, float(wholesale_arr[combo_i]),
-                    float(nuclear_arr[combo_i]), float(ccs_arr[combo_i]))
-
-                thr_data[thr]['scenarios'][scenario_key] = scenario
+                scenario = build_winner_scenario_from_cache(
+                    winner_cache, best_idx, tc_val, ws, nuc, ccs_p)
+                thr_data[active_thresholds[ti]]['scenarios'][scenario_key] = scenario
 
             if (combo_i + 1) % 5000 == 0:
                 print(f"    {iso}: extracted {combo_i+1}/{n_combos} winners")
@@ -1469,22 +1713,24 @@ def main():
             sample_full.sort()
 
             idx_arr = np.array(sample_full)
-            ccs_pct = np.maximum(0, 100 - (arrays['clean_firm'][idx_arr].astype(int) +
-                                            arrays['solar'][idx_arr].astype(int) +
-                                            arrays['wind'][idx_arr].astype(int) +
-                                            arrays['hydro'][idx_arr].astype(int)))
-            bat8 = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.int64))
+            # Index + convert to int once; reuse for CCS computation and .tolist()
+            _cf_i = arrays['clean_firm'][idx_arr].astype(np.int64)
+            _sol_i = arrays['solar'][idx_arr].astype(np.int64)
+            _wnd_i = arrays['wind'][idx_arr].astype(np.int64)
+            _hyd_i = arrays['hydro'][idx_arr].astype(np.int64)
+            ccs_pct = np.maximum(0, 100 - (_cf_i + _sol_i + _wnd_i + _hyd_i))
+            bat8 = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
             thr_data[thr]['feasible_mixes'] = {
-                'clean_firm': arrays['clean_firm'][idx_arr].astype(int).tolist(),
-                'solar': arrays['solar'][idx_arr].astype(int).tolist(),
-                'wind': arrays['wind'][idx_arr].astype(int).tolist(),
+                'clean_firm': _cf_i.tolist(),
+                'solar': _sol_i.tolist(),
+                'wind': _wnd_i.tolist(),
                 'ccs_ccgt': ccs_pct.tolist(),
-                'hydro': arrays['hydro'][idx_arr].astype(int).tolist(),
-                'procurement_pct': arrays['procurement_pct'][idx_arr].astype(int).tolist(),
+                'hydro': _hyd_i.tolist(),
+                'procurement_pct': arrays['procurement_pct'][idx_arr].astype(np.int64).tolist(),
                 'hourly_match_score': np.round(arrays['hourly_match_score'][idx_arr], 4).tolist(),
-                'battery_dispatch_pct': arrays['battery_dispatch_pct'][idx_arr].astype(int).tolist(),
-                'battery8_dispatch_pct': bat8[idx_arr].astype(int).tolist(),
-                'ldes_dispatch_pct': arrays['ldes_dispatch_pct'][idx_arr].astype(int).tolist(),
+                'battery_dispatch_pct': arrays['battery_dispatch_pct'][idx_arr].astype(np.int64).tolist(),
+                'battery8_dispatch_pct': bat8[idx_arr].astype(np.int64).tolist(),
+                'ldes_dispatch_pct': arrays['ldes_dispatch_pct'][idx_arr].astype(np.int64).tolist(),
             }
 
             t_str = str(thr)
@@ -1542,7 +1788,8 @@ def main():
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         all_combos = get_sensitivity_combos(iso)
         n_combos = len(all_combos)
-        scores_all = arrays['hourly_match_score'].astype(np.float64)
+        # Already float64 from _table_to_arrays
+        scores_all = arrays['hourly_match_score']
 
         track_output['results'][iso] = {}
 
@@ -1554,7 +1801,8 @@ def main():
         if n_h0 > 0:
             h0_idx = np.where(h0_mask)[0]
             nb_arrays = {k: arrays[k][h0_idx] for k in arrays}
-            nb_scores = nb_arrays['hourly_match_score'].astype(np.float64)
+            # Already float64 from _table_to_arrays (slicing preserves dtype)
+            nb_scores = nb_arrays['hourly_match_score']
 
             # Pre-compute threshold indices for newbuild mixes
             nb_thr_indices = {}
@@ -1574,27 +1822,40 @@ def main():
                 nb_arch_set = set()
 
                 iso_start_nb = time.time()
-                nb_price_matrix, nb_ws_arr, nb_nuc_arr, nb_ccs_arr = precompute_all_prices(
-                    iso, all_combos)
+                # Reuse cached price matrix from Phase 1 (same iso + combos)
+                nb_price_matrix, nb_ws_arr, nb_nuc_arr, nb_ccs_arr = iso_price_cache[iso]
                 nb_all_idxs, nb_all_vals = batch_eval_and_argmin_all(
                     nb_cm, nb_const, nb_price_matrix, nb_scores, thresholds_desc_nb)
                 print(f"    {iso} newbuild: batched eval {n_combos} combos × {n_h0:,} mixes "
                       f"— {time.time()-iso_start_nb:.1f}s")
 
+                # Two-pass extraction: collect unique indices, then batch extract
+                nb_n_thr = len(active_thr_nb)
+                nb_thr_k_map = [thr_pos_nb[float(thr)] for thr in active_thr_nb]
+                for combo_i in range(n_combos):
+                    for ti in range(nb_n_thr):
+                        k = nb_thr_k_map[ti]
+                        if nb_all_vals[combo_i, k] == np.inf:
+                            continue
+                        nb_arch_set.add(int(nb_all_idxs[combo_i, k]))
+
+                nb_winner_cache = preextract_winner_data(
+                    nb_arrays, nb_extras, nb_arch_set, iso, demand_twh)
+
                 for combo_i, (scenario_key, sens) in enumerate(all_combos):
-                    for thr in active_thr_nb:
-                        k = thr_pos_nb[float(thr)]
+                    ws = float(nb_ws_arr[combo_i])
+                    nuc = float(nb_nuc_arr[combo_i])
+                    ccs_p = float(nb_ccs_arr[combo_i])
+                    for ti in range(nb_n_thr):
+                        k = nb_thr_k_map[ti]
                         if nb_all_vals[combo_i, k] == np.inf:
                             continue
                         best_idx = int(nb_all_idxs[combo_i, k])
                         tc_val = float(nb_all_vals[combo_i, k])
-                        nb_arch_set.add(best_idx)
 
-                        scenario = build_winner_scenario(
-                            nb_arrays, nb_extras, best_idx, sens, iso, demand_twh,
-                            tc_val, float(nb_ws_arr[combo_i]),
-                            float(nb_nuc_arr[combo_i]), float(nb_ccs_arr[combo_i]))
-                        nb_thr_data[thr]['scenarios'][scenario_key] = scenario
+                        scenario = build_winner_scenario_from_cache(
+                            nb_winner_cache, best_idx, tc_val, ws, nuc, ccs_p)
+                        nb_thr_data[active_thr_nb[ti]]['scenarios'][scenario_key] = scenario
 
                 track_output['results'][iso]['newbuild'] = {
                     str(thr): nb_thr_data[thr] for thr in active_thr_nb
@@ -1624,27 +1885,40 @@ def main():
         rp_arch_set = set()
 
         iso_start_rp = time.time()
-        rp_price_matrix, rp_ws_arr, rp_nuc_arr, rp_ccs_arr = precompute_all_prices(
-            iso, all_combos)
+        # Reuse cached price matrix from Phase 1 (same iso + combos)
+        rp_price_matrix, rp_ws_arr, rp_nuc_arr, rp_ccs_arr = iso_price_cache[iso]
         rp_all_idxs, rp_all_vals = batch_eval_and_argmin_all(
             rp_cm, rp_const, rp_price_matrix, scores_all, thresholds_desc_rp)
         print(f"    {iso} replace: batched eval {n_combos} combos × {N:,} mixes "
               f"— {time.time()-iso_start_rp:.1f}s")
 
+        # Two-pass extraction: collect unique indices, then batch extract
+        rp_n_thr = len(active_thr_rp)
+        rp_thr_k_map = [thr_pos_rp[float(thr)] for thr in active_thr_rp]
+        for combo_i in range(n_combos):
+            for ti in range(rp_n_thr):
+                k = rp_thr_k_map[ti]
+                if rp_all_vals[combo_i, k] == np.inf:
+                    continue
+                rp_arch_set.add(int(rp_all_idxs[combo_i, k]))
+
+        rp_winner_cache = preextract_winner_data(
+            arrays, rp_extras, rp_arch_set, iso, demand_twh)
+
         for combo_i, (scenario_key, sens) in enumerate(all_combos):
-            for thr in active_thr_rp:
-                k = thr_pos_rp[float(thr)]
+            ws = float(rp_ws_arr[combo_i])
+            nuc = float(rp_nuc_arr[combo_i])
+            ccs_p = float(rp_ccs_arr[combo_i])
+            for ti in range(rp_n_thr):
+                k = rp_thr_k_map[ti]
                 if rp_all_vals[combo_i, k] == np.inf:
                     continue
                 best_idx = int(rp_all_idxs[combo_i, k])
                 tc_val = float(rp_all_vals[combo_i, k])
-                rp_arch_set.add(best_idx)
 
-                scenario = build_winner_scenario(
-                    arrays, rp_extras, best_idx, sens, iso, demand_twh,
-                    tc_val, float(rp_ws_arr[combo_i]),
-                    float(rp_nuc_arr[combo_i]), float(rp_ccs_arr[combo_i]))
-                rp_thr_data[thr]['scenarios'][scenario_key] = scenario
+                scenario = build_winner_scenario_from_cache(
+                    rp_winner_cache, best_idx, tc_val, ws, nuc, ccs_p)
+                rp_thr_data[active_thr_rp[ti]]['scenarios'][scenario_key] = scenario
 
         track_output['results'][iso]['replace'] = {
             str(thr): rp_thr_data[thr] for thr in active_thr_rp
@@ -1716,11 +1990,12 @@ def main():
         # Initialize per-threshold result dicts
         thr_dg = {thr: {} for thr in arch_thr_mask}
 
-        # Pre-compute price matrix for all combos (one-time per ISO)
-        dg_price_matrix, dg_ws_arr, _, _ = precompute_all_prices(iso, all_combos)
+        # Reuse cached price matrix from Phase 1 (same iso + combos)
+        dg_price_matrix, dg_ws_arr, _, _ = iso_price_cache[iso]
 
         # Archetype scores for batched eval + effective cost
-        arch_scores_f64 = arch_scores.astype(np.float64)
+        # Already float64 from _table_to_arrays — no .astype() needed
+        arch_scores_f64 = arch_scores
         arch_match_frac = arch_scores_f64 / 100.0
 
         # Thresholds for batched eval (sorted descending)
@@ -1854,11 +2129,12 @@ def main():
 
             thr_dg = {thr: {} for thr in arch_thr_mask}
 
-            # Pre-compute price matrix for all combos (one-time)
-            tk_price_matrix, tk_ws_arr, _, _ = precompute_all_prices(iso, all_combos)
+            # Reuse cached price matrix from Phase 1 (same iso + combos)
+            tk_price_matrix, tk_ws_arr, _, _ = iso_price_cache[iso]
 
             # Archetype scores for batched eval
-            tk_scores_f64 = arch_scores.astype(np.float64)
+            # Already float64 from _table_to_arrays — no .astype() needed
+            tk_scores_f64 = arch_scores
             tk_match_frac = tk_scores_f64 / 100.0
 
             # Thresholds for batched eval
@@ -2065,21 +2341,25 @@ def main():
         # year, growth_level, growth_factor columns for downstream pipeline.
         iso_dg = dg_output.get('results', {}).get(iso, {})
         iso_arrays = pfs.get(iso, {})  # PFS arrays for resolving mix_idx
+
+        # Pre-compute nuclear-vs-CCS decision cache ONCE per ISO (invariant across
+        # thresholds, years, growth levels — only depends on iso + sensitivity toggles).
+        # Reuse nuclear_arr/ccs_arr from iso_price_cache instead of re-calling get_scenario_prices.
+        iso_combos = get_sensitivity_combos(iso)
+        _, _, _cached_nuc_arr, _cached_ccs_arr = iso_price_cache[iso]
+        iso_t3_cache = {}
+        for _ci, (skey, _) in enumerate(iso_combos):
+            iso_t3_cache[skey] = _cached_nuc_arr[_ci] <= _cached_ccs_arr[_ci]
+
         if iso_dg and iso_arrays:
             dg_total = 0
+
             for t_str, thr_scenarios in iso_dg.items():
                 t_label = f"{float(t_str):g}"
                 dg_t_out = output_dir / f'step3_dg_{iso}_t{t_label}.parquet'
 
-                def _dg_threshold_gen(iso_, t_str_, thr_sc_, arrs_, combos_):
+                def _dg_threshold_gen(iso_, t_str_, thr_sc_, arrs_, t3_cache_):
                     """Yield DG rows with full resource mix + tranche breakdown."""
-                    # Pre-compute nuclear-vs-CCS decision per scenario (only depends on
-                    # iso + sensitivity toggles, not mix or year/growth).
-                    t3_cache = {}
-                    for ci, (skey, sens) in enumerate(combos_):
-                        _, _, nuc_price, ccs_price = get_scenario_prices(iso_, sens)
-                        t3_cache[skey] = nuc_price <= ccs_price
-
                     for sc_key, year_data in thr_sc_.items():
                         for year_str, growth_data in year_data.items():
                             for g_level, vals in growth_data.items():
@@ -2124,9 +2404,9 @@ def main():
                                     row['tranche_geo_twh'] = round(tranche['geo_twh'], 3)
                                     row['tranche_new_cf_twh'] = round(tranche['new_cf_twh'], 3)
 
-                                    # Tranche 3 split: nuclear vs CCS (cached per scenario)
+                                    # Tranche 3 split: nuclear vs CCS (pre-computed per scenario)
                                     remaining_twh = tranche['remaining_twh']
-                                    t3_is_nuclear = t3_cache.get(sc_key, False)
+                                    t3_is_nuclear = t3_cache_.get(sc_key, False)
                                     row['tranche_nuclear_newbuild_twh'] = round(
                                         remaining_twh if t3_is_nuclear else 0.0, 3)
                                     row['tranche_ccs_tranche_twh'] = round(
@@ -2143,9 +2423,8 @@ def main():
                                 row['cost_incremental'] = vals[3]
                                 yield row
 
-                iso_combos = get_sensitivity_combos(iso)
                 n = _rows_to_parquet(
-                    _dg_threshold_gen(iso, t_str, thr_scenarios, iso_arrays, iso_combos),
+                    _dg_threshold_gen(iso, t_str, thr_scenarios, iso_arrays, iso_t3_cache),
                     dg_t_out)
                 dg_total += n
             print(f"  step3_dg_{iso}: {dg_total:,} demand growth rows "
@@ -2156,14 +2435,11 @@ def main():
         # --- 4. Track demand growth (per-threshold files, full resource mix) ---
         # Track archetypes use different PFS arrays (newbuild: hydro=0, replace: uprates=OFF)
         def _flatten_track_dg_threshold(iso_, track_name_, t_str_, thr_sc_,
-                                        tarrs_, combos_):
-            """Yield track DG rows with full resource mix + tranche breakdown."""
-            # Pre-compute nuclear-vs-CCS decision per scenario
-            t3_cache = {}
-            for _ci, (skey, sens) in enumerate(combos_):
-                _, _, nuc_price, ccs_price = get_scenario_prices(iso_, sens)
-                t3_cache[skey] = nuc_price <= ccs_price
+                                        tarrs_, t3_cache_):
+            """Yield track DG rows with full resource mix + tranche breakdown.
 
+            t3_cache_ is pre-computed once per ISO (nuclear-vs-CCS decision per scenario key).
+            """
             for sc_key, year_data in thr_sc_.items():
                 for year_str, growth_data in year_data.items():
                     for g_level, vals in growth_data.items():
@@ -2205,7 +2481,7 @@ def main():
                             row['tranche_geo_twh'] = round(tranche['geo_twh'], 3)
                             row['tranche_new_cf_twh'] = round(tranche['new_cf_twh'], 3)
                             remaining_twh = tranche['remaining_twh']
-                            t3_is_nuclear = t3_cache.get(sc_key, False)
+                            t3_is_nuclear = t3_cache_.get(sc_key, False)
                             row['tranche_nuclear_newbuild_twh'] = round(
                                 remaining_twh if t3_is_nuclear else 0.0, 3)
                             row['tranche_ccs_tranche_twh'] = round(
@@ -2221,7 +2497,8 @@ def main():
 
         tdg_total = 0
         tdg_thresholds = set()
-        iso_combos_for_tdg = get_sensitivity_combos(iso)
+        # iso_t3_cache was built unconditionally above — reuse directly
+
         for track_name in ['newbuild', 'replace']:
             iso_tdg = track_dg.get(track_name, {}).get(iso, {})
             ta = track_archetypes.get(track_name, {}).get(iso)
@@ -2233,7 +2510,7 @@ def main():
                 n = _rows_to_parquet(
                     _flatten_track_dg_threshold(
                         iso, track_name, t_str, thr_scenarios,
-                        track_pfs_arrays, iso_combos_for_tdg),
+                        track_pfs_arrays, iso_t3_cache),
                     tdg_t_out)
                 tdg_total += n
         if tdg_total > 0:
