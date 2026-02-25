@@ -194,43 +194,7 @@ body { background: #F3F4F8; }
     </div>
 </section>
 
-<!-- 2. What Resources Get Deployed at Each Zone -->
-<section class="content-section">
-    <h2 class="section-title">What Gets Deployed at Each Zone?</h2>
-    <p class="section-subtitle">The consequential path deploys resources sequentially — locked-in at each threshold before
-    optimizing the next. The hourly matching path invests in clean firm along the FOAK&rarr;NOAK learning curve — less early when costs
-    are high, ramping up as learning drives costs toward NOAK. The sequential path shows escalating renewable overbuilding;
-    the hourly matching path shows a graduated increase in clean firm as the technology matures.</p>
-
-    <div class="iso-selector" id="deployIsoSelector"></div>
-
-    <div class="chart-pair">
-        <div class="chart-box">
-            <span class="scenario-tag tag-a">Pure Consequential</span>
-            <h3 id="deployTitleA">PJM — Resources at Each Threshold (TWh)</h3>
-            <p class="chart-note">Horizontal bars show total deployed resources + gas backup (GW, rightmost). Hover for details.</p>
-            <div class="deploy-chart-container"><canvas id="deployChartA"></canvas></div>
-        </div>
-        <div class="chart-box">
-            <span class="scenario-tag tag-b">Hourly Matching</span>
-            <h3 id="deployTitleB">PJM — Resources at Each Threshold (TWh)</h3>
-            <p class="chart-note">Graduated deployment — clean firm increases as FOAK&rarr;NOAK learning drives costs down.</p>
-            <div class="deploy-chart-container"><canvas id="deployChartB"></canvas></div>
-        </div>
-    </div>
-
-    <div class="callout">
-        <div class="callout-title">Path Dependency Creates Renewable Saturation</div>
-        <p>Because the sequential strategy locks in the cheapest resources first, it overbuilds renewables at early thresholds.
-        Those resources are committed — they can't be unbuilt. At 80%+, the optimizer inherits this oversized renewable base
-        and must add even more to push hourly matching higher, because clean firm is expensive at High LCOE. The result:
-        PJM reaches 2,400 TWh of solar at 95% (vs. 27 TWh in the hourly matching target). ERCOT hits 1,400+ TWh of solar at 85%.
-        This is the cost of local optimization — each step was the cheapest $/tCO<sub>2</sub> at the time, but the cumulative
-        path is 3-5&times; more expensive than targeting a high threshold directly.</p>
-    </div>
-</section>
-
-<!-- 3. Gas Capacity: The Stranding Story -->
+<!-- 2. Gas Capacity: The Stranding Story -->
 <section class="content-section">
     <h2 class="section-title">Gas Capacity: Overbuilding vs. Efficient Displacement</h2>
     <p class="section-subtitle">Gas backup capacity at each milestone. The sequential path's massive renewable overbuilding
@@ -701,84 +665,7 @@ function renderMacTimeline(iso) {
 createIsoSelector('macIsoSelector', 'PJM', renderMacTimeline);
 renderMacTimeline('PJM');
 
-// ===== 2. HORIZONTAL STACKED BAR CHARTS (Resources + Gas at each threshold) =====
-let deployChartA, deployChartB;
-const DEPLOY_RES_ORDER = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'ldes'];
-
-function renderDeployCharts(iso) {
-    document.getElementById('deployTitleA').textContent = iso + ' \u2014 Resources at Each Threshold (TWh)';
-    document.getElementById('deployTitleB').textContent = iso + ' \u2014 Resources at Each Threshold (TWh)';
-
-    const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = DATA.trajectories.hourly_matching[iso] || [];
-    const labels = trajA.map(d => d.threshold + '%');
-
-    function makeDatasets(traj) {
-        const datasets = [];
-        DEPLOY_RES_ORDER.forEach(res => {
-            datasets.push({
-                label: RES_LABELS[res] || res,
-                data: traj.map(d => Math.round(d.resource_twh[res] || 0)),
-                backgroundColor: 'rgba(' + RES_RGB[res] + ',0.55)',
-                borderColor: 'rgba(' + RES_RGB[res] + ',1)',
-                borderWidth: 1.5,
-                borderRadius: 6,
-                borderSkipped: 'start',
-            });
-        });
-        datasets.push({
-            label: 'Gas Backup (GW)',
-            data: traj.map(d => Math.round(d.gas_backup_mw / 1000)),
-            backgroundColor: 'rgba(107,114,128,0.3)',
-            borderColor: 'rgba(107,114,128,0.7)',
-            borderWidth: 1.5,
-            borderRadius: 6,
-            borderSkipped: 'start',
-        });
-        return datasets;
-    }
-
-    const opts = {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { labels: { color: 'rgba(0,0,0,0.6)', font: { size: 10 }, usePointStyle: true, pointStyle: 'rectRounded' } },
-            tooltip: {
-                callbacks: {
-                    label: ctx => {
-                        if (ctx.dataset.label.includes('Gas')) {
-                            return ctx.dataset.label + ': ' + ctx.parsed.x.toLocaleString() + ' GW';
-                        }
-                        return ctx.dataset.label + ': ' + ctx.parsed.x.toLocaleString() + ' TWh';
-                    }
-                }
-            }
-        },
-        scales: {
-            x: {
-                stacked: true,
-                ticks: { color: 'rgba(0,0,0,0.5)' },
-                grid: { color: 'rgba(0,0,0,0.06)' },
-                title: { display: true, text: 'TWh (Gas in GW)', color: 'rgba(0,0,0,0.5)', font: { size: 10 } },
-            },
-            y: {
-                stacked: true,
-                ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 } },
-                grid: { color: 'rgba(0,0,0,0.06)' },
-            }
-        }
-    };
-
-    if (deployChartA) deployChartA.destroy();
-    if (deployChartB) deployChartB.destroy();
-    deployChartA = new Chart(document.getElementById('deployChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA) }, options: opts });
-    deployChartB = new Chart(document.getElementById('deployChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB) }, options: opts });
-}
-createIsoSelector('deployIsoSelector', 'PJM', renderDeployCharts);
-renderDeployCharts('PJM');
-
-// ===== 3. GAS BACKUP CHART =====
+// ===== 2. GAS BACKUP CHART =====
 let gasChart;
 function renderGasChart(iso) {
     document.getElementById('gasChartTitle').textContent = iso + ' \u2014 Gas Backup Capacity (MW)';
@@ -962,6 +849,19 @@ function renderMixCharts(iso) {
         return datasets;
     }
 
+    // Compute shared y-axis max across BOTH trajectories for equal scaling
+    function computeMaxStack(traj) {
+        let maxV = 0;
+        traj.forEach(d => {
+            const totalRes = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+            const matched = d.threshold / 100 * demandTwh;
+            const curtailed = Math.max(0, totalRes - matched);
+            maxV = Math.max(maxV, totalRes + curtailed);
+        });
+        return maxV;
+    }
+    const sharedYMax = Math.ceil(Math.max(computeMaxStack(trajA), computeMaxStack(trajB)) / 50) * 50;
+
     const opts = {
         responsive: true, maintainAspectRatio: false,
         plugins: {
@@ -989,7 +889,7 @@ function renderMixCharts(iso) {
         },
         scales: {
             x: { stacked: true, ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 9 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
-            y: { stacked: true, ticks: { color: 'rgba(0,0,0,0.5)' }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.5)' } }
+            y: { stacked: true, max: sharedYMax, ticks: { color: 'rgba(0,0,0,0.5)' }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.5)' } }
         }
     };
 
