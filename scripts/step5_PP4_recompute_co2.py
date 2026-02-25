@@ -97,7 +97,8 @@ def fast_co2_from_match_score(match_score, resource_mix, procurement_pct,
     ~1000x faster than hourly dispatch path.
     """
     # Get emission rate from cache or compute
-    cache_key = (iso, round(threshold_pct, 1))
+    # Use string key to avoid float precision issues (e.g. 87.5 vs 87.50000000001)
+    cache_key = (iso, str(threshold_pct))
     if rate_cache is not None and cache_key in rate_cache:
         rate, info = rate_cache[cache_key]
     else:
@@ -230,15 +231,19 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
         dispatch_cache = load_dispatch_cache(iso)
         cache_dirty = False
 
-        # Pre-compute emission rates per threshold (avoid redundant calls)
+        # Pre-populate rate cache for ALL known thresholds (string keys for precision)
+        THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
         rate_cache = {}
+        for t in THRESHOLDS:
+            cache_key = (iso, str(t))
+            rate_cache[cache_key] = compute_dispatch_stack_emission_rate(
+                iso, t, emission_rates, fossil_mix)
 
         baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
         print(f"\n  {iso} (baseline clean: {baseline_clean:.1f}%):")
         print(f"    Dispatch-stack emission rates (tCO₂/MWh):")
         for t_pct in [50, 60, 70, 80, 90, 95, 100]:
-            rate, info = get_emission_rate_for_threshold(iso, t_pct, emission_rates, fossil_mix)
-            rate_cache[(iso, t_pct)] = (rate, info)
+            rate, info = rate_cache[(iso, str(t_pct))]
             gas_only = info.get('forced_gas_only', False)
             label = " [gas-only]" if gas_only else ""
             print(f"      {t_pct:>3}% clean → {rate:.4f} tCO₂/MWh{label}")
@@ -282,10 +287,14 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
             threshold_pct = float(t_str)
             scenarios = t_data.get('scenarios', {})
 
-            # Pre-fetch rate for this threshold
-            rate, info = get_emission_rate_for_threshold(
-                iso, threshold_pct, emission_rates, fossil_mix)
-            rate_cache[(iso, round(threshold_pct, 1))] = (rate, info)
+            # Pre-fetch rate for this threshold (string key for float precision)
+            cache_key = (iso, str(threshold_pct))
+            if cache_key in rate_cache:
+                rate, info = rate_cache[cache_key]
+            else:
+                rate, info = get_emission_rate_for_threshold(
+                    iso, threshold_pct, emission_rates, fossil_mix)
+                rate_cache[cache_key] = (rate, info)
 
             for sk, result in scenarios.items():
                 resource_mix = result.get('resource_mix', {})
@@ -361,36 +370,70 @@ def recompute_dg_co2(input_dir, output_dir, run_isos, emission_rates, fossil_mix
             if df.empty:
                 continue
 
-            # Add CO2 columns
-            co2_total = []
-            co2_rate_per_mwh = []
-            co2_emission_rate = []
+            # --- Vectorized CO₂ computation for DG scenarios ---
+            # 1. Build arrays of threshold and match_score
+            thresholds = df['threshold'].astype(float).values
+            if 'hourly_match_score' in df.columns:
+                match_scores = df['hourly_match_score'].astype(float).values
+            else:
+                match_scores = thresholds.copy()
 
-            for _, row in df.iterrows():
-                threshold_pct = float(row['threshold'])
-                match_score = float(row.get('hourly_match_score', threshold_pct))
-                demand_mwh = float(row.get('annual_demand_mwh', 0))
-                if demand_mwh <= 0:
-                    demand_mwh = BASE_DEMAND_TWH.get(iso, 0) * 1e6
-                procurement_pct = int(row.get('procurement_pct', 100))
+            # 2. Demand (vectorized with fallback)
+            if 'annual_demand_mwh' in df.columns:
+                demand_mwh_arr = df['annual_demand_mwh'].astype(float).values
+            else:
+                demand_mwh_arr = np.zeros(len(df))
+            fallback_demand = BASE_DEMAND_TWH.get(iso, 0) * 1e6
+            demand_mwh_arr = np.where(demand_mwh_arr > 0, demand_mwh_arr, fallback_demand)
 
-                resource_mix = {}
-                for rtype in RESOURCE_TYPES:
-                    col = f'mix_{rtype}'
-                    resource_mix[rtype] = int(row[col]) if col in df.columns else 0
+            # 3. Procurement
+            if 'procurement_pct' in df.columns:
+                procurement_arr = df['procurement_pct'].astype(float).values
+            else:
+                procurement_arr = np.full(len(df), 100.0)
 
-                co2 = fast_co2_from_match_score(
-                    match_score, resource_mix, procurement_pct,
-                    threshold_pct, iso, emission_rates, fossil_mix,
-                    demand_mwh, rate_cache)
+            # 4. CCS mix percentage
+            ccs_col = 'mix_ccs_ccgt'
+            if ccs_col in df.columns:
+                ccs_pct_arr = df[ccs_col].astype(float).values
+            else:
+                ccs_pct_arr = np.zeros(len(df))
 
-                co2_total.append(round(co2['total_co2_abated_tons'], 0))
-                co2_rate_per_mwh.append(round(co2['co2_rate_per_mwh'], 4))
-                co2_emission_rate.append(round(co2['emission_rate_tco2_mwh'], 4))
+            # 5. Build emission rate array — one rate per unique threshold
+            unique_thresholds = np.unique(thresholds)
+            threshold_rate_map = {}
+            for t in unique_thresholds:
+                cache_key = (iso, str(t))
+                if cache_key in rate_cache:
+                    rate_val, _ = rate_cache[cache_key]
+                else:
+                    rate_val, info = compute_dispatch_stack_emission_rate(
+                        iso, t, emission_rates, fossil_mix)
+                    rate_cache[cache_key] = (rate_val, info)
+                threshold_rate_map[t] = rate_val
 
-            df['co2_total_abated_tons'] = co2_total
-            df['co2_rate_per_mwh'] = co2_rate_per_mwh
-            df['co2_emission_rate_tco2_mwh'] = co2_emission_rate
+            # Vectorized rate lookup
+            rate_arr = np.array([threshold_rate_map[t] for t in thresholds])
+
+            # 6. Vectorized CO₂ math (mirrors fast_co2_from_match_score logic)
+            fossil_displaced_mwh = (match_scores / 100.0) * demand_mwh_arr
+            ccs_supply_mwh = (ccs_pct_arr / 100.0) * (procurement_arr / 100.0) * demand_mwh_arr
+            ccs_effective_mwh = np.minimum(ccs_supply_mwh, fossil_displaced_mwh)
+            non_ccs_mwh = fossil_displaced_mwh - ccs_effective_mwh
+
+            co2_clean = non_ccs_mwh * rate_arr
+            ccs_credit = np.maximum(0.0, rate_arr - CCS_RESIDUAL_EMISSION_RATE)
+            co2_ccs = ccs_effective_mwh * ccs_credit
+            total_abated = co2_clean + co2_ccs
+
+            # Safe division for rate per MWh
+            with np.errstate(divide='ignore', invalid='ignore'):
+                co2_rate = np.where(fossil_displaced_mwh > 0,
+                                    total_abated / fossil_displaced_mwh, 0.0)
+
+            df['co2_total_abated_tons'] = np.round(total_abated, 0)
+            df['co2_rate_per_mwh'] = np.round(co2_rate, 4)
+            df['co2_emission_rate_tco2_mwh'] = np.round(rate_arr, 4)
             iso_processed += len(df)
 
             # Write back to output dir
@@ -403,8 +446,6 @@ def recompute_dg_co2(input_dir, output_dir, run_isos, emission_rates, fossil_mix
 
     print(f"  [DG CO2] Total: {total_processed:,} DG scenarios recomputed")
     return total_processed
-
-    return results_data
 
 
 def main():

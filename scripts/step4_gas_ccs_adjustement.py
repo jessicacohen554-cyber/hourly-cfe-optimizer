@@ -31,12 +31,14 @@ See SPEC.md for methodology documentation.
 """
 
 import argparse
+import functools
 import json
 import os
 import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -162,6 +164,25 @@ GRID_MIX_SHARES = {
 
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
+# ── Pre-computed flat lookup dicts for O(1) access in hot loops ──
+# Avoids repeated 3-level nested dict traversals like
+# FULL_LCOE_TABLES[resource][level][iso] on every call.
+_LCOE_FLAT = {}    # key: (resource, level, iso) → float
+_TX_FLAT = {}      # key: (resource, level, iso) → float
+
+def _build_flat_lookups():
+    """Build flat (resource, level, iso) → cost lookup dicts at module load."""
+    for resource, level_dict in FULL_LCOE_TABLES.items():
+        for level, iso_dict in level_dict.items():
+            for iso, val in iso_dict.items():
+                _LCOE_FLAT[(resource, level, iso)] = val
+    for resource, level_dict in FULL_TRANSMISSION_TABLES.items():
+        for level, iso_dict in level_dict.items():
+            for iso, val in iso_dict.items():
+                _TX_FLAT[(resource, level, iso)] = val
+
+_build_flat_lookups()
+
 # 45Q credit: corrected value
 FOURTY_FIVE_Q_OFFSET_CORRECTED = 27.5  # $85/ton × 0.323 tCO2/MWh captured
 FOURTY_FIVE_Q_OFFSET_ORIGINAL = 29.0   # What the optimizer used
@@ -264,16 +285,17 @@ def load_from_parquets(input_dir, isos):
             continue
 
         table = pq.read_table(parquet_path)
-        col_names = table.column_names
+        col_names = set(table.column_names)
         print(f"  Loaded {iso}: {table.num_rows:,} rows from {parquet_path} "
               f"({os.path.getsize(parquet_path) / 1024:.0f} KB)")
 
-        # Convert to column dict for fast row-wise access
-        col_data = {name: table.column(name).to_pylist() for name in col_names}
-        n_rows = table.num_rows
+        # Convert to pandas for fast columnar + row access (much faster than
+        # per-column .to_pylist() for wide tables with many rows)
+        df = table.to_pandas()
+        n_rows = len(df)
 
         # Extract annual_demand_mwh (same for all rows of this ISO)
-        annual_demand = float(col_data['annual_demand_mwh'][0]) if 'annual_demand_mwh' in col_names else REGIONAL_DEMAND_MWH.get(iso, 0)
+        annual_demand = float(df['annual_demand_mwh'].iloc[0]) if 'annual_demand_mwh' in col_names else REGIONAL_DEMAND_MWH.get(iso, 0)
 
         iso_data = {
             'annual_demand_mwh': annual_demand,
@@ -284,60 +306,89 @@ def load_from_parquets(input_dir, isos):
         tranche_cols = [c for c in col_names if c.startswith('tranche_')]
         gas_cols = [c for c in col_names if c.startswith('gas_')]
 
-        # Group by threshold using a dict
-        threshold_groups = {}  # threshold_val -> [row_indices]
-        for i in range(n_rows):
-            thr = col_data['threshold'][i]
-            threshold_groups.setdefault(thr, []).append(i)
+        # Pre-extract numpy arrays for hot columns (avoids repeated pandas indexing)
+        threshold_arr = df['threshold'].values
+        scenario_arr = df['scenario'].values
 
-        for threshold, row_indices in threshold_groups.items():
+        mix_arrays = {}
+        for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+            col = f'mix_{rtype}'
+            mix_arrays[rtype] = df[col].values if col in col_names else None
+
+        cost_arrays = {}
+        for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
+            col = f'cost_{ckey}'
+            cost_arrays[ckey] = df[col].values if col in col_names else None
+
+        tranche_arrays = {col: df[col].values for col in tranche_cols}
+        gas_arrays = {col: df[col].values for col in gas_cols}
+
+        scalar_arrays = {}
+        for scol in ['procurement_pct', 'hourly_match_score',
+                     'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']:
+            scalar_arrays[scol] = df[scol].values if scol in col_names else None
+
+        # Group by threshold using numpy for speed
+        unique_thresholds = np.unique(threshold_arr)
+
+        for threshold in unique_thresholds:
+            threshold_val = float(threshold)
             # Handle float thresholds like 87.5, 92.5, 97.5
-            if isinstance(threshold, float) and threshold != int(threshold):
-                t_str = str(threshold)
+            if threshold_val != int(threshold_val):
+                t_str = str(threshold_val)
             else:
-                t_str = str(int(threshold))
+                t_str = str(int(threshold_val))
+
+            row_mask = threshold_arr == threshold
+            row_indices = np.where(row_mask)[0]
 
             scenarios = {}
             for i in row_indices:
-                sc_key = col_data['scenario'][i]
+                sc_key = scenario_arr[i]
 
-                # Reconstruct resource_mix
+                # Reconstruct resource_mix from pre-extracted arrays
                 resource_mix = {}
                 for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
-                    col = f'mix_{rtype}'
-                    resource_mix[rtype] = int(col_data[col][i]) if col in col_names else 0
+                    arr = mix_arrays[rtype]
+                    resource_mix[rtype] = int(arr[i]) if arr is not None else 0
 
-                # Reconstruct costs
+                # Reconstruct costs from pre-extracted arrays
                 costs = {}
                 for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
-                    col = f'cost_{ckey}'
-                    costs[ckey] = float(col_data[col][i]) if col in col_names else 0.0
+                    arr = cost_arrays[ckey]
+                    costs[ckey] = float(arr[i]) if arr is not None else 0.0
 
-                # Reconstruct tranche_costs
+                # Reconstruct tranche_costs from pre-extracted arrays
                 tranche_costs = {}
                 for col in tranche_cols:
                     key = col[len('tranche_'):]
-                    val = col_data[col][i]
-                    if val is not None:
+                    val = tranche_arrays[col][i]
+                    if val is not None and not (isinstance(val, float) and np.isnan(val)):
                         tranche_costs[key] = float(val)
 
-                # Reconstruct gas_backup from step 3 (preserved as gas_backup_step3)
+                # Reconstruct gas_backup from pre-extracted arrays
                 gas_step3 = {}
                 for col in gas_cols:
                     key = col[len('gas_'):]
-                    val = col_data[col][i]
-                    if val is not None:
+                    val = gas_arrays[col][i]
+                    if val is not None and not (isinstance(val, float) and np.isnan(val)):
                         gas_step3[key] = float(val) if isinstance(val, float) else int(val)
+
+                proc_arr = scalar_arrays['procurement_pct']
+                match_arr = scalar_arrays['hourly_match_score']
+                batt_arr = scalar_arrays['battery_dispatch_pct']
+                batt8_arr = scalar_arrays['battery8_dispatch_pct']
+                ldes_arr = scalar_arrays['ldes_dispatch_pct']
 
                 scenario = {
                     'resource_mix': resource_mix,
                     'costs': costs,
                     'tranche_costs': tranche_costs,
-                    'procurement_pct': int(col_data['procurement_pct'][i]) if 'procurement_pct' in col_names else 100,
-                    'hourly_match_score': float(col_data['hourly_match_score'][i]) if 'hourly_match_score' in col_names else 0.0,
-                    'battery_dispatch_pct': int(col_data['battery_dispatch_pct'][i]) if 'battery_dispatch_pct' in col_names else 0,
-                    'battery8_dispatch_pct': int(col_data['battery8_dispatch_pct'][i]) if 'battery8_dispatch_pct' in col_names else 0,
-                    'ldes_dispatch_pct': int(col_data['ldes_dispatch_pct'][i]) if 'ldes_dispatch_pct' in col_names else 0,
+                    'procurement_pct': int(proc_arr[i]) if proc_arr is not None else 100,
+                    'hourly_match_score': float(match_arr[i]) if match_arr is not None else 0.0,
+                    'battery_dispatch_pct': int(batt_arr[i]) if batt_arr is not None else 0,
+                    'battery8_dispatch_pct': int(batt8_arr[i]) if batt8_arr is not None else 0,
+                    'ldes_dispatch_pct': int(ldes_arr[i]) if ldes_arr is not None else 0,
                     'gas_backup_step3': gas_step3,
                 }
 
@@ -483,6 +534,7 @@ def medium_key(iso):
     return f'MMMM_M_M_M1_{geo}'
 
 
+@functools.lru_cache(maxsize=None)
 def decode_scenario_key(key):
     """Decode scenario key into toggle levels.
     Returns: (renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo)
@@ -541,6 +593,38 @@ def ccs_lcoe_dispatchable(lcoe_no45q, capacity_factor):
     return lcoe_no45q * (fixed_share * cf_ratio + variable_share)
 
 
+@functools.lru_cache(maxsize=None)
+def _cached_base_maps(scenario_key, iso):
+    """Pre-compute base LCOE and TX maps for a (scenario_key, iso) pair.
+
+    Returns:
+        (lcoe_base, tx_map, firm_level, fuel_level, wholesale_base)
+    where lcoe_base is a dict of resource → base LCOE (without CCS 45Q logic),
+    tx_map is resource → transmission cost, and wholesale_base is the fuel-
+    adjusted wholesale price (before any NEISO adder).
+
+    Cached because the same scenario_key × iso pair is evaluated multiple
+    times (with/without 45Q, with/without gas adder).
+    """
+    renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo = decode_scenario_key(scenario_key)
+
+    lcoe_base = {
+        'solar': _LCOE_FLAT[('solar', renewable, iso)],
+        'wind': _LCOE_FLAT[('wind', renewable, iso)],
+        'clean_firm': _LCOE_FLAT[('clean_firm', firm, iso)],
+        'battery': _LCOE_FLAT[('battery', battery, iso)],
+        'ldes': _LCOE_FLAT[('ldes', ldes, iso)],
+        'hydro': 0,
+    }
+
+    tx_map = {rtype: _TX_FLAT[(rtype, tx, iso)]
+              for rtype in FULL_TRANSMISSION_TABLES}
+
+    wholesale_base = WHOLESALE_PRICES[iso] + WHOLESALE_FUEL_ADJUSTMENTS[iso][fuel]
+
+    return lcoe_base, tx_map, firm, fuel, tx, wholesale_base
+
+
 def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
                                 ldes_pct, match_score, scenario_key,
                                 apply_45q=True, neiso_gas_adder=False,
@@ -553,16 +637,13 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
             for demand-growth scenarios where existing generation is a smaller
             fraction of total demand.
     """
-    renewable, firm, battery, ldes, fuel, tx, ccs, q45, geo = decode_scenario_key(scenario_key)
+    # Use cached base maps — avoids redundant decode + nested dict lookups
+    lcoe_base, tx_map, firm, fuel, tx, wholesale_base = _cached_base_maps(scenario_key, iso)
 
-    lcoe_map = {
-        'solar': FULL_LCOE_TABLES['solar'][renewable][iso],
-        'wind': FULL_LCOE_TABLES['wind'][renewable][iso],
-        'clean_firm': tranche_cf_lcoe if tranche_cf_lcoe is not None else FULL_LCOE_TABLES['clean_firm'][firm][iso],
-        'battery': FULL_LCOE_TABLES['battery'][battery][iso],
-        'ldes': FULL_LCOE_TABLES['ldes'][ldes][iso],
-        'hydro': 0,
-    }
+    # Build per-call lcoe_map from cached base (shallow copy + overrides)
+    lcoe_map = dict(lcoe_base)
+    if tranche_cf_lcoe is not None:
+        lcoe_map['clean_firm'] = tranche_cf_lcoe
 
     if apply_45q:
         lcoe_map['ccs_ccgt'] = ccs_lcoe_corrected_45q(iso, firm)
@@ -577,11 +658,7 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
         else:
             lcoe_map['ccs_ccgt'] = base_no45q
 
-    tx_map = {}
-    for rtype in FULL_TRANSMISSION_TABLES:
-        tx_map[rtype] = FULL_TRANSMISSION_TABLES[rtype][tx][iso]
-
-    wholesale = WHOLESALE_PRICES[iso] + WHOLESALE_FUEL_ADJUSTMENTS[iso][fuel]
+    wholesale = wholesale_base
     wholesale = max(5, wholesale)
 
     if neiso_gas_adder and iso == 'NEISO':
@@ -738,11 +815,11 @@ def add_no45q_overlay(data, run_isos):
                 scenario['no_45q_costs'] = no45q_costs
 
                 if ccs_pct > 0:
-                    renewable, firm, battery_lvl, ldes_lvl, fuel, tx, ccs, q45, geo = decode_scenario_key(effective_key)
-                    ldes_cost = FULL_LCOE_TABLES['ldes'][ldes_lvl][iso] + \
-                                FULL_TRANSMISSION_TABLES['ldes'][tx][iso]
-                    ccs_no45q_base = ccs_lcoe_no45q(iso, firm)
-                    ccs_tx = FULL_TRANSMISSION_TABLES['ccs_ccgt'][tx][iso]
+                    # Use cached base maps to avoid redundant decode + nested lookups
+                    lcoe_base_cr, tx_map_cr, firm_cr, _, _, _ = _cached_base_maps(effective_key, iso)
+                    ldes_cost = lcoe_base_cr['ldes'] + tx_map_cr['ldes']
+                    ccs_no45q_base = ccs_lcoe_no45q(iso, firm_cr)
+                    ccs_tx = tx_map_cr['ccs_ccgt']
 
                     rhs = ldes_cost - ccs_tx - ccs_no45q_base * 0.37
                     if rhs > 0:
@@ -1020,11 +1097,10 @@ def load_dg_parquets(input_dir, iso):
     rows = []
     for fpath in files:
         table = pq.read_table(fpath)
-        col_names = table.column_names
-        col_data = {name: table.column(name).to_pylist() for name in col_names}
-        n = table.num_rows
-        for i in range(n):
-            rows.append({name: col_data[name][i] for name in col_names})
+        # Use pandas .to_dict('records') for fast batch conversion
+        # instead of per-column .to_pylist() + row-by-row dict construction
+        df = table.to_pandas()
+        rows.extend(df.to_dict('records'))
     return rows
 
 

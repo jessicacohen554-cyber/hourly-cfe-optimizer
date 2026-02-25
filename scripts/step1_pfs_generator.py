@@ -324,7 +324,7 @@ def get_supply_profiles(iso, gen_profiles):
     if len(cf_profile) < H:
         cf_profile = np.pad(cf_profile, (0, H - len(cf_profile)),
                             constant_values=1.0 / H)
-    profiles['clean_firm'] = cf_profile.tolist()
+    profiles['clean_firm'] = cf_profile
 
     # Solar (with vectorized DST-aware nighttime correction)
     if iso == 'NYISO':
@@ -361,23 +361,23 @@ def get_supply_profiles(iso, gen_profiles):
     solar_arr[~is_daylight] = 0.0
     if len(solar_arr) < H:
         solar_arr = np.pad(solar_arr, (0, H - len(solar_arr)))
-    profiles['solar'] = solar_arr.tolist()
+    profiles['solar'] = solar_arr
 
     # Wind
-    profiles['wind'] = list(gen_profiles[iso].get('wind', [0.0] * H)[:H])
+    profiles['wind'] = np.array(gen_profiles[iso].get('wind', [0.0] * H)[:H], dtype=np.float64)
 
     # Hydro
-    profiles['hydro'] = list(gen_profiles[iso].get('hydro', [0.0] * H)[:H])
+    profiles['hydro'] = np.array(gen_profiles[iso].get('hydro', [0.0] * H)[:H], dtype=np.float64)
 
-    # Ensure all profiles are exactly H hours, no negatives (vectorized)
+    # Ensure all profiles are exactly H hours, no negatives (kept as numpy arrays)
     for rtype in RESOURCE_TYPES:
-        arr = np.array(profiles[rtype], dtype=np.float64)
+        arr = np.asarray(profiles[rtype], dtype=np.float64)
         if len(arr) > H:
-            arr = arr[:H]
+            arr = arr[:H].copy()
         elif len(arr) < H:
             arr = np.pad(arr, (0, H - len(arr)))
         np.maximum(arr, 0.0, out=arr)
-        profiles[rtype] = arr.tolist()
+        profiles[rtype] = arr
 
     return profiles
 
@@ -396,7 +396,7 @@ def prepare_numpy_profiles(demand_norm, supply_profiles):
     if dsum > 0 and abs(dsum - 1.0) > 1e-9:
         demand_arr *= (1.0 / dsum)
     supply_matrix = np.stack([
-        np.array(supply_profiles[rt][:H], dtype=np.float64)
+        np.asarray(supply_profiles[rt][:H], dtype=np.float64)
         for rt in RESOURCE_TYPES
     ])  # shape (4, 8760)
     return demand_arr, supply_matrix
@@ -478,6 +478,36 @@ def _compute_storage_caps(demand, supply_row, procurement,
     ldes_cap = max_7day
 
     return bat4_cap, bat8_cap, ldes_cap, has_curtailment, surplus_days
+
+
+@njit(cache=True, parallel=True)
+def _batch_compute_storage_caps(demand, supply_rows, procurement, N,
+                                 batt4_duration, batt8_duration, ldes_duration):
+    """Compute storage caps for N mixes in parallel using Numba prange.
+
+    Replaces per-mix Python loop with a single parallel kernel call.
+    Each mix is independent — Numba distributes across CPU cores.
+
+    Returns: (bat4_caps, bat8_caps, ldes_caps, has_curtailment, surplus_days)
+        Each is a 1D array of length N.
+    """
+    bat4_caps = np.empty(N, dtype=np.float64)
+    bat8_caps = np.empty(N, dtype=np.float64)
+    ldes_caps = np.empty(N, dtype=np.float64)
+    has_curtailment_arr = np.empty(N, dtype=np.int64)
+    surplus_days_arr = np.empty(N, dtype=np.int64)
+
+    for i in prange(N):
+        b4, b8, lc, hc, sd = _compute_storage_caps(
+            demand, supply_rows[i], procurement,
+            batt4_duration, batt8_duration, ldes_duration)
+        bat4_caps[i] = b4
+        bat8_caps[i] = b8
+        ldes_caps[i] = lc
+        has_curtailment_arr[i] = 1 if hc else 0
+        surplus_days_arr[i] = sd
+
+    return bat4_caps, bat8_caps, ldes_caps, has_curtailment_arr, surplus_days_arr
 
 
 @njit(cache=True)
@@ -802,6 +832,56 @@ def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, procurement):
     return matched.sum(axis=1)
 
 
+def vectorized_procurement_sweep(demand_arr, supply_rows, target, proc_levels, floors=None):
+    """Find minimum feasible procurement for each mix via batch level sweep.
+
+    Instead of per-mix binary search (N × log(P) individual numpy ops), evaluates
+    ALL mixes at each procurement level in a single vectorized numpy operation
+    (P batch ops total). For typical N=500 mixes and P=20 levels, this is ~50x
+    fewer Python-level operations.
+
+    Args:
+        demand_arr: (H,) normalized demand profile
+        supply_rows: (N, H) pre-computed supply profiles for each mix
+        target: feasibility threshold (e.g., 0.90 for 90%)
+        proc_levels: list of procurement levels to sweep (low → high)
+        floors: (N,) optional per-mix procurement floor (from prev threshold)
+
+    Returns:
+        min_procs: (N,) minimum feasible procurement level per mix
+        final_scores: (N,) hourly match score at minimum procurement
+    """
+    n_mixes = len(supply_rows)
+    max_proc = proc_levels[-1]
+    min_procs = np.full(n_mixes, max_proc, dtype=np.float64)
+    if floors is None:
+        floors = np.full(n_mixes, float(proc_levels[0]))
+
+    # Sweep procurement levels low → high; record first feasible per mix
+    for proc in proc_levels:
+        pf = proc / 100.0
+        # One vectorized numpy op evaluates all mixes at this procurement
+        scores = np.minimum(demand_arr, supply_rows * pf).sum(axis=1)
+        newly_feasible = (
+            (scores >= target) &
+            (min_procs == max_proc) &
+            (float(proc) >= floors)
+        )
+        min_procs[newly_feasible] = proc
+
+    # Compute final scores grouped by unique procurement level
+    unique_procs = np.unique(min_procs)
+    final_scores = np.empty(n_mixes)
+    for up in unique_procs:
+        mask = min_procs == up
+        pf = up / 100.0
+        final_scores[mask] = np.minimum(
+            demand_arr, supply_rows[mask] * pf
+        ).sum(axis=1)
+
+    return min_procs.astype(int), final_scores
+
+
 @njit(cache=True)
 def _batch_score_no_storage(demand, supply_rows, procurement, N):
     """Score N mixes without storage, using Numba parallel if available.
@@ -880,30 +960,43 @@ def generate_4d_combos(hydro_cap, step=5, max_single=100):
 
 
 def generate_4d_combos_around(base_combo, hydro_cap, step=1, radius=2, max_single=100):
-    """Generate 4D combos in neighborhood of base_combo."""
-    combos = []
-    seen = set()
+    """Generate 4D combos in neighborhood of base_combo.
+
+    Uses vectorized meshgrid instead of 4 nested Python loops.
+    Wind is derived from the sum=100 constraint, then filtered to be
+    within its valid range. np.unique handles deduplication.
+    """
     hydro_max = min(int(hydro_cap), max_single)
-
     base = [int(base_combo[i]) for i in range(4)]
-    ranges = []
-    for i, val in enumerate(base):
-        cap = hydro_max if i == 3 else max_single
-        lo = max(0, val - radius * step)
-        hi = min(cap, val + radius * step)
-        ranges.append(list(range(lo, hi + 1, step)))
 
-    for cf in ranges[0]:
-        for sol in ranges[1]:
-            for wnd in ranges[2]:
-                for hyd in ranges[3]:
-                    if cf + sol + wnd + hyd == 100:
-                        key = (cf, sol, wnd, hyd)
-                        if key not in seen and all(v <= max_single for v in key):
-                            seen.add(key)
-                            combos.append([cf, sol, wnd, hyd])
+    # Per-dimension ranges (cf, sol, wnd, hyd)
+    caps = [max_single, max_single, max_single, hydro_max]
+    lo = [max(0, base[i] - radius * step) for i in range(4)]
+    hi = [min(caps[i], base[i] + radius * step) for i in range(4)]
 
-    return np.array(combos, dtype=np.float64) if combos else np.empty((0, 4))
+    # Meshgrid over cf, sol, hyd — wind derived from sum=100
+    cf_vals = np.arange(lo[0], hi[0] + 1, step)
+    sol_vals = np.arange(lo[1], hi[1] + 1, step)
+    hyd_vals = np.arange(lo[3], hi[3] + 1, step)
+
+    cf_grid, sol_grid, hyd_grid = np.meshgrid(cf_vals, sol_vals, hyd_vals, indexing='ij')
+    cf_flat = cf_grid.ravel()
+    sol_flat = sol_grid.ravel()
+    hyd_flat = hyd_grid.ravel()
+    wnd_flat = 100 - cf_flat - sol_flat - hyd_flat
+
+    # Filter: wind must be in valid neighborhood range and within bounds
+    valid = (
+        (wnd_flat >= 0) & (wnd_flat <= max_single) &
+        (wnd_flat >= lo[2]) & (wnd_flat <= hi[2])
+    )
+
+    if not np.any(valid):
+        return np.empty((0, 4))
+
+    combos = np.column_stack([cf_flat[valid], sol_flat[valid],
+                              wnd_flat[valid], hyd_flat[valid]])
+    return np.unique(combos, axis=0).astype(np.float64)
 
 
 # Edge case seed mixes (4D: clean_firm, solar, wind, hydro)
@@ -1068,20 +1161,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         combos_5 = np.unique(combos_5, axis=0)
 
     # Cross-threshold pruning: eliminate mixes that were infeasible at previous threshold
+    # Vectorized: build mask from set lookups in a single pass
     if prev_pruning is not None:
         feasible_prev = prev_pruning.get('feasible_mixes', set())
         all_prev = prev_pruning.get('all_mixes', set())
         if feasible_prev and all_prev:
-            # Only keep mixes that were either feasible before or weren't tested
-            keep_mask = []
-            for row in combos_5:
-                key = (int(row[0]), int(row[1]), int(row[2]), int(row[3]))
-                # Keep if: was feasible at lower threshold, or is a new mix we haven't tested
-                if key in feasible_prev or key not in all_prev:
-                    keep_mask.append(True)
-                else:
-                    keep_mask.append(False)
-            keep_mask = np.array(keep_mask)
+            infeasible_prev = all_prev - feasible_prev
+            combos_int = combos_5.astype(np.int64)
+            keep_mask = np.array([
+                (int(r[0]), int(r[1]), int(r[2]), int(r[3])) not in infeasible_prev
+                for r in combos_int
+            ], dtype=bool)
             n_before = len(combos_5)
             combos_5 = combos_5[keep_mask]
             n_pruned = n_before - len(combos_5)
@@ -1173,63 +1263,70 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     if prev_pruning is not None:
         prev_min_proc = prev_pruning.get('min_proc', {})
 
-    # Phase 1a: No-storage sweep — vectorized batch + binary search procurement
-    # Batch-scores all mixes at max procurement in one matrix multiply, then
-    # binary searches for minimum feasible procurement per feasible mix.
-    # Near-miss window: 25% (wider than original 15% per SPEC item 3).
+    # Phase 1a: No-storage sweep — FULLY VECTORIZED batch procurement sweep
+    # Instead of per-mix binary search (N × log(P) individual numpy ops),
+    # evaluates ALL mixes at each procurement level in one vectorized numpy op.
+    # ~20 batch calls replaces thousands of individual evaluations.
     phase1a_start = resume_cursor if resume_phase == '1a' else n_combos
 
     if phase1a_start < n_combos:
-        # Vectorized: score ALL mixes at max procurement in one shot
+        if _time_limit_hit():
+            _checkpoint_and_timeout('1a', phase1a_start)
+
+    if not timed_out and phase1a_start < n_combos:
+        # Score ALL mixes at max procurement in one shot
         max_pf = proc_levels[-1] / 100.0
         all_max_scores = batch_hourly_scores(demand_arr, supply_matrix, mix_fracs, max_pf)
 
+        # Track all mix keys (batch)
         for i in range(phase1a_start, n_combos):
-            if _time_limit_hit():
-                _checkpoint_and_timeout('1a', i)
-                break
-            if _mix_limit_hit():
-                _checkpoint_and_mix_cap('1a', i)
-                break
+            all_mix_keys.add((int(combos_5[i][0]), int(combos_5[i][1]),
+                              int(combos_5[i][2]), int(combos_5[i][3])))
+        mixes_processed += n_combos - phase1a_start
 
-            mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
-                       int(combos_5[i][2]), int(combos_5[i][3]))
-            mixes_processed += 1
-            all_mix_keys.add(mix_key)
+        # Identify feasible and near-miss mixes (vectorized boolean masks)
+        feasible_mask = all_max_scores >= target
+        near_miss_mask = (~feasible_mask) & (all_max_scores >= target - 0.40)
 
-            max_score = all_max_scores[i]
-            if max_score >= target:
-                # Binary search for minimum feasible procurement
-                floor = max(prev_min_proc.get(mix_key, proc_min), proc_min)
-                valid_procs = [p for p in proc_levels if p >= floor]
-                if valid_procs:
-                    lo, hi = 0, len(valid_procs) - 1
-                    while lo < hi:
-                        mid = (lo + hi) // 2
-                        pf = valid_procs[mid] / 100.0
-                        score = np.sum(np.minimum(demand_arr, supply_rows[i] * pf))
-                        if score >= target:
-                            hi = mid
-                        else:
-                            lo = mid + 1
-                    min_proc = valid_procs[lo]
-                    score = np.sum(np.minimum(demand_arr, supply_rows[i] * (min_proc / 100.0)))
-                    add_candidate(combos_5[i], min_proc, 0, 0, 0, score)
-                    mix_min_proc[mix_key] = min(mix_min_proc.get(mix_key, 9999), min_proc)
-                    feasible_mix_keys.add(mix_key)
-            elif max_score >= target - 0.40:
-                # Near-miss: candidate for storage sweep in Phase 1b.
-                # Wide 40% window allows high-VRE mixes with substantial battery
-                # potential (e.g., pure solar at 45% match → battery can bridge gap).
-                if mix_key not in cross_skip:
-                    near_miss_mixes[i] = max(near_miss_mixes.get(i, 0), max_score)
+        # --- Batch procurement sweep for feasible mixes ---
+        feasible_indices = np.where(feasible_mask)[0]
+        feasible_indices = feasible_indices[feasible_indices >= phase1a_start]
 
-            # Nth-mix checkpoint within Phase 1a
-            mixes_done = i + 1 - phase1a_start
-            if mixes_done > 0 and mixes_done % MIX_CHECKPOINT_INTERVAL == 0:
-                _save_mix_progress(iso, threshold, candidates, '1a', i + 1,
-                                   near_miss_data=near_miss_mixes,
-                                   mix_min_proc_data=mix_min_proc)
+        if len(feasible_indices) > 0:
+            n_feas = len(feasible_indices)
+            feasible_supply = supply_rows[feasible_indices]
+
+            # Build per-mix procurement floors from previous threshold
+            floors = np.full(n_feas, float(proc_min))
+            for j in range(n_feas):
+                fi = feasible_indices[j]
+                mk = (int(combos_5[fi][0]), int(combos_5[fi][1]),
+                      int(combos_5[fi][2]), int(combos_5[fi][3]))
+                floors[j] = float(max(prev_min_proc.get(mk, proc_min), proc_min))
+
+            # Vectorized procurement sweep: find min feasible level per mix
+            min_procs, final_scores = vectorized_procurement_sweep(
+                demand_arr, feasible_supply, target, proc_levels, floors)
+
+            # Add all feasible candidates (cheap dict ops)
+            for j in range(n_feas):
+                fi = feasible_indices[j]
+                proc = int(min_procs[j])
+                add_candidate(combos_5[fi], proc, 0, 0, 0, final_scores[j])
+                mk = (int(combos_5[fi][0]), int(combos_5[fi][1]),
+                      int(combos_5[fi][2]), int(combos_5[fi][3]))
+                mix_min_proc[mk] = min(mix_min_proc.get(mk, 9999), proc)
+                feasible_mix_keys.add(mk)
+
+        # --- Near-miss recording (vectorized) ---
+        near_miss_indices = np.where(near_miss_mask)[0]
+        near_miss_indices = near_miss_indices[near_miss_indices >= phase1a_start]
+        for i in near_miss_indices:
+            mk = (int(combos_5[i][0]), int(combos_5[i][1]),
+                  int(combos_5[i][2]), int(combos_5[i][3]))
+            if mk not in cross_skip:
+                near_miss_mixes[int(i)] = max(
+                    near_miss_mixes.get(int(i), 0), float(all_max_scores[i]))
 
     if timed_out:
         pruning_info = {
@@ -1273,22 +1370,38 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     l_arr = np.array(ldes_levels, dtype=np.float64)
     n_b4, n_b8, n_l = len(b4_arr), len(b8_arr), len(l_arr)
 
-    # Pre-compute curtailment caps for all near-miss mixes (fast: one pass per mix)
-    nm_valid = []  # (nm_idx, i, mix_key, bat4_cap_pct, bat8_cap_pct, ldes_cap_pct, n_surplus_days)
+    # Pre-compute curtailment caps for all near-miss mixes using batch Numba kernel
+    # (parallel prange across mixes instead of sequential Python loop)
     max_pf = proc_levels[-1] / 100.0
+
+    # Pre-filter: skip cross_skip mixes before expensive storage cap computation
+    nm_candidates = []
     for nm_idx in range(phase1b_start, len(near_miss_list)):
         i = near_miss_list[nm_idx]
         mix_key = (int(combos_5[i][0]), int(combos_5[i][1]),
                    int(combos_5[i][2]), int(combos_5[i][3]))
-        if mix_key in cross_skip:
-            continue
-        b4c, b8c, lc, has_c, n_sd = _compute_storage_caps(
-            demand_arr, supply_rows[i], max_pf,
+        if mix_key not in cross_skip:
+            nm_candidates.append((nm_idx, i, mix_key))
+
+    nm_valid = []
+    if nm_candidates:
+        # Gather supply rows for batch computation
+        nm_supply = np.empty((len(nm_candidates), H), dtype=np.float64)
+        for ci, (nm_idx, i, mk) in enumerate(nm_candidates):
+            nm_supply[ci] = supply_rows[i]
+
+        # BATCH: compute storage caps for all near-miss mixes in parallel
+        b4_caps, b8_caps, l_caps, hc_arr, sd_arr = _batch_compute_storage_caps(
+            demand_arr, nm_supply, max_pf, len(nm_candidates),
             BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
-        if has_c:
-            nm_valid.append((nm_idx, i, mix_key,
-                             b4c * 100.0 * 1.1, b8c * 100.0 * 1.1,
-                             lc * 100.0 * 1.1, n_sd))
+
+        for ci, (nm_idx, i, mix_key) in enumerate(nm_candidates):
+            if hc_arr[ci]:
+                nm_valid.append((nm_idx, i, mix_key,
+                                 b4_caps[ci] * 100.0 * 1.1,
+                                 b8_caps[ci] * 100.0 * 1.1,
+                                 l_caps[ci] * 100.0 * 1.1,
+                                 int(sd_arr[ci])))
 
     # Process mixes in batches of MAX_MIX_BATCH
     for batch_start in range(0, len(nm_valid), MAX_MIX_BATCH):
@@ -1399,129 +1512,151 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
         }
         return candidates, pruning_info
 
-    # ── Phase 2: Refine feasible archetypes to 1% resolution ──
-    # Same early-stop logic: per-mix, stop procurement once target is met
-    if candidates:
+    # ── Phase 2: Refine feasible archetypes to 1% resolution — BATCHED ──
+    # Collects all fine combos across ALL archetypes, deduplicates, then batch-
+    # evaluates in a single pass. Eliminates per-archetype overhead and avoids
+    # re-evaluating overlapping neighborhoods.
+    if candidates and not timed_out:
         mix_archetypes = set()
         for c in candidates:
             m = tuple(c['resource_mix'][rt] for rt in RESOURCE_TYPES)
             mix_archetypes.add(m)
 
+        # Generate fine combos for all archetypes, concatenate and deduplicate
+        all_fine_parts = []
         for mix_tuple in mix_archetypes:
-            if _time_limit_hit():
-                _checkpoint_and_timeout('2', 0)
-                break
-
             base = np.array(mix_tuple, dtype=np.float64)
-            fine_combos = generate_4d_combos_around(base, hydro_cap, step=1, radius=4)
-            if len(fine_combos) == 0:
-                continue
+            fine = generate_4d_combos_around(base, hydro_cap, step=1, radius=4)
+            if len(fine) > 0:
+                all_fine_parts.append(fine)
 
-            fine_fracs = fine_combos / 100.0
-            fine_supply = fine_fracs @ supply_matrix
-            n_fine = len(fine_combos)
+        if all_fine_parts:
+            all_fine = np.unique(np.vstack(all_fine_parts), axis=0)
+            all_fine_fracs = all_fine / 100.0
+            all_fine_supply = all_fine_fracs @ supply_matrix
+            n_all_fine = len(all_fine)
 
-            # No-storage: batch eval at max proc + binary search for feasible
-            # Near-miss window: 15% for refinement (wider than original 10%, SPEC item 3)
             max_pf = proc_levels[-1] / 100.0
-            fine_max_scores = batch_hourly_scores(demand_arr, supply_matrix, fine_fracs, max_pf)
+            all_fine_max_scores = batch_hourly_scores(
+                demand_arr, supply_matrix, all_fine_fracs, max_pf)
 
-            for j in range(n_fine):
-                max_score_j = fine_max_scores[j]
-                if max_score_j >= target:
-                    # Binary search for min feasible procurement (no storage)
-                    lo, hi = 0, len(proc_levels) - 1
-                    while lo < hi:
-                        mid = (lo + hi) // 2
-                        pf = proc_levels[mid] / 100.0
-                        score = np.sum(np.minimum(demand_arr, fine_supply[j] * pf))
-                        if score >= target:
-                            hi = mid
-                        else:
-                            lo = mid + 1
-                    min_proc = proc_levels[lo]
-                    score = np.sum(np.minimum(demand_arr, fine_supply[j] * (min_proc / 100.0)))
-                    add_candidate(fine_combos[j], min_proc, 0, 0, 0, score)
-                elif max_score_j >= target - 0.30:
-                    # Near-miss refinement: batched storage sweep
-                    supply_row_j = fine_supply[j]
+            # --- Batch procurement sweep for feasible fine combos ---
+            fine_feas_mask = all_fine_max_scores >= target
+            fine_feas_idx = np.where(fine_feas_mask)[0]
 
-                    # Curtailment-MW cap + frequency filter
-                    b4c, b8c, lc, has_c, n_sd = _compute_storage_caps(
-                        demand_arr, supply_row_j, max_pf,
-                        BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
-                        LDES_DURATION_HOURS)
+            if len(fine_feas_idx) > 0:
+                feas_supply = all_fine_supply[fine_feas_idx]
+                min_procs_fine, final_scores_fine = vectorized_procurement_sweep(
+                    demand_arr, feas_supply, target, proc_levels)
 
-                    if not has_c:
-                        continue
+                for j in range(len(fine_feas_idx)):
+                    fi = fine_feas_idx[j]
+                    add_candidate(all_fine[fi], int(min_procs_fine[j]),
+                                  0, 0, 0, final_scores_fine[j])
 
-                    b4_ceil = b4c * 100.0 * 1.1
-                    b8_ceil = b8c * 100.0 * 1.1
-                    l_ceil = lc * 100.0 * 1.1
+            # --- Batch storage screen for near-miss fine combos ---
+            fine_nm_mask = (~fine_feas_mask) & (all_fine_max_scores >= target - 0.30)
+            fine_nm_idx = np.where(fine_nm_mask)[0]
 
-                    # Batch: evaluate all storage combos at max procurement
-                    p2_b4 = np.array(batt_levels, dtype=np.float64)
-                    p2_b8 = np.array(batt8_levels, dtype=np.float64)
-                    p2_l = np.array(ldes_levels, dtype=np.float64)
-                    p2_nb4, p2_nb8, p2_nl = len(p2_b4), len(p2_b8), len(p2_l)
+            if len(fine_nm_idx) > 0:
+                nm_fine_supply = all_fine_supply[fine_nm_idx]
+                n_nm_fine = len(fine_nm_idx)
 
-                    p2_scores = _batch_storage_scores(
-                        demand_arr, supply_row_j, max_pf,
+                # Batch compute storage caps (parallel Numba kernel)
+                p2_b4c, p2_b8c, p2_lc, p2_hc, p2_sd = _batch_compute_storage_caps(
+                    demand_arr, nm_fine_supply, max_pf, n_nm_fine,
+                    BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
+
+                # Filter to mixes with curtailment and build batch list
+                nm_fine_valid = []
+                for ci in range(n_nm_fine):
+                    if p2_hc[ci]:
+                        nm_fine_valid.append((
+                            ci, fine_nm_idx[ci],
+                            p2_b4c[ci] * 100.0 * 1.1,
+                            p2_b8c[ci] * 100.0 * 1.1,
+                            p2_lc[ci] * 100.0 * 1.1,
+                            int(p2_sd[ci]),
+                        ))
+
+                # Storage sweep in batches using _batch_mixes_storage_screen
+                p2_b4 = np.array(batt_levels, dtype=np.float64)
+                p2_b8 = np.array(batt8_levels, dtype=np.float64)
+                p2_l = np.array(ldes_levels, dtype=np.float64)
+                p2_nb4, p2_nb8, p2_nl = len(p2_b4), len(p2_b8), len(p2_l)
+
+                for batch_start in range(0, len(nm_fine_valid), MAX_MIX_BATCH):
+                    batch_end = min(batch_start + MAX_MIX_BATCH, len(nm_fine_valid))
+                    batch_p2 = nm_fine_valid[batch_start:batch_end]
+                    n_bp2 = len(batch_p2)
+
+                    batch_supply_p2 = np.empty((n_bp2, H), dtype=np.float64)
+                    for bi in range(n_bp2):
+                        batch_supply_p2[bi] = all_fine_supply[batch_p2[bi][1]]
+
+                    batch_scores_p2 = _batch_mixes_storage_screen(
+                        demand_arr, batch_supply_p2, max_pf, n_bp2,
                         p2_b4, p2_b8, p2_l, p2_nb4, p2_nb8, p2_nl,
                         batt_eff, batt8_eff, ldes_eff,
                         BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
                         LDES_DURATION_HOURS, ldes_window_hours, batt8_window)
 
-                    for bi4 in range(p2_nb4):
-                        bp = p2_b4[bi4]
-                        if bp > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or bp > b4_ceil):
-                            continue
-                        batt_cap = bp / 100.0
-                        batt_pow = batt_cap / BATTERY_DURATION_HOURS if batt_cap > 0 else 0
-                        for bi8 in range(p2_nb8):
-                            b8p = p2_b8[bi8]
-                            if b8p > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or b8p > b8_ceil):
+                    for bi in range(n_bp2):
+                        ci, orig_idx, b4_ceil, b8_ceil, l_ceil, n_sd = batch_p2[bi]
+                        scores = batch_scores_p2[bi]
+                        supply_row_j = all_fine_supply[orig_idx]
+
+                        for bi4 in range(p2_nb4):
+                            bp = p2_b4[bi4]
+                            if bp > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or bp > b4_ceil):
                                 continue
-                            batt8_cap = b8p / 100.0
-                            batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS if batt8_cap > 0 else 0
-                            ldes_best_proc = 9999
-                            for li in range(p2_nl):
-                                lp = p2_l[li]
-                                if bp == 0 and b8p == 0 and lp == 0:
+                            batt_cap = bp / 100.0
+                            batt_pow = batt_cap / BATTERY_DURATION_HOURS if batt_cap > 0 else 0
+                            for bi8 in range(p2_nb8):
+                                b8p = p2_b8[bi8]
+                                if b8p > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or b8p > b8_ceil):
                                     continue
-                                if lp > 0 and lp > l_ceil:
-                                    continue
-                                sidx = bi4 * p2_nb8 * p2_nl + bi8 * p2_nl + li
-                                max_sc = p2_scores[sidx]
-                                if max_sc < 0 or max_sc < target:
-                                    continue
-                                ldes_cap = lp / 100.0
-                                ldes_pow = ldes_cap / LDES_DURATION_HOURS if ldes_cap > 0 else 0
-                                lo, hi = 0, len(proc_levels) - 1
-                                while lo < hi:
-                                    mid = (lo + hi) // 2
-                                    pf = proc_levels[mid] / 100.0
+                                batt8_cap = b8p / 100.0
+                                batt8_pow = batt8_cap / BATTERY8_DURATION_HOURS if batt8_cap > 0 else 0
+                                ldes_best_proc = 9999
+                                for li in range(p2_nl):
+                                    lp = p2_l[li]
+                                    if bp == 0 and b8p == 0 and lp == 0:
+                                        continue
+                                    if lp > 0 and lp > l_ceil:
+                                        continue
+                                    sidx = bi4 * p2_nb8 * p2_nl + bi8 * p2_nl + li
+                                    max_sc = scores[sidx]
+                                    if max_sc < 0 or max_sc < target:
+                                        continue
+                                    ldes_cap = lp / 100.0
+                                    ldes_pow = ldes_cap / LDES_DURATION_HOURS if ldes_cap > 0 else 0
+                                    lo, hi = 0, len(proc_levels) - 1
+                                    while lo < hi:
+                                        mid = (lo + hi) // 2
+                                        pf = proc_levels[mid] / 100.0
+                                        sc = _score_with_all_storage(
+                                            demand_arr, supply_row_j, pf,
+                                            batt_cap, batt_pow, batt_eff,
+                                            batt8_cap, batt8_pow, batt8_eff,
+                                            ldes_cap, ldes_pow, ldes_eff,
+                                            ldes_window_hours)
+                                        if sc >= target:
+                                            hi = mid
+                                        else:
+                                            lo = mid + 1
+                                    min_proc = proc_levels[lo]
                                     sc = _score_with_all_storage(
-                                        demand_arr, supply_row_j, pf,
+                                        demand_arr, supply_row_j, min_proc / 100.0,
                                         batt_cap, batt_pow, batt_eff,
                                         batt8_cap, batt8_pow, batt8_eff,
                                         ldes_cap, ldes_pow, ldes_eff,
                                         ldes_window_hours)
-                                    if sc >= target:
-                                        hi = mid
-                                    else:
-                                        lo = mid + 1
-                                min_proc = proc_levels[lo]
-                                sc = _score_with_all_storage(
-                                    demand_arr, supply_row_j, min_proc / 100.0,
-                                    batt_cap, batt_pow, batt_eff,
-                                    batt8_cap, batt8_pow, batt8_eff,
-                                    ldes_cap, ldes_pow, ldes_eff,
-                                    ldes_window_hours)
-                                add_candidate(fine_combos[j], min_proc, bp, b8p, lp, sc)
-                                if min_proc >= ldes_best_proc and ldes_best_proc < 9999:
-                                    break
-                                ldes_best_proc = min(ldes_best_proc, min_proc)
+                                    add_candidate(all_fine[orig_idx], min_proc,
+                                                  bp, b8p, lp, sc)
+                                    if min_proc >= ldes_best_proc and ldes_best_proc < 9999:
+                                        break
+                                    ldes_best_proc = min(ldes_best_proc, min_proc)
 
     # Build pruning info for next threshold
     # Phase 2 fine combos also contribute to feasibility (update from candidates)
@@ -2155,6 +2290,7 @@ def main():
                              0.01, 0.0025, 0.85, 0.01, 0.00125, 0.85,
                              0.01, 0.0001, 0.50, 168)
         _compute_storage_caps(dummy_demand, dummy_supply, 1.0, 4, 8, 100)
+        _batch_compute_storage_caps(dummy_demand, dummy_supply_2d, 1.0, 2, 4, 8, 100)
         dummy_levels = np.array([0.0, 0.1], dtype=np.float64)
         _batch_storage_scores(dummy_demand, dummy_supply, 1.0,
                               dummy_levels, dummy_levels, dummy_levels,
