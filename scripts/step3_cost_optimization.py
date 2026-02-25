@@ -1389,6 +1389,14 @@ def main():
         if n_filtered > 0:
             print(f"    {iso}: existing clean floor filter removed {n_filtered:,} / {N_raw:,} mixes "
                   f"({n_filtered/N_raw*100:.1f}%) — {N:,} remaining")
+            # Recompute threshold indices for filtered arrays (old indices pointed into raw)
+            scores_filt = arrays['hourly_match_score']
+            for thr in OUTPUT_THRESHOLDS:
+                filt_idx = np.where(scores_filt >= effective_gate(thr))[0]
+                if len(filt_idx) > 0:
+                    thr_indices[(iso, thr)] = filt_idx
+                elif (iso, thr) in thr_indices:
+                    del thr_indices[(iso, thr)]
         demand_twh = REGIONAL_DEMAND_TWH[iso]
 
         output['results'][iso] = {
