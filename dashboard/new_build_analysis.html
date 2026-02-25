@@ -42,9 +42,12 @@ body { background: #F7F8FC; }
 @media (max-width: 768px) {
     .comparison-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 12px;
     }
-    .delta-panel { order: -1; }
+    .track-panel.ecf { order: 1; }
+    .delta-panel { order: 2; flex-direction: row; gap: 12px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; }
+    .delta-arrow { margin-bottom: 0; font-size: 1.4rem; }
+    .track-panel.nb { order: 3; }
 }
 .track-panel {
     background: #fff;
@@ -83,6 +86,7 @@ body { background: #F7F8FC; }
 .mix-chart-wrap {
     height: 200px;
     margin-top: 16px;
+    position: relative;
 }
 
 /* Delta panel */
@@ -206,6 +210,15 @@ body { background: #F7F8FC; }
 }
 @media (max-width: 768px) {
     .chart-wrap { min-height: 280px; }
+}
+
+/* ========== SCROLL HEADINGS ========== */
+.scroll-heading {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin: 0 0 8px;
 }
 
 /* ========== SCROLLYTELL STEPS ========== */
@@ -343,6 +356,75 @@ body { background: #F7F8FC; }
     background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
     border-radius: 2px; margin: 0 auto; max-width: 1320px; opacity: 0.5;
 }
+
+/* ========== COMPREHENSIVE MOBILE FIXES ========== */
+@media (max-width: 768px) {
+    /* Reduce card padding */
+    .section-card { padding: 18px 16px; margin-bottom: 20px; }
+    .section-card h2 { font-size: 1.15rem; }
+    .section-card .section-sub { font-size: 0.82rem; margin-bottom: 14px; }
+
+    /* Chart containers — explicit height for Chart.js rendering */
+    .chart-wrap { min-height: 300px; height: 300px; }
+    .mix-chart-wrap { height: 180px; }
+
+    /* Track panels */
+    .track-panel { padding: 16px; }
+    .cost-big { font-size: 1.8rem; }
+    .cost-big .unit { font-size: 0.78rem; }
+
+    /* Premium controls */
+    .premium-controls { padding: 16px; margin-bottom: 20px; }
+    .premium-controls h4 { font-size: 0.85rem; margin-bottom: 12px; }
+    .premium-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .premium-item label { font-size: 0.72rem; }
+    .premium-val { font-size: 0.8rem; min-width: 48px; }
+    .premium-item input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; }
+    .premium-item input[type=range]::-moz-range-thumb { width: 20px; height: 20px; }
+
+    /* Waterfall bar — stack on very small screens */
+    .waterfall-bar { flex-wrap: wrap; height: auto; gap: 2px; }
+    .waterfall-bar .seg { width: 100% !important; padding: 8px 12px; justify-content: flex-start; font-size: 0.75rem; border-radius: 4px; }
+
+    /* Metric strip */
+    .metric-strip { grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+    .metric-item { padding: 12px 8px; }
+    .metric-item .val { font-size: 1.4rem; }
+    .metric-item .lbl { font-size: 0.68rem; }
+
+    /* Bottom line */
+    .bottom-line { padding: 24px 16px; margin-bottom: 20px; }
+    .bottom-line h2 { font-size: 1.25rem; margin-bottom: 14px; }
+    .bottom-line p { font-size: 0.85rem; line-height: 1.6; }
+
+    /* Callout boxes */
+    .callout-box { padding: 14px 16px; margin: 14px 0; }
+    .callout-box h4 { font-size: 0.85rem; }
+    .callout-box p { font-size: 0.8rem; line-height: 1.5; }
+
+    /* Scrollytell steps */
+    .scroll-step { margin-bottom: 24px; }
+    .scroll-heading { font-size: 0.95rem; }
+
+    /* Target slider section */
+    .target-slider-section { padding: 12px 16px 8px; margin-top: -12px; }
+    .target-slider-card { padding: 14px 16px; }
+
+    /* Footer */
+    .footer-links { gap: 8px 16px; }
+    .footer-links a { font-size: 0.78rem; padding: 6px 4px; }
+}
+
+/* Extra small (320px) */
+@media (max-width: 420px) {
+    .premium-grid { grid-template-columns: 1fr; }
+    .metric-strip { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric-item .val { font-size: 1.2rem; }
+    .chart-wrap { min-height: 260px; height: 260px; }
+    .cost-big { font-size: 1.5rem; }
+    .section-card { padding: 14px 12px; }
+    .bottom-line { padding: 20px 14px; }
+}
 </style>
 </head>
 <body>
@@ -474,14 +556,14 @@ body { background: #F7F8FC; }
 
 <!-- Step 3a: LMP Decline -->
 <div class="scroll-step section-card">
-    <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.1rem;color:#1A2744;margin:0 0 8px;">Wholesale prices fall as clean energy displaces fossil generation</h3>
+    <h3 class="scroll-heading">Wholesale prices fall as clean energy displaces fossil generation</h3>
     <p style="font-size:0.85rem;color:#6b7280;margin-bottom:16px;">PJM's wholesale electricity price (LMP) declines from $37/MWh at 50% clean to under $7/MWh at 99%. The merit-order effect is relentless: every MWh of zero-marginal-cost clean energy pushes higher-cost fossil plants out of the dispatch stack.</p>
     <div class="chart-wrap"><canvas id="lmpChart"></canvas></div>
 </div>
 
 <!-- Step 3b: The Clean Premium -->
 <div class="scroll-step section-card">
-    <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.1rem;color:#1A2744;margin:0 0 8px;">The widening gap: when wholesale prices fall below operating costs</h3>
+    <h3 class="scroll-heading">The widening gap: when wholesale prices fall below operating costs</h3>
     <p style="font-size:0.85rem;color:#6b7280;margin-bottom:16px;">Nuclear plants cost roughly $33/MWh to operate (fuel + O&amp;M). When the wholesale price drops below that floor, existing nuclear can only survive with out-of-market revenue — clean energy premiums, state subsidies, or federal tax credits.</p>
 
     <div class="metric-strip">
@@ -506,7 +588,7 @@ body { background: #F7F8FC; }
 
 <!-- Step 3c: Supply Waterfall -->
 <div class="scroll-step section-card">
-    <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.1rem;color:#1A2744;margin:0 0 8px;">PJM's clean generation: who owns it and what's available?</h3>
+    <h3 class="scroll-heading">PJM's clean generation: who owns it and what's available?</h3>
     <p style="font-size:0.85rem;color:#6b7280;margin-bottom:16px;">Not all 280 TWh of PJM clean energy is available for voluntary corporate procurement. State programs, RPS mandates, and existing contracts claim most of it.</p>
 
     <div class="waterfall-bar">
@@ -541,7 +623,7 @@ body { background: #F7F8FC; }
 
 <!-- Step 3e: The Paradox -->
 <div class="scroll-step section-card" style="border-left:4px solid #EF4444;">
-    <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.1rem;color:#EF4444;margin:0 0 8px;">The Procurement Paradox</h3>
+    <h3 class="scroll-heading" style="color:#EF4444;">The Procurement Paradox</h3>
     <p style="font-size:0.88rem;color:#374151;line-height:1.7;">
         A strategy that relies exclusively on new-build clean energy accelerates the very feedback loop that undermines existing nuclear viability:
     </p>
@@ -607,6 +689,7 @@ body { background: #F7F8FC; }
 // ============================================================================
 // CONSTANTS
 // ============================================================================
+var isMobile = window.innerWidth < 768;
 var THR_SLIDER = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5]; // PJM track data range
 var SBTI_YEARS = {50:'2030',55:'2031',60:'2032',65:'2033',70:'2034',75:'2036',80:'2038',85:'2040',87.5:'2041',90:'2042',92.5:'2044',95:'2046',97.5:'2048',99:'2049',100:'2050'};
 var NUCLEAR_OP_COST = 33; // $/MWh operating cost (fuel + O&M)
@@ -846,7 +929,7 @@ function updateMixChart(track, thrIdx) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 11, family: "'Plus Jakarta Sans'" }, padding: 12, usePointStyle: true } },
+                legend: { position: 'bottom', labels: { font: { size: isMobile ? 10 : 11, family: "'Plus Jakarta Sans'" }, padding: isMobile ? 8 : 12, usePointStyle: true, boxWidth: isMobile ? 8 : 12 } },
                 datalabels: { display: false }
             },
             cutout: '55%'
@@ -890,7 +973,7 @@ function updateNbMixChart(thr) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 11, family: "'Plus Jakarta Sans'" }, padding: 12, usePointStyle: true } },
+                legend: { position: 'bottom', labels: { font: { size: isMobile ? 10 : 11, family: "'Plus Jakarta Sans'" }, padding: isMobile ? 8 : 12, usePointStyle: true, boxWidth: isMobile ? 8 : 12 } },
                 datalabels: { display: false }
             },
             cutout: '55%'
@@ -938,23 +1021,23 @@ function buildScalingChart() {
                     data: ecfCurve,
                     borderColor: '#0EA5E9',
                     backgroundColor: 'rgba(14,165,233,0.1)',
-                    borderWidth: 3,
+                    borderWidth: isMobile ? 2 : 3,
                     fill: false,
                     tension: 0.4,
-                    pointRadius: 4,
-                    pointHoverRadius: 7
+                    pointRadius: isMobile ? 2 : 4,
+                    pointHoverRadius: isMobile ? 5 : 7
                 },
                 {
                     label: 'New Build Only',
                     data: nbCurve,
                     borderColor: '#F59E0B',
                     backgroundColor: 'rgba(245,158,11,0.1)',
-                    borderWidth: 3,
+                    borderWidth: isMobile ? 2 : 3,
                     borderDash: [8, 4],
                     fill: false,
                     tension: 0,
-                    pointRadius: 4,
-                    pointHoverRadius: 7
+                    pointRadius: isMobile ? 2 : 4,
+                    pointHoverRadius: isMobile ? 5 : 7
                 }
             ]
         },
@@ -963,7 +1046,7 @@ function buildScalingChart() {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { position: 'top', labels: { font: { size: 12, family: "'Plus Jakarta Sans'" }, usePointStyle: true } },
+                legend: { position: 'top', labels: { font: { size: isMobile ? 10 : 12, family: "'Plus Jakarta Sans'" }, usePointStyle: true, boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10 } },
                 datalabels: { display: false },
                 annotation: {
                     annotations: {
@@ -976,12 +1059,12 @@ function buildScalingChart() {
                             borderDash: [6, 3],
                             label: {
                                 display: true,
-                                content: 'Supply ceiling (~' + exhaustPct + '% participation)',
+                                content: isMobile ? 'Supply ceiling' : 'Supply ceiling (~' + exhaustPct + '% participation)',
                                 position: 'start',
                                 backgroundColor: 'rgba(239,68,68,0.85)',
                                 color: '#fff',
-                                font: { size: 11, family: "'Plus Jakarta Sans'" },
-                                padding: 6
+                                font: { size: isMobile ? 9 : 11, family: "'Plus Jakarta Sans'" },
+                                padding: isMobile ? 4 : 6
                             }
                         }
                     }
@@ -996,13 +1079,15 @@ function buildScalingChart() {
             },
             scales: {
                 x: {
-                    title: { display: true, text: 'C&I Load Participating in Hourly CFE (%)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    title: { display: !isMobile, text: 'C&I Load Participating in Hourly CFE (%)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    ticks: { font: { size: isMobile ? 9 : 11 }, maxRotation: isMobile ? 45 : 0 },
                     grid: { display: false }
                 },
                 y: {
-                    title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    title: { display: true, text: isMobile ? '$/MWh' : 'Effective Cost ($/MWh)', font: { size: isMobile ? 10 : 12, family: "'Plus Jakarta Sans'", weight: 600 } },
                     min: 60,
                     max: 110,
+                    ticks: { font: { size: isMobile ? 9 : 11 } },
                     grid: { color: 'rgba(0,0,0,0.06)' }
                 }
             }
@@ -1036,11 +1121,11 @@ function buildLmpChart() {
                     data: lmpValues,
                     borderColor: '#0EA5E9',
                     backgroundColor: 'rgba(14,165,233,0.15)',
-                    borderWidth: 3,
+                    borderWidth: isMobile ? 2 : 3,
                     fill: true,
                     tension: 0.3,
-                    pointRadius: 4,
-                    pointHoverRadius: 7
+                    pointRadius: isMobile ? 2 : 4,
+                    pointHoverRadius: isMobile ? 5 : 7
                 },
                 {
                     label: 'Nuclear Operating Cost ($33/MWh)',
@@ -1059,7 +1144,7 @@ function buildLmpChart() {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { position: 'top', labels: { font: { size: 12, family: "'Plus Jakarta Sans'" }, usePointStyle: true } },
+                legend: { position: 'top', labels: { font: { size: isMobile ? 9 : 12, family: "'Plus Jakarta Sans'" }, usePointStyle: true, boxWidth: isMobile ? 8 : 12, padding: isMobile ? 6 : 10 } },
                 datalabels: { display: false },
                 annotation: {
                     annotations: {
@@ -1068,7 +1153,7 @@ function buildLmpChart() {
                             xValue: crossIdx,
                             yValue: NUCLEAR_OP_COST,
                             backgroundColor: '#EF4444',
-                            radius: 8,
+                            radius: isMobile ? 5 : 8,
                             borderColor: '#fff',
                             borderWidth: 2
                         },
@@ -1076,18 +1161,15 @@ function buildLmpChart() {
                             type: 'label',
                             xValue: crossIdx + 1,
                             yValue: NUCLEAR_OP_COST + 3,
-                            content: ['Nuclear needs', 'clean premium'],
+                            content: isMobile ? ['Needs premium'] : ['Nuclear needs', 'clean premium'],
                             color: '#EF4444',
-                            font: { size: 11, weight: 'bold', family: "'Plus Jakarta Sans'" }
+                            font: { size: isMobile ? 9 : 11, weight: 'bold', family: "'Plus Jakarta Sans'" }
                         },
                         gapFill: {
                             type: 'box',
                             xMin: crossIdx,
                             xMax: lmpThresholds.length - 1,
-                            yMin: function(ctx) {
-                                // approximate: use last LMP value
-                                return 0;
-                            },
+                            yMin: 0,
                             yMax: NUCLEAR_OP_COST,
                             backgroundColor: 'rgba(239,68,68,0.08)',
                             borderWidth: 0
@@ -1114,13 +1196,26 @@ function buildLmpChart() {
             },
             scales: {
                 x: {
-                    title: { display: true, text: 'Hourly Clean Energy Target (%)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    title: { display: !isMobile, text: 'Hourly Clean Energy Target (%)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    ticks: {
+                        font: { size: isMobile ? 9 : 11 },
+                        maxRotation: isMobile ? 45 : 0,
+                        callback: function(val, idx) {
+                            // On mobile, show fewer labels to avoid crowding
+                            if (isMobile) {
+                                var t = lmpThresholds[idx];
+                                return (t === 50 || t === 75 || t === 90 || t === 99) ? t + '%' : '';
+                            }
+                            return lmpThresholds[idx] + '%';
+                        }
+                    },
                     grid: { display: false }
                 },
                 y: {
-                    title: { display: true, text: 'Price ($/MWh)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    title: { display: true, text: isMobile ? '$/MWh' : 'Price ($/MWh)', font: { size: isMobile ? 10 : 12, family: "'Plus Jakarta Sans'", weight: 600 } },
                     min: 0,
                     max: 45,
+                    ticks: { font: { size: isMobile ? 9 : 11 } },
                     grid: { color: 'rgba(0,0,0,0.06)' }
                 }
             }
