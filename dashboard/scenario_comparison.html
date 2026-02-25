@@ -255,7 +255,7 @@ body { background: #F3F4F8; }
     <p class="section-subtitle">The sequential path's resource mix evolves erratically as each threshold inherits prior overbuilds.
     The hourly matching path shows a graduated transition — increasing clean firm as FOAK&rarr;NOAK learning reduces costs,
     with the optimizer selecting more balanced portfolios at each threshold.
-    <strong>Black outline = total demand</strong> (identical for both scenarios) — generation above the outline is overbuilt/curtailed.</p>
+    <strong>Dashed line = total demand</strong> (identical for both scenarios) — generation above the line is overbuilt/curtailed.</p>
 
     <div class="iso-selector" id="mixIsoSelector"></div>
 
@@ -986,21 +986,21 @@ function renderMixCharts(iso) {
             });
         }
 
-        // 4) Demand outline — non-stacked bar showing total demand at each threshold
-        // Uses a separate y-axis to avoid participating in the stack, drawn as outline only
+        // 4) Demand line overlay — horizontal reference line showing total demand
         datasets.push({
             label: 'Demand',
             data: traj.map(d => Math.round(d.demand_twh || baseDemandTwh)),
-            type: 'bar',
-            backgroundColor: 'rgba(0,0,0,0.04)',
-            borderColor: 'rgba(0,0,0,0.65)',
-            borderWidth: 2.5,
-            borderRadius: 4,
-            borderSkipped: false,
-            yAxisID: 'yDemand',
-            order: -1,
-            barPercentage: 1.05,
-            categoryPercentage: 0.82,
+            type: 'line',
+            borderColor: 'rgba(0,0,0,0.7)',
+            borderWidth: 2,
+            borderDash: [6, 3],
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointBackgroundColor: 'rgba(0,0,0,0.7)',
+            fill: false,
+            tension: 0,
+            yAxisID: 'y',
+            order: -2,
         });
 
         return datasets;
@@ -1049,7 +1049,7 @@ function renderMixCharts(iso) {
         scales: {
             x: { stacked: true, ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 9 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
             y: { stacked: true, max: sharedYMax, ticks: { color: 'rgba(0,0,0,0.5)' }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.5)' } },
-            yDemand: { display: false, max: sharedYMax, min: 0 }
+            // yDemand axis removed — demand now uses main y axis as a line overlay
         }
     };
 
