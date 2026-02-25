@@ -72,6 +72,29 @@ GROWTH_RATES = {
     'CAISO': 1.8, 'ERCOT': 3.5, 'PJM': 2.4, 'NYISO': 1.2, 'NEISO': 1.0,
 }
 
+# Pre-compute threshold-to-string mapping (avoids repeated str() calls in loops)
+THRESHOLD_STRS = {t: str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS}
+
+# ========== MEMOIZATION ==========
+_fossil_retirement_cache = {}
+
+
+def cached_fossil_retirement(iso, threshold_pct, emission_rates, fossil_mix,
+                              demand_growth_factor=1.0):
+    """Memoized wrapper for compute_fossil_retirement.
+
+    The function is called many times with the same (iso, threshold) pair
+    during zone metric computation and emission rate trajectory calculation.
+    Since emission_rates and fossil_mix are constant within a run, caching
+    by (iso, threshold, demand_growth_factor) is safe.
+    """
+    cache_key = (iso, threshold_pct, demand_growth_factor)
+    if cache_key not in _fossil_retirement_cache:
+        _fossil_retirement_cache[cache_key] = compute_fossil_retirement(
+            iso, threshold_pct, emission_rates, fossil_mix,
+            demand_growth_factor=demand_growth_factor)
+    return _fossil_retirement_cache[cache_key]
+
 # Import canonical threshold-year mapping from Step 3
 try:
     from step3_cost_optimization import THRESHOLD_TARGET_YEARS
@@ -146,9 +169,9 @@ def compute_marginal_displaced_rate(iso, threshold_start, threshold_end, egrid, 
     demand_twh = BASE_DEMAND_TWH[iso]
     baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
 
-    # Get cumulative displacement info at both thresholds
-    rate_start, info_start = compute_fossil_retirement(iso, threshold_start, egrid, fossil_mix)
-    rate_end, info_end = compute_fossil_retirement(iso, threshold_end, egrid, fossil_mix)
+    # Get cumulative displacement info at both thresholds (memoized)
+    rate_start, info_start = cached_fossil_retirement(iso, threshold_start, egrid, fossil_mix)
+    rate_end, info_end = cached_fossil_retirement(iso, threshold_end, egrid, fossil_mix)
 
     # Additional clean TWh at each threshold (from baseline)
     clean_twh_start = max(0, (threshold_start - baseline_clean) / 100.0 * demand_twh)
@@ -203,37 +226,37 @@ def extract_medium_scenarios(df):
         iso_df = iso_df.sort_values('threshold')
 
         result[iso] = {}
-        for _, row in iso_df.iterrows():
-            t = float(row['threshold'])
-            demand_twh = row['annual_demand_mwh'] / 1e6
-            proc = row['procurement_pct'] / 100
+        for row in iso_df.itertuples(index=False):
+            t = float(row.threshold)
+            demand_twh = row.annual_demand_mwh / 1e6
+            proc = row.procurement_pct / 100
 
             res_twh = {}
             for res in RESOURCES:
-                pct = row[f'mix_{res}'] / 100
+                pct = getattr(row, f'mix_{res}') / 100
                 res_twh[res] = pct * proc * demand_twh
 
             result[iso][t] = {
                 'demand_twh': demand_twh,
-                'demand_mwh': row['annual_demand_mwh'],
-                'procurement_pct': row['procurement_pct'],
-                'match_score': row['hourly_match_score'],
-                'eff_cost': row['cost_effective_cost'],
-                'total_cost': row['cost_total_cost'],
-                'incremental_cost': row['cost_incremental'],
-                'wholesale': row['cost_wholesale'],
+                'demand_mwh': row.annual_demand_mwh,
+                'procurement_pct': row.procurement_pct,
+                'match_score': row.hourly_match_score,
+                'eff_cost': row.cost_effective_cost,
+                'total_cost': row.cost_total_cost,
+                'incremental_cost': row.cost_incremental,
+                'wholesale': row.cost_wholesale,
                 'resource_twh': res_twh,
-                'battery_twh': row['battery_dispatch_pct'] / 100 * demand_twh,
-                'ldes_twh': row['ldes_dispatch_pct'] / 100 * demand_twh,
-                'resource_pct': {res: float(row[f'mix_{res}']) for res in RESOURCES},
-                'gas_backup_mw': float(row['ra_gas_backup_needed_mw']),
-                'new_gas_mw': float(row['ra_new_gas_build_mw']),
-                'gas_cost': float(row['ra_gas_backup_cost_per_mwh']),
-                'tranche_existing_twh': float(row['tranche_cf_existing_twh']),
-                'tranche_uprate_twh': float(row['tranche_uprate_twh']),
-                'tranche_geo_twh': float(row['tranche_geo_twh']),
-                'tranche_nuclear_twh': float(row['tranche_nuclear_newbuild_twh']),
-                'tranche_ccs_twh': float(row['tranche_ccs_tranche_twh']),
+                'battery_twh': row.battery_dispatch_pct / 100 * demand_twh,
+                'ldes_twh': row.ldes_dispatch_pct / 100 * demand_twh,
+                'resource_pct': {res: float(getattr(row, f'mix_{res}')) for res in RESOURCES},
+                'gas_backup_mw': float(row.ra_gas_backup_needed_mw),
+                'new_gas_mw': float(row.ra_new_gas_build_mw),
+                'gas_cost': float(row.ra_gas_backup_cost_per_mwh),
+                'tranche_existing_twh': float(row.tranche_cf_existing_twh),
+                'tranche_uprate_twh': float(row.tranche_uprate_twh),
+                'tranche_geo_twh': float(row.tranche_geo_twh),
+                'tranche_nuclear_twh': float(row.tranche_nuclear_newbuild_twh),
+                'tranche_ccs_twh': float(row.tranche_ccs_tranche_twh),
             }
 
     return result
@@ -462,7 +485,7 @@ def compute_emission_rate_trajectory(egrid, fossil_mix):
     for iso in ISOS:
         rates = []
         for t in THRESHOLDS:
-            rate, info = compute_fossil_retirement(iso, t, egrid, fossil_mix)
+            rate, info = cached_fossil_retirement(iso, t, egrid, fossil_mix)
             rates.append({
                 'threshold': t,
                 'displaced_rate': round(rate, 4),
@@ -795,7 +818,7 @@ def write_outputs(queue, cumulative, stranding, trajectories, projections,
             'isos': ISOS,
             'medium_scenario_keys': MEDIUM_KEYS,
             'growth_rates_pct': GROWTH_RATES,
-            'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
+            'sbti_year_map': {THRESHOLD_STRS.get(k, str(k)): v for k, v in SBTI_YEAR_MAP.items()},
         },
         'dispatch_stacks': stack_summary,
         'deployment_queue': queue,
