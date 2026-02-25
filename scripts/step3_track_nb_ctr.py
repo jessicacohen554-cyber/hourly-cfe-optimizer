@@ -513,6 +513,9 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     (year, growth_level) combo, this function pre-computes the coefficient matrices once
     for all 42 unique growth scenarios (14 years × 3 levels).
 
+    Hoists growth-invariant array computations (proc, demand pcts, ccs_pct, storage pcts)
+    outside the loop, recomputing only the growth-dependent existing/new splits and gas backup.
+
     Returns:
         dg_coeffs: dict of (year, g_level) → (coeff_matrix, constant, match_frac)
         dg_meta: dict of (year, g_level) → (gf, demand_grown_mwh)
@@ -521,6 +524,67 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     dg_coeffs = {}
     dg_meta = {}
 
+    # ── Growth-INVARIANT computations (hoisted outside loop) ──
+    N = len(arch_arrays['clean_firm'])
+    existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
+
+    proc = arch_arrays['procurement_pct'] / 100.0
+    match_frac = arch_arrays['hourly_match_score'] / 100.0
+
+    cf_pct = arch_arrays['clean_firm']
+    sol_pct = arch_arrays['solar']
+    wnd_pct = arch_arrays['wind']
+    hyd_pct = arch_arrays['hydro']
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
+    bat_pct = arch_arrays['battery_dispatch_pct']
+    bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
+    ldes_pct = arch_arrays['ldes_dispatch_pct']
+
+    # Demand pcts (proc × alloc) — invariant across growth scenarios
+    sol_demand_pct = proc * sol_pct
+    wnd_demand_pct = proc * wnd_pct
+    hyd_demand_pct = proc * hyd_pct
+    ccs_demand_pct = proc * ccs_pct
+    cf_demand_pct = proc * cf_pct
+
+    # Storage coefficients are fully growth-invariant (columns 7-9)
+    bat4_coeff = bat_pct / 100.0
+    bat8_coeff = bat8_pct / 100.0
+    ldes_coeff = ldes_pct / 100.0
+
+    # Uprate cap and geo cap are per-ISO constants
+    uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
+    is_caiso = (iso == 'CAISO')
+
+    # Gas backup constants (per-ISO, invariant)
+    peak_mw = PEAK_DEMAND_MW[iso]
+    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+    gas_fom = EXISTING_GAS_FOM_KW_YR[iso] * 1000
+    new_ccgt_cost = NEW_CCGT_COST_KW_YR[iso] * 1000
+
+    # Pre-compute peak capacity coefficient (invariant factor for clean_peak_mw / avg_demand_mw)
+    # clean_peak_mw = peak_coeff_per_avg_mw * avg_demand_mw
+    # where peak_coeff_per_avg_mw is independent of demand growth
+    peak_coeff = (
+        proc * cf_pct / 100.0 * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        proc * sol_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar'] +
+        proc * wnd_pct / 100.0 * PEAK_CAPACITY_CREDITS['wind'] +
+        proc * ccs_pct / 100.0 * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        proc * hyd_pct / 100.0 * PEAK_CAPACITY_CREDITS['hydro'] +
+        bat_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
+    )
+
+    # Base existing shares (before scaling)
+    ex_sol_base = existing['solar']
+    ex_wnd_base = existing['wind']
+    ex_ccs_base = existing.get('ccs_ccgt', 0)
+    ex_cf_base = existing['clean_firm']
+
+    # ── Growth-DEPENDENT loop ──
     for year in DG_UNIQUE_YEARS:
         years_out = year - 2025
         for g_level in DEMAND_GROWTH_LEVELS:
@@ -530,84 +594,46 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
             demand_grown_mwh = demand_grown * 1e6
             existing_scale = 1.0 / gf
 
-            # Recompute coefficients with growth-adjusted demand and existing scale
-            # This mirrors precompute_base_year_coefficients but with growth params
-            N = len(arch_arrays['clean_firm'])
-            existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
-
-            proc = arch_arrays['procurement_pct'] / 100.0
-            match_frac = arch_arrays['hourly_match_score'] / 100.0
-
-            cf_pct = arch_arrays['clean_firm']
-            sol_pct = arch_arrays['solar']
-            wnd_pct = arch_arrays['wind']
-            hyd_pct = arch_arrays['hydro']
-            ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
-            bat_pct = arch_arrays['battery_dispatch_pct']
-            bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
-            ldes_pct = arch_arrays['ldes_dispatch_pct']
-
-            # Demand pcts (proc × alloc)
-            sol_demand_pct = proc * sol_pct
-            wnd_demand_pct = proc * wnd_pct
-            hyd_demand_pct = proc * hyd_pct
-            ccs_demand_pct = proc * ccs_pct
-            cf_demand_pct = proc * cf_pct
-
             # Existing/new splits with growth-adjusted existing share
-            sol_ex = min(existing['solar'] * existing_scale, 100.0)
+            sol_ex = min(ex_sol_base * existing_scale, 100.0)
             sol_existing_pct = np.minimum(sol_demand_pct, sol_ex)
             sol_new_pct = np.maximum(0, sol_demand_pct - sol_ex)
 
-            wnd_ex = min(existing['wind'] * existing_scale, 100.0)
+            wnd_ex = min(ex_wnd_base * existing_scale, 100.0)
             wnd_existing_pct = np.minimum(wnd_demand_pct, wnd_ex)
             wnd_new_pct = np.maximum(0, wnd_demand_pct - wnd_ex)
 
-            ccs_ex = min(existing.get('ccs_ccgt', 0) * existing_scale, 100.0)
+            ccs_ex = min(ex_ccs_base * existing_scale, 100.0)
             ccs_existing_pct = np.minimum(ccs_demand_pct, ccs_ex)
             ccs_new_pct = np.maximum(0, ccs_demand_pct - ccs_ex)
 
-            cf_ex = min(existing['clean_firm'] * existing_scale, 100.0)
+            cf_ex = min(ex_cf_base * existing_scale, 100.0)
             cf_existing_pct = np.minimum(cf_demand_pct, cf_ex)
             cf_new_pct = np.maximum(0, cf_demand_pct - cf_ex)
 
             # Clean firm tranche allocation
             new_cf_twh = cf_new_pct / 100.0 * demand_grown
-            uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
             uprate_twh = np.minimum(new_cf_twh, uprate_cap)
             remaining_after_uprate = np.maximum(0, new_cf_twh - uprate_twh)
 
-            geo_twh = np.zeros(N)
-            remaining_after_geo = remaining_after_uprate
-            if iso == 'CAISO':
+            if is_caiso:
                 geo_twh = np.minimum(remaining_after_uprate, GEO_CAP_TWH)
                 remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_twh)
+            else:
+                geo_twh = np.zeros(N)
+                remaining_after_geo = remaining_after_uprate
 
-            # Gas backup
-            peak_mw = PEAK_DEMAND_MW[iso]
-            ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+            # Gas backup: clean_peak_mw = peak_coeff * avg_demand_mw
             avg_demand_mw = demand_grown_mwh / 8760
+            clean_peak_mw = peak_coeff * avg_demand_mw
 
-            clean_peak_mw = (
-                proc * cf_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
-                proc * sol_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
-                proc * wnd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
-                proc * ccs_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
-                proc * hyd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
-                bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
-                bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
-                ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
-            )
-
-            gaf = GAS_AVAILABILITY_FACTOR[iso]
             gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw) / gaf
-            existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
             existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
             new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
 
             constant = (
-                existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
-                new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
+                existing_gas_used_mw * gas_fom +
+                new_gas_mw * new_ccgt_cost
             ) / demand_grown_mwh
 
             # Build coefficient matrix (N, 10)
@@ -621,9 +647,9 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
             coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_grown
             coeff_matrix[:, _COL_GEO] = geo_twh / demand_grown
             coeff_matrix[:, _COL_REMAINING] = remaining_after_geo / demand_grown
-            coeff_matrix[:, _COL_BAT4] = bat_pct / 100.0
-            coeff_matrix[:, _COL_BAT8] = bat8_pct / 100.0
-            coeff_matrix[:, _COL_LDES] = ldes_pct / 100.0
+            coeff_matrix[:, _COL_BAT4] = bat4_coeff
+            coeff_matrix[:, _COL_BAT8] = bat8_coeff
+            coeff_matrix[:, _COL_LDES] = ldes_coeff
 
             dg_coeffs[(year, g_level)] = (coeff_matrix, constant, match_frac)
             dg_meta[(year, g_level)] = (gf, demand_grown_mwh)
