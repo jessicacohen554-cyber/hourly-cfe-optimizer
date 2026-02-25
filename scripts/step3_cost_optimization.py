@@ -522,9 +522,11 @@ def apply_existing_clean_floor(arrays, iso):
 
     mask = np.ones(N, dtype=bool)
     for resource in ['clean_firm', 'solar', 'wind', 'hydro']:
-        floor = existing.get(resource, 0)
-        if floor > 0:
-            mask &= arrays[resource].astype(np.float64) >= floor
+        floor_raw = existing.get(resource, 0)
+        if floor_raw > 0:
+            # PFS arrays use integer % (0-100); snap floor down to match grid
+            floor = int(floor_raw)
+            mask &= arrays[resource] >= floor
 
     n_kept = int(mask.sum())
     n_removed = N - n_kept
@@ -2024,8 +2026,11 @@ def main():
         # --- 1. Baseline scenarios (generator → chunked write) ---
         iso_out = output_dir / f'step3_co_{iso}.parquet'
         n = _rows_to_parquet(_flatten_scenarios(iso, iso_data), iso_out)
-        print(f"  {iso_out}: {n:,} scenario rows, "
-              f"{os.path.getsize(iso_out) / 1e6:.1f} MB")
+        if n > 0:
+            print(f"  {iso_out}: {n:,} scenario rows, "
+                  f"{os.path.getsize(iso_out) / 1e6:.1f} MB")
+        else:
+            print(f"  {iso_out}: 0 scenario rows (no baseline mixes passed filter)")
         gc.collect()
 
         # --- 2. Track scenarios (chain newbuild + replace generators) ---
