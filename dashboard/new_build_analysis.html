@@ -9,13 +9,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 body { background: #F7F8FC; }
 
-/* ========== TARGET SLIDER (matches scenario_comparison pattern) ========== */
+/* ========== TARGET SLIDER ========== */
 .target-slider-section { max-width: 1200px; margin: -20px auto 0; padding: 20px 24px 12px; position: relative; z-index: 10; }
 .target-slider-card { background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 20px 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .target-slider-label { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.85rem; color: #1A2744; font-weight: 700; white-space: nowrap; }
@@ -25,7 +22,6 @@ body { background: #F7F8FC; }
 .target-slider-wrap input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #1A2744; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
 .target-val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.4rem; font-weight: 800; color: #0284C7; min-width: 50px; text-align: center; }
 .target-year { font-size: 0.78rem; color: rgba(0,0,0,0.45); font-weight: 600; }
-.target-ticks { display: flex; justify-content: space-between; font-size: 0.65rem; color: rgba(0,0,0,0.35); padding: 2px 0 0; }
 @media (max-width: 768px) {
     .target-slider-card { flex-direction: column; align-items: stretch; gap: 12px; }
     .target-slider-label { text-align: center; }
@@ -83,10 +79,48 @@ body { background: #F7F8FC; }
     margin-top: 4px;
     font-family: 'Rajdhani', monospace;
 }
-.mix-chart-wrap {
-    height: 200px;
-    margin-top: 16px;
-    position: relative;
+
+/* ========== STACKED BAR (CSS-only resource mix) ========== */
+.mix-bar-wrap { margin-top: 16px; }
+.mix-bar-label { font-size: 0.72rem; color: #9ca3af; margin-bottom: 6px; font-weight: 600; }
+.mix-bar {
+    display: flex;
+    height: 28px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f1f5f9;
+}
+.mix-bar .seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    padding: 0 4px;
+    min-width: 0;
+    transition: width 0.5s ease;
+}
+.mix-bar .seg span { overflow: hidden; text-overflow: ellipsis; }
+.mix-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-top: 8px;
+}
+.mix-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    color: #6b7280;
+}
+.mix-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
 }
 
 /* Delta panel */
@@ -98,11 +132,7 @@ body { background: #F7F8FC; }
     padding: 24px 16px;
     min-width: 140px;
 }
-.delta-arrow {
-    font-size: 2rem;
-    color: #9ca3af;
-    margin-bottom: 8px;
-}
+.delta-arrow { font-size: 2rem; color: #9ca3af; margin-bottom: 8px; }
 .delta-value {
     font-family: 'Rajdhani', monospace;
     font-size: 1.8rem;
@@ -110,12 +140,7 @@ body { background: #F7F8FC; }
     color: #EF4444;
 }
 .delta-value.positive { color: #22C55E; }
-.delta-label {
-    font-size: 0.75rem;
-    color: #6b7280;
-    text-align: center;
-    margin-top: 4px;
-}
+.delta-label { font-size: 0.75rem; color: #6b7280; text-align: center; margin-top: 4px; }
 
 /* ========== EAC PREMIUM SLIDERS ========== */
 .premium-controls {
@@ -144,34 +169,16 @@ body { background: #F7F8FC; }
     margin-bottom: 6px;
     font-weight: 600;
 }
-.premium-item .slider-inline {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+.premium-item .slider-inline { display: flex; align-items: center; gap: 8px; }
 .premium-item input[type=range] {
-    flex: 1;
-    -webkit-appearance: none;
-    appearance: none;
-    height: 4px;
-    background: #e5e7eb;
-    border-radius: 2px;
-    outline: none;
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 4px; background: #e5e7eb; border-radius: 2px; outline: none;
 }
 .premium-item input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #1A2744;
-    cursor: pointer;
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #1A2744; cursor: pointer;
 }
 .premium-item input[type=range]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #1A2744;
-    cursor: pointer;
+    width: 16px; height: 16px; border-radius: 50%; background: #1A2744; cursor: pointer;
 }
 .premium-val {
     min-width: 55px;
@@ -203,13 +210,95 @@ body { background: #F7F8FC; }
     margin-bottom: 20px;
     max-width: 700px;
 }
-.chart-wrap {
+
+/* ========== SVG CHART CONTAINER ========== */
+.svg-chart-wrap {
     position: relative;
     width: 100%;
-    min-height: 360px;
+    overflow: visible;
+    margin: 16px 0;
 }
-@media (max-width: 768px) {
-    .chart-wrap { min-height: 280px; }
+.svg-chart-wrap svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+.chart-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 8px;
+}
+.chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    color: #6b7280;
+}
+.chart-legend-line {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+/* ========== CSS BAR CHART (scaling curve) ========== */
+.bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 200px;
+    padding-top: 20px;
+    border-bottom: 2px solid #e5e7eb;
+    position: relative;
+}
+.bar-chart-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    height: 100%;
+    justify-content: flex-end;
+}
+.bar-chart-bar {
+    width: 100%;
+    max-width: 40px;
+    border-radius: 3px 3px 0 0;
+    transition: height 0.5s ease;
+    position: relative;
+}
+.bar-chart-bar .bar-val {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #374151;
+    white-space: nowrap;
+}
+.bar-chart-label {
+    font-size: 0.6rem;
+    color: #9ca3af;
+    margin-top: 6px;
+    text-align: center;
+    font-weight: 600;
+}
+.bar-chart-y {
+    position: absolute;
+    left: -4px;
+    transform: translateX(-100%);
+    font-size: 0.6rem;
+    color: #9ca3af;
+    white-space: nowrap;
 }
 
 /* ========== SCROLL HEADINGS ========== */
@@ -304,11 +393,7 @@ body { background: #F7F8FC; }
     color: #1A2744;
     line-height: 1;
 }
-.metric-item .lbl {
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin-top: 4px;
-}
+.metric-item .lbl { font-size: 0.75rem; color: #6b7280; margin-top: 4px; }
 
 /* ========== BOTTOM LINE ========== */
 .bottom-line {
@@ -331,13 +416,6 @@ body { background: #F7F8FC; }
     line-height: 1.7;
     max-width: 750px;
 }
-.bottom-line .key-stat {
-    display: inline-block;
-    font-family: 'Rajdhani', monospace;
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: #38bdf8;
-}
 
 /* ========== FOOTER ========== */
 .footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
@@ -357,23 +435,14 @@ body { background: #F7F8FC; }
     border-radius: 2px; margin: 0 auto; max-width: 1320px; opacity: 0.5;
 }
 
-/* ========== COMPREHENSIVE MOBILE FIXES ========== */
+/* ========== MOBILE ========== */
 @media (max-width: 768px) {
-    /* Reduce card padding */
     .section-card { padding: 18px 16px; margin-bottom: 20px; }
     .section-card h2 { font-size: 1.15rem; }
     .section-card .section-sub { font-size: 0.82rem; margin-bottom: 14px; }
-
-    /* Chart containers — explicit height for Chart.js rendering */
-    .chart-wrap { min-height: 300px; height: 300px; }
-    .mix-chart-wrap { height: 180px; }
-
-    /* Track panels */
     .track-panel { padding: 16px; }
     .cost-big { font-size: 1.8rem; }
     .cost-big .unit { font-size: 0.78rem; }
-
-    /* Premium controls */
     .premium-controls { padding: 16px; margin-bottom: 20px; }
     .premium-controls h4 { font-size: 0.85rem; margin-bottom: 12px; }
     .premium-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -381,49 +450,32 @@ body { background: #F7F8FC; }
     .premium-val { font-size: 0.8rem; min-width: 48px; }
     .premium-item input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; }
     .premium-item input[type=range]::-moz-range-thumb { width: 20px; height: 20px; }
-
-    /* Waterfall bar — stack on very small screens */
     .waterfall-bar { flex-wrap: wrap; height: auto; gap: 2px; }
     .waterfall-bar .seg { width: 100% !important; padding: 8px 12px; justify-content: flex-start; font-size: 0.75rem; border-radius: 4px; }
-
-    /* Metric strip */
     .metric-strip { grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
     .metric-item { padding: 12px 8px; }
     .metric-item .val { font-size: 1.4rem; }
     .metric-item .lbl { font-size: 0.68rem; }
-
-    /* Bottom line */
     .bottom-line { padding: 24px 16px; margin-bottom: 20px; }
     .bottom-line h2 { font-size: 1.25rem; margin-bottom: 14px; }
     .bottom-line p { font-size: 0.85rem; line-height: 1.6; }
-
-    /* Callout boxes */
     .callout-box { padding: 14px 16px; margin: 14px 0; }
     .callout-box h4 { font-size: 0.85rem; }
     .callout-box p { font-size: 0.8rem; line-height: 1.5; }
-
-    /* Scrollytell steps */
     .scroll-step { margin-bottom: 24px; }
     .scroll-heading { font-size: 0.95rem; }
-
-    /* Target slider section */
     .target-slider-section { padding: 12px 16px 8px; margin-top: -12px; }
     .target-slider-card { padding: 14px 16px; }
-
-    /* Footer */
     .footer-links { gap: 8px 16px; }
     .footer-links a { font-size: 0.78rem; padding: 6px 4px; }
+    .bar-chart { height: 160px; }
 }
-
-/* Extra small (320px) */
 @media (max-width: 420px) {
     .premium-grid { grid-template-columns: 1fr; }
     .metric-strip { grid-template-columns: 1fr 1fr; gap: 8px; }
     .metric-item .val { font-size: 1.2rem; }
-    .chart-wrap { min-height: 260px; height: 260px; }
     .cost-big { font-size: 1.5rem; }
-    .section-card { padding: 14px 12px; }
-    .bottom-line { padding: 20px 14px; }
+    .bar-chart { height: 140px; }
 }
 </style>
 </head>
@@ -447,7 +499,6 @@ body { background: #F7F8FC; }
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 1: THE PROCUREMENT CHOICE                                 -->
 <!-- ═══════════════════════════════════════════════════════════════════ -->
-<!-- Target threshold slider (floating card, matches scenario_comparison) -->
 <div class="target-slider-section">
     <div class="target-slider-card">
         <div class="target-slider-label">Hourly Clean Energy Target</div>
@@ -475,7 +526,11 @@ body { background: #F7F8FC; }
             <p class="panel-sub">Existing nuclear, hydro, solar, wind credited at wholesale + EAC premium</p>
             <div class="cost-big" id="ecfCost">$72.3 <span class="unit">$/MWh</span></div>
             <div class="cost-range" id="ecfRange">Medium cost scenario</div>
-            <div class="mix-chart-wrap"><canvas id="ecfMixChart"></canvas></div>
+            <div class="mix-bar-wrap">
+                <div class="mix-bar-label">Resource Mix</div>
+                <div class="mix-bar" id="ecfMixBar"></div>
+                <div class="mix-legend" id="ecfMixLegend"></div>
+            </div>
         </div>
 
         <!-- Delta -->
@@ -491,7 +546,11 @@ body { background: #F7F8FC; }
             <p class="panel-sub">All generation from new solar, wind, clean firm, storage — priced at LCOE</p>
             <div class="cost-big" id="nbCost">$89.7 <span class="unit">$/MWh</span></div>
             <div class="cost-range" id="nbRange">P10: $75 &mdash; P50: $90 &mdash; P90: $118</div>
-            <div class="mix-chart-wrap"><canvas id="nbMixChart"></canvas></div>
+            <div class="mix-bar-wrap">
+                <div class="mix-bar-label">Resource Mix</div>
+                <div class="mix-bar" id="nbMixBar"></div>
+                <div class="mix-legend" id="nbMixLegend"></div>
+            </div>
         </div>
     </div>
 
@@ -538,7 +597,13 @@ body { background: #F7F8FC; }
     <h2>2. The Scaling Curve</h2>
     <p class="section-sub">What happens when more buyers enter the market? As aggregate corporate demand scales, existing merchant supply is consumed. Beyond a critical threshold, every buyer faces new-build economics regardless of their stated procurement strategy.</p>
 
-    <div class="chart-wrap"><canvas id="scalingChart"></canvas></div>
+    <div class="chart-title">Effective Cost vs. Market Participation (at 75% target)</div>
+    <div class="svg-chart-wrap" id="scalingChartWrap"></div>
+    <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-line" style="background:#0EA5E9;"></div> With Existing Clean</div>
+        <div class="chart-legend-item"><div class="chart-legend-line" style="background:#F59E0B;border-style:dashed;border-width:1.5px 0 0;height:0;"></div> New Build Only</div>
+        <div class="chart-legend-item"><div class="chart-legend-line" style="background:#EF4444;border-style:dashed;border-width:1.5px 0 0;height:0;"></div> Supply ceiling</div>
+    </div>
 
     <div class="callout-box info" style="margin-top:20px;">
         <h4>PJM Available Merchant Supply: ~90 TWh</h4>
@@ -558,7 +623,13 @@ body { background: #F7F8FC; }
 <div class="scroll-step section-card">
     <h3 class="scroll-heading">Wholesale prices fall as clean energy displaces fossil generation</h3>
     <p style="font-size:0.85rem;color:#6b7280;margin-bottom:16px;">PJM's wholesale electricity price (LMP) declines from $37/MWh at 50% clean to under $7/MWh at 99%. The merit-order effect is relentless: every MWh of zero-marginal-cost clean energy pushes higher-cost fossil plants out of the dispatch stack.</p>
-    <div class="chart-wrap"><canvas id="lmpChart"></canvas></div>
+
+    <div class="chart-title">PJM Wholesale LMP vs. Nuclear Operating Cost</div>
+    <div class="svg-chart-wrap" id="lmpChartWrap"></div>
+    <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-line" style="background:#0EA5E9;"></div> PJM Wholesale LMP</div>
+        <div class="chart-legend-item"><div class="chart-legend-line" style="background:#EF4444;border-style:dashed;border-width:1.5px 0 0;height:0;"></div> Nuclear Operating Cost ($33)</div>
+    </div>
 </div>
 
 <!-- Step 3b: The Clean Premium -->
@@ -682,102 +753,67 @@ body { background: #F7F8FC; }
 <div class="bottom-banner"></div>
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
-<!-- DATA & CHART SCRIPTS                                              -->
+<!-- DATA & SCRIPTS — No external chart library needed                 -->
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <script src="js/shared-data.js"></script>
 <script>
 // ============================================================================
-// CONSTANTS
+// CONSTANTS & DATA — all inline, no CDN dependencies
 // ============================================================================
 var isMobile = window.innerWidth < 768;
-var THR_SLIDER = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5]; // PJM track data range
+var THR_SLIDER = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5];
 var SBTI_YEARS = {50:'2030',55:'2031',60:'2032',65:'2033',70:'2034',75:'2036',80:'2038',85:'2040',87.5:'2041',90:'2042',92.5:'2044',95:'2046',97.5:'2048',99:'2049',100:'2050'};
-var NUCLEAR_OP_COST = 33; // $/MWh operating cost (fuel + O&M)
-var WHOLESALE_PJM = 34;   // $/MWh 2025 baseline
-
-// PJM LMP by threshold (from lmp_summary.json)
+var NUCLEAR_OP_COST = 33;
+var WHOLESALE_PJM = 34;
 var LMP_BY_THR = {50:36.86,55:35.53,60:34.13,65:32.64,70:33.27,75:31.55,80:29.78,85:25.0,87.5:24.88,90:23.57,92.5:20.31,95:18.82,97.5:11.36,99:6.80};
 
-// Baseline ECF data (from shared-data.js)
 var ECF_COSTS = typeof EFFECTIVE_COST_DATA !== 'undefined' ? EFFECTIVE_COST_DATA.PJM : [];
 var ECF_MIX = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA.PJM : {};
 var ALL_THR = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,100];
 
-// Resource colors (match site palette)
 var MIX_COLORS = {
-    clean_firm: '#1E3A5F',
-    solar: '#F59E0B',
-    wind: '#22C55E',
-    ccs_ccgt: '#0D9488',
-    hydro: '#0EA5E9',
-    battery: '#9333EA',
-    ldes: '#EC4899'
+    clean_firm: '#1E3A5F', solar: '#F59E0B', wind: '#22C55E',
+    ccs_ccgt: '#0D9488', hydro: '#0EA5E9', battery: '#9333EA', ldes: '#EC4899'
 };
 var MIX_LABELS = {
-    clean_firm: 'Nuclear',
-    solar: 'Solar',
-    wind: 'Wind',
-    ccs_ccgt: 'CCS-CCGT',
-    hydro: 'Hydro',
-    battery: 'Battery',
-    ldes: 'LDES'
+    clean_firm: 'Nuclear', solar: 'Solar', wind: 'Wind',
+    ccs_ccgt: 'CCS-CCGT', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES'
 };
 
-// EAC scarcity model constants (PJM)
-var PJM_TOTAL_CLEAN = 280;   // TWh
-var PJM_SSS_FIXED = 95;      // TWh
-var PJM_RPS = 70;            // TWh
-var PJM_PPAS = 25;           // TWh
-var PJM_AVAILABLE = 90;      // TWh merchant
-var PJM_CI_SHARE = 0.62;     // C&I share of total demand
-var PJM_DEMAND = 800;        // TWh approximate total demand
+var PJM_TOTAL_CLEAN = 280;
+var PJM_SSS_FIXED = 95;
+var PJM_RPS = 70;
+var PJM_PPAS = 25;
+var PJM_AVAILABLE = 90;
+var PJM_CI_SHARE = 0.62;
+var PJM_DEMAND = 800;
 
-// Track data (loaded async)
 var trackData = null;
-var charts = {};
-
-// Disable datalabels plugin globally (matches dashboard.html/index.html pattern)
-if (typeof Chart !== 'undefined') {
-    Chart.defaults.set('plugins.datalabels', { display: false });
-}
 
 // ============================================================================
 // DATA LOADING
 // ============================================================================
 fetch('track_results.json')
-    .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) { trackData = d; initPage(); })
-    .catch(function(err) {
-        console.warn('track_results.json not loaded:', err);
-        initPage();
-    });
+    .catch(function(err) { console.warn('track_results.json:', err); initPage(); });
 
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
 function initPage() {
-    if (typeof Chart === 'undefined') {
-        console.error('Chart.js not loaded — charts will not render');
-        document.querySelectorAll('.chart-wrap, .mix-chart-wrap').forEach(function(el) {
-            el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:0.85rem;">Chart library failed to load. Check your internet connection.</div>';
-        });
-        return;
-    }
-    try { initTargetSlider(); } catch(e) { console.error('initTargetSlider:', e); }
-    try { initPremiumSliders(); } catch(e) { console.error('initPremiumSliders:', e); }
-    try { updateSection1(5); } catch(e) { console.error('updateSection1:', e); }
-    try { buildScalingChart(); } catch(e) { console.error('buildScalingChart:', e); }
-    try { buildLmpChart(); } catch(e) { console.error('buildLmpChart:', e); }
-    try { updateMetrics(); } catch(e) { console.error('updateMetrics:', e); }
-    try { updateBottomLine(5); } catch(e) { console.error('updateBottomLine:', e); }
+    try { initTargetSlider(); } catch(e) { console.error('slider:', e); }
+    try { initPremiumSliders(); } catch(e) { console.error('premiums:', e); }
+    try { updateSection1(5); } catch(e) { console.error('section1:', e); }
+    try { buildScalingChart(); } catch(e) { console.error('scaling:', e); }
+    try { buildLmpChart(); } catch(e) { console.error('lmp:', e); }
+    try { updateMetrics(); } catch(e) { console.error('metrics:', e); }
+    try { updateBottomLine(5); } catch(e) { console.error('bottomLine:', e); }
     initScrollObserver();
 }
 
 // ============================================================================
-// SECTION 1: TARGET SLIDER + COMPARISON
+// TARGET SLIDER
 // ============================================================================
 function initTargetSlider() {
     var slider = document.getElementById('targetSlider');
@@ -792,10 +828,8 @@ function initTargetSlider() {
 }
 
 function initPremiumSliders() {
-    var ids = ['premNuclear', 'premHydro', 'premSolar', 'premWind'];
-    ids.forEach(function(id) {
-        var el = document.getElementById(id);
-        el.addEventListener('input', function() {
+    ['premNuclear', 'premHydro', 'premSolar', 'premWind'].forEach(function(id) {
+        document.getElementById(id).addEventListener('input', function() {
             document.getElementById(id + 'Val').textContent = '$' + this.value + '/MWh';
             var idx = parseInt(document.getElementById('targetSlider').value);
             updateSection1(idx);
@@ -804,20 +838,20 @@ function initPremiumSliders() {
     });
 }
 
+// ============================================================================
+// SECTION 1: COMPARISON + MIX BARS
+// ============================================================================
 function updateSection1(sliderIdx) {
     var thr = THR_SLIDER[sliderIdx];
     var thrIdx = ALL_THR.indexOf(thr);
 
-    // ECF cost (baseline)
     var ecfBase = (thrIdx >= 0 && ECF_COSTS[thrIdx] != null) ? ECF_COSTS[thrIdx] : null;
 
-    // Add EAC premiums to ECF cost
     var premNuc = parseInt(document.getElementById('premNuclear').value) || 0;
     var premHydro = parseInt(document.getElementById('premHydro').value) || 0;
     var premSolar = parseInt(document.getElementById('premSolar').value) || 0;
     var premWind = parseInt(document.getElementById('premWind').value) || 0;
 
-    // Resource mix weights for premium calculation
     var mixCF = (ECF_MIX.clean_firm && thrIdx >= 0) ? ECF_MIX.clean_firm[thrIdx] / 100 : 0;
     var mixHy = (ECF_MIX.hydro && thrIdx >= 0) ? ECF_MIX.hydro[thrIdx] / 100 : 0;
     var mixSo = (ECF_MIX.solar && thrIdx >= 0) ? ECF_MIX.solar[thrIdx] / 100 : 0;
@@ -833,7 +867,6 @@ function updateSection1(sliderIdx) {
         ? 'Base: $' + ecfBase.toFixed(1) + ' + $' + weightedPremium.toFixed(1) + ' EAC premium'
         : 'No data at this threshold';
 
-    // NB cost (from track data)
     var nbMedium = getNbCost(thr);
     var nbSweep = getNbSweep(thr);
 
@@ -845,7 +878,6 @@ function updateSection1(sliderIdx) {
             'P10: $' + nbSweep.p10.toFixed(0) + ' — P50: $' + nbSweep.p50.toFixed(0) + ' — P90: $' + nbSweep.p90.toFixed(0);
     }
 
-    // Delta
     if (ecfWithPremium != null && nbMedium != null) {
         var delta = nbMedium - ecfWithPremium;
         var el = document.getElementById('deltaValue');
@@ -855,17 +887,70 @@ function updateSection1(sliderIdx) {
         document.getElementById('deltaValue').textContent = '—';
     }
 
-    // Update nuclear premium default based on LMP
-    var lmp = LMP_BY_THR[thr] || WHOLESALE_PJM;
-    var autoNucPrem = Math.max(0, Math.round((NUCLEAR_OP_COST * 1.1) - lmp));
-    // Only auto-set on slider move, not on premium slider move
-    // (premium sliders have their own listeners)
-
-    // Resource mix charts
-    try { updateMixChart('ecf', thrIdx); } catch(e) { console.error('ecfMixChart:', e); }
-    try { updateNbMixChart(thr); } catch(e) { console.error('nbMixChart:', e); }
+    // Resource mix bars (pure CSS)
+    try { updateMixBar('ecf', thrIdx); } catch(e) { console.error('ecfMix:', e); }
+    try { updateNbMixBar(thr); } catch(e) { console.error('nbMix:', e); }
 }
 
+function updateMixBar(track, thrIdx) {
+    var barEl = document.getElementById(track + 'MixBar');
+    var legendEl = document.getElementById(track + 'MixLegend');
+    var resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
+    var segs = [];
+
+    resources.forEach(function(r) {
+        var val = (ECF_MIX[r] && thrIdx >= 0) ? ECF_MIX[r][thrIdx] : 0;
+        if (val > 0) segs.push({ key: r, val: val });
+    });
+
+    renderMixBar(barEl, legendEl, segs);
+}
+
+function updateNbMixBar(thr) {
+    var barEl = document.getElementById('nbMixBar');
+    var legendEl = document.getElementById('nbMixLegend');
+    var mix = getNbMix(thr);
+    var resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
+    var segs = [];
+
+    if (mix) {
+        resources.forEach(function(r) {
+            var val = mix[r] || 0;
+            if (val > 0) segs.push({ key: r, val: val });
+        });
+    }
+
+    if (segs.length === 0) {
+        barEl.innerHTML = '<div class="seg" style="width:100%;background:#e5e7eb;color:#9ca3af;font-size:0.72rem;">No data</div>';
+        legendEl.innerHTML = '';
+        return;
+    }
+
+    renderMixBar(barEl, legendEl, segs);
+}
+
+function renderMixBar(barEl, legendEl, segs) {
+    var total = segs.reduce(function(s, d) { return s + d.val; }, 0);
+    if (total === 0) { barEl.innerHTML = ''; legendEl.innerHTML = ''; return; }
+
+    var html = '';
+    segs.forEach(function(s) {
+        var pct = (s.val / total * 100).toFixed(1);
+        var label = pct >= 10 ? Math.round(pct) + '%' : '';
+        html += '<div class="seg" style="width:' + pct + '%;background:' + MIX_COLORS[s.key] + ';"><span>' + label + '</span></div>';
+    });
+    barEl.innerHTML = html;
+
+    var leg = '';
+    segs.forEach(function(s) {
+        leg += '<div class="mix-legend-item"><div class="mix-legend-dot" style="background:' + MIX_COLORS[s.key] + ';"></div>' + MIX_LABELS[s.key] + ' ' + Math.round(s.val / total * 100) + '%</div>';
+    });
+    legendEl.innerHTML = leg;
+}
+
+// ============================================================================
+// TRACK DATA HELPERS
+// ============================================================================
 function getNbCost(thr) {
     if (!trackData || !trackData.results || !trackData.results.PJM) return null;
     var nb = trackData.results.PJM.newbuild;
@@ -875,9 +960,8 @@ function getNbCost(thr) {
     if (!d || !d.scenarios) return null;
     var keys = Object.keys(d.scenarios);
     for (var i = 0; i < keys.length; i++) {
-        if (d.scenarios[keys[i]] && d.scenarios[keys[i]].costs) {
+        if (d.scenarios[keys[i]] && d.scenarios[keys[i]].costs)
             return d.scenarios[keys[i]].costs.effective_cost;
-        }
     }
     return null;
 }
@@ -905,337 +989,190 @@ function getNbMix(thr) {
     if (!d || !d.scenarios) return null;
     var keys = Object.keys(d.scenarios);
     for (var i = 0; i < keys.length; i++) {
-        if (d.scenarios[keys[i]] && d.scenarios[keys[i]].resource_mix) {
+        if (d.scenarios[keys[i]] && d.scenarios[keys[i]].resource_mix)
             return d.scenarios[keys[i]].resource_mix;
-        }
     }
     return null;
 }
 
 // ============================================================================
-// RESOURCE MIX CHARTS (horizontal stacked bars)
-// ============================================================================
-function updateMixChart(track, thrIdx) {
-    var canvasId = track + 'MixChart';
-    if (charts[canvasId]) charts[canvasId].destroy();
-
-    var resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'];
-    var data = [];
-    var labels = [];
-    var colors = [];
-
-    resources.forEach(function(r) {
-        var val = (ECF_MIX[r] && thrIdx >= 0) ? ECF_MIX[r][thrIdx] : 0;
-        if (val > 0) {
-            data.push(val);
-            labels.push(MIX_LABELS[r]);
-            colors.push(MIX_COLORS[r]);
-        }
-    });
-
-    var ctx = document.getElementById(canvasId).getContext('2d');
-    charts[canvasId] = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { size: isMobile ? 10 : 11, family: "'Plus Jakarta Sans'" }, padding: isMobile ? 8 : 12, usePointStyle: true, boxWidth: isMobile ? 8 : 12 } },
-                datalabels: { display: false }
-            },
-            cutout: '55%'
-        }
-    });
-}
-
-function updateNbMixChart(thr) {
-    var canvasId = 'nbMixChart';
-    if (charts[canvasId]) charts[canvasId].destroy();
-
-    var mix = getNbMix(thr);
-    var resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'];
-    var data = [];
-    var labels = [];
-    var colors = [];
-
-    if (mix) {
-        resources.forEach(function(r) {
-            var val = mix[r] || 0;
-            if (val > 0) {
-                data.push(val);
-                labels.push(MIX_LABELS[r]);
-                colors.push(MIX_COLORS[r]);
-            }
-        });
-    }
-
-    if (data.length === 0) {
-        data = [1]; labels = ['No data']; colors = ['#e5e7eb'];
-    }
-
-    var ctx = document.getElementById(canvasId).getContext('2d');
-    charts[canvasId] = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { size: isMobile ? 10 : 11, family: "'Plus Jakarta Sans'" }, padding: isMobile ? 8 : 12, usePointStyle: true, boxWidth: isMobile ? 8 : 12 } },
-                datalabels: { display: false }
-            },
-            cutout: '55%'
-        }
-    });
-}
-
-// ============================================================================
-// SECTION 2: SCALING CURVE
+// SCALING CHART — Pure inline SVG
 // ============================================================================
 function buildScalingChart() {
-    var ctx = document.getElementById('scalingChart').getContext('2d');
+    var wrap = document.getElementById('scalingChartWrap');
+    var W = 600, H = 280, PAD_L = 50, PAD_R = 20, PAD_T = 20, PAD_B = 50;
+    var plotW = W - PAD_L - PAD_R;
+    var plotH = H - PAD_T - PAD_B;
 
-    // Model: as participation % rises, existing supply consumed → cost rises
-    // At 0% participation: ECF cost is low, NB cost is what it is
-    // At high participation: ECF cost converges to NB cost
     var participationPcts = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100];
-
-    // Get 75% threshold costs as baseline
-    var ecfBase = ECF_COSTS[5] || 72.3; // 75% threshold = index 5
+    var ecfBase = ECF_COSTS[5] || 72.3;
     var nbCost = getNbCost(75) || 89.7;
 
-    // EAC scarcity model: as demand exceeds available supply, cost rises
     var ecfCurve = participationPcts.map(function(p) {
-        var demandTWh = PJM_DEMAND * PJM_CI_SHARE * (p / 100) * 0.80; // 80% procurement ratio at 75%
+        var demandTWh = PJM_DEMAND * PJM_CI_SHARE * (p / 100) * 0.80;
         var supplyUsed = Math.min(demandTWh / PJM_AVAILABLE, 1);
-        // Quadratic blend: as supply consumed, price rises toward NB cost
-        var blendFactor = Math.min(1, supplyUsed * supplyUsed * 1.2);
-        return ecfBase + (nbCost - ecfBase) * blendFactor;
+        var blend = Math.min(1, supplyUsed * supplyUsed * 1.2);
+        return ecfBase + (nbCost - ecfBase) * blend;
     });
-
-    // NB cost is flat (it doesn't depend on existing supply)
     var nbCurve = participationPcts.map(function() { return nbCost; });
 
-    // Find where merchant supply exhausts
+    var yMin = 60, yMax = 110;
     var exhaustPct = Math.round(PJM_AVAILABLE / (PJM_DEMAND * PJM_CI_SHARE * 0.80) * 100);
 
-    charts.scaling = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: participationPcts.map(function(p) { return p + '%'; }),
-            datasets: [
-                {
-                    label: 'With Existing Clean',
-                    data: ecfCurve,
-                    borderColor: '#0EA5E9',
-                    backgroundColor: 'rgba(14,165,233,0.1)',
-                    borderWidth: isMobile ? 2 : 3,
-                    fill: false,
-                    tension: 0.4,
-                    pointRadius: isMobile ? 2 : 4,
-                    pointHoverRadius: isMobile ? 5 : 7
-                },
-                {
-                    label: 'New Build Only',
-                    data: nbCurve,
-                    borderColor: '#F59E0B',
-                    backgroundColor: 'rgba(245,158,11,0.1)',
-                    borderWidth: isMobile ? 2 : 3,
-                    borderDash: [8, 4],
-                    fill: false,
-                    tension: 0,
-                    pointRadius: isMobile ? 2 : 4,
-                    pointHoverRadius: isMobile ? 5 : 7
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { position: 'top', labels: { font: { size: isMobile ? 10 : 12, family: "'Plus Jakarta Sans'" }, usePointStyle: true, boxWidth: isMobile ? 8 : 12, padding: isMobile ? 8 : 10 } },
-                datalabels: { display: false },
-                annotation: {
-                    annotations: {
-                        exhaustLine: {
-                            type: 'line',
-                            xMin: exhaustPct <= 100 ? participationPcts.indexOf(exhaustPct >= 75 ? 75 : (exhaustPct >= 50 ? 50 : 40)) : 6,
-                            xMax: exhaustPct <= 100 ? participationPcts.indexOf(exhaustPct >= 75 ? 75 : (exhaustPct >= 50 ? 50 : 40)) : 6,
-                            borderColor: '#EF4444',
-                            borderWidth: 2,
-                            borderDash: [6, 3],
-                            label: {
-                                display: true,
-                                content: isMobile ? 'Supply ceiling' : 'Supply ceiling (~' + exhaustPct + '% participation)',
-                                position: 'start',
-                                backgroundColor: 'rgba(239,68,68,0.85)',
-                                color: '#fff',
-                                font: { size: isMobile ? 9 : 11, family: "'Plus Jakarta Sans'" },
-                                padding: isMobile ? 4 : 6
-                            }
-                        }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    title: { display: !isMobile, text: 'C&I Load Participating in Hourly CFE (%)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
-                    ticks: { font: { size: isMobile ? 9 : 11 }, maxRotation: isMobile ? 45 : 0 },
-                    grid: { display: false }
-                },
-                y: {
-                    title: { display: true, text: isMobile ? '$/MWh' : 'Effective Cost ($/MWh)', font: { size: isMobile ? 10 : 12, family: "'Plus Jakarta Sans'", weight: 600 } },
-                    min: 60,
-                    max: 110,
-                    ticks: { font: { size: isMobile ? 9 : 11 } },
-                    grid: { color: 'rgba(0,0,0,0.06)' }
-                }
-            }
-        }
+    function xPos(i) { return PAD_L + (i / (participationPcts.length - 1)) * plotW; }
+    function yPos(v) { return PAD_T + (1 - (v - yMin) / (yMax - yMin)) * plotH; }
+
+    // Build ECF path
+    var ecfPath = 'M';
+    ecfCurve.forEach(function(v, i) {
+        ecfPath += (i > 0 ? ' L' : '') + xPos(i).toFixed(1) + ',' + yPos(v).toFixed(1);
     });
+
+    // Build NB path
+    var nbPath = 'M' + xPos(0).toFixed(1) + ',' + yPos(nbCost).toFixed(1) + ' L' + xPos(participationPcts.length - 1).toFixed(1) + ',' + yPos(nbCost).toFixed(1);
+
+    // Supply ceiling X position
+    var ceilIdx = 0;
+    for (var i = 0; i < participationPcts.length; i++) {
+        if (participationPcts[i] >= exhaustPct) { ceilIdx = i; break; }
+        if (i === participationPcts.length - 1) ceilIdx = i;
+    }
+    var ceilX = xPos(ceilIdx);
+
+    // Y-axis ticks
+    var yTicks = [60, 70, 80, 90, 100, 110];
+    var yTicksSvg = '';
+    yTicks.forEach(function(v) {
+        var y = yPos(v);
+        yTicksSvg += '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="#e5e7eb" stroke-width="1"/>';
+        yTicksSvg += '<text x="' + (PAD_L - 6) + '" y="' + (y + 3) + '" text-anchor="end" fill="#9ca3af" font-size="10">$' + v + '</text>';
+    });
+
+    // X-axis labels
+    var xLabelsSvg = '';
+    participationPcts.forEach(function(p, i) {
+        if (isMobile && i % 2 !== 0 && i !== participationPcts.length - 1) return;
+        xLabelsSvg += '<text x="' + xPos(i) + '" y="' + (H - PAD_B + 18) + '" text-anchor="middle" fill="#9ca3af" font-size="10">' + p + '%</text>';
+    });
+
+    // Data point dots for ECF
+    var ecfDots = '';
+    ecfCurve.forEach(function(v, i) {
+        ecfDots += '<circle cx="' + xPos(i) + '" cy="' + yPos(v) + '" r="3" fill="#0EA5E9"/>';
+    });
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="font-family:\'Plus Jakarta Sans\',sans-serif;">';
+    svg += yTicksSvg;
+    svg += xLabelsSvg;
+
+    // Axis labels
+    svg += '<text x="' + (PAD_L + plotW / 2) + '" y="' + (H - 4) + '" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="600">C&amp;I Load Participating (%)</text>';
+    svg += '<text x="14" y="' + (PAD_T + plotH / 2) + '" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="600" transform="rotate(-90,14,' + (PAD_T + plotH / 2) + ')">$/MWh</text>';
+
+    // Supply ceiling line
+    svg += '<line x1="' + ceilX + '" y1="' + PAD_T + '" x2="' + ceilX + '" y2="' + (H - PAD_B) + '" stroke="#EF4444" stroke-width="2" stroke-dasharray="6,3"/>';
+    svg += '<rect x="' + (ceilX - (isMobile ? 40 : 55)) + '" y="' + (PAD_T + 2) + '" width="' + (isMobile ? 80 : 110) + '" height="18" rx="4" fill="rgba(239,68,68,0.85)"/>';
+    svg += '<text x="' + ceilX + '" y="' + (PAD_T + 14) + '" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">' + (isMobile ? 'Supply ceiling' : 'Supply ceiling ~' + exhaustPct + '%') + '</text>';
+
+    // NB line (dashed)
+    svg += '<path d="' + nbPath + '" fill="none" stroke="#F59E0B" stroke-width="2.5" stroke-dasharray="8,4"/>';
+
+    // ECF line + fill
+    var fillPath = ecfPath + ' L' + xPos(participationPcts.length - 1) + ',' + yPos(yMin) + ' L' + xPos(0) + ',' + yPos(yMin) + ' Z';
+    svg += '<path d="' + fillPath + '" fill="rgba(14,165,233,0.08)"/>';
+    svg += '<path d="' + ecfPath + '" fill="none" stroke="#0EA5E9" stroke-width="2.5"/>';
+    svg += ecfDots;
+
+    svg += '</svg>';
+    wrap.innerHTML = svg;
 }
 
 // ============================================================================
-// SECTION 3: LMP DECLINE CHART
+// LMP CHART — Pure inline SVG
 // ============================================================================
 function buildLmpChart() {
-    var ctx = document.getElementById('lmpChart').getContext('2d');
+    var wrap = document.getElementById('lmpChartWrap');
+    var W = 600, H = 280, PAD_L = 50, PAD_R = 20, PAD_T = 20, PAD_B = 50;
+    var plotW = W - PAD_L - PAD_R;
+    var plotH = H - PAD_T - PAD_B;
 
-    var lmpThresholds = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
-    var lmpValues = lmpThresholds.map(function(t) { return LMP_BY_THR[t]; });
-    var nuclearLine = lmpThresholds.map(function() { return NUCLEAR_OP_COST; });
+    var thresholds = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
+    var lmpValues = thresholds.map(function(t) { return LMP_BY_THR[t]; });
 
-    // Find crossover point
+    var yMin = 0, yMax = 45;
+
+    function xPos(i) { return PAD_L + (i / (thresholds.length - 1)) * plotW; }
+    function yPos(v) { return PAD_T + (1 - (v - yMin) / (yMax - yMin)) * plotH; }
+
+    // LMP path
+    var lmpPath = 'M';
+    lmpValues.forEach(function(v, i) {
+        lmpPath += (i > 0 ? ' L' : '') + xPos(i).toFixed(1) + ',' + yPos(v).toFixed(1);
+    });
+
+    // Fill under LMP
+    var fillPath = lmpPath + ' L' + xPos(thresholds.length - 1) + ',' + yPos(yMin) + ' L' + xPos(0) + ',' + yPos(yMin) + ' Z';
+
+    // Nuclear cost line
+    var nucY = yPos(NUCLEAR_OP_COST);
+
+    // Crossover index
     var crossIdx = 0;
     for (var i = 0; i < lmpValues.length; i++) {
         if (lmpValues[i] < NUCLEAR_OP_COST) { crossIdx = i; break; }
     }
 
-    charts.lmp = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: lmpThresholds.map(function(t) { return t + '%'; }),
-            datasets: [
-                {
-                    label: 'PJM Wholesale LMP',
-                    data: lmpValues,
-                    borderColor: '#0EA5E9',
-                    backgroundColor: 'rgba(14,165,233,0.15)',
-                    borderWidth: isMobile ? 2 : 3,
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: isMobile ? 2 : 4,
-                    pointHoverRadius: isMobile ? 5 : 7
-                },
-                {
-                    label: 'Nuclear Operating Cost ($33/MWh)',
-                    data: nuclearLine,
-                    borderColor: '#EF4444',
-                    borderWidth: 2,
-                    borderDash: [8, 4],
-                    fill: false,
-                    pointRadius: 0,
-                    pointHoverRadius: 0
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { position: 'top', labels: { font: { size: isMobile ? 9 : 12, family: "'Plus Jakarta Sans'" }, usePointStyle: true, boxWidth: isMobile ? 8 : 12, padding: isMobile ? 6 : 10 } },
-                datalabels: { display: false },
-                annotation: {
-                    annotations: {
-                        crossover: {
-                            type: 'point',
-                            xValue: crossIdx,
-                            yValue: NUCLEAR_OP_COST,
-                            backgroundColor: '#EF4444',
-                            radius: isMobile ? 5 : 8,
-                            borderColor: '#fff',
-                            borderWidth: 2
-                        },
-                        crossLabel: {
-                            type: 'label',
-                            xValue: crossIdx + 1,
-                            yValue: NUCLEAR_OP_COST + 3,
-                            content: isMobile ? ['Needs premium'] : ['Nuclear needs', 'clean premium'],
-                            color: '#EF4444',
-                            font: { size: isMobile ? 9 : 11, weight: 'bold', family: "'Plus Jakarta Sans'" }
-                        },
-                        gapFill: {
-                            type: 'box',
-                            xMin: crossIdx,
-                            xMax: lmpThresholds.length - 1,
-                            yMin: 0,
-                            yMax: NUCLEAR_OP_COST,
-                            backgroundColor: 'rgba(239,68,68,0.08)',
-                            borderWidth: 0
-                        }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh';
-                        },
-                        afterBody: function(items) {
-                            if (items.length >= 2) {
-                                var lmp = items[0].parsed.y;
-                                var gap = NUCLEAR_OP_COST - lmp;
-                                if (gap > 0) {
-                                    return ['Clean premium needed: $' + gap.toFixed(1) + '/MWh'];
-                                }
-                            }
-                            return [];
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    title: { display: !isMobile, text: 'Hourly Clean Energy Target (%)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
-                    ticks: {
-                        font: { size: isMobile ? 9 : 11 },
-                        maxRotation: isMobile ? 45 : 0,
-                        callback: function(val, idx) {
-                            // On mobile, show fewer labels to avoid crowding
-                            if (isMobile) {
-                                var t = lmpThresholds[idx];
-                                return (t === 50 || t === 75 || t === 90 || t === 99) ? t + '%' : '';
-                            }
-                            return lmpThresholds[idx] + '%';
-                        }
-                    },
-                    grid: { display: false }
-                },
-                y: {
-                    title: { display: true, text: isMobile ? '$/MWh' : 'Price ($/MWh)', font: { size: isMobile ? 10 : 12, family: "'Plus Jakarta Sans'", weight: 600 } },
-                    min: 0,
-                    max: 45,
-                    ticks: { font: { size: isMobile ? 9 : 11 } },
-                    grid: { color: 'rgba(0,0,0,0.06)' }
-                }
-            }
-        }
+    // Y ticks
+    var yTicks = [0, 10, 20, 30, 40];
+    var yTicksSvg = '';
+    yTicks.forEach(function(v) {
+        var y = yPos(v);
+        yTicksSvg += '<line x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '" stroke="#e5e7eb" stroke-width="1"/>';
+        yTicksSvg += '<text x="' + (PAD_L - 6) + '" y="' + (y + 3) + '" text-anchor="end" fill="#9ca3af" font-size="10">$' + v + '</text>';
     });
+
+    // X labels
+    var xLabelsSvg = '';
+    thresholds.forEach(function(t, i) {
+        // On mobile show fewer labels
+        if (isMobile && t !== 50 && t !== 75 && t !== 90 && t !== 99) return;
+        xLabelsSvg += '<text x="' + xPos(i) + '" y="' + (H - PAD_B + 18) + '" text-anchor="middle" fill="#9ca3af" font-size="10">' + t + '%</text>';
+    });
+
+    // LMP dots
+    var dots = '';
+    lmpValues.forEach(function(v, i) {
+        dots += '<circle cx="' + xPos(i) + '" cy="' + yPos(v) + '" r="3" fill="#0EA5E9"/>';
+    });
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="font-family:\'Plus Jakarta Sans\',sans-serif;">';
+    svg += yTicksSvg;
+    svg += xLabelsSvg;
+
+    // Axis labels
+    svg += '<text x="' + (PAD_L + plotW / 2) + '" y="' + (H - 4) + '" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="600">Hourly Clean Energy Target (%)</text>';
+    svg += '<text x="14" y="' + (PAD_T + plotH / 2) + '" text-anchor="middle" fill="#6b7280" font-size="11" font-weight="600" transform="rotate(-90,14,' + (PAD_T + plotH / 2) + ')">$/MWh</text>';
+
+    // Gap fill (red zone below nuclear cost, after crossover)
+    svg += '<rect x="' + xPos(crossIdx) + '" y="' + nucY + '" width="' + (xPos(thresholds.length - 1) - xPos(crossIdx)) + '" height="' + (yPos(yMin) - nucY) + '" fill="rgba(239,68,68,0.08)"/>';
+
+    // Nuclear cost line (dashed red)
+    svg += '<line x1="' + PAD_L + '" y1="' + nucY + '" x2="' + (W - PAD_R) + '" y2="' + nucY + '" stroke="#EF4444" stroke-width="2" stroke-dasharray="8,4"/>';
+
+    // LMP fill + line
+    svg += '<path d="' + fillPath + '" fill="rgba(14,165,233,0.12)"/>';
+    svg += '<path d="' + lmpPath + '" fill="none" stroke="#0EA5E9" stroke-width="2.5"/>';
+    svg += dots;
+
+    // Crossover point
+    svg += '<circle cx="' + xPos(crossIdx) + '" cy="' + nucY + '" r="6" fill="#EF4444" stroke="#fff" stroke-width="2"/>';
+
+    // Label
+    var labelX = xPos(Math.min(crossIdx + 2, thresholds.length - 1));
+    svg += '<text x="' + labelX + '" y="' + (nucY - 8) + '" fill="#EF4444" font-size="10" font-weight="700">Needs premium</text>';
+
+    svg += '</svg>';
+    wrap.innerHTML = svg;
 }
 
 // ============================================================================
@@ -1255,7 +1192,6 @@ function updateBottomLine(sliderIdx) {
     var ecfBase = (thrIdx >= 0 && ECF_COSTS[thrIdx] != null) ? ECF_COSTS[thrIdx] : null;
     var nbCost = getNbCost(thr);
 
-    // Add premiums
     var premNuc = parseInt(document.getElementById('premNuclear').value) || 0;
     var premHydro = parseInt(document.getElementById('premHydro').value) || 0;
     var premSolar = parseInt(document.getElementById('premSolar').value) || 0;
@@ -1273,7 +1209,6 @@ function updateBottomLine(sliderIdx) {
     document.getElementById('blSaving').textContent = (ecfFinal != null && nbCost != null)
         ? '$' + (nbCost - ecfFinal).toFixed(0) : '—';
 
-    // Update labels
     document.querySelector('#blEcfCost').closest('.metric-item').querySelector('.lbl').textContent = 'With Existing at ' + thr + '%';
     document.querySelector('#blNbCost').closest('.metric-item').querySelector('.lbl').textContent = 'New Build Only at ' + thr + '%';
 }
@@ -1286,7 +1221,7 @@ function initScrollObserver() {
         entries.forEach(function(e) {
             if (e.isIntersecting) e.target.classList.add('visible');
         });
-    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+    }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
 
     document.querySelectorAll('.scroll-step').forEach(function(el) { obs.observe(el); });
 }
