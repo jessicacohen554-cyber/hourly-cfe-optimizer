@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Survival Dashboard | Hourly CFE Optimizer</title>
+    <link rel="stylesheet" href="styles/shared.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0F172A;
+            --bg-secondary: #1E293B;
+            --bg-card: #1E293B;
+            --border: #334155;
+            --text-primary: #F1F5F9;
+            --text-secondary: #94A3B8;
+            --accent: #3B82F6;
+            --accent-light: #60A5FA;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --success: #22C55E;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        .page-header {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 48px 24px 40px;
+            text-align: center;
+        }
+        .page-header h1 {
+            font-family: 'Barlow Semi Condensed', sans-serif;
+            font-size: clamp(1.8rem, 4vw, 2.6rem);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .page-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .container { max-width: 1280px; margin: 0 auto; padding: 24px 16px; }
+
+        /* Summary Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card .label { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; font-family: 'Barlow Semi Condensed', sans-serif; }
+        .stat-card .sub { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; }
+        .stat-card.danger .value { color: var(--danger); }
+        .stat-card.warning .value { color: var(--warning); }
+        .stat-card.success .value { color: var(--success); }
+        .stat-card.accent .value { color: var(--accent-light); }
+
+        /* Section */
+        .section { margin-bottom: 40px; }
+        .section-title {
+            font-family: 'Barlow Semi Condensed', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-desc { color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 20px; }
+
+        /* Chart Container */
+        .chart-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+        .chart-container canvas { width: 100% !important; }
+        .chart-title {
+            font-family: 'Barlow Semi Condensed', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .chart-subtitle { color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 16px; }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+        }
+
+        /* Company Selector */
+        .company-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .company-pill {
+            padding: 8px 18px;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .company-pill:hover { border-color: var(--accent); color: var(--text-primary); }
+        .company-pill.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        /* Fuel Filter */
+        .fuel-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+        .fuel-btn {
+            padding: 5px 14px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .fuel-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+        .fuel-btn.active { background: var(--bg-primary); border-color: var(--accent-light); color: var(--accent-light); }
+
+        /* Company Profile */
+        .company-profile {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            display: none;
+        }
+        .company-profile.visible { display: block; }
+        .profile-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+        .profile-name { font-size: 1.5rem; font-weight: 700; font-family: 'Barlow Semi Condensed', sans-serif; }
+        .profile-type {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .profile-type.merchant { background: rgba(59,130,246,0.15); color: var(--accent-light); }
+        .profile-type.hybrid { background: rgba(245,158,11,0.15); color: var(--warning); }
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .profile-stat { text-align: center; }
+        .profile-stat .val { font-size: 1.3rem; font-weight: 700; font-family: 'Barlow Semi Condensed', sans-serif; }
+        .profile-stat .lbl { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Table */
+        .fleet-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 12px; }
+        .fleet-table th, .fleet-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .fleet-table th { color: var(--text-secondary); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .fleet-table tr:hover td { background: rgba(255,255,255,0.03); }
+        .fuel-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+        /* Key Insight */
+        .insight-box {
+            background: rgba(59,130,246,0.08);
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            font-size: 0.92rem;
+        }
+        .insight-box strong { color: var(--accent-light); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 16px 12px; }
+            .chart-grid { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .page-header { padding: 32px 16px 28px; }
+            .company-pill { padding: 6px 12px; font-size: 0.82rem; }
+        }
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <script src="js/nav.js"></script>
+
+    <div class="page-header">
+        <h1>Fleet Survival Dashboard</h1>
+        <p class="subtitle">How do major power generators' fossil fleets fare against the grid decarbonization trajectory? Track 1 baseline analysis with SBTi timeline mapping and P10/P90 certainty bounds.</p>
+    </div>
+
+    <div class="container">
+
+        <!-- Aggregate Summary Stats -->
+        <div class="stats-row" id="summaryStats">
+            <div class="stat-card danger">
+                <div class="label">Total Fossil Capacity</div>
+                <div class="value" id="statFossilCap">—</div>
+                <div class="sub">across 7 companies</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="label">2024 Fleet CO2</div>
+                <div class="value" id="statCO2">—</div>
+                <div class="sub">million metric tons</div>
+            </div>
+            <div class="stat-card accent">
+                <div class="label">Coal Exits Grid</div>
+                <div class="value" id="statCoalExit">~2033</div>
+                <div class="sub">PJM/ERCOT (60% threshold)</div>
+            </div>
+            <div class="stat-card success">
+                <div class="label">Avg Fleet CO2 by 2040</div>
+                <div class="value" id="statCO2Reduction">—</div>
+                <div class="sub">reduction vs 2024 baseline</div>
+            </div>
+        </div>
+
+        <!-- Key Insight -->
+        <div class="insight-box">
+            <strong>Key finding:</strong> Under the SBTi trajectory, coal fleet capacity across all tracked companies reaches zero by <strong>~2033</strong> (60% clean threshold). Gas peakers follow next, with most curtailed by <strong>~2040</strong>. Efficient gas CCGTs are the last fossil assets standing, declining gradually through 2050. Companies with heavy coal exposure (Vistra, NRG) face the steepest near-term stranding risk.
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Summary — All Companies Compared -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2 class="section-title">Fleet Survival Comparison — All Companies</h2>
+            <p class="section-desc">Fossil fleet survival rate (% of fossil capacity still dispatching) mapped to the SBTi decarbonization timeline. P10/P90 bounds from demand growth uncertainty.</p>
+
+            <div class="chart-container" style="height: 420px;">
+                <div class="chart-title">Fossil Fleet Survival Curves by Company</div>
+                <div class="chart-subtitle">% of fossil capacity with dispatch room at each SBTi milestone | P50 (medium demand growth)</div>
+                <canvas id="chartAllCompanies"></canvas>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-container" style="height: 360px;">
+                    <div class="chart-title">Absolute CO2 Emissions Remaining by Company</div>
+                    <div class="chart-subtitle">Million metric tons CO2/year at each threshold | P50 estimate</div>
+                    <canvas id="chartCO2Absolute"></canvas>
+                </div>
+                <div class="chart-container" style="height: 360px;">
+                    <div class="chart-title">CO2 Reduction vs 2024 Baseline</div>
+                    <div class="chart-subtitle">% reduction in fleet CO2 emissions at each SBTi milestone</div>
+                    <canvas id="chartCO2Reduction"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Regional Fossil Dispatch Decline -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2 class="section-title">Regional Fossil Dispatch Decline</h2>
+            <p class="section-desc">Remaining fossil generation (TWh) by fuel type across the SBTi trajectory. Coal and oil retire first (merit-order), gas declines last. P10/P90 bands from demand growth scenarios.</p>
+
+            <div class="chart-grid">
+                <div class="chart-container" style="height: 320px;" id="regionChartPJM">
+                    <div class="chart-title">PJM — Fossil Dispatch Remaining</div>
+                    <div class="chart-subtitle">Coal exits ~2033 | 843 TWh demand | P10/P90 gas bands shown</div>
+                    <canvas id="chartRegionPJM"></canvas>
+                </div>
+                <div class="chart-container" style="height: 320px;" id="regionChartERCOT">
+                    <div class="chart-title">ERCOT — Fossil Dispatch Remaining</div>
+                    <div class="chart-subtitle">Coal exits ~2033 | 488 TWh demand | P10/P90 gas bands shown</div>
+                    <canvas id="chartRegionERCOT"></canvas>
+                </div>
+                <div class="chart-container" style="height: 320px;" id="regionChartCAISO">
+                    <div class="chart-title">CAISO — Fossil Dispatch Remaining</div>
+                    <div class="chart-subtitle">No coal | 224 TWh demand | Gas only declining</div>
+                    <canvas id="chartRegionCAISO"></canvas>
+                </div>
+                <div class="chart-container" style="height: 320px;" id="regionChartNYISO">
+                    <div class="chart-title">NYISO — Fossil Dispatch Remaining</div>
+                    <div class="chart-subtitle">No coal | 152 TWh demand | Gas only declining</div>
+                    <canvas id="chartRegionNYISO"></canvas>
+                </div>
+                <div class="chart-container" style="height: 320px;" id="regionChartNEISO">
+                    <div class="chart-title">NEISO — Fossil Dispatch Remaining</div>
+                    <div class="chart-subtitle">Negligible coal/oil | 115 TWh demand | Gas declining</div>
+                    <canvas id="chartRegionNEISO"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Interactive Company Explorer -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2 class="section-title">Company Fleet Explorer</h2>
+            <p class="section-desc">Select a company to see its detailed fleet breakdown, survival curves by fuel type, and CO2 trajectory with P10/P90 bounds.</p>
+
+            <div class="company-selector" id="companySelector"></div>
+
+            <div class="fuel-filter" id="fuelFilter">
+                <button class="fuel-btn active" data-fuel="all_fossil">All Fossil</button>
+                <button class="fuel-btn" data-fuel="coal">Coal</button>
+                <button class="fuel-btn" data-fuel="gas">All Gas</button>
+                <button class="fuel-btn" data-fuel="gas_ccgt">Gas CCGT</button>
+                <button class="fuel-btn" data-fuel="gas_peaker">Gas Peaker</button>
+                <button class="fuel-btn" data-fuel="oil">Oil</button>
+            </div>
+
+            <!-- Company Profile Card -->
+            <div class="company-profile" id="companyProfile">
+                <div class="profile-header">
+                    <div>
+                        <div class="profile-name" id="profileName">—</div>
+                        <span class="profile-type merchant" id="profileType">Merchant/IPP</span>
+                    </div>
+                    <div style="text-align: right; font-size: 0.88rem; color: var(--text-secondary);">
+                        <div id="profileTarget">—</div>
+                    </div>
+                </div>
+                <div class="profile-stats" id="profileStats">
+                    <div class="profile-stat"><div class="val" id="psTotalCap">—</div><div class="lbl">Total Capacity</div></div>
+                    <div class="profile-stat"><div class="val" id="psFossilCap">—</div><div class="lbl">Fossil Capacity</div></div>
+                    <div class="profile-stat"><div class="val" id="psFossilPct">—</div><div class="lbl">Fossil %</div></div>
+                    <div class="profile-stat"><div class="val" id="psCO2">—</div><div class="lbl">2024 CO2 (MT)</div></div>
+                    <div class="profile-stat"><div class="val" id="psIntensity">—</div><div class="lbl">kg CO2/MWh</div></div>
+                    <div class="profile-stat"><div class="val" id="psISOs">—</div><div class="lbl">ISOs</div></div>
+                </div>
+
+                <!-- Fleet Table -->
+                <table class="fleet-table" id="fleetTable">
+                    <thead>
+                        <tr>
+                            <th>Plant / Fleet</th>
+                            <th>ISO</th>
+                            <th>Fuel</th>
+                            <th>Capacity (MW)</th>
+                            <th>Generation (TWh)</th>
+                            <th>CO2 (MT/yr)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fleetTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Interactive Charts -->
+            <div class="chart-grid">
+                <div class="chart-container" style="height: 380px;">
+                    <div class="chart-title" id="survivalChartTitle">Fleet Survival Curve</div>
+                    <div class="chart-subtitle" id="survivalChartSub">Select a company to see its survival curve with P10/P90 bounds</div>
+                    <canvas id="chartCompanySurvival"></canvas>
+                </div>
+                <div class="chart-container" style="height: 380px;">
+                    <div class="chart-title" id="co2ChartTitle">Fleet CO2 Trajectory</div>
+                    <div class="chart-subtitle" id="co2ChartSub">Absolute CO2 remaining and % reduction vs 2024 baseline</div>
+                    <canvas id="chartCompanyCO2"></canvas>
+                </div>
+            </div>
+
+            <!-- Fleet Composition Donut -->
+            <div class="chart-grid">
+                <div class="chart-container" style="height: 340px;">
+                    <div class="chart-title">Fleet Composition by Fuel Type</div>
+                    <div class="chart-subtitle">Capacity (MW) breakdown</div>
+                    <canvas id="chartFuelMix"></canvas>
+                </div>
+                <div class="chart-container" style="height: 340px;">
+                    <div class="chart-title">Fleet Composition by ISO Region</div>
+                    <div class="chart-subtitle">Capacity (MW) by market</div>
+                    <canvas id="chartISOBreakdown"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Key Milestones Timeline -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2 class="section-title">Fleet Milestones — When Do Assets Strand?</h2>
+            <p class="section-desc">Key dates when specific fuel types lose all dispatch room, mapped to the SBTi trajectory.</p>
+            <div class="chart-container" style="height: 380px;">
+                <div class="chart-title">Asset Stranding Timeline by Fuel Type and Region</div>
+                <div class="chart-subtitle">Year when each fuel type's dispatch share reaches zero | Based on Track 1 baseline P50</div>
+                <canvas id="chartTimeline"></canvas>
+            </div>
+        </div>
+
+        <!-- Methodology Note -->
+        <div class="insight-box" style="margin-top: 32px;">
+            <strong>Methodology:</strong> Survival rates are computed from the Track 1 (Existing Clean Floor) baseline pipeline's merit-order fossil retirement model. Coal is displaced first, then oil, then gas. Gas CCGTs dispatch before peakers (lower heat rate / marginal cost). P10/P90 bounds reflect demand growth uncertainty (0.5%/yr low, 1.0%/yr medium, 2.0%/yr high). Company fleet data sourced from EIA Form 860/923, eGRID, company sustainability/investor reports, and MJ Bradley/ERM Benchmarking Air Emissions (21st ed., 2025). CO2 estimates use eGRID regional emission rates by fuel type.
+        </div>
+
+    </div>
+
+    <!-- Data + Chart Scripts -->
+    <script src="js/fleet-survival-data.js"></script>
+    <script>
+    // ========================================================================
+    // CHART DEFAULTS
+    // ========================================================================
+    Chart.defaults.color = '#94A3B8';
+    Chart.defaults.borderColor = '#334155';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', 'Inter', sans-serif";
+    Chart.defaults.plugins.datalabels = { display: false };
+
+    const COMPANY_COLORS = [
+        '#EF4444', '#3B82F6', '#F59E0B', '#22C55E', '#8B5CF6', '#EC4899', '#0EA5E9'
+    ];
+
+    // ========================================================================
+    // SUMMARY STATS
+    // ========================================================================
+    (function computeSummaryStats() {
+        let totalFossilCap = 0, totalCO2 = 0, totalCO2_2040 = 0;
+        FLEET_COMPANIES.forEach(c => {
+            const bd = getFleetBreakdown(c);
+            totalFossilCap += bd.fossil_capacity;
+            totalCO2 += c.co2_2024_mt;
+            const surv = computeFleetSurvival(c, 'all_fossil');
+            // 2040 = 90% threshold (index 9)
+            const idx2040 = surv.thresholds.indexOf(90);
+            if (idx2040 >= 0) {
+                totalCO2_2040 += surv.co2_remaining_mt.p50[idx2040];
+            }
+        });
+        document.getElementById('statFossilCap').textContent = (totalFossilCap / 1000).toFixed(1) + ' GW';
+        document.getElementById('statCO2').textContent = totalCO2.toFixed(0) + ' MT';
+        const pctReduction = totalCO2 > 0 ? ((totalCO2 - totalCO2_2040) / totalCO2 * 100) : 0;
+        document.getElementById('statCO2Reduction').textContent = '-' + pctReduction.toFixed(0) + '%';
+    })();
+
+    // ========================================================================
+    // CHART 1: All Companies Survival Comparison
+    // ========================================================================
+    (function() {
+        const ctx = document.getElementById('chartAllCompanies').getContext('2d');
+        const datasets = [];
+        FLEET_COMPANIES.forEach((c, i) => {
+            const surv = computeFleetSurvival(c, 'all_fossil');
+            datasets.push({
+                label: c.shortName,
+                data: surv.years.map((y, j) => ({ x: y, y: surv.survival_pct.p50[j] })),
+                borderColor: COMPANY_COLORS[i % COMPANY_COLORS.length],
+                backgroundColor: COMPANY_COLORS[i % COMPANY_COLORS.length] + '20',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                tension: 0.3,
+                fill: false,
+            });
+        });
+        new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        type: 'linear', min: 2030, max: 2050,
+                        title: { display: true, text: 'SBTi Target Year' },
+                        ticks: { stepSize: 5 },
+                        grid: { color: '#1E293B' }
+                    },
+                    y: {
+                        min: 0, max: 100,
+                        title: { display: true, text: 'Fossil Fleet Survival (%)' },
+                        ticks: { callback: v => v + '%' },
+                        grid: { color: '#1E293B' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 16, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            title: items => 'Year: ' + Math.round(items[0].parsed.x),
+                            label: item => item.dataset.label + ': ' + item.parsed.y.toFixed(1) + '% surviving'
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            sbti2030: { type: 'line', xMin: 2030, xMax: 2030, borderColor: '#60A5FA44', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 50%', position: 'start', font: { size: 10 } } },
+                            sbti2035: { type: 'line', xMin: 2035, xMax: 2035, borderColor: '#60A5FA44', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 70%', position: 'start', font: { size: 10 } } },
+                            sbti2040: { type: 'line', xMin: 2040, xMax: 2040, borderColor: '#60A5FA44', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 90%', position: 'start', font: { size: 10 } } },
+                            sbti2050: { type: 'line', xMin: 2050, xMax: 2050, borderColor: '#22C55E44', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'Net-Zero', position: 'start', font: { size: 10 } } },
+                        }
+                    }
+                }
+            }
+        });
+    })();
+
+    // ========================================================================
+    // CHART 2: CO2 Absolute Remaining
+    // ========================================================================
+    (function() {
+        const ctx = document.getElementById('chartCO2Absolute').getContext('2d');
+        const datasets = [];
+        FLEET_COMPANIES.forEach((c, i) => {
+            const surv = computeFleetSurvival(c, 'all_fossil');
+            datasets.push({
+                label: c.shortName,
+                data: surv.years.map((y, j) => ({ x: y, y: surv.co2_remaining_mt.p50[j] })),
+                borderColor: COMPANY_COLORS[i % COMPANY_COLORS.length],
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        });
+        new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
+                    y: { min: 0, title: { display: true, text: 'CO2 (Million Metric Tons/yr)' }, grid: { color: '#1E293B' } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 12, usePointStyle: true, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: item => item.dataset.label + ': ' + item.parsed.y.toFixed(1) + ' MT CO2' } }
+                }
+            }
+        });
+    })();
+
+    // ========================================================================
+    // CHART 3: CO2 % Reduction
+    // ========================================================================
+    (function() {
+        const ctx = document.getElementById('chartCO2Reduction').getContext('2d');
+        const datasets = [];
+        FLEET_COMPANIES.forEach((c, i) => {
+            const surv = computeFleetSurvival(c, 'all_fossil');
+            datasets.push({
+                label: c.shortName,
+                data: surv.years.map((y, j) => ({ x: y, y: surv.co2_reduction_pct.p50[j] })),
+                borderColor: COMPANY_COLORS[i % COMPANY_COLORS.length],
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        });
+        new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
+                    y: { min: 0, max: 100, title: { display: true, text: 'CO2 Reduction vs 2024 (%)' }, ticks: { callback: v => v + '%' }, grid: { color: '#1E293B' } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 12, usePointStyle: true, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: item => item.dataset.label + ': -' + item.parsed.y.toFixed(1) + '%' } }
+                }
+            }
+        });
+    })();
+
+    // ========================================================================
+    // REGIONAL FOSSIL DISPATCH CHARTS
+    // ========================================================================
+    function createRegionalChart(canvasId, iso) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        const decline = FOSSIL_DISPATCH_DECLINE[iso];
+        if (!decline) return;
+
+        const years = [], coal_p50 = [], oil_p50 = [], gas_p50 = [], gas_p10 = [], gas_p90 = [];
+        FLEET_THRESHOLDS.forEach(t => {
+            const d = decline.thresholds[String(t)];
+            years.push(d.year);
+            coal_p50.push(d.p50.coal);
+            oil_p50.push(d.p50.oil);
+            gas_p50.push(d.p50.gas);
+            gas_p10.push(d.p10.gas);
+            gas_p90.push(d.p90.gas);
+        });
+
+        const datasets = [];
+
+        // Gas P10/P90 band (fill between)
+        datasets.push({
+            label: 'Gas P90 (high growth)',
+            data: years.map((y, i) => ({ x: y, y: gas_p90[i] })),
+            borderColor: '#EF444433',
+            backgroundColor: '#EF444412',
+            borderWidth: 1,
+            borderDash: [3, 3],
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+        });
+        datasets.push({
+            label: 'Gas P10 (low growth)',
+            data: years.map((y, i) => ({ x: y, y: gas_p10[i] })),
+            borderColor: '#EF444433',
+            backgroundColor: '#EF444412',
+            borderWidth: 1,
+            borderDash: [3, 3],
+            pointRadius: 0,
+            tension: 0.3,
+            fill: '-1', // fill to previous dataset
+        });
+
+        // Gas P50
+        datasets.push({
+            label: 'Gas (P50)',
+            data: years.map((y, i) => ({ x: y, y: gas_p50[i] })),
+            borderColor: '#EF4444',
+            backgroundColor: '#EF444440',
+            borderWidth: 2.5,
+            pointRadius: 2,
+            tension: 0.3,
+            fill: false,
+        });
+
+        // Coal if any
+        if (coal_p50.some(v => v > 0)) {
+            datasets.push({
+                label: 'Coal (P50)',
+                data: years.map((y, i) => ({ x: y, y: coal_p50[i] })),
+                borderColor: '#374151',
+                backgroundColor: '#37415140',
+                borderWidth: 2.5,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        // Oil if any
+        if (oil_p50.some(v => v > 0.5)) {
+            datasets.push({
+                label: 'Oil (P50)',
+                data: years.map((y, i) => ({ x: y, y: oil_p50[i] })),
+                borderColor: '#9CA3AF',
+                backgroundColor: '#9CA3AF40',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
+                    y: { min: 0, title: { display: true, text: 'Remaining TWh' }, grid: { color: '#1E293B' } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 10 }, usePointStyle: true } },
+                    tooltip: { callbacks: { label: item => item.dataset.label + ': ' + item.parsed.y.toFixed(1) + ' TWh' } }
+                }
+            }
+        });
+    }
+
+    createRegionalChart('chartRegionPJM', 'PJM');
+    createRegionalChart('chartRegionERCOT', 'ERCOT');
+    createRegionalChart('chartRegionCAISO', 'CAISO');
+    createRegionalChart('chartRegionNYISO', 'NYISO');
+    createRegionalChart('chartRegionNEISO', 'NEISO');
+
+    // ========================================================================
+    // COMPANY SELECTOR + FUEL FILTER
+    // ========================================================================
+    let selectedCompanyIdx = null;
+    let selectedFuel = 'all_fossil';
+    let survivalChart = null, co2Chart = null, fuelMixChart = null, isoChart = null;
+
+    // Build company pills
+    const selectorEl = document.getElementById('companySelector');
+    FLEET_COMPANIES.forEach((c, i) => {
+        const pill = document.createElement('button');
+        pill.className = 'company-pill';
+        pill.textContent = c.shortName;
+        pill.onclick = () => selectCompany(i);
+        selectorEl.appendChild(pill);
+    });
+
+    // Fuel filter buttons
+    document.querySelectorAll('.fuel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.fuel-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedFuel = btn.dataset.fuel;
+            if (selectedCompanyIdx !== null) updateCompanyCharts();
+        });
+    });
+
+    function selectCompany(idx) {
+        selectedCompanyIdx = idx;
+        const pills = document.querySelectorAll('.company-pill');
+        pills.forEach((p, i) => p.classList.toggle('active', i === idx));
+        document.getElementById('companyProfile').classList.add('visible');
+        updateCompanyProfile();
+        updateCompanyCharts();
+    }
+
+    function updateCompanyProfile() {
+        const c = FLEET_COMPANIES[selectedCompanyIdx];
+        const bd = getFleetBreakdown(c);
+
+        document.getElementById('profileName').textContent = c.name;
+        document.getElementById('profileType').textContent = c.type;
+        document.getElementById('profileType').className = 'profile-type ' + (c.type.includes('Merchant') ? 'merchant' : 'hybrid');
+        document.getElementById('profileTarget').textContent = c.target;
+
+        document.getElementById('psTotalCap').textContent = (bd.total_capacity / 1000).toFixed(1) + ' GW';
+        document.getElementById('psFossilCap').textContent = (bd.fossil_capacity / 1000).toFixed(1) + ' GW';
+        document.getElementById('psFossilPct').textContent = bd.fossil_pct.toFixed(0) + '%';
+        document.getElementById('psCO2').textContent = c.co2_2024_mt;
+        document.getElementById('psIntensity').textContent = c.intensity_kg_per_mwh;
+
+        const isos = [...new Set(c.plants.map(p => p.iso))];
+        document.getElementById('psISOs').textContent = isos.join(', ');
+
+        // Fleet table
+        const tbody = document.getElementById('fleetTableBody');
+        tbody.innerHTML = '';
+        c.plants.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.name}</td>
+                <td>${p.iso}</td>
+                <td><span class="fuel-dot" style="background:${FUEL_COLORS[p.fuel] || '#666'}"></span>${FUEL_LABELS[p.fuel] || p.fuel}</td>
+                <td>${p.capacity_mw.toLocaleString()}</td>
+                <td>${p.generation_twh.toFixed(1)}</td>
+                <td>${p.co2_mt.toFixed(1)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateCompanyCharts() {
+        const c = FLEET_COMPANIES[selectedCompanyIdx];
+        const surv = computeFleetSurvival(c, selectedFuel);
+        const bd = getFleetBreakdown(c);
+        const fuelLabel = selectedFuel === 'all_fossil' ? 'All Fossil' :
+            selectedFuel === 'gas' ? 'All Gas' : (FUEL_LABELS[selectedFuel] || selectedFuel);
+
+        // Update titles
+        document.getElementById('survivalChartTitle').textContent = c.shortName + ' — ' + fuelLabel + ' Fleet Survival';
+        document.getElementById('survivalChartSub').textContent = 'P10/P50/P90 bounds from demand growth uncertainty | Baseline: ' +
+            (surv.baseline_fossil_capacity / 1000).toFixed(1) + ' GW fossil';
+        document.getElementById('co2ChartTitle').textContent = c.shortName + ' — CO2 Emissions Trajectory';
+        document.getElementById('co2ChartSub').textContent = '2024 baseline: ' + c.co2_2024_mt + ' MT CO2 | ' + fuelLabel + ' fleet only';
+
+        // Survival chart
+        if (survivalChart) survivalChart.destroy();
+        const survCtx = document.getElementById('chartCompanySurvival').getContext('2d');
+        const hasData = surv.survival_pct.p50.some(v => v !== null);
+
+        survivalChart = new Chart(survCtx, {
+            type: 'line',
+            data: {
+                datasets: hasData ? [
+                    {
+                        label: 'P90 (high demand)',
+                        data: surv.years.map((y, i) => ({ x: y, y: surv.survival_pct.p90[i] })),
+                        borderColor: '#EF444444',
+                        backgroundColor: '#EF444415',
+                        borderWidth: 1, borderDash: [4,4], pointRadius: 0, tension: 0.3, fill: false,
+                    },
+                    {
+                        label: 'P10 (low demand)',
+                        data: surv.years.map((y, i) => ({ x: y, y: surv.survival_pct.p10[i] })),
+                        borderColor: '#22C55E44',
+                        backgroundColor: '#EF444415',
+                        borderWidth: 1, borderDash: [4,4], pointRadius: 0, tension: 0.3, fill: '-1',
+                    },
+                    {
+                        label: 'P50 (medium demand)',
+                        data: surv.years.map((y, i) => ({ x: y, y: surv.survival_pct.p50[i] })),
+                        borderColor: '#3B82F6',
+                        backgroundColor: '#3B82F620',
+                        borderWidth: 3, pointRadius: 3, pointHoverRadius: 6, tension: 0.3, fill: false,
+                    },
+                ] : []
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
+                    y: { min: 0, max: 100, title: { display: true, text: 'Survival Rate (%)' }, ticks: { callback: v => v + '%' }, grid: { color: '#1E293B' } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 12, usePointStyle: true } },
+                    tooltip: { callbacks: { label: item => item.dataset.label + ': ' + (item.parsed.y !== null ? item.parsed.y.toFixed(1) + '%' : 'N/A') } },
+                    annotation: {
+                        annotations: {
+                            line50: { type: 'line', yMin: 50, yMax: 50, borderColor: '#F59E0B33', borderWidth: 1, borderDash: [4,4], label: { display: true, content: '50% Stranded', position: 'end', font: { size: 10 }, color: '#F59E0B' } }
+                        }
+                    }
+                }
+            }
+        });
+
+        // CO2 chart (dual axis: absolute + % reduction)
+        if (co2Chart) co2Chart.destroy();
+        const co2Ctx = document.getElementById('chartCompanyCO2').getContext('2d');
+
+        co2Chart = new Chart(co2Ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'CO2 Remaining (MT)',
+                        data: surv.years.map((y, i) => ({ x: y, y: surv.co2_remaining_mt.p50[i] })),
+                        borderColor: '#EF4444',
+                        backgroundColor: '#EF444420',
+                        borderWidth: 2.5, pointRadius: 3, tension: 0.3, fill: true,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'CO2 Remaining P90',
+                        data: surv.years.map((y, i) => ({ x: y, y: surv.co2_remaining_mt.p90[i] })),
+                        borderColor: '#EF444433',
+                        borderWidth: 1, borderDash: [4,4], pointRadius: 0, tension: 0.3, fill: false,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: '% Reduction (P50)',
+                        data: surv.years.map((y, i) => ({ x: y, y: surv.co2_reduction_pct.p50[i] })),
+                        borderColor: '#22C55E',
+                        backgroundColor: '#22C55E20',
+                        borderWidth: 2, pointRadius: 2, tension: 0.3, fill: false,
+                        yAxisID: 'y1',
+                    },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
+                    y: { min: 0, position: 'left', title: { display: true, text: 'CO2 (MT/yr)' }, grid: { color: '#1E293B' } },
+                    y1: { min: 0, max: 100, position: 'right', title: { display: true, text: '% Reduction' }, ticks: { callback: v => v + '%' }, grid: { display: false } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 12, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            label: item => {
+                                if (item.dataset.yAxisID === 'y1') return item.dataset.label + ': -' + item.parsed.y.toFixed(1) + '%';
+                                return item.dataset.label + ': ' + item.parsed.y.toFixed(2) + ' MT';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Fuel mix donut
+        if (fuelMixChart) fuelMixChart.destroy();
+        const fuelCtx = document.getElementById('chartFuelMix').getContext('2d');
+        const fuelEntries = Object.entries(bd.byFuel).sort((a, b) => b[1].capacity_mw - a[1].capacity_mw);
+
+        fuelMixChart = new Chart(fuelCtx, {
+            type: 'doughnut',
+            data: {
+                labels: fuelEntries.map(([f]) => FUEL_LABELS[f] || f),
+                datasets: [{
+                    data: fuelEntries.map(([, v]) => v.capacity_mw),
+                    backgroundColor: fuelEntries.map(([f]) => FUEL_COLORS[f] || '#666'),
+                    borderColor: '#1E293B',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '55%',
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: item => item.label + ': ' + item.raw.toLocaleString() + ' MW' } }
+                }
+            }
+        });
+
+        // ISO breakdown bar chart
+        if (isoChart) isoChart.destroy();
+        const isoCtx = document.getElementById('chartISOBreakdown').getContext('2d');
+        const isoEntries = Object.entries(bd.byISO).sort((a, b) => b[1].capacity_mw - a[1].capacity_mw);
+
+        // Stack by fuel within each ISO
+        const isoLabels = isoEntries.map(([iso]) => iso);
+        const allFuels = [...new Set(c.plants.map(p => p.fuel))];
+        const isoDatasets = allFuels.map(fuel => ({
+            label: FUEL_LABELS[fuel] || fuel,
+            data: isoLabels.map(iso => {
+                return c.plants.filter(p => p.iso === iso && p.fuel === fuel).reduce((s, p) => s + p.capacity_mw, 0);
+            }),
+            backgroundColor: FUEL_COLORS[fuel] || '#666',
+            borderColor: '#1E293B',
+            borderWidth: 1,
+        }));
+
+        isoChart = new Chart(isoCtx, {
+            type: 'bar',
+            data: { labels: isoLabels, datasets: isoDatasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: { stacked: true, title: { display: true, text: 'Capacity (MW)' }, grid: { color: '#1E293B' } },
+                    y: { stacked: true, grid: { display: false } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 10 }, usePointStyle: true } },
+                    tooltip: { callbacks: { label: item => item.dataset.label + ': ' + item.raw.toLocaleString() + ' MW' } }
+                }
+            }
+        });
+    }
+
+    // ========================================================================
+    // TIMELINE CHART — Asset Stranding Dates
+    // ========================================================================
+    (function() {
+        const ctx = document.getElementById('chartTimeline').getContext('2d');
+
+        // For each ISO + fuel, find the year when dispatch reaches 0
+        const entries = [];
+        ISO_LIST.forEach(iso => {
+            const decline = FOSSIL_DISPATCH_DECLINE[iso];
+            if (!decline) return;
+
+            // Coal
+            if (decline.coal_cap_twh > 0) {
+                let exitYear = null;
+                for (const t of FLEET_THRESHOLDS) {
+                    const d = decline.thresholds[String(t)];
+                    if (d && d.p50.coal === 0) { exitYear = d.year; break; }
+                }
+                if (exitYear) entries.push({ iso, fuel: 'Coal', year: exitYear, color: '#374151' });
+            }
+            // Oil
+            if (decline.oil_cap_twh > 0.5) {
+                let exitYear = null;
+                for (const t of FLEET_THRESHOLDS) {
+                    const d = decline.thresholds[String(t)];
+                    if (d && (d.p50.oil || 0) === 0) { exitYear = d.year; break; }
+                }
+                if (exitYear) entries.push({ iso, fuel: 'Oil', year: exitYear, color: '#9CA3AF' });
+            }
+            // Gas (reaches 0 at 100% = 2050)
+            entries.push({ iso, fuel: 'Gas', year: 2050, color: '#EF4444' });
+        });
+
+        // Group by ISO
+        const isoLabels = [...new Set(entries.map(e => e.iso))];
+        const fuelTypes = ['Coal', 'Oil', 'Gas'];
+        const fuelColors = { Coal: '#374151', Oil: '#9CA3AF', Gas: '#EF4444' };
+
+        const datasets = fuelTypes.map(fuel => ({
+            label: fuel,
+            data: isoLabels.map(iso => {
+                const entry = entries.find(e => e.iso === iso && e.fuel === fuel);
+                return entry ? entry.year : null;
+            }),
+            backgroundColor: fuelColors[fuel],
+            borderColor: '#1E293B',
+            borderWidth: 1,
+            barThickness: 20,
+        }));
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: { labels: isoLabels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        min: 2028, max: 2052,
+                        title: { display: true, text: 'Year of Full Retirement' },
+                        grid: { color: '#1E293B' },
+                        ticks: { stepSize: 5 }
+                    },
+                    y: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+                    tooltip: { callbacks: { label: item => item.dataset.label + ' exits ' + item.label + ': ' + (item.raw || 'N/A') } }
+                }
+            }
+        });
+    })();
+
+    // Auto-select first company
+    selectCompany(0);
+    </script>
+</body>
+</html>
