@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — New Build Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+body { background: #F7F8FC; }
+
+/* ========== TARGET SLIDER (matches scenario_comparison pattern) ========== */
+.target-slider-section { max-width: 1200px; margin: -20px auto 0; padding: 20px 24px 12px; position: relative; z-index: 10; }
+.target-slider-card { background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 20px 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.target-slider-label { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.85rem; color: #1A2744; font-weight: 700; white-space: nowrap; }
+.target-slider-wrap { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 12px; }
+.target-slider-wrap input[type=range] { flex: 1; height: 6px; -webkit-appearance: none; appearance: none; background: linear-gradient(90deg, #0EA5E9 0%, #16A34A 50%, #F59E0B 80%, #DC2626 100%); border-radius: 3px; outline: none; cursor: pointer; }
+.target-slider-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #1A2744; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
+.target-slider-wrap input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #1A2744; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
+.target-val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.4rem; font-weight: 800; color: #0284C7; min-width: 50px; text-align: center; }
+.target-year { font-size: 0.78rem; color: rgba(0,0,0,0.45); font-weight: 600; }
+.target-ticks { display: flex; justify-content: space-between; font-size: 0.65rem; color: rgba(0,0,0,0.35); padding: 2px 0 0; }
+@media (max-width: 768px) {
+    .target-slider-card { flex-direction: column; align-items: stretch; gap: 12px; }
+    .target-slider-label { text-align: center; }
+}
+
+/* ========== COMPARISON PANELS ========== */
+.comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+    align-items: start;
+}
+@media (max-width: 768px) {
+    .comparison-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .delta-panel { order: -1; }
+}
+.track-panel {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border-top: 4px solid #0EA5E9;
+}
+.track-panel.nb { border-top-color: #F59E0B; }
+.track-panel h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: #1A2744;
+}
+.track-panel .panel-sub {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 16px;
+}
+.cost-big {
+    font-family: 'Rajdhani', monospace;
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #1A2744;
+    line-height: 1;
+}
+.cost-big .unit { font-size: 0.9rem; font-weight: 500; color: #6b7280; }
+.cost-range {
+    font-size: 0.78rem;
+    color: #9ca3af;
+    margin-top: 4px;
+    font-family: 'Rajdhani', monospace;
+}
+.mix-chart-wrap {
+    height: 200px;
+    margin-top: 16px;
+}
+
+/* Delta panel */
+.delta-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    min-width: 140px;
+}
+.delta-arrow {
+    font-size: 2rem;
+    color: #9ca3af;
+    margin-bottom: 8px;
+}
+.delta-value {
+    font-family: 'Rajdhani', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #EF4444;
+}
+.delta-value.positive { color: #22C55E; }
+.delta-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-align: center;
+    margin-top: 4px;
+}
+
+/* ========== EAC PREMIUM SLIDERS ========== */
+.premium-controls {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 32px;
+}
+.premium-controls h4 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin: 0 0 16px;
+}
+.premium-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+.premium-item label {
+    display: block;
+    font-size: 0.78rem;
+    color: #6b7280;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+.premium-item .slider-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.premium-item input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    outline: none;
+}
+.premium-item input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #1A2744;
+    cursor: pointer;
+}
+.premium-item input[type=range]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #1A2744;
+    cursor: pointer;
+}
+.premium-val {
+    min-width: 55px;
+    font-family: 'Rajdhani', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1A2744;
+    text-align: right;
+}
+
+/* ========== SECTION CARDS ========== */
+.section-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 32px;
+}
+.section-card h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin: 0 0 8px;
+}
+.section-card .section-sub {
+    font-size: 0.88rem;
+    color: #6b7280;
+    margin-bottom: 20px;
+    max-width: 700px;
+}
+.chart-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 360px;
+}
+@media (max-width: 768px) {
+    .chart-wrap { min-height: 280px; }
+}
+
+/* ========== SCROLLYTELL STEPS ========== */
+.scroll-step {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 48px;
+}
+.scroll-step.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ========== CALLOUT BOX ========== */
+.callout-box {
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border-left: 4px solid #F59E0B;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 20px 0;
+}
+.callout-box.danger {
+    background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+    border-left-color: #EF4444;
+}
+.callout-box.info {
+    background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+    border-left-color: #3B82F6;
+}
+.callout-box h4 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: #1A2744;
+}
+.callout-box p {
+    font-size: 0.85rem;
+    color: #374151;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* ========== SUPPLY WATERFALL ========== */
+.waterfall-bar {
+    display: flex;
+    height: 36px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 12px 0;
+}
+.waterfall-bar .seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    padding: 0 6px;
+    min-width: 0;
+}
+
+/* ========== METRIC STRIP ========== */
+.metric-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+}
+.metric-item {
+    text-align: center;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+.metric-item .val {
+    font-family: 'Rajdhani', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1A2744;
+    line-height: 1;
+}
+.metric-item .lbl {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+/* ========== BOTTOM LINE ========== */
+.bottom-line {
+    background: linear-gradient(135deg, #0F1A2E 0%, #1A2744 40%, #1E3A5F 100%);
+    border-radius: 12px;
+    padding: 40px 32px;
+    color: #fff;
+    margin-bottom: 32px;
+}
+.bottom-line h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0 0 20px;
+    color: #fff;
+}
+.bottom-line p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.7;
+    max-width: 750px;
+}
+.bottom-line .key-stat {
+    display: inline-block;
+    font-family: 'Rajdhani', monospace;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #38bdf8;
+}
+
+/* ========== FOOTER ========== */
+.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
+.footer-links a {
+    text-decoration: none; font-size: 0.85rem; font-weight: 500;
+    transition: color 0.2s; min-height: 44px;
+    display: inline-flex; align-items: center; padding: 8px 4px;
+}
+.footer-note { font-size: 0.78rem; }
+.bottom-banner {
+    height: 4px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+}
+.energy-spectrum-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    border-radius: 2px; margin: 0 auto; max-width: 1320px; opacity: 0.5;
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<div style="background:#0F1A2E;padding:8px 24px;">
+    <a href="index.html" style="color:rgba(255,255,255,0.6);font-size:0.82rem;text-decoration:none;">&#8592; Back to Home</a>
+</div>
+
+<!-- Header Banner -->
+<header class="header">
+    <h1>New Build Analysis</h1>
+    <p class="subtitle">Should you procure from existing clean generation — or build new? The answer depends on scale, and the system responds to your choice.</p>
+    <div class="header-accent"></div>
+</header>
+<div class="energy-spectrum-bar"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1: THE PROCUREMENT CHOICE                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- Target threshold slider (floating card, matches scenario_comparison) -->
+<div class="target-slider-section">
+    <div class="target-slider-card">
+        <div class="target-slider-label">Hourly Clean Energy Target</div>
+        <div class="target-slider-wrap">
+            <input type="range" id="targetSlider" min="0" max="10" step="1" value="5">
+            <div>
+                <div class="target-val" id="targetVal">75%</div>
+                <div class="target-year" id="targetYear">SBTi 2036</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="max-width:1200px;margin:0 auto;padding:16px var(--pad-page) 0;">
+
+<div class="section-card">
+    <h2>1. The Procurement Choice</h2>
+    <p class="section-sub">At each hourly clean energy target, compare the cost of procuring from existing clean sources versus building entirely new generation. PJM's large existing nuclear fleet creates a significant cost advantage — until aggregate demand exhausts available supply.</p>
+
+    <!-- Comparison Grid -->
+    <div class="comparison-grid">
+        <!-- Track 1: With Existing -->
+        <div class="track-panel ecf">
+            <h3>With Existing Clean</h3>
+            <p class="panel-sub">Existing nuclear, hydro, solar, wind credited at wholesale + EAC premium</p>
+            <div class="cost-big" id="ecfCost">$72.3 <span class="unit">$/MWh</span></div>
+            <div class="cost-range" id="ecfRange">Medium cost scenario</div>
+            <div class="mix-chart-wrap"><canvas id="ecfMixChart"></canvas></div>
+        </div>
+
+        <!-- Delta -->
+        <div class="delta-panel">
+            <div class="delta-arrow">&#8644;</div>
+            <div class="delta-value" id="deltaValue">+$17.4</div>
+            <div class="delta-label">New-build premium<br>per MWh</div>
+        </div>
+
+        <!-- Track 2: New Build Only -->
+        <div class="track-panel nb">
+            <h3>New Build Only</h3>
+            <p class="panel-sub">All generation from new solar, wind, clean firm, storage — priced at LCOE</p>
+            <div class="cost-big" id="nbCost">$89.7 <span class="unit">$/MWh</span></div>
+            <div class="cost-range" id="nbRange">P10: $75 &mdash; P50: $90 &mdash; P90: $118</div>
+            <div class="mix-chart-wrap"><canvas id="nbMixChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- EAC Premium Controls -->
+    <div class="premium-controls">
+        <h4>EAC Premium Assumptions <span style="font-weight:400;color:#9ca3af;font-size:0.8rem;">(adjusts "With Existing" cost)</span></h4>
+        <div class="premium-grid">
+            <div class="premium-item">
+                <label>Nuclear premium</label>
+                <div class="slider-inline">
+                    <input type="range" id="premNuclear" min="0" max="40" step="1" value="4">
+                    <span class="premium-val" id="premNuclearVal">$4/MWh</span>
+                </div>
+            </div>
+            <div class="premium-item">
+                <label>Hydro premium</label>
+                <div class="slider-inline">
+                    <input type="range" id="premHydro" min="0" max="20" step="1" value="3">
+                    <span class="premium-val" id="premHydroVal">$3/MWh</span>
+                </div>
+            </div>
+            <div class="premium-item">
+                <label>Solar REC premium</label>
+                <div class="slider-inline">
+                    <input type="range" id="premSolar" min="0" max="20" step="1" value="5">
+                    <span class="premium-val" id="premSolarVal">$5/MWh</span>
+                </div>
+            </div>
+            <div class="premium-item">
+                <label>Wind REC premium</label>
+                <div class="slider-inline">
+                    <input type="range" id="premWind" min="0" max="20" step="1" value="5">
+                    <span class="premium-val" id="premWindVal">$5/MWh</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2: THE SCALING CURVE                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section-card">
+    <h2>2. The Scaling Curve</h2>
+    <p class="section-sub">What happens when more buyers enter the market? As aggregate corporate demand scales, existing merchant supply is consumed. Beyond a critical threshold, every buyer faces new-build economics regardless of their stated procurement strategy.</p>
+
+    <div class="chart-wrap"><canvas id="scalingChart"></canvas></div>
+
+    <div class="callout-box info" style="margin-top:20px;">
+        <h4>PJM Available Merchant Supply: ~90 TWh</h4>
+        <p>Of PJM's 280 TWh total clean generation, 95 TWh is locked in state subsidy programs (SSS-fixed), 70 TWh fulfills RPS mandates, and 25 TWh is already under corporate PPAs. That leaves roughly 90 TWh of uncontracted merchant supply available for voluntary hourly matching procurement.</p>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3: THE ECONOMIC FEEDBACK LOOP (scrollytell)               -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="section-card" style="background:transparent;box-shadow:none;padding:0;">
+    <h2 style="padding:0 0 8px;">3. The Economic Feedback Loop</h2>
+    <p class="section-sub">Clean energy procurement doesn't happen in a vacuum. Large-scale hourly matching reshapes wholesale electricity markets — which feeds back to undermine the very assets that make "with existing" procurement cheap.</p>
+</div>
+
+<!-- Step 3a: LMP Decline -->
+<div class="scroll-step section-card">
+    <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.1rem;color:#1A2744;margin:0 0 8px;">Wholesale prices fall as clean energy displaces fossil generation</h3>
+    <p style="font-size:0.85rem;color:#6b7280;margin-bottom:16px;">PJM's wholesale electricity price (LMP) declines from $37/MWh at 50% clean to under $7/MWh at 99%. The merit-order effect is relentless: every MWh of zero-marginal-cost clean energy pushes higher-cost fossil plants out of the dispatch stack.</p>
+    <div class="chart-wrap"><canvas id="lmpChart"></canvas></div>
+</div>
+
+<!-- Step 3b: The Clean Premium -->
+<div class="scroll-step section-card">
+    <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.1rem;color:#1A2744;margin:0 0 8px;">The widening gap: when wholesale prices fall below operating costs</h3>
+    <p style="font-size:0.85rem;color:#6b7280;margin-bottom:16px;">Nuclear plants cost roughly $33/MWh to operate (fuel + O&amp;M). When the wholesale price drops below that floor, existing nuclear can only survive with out-of-market revenue — clean energy premiums, state subsidies, or federal tax credits.</p>
+
+    <div class="metric-strip">
+        <div class="metric-item">
+            <div class="val">$33</div>
+            <div class="lbl">Nuclear operating cost ($/MWh)</div>
+        </div>
+        <div class="metric-item">
+            <div class="val" id="lmpAt80">$30</div>
+            <div class="lbl">PJM LMP at 80% clean</div>
+        </div>
+        <div class="metric-item">
+            <div class="val" id="premiumAt80">$3</div>
+            <div class="lbl">Minimum clean premium needed</div>
+        </div>
+        <div class="metric-item">
+            <div class="val" id="premiumAt95">$14</div>
+            <div class="lbl">Premium at 95% clean</div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 3c: Supply Waterfall -->
+<div class="scroll-step section-card">
+    <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.1rem;color:#1A2744;margin:0 0 8px;">PJM's clean generation: who owns it and what's available?</h3>
+    <p style="font-size:0.85rem;color:#6b7280;margin-bottom:16px;">Not all 280 TWh of PJM clean energy is available for voluntary corporate procurement. State programs, RPS mandates, and existing contracts claim most of it.</p>
+
+    <div class="waterfall-bar">
+        <div class="seg" style="width:34%;background:#1E3A5F;">SSS-Fixed: 95 TWh</div>
+        <div class="seg" style="width:25%;background:#22C55E;">RPS: 70 TWh</div>
+        <div class="seg" style="width:9%;background:#9333EA;">PPAs: 25 TWh</div>
+        <div class="seg" style="width:32%;background:#0EA5E9;">Available: 90 TWh</div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+        <span style="font-size:0.72rem;color:#6b7280;"><span style="display:inline-block;width:10px;height:10px;background:#1E3A5F;border-radius:2px;margin-right:3px;"></span>State subsidies (ZEC/CMC/rate-base)</span>
+        <span style="font-size:0.72rem;color:#6b7280;"><span style="display:inline-block;width:10px;height:10px;background:#22C55E;border-radius:2px;margin-right:3px;"></span>Renewable Portfolio Standards</span>
+        <span style="font-size:0.72rem;color:#6b7280;"><span style="display:inline-block;width:10px;height:10px;background:#9333EA;border-radius:2px;margin-right:3px;"></span>Existing corporate PPAs</span>
+        <span style="font-size:0.72rem;color:#6b7280;"><span style="display:inline-block;width:10px;height:10px;background:#0EA5E9;border-radius:2px;margin-right:3px;"></span>Uncontracted merchant</span>
+    </div>
+</div>
+
+<!-- Step 3d: IL ZEC/CMC + 45U PTC -->
+<div class="scroll-step">
+    <div class="callout-box danger">
+        <h4>Illinois ZEC/CMC Expiry (2027): 94 TWh at Risk</h4>
+        <p>Illinois' Zero Emission Credit (ZEC) and Clean Energy Jobs Act (CMC) programs — which subsidize six nuclear stations (Dresden, Braidwood, Byron, LaSalle, Clinton, Quad Cities) — expire in 2027. Without renewal or replacement revenue, these 94 TWh of SSS-fixed nuclear generation could shift to merchant status or face retirement pressure.</p>
+        <p style="margin-top:10px;">This is not hypothetical. Exelon already announced potential early retirement of Quad Cities and Byron before the original ZEC program was enacted in 2016.</p>
+    </div>
+
+    <div class="callout-box info">
+        <h4>45U Production Tax Credit: A Bridge, Not a Solution</h4>
+        <p>The Inflation Reduction Act's Section 45U provides existing nuclear plants up to <strong>$15/MWh</strong> in production tax credits (2024–2032). This helps close the gap between operating costs and declining wholesale prices — but it phases down as carbon-free generation increases, and expires entirely by 2032.</p>
+        <p style="margin-top:10px;">At 90% clean energy penetration (LMP ~$24/MWh), nuclear needs ~$9/MWh beyond what markets provide. The 45U PTC covers this today. But as thresholds rise further and LMP drops below $12/MWh, even the full $15 PTC becomes insufficient — and it sunsets before most SBTi targets are reached.</p>
+    </div>
+</div>
+
+<!-- Step 3e: The Paradox -->
+<div class="scroll-step section-card" style="border-left:4px solid #EF4444;">
+    <h3 style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:1.1rem;color:#EF4444;margin:0 0 8px;">The Procurement Paradox</h3>
+    <p style="font-size:0.88rem;color:#374151;line-height:1.7;">
+        A strategy that relies exclusively on new-build clean energy accelerates the very feedback loop that undermines existing nuclear viability:
+    </p>
+    <ol style="font-size:0.85rem;color:#374151;line-height:1.8;padding-left:20px;margin:12px 0 0;">
+        <li><strong>New build depresses LMP</strong> — zero-marginal-cost renewables push fossil (and nuclear) out of the merit order</li>
+        <li><strong>Existing nuclear becomes uneconomic</strong> — operating costs exceed wholesale revenue</li>
+        <li><strong>Nuclear retires</strong> — without state subsidies or clean premiums, plants shut down</li>
+        <li><strong>Reliability gap emerges</strong> — PJM loses 32 GW of baseload; must be replaced with new firm generation</li>
+        <li><strong>Replacement cost is higher</strong> — new nuclear costs $105/MWh vs $33/MWh to keep existing plants running</li>
+    </ol>
+    <p style="font-size:0.88rem;color:#374151;line-height:1.7;margin-top:12px;">
+        The cheapest path includes both: <strong>clean premiums to retain existing nuclear</strong> and <strong>new-build for incremental capacity</strong>. Ignoring existing assets doesn't make them disappear — it makes replacing them expensive.
+    </p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4: BOTTOM LINE                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="bottom-line">
+    <h2>4. The Bottom Line</h2>
+    <div class="metric-strip" style="margin-bottom:24px;">
+        <div class="metric-item" style="background:rgba(255,255,255,0.08);">
+            <div class="val" style="color:#38bdf8;" id="blEcfCost">$72</div>
+            <div class="lbl" style="color:rgba(255,255,255,0.6);">With Existing at 75%</div>
+        </div>
+        <div class="metric-item" style="background:rgba(255,255,255,0.08);">
+            <div class="val" style="color:#F59E0B;" id="blNbCost">$90</div>
+            <div class="lbl" style="color:rgba(255,255,255,0.6);">New Build Only at 75%</div>
+        </div>
+        <div class="metric-item" style="background:rgba(255,255,255,0.08);">
+            <div class="val" style="color:#22C55E;" id="blSaving">$18</div>
+            <div class="lbl" style="color:rgba(255,255,255,0.6);">Savings per MWh</div>
+        </div>
+        <div class="metric-item" style="background:rgba(255,255,255,0.08);">
+            <div class="val" style="color:#EF4444;">~90 TWh</div>
+            <div class="lbl" style="color:rgba(255,255,255,0.6);">Merchant supply ceiling</div>
+        </div>
+    </div>
+    <p>Procuring from existing clean generation is significantly cheaper — but only while supply lasts. PJM has roughly 90 TWh of uncontracted merchant clean energy. As aggregate corporate demand approaches that ceiling, the cost advantage narrows and eventually disappears.</p>
+    <p style="margin-top:12px;">The economically rational strategy: <strong>secure existing clean generation through EAC premiums now</strong> while those premiums are low ($3–15/MWh), and <strong>complement with new-build</strong> where existing supply is insufficient. Attempting to procure only new-build accelerates wholesale price decline, threatens existing nuclear viability, and ultimately increases total system cost.</p>
+    <p style="margin-top:12px;">Clean premiums are not a subsidy — they're a <strong>market signal</strong> that existing clean generation has value beyond the wholesale energy market. Without that signal, the cheapest clean electrons in the system retire, and everyone pays more.</p>
+</div>
+
+</div><!-- end max-width container -->
+
+<!-- Footer -->
+<footer class="page-footer" style="background:#0F1A2E;padding:32px var(--pad-page);text-align:center;color:rgba(255,255,255,0.5);">
+    <div class="footer-links">
+        <a href="index.html" style="color:rgba(255,255,255,0.6);">Home</a>
+        <a href="dashboard.html" style="color:rgba(255,255,255,0.6);">Grid Simulation</a>
+        <a href="cost_to_replace.html" style="color:rgba(255,255,255,0.6);">Cost to Replace</a>
+        <a href="research_paper.html" style="color:rgba(255,255,255,0.6);">Research Paper</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- DATA & CHART SCRIPTS                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<script src="js/shared-data.js"></script>
+<script>
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+var THR_SLIDER = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5]; // PJM track data range
+var SBTI_YEARS = {50:'2030',55:'2031',60:'2032',65:'2033',70:'2034',75:'2036',80:'2038',85:'2040',87.5:'2041',90:'2042',92.5:'2044',95:'2046',97.5:'2048',99:'2049',100:'2050'};
+var NUCLEAR_OP_COST = 33; // $/MWh operating cost (fuel + O&M)
+var WHOLESALE_PJM = 34;   // $/MWh 2025 baseline
+
+// PJM LMP by threshold (from lmp_summary.json)
+var LMP_BY_THR = {50:36.86,55:35.53,60:34.13,65:32.64,70:33.27,75:31.55,80:29.78,85:25.0,87.5:24.88,90:23.57,92.5:20.31,95:18.82,97.5:11.36,99:6.80};
+
+// Baseline ECF data (from shared-data.js)
+var ECF_COSTS = typeof EFFECTIVE_COST_DATA !== 'undefined' ? EFFECTIVE_COST_DATA.PJM : [];
+var ECF_MIX = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA.PJM : {};
+var ALL_THR = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,100];
+
+// Resource colors (match site palette)
+var MIX_COLORS = {
+    clean_firm: '#1E3A5F',
+    solar: '#F59E0B',
+    wind: '#22C55E',
+    ccs_ccgt: '#0D9488',
+    hydro: '#0EA5E9',
+    battery: '#9333EA',
+    ldes: '#EC4899'
+};
+var MIX_LABELS = {
+    clean_firm: 'Nuclear',
+    solar: 'Solar',
+    wind: 'Wind',
+    ccs_ccgt: 'CCS-CCGT',
+    hydro: 'Hydro',
+    battery: 'Battery',
+    ldes: 'LDES'
+};
+
+// EAC scarcity model constants (PJM)
+var PJM_TOTAL_CLEAN = 280;   // TWh
+var PJM_SSS_FIXED = 95;      // TWh
+var PJM_RPS = 70;            // TWh
+var PJM_PPAS = 25;           // TWh
+var PJM_AVAILABLE = 90;      // TWh merchant
+var PJM_CI_SHARE = 0.62;     // C&I share of total demand
+var PJM_DEMAND = 800;        // TWh approximate total demand
+
+// Track data (loaded async)
+var trackData = null;
+var charts = {};
+
+// ============================================================================
+// DATA LOADING
+// ============================================================================
+fetch('track_results.json')
+    .then(function(r) { return r.json(); })
+    .then(function(d) { trackData = d; initPage(); })
+    .catch(function(err) {
+        console.warn('track_results.json not loaded:', err);
+        initPage();
+    });
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+function initPage() {
+    initTargetSlider();
+    initPremiumSliders();
+    updateSection1(5); // default: 75%
+    buildScalingChart();
+    buildLmpChart();
+    updateMetrics();
+    updateBottomLine(5);
+    initScrollObserver();
+}
+
+// ============================================================================
+// SECTION 1: TARGET SLIDER + COMPARISON
+// ============================================================================
+function initTargetSlider() {
+    var slider = document.getElementById('targetSlider');
+    slider.addEventListener('input', function() {
+        var idx = parseInt(this.value);
+        var thr = THR_SLIDER[idx];
+        document.getElementById('targetVal').textContent = thr + '%';
+        document.getElementById('targetYear').textContent = 'SBTi ' + (SBTI_YEARS[thr] || '—');
+        updateSection1(idx);
+        updateBottomLine(idx);
+    });
+}
+
+function initPremiumSliders() {
+    var ids = ['premNuclear', 'premHydro', 'premSolar', 'premWind'];
+    ids.forEach(function(id) {
+        var el = document.getElementById(id);
+        el.addEventListener('input', function() {
+            document.getElementById(id + 'Val').textContent = '$' + this.value + '/MWh';
+            var idx = parseInt(document.getElementById('targetSlider').value);
+            updateSection1(idx);
+            updateBottomLine(idx);
+        });
+    });
+}
+
+function updateSection1(sliderIdx) {
+    var thr = THR_SLIDER[sliderIdx];
+    var thrIdx = ALL_THR.indexOf(thr);
+
+    // ECF cost (baseline)
+    var ecfBase = (thrIdx >= 0 && ECF_COSTS[thrIdx] != null) ? ECF_COSTS[thrIdx] : null;
+
+    // Add EAC premiums to ECF cost
+    var premNuc = parseInt(document.getElementById('premNuclear').value) || 0;
+    var premHydro = parseInt(document.getElementById('premHydro').value) || 0;
+    var premSolar = parseInt(document.getElementById('premSolar').value) || 0;
+    var premWind = parseInt(document.getElementById('premWind').value) || 0;
+
+    // Resource mix weights for premium calculation
+    var mixCF = (ECF_MIX.clean_firm && thrIdx >= 0) ? ECF_MIX.clean_firm[thrIdx] / 100 : 0;
+    var mixHy = (ECF_MIX.hydro && thrIdx >= 0) ? ECF_MIX.hydro[thrIdx] / 100 : 0;
+    var mixSo = (ECF_MIX.solar && thrIdx >= 0) ? ECF_MIX.solar[thrIdx] / 100 : 0;
+    var mixWi = (ECF_MIX.wind && thrIdx >= 0) ? ECF_MIX.wind[thrIdx] / 100 : 0;
+
+    var weightedPremium = (premNuc * mixCF) + (premHydro * mixHy) + (premSolar * mixSo) + (premWind * mixWi);
+    var ecfWithPremium = ecfBase != null ? (ecfBase + weightedPremium) : null;
+
+    document.getElementById('ecfCost').innerHTML = ecfWithPremium != null
+        ? '$' + ecfWithPremium.toFixed(1) + ' <span class="unit">$/MWh</span>'
+        : '— <span class="unit">$/MWh</span>';
+    document.getElementById('ecfRange').textContent = ecfBase != null
+        ? 'Base: $' + ecfBase.toFixed(1) + ' + $' + weightedPremium.toFixed(1) + ' EAC premium'
+        : 'No data at this threshold';
+
+    // NB cost (from track data)
+    var nbMedium = getNbCost(thr);
+    var nbSweep = getNbSweep(thr);
+
+    document.getElementById('nbCost').innerHTML = nbMedium != null
+        ? '$' + nbMedium.toFixed(1) + ' <span class="unit">$/MWh</span>'
+        : '— <span class="unit">$/MWh</span>';
+    if (nbSweep) {
+        document.getElementById('nbRange').textContent =
+            'P10: $' + nbSweep.p10.toFixed(0) + ' — P50: $' + nbSweep.p50.toFixed(0) + ' — P90: $' + nbSweep.p90.toFixed(0);
+    }
+
+    // Delta
+    if (ecfWithPremium != null && nbMedium != null) {
+        var delta = nbMedium - ecfWithPremium;
+        var el = document.getElementById('deltaValue');
+        el.textContent = (delta >= 0 ? '+' : '') + '$' + delta.toFixed(1);
+        el.className = 'delta-value' + (delta < 0 ? ' positive' : '');
+    } else {
+        document.getElementById('deltaValue').textContent = '—';
+    }
+
+    // Update nuclear premium default based on LMP
+    var lmp = LMP_BY_THR[thr] || WHOLESALE_PJM;
+    var autoNucPrem = Math.max(0, Math.round((NUCLEAR_OP_COST * 1.1) - lmp));
+    // Only auto-set on slider move, not on premium slider move
+    // (premium sliders have their own listeners)
+
+    // Resource mix charts
+    updateMixChart('ecf', thrIdx);
+    updateNbMixChart(thr);
+}
+
+function getNbCost(thr) {
+    if (!trackData || !trackData.results || !trackData.results.PJM) return null;
+    var nb = trackData.results.PJM.newbuild;
+    if (!nb) return null;
+    var key = String(thr % 1 === 0 ? Math.floor(thr) : thr);
+    var d = nb[key];
+    if (!d || !d.scenarios) return null;
+    var keys = Object.keys(d.scenarios);
+    for (var i = 0; i < keys.length; i++) {
+        if (d.scenarios[keys[i]] && d.scenarios[keys[i]].costs) {
+            return d.scenarios[keys[i]].costs.effective_cost;
+        }
+    }
+    return null;
+}
+
+function getNbSweep(thr) {
+    if (!trackData || !trackData.results || !trackData.results.PJM) return null;
+    var nb = trackData.results.PJM.newbuild;
+    if (!nb) return null;
+    var key = String(thr % 1 === 0 ? Math.floor(thr) : thr);
+    var d = nb[key];
+    if (!d || !d.sweep) return null;
+    return {
+        p10: d.sweep.p10 ? d.sweep.p10.effective_cost : null,
+        p50: d.sweep.p50 ? d.sweep.p50.effective_cost : null,
+        p90: d.sweep.p90 ? d.sweep.p90.effective_cost : null
+    };
+}
+
+function getNbMix(thr) {
+    if (!trackData || !trackData.results || !trackData.results.PJM) return null;
+    var nb = trackData.results.PJM.newbuild;
+    if (!nb) return null;
+    var key = String(thr % 1 === 0 ? Math.floor(thr) : thr);
+    var d = nb[key];
+    if (!d || !d.scenarios) return null;
+    var keys = Object.keys(d.scenarios);
+    for (var i = 0; i < keys.length; i++) {
+        if (d.scenarios[keys[i]] && d.scenarios[keys[i]].resource_mix) {
+            return d.scenarios[keys[i]].resource_mix;
+        }
+    }
+    return null;
+}
+
+// ============================================================================
+// RESOURCE MIX CHARTS (horizontal stacked bars)
+// ============================================================================
+function updateMixChart(track, thrIdx) {
+    var canvasId = track + 'MixChart';
+    if (charts[canvasId]) charts[canvasId].destroy();
+
+    var resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'];
+    var data = [];
+    var labels = [];
+    var colors = [];
+
+    resources.forEach(function(r) {
+        var val = (ECF_MIX[r] && thrIdx >= 0) ? ECF_MIX[r][thrIdx] : 0;
+        if (val > 0) {
+            data.push(val);
+            labels.push(MIX_LABELS[r]);
+            colors.push(MIX_COLORS[r]);
+        }
+    });
+
+    var ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11, family: "'Plus Jakarta Sans'" }, padding: 12, usePointStyle: true } },
+                datalabels: { display: false }
+            },
+            cutout: '55%'
+        }
+    });
+}
+
+function updateNbMixChart(thr) {
+    var canvasId = 'nbMixChart';
+    if (charts[canvasId]) charts[canvasId].destroy();
+
+    var mix = getNbMix(thr);
+    var resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'];
+    var data = [];
+    var labels = [];
+    var colors = [];
+
+    if (mix) {
+        resources.forEach(function(r) {
+            var val = mix[r] || 0;
+            if (val > 0) {
+                data.push(val);
+                labels.push(MIX_LABELS[r]);
+                colors.push(MIX_COLORS[r]);
+            }
+        });
+    }
+
+    if (data.length === 0) {
+        data = [1]; labels = ['No data']; colors = ['#e5e7eb'];
+    }
+
+    var ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11, family: "'Plus Jakarta Sans'" }, padding: 12, usePointStyle: true } },
+                datalabels: { display: false }
+            },
+            cutout: '55%'
+        }
+    });
+}
+
+// ============================================================================
+// SECTION 2: SCALING CURVE
+// ============================================================================
+function buildScalingChart() {
+    var ctx = document.getElementById('scalingChart').getContext('2d');
+
+    // Model: as participation % rises, existing supply consumed → cost rises
+    // At 0% participation: ECF cost is low, NB cost is what it is
+    // At high participation: ECF cost converges to NB cost
+    var participationPcts = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100];
+
+    // Get 75% threshold costs as baseline
+    var ecfBase = ECF_COSTS[5] || 72.3; // 75% threshold = index 5
+    var nbCost = getNbCost(75) || 89.7;
+
+    // EAC scarcity model: as demand exceeds available supply, cost rises
+    var ecfCurve = participationPcts.map(function(p) {
+        var demandTWh = PJM_DEMAND * PJM_CI_SHARE * (p / 100) * 0.80; // 80% procurement ratio at 75%
+        var supplyUsed = Math.min(demandTWh / PJM_AVAILABLE, 1);
+        // Quadratic blend: as supply consumed, price rises toward NB cost
+        var blendFactor = Math.min(1, supplyUsed * supplyUsed * 1.2);
+        return ecfBase + (nbCost - ecfBase) * blendFactor;
+    });
+
+    // NB cost is flat (it doesn't depend on existing supply)
+    var nbCurve = participationPcts.map(function() { return nbCost; });
+
+    // Find where merchant supply exhausts
+    var exhaustPct = Math.round(PJM_AVAILABLE / (PJM_DEMAND * PJM_CI_SHARE * 0.80) * 100);
+
+    charts.scaling = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: participationPcts.map(function(p) { return p + '%'; }),
+            datasets: [
+                {
+                    label: 'With Existing Clean',
+                    data: ecfCurve,
+                    borderColor: '#0EA5E9',
+                    backgroundColor: 'rgba(14,165,233,0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 7
+                },
+                {
+                    label: 'New Build Only',
+                    data: nbCurve,
+                    borderColor: '#F59E0B',
+                    backgroundColor: 'rgba(245,158,11,0.1)',
+                    borderWidth: 3,
+                    borderDash: [8, 4],
+                    fill: false,
+                    tension: 0,
+                    pointRadius: 4,
+                    pointHoverRadius: 7
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 12, family: "'Plus Jakarta Sans'" }, usePointStyle: true } },
+                datalabels: { display: false },
+                annotation: {
+                    annotations: {
+                        exhaustLine: {
+                            type: 'line',
+                            xMin: exhaustPct <= 100 ? participationPcts.indexOf(exhaustPct >= 75 ? 75 : (exhaustPct >= 50 ? 50 : 40)) : 6,
+                            xMax: exhaustPct <= 100 ? participationPcts.indexOf(exhaustPct >= 75 ? 75 : (exhaustPct >= 50 ? 50 : 40)) : 6,
+                            borderColor: '#EF4444',
+                            borderWidth: 2,
+                            borderDash: [6, 3],
+                            label: {
+                                display: true,
+                                content: 'Supply ceiling (~' + exhaustPct + '% participation)',
+                                position: 'start',
+                                backgroundColor: 'rgba(239,68,68,0.85)',
+                                color: '#fff',
+                                font: { size: 11, family: "'Plus Jakarta Sans'" },
+                                padding: 6
+                            }
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'C&I Load Participating in Hourly CFE (%)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    grid: { display: false }
+                },
+                y: {
+                    title: { display: true, text: 'Effective Cost ($/MWh)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    min: 60,
+                    max: 110,
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// SECTION 3: LMP DECLINE CHART
+// ============================================================================
+function buildLmpChart() {
+    var ctx = document.getElementById('lmpChart').getContext('2d');
+
+    var lmpThresholds = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
+    var lmpValues = lmpThresholds.map(function(t) { return LMP_BY_THR[t]; });
+    var nuclearLine = lmpThresholds.map(function() { return NUCLEAR_OP_COST; });
+
+    // Find crossover point
+    var crossIdx = 0;
+    for (var i = 0; i < lmpValues.length; i++) {
+        if (lmpValues[i] < NUCLEAR_OP_COST) { crossIdx = i; break; }
+    }
+
+    charts.lmp = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: lmpThresholds.map(function(t) { return t + '%'; }),
+            datasets: [
+                {
+                    label: 'PJM Wholesale LMP',
+                    data: lmpValues,
+                    borderColor: '#0EA5E9',
+                    backgroundColor: 'rgba(14,165,233,0.15)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointHoverRadius: 7
+                },
+                {
+                    label: 'Nuclear Operating Cost ($33/MWh)',
+                    data: nuclearLine,
+                    borderColor: '#EF4444',
+                    borderWidth: 2,
+                    borderDash: [8, 4],
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 12, family: "'Plus Jakarta Sans'" }, usePointStyle: true } },
+                datalabels: { display: false },
+                annotation: {
+                    annotations: {
+                        crossover: {
+                            type: 'point',
+                            xValue: crossIdx,
+                            yValue: NUCLEAR_OP_COST,
+                            backgroundColor: '#EF4444',
+                            radius: 8,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        crossLabel: {
+                            type: 'label',
+                            xValue: crossIdx + 1,
+                            yValue: NUCLEAR_OP_COST + 3,
+                            content: ['Nuclear needs', 'clean premium'],
+                            color: '#EF4444',
+                            font: { size: 11, weight: 'bold', family: "'Plus Jakarta Sans'" }
+                        },
+                        gapFill: {
+                            type: 'box',
+                            xMin: crossIdx,
+                            xMax: lmpThresholds.length - 1,
+                            yMin: function(ctx) {
+                                // approximate: use last LMP value
+                                return 0;
+                            },
+                            yMax: NUCLEAR_OP_COST,
+                            backgroundColor: 'rgba(239,68,68,0.08)',
+                            borderWidth: 0
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh';
+                        },
+                        afterBody: function(items) {
+                            if (items.length >= 2) {
+                                var lmp = items[0].parsed.y;
+                                var gap = NUCLEAR_OP_COST - lmp;
+                                if (gap > 0) {
+                                    return ['Clean premium needed: $' + gap.toFixed(1) + '/MWh'];
+                                }
+                            }
+                            return [];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Hourly Clean Energy Target (%)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    grid: { display: false }
+                },
+                y: {
+                    title: { display: true, text: 'Price ($/MWh)', font: { size: 12, family: "'Plus Jakarta Sans'", weight: 600 } },
+                    min: 0,
+                    max: 45,
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// METRICS & BOTTOM LINE
+// ============================================================================
+function updateMetrics() {
+    var lmp80 = LMP_BY_THR[80] || 29.78;
+    var lmp95 = LMP_BY_THR[95] || 18.82;
+    document.getElementById('lmpAt80').textContent = '$' + lmp80.toFixed(0);
+    document.getElementById('premiumAt80').textContent = '$' + Math.max(0, NUCLEAR_OP_COST - lmp80).toFixed(0);
+    document.getElementById('premiumAt95').textContent = '$' + Math.max(0, NUCLEAR_OP_COST - lmp95).toFixed(0);
+}
+
+function updateBottomLine(sliderIdx) {
+    var thr = THR_SLIDER[sliderIdx];
+    var thrIdx = ALL_THR.indexOf(thr);
+    var ecfBase = (thrIdx >= 0 && ECF_COSTS[thrIdx] != null) ? ECF_COSTS[thrIdx] : null;
+    var nbCost = getNbCost(thr);
+
+    // Add premiums
+    var premNuc = parseInt(document.getElementById('premNuclear').value) || 0;
+    var premHydro = parseInt(document.getElementById('premHydro').value) || 0;
+    var premSolar = parseInt(document.getElementById('premSolar').value) || 0;
+    var premWind = parseInt(document.getElementById('premWind').value) || 0;
+
+    var mixCF = (ECF_MIX.clean_firm && thrIdx >= 0) ? ECF_MIX.clean_firm[thrIdx] / 100 : 0;
+    var mixHy = (ECF_MIX.hydro && thrIdx >= 0) ? ECF_MIX.hydro[thrIdx] / 100 : 0;
+    var mixSo = (ECF_MIX.solar && thrIdx >= 0) ? ECF_MIX.solar[thrIdx] / 100 : 0;
+    var mixWi = (ECF_MIX.wind && thrIdx >= 0) ? ECF_MIX.wind[thrIdx] / 100 : 0;
+    var weightedPremium = (premNuc * mixCF) + (premHydro * mixHy) + (premSolar * mixSo) + (premWind * mixWi);
+    var ecfFinal = ecfBase != null ? ecfBase + weightedPremium : null;
+
+    document.getElementById('blEcfCost').textContent = ecfFinal != null ? '$' + ecfFinal.toFixed(0) : '—';
+    document.getElementById('blNbCost').textContent = nbCost != null ? '$' + nbCost.toFixed(0) : '—';
+    document.getElementById('blSaving').textContent = (ecfFinal != null && nbCost != null)
+        ? '$' + (nbCost - ecfFinal).toFixed(0) : '—';
+
+    // Update labels
+    document.querySelector('#blEcfCost').closest('.metric-item').querySelector('.lbl').textContent = 'With Existing at ' + thr + '%';
+    document.querySelector('#blNbCost').closest('.metric-item').querySelector('.lbl').textContent = 'New Build Only at ' + thr + '%';
+}
+
+// ============================================================================
+// SCROLL OBSERVER
+// ============================================================================
+function initScrollObserver() {
+    var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (e.isIntersecting) e.target.classList.add('visible');
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.scroll-step').forEach(function(el) { obs.observe(el); });
+}
+</script>
+</body>
+</html>
