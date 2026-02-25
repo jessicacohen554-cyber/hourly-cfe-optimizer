@@ -95,12 +95,17 @@ def load_combined_df(input_dir, isos):
 
 
 def add_mac_column(df):
-    """Add MAC column: (cost_incremental × annual_demand_mwh) / co2_total_co2_abated_tons."""
+    """Add MAC column: (cost_effective_cost × annual_demand_mwh) / co2_total_co2_abated_tons.
+
+    Uses full portfolio LCOE (effective_cost) rather than incremental cost above
+    wholesale, so MAC reflects the standalone cost of the clean portfolio per ton
+    of CO₂ abated — not a premium over grid power.
+    """
     co2 = df['co2_total_co2_abated_tons']
-    valid = (co2 > 0) & df['cost_incremental'].notna()
+    valid = (co2 > 0) & df['cost_effective_cost'].notna()
     df['mac'] = np.where(
         valid,
-        (df['cost_incremental'] * df['annual_demand_mwh']) / co2,
+        (df['cost_effective_cost'] * df['annual_demand_mwh']) / co2,
         np.nan,
     )
     return df
@@ -238,10 +243,10 @@ def compute_stepwise_fan(df):
             t_prev, t_curr = THRESHOLDS[i - 1], THRESHOLDS[i]
 
             prev = iso_df.loc[iso_df['threshold'] == t_prev,
-                              ['scenario', 'cost_incremental', 'co2_total_co2_abated_tons',
+                              ['scenario', 'cost_effective_cost', 'co2_total_co2_abated_tons',
                                'annual_demand_mwh']].set_index('scenario')
             curr = iso_df.loc[iso_df['threshold'] == t_curr,
-                              ['scenario', 'cost_incremental',
+                              ['scenario', 'cost_effective_cost',
                                'co2_total_co2_abated_tons']].set_index('scenario')
 
             merged = prev.join(curr, rsuffix='_next', how='inner')
@@ -250,7 +255,7 @@ def compute_stepwise_fan(df):
                     fan_data[iso][p].append(None)
                 continue
 
-            delta_cost = ((merged['cost_incremental_next'] - merged['cost_incremental'])
+            delta_cost = ((merged['cost_effective_cost_next'] - merged['cost_effective_cost'])
                           * merged['annual_demand_mwh'])
             delta_co2 = (merged['co2_total_co2_abated_tons_next']
                          - merged['co2_total_co2_abated_tons'])
@@ -323,6 +328,11 @@ def compute_envelope_and_path(df):
                 path_costs.append(None)
                 continue
 
+            row = t_rows.iloc[0]
+            eff_cost = float(row['cost_effective_cost'])
+            co2_tons = float(row['co2_total_co2_abated_tons'])
+
+            costs_at_t.append(eff_cost)
             incremental = float(row['cost_incremental'])
             co2_tons = float(row['co2_total_co2_abated_tons'])
 
@@ -331,7 +341,7 @@ def compute_envelope_and_path(df):
             co2_at_t.append(co2_tons if pd.notna(co2_tons) else 0)
 
             if pd.notna(co2_tons) and co2_tons > 0:
-                raw_macs.append(round((incremental * demand_mwh) / co2_tons, 1))
+                raw_macs.append(round((eff_cost * demand_mwh) / co2_tons, 1))
             else:
                 raw_macs.append(None)
 
@@ -430,6 +440,12 @@ def compute_envelope_and_path(df):
                 'costs': path_costs,
             }
 
+            mix = {r: int(row[f'mix_{r}']) for r in RESOURCE_TYPES}
+            proc = int(row['procurement_pct'])
+            batt = int(row['battery_dispatch_pct'])
+            ldes = int(row['ldes_dispatch_pct'])
+            co2_tons = float(row['co2_total_co2_abated_tons'])
+            eff_cost = float(row['cost_effective_cost'])
     return envelope, path_mac
 
 
@@ -442,6 +458,32 @@ def compute_monotonic_envelope(df):
     envelope, _ = compute_envelope_and_path(df)
     return envelope
 
+            # Cost is at least as high as previous constrained cost
+            constrained_eff_cost = max(eff_cost, prev_cost)
+
+            # Average MAC
+            if co2_tons > 0:
+                avg_mac = round((constrained_eff_cost * demand_mwh) / co2_tons, 1)
+            else:
+                avg_mac = None
+
+            path_macs.append(avg_mac)
+            path_mixes.append(constrained_mix)
+            path_costs.append(round(constrained_eff_cost, 2))
+
+            # Update state for next threshold
+            prev_abs = constrained_abs
+            prev_batt = constrained_batt
+            prev_ldes = constrained_ldes
+            prev_proc = constrained_proc
+            prev_cost = constrained_eff_cost
+            prev_co2 = co2_tons
+
+        path_mac[iso] = {
+            'mac': path_macs,
+            'mixes': path_mixes,
+            'costs': path_costs,
+        }
 
 def compute_path_constrained_mac(df):
     """Compute path-constrained reference MAC from medium scenario.
@@ -531,13 +573,13 @@ def compute_dg_mac(input_dir, isos):
             continue
 
         # Vectorized MAC computation
-        valid = ((dg_df[co2_col] > 0) & dg_df['cost_incremental'].notna()
+        valid = ((dg_df[co2_col] > 0) & dg_df['cost_effective_cost'].notna()
                  & (dg_df[demand_col] > 0))
         dg_valid = dg_df[valid].copy()
         if dg_valid.empty:
             continue
 
-        dg_valid['mac'] = ((dg_valid['cost_incremental'] * dg_valid[demand_col])
+        dg_valid['mac'] = ((dg_valid['cost_effective_cost'] * dg_valid[demand_col])
                            / dg_valid[co2_col])
 
         iso_mac = {}
