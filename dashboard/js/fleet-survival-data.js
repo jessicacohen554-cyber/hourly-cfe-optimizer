@@ -633,6 +633,190 @@ function computeFleetSurvival(company, fuelFilter) {
 }
 
 /**
+ * Compute the full fleet mix (all fuel types) at each threshold with P10/P50/P90 for fossil.
+ * Clean assets stay constant; fossil assets decline per the dispatch model.
+ *
+ * Returns: {
+ *   thresholds, years,
+ *   capacity_gw: { <fuel>: { p10: [...], p50: [...], p90: [...] } },
+ *   generation_twh: { <fuel>: { p10: [...], p50: [...], p90: [...] } },
+ *   total_capacity_gw: { p10: [...], p50: [...], p90: [...] },
+ *   total_generation_twh: { p10: [...], p50: [...], p90: [...] },
+ *   baseline_total_capacity_gw, baseline_total_generation_twh,
+ * }
+ */
+function computeFleetMixOverTime(company) {
+    const thresholds = [];
+    const years = [];
+    const allFuels = [...new Set(company.plants.map(p => p.fuel))];
+
+    // Initialize per-fuel arrays
+    const capacity_gw = {};
+    const generation_twh = {};
+    allFuels.forEach(f => {
+        capacity_gw[f] = { p10: [], p50: [], p90: [] };
+        generation_twh[f] = { p10: [], p50: [], p90: [] };
+    });
+    const total_capacity_gw = { p10: [], p50: [], p90: [] };
+    const total_generation_twh = { p10: [], p50: [], p90: [] };
+
+    // Baseline totals
+    let baseline_total_cap = 0, baseline_total_gen = 0;
+    company.plants.forEach(p => {
+        baseline_total_cap += p.capacity_mw;
+        baseline_total_gen += p.generation_twh;
+    });
+
+    FLEET_THRESHOLDS.forEach(t => {
+        thresholds.push(t);
+        years.push(FLEET_THRESHOLD_YEARS[t]);
+
+        ['p10', 'p50', 'p90'].forEach(pct => {
+            const fuel_cap = {};
+            const fuel_gen = {};
+            allFuels.forEach(f => { fuel_cap[f] = 0; fuel_gen[f] = 0; });
+
+            company.plants.forEach(plant => {
+                const iso = plant.iso;
+                const decline = FOSSIL_DISPATCH_DECLINE[iso];
+
+                if (CLEAN_FUELS.includes(plant.fuel)) {
+                    // Clean plants always survive at 100%
+                    fuel_cap[plant.fuel] += plant.capacity_mw;
+                    fuel_gen[plant.fuel] += plant.generation_twh;
+                    return;
+                }
+
+                if (!decline) {
+                    fuel_cap[plant.fuel] += plant.capacity_mw;
+                    fuel_gen[plant.fuel] += plant.generation_twh;
+                    return;
+                }
+
+                const tData = decline.thresholds[String(t)];
+                if (!tData) return;
+                const remaining = tData[pct];
+                const base = decline.base_demand_twh;
+
+                if (plant.fuel === 'coal') {
+                    const coal_cap = decline.coal_cap_twh;
+                    const frac = coal_cap > 0 ? Math.min(1, remaining.coal / coal_cap) : 0;
+                    fuel_cap[plant.fuel] += plant.capacity_mw * frac;
+                    fuel_gen[plant.fuel] += plant.generation_twh * frac;
+                } else if (plant.fuel === 'oil') {
+                    const oil_cap = decline.oil_cap_twh;
+                    const frac = oil_cap > 0 ? Math.min(1, (remaining.oil || 0) / oil_cap) : 0;
+                    fuel_cap[plant.fuel] += plant.capacity_mw * frac;
+                    fuel_gen[plant.fuel] += plant.generation_twh * frac;
+                } else if (plant.fuel === 'gas_ccgt' || plant.fuel === 'gas_peaker') {
+                    const gas_remaining_twh = remaining.gas;
+                    const iso_ccgt_gen = company.plants
+                        .filter(p => p.iso === iso && p.fuel === 'gas_ccgt')
+                        .reduce((s, p) => s + p.generation_twh, 0);
+                    const iso_peaker_gen = company.plants
+                        .filter(p => p.iso === iso && p.fuel === 'gas_peaker')
+                        .reduce((s, p) => s + p.generation_twh, 0);
+                    const iso_total_gas_gen = iso_ccgt_gen + iso_peaker_gen;
+                    const baseline_fossil_pct = (100 - decline.baseline_clean_pct) / 100;
+                    const total_regional_gas = base * baseline_fossil_pct - decline.coal_cap_twh - decline.oil_cap_twh;
+                    const regional_gas_frac = total_regional_gas > 0 ?
+                        Math.min(1, gas_remaining_twh / total_regional_gas) : 0;
+
+                    if (plant.fuel === 'gas_ccgt') {
+                        const peaker_share = iso_total_gas_gen > 0 ? iso_peaker_gen / iso_total_gas_gen : 0;
+                        const ccgt_survival = peaker_share < 1 ?
+                            Math.min(1, regional_gas_frac / (1 - peaker_share)) : regional_gas_frac;
+                        const frac = Math.min(1, ccgt_survival);
+                        fuel_cap[plant.fuel] += plant.capacity_mw * frac;
+                        fuel_gen[plant.fuel] += plant.generation_twh * frac;
+                    } else {
+                        const ccgt_share = iso_total_gas_gen > 0 ? iso_ccgt_gen / iso_total_gas_gen : 0;
+                        const after_ccgt = Math.max(0, regional_gas_frac - ccgt_share);
+                        const peaker_survival = ccgt_share < 1 ?
+                            Math.min(1, after_ccgt / (1 - ccgt_share)) : 0;
+                        const frac = Math.min(1, peaker_survival);
+                        fuel_cap[plant.fuel] += plant.capacity_mw * frac;
+                        fuel_gen[plant.fuel] += plant.generation_twh * frac;
+                    }
+                }
+            });
+
+            // Store per-fuel results
+            allFuels.forEach(f => {
+                capacity_gw[f][pct].push(Math.round(fuel_cap[f] / 10) / 100); // MW → GW, 2 decimal
+                generation_twh[f][pct].push(Math.round(fuel_gen[f] * 100) / 100);
+            });
+
+            // Store totals
+            let tot_cap = 0, tot_gen = 0;
+            allFuels.forEach(f => { tot_cap += fuel_cap[f]; tot_gen += fuel_gen[f]; });
+            total_capacity_gw[pct].push(Math.round(tot_cap / 10) / 100);
+            total_generation_twh[pct].push(Math.round(tot_gen * 100) / 100);
+        });
+    });
+
+    return {
+        thresholds, years, fuels: allFuels,
+        capacity_gw, generation_twh,
+        total_capacity_gw, total_generation_twh,
+        baseline_total_capacity_gw: Math.round(baseline_total_cap / 10) / 100,
+        baseline_total_generation_twh: Math.round(baseline_total_gen * 100) / 100,
+    };
+}
+
+/**
+ * Compute milestone years for a company's fleet: when each fossil fuel type's
+ * dispatch drops below meaningful thresholds.
+ *
+ * Returns: {
+ *   coal_exit_year: year when company coal dispatch → 0 (or null if no coal),
+ *   oil_exit_year: year when company oil dispatch → 0 (or null),
+ *   peaker_squeeze_year: year when peaker dispatch drops below 50% of baseline,
+ *   ccgt_erosion_year: year when CCGT dispatch drops below 90% of baseline
+ *                       (the start of real CCGT pain — lower CFs, not retirements),
+ * }
+ */
+function computeFleetMilestones(company) {
+    const mix = computeFleetMixOverTime(company);
+    const result = { coal_exit_year: null, oil_exit_year: null, peaker_squeeze_year: null, ccgt_erosion_year: null };
+
+    // Check if company has each fuel type
+    const hasCoal = mix.fuels.includes('coal') && mix.generation_twh.coal && mix.generation_twh.coal.p50[0] > 0.01;
+    const hasOil = mix.fuels.includes('oil') && mix.generation_twh.oil && mix.generation_twh.oil.p50[0] > 0.01;
+    const hasPeaker = mix.fuels.includes('gas_peaker') && mix.generation_twh.gas_peaker;
+    const hasCCGT = mix.fuels.includes('gas_ccgt') && mix.generation_twh.gas_ccgt;
+
+    for (let i = 0; i < mix.thresholds.length; i++) {
+        const yr = mix.years[i];
+
+        // Coal exit: first year coal TWh → 0
+        if (hasCoal && !result.coal_exit_year && mix.generation_twh.coal.p50[i] < 0.01) {
+            result.coal_exit_year = yr;
+        }
+        // Oil exit: first year oil TWh → 0
+        if (hasOil && !result.oil_exit_year && mix.generation_twh.oil.p50[i] < 0.01) {
+            result.oil_exit_year = yr;
+        }
+        // Peaker squeeze: first year peaker gen < 50% of baseline
+        if (hasPeaker && !result.peaker_squeeze_year) {
+            const baseline = mix.generation_twh.gas_peaker.p50[0];
+            if (baseline > 0 && mix.generation_twh.gas_peaker.p50[i] < baseline * 0.5) {
+                result.peaker_squeeze_year = yr;
+            }
+        }
+        // CCGT erosion: first year CCGT gen < 90% of baseline (CFs start dropping meaningfully)
+        if (hasCCGT && !result.ccgt_erosion_year) {
+            const baseline = mix.generation_twh.gas_ccgt.p50[0];
+            if (baseline > 0 && mix.generation_twh.gas_ccgt.p50[i] < baseline * 0.9) {
+                result.ccgt_erosion_year = yr;
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
  * Get aggregated fleet stats for a company by ISO and fuel type.
  */
 function getFleetBreakdown(company) {

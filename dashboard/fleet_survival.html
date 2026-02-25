@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
         :root {
+            --bg-page: #111827;
             --bg-primary: #0F172A;
             --bg-secondary: #1E293B;
             --bg-card: #1E293B;
@@ -25,28 +26,9 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
-            background: var(--bg-primary);
+            background: var(--bg-page);
             color: var(--text-primary);
             line-height: 1.6;
-        }
-        .page-header {
-            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-            border-bottom: 1px solid var(--border);
-            padding: 48px 24px 40px;
-            text-align: center;
-        }
-        .page-header h1 {
-            font-family: 'Barlow Semi Condensed', sans-serif;
-            font-size: clamp(1.8rem, 4vw, 2.6rem);
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 8px;
-        }
-        .page-header .subtitle {
-            color: var(--text-secondary);
-            font-size: 1.05rem;
-            max-width: 720px;
-            margin: 0 auto;
         }
         .container { max-width: 1280px; margin: 0 auto; padding: 24px 16px; }
 
@@ -60,9 +42,10 @@
         .stat-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 20px;
             text-align: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
         }
         .stat-card .label { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
         .stat-card .value { font-size: 1.8rem; font-weight: 700; font-family: 'Barlow Semi Condensed', sans-serif; }
@@ -84,14 +67,15 @@
         }
         .section-desc { color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 20px; }
 
-        /* Chart Container */
+        /* Chart Container — Navy panels on lighter background */
         .chart-container {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 14px;
+            padding: 24px;
             margin-bottom: 24px;
             position: relative;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
         }
         .chart-container canvas { width: 100% !important; }
         .chart-title {
@@ -104,6 +88,11 @@
         .chart-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+        }
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 20px;
         }
 
@@ -221,9 +210,10 @@
 <body>
     <script src="js/nav.js"></script>
 
-    <div class="page-header">
+    <div class="header">
+        <div class="header-accent"></div>
         <h1>Fleet Survival Dashboard</h1>
-        <p class="subtitle">How do major power generators' fossil fleets fare against the grid decarbonization trajectory? Track 1 baseline analysis with SBTi timeline mapping and P10/P90 certainty bounds.</p>
+        <p class="header-tagline">How do major power generators' fossil fleets fare against the grid decarbonization trajectory?<br>Track 1 baseline analysis with SBTi timeline mapping and P10/P90 certainty bounds.</p>
     </div>
 
     <div class="container">
@@ -388,17 +378,43 @@
                 </div>
             </div>
 
-            <!-- Fleet Composition Donut -->
+            <!-- Fleet Composition Donut + ISO Bar -->
             <div class="chart-grid">
-                <div class="chart-container" style="height: 340px;">
+                <div class="chart-container" style="height: 260px;">
                     <div class="chart-title">Fleet Composition by Fuel Type</div>
                     <div class="chart-subtitle">Capacity (MW) breakdown</div>
                     <canvas id="chartFuelMix"></canvas>
                 </div>
-                <div class="chart-container" style="height: 340px;">
+                <div class="chart-container" style="height: 260px;">
                     <div class="chart-title">Fleet Composition by ISO Region</div>
                     <div class="chart-subtitle">Capacity (MW) by market</div>
                     <canvas id="chartISOBreakdown"></canvas>
+                </div>
+            </div>
+
+            <!-- Fleet Evolution Over Time -->
+            <h3 class="section-title" style="font-size: 1.2rem; margin-top: 36px; margin-bottom: 4px;" id="mixEvolutionTitle">Fleet Evolution Over Time</h3>
+            <p class="section-desc" id="mixEvolutionSub" style="margin-bottom: 16px;">How the fleet's capacity and generation mix changes as clean energy targets rise and fossil dispatch declines along the SBTi trajectory.</p>
+
+            <!-- Total Capacity Survival with P10/P90 -->
+            <div class="chart-container" style="height: 400px; margin-bottom: 20px;">
+                <div class="chart-title" id="capSurvivalTitle">Total Fleet Capacity — Absolute GW</div>
+                <div class="chart-subtitle" id="capSurvivalSub">P50 with P10/P90 confidence band from demand growth uncertainty</div>
+                <canvas id="chartCapSurvival"></canvas>
+            </div>
+
+            <!-- Generation Mix Stacked Bar (TWh) -->
+            <div class="chart-row">
+                <div class="chart-container" style="height: 420px;">
+                    <div class="chart-title" id="genMixTitle">Generation Mix Over Time (TWh)</div>
+                    <div class="chart-subtitle" id="genMixSub">How fleet generation composition shifts as fossil fuels are displaced | P50 scenario</div>
+                    <canvas id="chartGenMix"></canvas>
+                </div>
+                <!-- Capacity Mix Stacked Bar (GW) -->
+                <div class="chart-container" style="height: 420px;">
+                    <div class="chart-title" id="capMixTitle">Capacity Mix Over Time (GW)</div>
+                    <div class="chart-subtitle" id="capMixSub">Fleet capacity by fuel type at each decarbonization threshold | P50 scenario</div>
+                    <canvas id="chartCapMix"></canvas>
                 </div>
             </div>
         </div>
@@ -491,13 +507,13 @@
                         type: 'linear', min: 2030, max: 2050,
                         title: { display: true, text: 'SBTi Target Year' },
                         ticks: { stepSize: 5 },
-                        grid: { color: '#1E293B' }
+                        grid: { color: '#1E293B66' }
                     },
                     y: {
                         min: 0, max: 100,
                         title: { display: true, text: 'Fossil Fleet Survival (%)' },
                         ticks: { callback: v => v + '%' },
-                        grid: { color: '#1E293B' }
+                        grid: { color: '#1E293B66' }
                     }
                 },
                 plugins: {
@@ -546,8 +562,8 @@
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
-                    y: { min: 0, title: { display: true, text: 'CO2 (Million Metric Tons/yr)' }, grid: { color: '#1E293B' } }
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B66' } },
+                    y: { min: 0, title: { display: true, text: 'CO2 (Million Metric Tons/yr)' }, grid: { color: '#1E293B66' } }
                 },
                 plugins: {
                     legend: { position: 'top', labels: { boxWidth: 10, padding: 12, usePointStyle: true, font: { size: 11 } } },
@@ -582,8 +598,8 @@
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
-                    y: { min: 0, max: 100, title: { display: true, text: 'CO2 Reduction vs 2024 (%)' }, ticks: { callback: v => v + '%' }, grid: { color: '#1E293B' } }
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B66' } },
+                    y: { min: 0, max: 100, title: { display: true, text: 'CO2 Reduction vs 2024 (%)' }, ticks: { callback: v => v + '%' }, grid: { color: '#1E293B66' } }
                 },
                 plugins: {
                     legend: { position: 'top', labels: { boxWidth: 10, padding: 12, usePointStyle: true, font: { size: 11 } } },
@@ -685,8 +701,8 @@
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
-                    y: { min: 0, title: { display: true, text: 'Remaining TWh' }, grid: { color: '#1E293B' } }
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B66' } },
+                    y: { min: 0, title: { display: true, text: 'Remaining TWh' }, grid: { color: '#1E293B66' } }
                 },
                 plugins: {
                     legend: { position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 10 }, usePointStyle: true } },
@@ -708,6 +724,7 @@
     let selectedCompanyIdx = null;
     let selectedFuel = 'all_fossil';
     let survivalChart = null, co2Chart = null, fuelMixChart = null, isoChart = null;
+    let capSurvivalChart = null, genMixChart = null, capMixChart = null;
 
     // Build company pills
     const selectorEl = document.getElementById('companySelector');
@@ -822,8 +839,8 @@
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: {
-                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
-                    y: { min: 0, max: 100, title: { display: true, text: 'Survival Rate (%)' }, ticks: { callback: v => v + '%' }, grid: { color: '#1E293B' } }
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B66' } },
+                    y: { min: 0, max: 100, title: { display: true, text: 'Survival Rate (%)' }, ticks: { callback: v => v + '%' }, grid: { color: '#1E293B66' } }
                 },
                 plugins: {
                     legend: { position: 'top', labels: { boxWidth: 10, padding: 12, usePointStyle: true } },
@@ -874,8 +891,8 @@
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B' } },
-                    y: { min: 0, position: 'left', title: { display: true, text: 'CO2 (MT/yr)' }, grid: { color: '#1E293B' } },
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B66' } },
+                    y: { min: 0, position: 'left', title: { display: true, text: 'CO2 (MT/yr)' }, grid: { color: '#1E293B66' } },
                     y1: { min: 0, max: 100, position: 'right', title: { display: true, text: '% Reduction' }, ticks: { callback: v => v + '%' }, grid: { display: false } }
                 },
                 plugins: {
@@ -910,7 +927,7 @@
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                cutout: '55%',
+                cutout: '62%',
                 plugins: {
                     legend: { position: 'right', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
                     tooltip: { callbacks: { label: item => item.label + ': ' + item.raw.toLocaleString() + ' MW' } }
@@ -943,12 +960,258 @@
                 responsive: true, maintainAspectRatio: false,
                 indexAxis: 'y',
                 scales: {
-                    x: { stacked: true, title: { display: true, text: 'Capacity (MW)' }, grid: { color: '#1E293B' } },
+                    x: { stacked: true, title: { display: true, text: 'Capacity (MW)' }, grid: { color: '#1E293B66' } },
                     y: { stacked: true, grid: { display: false } }
                 },
                 plugins: {
                     legend: { position: 'top', labels: { boxWidth: 10, padding: 10, font: { size: 10 }, usePointStyle: true } },
                     tooltip: { callbacks: { label: item => item.dataset.label + ': ' + item.raw.toLocaleString() + ' MW' } }
+                }
+            }
+        });
+
+        // ====================================================================
+        // FLEET EVOLUTION CHARTS — Capacity Survival + Gen Mix + Cap Mix
+        // ====================================================================
+        const mix = computeFleetMixOverTime(c);
+        const yearLabels = mix.years.map(y => String(y));
+        const milestones = computeFleetMilestones(c);
+
+        // --- Total Capacity Survival with P10/P90 Band + Milestone Lines ---
+        if (capSurvivalChart) capSurvivalChart.destroy();
+        document.getElementById('capSurvivalTitle').textContent = c.shortName + ' — Total Fleet Capacity (GW)';
+        document.getElementById('capSurvivalSub').textContent = 'Clean assets constant; fossil dispatch declining (lower CFs, not retirements) | Baseline: ' +
+            mix.baseline_total_capacity_gw.toFixed(1) + ' GW';
+
+        // Build milestone annotations
+        const milestoneAnnotations = {
+            baseline: {
+                type: 'line', yMin: mix.baseline_total_capacity_gw, yMax: mix.baseline_total_capacity_gw,
+                borderColor: '#F59E0B44', borderWidth: 1, borderDash: [6,4],
+                label: { display: true, content: 'Baseline ' + mix.baseline_total_capacity_gw.toFixed(1) + ' GW', position: 'start', font: { size: 10 }, color: '#F59E0B' }
+            }
+        };
+        if (milestones.coal_exit_year) {
+            milestoneAnnotations.coalExit = {
+                type: 'line', xMin: milestones.coal_exit_year, xMax: milestones.coal_exit_year,
+                borderColor: '#374151CC', borderWidth: 2, borderDash: [6,3],
+                label: { display: true, content: 'Coal Exit', position: 'start', rotation: -90, font: { size: 10, weight: 'bold' }, color: '#9CA3AF', backgroundColor: '#1E293BCC', padding: 4 }
+            };
+        }
+        if (milestones.oil_exit_year) {
+            milestoneAnnotations.oilExit = {
+                type: 'line', xMin: milestones.oil_exit_year, xMax: milestones.oil_exit_year,
+                borderColor: '#9CA3AFCC', borderWidth: 2, borderDash: [6,3],
+                label: { display: true, content: 'Oil Exit', position: 'start', rotation: -90, font: { size: 10, weight: 'bold' }, color: '#9CA3AF', backgroundColor: '#1E293BCC', padding: 4 }
+            };
+        }
+        if (milestones.peaker_squeeze_year) {
+            milestoneAnnotations.peakerSqueeze = {
+                type: 'line', xMin: milestones.peaker_squeeze_year, xMax: milestones.peaker_squeeze_year,
+                borderColor: '#FB923CCC', borderWidth: 2, borderDash: [6,3],
+                label: { display: true, content: 'Peaker <50%', position: 'center', rotation: -90, font: { size: 10, weight: 'bold' }, color: '#FB923C', backgroundColor: '#1E293BCC', padding: 4 }
+            };
+        }
+        if (milestones.ccgt_erosion_year) {
+            milestoneAnnotations.ccgtErosion = {
+                type: 'line', xMin: milestones.ccgt_erosion_year, xMax: milestones.ccgt_erosion_year,
+                borderColor: '#EF4444CC', borderWidth: 2, borderDash: [6,3],
+                label: { display: true, content: 'CCGT CF Erosion', position: 'end', rotation: -90, font: { size: 10, weight: 'bold' }, color: '#EF4444', backgroundColor: '#1E293BCC', padding: 4 }
+            };
+        }
+
+        capSurvivalChart = new Chart(document.getElementById('chartCapSurvival').getContext('2d'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'P90 (high demand)',
+                        data: mix.years.map((y, i) => ({ x: y, y: mix.total_capacity_gw.p90[i] })),
+                        borderColor: '#EF444444', backgroundColor: '#EF444412',
+                        borderWidth: 1, borderDash: [4,4], pointRadius: 0, tension: 0.3, fill: false,
+                    },
+                    {
+                        label: 'P10 (low demand)',
+                        data: mix.years.map((y, i) => ({ x: y, y: mix.total_capacity_gw.p10[i] })),
+                        borderColor: '#22C55E44', backgroundColor: '#3B82F612',
+                        borderWidth: 1, borderDash: [4,4], pointRadius: 0, tension: 0.3, fill: '-1',
+                    },
+                    {
+                        label: 'P50 Dispatchable Capacity',
+                        data: mix.years.map((y, i) => ({ x: y, y: mix.total_capacity_gw.p50[i] })),
+                        borderColor: '#3B82F6', backgroundColor: '#3B82F620',
+                        borderWidth: 3, pointRadius: 3, pointHoverRadius: 6, tension: 0.3, fill: false,
+                    },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, title: { display: true, text: 'Year (SBTi Trajectory)' }, ticks: { stepSize: 5 }, grid: { color: '#1E293B66' } },
+                    y: { min: 0, title: { display: true, text: 'Capacity (GW)' }, grid: { color: '#1E293B66' } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 12, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            title: items => items[0] ? 'Year ' + items[0].parsed.x : '',
+                            label: item => item.dataset.label + ': ' + item.parsed.y.toFixed(1) + ' GW'
+                        }
+                    },
+                    annotation: { annotations: milestoneAnnotations }
+                }
+            }
+        });
+
+        // --- Generation Mix Stacked Bar (TWh) with milestone annotations ---
+        if (genMixChart) genMixChart.destroy();
+        document.getElementById('genMixTitle').textContent = c.shortName + ' — Generation Mix Over Time (TWh)';
+        document.getElementById('genMixSub').textContent = 'Clean generation constant; fossil phased out via merit-order | P50 scenario';
+
+        // Order: clean fuels on bottom (stable), then fossil on top (declining)
+        const fuelOrder = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'oil', 'coal'];
+        const activeFuelsGen = fuelOrder.filter(f => mix.fuels.includes(f) && mix.generation_twh[f]);
+        const visibleFuelsGen = activeFuelsGen.filter(f => mix.generation_twh[f].p50.some(v => v > 0.01));
+
+        // Semi-transparent fills with 80% opacity
+        const alphaHex = 'CC'; // ~80% opacity
+        const genDatasets = visibleFuelsGen.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: mix.generation_twh[f].p50,
+            backgroundColor: (FUEL_COLORS[f] || '#666') + alphaHex,
+            borderColor: (FUEL_COLORS[f] || '#666'),
+            borderWidth: 1,
+            borderRadius: 4,
+            borderSkipped: false,
+        }));
+
+        // Build bar chart milestone annotations (use index-based xMin/xMax for category axis)
+        function barMilestoneAnnotations(ms) {
+            const ann = {};
+            function yearToLabel(yr) { return String(yr); }
+            if (ms.coal_exit_year) {
+                ann.coalExit = {
+                    type: 'line', scaleID: 'x', value: yearToLabel(ms.coal_exit_year),
+                    borderColor: '#374151CC', borderWidth: 2, borderDash: [6,3],
+                    label: { display: true, content: 'Coal Exit', position: 'start', font: { size: 9, weight: 'bold' }, color: '#9CA3AF', backgroundColor: '#1E293BDD', padding: 3 }
+                };
+            }
+            if (ms.oil_exit_year) {
+                ann.oilExit = {
+                    type: 'line', scaleID: 'x', value: yearToLabel(ms.oil_exit_year),
+                    borderColor: '#9CA3AFCC', borderWidth: 2, borderDash: [6,3],
+                    label: { display: true, content: 'Oil Exit', position: 'start', font: { size: 9, weight: 'bold' }, color: '#9CA3AF', backgroundColor: '#1E293BDD', padding: 3 }
+                };
+            }
+            if (ms.peaker_squeeze_year) {
+                ann.peakerSqueeze = {
+                    type: 'line', scaleID: 'x', value: yearToLabel(ms.peaker_squeeze_year),
+                    borderColor: '#FB923CCC', borderWidth: 2, borderDash: [6,3],
+                    label: { display: true, content: 'Peaker <50%', position: 'center', font: { size: 9, weight: 'bold' }, color: '#FB923C', backgroundColor: '#1E293BDD', padding: 3 }
+                };
+            }
+            if (ms.ccgt_erosion_year) {
+                ann.ccgtErosion = {
+                    type: 'line', scaleID: 'x', value: yearToLabel(ms.ccgt_erosion_year),
+                    borderColor: '#EF4444CC', borderWidth: 2, borderDash: [6,3],
+                    label: { display: true, content: 'CCGT CF Erosion', position: 'end', font: { size: 9, weight: 'bold' }, color: '#EF4444', backgroundColor: '#1E293BDD', padding: 3 }
+                };
+            }
+            return ann;
+        }
+
+        genMixChart = new Chart(document.getElementById('chartGenMix').getContext('2d'), {
+            type: 'bar',
+            data: { labels: yearLabels, datasets: genDatasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true, title: { display: true, text: 'Year (SBTi Trajectory)' }, grid: { color: '#1E293B44' },
+                         ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10 } },
+                    y: { stacked: true, title: { display: true, text: 'Generation (TWh/yr)' }, grid: { color: '#1E293B44' } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 8, font: { size: 10 }, usePointStyle: true } },
+                    tooltip: {
+                        mode: 'index',
+                        callbacks: {
+                            title: items => items[0] ? 'Year ' + items[0].label : '',
+                            label: item => item.dataset.label + ': ' + item.raw.toFixed(1) + ' TWh',
+                            footer: items => {
+                                const total = items.reduce((s, i) => s + i.raw, 0);
+                                return 'Total: ' + total.toFixed(1) + ' TWh';
+                            }
+                        }
+                    },
+                    annotation: { annotations: barMilestoneAnnotations(milestones) }
+                }
+            }
+        });
+
+        // --- Capacity Mix Stacked Bar (GW) — Dispatchable capacity ---
+        // Note: this shows dispatchable (economic) capacity, not nameplate.
+        // Fossil nameplate stays constant, but dispatch drops — meaning lower CFs, not retirements.
+        // We show a dashed "Nameplate" line to make this distinction visible.
+        if (capMixChart) capMixChart.destroy();
+        document.getElementById('capMixTitle').textContent = c.shortName + ' — Capacity Mix Over Time (GW)';
+        document.getElementById('capMixSub').textContent = 'Dispatchable capacity by fuel (solid bars) vs total nameplate (dashed line) | Fossil loses dispatch, not MW';
+
+        const activeFuelsCap = fuelOrder.filter(f => mix.fuels.includes(f) && mix.capacity_gw[f]);
+        const visibleFuelsCap = activeFuelsCap.filter(f => mix.capacity_gw[f].p50.some(v => v > 0.01));
+
+        const capDatasets = visibleFuelsCap.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: mix.capacity_gw[f].p50,
+            backgroundColor: (FUEL_COLORS[f] || '#666') + alphaHex,
+            borderColor: (FUEL_COLORS[f] || '#666'),
+            borderWidth: 1,
+            borderRadius: 4,
+            borderSkipped: false,
+            stack: 'dispatchable',
+        }));
+
+        // Add nameplate total as a line overlay (constant — physical capacity doesn't change)
+        capDatasets.push({
+            label: 'Nameplate Total (physical)',
+            data: yearLabels.map(() => mix.baseline_total_capacity_gw),
+            type: 'line',
+            borderColor: '#F59E0B88',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [8, 4],
+            pointRadius: 0,
+            tension: 0,
+            stack: false,
+        });
+
+        capMixChart = new Chart(document.getElementById('chartCapMix').getContext('2d'), {
+            type: 'bar',
+            data: { labels: yearLabels, datasets: capDatasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true, title: { display: true, text: 'Year (SBTi Trajectory)' }, grid: { color: '#1E293B44' },
+                         ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10 } },
+                    y: { stacked: true, title: { display: true, text: 'Capacity (GW)' }, grid: { color: '#1E293B44' } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, padding: 8, font: { size: 10 }, usePointStyle: true } },
+                    tooltip: {
+                        mode: 'index',
+                        callbacks: {
+                            title: items => items[0] ? 'Year ' + items[0].label : '',
+                            label: item => {
+                                if (item.dataset.type === 'line') return item.dataset.label + ': ' + item.raw.toFixed(1) + ' GW';
+                                return item.dataset.label + ': ' + item.raw.toFixed(1) + ' GW';
+                            },
+                            footer: items => {
+                                const barItems = items.filter(i => !i.dataset.type);
+                                const total = barItems.reduce((s, i) => s + i.raw, 0);
+                                return 'Dispatchable: ' + total.toFixed(1) + ' GW | Nameplate: ' + mix.baseline_total_capacity_gw.toFixed(1) + ' GW';
+                            }
+                        }
+                    },
+                    annotation: { annotations: barMilestoneAnnotations(milestones) }
                 }
             }
         });
@@ -1015,7 +1278,7 @@
                     x: {
                         min: 2028, max: 2052,
                         title: { display: true, text: 'Year of Full Retirement' },
-                        grid: { color: '#1E293B' },
+                        grid: { color: '#1E293B66' },
                         ticks: { stepSize: 5 }
                     },
                     y: { grid: { display: false } }
