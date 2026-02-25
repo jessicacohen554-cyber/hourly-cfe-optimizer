@@ -1097,17 +1097,18 @@ Clean firm cost uses a **merit-order supply curve** with two tranches, filled ch
 
 *Sources: INL LWRS Program, NRC uprate database, NEI fleet data, Thunder Said Energy capex analysis, IRA §45Y PTC*
 
-**Uprate cap** — 5% of existing nuclear capacity (midpoint estimate accounting for partial exhaustion of MUR/stretch potential; EPU potential remains but is higher-cost):
+**Uprate cap** — 8% of existing nuclear capacity (includes MUR + stretch + good EPU opportunities):
 
 | Region | Existing Nuclear (GW) | Uprate Cap (GW) | Uprate Cap (TWh/yr @ 90% CF) |
 |---|---|---|---|
-| **CAISO** | 2.3 (Diablo Canyon) | 0.12 | 0.9 |
-| **ERCOT** | 2.7 (South Texas Project) | 0.14 | 1.1 |
-| **PJM** | 32.0 (largest US fleet) | 1.60 | 12.6 |
-| **NYISO** | 3.4 (Nine Mile, FitzPatrick, Ginna) | 0.17 | 1.3 |
-| **NEISO** | 3.5 (Millstone, Seabrook) | 0.18 | 1.4 |
+| **CAISO** | 2.3 (Diablo Canyon) | 0.18 | 1.5 |
+| **ERCOT** | 2.7 (South Texas Project) | 0.22 | 1.7 |
+| **PJM** | 32.0 (largest US fleet) | 2.56 | 20.2 |
+| **NYISO** | 3.4 (Nine Mile, FitzPatrick, Ginna) | 0.27 | 2.1 |
+| **NEISO** | 3.5 (Millstone, Seabrook) | 0.28 | 2.2 |
+| **Total** | **43.9** | **3.51** | **27.7** |
 
-*5% chosen as midpoint: NRC has approved ~8% fleet-wide historically, but MUR/stretch largely exhausted. Remaining potential is primarily EPU on ~27 of 94 reactors. DOE executive order targets ~3-5 GW; INL LWRS estimates 3-8% remaining. 5% balances optimism with exhaustion.*
+*8% chosen: NRC has approved ~8% fleet-wide historically (MUR + stretch + EPU). Good EPU opportunities remain across ~27 of 94 reactors, particularly BWR plants. DOE executive order targets ~3-5 GW; INL LWRS estimates 3-8% remaining. 8% reflects full remaining potential including EPU deployment at $15-40/MWh — the cheapest new dispatchable clean capacity available.*
 
 #### Tranche 2: Geothermal (CAISO Only, Capped at 5 GW)
 
