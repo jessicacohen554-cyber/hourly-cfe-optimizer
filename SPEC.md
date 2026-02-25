@@ -493,29 +493,63 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 **Files changed**: `scripts/step5_PP5_compute_mac_stats.py` — all MAC computation functions (`add_mac_column`, `compute_stepwise_fan`, `compute_monotonic_envelope`, `compute_path_constrained_mac`, demand-growth MAC) now use `cost_effective_cost` instead of `cost_incremental`. No changes to Steps 1-4 or parquet outputs needed — only PP5 re-run required.
 
-### FOAK→NOAK Learning Curve — Concave Ramp with Delayed Start (Feb 25, 2026)
+### FOAK→NOAK Learning Curve — Scenario-Differentiated, Year-Based (Feb 25, 2026)
 
-**Decision**: Changed learning curve from convex (exponent 1.8) to concave (exponent 0.8) with delayed start — no learning below 70% threshold (~2029). First SMRs won't deploy until ~2030, so costs stay at FOAK floor through the early thresholds.
+**Decision**: Replaced single learning curve with scenario-differentiated, year-based curves. Both scenarios now have learning curves, but with different start dates and durations reflecting deployment pace differences.
 
-**Rationale**: Wright's Law doublings happen fast early (1→2→4→8 factory-built SMR units) then slow down. But learning can't begin before deployment — NRC SMR licensing timeline means first commercial units ~2030. The concave ramp reflects rapid cost decline once factory production begins, with no learning in the pre-deployment period.
+**Rationale**: INL data shows SOAK (2nd unit) achieves 15% reduction, units 2-4 another 5%, before gradual decline toward NOAK. NEA shows -18 to -25% for unit 2, -25 to -40% by unit 4, -35 to -55% by unit 8. DOE Liftoff projects NOAK by early 2030s for advanced designs, scaled achievement by 2035, full low-price stabilization by 2040. Learning occurs sequentially and in compressed timelines — construction learning transfers through engineering teams, supply chains, and regulatory streamlining before each unit completes. Westinghouse plans 10 new AP1000s by 2030; commercial SMRs expected operational by 2030.
 
-**Implementation**: `learning_fraction()` returns flat 0.05 (FOAK floor) for thresholds ≤70%, then concave ramp (exponent 0.8) from 70%→100% reaching full NOAK.
+**Scenario B (Hourly Matching — aggressive deployment):**
+- FOAK starts: 2029 (first commercial SMR deployments)
+- Learning period: 2028-2038 (10 years)
+- NOAK achieved: 2038
+- 2038-2050: Stable at NOAK (Low) pricing
+- Shape: Concave (exponent 0.6) — steep front-end matching INL/NEA unit-doubling data, asymptotic tail
+- Pre-2029: Pure FOAK (no learning, no SMR deployment yet)
 
-**Nuclear LCOE trajectory (PJM, H=$160 → L=$72)**:
-| Threshold | Year | Fraction | LCOE |
-|---|---|---|---|
-| 50% | 2025 | 0.05 | $156 |
-| 60% | 2027 | 0.05 | $156 |
-| 70% | 2029 | 0.05 | $156 |
-| 75% | 2030 | 0.28 | $136 |
-| 80% | 2032 | 0.44 | $121 |
-| 90% | 2040 | 0.74 | $95 |
-| 95% | 2045 | 0.87 | $83 |
-| 100% | 2050 | 1.00 | $72 |
+**Scenario A (Pure Consequential — delayed deployment):**
+- FOAK starts: 2036 (5-year delay due to less investment, slower regulatory pathway)
+- Learning period: 2036-2048 (12 years — stretched due to fewer units built per year)
+- NOAK achieved: 2048
+- 2048-2050: Stable at NOAK (Low) pricing
+- Shape: Concave (exponent 0.6) — same steep front-end physics, stretched across 12 years
+- Pre-2036: Pure FOAK
 
-**Impact**: Scenario B (Hourly Matching) firm costs stay high through 70%/2029 (same as Scenario A), then decline rapidly. The cost advantage of Scenario B over A emerges at 75%+ when learning kicks in. More realistic timeline — no free FOAK cost reduction before deployment exists.
+**Implementation**: `learning_fraction(threshold, scenario='B')` now uses year-based lookup via SBTI_YEAR_MAP. Each scenario defines `foak_start_year` and `noak_year`. Fraction is 0 (pure FOAK) before start, concave ramp during learning period, 1.0 (full NOAK) after NOAK year. Both `_adjust_costs_with_learning` (Scenario B) and `_adjust_costs_no_learning` → `_adjust_costs_delayed_learning` (Scenario A) use the same interpolation machinery with different timeline parameters.
 
-**Files changed**: `scripts/step5_PP3_scenario_comparison.py` — `learning_fraction()` function. PP3 re-run required.
+**Nuclear LCOE trajectory (PJM, H=$160 → L=$72):**
+
+Scenario B:
+| Year | Threshold | Fraction | LCOE |
+|------|-----------|----------|------|
+| 2030 | 50% | 0.38 | $126 |
+| 2031 | 55% | 0.49 | $117 |
+| 2033 | 60% | 0.66 | $102 |
+| 2035 | 70% | 0.81 | $89 |
+| 2037 | 80% | 0.94 | $77 |
+| 2038 | 85% | 1.00 | $72 |
+| 2040 | 90% | 1.00 | $72 |
+| 2045 | 95% | 1.00 | $72 |
+| 2050 | 100% | 1.00 | $72 |
+
+Scenario A:
+| Year | Threshold | Fraction | LCOE |
+|------|-----------|----------|------|
+| 2030 | 50% | 0.00 | $160 |
+| 2035 | 70% | 0.00 | $160 |
+| 2036 | 75% | 0.00 | $160 |
+| 2037 | 80% | 0.23 | $140 |
+| 2038 | 85% | 0.34 | $130 |
+| 2040 | 90% | 0.52 | $114 |
+| 2045 | 95% | 0.84 | $86 |
+| 2048 | 97.5% | 1.00 | $72 |
+| 2050 | 100% | 1.00 | $72 |
+
+**Supersedes**: Previous single learning curve (concave ramp, no learning below 70%, same curve for both scenarios). Scenario A previously had NO learning curve (flat FOAK forever).
+
+**Scope**: PP3 scenario comparison only. Step 3 cost optimization is NOT modified — it remains the 2025 snapshot with static LCOE tables.
+
+**Files changed**: `scripts/step5_PP3_scenario_comparison.py` — `learning_fraction()`, `_adjust_costs_no_learning()` → `_adjust_costs_delayed_learning()`. PP3 re-run required.
 
 ### Compressed Day Chart — Curtailment Double-Count Fix (Feb 25, 2026)
 
