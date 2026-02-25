@@ -103,9 +103,11 @@
 - **Step 2 update**: Remove Phase 0 filter for future runs (kept as dead code for reference). No full PFS re-run needed — temp script recovers the delta.
 - **Script**: `recover_below_floor.py` (one-time use, can be deleted after merge)
 
-#### Decision 4: LMP Integration — Wholesale + LCOE Hybrid (4A)
-- **Approach**: Current architecture preserved. Existing generation priced at regional wholesale (LMP-informed). New-build priced at LCOE + transmission adder.
-- **No change to pricing engine structure** — the existing/new split already computed in Step 3 `price_mix_batch()`. This decision confirms the hybrid approach is correct and no full nodal LMP model is needed.
+#### Decision 4: Existing Clean = $0, New-Build = LCOE (Updated Feb 25, 2026)
+- **Approach**: Existing clean generation priced at **$0** (sunk fleet — already built and operating, no cost to buyer). New-build priced at LCOE + transmission adder. Previous wholesale pricing of existing resources was distorting the optimizer toward wind-heavy mixes that underutilized the existing fleet.
+- **Rationale**: For Track 1 baseline analysis, existing clean resources are constants on the grid. Charging them at wholesale ($25-42/MWh) penalized mixes that used more existing, causing the optimizer to prefer over-procuring cheap new-build wind while leaving free existing nuclear/solar unused.
+- **Effect**: Optimizer now strongly prefers mixes that maximize use of existing fleet (free) before adding new-build. ERCOT 50% at 2030 now correctly shows ~13% CF / 22% solar / 65% wind at 55% procurement (using ~42 TWh of existing nuclear) instead of 5% CF / 86% wind at 65% procurement.
+- **Implementation**: `coeff_matrix[:, _COL_WHOLESALE] = 0` in coefficient model; `total_cost += 0` for existing in price_mix_batch.
 
 #### Decision 6: LMP Module Architecture (Feb 21, 2026, updated v9)
 - **Pipeline position**: Downstream of Step 4, reads ECF base case from `overprocure_scenarios.parquet`
@@ -129,8 +131,8 @@ Three distinct tracks with standardized naming. Each track represents a differen
 
 **Track 1 — ECF (Existing Clean Floor)**: Baseline case
 - Cost optimization built on **2025 absolute existing clean generation** — the "existing clean floor"
-- Existing clean TWh remain constant across all demand growth scenarios (absolute TWh steady; share of total generation declines over time as demand grows)
-- All existing resources credited at wholesale prices
+- Existing clean TWh remain **constant** across all demand growth scenarios (absolute TWh steady; share of total generation declines over time as demand grows)
+- All existing resources priced at **$0** (sunk fleet — no cost to buyer)
 - New-build procurement optimized on top of the existing floor to hit each target threshold
 - Source: `overprocure_scenarios.parquet` (baseline results)
 - LMP module runs on this track
@@ -148,9 +150,9 @@ Three distinct tracks with standardized naming. Each track represents a differen
 - **Does NOT include** existing clean firm (nuclear) or uprates — these are what's being "replaced"
 - **Does NOT include** existing CCS (near-zero in most ISOs, but conceptually part of what's replaced)
 - Uprates: **off** (uprate_cap=0, no uprate tranche)
-- Hydro: **included** (existing floor, wholesale-priced)
-- Existing solar: **included** (existing floor, wholesale-priced)
-- Existing wind: **included** (existing floor, wholesale-priced)
+- Hydro: **included** (existing floor, $0 — sunk fleet)
+- Existing solar: **included** (existing floor, $0 — sunk fleet)
+- Existing wind: **included** (existing floor, $0 — sunk fleet)
 - Purpose: True cost of replacing existing dispatchable clean generation (nuclear/CCS), while keeping existing renewables and hydro as the floor
 - Files/caches use `ctr_` prefix
 
@@ -2436,6 +2438,33 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 **Sources**: PJM ELCC Class Ratings (2024/25), NERC GADS EFORd class averages, FERC Final Reports on Winter Storm Uri (2021) and Elliott (2022), Brattle Group VRR Curve Review (2025), UCS gas reliability analyses, ERCOT Aurora RA Assessment (2025).
 
 **Impact on optimization**: GAF increases gas backup MW requirements by 12-18% across ISOs, which increases gas backup costs. This tilts cost-optimal mixes toward resources with higher peak capacity credits (clean firm, CCS, battery) and away from resources with low capacity credits (solar, wind) at high matching thresholds. The effect is modest at low thresholds (gas backup is small) and material at 95%+ (where gas backup costs are a significant fraction of total cost).
+
+### 22.9 Delta RA Approach — Calibrated Gas Backup (Feb 25, 2026)
+
+**Problem**: The previous RA formula `gas_needed = max(0, ra_peak - clean_peak) / GAF` computed clean_peak from energy allocations (`proc * pct / 100 * avg_demand_mw * CC`), which conflates average generation MW with installed capacity. This systematically underestimated clean peak contribution (by 2-4x for solar/wind) because it didn't convert energy → installed MW using capacity factors. Result: ERCOT 2025 showed ~94 GW gas needed when only 55 GW exists.
+
+**Fix**: Delta RA approach calibrated to 2025 reality:
+1. At base year (2025): `gas = EXISTING_GAS_CAPACITY_MW` (calibrated to actual installed fleet)
+2. Compute `EXISTING_CLEAN_PEAK_MW` from 2025 fleet using `avg_mw / capacity_factor * capacity_credit`
+3. Compute `GAS_RAW_2025 = max(0, RA_peak - EXISTING_CLEAN_PEAK_MW) / GAF` as theoretical baseline
+4. For any scenario: `gas_raw = max(0, ra_peak_grown - total_clean_peak) / GAF`
+5. `gas_delta = gas_raw - GAS_RAW_2025`
+6. `total_gas = max(0, EXISTING_GAS + gas_delta)`
+
+**New-build peak uses capacity factor conversion**: `installed_mw = avg_generation_mw / CF[resource][iso]` then `peak_mw = installed_mw * CC[resource]`. This properly accounts for wind's low CF (high installed per MWh) and solar's low CF.
+
+**Resource capacity factors (EIA Form 923, eGRID 2022-2024)**:
+| Resource | CAISO | ERCOT | PJM | NYISO | NEISO |
+|----------|-------|-------|-----|-------|-------|
+| Nuclear  | 0.90  | 0.93  | 0.93| 0.90  | 0.90  |
+| Solar    | 0.28  | 0.24  | 0.17| 0.15  | 0.15  |
+| Wind     | 0.25  | 0.38  | 0.30| 0.28  | 0.30  |
+| CCS-CCGT | 0.85  | 0.85  | 0.85| 0.85  | 0.85  |
+| Hydro    | 0.40  | 0.30  | 0.35| 0.40  | 0.40  |
+
+**Peak demand growth**: Peak scales with demand growth factor (`peak_grown = PEAK_2025 * gf`).
+
+**Result**: ERCOT 50% at 2030 Medium growth now shows ~71 GW gas (down from >100 GW), consistent with real-world expectations of 65-70 GW for modest clean energy expansion from a 46% clean baseline with ~53 GW existing gas.
 
 ### 22.8 NEISO Pipeline Capacity Constraint — Informational Metric (Feb 20, 2026)
 
