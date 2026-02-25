@@ -477,6 +477,22 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 **Implementation plan**: See `PLAN_marginal_mac_fix.md` for detailed implementation steps and file-by-file changes.
 
+### MAC Formula Change (Feb 25, 2026) — Full Portfolio LCOE, Not Incremental Above Wholesale
+
+**Previous formula**: `MAC = (cost_incremental × demand) / CO₂_abated` where `cost_incremental = effective_cost - wholesale_price`. This measured the premium of clean energy over grid wholesale power per ton abated.
+
+**New formula**: `MAC = (cost_effective_cost × demand) / CO₂_abated`. Uses the full portfolio LCOE (effective cost) rather than the incremental cost above wholesale.
+
+**Rationale**:
+- MAC should measure the standalone cost-effectiveness of the clean portfolio per ton of CO₂ displaced, not a premium relative to a wholesale baseline
+- Removes wholesale price sensitivity from MAC (previously, higher wholesale prices made MAC look artificially low)
+- Aligns with standard MAC curve methodology: cost of the abatement action itself
+- CO₂ abatement continues to use merit-order fossil retirement (coal → oil → gas) from the dispatch model in `dispatch_utils.py`
+
+**Impact**: MAC values will be higher across the board (roughly 2× for regions where wholesale ≈ effective_cost/2). DAC/SCC/ETS benchmark comparisons remain unchanged. Crossover thresholds will shift. Dashboard narrative text must be updated after PP5 re-run.
+
+**Files changed**: `scripts/step5_PP5_compute_mac_stats.py` — all MAC computation functions (`add_mac_column`, `compute_stepwise_fan`, `compute_monotonic_envelope`, `compute_path_constrained_mac`, demand-growth MAC) now use `cost_effective_cost` instead of `cost_incremental`. No changes to Steps 1-4 or parquet outputs needed — only PP5 re-run required.
+
 ### Optimizer Statistical Properties (Feb 16, 2026)
 
 **Search architecture**: 3-phase hierarchical grid search (10% → 5% → 1% resolution)
