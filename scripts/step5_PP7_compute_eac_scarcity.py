@@ -19,6 +19,8 @@ import json
 import os
 import time
 import math
+import functools
+import numpy as np
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 RESULTS_PATH = "dashboard/overprocure_results.json"
@@ -227,11 +229,22 @@ SCARCITY_BANDS = {
     "critical":   {"max_ratio": 999,  "label": "Critical",   "color": "#ef4444"},
 }
 
+# ── Pre-sorted interpolation keys (sort once at module level, not per call) ──
+_SORTED_PROCUREMENT_KEYS = sorted(PROCUREMENT_RATIO.keys())
+
+# Pre-compute numpy arrays for vectorized scenario loop
+MATCH_TARGETS_ARR = np.array(MATCH_TARGETS)            # shape: (15,)
+PARTICIPATION_ARR = np.array(PARTICIPATION_RATES)       # shape: (12,)
+
+# Pre-compute procurement ratios for all match targets (used in vectorized loop)
+# This is populated after get_procurement_ratio is defined below
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Helper functions
 # ═══════════════════════════════════════════════════════════════════════════
 
+@functools.lru_cache(maxsize=512)
 def classify_scarcity(demand_ratio):
     """Classify scarcity based on demand/supply ratio."""
     for band_key, band in SCARCITY_BANDS.items():
@@ -240,30 +253,62 @@ def classify_scarcity(demand_ratio):
     return "critical", "Critical", "#ef4444"
 
 
+def _interp_sorted(sorted_years, values, year):
+    """Linearly interpolate given pre-sorted years and corresponding values."""
+    if year <= sorted_years[0]:
+        return values[0]
+    if year >= sorted_years[-1]:
+        return values[-1]
+    for i in range(len(sorted_years) - 1):
+        if sorted_years[i] <= year <= sorted_years[i + 1]:
+            t = (year - sorted_years[i]) / (sorted_years[i + 1] - sorted_years[i])
+            return values[i] + t * (values[i + 1] - values[i])
+    return values[-1]
+
+
+# Cache for pre-sorted keys: maps id(dict) -> (sorted_years_tuple, values_tuple)
+_interp_cache = {}
+
+
 def interp_dict(data, year):
-    """Linearly interpolate a {str_year: value} dict at any year."""
-    years = sorted(int(y) for y in data.keys())
-    if year <= years[0]:
-        return data[str(years[0])]
-    if year >= years[-1]:
-        return data[str(years[-1])]
-    for i in range(len(years) - 1):
-        if years[i] <= year <= years[i + 1]:
-            t = (year - years[i]) / (years[i + 1] - years[i])
-            return data[str(years[i])] + t * (data[str(years[i + 1])] - data[str(years[i])])
-    return data[str(years[-1])]
+    """Linearly interpolate a {str_year: value} dict at any year.
+    Pre-sorts and caches keys on first call per dict instance."""
+    dict_id = id(data)
+    if dict_id not in _interp_cache:
+        sorted_years = tuple(sorted(int(y) for y in data.keys()))
+        values = tuple(data[str(y)] for y in sorted_years)
+        _interp_cache[dict_id] = (sorted_years, values)
+    sorted_years, values = _interp_cache[dict_id]
+    return _interp_sorted(sorted_years, values, year)
 
 
+# Pre-populate _interp_cache for all module-level dicts (avoids sorting on first call)
+def _prepopulate_interp_cache():
+    """Eagerly cache sorted keys for all known interpolation dicts at module load."""
+    for iso_data in RPS_TARGET_TRAJECTORIES.values():
+        for growth_dict in iso_data.values():
+            interp_dict(growth_dict, 2025)  # triggers cache population
+    for iso_dict in SSS_NEW_BUILD_FRACTION.values():
+        interp_dict(iso_dict, 2025)
+    for pipeline in COMMITTED_CLEAN_PIPELINE.values():
+        interp_dict(pipeline["phasing_gw"], 2025)
+
+_prepopulate_interp_cache()
+
+
+@functools.lru_cache(maxsize=512)
 def interpolate_rps_target(iso, year, growth_level):
     """Interpolate RPS clean energy target % for a given ISO/year/growth."""
     return interp_dict(RPS_TARGET_TRAJECTORIES[iso][growth_level], year)
 
 
+@functools.lru_cache(maxsize=256)
 def get_sss_new_fraction(iso, year):
     """Interpolate SSS new-build fraction for any year."""
     return interp_dict(SSS_NEW_BUILD_FRACTION[iso], year)
 
 
+@functools.lru_cache(maxsize=256)
 def get_committed_pipeline_twh(iso, year):
     """Compute TWh locked up by committed hyperscaler clean PPAs at a given year."""
     if iso not in COMMITTED_CLEAN_PIPELINE:
@@ -273,9 +318,10 @@ def get_committed_pipeline_twh(iso, year):
     return gw * 8.760 * pipeline["capacity_factor"]
 
 
+@functools.lru_cache(maxsize=256)
 def get_procurement_ratio(match_target):
     """Interpolate procurement ratio for any match target."""
-    thresholds = sorted(PROCUREMENT_RATIO.keys())
+    thresholds = _SORTED_PROCUREMENT_KEYS  # Pre-sorted at module level
     if match_target <= thresholds[0]:
         return PROCUREMENT_RATIO[thresholds[0]]
     if match_target >= thresholds[-1]:
@@ -290,6 +336,7 @@ def get_procurement_ratio(match_target):
     return PROCUREMENT_RATIO[thresholds[-1]]
 
 
+@functools.lru_cache(maxsize=256)
 def get_total_buildable(iso, year):
     """Total new-build capacity available on the supply stack for a given ISO/year."""
     years_elapsed = max(0, year - 2025)
@@ -297,6 +344,10 @@ def get_total_buildable(iso, year):
     for tier in CLEAN_SUPPLY_STACK[iso]:
         total += min(tier["annual_add_twh"] * years_elapsed, tier["max_cumulative_twh"])
     return total
+
+
+# Pre-compute procurement ratios array for vectorized scenario loop (now that function is defined)
+_PROC_RATIOS_ARR = np.array([get_procurement_ratio(mt) for mt in MATCH_TARGETS])  # shape: (15,)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -460,11 +511,167 @@ def compute_clean_premium(iso, year, rps_new_demand_twh, corp_demand_twh, availa
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Vectorized helpers for Phase 2 scenario loop
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _vectorized_walk_supply_stack(iso, year, total_new_demand_grid):
+    """Vectorized walk_supply_stack: computes marginal LCOE for a 2D grid of demands.
+
+    Args:
+        iso: ISO name
+        year: year
+        total_new_demand_grid: numpy array of any shape (e.g. (12, 15))
+
+    Returns:
+        numpy array of same shape with marginal LCOE values.
+    """
+    wholesale = WHOLESALE_PRICES[iso]
+    years_elapsed = max(1, year - 2025)
+    stack = CLEAN_SUPPLY_STACK[iso]
+
+    # Pre-compute tier capacities for this ISO/year
+    tier_capacities = []
+    tier_lcoes = []
+    for tier in stack:
+        cap = min(tier["annual_add_twh"] * years_elapsed, tier["max_cumulative_twh"])
+        if cap > 0:
+            tier_capacities.append(cap)
+            tier_lcoes.append(tier["lcoe"])
+
+    flat = total_new_demand_grid.ravel()
+    result = np.empty_like(flat, dtype=np.float64)
+
+    for idx in range(len(flat)):
+        demand = flat[idx]
+        if demand <= 0:
+            result[idx] = wholesale
+            continue
+        remaining = demand
+        marginal = wholesale
+        for cap, lcoe in zip(tier_capacities, tier_lcoes):
+            if remaining <= cap:
+                marginal = lcoe
+                remaining = 0
+                break
+            remaining -= cap
+            marginal = lcoe
+        if remaining > 0:
+            marginal = marginal + remaining * 3  # scarcity surcharge
+        result[idx] = marginal
+
+    return result.reshape(total_new_demand_grid.shape)
+
+
+def _vectorized_classify_scarcity(demand_ratio_grid):
+    """Vectorized scarcity classification for a numpy array.
+
+    Returns:
+        band_keys: list of lists of band key strings (same shape)
+        labels: list of lists of label strings
+        colors: list of lists of color strings
+    """
+    # Build sorted band list for threshold comparison
+    band_list = []
+    for band_key, band in SCARCITY_BANDS.items():
+        band_list.append((band["max_ratio"], band_key, band["label"], band["color"]))
+
+    flat = demand_ratio_grid.ravel()
+    n = len(flat)
+    band_keys = [""] * n
+    labels = [""] * n
+    colors = [""] * n
+
+    for idx in range(n):
+        ratio = flat[idx]
+        found = False
+        for max_r, bk, lab, col in band_list:
+            if ratio <= max_r:
+                band_keys[idx] = bk
+                labels[idx] = lab
+                colors[idx] = col
+                found = True
+                break
+        if not found:
+            band_keys[idx] = "critical"
+            labels[idx] = "Critical"
+            colors[idx] = "#ef4444"
+
+    shape = demand_ratio_grid.shape
+    return (
+        [band_keys[i * shape[1]:(i + 1) * shape[1]] for i in range(shape[0])],
+        [labels[i * shape[1]:(i + 1) * shape[1]] for i in range(shape[0])],
+        [colors[i * shape[1]:(i + 1) * shape[1]] for i in range(shape[0])],
+    )
+
+
+def _vectorized_clean_premium(iso, year, rps_new_demand_twh, corp_eac_demand_grid, available_existing_twh):
+    """Vectorized compute_clean_premium for a 2D grid of corp_eac_demand values.
+
+    Args:
+        iso, year, rps_new_demand_twh, available_existing_twh: scalars (constant per combo)
+        corp_eac_demand_grid: numpy array shape (n_part, n_match)
+
+    Returns:
+        numpy array of same shape with premium values (rounded to 2 decimals).
+    """
+    wholesale = WHOLESALE_PRICES[iso]
+    base_rec_premium = 5.0
+
+    shape = corp_eac_demand_grid.shape
+    premium_grid = np.zeros(shape, dtype=np.float64)
+
+    # Mask: zero demand
+    zero_mask = corp_eac_demand_grid <= 0
+    # premium stays 0 for these
+
+    # Existing portion and remaining
+    existing_portion = np.minimum(corp_eac_demand_grid, available_existing_twh)
+    corp_remaining = np.maximum(0, corp_eac_demand_grid - available_existing_twh)
+
+    # Case 1: All met by existing (corp_remaining <= 0 and demand > 0)
+    all_existing_mask = (corp_remaining <= 0) & (~zero_mask)
+    if np.any(all_existing_mask):
+        if available_existing_twh > 0:
+            utilization = corp_eac_demand_grid[all_existing_mask] / available_existing_twh
+        else:
+            utilization = np.zeros(np.sum(all_existing_mask))
+        premium_grid[all_existing_mask] = 2 + utilization * utilization * 10
+
+    # Case 2: Need new build (corp_remaining > 0)
+    newbuild_mask = corp_remaining > 0
+    if np.any(newbuild_mask):
+        total_new_demand = rps_new_demand_twh + corp_remaining[newbuild_mask]
+        # Walk supply stack for each unique demand value
+        marginal_lcoes = _vectorized_walk_supply_stack(
+            iso, year, total_new_demand.reshape(1, -1)).ravel()
+        newbuild_premium = np.maximum(0, marginal_lcoes - wholesale)
+
+        existing_premium_val = base_rec_premium * 2  # $10/MWh
+        ep = existing_portion[newbuild_mask]
+        cr = corp_remaining[newbuild_mask]
+        total = ep + cr
+        safe_total = np.where(total > 0, total, 1)
+        premium_grid[newbuild_mask] = np.where(
+            total > 0,
+            (ep * existing_premium_val + cr * newbuild_premium) / safe_total,
+            0
+        )
+
+    return np.round(premium_grid, 2)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Inflection points
 # ═══════════════════════════════════════════════════════════════════════════
 
 def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
-    """Find the participation rate at which each match target hits scarcity (>0.8 ratio)."""
+    """Find the participation rate at which each match target hits scarcity (>0.8 ratio).
+
+    Uses analytical solution instead of iterating pct 1..100:
+      ratio = demand_twh * CI_SHARE * (pct/100) * incremental_need * procurement_mult / total_for_corp
+      Solve for pct when ratio = 0.8:
+      pct = ceil(0.8 * total_for_corp * 100 / (demand_twh * CI_SHARE * incremental_need * procurement_mult))
+    """
     inflections = {}
     available = supply_data["available_non_sss_twh"]
     sss_share = supply_data["sss_share_of_total"]
@@ -474,20 +681,28 @@ def compute_inflection_points(iso, year, growth_level, supply_data, demand_twh):
     remaining_buildable = max(0, total_buildable - rps_mandated)
     total_for_corp = available + remaining_buildable
 
-    for match_target in MATCH_TARGETS:
-        procurement_mult = get_procurement_ratio(match_target)
-        incremental_need_frac = max(0, match_target / 100 - sss_share)
+    # Vectorized: compute all match targets at once
+    proc_mults = _PROC_RATIOS_ARR  # (15,)
+    incremental_need_fracs = np.maximum(0, MATCH_TARGETS_ARR / 100.0 - sss_share)  # (15,)
 
+    for i, match_target in enumerate(MATCH_TARGETS):
+        procurement_mult = float(proc_mults[i])
+        incremental_need_frac = float(incremental_need_fracs[i])
+
+        # Analytical inflection point calculation
         inflection_pct = None
-        for pct in range(1, 101):
-            corp_load = demand_twh * CI_SHARE * (pct / 100)
-            corp_eac_demand = corp_load * incremental_need_frac * procurement_mult
-
-            # Corporate-centric ratio: corp demand / total available for corp
-            ratio = corp_eac_demand / total_for_corp if total_for_corp > 0 else 999
-            if ratio > 0.8:  # "Tightening" threshold — scarcity starts here
-                inflection_pct = pct
-                break
+        denominator = demand_twh * CI_SHARE * incremental_need_frac * procurement_mult
+        if total_for_corp > 0 and denominator > 0:
+            # pct at which ratio == 0.8
+            pct_exact = 0.8 * total_for_corp * 100.0 / denominator
+            # We need the first integer pct where ratio > 0.8, so ceil
+            pct_ceil = math.ceil(pct_exact)
+            # Verify it's within [1, 100] — if pct_exact > 100, no inflection
+            if pct_ceil <= 100:
+                inflection_pct = max(1, pct_ceil)
+        elif total_for_corp <= 0 and denominator > 0:
+            # No supply at all — scarcity at pct=1
+            inflection_pct = 1
 
         inflections[str(match_target)] = {
             "inflection_participation_pct": inflection_pct,
@@ -665,61 +880,90 @@ def main():
                 rps_mandated = supply["rps_mandated_new_twh"]
                 total_buildable = get_total_buildable(iso, year)
 
+                # ── Vectorized over participation × match_target grid ──
+                # Shapes: PARTICIPATION_ARR (12,), MATCH_TARGETS_ARR (15,), _PROC_RATIOS_ARR (15,)
+                n_part = len(PARTICIPATION_ARR)
+                n_match = len(MATCH_TARGETS_ARR)
+
+                # Broadcasting: part_grid (12,1), match_grid (1,15)
+                part_grid = PARTICIPATION_ARR[:, None]              # (12, 1)
+                match_grid = MATCH_TARGETS_ARR[None, :]             # (1, 15)
+                proc_ratios = _PROC_RATIOS_ARR[None, :]             # (1, 15)
+
+                # Corporate load: (12, 1)
+                corp_load_grid = projected_demand * CI_SHARE * (part_grid / 100.0)
+
+                # SSS pro-rata derate: incremental need per match target (1, 15)
+                incremental_need_grid = np.maximum(0, match_grid / 100.0 - sss_share)
+
+                # Corp EAC demand: (12, 15)
+                corp_eac_demand_grid = corp_load_grid * incremental_need_grid * proc_ratios
+
+                # Combined demand: RPS mandated + corp demand beyond existing
+                corp_beyond_existing_grid = np.maximum(0, corp_eac_demand_grid - available)
+                combined_new_demand_grid = rps_mandated + corp_beyond_existing_grid
+
+                # Scarcity ratio: corporate-centric
+                remaining_buildable = max(0, total_buildable - rps_mandated)
+                total_for_corp = available + remaining_buildable
+
+                if total_for_corp > 0:
+                    demand_ratio_grid = corp_eac_demand_grid / total_for_corp
+                else:
+                    # Where corp demand > 0, ratio = 999; else 0
+                    demand_ratio_grid = np.where(corp_eac_demand_grid > 0, 999.0, 0.0)
+
+                # Vectorized scarcity classification
+                band_keys_2d, labels_2d, colors_2d = _vectorized_classify_scarcity(demand_ratio_grid)
+
+                # Vectorized clean premium
+                premium_grid = _vectorized_clean_premium(
+                    iso, year, rps_mandated, corp_eac_demand_grid, available)
+
+                # ── Pack results into list of dicts ──
+                # Pre-round grids once (avoids per-element round() calls)
+                projected_demand_r = round(projected_demand, 1)
+                ci_share_pct_r = round(CI_SHARE * 100, 1)
+                sss_pro_rata_r = round(sss_share * 100, 1)
+                available_r = round(available, 1)
+                rps_mandated_r = round(rps_mandated, 1)
+                total_buildable_r = round(total_buildable, 1)
+                remaining_buildable_r = round(remaining_buildable, 1)
+                total_for_corp_r = round(total_for_corp, 1)
+
+                corp_load_rounded = np.round(corp_load_grid, 1)
+                incremental_need_rounded = np.round(incremental_need_grid * 100, 1)
+                proc_ratios_rounded = np.round(proc_ratios, 3)
+                corp_eac_rounded = np.round(corp_eac_demand_grid, 1)
+                combined_new_rounded = np.round(combined_new_demand_grid, 1)
+                demand_ratio_rounded = np.round(demand_ratio_grid, 3)
+
                 scenarios_for_combo = []
-
-                for participation in PARTICIPATION_RATES:
-                    for match_target in MATCH_TARGETS:
-                        mult = get_procurement_ratio(match_target)
-
-                        # Corporate load (C&I only)
-                        corp_load = projected_demand * CI_SHARE * (participation / 100)
-                        # SSS pro-rata derate
-                        incremental_need_frac = max(0, match_target / 100 - sss_share)
-                        corp_eac_demand = corp_load * incremental_need_frac * mult
-
-                        # Combined demand: RPS mandated + corp demand beyond existing
-                        corp_beyond_existing = max(0, corp_eac_demand - available)
-                        combined_new_demand = rps_mandated + corp_beyond_existing
-
-                        # Scarcity ratio: corporate-centric
-                        # Total supply available for corporate = existing + remaining buildable after RPS
-                        remaining_buildable = max(0, total_buildable - rps_mandated)
-                        total_for_corp = available + remaining_buildable
-                        if total_for_corp > 0:
-                            demand_ratio = corp_eac_demand / total_for_corp
-                        elif corp_eac_demand > 0:
-                            demand_ratio = 999
-                        else:
-                            demand_ratio = 0
-
-                        band_key, label, color = classify_scarcity(demand_ratio)
-
-                        # Marginal premium from combined demand on supply stack
-                        premium = compute_clean_premium(
-                            iso, year, rps_mandated, corp_eac_demand, available)
-
+                for pi in range(n_part):
+                    corp_load_val = float(corp_load_rounded[pi, 0])
+                    for mi in range(n_match):
                         scenarios_for_combo.append({
-                            "participation_pct": participation,
-                            "match_target_pct": match_target,
-                            "projected_demand_twh": round(projected_demand, 1),
-                            "ci_share_pct": round(CI_SHARE * 100, 1),
-                            "corp_load_twh": round(corp_load, 1),
-                            "sss_pro_rata_pct": round(sss_share * 100, 1),
-                            "incremental_need_pct": round(incremental_need_frac * 100, 1),
-                            "procurement_ratio": round(mult, 3),
-                            "corp_eac_demand_twh": round(corp_eac_demand, 1),
-                            "available_supply_twh": round(available, 1),
-                            "rps_mandated_new_twh": round(rps_mandated, 1),
-                            "combined_new_demand_twh": round(combined_new_demand, 1),
-                            "total_buildable_twh": round(total_buildable, 1),
-                            "remaining_buildable_twh": round(remaining_buildable, 1),
-                            "total_for_corp_twh": round(total_for_corp, 1),
-                            "demand_supply_ratio": round(demand_ratio, 3),
-                            "scarcity_class": band_key,
-                            "scarcity_label": label,
-                            "clean_premium_per_mwh": premium,
+                            "participation_pct": PARTICIPATION_RATES[pi],
+                            "match_target_pct": MATCH_TARGETS[mi],
+                            "projected_demand_twh": projected_demand_r,
+                            "ci_share_pct": ci_share_pct_r,
+                            "corp_load_twh": corp_load_val,
+                            "sss_pro_rata_pct": sss_pro_rata_r,
+                            "incremental_need_pct": float(incremental_need_rounded[0, mi]),
+                            "procurement_ratio": float(proc_ratios_rounded[0, mi]),
+                            "corp_eac_demand_twh": float(corp_eac_rounded[pi, mi]),
+                            "available_supply_twh": available_r,
+                            "rps_mandated_new_twh": rps_mandated_r,
+                            "combined_new_demand_twh": float(combined_new_rounded[pi, mi]),
+                            "total_buildable_twh": total_buildable_r,
+                            "remaining_buildable_twh": remaining_buildable_r,
+                            "total_for_corp_twh": total_for_corp_r,
+                            "demand_supply_ratio": float(demand_ratio_rounded[pi, mi]),
+                            "scarcity_class": band_keys_2d[pi][mi],
+                            "scarcity_label": labels_2d[pi][mi],
+                            "clean_premium_per_mwh": float(premium_grid[pi, mi]),
                         })
-                        scenario_count += 1
+                scenario_count += n_part * n_match
 
                 results["scenarios"][iso][year_key][growth] = scenarios_for_combo
                 completed_keys.add(combo_key)
