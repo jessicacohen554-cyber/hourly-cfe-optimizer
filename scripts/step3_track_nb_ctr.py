@@ -513,6 +513,9 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     (year, growth_level) combo, this function pre-computes the coefficient matrices once
     for all 42 unique growth scenarios (14 years × 3 levels).
 
+    Hoists growth-invariant array computations (proc, demand pcts, ccs_pct, storage pcts)
+    outside the loop, recomputing only the growth-dependent existing/new splits and gas backup.
+
     Returns:
         dg_coeffs: dict of (year, g_level) → (coeff_matrix, constant, match_frac)
         dg_meta: dict of (year, g_level) → (gf, demand_grown_mwh)
@@ -521,6 +524,67 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     dg_coeffs = {}
     dg_meta = {}
 
+    # ── Growth-INVARIANT computations (hoisted outside loop) ──
+    N = len(arch_arrays['clean_firm'])
+    existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
+
+    proc = arch_arrays['procurement_pct'] / 100.0
+    match_frac = arch_arrays['hourly_match_score'] / 100.0
+
+    cf_pct = arch_arrays['clean_firm']
+    sol_pct = arch_arrays['solar']
+    wnd_pct = arch_arrays['wind']
+    hyd_pct = arch_arrays['hydro']
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
+    bat_pct = arch_arrays['battery_dispatch_pct']
+    bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
+    ldes_pct = arch_arrays['ldes_dispatch_pct']
+
+    # Demand pcts (proc × alloc) — invariant across growth scenarios
+    sol_demand_pct = proc * sol_pct
+    wnd_demand_pct = proc * wnd_pct
+    hyd_demand_pct = proc * hyd_pct
+    ccs_demand_pct = proc * ccs_pct
+    cf_demand_pct = proc * cf_pct
+
+    # Storage coefficients are fully growth-invariant (columns 7-9)
+    bat4_coeff = bat_pct / 100.0
+    bat8_coeff = bat8_pct / 100.0
+    ldes_coeff = ldes_pct / 100.0
+
+    # Uprate cap and geo cap are per-ISO constants
+    uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
+    is_caiso = (iso == 'CAISO')
+
+    # Gas backup constants (per-ISO, invariant)
+    peak_mw = PEAK_DEMAND_MW[iso]
+    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+    gas_fom = EXISTING_GAS_FOM_KW_YR[iso] * 1000
+    new_ccgt_cost = NEW_CCGT_COST_KW_YR[iso] * 1000
+
+    # Pre-compute peak capacity coefficient (invariant factor for clean_peak_mw / avg_demand_mw)
+    # clean_peak_mw = peak_coeff_per_avg_mw * avg_demand_mw
+    # where peak_coeff_per_avg_mw is independent of demand growth
+    peak_coeff = (
+        proc * cf_pct / 100.0 * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        proc * sol_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar'] +
+        proc * wnd_pct / 100.0 * PEAK_CAPACITY_CREDITS['wind'] +
+        proc * ccs_pct / 100.0 * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        proc * hyd_pct / 100.0 * PEAK_CAPACITY_CREDITS['hydro'] +
+        bat_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
+    )
+
+    # Base existing shares (before scaling)
+    ex_sol_base = existing['solar']
+    ex_wnd_base = existing['wind']
+    ex_ccs_base = existing.get('ccs_ccgt', 0)
+    ex_cf_base = existing['clean_firm']
+
+    # ── Growth-DEPENDENT loop ──
     for year in DG_UNIQUE_YEARS:
         years_out = year - 2025
         for g_level in DEMAND_GROWTH_LEVELS:
@@ -530,84 +594,46 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
             demand_grown_mwh = demand_grown * 1e6
             existing_scale = 1.0 / gf
 
-            # Recompute coefficients with growth-adjusted demand and existing scale
-            # This mirrors precompute_base_year_coefficients but with growth params
-            N = len(arch_arrays['clean_firm'])
-            existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
-
-            proc = arch_arrays['procurement_pct'] / 100.0
-            match_frac = arch_arrays['hourly_match_score'] / 100.0
-
-            cf_pct = arch_arrays['clean_firm']
-            sol_pct = arch_arrays['solar']
-            wnd_pct = arch_arrays['wind']
-            hyd_pct = arch_arrays['hydro']
-            ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
-            bat_pct = arch_arrays['battery_dispatch_pct']
-            bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
-            ldes_pct = arch_arrays['ldes_dispatch_pct']
-
-            # Demand pcts (proc × alloc)
-            sol_demand_pct = proc * sol_pct
-            wnd_demand_pct = proc * wnd_pct
-            hyd_demand_pct = proc * hyd_pct
-            ccs_demand_pct = proc * ccs_pct
-            cf_demand_pct = proc * cf_pct
-
             # Existing/new splits with growth-adjusted existing share
-            sol_ex = min(existing['solar'] * existing_scale, 100.0)
+            sol_ex = min(ex_sol_base * existing_scale, 100.0)
             sol_existing_pct = np.minimum(sol_demand_pct, sol_ex)
             sol_new_pct = np.maximum(0, sol_demand_pct - sol_ex)
 
-            wnd_ex = min(existing['wind'] * existing_scale, 100.0)
+            wnd_ex = min(ex_wnd_base * existing_scale, 100.0)
             wnd_existing_pct = np.minimum(wnd_demand_pct, wnd_ex)
             wnd_new_pct = np.maximum(0, wnd_demand_pct - wnd_ex)
 
-            ccs_ex = min(existing.get('ccs_ccgt', 0) * existing_scale, 100.0)
+            ccs_ex = min(ex_ccs_base * existing_scale, 100.0)
             ccs_existing_pct = np.minimum(ccs_demand_pct, ccs_ex)
             ccs_new_pct = np.maximum(0, ccs_demand_pct - ccs_ex)
 
-            cf_ex = min(existing['clean_firm'] * existing_scale, 100.0)
+            cf_ex = min(ex_cf_base * existing_scale, 100.0)
             cf_existing_pct = np.minimum(cf_demand_pct, cf_ex)
             cf_new_pct = np.maximum(0, cf_demand_pct - cf_ex)
 
             # Clean firm tranche allocation
             new_cf_twh = cf_new_pct / 100.0 * demand_grown
-            uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
             uprate_twh = np.minimum(new_cf_twh, uprate_cap)
             remaining_after_uprate = np.maximum(0, new_cf_twh - uprate_twh)
 
-            geo_twh = np.zeros(N)
-            remaining_after_geo = remaining_after_uprate
-            if iso == 'CAISO':
+            if is_caiso:
                 geo_twh = np.minimum(remaining_after_uprate, GEO_CAP_TWH)
                 remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_twh)
+            else:
+                geo_twh = np.zeros(N)
+                remaining_after_geo = remaining_after_uprate
 
-            # Gas backup
-            peak_mw = PEAK_DEMAND_MW[iso]
-            ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+            # Gas backup: clean_peak_mw = peak_coeff * avg_demand_mw
             avg_demand_mw = demand_grown_mwh / 8760
+            clean_peak_mw = peak_coeff * avg_demand_mw
 
-            clean_peak_mw = (
-                proc * cf_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
-                proc * sol_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
-                proc * wnd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
-                proc * ccs_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
-                proc * hyd_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
-                bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
-                bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
-                ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
-            )
-
-            gaf = GAS_AVAILABILITY_FACTOR[iso]
             gas_needed_mw = np.maximum(0, ra_peak_mw - clean_peak_mw) / gaf
-            existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
             existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
             new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_used_mw)
 
             constant = (
-                existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
-                new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
+                existing_gas_used_mw * gas_fom +
+                new_gas_mw * new_ccgt_cost
             ) / demand_grown_mwh
 
             # Build coefficient matrix (N, 10)
@@ -621,9 +647,9 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
             coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_grown
             coeff_matrix[:, _COL_GEO] = geo_twh / demand_grown
             coeff_matrix[:, _COL_REMAINING] = remaining_after_geo / demand_grown
-            coeff_matrix[:, _COL_BAT4] = bat_pct / 100.0
-            coeff_matrix[:, _COL_BAT8] = bat8_pct / 100.0
-            coeff_matrix[:, _COL_LDES] = ldes_pct / 100.0
+            coeff_matrix[:, _COL_BAT4] = bat4_coeff
+            coeff_matrix[:, _COL_BAT8] = bat8_coeff
+            coeff_matrix[:, _COL_LDES] = ldes_coeff
 
             dg_coeffs[(year, g_level)] = (coeff_matrix, constant, match_frac)
             dg_meta[(year, g_level)] = (gf, demand_grown_mwh)
@@ -635,15 +661,18 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
                              uprate_cap_override=None, existing_override=None):
     """Run demand growth sweep for track archetypes (threshold-year paired).
 
-    Each threshold is evaluated only at its SBTi-interpolated target year × L/M/H,
-    producing 15 × 3 = 45 DG results per ISO per scenario combo.
+    Each threshold is evaluated only at its SBTi-interpolated target year x L/M/H,
+    producing 15 x 3 = 45 DG results per ISO per scenario combo.
 
-    Optimized: pre-computes coefficient matrices for all 42 unique (year, growth_level)
-    pairs, then evaluates each combo with a fast matrix-vector multiply instead of
-    calling price_mix_batch per (year, growth_level).
+    Optimized with two levels of batching:
+    1. Pre-computes coefficient matrices for all ~42 unique (year, growth_level) pairs
+       (scenario-INVARIANT), with growth-invariant computations hoisted out.
+    2. For each (year, g_level), uses batch_eval_and_argmin_all to evaluate ALL combos
+       in a single Numba-accelerated call instead of sequential eval_cost_fast calls.
+    3. Loop order inverted: (year, g_level) outer, all combos inner -- each coefficient
+       matrix is loaded once and evaluated against all price vectors simultaneously.
     """
     demand_twh = REGIONAL_DEMAND_TWH[iso]
-    iso_rates = DEMAND_GROWTH_RATES[iso]
 
     arch_indices = sorted(arch_set)
     n_arch = len(arch_indices)
@@ -652,7 +681,9 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
 
     arch_arrays = {k: arrays[k][arch_indices] for k in arrays}
     arch_scores = arch_arrays['hourly_match_score']
+    match_frac = arch_scores / 100.0
 
+    # Pre-compute threshold qualifying masks using cached effective gates
     arch_thr_mask = {}
     for thr in OUTPUT_THRESHOLDS:
         gate = _EFFECTIVE_GATES[thr]
@@ -660,7 +691,11 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
         if len(qualifying) > 0:
             arch_thr_mask[thr] = qualifying
 
+    if not arch_thr_mask:
+        return {}
+
     thr_dg = {thr: {} for thr in arch_thr_mask}
+    n_combos = len(combos)
 
     # Pre-compute which years have matching thresholds (avoid recomputing per combo)
     year_thr_map = {}
@@ -672,56 +707,80 @@ def run_track_demand_growth(track_name, iso, arrays, arch_set, combos,
     if not year_thr_map:
         return {}
 
-    # Pre-compute DG coefficient matrices for all (year, g_level) pairs — O(42 × N)
-    # This is the key optimization: these matrices are scenario-INVARIANT (they depend
-    # on the physical arrays and demand growth, not on price sensitivities). We compute
-    # them once and reuse for every combo, replacing len(combos) × 42 price_mix_batch
-    # calls with 42 precompute calls + len(combos) × 42 fast matmul evals.
+    # Pre-compute all price vectors + wholesale for all combos (once)
+    price_matrix, wholesale_arr, _, _ = precompute_all_prices(iso, combos)
+
+    # Build active thresholds for DG (only those with matched years)
+    dg_active_thresholds = set()
+    for _year, matched in year_thr_map.items():
+        dg_active_thresholds.update(matched)
+    dg_active_thresholds = sorted(dg_active_thresholds)
+
+    # Descending thresholds for batch_eval_and_argmin_all
+    dg_thr_desc = np.array(sorted(dg_active_thresholds, reverse=True), dtype=np.float64)
+    dg_thr_pos = {float(dg_thr_desc[k]): k for k in range(len(dg_thr_desc))}
+
+    # Pre-compute DG coefficient matrices for all (year, g_level) pairs
+    # These are scenario-INVARIANT: depend on physical arrays and demand growth,
+    # not on price sensitivities. Computed once, reused for every combo.
     dg_coeffs, dg_meta = _precompute_dg_coefficients(
         iso, arch_arrays, demand_twh,
         uprate_cap_override=uprate_cap_override,
         existing_override=existing_override)
 
-    for scenario_key, sens in combos:
-        # Get scenario prices (10 scalars) — computed once per combo
-        prices, wholesale, _, _ = get_scenario_prices(iso, sens)
+    # Initialize per-combo result storage
+    combo_results = [{thr: {} for thr in arch_thr_mask} for _ in range(n_combos)]
 
-        thr_year_results = {thr: {} for thr in arch_thr_mask}
+    # Inverted loop: iterate (year, g_level) in outer loop, batch all combos.
+    # Each batch_eval_and_argmin_all call evaluates n_combos price vectors
+    # against one coefficient matrix in a single Numba kernel.
+    for year, matched_thresholds in year_thr_map.items():
+        yr_str = _YEAR_STR[year]
 
-        for year, matched_thresholds in year_thr_map.items():
-            year_str = _YEAR_STR[year]
+        for g_level in DEMAND_GROWTH_LEVELS:
+            coeff_matrix, constant, _mf = dg_coeffs[(year, g_level)]
+            gf, demand_grown_mwh = dg_meta[(year, g_level)]
+            gf_rounded = round(gf, 6)
+            demand_grown_rounded = round(demand_grown_mwh, 0)
 
-            for g_level in DEMAND_GROWTH_LEVELS:
-                coeff_matrix, constant, match_frac = dg_coeffs[(year, g_level)]
-                gf, demand_grown_mwh = dg_meta[(year, g_level)]
+            # Batch-evaluate all combos at once via Numba-accelerated kernel
+            all_best_idxs, all_best_vals = batch_eval_and_argmin_all(
+                coeff_matrix, constant, price_matrix, arch_scores, dg_thr_desc)
 
-                # Fast cost evaluation: tc = coeff_matrix @ prices + constant
-                tc = eval_cost_fast(coeff_matrix, constant, prices)
-                # Effective cost = total_cost / match_fraction
-                ec = np.where(match_frac > 0, tc / match_frac, 0.0)
-
+            # Extract results per combo per matched threshold
+            for j in range(n_combos):
+                wholesale_j = float(wholesale_arr[j])
                 for thr in matched_thresholds:
-                    qual_idx = arch_thr_mask[thr]
-                    best_local = int(qual_idx[np.argmin(tc[qual_idx])])
+                    k = dg_thr_pos[float(thr)]
+                    if all_best_vals[j, k] == np.inf:
+                        continue
+                    best_local = int(all_best_idxs[j, k])
                     full_idx = arch_indices[best_local]
-                    if year_str not in thr_year_results[thr]:
-                        thr_year_results[thr][year_str] = {}
-                    thr_year_results[thr][year_str][g_level] = [
+                    tc_val = float(all_best_vals[j, k])
+                    mf = float(match_frac[best_local])
+                    ec_val = tc_val / mf if mf > 0 else 0.0
+
+                    if yr_str not in combo_results[j][thr]:
+                        combo_results[j][thr][yr_str] = {}
+                    combo_results[j][thr][yr_str][g_level] = [
                         full_idx,
-                        round(float(tc[best_local]), 2),
-                        round(float(ec[best_local]), 2),
-                        round(float(ec[best_local]) - wholesale, 2),
-                        round(gf, 6),
-                        round(demand_grown_mwh, 0),
+                        round(tc_val, 2),
+                        round(ec_val, 2),
+                        round(ec_val - wholesale_j, 2),
+                        gf_rounded,
+                        demand_grown_rounded,
                     ]
 
+    # Assemble into output structure
+    for j, (scenario_key, _sens) in enumerate(combos):
         for thr in arch_thr_mask:
-            thr_dg[thr][scenario_key] = thr_year_results[thr]
+            thr_dg[thr][scenario_key] = combo_results[j][thr]
 
     n_dg_evals = len(DG_UNIQUE_YEARS) * len(DEMAND_GROWTH_LEVELS)
     result = {_THR_STR.get(thr, str(thr)): thr_dg[thr] for thr in arch_thr_mask}
     print(f"  {iso:>6} {track_name:>10} DG: {n_arch} archetypes, "
-          f"{len(arch_thr_mask)} thresholds, {n_dg_evals} paired evals")
+          f"{len(arch_thr_mask)} thresholds, {n_dg_evals} paired evals, "
+          f"{n_combos} combos (batched)")
     return result
 
 
