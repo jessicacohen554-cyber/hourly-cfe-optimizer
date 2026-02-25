@@ -149,6 +149,33 @@ except ImportError:
 
 GROWTH_RATES = {'CAISO': 1.9, 'ERCOT': 3.5, 'PJM': 2.4, 'NYISO': 2.0, 'NEISO': 1.8}
 
+# Demand growth rates (decimal) — medium growth scenario for both A and B
+DEMAND_GROWTH_RATES = {
+    'CAISO': 0.019, 'ERCOT': 0.035, 'PJM': 0.024,
+    'NYISO': 0.020, 'NEISO': 0.018,
+}
+BASE_YEAR = 2025
+
+
+def get_demand_twh(iso, threshold):
+    """Get demand TWh for a given ISO and threshold, accounting for medium demand growth.
+
+    Each threshold maps to a year via SBTI_YEAR_MAP. Demand grows at
+    the ISO's medium growth rate compounded annually from 2025.
+    """
+    year = SBTI_YEAR_MAP.get(threshold, 2050)
+    years = max(0, year - BASE_YEAR)
+    rate = DEMAND_GROWTH_RATES[iso]
+    return BASE_DEMAND_TWH[iso] * (1 + rate) ** years
+
+
+def get_demand_growth_factor(iso, threshold):
+    """Get the demand growth factor relative to BASE_YEAR."""
+    year = SBTI_YEAR_MAP.get(threshold, 2050)
+    years = max(0, year - BASE_YEAR)
+    rate = DEMAND_GROWTH_RATES[iso]
+    return (1 + rate) ** years
+
 # Zone definitions for consequential queue
 ZONES = [
     {'label': '50→55%', 'start': 50, 'end': 55},
@@ -290,13 +317,16 @@ def get_tx(rtype, tx_level, iso):
     return val
 
 
-def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None):
+def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1.0):
     """
     Compute total system cost per MWh for a single mix under a sensitivity scenario.
 
     mix: [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
     overrides: optional dict with explicit LCOE values (bypasses toggle lookups):
         nuclear_lcoe, ccs_lcoe, geo_lcoe, ldes_lcoe, uprate_lcoe
+    growth_factor: demand growth multiplier (>1 means demand has grown from base year).
+        Existing resource percentages are scaled DOWN by this factor so that existing
+        absolute TWh stays fixed as demand grows.
     Returns: dict with cost details + gas backup
     """
     cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
@@ -316,7 +346,10 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None):
     q45 = sens['q45']
     geo_lev = sens.get('geo')
 
-    existing = GRID_MIX_SHARES[iso]
+    # Existing resource percentages scaled for demand growth.
+    # Existing infrastructure produces fixed absolute TWh (2025 levels).
+    # As demand grows, existing covers a smaller percentage.
+    existing = {k: v / growth_factor for k, v in GRID_MIX_SHARES[iso].items()}
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
 
     # CCS price
@@ -374,7 +407,8 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None):
     # Gas backup (scenario-invariant given the mix)
     demand_mwh = demand_twh * 1e6
     avg_demand_mw = demand_mwh / 8760
-    peak_mw = PEAK_DEMAND_MW[iso]
+    # Peak demand grows proportionally with annual demand
+    peak_mw = PEAK_DEMAND_MW[iso] * growth_factor
     ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
 
     clean_peak_mw = (
@@ -536,6 +570,20 @@ def _floor_violation_score(mix, floor, demand_twh):
     return violation
 
 
+def _excess_build_score(mix, floor, demand_twh):
+    """Compute total new build above the floor (in TWh).
+
+    Used to prefer mixes that minimize incremental building — 'only build
+    as much as you need to hit the next target'.
+    """
+    deployed = _mix_resource_twh(mix, demand_twh)
+    excess = 0.0
+    for res in deployed:
+        floor_val = floor.get(res, 0)
+        excess += max(0, deployed[res] - floor_val)
+    return excess
+
+
 def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
     """Path-dependent sequential optimization for the consequential scenario.
 
@@ -544,14 +592,11 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
     consequential procurement strategy where buyers chase cheapest $/tCO₂
     at each increment, locking in prior resource commitments.
 
-    Resources remain at LCOE pricing (not wholesale) — committed capacity
-    retains its original cost, it doesn't become "existing" at wholesale.
+    Demand grows year-over-year per SBTI timeline (medium growth rate).
+    Existing resource floors are fixed at 2025 absolute TWh levels.
 
-    When the feasible mix space is too sparse for strict monotonicity,
-    the optimizer uses a soft-floor approach: score each mix by its total
-    floor violation (TWh shortfall), then select the cheapest mix among
-    those with the minimum violation. This preserves path dependency
-    while handling discrete feasible-set gaps.
+    Selection: cheapest effective cost that respects the floor.  Optimizes
+    for max emissions reductions via the consequential queue ranking (MAC).
     """
     results = {}
     sens = scenario['toggles']
@@ -562,16 +607,16 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
         if iso != 'CAISO':
             iso_sens['geo'] = None
 
-        demand_twh = demand_twh_map[iso]
-        # Floor starts at existing resource levels — cannot shrink below current grid.
-        # These are absolute TWh floors locked in from existing infrastructure.
+        base_demand_twh = demand_twh_map[iso]
+        # Floor starts at existing resource levels in ABSOLUTE TWh (2025 base year).
+        # These do NOT grow with demand — they represent fixed existing infrastructure.
         existing = GRID_MIX_SHARES[iso]
         floor = {
-            'clean_firm': existing.get('clean_firm', 0) / 100.0 * demand_twh,
-            'solar': existing.get('solar', 0) / 100.0 * demand_twh,
-            'wind': existing.get('wind', 0) / 100.0 * demand_twh,
-            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * demand_twh,
-            'hydro': existing.get('hydro', 0) / 100.0 * demand_twh,
+            'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand_twh,
+            'solar': existing.get('solar', 0) / 100.0 * base_demand_twh,
+            'wind': existing.get('wind', 0) / 100.0 * base_demand_twh,
+            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * base_demand_twh,
+            'hydro': existing.get('hydro', 0) / 100.0 * base_demand_twh,
             'battery': 0, 'ldes': 0,
         }
 
@@ -581,12 +626,16 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
             if not mixes:
                 continue
 
-            # Score all mixes by (floor_violation, cost) — lexicographic sort
-            # This picks the mix with minimum floor violation; among ties, cheapest
+            # Year-specific demand with growth
+            gf = get_demand_growth_factor(iso, t)
+            demand_twh = base_demand_twh * gf
+
+            # Score all mixes by (floor_violation, effective_cost)
+            # Cheapest mix that respects the locked-in floor
             candidates = []
             for mix in mixes:
                 violation = _floor_violation_score(mix, floor, demand_twh)
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh)
+                result = compute_mix_cost(mix, iso_sens, iso, demand_twh, growth_factor=gf)
                 candidates.append((violation, result['effective_cost'], result, mix))
 
             # Sort: minimum violation first, then cheapest
@@ -616,14 +665,11 @@ def find_optimal_mixes_learning_curve(feasible_mixes, scenario, demand_twh_map):
     on the SBTi timeline via learning_fraction().  Mature technologies
     (solar, wind, battery) stay at Low cost throughout.
 
-    This produces:
-      - Less clean firm at early thresholds (expensive FOAK pricing)
-      - Gradually increasing clean firm as learning drives costs down
-      - Near-full NOAK deployment at high thresholds (95-100%)
-
+    Demand grows year-over-year per SBTI timeline (medium growth rate).
     Each threshold is optimized independently (no path-dependency floor).
     The increasing deployment emerges naturally from declining costs +
-    increasing physics requirements for firm generation at higher CFE.
+    increasing physics requirements for firm generation at higher CFE +
+    growing demand.
     """
     results = {}
     sens = scenario['toggles']
@@ -634,16 +680,16 @@ def find_optimal_mixes_learning_curve(feasible_mixes, scenario, demand_twh_map):
         if iso != 'CAISO':
             iso_sens['geo'] = None
 
-        demand_twh = demand_twh_map[iso]
+        base_demand_twh = demand_twh_map[iso]
 
-        # Existing resource floor — cannot shrink below current grid (absolute TWh)
+        # Existing resource floor — fixed at 2025 absolute TWh (does NOT grow)
         existing = GRID_MIX_SHARES[iso]
         existing_floor = {
-            'clean_firm': existing.get('clean_firm', 0) / 100.0 * demand_twh,
-            'solar': existing.get('solar', 0) / 100.0 * demand_twh,
-            'wind': existing.get('wind', 0) / 100.0 * demand_twh,
-            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * demand_twh,
-            'hydro': existing.get('hydro', 0) / 100.0 * demand_twh,
+            'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand_twh,
+            'solar': existing.get('solar', 0) / 100.0 * base_demand_twh,
+            'wind': existing.get('wind', 0) / 100.0 * base_demand_twh,
+            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * base_demand_twh,
+            'hydro': existing.get('hydro', 0) / 100.0 * base_demand_twh,
             'battery': 0, 'ldes': 0,
         }
 
@@ -652,6 +698,10 @@ def find_optimal_mixes_learning_curve(feasible_mixes, scenario, demand_twh_map):
             mixes = feasible_mixes.get(iso, {}).get(t_str, [])
             if not mixes:
                 continue
+
+            # Year-specific demand with growth
+            gf = get_demand_growth_factor(iso, t)
+            demand_twh = base_demand_twh * gf
 
             # Learning curve fraction: how far along FOAK→NOAK
             frac = learning_fraction(t)
@@ -697,7 +747,8 @@ def find_optimal_mixes_learning_curve(feasible_mixes, scenario, demand_twh_map):
             best_result = None
 
             for mix in floor_passing:
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh, overrides=overrides)
+                result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
+                                          overrides=overrides, growth_factor=gf)
                 if result['effective_cost'] < best_cost:
                     best_cost = result['effective_cost']
                     best_result = result
@@ -719,8 +770,6 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix):
 
     for iso in ISOS:
         iso_data = scenario_results[iso]
-        demand_twh = BASE_DEMAND_TWH[iso]
-        demand_mwh = demand_twh * 1e6
         baseline_clean = sum(GRID_MIX_SHARES[iso].values())
 
         for zone in ZONES:
@@ -731,12 +780,16 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix):
             start = iso_data[t_start]
             end = iso_data[t_end]
 
+            # Use year-specific demand for each endpoint
+            demand_twh_start = get_demand_twh(iso, t_start)
+            demand_twh_end = get_demand_twh(iso, t_end)
+
             # Cost delta (for reporting only — NOT used in MAC)
             delta_cost_per_mwh = end['effective_cost'] - start['effective_cost']
 
             # CO₂ displaced using merit-order dispatch (coal → oil → gas)
-            clean_twh_start = max(0, (t_start - baseline_clean) / 100.0 * demand_twh)
-            clean_twh_end = max(0, (t_end - baseline_clean) / 100.0 * demand_twh)
+            clean_twh_start = max(0, (t_start - baseline_clean) / 100.0 * demand_twh_start)
+            clean_twh_end = max(0, (t_end - baseline_clean) / 100.0 * demand_twh_end)
             delta_clean_twh = clean_twh_end - clean_twh_start
 
             rate_start, _ = compute_fossil_retirement(iso, t_start, egrid, fossil_mix)
@@ -975,24 +1028,22 @@ def main():
     # SIDE-BY-SIDE COMPARISON
     # ========================================================================
 
-    print(f"\n{'=' * 140}")
-    print("SIDE-BY-SIDE: RESOURCE MIX + GAS + COST AT EACH THRESHOLD")
-    print(f"{'=' * 140}")
+    print(f"\n{'=' * 150}")
+    print("SIDE-BY-SIDE: RESOURCE MIX + GAS + COST AT EACH THRESHOLD (demand grows per SBTI year)")
+    print(f"{'=' * 150}")
 
     for iso in ISOS:
-        print(f"\n{'─' * 120}")
-        print(f"  {iso}")
-        print(f"{'─' * 120}")
-        print(f"{'Thr':>5} {'Year':>5} │ {'CF_A':>6} {'Sol_A':>6} {'Wnd_A':>6} {'Gas_A':>8} {'$/MWh_A':>8} │ "
+        print(f"\n{'─' * 130}")
+        print(f"  {iso} (base demand: {BASE_DEMAND_TWH[iso]:.1f} TWh, growth: {DEMAND_GROWTH_RATES[iso]*100:.1f}%/yr)")
+        print(f"{'─' * 130}")
+        print(f"{'Thr':>5} {'Year':>5} {'Dem':>6} │ {'CF_A':>6} {'Sol_A':>6} {'Wnd_A':>6} {'Gas_A':>8} {'$/MWh_A':>8} │ "
               f"{'CF_B':>6} {'Sol_B':>6} {'Wnd_B':>6} {'Gas_B':>8} {'$/MWh_B':>8} │ "
               f"{'ΔCost':>7} {'ΔGas':>8}")
-        print(f"{'':>5} {'':>5} │ {'(TWh)':>6} {'(TWh)':>6} {'(TWh)':>6} {'(MW)':>8} {'':>8} │ "
-              f"{'(TWh)':>6} {'(TWh)':>6} {'(TWh)':>6} {'(MW)':>8} {'':>8} │ "
-              f"{'($/MWh)':>7} {'(MW)':>8}")
-        print("-" * 120)
+        print("-" * 130)
 
         for t in THRESHOLDS:
             year = SBTI_YEAR_MAP.get(t, '?')
+            demand_twh = get_demand_twh(iso, t)
             a = results_a.get(iso, {}).get(t, {})
             b = results_b.get(iso, {}).get(t, {})
             if not a or not b:
@@ -1004,7 +1055,7 @@ def main():
             delta_cost = b['effective_cost'] - a['effective_cost']
             delta_gas = b['gas_backup_mw'] - a['gas_backup_mw']
 
-            print(f"{t:>5} {year:>5} │ "
+            print(f"{t:>5} {year:>5} {demand_twh:>5.0f} │ "
                   f"{a_rt['clean_firm']:>6.0f} {a_rt['solar']:>6.0f} {a_rt['wind']:>6.0f} "
                   f"{a['gas_backup_mw']:>8,} {a['effective_cost']:>7.1f} │ "
                   f"{b_rt['clean_firm']:>6.0f} {b_rt['solar']:>6.0f} {b_rt['wind']:>6.0f} "
@@ -1053,14 +1104,16 @@ def main():
         traj = {}
         for iso in ISOS:
             iso_traj = []
-            demand_twh = BASE_DEMAND_TWH[iso]
-            demand_mwh = demand_twh * 1e6
+            base_demand_twh = BASE_DEMAND_TWH[iso]
             baseline_clean = sum(GRID_MIX_SHARES[iso].values())
             prev_t = None
             for t in THRESHOLDS:
                 d = results.get(iso, {}).get(t, {})
                 if not d:
                     continue
+
+                # Year-specific demand
+                demand_twh = get_demand_twh(iso, t)
 
                 # Stepwise MAC = marginal LCOE / displaced emission rate
                 stepwise_mac = None
@@ -1083,12 +1136,14 @@ def main():
                 # Clean firm TWh — NEW BUILD ONLY (subtract existing clean firm)
                 cf_twh = d['resource_twh'].get('clean_firm', 0)
                 ccs_twh = d['resource_twh'].get('ccs_ccgt', 0)
-                existing_cf_twh = GRID_MIX_SHARES[iso].get('clean_firm', 0) / 100.0 * BASE_DEMAND_TWH[iso]
+                # Existing clean firm is fixed at 2025 absolute TWh
+                existing_cf_twh = GRID_MIX_SHARES[iso].get('clean_firm', 0) / 100.0 * base_demand_twh
                 firm_total_twh = max(0, cf_twh - existing_cf_twh) + ccs_twh
 
                 iso_traj.append({
                     'threshold': t,
                     'year': SBTI_YEAR_MAP.get(t, 2050),
+                    'demand_twh': round(demand_twh, 1),
                     'effective_cost': d['effective_cost'],
                     'total_cost': d['total_cost'],
                     'incremental': d['incremental'],
@@ -1142,7 +1197,9 @@ def main():
                     clean_peak_mw += (entry.get('battery_twh', 0) * 1e6 / 8760) * PEAK_CAPACITY_CREDITS.get('battery', 0.95)
                     clean_peak_mw += (entry.get('ldes_twh', 0) * 1e6 / 8760) * PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
 
-                    ra_peak_mw = PEAK_DEMAND_MW[iso] * (1 + RESOURCE_ADEQUACY_MARGIN)
+                    # Peak demand grows with demand growth
+                    gf = get_demand_growth_factor(iso, entry['threshold'])
+                    ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
                     gaf = GAS_AVAILABILITY_FACTOR[iso]
                     gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
                     entry['gas_backup_mw'] = round(gas_needed_mw)
@@ -1180,6 +1237,8 @@ def main():
             'isos': ISOS,
             'grid_mix_shares': {iso: dict(GRID_MIX_SHARES[iso]) for iso in ISOS},
             'base_demand_twh': dict(BASE_DEMAND_TWH),
+            'demand_growth_rates': DEMAND_GROWTH_RATES,
+            'demand_growth_level': 'Medium',
         },
         'queue_a': queue_a,
         'queue_b': queue_b,
