@@ -613,9 +613,9 @@ html, body {
                     <canvas id="heroOverviewChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Baseline (existing fleet)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Replace (all new-build)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>Replacement premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
                 </div>
                 <div class="hero-chart-subtitle">Effective $/MWh &middot; Medium cost sensitivities &middot; All thresholds</div>
             </div>
@@ -634,14 +634,14 @@ html, body {
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">PJM (Mid-Atlantic) &mdash; Baseline vs. Replace</div>
+                <div class="hero-chart-title">PJM (Mid-Atlantic) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
                 <div class="chart-container">
                     <canvas id="regionChart_PJM"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#4a90d9;"></span>Replace</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(74,144,217,0.25);"></span>Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#4a90d9;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
                 </div>
             </div>
         </div>
@@ -651,6 +651,7 @@ html, body {
                 <h3>PJM: Nuclear dominance means the highest replacement cost</h3>
                 <p>PJM's grid is anchored by 32.1% existing clean firm generation &mdash; overwhelmingly nuclear. These plants dispatch at wholesale rates (~$30/MWh), but new nuclear construction costs $75&ndash;120/MWh. Replacing this fleet from scratch roughly doubles the effective cost at moderate thresholds and pushes higher targets into prohibitively expensive territory. PJM illustrates why preserving existing nuclear capacity is among the most cost-effective decarbonization strategies available.</p>
                 <span class="step-stat step-stat-red" id="statPJM">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualPJM" style="margin-top:12px;padding:10px 14px;background:rgba(74,144,217,0.06);border:1px solid rgba(74,144,217,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
         </div>
     </div>
@@ -661,14 +662,14 @@ html, body {
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">ERCOT (Texas) &mdash; Baseline vs. Replace</div>
+                <div class="hero-chart-title">ERCOT (Texas) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
                 <div class="chart-container">
                     <canvas id="regionChart_ERCOT"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#22C55E;"></span>Replace</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.2);"></span>Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#22C55E;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
                 </div>
             </div>
         </div>
@@ -678,6 +679,7 @@ html, body {
                 <h3>ERCOT: Minimal existing clean firm means a small premium</h3>
                 <p>With only 8.6% existing clean firm capacity (nuclear), ERCOT has the least to lose from a greenfield rebuild. The existing fleet is dominated by gas and wind &mdash; resources where new-build costs are closest to wholesale. The replacement premium stays modest across all thresholds, making ERCOT the region least penalized by a full-replacement scenario. The lesson: when most of your clean fleet is already renewable, the greenfield penalty is small.</p>
                 <span class="step-stat step-stat-green" id="statERCOT">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualERCOT" style="margin-top:12px;padding:10px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
         </div>
     </div>
@@ -690,14 +692,14 @@ html, body {
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">CAISO (California) &mdash; Baseline vs. Replace</div>
+                <div class="hero-chart-title">CAISO (California) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
                 <div class="chart-container">
                     <canvas id="regionChart_CAISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Replace</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
                 </div>
             </div>
         </div>
@@ -707,6 +709,7 @@ html, body {
                 <h3>CAISO: Diablo Canyon + hydro create a moderate premium</h3>
                 <p>California's grid carries 7.9% nuclear (Diablo Canyon, since relicensed) and 9.5% hydro. Both operate well below new-build costs. Replacing them at greenfield prices layers a moderate premium onto an already-expensive grid. The premium widens at higher thresholds as the optimizer can no longer lean on cheap existing dispatchable resources. CAISO's geothermal potential (The Geysers, Salton Sea) helps offset some replacement cost, but nuclear remains the biggest swing factor.</p>
                 <span class="step-stat step-stat-amber" id="statCAISO">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualCAISO" style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
         </div>
     </div>
@@ -717,14 +720,14 @@ html, body {
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">NYISO (New York) &mdash; Baseline vs. Replace</div>
+                <div class="hero-chart-title">NYISO (New York) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
                 <div class="chart-container">
                     <canvas id="regionChart_NYISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E63;"></span>Replace</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.25);"></span>Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E63;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
                 </div>
             </div>
         </div>
@@ -734,6 +737,7 @@ html, body {
                 <h3>NYISO: Hydro and nuclear deliver a steep two-part premium</h3>
                 <p>New York benefits from 15.9% hydro (Niagara Falls, St. Lawrence) priced at floor rates and 18.4% nuclear (Indian Point legacy, Nine Mile Point, FitzPatrick). Together, these assets supply over a third of clean energy at wholesale cost. Rebuilding them from scratch would require new nuclear ($75&ndash;120/MWh) or imported Canadian hydro at negotiated PPA rates &mdash; either way, significantly more expensive. NYISO's premium is among the steepest because both of its largest clean resources are far below new-build cost.</p>
                 <span class="step-stat step-stat-red" id="statNYISO">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualNYISO" style="margin-top:12px;padding:10px 14px;background:rgba(233,30,99,0.06);border:1px solid rgba(233,30,99,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
         </div>
     </div>
@@ -746,14 +750,14 @@ html, body {
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">NEISO (New England) &mdash; Baseline vs. Replace</div>
+                <div class="hero-chart-title">NEISO (New England) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
                 <div class="chart-container">
                     <canvas id="regionChart_NEISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#9C27B0;"></span>Replace</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(156,39,176,0.25);"></span>Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#9C27B0;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
                 </div>
             </div>
         </div>
@@ -763,6 +767,7 @@ html, body {
                 <h3>NEISO: Millstone anchors the fleet &mdash; losing it would be catastrophic</h3>
                 <p>New England runs 23.8% of its clean energy from nuclear (Millstone, Seabrook). These plants provide baseload capacity through harsh winters when gas pipeline constraints already spike energy costs. Replacing this nuclear capacity at new-build prices would push NEISO's already-steep cost curve even higher. The winter gas constraint means CCS-CCGT replacement carries an additional $13/MWh adder, compounding the premium. NEISO demonstrates that existing nuclear is not just cheap &mdash; it's irreplaceable in constrained grids.</p>
                 <span class="step-stat step-stat-purple" id="statNEISO">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualNEISO" style="margin-top:12px;padding:10px 14px;background:rgba(156,39,176,0.06);border:1px solid rgba(156,39,176,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
         </div>
     </div>
@@ -926,19 +931,18 @@ function getReplaceSweepData(iso) {
 }
 
 // ============================================================================
-// BUILD HERO OVERVIEW CHART (grouped bar: baseline vs replace at 90%)
+// DEMAND DATA (for total annual cost computation)
+// ============================================================================
+var DEMAND_TWH = typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH : {};
+
+// ============================================================================
+// BUILD HERO OVERVIEW CHART (all regions: baseline vs replace)
 // ============================================================================
 function buildHeroChart() {
     var ctx = document.getElementById('heroOverviewChart');
     if (!ctx) return;
     ctx = ctx.getContext('2d');
 
-    // For each region, get baseline and replace effective cost across all thresholds
-    var baselineDatasets = [];
-    var replaceDatasets = [];
-    var premiumDatasets = [];
-
-    // Build line chart: baseline solid, replace dashed, shaded premium area
     var datasets = [];
     var premiumAt90 = [];
 
@@ -949,13 +953,13 @@ function buildHeroChart() {
 
         if (!bl) return;
 
-        // Baseline line
+        // Track 1 Baseline line (solid)
         var blPts = THR.map(function(t, i) {
             return bl[i] != null ? { x: t, y: bl[i] } : null;
         }).filter(function(d) { return d !== null; });
 
         datasets.push({
-            label: iso + ' Baseline',
+            label: iso + ' Track 1 Baseline',
             data: blPts,
             borderColor: c,
             backgroundColor: c + '10',
@@ -969,13 +973,13 @@ function buildHeroChart() {
         });
 
         if (rp) {
-            // Replace line (dashed)
+            // Track 2 Replacement line (dashed)
             var rpPts = THR.map(function(t, i) {
                 return rp[i] != null ? { x: t, y: rp[i] } : null;
             }).filter(function(d) { return d !== null; });
 
             datasets.push({
-                label: iso + ' Replace',
+                label: iso + ' Track 2 Replacement',
                 data: rpPts,
                 borderColor: c,
                 backgroundColor: c + '20',
@@ -1003,7 +1007,6 @@ function buildHeroChart() {
         avgPremium = premiumAt90.reduce(function(a, b) { return a + b; }, 0) / premiumAt90.length;
     }
 
-    // Update hero counter
     var heroCounter = document.getElementById('heroCounter');
     if (heroCounter) {
         heroCounter.setAttribute('data-target', avgPremium.toFixed(1));
@@ -1025,6 +1028,7 @@ function buildHeroChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
             animation: {
                 duration: 1200,
                 easing: 'easeOutQuart',
@@ -1067,23 +1071,46 @@ function buildHeroChart() {
                 legend: { display: false },
                 tooltip: {
                     enabled: true,
-                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    backgroundColor: 'rgba(255,255,255,0.97)',
                     titleColor: '#1E293B',
                     bodyColor: '#374151',
-                    borderColor: 'rgba(0,0,0,0.08)',
+                    borderColor: 'rgba(0,0,0,0.1)',
                     borderWidth: 1,
                     titleFont: { size: 11, weight: 600 },
                     bodyFont: { size: 10 },
                     cornerRadius: 8,
-                    padding: 10,
+                    padding: 12,
                     callbacks: {
                         title: function(items) {
-                            return items[0] ? items[0].raw.x + '% Clean' : '';
+                            return items[0] ? items[0].raw.x + '% Clean Energy Target' : '';
                         },
                         label: function(item) {
                             var ds = item.dataset;
-                            var type = ds._type === 'replace' ? ' (Replace)' : ' (Baseline)';
+                            var type = ds._type === 'replace' ? ' (Track 2)' : ' (Track 1)';
                             return ds._iso + type + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        },
+                        afterBody: function(items) {
+                            // Show premium for each ISO at this threshold
+                            if (!items || items.length === 0) return [];
+                            var thrX = items[0].raw.x;
+                            var thrIdx = THR.indexOf(thrX);
+                            if (thrIdx === -1) return [];
+                            var lines = [''];
+                            var isosSeen = {};
+                            items.forEach(function(item) {
+                                var iso = item.dataset._iso;
+                                if (isosSeen[iso] || item.dataset._type !== 'baseline') return;
+                                isosSeen[iso] = true;
+                                var bl = BASELINE[iso];
+                                var rp = getReplaceEffectiveCost(iso);
+                                if (bl && rp && bl[thrIdx] != null && rp[thrIdx] != null) {
+                                    var prem = rp[thrIdx] - bl[thrIdx];
+                                    if (prem > 0) {
+                                        lines.push(iso + ' Premium: +$' + prem.toFixed(1) + '/MWh');
+                                    }
+                                }
+                            });
+                            return lines.length > 1 ? lines : [];
                         }
                     }
                 },
@@ -1111,14 +1138,15 @@ function buildRegionalChart(iso) {
     if (!bl) return;
 
     var datasets = [];
+    var baselineIdx = 0; // baseline is always dataset 0
 
-    // Baseline line (solid, thick)
+    // Dataset 0: Track 1 Baseline line (solid, thick)
     var blPts = THR.map(function(t, i) {
         return bl[i] != null ? { x: t, y: bl[i] } : null;
     }).filter(function(d) { return d !== null; });
 
     datasets.push({
-        label: 'Baseline',
+        label: 'Track 1 Baseline',
         data: blPts,
         borderColor: c,
         backgroundColor: c + '10',
@@ -1135,37 +1163,19 @@ function buildRegionalChart(iso) {
     });
 
     if (rp) {
-        // Replace upper band (P90) if sweep data available
-        if (sweep && sweep.p90) {
-            var p90Pts = THR.map(function(t, i) {
-                return sweep.p90[i] != null ? { x: t, y: sweep.p90[i] } : null;
-            }).filter(function(d) { return d !== null; });
-
-            datasets.push({
-                label: 'Replace P90',
-                data: p90Pts,
-                borderColor: 'transparent',
-                backgroundColor: c + '20',
-                borderWidth: 0,
-                pointRadius: 0,
-                fill: '+1',
-                tension: 0.3,
-                order: 5,
-                _type: 'band'
-            });
-        }
-
-        // Replace line (dashed)
+        // Track 2 Replacement line (dashed) — always comes right after baseline
         var rpPts = THR.map(function(t, i) {
             var val = (sweep && sweep.p50 && sweep.p50[i] != null) ? sweep.p50[i] : rp[i];
             return val != null ? { x: t, y: val } : null;
         }).filter(function(d) { return d !== null; });
 
+        // The replace line fills DOWN to baseline (dataset 0) to show the premium
+        var replaceIdx = datasets.length;
         datasets.push({
-            label: 'Replace',
+            label: 'Track 2 Replacement',
             data: rpPts,
             borderColor: c,
-            backgroundColor: c + '08',
+            backgroundColor: 'rgba(239,68,68,0.12)',
             borderWidth: 2.5,
             borderDash: [8, 5],
             pointRadius: 3,
@@ -1174,53 +1184,54 @@ function buildRegionalChart(iso) {
             pointBorderWidth: 1,
             pointHoverRadius: 6,
             pointStyle: 'rectRot',
-            fill: false,
+            fill: { target: baselineIdx, above: 'rgba(239,68,68,0.14)', below: 'transparent' },
             tension: 0.3,
             order: 2,
             _type: 'replace'
         });
 
-        // Replace lower band (P10) if sweep data available
+        // P90 upper band (gray, separate from premium)
+        if (sweep && sweep.p90) {
+            var p90Pts = THR.map(function(t, i) {
+                return sweep.p90[i] != null ? { x: t, y: sweep.p90[i] } : null;
+            }).filter(function(d) { return d !== null; });
+
+            datasets.push({
+                label: 'P90',
+                data: p90Pts,
+                borderColor: 'transparent',
+                backgroundColor: 'rgba(148,163,184,0.12)',
+                borderWidth: 0,
+                pointRadius: 0,
+                fill: '+1' in {} ? undefined : replaceIdx,
+                tension: 0.3,
+                order: 5,
+                _type: 'band'
+            });
+            // Fix: fill from P90 down to Replace line
+            datasets[datasets.length - 1].fill = { target: replaceIdx, above: 'rgba(148,163,184,0.12)', below: 'transparent' };
+        }
+
+        // P10 lower band
         if (sweep && sweep.p10) {
             var p10Pts = THR.map(function(t, i) {
                 return sweep.p10[i] != null ? { x: t, y: sweep.p10[i] } : null;
             }).filter(function(d) { return d !== null; });
 
             datasets.push({
-                label: 'Replace P10',
+                label: 'P10',
                 data: p10Pts,
-                borderColor: c + '50',
+                borderColor: 'rgba(148,163,184,0.3)',
                 backgroundColor: 'transparent',
                 borderWidth: 0.5,
                 borderDash: [2, 2],
                 pointRadius: 0,
-                fill: false,
+                fill: { target: replaceIdx, below: 'rgba(148,163,184,0.12)', above: 'transparent' },
                 tension: 0.3,
                 order: 5,
                 _type: 'band'
             });
         }
-
-        // Premium fill area between baseline and replace
-        // This uses the filler plugin: fill between baseline dataset and replace dataset
-        // We do this with a custom dataset that traces the replace line and fills down to baseline
-        var premiumPts = THR.map(function(t, i) {
-            var rpVal = (sweep && sweep.p50 && sweep.p50[i] != null) ? sweep.p50[i] : rp[i];
-            return (rpVal != null && bl[i] != null) ? { x: t, y: rpVal } : null;
-        }).filter(function(d) { return d !== null; });
-
-        datasets.push({
-            label: 'Premium',
-            data: premiumPts,
-            borderColor: 'transparent',
-            backgroundColor: c + '18',
-            borderWidth: 0,
-            pointRadius: 0,
-            fill: { target: 0, above: c + '18', below: 'transparent' },
-            tension: 0.3,
-            order: 4,
-            _type: 'premium'
-        });
     }
 
     // Compute Y range
@@ -1239,6 +1250,7 @@ function buildRegionalChart(iso) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
             animation: {
                 duration: 1400,
                 easing: 'easeOutQuart',
@@ -1281,27 +1293,56 @@ function buildRegionalChart(iso) {
                 legend: { display: false },
                 tooltip: {
                     enabled: true,
-                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    backgroundColor: 'rgba(255,255,255,0.97)',
                     titleColor: '#1E293B',
                     bodyColor: '#374151',
-                    borderColor: 'rgba(0,0,0,0.08)',
+                    borderColor: 'rgba(0,0,0,0.1)',
                     borderWidth: 1,
                     titleFont: { size: 11, weight: 600 },
                     bodyFont: { size: 10 },
+                    footerFont: { size: 9, style: 'italic' },
+                    footerColor: '#6B7280',
                     cornerRadius: 8,
-                    padding: 10,
+                    padding: 12,
                     callbacks: {
                         title: function(items) {
-                            return items[0] ? items[0].raw.x + '% Clean' : '';
+                            return items[0] ? items[0].raw.x + '% Clean Energy Target' : '';
                         },
                         label: function(item) {
-                            if (item.dataset._type === 'band' || item.dataset._type === 'premium') return null;
-                            var label = item.dataset._type === 'replace' ? 'Replace' : 'Baseline';
-                            return label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                            if (item.dataset._type === 'band') return null;
+                            return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        },
+                        afterBody: function(items) {
+                            if (!items || items.length === 0) return [];
+                            var thrX = items[0].raw.x;
+                            var thrIdx = THR.indexOf(thrX);
+                            if (thrIdx === -1) return [];
+                            var blVal = bl[thrIdx];
+                            var rpVal = rp ? rp[thrIdx] : null;
+                            if (sweep && sweep.p50 && sweep.p50[thrIdx] != null) rpVal = sweep.p50[thrIdx];
+                            if (blVal == null || rpVal == null) return [];
+                            var prem = rpVal - blVal;
+                            var pct = blVal > 0 ? ((prem / blVal) * 100).toFixed(0) : '—';
+                            var lines = [
+                                '',
+                                'Cost to Replace Premium: +$' + prem.toFixed(1) + '/MWh (+' + pct + '%)'
+                            ];
+                            // Total annual cost
+                            var demand = DEMAND_TWH[iso];
+                            if (demand) {
+                                var blAnnual = (blVal * demand / 1000).toFixed(1);
+                                var rpAnnual = (rpVal * demand / 1000).toFixed(1);
+                                var premAnnual = (prem * demand / 1000).toFixed(1);
+                                lines.push('');
+                                lines.push('Annual Cost (Track 1): $' + blAnnual + 'B/yr');
+                                lines.push('Annual Cost (Track 2): $' + rpAnnual + 'B/yr');
+                                lines.push('Annual Premium: +$' + premAnnual + 'B/yr');
+                            }
+                            return lines;
                         }
                     },
                     filter: function(item) {
-                        return item.dataset._type !== 'band' && item.dataset._type !== 'premium';
+                        return item.dataset._type !== 'band';
                     }
                 },
                 datalabels: { display: false },
@@ -1312,26 +1353,49 @@ function buildRegionalChart(iso) {
 }
 
 // ============================================================================
-// UPDATE STAT BADGES WITH ACTUAL DATA
+// UPDATE STAT BADGES WITH ACTUAL DATA + ANNUAL COST
 // ============================================================================
 function updateStatBadges() {
+    var idx95 = THR.indexOf(95);
     var idx90 = THR.indexOf(90);
-    if (idx90 === -1) return;
 
     REGIONS.forEach(function(iso) {
         var bl = BASELINE[iso];
         var rp = getReplaceEffectiveCost(iso);
         var el = document.getElementById('stat' + iso);
+        var annualEl = document.getElementById('annual' + iso);
         if (!el) return;
 
-        if (bl && rp && bl[idx90] != null && rp[idx90] != null) {
-            var premium = rp[idx90] - bl[idx90];
-            var pct = ((premium / bl[idx90]) * 100).toFixed(0);
-            el.textContent = 'Premium at 90%: +$' + premium.toFixed(1) + '/MWh (+' + pct + '%)';
-        } else if (bl && bl[idx90] != null) {
-            el.textContent = 'Baseline at 90%: $' + bl[idx90].toFixed(1) + '/MWh (replace data pending)';
+        // Try 95% first, fall back to 90%
+        var refIdx = (idx95 !== -1 && rp && rp[idx95] != null) ? idx95 : idx90;
+        var refThr = (refIdx === idx95) ? 95 : 90;
+
+        if (bl && rp && refIdx !== -1 && bl[refIdx] != null && rp[refIdx] != null) {
+            var premium = rp[refIdx] - bl[refIdx];
+            var pct = ((premium / bl[refIdx]) * 100).toFixed(0);
+            el.textContent = 'Premium at ' + refThr + '%: +$' + premium.toFixed(1) + '/MWh (+' + pct + '%)';
+
+            // Annual cost callout
+            if (annualEl) {
+                var demand = DEMAND_TWH[iso];
+                if (demand) {
+                    var blAnnual = (bl[refIdx] * demand / 1000).toFixed(1);
+                    var rpAnnual = (rp[refIdx] * demand / 1000).toFixed(1);
+                    var premAnnual = (premium * demand / 1000).toFixed(1);
+                    annualEl.innerHTML = '<strong>At ' + refThr + '% clean:</strong> ' +
+                        'Track 1 annual cost: <strong>$' + blAnnual + 'B/yr</strong> &middot; ' +
+                        'Track 2 replacement: <strong>$' + rpAnnual + 'B/yr</strong> &middot; ' +
+                        'Annual premium: <strong style="color:#EF4444;">+$' + premAnnual + 'B/yr</strong>';
+                } else {
+                    annualEl.textContent = '';
+                }
+            }
+        } else if (bl && idx90 !== -1 && bl[idx90] != null) {
+            el.textContent = 'Track 1 at 90%: $' + bl[idx90].toFixed(1) + '/MWh (Track 2 data pending)';
+            if (annualEl) annualEl.textContent = '';
         } else {
             el.textContent = 'Data loading...';
+            if (annualEl) annualEl.textContent = '';
         }
     });
 }

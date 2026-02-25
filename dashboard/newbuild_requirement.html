@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Starting Point Problem — The 8,760 Problem</title>
+<title>Would You Build the Wrong Grid? — The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -680,23 +680,23 @@ html, body {
 <!-- HEADER BANNER -->
 <header class="header">
     <div class="header-accent"></div>
-    <h1>The Starting Point Problem</h1>
-    <p class="subtitle">What you need to build depends on what you already have.<br>Ignore that and you risk investing in the wrong resources.</p>
+    <h1>Would You Build the Wrong Grid?</h1>
+    <p class="subtitle">Procurement that ignores existing clean resources produces a fundamentally different &mdash; and more expensive &mdash; portfolio.<br>Here's how the resource mix changes when you don't account for what's already on the grid.</p>
 </header>
 
 <!-- ==================== SECTION 1: HERO OVERVIEW ==================== -->
 <section class="hero-overview">
     <div class="hero-overview-inner">
         <div class="hero-text-block">
-            <div class="hero-badge">Where You Start Determines What You Need</div>
-            <h2>Your Grid Has Existing Clean Resources. Price Them In — Or Build the Wrong Thing.</h2>
-            <p>Every grid already has nuclear, hydro, and legacy wind generating around the clock. When procurement decisions ignore these existing resources and treat the problem as a full new-build, the resulting investment mix is fundamentally wrong — solar-heavy, firm-light, and expensive.</p>
-            <p>The shape of what you need to <em>add</em> depends entirely on what's already there. A grid with 30% existing nuclear needs different new-build than one starting from fossil. Ignore the starting point, and capital flows into resources that duplicate what exists — creating stranded asset risk on both sides.</p>
+            <div class="hero-badge">The Greenfield Distortion</div>
+            <h2>Same Clean Energy Target. Radically Different Investment Decisions.</h2>
+            <p>Every ISO already has nuclear plants, hydroelectric dams, and legacy renewables generating clean energy around the clock. When a procurement strategy ignores these resources &mdash; optimizing as if starting from zero &mdash; it produces a portfolio that over-invests in firm generation and under-invests in the renewables that would actually fill the remaining gap.</p>
+            <p>The chart compares <strong>Track 1</strong> (builds on existing generation) with <strong>Track 2</strong> (greenfield &mdash; ignores existing). At every threshold, the greenfield optimizer buys far more new clean firm capacity because it doesn't have existing nuclear and hydro to lean on.</p>
             <div class="hero-stat-callout" id="heroStatCallout">Loading...</div>
         </div>
         <div class="hero-chart-block">
             <div class="chart-panel chart-panel-overview">
-                <div class="chart-title">Same Target, Different Starting Point: Baseline vs. Greenfield Mix</div>
+                <div class="chart-title">Resource Mix: Track 1 (With Existing) vs. Track 2 (Greenfield)</div>
                 <div class="chart-container">
                     <canvas id="heroComparisonChart"></canvas>
                 </div>
@@ -706,8 +706,8 @@ html, body {
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#22C55E;"></span>Wind</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#06B6D4;"></span>Hydro</span>
                     <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(0,0,0,0.14);"></span>With Existing</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(245,158,11,0.6);border-top:2px solid #F59E0B;height:0;"></span>Greenfield</span>
+                    <span class="chart-legend-item" style="font-weight:600;opacity:0.5;">Left bar = Track 1</span>
+                    <span class="chart-legend-item" style="font-weight:600;">Right bar = Track 2 (Greenfield)</span>
                 </div>
                 <div class="chart-subtitle">CAISO at medium cost assumptions</div>
             </div>
@@ -718,14 +718,13 @@ html, body {
 <!-- ENERGY SPECTRUM DIVIDER -->
 <div class="energy-spectrum-bar"></div>
 
-<!-- ==================== SECTION 2: SOLAR DOMINANCE (SCROLLYTELL) ==================== -->
+<!-- ==================== SECTION 2: THE DISTORTION (SCROLLYTELL) ==================== -->
 <div class="section-header">
     <div class="section-number">1</div>
-    <h2>The Greenfield Fallacy</h2>
-    <p>Optimizing from scratch produces a fundamentally different — and likely wrong — investment mix compared to building on top of what's already generating.</p>
+    <h2>How Ignoring Existing Resources Distorts the Portfolio</h2>
+    <p>The greenfield optimizer doesn't have existing nuclear and hydro to build on. So it buys more of everything &mdash; especially firm generation &mdash; to cover hours that existing resources already handle.</p>
 </div>
 
-<!-- Step 1: Solar Is Cheapest -->
 <section class="region-section" id="scrollStep1">
     <div class="region-section-inner">
         <div class="region-chart-col">
@@ -737,14 +736,14 @@ html, body {
                     <button class="iso-btn" data-iso="NYISO" disabled title="Data not yet available">NYISO</button>
                     <button class="iso-btn" data-iso="NEISO" disabled title="Data not yet available">NEISO</button>
                 </div>
-                <div class="chart-title" id="mixChartTitle">CAISO: What You'd Build Starting From Zero</div>
+                <div class="chart-title" id="mixChartTitle">CAISO: Greenfield Resource Mix (Track 2)</div>
                 <div class="chart-container">
                     <canvas id="mixAreaChart"></canvas>
                 </div>
                 <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#1E3A5F90;"></span>Clean Firm</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#F59E0B90;"></span>Solar</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#22C55E90;"></span>Wind</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#1E3A5F90;"></span>Clean Firm</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:#0EA5E990;"></span>CCS</span>
                 </div>
             </div>
@@ -752,25 +751,25 @@ html, body {
         <div class="region-narrative-col">
             <div class="region-step-card" id="card1">
                 <div class="step-num step-num-amber">1</div>
-                <h3>Without a Starting Point, the Optimizer Picks Solar</h3>
-                <p>Strip away existing generation — no nuclear, no hydro, no legacy wind — and the optimizer builds near-pure solar at 50-70% clean. Solar LCOE is lowest, so from a blank slate, this is the rational answer.</p>
-                <p>But no buyer starts from zero. Every grid has existing clean resources generating 24/7. Ignore them and capital flows into solar that duplicates what nuclear and hydro already provide — while the firm generation the grid actually needs goes unfunded. The wrong starting point produces the wrong investment signal.</p>
+                <h3>Without Existing Nuclear, the Optimizer Over-Buys Firm</h3>
+                <p>Remove existing nuclear and hydro from the optimization, and the model's cheapest path to hourly matching is new firm generation. Clean firm provides 24/7 coverage without storage, so starting from zero, the optimizer allocates 70&ndash;96% of the portfolio to firm resources (nuclear uprates, geothermal, new nuclear).</p>
+                <p>But no buyer actually starts from zero. Grids with existing nuclear already have nighttime and baseload coverage. The <em>marginal</em> need is for daytime solar, variable wind, and modest firm top-ups &mdash; not a full firm rebuild. Ignoring this produces a portfolio that duplicates existing capacity.</p>
                 <span class="step-stat step-stat-amber" id="stat1">Loading...</span>
             </div>
 
             <div class="region-step-card" id="card2">
                 <div class="step-num step-num-red">2</div>
-                <h3>The Shape You Need to Fill Depends on What's Already There</h3>
-                <p>With existing nuclear and hydro on the grid, the remaining gap to fill is dominated by nighttime and shoulder hours — exactly the shape that demands firm, dispatchable generation. Pricing in existing resources means firm power enters the mix early, in cost-effective increments.</p>
-                <p>Without that starting point, the optimizer delays firm generation until 87-93%, when solar physically can't cover nights. The resulting investment profile is backward: massive solar overbuilding first, then a sudden, expensive pivot to firm. Capital that should flow steadily into firm resources instead gets front-loaded into solar that duplicates daytime capacity the grid already has.</p>
+                <h3>The Gap Widens at Higher Targets</h3>
+                <p>At low thresholds (50&ndash;70%), the greenfield distortion is already significant: the optimizer is building massive firm capacity that the baseline approach doesn't need because existing resources already cover it. As the clean energy target rises to 85&ndash;95%, the greenfield approach doubles down on firm &mdash; while the baseline diversifies into solar and wind to fill the daytime gap.</p>
+                <p>The mismatch matters because these are different capital allocation signals. One says "build nuclear." The other says "build solar + wind with firm at the margin." Both hit the same target, but with radically different investment implications and cost profiles.</p>
                 <span class="step-stat step-stat-red" id="stat2">Loading...</span>
             </div>
 
             <div class="region-step-card" id="card3">
                 <div class="step-num step-num-blue">3</div>
-                <h3>The Path Matters More Than the Destination</h3>
-                <p>At 95% clean, both approaches hit the same target — but the portfolios look nothing alike. Without existing resources priced in, the mix is solar-heavy with firm generation forced in at the last minute. With them, you get a balanced portfolio at lower cost that builds incrementally on existing infrastructure.</p>
-                <p>The stranded asset risk is real in both directions: new solar capacity that duplicates existing clean generation, and existing firm resources that lose market share despite being exactly what the grid needs. Getting the starting point right isn't academic — it determines whether billions in clean energy investment goes to the right resources or the wrong ones.</p>
+                <h3>Regional Grids, Regional Answers</h3>
+                <p>The distortion is most severe in regions with large existing clean fleets. PJM (32% nuclear) and NYISO (18% nuclear + 16% hydro) see massive over-procurement of firm in the greenfield case because their existing fleets already provide substantial clean coverage that the greenfield optimizer doesn't see.</p>
+                <p>ERCOT is the counterexample: with only 8.6% nuclear, its greenfield portfolio (dominated by wind) looks closer to the baseline. The lesson: the more clean generation you already have, the more wrong a greenfield approach gets.</p>
                 <span class="step-stat step-stat-blue" id="stat3">Loading...</span>
             </div>
         </div>
@@ -780,11 +779,11 @@ html, body {
 <!-- ENERGY SPECTRUM DIVIDER -->
 <div class="energy-spectrum-bar"></div>
 
-<!-- ==================== SECTION 3: REGIONAL COST COMPARISON ==================== -->
+<!-- ==================== SECTION 3: COST COMPARISON ==================== -->
 <div class="section-header">
     <div class="section-number">2</div>
-    <h2>The Cost of Ignoring What You Have</h2>
-    <p>New-build-only procurement pays more because it rebuilds capacity that already exists. The gap between the two cost curves is the premium for ignoring your starting point.</p>
+    <h2>The Cost of Getting It Wrong</h2>
+    <p>Building from scratch costs more because it rebuilds capacity that already exists. The gap between the two cost curves quantifies the price of ignoring your starting point.</p>
 </div>
 
 <section class="chart-section">
@@ -797,17 +796,17 @@ html, body {
                 <button class="iso-btn" data-iso="NYISO" disabled title="Data not yet available">NYISO</button>
                 <button class="iso-btn" data-iso="NEISO" disabled title="Data not yet available">NEISO</button>
             </div>
-            <div class="chart-title" id="costChartTitle">CAISO: The Cost Premium of Ignoring Existing Generation</div>
+            <div class="chart-title" id="costChartTitle">CAISO: Track 1 (With Existing) vs. Track 2 (Greenfield) Cost</div>
             <div class="chart-container">
                 <canvas id="costComparisonChart"></canvas>
             </div>
             <div class="chart-legend">
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Greenfield (no existing)</span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>Greenfield P10&ndash;P90</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Track 2 Greenfield (Medium)</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>Track 2 P10&ndash;P90</span>
                 <span class="chart-legend-divider"></span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:rgba(15,23,42,0.45);"></span>With existing resources</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:rgba(15,23,42,0.45);"></span>Track 1 (With Existing)</span>
             </div>
-            <div class="chart-subtitle">The gap between curves = the cost of ignoring existing clean generation</div>
+            <div class="chart-subtitle">The gap between curves = the cost premium of ignoring existing clean generation</div>
         </div>
     </div>
 </section>
@@ -819,21 +818,21 @@ html, body {
 <section class="synthesis-section">
     <div style="max-width:1320px;margin:0 auto;text-align:center;margin-bottom:32px;">
         <div class="section-number">3</div>
-        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:800;color:#1E293B;margin-bottom:8px;letter-spacing:-0.3px;">Price In Your Starting Point — Or Risk Stranded Assets</h2>
-        <p style="font-size:0.88rem;color:rgba(15,23,42,0.5);max-width:700px;margin:0 auto;line-height:1.6;">The difference between building the right portfolio and the wrong one comes down to one question: did you account for what's already on the grid?</p>
+        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:800;color:#1E293B;margin-bottom:8px;letter-spacing:-0.3px;">Your Starting Point Determines Your Investment Path</h2>
+        <p style="font-size:0.88rem;color:rgba(15,23,42,0.5);max-width:700px;margin:0 auto;line-height:1.6;">Procurement strategies that ignore what's already on the grid don't just cost more &mdash; they direct capital into the wrong resources entirely.</p>
     </div>
     <div class="synthesis-inner">
         <div class="synthesis-card">
-            <h3>Same Target, Different Starting Point, Different Portfolio</h3>
-            <p>At 90% clean, a buyer who prices in existing nuclear and hydro adds solar, wind, and modest firm generation to fill the remaining shape — a balanced mix. A buyer who ignores the starting point procures <strong style="color:#F59E0B;">94% solar</strong> and needs <strong style="color:#38bdf8;">106% procurement</strong> just to make it work.</p>
-            <p style="margin-top:12px;">One asks "what do I need on top of what exists?" The other asks "what would I build from scratch?" The second question directs capital into solar that duplicates existing clean generation — while the firm dispatchable power the grid actually needs goes unfunded and at risk of stranding.</p>
-            <span class="step-stat step-stat-amber">Same 90% target — two completely different investment paths</span>
+            <h3>Two Portfolios, One Target, Opposite Signals</h3>
+            <p>A buyer accounting for existing nuclear and hydro builds a balanced portfolio: solar and wind for daytime generation, modest firm additions for nighttime gaps. A buyer ignoring those assets builds a firm-heavy portfolio that <strong>duplicates what the grid already has</strong> &mdash; paying new-build prices for capacity that's already generating at wholesale cost.</p>
+            <p style="margin-top:12px;">The difference isn't marginal. At 90% clean in CAISO, the greenfield approach allocates <strong style="color:#1E3A5F;" id="synthFirm1">76%</strong> to firm vs. <strong style="color:#1E3A5F;" id="synthFirm2">62%</strong> in the baseline. That 14-point gap represents billions in misallocated capital &mdash; money that would build nuclear capacity the grid doesn't need instead of the renewables it does.</p>
+            <span class="step-stat step-stat-amber">Same target, opposite capital allocation signals</span>
         </div>
         <div class="synthesis-card">
-            <h3>The Stranded Asset Risk</h3>
-            <p>When markets don't price in existing clean resources, two things happen simultaneously: new capital flows into solar that duplicates existing generation capacity, and existing firm resources (nuclear, hydro) lose revenue despite providing exactly the reliability the grid needs.</p>
-            <p style="margin-top:12px;">A company in a region with 30% existing nuclear needs a fundamentally different new-build mix than one in a fossil-dominated grid. Markets and mandates that fail to distinguish between these starting points will systematically direct investment into the wrong resources — creating stranded assets on both the new-build and existing sides of the portfolio.</p>
-            <span class="step-stat step-stat-blue">Right investment requires knowing where you start</span>
+            <h3>The Policy Implication</h3>
+            <p>Clean energy mandates and corporate procurement programs that don't account for existing grid resources will systematically over-invest in firm generation and under-invest in renewables. This isn't an academic distinction &mdash; it determines whether tens of billions in annual clean energy spending goes to the technologies that actually close the gap or duplicates what's already built.</p>
+            <p style="margin-top:12px;">The fix is straightforward: any procurement optimization must use the existing clean generation profile as its starting point. Zeroing out existing resources doesn't create a "conservative" or "worst-case" scenario &mdash; it creates a <strong>wrong</strong> one.</p>
+            <span class="step-stat step-stat-blue">Right procurement requires knowing where you start</span>
         </div>
     </div>
 </section>
@@ -843,12 +842,12 @@ html, body {
     <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
         <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
         <div style="font-size:0.82rem;color:rgba(15,23,42,0.5);line-height:1.8;margin-top:12px;">
-            <p><strong style="color:rgba(15,23,42,0.65);">New-build track methodology:</strong> The optimizer was run with all existing clean generation zeroed (nuclear, solar, wind, CCS, and hydro set to 0) to isolate the greenfield case — what a buyer would procure if they ignored existing grid resources. Uprate tranches remain active as the cheapest new-build option. Results are compared against the baseline track (which builds on top of existing generation) to quantify the cost and compositional distortion of ignoring the starting point.</p>
+            <p><strong style="color:rgba(15,23,42,0.65);">New-build track methodology:</strong> The optimizer was run with all existing clean generation set to zero &mdash; no nuclear, no hydro, no legacy renewables &mdash; to isolate the greenfield case. This simulates what a buyer would procure if they treated the grid as a blank slate. Nuclear uprate tranches remain active as new-build options. Results (Track 2) are compared against the baseline track (Track 1, which builds on top of existing generation) to quantify how the resource mix and cost change when you ignore what's already on the grid.</p>
             <ol style="padding-left:20px;margin-top:8px;">
-                <li>NREL Annual Technology Baseline (ATB) 2024 — new-build costs for solar, wind, nuclear, CCS, storage.</li>
-                <li>EIA Hourly Electric Grid Monitor — hourly demand and generation profiles by ISO.</li>
-                <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) — generation technology cost benchmarks.</li>
-                <li>8,760 Problem optimizer — physics-validated hourly dispatch model with 15 threshold levels and 17,496 cost scenarios (CAISO).</li>
+                <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; new-build costs for solar, wind, nuclear, CCS, storage.</li>
+                <li>EIA Hourly Electric Grid Monitor &mdash; hourly demand and generation profiles by ISO.</li>
+                <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) &mdash; generation technology cost benchmarks.</li>
+                <li>8,760 Problem optimizer &mdash; physics-validated hourly dispatch model with 15 threshold levels and 17,496 cost scenarios (CAISO).</li>
             </ol>
         </div>
     </details>
@@ -872,7 +871,7 @@ html, body {
 <script src="js/shared-data.js"></script>
 <script>
 // ============================================================================
-// NEW-BUILD REQUIREMENT PAGE — Chart initialization and data binding
+// NEW-BUILD REQUIREMENT PAGE — "Would You Build the Wrong Grid?"
 // ============================================================================
 
 // --- Constants ---
@@ -891,13 +890,11 @@ const NB_RESOURCE_LABELS = {
     ccs_ccgt: 'CCS-CCGT',
     hydro: 'Hydro'
 };
-// Medium scenario keys: CAISO uses geo suffix (M), non-CAISO uses X
 const MEDIUM_KEYS = ['MMMM_M_M_M1_X', 'MMMM_M_M_M1_M', 'MMMM_M_N_M1_M'];
 function findMediumKey(scenarios) {
     for (var i = 0; i < MEDIUM_KEYS.length; i++) {
         if (scenarios[MEDIUM_KEYS[i]]) return MEDIUM_KEYS[i];
     }
-    // Fallback: return first available key
     var keys = Object.keys(scenarios);
     return keys.length > 0 ? keys[0] : null;
 }
@@ -910,7 +907,7 @@ let costChart = null;
 let activeISO = 'CAISO';
 let chartsInitialized = false;
 
-// --- Dark theme chart defaults ---
+// --- Chart defaults ---
 const DARK_SCALES_X = {
     type: 'linear', min: 48, max: 100,
     afterBuildTicks: function(axis) {
@@ -923,15 +920,15 @@ const DARK_SCALES_X = {
     title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
 };
 const DARK_TOOLTIP = {
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: 'rgba(255,255,255,0.97)',
     titleColor: '#1E293B',
     bodyColor: '#374151',
-    borderColor: 'rgba(0,0,0,0.08)',
+    borderColor: 'rgba(0,0,0,0.1)',
     borderWidth: 1,
     titleFont: { size: 11, weight: 600 },
     bodyFont: { size: 10 },
     cornerRadius: 8,
-    padding: 10
+    padding: 12
 };
 
 // ============================================================================
@@ -986,14 +983,12 @@ function getCostFan(iso) {
             p10.push(null); p50.push(null); p90.push(null); med.push(null);
             return;
         }
-        // Use precomputed sweep percentiles if available
         if (nb[tKey].sweep) {
             var sw = nb[tKey].sweep;
             p10.push(sw.p10 ? sw.p10.effective_cost : null);
             p50.push(sw.p50 ? sw.p50.effective_cost : null);
             p90.push(sw.p90 ? sw.p90.effective_cost : null);
         } else if (nb[tKey].scenarios) {
-            // Fallback: single scenario, use as all percentiles
             var scenarios = nb[tKey].scenarios;
             var keys = Object.keys(scenarios);
             if (keys.length > 0) {
@@ -1005,7 +1000,6 @@ function getCostFan(iso) {
         } else {
             p10.push(null); p50.push(null); p90.push(null);
         }
-        // Medium scenario cost
         if (nb[tKey].scenarios) {
             var medKey = findMediumKey(nb[tKey].scenarios);
             if (medKey) {
@@ -1021,7 +1015,7 @@ function getCostFan(iso) {
 }
 
 // ============================================================================
-// CHART 1: Hero Comparison (grouped bars — baseline vs newbuild)
+// CHART 1: Hero Comparison — grouped bars (Track 1 vs Track 2)
 // ============================================================================
 function buildHeroComparisonChart() {
     var ctx = document.getElementById('heroComparisonChart');
@@ -1031,24 +1025,20 @@ function buildHeroComparisonChart() {
     var medData = getMediumMixData(activeISO);
     if (!medData) return;
 
-    // Key thresholds for grouped bar comparison
     var keyThresholds = [70, 85, 90, 95, 99];
     var labels = keyThresholds.map(function(t) { return t + '%'; });
 
-    // Get baseline data from shared-data.js
     var baselineMix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[activeISO] : null;
     var resources = ['clean_firm', 'solar', 'wind', 'hydro'];
     var colors = { clean_firm: '#1E3A5F', solar: '#F59E0B', wind: '#22C55E', hydro: '#06B6D4' };
 
     var datasets = [];
     resources.forEach(function(res) {
-        // Baseline bars
         var baseVals = keyThresholds.map(function(t) {
             if (!baselineMix || !baselineMix[res]) return 0;
             var idx = THRESHOLDS.indexOf(t);
             return idx >= 0 ? (baselineMix[res][idx] || 0) : 0;
         });
-        // Newbuild bars
         var nbVals = keyThresholds.map(function(t) {
             var idx = NB_THRESHOLDS.indexOf(t);
             if (idx < 0 || !medData[idx]) return 0;
@@ -1056,22 +1046,22 @@ function buildHeroComparisonChart() {
         });
 
         datasets.push({
-            label: NB_RESOURCE_LABELS[res] + ' (With Existing)',
+            label: NB_RESOURCE_LABELS[res] + ' (Track 1)',
             data: baseVals,
-            backgroundColor: colors[res] + '60',
+            backgroundColor: colors[res] + '55',
             borderColor: colors[res],
             borderWidth: 1,
-            stack: 'baseline',
+            stack: 'track1',
             barPercentage: 0.85,
             categoryPercentage: 0.7
         });
         datasets.push({
-            label: NB_RESOURCE_LABELS[res] + ' (Greenfield)',
+            label: NB_RESOURCE_LABELS[res] + ' (Track 2)',
             data: nbVals,
             backgroundColor: colors[res],
             borderColor: colors[res],
             borderWidth: 1,
-            stack: 'newbuild',
+            stack: 'track2',
             barPercentage: 0.85,
             categoryPercentage: 0.7
         });
@@ -1106,44 +1096,41 @@ function buildHeroComparisonChart() {
             },
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    titleColor: '#1E293B',
-                    bodyColor: '#374151',
-                    borderColor: 'rgba(0,0,0,0.08)',
-                    borderWidth: 1,
-                    titleFont: { size: 11, weight: 600 },
-                    bodyFont: { size: 10 },
-                    cornerRadius: 8,
-                    padding: 10,
+                tooltip: Object.assign({}, DARK_TOOLTIP, {
                     callbacks: {
                         title: function(items) {
                             if (!items[0]) return '';
-                            return items[0].label + ' Clean';
+                            return items[0].label + ' Clean Energy Target';
                         },
                         label: function(item) {
                             return item.dataset.label + ': ' + item.raw + '%';
                         }
                     }
-                },
+                }),
                 datalabels: { display: false }
             }
         }
     });
 
-    // Update hero stat callout
+    // Update hero stat callout — compare firm allocation at 90%
     var stat90 = medData[NB_THRESHOLDS.indexOf(90)];
     if (stat90) {
-        // Compare to baseline
-        var baselineMix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[activeISO] : null;
-        var baseSolar90 = baselineMix && baselineMix.solar ? baselineMix.solar[THRESHOLDS.indexOf(90)] : '?';
+        var baseCF90 = baselineMix && baselineMix.clean_firm ? baselineMix.clean_firm[THRESHOLDS.indexOf(90)] : '?';
+        var greenfieldCF90 = stat90.mix.clean_firm;
         document.getElementById('heroStatCallout').textContent =
-            'Ignore existing grid: ' + stat90.mix.solar + '% solar | Account for it: ' + baseSolar90 + '% solar — same 90% target';
+            'At 90% clean — Greenfield: ' + greenfieldCF90 + '% firm | With existing: ' + baseCF90 + '% firm — ' +
+            (greenfieldCF90 - baseCF90) + ' point gap in capital allocation';
+
+        // Update synthesis stats
+        var sf1 = document.getElementById('synthFirm1');
+        var sf2 = document.getElementById('synthFirm2');
+        if (sf1) sf1.textContent = greenfieldCF90 + '%';
+        if (sf2) sf2.textContent = baseCF90 + '%';
     }
 }
 
 // ============================================================================
-// CHART 2: Stacked Area — Resource Mix across thresholds
+// CHART 2: Stacked Area — Greenfield Resource Mix across thresholds
 // ============================================================================
 function buildMixAreaChart() {
     var ctx = document.getElementById('mixAreaChart');
@@ -1153,8 +1140,7 @@ function buildMixAreaChart() {
     var medData = getMediumMixData(activeISO);
     if (!medData) return;
 
-    // Build datasets for stacked area (order: solar bottom, wind, clean_firm, ccs top)
-    var resourceOrder = ['solar', 'wind', 'clean_firm', 'ccs_ccgt'];
+    var resourceOrder = ['clean_firm', 'wind', 'solar', 'ccs_ccgt'];
     var datasets = [];
 
     resourceOrder.forEach(function(res) {
@@ -1185,10 +1171,7 @@ function buildMixAreaChart() {
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: 1200, easing: 'easeOutQuart' },
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
+            interaction: { mode: 'index', intersect: false },
             scales: {
                 x: Object.assign({}, DARK_SCALES_X),
                 y: {
@@ -1209,10 +1192,25 @@ function buildMixAreaChart() {
                 tooltip: Object.assign({}, DARK_TOOLTIP, {
                     callbacks: {
                         title: function(items) {
-                            return items[0] ? items[0].raw.x + '% Clean Energy Target' : '';
+                            return items[0] ? items[0].raw.x + '% Clean Energy Target (Greenfield)' : '';
                         },
                         label: function(item) {
                             return item.dataset.label + ': ' + item.raw.y + '%';
+                        },
+                        afterBody: function(items) {
+                            if (!items || items.length === 0) return [];
+                            var thrX = items[0].raw.x;
+                            // Compare with baseline
+                            var baselineMix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[activeISO] : null;
+                            if (!baselineMix) return [];
+                            var baseIdx = THRESHOLDS.indexOf(thrX);
+                            if (baseIdx === -1) return [];
+                            var lines = ['', '— Track 1 (With Existing) —'];
+                            ['clean_firm', 'solar', 'wind'].forEach(function(res) {
+                                var baseVal = baselineMix[res] ? (baselineMix[res][baseIdx] || 0) : 0;
+                                lines.push(NB_RESOURCE_LABELS[res] + ': ' + baseVal + '%');
+                            });
+                            return lines;
                         }
                     }
                 }),
@@ -1221,46 +1219,44 @@ function buildMixAreaChart() {
         }
     });
 
-    // Update narrative stat badges
     updateNarrativeStats(medData);
 }
 
 function updateNarrativeStats(medData) {
-    // Card 1: Low thresholds (50-70%)
+    var baselineMix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[activeISO] : null;
+
+    // Card 1: Firm over-allocation at low thresholds
     var d50 = medData[NB_THRESHOLDS.indexOf(50)];
     var d70 = medData[NB_THRESHOLDS.indexOf(70)];
     if (d50 && d70) {
+        var base70cf = baselineMix ? (baselineMix.clean_firm[THRESHOLDS.indexOf(70)] || 0) : '?';
         document.getElementById('stat1').textContent =
-            'At 50%: ' + d50.mix.solar + '% solar, ' + d50.mix.clean_firm + '% firm | ' +
-            'At 70%: ' + d70.mix.solar + '% solar, ' + d70.mix.clean_firm + '% firm';
+            'Greenfield at 50%: ' + d50.mix.clean_firm + '% firm | At 70%: ' + d70.mix.clean_firm + '% firm ' +
+            '(vs. ' + base70cf + '% with existing)';
     }
 
-    // Card 2: Inflection point (85-92.5%)
+    // Card 2: Gap widens at higher targets
     var d85 = medData[NB_THRESHOLDS.indexOf(85)];
     var d90 = medData[NB_THRESHOLDS.indexOf(90)];
-    var d925 = medData[NB_THRESHOLDS.indexOf(92.5)];
     if (d85 && d90) {
+        var base90cf = baselineMix ? (baselineMix.clean_firm[THRESHOLDS.indexOf(90)] || 0) : '?';
+        var gap = d90.mix.clean_firm - base90cf;
         document.getElementById('stat2').textContent =
-            'At 85%: ' + d85.mix.clean_firm + '% firm | ' +
-            'At 90%: ' + d90.mix.clean_firm + '% firm | ' +
-            (d925 ? 'At 92.5%: ' + d925.mix.clean_firm + '% firm' : '');
+            'At 90% — Greenfield: ' + d90.mix.clean_firm + '% firm vs. Track 1: ' + base90cf + '% firm ' +
+            '(+' + gap + ' point gap)';
     }
 
-    // Card 3: High thresholds (95-99%)
+    // Card 3: Regional variation
     var d95 = medData[NB_THRESHOLDS.indexOf(95)];
-    var d99 = medData[NB_THRESHOLDS.indexOf(99)];
-    if (d95 && d99) {
-        // Compare to baseline
-        var baselineMix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[activeISO] : null;
+    if (d95) {
         var base95cf = baselineMix ? (baselineMix.clean_firm[THRESHOLDS.indexOf(95)] || 0) : '?';
         document.getElementById('stat3').textContent =
-            'New-build at 95%: ' + d95.mix.clean_firm + '% firm vs. baseline ' + base95cf + '% firm | ' +
-            'At 99%: ' + d99.mix.clean_firm + '% firm';
+            activeISO + ' at 95%: Greenfield ' + d95.mix.clean_firm + '% firm vs. Track 1 ' + base95cf + '% firm';
     }
 }
 
 // ============================================================================
-// CHART 3: Cost Comparison — newbuild vs baseline effective $/MWh
+// CHART 3: Cost Comparison — Track 1 vs Track 2 effective $/MWh
 // ============================================================================
 function buildCostComparisonChart() {
     var ctx = document.getElementById('costComparisonChart');
@@ -1270,7 +1266,6 @@ function buildCostComparisonChart() {
     var costFan = getCostFan(activeISO);
     if (!costFan) return;
 
-    // Baseline effective cost from shared-data.js (flat structure: EFFECTIVE_COST_DATA.ISO[])
     var baselineMedium = null;
     if (typeof EFFECTIVE_COST_DATA !== 'undefined' && EFFECTIVE_COST_DATA[activeISO]) {
         baselineMedium = EFFECTIVE_COST_DATA[activeISO];
@@ -1278,7 +1273,29 @@ function buildCostComparisonChart() {
 
     var datasets = [];
 
-    // P90 band (top)
+    // Track 1 baseline line (solid)
+    if (baselineMedium) {
+        var basePts = [];
+        THRESHOLDS.forEach(function(t, i) {
+            if (baselineMedium[i] != null && t >= 50 && t <= 99) {
+                basePts.push({ x: t, y: baselineMedium[i] });
+            }
+        });
+        datasets.push({
+            label: 'Track 1 (With Existing)',
+            data: basePts,
+            borderColor: '#4a90d9',
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+            order: 1,
+            _type: 'baseline'
+        });
+    }
+
+    // Track 2 P90 band
     var p90pts = costFan.p90.map(function(v, i) {
         return v != null ? { x: NB_THRESHOLDS[i], y: v } : null;
     }).filter(function(d) { return d != null; });
@@ -1291,10 +1308,33 @@ function buildCostComparisonChart() {
         pointRadius: 0,
         fill: '+1',
         tension: 0.3,
-        order: 5
+        order: 5,
+        _type: 'band'
     });
 
-    // P10 band (bottom)
+    // Track 2 medium line
+    var medPts = costFan.medium.map(function(v, i) {
+        return v != null ? { x: NB_THRESHOLDS[i], y: v } : null;
+    }).filter(function(d) { return d != null; });
+    datasets.push({
+        label: 'Track 2 Greenfield (Medium)',
+        data: medPts,
+        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(245,158,11,0.1)',
+        borderWidth: 2.5,
+        borderDash: [8, 5],
+        pointRadius: 3,
+        pointBackgroundColor: '#F59E0B',
+        pointBorderColor: '#000',
+        pointBorderWidth: 1,
+        pointHoverRadius: 6,
+        fill: false,
+        tension: 0.3,
+        order: 2,
+        _type: 'greenfield'
+    });
+
+    // Track 2 P10 band
     var p10pts = costFan.p10.map(function(v, i) {
         return v != null ? { x: NB_THRESHOLDS[i], y: v } : null;
     }).filter(function(d) { return d != null; });
@@ -1308,52 +1348,10 @@ function buildCostComparisonChart() {
         pointRadius: 0,
         fill: false,
         tension: 0.3,
-        order: 5
+        order: 5,
+        _type: 'band'
     });
 
-    // Medium newbuild line
-    var medPts = costFan.medium.map(function(v, i) {
-        return v != null ? { x: NB_THRESHOLDS[i], y: v } : null;
-    }).filter(function(d) { return d != null; });
-    datasets.push({
-        label: 'Greenfield (Medium)',
-        data: medPts,
-        borderColor: '#F59E0B',
-        backgroundColor: 'rgba(245,158,11,0.1)',
-        borderWidth: 2.5,
-        pointRadius: 3,
-        pointBackgroundColor: '#F59E0B',
-        pointBorderColor: '#000',
-        pointBorderWidth: 1,
-        pointHoverRadius: 6,
-        fill: false,
-        tension: 0.3,
-        order: 1
-    });
-
-    // Baseline line (dashed)
-    if (baselineMedium) {
-        var basePts = [];
-        THRESHOLDS.forEach(function(t, i) {
-            if (baselineMedium[i] != null && t >= 50 && t <= 99) {
-                basePts.push({ x: t, y: baselineMedium[i] });
-            }
-        });
-        datasets.push({
-            label: 'With Existing (Medium)',
-            data: basePts,
-            borderColor: 'rgba(15,23,42,0.45)',
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            borderDash: [6, 4],
-            pointRadius: 0,
-            fill: false,
-            tension: 0.3,
-            order: 2
-        });
-    }
-
-    // Find y-axis range
     var allY = [];
     datasets.forEach(function(ds) {
         ds.data.forEach(function(d) { if (d && d.y != null) allY.push(d.y); });
@@ -1368,6 +1366,7 @@ function buildCostComparisonChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
             animation: { duration: 1200, easing: 'easeOutQuart' },
             scales: {
                 x: Object.assign({}, DARK_SCALES_X),
@@ -1387,15 +1386,30 @@ function buildCostComparisonChart() {
                 tooltip: Object.assign({}, DARK_TOOLTIP, {
                     callbacks: {
                         title: function(items) {
-                            return items[0] ? items[0].raw.x + '% Clean' : '';
+                            return items[0] ? items[0].raw.x + '% Clean Energy Target' : '';
                         },
                         label: function(item) {
-                            if (item.dataset.label === 'P90' || item.dataset.label === 'P10') return null;
+                            if (item.dataset._type === 'band') return null;
                             return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        },
+                        afterBody: function(items) {
+                            if (!items || items.length === 0) return [];
+                            var thrX = items[0].raw.x;
+                            // Find baseline and greenfield at this threshold
+                            var baseVal = null, gfVal = null;
+                            items.forEach(function(item) {
+                                if (item.dataset._type === 'baseline') baseVal = item.raw.y;
+                                if (item.dataset._type === 'greenfield') gfVal = item.raw.y;
+                            });
+                            if (baseVal != null && gfVal != null) {
+                                var diff = gfVal - baseVal;
+                                return ['', 'Cost gap: ' + (diff > 0 ? '+' : '') + '$' + diff.toFixed(1) + '/MWh'];
+                            }
+                            return [];
                         }
                     },
                     filter: function(item) {
-                        return item.dataset.label !== 'P90' && item.dataset.label !== 'P10';
+                        return item.dataset._type !== 'band';
                     }
                 }),
                 datalabels: { display: false }
@@ -1408,7 +1422,6 @@ function buildCostComparisonChart() {
 // ISO SELECTOR WIRING
 // ============================================================================
 function wireISOSelectors() {
-    // Mix chart ISO selector
     var mixBtns = document.querySelectorAll('#mixISOSelector .iso-btn');
     mixBtns.forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -1418,13 +1431,12 @@ function wireISOSelectors() {
             var iso = this.getAttribute('data-iso');
             activeISO = iso;
             document.getElementById('mixChartTitle').textContent =
-                iso + ': What You\'d Build Starting From Zero';
+                iso + ': Greenfield Resource Mix (Track 2)';
             if (mixChart) { mixChart.destroy(); mixChart = null; }
             buildMixAreaChart();
         });
     });
 
-    // Cost chart ISO selector
     var costBtns = document.querySelectorAll('#costISOSelector .iso-btn');
     costBtns.forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -1434,7 +1446,7 @@ function wireISOSelectors() {
             var iso = this.getAttribute('data-iso');
             activeISO = iso;
             document.getElementById('costChartTitle').textContent =
-                iso + ': The Cost Premium of Ignoring Existing Generation';
+                iso + ': Track 1 (With Existing) vs. Track 2 (Greenfield) Cost';
             if (costChart) { costChart.destroy(); costChart = null; }
             buildCostComparisonChart();
         });
@@ -1462,45 +1474,12 @@ function enableAvailableISOs() {
 function initObservers() {
     var fadeObs = new IntersectionObserver(function(entries) {
         entries.forEach(function(e) {
-            if (e.isIntersecting) {
-                e.target.classList.add('visible');
-            }
+            if (e.isIntersecting) e.target.classList.add('visible');
         });
     }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
     document.querySelectorAll('.region-step-card, .synthesis-card').forEach(function(el) {
         fadeObs.observe(el);
-    });
-}
-
-// ============================================================================
-// ANIMATED COUNTERS (for hero stat callout)
-// ============================================================================
-function animateCounters() {
-    var counters = document.querySelectorAll('[data-counter-target]');
-    counters.forEach(function(el) {
-        var target = parseFloat(el.getAttribute('data-counter-target'));
-        var suffix = el.getAttribute('data-counter-suffix') || '';
-        var prefix = el.getAttribute('data-counter-prefix') || '';
-        var duration = 1500;
-        var startTime = null;
-
-        function step(timestamp) {
-            if (!startTime) startTime = timestamp;
-            var progress = Math.min((timestamp - startTime) / duration, 1);
-            var eased = 1 - Math.pow(1 - progress, 3);
-            var current = Math.round(target * eased);
-            el.textContent = prefix + current + suffix;
-            if (progress < 1) requestAnimationFrame(step);
-        }
-
-        var obs = new IntersectionObserver(function(entries) {
-            if (entries[0].isIntersecting) {
-                requestAnimationFrame(step);
-                obs.unobserve(el);
-            }
-        }, { threshold: 0.5 });
-        obs.observe(el);
     });
 }
 
@@ -1517,12 +1496,9 @@ function initAllCharts() {
     buildCostComparisonChart();
     wireISOSelectors();
     initObservers();
-    animateCounters();
 }
 
-// Fallback: if trackData fails to load, still wire up observers for animations
 document.addEventListener('DOMContentLoaded', function() {
-    // Give data 3s to load, then init observers anyway for card animations
     setTimeout(function() {
         if (!chartsInitialized) {
             initObservers();
