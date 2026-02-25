@@ -2260,6 +2260,36 @@ const CLEAN_FIRM_ENERGY_SPLIT = {
 };
 
 // ============================================================================
+// FOAK → NOAK LEARNING CURVE DATA (Clean Firm Case page + Scenario Comparison)
+// ============================================================================
+// Years aligned with SBTi milestones (2025–2050).
+// Clean firm LCOE trajectories: blended nuclear + CCS portfolio cost declining
+// along Wright's Law learning curves. Sources: DOE Liftoff (2024), NREL ATB 2024,
+// MIT Advanced Nuclear (2024), INL (2024), Frontiers in Energy Research (2022).
+// Gas true cost: fuel (EIA AEO2025 $3.50→$4.95/MMBtu) + rising capital
+// (GridLab 2025 $2,400/kW) + declining utilization + carbon pricing trajectory
+// (EU ETS €77→€126+/ton; EPA SCC $51/ton; Rennert $185/ton).
+const FOAK_NOAK_YEARS = [2025, 2028, 2030, 2033, 2035, 2038, 2040, 2043, 2045, 2048, 2050];
+
+const CLEAN_FIRM_LEARNING = {
+    // Conservative: 5–8% learning rate, limited policy support
+    conservative: [170, 155, 145, 128, 115, 100, 92, 85, 82, 79, 78],
+    // Central: 8–9.5% learning rate (NREL ATB), moderate deployment
+    central:      [150, 132, 120, 103, 92,  80, 75, 72, 70, 69, 68],
+    // Optimistic: 10–12% learning rate, strong deployment + policy
+    optimistic:   [135, 112, 98,  82,  74,  66, 62, 58, 55, 53, 52]
+};
+
+const GAS_TRUE_COST = {
+    // Base: fuel + capital + O&M only (no carbon price)
+    // EIA AEO2025 gas price trajectory + GridLab capital + declining utilization
+    base:        [55, 58, 60, 64, 67, 72, 75, 80, 83, 88, 92],
+    // With carbon pricing: base + escalating carbon cost
+    // EU ETS trajectory ($60→$130/ton) applied at ~0.35 tCO₂/MWh
+    with_carbon: [62, 68, 74, 83, 90, 100, 107, 118, 125, 138, 148]
+};
+
+// ============================================================================
 // SBTi TIMELINE + DAC LEARNING CURVE (SPEC.md §7.3)
 // ============================================================================
 // Maps clean energy thresholds to SBTi target years, with projected DAC costs
