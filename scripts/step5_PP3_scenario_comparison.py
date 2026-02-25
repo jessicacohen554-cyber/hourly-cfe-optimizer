@@ -19,9 +19,11 @@ import json
 import os
 import re
 import sys
+import functools
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 # Import dispatch utilities for emission rates
 sys.path.insert(0, str(Path(__file__).parent))
@@ -961,18 +963,67 @@ def _load_step3_results(scenario, iso):
         print(f"  ⚠ No step 3 results for {iso} scenario {key}")
         return {}
 
+    # Vectorized column operations instead of iterrows()
+    s = subset.copy()
+    s['demand_twh'] = s['annual_demand_mwh'] / 1e6
+    s['proc'] = s['procurement_pct'] / 100.0
+
+    # Resource TWh columns
+    s['res_cf_twh'] = s['proc'] * s['mix_clean_firm'] / 100.0 * s['demand_twh']
+    s['res_sol_twh'] = s['proc'] * s['mix_solar'] / 100.0 * s['demand_twh']
+    s['res_wnd_twh'] = s['proc'] * s['mix_wind'] / 100.0 * s['demand_twh']
+    s['res_ccs_twh'] = s['proc'] * s['mix_ccs_ccgt'] / 100.0 * s['demand_twh']
+    s['res_hyd_twh'] = s['proc'] * s['mix_hydro'] / 100.0 * s['demand_twh']
+    s['bat_twh'] = s['battery_dispatch_pct'] / 100.0 * s['demand_twh']
+    s['bat8_twh'] = s['battery8_dispatch_pct'] / 100.0 * s['demand_twh']
+    s['ldes_twh_calc'] = s['ldes_dispatch_pct'] / 100.0 * s['demand_twh']
+
+    # New-build cost tracking (vectorized)
+    existing_pct = GRID_MIX_SHARES[iso]
+    base_twh = BASE_DEMAND_TWH[iso]
+    s['gf'] = s['demand_twh'] / base_twh
+    # Existing percentages scaled by demand growth
+    ex_cf = existing_pct.get('clean_firm', 0)
+    ex_sol = existing_pct.get('solar', 0)
+    ex_wnd = existing_pct.get('wind', 0)
+    ex_ccs = existing_pct.get('ccs_ccgt', 0)
+
+    s['cf_new_pct'] = (s['proc'] * s['mix_clean_firm'] - ex_cf / s['gf']).clip(lower=0)
+    s['sol_new_pct'] = (s['proc'] * s['mix_solar'] - ex_sol / s['gf']).clip(lower=0)
+    s['wnd_new_pct'] = (s['proc'] * s['mix_wind'] - ex_wnd / s['gf']).clip(lower=0)
+    s['ccs_new_pct'] = (s['proc'] * s['mix_ccs_ccgt'] * 100 - ex_ccs / s['gf']).clip(lower=0)
+    s['new_gen_twh'] = (s['cf_new_pct'] + s['sol_new_pct'] + s['wnd_new_pct'] + s['ccs_new_pct']) / 100.0 * s['demand_twh']
+
+    # ex_frac: sum of min(proc * resource_frac, existing_scaled_frac) for each resource
+    s['ex_frac'] = 0.0
+    for res_col, ex_val in [('res_cf_twh', ex_cf), ('res_sol_twh', ex_sol),
+                            ('res_wnd_twh', ex_wnd), ('res_ccs_twh', ex_ccs),
+                            ('res_hyd_twh', existing_pct.get('hydro', 0))]:
+        resource_frac = s[res_col] / s['demand_twh']
+        existing_frac = (ex_val / s['gf']) / 100.0
+        s['ex_frac'] += np.minimum(resource_frac, existing_frac)
+
+    s['new_build_per_mwh'] = (s['cost_total_cost'] - s['ex_frac'] * s['cost_wholesale']
+                              - s['gas_gas_cost_per_mwh']).clip(lower=0)
+    s['new_build_cost_total'] = s['new_build_per_mwh'] * s['demand_twh'] * 1e6
+    s['blended_new_lcoe'] = np.where(
+        s['new_gen_twh'] > 0.01,
+        (s['new_build_per_mwh'] * s['demand_twh'] / s['new_gen_twh']).round(2),
+        0.0)
+
+    # Handle optional columns
+    has_ccs_tranche = 'tranche_ccs_tranche_twh' in s.columns
+    has_geo_tranche = 'tranche_geo_twh' in s.columns
+
     results = {}
-    for _, row in subset.iterrows():
-        t = row['threshold']
-        demand_twh = row['annual_demand_mwh'] / 1e6
-        proc = row['procurement_pct'] / 100.0
+    for t, row in s.set_index('threshold').iterrows():
         results[t] = {
             'threshold': t,
             'mix_raw': [row['mix_clean_firm'], row['mix_solar'], row['mix_wind'],
                         row['mix_ccs_ccgt'], row['mix_hydro'], row['procurement_pct'],
                         row['hourly_match_score'], row['battery_dispatch_pct'],
                         row['battery8_dispatch_pct'], row['ldes_dispatch_pct']],
-            'demand_twh': demand_twh,
+            'demand_twh': row['demand_twh'],
             'effective_cost': row['cost_effective_cost'],
             'total_cost': row['cost_total_cost'],
             'incremental': row['cost_incremental'],
@@ -980,46 +1031,26 @@ def _load_step3_results(scenario, iso):
             'match_score': row['hourly_match_score'],
             'procurement_pct': row['procurement_pct'],
             'resource_twh': {
-                'clean_firm': proc * row['mix_clean_firm'] / 100.0 * demand_twh,
-                'solar': proc * row['mix_solar'] / 100.0 * demand_twh,
-                'wind': proc * row['mix_wind'] / 100.0 * demand_twh,
-                'ccs_ccgt': proc * row['mix_ccs_ccgt'] / 100.0 * demand_twh,
-                'hydro': proc * row['mix_hydro'] / 100.0 * demand_twh,
+                'clean_firm': row['res_cf_twh'], 'solar': row['res_sol_twh'],
+                'wind': row['res_wnd_twh'], 'ccs_ccgt': row['res_ccs_twh'],
+                'hydro': row['res_hyd_twh'],
             },
-            'battery_twh': row['battery_dispatch_pct'] / 100.0 * demand_twh,
-            'battery8_twh': row['battery8_dispatch_pct'] / 100.0 * demand_twh,
-            'ldes_twh': row['ldes_dispatch_pct'] / 100.0 * demand_twh,
+            'battery_twh': row['bat_twh'],
+            'battery8_twh': row['bat8_twh'],
+            'ldes_twh': row['ldes_twh_calc'],
             'gas_backup_mw': round(row['gas_gas_backup_needed_mw']),
             'new_gas_mw': round(row['gas_new_gas_build_mw']),
             'existing_gas_used_mw': round(row['gas_existing_gas_used_mw']),
             'clean_peak_mw': round(row['gas_clean_peak_capacity_mw']),
             'tranche_uprate_twh': row['tranche_uprate_twh'],
             'tranche_nuclear_newbuild_twh': row['tranche_nuclear_newbuild_twh'],
-            'tranche_ccs_tranche_twh': row.get('tranche_ccs_tranche_twh', 0),
-            'tranche_geo_twh': row.get('tranche_geo_twh', 0),
+            'tranche_ccs_tranche_twh': row['tranche_ccs_tranche_twh'] if has_ccs_tranche else 0,
+            'tranche_geo_twh': row['tranche_geo_twh'] if has_geo_tranche else 0,
             'tranche_new_cf_twh': row['tranche_new_cf_twh'],
+            'new_gen_twh': round(row['new_gen_twh'], 3),
+            'new_build_cost_total': row['new_build_cost_total'],
+            'blended_new_lcoe': round(row['blended_new_lcoe'], 2),
         }
-        # Compute new-build cost tracking (for MAC calculation)
-        existing_pct = {k: v for k, v in GRID_MIX_SHARES[iso].items()}
-        gf = demand_twh / BASE_DEMAND_TWH[iso]
-        ex_scaled = {k: v / gf for k, v in existing_pct.items()}
-        cf_new_pct = max(0, proc * row['mix_clean_firm'] - ex_scaled.get('clean_firm', 0))
-        sol_new_pct = max(0, proc * row['mix_solar'] - ex_scaled.get('solar', 0))
-        wnd_new_pct = max(0, proc * row['mix_wind'] - ex_scaled.get('wind', 0))
-        ccs_new_pct = max(0, proc * row['mix_ccs_ccgt'] * 100 - ex_scaled.get('ccs_ccgt', 0))
-        new_gen_twh = (cf_new_pct + sol_new_pct + wnd_new_pct + ccs_new_pct) / 100.0 * demand_twh
-        existing_cost = (row['cost_total_cost'] - row['gas_gas_cost_per_mwh'])
-        # Approximate new-build cost from total cost minus existing wholesale
-        wholesale = row['cost_wholesale']
-        ex_frac = sum(min(proc * results[t]['resource_twh'].get(k, 0) / demand_twh,
-                         ex_scaled.get(k, 0) / 100.0)
-                      for k in existing_pct) if demand_twh > 0 else 0
-        new_build_per_mwh = max(0, row['cost_total_cost'] - ex_frac * wholesale
-                                - row['gas_gas_cost_per_mwh'])
-        results[t]['new_gen_twh'] = round(new_gen_twh, 3)
-        results[t]['new_build_cost_total'] = new_build_per_mwh * demand_twh * 1e6
-        results[t]['blended_new_lcoe'] = round(
-            new_build_per_mwh * demand_twh / new_gen_twh if new_gen_twh > 0.01 else 0, 2)
 
     return results
 
@@ -1120,6 +1151,20 @@ def _apply_floor_ratchet(step3_results, iso, sens):
     return augmented_results
 
 
+def _process_iso_step3(scenario, iso):
+    """Load step 3 results and apply floor ratchet for a single ISO."""
+    sens = scenario['toggles']
+    iso_sens = dict(sens)
+    if iso != 'CAISO':
+        iso_sens['geo'] = None
+
+    step3 = _load_step3_results(scenario, iso)
+    if not step3:
+        return iso, {}
+
+    return iso, _apply_floor_ratchet(step3, iso, iso_sens)
+
+
 def find_scenario_b_from_step3(scenario):
     """Scenario B: Hourly matching with early clean firm investment + learning curve.
 
@@ -1134,22 +1179,14 @@ def find_scenario_b_from_step3(scenario):
       5. Overall system cost is LOWER than Scenario A because early investment
          enables cheaper firm deployment at scale when it matters most.
     """
-    results = {}
-    sens = scenario['toggles']
-
-    for iso in ISOS:
-        iso_sens = dict(sens)
-        if iso != 'CAISO':
-            iso_sens['geo'] = None
-
-        print(f"  {iso}: loading step 3 results...", end='')
-        step3 = _load_step3_results(scenario, iso)
-        if not step3:
-            results[iso] = {}
-            continue
-
-        print(f" {len(step3)} thresholds, applying floor ratchet + learning curve...")
-        results[iso] = _apply_floor_ratchet(step3, iso, iso_sens)
+    print("  Loading step 3 results + floor ratchet (5 ISOs parallel)...")
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {iso: pool.submit(_process_iso_step3, scenario, iso) for iso in ISOS}
+        results = {}
+        for iso in ISOS:
+            ret_iso, ret_data = futures[iso].result()
+            results[ret_iso] = ret_data
+            print(f"    {ret_iso}: {len(ret_data)} thresholds")
 
     # Apply learning curve cost adjustments (FOAK → NOAK over time)
     _adjust_costs_with_learning(results, scenario)
@@ -1182,22 +1219,14 @@ def find_scenario_a_from_step3(scenario):
          to drive learning. This is the "scrambling" scenario.
       4. Uprates at Medium ($25/MWh) — existing plants, no learning dependency.
     """
-    results = {}
-    sens = scenario['toggles']
-
-    for iso in ISOS:
-        iso_sens = dict(sens)
-        if iso != 'CAISO':
-            iso_sens['geo'] = None
-
-        print(f"  {iso}: loading step 3 results...", end='')
-        step3 = _load_step3_results(scenario, iso)
-        if not step3:
-            results[iso] = {}
-            continue
-
-        print(f" {len(step3)} thresholds, applying floor ratchet (no learning curve)...")
-        results[iso] = _apply_floor_ratchet(step3, iso, iso_sens)
+    print("  Loading step 3 results + floor ratchet (5 ISOs parallel)...")
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {iso: pool.submit(_process_iso_step3, scenario, iso) for iso in ISOS}
+        results = {}
+        for iso in ISOS:
+            ret_iso, ret_data = futures[iso].result()
+            results[ret_iso] = ret_data
+            print(f"    {ret_iso}: {len(ret_data)} thresholds")
 
     # Adjust uprate to Medium only (no learning curve — firm stays at FOAK)
     _adjust_costs_no_learning(results, scenario)
@@ -1219,8 +1248,10 @@ def find_scenario_a_from_step3(scenario):
 # CONSEQUENTIAL QUEUE BUILDER
 # ============================================================================
 
-def build_consequential_queue(scenario_results, egrid, fossil_mix):
+def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None):
     """Build the consequential deployment queue for a scenario."""
+    if cfr_fn is None:
+        cfr_fn = compute_fossil_retirement
     zone_metrics = []
 
     for iso in ISOS:
@@ -1247,8 +1278,8 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix):
             clean_twh_end = max(0, (t_end - baseline_clean) / 100.0 * demand_twh_end)
             delta_clean_twh = clean_twh_end - clean_twh_start
 
-            rate_start, _ = compute_fossil_retirement(iso, t_start, egrid, fossil_mix)
-            rate_end, _ = compute_fossil_retirement(iso, t_end, egrid, fossil_mix)
+            rate_start, _ = cfr_fn(iso, t_start, egrid, fossil_mix)
+            rate_end, _ = cfr_fn(iso, t_end, egrid, fossil_mix)
             avg_rate = (rate_start + rate_end) / 2
 
             co2_displaced_mt = delta_clean_twh * avg_rate
@@ -1411,10 +1442,19 @@ def main():
     print(f"  Uprate override: Medium (${UPRATE_LCOE['M']}/MWh)")
     results_b = find_scenario_b_from_step3(SCENARIO_B)
 
+    # Memoize compute_fossil_retirement — egrid/fossil_mix are constant across all calls
+    _cfr_cache = {}
+
+    def cfr_cached(iso, threshold, er, fm, demand_growth_factor=1.0):
+        key = (iso, threshold, demand_growth_factor)
+        if key not in _cfr_cache:
+            _cfr_cache[key] = compute_fossil_retirement(iso, threshold, er, fm, demand_growth_factor)
+        return _cfr_cache[key]
+
     # Build consequential queues
     print("\nBuilding consequential queues...")
-    queue_a = build_consequential_queue(results_a, egrid, fossil_mix)
-    queue_b = build_consequential_queue(results_b, egrid, fossil_mix)
+    queue_a = build_consequential_queue(results_a, egrid, fossil_mix, cfr_fn=cfr_cached)
+    queue_b = build_consequential_queue(results_b, egrid, fossil_mix, cfr_fn=cfr_cached)
 
     # Stranding analysis
     print("\nComputing stranding analysis...")
@@ -1570,7 +1610,7 @@ def main():
                         marginal_lcoe = delta_new_cost / (delta_new_gen * 1e6)
                     else:
                         marginal_lcoe = d.get('blended_new_lcoe', 0)
-                    rate_cur, _ = compute_fossil_retirement(iso, t, egrid, fossil_mix)
+                    rate_cur, _ = cfr_cached(iso, t, egrid, fossil_mix)
                     if rate_cur > 0.001 and marginal_lcoe > 0:
                         stepwise_mac = round(marginal_lcoe / rate_cur, 1)
                     else:
