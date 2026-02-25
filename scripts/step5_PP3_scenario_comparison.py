@@ -1370,38 +1370,264 @@ def _process_iso_step3(scenario, iso):
 
 
 def find_scenario_b_mixes(feasible_mixes):
-    """Scenario B: Hourly Matching — forward-stepping with FOAK→NOAK learning curve.
+    """Scenario B: Endpoint-deterministic with paced clean firm investment.
 
-    At each threshold, evaluates ALL feasible EF mixes under learning-curve-adjusted
-    prices and picks the cheapest augmented effective cost. Floor ratchets.
+    Strategy (fundamentally different from Scenario A):
+      1. Find the NOAK-optimal mix at the 95% target — this is the "north star"
+         resource composition that the grid is building toward.
+      2. Compute a paced firm investment ramp from existing levels to the 95% target.
+         At each threshold T, firm deployment should be at least:
+           existing_firm + (T - 50)/(95 - 50) * (target_firm - existing_firm)
+      3. At each threshold, evaluate all feasible EF mixes. Prefer those that meet
+         the pacing requirement (invest enough in firm clean). Among pacing-compliant
+         mixes, pick the cheapest with learning-curve-adjusted prices.
+      4. Floor ratchet locks in prior commitments.
+      5. For thresholds > 95%, continue building on the 95% foundation.
 
-    With declining firm costs (FOAK→NOAK via Wright's Law), the optimizer includes
-    more firm clean at each step than Scenario A does. This models proactive
-    investment in the late 2020s / early-to-mid 2030s to drive the cost curve down.
-
-    By 2040s (90%+ thresholds), firm approaches NOAK pricing, making the total cost
-    trajectory smoother and cheaper than Scenario A's late-threshold FOAK spike.
+    This produces a fundamentally different trajectory from Scenario A because:
+      - At 50-75%, Scenario A picks renewable-heavy mixes (cheapest). Scenario B
+        intentionally picks mixes with more firm clean (pacing requirement).
+      - At 80-90%, the divergence compounds: B has been building firm, driving
+        learning curve down. A has been deferring firm.
+      - At 95%+, B benefits from NOAK firm prices. A faces FOAK cost cliff.
 
     Cost: Low renewables, Medium batteries/uprates/tx, FOAK→NOAK firm/CCS/LDES/geo.
     """
-    def get_overrides_b(iso, threshold):
-        frac = learning_fraction(threshold)
-        return _build_learning_overrides(iso, frac)
-        # _build_learning_overrides already sets uprate_lcoe to Medium
+    results = {}
 
-    print(f"  Cost: ren=Low, batt=Med, tx=Med, uprate=Med, firm/CCS/LDES/geo=FOAK→NOAK")
-    results = _forward_step_optimization(
-        feasible_mixes, SCENARIO_B['toggles'], get_overrides_b, 'B')
+    # For finding the 95% target, use NOAK (Low) prices — this is what the grid
+    # looks like when learning curve investments have paid off
+    NOAK_SENS = {
+        'ren': 'L', 'firm': 'L', 'batt': 'M', 'ldes_lvl': 'L',
+        'fuel': 'M', 'tx': 'M', 'ccs': 'L', 'q45': '1', 'geo': 'L',
+    }
 
-    # Add learning curve metadata to results
-    for iso in results:
-        for t in results[iso]:
+    for iso in ISOS:
+        iso_sens = dict(SCENARIO_B['toggles'])
+        if iso != 'CAISO':
+            iso_sens['geo'] = None
+
+        noak_sens = dict(NOAK_SENS)
+        if iso != 'CAISO':
+            noak_sens['geo'] = None
+
+        base_demand = BASE_DEMAND_TWH[iso]
+        existing = GRID_MIX_SHARES[iso]
+
+        # ==================================================================
+        # Step 1: Find NOAK-optimal mix at 95% — the "north star"
+        # This tells us what resources the grid needs at deep decarbonization
+        # when firm costs have reached NOAK via learning curve investment.
+        # ==================================================================
+        gf_95 = get_demand_growth_factor(iso, 95)
+        demand_95 = base_demand * gf_95
+        mixes_95 = feasible_mixes.get(iso, {}).get('95', [])
+
+        best_cost_95 = float('inf')
+        best_mix_95 = None
+        for mix in mixes_95:
+            result = compute_mix_cost(mix, noak_sens, iso, demand_95,
+                                     growth_factor=gf_95)
+            if result['effective_cost'] < best_cost_95:
+                best_cost_95 = result['effective_cost']
+                best_mix_95 = mix
+
+        if not best_mix_95:
+            print(f"  ⚠ {iso}: No feasible mixes at 95%, skipping")
+            results[iso] = {}
+            continue
+
+        target_deployed = _mix_resource_twh(best_mix_95, demand_95)
+
+        # Firm resources at target (nuclear + CCS — the resources needing learning curve)
+        target_cf_twh = target_deployed.get('clean_firm', 0)
+        target_ccs_twh = target_deployed.get('ccs_ccgt', 0)
+        target_firm_twh = target_cf_twh + target_ccs_twh
+        target_ldes_twh = target_deployed.get('ldes', 0)
+
+        # Existing firm baseline (2025 levels)
+        existing_cf_twh = existing.get('clean_firm', 0) / 100.0 * base_demand
+        existing_ccs_twh = existing.get('ccs_ccgt', 0) / 100.0 * base_demand
+        existing_firm_twh = existing_cf_twh + existing_ccs_twh
+
+        print(f"\n  {iso} 95% NOAK target: firm={target_firm_twh:.0f} TWh "
+              f"(CF={target_cf_twh:.0f}, CCS={target_ccs_twh:.0f}), "
+              f"LDES={target_ldes_twh:.0f} TWh, "
+              f"existing firm={existing_firm_twh:.0f} TWh")
+
+        # ==================================================================
+        # Step 2: Forward-step with paced firm investment toward 95% target
+        # ==================================================================
+        floor = {
+            'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand,
+            'solar': existing.get('solar', 0) / 100.0 * base_demand,
+            'wind': existing.get('wind', 0) / 100.0 * base_demand,
+            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * base_demand,
+            'hydro': existing.get('hydro', 0) / 100.0 * base_demand,
+            'battery': 0, 'ldes': 0,
+        }
+
+        iso_results = {}
+
+        for t in THRESHOLDS:
+            t_str = str(int(t)) if t == int(t) else str(t)
+            mixes = feasible_mixes.get(iso, {}).get(t_str, [])
+            if not mixes:
+                continue
+
+            gf = get_demand_growth_factor(iso, t)
+            demand_twh = base_demand * gf
+            demand_mwh = demand_twh * 1e6
+
+            # Learning-curve overrides at this threshold
             frac = learning_fraction(t)
             overrides = _build_learning_overrides(iso, frac)
-            results[iso][t]['learning_fraction'] = round(frac, 3)
-            results[iso][t]['learning_nuclear_lcoe'] = round(overrides['nuclear_lcoe'], 1)
-            results[iso][t]['learning_ccs_lcoe'] = round(overrides['ccs_lcoe'], 1)
-            results[iso][t]['learning_ldes_lcoe'] = round(overrides['ldes_lcoe'], 1)
+
+            # Paced firm investment floor: linear ramp from existing to 95% target.
+            # Scale target by demand growth ratio (firm TWh grows with demand).
+            t_frac = min(1.0, max(0, (t - 50) / (95 - 50)))
+            demand_ratio = demand_twh / demand_95 if demand_95 > 0 else 1.0
+            paced_firm_twh = existing_firm_twh + t_frac * (
+                target_firm_twh * demand_ratio - existing_firm_twh)
+
+            # Evaluate ALL mixes. Prefer those meeting firm pacing requirement.
+            # Among pacing-compliant mixes, pick cheapest with learning-curve prices.
+            best_paced_eff = float('inf')
+            best_paced_result = None
+            best_paced_mix = None
+            best_paced_excess = 0.0
+
+            best_any_eff = float('inf')
+            best_any_result = None
+            best_any_mix = None
+            best_any_excess = 0.0
+
+            for mix in mixes:
+                result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
+                                         overrides=overrides, growth_factor=gf)
+
+                deployed = _mix_resource_twh(mix, demand_twh)
+
+                # Floor excess cost
+                excess_per_mwh = 0.0
+                for res in floor:
+                    excess = max(0, floor.get(res, 0) - deployed.get(res, 0))
+                    if excess > 0.01:
+                        lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
+                        excess_per_mwh += excess / demand_twh * lcoe
+
+                augmented_eff = (result['total_cost'] + excess_per_mwh) / \
+                    (result['match_score'] / 100.0) if result['match_score'] > 0 else float('inf')
+
+                # Check pacing: does this mix invest enough in firm?
+                mix_firm_twh = deployed.get('clean_firm', 0) + deployed.get('ccs_ccgt', 0)
+                meets_pace = mix_firm_twh >= paced_firm_twh * 0.7  # 70% tolerance
+
+                if meets_pace and augmented_eff < best_paced_eff:
+                    best_paced_eff = augmented_eff
+                    best_paced_result = result
+                    best_paced_mix = mix
+                    best_paced_excess = excess_per_mwh
+
+                if augmented_eff < best_any_eff:
+                    best_any_eff = augmented_eff
+                    best_any_result = result
+                    best_any_mix = mix
+                    best_any_excess = excess_per_mwh
+
+            # Prefer pacing-compliant mix; fall back to any if none qualify
+            if best_paced_result:
+                sel_result = best_paced_result
+                sel_mix = best_paced_mix
+                sel_excess = best_paced_excess
+                paced_flag = ''
+            elif best_any_result:
+                sel_result = best_any_result
+                sel_mix = best_any_mix
+                sel_excess = best_any_excess
+                paced_flag = ' (no pace-compliant mix)'
+            else:
+                continue
+
+            # Build augmented result
+            deployed = _mix_resource_twh(sel_mix, demand_twh)
+            augmented = {}
+            excess_twh = {}
+            for res in floor:
+                ef_val = deployed.get(res, 0)
+                floor_val = floor.get(res, 0)
+                augmented[res] = max(ef_val, floor_val)
+                excess_twh[res] = max(0, floor_val - ef_val)
+
+            total_excess = sum(excess_twh.values())
+
+            aug = dict(sel_result)
+            aug['total_cost'] = round(sel_result['total_cost'] + sel_excess, 2)
+            match_frac = sel_result['match_score'] / 100.0
+            aug['effective_cost'] = round(
+                aug['total_cost'] / match_frac if match_frac > 0 else 0, 2)
+            aug['incremental'] = round(
+                aug['effective_cost'] - sel_result['wholesale'], 2)
+
+            aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
+            aug['battery_twh'] = augmented.get('battery', 0)
+            aug['battery8_twh'] = 0
+            aug['ldes_twh'] = augmented.get('ldes', 0)
+            aug['demand_twh'] = demand_twh
+            aug['mix_raw'] = list(sel_mix)
+
+            # Recompute gas backup from augmented clean capacity
+            clean_peak_mw = 0
+            for r, twh in aug['resource_twh'].items():
+                pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
+                if pcc > 0 and twh > 0:
+                    clean_peak_mw += (twh * 1e6 / 8760) * pcc
+            clean_peak_mw += (augmented.get('battery', 0) * 1e6 / 8760) * \
+                PEAK_CAPACITY_CREDITS.get('battery', 0.95)
+            clean_peak_mw += (augmented.get('ldes', 0) * 1e6 / 8760) * \
+                PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
+
+            ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
+            gaf = GAS_AVAILABILITY_FACTOR[iso]
+            gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+            aug['gas_backup_mw'] = round(gas_needed_mw)
+            aug['new_gas_mw'] = round(max(0, gas_needed_mw - EXISTING_GAS_CAPACITY_MW[iso]))
+            aug['clean_peak_mw'] = round(clean_peak_mw)
+            aug['existing_gas_used_mw'] = round(min(gas_needed_mw, EXISTING_GAS_CAPACITY_MW[iso]))
+
+            aug['new_build_cost_total'] = (
+                sel_result['new_build_cost_total'] + sel_excess * demand_mwh)
+            aug['new_gen_twh'] = round(
+                sel_result['new_gen_twh'] +
+                sum(v for k, v in excess_twh.items() if k != 'hydro'), 3)
+
+            # Learning curve metadata
+            aug['learning_fraction'] = round(frac, 3)
+            aug['learning_nuclear_lcoe'] = round(overrides['nuclear_lcoe'], 1)
+            aug['learning_ccs_lcoe'] = round(overrides['ccs_lcoe'], 1)
+            aug['learning_ldes_lcoe'] = round(overrides['ldes_lcoe'], 1)
+            aug['paced_firm_target_twh'] = round(paced_firm_twh, 1)
+
+            if total_excess > 1.0:
+                print(f"  ↗ {iso} {t}% [B]: {total_excess:.0f} TWh excess "
+                      f"(+${sel_excess:.1f}/MWh)")
+
+            iso_results[t] = aug
+            floor = dict(augmented)
+
+        # Print trajectory summary
+        for t in sorted(iso_results.keys()):
+            r = iso_results[t]
+            rt = r['resource_twh']
+            lf = r.get('learning_fraction', 0)
+            paced = r.get('paced_firm_target_twh', 0)
+            actual_firm = rt.get('clean_firm', 0) + rt.get('ccs_ccgt', 0)
+            print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
+                  f"Wnd={rt['wind']:6.0f} CCS={rt.get('ccs_ccgt', 0):6.0f} "
+                  f"Firm={actual_firm:6.0f}/{paced:5.0f} pace "
+                  f"LF={lf:.2f} ${r['effective_cost']:.0f}/MWh [B]")
+
+        results[iso] = iso_results
 
     return results
 
