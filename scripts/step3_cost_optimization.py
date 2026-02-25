@@ -854,6 +854,9 @@ def eval_and_argmin_all(coeff_matrix, constant, prices, scores, thresholds_desc)
 def precompute_all_prices(iso, all_combos):
     """Pre-compute price vectors + metadata for all sensitivity combos at once.
 
+    Inlines price lookups and fills the pre-allocated matrix directly, avoiding
+    ~5,832-17,496 temporary np.array allocations from get_scenario_prices().
+
     Returns:
         price_matrix: (B, 10) float64 price vectors
         wholesale_arr: (B,) float64 wholesale prices
@@ -866,9 +869,60 @@ def precompute_all_prices(iso, all_combos):
     nuclear_arr = np.empty(B, dtype=np.float64)
     ccs_arr = np.empty(B, dtype=np.float64)
 
+    # Pre-resolve ISO-specific lookup tables to avoid repeated dict lookups
+    _ws_base = WHOLESALE_PRICES[iso]
+    _fuel_adj = FUEL_ADJUSTMENTS[iso]
+    _ccs_on_iso = {lev: CCS_LCOE_45Q_ON[lev][iso] for lev in LMH}
+    _ccs_off_iso = {lev: CCS_LCOE_45Q_OFF[lev][iso] for lev in LMH}
+    _nuc_nb_iso = {lev: NUCLEAR_NEWBUILD_LCOE[lev][iso] for lev in LMH}
+    _sol_lcoe_iso = {name: LCOE_TABLES['solar'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _wnd_lcoe_iso = {name: LCOE_TABLES['wind'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _bat_lcoe_iso = {name: LCOE_TABLES['battery'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _bat8_lcoe_iso = {name: LCOE_TABLES['battery8'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _ldes_lcoe_iso = {name: LCOE_TABLES['ldes'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _is_caiso = (iso == 'CAISO')
+
+    # Pre-resolve transmission adders for all (resource, tx_level) combos for this ISO
+    _tx_cache = {}
+    for rtype in ['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes']:
+        for tx_name in ['None', 'Low', 'Medium', 'High']:
+            _tx_cache[(rtype, tx_name)] = get_tx(rtype, tx_name, iso)
+
     for j, (scenario_key, sens) in enumerate(all_combos):
-        prices, wholesale, nuclear_price, ccs_price = get_scenario_prices(iso, sens)
-        price_matrix[j] = prices
+        ren_name = LEVEL_NAME[sens['ren']]
+        batt_name = LEVEL_NAME[sens['batt']]
+        ldes_name = LEVEL_NAME[sens['ldes_lvl']]
+        fuel_name = LEVEL_NAME[sens['fuel']]
+        tx_name = LEVEL_NAME[sens['tx']]
+        firm_lev = sens['firm']
+        ccs_lev = sens['ccs']
+        q45 = sens['q45']
+        geo_lev = sens.get('geo')
+
+        wholesale = max(5, _ws_base + _fuel_adj[fuel_name])
+        ccs_lcoe = _ccs_on_iso[ccs_lev] if q45 == '1' else _ccs_off_iso[ccs_lev]
+        ccs_tx = _tx_cache[('ccs_ccgt', tx_name)]
+        ccs_price = ccs_lcoe + ccs_tx
+
+        tx_cf = _tx_cache[('clean_firm', tx_name)]
+        nuclear_price = _nuc_nb_iso[firm_lev] + tx_cf
+        remaining_price = min(nuclear_price, ccs_price)
+
+        geo_price = 0.0
+        if _is_caiso and geo_lev:
+            geo_price = GEOTHERMAL_LCOE[geo_lev] + tx_cf
+
+        # Fill directly into pre-allocated matrix (avoids np.array() allocation per call)
+        price_matrix[j, _COL_WHOLESALE] = wholesale
+        price_matrix[j, _COL_SOL_NEW] = _sol_lcoe_iso[ren_name] + _tx_cache[('solar', tx_name)]
+        price_matrix[j, _COL_WND_NEW] = _wnd_lcoe_iso[ren_name] + _tx_cache[('wind', tx_name)]
+        price_matrix[j, _COL_CCS_NEW] = ccs_price
+        price_matrix[j, _COL_UPRATE] = UPRATE_LCOE[firm_lev]
+        price_matrix[j, _COL_GEO] = geo_price
+        price_matrix[j, _COL_REMAINING] = remaining_price
+        price_matrix[j, _COL_BAT4] = _bat_lcoe_iso[batt_name] + _tx_cache[('battery', tx_name)]
+        price_matrix[j, _COL_BAT8] = _bat8_lcoe_iso[batt_name] + _tx_cache[('battery8', tx_name)]
+        price_matrix[j, _COL_LDES] = _ldes_lcoe_iso[ldes_name] + _tx_cache[('ldes', tx_name)]
         wholesale_arr[j] = wholesale
         nuclear_arr[j] = nuclear_price
         ccs_arr[j] = ccs_price
@@ -2282,12 +2336,12 @@ def main():
 
         # Pre-compute nuclear-vs-CCS decision cache ONCE per ISO (invariant across
         # thresholds, years, growth levels — only depends on iso + sensitivity toggles).
-        # Built unconditionally so it's available for both DG and track DG sections.
+        # Reuse nuclear_arr/ccs_arr from iso_price_cache instead of re-calling get_scenario_prices.
         iso_combos = get_sensitivity_combos(iso)
+        _, _, _cached_nuc_arr, _cached_ccs_arr = iso_price_cache[iso]
         iso_t3_cache = {}
-        for _ci, (skey, sens) in enumerate(iso_combos):
-            _, _, nuc_price, ccs_price = get_scenario_prices(iso, sens)
-            iso_t3_cache[skey] = nuc_price <= ccs_price
+        for _ci, (skey, _) in enumerate(iso_combos):
+            iso_t3_cache[skey] = _cached_nuc_arr[_ci] <= _cached_ccs_arr[_ci]
 
         if iso_dg and iso_arrays:
             dg_total = 0
