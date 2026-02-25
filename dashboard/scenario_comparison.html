@@ -87,6 +87,22 @@ body { background: #F3F4F8; }
 .iso-btn:hover { background: rgba(255,255,255,0.95); color: #1A2744; }
 .iso-btn.active { background: rgba(14,165,233,0.12); border-color: rgba(14,165,233,0.4); color: #0284C7; }
 
+/* Target threshold slider */
+.target-slider-section { max-width: 1200px; margin: -20px auto 0; padding: 20px 24px 12px; position: relative; z-index: 10; }
+.target-slider-card { background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 20px 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.target-slider-label { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.85rem; color: #1A2744; font-weight: 700; white-space: nowrap; }
+.target-slider-wrap { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 12px; }
+.target-slider-wrap input[type=range] { flex: 1; height: 6px; -webkit-appearance: none; appearance: none; background: linear-gradient(90deg, #0EA5E9 0%, #16A34A 50%, #F59E0B 80%, #DC2626 100%); border-radius: 3px; outline: none; cursor: pointer; }
+.target-slider-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #1A2744; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
+.target-slider-wrap input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #1A2744; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
+.target-val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.4rem; font-weight: 800; color: #0284C7; min-width: 50px; text-align: center; }
+.target-year { font-size: 0.78rem; color: rgba(0,0,0,0.45); font-weight: 600; }
+.target-ticks { display: flex; justify-content: space-between; font-size: 0.65rem; color: rgba(0,0,0,0.35); padding: 2px 0 0; }
+@media (max-width: 768px) {
+    .target-slider-card { flex-direction: column; align-items: stretch; gap: 12px; }
+    .target-slider-label { text-align: center; }
+}
+
 /* Callout */
 .callout { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
 .callout-title { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; color: #D97706; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -135,6 +151,20 @@ body { background: #F3F4F8; }
         drives costs down. Same physics, same feasible mixes — radically different outcomes.
     </p>
 </section>
+
+<!-- Target threshold slider -->
+<div class="target-slider-section">
+    <div class="target-slider-card">
+        <div class="target-slider-label">Target CFE Threshold</div>
+        <div class="target-slider-wrap">
+            <input type="range" id="targetSlider" min="0" max="14" step="1" value="11">
+            <div>
+                <div class="target-val" id="targetVal">95%</div>
+                <div class="target-year" id="targetYear">SBTi 2045</div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Dynamic headline cards -->
 <div class="headline-row" id="headlineCards"></div>
@@ -497,6 +527,61 @@ const THRESHOLDS = DATA.metadata.thresholds;
 const YEAR_MAP = {};
 Object.entries(DATA.metadata.sbti_year_map).forEach(([k,v]) => YEAR_MAP[parseFloat(k)] = v);
 
+// Global target threshold (slider-controlled)
+let targetThreshold = 95;
+const SLIDER_STEPS = THRESHOLDS; // [50, 55, 60, ..., 100]
+const slider = document.getElementById('targetSlider');
+const sliderVal = document.getElementById('targetVal');
+const sliderYear = document.getElementById('targetYear');
+
+function updateSliderDisplay() {
+    const t = SLIDER_STEPS[parseInt(slider.value)];
+    targetThreshold = t;
+    const tStr = t === Math.floor(t) ? t + '%' : t + '%';
+    sliderVal.textContent = tStr;
+    const yr = YEAR_MAP[t] || '?';
+    sliderYear.textContent = 'SBTi ' + yr;
+}
+updateSliderDisplay();
+
+// Track current ISO per chart section for re-render on slider change
+const currentIso = { mac: 'PJM', gas: 'PJM', mix: 'PJM', cost: 'PJM', firm: 'PJM' };
+
+slider.addEventListener('input', () => {
+    updateSliderDisplay();
+    buildHeadlineCards();
+    renderMacTimeline(currentIso.mac);
+    renderGasChart(currentIso.gas);
+    renderMixCharts(currentIso.mix);
+    renderCostChart(currentIso.cost);
+    renderFirmChart(currentIso.firm);
+});
+
+// Helper: get annotation config for the target threshold vertical line
+function targetAnnotation(labels, trajRef) {
+    if (!labels || !trajRef || trajRef.length === 0) return {};
+    const idx = trajRef.findIndex(d => d.threshold === targetThreshold);
+    if (idx < 0) return {};
+    return {
+        targetLine: {
+            type: 'line',
+            xMin: idx, xMax: idx,
+            borderColor: 'rgba(14,165,233,0.5)', borderWidth: 2, borderDash: [6, 3],
+            label: {
+                display: true,
+                content: 'Target: ' + targetThreshold + '%',
+                position: 'start',
+                backgroundColor: 'rgba(14,165,233,0.85)',
+                color: '#fff',
+                font: { size: 10, weight: '600' },
+                padding: { top: 3, bottom: 3, left: 6, right: 6 },
+                borderRadius: 4,
+                yAdjust: -6,
+            }
+        }
+    };
+}
+
 // Match dashboard color palette from shared-data.js MIX_COLORS
 const COLORS = {
     A: '#DC2626', B: '#16A34A',
@@ -527,49 +612,51 @@ const CHART_DEFAULTS = {
 function yearLabel(d) { return d.year + '\n(' + d.threshold + '%)'; }
 function pctLabel(d) { return d.threshold + '%'; }
 
-// ===== HEADLINE CARDS (dynamic from data) =====
+// ===== HEADLINE CARDS (dynamic from data + slider target) =====
 function buildHeadlineCards() {
     const container = document.getElementById('headlineCards');
-    const baseDemand = { CAISO: 217, ERCOT: 485, PJM: 833, NYISO: 154, NEISO: 117 };
+    const t = targetThreshold;
 
-    // Compare effective system cost at 95% threshold
+    // Compare effective system cost at target threshold
     let annualCostA = 0, annualCostB = 0;
     ISOS.forEach(iso => {
         const trajA = DATA.trajectories.pure_consequential[iso] || [];
-        const trajB = DATA.trajectories.hourly_matching[iso] || [];
-        const a95 = trajA.find(d => d.threshold === 95);
-        const b95 = trajB.find(d => d.threshold === 95);
-        if (a95 && b95) {
-            annualCostA += a95.effective_cost * baseDemand[iso]; // $/MWh × TWh = $M
-            annualCostB += b95.effective_cost * baseDemand[iso];
+        const trajB = getScenarioB(iso);
+        const demandTwh = DATA.metadata.base_demand_twh[iso] || 0;
+        const aT = trajA.find(d => d.threshold === t);
+        const bT = trajB.find(d => d.threshold === t);
+        if (aT && bT) {
+            annualCostA += aT.effective_cost * demandTwh;
+            annualCostB += bT.effective_cost * demandTwh;
         }
     });
     const savingsB = Math.round((annualCostA - annualCostB) / 1000);
 
-    // PJM cost gap at 95%
+    // PJM cost gap at target
     const trajA_PJM = DATA.trajectories.pure_consequential.PJM || [];
-    const trajB_PJM = DATA.trajectories.hourly_matching.PJM || [];
-    const a95_PJM = trajA_PJM.find(d => d.threshold === 95);
-    const b95_PJM = trajB_PJM.find(d => d.threshold === 95);
-    const costGapPJM = a95_PJM && b95_PJM ? Math.round(a95_PJM.effective_cost - b95_PJM.effective_cost) : 227;
+    const trajB_PJM = getScenarioB('PJM');
+    const aT_PJM = trajA_PJM.find(d => d.threshold === t);
+    const bT_PJM = trajB_PJM.find(d => d.threshold === t);
+    const costGapPJM = aT_PJM && bT_PJM ? Math.round(aT_PJM.effective_cost - bT_PJM.effective_cost) : 0;
 
-    // Cost multiplier at 95% — ratio of pure consequential to hourly matching
-    const costMultiplier = (annualCostB > 0) ? (annualCostA / annualCostB).toFixed(1) : '3.5';
+    // Cost multiplier — ratio of A to B
+    const costMultiplier = (annualCostB > 0) ? (annualCostA / annualCostB).toFixed(1) : '-';
 
-    // PJM solar overbuilding — TWh at 95% in pure consequential path
-    const solarOverPJM = a95_PJM ? Math.round(a95_PJM.resource_twh.solar) : 2412;
-    const solarHM_PJM = b95_PJM ? Math.round(b95_PJM.resource_twh.solar) : 27;
+    // PJM solar overbuilding at target
+    const solarOverPJM = aT_PJM ? Math.round(aT_PJM.resource_twh.solar) : 0;
+    const solarHM_PJM = bT_PJM ? Math.round(bT_PJM.resource_twh.solar) : 0;
 
+    const tLabel = t === Math.floor(t) ? t + '%' : t + '%';
     container.innerHTML = `
-        <div class="headline-card"><div class="val red">${costMultiplier}&times;</div><div class="lbl">Consequential vs. Hourly Matching at 95%</div></div>
+        <div class="headline-card"><div class="val red">${costMultiplier}&times;</div><div class="lbl">Consequential vs. Hourly Matching at ${tLabel}</div></div>
         <div class="headline-card"><div class="val amber">$${savingsB}B</div><div class="lbl">Annual Savings From Hourly Matching</div></div>
-        <div class="headline-card"><div class="val blue">$${costGapPJM}/MWh</div><div class="lbl">PJM Cost Gap at 95%</div></div>
+        <div class="headline-card"><div class="val blue">$${costGapPJM}/MWh</div><div class="lbl">PJM Cost Gap at ${tLabel}</div></div>
         <div class="headline-card"><div class="val cyan">${solarOverPJM} TWh</div><div class="lbl">PJM Solar in Consequential (vs. ${solarHM_PJM} Hourly)</div></div>
     `;
 
     // Update gas callout text
     const gapEl = document.getElementById('gasGapPJM');
-    if (gapEl && b95_PJM) gapEl.textContent = Math.round(b95_PJM.gas_backup_mw / 1000) + ' GW';
+    if (gapEl && bT_PJM) gapEl.textContent = Math.round(bT_PJM.gas_backup_mw / 1000) + ' GW';
 }
 buildHeadlineCards();
 
@@ -590,12 +677,23 @@ function createIsoSelector(containerId, defaultIso, onChange) {
     });
 }
 
+// ===== Helper: get Scenario B trajectory for current target =====
+function getScenarioB(iso) {
+    // Parametric: if multi-target data exists, use it; otherwise fall back to single trajectory
+    const tKey = String(targetThreshold);
+    if (DATA.trajectories_b_by_target && DATA.trajectories_b_by_target[tKey]) {
+        return DATA.trajectories_b_by_target[tKey][iso] || [];
+    }
+    return DATA.trajectories.hourly_matching[iso] || [];
+}
+
 // ===== 1. MAC TIMELINE CHART =====
 let macTimelineChart;
 function renderMacTimeline(iso) {
+    currentIso.mac = iso;
     document.getElementById('macTimelineTitle').innerHTML = iso + ' &mdash; Marginal $/tCO<sub>2</sub> by SBTi Year';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = DATA.trajectories.hourly_matching[iso] || [];
+    const trajB = getScenarioB(iso);
     // Filter to only points with stepwise_mac
     const ptsA = trajA.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
     const ptsB = trajB.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
@@ -649,7 +747,7 @@ function renderMacTimeline(iso) {
                         }
                     }
                 },
-                annotation: undefined,
+                annotation: { annotations: targetAnnotation(labels, trajA) },
             },
             scales: {
                 x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
@@ -662,15 +760,16 @@ function renderMacTimeline(iso) {
         }
     });
 }
-createIsoSelector('macIsoSelector', 'PJM', renderMacTimeline);
+createIsoSelector('macIsoSelector', 'PJM', iso => { currentIso.mac = iso; renderMacTimeline(iso); });
 renderMacTimeline('PJM');
 
 // ===== 2. GAS BACKUP CHART =====
 let gasChart;
 function renderGasChart(iso) {
+    currentIso.gas = iso;
     document.getElementById('gasChartTitle').textContent = iso + ' \u2014 Gas Backup Capacity (MW)';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = DATA.trajectories.hourly_matching[iso] || [];
+    const trajB = getScenarioB(iso);
     const labels = trajA.map(yearLabel);
 
     if (gasChart) gasChart.destroy();
@@ -716,11 +815,14 @@ function renderGasChart(iso) {
                         label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y).toLocaleString() + ' MW',
                         afterBody: ctx => {
                             const idx = ctx[0].dataIndex;
-                            const gap = trajA[idx].gas_backup_mw - trajB[idx].gas_backup_mw;
+                            const aVal = trajA[idx] ? trajA[idx].gas_backup_mw : 0;
+                            const bVal = trajB[idx] ? trajB[idx].gas_backup_mw : 0;
+                            const gap = aVal - bVal;
                             return gap > 0 ? ['\u0394 Gap: ' + Math.round(gap).toLocaleString() + ' MW avoided'] : [];
                         }
                     }
-                }
+                },
+                annotation: { annotations: targetAnnotation(labels, trajA) },
             },
             scales: {
                 x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
@@ -733,7 +835,7 @@ function renderGasChart(iso) {
         }
     });
 }
-createIsoSelector('gasIsoSelector', 'PJM', renderGasChart);
+createIsoSelector('gasIsoSelector', 'PJM', iso => { currentIso.gas = iso; renderGasChart(iso); });
 renderGasChart('PJM');
 
 // ===== 4. WYN-PANEL RESOURCE MIX: existing (transparent) + new (saturated) + curtailment (striped) =====
@@ -763,11 +865,12 @@ const NEWBUILD_ORDER = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt',
 
 let mixChartA, mixChartB;
 function renderMixCharts(iso) {
+    currentIso.mix = iso;
     document.getElementById('mixTitleA').textContent = iso + ' \u2014 Resource Mix (TWh)';
     document.getElementById('mixTitleB').textContent = iso + ' \u2014 Resource Mix (TWh)';
 
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = DATA.trajectories.hourly_matching[iso] || [];
+    const trajB = getScenarioB(iso);
     const labels = trajA.map(d => d.year + '\n' + d.threshold + '%');
     const baseDemandTwh = DEMAND_TWH[iso];
     const existShares = GRID_MIX || {};
@@ -893,20 +996,26 @@ function renderMixCharts(iso) {
         }
     };
 
+    // Add target annotation to mix chart options
+    const mixAnnotations = targetAnnotation(labels, trajA);
+    const optsA = { ...opts, plugins: { ...opts.plugins, annotation: { annotations: mixAnnotations } } };
+    const optsB = { ...opts, plugins: { ...opts.plugins, annotation: { annotations: mixAnnotations } } };
+
     if (mixChartA) mixChartA.destroy();
     if (mixChartB) mixChartB.destroy();
-    mixChartA = new Chart(document.getElementById('mixChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA, 'mixChartA') }, options: opts });
-    mixChartB = new Chart(document.getElementById('mixChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB, 'mixChartB') }, options: opts });
+    mixChartA = new Chart(document.getElementById('mixChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA, 'mixChartA') }, options: optsA });
+    mixChartB = new Chart(document.getElementById('mixChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB, 'mixChartB') }, options: optsB });
 }
-createIsoSelector('mixIsoSelector', 'PJM', renderMixCharts);
+createIsoSelector('mixIsoSelector', 'PJM', iso => { currentIso.mix = iso; renderMixCharts(iso); });
 renderMixCharts('PJM');
 
 // ===== 5. EFFECTIVE COST OVERLAY =====
 let costChart;
 function renderCostChart(iso) {
+    currentIso.cost = iso;
     document.getElementById('costChartTitle').textContent = iso + ' \u2014 Effective System Cost ($/MWh)';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = DATA.trajectories.hourly_matching[iso] || [];
+    const trajB = getScenarioB(iso);
     const labels = trajA.map(yearLabel);
 
     if (costChart) costChart.destroy();
@@ -952,11 +1061,14 @@ function renderCostChart(iso) {
                         label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh',
                         afterBody: ctx => {
                             const idx = ctx[0].dataIndex;
-                            const gap = trajA[idx].effective_cost - trajB[idx].effective_cost;
+                            const aVal = trajA[idx] ? trajA[idx].effective_cost : 0;
+                            const bVal = trajB[idx] ? trajB[idx].effective_cost : 0;
+                            const gap = aVal - bVal;
                             return gap > 0 ? ['\u0394 Savings: $' + gap.toFixed(1) + '/MWh'] : [];
                         }
                     }
-                }
+                },
+                annotation: { annotations: targetAnnotation(labels, trajA) },
             },
             scales: {
                 x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
@@ -969,15 +1081,16 @@ function renderCostChart(iso) {
         }
     });
 }
-createIsoSelector('costIsoSelector', 'PJM', renderCostChart);
+createIsoSelector('costIsoSelector', 'PJM', iso => { currentIso.cost = iso; renderCostChart(iso); });
 renderCostChart('PJM');
 
 // ===== 6. CLEAN FIRM DEPLOYMENT CHART =====
 let firmChart;
 function renderFirmChart(iso) {
+    currentIso.firm = iso;
     document.getElementById('firmChartTitle').textContent = iso + ' \u2014 New Clean Firm + CCS Deployment (TWh)';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = DATA.trajectories.hourly_matching[iso] || [];
+    const trajB = getScenarioB(iso);
     const labels = trajA.map(yearLabel);
 
     if (firmChart) firmChart.destroy();
@@ -1022,7 +1135,8 @@ function renderFirmChart(iso) {
                         },
                         label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y) + ' TWh',
                     }
-                }
+                },
+                annotation: { annotations: targetAnnotation(labels, trajA) },
             },
             scales: {
                 x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
@@ -1035,7 +1149,7 @@ function renderFirmChart(iso) {
         }
     });
 }
-createIsoSelector('firmIsoSelector', 'PJM', renderFirmChart);
+createIsoSelector('firmIsoSelector', 'PJM', iso => { currentIso.firm = iso; renderFirmChart(iso); });
 renderFirmChart('PJM');
 
 // ===== 7. DOMINO TABLES =====
