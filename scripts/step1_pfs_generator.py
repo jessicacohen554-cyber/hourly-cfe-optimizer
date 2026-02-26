@@ -41,6 +41,7 @@ import json
 import os
 import sys
 import time
+import itertools
 import numpy as np
 from multiprocessing import Pool, cpu_count
 from datetime import datetime, timezone
@@ -98,9 +99,13 @@ H2_EFFICIENCY = 0.35         # Green H2: electrolysis (70%) × storage (95%) × 
 H2_DURATION_HOURS = 1000     # ~42 days at full power (salt cavern)
 H2_WINDOW_DAYS = 30          # 30-day rolling window for multi-week weather bridging
 
-# 4D resource types (CCS merged into clean_firm)
-RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'hydro']
-N_RESOURCES = len(RESOURCE_TYPES)
+# Resource types — 4D for non-CAISO, 5D for CAISO (geothermal)
+RESOURCE_TYPES_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
+RESOURCE_TYPES_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'geothermal']
+
+def get_resource_types(iso):
+    """Return resource type list for this ISO."""
+    return RESOURCE_TYPES_CAISO if iso == 'CAISO' else RESOURCE_TYPES_BASE
 
 # Regions
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
@@ -114,42 +119,34 @@ ISO_LABELS = {
     'SPP': 'SPP (Central)',
 }
 
+# Hydro caps (% of demand, existing only)
 HYDRO_CAPS = {
     'CAISO': 9.5, 'ERCOT': 0.1, 'PJM': 1.8, 'NYISO': 15.9, 'NEISO': 4.4,
     'MISO': 1.6, 'SPP': 4.3,
 }
+# Physics-only hydro adder: allow +10% above existing cap for run-of-river
+# innovation potential. NOT priced in Step 3 — just explored in physics cache.
+HYDRO_ADDER_PCT = 10
 
-# 15 thresholds (v4.1: added 55, 65 for finer low-range granularity)
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+# CAISO geothermal cap: (existing_geo_TWh + potential) / demand
+# = (5.31 + 39.0) / 224.039 = 19.8% → cap at 20%
+GEO_CAP_PCT = 20
 
-# Threshold-adaptive procurement bounds (Decision 3C, expanded)
-# ≤92.5%: capped at 250% (sufficient for moderate RE saturation with storage).
-# 95–99%: widened to 350% — wind-floor-compliant mixes (wind ≥ existing %)
-#   need higher procurement to compensate for constrained solar/wind ratio.
-# 99.5–100%: pushed to 500% for perfect hourly matching across all mix types.
-PROCUREMENT_BOUNDS = {
-    50:   (50, 200),
-    55:   (55, 212),
-    60:   (60, 225),
-    65:   (65, 237),
-    70:   (70, 250),
-    75:   (75, 250),
-    80:   (80, 250),
-    85:   (85, 250),
-    87.5: (87, 250),
-    90:   (90, 250),
-    92.5: (92, 250),
-    95:   (95, 350),
-    97.5: (100, 350),
-    99:   (100, 400),
-    99.5: (100, 450),
-    99.9: (100, 500),
-    100:  (100, 500),
+# Resource caps: max % of demand for each resource in coarse grid search
+# Each resource varies independently — no sum-to-100 constraint.
+RESOURCE_CAPS = {
+    'clean_firm': 120,   # Nuclear/CCS flat profile; >100% = surplus for storage
+    'solar':      250,   # High values capture solar+storage strategies
+    'wind':       250,   # High values capture wind+storage strategies
+    # hydro and geothermal caps are per-ISO (HYDRO_CAPS + HYDRO_ADDER_PCT, GEO_CAP_PCT)
 }
 
-# Nuclear seasonal derate
+# 17 thresholds
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+
+# Nuclear seasonal derate — CAISO now pure nuclear (geothermal is separate 5th dim)
 NUCLEAR_SHARE_OF_CLEAN_FIRM = {
-    'CAISO': 0.70, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
+    'CAISO': 1.0, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
     'MISO': 1.0, 'SPP': 1.0,
 }
 
@@ -308,21 +305,23 @@ def load_data():
 
 
 def get_supply_profiles(iso, gen_profiles):
-    """Get generation profiles for 4D resource types (v4.0: no separate CCS).
+    """Get generation profiles for resource types (4D non-CAISO, 5D CAISO).
 
-    Returns dict mapping resource type to list of H floats (normalized shape profiles).
-    Uses numpy for vectorized DST correction and profile construction.
+    Returns dict mapping resource type to numpy array of H floats.
+    Each profile represents the hourly generation shape per unit of annual demand
+    (i.e., if a resource is at 100% of demand, profile[h] * demand_TWh gives MWh
+    in hour h). Profiles are normalized so sum(profile) = 1.0 / H for flat resources.
+
+    CAISO includes geothermal (flat, no seasonal derate) as 5th resource.
     """
     profiles = {}
 
-    # Clean firm = nuclear seasonal-derated baseload
-    # CCS sub-allocation handled by cost model; physics uses nuclear profile (conservative)
-    nuc_share = NUCLEAR_SHARE_OF_CLEAN_FIRM.get(iso, 1.0)
-    geo_share = 1.0 - nuc_share
+    # Clean firm = nuclear seasonal-derated baseload (+ CCS in shoulder months)
+    # CAISO: pure nuclear (geothermal split to separate dimension)
+    # Non-CAISO: pure nuclear (no geothermal)
     monthly_cf = NUCLEAR_MONTHLY_CF.get(iso, {m: 1.0 for m in range(1, 13)})
     month_hours = np.array([744, 672, 744, 720, 744, 720, 744, 744, 720, 744, 720, 744])
-    month_cfs = np.array([nuc_share * monthly_cf.get(m + 1, 1.0) + geo_share
-                          for m in range(12)])
+    month_cfs = np.array([monthly_cf.get(m + 1, 1.0) for m in range(12)])
     cf_profile = np.repeat(month_cfs, month_hours)[:H] / H
     if len(cf_profile) < H:
         cf_profile = np.pad(cf_profile, (0, H - len(cf_profile)),
@@ -372,8 +371,12 @@ def get_supply_profiles(iso, gen_profiles):
     # Hydro
     profiles['hydro'] = np.array(gen_profiles[iso].get('hydro', [0.0] * H)[:H], dtype=np.float64)
 
+    # CAISO: add geothermal as flat year-round profile (no seasonal derate)
+    if iso == 'CAISO':
+        profiles['geothermal'] = np.full(H, 1.0 / H, dtype=np.float64)
+
     # Ensure all profiles are exactly H hours, no negatives (kept as numpy arrays)
-    for rtype in RESOURCE_TYPES:
+    for rtype in get_resource_types(iso):
         arr = np.asarray(profiles[rtype], dtype=np.float64)
         if len(arr) > H:
             arr = arr[:H].copy()
@@ -385,23 +388,25 @@ def get_supply_profiles(iso, gen_profiles):
     return profiles
 
 
-def prepare_numpy_profiles(demand_norm, supply_profiles):
-    """Convert to numpy arrays + build supply matrix (4, 8760).
+def prepare_numpy_profiles(iso, demand_norm, supply_profiles):
+    """Convert to numpy arrays + build supply matrix (N_resources, 8760).
+
+    Returns (demand_arr, supply_matrix) where supply_matrix shape is
+    (4, 8760) for non-CAISO or (5, 8760) for CAISO (includes geothermal).
 
     Re-normalizes demand_arr to sum to exactly 1.0 to fix a scaling issue
     where leap-year profiles (2024) were normalized over 8784 hours then
     truncated to 8760, causing the average to sum to ~0.9995 instead of 1.0.
-    Without this fix, hourly_match_score caps at 99.95% even with perfect
-    hourly matching.
     """
     demand_arr = np.array(demand_norm[:H], dtype=np.float64)
     dsum = demand_arr.sum()
     if dsum > 0 and abs(dsum - 1.0) > 1e-9:
         demand_arr *= (1.0 / dsum)
+    rtypes = get_resource_types(iso)
     supply_matrix = np.stack([
         np.asarray(supply_profiles[rt][:H], dtype=np.float64)
-        for rt in RESOURCE_TYPES
-    ])  # shape (4, 8760)
+        for rt in rtypes
+    ])  # shape (n_resources, 8760)
     return demand_arr, supply_matrix
 
 
@@ -1007,136 +1012,175 @@ def _batch_score_storage(demand, supply_rows, procurement, N,
 # GRID SEARCH — 4D adaptive (Decision 1C)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def generate_4d_combos(hydro_cap, step=5, max_single=100):
-    """Generate all 4D resource mixes summing to 100% with constraints.
+def generate_resource_combos(iso, step=5):
+    """Generate all resource fraction combos as independent % of demand.
 
-    max_single=100 allows any single resource up to 100% of the mix,
-    enabling extreme solar-only or wind-only portfolios (which at high
-    procurement can reach 200%+ of demand).
+    Each resource varies independently (no sum-to-100 constraint).
+    Resource caps defined in RESOURCE_CAPS + per-ISO hydro/geo caps.
 
-    Returns numpy array of shape (N, 4) where columns are
-    [clean_firm, solar, wind, hydro] as percentages.
+    Returns numpy array of shape (N, n_resources) where n_resources is
+    4 (non-CAISO) or 5 (CAISO with geothermal). Values are percentages
+    of annual demand (e.g., solar=150 means 150% of demand from solar).
 
-    Uses vectorized numpy meshgrid instead of nested Python loops.
+    Uses itertools.product for clean Cartesian product generation.
     """
-    hydro_max = min(int(hydro_cap), max_single)
-    hyd_vals = np.arange(0, hydro_max + 1, step)
-    cf_vals = np.arange(0, max_single + 1, step)
-    sol_vals = np.arange(0, max_single + 1, step)
+    hydro_cap = HYDRO_CAPS[iso] + HYDRO_ADDER_PCT
+    cf_max = RESOURCE_CAPS['clean_firm']
+    sol_max = RESOURCE_CAPS['solar']
+    wnd_max = RESOURCE_CAPS['wind']
 
-    # Build all (cf, sol, hyd) triples via meshgrid
-    cf_grid, sol_grid, hyd_grid = np.meshgrid(cf_vals, sol_vals, hyd_vals, indexing='ij')
-    cf_flat = cf_grid.ravel()
-    sol_flat = sol_grid.ravel()
-    hyd_flat = hyd_grid.ravel()
-    wnd_flat = 100 - cf_flat - sol_flat - hyd_flat
+    cf_vals = list(range(0, cf_max + 1, step))
+    sol_vals = list(range(0, sol_max + 1, step))
+    wnd_vals = list(range(0, wnd_max + 1, step))
+    hyd_vals = list(range(0, int(hydro_cap) + 1, step))
+    if int(hydro_cap) not in hyd_vals and hydro_cap > 0:
+        hyd_vals.append(int(hydro_cap))
 
-    # Filter: wind must be in [0, max_single]
-    valid = (wnd_flat >= 0) & (wnd_flat <= max_single)
-    combos = np.column_stack([cf_flat[valid], sol_flat[valid],
-                              wnd_flat[valid], hyd_flat[valid]])
-    return combos.astype(np.float64)
+    if iso == 'CAISO':
+        geo_vals = list(range(0, GEO_CAP_PCT + 1, step))
+        combos = np.array(list(itertools.product(
+            cf_vals, sol_vals, wnd_vals, hyd_vals, geo_vals
+        )), dtype=np.float64)
+    else:
+        combos = np.array(list(itertools.product(
+            cf_vals, sol_vals, wnd_vals, hyd_vals
+        )), dtype=np.float64)
+
+    # Filter: at least some generation (sum > 0)
+    row_sums = combos.sum(axis=1)
+    combos = combos[row_sums > 0]
+
+    return combos
 
 
-def generate_4d_combos_around(base_combo, hydro_cap, step=1, radius=2, max_single=100):
-    """Generate 4D combos in neighborhood of base_combo.
+def generate_resource_combos_around(base_combo, iso, step=1, radius=4):
+    """Generate fine combos in neighborhood of base_combo.
 
-    Uses vectorized meshgrid instead of 4 nested Python loops.
-    Wind is derived from the sum=100 constraint, then filtered to be
-    within its valid range. np.unique handles deduplication.
+    Each resource varies ±radius*step from its base value, clamped to
+    valid range. Returns deduplicated array.
     """
-    hydro_max = min(int(hydro_cap), max_single)
-    base = [int(base_combo[i]) for i in range(4)]
+    hydro_cap = HYDRO_CAPS[iso] + HYDRO_ADDER_PCT
+    rtypes = get_resource_types(iso)
+    n_res = len(rtypes)
 
-    # Per-dimension ranges (cf, sol, wnd, hyd)
-    caps = [max_single, max_single, max_single, hydro_max]
-    lo = [max(0, base[i] - radius * step) for i in range(4)]
-    hi = [min(caps[i], base[i] + radius * step) for i in range(4)]
+    caps = []
+    for rt in rtypes:
+        if rt == 'hydro':
+            caps.append(int(hydro_cap))
+        elif rt == 'geothermal':
+            caps.append(GEO_CAP_PCT)
+        else:
+            caps.append(RESOURCE_CAPS[rt])
 
-    # Meshgrid over cf, sol, hyd — wind derived from sum=100
-    cf_vals = np.arange(lo[0], hi[0] + 1, step)
-    sol_vals = np.arange(lo[1], hi[1] + 1, step)
-    hyd_vals = np.arange(lo[3], hi[3] + 1, step)
+    ranges = []
+    for i in range(n_res):
+        base_val = int(base_combo[i])
+        lo = max(0, base_val - radius * step)
+        hi = min(caps[i], base_val + radius * step)
+        ranges.append(list(range(lo, hi + 1, step)))
 
-    cf_grid, sol_grid, hyd_grid = np.meshgrid(cf_vals, sol_vals, hyd_vals, indexing='ij')
-    cf_flat = cf_grid.ravel()
-    sol_flat = sol_grid.ravel()
-    hyd_flat = hyd_grid.ravel()
-    wnd_flat = 100 - cf_flat - sol_flat - hyd_flat
+    combos = np.array(list(itertools.product(*ranges)), dtype=np.float64)
 
-    # Filter: wind must be in valid neighborhood range and within bounds
-    valid = (
-        (wnd_flat >= 0) & (wnd_flat <= max_single) &
-        (wnd_flat >= lo[2]) & (wnd_flat <= hi[2])
-    )
+    # Filter: at least some generation
+    if len(combos) > 0:
+        row_sums = combos.sum(axis=1)
+        combos = combos[row_sums > 0]
+        combos = np.unique(combos, axis=0)
 
-    if not np.any(valid):
-        return np.empty((0, 4))
-
-    combos = np.column_stack([cf_flat[valid], sol_flat[valid],
-                              wnd_flat[valid], hyd_flat[valid]])
-    return np.unique(combos, axis=0).astype(np.float64)
+    return combos
 
 
-# Edge case seed mixes (4D: clean_firm, solar, wind, hydro)
-# Includes extreme single-resource mixes to capture solar+storage, wind+storage outcomes
-EDGE_CASE_SEEDS = [
-    # Extreme solar (at high procurement, 100% solar = 200%+ of demand from solar alone)
-    [0, 100, 0, 0],    # Pure solar
-    [0, 95, 5, 0],     # Near-pure solar + wind
-    [0, 95, 0, 5],     # Near-pure solar + hydro
-    [0, 90, 10, 0],
-    [0, 90, 5, 5],
-    [5, 90, 5, 0],
-    [5, 85, 10, 0],
-    # Extreme wind
-    [0, 0, 100, 0],    # Pure wind
-    [0, 5, 95, 0],     # Near-pure wind + solar
-    [0, 0, 95, 5],     # Near-pure wind + hydro
-    [0, 10, 90, 0],
-    [5, 5, 90, 0],
-    [5, 10, 85, 0],
-    # Solar-dominant
-    [5, 70, 20, 5],
-    [5, 75, 15, 5],
-    [10, 80, 10, 0],
-    # Wind-dominant
-    [5, 20, 70, 5],
-    [5, 15, 75, 5],
-    [10, 10, 80, 0],
-    # Balanced renewable + hydro
-    [5, 40, 40, 15],
-    [10, 45, 45, 0],
+# Edge case seed combos: direct % of demand (not mix fractions)
+# These guarantee extreme-but-potentially-optimal strategies are evaluated.
+EDGE_CASE_SEEDS_BASE = [
+    # (clean_firm, solar, wind, hydro) as % of demand
+    # High solar + storage strategies
+    [0, 200, 0, 0],
+    [0, 200, 50, 0],
+    [0, 150, 0, 0],
+    [0, 150, 50, 0],
+    [10, 200, 0, 0],
+    # High wind + storage strategies
+    [0, 0, 200, 0],
+    [0, 50, 200, 0],
+    [0, 0, 150, 0],
+    [0, 50, 150, 0],
+    [10, 0, 200, 0],
+    # Balanced high renewable
+    [0, 125, 125, 0],
+    [0, 100, 100, 0],
+    [10, 100, 100, 0],
     # Clean firm dominant
-    [60, 15, 15, 10],
-    [70, 10, 10, 10],
-    [80, 10, 10, 0],
-    [90, 5, 5, 0],
-    [100, 0, 0, 0],    # Pure clean firm
-    [95, 5, 0, 0],
-    # Moderate firm + renewables
-    [50, 25, 25, 0],
-    [40, 30, 30, 0],
-    [30, 35, 35, 0],
-    # Minimal firm
-    [20, 40, 40, 0],
-    [10, 45, 45, 0],
-    [0, 50, 50, 0],    # Zero firm — pure renewables
+    [100, 0, 0, 0],
+    [100, 50, 0, 0],
+    [100, 0, 50, 0],
+    [80, 50, 50, 0],
+    [120, 0, 0, 0],
+    # Firm + moderate renewables
+    [60, 80, 20, 0],
+    [60, 20, 80, 0],
+    [40, 100, 50, 0],
+    [40, 50, 100, 0],
+    # Minimal firm, heavy renewables
+    [10, 120, 120, 0],
+    [0, 150, 100, 0],
+    [0, 100, 150, 0],
+    # Pure renewables
+    [0, 125, 125, 0],
+]
+
+# Extra CAISO seeds with geothermal (5th column = geothermal %)
+EDGE_CASE_SEEDS_CAISO_GEO = [
+    # (clean_firm, solar, wind, hydro, geothermal) as % of demand
+    [0, 150, 0, 0, 20],
+    [0, 100, 50, 0, 20],
+    [0, 0, 150, 0, 20],
+    [50, 100, 0, 0, 20],
+    [80, 50, 0, 0, 20],
+    [0, 125, 125, 0, 10],
+    [20, 100, 100, 0, 15],
 ]
 
 
-def get_seed_combos(hydro_cap):
-    """Return edge case seeds valid for this region's hydro cap."""
+def get_seed_combos(iso):
+    """Return edge case seeds valid for this ISO's resource caps."""
+    hydro_cap = HYDRO_CAPS[iso] + HYDRO_ADDER_PCT
+    rtypes = get_resource_types(iso)
+    n_res = len(rtypes)
+
+    seeds = []
+    if iso == 'CAISO':
+        # Add base seeds with geo=0, then CAISO-specific geo seeds
+        for seed in EDGE_CASE_SEEDS_BASE:
+            seeds.append(seed + [0])  # append geo=0
+        seeds.extend(EDGE_CASE_SEEDS_CAISO_GEO)
+    else:
+        seeds = list(EDGE_CASE_SEEDS_BASE)
+
     valid = []
     seen = set()
-    for seed in EDGE_CASE_SEEDS:
+    for seed in seeds:
+        if len(seed) != n_res:
+            continue
+        # Check resource caps
         if seed[3] > hydro_cap:
             continue
+        if n_res > 4 and seed[4] > GEO_CAP_PCT:
+            continue
+        if seed[0] > RESOURCE_CAPS['clean_firm']:
+            continue
+        if seed[1] > RESOURCE_CAPS['solar']:
+            continue
+        if seed[2] > RESOURCE_CAPS['wind']:
+            continue
+        if sum(seed) == 0:
+            continue
         key = tuple(seed)
-        if key not in seen and sum(seed) == 100:
+        if key not in seen:
             seen.add(key)
             valid.append(seed)
-    return np.array(valid, dtype=np.float64) if valid else np.empty((0, 4))
+
+    return np.array(valid, dtype=np.float64) if valid else np.empty((0, n_res))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
