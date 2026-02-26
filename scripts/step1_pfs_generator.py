@@ -909,17 +909,29 @@ def _batch_mixes_storage_screen(demand, supply_rows_batch, procurement, n_mixes,
 # BATCH EVALUATION — vectorized for grid search + Numba parallel for storage
 # ══════════════════════════════════════════════════════════════════════════════
 
-def batch_hourly_scores(demand_arr, supply_matrix, mix_batch):
+def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, chunk_size=20000):
     """Evaluate N mixes at once. mix_batch shape (N, n_resources), returns (N,) scores.
 
     Resource fractions are direct % of demand (no procurement multiplier).
     Uses total matched energy metric: sum(min(demand, supply)).
+
+    Processes in chunks to avoid OOM on large combo sets (e.g. CAISO 5D
+    produces 1.6M combos × 8760 hours = 106 GiB at float64 if done at once).
+    chunk_size=20000 keeps the intermediate array under ~1.4 GiB.
     """
-    # (N, n_res) @ (n_res, 8760) = (N, 8760) — all mixes in one matrix multiply
-    # mix_batch values are % of demand, so divide by 100 for fraction
-    supply_batch = (mix_batch / 100.0) @ supply_matrix
-    matched = np.minimum(demand_arr, supply_batch)
-    return matched.sum(axis=1)
+    N = len(mix_batch)
+    if N <= chunk_size:
+        supply_batch = (mix_batch / 100.0) @ supply_matrix
+        matched = np.minimum(demand_arr, supply_batch)
+        return matched.sum(axis=1)
+
+    scores = np.empty(N, dtype=np.float64)
+    for start in range(0, N, chunk_size):
+        end = min(start + chunk_size, N)
+        supply_chunk = (mix_batch[start:end] / 100.0) @ supply_matrix
+        np.minimum(demand_arr, supply_chunk, out=supply_chunk)
+        scores[start:end] = supply_chunk.sum(axis=1)
+    return scores
 
 
 @njit(cache=True)
@@ -1293,16 +1305,29 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     near_miss_idx = np.where(near_miss_mask)[0]
 
     if len(near_miss_idx) > 0:
-        # Pre-compute supply rows for near-miss combos
-        nm_fracs = coarse_combos[near_miss_idx] / 100.0
-        nm_supply = nm_fracs @ supply_matrix  # (N_nm, 8760)
         n_nm = len(near_miss_idx)
+        NM_CHUNK = 20000  # ~1.4 GiB per chunk at float64 × 8760
 
-        # Batch compute storage caps using Numba kernel
-        # Pass procurement=1.0 since fractions already encode generation volume
-        b4_caps, b8_caps, l_caps, hc_arr, sd_arr = _batch_compute_storage_caps(
-            demand_arr, nm_supply, 1.0, n_nm,
-            BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
+        # Chunk-wise storage cap computation (avoids allocating full N_nm × 8760)
+        b4_caps = np.empty(n_nm, dtype=np.float64)
+        b8_caps = np.empty(n_nm, dtype=np.float64)
+        l_caps = np.empty(n_nm, dtype=np.float64)
+        hc_arr = np.empty(n_nm, dtype=np.int64)
+        sd_arr = np.empty(n_nm, dtype=np.int64)
+
+        for cs in range(0, n_nm, NM_CHUNK):
+            ce = min(cs + NM_CHUNK, n_nm)
+            chunk_fracs = coarse_combos[near_miss_idx[cs:ce]] / 100.0
+            chunk_supply = chunk_fracs @ supply_matrix
+            chunk_n = ce - cs
+            cb4, cb8, cl, chc, csd = _batch_compute_storage_caps(
+                demand_arr, chunk_supply, 1.0, chunk_n,
+                BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
+            b4_caps[cs:ce] = cb4
+            b8_caps[cs:ce] = cb8
+            l_caps[cs:ce] = cl
+            hc_arr[cs:ce] = chc
+            sd_arr[cs:ce] = csd
 
         # Filter to mixes with curtailment
         nm_valid = []
@@ -1329,11 +1354,11 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             batch = nm_valid[batch_start:batch_end]
             n_batch = len(batch)
 
-            # Gather supply rows for this batch
+            # Compute supply rows on-the-fly (avoids storing full nm_supply)
             batch_supply = np.empty((n_batch, H), dtype=np.float64)
             for bi in range(n_batch):
-                ci = batch[bi][0]
-                batch_supply[bi] = nm_supply[ci]
+                orig_idx = batch[bi][1]
+                batch_supply[bi] = (coarse_combos[orig_idx] / 100.0) @ supply_matrix
 
             # Batch screen all mixes × all storage combos (procurement=1.0)
             batch_scores = _batch_mixes_storage_screen(
@@ -1413,14 +1438,29 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             fine_nm_idx = np.where(fine_nm_mask)[0]
 
             if len(fine_nm_idx) > 0:
-                nm_fine_fracs = all_fine[fine_nm_idx] / 100.0
-                nm_fine_supply = nm_fine_fracs @ supply_matrix
                 n_nm_fine = len(fine_nm_idx)
 
-                # Batch compute storage caps
-                p2_b4c, p2_b8c, p2_lc, p2_hc, p2_sd = _batch_compute_storage_caps(
-                    demand_arr, nm_fine_supply, 1.0, n_nm_fine,
-                    BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS)
+                # Chunk-wise storage cap computation
+                p2_b4c = np.empty(n_nm_fine, dtype=np.float64)
+                p2_b8c = np.empty(n_nm_fine, dtype=np.float64)
+                p2_lc = np.empty(n_nm_fine, dtype=np.float64)
+                p2_hc = np.empty(n_nm_fine, dtype=np.int64)
+                p2_sd = np.empty(n_nm_fine, dtype=np.int64)
+
+                for cs in range(0, n_nm_fine, NM_CHUNK):
+                    ce = min(cs + NM_CHUNK, n_nm_fine)
+                    chunk_fracs = all_fine[fine_nm_idx[cs:ce]] / 100.0
+                    chunk_supply = chunk_fracs @ supply_matrix
+                    chunk_n = ce - cs
+                    cb4, cb8, cl, chc, csd = _batch_compute_storage_caps(
+                        demand_arr, chunk_supply, 1.0, chunk_n,
+                        BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
+                        LDES_DURATION_HOURS)
+                    p2_b4c[cs:ce] = cb4
+                    p2_b8c[cs:ce] = cb8
+                    p2_lc[cs:ce] = cl
+                    p2_hc[cs:ce] = chc
+                    p2_sd[cs:ce] = csd
 
                 nm_fine_valid = []
                 for ci in range(n_nm_fine):
@@ -1444,9 +1484,11 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                     batch_p2 = nm_fine_valid[batch_start:batch_end]
                     n_bp2 = len(batch_p2)
 
+                    # Compute supply rows on-the-fly
                     batch_supply_p2 = np.empty((n_bp2, H), dtype=np.float64)
                     for bi in range(n_bp2):
-                        batch_supply_p2[bi] = nm_fine_supply[batch_p2[bi][0]]
+                        orig_fine_idx = batch_p2[bi][1]
+                        batch_supply_p2[bi] = (all_fine[orig_fine_idx] / 100.0) @ supply_matrix
 
                     batch_scores_p2 = _batch_mixes_storage_screen(
                         demand_arr, batch_supply_p2, 1.0, n_bp2,
@@ -1566,6 +1608,22 @@ def extract_pareto(candidates, iso):
 
 
 
+def build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2):
+    """Build fine-grained storage levels from coarse saturation analysis.
+
+    Returns dict with keys 'bat4', 'bat8', 'ldes', 'h2' — each a list of
+    levels at finer granularity than the coarse sweep. Returns None if no
+    storage was used in coarse results.
+    """
+    if max_bat4 == 0 and max_bat8 == 0 and max_ldes == 0 and max_h2 == 0:
+        return None
+    fine_bat4 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat4 + 0.25) / 0.05) + 1)]
+    fine_bat8 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat8 + 0.25) / 0.05) + 1)]
+    fine_ldes = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
+    fine_h2 = [0] + [round(x, 1) for x in range(1, int(max_h2 + 2))] if max_h2 > 0 else [0]
+    return {'bat4': fine_bat4, 'bat8': fine_bat8, 'ldes': fine_ldes, 'h2': fine_h2}
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # PER-ISO PROCESSING
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1650,16 +1708,15 @@ def process_iso(args):
           f"ldes={max_ldes:.1f}%, h2={max_h2:.1f}%")
 
     # Phase 2: Fine storage sweep within saturation range
-    fine_bat4 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat4 + 0.25) / 0.05) + 1)]
-    fine_bat8 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat8 + 0.25) / 0.05) + 1)]
-    fine_ldes = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
-    fine_h2 = [0] + [round(x, 1) for x in range(1, int(max_h2 + 2))] if max_h2 > 0 else [0]
-    fine_levels = {'bat4': fine_bat4, 'bat8': fine_bat8, 'ldes': fine_ldes, 'h2': fine_h2}
+    fine_levels = build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2)
 
-    print(f"    {iso}: Phase 2 — Fine sweep: bat4={len(fine_bat4)} levels, "
-          f"bat8={len(fine_bat8)} levels, h2={len(fine_h2)} levels")
-
-    fine_results = _run_threshold_loop("fine", fine_levels)
+    if fine_levels is not None:
+        print(f"    {iso}: Phase 2 — Fine sweep: bat4={len(fine_levels['bat4'])} levels, "
+              f"bat8={len(fine_levels['bat8'])} levels, h2={len(fine_levels['h2'])} levels")
+        fine_results = _run_threshold_loop("fine", fine_levels)
+    else:
+        print(f"    {iso}: No storage saturation — skipping Phase 2")
+        fine_results = coarse_results
 
     total_solutions = sum(len(r) for r in fine_results.values())
     print(f"    {iso}: Total: {total_solutions:,} solutions")
