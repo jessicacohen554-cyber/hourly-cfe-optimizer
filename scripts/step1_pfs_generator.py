@@ -146,8 +146,8 @@ RESOURCE_CAPS = {
     # hydro and geothermal caps are per-ISO (HYDRO_CAPS + HYDRO_ADDER_PCT, GEO_CAP_PCT)
 }
 
-# 17 thresholds
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+# 21 thresholds (10-40 added for Track 2/3 greenfield analysis)
+THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 
 # Nuclear seasonal derate — CAISO now pure nuclear (geothermal is separate 5th dim)
 NUCLEAR_SHARE_OF_CLEAN_FIRM = {
@@ -1183,10 +1183,11 @@ def build_coarse_cache(iso, demand_arr, supply_matrix):
 
     recon_scores = batch_hourly_scores(demand_arr, supply_matrix, recon_combos)
 
-    # Viability floor: any combo scoring >= 10% hourly match could be
-    # relevant for thresholds 50%+ with storage (up to ~40pp uplift).
-    # Below 10%, the combo is unreachable for any threshold.
-    VIABILITY_FLOOR = 0.10
+    # Viability floor: lowest threshold is now 10%, and storage adds up
+    # to ~40pp uplift. A combo must score at least ~1% to be reachable
+    # for any threshold. We use 0.01 as a conservative floor — this
+    # only eliminates combos with near-zero generation (effectively empty).
+    VIABILITY_FLOOR = 0.01
     interesting_mask = recon_scores >= VIABILITY_FLOOR
     n_interesting = int(interesting_mask.sum())
     pct_interesting = n_interesting / n_recon * 100 if n_recon > 0 else 0
