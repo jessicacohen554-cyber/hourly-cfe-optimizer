@@ -17,9 +17,9 @@ on:
           - MISO
           - SPP
       thresholds:
-        description: 'Comma-separated thresholds (e.g., "100", "95,92.5,90", "all")'
+        description: 'Comma-separated thresholds (e.g., "99.5,99.9", "100", "all")'
         required: true
-        default: '100'
+        default: '99.5,99.9'
       max_runtime_minutes:
         description: 'Max runtime in minutes per threshold before checkpointing (0 = no cap)'
         required: false
