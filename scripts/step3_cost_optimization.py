@@ -225,7 +225,7 @@ THRESHOLD_TARGET_YEARS = {
     50: 2030, 55: 2031, 60: 2033, 65: 2034,
     70: 2035, 75: 2036, 80: 2037, 85: 2038, 87.5: 2039,
     90: 2040, 92.5: 2043,
-    95: 2045, 97.5: 2048, 99: 2049, 100: 2050,
+    95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050, 100: 2050,
 }
 
 # Unique DG years (for efficient batching — group thresholds that share a year)
@@ -1477,7 +1477,7 @@ INPUT_DIR = Path('data/step2-ef-parquets')
 OUTPUT_DIR = Path('data/step3-cost-opt-parquets')
 
 # Thresholds to evaluate
-OUTPUT_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+OUTPUT_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 
 
 def effective_gate(thr):

@@ -163,7 +163,7 @@ COMMITTED_CLEAN_PIPELINE = {
 
 # ── Scenario Parameters ───────────────────────────────────────────────────
 PARTICIPATION_RATES = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100]
-MATCH_TARGETS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+MATCH_TARGETS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 TIME_HORIZONS = list(range(2025, 2051))  # Annual: 2025–2050 (26 years)
 GROWTH_LEVELS = ["Low", "Medium", "High"]
 ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
