@@ -32,6 +32,9 @@ import numpy as np
 # Add project root to path for dispatch_utils import
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
+sys.path.insert(0, os.path.join(BASE_DIR, 'scripts'))
+
+from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
 
 from dispatch_utils import (
     compute_fossil_retirement,
@@ -55,7 +58,6 @@ OUTPUT_JS = os.path.join(BASE_DIR, 'dashboard', 'js', 'consequential-queue-data.
 
 # ========== CONSTANTS ==========
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
 MEDIUM_KEYS = {

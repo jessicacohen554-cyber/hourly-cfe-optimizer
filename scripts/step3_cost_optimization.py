@@ -232,6 +232,7 @@ DEMAND_GROWTH_LEVELS = ['Low', 'Medium', 'High']
 # Each threshold is paired with the year when that clean energy % is expected.
 # DG sweep evaluates each threshold only at its matched year × L/M/H growth.
 THRESHOLD_TARGET_YEARS = {
+    10: 2026, 20: 2027, 30: 2028, 40: 2029,
     50: 2030, 55: 2031, 60: 2033, 65: 2034,
     70: 2035, 75: 2036, 80: 2037, 85: 2038, 87.5: 2039,
     90: 2040, 92.5: 2043,
@@ -1482,7 +1483,7 @@ INPUT_DIR = Path('data/step2-ef-parquets')
 OUTPUT_DIR = Path('data/step3-cost-opt-parquets')
 
 # Thresholds to evaluate
-OUTPUT_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+OUTPUT_THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 
 
 def effective_gate(thr):
