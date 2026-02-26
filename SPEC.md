@@ -1137,7 +1137,7 @@ data/step5-post-processing/lmp/                      # Output directory
   - **Peak capacity credit**: 0.85 (dispatchable but slower ramp than gas/battery)
   - **Merit order rationale**: Battery → LDES → H2 is economically robust because (1) higher RTE storage should fill short gaps first to minimize surplus waste, (2) battery $/kW is lower than LDES for 4hr needs, (3) H2's only advantage is very cheap $/kWh (salt caverns) at multi-week timescales where LDES is prohibitively expensive.
 - **CAISO geothermal as 5th physics dimension** (added Feb 2026):
-  - CAISO uses 5D grid search: [clean_firm (nuclear/CCS only), solar, wind, hydro, geothermal], all summing to 100%.
+  - CAISO uses 5D grid search: [clean_firm (nuclear/CCS only), solar, wind, hydro, geothermal] — each as independent % of demand (no sum constraint).
   - **Geothermal profile**: Flat year-round (1/8760 per hour). No seasonal derate — geothermal has no refueling outages.
   - **CAISO clean_firm profile**: Now purely nuclear with full seasonal derate (NUCLEAR_SHARE_OF_CLEAN_FIRM = 1.0 for CAISO). The 70/30 nuclear/geo blend is removed; geothermal physics are captured by the separate dimension.
   - **Geothermal cap**: (existing_geo_TWh + GEO_CAP_TWH) / CAISO_demand_TWh = (5.31 + 39.0) / 224.039 = 19.8% → capped at 20% in grid search.
@@ -1892,35 +1892,35 @@ For each resource:
 - **Cross-pollination**: After representative scenarios run per threshold, every unique mix re-evaluated against all scenarios
 - **15 thresholds × 5 regions × 5,832 scenarios** — incremental saves essential for reliability
 
-### 11.1 Adaptive Procurement Bounds (v4.0 — Decision 3C: Threshold-Adaptive)
+### 11.1 Direct Resource Fractions (v5.0 — replaces procurement multiplier)
 
-Narrower bounds at low thresholds where targets are easily met; wider at high thresholds to allow extreme solar+storage or wind+storage outcomes:
+**Decision (Feb 2026)**: Procurement multiplier removed. Resource fractions are now expressed directly as % of annual demand. No sum-to-100% constraint. Total generation (sum of all fractions) is what "procurement" used to be, but implicit.
 
-| Threshold | Min% | Max% | Rationale |
-|-----------|------|------|-----------|
-| 50% | 50 | 150 | Easy target, modest headroom |
-| 60% | 60 | 150 | Easy target |
-| 70% | 70 | 175 | Moderate headroom |
-| 75% | 75 | 200 | Allow 2× procurement for renewable-heavy mixes |
-| 80% | 80 | 200 | Allow 2× procurement |
-| 85% | 85 | 225 | Growing overprocurement for extreme renewables |
-| 87.5% | 87 | 250 | 2.5× procurement |
-| 90% | 90 | 250 | 2.5× procurement — cap for 90-99% per user direction |
-| 92.5% | 92 | 250 | 2.5× procurement |
-| 95% | 95 | 250 | 2.5× procurement |
-| 97.5% | 100 | 250 | 2.5× procurement |
-| 99% | 100 | 250 | 2.5× procurement |
-| 100% | 100 | 500 | 5× procurement for perfect hourly matching |
+**Old approach (removed)**: Mix shape (clean_firm + solar + wind + hydro = 100%) × procurement multiplier (50–500%). This created redundant evaluations — e.g., `(50% solar, 50% wind) @ 200%` and `(100% solar, 0% wind)` at different procurement levels could produce similar supply profiles. The procurement dimension was an unnecessary indirection.
 
-**Resource ceiling**: `max_single=100` — any single resource can be up to 100% of the mix allocation. Combined with high procurement, this enables outcomes like 200% of demand from solar alone (100% solar mix at 200% procurement). This captures extreme solar+storage and wind+storage scenarios that may be cost-optimal at lower thresholds.
+**New approach**: Each resource varies independently as % of demand:
+| Resource | Range | Step (coarse) | Step (fine) | Cap logic |
+|----------|-------|---------------|-------------|-----------|
+| Clean Firm (nuclear/CCS) | 0–100% | 5% | 1% | Flat profile → >100% is pure surplus |
+| Solar | 0–200% | 5% | 1% | High values capture solar+storage strategies |
+| Wind | 0–200% | 5% | 1% | High values capture wind+storage strategies |
+| Hydro | 0–cap% | 5% | 1% | Regional cap (existing only) |
+| Geothermal (CAISO only) | 0–20% | 5% | 1% | (existing + potential) / demand |
 
-**Procurement step**: Adaptive based on range width — 2% step for narrow ranges (<100%), 5% for medium (100-200%), 10% for wide (>200%). Keeps runtime bounded while preserving resolution where it matters.
+**One-time coarse sweep**: All resource fraction combos scored once. Each combo has exactly one hourly match score (no procurement sweep). The score matrix `(n_combos,)` is valid for ALL thresholds — filter by `score >= target` for each threshold. This eliminates per-threshold Phase 1a recomputation.
 
-**Per-mix early stopping**: For each (mix, storage_config) combination, procurement is swept low→high and stops at the first level that clears the target. Lower procurement = lower cost, so the first-feasible procurement is always the cost-optimal choice for that mix. This prevents exploring the vast upper range of procurement bounds for mixes that achieve feasibility early.
+**Per-threshold extraction**: For each threshold, combos where `score >= target` are feasible. Near-miss combos (within 40pp) get storage sweep. Fine refinement (1% step) around frontier combos.
 
-**Cross-threshold pruning**: Thresholds are processed in ascending order (50% → 100%). After each threshold, the optimizer records which mixes were infeasible even at maximum procurement. These mixes are eliminated from all higher thresholds (if it can't hit 50%, it can't hit 85%). Additionally, each mix's minimum-feasible procurement from the previous threshold becomes the floor for the next threshold (no point starting below the level needed for a lower target). This dramatically narrows the search space for high thresholds.
+**What this removes**:
+- `procurement_pct` column from all parquets (step1 → step2 → step3 → dashboard)
+- `PROCUREMENT_BOUNDS` dict
+- `vectorized_procurement_sweep()` function
+- Binary search on procurement in storage sweep
+- Cross-threshold pruning logic (unnecessary — all scores known from single sweep)
 
-**Persistent solution cache**: Results are accumulated in `data/step1-pfs-parquets/` as per-ISO/threshold parquet files across runs. Each run merges new solutions with existing results — deduplicating by (mix, procurement, battery, ldes) key but never deleting previously found solutions. This means iterating on parameter bounds, procurement ceilings, or grid resolution adds to the feasible solution space without losing work from prior runs. The cost model in Step 3 always operates on the EF extracted in Step 2.
+**Cost formula change**: Step 3 simplifies from `resource_frac/100 × procurement/100 × LCOE` to `resource_frac/100 × LCOE × demand_TWh`. Resource fractions directly represent generation volume.
+
+**Persistent solution cache**: Results accumulated in `data/step1-pfs-parquets/` as per-ISO/threshold parquet files. Deduplication by (resource fractions, storage levels) key — no procurement dimension.
 
 ### 11.2 Edge Case Seed Mixes
 
