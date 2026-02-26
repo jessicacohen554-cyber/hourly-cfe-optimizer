@@ -82,10 +82,10 @@ jobs:
         if [ "$ISO" = "ALL" ]; then
           for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
             echo "=== Generating mixes for $iso ==="
-            python scripts/step1a_generate_mixes.py --iso "$iso" --force
+            python scripts/step1a_generate_mixes.py --iso "$iso"
           done
         else
-          python scripts/step1a_generate_mixes.py --iso "$ISO" --force
+          python scripts/step1a_generate_mixes.py --iso "$ISO"
         fi
 
     - name: "Stage 1b: Score mix combinations"
@@ -96,10 +96,10 @@ jobs:
         if [ "$ISO" = "ALL" ]; then
           for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
             echo "=== Scoring mixes for $iso ==="
-            python scripts/step1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK" --force
+            python scripts/step1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK"
           done
         else
-          python scripts/step1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK" --force
+          python scripts/step1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK"
         fi
 
     - name: "Stage 1c: Build PFS from scored database"
