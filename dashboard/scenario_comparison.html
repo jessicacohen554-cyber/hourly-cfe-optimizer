@@ -973,21 +973,36 @@ function renderMixCharts(iso) {
             return splitCleanFirm(iso, totalCf, existingNuclearTwh);
         });
 
-        // Pre-compute curtailment per trajectory point so we can subtract
-        // it from resource bars (showing only utilized) and add it as hatched bars
-        const curtailData = traj.map(d => {
+        // Pre-compute curtailment per trajectory point — pro-rata across ALL new-build resources
+        // (not just VRE). This ensures firm overprovisioning also shows as hatched/curtailed.
+        const curtailData = traj.map((d, idx) => {
             const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
             const matched = d.threshold / 100 * (d.demand_twh || baseDemandTwh);
             const totalCurtailed = Math.max(0, totalProcured - matched);
-            const newSol = Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0));
-            const newWnd = Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0));
-            const totalVRE = newSol + newWnd;
-            return {
-                total: totalCurtailed,
-                solar: totalVRE >= 1 ? totalCurtailed * (newSol / totalVRE) : 0,
-                wind: totalVRE >= 1 ? totalCurtailed * (newWnd / totalVRE) : 0,
-                matched: matched,
+
+            // Compute new-build TWh for each resource
+            const cf = cfBreakdown[idx];
+            const newBuildTwh = {
+                solar: Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0)),
+                wind: Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0)),
+                hydro: Math.max(0, (d.resource_twh.hydro || 0) - (existingTwh.hydro || 0)),
+                ccs_ccgt: Math.max(0, (d.resource_twh.ccs_ccgt || 0) - (existingTwh.ccs_ccgt || 0)),
+                battery: d.resource_twh.battery || d.battery_twh || 0,
+                ldes: d.resource_twh.ldes || d.ldes_twh || 0,
+                nuclear_uprate: cf.nuclear_uprate,
+                nuclear_new: cf.nuclear_new,
+                geothermal: cf.geothermal,
             };
+            const totalNewBuild = Object.values(newBuildTwh).reduce((s, v) => s + v, 0);
+
+            // Pro-rata curtailment across ALL new-build resources
+            const curtail = {};
+            for (const [res, val] of Object.entries(newBuildTwh)) {
+                curtail[res] = totalNewBuild > 1 ? totalCurtailed * (val / totalNewBuild) : 0;
+            }
+            curtail.total = totalCurtailed;
+            curtail.matched = matched;
+            return curtail;
         });
 
         // === 1) EXISTING RESOURCES (transparent, bottom of stack) ===
@@ -1027,9 +1042,8 @@ function renderMixCharts(iso) {
                     const total = d.resource_twh[res] || 0;
                     const ex = existingTwh[res] || 0;
                     let newBuild = Math.max(0, total - ex);
-                    // Subtract curtailed portion for VRE resources
-                    if (res === 'solar') newBuild = Math.max(0, newBuild - curtailData[i].solar);
-                    if (res === 'wind') newBuild = Math.max(0, newBuild - curtailData[i].wind);
+                    // Subtract pro-rata curtailed portion
+                    newBuild = Math.max(0, newBuild - (curtailData[i][res] || 0));
                     return Math.round(newBuild);
                 }),
                 backgroundColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.55)',
@@ -1038,20 +1052,26 @@ function renderMixCharts(iso) {
             });
         }
 
-        // Nuclear uprate + new build (combined as "Nuclear (new)")
+        // Nuclear uprate + new build (combined as "Nuclear (new)") — subtract curtailment
         datasets.push({
             label: 'Nuclear (new)',
-            data: cfBreakdown.map(b => Math.round(b.nuclear_uprate + b.nuclear_new)),
+            data: cfBreakdown.map((b, i) => {
+                const raw = b.nuclear_uprate + b.nuclear_new;
+                const curt = (curtailData[i].nuclear_uprate || 0) + (curtailData[i].nuclear_new || 0);
+                return Math.round(Math.max(0, raw - curt));
+            }),
             backgroundColor: 'rgba(' + RES_RGB.nuclear + ',0.65)',
             borderColor: 'rgba(' + RES_RGB.nuclear + ',1)',
             borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
         });
 
-        // Geothermal (CAISO only — will be 0 for all other ISOs)
+        // Geothermal (CAISO only) — subtract curtailment
         if (iso === 'CAISO') {
             datasets.push({
                 label: 'Geothermal (new)',
-                data: cfBreakdown.map(b => Math.round(b.geothermal)),
+                data: cfBreakdown.map((b, i) => {
+                    return Math.round(Math.max(0, b.geothermal - (curtailData[i].geothermal || 0)));
+                }),
                 backgroundColor: 'rgba(' + RES_RGB.geothermal + ',0.55)',
                 borderColor: 'rgba(' + RES_RGB.geothermal + ',1)',
                 borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
@@ -1059,24 +1079,30 @@ function renderMixCharts(iso) {
         }
 
         // === 3) CURTAILMENT (diagonal stripes, top of stack) ===
-        // These sit on top of the utilized resource bars. The demand line below
-        // marks the boundary between utilized and curtailed.
-        const curtailRes = ['solar', 'wind'];
-        for (const res of curtailRes) {
+        // Pro-rata curtailment across all new-build resource types.
+        const curtailResources = [
+            { key: 'solar', label: 'Solar', rgb: RES_RGB.solar },
+            { key: 'wind', label: 'Wind', rgb: RES_RGB.wind },
+            { key: 'nuclear_uprate', label: 'Nuclear', rgb: RES_RGB.nuclear, combineWith: 'nuclear_new' },
+            { key: 'ccs_ccgt', label: 'CCS', rgb: RES_RGB.ccs_ccgt },
+            { key: 'geothermal', label: 'Geothermal', rgb: RES_RGB.geothermal, onlyIso: 'CAISO' },
+        ];
+        for (const cr of curtailResources) {
+            if (cr.onlyIso && iso !== cr.onlyIso) continue;
             datasets.push({
-                label: (RES_LABELS[res] || res) + ' (curtailed)',
+                label: cr.label + ' (curtailed)',
                 data: curtailData.map(c => {
-                    const v = res === 'solar' ? c.solar : c.wind;
+                    let v = c[cr.key] || 0;
+                    if (cr.combineWith) v += (c[cr.combineWith] || 0);
                     return v >= 1 ? Math.round(v) : 0;
                 }),
-                backgroundColor: createStripePattern(ctx, RES_RGB[res]),
-                borderColor: 'rgba(' + RES_RGB[res] + ',0.4)',
+                backgroundColor: createStripePattern(ctx, cr.rgb),
+                borderColor: 'rgba(' + cr.rgb + ',0.4)',
                 borderWidth: 1, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
             });
         }
 
         // === 4) CFE TARGET LINE (matched demand) ===
-        // Sits at threshold% × demand — the boundary between utilized and curtailed generation.
         datasets.push({
             label: 'CFE Target',
             data: curtailData.map(c => Math.round(c.matched)),
@@ -1084,6 +1110,17 @@ function renderMixCharts(iso) {
             borderColor: 'rgba(0,0,0,0.7)', borderWidth: 2, borderDash: [6, 3],
             pointRadius: 0, pointHoverRadius: 4, pointBackgroundColor: 'rgba(0,0,0,0.7)',
             fill: false, tension: 0, yAxisID: 'y', order: -2,
+        });
+
+        // === 5) EXISTING CLEAN GEN REFERENCE LINE ===
+        const existingCleanTwh = Object.values(existingTwh).reduce((s, v) => s + v, 0) + existingNuclearTwh;
+        datasets.push({
+            label: 'Existing Clean',
+            data: traj.map(() => Math.round(existingCleanTwh)),
+            type: 'line',
+            borderColor: 'rgba(14,165,233,0.5)', borderWidth: 1.5, borderDash: [4, 4],
+            pointRadius: 0, pointHoverRadius: 3, pointBackgroundColor: 'rgba(14,165,233,0.5)',
+            fill: false, tension: 0, yAxisID: 'y', order: -1,
         });
 
         return datasets;
