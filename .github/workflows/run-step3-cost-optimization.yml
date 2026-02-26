@@ -3,6 +3,16 @@ name: Run Step 3 Cost Optimization
 on:
   workflow_dispatch:
     inputs:
+      track:
+        description: 'Which track to run'
+        required: true
+        default: 'track1-baseline'
+        type: choice
+        options:
+          - track1-baseline
+          - track2-newbuild
+          - track3-cost-to-replace
+          - track2-and-3
       iso:
         description: 'ISO to run (CAISO, ERCOT, PJM, NYISO, NEISO — or ALL)'
         required: true
@@ -17,6 +27,14 @@ on:
           - NEISO
           - MISO
           - SPP
+      sensitivity_mode:
+        description: 'Track 2-3 sensitivity mode (ignored for Track 1)'
+        required: false
+        default: 'medium'
+        type: choice
+        options:
+          - medium
+          - full
 
 env:
   BRANCH_PREFIX: step3-co
@@ -24,7 +42,7 @@ env:
 jobs:
   run-step3:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 480
 
     permissions:
       contents: write
@@ -41,8 +59,9 @@ jobs:
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
           ISO_LABEL="${{ github.event.inputs.iso }}"
-          echo "TARGET_BRANCH=auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LABEL}" >> "$GITHUB_ENV"
-          echo "Branch: auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LABEL}"
+          TRACK_LABEL="${{ github.event.inputs.track }}"
+          echo "TARGET_BRANCH=auto/${TIMESTAMP}-${BRANCH_PREFIX}-${TRACK_LABEL}-${ISO_LABEL}" >> "$GITHUB_ENV"
+          echo "Branch: auto/${TIMESTAMP}-${BRANCH_PREFIX}-${TRACK_LABEL}-${ISO_LABEL}"
 
       - name: Create fresh branch from master
         run: |
@@ -73,8 +92,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy numba pyarrow
 
-      - name: Ensure output directory exists
-        run: mkdir -p data/step3-cost-opt-parquets
+      - name: Ensure output directories exist
+        run: |
+          mkdir -p data/step3-cost-opt-parquets
+          mkdir -p dashboard
 
       - name: Build ISO arguments
         id: iso-args
@@ -86,16 +107,63 @@ jobs:
             echo "iso_flags=--iso $INPUT_ISO" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run Step 3 Cost Optimization
+      - name: Build Track 2-3 arguments
+        id: track-args
         run: |
+          INPUT_MODE="${{ github.event.inputs.sensitivity_mode }}"
+          FLAGS=""
+          if [ "$INPUT_MODE" = "full" ]; then
+            FLAGS="--full"
+          fi
+          echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
+
+      # ════════════════════════════════════════════════════════════════════
+      # TRACK 1: Baseline cost optimization
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: "Track 1: Run Baseline Cost Optimization"
+        if: ${{ github.event.inputs.track == 'track1-baseline' }}
+        run: |
+          echo "=== Track 1: Baseline Cost Optimization ==="
           python scripts/step3_cost_optimization.py ${{ steps.iso-args.outputs.iso_flags }}
+
+      # ════════════════════════════════════════════════════════════════════
+      # TRACK 2: New-Build cost optimization
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: "Track 2: Run New-Build Cost Optimization"
+        if: ${{ github.event.inputs.track == 'track2-newbuild' || github.event.inputs.track == 'track2-and-3' }}
+        run: |
+          echo "=== Track 2: New-Build Cost Optimization ==="
+          python scripts/step3_track_nb_ctr.py --fresh --track nb ${{ steps.iso-args.outputs.iso_flags }} ${{ steps.track-args.outputs.flags }}
+
+      # ════════════════════════════════════════════════════════════════════
+      # TRACK 3: Cost-to-Replace optimization
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: "Track 3: Run Cost-to-Replace Optimization"
+        if: ${{ github.event.inputs.track == 'track3-cost-to-replace' || github.event.inputs.track == 'track2-and-3' }}
+        run: |
+          echo "=== Track 3: Cost-to-Replace Optimization ==="
+          python scripts/step3_track_nb_ctr.py --fresh --track ctr ${{ steps.iso-args.outputs.iso_flags }} ${{ steps.track-args.outputs.flags }}
+
+      # ════════════════════════════════════════════════════════════════════
+      # COMMIT & PR
+      # ════════════════════════════════════════════════════════════════════
 
       - name: Commit and push Step 3 outputs
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f data/step3-cost-opt-parquets/
+          # Stage outputs based on track
+          TRACK="${{ github.event.inputs.track }}"
+          if [ "$TRACK" = "track1-baseline" ]; then
+            git add -f data/step3-cost-opt-parquets/ 2>/dev/null || true
+          else
+            git add -f dashboard/track_scenarios.parquet 2>/dev/null || true
+            git add -f dashboard/track_demand_growth.parquet 2>/dev/null || true
+          fi
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -103,7 +171,8 @@ jobs:
           fi
 
           ISO_LABEL="${{ github.event.inputs.iso }}"
-          git commit -m "Step 3 CO: cost optimization ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          TRACK_LABEL="${{ github.event.inputs.track }}"
+          git commit -m "Step 3: ${TRACK_LABEL} ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           # Push fresh branch (retry for transient network errors only)
           MAX_RETRIES=5
@@ -136,9 +205,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_BODY="## Summary"$'\n'"- Step 3 cost optimization results for **${{ github.event.inputs.iso }}**"$'\n'"- Auto-generated by GitHub Actions workflow run"
+          TRACK_LABEL="${{ github.event.inputs.track }}"
+          PR_BODY="## Summary"$'\n'"- Step 3 cost optimization: **${TRACK_LABEL}** for **${{ github.event.inputs.iso }}**"$'\n'"- Auto-generated by GitHub Actions workflow run"
           gh pr create \
-            --title "Step 3 CO: cost optimization ${{ github.event.inputs.iso }}" \
+            --title "Step 3: ${TRACK_LABEL} ${{ github.event.inputs.iso }}" \
             --body "$PR_BODY" \
             --base master \
             --head "$TARGET_BRANCH" || echo "PR creation skipped (no diff or already exists)"

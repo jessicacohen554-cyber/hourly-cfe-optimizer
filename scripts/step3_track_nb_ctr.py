@@ -792,10 +792,14 @@ def main():
                         help='Ignore checkpoint and start from scratch.')
     parser.add_argument('--iso', type=str, default=None,
                         help='Run only this ISO (e.g., PJM). Default: all ISOs.')
+    parser.add_argument('--track', type=str, default='both',
+                        choices=['nb', 'ctr', 'both'],
+                        help='Which track to run: nb (newbuild), ctr (cost-to-replace), or both. Default: both.')
     args = parser.parse_args()
 
+    track_labels = {'nb': 'NEW-BUILD (NB) only', 'ctr': 'COST-TO-REPLACE (CTR) only', 'both': 'NEW-BUILD (NB) + COST-TO-REPLACE (CTR)'}
     print("=" * 70)
-    print("  TRACK 2-3: NEW-BUILD (NB) + COST-TO-REPLACE (CTR)")
+    print(f"  TRACK 2-3: {track_labels[args.track]}")
     print(f"  Mode: {'Full sweep (all combos)' if args.full else 'Medium-only (fast)'}")
     print(f"  EF source: {EF_ISO_DIR}")
     print(f"  Checkpoint: Parquet-based ({PQ_SCENARIOS_PATH})")
@@ -858,7 +862,7 @@ def main():
         }
 
         # Track 2: newbuild / NB (hydro=0, all existing zeroed, uprates ON)
-        if (iso, 'newbuild') not in completed_tracks:
+        if args.track in ('nb', 'both') and (iso, 'newbuild') not in completed_tracks:
             h0_mask = iso_arrays['hydro'] == 0
             n_h0 = h0_mask.sum()
             if n_h0 > 0:
@@ -882,11 +886,11 @@ def main():
                         append_to_parquet(dg_rows, PQ_DG_PATH)
             else:
                 print(f"  {iso:>6}   newbuild: no hydro=0 mixes")
-        else:
+        elif args.track in ('nb', 'both'):
             print(f"  {iso:>6}   newbuild: skipped (in parquet)")
 
         # Track 3: cost-to-replace / CTR (hydro at existing floor, everything else zeroed, uprates OFF)
-        if (iso, 'cost_to_replace') not in completed_tracks:
+        if args.track in ('ctr', 'both') and (iso, 'cost_to_replace') not in completed_tracks:
             # Compute 2050 high-demand hydro floor
             hydro_existing_share = GRID_MIX_SHARES[iso]['hydro']
             high_rate = DEMAND_GROWTH_RATES[iso].get('High',
@@ -931,7 +935,7 @@ def main():
                 dg_rows = flatten_dg_rows(iso, 'cost_to_replace', ctr_dg)
                 if dg_rows:
                     append_to_parquet(dg_rows, PQ_DG_PATH)
-        else:
+        elif args.track in ('ctr', 'both'):
             print(f"  {iso:>6}    cost_to_replace: skipped (in parquet)")
 
     total_elapsed = time.time() - total_start
