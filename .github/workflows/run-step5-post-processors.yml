@@ -24,6 +24,7 @@ on:
         type: choice
         options:
           - ALL
+          - dispatch_cache
           - co2
           - mac
           - lmp
@@ -110,8 +111,16 @@ jobs:
           mkdir -p data/step5-post-processing/lmp
           mkdir -p dashboard/js
 
+      # ── PP0 Dispatch Cache (prerequisite for PP1/PP4/PP6) ──
+      - name: Build Dispatch Cache (PP0)
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'dispatch_cache' }}
+        run: |
+          echo "=== Building dispatch cache (PP0) ==="
+          python scripts/step5_PP0_build_dispatch_cache.py ${{ steps.iso-args.outputs.iso_flags }}
+          echo "=== Dispatch cache built ==="
+
       # ── Concurrent execution when ALL scripts selected ──
-      # Dependency chain: CO₂ → MAC (sequential), LMP + Compressed Day (independent)
+      # PP0 runs first (above), then: CO₂ → MAC (sequential), LMP + Compressed Day (independent)
       # LMP and Compressed Day start immediately in background alongside CO₂.
       # MAC waits for CO₂ to finish, then runs in background.
       # Final wait collects all exit codes.
@@ -174,6 +183,7 @@ jobs:
 
           # Stage all possible outputs
           git add -f data/step4-gas-ccs-parquets/ 2>/dev/null || true
+          git add -f data/step5-post-processing/dispatch_cache/ 2>/dev/null || true
           git add -f data/step5-post-processing/lmp/ 2>/dev/null || true
           git add -f data/step5-post-processing/ 2>/dev/null || true
           git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
