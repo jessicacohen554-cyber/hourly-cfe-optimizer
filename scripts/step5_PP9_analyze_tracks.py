@@ -26,7 +26,7 @@ TRACK_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_results.json')
 BASELINE_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CO2_BATCH_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing', 'co2_results')
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 THRESHOLDS_STR = [str(t) for t in THRESHOLDS]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
