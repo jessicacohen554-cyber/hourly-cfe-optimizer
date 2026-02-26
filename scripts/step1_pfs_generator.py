@@ -1608,6 +1608,22 @@ def extract_pareto(candidates, iso):
 
 
 
+def build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2):
+    """Build fine-grained storage levels from coarse saturation analysis.
+
+    Returns dict with keys 'bat4', 'bat8', 'ldes', 'h2' — each a list of
+    levels at finer granularity than the coarse sweep. Returns None if no
+    storage was used in coarse results.
+    """
+    if max_bat4 == 0 and max_bat8 == 0 and max_ldes == 0 and max_h2 == 0:
+        return None
+    fine_bat4 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat4 + 0.25) / 0.05) + 1)]
+    fine_bat8 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat8 + 0.25) / 0.05) + 1)]
+    fine_ldes = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
+    fine_h2 = [0] + [round(x, 1) for x in range(1, int(max_h2 + 2))] if max_h2 > 0 else [0]
+    return {'bat4': fine_bat4, 'bat8': fine_bat8, 'ldes': fine_ldes, 'h2': fine_h2}
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # PER-ISO PROCESSING
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1692,16 +1708,15 @@ def process_iso(args):
           f"ldes={max_ldes:.1f}%, h2={max_h2:.1f}%")
 
     # Phase 2: Fine storage sweep within saturation range
-    fine_bat4 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat4 + 0.25) / 0.05) + 1)]
-    fine_bat8 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat8 + 0.25) / 0.05) + 1)]
-    fine_ldes = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
-    fine_h2 = [0] + [round(x, 1) for x in range(1, int(max_h2 + 2))] if max_h2 > 0 else [0]
-    fine_levels = {'bat4': fine_bat4, 'bat8': fine_bat8, 'ldes': fine_ldes, 'h2': fine_h2}
+    fine_levels = build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2)
 
-    print(f"    {iso}: Phase 2 — Fine sweep: bat4={len(fine_bat4)} levels, "
-          f"bat8={len(fine_bat8)} levels, h2={len(fine_h2)} levels")
-
-    fine_results = _run_threshold_loop("fine", fine_levels)
+    if fine_levels is not None:
+        print(f"    {iso}: Phase 2 — Fine sweep: bat4={len(fine_levels['bat4'])} levels, "
+              f"bat8={len(fine_levels['bat8'])} levels, h2={len(fine_levels['h2'])} levels")
+        fine_results = _run_threshold_loop("fine", fine_levels)
+    else:
+        print(f"    {iso}: No storage saturation — skipping Phase 2")
+        fine_results = coarse_results
 
     total_solutions = sum(len(r) for r in fine_results.values())
     print(f"    {iso}: Total: {total_solutions:,} solutions")
