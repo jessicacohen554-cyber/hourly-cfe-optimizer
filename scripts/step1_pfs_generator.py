@@ -116,7 +116,7 @@ HYDRO_CAPS = {
 }
 
 # 15 thresholds (v4.1: added 55, 65 for finer low-range granularity)
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 
 # Threshold-adaptive procurement bounds (Decision 3C, expanded)
 # 90-99%: capped at 250% per user direction (high enough for extreme renewables,
@@ -139,6 +139,8 @@ PROCUREMENT_BOUNDS = {
     95:   (95, 250),
     97.5: (100, 250),
     99:   (100, 250),
+    99.5: (100, 300),
+    99.9: (100, 350),
     100:  (100, 350),
 }
 

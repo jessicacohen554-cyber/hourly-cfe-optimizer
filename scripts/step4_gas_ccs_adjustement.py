@@ -53,7 +53,7 @@ DEFAULT_OUTPUT_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-ccs-parquets')
 ANALYSIS_PATH = os.path.join(SCRIPT_DIR, 'data', 'step4-gas-ccs-parquets', 'step4_analysis.json')
 
 ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COST TABLES (duplicated from optimizer for standalone operation)
