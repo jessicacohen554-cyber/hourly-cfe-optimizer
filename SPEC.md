@@ -1,9 +1,28 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-21.
+> Last updated: 2026-02-26.
 
-## Current Status (Feb 21, 2026)
+## Current Status (Feb 26, 2026)
+
+### Pipeline Audit & Dispatch Consolidation (Feb 26, 2026)
+
+**Completed:**
+- Created `step5_PP0_build_dispatch_cache.py` — pre-computes 8,760-hour dispatch for all unique mixes across all ISOs. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles.
+- Extended `dispatch_utils.py` with `detailed=True` mode on `reconstruct_hourly_dispatch()`: adds per-resource merit-order breakdown (CF→CCS→hydro→wind→solar) and storage charge tracking.
+- Added `DISPATCH_ORDER`, `CACHE_VERSION`, `_compute_per_resource_dispatch()`, `_battery_loop_detailed()`, `_ldes_loop_detailed()` to dispatch_utils.
+- Fixed PP4 supply profile bug: was importing `get_supply_profiles_simple` (flat clean_firm, no DST correction) instead of canonical `get_supply_profiles`. CO₂ results on the dispatch path will now use correct nuclear seasonal derate + DST-corrected solar.
+- Refactored PP1 (`step5_PP1_compressed_day.py`): removed ~170 lines of duplicate dispatch engine (battery/LDES loops, supply profiles, data loading). Now imports from dispatch_utils and reads from PP0 cache.
+- Added cache-miss warning to PP6.
+- Removed dead code: `get_supply_profiles_simple` from dispatch_utils.
+- Added version metadata support to `load/save_dispatch_cache()`.
+- Updated all documentation: SPEC.md, CLAUDE.md, README.md, pipeline.html, optimizer_methodology.html.
+- Added MISO and SPP ISO support across pipeline and dashboard.
+
+**Pipeline execution order (Step 5):**
+```
+Step 4 → PP0 (cache builder) → PP1/PP4/PP5/PP6 (read from cache, run in parallel)
+```
 
 ### Step 1 PFS Rebuild — Two-Phase Adaptive Storage Sweep (Feb 21, 2026)
 
@@ -351,7 +370,7 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 | D | Numba JIT (try/fallback) | Compile storage scoring to machine code; fall back to B+C if install fails | 10-50× on storage (if available) |
 | F | Shared memory cache | `multiprocessing.shared_memory` for parallel ISO workers to share data | Enables A |
 
-**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (5,832 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 21,060 cost-coupled optimizations to 75 physics-only sweeps (15 thresholds × 5 ISOs), each finding the Pareto frontier of feasible mixes.
+**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (5,832 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 21,060 cost-coupled optimizations to 105 physics-only sweeps (15 thresholds × 7 ISOs), each finding the Pareto frontier of feasible mixes.
 
 **Projected runtime**: ~1-3 min with Numba (installed successfully). Down from multi-hour current architecture.
 
@@ -372,7 +391,7 @@ The optimizer runs as a 4-step pipeline. Each step is independent — only re-ru
 
 | Step | Script | Name | What It Does | When to Re-run |
 |------|--------|------|-------------|---------------|
-| **Step 1** | `step1_pfs_generator.py` | **PFS Generator** | Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces physics-validated mixes across 5 ISOs × 15 thresholds. | Only if dispatch logic, generation curves, or demand curves change. |
+| **Step 1** | `step1_pfs_generator.py` | **PFS Generator** | Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces physics-validated mixes across 7 ISOs × 15 thresholds. | Only if dispatch logic, generation curves, or demand curves change. |
 | **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** | Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement per allocation, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
 | **Step 3** | `step3_cost_optimization.py` | **Cost Optimization** | Vectorized cross-evaluation of all EF mixes under 5,832 sensitivity combos. Merit-order tranche pricing for clean firm. Extracts archetypes and sweeps demand growth scenarios (25 years × 3 growth rates). | When cost assumptions, tranche caps, LCOE tables, or sensitivity toggles change. |
 | **Step 4** | `step4_postprocess.py` | **Post-Processing** | NEISO gas constraint, CCS vs LDES crossover analysis, CO₂ calculations, MAC calculations. Produces final corrected results for the dashboard. | When Step 3 outputs change, or when CO₂ methodology changes. |
@@ -841,7 +860,7 @@ step5_PP6_compute_lmp_prices.py (imports dispatch_utils)
 └── calibration framework
 ```
 
-**PP0 pipeline position**: Runs after Step 4, before PP1/PP4/PP6. Pre-computes dispatch for ~645 unique mixes across 5 ISOs. Cache is versioned (v2) to invalidate stale v1 caches built with inconsistent supply profiles.
+**PP0 pipeline position**: Runs after Step 4, before PP1/PP4/PP6. Pre-computes dispatch for all unique mixes across 7 ISOs. Cache is versioned (v2) to invalidate stale v1 caches built with inconsistent supply profiles.
 
 **PP4 bug fix (Feb 2026)**: PP4 was importing `get_supply_profiles_simple` (flat clean_firm, no DST correction) instead of the canonical `get_supply_profiles`. Fixed to use the same nuclear-derated, DST-corrected profiles as Step 1. CO₂ results on the dispatch path will differ slightly from pre-fix.
 

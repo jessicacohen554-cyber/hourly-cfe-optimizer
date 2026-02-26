@@ -594,7 +594,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     <h1>The 8,760 Problem <span class="accent">Optimizer</span></h1>
     <p class="hero-desc">
         A procurement-focused hourly CFE optimizer that co-optimizes resource mix and cost across 9 sensitivity
-        dimensions. Full 8,760-hour resolution, 5 U.S. ISOs, &gt;5,000 cost scenarios per region. The model takes
+        dimensions. Full 8,760-hour resolution, 7 U.S. ISOs, &gt;5,000 cost scenarios per region. The model takes
         the grid as-given and answers: <strong style="color:#1A2744;">what portfolio of clean energy should a buyer procure to meet
         hourly matching targets at minimum cost?</strong> Not a system planning model &mdash; a procurement tool
         built on observed EIA data anchored to a 2025 snapshot.
@@ -606,7 +606,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             <div class="stat-label">Pipeline steps</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value green">5</div>
+            <div class="stat-value green">6</div>
             <div class="stat-label">Step 5 post-processors</div>
         </div>
         <div class="stat-card">
@@ -648,7 +648,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <code>scripts/step1_pfs_generator.py</code> &mdash; Generates the Physics Feasible Space (PFS).
                     4D adaptive grid search over clean_firm, solar, wind, and hydro resource fractions with
                     procurement sweep. Battery daily-cycle dispatch (4hr, 85% RTE) and LDES multi-day dispatch
-                    (100hr, 50% RTE). Produces physics-validated resource mixes across 15 thresholds and 5 ISOs.
+                    (100hr, 50% RTE). Produces physics-validated resource mixes across 15 thresholds and 7 ISOs.
                 </p>
                 <p style="color:rgba(239,68,68,0.8); font-size:0.8rem; font-weight:600;">
                     Only re-run if dispatch logic, generation curves, or demand curves change.
@@ -778,19 +778,75 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <div class="flow-card-header">
                         <h3>Post-Processors</h3>
                     </div>
-                    <p>Run independently in parallel after Step 4. Each reads from Step 3/4 outputs and produces specialized analysis data.</p>
+                    <p>PP0 (Dispatch Cache) runs first to pre-compute shared dispatch results. PP1&ndash;PP6+ then run independently in parallel, reading from the cache and Step 3/4 outputs.</p>
                 </div>
                 <div class="parallel-grid">
+                    <div class="flow-card" style="border-left: 3px solid #0EA5E9;">
+                        <div class="flow-card-header">
+                            <h3>PP0: Dispatch Cache</h3>
+                            <span class="flow-tag flow-tag-seconds">~30 sec</span>
+                        </div>
+                        <p>
+                            <code>scripts/step5_PP0_build_dispatch_cache.py</code> &mdash; <strong>Runs first.</strong>
+                            Pre-computes full 8,760-hour dispatch for all unique resource mixes across all ISOs.
+                            Uses <code>reconstruct_hourly_dispatch(detailed=True)</code> from <code>dispatch_utils.py</code>
+                            to produce per-resource matched/surplus breakdowns and storage charge profiles.
+                            Versioned cache (v2) ensures downstream scripts use consistent dispatch physics.
+                        </p>
+                        <div class="flow-files">
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">data/step4-gas-ccs-parquets/ (or step3 fallback)</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">data/EIA 930 Data/eia_generation_profiles.json, data/EIA 930 Data/eia_demand_profiles.json</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label out">OUT</span>
+                                <span class="flow-file-path">data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flow-card">
                         <div class="flow-card-header">
-                            <h3>CO&#8322; Recompute</h3>
+                            <h3>PP1: Compressed Day Profiles</h3>
+                            <span class="flow-tag flow-tag-seconds">~10 sec</span>
+                        </div>
+                        <p>
+                            <code>scripts/step5_PP1_compressed_day.py</code> &mdash; Generates 24-hour representative day profiles
+                            from the full 8,760-hour dispatch data. Reads from PP0 dispatch cache for per-resource matched/surplus
+                            breakdowns; falls back to live computation on cache miss. Compact supply/demand curves for dashboard
+                            visualization of daily dispatch patterns.
+                        </p>
+                        <div class="flow-files">
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label in">IN</span>
+                                <span class="flow-file-path">data/step4-gas-ccs-parquets/ (feasible mixes)</span>
+                            </div>
+                            <div class="flow-file">
+                                <span class="flow-file-label out">OUT</span>
+                                <span class="flow-file-path">dashboard/compressed_day_profiles.json</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-card">
+                        <div class="flow-card-header">
+                            <h3>PP4: CO&#8322; Recompute</h3>
                             <span class="flow-tag flow-tag-seconds">~15 sec</span>
                         </div>
                         <p>
                             <code>scripts/step5_PP4_recompute_co2.py</code> &mdash; Dispatch-stack emission model. Merit-order
                             retirement: coal first, then oil, then gas. Fast path uses pre-computed
-                            <code>hourly_match_score</code> (~1000x speedup). Numba-accelerated fallback for
-                            full hourly dispatch.
+                            <code>hourly_match_score</code> (~1000x speedup). Numba-accelerated fallback via
+                            canonical <code>dispatch_utils.get_supply_profiles()</code> (nuclear derate + DST correction).
+                            Reads from PP0 dispatch cache when available.
                         </p>
                         <div class="flow-files">
                             <div class="flow-file">
@@ -810,7 +866,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
                     <div class="flow-card">
                         <div class="flow-card-header">
-                            <h3>MAC Statistics</h3>
+                            <h3>PP5: MAC Statistics</h3>
                             <span class="flow-tag flow-tag-seconds">~30 sec</span>
                         </div>
                         <p>
@@ -832,26 +888,27 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
                     <div class="flow-card">
                         <div class="flow-card-header">
-                            <h3>LMP Pricing</h3>
+                            <h3>PP6: LMP Pricing</h3>
                             <span class="flow-tag flow-tag-seconds">~10 sec</span>
                         </div>
                         <p>
-                            <code>step5_PP6_compute_lmp_prices.py</code> &mdash; Wholesale energy market simulation.
+                            <code>scripts/step5_PP6_compute_lmp_prices.py</code> &mdash; Wholesale energy market simulation.
                             Dispatch-stack LMP model with merit-order fuel retirement. Computes price distributions,
-                            nuclear breakeven analysis, and revenue adequacy metrics.
+                            nuclear breakeven analysis, and revenue adequacy metrics. Reads from PP0 dispatch cache;
+                            warns on cache misses.
                         </p>
                         <div class="flow-files">
                             <div class="flow-file">
                                 <span class="flow-file-label in">IN</span>
-                                <span class="flow-file-path">dashboard/overprocure_results.json</span>
+                                <span class="flow-file-path">data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz</span>
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label in">IN</span>
-                                <span class="flow-file-path">data/EIA 930 Data/eia_generation_profiles.json, data/EIA 930 Data/eia_demand_profiles.json</span>
+                                <span class="flow-file-path">data/step4-gas-ccs-parquets/ (scenarios)</span>
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label out">OUT</span>
-                                <span class="flow-file-path">dashboard/lmp_analysis_results.json</span>
+                                <span class="flow-file-path">data/step5-post-processing/lmp/{ISO}_lmp.parquet, lmp_summary.json</span>
                             </div>
                         </div>
                     </div>
@@ -862,44 +919,18 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                             <span class="flow-tag flow-tag-minutes">~5 min</span>
                         </div>
                         <p>
-                            <code>temp_track.py</code> &mdash; Runs cost optimization for NB (new-build) and
+                            <code>scripts/step3_track_nb_ctr.py</code> &mdash; Runs cost optimization for NB (new-build) and
                             CTR (cost-to-replace) analysis tracks. Same EF mixes, different cost assumptions
                             and resource constraints.
                         </p>
                         <div class="flow-files">
                             <div class="flow-file">
                                 <span class="flow-file-label in">IN</span>
-                                <span class="flow-file-path">data/pfs_post_ef.parquet</span>
+                                <span class="flow-file-path">data/step2-ef-parquets/</span>
                             </div>
                             <div class="flow-file">
                                 <span class="flow-file-label out">OUT</span>
                                 <span class="flow-file-path">dashboard/track_results.json</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flow-card">
-                        <div class="flow-card-header">
-                            <h3>Compressed Day Profiles</h3>
-                            <span class="flow-tag flow-tag-seconds">~10 sec</span>
-                        </div>
-                        <p>
-                            <code>scripts/step5_PP1_compressed_day.py</code> &mdash; Generates 24-hour representative day profiles
-                            from the full 8,760-hour dispatch data. Compact supply/demand curves for dashboard
-                            visualization of daily dispatch patterns.
-                        </p>
-                        <div class="flow-files">
-                            <div class="flow-file">
-                                <span class="flow-file-label in">IN</span>
-                                <span class="flow-file-path">dashboard/overprocure_results.json</span>
-                            </div>
-                            <div class="flow-file">
-                                <span class="flow-file-label in">IN</span>
-                                <span class="flow-file-path">data/EIA 930 Data/eia_generation_profiles.json, data/EIA 930 Data/eia_demand_profiles.json</span>
-                            </div>
-                            <div class="flow-file">
-                                <span class="flow-file-label out">OUT</span>
-                                <span class="flow-file-path">dashboard/compressed_day_profiles.json</span>
                             </div>
                         </div>
                     </div>
@@ -1103,22 +1134,25 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <h3>dispatch_utils.py</h3>
             </div>
             <p>
-                Shared dispatch engine used by <code>scripts/step5_PP4_recompute_co2.py</code>, <code>step5_PP6_compute_lmp_prices.py</code>,
-                and <code>scripts/step5_PP1_compressed_day.py</code>. Contains Numba-compiled battery and LDES dispatch loops,
-                supply matrix construction, dispatch cache system, and merit-order fossil retirement model.
+                Single source of truth for dispatch reconstruction, supply profiles, and fossil retirement.
+                Used by PP0, PP1, PP4, and PP6. Contains Numba-compiled battery and LDES dispatch loops,
+                supply matrix construction, versioned dispatch cache system (v2), and merit-order fossil retirement model.
             </p>
             <ul style="list-style:none; padding:0; margin:8px 0 0;">
                 <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
-                    <span style="color:#38bdf8;">&#9632;</span> <code>reconstruct_hourly_dispatch()</code> &mdash; 8,760-hour supply/demand matching
+                    <span style="color:#38bdf8;">&#9632;</span> <code>reconstruct_hourly_dispatch(detailed=False)</code> &mdash; 8,760-hour supply/demand matching; <code>detailed=True</code> adds per-resource matched/surplus + charge profiles
                 </li>
                 <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
-                    <span style="color:#4ade80;">&#9632;</span> <code>build_supply_matrix()</code> &mdash; Pre-built (5, 8760) numpy array per ISO
+                    <span style="color:#4ade80;">&#9632;</span> <code>get_supply_profiles()</code> &mdash; Nuclear seasonal derate + DST-corrected solar (canonical for all scripts)
                 </li>
                 <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
                     <span style="color:#fbbf24;">&#9632;</span> <code>compute_fossil_retirement()</code> &mdash; Merit-order emission rate at threshold
                 </li>
                 <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
-                    <span style="color:#c084fc;">&#9632;</span> <code>_battery_loop() / _ldes_loop()</code> &mdash; Numba @njit compiled inner loops
+                    <span style="color:#c084fc;">&#9632;</span> <code>_battery_loop_detailed() / _ldes_loop_detailed()</code> &mdash; Numba @njit with charge tracking
+                </li>
+                <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
+                    <span style="color:#f87171;">&#9632;</span> <code>load/save_dispatch_cache(version=2)</code> &mdash; Versioned NPZ per ISO, shared across PP0/PP1/PP4/PP6
                 </li>
             </ul>
         </div>
@@ -1135,16 +1169,16 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <span style="color:#38bdf8;">&#9632;</span> <code>H = 8760</code> &mdash; Hours in a year
                 </li>
                 <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
-                    <span style="color:#4ade80;">&#9632;</span> <code>ISOS</code> &mdash; ['CAISO', 'ERCOT', 'MISO', 'PJM', 'NEISO']
+                    <span style="color:#4ade80;">&#9632;</span> <code>ISOS</code> &mdash; ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
                 </li>
                 <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
-                    <span style="color:#fbbf24;">&#9632;</span> <code>RESOURCE_TYPES</code> &mdash; ['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'hydro']
+                    <span style="color:#fbbf24;">&#9632;</span> <code>RESOURCE_TYPES</code> &mdash; ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
                 </li>
                 <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
-                    <span style="color:#f87171;">&#9632;</span> <code>GRID_MIX_SHARES</code> &mdash; Regional existing clean energy baselines
+                    <span style="color:#f87171;">&#9632;</span> <code>DISPATCH_ORDER</code> &mdash; ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar']
                 </li>
                 <li style="font-size:0.8rem; color:#4B5563; padding:3px 0;">
-                    <span style="color:#c084fc;">&#9632;</span> <code>BASE_DEMAND_TWH</code> &mdash; Regional annual demand (TWh)
+                    <span style="color:#c084fc;">&#9632;</span> <code>CACHE_VERSION = 2</code> &mdash; Dispatch cache version (v2 = detailed per-resource fields)
                 </li>
             </ul>
         </div>
