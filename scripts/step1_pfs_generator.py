@@ -1334,8 +1334,13 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     print(f"      {iso} {threshold}%: {len(feasible_idx):,} feasible without storage", end="")
 
     # ── Phase 1b: Storage sweep on near-miss combos ──
-    # Near-miss: within 40pp of target at coarse level
-    near_miss_mask = (~feasible_mask) & (coarse_scores >= target - 0.40)
+    # Near-miss: within 40pp of target at coarse level, but MUST score >50%.
+    # Storage only helps mixes that already generate substantial clean energy
+    # (surplus in some hours that can be shifted to deficit hours).
+    # Mixes below 50% don't have meaningful curtailment to shift.
+    STORAGE_SWEEP_FLOOR = 0.50
+    near_miss_lower = max(target - 0.40, STORAGE_SWEEP_FLOOR)
+    near_miss_mask = (~feasible_mask) & (coarse_scores >= near_miss_lower)
     near_miss_idx = np.where(near_miss_mask)[0]
 
     if len(near_miss_idx) > 0:
@@ -1439,12 +1444,19 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     else:
         print(f", 0 near-miss")
 
-    # ── Phase 2: Fine refinement at 1% step around feasible archetypes ──
+    # ── Phase 2: Fine refinement at 1% step around boundary archetypes ──
+    # Only refine mixes near the threshold boundary (within 3pp above target).
+    # Cost-optimal mixes barely clear the threshold — overprocuring by 10pp
+    # wastes money and won't survive Step 3 cost optimization anyway.
+    FINE_REFINEMENT_BAND = 0.03  # 3pp above target
     if candidates:
+        boundary_upper = target + FINE_REFINEMENT_BAND
         mix_archetypes = set()
         for c in candidates:
-            m = tuple(c['resource_mix'][rt] for rt in rtypes)
-            mix_archetypes.add(m)
+            score_frac = c['hourly_match_score'] / 100.0
+            if score_frac <= boundary_upper:
+                m = tuple(c['resource_mix'][rt] for rt in rtypes)
+                mix_archetypes.add(m)
 
         # Generate fine combos for all archetypes
         all_fine_parts = []
@@ -1467,8 +1479,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             for fi in fine_feas_idx:
                 add_candidate(all_fine[fi], 0, 0, 0, all_fine_scores[fi])
 
-            # Near-miss fine combos → storage sweep
-            fine_nm_mask = (~fine_feas_mask) & (all_fine_scores >= target - 0.30)
+            # Near-miss fine combos → storage sweep (same >50% floor as Phase 1b)
+            fine_nm_lower = max(target - 0.30, STORAGE_SWEEP_FLOOR)
+            fine_nm_mask = (~fine_feas_mask) & (all_fine_scores >= fine_nm_lower)
             fine_nm_idx = np.where(fine_nm_mask)[0]
 
             if len(fine_nm_idx) > 0:
