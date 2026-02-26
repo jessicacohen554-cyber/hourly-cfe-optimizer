@@ -1161,26 +1161,59 @@ def _coarse_cache_path(iso):
 
 
 def build_coarse_cache(iso, demand_arr, supply_matrix):
-    """One-time coarse sweep: score all resource fraction combos at 5% step.
+    """Two-stage adaptive coarse sweep: 10% recon → targeted 5% fill.
 
-    Scores each combo once (no procurement sweep). Saves to parquet cache.
+    Stage 1: Score all combos at 10% step (~15× fewer than uniform 5%).
+    Stage 2: Generate 5% sub-combos only around 10% cells that scored
+             above a viability floor, eliminating dead space.
+
+    The viability floor (10% hourly match) is conservative: the lowest
+    optimized threshold is 50% and storage can add ~40pp, so any combo
+    scoring below 10% is unreachable even with maximum storage.
+
     Returns (combos, scores) where combos is (N, n_res) and scores is (N,).
     """
     rtypes = get_resource_types(iso)
     n_res = len(rtypes)
 
-    # Generate all combos at 5% step
-    combos = generate_resource_combos(iso, step=5)
+    # ── Stage 1: 10% reconnaissance sweep ──
+    recon_combos = generate_resource_combos(iso, step=10)
+    n_recon = len(recon_combos)
+    print(f"    {iso}: Stage 1 — 10% recon sweep ({n_recon:,} combos, {n_res}D)")
+
+    recon_scores = batch_hourly_scores(demand_arr, supply_matrix, recon_combos)
+
+    # Viability floor: any combo scoring >= 10% hourly match could be
+    # relevant for thresholds 50%+ with storage (up to ~40pp uplift).
+    # Below 10%, the combo is unreachable for any threshold.
+    VIABILITY_FLOOR = 0.10
+    interesting_mask = recon_scores >= VIABILITY_FLOOR
+    n_interesting = int(interesting_mask.sum())
+    pct_interesting = n_interesting / n_recon * 100 if n_recon > 0 else 0
+    print(f"    {iso}: {n_interesting:,}/{n_recon:,} cells above viability floor "
+          f"({pct_interesting:.0f}%)")
+
+    # ── Stage 2: Targeted 5% fill around interesting cells ──
+    targeted_parts = [recon_combos]  # Always include the full 10% grid
+
+    for combo in recon_combos[interesting_mask]:
+        fine = generate_resource_combos_around(combo, iso, step=5, radius=1)
+        targeted_parts.append(fine)
+
+    # Add seed combos (known-interesting mixes)
     seeds = get_seed_combos(iso)
     if len(seeds) > 0:
-        combos = np.vstack([combos, seeds])
-        combos = np.unique(combos, axis=0)
+        targeted_parts.append(seeds)
+
+    combos = np.unique(np.vstack(targeted_parts), axis=0)
+    # Filter: at least some generation (sum > 0)
+    row_sums = combos.sum(axis=1)
+    combos = combos[row_sums > 0]
 
     n_combos = len(combos)
-    print(f"    {iso}: Coarse sweep — {n_combos:,} combos ({n_res}D)")
+    print(f"    {iso}: Stage 2 — {n_combos:,} targeted 5% combos")
 
-    # Score all combos in one vectorized operation
-    # mix_fracs: (N, n_res) as fraction of demand
+    # Score all targeted combos
     scores = batch_hourly_scores(demand_arr, supply_matrix, combos)
 
     # Save to parquet cache
