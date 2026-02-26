@@ -212,8 +212,8 @@ body { background: #F3F4F8; }
     </p>
 
     <div class="hero-chart-wrap">
-        <h3>Clean Firm LCOE Trajectory vs. Rising Gas Cost</h3>
-        <p class="chart-note">Green band = learning curve range. Red = gas + carbon pricing. Dashed = gas without carbon price.</p>
+        <h3>Scenario A vs B: Clean Firm Cost Trajectory &amp; Gas Reference</h3>
+        <p class="chart-note"><span style="color:#4F46E5;font-weight:600;">Scenario A</span> (deferred firm) vs <span style="color:#0891B2;font-weight:600;">Scenario B</span> (early investment). <span style="color:#DC2626;">Red</span> = gas reference.</p>
         <div class="hero-chart-container"><canvas id="foakNOAKChart"></canvas></div>
     </div>
 
@@ -1476,6 +1476,12 @@ function renderFoakNOAKChart() {
 
     const crossoverCost = crossoverYear ? Math.round(interpAt(cf.central, crossoverYear)) : null;
 
+    // Scenario A (conservative learning — deferred procurement, less market seeding)
+    // Scenario B (central learning — early firm investment, rides the curve)
+    const scenA = cf.conservative;  // deferred → conservative cost trajectory
+    const scenB = cf.central;       // early investment → central learning trajectory
+
+    // Crossover: Scenario B vs gas+carbon
     const annotations = {};
     if (crossoverYear) {
         annotations.crossoverLine = {
@@ -1500,36 +1506,55 @@ function renderFoakNOAKChart() {
         type: 'line',
         data: {
             datasets: [
+                // Scenario A band (conservative → central range, light indigo fill)
                 {
-                    label: 'Clean Firm (conservative)',
-                    data: years.map((y, i) => ({ x: y, y: cf.conservative[i] })),
-                    borderColor: 'rgba(22,163,74,0.15)', borderWidth: 0, pointRadius: 0,
-                    fill: '+2', backgroundColor: 'rgba(22,163,74,0.12)', tension: 0.35, order: 6
+                    label: 'Scenario A band',
+                    data: years.map((y, i) => ({ x: y, y: scenA[i] })),
+                    borderColor: 'rgba(79,70,229,0.12)', borderWidth: 0, pointRadius: 0,
+                    fill: '+1', backgroundColor: 'rgba(79,70,229,0.08)', tension: 0.35, order: 6
                 },
+                // Scenario A main line (indigo/purple)
                 {
-                    label: 'Clean Firm (central learning)',
-                    data: years.map((y, i) => ({ x: y, y: cf.central[i] })),
-                    borderColor: '#16A34A', borderWidth: 3, pointRadius: 5,
-                    pointBackgroundColor: '#16A34A', fill: false, tension: 0.35, order: 2
+                    label: 'Scenario A (deferred firm)',
+                    data: years.map((y, i) => ({ x: y, y: scenA[i] })),
+                    borderColor: COLORS.A, borderWidth: 3, pointRadius: 5,
+                    pointBackgroundColor: COLORS.A, fill: false, tension: 0.35, order: 2
                 },
+                // Scenario B band (central → optimistic range, light blue fill)
                 {
-                    label: 'Clean Firm (optimistic)',
+                    label: 'Scenario B band lower',
+                    data: years.map((y, i) => ({ x: y, y: scenB[i] })),
+                    borderColor: 'rgba(8,145,178,0.12)', borderWidth: 0, pointRadius: 0,
+                    fill: '+1', backgroundColor: 'rgba(8,145,178,0.08)', tension: 0.35, order: 6
+                },
+                // Scenario B main line (blue)
+                {
+                    label: 'Scenario B (early firm investment)',
+                    data: years.map((y, i) => ({ x: y, y: scenB[i] })),
+                    borderColor: COLORS.B, borderWidth: 3, pointRadius: 5,
+                    pointBackgroundColor: COLORS.B, fill: false, tension: 0.35, order: 1
+                },
+                // Optimistic bound (hidden — just closes the Scenario B band)
+                {
+                    label: 'Optimistic bound',
                     data: years.map((y, i) => ({ x: y, y: cf.optimistic[i] })),
-                    borderColor: 'rgba(22,163,74,0.15)', borderWidth: 0, pointRadius: 0,
+                    borderColor: 'rgba(8,145,178,0.12)', borderWidth: 0, pointRadius: 0,
                     fill: false, tension: 0.35, order: 6
                 },
+                // Gas + carbon pricing (red reference)
                 {
                     label: 'Gas + carbon pricing',
                     data: years.map((y, i) => ({ x: y, y: gas.with_carbon[i] })),
-                    borderColor: '#DC2626', borderWidth: 3, pointRadius: 5,
-                    pointBackgroundColor: '#DC2626', fill: false, tension: 0.35, order: 1
+                    borderColor: COLORS.gas, borderWidth: 3, pointRadius: 5,
+                    pointBackgroundColor: COLORS.gas, fill: false, tension: 0.35, order: 3
                 },
+                // Gas (no carbon price — dashed red reference)
                 {
                     label: 'Gas (no carbon price)',
                     data: years.map((y, i) => ({ x: y, y: gas.base[i] })),
                     borderColor: 'rgba(220,38,38,0.4)', borderWidth: 2, borderDash: [6, 4],
                     pointRadius: 3, pointBackgroundColor: 'rgba(220,38,38,0.4)', pointBorderWidth: 0,
-                    fill: '+0', backgroundColor: 'rgba(220,38,38,0.04)', tension: 0.35, order: 4
+                    fill: false, tension: 0.35, order: 5
                 }
             ]
         },
@@ -1542,14 +1567,16 @@ function renderFoakNOAKChart() {
                 legend: {
                     labels: {
                         color: 'rgba(0,0,0,0.6)', font: { size: 11 },
-                        filter: item => item.datasetIndex === 1 || item.datasetIndex === 3 || item.datasetIndex === 4
+                        // Show only the main lines: Scenario A (1), Scenario B (3), Gas+carbon (5), Gas base (6)
+                        filter: item => [1, 3, 5, 6].includes(item.datasetIndex)
                     }
                 },
                 tooltip: {
                     callbacks: {
                         title: items => items[0].parsed.x + '',
                         label: ctx => {
-                            if (ctx.datasetIndex === 0 || ctx.datasetIndex === 2) return null;
+                            // Hide band datasets from tooltip
+                            if ([0, 2, 4].includes(ctx.datasetIndex)) return null;
                             return ctx.dataset.label + ': $' + ctx.parsed.y + '/MWh';
                         }
                     }
