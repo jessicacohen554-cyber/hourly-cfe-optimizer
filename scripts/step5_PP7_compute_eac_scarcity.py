@@ -75,6 +75,22 @@ SSS_2025 = {
         "non_sss_twh": 17.5,     # midpoint of 15-20 (merchant wind/solar/hydro)
         "sss_pct": 0.55,
         "notes": "CT Millstone PPA, MA/CT CES, some merchant hydro/wind"
+    },
+    "MISO": {
+        "total_clean_twh": 160,
+        "sss_fixed_twh": 80,     # Nuclear fleet (~75 TWh) + public hydro (~5)
+        "sss_rps_twh": 25,       # State RPS mandates (MN, IL, MI, WI)
+        "non_sss_twh": 55,       # Merchant wind/solar
+        "sss_pct": 0.65,
+        "notes": "Large nuclear fleet, growing merchant wind. State RPSs vary widely."
+    },
+    "SPP": {
+        "total_clean_twh": 115,
+        "sss_fixed_twh": 7,      # Wolf Creek nuclear (~7 TWh) + small hydro
+        "sss_rps_twh": 8,        # KS/OK RPS (modest targets)
+        "non_sss_twh": 100,      # Mostly merchant wind (SPP is wind-dominant)
+        "sss_pct": 0.13,
+        "notes": "Wind-dominant, mostly merchant. Minimal RPS mandates."
     }
 }
 
@@ -86,6 +102,8 @@ DEMAND_GROWTH_RATES = {
     "PJM":    {"Low": 0.015, "Medium": 0.024, "High": 0.036},
     "NYISO":  {"Low": 0.013, "Medium": 0.020, "High": 0.044},
     "NEISO":  {"Low": 0.009, "Medium": 0.018, "High": 0.029},
+    "MISO":   {"Low": 0.012, "Medium": 0.022, "High": 0.038},
+    "SPP":    {"Low": 0.010, "Medium": 0.018, "High": 0.030},
 }
 
 # ── RPS / Clean Energy Target Trajectories (% of demand) ─────────────────
@@ -116,6 +134,16 @@ RPS_TARGET_TRAJECTORIES = {
         "Medium": {"2025": 0.43, "2030": 0.55, "2035": 0.65, "2040": 0.78, "2045": 0.85, "2050": 0.90},
         "High":   {"2025": 0.43, "2030": 0.62, "2035": 0.75, "2040": 0.88, "2045": 0.95, "2050": 1.00},
     },
+    "MISO": {
+        "Low":    {"2025": 0.24, "2030": 0.28, "2035": 0.32, "2040": 0.38, "2045": 0.42, "2050": 0.48},
+        "Medium": {"2025": 0.24, "2030": 0.32, "2035": 0.40, "2040": 0.48, "2045": 0.55, "2050": 0.62},
+        "High":   {"2025": 0.24, "2030": 0.38, "2035": 0.48, "2040": 0.58, "2045": 0.68, "2050": 0.75},
+    },
+    "SPP": {
+        "Low":    {"2025": 0.39, "2030": 0.42, "2035": 0.45, "2040": 0.48, "2045": 0.50, "2050": 0.52},
+        "Medium": {"2025": 0.39, "2030": 0.48, "2035": 0.55, "2040": 0.62, "2045": 0.68, "2050": 0.72},
+        "High":   {"2025": 0.39, "2030": 0.55, "2035": 0.65, "2040": 0.75, "2045": 0.82, "2050": 0.88},
+    },
 }
 
 # ── SSS Policy Evolution (fraction of NEW supply that becomes SSS) ────────
@@ -125,6 +153,8 @@ SSS_NEW_BUILD_FRACTION = {
     "PJM":    {"2025": 0.55, "2030": 0.50, "2035": 0.45, "2040": 0.40, "2045": 0.35, "2050": 0.30},
     "NYISO":  {"2025": 0.80, "2030": 0.75, "2035": 0.65, "2040": 0.55, "2045": 0.50, "2050": 0.45},
     "NEISO":  {"2025": 0.55, "2030": 0.50, "2035": 0.45, "2040": 0.40, "2045": 0.35, "2050": 0.30},
+    "MISO":   {"2025": 0.60, "2030": 0.55, "2035": 0.50, "2040": 0.45, "2045": 0.40, "2050": 0.35},
+    "SPP":    {"2025": 0.10, "2030": 0.10, "2035": 0.10, "2040": 0.10, "2045": 0.10, "2050": 0.10},
 }
 
 # ── Policy Expirations (SSS TWh that shifts to non-SSS) ──────────────────
@@ -144,6 +174,8 @@ EXISTING_CORPORATE_PPAS = {
     "CAISO": {"twh": 5,  "note": "Tech company PPAs in CA"},
     "NYISO": {"twh": 2,  "note": "Limited corporate PPAs"},
     "NEISO": {"twh": 3,  "note": "Limited corporate PPAs"},
+    "MISO":  {"twh": 10, "note": "Data center + industrial PPAs in Midwest"},
+    "SPP":   {"twh": 5,  "note": "Corporate wind PPAs in OK/KS"},
 }
 
 # ── Committed Hyperscaler Clean PPA Pipeline ─────────────────────────────
@@ -166,7 +198,7 @@ PARTICIPATION_RATES = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100]
 MATCH_TARGETS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 TIME_HORIZONS = list(range(2025, 2051))  # Annual: 2025–2050 (26 years)
 GROWTH_LEVELS = ["Low", "Medium", "High"]
-ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
+ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"]
 
 # ── C&I Share of Total Demand ─────────────────────────────────────────────
 CI_SHARE = 0.62
