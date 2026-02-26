@@ -1,4 +1,4 @@
-name: Run Step 5 Post-Processors
+name: Run Step 6 Post-Processors
 
 on:
   workflow_dispatch:
@@ -18,24 +18,26 @@ on:
           - MISO
           - SPP
       scripts:
-        description: 'Which Step 5 scripts to run'
+        description: 'Which Step 6 scripts to run'
         required: true
         default: 'ALL'
         type: choice
         options:
           - ALL
-          - step5_dispatch_cache
-          - step5_eac_scarcity
-          - step5_export_tracks
-          - step5_analyze_tracks
+          - step6_co2
+          - step6_mac
+          - step6_lmp
+          - step6_compressed_day
+          - step6_consequential
+          - step6_scenario_comparison
 
 env:
-  BRANCH_PREFIX: step5-pp
+  BRANCH_PREFIX: step6-pp
 
 jobs:
-  run-step5:
+  run-step6:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 360
 
     permissions:
       contents: write
@@ -62,7 +64,7 @@ jobs:
           git config user.email "github-actions@github.com"
           git checkout -b "$TARGET_BRANCH"
 
-      - name: Verify step-4 or step-3 parquets exist
+      - name: Verify upstream data exists
         run: |
           HAS_DATA=false
           if [ -d "data/step4-gas-ccs-parquets" ] && ls data/step4-gas-ccs-parquets/*.parquet >/dev/null 2>&1; then
@@ -79,6 +81,15 @@ jobs:
             echo "ERROR: Neither step-4 nor step-3 parquets found."
             echo "Run Step 3 or Step 4 workflow first and merge results to master."
             exit 1
+          fi
+
+          # Check dispatch cache
+          if [ -d "data/step5-post-processing/dispatch_cache" ] && ls data/step5-post-processing/dispatch_cache/*.npz >/dev/null 2>&1; then
+            echo "Dispatch cache found:"
+            ls -lh data/step5-post-processing/dispatch_cache/
+          else
+            echo "WARNING: No dispatch cache found. Scripts will compute dispatch live (slower)."
+            echo "Consider running Step 5 dispatch cache first."
           fi
 
       - name: Set up Python
@@ -106,37 +117,50 @@ jobs:
 
       - name: Ensure output directories exist
         run: |
-          mkdir -p data/step5-post-processing/dispatch_cache
-          mkdir -p dashboard
+          mkdir -p data/step5-post-processing/lmp
+          mkdir -p dashboard/js
 
       # ════════════════════════════════════════════════════════════════════
-      # STEP 5: Dispatch cache build + cache-independent scripts
-      #         Each script runs sequentially to avoid resource contention
+      # STEP 6: Dispatch-cache-dependent scripts
+      #         Each script runs sequentially to avoid resource contention.
+      #         CO₂ runs before MAC (MAC depends on CO₂ output).
       # ════════════════════════════════════════════════════════════════════
 
-      - name: "Step 5: Build Dispatch Cache"
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step5_dispatch_cache' }}
+      - name: "Step 6: CO₂ Recomputation"
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step6_co2' }}
         run: |
-          echo "=== Step 5: Building dispatch cache ==="
-          python scripts/step5_build_dispatch_cache.py ${{ steps.iso-args.outputs.iso_flags }}
+          echo "=== Step 6: CO₂ Recomputation ==="
+          python scripts/step6_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
 
-      - name: "Step 5: EAC Scarcity"
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step5_eac_scarcity' }}
+      - name: "Step 6: MAC Statistics"
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step6_mac' }}
         run: |
-          echo "=== Step 5: EAC Scarcity ==="
-          python scripts/step5_compute_eac_scarcity.py
+          echo "=== Step 6: MAC Statistics ==="
+          python scripts/step6_compute_mac_stats.py
 
-      - name: "Step 5: Export Track Results"
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step5_export_tracks' }}
+      - name: "Step 6: LMP Prices"
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step6_lmp' }}
         run: |
-          echo "=== Step 5: Export Track Results ==="
-          python scripts/step5_export_track_results.py
+          echo "=== Step 6: LMP Prices ==="
+          python scripts/step6_compute_lmp_prices.py ${{ steps.iso-args.outputs.iso_flags }}
 
-      - name: "Step 5: Analyze Tracks"
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step5_analyze_tracks' }}
+      - name: "Step 6: Compressed Day"
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step6_compressed_day' }}
         run: |
-          echo "=== Step 5: Analyze Tracks ==="
-          python scripts/step5_analyze_tracks.py
+          echo "=== Step 6: Compressed Day ==="
+          python scripts/step6_compressed_day.py
+
+      - name: "Step 6: Consequential Queue"
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step6_consequential' }}
+        run: |
+          echo "=== Step 6: Consequential Queue ==="
+          python scripts/step6_consequential_queue.py
+
+      - name: "Step 6: Scenario Comparison"
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step6_scenario_comparison' }}
+        run: |
+          echo "=== Step 6: Scenario Comparison ==="
+          python scripts/step6_scenario_comparison.py
 
       # ════════════════════════════════════════════════════════════════════
       # COMMIT & PR
@@ -148,7 +172,10 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add -f data/step5-post-processing/ 2>/dev/null || true
-          git add -f dashboard/track_results.json 2>/dev/null || true
+          git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
+          git add -f dashboard/js/consequential-queue-data.js 2>/dev/null || true
+          git add -f dashboard/js/scenario-comparison-data.js 2>/dev/null || true
+          git add -f dashboard/compressed_day_profiles.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -157,7 +184,7 @@ jobs:
 
           SCRIPTS_LABEL="${{ github.event.inputs.scripts }}"
           ISO_LABEL="${{ github.event.inputs.iso }}"
-          git commit -m "Step 5 Post-Processing: ${SCRIPTS_LABEL} ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 6 Post-Processing: ${SCRIPTS_LABEL} ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=5
           for i in $(seq 1 $MAX_RETRIES); do
@@ -187,9 +214,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_BODY="## Summary"$'\n'"- Step 5 post-processing (**${{ github.event.inputs.scripts }}**) for **${{ github.event.inputs.iso }}**"$'\n'"- Dispatch cache build + cache-independent scripts (EAC, tracks)"$'\n'"- Auto-generated by GitHub Actions workflow run"
+          PR_BODY="## Summary"$'\n'"- Step 6 post-processing (**${{ github.event.inputs.scripts }}**) for **${{ github.event.inputs.iso }}**"$'\n'"- Dispatch-cache-dependent analysis (CO₂, MAC, LMP, compressed day, consequential, scenarios)"$'\n'"- Auto-generated by GitHub Actions workflow run"
           gh pr create \
-            --title "Step 5: ${{ github.event.inputs.scripts }} ${{ github.event.inputs.iso }}" \
+            --title "Step 6: ${{ github.event.inputs.scripts }} ${{ github.event.inputs.iso }}" \
             --body "$PR_BODY" \
             --base master \
             --head "$TARGET_BRANCH" || echo "PR creation skipped (no diff or already exists)"
