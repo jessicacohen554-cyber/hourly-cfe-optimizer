@@ -56,6 +56,9 @@ BATTERY8_DURATION_HOURS = 8
 LDES_EFFICIENCY = 0.50
 LDES_DURATION_HOURS = 100
 LDES_WINDOW_DAYS = 7
+H2_EFFICIENCY = 0.35           # Green H2: electrolysis (70%) × storage (95%) × turbine (55%)
+H2_DURATION_HOURS = 1000       # ~42 days at full power (salt cavern)
+H2_WINDOW_DAYS = 30            # 30-day rolling window for multi-week weather bridging
 
 # ══════════════════════════════════════════════════════════════════════════════
 # REGIONAL CONSTANTS
@@ -551,6 +554,37 @@ def _dispatch_ldes_detailed(residual_surplus, residual_gap, dispatch_pct, demand
                                 LDES_EFFICIENCY, window_hours, H)
 
 
+def _dispatch_h2(residual_surplus, residual_gap, dispatch_pct, demand_arr):
+    """Green H2 seasonal storage dispatch (1000hr, 30-day window). Modifies residual arrays in-place."""
+    dispatch_profile = np.zeros(H, dtype=np.float64)
+    if dispatch_pct <= 0:
+        return dispatch_profile
+
+    energy_capacity = dispatch_pct / 100.0
+    power_rating = energy_capacity / H2_DURATION_HOURS
+    window_hours = H2_WINDOW_DAYS * 24
+
+    return _ldes_loop(residual_surplus, residual_gap, dispatch_profile,
+                      energy_capacity, power_rating, H2_EFFICIENCY,
+                      window_hours, H)
+
+
+def _dispatch_h2_detailed(residual_surplus, residual_gap, dispatch_pct, demand_arr):
+    """Green H2 seasonal storage dispatch with charge tracking. Modifies residual arrays in-place."""
+    dispatch_profile = np.zeros(H, dtype=np.float64)
+    charge_profile = np.zeros(H, dtype=np.float64)
+    if dispatch_pct <= 0:
+        return dispatch_profile, charge_profile
+
+    energy_capacity = dispatch_pct / 100.0
+    power_rating = energy_capacity / H2_DURATION_HOURS
+    window_hours = H2_WINDOW_DAYS * 24
+
+    return _ldes_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
+                                charge_profile, energy_capacity, power_rating,
+                                H2_EFFICIENCY, window_hours, H)
+
+
 @njit(cache=True)
 def _per_resource_dispatch_njit(demand_arr, supply_matrix, resource_pcts_arr,
                                  procurement_factor, dispatch_order_indices):
@@ -671,7 +705,8 @@ def build_supply_matrix(supply_profiles):
 def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
                                  procurement_pct, battery_dispatch_pct,
                                  battery8_dispatch_pct, ldes_dispatch_pct,
-                                 supply_matrix=None, detailed=False):
+                                 supply_matrix=None, detailed=False,
+                                 h2_dispatch_pct=0):
     """Reconstruct full 8760 hourly dispatch for a resource mix.
 
     Args:
@@ -679,6 +714,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
             If provided, skips per-call array conversion (faster for batch calls).
         detailed: if True, also compute per-resource matched/surplus arrays and
             storage charge profiles. Used by step5_build_dispatch_cache and step6_compressed_day.
+        h2_dispatch_pct: green H2 seasonal storage capacity as % of demand (default 0).
 
     Returns:
         result dict with keys:
@@ -686,6 +722,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
           - battery4_profile: (H,) 4hr battery dispatch
           - battery8_profile: (H,) 8hr battery dispatch
           - ldes_profile: (H,) LDES dispatch
+          - h2_profile: (H,) green H2 dispatch
           - total_clean: (H,) total clean supply including storage
           - residual_demand: (H,) demand not met by clean (positive = fossil needed)
           - curtailed: (H,) curtailed clean energy
@@ -698,6 +735,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
           - battery4_charge: (H,) battery4 charge profile
           - battery8_charge: (H,) battery8 charge profile
           - ldes_charge: (H,) LDES charge profile
+          - h2_charge: (H,) H2 charge profile
     """
     procurement_factor = procurement_pct / 100.0
     demand_arr = np.array(demand_norm[:H], dtype=np.float64)
@@ -739,6 +777,9 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         ldes_profile, ldes_charge = _dispatch_ldes_detailed(
             residual_surplus, residual_gap,
             ldes_dispatch_pct, demand_arr)
+        h2_profile, h2_charge = _dispatch_h2_detailed(
+            residual_surplus, residual_gap,
+            h2_dispatch_pct, demand_arr)
     else:
         battery4_profile = _dispatch_battery(
             residual_surplus, residual_gap,
@@ -749,8 +790,11 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         ldes_profile = _dispatch_ldes(
             residual_surplus, residual_gap,
             ldes_dispatch_pct, demand_arr)
+        h2_profile = _dispatch_h2(
+            residual_surplus, residual_gap,
+            h2_dispatch_pct, demand_arr)
 
-    total_clean = supply_total + battery4_profile + battery8_profile + ldes_profile
+    total_clean = supply_total + battery4_profile + battery8_profile + ldes_profile + h2_profile
     fossil_displaced = np.minimum(demand_arr, total_clean)
     residual_demand = np.maximum(0.0, demand_arr - total_clean)
     curtailed = np.maximum(0.0, total_clean - demand_arr)
@@ -760,6 +804,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         'battery4_profile': battery4_profile,
         'battery8_profile': battery8_profile,
         'ldes_profile': ldes_profile,
+        'h2_profile': h2_profile,
         'total_clean': total_clean,
         'residual_demand': residual_demand,
         'curtailed': curtailed,
@@ -776,6 +821,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         result['battery4_charge'] = battery4_charge
         result['battery8_charge'] = battery8_charge
         result['ldes_charge'] = ldes_charge
+        result['h2_charge'] = h2_charge
 
     return result
 
