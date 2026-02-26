@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Step 1b: Build PFS by mining the scored mix database.
+"""Step 1c: Build PFS by mining the scored mix database.
 
 Reads the pre-scored coarse cache ({ISO}_coarse_cache.parquet) built by
-step1a_build_scored_mixes.py. For each requested threshold:
+step1b_score_mixes.py. For each requested threshold:
 
   1. Filter: score >= target → feasible without storage
   2. Near-miss: score >= target - 0.40 → storage sweep (in batches)
@@ -13,13 +13,13 @@ The scored database is ~40 MB (1.6M rows × 6 float64 cols). Loading it is
 trivial. Supply rows for storage dispatch are computed on-the-fly per batch
 of 100 mixes — never holding more than 100 × 8760 in memory.
 
-Fine refinement also scores new combos in chunks (same as step1a), keeping
+Fine refinement also scores new combos in chunks (same as step1b), keeping
 peak memory bounded at ~1.4 GiB.
 
 Usage:
-  python scripts/step1b_build_pfs.py --iso NYISO --thresholds all
-  python scripts/step1b_build_pfs.py --iso CAISO --thresholds "100,95,92.5"
-  python scripts/step1b_build_pfs.py --iso MISO --thresholds 100
+  python scripts/step1c_build_pfs.py --iso NYISO --thresholds all
+  python scripts/step1c_build_pfs.py --iso CAISO --thresholds "100,95,92.5"
+  python scripts/step1c_build_pfs.py --iso MISO --thresholds 100
 """
 
 import argparse
@@ -76,7 +76,7 @@ def validate_thresholds(raw_thresholds):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 1b: Build PFS from scored mix database.",
+        description="Step 1c: Build PFS from scored mix database.",
     )
     parser.add_argument(
         "--iso", required=True,
@@ -100,14 +100,14 @@ def main():
     cache_path = s1._coarse_cache_path(iso)
     if not os.path.exists(cache_path):
         print(f"ERROR: Scored mix database not found: {cache_path}")
-        print(f"Run step1a_build_scored_mixes.py --iso {iso} first.")
+        print(f"Run step1b_score_mixes.py --iso {iso} first.")
         sys.exit(1)
 
     rtypes = s1.get_resource_types(iso)
     threshold_strs = ', '.join(f"{t}%" for t in thresholds)
 
     print("=" * 70)
-    print(f"  Step 1b — Build PFS from Scored Database")
+    print(f"  Step 1c — Build PFS from Scored Database")
     print(f"  ISO: {iso}")
     print(f"  Thresholds: {threshold_strs}  ({len(thresholds)} total)")
     print(f"  Resources: {len(rtypes)}D ({', '.join(rtypes)})")
