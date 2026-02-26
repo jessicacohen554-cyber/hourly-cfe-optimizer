@@ -3,8 +3,8 @@
 fetch_eia_multiyear.py — Fetch 2021-2025 hourly EIA-930 data and produce
 multi-year averaged generation, demand, and fossil-mix profiles.
 
-Fetches hourly generation-by-fuel and demand from the EIA API for 5 ISOs
-(CISO, ERCO, PJM, NYIS, ISNE), converts UTC → local prevailing time,
+Fetches hourly generation-by-fuel and demand from the EIA API for 7 ISOs
+(CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP), converts UTC → local prevailing time,
 handles DST transitions, averages normalized profile shapes across years,
 and scales to 2025 annual totals.
 
@@ -60,6 +60,8 @@ BA_TO_ISO = {
     'PJM':  'PJM',
     'NYIS': 'NYISO',
     'ISNE': 'NEISO',
+    'MISO': 'MISO',
+    'SWPP': 'SPP',
 }
 
 ISO_TO_BA = {v: k for k, v in BA_TO_ISO.items()}
@@ -71,6 +73,8 @@ ISO_TIMEZONES = {
     'PJM':   'America/New_York',
     'NYISO': 'America/New_York',
     'NEISO': 'America/New_York',
+    'MISO':  'America/Chicago',
+    'SPP':   'America/Chicago',
 }
 
 # EIA fuel type codes → our categories
@@ -98,6 +102,8 @@ GRID_MIX_SHARES = {
     'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
     'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
     'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
+    'MISO':  {'clean_firm': 14.3, 'solar': 2.3, 'wind': 15.4, 'ccs_ccgt': 0, 'hydro': 1.7},
+    'SPP':   {'clean_firm': 5.3, 'solar': 0.4, 'wind': 37.6, 'ccs_ccgt': 0, 'hydro': 3.1},
 }
 
 # Rate limiting
@@ -203,7 +209,7 @@ def fetch_all_pages(url, params, api_key):
             return all_rows  # Return what we have
 
         rows = response.get('data', [])
-        total = response.get('total', 0)
+        total = int(response.get('total', 0))
 
         all_rows.extend(rows)
 
@@ -909,9 +915,9 @@ Examples:
     parser.add_argument(
         '--isos',
         nargs='+',
-        choices=['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'],
-        default=['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'],
-        help='ISOs to fetch (default: all 5)'
+        choices=['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'],
+        default=['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'],
+        help='ISOs to fetch (default: all 7)'
     )
     parser.add_argument(
         '--years',
@@ -991,9 +997,9 @@ Examples:
         print("  (Adding NEISO to fetch list for NYISO solar proxy)")
 
     for iso in fetch_isos:
-        print(f"\n{'─' * 50}")
+        print(f"\n{'-' * 50}")
         print(f"  Fetching {iso}")
-        print(f"{'─' * 50}")
+        print(f"{'-' * 50}")
 
         iso_result = fetch_and_process_iso(iso, api_key, years_to_fetch, dry_run)
         all_iso_data[iso] = iso_result
@@ -1029,9 +1035,22 @@ Examples:
     print("PHASE 3: Saving output files")
     print("=" * 70)
 
-    save_json(gen_profiles, 'eia_generation_profiles_multiyear.json')
-    save_json(demand_profiles, 'eia_demand_profiles_multiyear.json')
-    save_json(fossil_mix, 'eia_fossil_mix_multiyear.json')
+    # Merge with existing multiyear files if they exist (so running for
+    # a subset of ISOs doesn't overwrite previously computed ISOs)
+    for filename, new_data in [
+        ('eia_generation_profiles_multiyear.json', gen_profiles),
+        ('eia_demand_profiles_multiyear.json', demand_profiles),
+        ('eia_fossil_mix_multiyear.json', fossil_mix),
+    ]:
+        path = os.path.join(DATA_DIR, filename)
+        if os.path.exists(path):
+            with open(path) as f:
+                existing = json.load(f)
+            existing.update(new_data)
+            save_json(existing, filename)
+            print(f"    (merged {len(new_data)} new ISOs into existing file)")
+        else:
+            save_json(new_data, filename)
 
     # ── Summary ──────────────────────────────────────────────────────────
 
