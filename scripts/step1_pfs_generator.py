@@ -1302,6 +1302,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         h2_levels = [0]
 
     MIN_SURPLUS_DAYS_FOR_BATTERY = 150
+    NM_CHUNK = 20000       # ~1.4 GiB per chunk at float64 × 8760
+    MAX_MIX_BATCH = 100    # max mixes per storage-sweep batch
     batt8_window = 48
 
     candidates = []
@@ -1345,7 +1347,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
 
     if len(near_miss_idx) > 0:
         n_nm = len(near_miss_idx)
-        NM_CHUNK = 20000  # ~1.4 GiB per chunk at float64 × 8760
 
         # Chunk-wise storage cap computation (avoids allocating full N_nm × 8760)
         b4_caps = np.empty(n_nm, dtype=np.float64)
@@ -1385,7 +1386,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         h2_arr = np.array(h2_levels, dtype=np.float64)
         n_b4, n_b8, n_l, n_h2 = len(b4_arr), len(b8_arr), len(l_arr), len(h2_arr)
 
-        MAX_MIX_BATCH = 100
         storage_feasible = 0
 
         for batch_start in range(0, len(nm_valid), MAX_MIX_BATCH):
