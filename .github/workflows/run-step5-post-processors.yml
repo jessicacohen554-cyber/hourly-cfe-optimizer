@@ -1,4 +1,4 @@
-name: Run Step 5 Post-Processors
+name: Run Step 5 & 6 Post-Processors
 
 on:
   workflow_dispatch:
@@ -24,17 +24,22 @@ on:
         type: choice
         options:
           - ALL
-          - dispatch_cache
-          - co2
-          - mac
-          - lmp
-          - compressed_day
+          - step5_dispatch_cache
+          - step5_eac_scarcity
+          - step5_export_tracks
+          - step5_analyze_tracks
+          - step6_co2
+          - step6_mac
+          - step6_lmp
+          - step6_compressed_day
+          - step6_consequential
+          - step6_scenario_comparison
 
 env:
-  BRANCH_PREFIX: step5-pp
+  BRANCH_PREFIX: step5-6-pp
 
 jobs:
-  run-step5:
+  run-post-processors:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
@@ -109,85 +114,143 @@ jobs:
         run: |
           mkdir -p data/step4-gas-ccs-parquets
           mkdir -p data/step5-post-processing/lmp
+          mkdir -p data/step5-post-processing/dispatch_cache
           mkdir -p dashboard/js
 
-      # ── PP0 Dispatch Cache (prerequisite for PP1/PP4/PP6) ──
-      - name: Build Dispatch Cache (PP0)
-        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'dispatch_cache' }}
-        run: |
-          echo "=== Building dispatch cache (PP0) ==="
-          python scripts/step5_PP0_build_dispatch_cache.py ${{ steps.iso-args.outputs.iso_flags }}
-          echo "=== Dispatch cache built ==="
+      # ════════════════════════════════════════════════════════════════════
+      # STEP 5: Dispatch cache build + cache-independent scripts
+      # ════════════════════════════════════════════════════════════════════
 
-      # ── Concurrent execution when ALL scripts selected ──
-      # PP0 runs first (above), then: CO₂ → MAC (sequential), LMP + Compressed Day (independent)
-      # LMP and Compressed Day start immediately in background alongside CO₂.
-      # MAC waits for CO₂ to finish, then runs in background.
-      # Final wait collects all exit codes.
-      - name: Run ALL post-processors concurrently
+      - name: "Step 5: Build Dispatch Cache"
+        if: ${{ github.event.inputs.scripts == 'ALL' || github.event.inputs.scripts == 'step5_dispatch_cache' }}
+        run: |
+          echo "=== Step 5: Building dispatch cache ==="
+          python scripts/step5_build_dispatch_cache.py ${{ steps.iso-args.outputs.iso_flags }}
+
+      - name: "Step 5: Run cache-independent scripts"
         if: ${{ github.event.inputs.scripts == 'ALL' }}
         run: |
-          echo "=== Starting LMP (background) ==="
-          python scripts/step5_PP6_compute_lmp_prices.py ${{ steps.iso-args.outputs.iso_flags }} &
+          echo "=== Step 5: Export Track Results ==="
+          python scripts/step5_export_track_results.py &
+          PID_TRACKS=$!
+
+          echo "=== Step 5: EAC Scarcity ==="
+          python scripts/step5_compute_eac_scarcity.py &
+          PID_EAC=$!
+
+          FAIL=0
+          wait $PID_TRACKS || { echo "ERROR: Export Track Results failed"; FAIL=1; }
+          wait $PID_EAC    || { echo "ERROR: EAC Scarcity failed"; FAIL=1; }
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo "One or more Step 5 scripts failed"
+            exit 1
+          fi
+
+      # Individual Step 5 script runs
+      - name: "Step 5: EAC Scarcity (individual)"
+        if: ${{ github.event.inputs.scripts == 'step5_eac_scarcity' }}
+        run: python scripts/step5_compute_eac_scarcity.py
+
+      - name: "Step 5: Export Track Results (individual)"
+        if: ${{ github.event.inputs.scripts == 'step5_export_tracks' }}
+        run: python scripts/step5_export_track_results.py
+
+      - name: "Step 5: Analyze Tracks (individual)"
+        if: ${{ github.event.inputs.scripts == 'step5_analyze_tracks' }}
+        run: python scripts/step5_analyze_tracks.py
+
+      # ════════════════════════════════════════════════════════════════════
+      # STEP 6: Dispatch-cache-dependent scripts
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: "Step 6: Run ALL dispatch-dependent post-processors"
+        if: ${{ github.event.inputs.scripts == 'ALL' }}
+        run: |
+          echo "=== Step 6: Starting LMP (background) ==="
+          python scripts/step6_compute_lmp_prices.py ${{ steps.iso-args.outputs.iso_flags }} &
           PID_LMP=$!
 
-          echo "=== Starting Compressed Day (background) ==="
-          python scripts/step5_PP1_compressed_day.py &
+          echo "=== Step 6: Starting Compressed Day (background) ==="
+          python scripts/step6_compressed_day.py &
           PID_CD=$!
 
-          echo "=== Starting CO₂ Recomputation (foreground — MAC depends on it) ==="
-          python scripts/step5_PP4_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
+          echo "=== Step 6: Starting Consequential Queue (background) ==="
+          python scripts/step6_consequential_queue.py &
+          PID_CQ=$!
 
-          echo "=== CO₂ done — starting MAC Statistics (background) ==="
-          python scripts/step5_PP5_compute_mac_stats.py &
+          echo "=== Step 6: Starting Scenario Comparison (background) ==="
+          python scripts/step6_scenario_comparison.py &
+          PID_SC=$!
+
+          echo "=== Step 6: Starting CO₂ Recomputation (foreground — MAC depends on it) ==="
+          python scripts/step6_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
+
+          echo "=== Step 6: CO₂ done — starting MAC Statistics (background) ==="
+          python scripts/step6_compute_mac_stats.py &
           PID_MAC=$!
 
           FAIL=0
           wait $PID_LMP  || { echo "ERROR: LMP failed"; FAIL=1; }
           wait $PID_CD   || { echo "ERROR: Compressed Day failed"; FAIL=1; }
+          wait $PID_CQ   || { echo "ERROR: Consequential Queue failed"; FAIL=1; }
+          wait $PID_SC   || { echo "ERROR: Scenario Comparison failed"; FAIL=1; }
           wait $PID_MAC  || { echo "ERROR: MAC Statistics failed"; FAIL=1; }
 
           if [ "$FAIL" -ne 0 ]; then
-            echo "One or more post-processors failed"
+            echo "One or more Step 6 post-processors failed"
             exit 1
           fi
-          echo "=== All post-processors completed successfully ==="
+          echo "=== All Step 6 post-processors completed ==="
 
-      # ── Individual script runs (when a single script is selected) ──
-      - name: Run CO₂ Recomputation
-        if: ${{ github.event.inputs.scripts == 'co2' }}
-        run: python scripts/step5_PP4_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
+      # Individual Step 6 script runs
+      - name: "Step 6: CO₂ Recomputation (individual)"
+        if: ${{ github.event.inputs.scripts == 'step6_co2' }}
+        run: python scripts/step6_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
 
-      - name: Run MAC Statistics
-        if: ${{ github.event.inputs.scripts == 'mac' }}
-        run: python scripts/step5_PP5_compute_mac_stats.py
+      - name: "Step 6: MAC Statistics (individual)"
+        if: ${{ github.event.inputs.scripts == 'step6_mac' }}
+        run: python scripts/step6_compute_mac_stats.py
 
-      - name: Run LMP Price Calculation
-        if: ${{ github.event.inputs.scripts == 'lmp' }}
+      - name: "Step 6: LMP Prices (individual)"
+        if: ${{ github.event.inputs.scripts == 'step6_lmp' }}
         run: |
           INPUT_ISO="${{ github.event.inputs.iso }}"
           if [ "$INPUT_ISO" = "ALL" ]; then
-            python scripts/step5_PP6_compute_lmp_prices.py
+            python scripts/step6_compute_lmp_prices.py
           else
-            python scripts/step5_PP6_compute_lmp_prices.py --iso "$INPUT_ISO"
+            python scripts/step6_compute_lmp_prices.py --iso "$INPUT_ISO"
           fi
 
-      - name: Run Compressed Day Profiles
-        if: ${{ github.event.inputs.scripts == 'compressed_day' }}
-        run: python scripts/step5_PP1_compressed_day.py
+      - name: "Step 6: Compressed Day (individual)"
+        if: ${{ github.event.inputs.scripts == 'step6_compressed_day' }}
+        run: python scripts/step6_compressed_day.py
 
-      - name: Commit and push Step 5 outputs
+      - name: "Step 6: Consequential Queue (individual)"
+        if: ${{ github.event.inputs.scripts == 'step6_consequential' }}
+        run: python scripts/step6_consequential_queue.py
+
+      - name: "Step 6: Scenario Comparison (individual)"
+        if: ${{ github.event.inputs.scripts == 'step6_scenario_comparison' }}
+        run: python scripts/step6_scenario_comparison.py
+
+      # ════════════════════════════════════════════════════════════════════
+      # COMMIT & PR
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: Commit and push outputs
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
           # Stage all possible outputs
           git add -f data/step4-gas-ccs-parquets/ 2>/dev/null || true
-          git add -f data/step5-post-processing/dispatch_cache/ 2>/dev/null || true
-          git add -f data/step5-post-processing/lmp/ 2>/dev/null || true
           git add -f data/step5-post-processing/ 2>/dev/null || true
           git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
+          git add -f dashboard/js/consequential-queue-data.js 2>/dev/null || true
+          git add -f dashboard/js/scenario-comparison-data.js 2>/dev/null || true
           git add -f dashboard/compressed_day_profiles.json 2>/dev/null || true
+          git add -f dashboard/track_results.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -196,9 +259,8 @@ jobs:
 
           SCRIPTS_LABEL="${{ github.event.inputs.scripts }}"
           ISO_LABEL="${{ github.event.inputs.iso }}"
-          git commit -m "Step 5 Post-Processing: ${SCRIPTS_LABEL} ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 5/6 Post-Processing: ${SCRIPTS_LABEL} ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          # Push fresh branch (retry for transient network errors only)
           MAX_RETRIES=5
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Push attempt $i/$MAX_RETRIES..."
@@ -208,10 +270,8 @@ jobs:
             }
             echo "$PUSH_OUTPUT"
 
-            # Fail immediately on large-file rejection (not recoverable by retry)
             if echo "$PUSH_OUTPUT" | grep -q "GH001"; then
               echo "ERROR: Push rejected due to large files (GH001). Not retryable."
-              echo "Check file sizes — GitHub limit is 100 MB per file."
               exit 1
             fi
 
@@ -229,9 +289,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_BODY="## Summary"$'\n'"- Step 5 post-processing (**${{ github.event.inputs.scripts }}**) for **${{ github.event.inputs.iso }}**"$'\n'"- Auto-generated by GitHub Actions workflow run"
+          PR_BODY="## Summary"$'\n'"- Post-processing (**${{ github.event.inputs.scripts }}**) for **${{ github.event.inputs.iso }}**"$'\n'"- Step 5: dispatch cache + independent scripts"$'\n'"- Step 6: dispatch-dependent analysis"$'\n'"- Auto-generated by GitHub Actions workflow run"
           gh pr create \
-            --title "Step 5 Post-Processing: ${{ github.event.inputs.scripts }} ${{ github.event.inputs.iso }}" \
+            --title "Step 5/6 Post-Processing: ${{ github.event.inputs.scripts }} ${{ github.event.inputs.iso }}" \
             --body "$PR_BODY" \
             --base master \
             --head "$TARGET_BRANCH" || echo "PR creation skipped (no diff or already exists)"

@@ -17,17 +17,17 @@ track_results.json with the same pricing engine.
 Pipeline position:
   Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Postprocess)
                                                       ↓
-                                          step5_PP6_compute_lmp_prices.py  ← THIS
+                                          step6_compute_lmp_prices.py  ← THIS
                                                       ↓
                               data/step5-post-processing/lmp/{ISO}_lmp.parquet   (per-ISO output)
                               data/step5-post-processing/lmp/{ISO}_archetypes.parquet
                               data/step5-post-processing/lmp/lmp_summary.json
 
 Usage:
-  python step5_PP6_compute_lmp_prices.py --iso PJM                    # PJM only, all thresholds
-  python step5_PP6_compute_lmp_prices.py --iso PJM --test             # PJM test: 2025/50%/95%
-  python step5_PP6_compute_lmp_prices.py                              # PJM only (default)
-  python step5_PP6_compute_lmp_prices.py --iso PJM --fuel-level M     # Medium fuel only
+  python step6_compute_lmp_prices.py --iso PJM                    # PJM only, all thresholds
+  python step6_compute_lmp_prices.py --iso PJM --test             # PJM test: 2025/50%/95%
+  python step6_compute_lmp_prices.py                              # PJM only (default)
+  python step6_compute_lmp_prices.py --iso PJM --fuel-level M     # Medium fuel only
 """
 
 import json
@@ -1162,8 +1162,8 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
 
     print(f"    Dispatch cache: {cache_hits} hits, {cache_misses} misses")
     if cache_misses > 0:
-        print(f"    WARNING: {cache_misses} cache misses — consider running PP0 first "
-              f"(step5_PP0_build_dispatch_cache.py) to pre-populate the cache.")
+        print(f"    WARNING: {cache_misses} cache misses — consider running step5_build_dispatch_cache.py first "
+              f"to pre-populate the cache.")
     return results, archetypes
 
 
