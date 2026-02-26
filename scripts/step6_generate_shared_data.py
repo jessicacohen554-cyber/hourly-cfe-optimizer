@@ -33,7 +33,7 @@ from step3_cost_optimization import (
     REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH,
 )
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.5', '99.9', '100']
 THRESHOLDS_NUM = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
