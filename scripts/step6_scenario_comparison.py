@@ -274,27 +274,28 @@ def learning_fraction(threshold, scenario='B'):
     Year-based curves differentiated by scenario:
 
     Scenario B (Hourly Matching — aggressive deployment):
-      - FOAK starts: 2029. Learning period: 2028-2038 (10 years).
-      - NOAK by 2038, stable through 2050.
+      - Stays at FOAK until 2030. Learning period: 2030-2040 (10 years).
+      - NOAK by 2040, stable through 2050.
       - Sources: INL SOAK data (15% unit 2), NEA (-18 to -55% by unit 8),
         DOE Liftoff (NOAK early 2030s). Compressed sequential learning.
 
     Scenario A (Pure Consequential — delayed deployment):
-      - FOAK starts: 2036 (5-year delay). Learning period: 2036-2048 (12 years).
+      - Stays at FOAK until 2035. Learning period: 2035-2047 (12 years).
       - Same concave shape, stretched across longer timeline.
       - Less investment → fewer units/year → slower learning.
 
-    Both use concave exponent 0.6 — steep front-end matching Wright's Law
-    unit-doubling data (INL/NEA), asymptotic tail toward NOAK.
+    Both use concave exponent 0.6 — steep front-end (first 4-5 years see
+    most of the cost reduction) matching Wright's Law unit-doubling data
+    (INL/NEA), then asymptotically approaching NOAK in the latter half.
     """
     year = SBTI_YEAR_MAP.get(threshold, 2050)
 
     if scenario == 'B':
-        foak_start = 2028  # Learning begins (construction/supply chain), first SMR operational ~2029
-        noak_year = 2038   # 10-year learning period (2028-2038)
+        foak_start = 2030  # Learning begins with first operational SMRs
+        noak_year = 2040   # 10-year learning period (2030-2040)
     else:  # Scenario A
-        foak_start = 2036  # 5-year delay: less investment, slower regulatory
-        noak_year = 2048   # 12-year learning period (stretched)
+        foak_start = 2035  # 5-year delay: less investment, slower regulatory
+        noak_year = 2047   # 12-year learning period (2035-2047)
 
     if year < foak_start:
         return 0.0  # Pure FOAK, no deployment yet
@@ -303,6 +304,7 @@ def learning_fraction(threshold, scenario='B'):
 
     # Concave ramp: steep front-end (Wright's Law early doublings), asymptotic tail.
     # Exponent 0.6 reflects INL data: 15% at SOAK, 20% by unit 4, then gradual.
+    # First 4-5 years see most cost reduction; latter half approaches NOAK asymptotically.
     active = (year - foak_start) / (noak_year - foak_start)  # 0→1
     return active ** 0.6
 
@@ -311,8 +313,46 @@ def learning_fraction(threshold, scenario='B'):
 # PARSE FEASIBLE MIXES FROM SHARED-DATA.JS
 # ============================================================================
 
+def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
+    """Load feasible mixes for a single ISO from the step3 parquet file.
+
+    Returns dict: {threshold_str: [[cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%], ...]}
+    """
+    feasible_path = os.path.join(step3_dir, f'step3_feasible_{iso}.parquet')
+    if not os.path.exists(feasible_path):
+        return {}
+
+    df = pd.read_parquet(feasible_path)
+    mix_fields = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
+                  'procurement_pct', 'hourly_match_score',
+                  'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+    for col in mix_fields:
+        if col not in df.columns:
+            df[col] = 0
+
+    result = {}
+    for t_val, grp in df.groupby('threshold'):
+        t_str = str(int(t_val)) if t_val == int(t_val) else str(t_val)
+        rows = []
+        for _, row in grp.iterrows():
+            rows.append([
+                row['clean_firm'], row['solar'], row['wind'],
+                row['ccs_ccgt'], row['hydro'], row['procurement_pct'],
+                round(row['hourly_match_score'], 1),
+                row['battery_dispatch_pct'], row['battery8_dispatch_pct'],
+                row['ldes_dispatch_pct'],
+            ])
+        result[t_str] = rows
+    return result
+
+
 def parse_feasible_mixes(js_path='dashboard/js/shared-data.js'):
-    """Parse FEASIBLE_MIXES from the shared-data.js file."""
+    """Parse FEASIBLE_MIXES from the shared-data.js file.
+
+    Falls back to loading directly from step3 parquets for any ISO
+    missing from shared-data.js (e.g. MISO, SPP if step7 hasn't been
+    re-run since their parquets were generated).
+    """
     with open(js_path) as f:
         content = f.read()
 
@@ -342,6 +382,20 @@ def parse_feasible_mixes(js_path='dashboard/js/shared-data.js'):
     block = re.sub(r',\s*([}\]])', r'\1', block)
 
     mixes = json.loads(block)
+
+    # Fall back to step3 parquets for any ISO missing or empty in shared-data.js
+    for iso in ISOS:
+        iso_data = mixes.get(iso, {})
+        has_mixes = any(len(v) > 0 for v in iso_data.values()) if iso_data else False
+        if not has_mixes:
+            parquet_mixes = _load_feasible_from_parquet(iso)
+            if parquet_mixes:
+                mixes[iso] = parquet_mixes
+                total = sum(len(v) for v in parquet_mixes.values())
+                print(f"  Loaded {iso} feasible mixes from parquet fallback: {total} mixes")
+            else:
+                print(f"  WARNING: No feasible mixes for {iso} in shared-data.js or parquets")
+
     # mixes[iso][threshold_str] = list of [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
     return mixes
 
@@ -521,9 +575,8 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         ldes_price = LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
 
     # Total cost = Σ(coefficient × price) + gas_cost
-    # Coefficients: fraction of demand priced at each source
+    # Existing clean resources priced at $0; only new-build resources have LCOE costs.
     total_cost = (
-        (sol_existing + wnd_existing + hyd_demand + ccs_existing + cf_existing) / 100.0 * wholesale +
         sol_new / 100.0 * (LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso)) +
         wnd_new / 100.0 * (LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso)) +
         ccs_new / 100.0 * ccs_price +
@@ -536,9 +589,8 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         gas_cost
     )
 
-    # New-build cost tracking (for MAC = LCOE / displaced_rate)
-    existing_cost_per_mwh = (sol_existing + wnd_existing + hyd_demand + ccs_existing + cf_existing) / 100.0 * wholesale
-    new_build_per_mwh = total_cost - existing_cost_per_mwh - gas_cost
+    # New-build cost tracking (for MAC = delta_cost / delta_co2)
+    new_build_per_mwh = total_cost - gas_cost
     new_gen_twh = (sol_new + wnd_new + ccs_new + cf_new) / 100.0 * demand_twh
     new_build_cost_total = new_build_per_mwh * demand_mwh
     if new_gen_twh > 0.01:
@@ -944,8 +996,8 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
         base_demand = BASE_DEMAND_TWH[iso]
         existing = GRID_MIX_SHARES[iso]
 
-        # Floor = 2025 existing clean resource levels in absolute TWh
-        floor = {
+        # Existing resource levels in absolute TWh (2025 baseline) — priced at $0
+        existing_twh = {
             'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand,
             'solar': existing.get('solar', 0) / 100.0 * base_demand,
             'wind': existing.get('wind', 0) / 100.0 * base_demand,
@@ -953,6 +1005,9 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
             'hydro': existing.get('hydro', 0) / 100.0 * base_demand,
             'battery': 0, 'ldes': 0,
         }
+
+        # Floor = 2025 existing clean resource levels in absolute TWh
+        floor = dict(existing_twh)
 
         iso_results = {}
 
@@ -981,13 +1036,19 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
                 deployed = _mix_resource_twh(mix, demand_twh, iso)
 
                 # Floor excess cost: resources locked in from prior steps that
-                # this mix doesn't use. Priced at scenario-specific LCOEs.
+                # this mix doesn't use. Existing resources are $0; only
+                # committed-new resources above existing get newbuild pricing.
                 excess_per_mwh = 0.0
                 for res in floor:
                     excess = max(0, floor.get(res, 0) - deployed.get(res, 0))
                     if excess > 0.01:
-                        lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
-                        excess_per_mwh += excess / demand_twh * lcoe
+                        # Split excess into existing ($0) and committed-new (newbuild)
+                        existing_gap = max(0, min(excess,
+                                                  existing_twh.get(res, 0) - deployed.get(res, 0)))
+                        newbuild_gap = excess - max(0, existing_gap)
+                        if newbuild_gap > 0.01:
+                            lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
+                            excess_per_mwh += newbuild_gap / demand_twh * lcoe
 
                 augmented_eff = (result['total_cost'] + excess_per_mwh) / \
                     (result['match_score'] / 100.0) if result['match_score'] > 0 else float('inf')
@@ -1567,7 +1628,8 @@ def find_scenario_b_mixes(feasible_mixes):
         # ==================================================================
         # Step 2: Forward-step with paced firm investment toward 95% target
         # ==================================================================
-        floor = {
+        # Existing resource levels (priced at $0)
+        existing_twh_b = {
             'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand,
             'solar': existing.get('solar', 0) / 100.0 * base_demand,
             'wind': existing.get('wind', 0) / 100.0 * base_demand,
@@ -1575,6 +1637,7 @@ def find_scenario_b_mixes(feasible_mixes):
             'hydro': existing.get('hydro', 0) / 100.0 * base_demand,
             'battery': 0, 'ldes': 0,
         }
+        floor = dict(existing_twh_b)
 
         iso_results = {}
 
@@ -1617,13 +1680,18 @@ def find_scenario_b_mixes(feasible_mixes):
 
                 deployed = _mix_resource_twh(mix, demand_twh, iso)
 
-                # Floor excess cost
+                # Floor excess cost: existing resources at $0, only committed-new
+                # resources above existing get newbuild pricing.
                 excess_per_mwh = 0.0
                 for res in floor:
                     excess = max(0, floor.get(res, 0) - deployed.get(res, 0))
                     if excess > 0.01:
-                        lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
-                        excess_per_mwh += excess / demand_twh * lcoe
+                        existing_gap = max(0, min(excess,
+                                                  existing_twh_b.get(res, 0) - deployed.get(res, 0)))
+                        newbuild_gap = excess - max(0, existing_gap)
+                        if newbuild_gap > 0.01:
+                            lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
+                            excess_per_mwh += newbuild_gap / demand_twh * lcoe
 
                 augmented_eff = (result['total_cost'] + excess_per_mwh) / \
                     (result['match_score'] / 100.0) if result['match_score'] > 0 else float('inf')
@@ -1868,16 +1936,12 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
                 avg_rate = (rate_start + rate_end) / 2
                 co2_displaced_mt = delta_clean_twh * avg_rate
 
-            # MAC = LCOE / displaced_emission_rate
+            # MAC = delta_cost / delta_co2 (direct, no intermediate LCOE/rate split)
             delta_new_cost = end['new_build_cost_total'] - start['new_build_cost_total']
-            delta_new_gen = end['new_gen_twh'] - start['new_gen_twh']
-            if delta_new_gen > 0.01:
-                marginal_lcoe = delta_new_cost / (delta_new_gen * 1e6)
-            else:
-                marginal_lcoe = end.get('blended_new_lcoe', 0)
 
-            if avg_rate > 0.001 and marginal_lcoe > 0:
-                marginal_mac = marginal_lcoe / avg_rate
+            # co2_displaced_mt already computed above from dispatch or analytical model
+            if co2_displaced_mt > 0.001 and delta_new_cost > 0:
+                marginal_mac = delta_new_cost / (co2_displaced_mt * 1e6)
             else:
                 marginal_mac = float('inf')
 
@@ -1911,11 +1975,38 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
                 'eff_cost_end': end['effective_cost'],
             })
 
+    # Constrained greedy sort: pick lowest-MAC step whose prerequisite
+    # (prior threshold zone for same ISO) has already been placed.
+    # This allows interleaving ISOs freely while ensuring no ISO jumps
+    # ahead in threshold order (e.g., can't deploy 75→90% before 50→75%).
     zone_metrics.sort(key=lambda x: x['marginal_mac'])
-    for i, step in enumerate(zone_metrics):
+
+    # Build prerequisite map: for each (iso, zone), what zone must come first?
+    zone_order = {(z['start'], z['end']): i for i, z in enumerate(ZONES)}
+    iso_next_zone = {iso: 0 for iso in ISOS}  # index into ZONES each ISO is at
+
+    ordered = []
+    remaining = list(zone_metrics)
+    while remaining:
+        placed = False
+        for step in remaining:
+            iso = step['iso']
+            zone_idx = zone_order.get((step['threshold_start'], step['threshold_end']), -1)
+            if zone_idx == iso_next_zone[iso]:
+                ordered.append(step)
+                iso_next_zone[iso] = zone_idx + 1
+                remaining.remove(step)
+                placed = True
+                break
+        if not placed:
+            # No eligible step found — add remaining in MAC order
+            ordered.extend(remaining)
+            break
+
+    for i, step in enumerate(ordered):
         step['queue_position'] = i + 1
 
-    return zone_metrics
+    return ordered
 
 
 # ============================================================================
@@ -2227,19 +2318,26 @@ def main():
                 if prev_t is not None and prev_t in results.get(iso, {}):
                     prev_d = results[iso][prev_t]
                     delta_new_cost = d['new_build_cost_total'] - prev_d['new_build_cost_total']
-                    delta_new_gen = d['new_gen_twh'] - prev_d['new_gen_twh']
-                    if delta_new_gen > 0.01:
-                        marginal_lcoe = delta_new_cost / (delta_new_gen * 1e6)
+
+                    # MAC = delta_cost / delta_co2 (direct, no LCOE/rate split)
+                    co2_cur = _traj_co2_cache.get((iso, t, results_id))
+                    co2_prev = _traj_co2_cache.get((iso, prev_t, results_id))
+
+                    if co2_cur and co2_prev:
+                        delta_co2_tons = (co2_cur['total_co2_abated_tons']
+                                          - co2_prev['total_co2_abated_tons'])
                     else:
-                        marginal_lcoe = d.get('blended_new_lcoe', 0)
-                    # Use dispatch-based emission rate if available
-                    co2_result = _traj_co2_cache.get((iso, t, results_id))
-                    if co2_result:
-                        rate_cur = co2_result['weighted_emission_rate']
-                    else:
-                        rate_cur, _ = cfr_cached(iso, t, egrid, fossil_mix)
-                    if rate_cur > 0.001 and marginal_lcoe > 0:
-                        stepwise_mac = round(marginal_lcoe / rate_cur, 1)
+                        # Fallback: estimate from emission rate × new generation delta
+                        delta_new_gen = d['new_gen_twh'] - prev_d['new_gen_twh']
+                        if co2_cur:
+                            rate_cur = co2_cur['weighted_emission_rate']
+                        else:
+                            rate_cur, _ = cfr_cached(iso, t, egrid, fossil_mix)
+                        delta_co2_tons = (delta_new_gen * 1e6 * rate_cur
+                                          if rate_cur > 0 else 0)
+
+                    if delta_co2_tons > 0 and delta_new_cost > 0:
+                        stepwise_mac = round(delta_new_cost / delta_co2_tons, 1)
                     else:
                         stepwise_mac = 9999
                 cf_twh = d['resource_twh'].get('clean_firm', 0)
