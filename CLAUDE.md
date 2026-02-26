@@ -95,7 +95,7 @@
 ### Pipeline Architecture (Critical — Know What You're Changing)
 
 **Core pipeline (Steps 1–4):**
-- **Step 1: PFS Generator** (`scripts/step1_pfs_generator.py`) — Generates the Physics Feasible Space (PFS). 4D adaptive grid search (clean_firm, solar, wind, hydro) with procurement sweep, battery daily-cycle dispatch (4hr, 85% RTE), LDES multi-day dispatch (100hr, 50% RTE). Produces physics-validated resource mixes across 15 thresholds × 5 ISOs. Output: `data/step1-pfs-parquets/`. **Only re-run if dispatch logic, generation curves, or demand curves change.**
+- **Step 1: PFS Generator** (`scripts/step1_pfs_generator.py`) — Generates the Physics Feasible Space (PFS). 4D adaptive grid search (clean_firm, solar, wind, hydro) with procurement sweep, battery daily-cycle dispatch (4hr, 85% RTE), LDES multi-day dispatch (100hr, 50% RTE). Produces physics-validated resource mixes across 15 thresholds × 7 ISOs. Output: `data/step1-pfs-parquets/`. **Only re-run if dispatch logic, generation curves, or demand curves change.**
 - **Step 2: Efficient Frontier** (`scripts/step2_efficient_frontier.py`) — Extracts the Efficient Frontier (EF) from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. 21.4M → ~1.8M rows. Output: `data/step2-ef-parquets/`. **Only re-run if PFS changes or filtering criteria change.**
 - **Step 3: Cost Optimization** (`scripts/step3_cost_optimization.py`) — Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos (non-CAISO; 17,496 for CAISO). Merit-order tranche pricing for clean firm (uprate → geothermal → cheapest of nuclear/CCS). Demand growth sweep (25 years × 3 growth rates). Output: `data/step3-cost-opt-parquets/`. Also: `scripts/step3_track_nb_ctr.py` (Track 2 newbuild + Track 3 cost-to-replace). **Run when cost assumptions change. No physics re-run needed.**
 - **Step 4: Post-Processing** (`scripts/step4_gas_ccs_adjustement.py`) — NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh), without-45Q overlay, gas capacity backup & resource adequacy (15% RA margin), CCS vs LDES crossover analysis. Output: `data/step4-gas-ccs-parquets/`. **Run when Step 3 outputs change.**
@@ -126,7 +126,7 @@
 ### Incremental Results (Critical — Never Rerun What's Already Computed)
 - **Default to temp functions for new analysis tracks** — when adding a new analysis dimension (e.g., new-build track, LMP module, CO2 dispatch), write a standalone temp script that computes ONLY the missing results and appends them to the existing output files. Never rerun the full pipeline when only a subset of results is needed.
 - **Pattern**: (1) Write temp function to compute delta results, (2) Append/merge into existing output JSON/parquet, (3) Update primary scripts for future iterations (but don't rerun them)
-- **Step 3 cost optimization is semi-expensive with large EFs** — 27M mixes × 5,832 scenarios × 5 ISOs × numpy takes hours without Numba. Always preserve existing baseline results and only compute new tracks/dimensions incrementally.
+- **Step 3 cost optimization is semi-expensive with large EFs** — 27M mixes × 5,832 scenarios × 7 ISOs × numpy takes hours without Numba. Always preserve existing baseline results and only compute new tracks/dimensions incrementally.
 - **CO2 dispatch model**: Only run on mixes NOT already in results. Read existing results, identify gaps, compute only the gap, merge back.
 - **This rule exists because**: A full step3 rerun on 27M mixes took 5+ hours when only the new track results (~30% of compute) were actually needed. The existing baseline results were perfectly valid and didn't need recomputation.
 
@@ -206,7 +206,7 @@
 - **7 toggle groups**: 5 paired (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission) + CCS (L/M/H) + 45Q (On/Off) + Geothermal (CAISO-only, L/M/H)
 - **15 thresholds** (50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100) — expanded from 13, with 5% granularity in low range and 2.5% in inflection zone
 - **5,832 cost scenarios per region/threshold** (3×3×3×3×2×3×4 = non-CAISO; 17,496 for CAISO with geothermal toggle)
-- **~437,400 total evaluations** (15 thresholds × 5 regions × 5,832 combos)
+- **~612,360 total evaluations** (15 thresholds × 7 regions × 5,832 combos)
 - Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached physics
 - Hydro is always existing-only, wholesale-priced, $0 transmission
 - H2 storage explicitly excluded
