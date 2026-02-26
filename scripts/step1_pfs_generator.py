@@ -1259,15 +1259,15 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                        storage_levels=None):
     """Find feasible solutions for a single threshold × ISO.
 
-    Reads from pre-computed coarse cache (no procurement sweep). For each
-    threshold:
-      - Filter coarse combos by score >= target → feasible (no storage needed)
-      - Filter by score >= target - 0.40 → near-miss → storage sweep
-      - Fine refinement at 1% step around frontier combos
+    Flow:
+      1. Score all coarse generation mixes (no storage)
+      2. Feasible (score >= target) → keep as-is
+      3. Near-miss (within 40pp) with curtailment → fixed storage sweep
+      4. Fine refinement at 1% step around feasible archetypes
 
-    Since there's no procurement dimension, each (mix, storage) combo has
-    exactly ONE score — no binary search needed. Storage sweep evaluates
-    each combo once and checks if score >= target.
+    Storage levels are fixed coarse grids (3-4 levels per type),
+    threshold-dependent: expanded at ≥95% with H2 enabled.
+    Storage only evaluated on mixes with actual curtailment.
 
     Returns list of candidate dicts.
     """
@@ -1284,21 +1284,21 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     h2_dur = H2_DURATION_HOURS
     h2_window_hours = H2_WINDOW_DAYS * 24
 
-    # Storage levels
+    # Storage levels — fixed coarse sweep with threshold-dependent expansion
     if storage_levels is not None:
         batt_levels = storage_levels['bat4']
         batt8_levels = storage_levels['bat8']
         ldes_levels = storage_levels['ldes']
         h2_levels = storage_levels.get('h2', [0])
     elif threshold >= 95:
-        batt_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
-        batt8_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
-        ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]
-        h2_levels = [0, 1, 2, 5, 10, 20]
+        batt_levels = [0, 1, 3, 5]
+        batt8_levels = [0, 2, 4, 6]
+        ldes_levels = [0, 5, 10, 20]
+        h2_levels = [0, 5, 10, 20]
     else:
-        batt_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
-        batt8_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0]
-        ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
+        batt_levels = [0, 1, 3]
+        batt8_levels = [0, 2, 4]
+        ldes_levels = [0, 5, 10]
         h2_levels = [0]
 
     MIN_SURPLUS_DAYS_FOR_BATTERY = 150
@@ -1665,10 +1665,11 @@ def build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2):
 def process_iso(args):
     """Process all thresholds for a single ISO.
 
-    Architecture (v5.0):
+    Architecture (v5.1):
     1. Build coarse cache (one-time): score all resource fraction combos at 5% step
-    2. For each threshold: read cache → filter → storage sweep → fine refinement
-    3. Two-phase adaptive storage: coarse sweep → analyze saturation → fine sweep
+    2. For each threshold: score pure generation mixes → feasible kept as-is →
+       near-miss with curtailment get fixed storage sweep → fine mix refinement
+    3. Single-pass storage with fixed coarse levels (3-4 per type, expanded ≥95%)
     """
     iso, demand_data, gen_profiles = args
     iso_start = time.time()
@@ -1698,7 +1699,7 @@ def process_iso(args):
     else:
         coarse_combos, coarse_scores = build_coarse_cache(iso, demand_arr, supply_matrix)
 
-    # ── Step 2: Two-phase adaptive storage sweep across thresholds ──
+    # ── Step 2: Single-pass storage sweep across thresholds ──
 
     def _run_threshold_loop(phase_label, storage_levels_override=None):
         """Run all thresholds. Returns per-threshold results dict."""
@@ -1725,34 +1726,11 @@ def process_iso(args):
 
         return phase_results
 
-    # Phase 1: Coarse storage sweep
-    print(f"    {iso}: Phase 1 — Coarse storage sweep")
-    coarse_results = _run_threshold_loop("coarse")
+    # Single-pass storage sweep with fixed coarse levels
+    print(f"    {iso}: Storage sweep (fixed levels, curtailment-gated)")
+    results = _run_threshold_loop("sweep")
 
-    # Analyze storage saturation from coarse results
-    max_bat4 = max_bat8 = max_ldes = max_h2 = 0.0
-    for results_list in coarse_results.values():
-        for c in results_list:
-            max_bat4 = max(max_bat4, c.get('battery_dispatch_pct', 0) or 0)
-            max_bat8 = max(max_bat8, c.get('battery8_dispatch_pct', 0) or 0)
-            max_ldes = max(max_ldes, c.get('ldes_dispatch_pct', 0) or 0)
-            max_h2 = max(max_h2, c.get('h2_dispatch_pct', 0) or 0)
-
-    print(f"    {iso}: Coarse saturation — bat4={max_bat4:.2f}%, bat8={max_bat8:.2f}%, "
-          f"ldes={max_ldes:.1f}%, h2={max_h2:.1f}%")
-
-    # Phase 2: Fine storage sweep within saturation range
-    fine_levels = build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2)
-
-    if fine_levels is not None:
-        print(f"    {iso}: Phase 2 — Fine sweep: bat4={len(fine_levels['bat4'])} levels, "
-              f"bat8={len(fine_levels['bat8'])} levels, h2={len(fine_levels['h2'])} levels")
-        fine_results = _run_threshold_loop("fine", fine_levels)
-    else:
-        print(f"    {iso}: No storage saturation — skipping Phase 2")
-        fine_results = coarse_results
-
-    total_solutions = sum(len(r) for r in fine_results.values())
+    total_solutions = sum(len(r) for r in results.values())
     print(f"    {iso}: Total: {total_solutions:,} solutions")
 
     iso_elapsed = time.time() - iso_start
