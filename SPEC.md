@@ -1129,7 +1129,13 @@ data/step5-post-processing/lmp/                      # Output directory
 - **Dashboard impact**: Results still report the nuclear/CCS sub-split for transparency.
 
 ### Key resource decisions:
-- **H2 storage excluded** (explicitly out of scope)
+- **Green H2 seasonal storage** (added Feb 2026):
+  - **Parameters**: 35% round-trip efficiency (electrolysis 70% × storage 95% × turbine 55%), 1000hr duration (~42 days at full power), 30-day rolling dispatch window
+  - **Physics**: Dispatches as Phase 4 after battery4 → battery8 → LDES on post-LDES residual surplus/gap. Same window-based charge/discharge as LDES but with longer window and lower RTE.
+  - **Sweep levels**: Only evaluated at ≥95% thresholds (too expensive for lower). Levels: [0, 1, 2, 5, 10, 20] % of demand.
+  - **Cost**: LCOS-based, shares `ldes_lvl` sensitivity toggle. L=$185-230, M=$260-330, H=$365-460 $/MWh by ISO. Transmission adders: L=$2-3, M=$3-6, H=$5-10.
+  - **Peak capacity credit**: 0.85 (dispatchable but slower ramp than gas/battery)
+  - **Merit order rationale**: Battery → LDES → H2 is economically robust because (1) higher RTE storage should fill short gaps first to minimize surplus waste, (2) battery $/kW is lower than LDES for 4hr needs, (3) H2's only advantage is very cheap $/kWh (salt caverns) at multi-week timescales where LDES is prohibitively expensive.
 - **Clean Firm nuclear derate**: Seasonal spring/fall derate applied to nuclear portion only (not geothermal or CCS). Reflects staggered refueling outages across the fleet (~18-24 day outages per plant every 18-24 months, distributed across spring/fall shoulders). Summer/winter: ~100% CF (nukes run full during peak demand seasons). Spring/fall: reduced CF based on observed EIA 2021-2025 nuclear generation vs. available capacity. Derive simplified flat seasonal percentages from actual data. Geothermal (relevant in CAISO) stays flat 1/8760.
 - **Hydro**: Existing only, capped at regional capacity, wholesale priced, no new-build tier, $0 transmission
 - **CCS-CCGT** (within Clean Firm): 95% capture rate, residual ~0.0185 tCO2/MWh, 45Q ($85/ton = ~$27.5/MWh offset) baked into LCOE, fuel cost linked to gas price toggle. **Modeled as flat baseload (not dispatchable) by design** — while CCS-CCGT is physically dispatchable, the 45Q tax credit ($85/ton for geologic storage) incentivizes running at maximum capacity factor to maximize capture credits. This is an economics-driven decision, not a physical constraint.
