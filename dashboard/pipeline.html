@@ -1284,9 +1284,9 @@ body { background: #FFFFFF; }
                     <td><code>dashboard/js/consequential-queue-data.js</code></td>
                     <td>Step 6 (Consequential)</td>
                     <td>
-                        <span class="page-badge page-badge-consq">consequential_stranding</span>
+                        <span class="page-badge page-badge-consq">scenario_comparison</span>
                     </td>
-                    <td>Cross-regional deployment sequence under consequential accounting. Zone-by-zone retirement curves, deployment queue, marginal MAC by zone (50&rarr;75%, 75&rarr;90%, 90&rarr;99%).</td>
+                    <td>Cross-regional deployment queue data used by scenario comparison page.</td>
                 </tr>
                 <tr>
                     <td><code>dashboard/overprocure_results.json</code></td>
@@ -1362,11 +1362,6 @@ body { background: #FFFFFF; }
                 <tr>
                     <td><strong>clean_firm_case.html</strong></td>
                     <td>GAS_BACKUP_DATA, EFFECTIVE_COST_DATA, CF_TRANCHE_DATA</td>
-                    <td>None</td>
-                </tr>
-                <tr>
-                    <td><strong>consequential_stranding.html</strong></td>
-                    <td>shared-data.js + consequential-queue-data.js (CQ_DATA)</td>
                     <td>None</td>
                 </tr>
                 <tr>
@@ -1467,8 +1462,8 @@ body { background: #FFFFFF; }
                     <td><code>dashboard/js/consequential-queue-data.js</code></td>
                     <td>JS module</td>
                     <td>step6_consequential_queue.py</td>
-                    <td>consequential_stranding.html</td>
-                    <td>Cross-regional deployment path under consequential accounting</td>
+                    <td>scenario_comparison.html</td>
+                    <td>Cross-regional deployment data for scenario comparison</td>
                 </tr>
                 <tr>
                     <td><code>data/step5-post-processing/lmp/{ISO}_lmp.parquet</code></td>
