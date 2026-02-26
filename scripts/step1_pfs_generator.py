@@ -119,11 +119,10 @@ HYDRO_CAPS = {
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 
 # Threshold-adaptive procurement bounds (Decision 3C, expanded)
-# 90-99%: capped at 250% per user direction (high enough for extreme renewables,
-# but not wastefully wide). 100%: pushed to 500% for perfect hourly matching.
-# Procurement bounds — raised for lower thresholds to allow higher RE saturation
-# with storage. A pure solar mix at 250% procurement + right-sized battery can
-# hit 80%+ targets — the old caps (150-200%) blocked this solution space.
+# ≤92.5%: capped at 250% (sufficient for moderate RE saturation with storage).
+# 95–99%: widened to 350% — wind-floor-compliant mixes (wind ≥ existing %)
+#   need higher procurement to compensate for constrained solar/wind ratio.
+# 99.5–100%: pushed to 500% for perfect hourly matching across all mix types.
 PROCUREMENT_BOUNDS = {
     50:   (50, 200),
     55:   (55, 212),
@@ -136,12 +135,12 @@ PROCUREMENT_BOUNDS = {
     87.5: (87, 250),
     90:   (90, 250),
     92.5: (92, 250),
-    95:   (95, 250),
-    97.5: (100, 250),
-    99:   (100, 250),
-    99.5: (100, 300),
-    99.9: (100, 350),
-    100:  (100, 350),
+    95:   (95, 350),
+    97.5: (100, 350),
+    99:   (100, 400),
+    99.5: (100, 450),
+    99.9: (100, 500),
+    100:  (100, 500),
 }
 
 # Nuclear seasonal derate
@@ -1138,10 +1137,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
 
     # Storage levels — either from two-phase adaptive sweep (storage_levels param)
     # or default coarse 0.25% for initial pass.
+    # At ≥95% thresholds, expand storage search: higher battery and LDES levels
+    # to fill multi-day wind lulls and overnight solar gaps.
     if storage_levels is not None:
         batt_levels = storage_levels['bat4']
         batt8_levels = storage_levels['bat8']
         ldes_levels = storage_levels['ldes']
+    elif threshold >= 95:
+        # Expanded storage for high thresholds
+        batt_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
+        batt8_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
+        ldes_levels = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10, 15, 20]
     else:
         # Default: coarse 0.25% sweep (Phase 1 of two-phase adaptive approach)
         batt_levels = [0, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5]
@@ -1185,8 +1191,12 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
     supply_rows = mix_fracs @ supply_matrix
 
     # Procurement levels — adaptive step based on range width
+    # At high thresholds (≥95%), use finer steps even for wide ranges to avoid
+    # missing optimal procurement points in the steep part of the score curve.
     proc_range = proc_max - proc_min
-    if proc_range > 200:
+    if threshold >= 95:
+        proc_step = 5   # High thresholds: medium step even for wide ranges
+    elif proc_range > 200:
         proc_step = 10  # Very wide range (300%+): coarse sweep
     elif proc_range > 100:
         proc_step = 5   # Wide range (100-200%): medium sweep
