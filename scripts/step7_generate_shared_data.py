@@ -6,7 +6,7 @@ Replaces the entire file with fresh data from the latest pipeline run.
 Pipeline order: Step 1 (physics) → Step 2 (tranche) → postprocess → co2 → mac_stats → THIS
 
 Input:  dashboard/overprocure_results.json                  (final pipeline output)
-        data/step5-post-processing/mac_stats.json  (MAC statistics from step5_PP5_compute_mac_stats.py)
+        data/step5-post-processing/mac_stats.json  (MAC statistics from step6_compute_mac_stats.py)
 Output: dashboard/js/shared-data.js                        (complete rewrite)
         data/step5-post-processing/shared_data.json (canonical JSON archive)
 """
@@ -79,7 +79,7 @@ def load_from_co2_batches(batch_dir, isos, thresholds):
     """Reassemble results dict from batched co2 result files.
 
     Reads _config.json, per-ISO meta files, and per-ISO/threshold files
-    written by step5_PP4_recompute_co2.py.
+    written by step6_recompute_co2.py.
     """
     import glob as _glob
 

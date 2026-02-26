@@ -100,20 +100,22 @@
 - **Step 3: Cost Optimization** (`scripts/step3_cost_optimization.py`) — Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos (non-CAISO; 17,496 for CAISO). Merit-order tranche pricing for clean firm (uprate → geothermal → cheapest of nuclear/CCS). Demand growth sweep (25 years × 3 growth rates). Output: `data/step3-cost-opt-parquets/`. Also: `scripts/step3_track_nb_ctr.py` (Track 2 newbuild + Track 3 cost-to-replace). **Run when cost assumptions change. No physics re-run needed.**
 - **Step 4: Post-Processing** (`scripts/step4_gas_ccs_adjustement.py`) — NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh), without-45Q overlay, gas capacity backup & resource adequacy (15% RA margin), CCS vs LDES crossover analysis. Output: `data/step4-gas-ccs-parquets/`. **Run when Step 3 outputs change.**
 
-**Step 5: Post-processing scripts (run after Step 4, all output to `data/step5-post-processing/`):**
-- **`scripts/step5_PP0_build_dispatch_cache.py`** — **Run first.** Pre-computes 8760-hour dispatch for all unique mixes across all ISOs. Populates `dispatch_cache/{ISO}_dispatch_cache.npz` (v2, with per-resource matched/surplus + charge profiles). PP1/PP4/PP6 read from this cache.
-- **`scripts/step5_PP1_compressed_day.py`** — 24-hour representative day profiles for each unique mix. Reads from PP0 dispatch cache; falls back to live compute if cache miss.
-- **`scripts/step5_PP2_consequential_queue.py`** — Cross-regional deployment path under consequential accounting; merit-order fuel retirement.
-- **`scripts/step5_PP3_scenario_comparison.py`** — Consequential vs. hourly matching strategy comparison.
-- **`scripts/step5_PP4_recompute_co2.py`** — Dispatch-stack emission model. Merit-order retirement: coal first, then oil, then gas. Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average rate of DISPLACED fossil (not remaining fleet) for CO₂ abated calculation. Demand-growth-aware. Uses canonical `get_supply_profiles` (nuclear derate + DST correction).
-- **`scripts/step5_PP5_compute_mac_stats.py`** — Computes 6 MAC metrics: average MAC fan (P10/P50/P90), stepwise marginal MAC, monotonic envelope, path-constrained MAC. ANOVA sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS benchmarks.
-- **`scripts/step5_PP6_compute_lmp_prices.py`** — Reconstructs 8760-hour dispatch per scenario; synthetic hourly LMP from merit-order fossil stack. Output: `data/step5-post-processing/lmp/`.
-- **`scripts/step5_PP7_compute_eac_scarcity.py`** — EAC supply scarcity analysis under RPS + voluntary demand.
-- **`scripts/step5_PP8_export_track_results.py`** — Exports track parquets (NB + CTR) to `track_results.json` for dashboard.
-- **`scripts/step5_PP9_analyze_tracks.py`** — Track result analysis: cost envelopes (P10/P50/P90), resource mix differentials.
+**Step 5: Dispatch cache + cache-independent scripts (run after Step 4, output to `data/step5-post-processing/`):**
+- **`scripts/step5_build_dispatch_cache.py`** — **Run first.** Pre-computes 8760-hour dispatch for all unique mixes across all ISOs. Populates `dispatch_cache/{ISO}_dispatch_cache.npz` (v2, with per-resource matched/surplus + charge profiles). Step 6 scripts read from this cache.
+- **`scripts/step5_compute_eac_scarcity.py`** — EAC supply scarcity analysis under RPS + voluntary demand. No dispatch cache dependency.
+- **`scripts/step5_export_track_results.py`** — Exports track parquets (NB + CTR) to `track_results.json` for dashboard. No dispatch cache dependency.
+- **`scripts/step5_analyze_tracks.py`** — Track result analysis: cost envelopes (P10/P50/P90), resource mix differentials. No dispatch cache dependency.
 
-**Step 6: Dashboard Data Generation:**
-- **`scripts/step6_generate_shared_data.py`** — Extracts all results into `dashboard/js/shared-data.js` for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing. Aggregates Step 5 outputs (mac_stats, etc.). Runs last.
+**Step 6: Dispatch-cache-dependent scripts (output to `data/step5-post-processing/`):**
+- **`scripts/step6_compressed_day.py`** — 24-hour representative day profiles for each unique mix. Reads from dispatch cache; falls back to live compute if cache miss.
+- **`scripts/step6_consequential_queue.py`** — Cross-regional deployment path under consequential accounting. Uses dispatch cache for hourly emission accounting via `compute_co2_from_dispatch()`.
+- **`scripts/step6_scenario_comparison.py`** — Consequential vs. hourly matching strategy comparison. Both Scenario A and B use dispatch-cache-based emission accounting.
+- **`scripts/step6_recompute_co2.py`** — Dispatch-stack emission model. Merit-order retirement: coal first, then oil, then gas. Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average rate of DISPLACED fossil (not remaining fleet) for CO₂ abated calculation. Demand-growth-aware.
+- **`scripts/step6_compute_mac_stats.py`** — Computes 6 MAC metrics: average MAC fan (P10/P50/P90), stepwise marginal MAC, monotonic envelope, path-constrained MAC. ANOVA sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS benchmarks.
+- **`scripts/step6_compute_lmp_prices.py`** — Reconstructs 8760-hour dispatch per scenario; synthetic hourly LMP from merit-order fossil stack. Output: `data/step5-post-processing/lmp/`.
+
+**Step 7: Dashboard Data Generation:**
+- **`scripts/step7_generate_shared_data.py`** — Extracts all results into `dashboard/js/shared-data.js` for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing. Aggregates Step 5/6 outputs (mac_stats, etc.). Runs last.
 
 **Step 0: Data Fetch/Prep** (scripts prefixed `step0_`):
 - `step0_fetch_eia_master.py`, `step0_fetch_all_data.py`, `step0_fetch_egrid.py`, `step0_fetch_eia_multiyear.py`, `step0_fetch_lmp_2025.py`, `step0_fix_dst_profiles.py`, `step0_fix_utc_profiles.py`
