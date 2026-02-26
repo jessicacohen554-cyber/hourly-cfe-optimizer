@@ -19,6 +19,7 @@ from datetime import datetime
 # Import cost tables directly from Step 3 (single source of truth)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from step3_cost_optimization import (
+    OUTPUT_THRESHOLDS as _OUTPUT_THRESHOLDS,
     GRID_MIX_SHARES as _GRID_MIX_SHARES,
     WHOLESALE_PRICES as _WHOLESALE_PRICES,
     FUEL_ADJUSTMENTS as _FUEL_ADJUSTMENTS,
@@ -34,8 +35,8 @@ from step3_cost_optimization import (
 )
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.5', '99.9', '100']
-THRESHOLDS_NUM = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+THRESHOLDS_NUM = _OUTPUT_THRESHOLDS
+THRESHOLDS = [str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS_NUM]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
 

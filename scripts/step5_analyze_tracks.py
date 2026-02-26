@@ -20,14 +20,15 @@ import numpy as np
 from collections import defaultdict
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, SCRIPT_DIR)
+sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts'))
 
 TRACK_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_results.json')
 BASELINE_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CO2_BATCH_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing', 'co2_results')
 
+from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
+
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 THRESHOLDS_STR = [str(t) for t in THRESHOLDS]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
