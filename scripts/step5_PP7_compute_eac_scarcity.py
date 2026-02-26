@@ -205,7 +205,8 @@ CI_SHARE = 0.62
 
 # ── Wholesale Prices ($/MWh) from optimizer config ────────────────────────
 WHOLESALE_PRICES = {
-    "CAISO": 30, "ERCOT": 27, "PJM": 34, "NYISO": 42, "NEISO": 41
+    "CAISO": 30, "ERCOT": 27, "PJM": 34, "NYISO": 42, "NEISO": 41,
+    "MISO": 30, "SPP": 25,
 }
 
 # ── Clean Supply Cost Stack per ISO ───────────────────────────────────────
@@ -243,6 +244,18 @@ CLEAN_SUPPLY_STACK = {
         {"resource": "solar",      "lcoe": 82,  "annual_add_twh": 2,  "max_cumulative_twh": 30},
         {"resource": "clean_firm", "lcoe": 90,  "annual_add_twh": 1,  "max_cumulative_twh": 15},
         {"resource": "storage",    "lcoe": 100, "annual_add_twh": 1,  "max_cumulative_twh": 15},
+    ],
+    "MISO": [
+        {"resource": "wind",       "lcoe": 38,  "annual_add_twh": 18, "max_cumulative_twh": 280},
+        {"resource": "solar",      "lcoe": 62,  "annual_add_twh": 12, "max_cumulative_twh": 200},
+        {"resource": "clean_firm", "lcoe": 90,  "annual_add_twh": 3,  "max_cumulative_twh": 50},
+        {"resource": "storage",    "lcoe": 100, "annual_add_twh": 2,  "max_cumulative_twh": 30},
+    ],
+    "SPP": [
+        {"resource": "wind",       "lcoe": 35,  "annual_add_twh": 20, "max_cumulative_twh": 350},
+        {"resource": "solar",      "lcoe": 57,  "annual_add_twh": 8,  "max_cumulative_twh": 120},
+        {"resource": "clean_firm", "lcoe": 90,  "annual_add_twh": 2,  "max_cumulative_twh": 30},
+        {"resource": "storage",    "lcoe": 100, "annual_add_twh": 1,  "max_cumulative_twh": 20},
     ],
 }
 

@@ -537,13 +537,15 @@
             <tr><td>PJM</td><td>PJM</td><td>Mid-Atlantic / Great Lakes (13 states + DC)</td></tr>
             <tr><td>NYISO</td><td>NYIS</td><td>New York</td></tr>
             <tr><td>NEISO</td><td>ISNE</td><td>New England (6 states)</td></tr>
+            <tr><td>MISO</td><td>MISO</td><td>Midwest (15 states)</td></tr>
+            <tr><td>SPP</td><td>SWPP</td><td>Central Plains (14 states)</td></tr>
         </tbody>
     </table>
 
     <!-- ======== SECTION 3: DEMAND PROFILES ======== -->
     <h2 id="demand-profiles">3. Demand Profiles</h2>
     <p>
-        Regional electricity demand profiles are extracted from EIA-930 balance data for each of the five
+        Regional electricity demand profiles are extracted from EIA-930 balance data for each of the seven
         ISO regions. The raw data provides hourly demand in megawatts (MW) for each balancing authority.
     </p>
 
@@ -668,6 +670,8 @@
             <tr><td>PJM (Mid-Atlantic)</td><td>3%</td><td>Limited Appalachian hydro</td></tr>
             <tr><td>NYISO (New York)</td><td>25%</td><td>Substantial Niagara/St. Lawrence hydro</td></tr>
             <tr><td>NEISO (New England)</td><td>10%</td><td>Moderate New England/Quebec hydro imports</td></tr>
+            <tr><td>MISO (Midwest)</td><td>1.6%</td><td>Limited hydro resources across Midwest footprint</td></tr>
+            <tr><td>SPP (Central Plains)</td><td>4.3%</td><td>Moderate hydro from Missouri River system (Garrison, Fort Randall, Gavins Point)</td></tr>
         </tbody>
     </table>
 
@@ -822,7 +826,7 @@
     </div>
 
     <p>
-        This reduces the coarse phase from minutes to seconds across all five ISO regions.
+        This reduces the coarse phase from minutes to seconds across all seven ISO regions.
     </p>
 
     <h3>5.5 Mix Generation</h3>
@@ -992,6 +996,8 @@
             <tr><td>PJM</td><td>32.1%</td><td>2.9%</td><td>3.8%</td><td>1.8%</td><td>40.6%</td></tr>
             <tr><td>NYISO</td><td>18.4%</td><td>0.0%</td><td>4.7%</td><td>15.9%</td><td>39.0%</td></tr>
             <tr><td>NEISO</td><td>23.8%</td><td>1.4%</td><td>3.9%</td><td>4.4%</td><td>33.5%</td></tr>
+            <tr><td>MISO</td><td>18.5%</td><td>4.2%</td><td>12.8%</td><td>1.6%</td><td>37.1%</td></tr>
+            <tr><td>SPP</td><td>5.2%</td><td>6.5%</td><td>33.4%</td><td>4.3%</td><td>49.4%</td></tr>
         </tbody>
     </table>
     </div>
@@ -1017,6 +1023,8 @@
             <tr><td>PJM (Mid-Atlantic)</td><td>~$34</td><td>PJM IMM State of the Market, 2023&ndash;2025</td></tr>
             <tr><td>NYISO (New York)</td><td>~$42</td><td>NYISO market data, 2023&ndash;2025</td></tr>
             <tr><td>NEISO (New England)</td><td>~$41</td><td>ISO-NE market data, 2023&ndash;2025</td></tr>
+            <tr><td>MISO (Midwest)</td><td>~$30</td><td>MISO market data, 2023&ndash;2025</td></tr>
+            <tr><td>SPP (Central Plains)</td><td>~$25</td><td>SPP market data, 2023&ndash;2025</td></tr>
         </tbody>
     </table>
     </div>
@@ -1033,12 +1041,12 @@
     <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr>
         </thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$45</td><td>$40</td><td>$50</td><td>$70</td><td>$62</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$60</td><td>$54</td><td>$65</td><td>$92</td><td>$82</td></tr>
-            <tr><td><strong>High</strong></td><td>$78</td><td>$70</td><td>$85</td><td>$120</td><td>$107</td></tr>
+            <tr><td><strong>Low</strong></td><td>$45</td><td>$40</td><td>$50</td><td>$70</td><td>$62</td><td>$48</td><td>$43</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$60</td><td>$54</td><td>$65</td><td>$92</td><td>$82</td><td>$62</td><td>$57</td></tr>
+            <tr><td><strong>High</strong></td><td>$78</td><td>$70</td><td>$85</td><td>$120</td><td>$107</td><td>$80</td><td>$74</td></tr>
         </tbody>
     </table>
     </div>
@@ -1046,24 +1054,26 @@
         Sources: NREL ATB 2024 utility-scale PV, LBNL Utility-Scale Solar 2024 regional PPA data, Lazard LCOE v17.
         Regional variation driven by solar irradiance (GHI), labor costs, and interconnection costs.
         ERCOT lowest (high irradiance, low labor). NYISO highest (low irradiance, high labor, constrained siting).
+        SPP and MISO benefit from strong Midwest/Plains irradiance and low labor costs.
     </p>
 
     <h3>7.2.2 Wind LCOE ($/MWh)</h3>
     <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr>
         </thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$55</td><td>$30</td><td>$47</td><td>$61</td><td>$55</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$73</td><td>$40</td><td>$62</td><td>$81</td><td>$73</td></tr>
-            <tr><td><strong>High</strong></td><td>$95</td><td>$52</td><td>$81</td><td>$105</td><td>$95</td></tr>
+            <tr><td><strong>Low</strong></td><td>$55</td><td>$30</td><td>$47</td><td>$61</td><td>$55</td><td>$33</td><td>$30</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$73</td><td>$40</td><td>$62</td><td>$81</td><td>$73</td><td>$42</td><td>$38</td></tr>
+            <tr><td><strong>High</strong></td><td>$95</td><td>$52</td><td>$81</td><td>$105</td><td>$95</td><td>$55</td><td>$50</td></tr>
         </tbody>
     </table>
     </div>
     <p style="font-size:0.82rem;color:var(--text-muted);">
         Sources: LBNL Land-Based Wind Market Report 2024 (+30% escalation to 2025), NREL ATB 2024 onshore wind.
         ERCOT lowest (exceptional wind resource in West Texas/Panhandle, CREZ transmission buildout).
+        SPP near-ERCOT levels (excellent Great Plains wind resource, established wind corridor).
         NYISO highest (limited onshore wind resource, offshore wind excluded from this resource class).
     </p>
 
@@ -1075,18 +1085,19 @@
     <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr>
         </thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$58</td><td>$63</td><td>$72</td><td>$75</td><td>$73</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$78</td><td>$85</td><td>$93</td><td>$98</td><td>$96</td></tr>
-            <tr><td><strong>High</strong></td><td>$110</td><td>$120</td><td>$140</td><td>$150</td><td>$145</td></tr>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$63</td><td>$72</td><td>$75</td><td>$73</td><td>$68</td><td>$65</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$78</td><td>$85</td><td>$93</td><td>$98</td><td>$96</td><td>$90</td><td>$87</td></tr>
+            <tr><td><strong>High</strong></td><td>$110</td><td>$120</td><td>$140</td><td>$150</td><td>$145</td><td>$135</td><td>$130</td></tr>
         </tbody>
     </table>
     </div>
     <p style="font-size:0.82rem;color:var(--text-muted);">
         Sources: NREL ATB 2024 (nuclear, geothermal), Lazard LCOE v17.
         CAISO lowest (Salton Sea, Imperial Valley, The Geysers geothermal access).
+        SPP and MISO moderate (nuclear-only, no geothermal potential, but lower labor costs than Northeast).
         NYISO highest (nuclear-only, zero geothermal potential, highest construction labor costs).
     </p>
 
@@ -1127,17 +1138,18 @@
     <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr>
         </thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$58</td><td>$52</td><td>$62</td><td>$78</td><td>$75</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$86</td><td>$71</td><td>$79</td><td>$99</td><td>$96</td></tr>
-            <tr><td><strong>High</strong></td><td>$115</td><td>$92</td><td>$102</td><td>$128</td><td>$122</td></tr>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$52</td><td>$62</td><td>$78</td><td>$75</td><td>$55</td><td>$53</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$86</td><td>$71</td><td>$79</td><td>$99</td><td>$96</td><td>$74</td><td>$72</td></tr>
+            <tr><td><strong>High</strong></td><td>$115</td><td>$92</td><td>$102</td><td>$128</td><td>$122</td><td>$98</td><td>$95</td></tr>
         </tbody>
     </table>
     </div>
     <p style="font-size:0.82rem;color:var(--text-muted);">
         ERCOT lowest (Gulf Coast Class VI wells, abundant geology, cheap gas, shortest CO<sub>2</sub> transport).
+        SPP and MISO benefit from proximity to Gulf Coast and Midwest saline aquifer formations, with moderate transport distances.
         NYISO highest (no suitable sequestration geology, longest transport distance, highest permitting burden).
     </p>
 
@@ -1174,7 +1186,9 @@
 
     <div class="note-box">
         <strong>Class VI Well Availability:</strong> ERCOT benefits from Gulf Coast geology (extensive saline
-        aquifer storage formations, active Class VI well permitting). PJM has moderate access via Appalachian
+        aquifer storage formations, active Class VI well permitting). MISO and SPP have moderate-to-good access
+        via Illinois Basin, Williston Basin, and Gulf Coast fringe formations, with shorter transport distances
+        than the Northeast. PJM has moderate access via Appalachian
         basin formations. NYISO and NEISO face the greatest challenges: limited suitable geology in the
         Northeast requires longer CO<sub>2</sub> pipeline transport distances (100+ miles) and higher
         permitting burden, driving significantly higher transport and storage costs.
@@ -1187,18 +1201,19 @@
     <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr>
         </thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$77</td><td>$69</td><td>$74</td><td>$81</td><td>$79</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$102</td><td>$92</td><td>$98</td><td>$108</td><td>$105</td></tr>
-            <tr><td><strong>High</strong></td><td>$133</td><td>$120</td><td>$127</td><td>$140</td><td>$137</td></tr>
+            <tr><td><strong>Low</strong></td><td>$77</td><td>$69</td><td>$74</td><td>$81</td><td>$79</td><td>$60</td><td>$58</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$102</td><td>$92</td><td>$98</td><td>$108</td><td>$105</td><td>$75</td><td>$72</td></tr>
+            <tr><td><strong>High</strong></td><td>$133</td><td>$120</td><td>$127</td><td>$140</td><td>$137</td><td>$95</td><td>$92</td></tr>
         </tbody>
     </table>
     </div>
     <p style="font-size:0.82rem;color:var(--text-muted);">
         Sources: NREL ATB 2024 (4hr Li-ion utility-scale battery), Lazard LCOS v9.
         ERCOT lowest (low labor costs, fast permitting, flat land for siting).
+        SPP and MISO benefit from low labor costs and abundant flat land, similar to ERCOT.
         NYISO highest (highest labor costs, most constrained siting, dense urban proximity).
     </p>
 
@@ -1206,18 +1221,19 @@
     <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+            <tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr>
         </thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$135</td><td>$116</td><td>$128</td><td>$150</td><td>$143</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$180</td><td>$155</td><td>$170</td><td>$200</td><td>$190</td></tr>
-            <tr><td><strong>High</strong></td><td>$234</td><td>$202</td><td>$221</td><td>$260</td><td>$247</td></tr>
+            <tr><td><strong>Low</strong></td><td>$135</td><td>$116</td><td>$128</td><td>$150</td><td>$143</td><td>$100</td><td>$98</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$180</td><td>$155</td><td>$170</td><td>$200</td><td>$190</td><td>$140</td><td>$138</td></tr>
+            <tr><td><strong>High</strong></td><td>$234</td><td>$202</td><td>$221</td><td>$260</td><td>$247</td><td>$185</td><td>$182</td></tr>
         </tbody>
     </table>
     </div>
     <p style="font-size:0.82rem;color:var(--text-muted);">
         Sources: NREL ATB 2024, Form Energy published projections, Lazard LCOS v9 (long-duration category).
         ERCOT lowest (Gulf Coast geology for compressed air variants, low labor).
+        SPP and MISO among the lowest (flat terrain, low labor, favorable geology for iron-air siting).
         NYISO highest (expensive labor, constrained siting, limited suitable geology).
     </p>
 
@@ -1233,34 +1249,34 @@
     <div class="table-wrap">
     <table>
         <thead>
-            <tr><th>Resource</th><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr>
+            <tr><th>Resource</th><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr>
         </thead>
         <tbody>
-            <tr><td rowspan="3"><strong>Wind</strong></td><td>Low</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
-            <tr><td>Medium</td><td>$8</td><td>$6</td><td>$10</td><td>$14</td><td>$12</td></tr>
-            <tr><td>High</td><td>$14</td><td>$10</td><td>$18</td><td>$22</td><td>$20</td></tr>
+            <tr><td rowspan="3"><strong>Wind</strong></td><td>Low</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td><td>$4</td><td>$3</td></tr>
+            <tr><td>Medium</td><td>$8</td><td>$6</td><td>$10</td><td>$14</td><td>$12</td><td>$8</td><td>$7</td></tr>
+            <tr><td>High</td><td>$14</td><td>$10</td><td>$18</td><td>$22</td><td>$20</td><td>$12</td><td>$11</td></tr>
 
-            <tr><td rowspan="3"><strong>Solar</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$2</td><td>$3</td><td>$3</td></tr>
-            <tr><td>Medium</td><td>$3</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
-            <tr><td>High</td><td>$6</td><td>$5</td><td>$9</td><td>$12</td><td>$10</td></tr>
+            <tr><td rowspan="3"><strong>Solar</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$2</td><td>$3</td><td>$3</td><td>$3</td><td>$2</td></tr>
+            <tr><td>Medium</td><td>$3</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td><td>$6</td><td>$5</td></tr>
+            <tr><td>High</td><td>$6</td><td>$5</td><td>$9</td><td>$12</td><td>$10</td><td>$9</td><td>$8</td></tr>
 
-            <tr><td rowspan="3"><strong>Clean Firm</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
-            <tr><td>Medium</td><td>$3</td><td>$2</td><td>$3</td><td>$5</td><td>$4</td></tr>
-            <tr><td>High</td><td>$6</td><td>$4</td><td>$6</td><td>$9</td><td>$7</td></tr>
+            <tr><td rowspan="3"><strong>Clean Firm</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td><td>$1</td><td>$1</td></tr>
+            <tr><td>Medium</td><td>$3</td><td>$2</td><td>$3</td><td>$5</td><td>$4</td><td>$3</td><td>$2</td></tr>
+            <tr><td>High</td><td>$6</td><td>$4</td><td>$6</td><td>$9</td><td>$7</td><td>$5</td><td>$4</td></tr>
 
-            <tr><td rowspan="3"><strong>CCS-CCGT</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
-            <tr><td>Medium</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td></tr>
-            <tr><td>High</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
+            <tr><td rowspan="3"><strong>CCS-CCGT</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td><td>$1</td><td>$1</td></tr>
+            <tr><td>Medium</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td><td>$2</td><td>$2</td></tr>
+            <tr><td>High</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td><td>$4</td><td>$3</td></tr>
 
-            <tr><td rowspan="3"><strong>Battery</strong></td><td>Low</td><td>$0</td><td>$0</td><td>$0</td><td>$1</td><td>$1</td></tr>
-            <tr><td>Medium</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
-            <tr><td>High</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td></tr>
+            <tr><td rowspan="3"><strong>Battery</strong></td><td>Low</td><td>$0</td><td>$0</td><td>$0</td><td>$1</td><td>$1</td><td>$0</td><td>$0</td></tr>
+            <tr><td>Medium</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td><td>$1</td><td>$1</td></tr>
+            <tr><td>High</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td><td>$2</td><td>$2</td></tr>
 
-            <tr><td rowspan="3"><strong>LDES</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
-            <tr><td>Medium</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td></tr>
-            <tr><td>High</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
+            <tr><td rowspan="3"><strong>LDES</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td><td>$1</td><td>$1</td></tr>
+            <tr><td>Medium</td><td>$2</td><td>$2</td><td>$3</td><td>$4</td><td>$3</td><td>$2</td><td>$2</td></tr>
+            <tr><td>High</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td><td>$4</td><td>$3</td></tr>
 
-            <tr><td><strong>Hydro</strong></td><td>All</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td></tr>
+            <tr><td><strong>Hydro</strong></td><td>All</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td></tr>
         </tbody>
     </table>
     </div>
@@ -1312,6 +1328,8 @@
             <tr><td>PJM</td><td>~45 GW remaining</td><td>High</td><td>Gas price increases drive meaningful coal resurgence, emission rate jumps</td></tr>
             <tr><td>NYISO</td><td>Minimal</td><td>Low</td><td>Small coal fleet limits switching effect</td></tr>
             <tr><td>NEISO</td><td>Minimal (retiring)</td><td>Low</td><td>Small and declining coal fleet</td></tr>
+            <tr><td>MISO</td><td>~30 GW remaining</td><td>High</td><td>Significant coal fleet across Midwest; gas price increases drive substantial coal resurgence</td></tr>
+            <tr><td>SPP</td><td>~15 GW remaining</td><td>Moderate</td><td>Moderate coal fleet in Kansas, Oklahoma, Nebraska; some switching potential</td></tr>
         </tbody>
     </table>
     </div>
@@ -1552,8 +1570,8 @@
         <li><strong>No embodied emissions:</strong> Life-cycle emissions from manufacturing, construction,
             and decommissioning of clean energy infrastructure are not included. Solar panels, wind turbines,
             and batteries all have embodied carbon from mining, manufacturing, and transport.</li>
-        <li><strong>5 ISO regions only:</strong> The tool currently covers CAISO, ERCOT, PJM, NYISO, and
-            NEISO. Other U.S. regions (MISO, SPP, etc.) are not yet included, limiting national applicability.</li>
+        <li><strong>7 ISO regions:</strong> The tool covers CAISO, ERCOT, PJM, NYISO, NEISO, MISO, and
+            SPP. Other U.S. regions and non-ISO territories are not yet included, limiting full national applicability.</li>
     </ul>
 
     <h3>9.6 Storage Model Limitations</h3>
@@ -1900,6 +1918,8 @@
             <tr><td>PJM</td><td>~0.95</td><td>~0.44</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
             <tr><td>NYISO</td><td>~0.95</td><td>~0.37</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
             <tr><td>NEISO</td><td>~0.95</td><td>~0.38</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
+            <tr><td>MISO</td><td>~0.97</td><td>~0.43</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
+            <tr><td>SPP</td><td>~0.96</td><td>~0.41</td><td>~0.73</td><td>EPA eGRID 2023</td></tr>
         </tbody>
     </table>
     </div>
@@ -2012,6 +2032,8 @@
             <tr><td>PJM</td><td>3%</td><td>15</td><td>Limited Appalachian hydro (Conowingo, Bath County pumped storage)</td></tr>
             <tr><td>NYISO</td><td>25%</td><td>40</td><td>Substantial Niagara Falls and St. Lawrence River hydro</td></tr>
             <tr><td>NEISO</td><td>10%</td><td>30</td><td>Moderate New England hydro plus Quebec hydro imports (HQ interconnections)</td></tr>
+            <tr><td>MISO</td><td>1.6%</td><td>12</td><td>Limited hydro resources across Midwest footprint (small run-of-river facilities)</td></tr>
+            <tr><td>SPP</td><td>4.3%</td><td>10</td><td>Moderate hydro from Missouri River system (Garrison, Fort Randall, Gavins Point)</td></tr>
         </tbody>
     </table>
     </div>
@@ -2176,6 +2198,8 @@
             <tr><td><strong>CAISO</strong></td><td>~130</td><td>~280</td><td>46%</td><td>~25% (geothermal + nuclear + wind)</td></tr>
             <tr><td><strong>ISO-NE</strong></td><td>~55</td><td>~120</td><td>46%</td><td>~30% (nuclear + hydro)</td></tr>
             <tr><td><strong>NYISO</strong></td><td>~75</td><td>~155</td><td>48%</td><td>~35% (nuclear + hydro)</td></tr>
+            <tr><td><strong>MISO</strong></td><td>~245</td><td>~664</td><td>37%</td><td>~25% (nuclear + wind)</td></tr>
+            <tr><td><strong>SPP</strong></td><td>~148</td><td>~300</td><td>49%</td><td>~30% (wind dominant)</td></tr>
         </tbody>
     </table>
     <p style="font-size:0.85rem;color:var(--text-muted);margin-top:8px;">Night SSS estimates based on 10 PM&ndash;6 AM average clean generation share. Nuclear assumed ~90% annual CF (NRC fleet average). Hydro seasonal variation captured via 5-year monthly averages.</p>
@@ -2191,6 +2215,8 @@
         <li><strong>CAISO:</strong> SB 100 (60% RPS by 2030, 100% clean by 2045). ~170 TWh RPS demand by 2030.</li>
         <li><strong>ERCOT:</strong> No binding RPS. 0 TWh mandatory demand.</li>
         <li><strong>NYISO:</strong> CLCPA (70% renewable by 2030, 100% zero-emission by 2040). ~110 TWh by 2030.</li>
+        <li><strong>MISO:</strong> No unified RPS (state-level mandates vary: IL CEJA, MN 100% clean by 2040, MI 60% by 2035). Combined ~80&ndash;100 TWh REC demand by 2030.</li>
+        <li><strong>SPP:</strong> No unified RPS. Limited state mandates (KS 20% by 2020 achieved, OK voluntary goal only). Minimal mandatory REC demand (~5&ndash;10 TWh).</li>
     </ul>
     <p style="margin-top:12px;">
         <strong>Uncommitted clean supply = Total clean supply &minus; max(SSS allocation, RPS demand)</strong>

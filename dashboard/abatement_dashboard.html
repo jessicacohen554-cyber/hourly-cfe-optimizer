@@ -573,6 +573,8 @@ html, body {
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>CAISO</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>NYISO</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>NEISO</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#06B6D4;"></span>MISO</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>SPP</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.08);"></span>P10&ndash;P90 band</span>
                     <span class="chart-legend-divider"></span>
@@ -730,6 +732,62 @@ html, body {
     </div>
 </section>
 
+<!-- REGION: MISO -->
+<section class="region-section" data-region="MISO">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">MISO (Midwest)</div>
+                <div class="chart-container">
+                    <canvas id="regionChart_MISO"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#06B6D4;"></span>Stepwise marginal MAC (Medium cost)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(6,182,212,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
+                </div>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(6,182,212,0.1);color:#06B6D4;">MISO</span>
+                <div class="region-narrative-title">MISO — Wind-Rich Midwest</div>
+                <p>MISO's vast wind resources and growing solar fleet offer low-cost renewable pathways, but transmission constraints across its 15-state footprint create deliverability challenges. The region's large nuclear fleet (75+ TWh) provides a strong clean firm baseline, while coal retirement timelines remain politically contested.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- REGION: SPP -->
+<section class="region-section" data-region="SPP">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">SPP (Central)</div>
+                <div class="chart-container">
+                    <canvas id="regionChart_SPP"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#EF4444;"></span>Stepwise marginal MAC (Medium cost)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.25);"></span>P10&ndash;P90 sensitivity band</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
+                </div>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(239,68,68,0.1);color:#EF4444;">SPP</span>
+                <div class="region-narrative-title">SPP — Wind Capital of the US</div>
+                <p>SPP leads the nation in wind penetration at 37% of demand, making renewable-heavy procurement strategies exceptionally cost-effective. However, limited nuclear capacity (Wolf Creek only) means clean firm resources must come from new-build — a significant cost adder at high CFE targets.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- SYNTHESIS: Policy levers + conclusion -->
 <section class="synthesis-section">
     <div class="synthesis-inner">
@@ -830,8 +888,8 @@ function buildHeroChart() {
     const ctx = document.getElementById('heroScrollyChart')?.getContext('2d');
     if (!ctx) return;
 
-    const regions = ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
-    const colors = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0' };
+    const regions = ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+    const colors = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#EF4444' };
 
     const stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
     const avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
