@@ -26,7 +26,7 @@ OUTPUT_PATH = os.path.join(ROOT_DIR, 'data', 'analysis_results.json')
 sys.path.insert(0, SCRIPT_DIR)
 from step3_cost_optimization import REGIONAL_DEMAND_TWH
 
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100]
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 
 
