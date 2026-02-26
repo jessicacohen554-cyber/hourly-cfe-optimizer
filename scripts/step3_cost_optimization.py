@@ -361,8 +361,8 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     Args:
         iso: region string
         arrays: dict with numpy arrays (shape N) for each mix dimension:
-            'clean_firm', 'solar', 'wind', 'hydro' (% allocation),
-            'procurement_pct', 'battery_dispatch_pct', 'battery8_dispatch_pct',
+            'clean_firm', 'solar', 'wind', 'hydro' (% of demand),
+            'battery_dispatch_pct', 'battery8_dispatch_pct',
             'ldes_dispatch_pct', 'hourly_match_score'
         sens: dict with scalar sensitivity parameters:
             'ren', 'firm', 'batt', 'ldes_lvl', 'ccs', 'q45', 'fuel', 'tx', 'geo'
@@ -401,7 +401,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
     # Arrays are pre-converted to float64 in _table_to_arrays — no .astype() needed
-    proc = arrays['procurement_pct'] / 100.0
+    # Resource fractions are already % of demand (no procurement multiplier)
     match_frac = arrays['hourly_match_score'] / 100.0
 
     total_cost = np.zeros(N, dtype=np.float64)
@@ -420,42 +420,37 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     h2_pct = arrays.get('h2_dispatch_pct', np.zeros(N, dtype=np.float64))
 
     # --- Solar (existing = $0, only new-build costs money) ---
-    sol_demand_pct = proc * sol_pct
     sol_existing = min(existing['solar'] * existing_scale, 100.0)
-    sol_existing_pct = np.minimum(sol_demand_pct, sol_existing)
-    sol_new_pct = np.maximum(0, sol_demand_pct - sol_existing)
+    sol_existing_pct = np.minimum(sol_pct, sol_existing)
+    sol_new_pct = np.maximum(0, sol_pct - sol_existing)
     sol_lcoe = LCOE_TABLES['solar'][ren_name][iso]
     sol_tx = get_tx('solar', tx_name, iso)
     total_cost += sol_new_pct / 100.0 * (sol_lcoe + sol_tx)
 
     # --- Wind (existing = $0, only new-build costs money) ---
-    wnd_demand_pct = proc * wnd_pct
     wnd_existing = min(existing['wind'] * existing_scale, 100.0)
-    wnd_existing_pct = np.minimum(wnd_demand_pct, wnd_existing)
-    wnd_new_pct = np.maximum(0, wnd_demand_pct - wnd_existing)
+    wnd_existing_pct = np.minimum(wnd_pct, wnd_existing)
+    wnd_new_pct = np.maximum(0, wnd_pct - wnd_existing)
     wnd_lcoe = LCOE_TABLES['wind'][ren_name][iso]
     wnd_tx = get_tx('wind', tx_name, iso)
     total_cost += wnd_new_pct / 100.0 * (wnd_lcoe + wnd_tx)
 
     # --- Hydro (always existing, $0 cost — sunk fleet) ---
-    hyd_demand_pct = proc * hyd_pct
     # No cost added for hydro (existing fleet, $0 price)
 
     # --- CCS-CCGT (existing = $0, only new-build costs money) ---
-    ccs_demand_pct = proc * ccs_pct
     ccs_existing = min(existing.get('ccs_ccgt', 0) * existing_scale, 100.0)
-    ccs_existing_pct = np.minimum(ccs_demand_pct, ccs_existing)
-    ccs_new_pct = np.maximum(0, ccs_demand_pct - ccs_existing)
+    ccs_existing_pct = np.minimum(ccs_pct, ccs_existing)
+    ccs_new_pct = np.maximum(0, ccs_pct - ccs_existing)
     ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
     ccs_lcoe = ccs_table[ccs_lev][iso]
     ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
     total_cost += ccs_new_pct / 100.0 * (ccs_lcoe + ccs_tx)
 
     # --- Clean Firm (existing = $0, new = merit-order tranche pricing) ---
-    cf_demand_pct = proc * cf_pct
     cf_existing = min(existing['clean_firm'] * existing_scale, 100.0)
-    cf_existing_pct = np.minimum(cf_demand_pct, cf_existing)
-    cf_new_pct = np.maximum(0, cf_demand_pct - cf_existing)
+    cf_existing_pct = np.minimum(cf_pct, cf_existing)
+    cf_new_pct = np.maximum(0, cf_pct - cf_existing)
 
     # New CF in TWh for tranche pricing
     new_cf_twh = cf_new_pct / 100.0 * demand
@@ -671,7 +666,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     N = len(arrays['clean_firm'])
 
     # Arrays are pre-converted to float64 in _table_to_arrays — no .astype() needed
-    proc = arrays['procurement_pct'] / 100.0
+    # Resource fractions are already % of demand (no procurement multiplier)
     match_frac = arrays['hourly_match_score'] / 100.0
 
     cf_pct = arrays['clean_firm']
@@ -687,26 +682,19 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
 
     existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
-    # Demand pcts (proc × alloc) — scenario-invariant
-    sol_demand_pct = proc * sol_pct
-    wnd_demand_pct = proc * wnd_pct
-    hyd_demand_pct = proc * hyd_pct
-    ccs_demand_pct = proc * ccs_pct
-    cf_demand_pct = proc * cf_pct
-
     # Existing/new splits (base year, existing_scale=1.0)
-    sol_existing_pct = np.minimum(sol_demand_pct, existing['solar'])
-    sol_new_pct = np.maximum(0, sol_demand_pct - existing['solar'])
+    sol_existing_pct = np.minimum(sol_pct, existing['solar'])
+    sol_new_pct = np.maximum(0, sol_pct - existing['solar'])
 
-    wnd_existing_pct = np.minimum(wnd_demand_pct, existing['wind'])
-    wnd_new_pct = np.maximum(0, wnd_demand_pct - existing['wind'])
+    wnd_existing_pct = np.minimum(wnd_pct, existing['wind'])
+    wnd_new_pct = np.maximum(0, wnd_pct - existing['wind'])
 
     ccs_ex = existing.get('ccs_ccgt', 0)
-    ccs_existing_pct = np.minimum(ccs_demand_pct, ccs_ex)
-    ccs_new_pct = np.maximum(0, ccs_demand_pct - ccs_ex)
+    ccs_existing_pct = np.minimum(ccs_pct, ccs_ex)
+    ccs_new_pct = np.maximum(0, ccs_pct - ccs_ex)
 
-    cf_existing_pct = np.minimum(cf_demand_pct, existing['clean_firm'])
-    cf_new_pct = np.maximum(0, cf_demand_pct - existing['clean_firm'])
+    cf_existing_pct = np.minimum(cf_pct, existing['clean_firm'])
+    cf_new_pct = np.maximum(0, cf_pct - existing['clean_firm'])
 
     # Clean firm tranche allocation (scenario-invariant quantities)
     new_cf_twh = cf_new_pct / 100.0 * demand_twh
@@ -1164,7 +1152,6 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     sol_vals = arrays['solar'][idx_arr]
     wnd_vals = arrays['wind'][idx_arr]
     hyd_vals = arrays['hydro'][idx_arr]
-    proc_vals = arrays['procurement_pct'][idx_arr]
     match_vals = arrays['hourly_match_score'][idx_arr]
     bat_vals = arrays['battery_dispatch_pct'][idx_arr]
     bat8_arr = arrays.get('battery8_dispatch_pct')
@@ -1196,17 +1183,16 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     ) / demand_mwh
 
     # Build lookup dict: original_index -> pre-extracted data tuple
-    # Tuple layout: [0]resource_mix, [1]proc, [2]match_score, [3]bat4, [4]bat8,
-    #   [5]ldes, [6]match_frac, [7]cf_ex_twh, [8]uprate_twh, [9]geo_twh,
-    #   [10]remaining_twh, [11]new_cf_twh, [12]gas_needed_mw, [13]ex_gas_used_mw,
-    #   [14]new_gas_mw, [15]gas_cost_mwh, [16]clean_peak_mw, [17]ra_peak_mw
+    # Tuple layout: [0]resource_mix, [1]match_score, [2]bat4, [3]bat8,
+    #   [4]ldes, [5]match_frac, [6]cf_ex_twh, [7]uprate_twh, [8]geo_twh,
+    #   [9]remaining_twh, [10]new_cf_twh, [11]gas_needed_mw, [12]ex_gas_used_mw,
+    #   [13]new_gas_mw, [14]gas_cost_mwh, [15]clean_peak_mw, [16]ra_peak_mw
     winner_data = {}
     for pos in range(n):
         winner_data[int(idx_arr[pos])] = (
             {'clean_firm': int(cf_vals[pos]), 'solar': int(sol_vals[pos]),
              'wind': int(wnd_vals[pos]), 'ccs_ccgt': int(ccs_vals[pos]),
              'hydro': int(hyd_vals[pos])},
-            int(proc_vals[pos]),
             round(float(match_vals[pos]), 4),
             int(bat_vals[pos]),
             int(bat8_vals[pos]),
@@ -1236,18 +1222,17 @@ def build_winner_scenario_from_cache(winner_cache, best_idx, tc_val, wholesale,
     is populated by preextract_winner_data() which does batch numpy fancy indexing.
     """
     w = winner_cache[best_idx]
-    match_frac = w[6]
+    match_frac = w[5]
     ec_val = tc_val / match_frac if match_frac > 0 else 0.0
     tranche3_is_nuclear = nuclear_price <= ccs_price
-    remaining_twh = w[10]
+    remaining_twh = w[9]
 
     return {
         'resource_mix': w[0],
-        'procurement_pct': w[1],
-        'hourly_match_score': w[2],
-        'battery_dispatch_pct': w[3],
-        'battery8_dispatch_pct': w[4],
-        'ldes_dispatch_pct': w[5],
+        'hourly_match_score': w[1],
+        'battery_dispatch_pct': w[2],
+        'battery8_dispatch_pct': w[3],
+        'ldes_dispatch_pct': w[4],
         'costs': {
             'total_cost': round(tc_val, 2),
             'effective_cost': round(ec_val, 2),
@@ -1255,20 +1240,20 @@ def build_winner_scenario_from_cache(winner_cache, best_idx, tc_val, wholesale,
             'wholesale': wholesale,
         },
         'tranche_costs': {
-            'cf_existing_twh': w[7],
-            'uprate_twh': w[8],
-            'geo_twh': w[9],
+            'cf_existing_twh': w[6],
+            'uprate_twh': w[7],
+            'geo_twh': w[8],
             'nuclear_newbuild_twh': remaining_twh if tranche3_is_nuclear else 0.0,
             'ccs_tranche_twh': 0.0 if tranche3_is_nuclear else remaining_twh,
-            'new_cf_twh': w[11],
+            'new_cf_twh': w[10],
         },
         'gas_backup': {
-            'gas_backup_needed_mw': w[12],
-            'existing_gas_used_mw': w[13],
-            'new_gas_build_mw': w[14],
-            'gas_cost_per_mwh': w[15],
-            'clean_peak_capacity_mw': w[16],
-            'ra_peak_mw': w[17],
+            'gas_backup_needed_mw': w[11],
+            'existing_gas_used_mw': w[12],
+            'new_gas_build_mw': w[13],
+            'gas_cost_per_mwh': w[14],
+            'clean_peak_capacity_mw': w[15],
+            'ra_peak_mw': w[16],
         },
     }
 
@@ -1318,7 +1303,6 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
             'ccs_ccgt': ccs_alloc,
             'hydro': hyd,
         },
-        'procurement_pct': int(arrays['procurement_pct'][best_idx]),
         'hourly_match_score': round(float(arrays['hourly_match_score'][best_idx]), 4),
         'battery_dispatch_pct': int(arrays['battery_dispatch_pct'][best_idx]),
         'battery8_dispatch_pct': int(bat8_arr[best_idx]) if bat8_arr is not None else 0,
@@ -1362,12 +1346,13 @@ def make_scenario_key(r, f, batt, ldes, ff, tx, ccs, q45, geo):
     return f"{r}{f}{batt}{ldes}_{ff}_{tx}_{ccs}{q45}_{geo_code}"
 
 
-def compute_tranche_for_mix(iso, cf_pct, procurement_pct, demand_twh,
+def compute_tranche_for_mix(iso, cf_pct, demand_twh,
                             scenario_key, existing_scale=1.0, uprate_cap_override=None):
     """Compute clean firm tranche breakdown for a single mix.
 
     Returns dict with tranche TWh values: uprate, geo, nuclear_newbuild, ccs_tranche.
     Used by DG parquet writer to enrich each winning mix with tranche data.
+    cf_pct is already % of demand (no procurement multiplier).
     """
     # Decode scenario key to get toggle levels
     parts = scenario_key.split('_')
@@ -1384,11 +1369,9 @@ def compute_tranche_for_mix(iso, cf_pct, procurement_pct, demand_twh,
     # Existing clean firm share, scaled for DG
     existing_cf = min(GRID_MIX_SHARES[iso].get('clean_firm', 0) * existing_scale, 100.0)
 
-    # Clean firm demand % and new CF TWh
-    proc = procurement_pct / 100.0
-    cf_demand_pct = proc * cf_pct
-    cf_existing_pct = min(cf_demand_pct, existing_cf)
-    cf_new_pct = max(0, cf_demand_pct - existing_cf)
+    # Clean firm demand % and new CF TWh (cf_pct is already % of demand)
+    cf_existing_pct = min(cf_pct, existing_cf)
+    cf_new_pct = max(0, cf_pct - existing_cf)
     new_cf_twh = cf_new_pct / 100.0 * demand_twh
 
     # Existing CF TWh
@@ -1519,12 +1502,11 @@ def _table_to_arrays(table):
     calls in downstream functions (precompute_base_year_coefficients, price_mix_batch,
     etc.). Integer fields like clean_firm are stored as float64 but remain integer-valued.
     """
-    return {
+    result = {
         'clean_firm': table.column('clean_firm').to_numpy().astype(np.float64),
         'solar': table.column('solar').to_numpy().astype(np.float64),
         'wind': table.column('wind').to_numpy().astype(np.float64),
         'hydro': table.column('hydro').to_numpy().astype(np.float64),
-        'procurement_pct': table.column('procurement_pct').to_numpy().astype(np.float64),
         'battery_dispatch_pct': table.column('battery_dispatch_pct').to_numpy().astype(np.float64),
         'battery8_dispatch_pct': (table.column('battery8_dispatch_pct').to_numpy().astype(np.float64)
                                   if 'battery8_dispatch_pct' in table.column_names
@@ -1535,6 +1517,10 @@ def _table_to_arrays(table):
                             else np.zeros(table.num_rows, dtype=np.float64)),
         'hourly_match_score': table.column('hourly_match_score').to_numpy().astype(np.float64),
     }
+    # CAISO geothermal (5th resource dimension)
+    if 'geothermal' in table.column_names:
+        result['geothermal'] = table.column('geothermal').to_numpy().astype(np.float64)
+    return result
 
 
 def load_pfs_post_ef(input_dir, selected_isos=None):
@@ -1601,7 +1587,6 @@ def arrays_to_mix_dict(arrays, idx):
             'ccs_ccgt': ccs_pct,
             'hydro': int(arrays['hydro'][idx]),
         },
-        'procurement_pct': int(arrays['procurement_pct'][idx]),
         'hourly_match_score': round(float(arrays['hourly_match_score'][idx]), 4),
         'battery_dispatch_pct': int(arrays['battery_dispatch_pct'][idx]),
         'battery8_dispatch_pct': int(bat8[idx]) if bat8 is not None else 0,
@@ -1847,7 +1832,6 @@ def main():
                 'wind': _wnd_i.tolist(),
                 'ccs_ccgt': ccs_pct.tolist(),
                 'hydro': _hyd_i.tolist(),
-                'procurement_pct': arrays['procurement_pct'][idx_arr].astype(np.int64).tolist(),
                 'hourly_match_score': np.round(arrays['hourly_match_score'][idx_arr], 4).tolist(),
                 'battery_dispatch_pct': arrays['battery_dispatch_pct'][idx_arr].astype(np.int64).tolist(),
                 'battery8_dispatch_pct': bat8[idx_arr].astype(np.int64).tolist(),
@@ -2361,7 +2345,6 @@ def main():
                     row['track'] = track_name
                 for k, v in sc.get('resource_mix', {}).items():
                     row[f'mix_{k}'] = v
-                row['procurement_pct'] = sc.get('procurement_pct')
                 row['hourly_match_score'] = sc.get('hourly_match_score')
                 row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct')
                 row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct')
@@ -2506,7 +2489,6 @@ def main():
                                 row['mix_wind'] = wnd
                                 row['mix_ccs_ccgt'] = ccs_alloc
                                 row['mix_hydro'] = hyd
-                                row['procurement_pct'] = int(arrs_['procurement_pct'][mix_idx])
                                 row['hourly_match_score'] = float(
                                     arrs_['hourly_match_score'][mix_idx])
 
@@ -2593,7 +2575,6 @@ def main():
                         row['mix_wind'] = wnd
                         row['mix_ccs_ccgt'] = ccs
                         row['mix_hydro'] = hyd
-                        row['procurement_pct'] = int(tarrs_['procurement_pct'][mix_idx])
                         row['hourly_match_score'] = float(
                             tarrs_['hourly_match_score'][mix_idx])
                         row['battery_dispatch_pct'] = int(
@@ -2695,10 +2676,9 @@ def main():
             rm = sc['resource_mix']
             eff = sc['costs']['effective_cost']
             match = sc['hourly_match_score']
-            proc = sc['procurement_pct']
             print(f"    {thr:>5}%: CF={rm.get('clean_firm',0):>2} Sol={rm.get('solar',0):>2} "
                   f"Wnd={rm.get('wind',0):>2} CCS={rm.get('ccs_ccgt',0):>2} Hyd={rm.get('hydro',0):>2} | "
-                  f"proc={proc}% eff=${eff:.1f}/MWh match={match}%")
+                  f"eff=${eff:.1f}/MWh match={match}%")
 
     # Track summaries
     for track_name in ['newbuild', 'replace']:
@@ -2719,10 +2699,9 @@ def main():
                 rm = sc['resource_mix']
                 eff = sc['costs']['effective_cost']
                 match = sc['hourly_match_score']
-                proc = sc['procurement_pct']
                 print(f"    {thr:>5}%: CF={rm.get('clean_firm',0):>2} Sol={rm.get('solar',0):>2} "
                       f"Wnd={rm.get('wind',0):>2} CCS={rm.get('ccs_ccgt',0):>2} Hyd={rm.get('hydro',0):>2} | "
-                      f"proc={proc}% eff=${eff:.1f}/MWh match={match}%")
+                      f"eff=${eff:.1f}/MWh match={match}%")
 
 
 if __name__ == '__main__':
