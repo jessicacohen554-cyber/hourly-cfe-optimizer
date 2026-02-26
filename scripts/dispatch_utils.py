@@ -522,9 +522,10 @@ def _dispatch_battery_detailed(residual_surplus, residual_gap, dispatch_pct,
     if dispatch_pct <= 0:
         return dispatch_profile, charge_profile
 
-    total_dispatch = dispatch_pct / 100.0
+    # dispatch_pct is battery capacity as % of normalized demand (matching Step 1)
+    # e.g. dispatch_pct=1.0 → capacity = 0.01 of total demand energy
+    daily_target = dispatch_pct / 100.0
     num_days = H // 24
-    daily_target = total_dispatch / num_days
     power_rating = daily_target / duration_hours
 
     return _battery_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
@@ -539,8 +540,9 @@ def _dispatch_ldes_detailed(residual_surplus, residual_gap, dispatch_pct, demand
     if dispatch_pct <= 0:
         return dispatch_profile, charge_profile
 
-    total_demand_energy = demand_arr.sum()
-    energy_capacity = total_demand_energy * (24.0 / H)
+    # dispatch_pct is LDES capacity as % of normalized demand (matching Step 1)
+    # e.g. dispatch_pct=2.0 → capacity = 0.02 of total demand energy
+    energy_capacity = dispatch_pct / 100.0
     power_rating = energy_capacity / LDES_DURATION_HOURS
     window_hours = LDES_WINDOW_DAYS * 24
 
@@ -626,9 +628,10 @@ def _dispatch_battery(residual_surplus, residual_gap, dispatch_pct, duration_hou
     if dispatch_pct <= 0:
         return dispatch_profile
 
-    total_dispatch = dispatch_pct / 100.0
+    # dispatch_pct is battery capacity as % of normalized demand (matching Step 1)
+    # e.g. dispatch_pct=1.0 → capacity = 0.01 of total demand energy
+    daily_target = dispatch_pct / 100.0
     num_days = H // 24
-    daily_target = total_dispatch / num_days
     power_rating = daily_target / duration_hours
 
     return _battery_loop(residual_surplus, residual_gap, dispatch_profile,
@@ -641,8 +644,9 @@ def _dispatch_ldes(residual_surplus, residual_gap, dispatch_pct, demand_arr):
     if dispatch_pct <= 0:
         return dispatch_profile
 
-    total_demand_energy = demand_arr.sum()
-    energy_capacity = total_demand_energy * (24.0 / H)
+    # dispatch_pct is LDES capacity as % of normalized demand (matching Step 1)
+    # e.g. dispatch_pct=2.0 → capacity = 0.02 of total demand energy
+    energy_capacity = dispatch_pct / 100.0
     power_rating = energy_capacity / LDES_DURATION_HOURS
     window_hours = LDES_WINDOW_DAYS * 24
 
