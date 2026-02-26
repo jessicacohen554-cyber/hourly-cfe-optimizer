@@ -435,13 +435,6 @@ def compute_envelope_and_path(df):
                 'mixes': path_mixes,
                 'costs': path_costs,
             }
-
-            mix = {r: int(row[f'mix_{r}']) for r in RESOURCE_TYPES}
-            proc = int(row['procurement_pct'])
-            batt = int(row['battery_dispatch_pct'])
-            ldes = int(row['ldes_dispatch_pct'])
-            co2_tons = float(row['co2_total_co2_abated_tons'])
-            eff_cost = float(row['cost_effective_cost'])
     return envelope, path_mac
 
 
