@@ -2355,6 +2355,18 @@ This section documents known simplifying assumptions for transparency and academ
 
 **Status**: Working correctly. NYISO uses NEISO solar generation profile as proxy since NYISO lacks meaningful solar generation data in EIA 930. The proxy is stored in `eia_generation_profiles.json` as `solar_proxy` under NYISO and matches NEISO solar values exactly. The optimizer code (line 298-302) checks for `solar_proxy` first, falls back to NEISO solar.
 
+### 19.6 Geothermal Scope: Conventional Hydrothermal Only (CAISO)
+
+**Assumption**: Geothermal resource is modeled only for CAISO, using conventional hydrothermal potential (identified by USGS). Enhanced Geothermal Systems (EGS) and other advanced geothermal technologies (closed-loop, superhot rock) are excluded from all ISOs.
+
+**Why this matters**: EGS could theoretically unlock GW-scale firm clean power in regions with no conventional hydrothermal resource (PJM, NYISO, MISO, etc.). DOE's Enhanced Geothermal Shot initiative targets 2035 for cost-competitive EGS, and projects like Fervo Energy's Utah pilot (2026) and DOE's FORGE site are advancing the technology. If EGS reaches commercial scale, the firm clean power landscape changes substantially for non-CAISO regions.
+
+**Justification**: This is a 2025 snapshot model. Conventional hydrothermal is the only geothermal technology commercially deployed at scale today, and CAISO is the only modeled ISO with meaningful resource (5.3 TWh existing + ~39 TWh USGS identified = ~44 TWh potential, capped at 5 GW). Non-CAISO ISOs sit on geology unsuitable for conventional hydrothermal — Appalachian basement rock (PJM/NYISO/NEISO) with 20–25°C/km thermal gradients, deep sedimentary basins (MISO/SPP), or early-stage pilots (ERCOT — Sage Geosystems). None have commercial-scale geothermal in the 2025 timeframe.
+
+**EGS exclusion rationale**: EGS commercial deployment timelines (DOE targets 2035, industry consensus >2030 for first utility-scale projects) fall outside this model's 2025 snapshot scope. Including speculative EGS capacity would require forward-looking assumptions about cost learning curves, drilling success rates, and induced seismicity risk that are inconsistent with the model's empirical, current-year methodology. EGS is noted as a potential model enhancement for post-2030 analysis (see §21).
+
+**Impact**: The model may overstate the long-term cost of firm clean power for non-CAISO regions if EGS achieves cost targets. For the 2025 snapshot, this is immaterial — no EGS capacity exists to procure today.
+
 ---
 
 ## 20. Model Alignment and Differentiation vs. Existing Energy Models
