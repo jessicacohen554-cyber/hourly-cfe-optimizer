@@ -2,7 +2,7 @@
 """
 Shared Dispatch Utilities — Single source of truth for hourly dispatch reconstruction.
 ======================================================================================
-Extracted from step5_PP4_recompute_co2.py to avoid duplicating dispatch logic between the CO2
+Extracted from step6_recompute_co2.py to avoid duplicating dispatch logic between the CO2
 model and the LMP pricing module. Both import from here.
 
 Provides:
@@ -163,7 +163,7 @@ def get_demand_profile(iso, demand_data):
 def get_supply_profiles(iso, gen_profiles):
     """Get generation shape profiles — Step 1 version with nuclear seasonal derate.
 
-    This is the authoritative version. step5_PP4_recompute_co2.py's simpler version (flat
+    This is the authoritative version. step6_recompute_co2.py's simpler version (flat
     clean_firm) is preserved for backward compatibility but new code should use this.
     """
     profiles = {}
@@ -628,7 +628,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         supply_matrix: optional (5, H) numpy array from build_supply_matrix().
             If provided, skips per-call array conversion (faster for batch calls).
         detailed: if True, also compute per-resource matched/surplus arrays and
-            storage charge profiles. Used by PP0 cache builder and PP1 compressed day.
+            storage charge profiles. Used by step5_build_dispatch_cache and step6_compressed_day.
 
     Returns:
         result dict with keys:
@@ -1002,3 +1002,84 @@ def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
         cache[key] = {k: v for k, v in result.items()}
 
     return result, False
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DISPATCH-BASED CO₂ ACCOUNTING — hourly fossil displacement from cache
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_co2_from_dispatch(iso, dispatch_result, emission_rates, demand_total_mwh):
+    """Compute CO₂ displacement from hourly dispatch results.
+
+    Uses the 8760-hour fossil_displaced and ccs_supply arrays from the dispatch
+    cache to compute exact CO₂ abated. The emission rate at each hour is the
+    weighted average of the remaining fossil stack (merit-order: coal → oil → gas).
+
+    Unlike the analytical compute_fossil_retirement() which uses TWh-level averages,
+    this function captures the hourly shape of displacement — a wind-heavy portfolio
+    displaces different fossil hours than clean firm.
+
+    Args:
+        iso: ISO region identifier
+        dispatch_result: dict from dispatch cache with 'fossil_displaced', 'ccs_supply' arrays
+        emission_rates: eGRID emission rates dict
+        demand_total_mwh: annual demand in MWh (for scaling normalized arrays)
+
+    Returns:
+        dict with total_co2_abated_tons, co2_rate_per_mwh, matched_mwh,
+        displaced TWh by fuel type, emission_rate details
+    """
+    regional = emission_rates.get(iso, {})
+    coal_rate = regional.get('coal_co2_lb_per_mwh', 0.0) / 2204.62  # tCO2/MWh
+    oil_rate = regional.get('oil_co2_lb_per_mwh', 0.0) / 2204.62
+    gas_rate = regional.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
+
+    fossil_displaced = dispatch_result['fossil_displaced']  # (H,) normalized
+    ccs_supply = dispatch_result.get('ccs_supply', np.zeros(H))
+
+    # Scale to MWh
+    fossil_mwh = fossil_displaced * demand_total_mwh  # per-hour MWh displaced
+    ccs_mwh = np.minimum(ccs_supply * demand_total_mwh, fossil_mwh)
+    non_ccs_mwh = fossil_mwh - ccs_mwh
+
+    total_displaced_mwh = float(np.sum(fossil_mwh))
+    total_displaced_twh = total_displaced_mwh / 1e6
+
+    # Determine which fossil fuels are displaced using merit-order
+    # Coal displaced first (up to cap), then oil, then gas
+    coal_cap_mwh = COAL_CAP_TWH.get(iso, 0) * 1e6
+    oil_cap_mwh = OIL_CAP_TWH.get(iso, 0) * 1e6
+
+    coal_displaced_mwh = min(total_displaced_mwh, coal_cap_mwh)
+    remaining = total_displaced_mwh - coal_displaced_mwh
+    oil_displaced_mwh = min(remaining, oil_cap_mwh)
+    gas_displaced_mwh = max(0, remaining - oil_displaced_mwh)
+
+    # CO₂ from non-CCS displacement (weighted by fuel type displaced)
+    if total_displaced_mwh > 0:
+        weighted_rate = (
+            coal_displaced_mwh * coal_rate +
+            oil_displaced_mwh * oil_rate +
+            gas_displaced_mwh * gas_rate
+        ) / total_displaced_mwh
+    else:
+        weighted_rate = gas_rate
+
+    co2_non_ccs = float(np.sum(non_ccs_mwh)) * weighted_rate
+    ccs_credit = max(0.0, weighted_rate - CCS_RESIDUAL_EMISSION_RATE)
+    co2_ccs = float(np.sum(ccs_mwh)) * ccs_credit
+
+    total_co2 = co2_non_ccs + co2_ccs
+    co2_rate = total_co2 / total_displaced_mwh if total_displaced_mwh > 0 else 0
+
+    return {
+        'total_co2_abated_tons': round(total_co2, 0),
+        'co2_rate_per_mwh': round(co2_rate, 4),
+        'matched_mwh': round(total_displaced_mwh, 0),
+        'displaced_twh': round(total_displaced_twh, 2),
+        'coal_displaced_twh': round(coal_displaced_mwh / 1e6, 2),
+        'oil_displaced_twh': round(oil_displaced_mwh / 1e6, 2),
+        'gas_displaced_twh': round(gas_displaced_mwh / 1e6, 2),
+        'weighted_emission_rate': round(weighted_rate, 4),
+        'methodology': 'dispatch_cache_hourly',
+    }
