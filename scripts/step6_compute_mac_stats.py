@@ -328,13 +328,9 @@ def compute_envelope_and_path(df):
                 path_costs.append(None)
                 continue
 
-            row = t_rows.iloc[0]
             eff_cost = float(row['cost_effective_cost'])
             co2_tons = float(row['co2_total_co2_abated_tons'])
-
-            costs_at_t.append(eff_cost)
             incremental = float(row['cost_incremental'])
-            co2_tons = float(row['co2_total_co2_abated_tons'])
 
             # ── Envelope data collection ──
             costs_at_t.append(incremental)
