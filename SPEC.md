@@ -1901,15 +1901,25 @@ For each resource:
 **New approach**: Each resource varies independently as % of demand:
 | Resource | Range | Step (coarse) | Step (fine) | Cap logic |
 |----------|-------|---------------|-------------|-----------|
-| Clean Firm (nuclear/CCS) | 0–100% | 5% | 1% | Flat profile → >100% is pure surplus |
-| Solar | 0–200% | 5% | 1% | High values capture solar+storage strategies |
-| Wind | 0–200% | 5% | 1% | High values capture wind+storage strategies |
-| Hydro | 0–cap% | 5% | 1% | Regional cap (existing only) |
+| Clean Firm (nuclear/CCS) | 0–120% | 5% | 1% | Nuclear/CCS with seasonal derate; 120% allows surplus for storage |
+| Solar | 0–250% | 5% | 1% | High values capture solar+storage strategies |
+| Wind | 0–250% | 5% | 1% | High values capture wind+storage strategies |
+| Hydro | 0–(cap+10%) | 5% | 1% | Regional cap + 10% adder for run-of-river innovation potential. Extra hydro beyond existing cap is physics-only — NOT priced in Step 3. |
 | Geothermal (CAISO only) | 0–20% | 5% | 1% | (existing + potential) / demand |
 
-**One-time coarse sweep**: All resource fraction combos scored once. Each combo has exactly one hourly match score (no procurement sweep). The score matrix `(n_combos,)` is valid for ALL thresholds — filter by `score >= target` for each threshold. This eliminates per-threshold Phase 1a recomputation.
+**Two-phase architecture**:
 
-**Per-threshold extraction**: For each threshold, combos where `score >= target` are feasible. Near-miss combos (within 40pp) get storage sweep. Fine refinement (1% step) around frontier combos.
+**Phase 1a — One-time coarse sweep per ISO** (cached to `data/step1-pfs-parquets/{ISO}_coarse_cache.parquet`):
+- Generate all resource fraction combos at 5% step
+- Score each combo once: `supply[h] = sum(frac[r] * profile[r][h])`, `score = sum(min(demand[h], supply[h]))`
+- Cache `(resource fractions, score)` — reusable across ALL thresholds
+- Run once per ISO; subsequent threshold work reads from cache
+
+**Per-threshold work** (reads from coarse cache):
+- Filter: `score >= target` → feasible combos (no-storage)
+- Filter: `score >= target - 0.40` → storage zone → storage sweep
+- Fine refinement at 1% step around frontier combos
+- Save per-threshold results to `{ISO}_t{XX}_raw_pfs.parquet`
 
 **What this removes**:
 - `procurement_pct` column from all parquets (step1 → step2 → step3 → dashboard)
@@ -1924,18 +1934,17 @@ For each resource:
 
 ### 11.2 Edge Case Seed Mixes
 
-Forced seed mixes injected into initial grid scan to guarantee extreme-but-potentially-optimal mixes survive pruning. Updated for 4D resource space (v4.0) with expanded extremes:
+Forced seed combos injected into coarse sweep to guarantee extreme-but-potentially-optimal strategies are evaluated. Now expressed as direct % of demand (not mix fractions):
 
-- **Pure solar** (95-100%): captures extreme solar+storage outcomes at high procurement. At 200%+ procurement, a 100% solar mix delivers 200%+ of demand from solar alone — paired with storage, this may be cost-optimal at lower thresholds.
-- **Pure wind** (95-100%): same logic for wind-dominant regions (ERCOT)
-- **Solar-dominant** (70-90%): traditional solar-heavy scenarios
-- **Wind-dominant** (70-90%): traditional wind-heavy scenarios
-- **Balanced renewable** (40/40 to 50/50 solar/wind): diversified variable generation
-- **Clean firm dominant** (60-100%): captures scenarios where nuclear/CCS is cheapest, including pure-nuclear
-- **Minimal/zero firm** (0-10% clean_firm): tests whether renewables + storage can carry all load
-- **Zero-firm pure renewables** (0% clean_firm, 50/50 solar/wind): extreme test case
+- **High solar + storage**: solar=200%, wind=0%, CF=0%. Relies entirely on solar surplus + storage.
+- **High wind + storage**: solar=0%, wind=200%, CF=0%. Same for wind-dominant regions.
+- **Balanced high renewable**: solar=125%, wind=125%, CF=0%. Diversified variable generation.
+- **Clean firm dominant**: CF=100%, solar=0%, wind=0%. Pure baseload.
+- **CF + moderate solar**: CF=60%, solar=80%, wind=20%. Firm backbone + solar.
+- **CF + moderate wind**: CF=60%, solar=20%, wind=80%. Firm backbone + wind.
+- **Minimal firm**: CF=10%, solar=120%, wind=120%. Almost pure renewables.
 
-Seeds filtered at runtime by regional hydro cap. Adds ~30 combos to the ~441 adaptive grid combos per region — negligible compute cost, significant coverage improvement.
+Seeds filtered at runtime by regional hydro cap and geothermal cap (CAISO). Negligible compute cost, significant coverage improvement.
 
 ### 11.3 Monotonicity Re-Sweep Mechanism
 
