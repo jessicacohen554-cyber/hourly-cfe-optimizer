@@ -458,33 +458,6 @@ def compute_monotonic_envelope(df):
     envelope, _ = compute_envelope_and_path(df)
     return envelope
 
-            # Cost is at least as high as previous constrained cost
-            constrained_eff_cost = max(eff_cost, prev_cost)
-
-            # Average MAC
-            if co2_tons > 0:
-                avg_mac = round((constrained_eff_cost * demand_mwh) / co2_tons, 1)
-            else:
-                avg_mac = None
-
-            path_macs.append(avg_mac)
-            path_mixes.append(constrained_mix)
-            path_costs.append(round(constrained_eff_cost, 2))
-
-            # Update state for next threshold
-            prev_abs = constrained_abs
-            prev_batt = constrained_batt
-            prev_ldes = constrained_ldes
-            prev_proc = constrained_proc
-            prev_cost = constrained_eff_cost
-            prev_co2 = co2_tons
-
-        path_mac[iso] = {
-            'mac': path_macs,
-            'mixes': path_mixes,
-            'costs': path_costs,
-        }
-
 def compute_path_constrained_mac(df):
     """Compute path-constrained reference MAC from medium scenario.
 
