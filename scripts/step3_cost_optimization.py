@@ -145,6 +145,13 @@ LCOE_TABLES = {
         'Medium': {'CAISO': 180, 'ERCOT': 155, 'PJM': 170, 'NYISO': 200, 'NEISO': 190, 'MISO': 162, 'SPP': 158},
         'High':   {'CAISO': 234, 'ERCOT': 202, 'PJM': 221, 'NYISO': 260, 'NEISO': 247, 'MISO': 211, 'SPP': 205},
     },
+    # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE drives high LCOS.
+    # Shares 'ldes_lvl' sensitivity toggle (both long-duration storage).
+    'h2': {
+        'Low':    {'CAISO': 210, 'ERCOT': 185, 'PJM': 200, 'NYISO': 230, 'NEISO': 220, 'MISO': 190, 'SPP': 182},
+        'Medium': {'CAISO': 300, 'ERCOT': 265, 'PJM': 285, 'NYISO': 330, 'NEISO': 315, 'MISO': 272, 'SPP': 260},
+        'High':   {'CAISO': 420, 'ERCOT': 370, 'PJM': 400, 'NYISO': 460, 'NEISO': 440, 'MISO': 380, 'SPP': 365},
+    },
 }
 
 # Transmission adders ($/MWh) by resource × tx level × ISO
@@ -170,6 +177,9 @@ TX_TABLES = {
     'ldes':       {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
                    'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
                    'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
+    'h2':         {'None': 0, 'Low': {'CAISO': 2, 'ERCOT': 2, 'PJM': 2, 'NYISO': 3, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
+                   'Medium': {'CAISO': 4, 'ERCOT': 3, 'PJM': 4, 'NYISO': 6, 'NEISO': 5, 'MISO': 3, 'SPP': 3},
+                   'High': {'CAISO': 7, 'ERCOT': 5, 'PJM': 7, 'NYISO': 10, 'NEISO': 9, 'MISO': 6, 'SPP': 5}},
     'hydro':      {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
 }
 
@@ -260,6 +270,7 @@ EXISTING_GAS_FOM_KW_YR = {
 PEAK_CAPACITY_CREDITS = {
     'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
     'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
+    'h2': 0.85,  # H2 turbine: dispatchable but slower ramp than gas/battery
 }
 
 # Gas Availability Factor (GAF) — accounts for forced outages + correlated weather risk
@@ -406,6 +417,7 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     bat_pct = arrays['battery_dispatch_pct']
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
     ldes_pct = arrays['ldes_dispatch_pct']
+    h2_pct = arrays.get('h2_dispatch_pct', np.zeros(N, dtype=np.float64))
 
     # --- Solar (existing = $0, only new-build costs money) ---
     sol_demand_pct = proc * sol_pct
@@ -481,13 +493,15 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     cf_cost_per_demand = cf_total_new_cost / demand
     total_cost += cf_cost_per_demand  # existing CF = $0
 
-    # --- Storage (battery toggle = 4hr + 8hr paired; LDES toggle = independent) ---
+    # --- Storage (battery toggle = 4hr + 8hr paired; LDES toggle = LDES + H2 paired) ---
     bat4_lcoe = LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)
     bat8_lcoe = LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso)
     ldes_lcoe = LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
+    h2_lcoe = LCOE_TABLES['h2'][ldes_name][iso] + get_tx('h2', tx_name, iso)
     total_cost += (bat_pct / 100.0 * bat4_lcoe +
                    bat8_pct / 100.0 * bat8_lcoe +
-                   ldes_pct / 100.0 * ldes_lcoe)
+                   ldes_pct / 100.0 * ldes_lcoe +
+                   h2_pct / 100.0 * h2_lcoe)
 
     # --- Gas Capacity Backup (delta RA approach) ---
     # Calibrated to 2025 reality: gas = EXISTING_GAS at base year.
@@ -515,7 +529,8 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     new_clean_peak_mw += (
         bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
     )
 
     # Total system clean peak = existing (constant) + new-build
@@ -629,7 +644,8 @@ _COL_REMAINING = 6  # tranche 3: min(nuclear, CCS) new-build
 _COL_BAT4      = 7  # 4hr battery dispatch
 _COL_BAT8      = 8  # 8hr battery dispatch
 _COL_LDES      = 9  # LDES dispatch
-_N_COEFFS = 10
+_COL_H2        = 10 # Green H2 seasonal storage dispatch
+_N_COEFFS = 11
 
 
 def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_override=None,
@@ -648,7 +664,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
             keeps hydro at existing share, zeros everything else.
 
     Returns:
-        coeff_matrix: (N, 10) float64 — multiply by scenario prices
+        coeff_matrix: (N, 11) float64 — multiply by scenario prices
         constant: (N,) float64 — gas backup cost (scenario-invariant)
         extras: dict with per-element data needed for winner detail extraction
     """
@@ -667,6 +683,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     bat_pct = arrays['battery_dispatch_pct']
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
     ldes_pct = arrays['ldes_dispatch_pct']
+    h2_pct = arrays.get('h2_dispatch_pct', np.zeros(N, dtype=np.float64))
 
     existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
@@ -729,7 +746,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     new_clean_peak_mw += (
         bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
     )
 
     # Total system clean peak = existing (constant) + new-build
@@ -749,7 +767,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
     ) / demand_mwh
 
-    # Build coefficient matrix (N, 10)
+    # Build coefficient matrix (N, 11)
     coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
     # Existing clean resources = $0 (sunk fleet, no cost to buyer)
     coeff_matrix[:, _COL_WHOLESALE] = 0.0
@@ -762,6 +780,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     coeff_matrix[:, _COL_BAT4] = bat_pct / 100.0
     coeff_matrix[:, _COL_BAT8] = bat8_pct / 100.0
     coeff_matrix[:, _COL_LDES] = ldes_pct / 100.0
+    coeff_matrix[:, _COL_H2] = h2_pct / 100.0
 
     ra_peak_mw = ra_peak_grown  # for output
 
@@ -788,10 +807,10 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
 
 
 def get_scenario_prices(iso, sens):
-    """Look up 10 scenario-dependent price scalars from sensitivity toggles.
+    """Look up 11 scenario-dependent price scalars from sensitivity toggles.
 
     Returns:
-        prices: (10,) float64 array matching coefficient column order
+        prices: (11,) float64 array matching coefficient column order
         wholesale: scalar for incremental cost calculation
         nuclear_price: scalar for tranche detail extraction
         ccs_tranche_price: scalar for tranche detail extraction
@@ -830,6 +849,7 @@ def get_scenario_prices(iso, sens):
         LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso),
         LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso),
         LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso),
+        LCOE_TABLES['h2'][ldes_name][iso] + get_tx('h2', tx_name, iso),
     ], dtype=np.float64)
 
     return prices, wholesale, nuclear_price, ccs_price
@@ -946,7 +966,7 @@ def precompute_all_prices(iso, all_combos):
     ~5,832-17,496 temporary np.array allocations from get_scenario_prices().
 
     Returns:
-        price_matrix: (B, 10) float64 price vectors
+        price_matrix: (B, 11) float64 price vectors
         wholesale_arr: (B,) float64 wholesale prices
         nuclear_arr: (B,) float64 nuclear new-build prices
         ccs_arr: (B,) float64 CCS tranche prices
@@ -968,11 +988,12 @@ def precompute_all_prices(iso, all_combos):
     _bat_lcoe_iso = {name: LCOE_TABLES['battery'][name][iso] for name in ['Low', 'Medium', 'High']}
     _bat8_lcoe_iso = {name: LCOE_TABLES['battery8'][name][iso] for name in ['Low', 'Medium', 'High']}
     _ldes_lcoe_iso = {name: LCOE_TABLES['ldes'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _h2_lcoe_iso = {name: LCOE_TABLES['h2'][name][iso] for name in ['Low', 'Medium', 'High']}
     _is_caiso = (iso == 'CAISO')
 
     # Pre-resolve transmission adders for all (resource, tx_level) combos for this ISO
     _tx_cache = {}
-    for rtype in ['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes']:
+    for rtype in ['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes', 'h2']:
         for tx_name in ['None', 'Low', 'Medium', 'High']:
             _tx_cache[(rtype, tx_name)] = get_tx(rtype, tx_name, iso)
 
@@ -1011,6 +1032,7 @@ def precompute_all_prices(iso, all_combos):
         price_matrix[j, _COL_BAT4] = _bat_lcoe_iso[batt_name] + _tx_cache[('battery', tx_name)]
         price_matrix[j, _COL_BAT8] = _bat8_lcoe_iso[batt_name] + _tx_cache[('battery8', tx_name)]
         price_matrix[j, _COL_LDES] = _ldes_lcoe_iso[ldes_name] + _tx_cache[('ldes', tx_name)]
+        price_matrix[j, _COL_H2] = _h2_lcoe_iso[ldes_name] + _tx_cache[('h2', tx_name)]
         wholesale_arr[j] = wholesale
         nuclear_arr[j] = nuclear_price
         ccs_arr[j] = ccs_price
@@ -1508,6 +1530,9 @@ def _table_to_arrays(table):
                                   if 'battery8_dispatch_pct' in table.column_names
                                   else np.zeros(table.num_rows, dtype=np.float64)),
         'ldes_dispatch_pct': table.column('ldes_dispatch_pct').to_numpy().astype(np.float64),
+        'h2_dispatch_pct': (table.column('h2_dispatch_pct').to_numpy().astype(np.float64)
+                            if 'h2_dispatch_pct' in table.column_names
+                            else np.zeros(table.num_rows, dtype=np.float64)),
         'hourly_match_score': table.column('hourly_match_score').to_numpy().astype(np.float64),
     }
 
