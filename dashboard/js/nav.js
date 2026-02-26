@@ -112,13 +112,18 @@
                 { label: 'New Build Analysis', href: 'new_build_analysis.html' },
                 { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
                 { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' },
-                { label: 'Fleet Survival Analysis', href: 'fleet_survival.html' },
                 { separator: true, label: 'Consequential Accounting' },
                 { label: 'Overview', href: 'consequential_accounting.html' },
                 { label: 'Failure Modes at Scale', href: 'consequential_vacuum.html' },
                 { label: 'Cross-Regional Deployment', href: 'consequential_stranding.html' },
-                { label: 'Scenario Comparison', href: 'scenario_comparison.html' },
-                { label: 'Generator Analysis', href: '../power-gen-decarbonization/site/index.html' }
+                { label: 'Scenario Comparison', href: 'scenario_comparison.html' }
+            ]
+        },
+        {
+            label: 'Generator Analysis',
+            children: [
+                { label: 'Generator Dashboard', href: '../power-gen-decarbonization/site/index.html' },
+                { label: 'Fleet Survival Analysis', href: 'fleet_survival.html' }
             ]
         },
         {
@@ -131,19 +136,7 @@
                 { label: 'About', href: 'about.html' }
             ]
         },
-        { label: 'Reference', href: 'reference.html' },
-        {
-            label: 'Kids',
-            children: [
-                { label: 'Clean Energy', href: 'kids_energy.html' },
-                { label: 'Dinosaurs & Fossil Fuels', href: 'kids_fossil_fuels.html' },
-                { label: 'How Wind Works', href: 'kids_wind.html' },
-                { label: 'How Solar Works', href: 'kids_solar.html' },
-                { label: 'How Nuclear Works', href: 'kids_nuclear.html' },
-                { label: 'How Geothermal Works', href: 'kids_geothermal.html' },
-                { label: 'How Storage Works', href: 'kids_storage.html' }
-            ]
-        }
+        { label: 'Reference', href: 'reference.html' }
     ];
 
     const HAMBURGER_OPEN = '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
