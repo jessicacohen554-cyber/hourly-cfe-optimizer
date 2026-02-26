@@ -34,6 +34,7 @@ Storage (not part of mix %, swept as separate dimensions):
   - Battery (4hr): Li-ion, 85% RTE, daily-cycle dispatch
   - Battery (8hr): Li-ion, 85% RTE, daily-cycle dispatch (power = cap/8hr)
   - LDES: 100hr iron-air, 50% RTE, 7-day rolling window dispatch
+  - Green H2: 1000hr salt cavern, 35% RTE, 30-day rolling window (≥95% thresholds only)
 """
 
 import json
