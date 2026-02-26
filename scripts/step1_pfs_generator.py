@@ -99,7 +99,7 @@ RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'hydro']
 N_RESOURCES = len(RESOURCE_TYPES)
 
 # Regions
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 ISO_LABELS = {
     'CAISO': 'CAISO (California)',
     'ERCOT': 'ERCOT (Texas)',
