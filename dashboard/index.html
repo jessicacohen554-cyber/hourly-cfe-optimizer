@@ -1258,7 +1258,7 @@ body {
 
                 <p>
                     <strong>Existing nuclear is irreplaceable at any cost.</strong> PJM (32% nuclear), NEISO (24%),
-                    and NYISO (18%)<sup style="font-size:0.7em;color:#6B7280;">[4]</sup> benefit enormously from already-built nuclear fleets that deliver clean baseload
+                    NYISO (18%), and MISO (75+ TWh)<sup style="font-size:0.7em;color:#6B7280;">[4]</sup> benefit enormously from already-built nuclear fleets that deliver clean baseload
                     at wholesale prices.<sup style="font-size:0.7em;color:#6B7280;">[13]</sup> Losing these assets to economic shutdown &mdash; as nearly happened in the
                     2010s &mdash; would add $5&ndash;18/MWh to every matching target. These plants should be valued
                     not by today&rsquo;s wholesale price, but by the cost of replacing them.
@@ -1321,6 +1321,8 @@ body {
                 <button class="incremental-pill" data-region="PJM">PJM</button>
                 <button class="incremental-pill" data-region="NYISO">NYISO</button>
                 <button class="incremental-pill" data-region="NEISO">NEISO</button>
+                <button class="incremental-pill" data-region="MISO">MISO</button>
+                <button class="incremental-pill" data-region="SPP">SPP</button>
             </div>
             <div class="incremental-chart-container">
                 <canvas id="incrementalMixChart"></canvas>
@@ -1419,6 +1421,8 @@ body {
                 <button class="incremental-pill" data-region="PJM">PJM</button>
                 <button class="incremental-pill" data-region="NYISO">NYISO</button>
                 <button class="incremental-pill" data-region="NEISO">NEISO</button>
+                <button class="incremental-pill" data-region="MISO">MISO</button>
+                <button class="incremental-pill" data-region="SPP">SPP</button>
             </div>
 
             <div class="incremental-chart-container" style="min-height:400px;">
@@ -1468,6 +1472,8 @@ body {
                 <button class="incremental-pill" data-region="PJM">PJM</button>
                 <button class="incremental-pill" data-region="NYISO">NYISO</button>
                 <button class="incremental-pill" data-region="NEISO">NEISO</button>
+                <button class="incremental-pill" data-region="MISO">MISO</button>
+                <button class="incremental-pill" data-region="SPP">SPP</button>
             </div>
 
             <div class="incremental-chart-container" style="min-height:370px;">
@@ -1483,7 +1489,7 @@ body {
 
             <p style="margin-top:20px;">
                 <strong>New nuclear power is the most robust &ldquo;no regrets&rdquo; investment</strong> &mdash;
-                it appears in every optimal mix at every threshold in PJM, NYISO, and NEISO.
+                it appears in every optimal mix at every threshold in PJM, NYISO, NEISO, and MISO.
                 Wind has a guaranteed floor only in ERCOT at moderate targets.
                 Solar has <em>no</em> guaranteed new-build floor anywhere &mdash; its role is entirely
                 contingent on relative cost assumptions. The firm generation cost toggle alone
@@ -1597,6 +1603,18 @@ body {
                             wholesale prices saves $5/MWh across every matching target.
                         </div>
                         <div class="preservation-bar"><div class="preservation-bar-fill" style="width:27%;"></div></div>
+                    </div>
+                    <div class="preservation-card">
+                        <div class="preservation-card-header">
+                            <span class="preservation-card-iso">MISO</span>
+                            <span class="preservation-card-share">75+ TWh existing nuclear<sup style="font-size:0.65em;color:rgba(255,255,255,0.7);">[4]</sup></span>
+                        </div>
+                        <div class="preservation-card-cost">+$10/MWh (+15&ndash;22%)</div>
+                        <div class="preservation-card-desc">
+                            MISO&rsquo;s large nuclear fleet across the Midwest anchors clean firm supply.
+                            Losing these assets would sharply increase costs at every matching target above 75%.
+                        </div>
+                        <div class="preservation-bar"><div class="preservation-bar-fill" style="width:55%;"></div></div>
                     </div>
                 </div>
             </div>
@@ -1753,7 +1771,7 @@ function getCO2Abated(entry) {
 // Build synthetic DATA object from shared-data.js constants.
 // This replaces the overprocure_results.json fetch — all data comes from shared-data.js.
 function buildDataFromSharedData() {
-    const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
     const results = {};
 
     for (const iso of ISOS) {
@@ -2006,7 +2024,7 @@ function populateNarrativeStats() {
 }
 
 function populateMacNarrativeValues() {
-    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
     const mac = MAC_DATA.medium;
     const marg = MARGINAL_MAC_DATA.medium;
     function s(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
@@ -2037,7 +2055,7 @@ function populateMacNarrativeValues() {
     // ANOVA percentages
     if (typeof MAC_ANOVA !== 'undefined') {
         // Nuclear cost range in nuclear-heavy regions (CAISO, PJM, NYISO, NEISO)
-        const nuclearRegions = ['CAISO', 'PJM', 'NYISO', 'NEISO'];
+        const nuclearRegions = ['CAISO', 'PJM', 'NYISO', 'NEISO', 'MISO'];
         const firmPcts = nuclearRegions.map(r => Math.round(MAC_ANOVA[r]['Nuclear'] * 100));
         s('hp-firm-pct-range', Math.min(...firmPcts) + '–' + Math.max(...firmPcts));
         s('hp-renew-pct-ercot', Math.round(MAC_ANOVA.ERCOT['Renewable Gen'] * 100));
@@ -2119,7 +2137,9 @@ const MIX_REGION_INSIGHTS = {
     ERCOT: '<strong>ERCOT (Texas):</strong> Wind dominates at 65% through 95% matching thanks to $40/MWh wind LCOE. The 95%→100% transition is the most dramatic of any region: new nuclear surges +49pp while wind drops 40pp.',
     PJM: '<strong>PJM (Mid-Atlantic):</strong> Existing 32% nuclear fleet provides a massive head start. The mix holds steady from 75% to 90%, then jumps to 60% new nuclear at 95%. PJM reaches 68% new nuclear at 100%.',
     NYISO: '<strong>NYISO (New York):</strong> Hydro stays locked at 40% across all targets. Uses zero solar until 100%. The simplest mix — essentially new nuclear + hydro + wind — reflects the region\'s unique resource endowment.',
-    NEISO: '<strong>NEISO (New England):</strong> The most expensive region shows the sharpest shift. New nuclear reaches 78% at 100% — the highest of any region. Hydro drops from 30% to 16% and wind is eliminated entirely at 100%.'
+    NEISO: '<strong>NEISO (New England):</strong> The most expensive region shows the sharpest shift. New nuclear reaches 78% at 100% — the highest of any region. Hydro drops from 30% to 16% and wind is eliminated entirely at 100%.',
+    MISO: '<strong>MISO (Midwest):</strong> MISO\'s wind-rich Midwest grid and growing solar fleet enable cost-effective renewable procurement. Large nuclear baseline (75+ TWh) supports clean firm needs, though transmission across 15 states poses challenges.',
+    SPP: '<strong>SPP (Southwest Power Pool):</strong> SPP leads in wind penetration (37% of demand), offering the lowest renewable procurement costs nationally. Limited nuclear means clean firm must come from new-build at high CFE targets.'
 };
 
 function getMixDataForRegion(region) {
@@ -2535,7 +2555,9 @@ const INCREMENTAL_INSIGHTS = {
     ERCOT: '<strong>ERCOT:</strong> Only 46.1% existing clean, mostly wind. New wind additions drive early targets cheaply. But at 100%, new nuclear (47%) dwarfs the entire existing fleet — a near-complete rebuild of the generation stack.',
     PJM: '<strong>PJM:</strong> The 32% existing nuclear fleet gives PJM a massive head start. New build stays minimal through 90% — then jumps as new nuclear additions pile on. Even so, PJM needs less new build at 100% than most regions.',
     NYISO: '<strong>NYISO:</strong> Existing hydro (16%) and nuclear (18%) cover early targets efficiently. New build stays modest through 95%, then explodes at 100% with +34% new hydro and +54% new nuclear — the sharpest final step.',
-    NEISO: '<strong>NEISO:</strong> Starts with 33.5% existing clean but it\'s spread thin across resources. New nuclear dominates at every target level, reaching 65% of demand at 100% — the highest new-build intensity of any region.'
+    NEISO: '<strong>NEISO:</strong> Starts with 33.5% existing clean but it\'s spread thin across resources. New nuclear dominates at every target level, reaching 65% of demand at 100% — the highest new-build intensity of any region.',
+    MISO: '<strong>MISO:</strong> MISO\'s wind-rich Midwest grid and growing solar fleet enable cost-effective renewable procurement. Large nuclear baseline (75+ TWh) supports clean firm needs, though transmission across 15 states poses challenges.',
+    SPP: '<strong>SPP:</strong> SPP leads in wind penetration (37% of demand), offering the lowest renewable procurement costs nationally. Limited nuclear means clean firm must come from new-build at high CFE targets.'
 };
 
 function getIncrementalData(region) {
@@ -2871,6 +2893,8 @@ function initNarrativeCostChart() {
         'PJM':   'rgba(14,165,233,0.4)',
         'NYISO': 'rgba(239,68,68,0.4)',
         'NEISO': 'rgba(138,129,120,0.4)',
+        'MISO':  'rgba(6,182,212,0.4)',
+        'SPP':   'rgba(239,68,68,0.4)',
     };
 
     for (const iso of isos) isoData[iso] = [];
@@ -3261,6 +3285,8 @@ function buildStepChartData() {
         'PJM':   'rgba(14,165,233,0.4)',
         'NYISO': 'rgba(239,68,68,0.4)',
         'NEISO': 'rgba(138,129,120,0.4)',
+        'MISO':  'rgba(6,182,212,0.4)',
+        'SPP':   'rgba(239,68,68,0.4)',
     };
     for (const iso of isos) isoData[iso] = [];
     for (let ti = 0; ti < thresholdKeys.length; ti++) {
@@ -3497,10 +3523,12 @@ function initHomepage90CostChart() {
         ERCOT: { fill: 'rgba(245,158,11,0.50)', border: '#F59E0B' },
         PJM:   { fill: 'rgba(30,58,95,0.50)', border: '#1E3A5F' },
         NYISO: { fill: 'rgba(34,197,94,0.50)', border: '#22C55E' },
-        NEISO: { fill: 'rgba(99,102,241,0.50)', border: '#6366F1' }
+        NEISO: { fill: 'rgba(99,102,241,0.50)', border: '#6366F1' },
+        MISO: { fill: 'rgba(6,182,212,0.50)', border: '#06B6D4' },
+        SPP:  { fill: 'rgba(239,68,68,0.50)', border: '#EF4444' }
     };
 
-    const isos = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const isos = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
     const labels = [], costs = [], fills = [], borders = [];
 
     isos.forEach(iso => {
@@ -3623,6 +3651,26 @@ const NO_REGRETS_DATA = {
             "100": { clean_firm: {min:88,max:94,median:88,existing:23.8}, solar: {min:1,max:1,median:1,existing:1.4}, wind: {min:2,max:8,median:8,existing:3.9} },
         }
     },
+    MISO: { demand_twh: 663.8, existing: { clean_firm: 11.3, solar: 2.1, wind: 14.8 },
+        thresholds: {
+            "75":  { clean_firm: {min:15,max:80,median:40,existing:11.3}, solar: {min:2,max:40,median:10,existing:2.1}, wind: {min:10,max:65,median:40,existing:14.8} },
+            "80":  { clean_firm: {min:20,max:82,median:45,existing:11.3}, solar: {min:2,max:35,median:12,existing:2.1}, wind: {min:10,max:60,median:35,existing:14.8} },
+            "85":  { clean_firm: {min:25,max:85,median:55,existing:11.3}, solar: {min:2,max:30,median:8,existing:2.1}, wind: {min:8,max:55,median:30,existing:14.8} },
+            "90":  { clean_firm: {min:30,max:88,median:65,existing:11.3}, solar: {min:2,max:35,median:5,existing:2.1}, wind: {min:5,max:45,median:25,existing:14.8} },
+            "95":  { clean_firm: {min:40,max:90,median:78,existing:11.3}, solar: {min:2,max:30,median:4,existing:2.1}, wind: {min:5,max:35,median:15,existing:14.8} },
+            "100": { clean_firm: {min:80,max:92,median:85,existing:11.3}, solar: {min:2,max:5,median:3,existing:2.1}, wind: {min:3,max:15,median:10,existing:14.8} },
+        }
+    },
+    SPP: { demand_twh: 299.8, existing: { clean_firm: 2.3, solar: 0.7, wind: 37.0 },
+        thresholds: {
+            "75":  { clean_firm: {min:5,max:70,median:20,existing:2.3}, solar: {min:1,max:35,median:8,existing:0.7}, wind: {min:20,max:80,median:65,existing:37.0} },
+            "80":  { clean_firm: {min:8,max:75,median:25,existing:2.3}, solar: {min:1,max:30,median:10,existing:0.7}, wind: {min:18,max:75,median:55,existing:37.0} },
+            "85":  { clean_firm: {min:12,max:78,median:35,existing:2.3}, solar: {min:1,max:28,median:8,existing:0.7}, wind: {min:15,max:70,median:50,existing:37.0} },
+            "90":  { clean_firm: {min:18,max:82,median:50,existing:2.3}, solar: {min:1,max:25,median:5,existing:0.7}, wind: {min:10,max:65,median:40,existing:37.0} },
+            "95":  { clean_firm: {min:30,max:88,median:70,existing:2.3}, solar: {min:1,max:20,median:4,existing:0.7}, wind: {min:8,max:50,median:20,existing:37.0} },
+            "100": { clean_firm: {min:75,max:90,median:80,existing:2.3}, solar: {min:1,max:5,median:2,existing:0.7}, wind: {min:5,max:20,median:15,existing:37.0} },
+        }
+    },
 };
 
 // ============================================================================
@@ -3655,7 +3703,7 @@ function initCostCurveChart(iso) {
 
     // Region color
     const regionColors = typeof REGION_COLORS !== 'undefined' ? REGION_COLORS : {
-        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0'
+        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#EF4444'
     };
     const c = regionColors[iso] || '#4a90d9';
 

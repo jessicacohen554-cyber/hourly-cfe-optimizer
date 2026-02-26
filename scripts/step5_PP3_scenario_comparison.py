@@ -1935,8 +1935,8 @@ def main():
     # Load egrid and fossil mix data
     with open('data/egrid_emission_rates.json') as f:
         egrid = json.load(f)
-    with open('data/EIA 930 Data/eia_fossil_mix.json') as f:
-        fossil_mix = json.load(f)
+    from eia_data_io import load_fossil_mix
+    fossil_mix = load_fossil_mix()
 
     # ==========================================================================
     # Scenario A: Pure Consequential — greedy forward-stepping, static FOAK firm

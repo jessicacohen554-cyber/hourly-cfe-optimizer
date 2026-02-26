@@ -42,7 +42,7 @@ STEP4_PARQUET_DIR = os.path.join(BASE_DIR, 'data', 'step4-gas-ccs-parquets')
 STEP3_PARQUET_DIR = os.path.join(BASE_DIR, 'data', 'step3-cost-opt-parquets')
 META_PATH = os.path.join(BASE_DIR, 'data', 'step4-gas-ccs-parquets', 'step4_meta.json')
 EGRID_PATH = os.path.join(BASE_DIR, 'data', 'egrid_emission_rates.json')
-FOSSIL_MIX_PATH = os.path.join(BASE_DIR, 'data', 'EIA 930 Data', 'eia_fossil_mix.json')
+FOSSIL_MIX_PATH = os.path.join(BASE_DIR, 'data', 'EIA 930 Data', 'eia_fossil_mix.json')  # legacy fallback
 OUTPUT_JSON = os.path.join(BASE_DIR, 'data', 'step5-post-processing', 'consequential_queue.json')
 OUTPUT_JS = os.path.join(BASE_DIR, 'dashboard', 'js', 'consequential-queue-data.js')
 
@@ -157,8 +157,8 @@ def load_data():
 
     with open(EGRID_PATH) as f:
         egrid = json.load(f)
-    with open(FOSSIL_MIX_PATH) as f:
-        fossil_mix = json.load(f)
+    from eia_data_io import load_fossil_mix
+    fossil_mix = load_fossil_mix()
 
     return df, meta, egrid, fossil_mix
 
