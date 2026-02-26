@@ -17,7 +17,7 @@ Key features:
   - Adaptive grid search: 5% → 1% refinement (±4% radius)
   - Pareto frontier: 3-5 points per threshold×ISO (procurement/storage tradeoff)
   - Numba JIT-compiled scoring functions
-  - Parallel ISO execution (multiprocessing)
+  - Inter-ISO parallel execution via multiprocessing.Pool (--workers N)
   - Vectorized batch mix evaluation
 
 Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per ISO/threshold)
@@ -2190,15 +2190,18 @@ def _rows_to_table(rows):
 
 
 def _parse_cli_args(argv):
-    """Parse CLI args for ISO and threshold filters.
+    """Parse CLI args for ISO, threshold, and worker count.
 
-    Supported threshold forms:
-      --threshold=95
-      --threshold 95
-      --threshold 95,97.5
+    Supported forms:
+      CAISO ERCOT           — positional ISO names
+      --threshold=95        — single threshold
+      --threshold 95,97.5   — comma-separated thresholds
+      --workers=4           — number of parallel ISO workers (default 1)
+      --workers 0           — auto-detect from CPU count
     """
     target_isos = []
     threshold_tokens = []
+    n_workers = 1
     i = 0
 
     while i < len(argv):
@@ -2213,6 +2216,18 @@ def _parse_cli_args(argv):
             if i + 1 >= len(argv):
                 raise ValueError("--threshold requires a value")
             threshold_tokens.extend(part.strip() for part in argv[i + 1].split(','))
+            i += 2
+            continue
+
+        if arg.startswith('--workers='):
+            n_workers = int(arg.split('=', 1)[1])
+            i += 1
+            continue
+
+        if arg == '--workers':
+            if i + 1 >= len(argv):
+                raise ValueError("--workers requires a value")
+            n_workers = int(argv[i + 1])
             i += 2
             continue
 
@@ -2253,7 +2268,13 @@ def _parse_cli_args(argv):
             target_thresholds.append(matched)
 
     target_thresholds = list(dict.fromkeys(target_thresholds))
-    return target_isos, target_thresholds
+
+    # Workers: 0 = auto (cpu_count), negative = 1
+    if n_workers <= 0:
+        n_workers = cpu_count()
+    n_workers = max(1, n_workers)
+
+    return target_isos, target_thresholds, n_workers
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2300,7 +2321,7 @@ def main():
                                      2, 2, 2, 0.85, 0.85, 0.50, 4, 8, 100, 168, 48)
         print("  JIT compilation complete")
 
-    target_isos, target_thresholds = _parse_cli_args(sys.argv[1:])
+    target_isos, target_thresholds, n_workers = _parse_cli_args(sys.argv[1:])
 
     if target_thresholds:
         THRESHOLDS = target_thresholds
@@ -2313,12 +2334,21 @@ def main():
 
     os.makedirs(STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
 
-    # Run ISOs sequentially and write per-ISO/threshold parquet outputs only
-    total_solutions = 0
-    for iso in run_isos:
-        args = (iso, demand_data, gen_profiles)
-        iso_name, iso_results = process_iso(args)
+    # Parallel or sequential ISO execution
+    n_workers = min(n_workers, len(run_isos))
+    iso_args = [(iso, demand_data, gen_profiles) for iso in run_isos]
 
+    if n_workers > 1:
+        print(f"\n  Parallel execution: {n_workers} workers for {len(run_isos)} ISOs")
+        with Pool(processes=n_workers) as pool:
+            results = pool.map(process_iso, iso_args)
+    else:
+        print(f"\n  Sequential execution: {len(run_isos)} ISOs")
+        results = [process_iso(a) for a in iso_args]
+
+    # Count solutions from parquet outputs
+    total_solutions = 0
+    for iso_name, iso_results in results:
         iso_total = 0
         for threshold in THRESHOLDS:
             path = _threshold_done_path(iso_name, threshold)
