@@ -231,14 +231,12 @@ def load_data():
     """Load demand profiles, generation profiles, emission rates, and fossil mix."""
     print("Loading data...")
 
-    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')) as f:
-        demand_raw = json.load(f)
-    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles.json')) as f:
-        gen_raw = json.load(f)
+    from eia_data_io import load_generation_profiles, load_demand_profiles, load_fossil_mix
+    demand_raw = load_demand_profiles()
+    gen_raw = load_generation_profiles()
     with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
         emission_rates = json.load(f)
-    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_fossil_mix.json')) as f:
-        fossil_mix = json.load(f)
+    fossil_mix = load_fossil_mix()
 
     # Average generation profiles across PROFILE_YEARS
     gen_profiles = {}

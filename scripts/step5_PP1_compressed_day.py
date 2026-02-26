@@ -116,10 +116,9 @@ def _validate_demand_profile(iso, year, profile):
 def load_data():
     """Load demand and generation profiles (same logic as step1)."""
     print("Loading data...")
-    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')) as f:
-        demand_raw = json.load(f)
-    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles.json')) as f:
-        gen_raw = json.load(f)
+    from eia_data_io import load_generation_profiles, load_demand_profiles
+    demand_raw = load_demand_profiles()
+    gen_raw = load_generation_profiles()
 
     # Average generation profiles
     gen_profiles = {}

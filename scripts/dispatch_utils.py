@@ -134,14 +134,12 @@ FUEL_ADJUSTMENTS = {
 
 def load_common_data():
     """Load all shared data files: demand, gen profiles, emission rates, fossil mix."""
-    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_demand_profiles.json')) as f:
-        demand_data = json.load(f)
-    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_generation_profiles.json')) as f:
-        gen_profiles = json.load(f)
+    from eia_data_io import load_generation_profiles, load_demand_profiles, load_fossil_mix
+    demand_data = load_demand_profiles()
+    gen_profiles = load_generation_profiles()
     with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
         emission_rates = json.load(f)
-    with open(os.path.join(DATA_DIR, 'EIA 930 Data', 'eia_fossil_mix.json')) as f:
-        fossil_mix = json.load(f)
+    fossil_mix = load_fossil_mix()
     return demand_data, gen_profiles, emission_rates, fossil_mix
 
 
