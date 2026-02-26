@@ -1605,6 +1605,14 @@ def parse_args():
         default=OUTPUT_DIR,
         help=f'Directory for per-ISO output parquets (default: {OUTPUT_DIR}).'
     )
+    parser.add_argument(
+        '--workers',
+        type=int,
+        default=1,
+        help='Number of parallel ISO workers. Numba already parallelizes within each '
+             'ISO via prange, so multi-worker mode is most useful when Numba thread '
+             'count is limited per worker. 0 = auto (CPU count). Default: 1.'
+    )
     return parser.parse_args()
 
 
