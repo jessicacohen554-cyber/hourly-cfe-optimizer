@@ -87,30 +87,28 @@ body { background: #F3F4F8; }
 .iso-btn:hover { background: rgba(255,255,255,0.95); color: #1A2744; }
 .iso-btn.active { background: rgba(14,165,233,0.12); border-color: rgba(14,165,233,0.4); color: #0284C7; }
 
-/* Global ISO bar — sticky */
+/* Global ISO bar — sticky, region + slider in one row */
 .global-iso-bar { background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 14px 24px; position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
 .global-iso-bar .bar-label { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.82rem; color: #1A2744; font-weight: 700; white-space: nowrap; }
+.bar-divider { width: 1px; height: 28px; background: rgba(0,0,0,0.12); flex-shrink: 0; }
+.bar-slider-wrap { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px; max-width: 320px; }
+.bar-slider-wrap input[type=range] { flex: 1; height: 5px; -webkit-appearance: none; appearance: none; background: linear-gradient(90deg, #0EA5E9 0%, #16A34A 50%, #F59E0B 80%, #DC2626 100%); border-radius: 3px; outline: none; cursor: pointer; }
+.bar-slider-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #1A2744; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
+.bar-slider-wrap input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #1A2744; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
+.bar-slider-readout { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.bar-slider-readout .target-val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.2rem; font-weight: 800; color: #0284C7; }
+.bar-slider-readout .target-year { font-size: 0.72rem; color: rgba(0,0,0,0.4); font-weight: 600; }
+@media (max-width: 768px) {
+    .bar-divider { display: none; }
+    .bar-slider-wrap { min-width: 140px; max-width: 100%; }
+}
 
 /* Dashboard grid */
 .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1320px; margin: 0 auto; padding: 0 24px 40px; }
 .dashboard-grid > .span-2 { grid-column: 1 / -1; }
 @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-/* Target threshold slider */
-.target-slider-section { max-width: 1200px; margin: -20px auto 0; padding: 20px 24px 12px; position: relative; z-index: 10; }
-.target-slider-card { background: rgba(255,255,255,0.95); border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 20px 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.target-slider-label { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 0.85rem; color: #1A2744; font-weight: 700; white-space: nowrap; }
-.target-slider-wrap { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 12px; }
-.target-slider-wrap input[type=range] { flex: 1; height: 6px; -webkit-appearance: none; appearance: none; background: linear-gradient(90deg, #0EA5E9 0%, #16A34A 50%, #F59E0B 80%, #DC2626 100%); border-radius: 3px; outline: none; cursor: pointer; }
-.target-slider-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #1A2744; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
-.target-slider-wrap input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #1A2744; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
-.target-val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.4rem; font-weight: 800; color: #0284C7; min-width: 50px; text-align: center; }
-.target-year { font-size: 0.78rem; color: rgba(0,0,0,0.45); font-weight: 600; }
-.target-ticks { display: flex; justify-content: space-between; font-size: 0.65rem; color: rgba(0,0,0,0.35); padding: 2px 0 0; }
-@media (max-width: 768px) {
-    .target-slider-card { flex-direction: column; align-items: stretch; gap: 12px; }
-    .target-slider-label { text-align: center; }
-}
+/* (Target slider now integrated into .global-iso-bar above) */
 
 /* Callout */
 .callout { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
@@ -141,22 +139,32 @@ body { background: #F3F4F8; }
     .key-findings { margin: -16px 16px 16px; padding: 20px; }
 }
 
-/* Metric tiles grid (region-specific, below slider) */
-.metric-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 1320px; margin: 0 auto; padding: 0 24px 24px; }
-.metric-tile { background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
-.metric-tile .tile-label { font-size: 0.68rem; color: rgba(0,0,0,0.45); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 8px; }
-.metric-tile .tile-val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.5rem; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
-.metric-tile .tile-sub { font-size: 0.72rem; color: rgba(0,0,0,0.4); line-height: 1.4; }
-.metric-tile .tile-row { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-.tile-tag { font-size: 0.62rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
-.metric-tile .tile-headline { font-size: 0.88rem; color: rgba(0,0,0,0.75); line-height: 1.5; margin-bottom: 10px; }
-.metric-tile .tile-headline strong { font-weight: 800; }
-.metric-tile .tile-ab-row { display: flex; gap: 8px; }
-.metric-tile .tile-ab { flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-align: center; line-height: 1.4; }
-.metric-tile .tile-ab-a { background: rgba(79,70,229,0.08); border: 1px solid rgba(79,70,229,0.2); color: #4F46E5; }
-.metric-tile .tile-ab-b { background: rgba(8,145,178,0.08); border: 1px solid rgba(8,145,178,0.2); color: #0891B2; }
-.metric-tile .tile-ab .ab-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; display: block; margin-bottom: 2px; }
-.metric-tile .tile-ab .ab-val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; font-weight: 800; }
+/* Metric tiles grid — heat-map conclusion + compact A/B panels */
+.metric-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 1320px; margin: 0 auto; padding: 12px 24px 24px; }
+.metric-tile { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.tile-conclusion { padding: 16px 16px 12px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.06); }
+.tile-conclusion .conclusion-val { font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.8rem; font-weight: 900; line-height: 1.1; margin-bottom: 4px; letter-spacing: -0.5px; }
+.tile-conclusion .conclusion-context { font-size: 0.78rem; color: rgba(0,0,0,0.55); line-height: 1.5; }
+.tile-conclusion .conclusion-context strong { font-weight: 700; }
+/* Heat-map backgrounds for conclusion severity */
+.tile-conclusion.heat-green { background: linear-gradient(135deg, rgba(22,163,74,0.08) 0%, rgba(22,163,74,0.15) 100%); }
+.tile-conclusion.heat-green .conclusion-val { color: #16A34A; }
+.tile-conclusion.heat-amber { background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.15) 100%); }
+.tile-conclusion.heat-amber .conclusion-val { color: #D97706; }
+.tile-conclusion.heat-red { background: linear-gradient(135deg, rgba(220,38,38,0.06) 0%, rgba(220,38,38,0.14) 100%); }
+.tile-conclusion.heat-red .conclusion-val { color: #DC2626; }
+.tile-conclusion.heat-blue { background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(14,165,233,0.12) 100%); }
+.tile-conclusion.heat-blue .conclusion-val { color: #0284C7; }
+.tile-conclusion.heat-neutral { background: rgba(0,0,0,0.02); }
+.tile-conclusion.heat-neutral .conclusion-val { color: rgba(0,0,0,0.5); }
+/* Compact A/B detail panels */
+.tile-details { display: flex; gap: 0; }
+.tile-ab-compact { flex: 1; padding: 8px 10px; text-align: center; font-size: 0.7rem; line-height: 1.35; }
+.tile-ab-compact + .tile-ab-compact { border-left: 1px solid rgba(0,0,0,0.06); }
+.tile-ab-compact.ab-a { background: rgba(79,70,229,0.04); color: #4F46E5; }
+.tile-ab-compact.ab-b { background: rgba(8,145,178,0.04); color: #0891B2; }
+.tile-ab-compact .ab-tag { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.6; font-weight: 700; display: block; margin-bottom: 1px; }
+.tile-ab-compact .ab-num { font-family: 'Rajdhani','Barlow Semi Condensed',monospace; font-size: 0.88rem; font-weight: 800; }
 @media (max-width: 1024px) { .metric-tiles { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 480px) { .metric-tiles { grid-template-columns: 1fr; } }
 
@@ -298,22 +306,17 @@ body { background: #F3F4F8; }
     </div>
 </section>
 
-<!-- ===== REGION TOGGLE (sticky) ===== -->
+<!-- ===== REGION TOGGLE + TARGET SLIDER (sticky, single row on desktop) ===== -->
 <div class="global-iso-bar">
     <span class="bar-label">Region:</span>
     <div class="iso-selector" id="globalIsoSelector" style="margin-bottom:0;"></div>
-</div>
-
-<!-- ===== TARGET SLIDER ===== -->
-<div class="target-slider-section">
-    <div class="target-slider-card">
-        <div class="target-slider-label">Target CFE Threshold</div>
-        <div class="target-slider-wrap">
-            <input type="range" id="targetSlider" min="0" max="14" step="1" value="11">
-            <div>
-                <div class="target-val" id="targetVal">95%</div>
-                <div class="target-year" id="targetYear">SBTi 2045</div>
-            </div>
+    <div class="bar-divider"></div>
+    <span class="bar-label">Target:</span>
+    <div class="bar-slider-wrap">
+        <input type="range" id="targetSlider" min="0" max="14" step="1" value="11">
+        <div class="bar-slider-readout">
+            <span class="target-val" id="targetVal">95%</span>
+            <span class="target-year" id="targetYear">SBTi 2045</span>
         </div>
     </div>
 </div>
@@ -356,7 +359,7 @@ body { background: #F3F4F8; }
     </div>
     <div class="chart-box">
         <h3 id="macTimelineTitle">PJM &mdash; Marginal $/tCO&#8322; by SBTi Year</h3>
-        <p class="chart-note">Red = A | Green = B. Hover for exact values.</p>
+        <p class="chart-note">Indigo = A | Teal = B. <span style="color:rgba(0,0,0,0.5);">&#9888; = no new CO&#8322; displaced at that step (cost increased but mix didn't add clean generation).</span></p>
         <div class="chart-container"><canvas id="macTimelineChart"></canvas></div>
     </div>
 </div>
@@ -728,50 +731,87 @@ function buildMetricTiles() {
     const bWins = mult > 1.01;
     const aWins = mult < 0.99;
 
-    function abTile(headline, aLabel, aVal, bLabel, bVal) {
+    // Heat-map class based on magnitude
+    function heatClass(ratio) {
+        if (ratio >= 1.5) return 'heat-red';
+        if (ratio >= 1.15) return 'heat-amber';
+        if (ratio >= 1.01) return 'heat-green';
+        return 'heat-neutral';
+    }
+
+    function heatTile(conclusionVal, conclusionCtx, heat, aTag, aVal, bTag, bVal) {
         return `<div class="metric-tile">
-            <div class="tile-headline">${headline}</div>
-            <div class="tile-ab-row">
-                <div class="tile-ab tile-ab-a"><span class="ab-label">Scenario A</span><span class="ab-val">${aVal}</span><br>${aLabel}</div>
-                <div class="tile-ab tile-ab-b"><span class="ab-label">Scenario B</span><span class="ab-val">${bVal}</span><br>${bLabel}</div>
+            <div class="tile-conclusion ${heat}">
+                <div class="conclusion-val">${conclusionVal}</div>
+                <div class="conclusion-context">${conclusionCtx}</div>
+            </div>
+            <div class="tile-details">
+                <div class="tile-ab-compact ab-a"><span class="ab-tag">Scenario A</span><span class="ab-num">${aVal}</span><br>${aTag}</div>
+                <div class="tile-ab-compact ab-b"><span class="ab-tag">Scenario B</span><span class="ab-num">${bVal}</span><br>${bTag}</div>
             </div>
         </div>`;
     }
 
-    const costHeadline = mult > 1.01
-        ? `<strong style="color:${COLORS.A};">${mult.toFixed(2)}&times;</strong> more expensive under Scenario A at ${tLabel} in ${iso}`
-        : mult < 0.99
-        ? `<strong style="color:${COLORS.B};">${(1/mult).toFixed(2)}&times;</strong> more expensive under Scenario B at ${tLabel} in ${iso}`
-        : `Cost parity between scenarios at ${tLabel} in ${iso}`;
+    // 1. Cost multiple
+    const costConclusion = mult > 1.01
+        ? `${mult.toFixed(2)}&times;`
+        : mult < 0.99 ? `${(1/mult).toFixed(2)}&times;` : 'Parity';
+    const costCtx = mult > 1.01
+        ? `more expensive under <strong>Scenario A</strong> at ${tLabel}`
+        : mult < 0.99 ? `more expensive under <strong>Scenario B</strong> at ${tLabel}` : `at ${tLabel} in ${iso}`;
+    const costHeat = mult > 1.01 ? heatClass(mult) : mult < 0.99 ? heatClass(1/mult) : 'heat-neutral';
 
-    const saveHeadline = parseFloat(annSaveB) > 0
-        ? `<strong style="color:${COLORS.B};">$${annSaveB}B/yr</strong> saved by Scenario B vs Scenario A in ${iso}`
-        : `<strong style="color:${COLORS.A};">$${Math.abs(parseFloat(annSaveB)).toFixed(1)}B/yr</strong> saved by Scenario A vs Scenario B in ${iso}`;
+    // 2. Annual savings
+    const savAbs = Math.abs(parseFloat(annSaveB));
+    const savConclusion = `$${savAbs.toFixed(1)}B/yr`;
+    const savCtx = parseFloat(annSaveB) > 0
+        ? `saved by <strong>Scenario B</strong> in ${iso}`
+        : `saved by <strong>Scenario A</strong> in ${iso}`;
+    const savHeat = savAbs > 5 ? 'heat-red' : savAbs > 1 ? 'heat-amber' : savAbs > 0.1 ? 'heat-green' : 'heat-neutral';
 
-    const npvHeadline = parseFloat(npvB) > 0
-        ? `<strong style="color:${COLORS.B};">$${npvB}B</strong> cumulative savings over 25 years (Scenario B vs A, 5% WACC)`
-        : `<strong style="color:${COLORS.A};">$${Math.abs(parseFloat(npvB))}B</strong> cumulative savings over 25 years (Scenario A vs B, 5% WACC)`;
+    // 3. 25yr NPV
+    const npvAbs = Math.abs(parseFloat(npvB));
+    const npvConclusion = `$${npvAbs}B`;
+    const npvCtx = parseFloat(npvB) > 0
+        ? `25-year NPV savings (<strong>B vs A</strong>, 5% WACC)`
+        : `25-year NPV savings (<strong>A vs B</strong>, 5% WACC)`;
+    const npvHeat = npvAbs > 50 ? 'heat-red' : npvAbs > 10 ? 'heat-amber' : npvAbs > 1 ? 'heat-green' : 'heat-neutral';
 
-    const gasHeadline = parseFloat(gasAvoided) > 0
-        ? `<strong style="color:#16A34A;">${gasAvoided} GW</strong> of gas capacity avoided in Scenario B vs Scenario A`
-        : `<strong style="color:#DC2626;">${Math.abs(parseFloat(gasAvoided)).toFixed(1)} GW</strong> more gas capacity needed in Scenario B`;
+    // 4. Gas avoided
+    const gasAbsF = Math.abs(parseFloat(gasAvoided));
+    const gasConclusion = `${gasAbsF.toFixed(1)} GW`;
+    const gasCtx = parseFloat(gasAvoided) > 0
+        ? `gas capacity <strong>avoided</strong> by Scenario B`
+        : `<strong>additional</strong> gas in Scenario B`;
+    const gasHeat = parseFloat(gasAvoided) > 0
+        ? (gasAbsF > 20 ? 'heat-green' : gasAbsF > 5 ? 'heat-green' : 'heat-neutral')
+        : (gasAbsF > 5 ? 'heat-red' : 'heat-neutral');
 
+    // 5. Curtailment delta
     const strandDelta = Math.round(strandCleanA - strandCleanB);
-    const strandHeadline = strandDelta > 0
-        ? `<strong style="color:${COLORS.A};">${strandDelta} TWh</strong> more clean energy wasted (curtailed) in Scenario A vs B`
-        : `<strong style="color:${COLORS.B};">${Math.abs(strandDelta)} TWh</strong> more clean energy wasted in Scenario B vs A`;
+    const strandAbs = Math.abs(strandDelta);
+    const strandConclusion = `${strandAbs} TWh`;
+    const strandCtx = strandDelta > 0
+        ? `more clean energy <strong>wasted</strong> in Scenario A`
+        : `more clean energy <strong>wasted</strong> in Scenario B`;
+    const strandHeat = strandAbs > 50 ? 'heat-amber' : strandAbs > 10 ? 'heat-green' : 'heat-neutral';
 
-    const firmHeadline = firmB > firmA
-        ? `<strong style="color:${COLORS.B};">${Math.round(firmB - firmA)} TWh</strong> more clean firm deployed in Scenario B — seeding the learning curve earlier`
-        : `<strong style="color:${COLORS.A};">${Math.round(firmA - firmB)} TWh</strong> more clean firm deployed in Scenario A`;
+    // 6. Clean firm delta
+    const firmDelta = Math.round(firmB - firmA);
+    const firmAbs = Math.abs(firmDelta);
+    const firmConclusion = `${firmAbs} TWh`;
+    const firmCtx = firmDelta > 0
+        ? `more clean firm in <strong>Scenario B</strong> — seeds learning curve`
+        : `more clean firm in <strong>Scenario A</strong>`;
+    const firmHeat = 'heat-blue';
 
     container.innerHTML = [
-        abTile(costHeadline, 'System cost', '$' + aT.effective_cost.toFixed(1) + '/MWh', 'System cost', '$' + bT.effective_cost.toFixed(1) + '/MWh'),
-        abTile(saveHeadline, 'Annual cost', '$' + (aT.annual_cost_billion || (aT.effective_cost * demA / 1000)).toFixed(1) + 'B', 'Annual cost', '$' + (bT.annual_cost_billion || (bT.effective_cost * demB / 1000)).toFixed(1) + 'B'),
-        abTile(npvHeadline, '25yr NPV', '$' + (aT.npv_25yr_billion || 0).toFixed(0) + 'B', '25yr NPV', '$' + (bT.npv_25yr_billion || 0).toFixed(0) + 'B'),
-        abTile(gasHeadline, 'Gas capacity', (totalGasA/1000).toFixed(0) + ' GW', 'Gas capacity', (totalGasB/1000).toFixed(0) + ' GW'),
-        abTile(strandHeadline, 'Curtailed', Math.round(strandCleanA) + ' TWh', 'Curtailed', Math.round(strandCleanB) + ' TWh'),
-        abTile(firmHeadline, 'Clean firm', Math.round(firmA) + ' TWh', 'Clean firm', Math.round(firmB) + ' TWh'),
+        heatTile(costConclusion, costCtx, costHeat, 'System cost', '$' + aT.effective_cost.toFixed(1) + '/MWh', 'System cost', '$' + bT.effective_cost.toFixed(1) + '/MWh'),
+        heatTile(savConclusion, savCtx, savHeat, 'Annual cost', '$' + (aT.annual_cost_billion || (aT.effective_cost * demA / 1000)).toFixed(1) + 'B', 'Annual cost', '$' + (bT.annual_cost_billion || (bT.effective_cost * demB / 1000)).toFixed(1) + 'B'),
+        heatTile(npvConclusion, npvCtx, npvHeat, '25yr NPV', '$' + (aT.npv_25yr_billion || 0).toFixed(0) + 'B', '25yr NPV', '$' + (bT.npv_25yr_billion || 0).toFixed(0) + 'B'),
+        heatTile(gasConclusion, gasCtx, gasHeat, 'Gas capacity', (totalGasA/1000).toFixed(0) + ' GW', 'Gas capacity', (totalGasB/1000).toFixed(0) + ' GW'),
+        heatTile(strandConclusion, strandCtx, strandHeat, 'Curtailed', Math.round(strandCleanA) + ' TWh', 'Curtailed', Math.round(strandCleanB) + ' TWh'),
+        heatTile(firmConclusion, firmCtx, firmHeat, 'Clean firm', Math.round(firmA) + ' TWh', 'Clean firm', Math.round(firmB) + ' TWh'),
     ].join('');
 }
 
@@ -813,24 +853,25 @@ function renderMacTimeline(iso) {
     const ptsB = trajB.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
     const labels = ptsA.map(yearLabel);
 
-    // Compute a reasonable y-axis max from finite values only, then add headroom for ∞ markers
+    // Compute a reasonable y-axis max from finite values only
     const finiteVals = [...ptsA, ...ptsB].map(d => d.stepwise_mac).filter(v => v < 9999 && v > 0);
     const macYMax = finiteVals.length ? Math.ceil(Math.max(...finiteVals) * 1.15 / 50) * 50 : 500;
-    const infCapVal = macYMax;  // Infinite bars render at y-max with ∞ label on top
 
-    // Plugin to draw ∞ labels on bars with infinite MAC
-    const infinityLabelPlugin = {
-        id: 'infinityLabels',
+    // For infinite MAC: show bar as null (no bar) and draw a symbol instead
+    // "No emissions displaced" means the cost increased but CO2 didn't change — MAC is undefined
+    const NO_DISP_SYMBOL = '\u26A0'; // ⚠ warning triangle
+
+    // Plugin to draw ⚠ symbols where MAC is infinite (no emissions displaced at that step)
+    const noDisplacementPlugin = {
+        id: 'noDisplacementSymbols',
         afterDatasetsDraw(chart) {
             const ctx = chart.ctx;
             ctx.save();
-            ctx.font = 'bold 14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            const datasets = chart.data.datasets;
             const srcPts = [ptsA, ptsB];
             const colors = [COLORS.A, COLORS.B];
-            for (let di = 0; di < datasets.length; di++) {
+            const yScale = chart.scales.y;
+            const yPos = yScale.getPixelForValue(macYMax * 0.5); // center of chart
+            for (let di = 0; di < srcPts.length; di++) {
                 const pts = srcPts[di];
                 if (!pts) continue;
                 for (let i = 0; i < pts.length; i++) {
@@ -838,8 +879,25 @@ function renderMacTimeline(iso) {
                         const meta = chart.getDatasetMeta(di);
                         const bar = meta.data[i];
                         if (!bar) continue;
+                        // Draw a circle with ⚠ symbol
+                        const cx = bar.x;
+                        const cy = yPos + (di === 0 ? -14 : 14); // offset A vs B
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+                        ctx.fillStyle = di === 0 ? 'rgba(79,70,229,0.1)' : 'rgba(8,145,178,0.1)';
+                        ctx.fill();
+                        ctx.strokeStyle = colors[di];
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([3, 2]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.closePath();
+                        // Symbol text
+                        ctx.font = 'bold 12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
                         ctx.fillStyle = colors[di];
-                        ctx.fillText('∞', bar.x, bar.y - 4);
+                        ctx.fillText(NO_DISP_SYMBOL, cx, cy);
                     }
                 }
             }
@@ -855,9 +913,9 @@ function renderMacTimeline(iso) {
             datasets: [
                 {
                     label: 'Scenario A',
-                    data: ptsA.map(d => d.stepwise_mac >= 9999 ? infCapVal : d.stepwise_mac),
-                    backgroundColor: ptsA.map(d => d.stepwise_mac >= 9999 ? 'rgba(79,70,229,0.15)' : 'rgba(79,70,229,0.45)'),
-                    borderColor: ptsA.map(d => d.stepwise_mac >= 9999 ? 'rgba(79,70,229,0.5)' : COLORS.A),
+                    data: ptsA.map(d => d.stepwise_mac >= 9999 ? null : d.stepwise_mac),
+                    backgroundColor: 'rgba(79,70,229,0.45)',
+                    borderColor: COLORS.A,
                     borderWidth: 1.5,
                     borderRadius: 6,
                     borderSkipped: 'start',
@@ -866,9 +924,9 @@ function renderMacTimeline(iso) {
                 },
                 {
                     label: 'Scenario B',
-                    data: ptsB.map(d => d.stepwise_mac >= 9999 ? infCapVal : d.stepwise_mac),
-                    backgroundColor: ptsB.map(d => d.stepwise_mac >= 9999 ? 'rgba(8,145,178,0.15)' : 'rgba(8,145,178,0.45)'),
-                    borderColor: ptsB.map(d => d.stepwise_mac >= 9999 ? 'rgba(8,145,178,0.5)' : COLORS.B),
+                    data: ptsB.map(d => d.stepwise_mac >= 9999 ? null : d.stepwise_mac),
+                    backgroundColor: 'rgba(8,145,178,0.45)',
+                    borderColor: COLORS.B,
                     borderWidth: 1.5,
                     borderRadius: 6,
                     borderSkipped: 'start',
@@ -877,11 +935,30 @@ function renderMacTimeline(iso) {
                 }
             ]
         },
-        plugins: [infinityLabelPlugin],
+        plugins: [noDisplacementPlugin],
         options: {
             ...CHART_DEFAULTS,
             plugins: {
                 ...CHART_DEFAULTS.plugins,
+                legend: {
+                    onClick: () => {},
+                    labels: {
+                        color: 'rgba(0,0,0,0.6)', font: { size: 11 },
+                        generateLabels: chart => {
+                            const defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            defaultLabels.push({
+                                text: '\u26A0 No emissions displaced',
+                                fillStyle: 'rgba(0,0,0,0.06)',
+                                strokeStyle: 'rgba(0,0,0,0.3)',
+                                lineWidth: 1.5,
+                                lineDash: [3, 2],
+                                hidden: false,
+                                index: 99,
+                            });
+                            return defaultLabels;
+                        }
+                    }
+                },
                 tooltip: {
                     callbacks: {
                         title: ctx => {
@@ -891,8 +968,8 @@ function renderMacTimeline(iso) {
                         label: ctx => {
                             const pts = ctx.datasetIndex === 0 ? ptsA : ptsB;
                             const raw = pts[ctx.dataIndex].stepwise_mac;
-                            const val = raw >= 9999 ? '∞ (no new CO₂ displaced)' : '$' + Math.round(raw).toLocaleString();
-                            return ctx.dataset.label + ': ' + val + '/tCO\u2082';
+                            if (raw >= 9999) return ctx.dataset.label + ': \u26A0 No new CO\u2082 displaced at this step';
+                            return ctx.dataset.label + ': $' + Math.round(raw).toLocaleString() + '/tCO\u2082';
                         }
                     }
                 },
@@ -1481,8 +1558,8 @@ function renderDominoTable() {
     const queue = buildSequentialQueue();
     let html = '<thead><tr><th>#</th><th>ISO</th><th>Zone</th><th>MAC</th><th>Primary Resource</th><th>\u0394Gas</th></tr></thead><tbody>';
     queue.forEach((step, i) => {
-        const mac = step.marginal_mac >= 9999 ? '\u221E' : '$' + Math.round(step.marginal_mac).toLocaleString();
-        const macClass = step.marginal_mac < 0 ? 'mac-cheap' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
+        const mac = step.marginal_mac >= 9999 ? '\u26A0' : '$' + Math.round(step.marginal_mac).toLocaleString();
+        const macClass = step.marginal_mac >= 9999 ? '' : step.marginal_mac < 0 ? 'mac-cheap' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
 
         const deltas = step.delta_resources || {};
         const sorted = Object.entries(deltas).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
@@ -1513,15 +1590,34 @@ function renderDominoTable() {
 renderDominoTable();
 
 // ===== 8. FOAK → NOAK LEARNING CURVE CHART =====
-// Uses data from shared-data.js: FOAK_NOAK_YEARS, CLEAN_FIRM_LEARNING, GAS_TRUE_COST
+// Learning curve data derived from SPEC.md FOAK→NOAK decision (Feb 25, 2026)
+// Nuclear LCOE: FOAK=$160/MWh, NOAK=$72/MWh (PJM reference)
+// Scenario B: FOAK starts 2029, NOAK by 2038 (concave exponent 0.6)
+// Scenario A: FOAK starts 2036, NOAK by 2048 (delayed, 12yr stretch)
+// Gas: $45-55/MWh base, +$20-30 carbon pricing trajectory (EPA SCC → ETS convergence)
+const FOAK_NOAK_YEARS_LOCAL = [2025, 2028, 2029, 2030, 2032, 2034, 2036, 2038, 2040, 2042, 2045, 2048, 2050];
+const CLEAN_FIRM_LEARNING_LOCAL = {
+    // Scenario A (conservative/delayed): flat FOAK until 2036, then concave ramp to NOAK by 2048
+    conservative: [160, 160, 160, 160, 160, 160, 160, 130, 114, 100, 86, 72, 72],
+    // Scenario B (central/early investment): learning starts 2029, NOAK by 2038
+    central:      [160, 160, 155, 126, 102, 85, 77, 72, 72, 72, 72, 72, 72],
+    // Optimistic bound: aggressive learning, NOAK by 2035
+    optimistic:   [160, 155, 140, 110, 85, 75, 72, 70, 68, 66, 65, 64, 63],
+};
+const GAS_TRUE_COST_LOCAL = {
+    // Gas CCGT base cost (fuel + O&M, no carbon price)
+    base:        [48, 50, 50, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61],
+    // Gas + carbon pricing (EPA SCC ramp: ~$51→$85/ton, converted to $/MWh at 0.4 tCO2/MWh)
+    with_carbon: [68, 72, 73, 75, 78, 82, 85, 88, 91, 94, 97, 100, 103],
+};
+
 function renderFoakNOAKChart() {
     const canvas = document.getElementById('foakNOAKChart');
     if (!canvas) return;
-    if (typeof FOAK_NOAK_YEARS === 'undefined' || typeof CLEAN_FIRM_LEARNING === 'undefined') return;
 
-    const years = FOAK_NOAK_YEARS;
-    const cf = CLEAN_FIRM_LEARNING;
-    const gas = GAS_TRUE_COST;
+    const years = FOAK_NOAK_YEARS_LOCAL;
+    const cf = CLEAN_FIRM_LEARNING_LOCAL;
+    const gas = GAS_TRUE_COST_LOCAL;
 
     // Find crossover year (central clean firm vs gas with carbon)
     let crossoverYear = null;
