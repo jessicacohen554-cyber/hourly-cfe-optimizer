@@ -95,17 +95,24 @@ def load_combined_df(input_dir, isos):
 
 
 def add_mac_column(df):
-    """Add MAC column: (cost_effective_cost × annual_demand_mwh) / co2_total_co2_abated_tons.
+    """Add MAC column: (cost_incremental × annual_demand_mwh) / co2_total_co2_abated_tons.
 
-    Uses full portfolio LCOE (effective_cost) rather than incremental cost above
-    wholesale, so MAC reflects the standalone cost of the clean portfolio per ton
-    of CO₂ abated — not a premium over grid power.
+    Uses incremental cost above wholesale (cost_incremental = effective_cost - wholesale)
+    so MAC reflects the premium paid for clean energy per ton of CO₂ abated —
+    the standard marginal abatement cost metric in climate policy literature.
     """
     co2 = df['co2_total_co2_abated_tons']
-    valid = (co2 > 0) & df['cost_effective_cost'].notna()
+    # Use incremental cost (above wholesale) for proper MAC
+    if 'cost_incremental' in df.columns:
+        cost_col = df['cost_incremental']
+        valid = (co2 > 0) & cost_col.notna()
+    else:
+        # Fallback: use effective_cost if incremental not available
+        cost_col = df['cost_effective_cost']
+        valid = (co2 > 0) & cost_col.notna()
     df['mac'] = np.where(
         valid,
-        (df['cost_effective_cost'] * df['annual_demand_mwh']) / co2,
+        (cost_col * df['annual_demand_mwh']) / co2,
         np.nan,
     )
     return df
@@ -242,11 +249,13 @@ def compute_stepwise_fan(df):
         for i in range(1, len(THRESHOLDS)):
             t_prev, t_curr = THRESHOLDS[i - 1], THRESHOLDS[i]
 
+            # Use cost_incremental for proper MAC (cost above wholesale)
+            cost_field = 'cost_incremental' if 'cost_incremental' in iso_df.columns else 'cost_effective_cost'
             prev = iso_df.loc[iso_df['threshold'] == t_prev,
-                              ['scenario', 'cost_effective_cost', 'co2_total_co2_abated_tons',
+                              ['scenario', cost_field, 'co2_total_co2_abated_tons',
                                'annual_demand_mwh']].set_index('scenario')
             curr = iso_df.loc[iso_df['threshold'] == t_curr,
-                              ['scenario', 'cost_effective_cost',
+                              ['scenario', cost_field,
                                'co2_total_co2_abated_tons']].set_index('scenario')
 
             merged = prev.join(curr, rsuffix='_next', how='inner')
@@ -255,7 +264,7 @@ def compute_stepwise_fan(df):
                     fan_data[iso][p].append(None)
                 continue
 
-            delta_cost = ((merged['cost_effective_cost_next'] - merged['cost_effective_cost'])
+            delta_cost = ((merged[f'{cost_field}_next'] - merged[cost_field])
                           * merged['annual_demand_mwh'])
             delta_co2 = (merged['co2_total_co2_abated_tons_next']
                          - merged['co2_total_co2_abated_tons'])
@@ -336,8 +345,9 @@ def compute_envelope_and_path(df):
             costs_at_t.append(incremental)
             co2_at_t.append(co2_tons if pd.notna(co2_tons) else 0)
 
+            # Use incremental cost (above wholesale) for proper MAC
             if pd.notna(co2_tons) and co2_tons > 0:
-                raw_macs.append(round((eff_cost * demand_mwh) / co2_tons, 1))
+                raw_macs.append(round((incremental * demand_mwh) / co2_tons, 1))
             else:
                 raw_macs.append(None)
 
