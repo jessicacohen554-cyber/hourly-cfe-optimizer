@@ -803,19 +803,35 @@ Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Postprocess)
 
 #### Shared Architecture: `dispatch_utils.py`
 
-Extracted from `step5_PP4_recompute_co2.py` to create a single source of truth for dispatch reconstruction, fossil retirement, and profile loading. Both `step5_PP4_recompute_co2.py` and `step5_PP6_compute_lmp_prices.py` import from this module. Step 1 Numba JIT dispatch functions also consolidated here.
+Single source of truth for dispatch reconstruction, fossil retirement, and profile loading. All post-processing scripts (PP0–PP6) import from this module. Step 1 Numba JIT dispatch functions consolidated here.
 
 ```
 dispatch_utils.py (shared)
 ├── Constants: battery/LDES params, hydro caps, grid mix, coal/oil caps, base demand
-├── get_supply_profiles(iso, gen_profiles)
-├── reconstruct_hourly_dispatch(mix, demand, profiles)  ← battery + LDES dispatch
-├── compute_fossil_retirement(iso, clean_pct, ...)      ← remaining capacity at threshold
-└── load_common_data()                                  ← demand, gen profiles, emission rates, fossil mix
+├── get_supply_profiles(iso, gen_profiles)           ← nuclear derate + DST correction
+├── reconstruct_hourly_dispatch(..., detailed=False)  ← battery + LDES dispatch
+│   └── detailed=True adds: per-resource matched/surplus, charge profiles
+├── _compute_per_resource_dispatch(...)               ← merit-order: CF→CCS→hydro→wind→solar
+├── _battery_loop_detailed / _ldes_loop_detailed      ← Numba loops with charge tracking
+├── compute_fossil_retirement(iso, clean_pct, ...)    ← remaining capacity at threshold
+├── load_common_data()                                ← demand, gen profiles, emission rates, fossil mix
+├── Dispatch cache: load/save per-ISO NPZ, versioned (CACHE_VERSION=2)
+└── DISPATCH_ORDER, CACHE_VERSION constants
 
-step5_PP4_recompute_co2.py (imports dispatch_utils — refactored, identical behavior)
+step5_PP0_build_dispatch_cache.py (NEW — runs before PP1/PP4/PP6)
+├── extract_unique_mixes(iso, input_dir)              ← reads step4/step3 parquets
+├── build_cache_for_iso(iso, mixes, ...)              ← detailed=True for all mixes
+└── Output: data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz (v2)
+
+step5_PP1_compressed_day.py (refactored — reads from dispatch cache)
+├── dispatch_from_cache(iso, mix, ...)                ← cache lookup → PP1 result format
+├── compress_to_24h(result)                           ← 8760 → 24 hour-of-day sums
+└── No duplicate dispatch engine — imports from dispatch_utils
+
+step5_PP4_recompute_co2.py (bug fix: now uses get_supply_profiles, not _simple)
 ├── compute_dispatch_stack_emission_rate()
-├── compute_co2_hourly()
+├── fast_co2_from_match_score()                       ← ~1000x faster, no dispatch needed
+├── compute_co2_hourly()                              ← fallback dispatch path
 └── recompute_all_co2()
 
 step5_PP6_compute_lmp_prices.py (imports dispatch_utils)
@@ -825,7 +841,11 @@ step5_PP6_compute_lmp_prices.py (imports dispatch_utils)
 └── calibration framework
 ```
 
-**Compatibility requirement**: After refactor, `step5_PP4_recompute_co2.py` must produce bit-identical results. Verified via automated test.
+**PP0 pipeline position**: Runs after Step 4, before PP1/PP4/PP6. Pre-computes dispatch for ~645 unique mixes across 5 ISOs. Cache is versioned (v2) to invalidate stale v1 caches built with inconsistent supply profiles.
+
+**PP4 bug fix (Feb 2026)**: PP4 was importing `get_supply_profiles_simple` (flat clean_firm, no DST correction) instead of the canonical `get_supply_profiles`. Fixed to use the same nuclear-derated, DST-corrected profiles as Step 1. CO₂ results on the dispatch path will differ slightly from pre-fix.
+
+**Compatibility note**: PP1's local dispatch engine (sequential battery algorithm, multi-year averaged demand) has been replaced with the canonical dispatch_utils engine (greedy-sort battery, single-year demand). Total energy dispatched is identical; hourly distribution differs slightly.
 
 #### Design Decisions (Locked)
 

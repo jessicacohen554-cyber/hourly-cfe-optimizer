@@ -255,62 +255,17 @@ def get_supply_profiles(iso, gen_profiles):
     return profiles
 
 
-def get_supply_profiles_simple(iso, gen_profiles):
-    """Simplified supply profiles (flat clean_firm, no DST correction).
-
-    Backward-compatible with step5_PP4_recompute_co2.py's original implementation.
-    Use get_supply_profiles() for new code.
-    """
-    profiles = {}
-    profiles['clean_firm'] = [1.0 / H] * H
-
-    iso_data = gen_profiles.get(iso, {})
-    year_data = iso_data.get(DATA_YEAR, iso_data)
-
-    if iso == 'NYISO':
-        if isinstance(year_data, dict):
-            p = year_data.get('solar_proxy')
-        else:
-            p = None
-        if not p:
-            neiso_data = gen_profiles.get('NEISO', {})
-            neiso_year = neiso_data.get(DATA_YEAR, neiso_data)
-            p = neiso_year.get('solar') if isinstance(neiso_year, dict) else None
-        if not p:
-            p = [0.0] * H
-        profiles['solar'] = list(p[:H])
-    else:
-        if isinstance(year_data, dict):
-            profiles['solar'] = year_data.get('solar', [0.0] * H)[:H]
-        else:
-            profiles['solar'] = [0.0] * H
-
-    if isinstance(year_data, dict):
-        profiles['wind'] = year_data.get('wind', [0.0] * H)[:H]
-    else:
-        profiles['wind'] = [0.0] * H
-
-    profiles['ccs_ccgt'] = [1.0 / H] * H
-
-    if isinstance(year_data, dict):
-        profiles['hydro'] = year_data.get('hydro', [0.0] * H)[:H]
-    else:
-        profiles['hydro'] = [0.0] * H
-
-    for rtype in RESOURCE_TYPES:
-        if len(profiles[rtype]) > H:
-            profiles[rtype] = profiles[rtype][:H]
-        elif len(profiles[rtype]) < H:
-            profiles[rtype] = list(profiles[rtype]) + [0.0] * (H - len(profiles[rtype]))
-
-    return profiles
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 # HOURLY DISPATCH RECONSTRUCTION
 # ══════════════════════════════════════════════════════════════════════════════
 
 # --- Numba-accelerated inner loops (10-50x faster than pure Python) ---
+
+DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar']
+
+# Cache version — bump when dispatch algorithm or field set changes
+CACHE_VERSION = 2  # v2 = full supply profiles + detailed fields
+
 
 @njit(cache=True)
 def _battery_loop(residual_surplus, residual_gap, dispatch_profile,
@@ -431,6 +386,193 @@ def _ldes_loop(residual_surplus, residual_gap, dispatch_profile,
     return dispatch_profile
 
 
+@njit(cache=True)
+def _battery_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
+                           charge_profile, num_days, daily_target, power_rating,
+                           efficiency):
+    """Inner loop for daily battery dispatch with charge tracking — Numba-compiled."""
+    for day in range(num_days):
+        ds = day * 24
+        de = ds + 24
+        day_surplus = residual_surplus[ds:de].copy()
+        day_gap = residual_gap[ds:de].copy()
+
+        max_from_charge = 0.0
+        gap_sum = 0.0
+        for i in range(24):
+            if day_surplus[i] > 0:
+                max_from_charge += day_surplus[i]
+            if day_gap[i] > 0:
+                gap_sum += day_gap[i]
+        max_from_charge *= efficiency
+
+        actual_dispatch = daily_target
+        if max_from_charge < actual_dispatch:
+            actual_dispatch = max_from_charge
+        if gap_sum < actual_dispatch:
+            actual_dispatch = gap_sum
+        if actual_dispatch <= 0:
+            continue
+
+        required_charge = actual_dispatch / efficiency
+
+        # Charge from largest surpluses
+        sorted_idx = np.argsort(-day_surplus)
+        remaining_charge = required_charge
+        for j in range(24):
+            idx = sorted_idx[j]
+            if remaining_charge <= 0 or day_surplus[idx] <= 0:
+                break
+            amt = day_surplus[idx]
+            if power_rating < amt:
+                amt = power_rating
+            if remaining_charge < amt:
+                amt = remaining_charge
+            residual_surplus[ds + idx] -= amt
+            charge_profile[ds + idx] += amt
+            remaining_charge -= amt
+
+        # Discharge to largest gaps
+        sorted_gap = np.argsort(-day_gap)
+        remaining_dispatch = actual_dispatch
+        for j in range(24):
+            idx = sorted_gap[j]
+            if remaining_dispatch <= 0 or day_gap[idx] <= 0:
+                break
+            amt = day_gap[idx]
+            if power_rating < amt:
+                amt = power_rating
+            if remaining_dispatch < amt:
+                amt = remaining_dispatch
+            dispatch_profile[ds + idx] = amt
+            residual_gap[ds + idx] -= amt
+            remaining_dispatch -= amt
+    return dispatch_profile, charge_profile
+
+
+@njit(cache=True)
+def _ldes_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
+                        charge_profile, energy_capacity, power_rating,
+                        ldes_efficiency, window_hours, total_hours):
+    """Inner loop for LDES multi-day dispatch with charge tracking — Numba-compiled."""
+    state_of_charge = 0.0
+    num_windows = (total_hours + window_hours - 1) // window_hours
+
+    for w in range(num_windows):
+        w_start = w * window_hours
+        w_end = w_start + window_hours
+        if w_end > total_hours:
+            w_end = total_hours
+        w_len = w_end - w_start
+
+        w_surplus = residual_surplus[w_start:w_end].copy()
+        w_gap = residual_gap[w_start:w_end].copy()
+
+        # Charge from surplus
+        surplus_indices = np.argsort(-w_surplus)
+        for j in range(w_len):
+            idx = surplus_indices[j]
+            if w_surplus[idx] <= 0:
+                break
+            space = energy_capacity - state_of_charge
+            if space <= 0:
+                break
+            charge_amt = w_surplus[idx]
+            if power_rating < charge_amt:
+                charge_amt = power_rating
+            if space < charge_amt:
+                charge_amt = space
+            if charge_amt > 0:
+                state_of_charge += charge_amt
+                charge_profile[w_start + idx] += charge_amt
+
+        # Discharge to gaps
+        gap_indices = np.argsort(-w_gap)
+        for j in range(w_len):
+            idx = gap_indices[j]
+            if w_gap[idx] <= 0:
+                break
+            avail = state_of_charge * ldes_efficiency
+            if avail <= 0:
+                break
+            dispatch_amt = w_gap[idx]
+            if power_rating < dispatch_amt:
+                dispatch_amt = power_rating
+            if avail < dispatch_amt:
+                dispatch_amt = avail
+            if dispatch_amt > 0:
+                dispatch_profile[w_start + idx] = dispatch_amt
+                state_of_charge -= dispatch_amt / ldes_efficiency
+                residual_gap[w_start + idx] -= dispatch_amt
+
+    return dispatch_profile, charge_profile
+
+
+def _dispatch_battery_detailed(residual_surplus, residual_gap, dispatch_pct,
+                                duration_hours, efficiency):
+    """Daily-cycle battery dispatch with charge tracking. Modifies residual arrays in-place."""
+    dispatch_profile = np.zeros(H, dtype=np.float64)
+    charge_profile = np.zeros(H, dtype=np.float64)
+    if dispatch_pct <= 0:
+        return dispatch_profile, charge_profile
+
+    total_dispatch = dispatch_pct / 100.0
+    num_days = H // 24
+    daily_target = total_dispatch / num_days
+    power_rating = daily_target / duration_hours
+
+    return _battery_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
+                                   charge_profile, num_days, daily_target,
+                                   power_rating, efficiency)
+
+
+def _dispatch_ldes_detailed(residual_surplus, residual_gap, dispatch_pct, demand_arr):
+    """LDES multi-day dispatch with charge tracking. Modifies residual arrays in-place."""
+    dispatch_profile = np.zeros(H, dtype=np.float64)
+    charge_profile = np.zeros(H, dtype=np.float64)
+    if dispatch_pct <= 0:
+        return dispatch_profile, charge_profile
+
+    total_demand_energy = demand_arr.sum()
+    energy_capacity = total_demand_energy * (24.0 / H)
+    power_rating = energy_capacity / LDES_DURATION_HOURS
+    window_hours = LDES_WINDOW_DAYS * 24
+
+    return _ldes_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
+                                charge_profile, energy_capacity, power_rating,
+                                LDES_EFFICIENCY, window_hours, H)
+
+
+def _compute_per_resource_dispatch(demand_arr, supply_profiles, resource_pcts,
+                                    procurement_factor, supply_matrix=None):
+    """Merit-order dispatch per resource: CF -> CCS -> hydro -> wind -> solar.
+
+    Returns:
+        matched: dict {resource: np.array(H)} -- dispatched to demand
+        surplus: dict {resource: np.array(H)} -- excess above demand
+    """
+    gen = {}
+    for i, rtype in enumerate(RESOURCE_TYPES):
+        pct = resource_pcts.get(rtype, 0) / 100.0
+        if supply_matrix is not None:
+            gen[rtype] = procurement_factor * pct * supply_matrix[i]
+        else:
+            profile = np.array(supply_profiles[rtype][:H], dtype=np.float64)
+            gen[rtype] = procurement_factor * pct * profile
+
+    matched = {}
+    surplus = {}
+    remaining_demand = demand_arr.copy()
+    for r in DISPATCH_ORDER:
+        g = gen.get(r, np.zeros(H, dtype=np.float64))
+        dispatched = np.minimum(g, remaining_demand)
+        matched[r] = dispatched
+        surplus[r] = g - dispatched
+        remaining_demand = np.maximum(remaining_demand - dispatched, 0)
+
+    return matched, surplus
+
+
 def _dispatch_battery(residual_surplus, residual_gap, dispatch_pct, duration_hours,
                       efficiency):
     """Daily-cycle battery dispatch (4hr or 8hr). Modifies residual arrays in-place."""
@@ -479,12 +621,14 @@ def build_supply_matrix(supply_profiles):
 def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
                                  procurement_pct, battery_dispatch_pct,
                                  battery8_dispatch_pct, ldes_dispatch_pct,
-                                 supply_matrix=None):
+                                 supply_matrix=None, detailed=False):
     """Reconstruct full 8760 hourly dispatch for a resource mix.
 
     Args:
         supply_matrix: optional (5, H) numpy array from build_supply_matrix().
             If provided, skips per-call array conversion (faster for batch calls).
+        detailed: if True, also compute per-resource matched/surplus arrays and
+            storage charge profiles. Used by PP0 cache builder and PP1 compressed day.
 
     Returns:
         result dict with keys:
@@ -497,6 +641,13 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
           - curtailed: (H,) curtailed clean energy
           - ccs_supply: (H,) CCS-CCGT supply portion
           - fossil_displaced: (H,) fossil MWh displaced at each hour (normalized)
+
+        When detailed=True, also includes:
+          - matched_{clean_firm,ccs_ccgt,solar,wind,hydro}: (H,) per-resource dispatched
+          - surplus_{clean_firm,ccs_ccgt,solar,wind,hydro}: (H,) per-resource surplus
+          - battery4_charge: (H,) battery4 charge profile
+          - battery8_charge: (H,) battery8 charge profile
+          - ldes_charge: (H,) LDES charge profile
     """
     procurement_factor = procurement_pct / 100.0
     demand_arr = np.array(demand_norm[:H], dtype=np.float64)
@@ -528,24 +679,33 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
     residual_surplus = np.maximum(0.0, supply_total - demand_arr)
     residual_gap = np.maximum(0.0, demand_arr - supply_total)
 
-    battery4_profile = _dispatch_battery(
-        residual_surplus, residual_gap,
-        battery_dispatch_pct, BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY)
-
-    battery8_profile = _dispatch_battery(
-        residual_surplus, residual_gap,
-        battery8_dispatch_pct, BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY)
-
-    ldes_profile = _dispatch_ldes(
-        residual_surplus, residual_gap,
-        ldes_dispatch_pct, demand_arr)
+    if detailed:
+        battery4_profile, battery4_charge = _dispatch_battery_detailed(
+            residual_surplus, residual_gap,
+            battery_dispatch_pct, BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY)
+        battery8_profile, battery8_charge = _dispatch_battery_detailed(
+            residual_surplus, residual_gap,
+            battery8_dispatch_pct, BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY)
+        ldes_profile, ldes_charge = _dispatch_ldes_detailed(
+            residual_surplus, residual_gap,
+            ldes_dispatch_pct, demand_arr)
+    else:
+        battery4_profile = _dispatch_battery(
+            residual_surplus, residual_gap,
+            battery_dispatch_pct, BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY)
+        battery8_profile = _dispatch_battery(
+            residual_surplus, residual_gap,
+            battery8_dispatch_pct, BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY)
+        ldes_profile = _dispatch_ldes(
+            residual_surplus, residual_gap,
+            ldes_dispatch_pct, demand_arr)
 
     total_clean = supply_total + battery4_profile + battery8_profile + ldes_profile
     fossil_displaced = np.minimum(demand_arr, total_clean)
     residual_demand = np.maximum(0.0, demand_arr - total_clean)
     curtailed = np.maximum(0.0, total_clean - demand_arr)
 
-    return {
+    result = {
         'supply_total': supply_total,
         'battery4_profile': battery4_profile,
         'battery8_profile': battery8_profile,
@@ -556,6 +716,18 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         'ccs_supply': ccs_supply,
         'fossil_displaced': fossil_displaced,
     }
+
+    if detailed:
+        matched, surplus = _compute_per_resource_dispatch(
+            demand_arr, supply_profiles, resource_pcts, procurement_factor, supply_matrix)
+        for rtype in RESOURCE_TYPES:
+            result[f'matched_{rtype}'] = matched[rtype]
+            result[f'surplus_{rtype}'] = surplus[rtype]
+        result['battery4_charge'] = battery4_charge
+        result['battery8_charge'] = battery8_charge
+        result['ldes_charge'] = ldes_charge
+
+    return result
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -738,17 +910,33 @@ def _cache_path(iso):
     return os.path.join(DISPATCH_CACHE_DIR, f'{iso}_dispatch_cache.npz')
 
 
-def load_dispatch_cache(iso):
-    """Load existing dispatch cache for an ISO. Returns dict of {key: arrays_dict}."""
+def load_dispatch_cache(iso, require_version=None):
+    """Load existing dispatch cache for an ISO. Returns dict of {key: arrays_dict}.
+
+    Args:
+        require_version: if set, returns empty dict if cache version doesn't match.
+    """
     path = _cache_path(iso)
     if not os.path.exists(path):
         return {}
     try:
         data = np.load(path, allow_pickle=True)
+
+        # Check cache version if required
+        if require_version is not None:
+            if '_meta_version' in data.files:
+                stored_version = int(data['_meta_version'][0])
+                if stored_version != require_version:
+                    return {}
+            else:
+                # No version metadata — stale v1 cache
+                return {}
+
         cache = {}
         # Keys stored as 'key_{hash}_{field}' → reconstruct
-        keys_seen = set()
         for arr_name in data.files:
+            if arr_name.startswith('_meta_'):
+                continue
             parts = arr_name.split('_', 2)
             if len(parts) >= 3 and parts[0] == 'k':
                 k = parts[1]
@@ -756,16 +944,21 @@ def load_dispatch_cache(iso):
                 if k not in cache:
                     cache[k] = {}
                 cache[k][field] = data[arr_name]
-                keys_seen.add(k)
         return cache
     except Exception:
         return {}
 
 
-def save_dispatch_cache(iso, cache):
-    """Save dispatch cache for an ISO. Overwrites existing file."""
+def save_dispatch_cache(iso, cache, version=None):
+    """Save dispatch cache for an ISO. Overwrites existing file.
+
+    Args:
+        version: if set, stores version metadata in the cache file.
+    """
     os.makedirs(DISPATCH_CACHE_DIR, exist_ok=True)
     arrays = {}
+    if version is not None:
+        arrays['_meta_version'] = np.array([version], dtype=np.int32)
     for k, fields in cache.items():
         for field, arr in fields.items():
             arrays[f'k_{k}_{field}'] = arr
