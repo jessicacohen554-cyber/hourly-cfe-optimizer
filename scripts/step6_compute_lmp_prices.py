@@ -642,54 +642,6 @@ def archetype_key(mix, fuel_level, threshold):
 # HOURLY LMP COMPUTATION
 # ══════════════════════════════════════════════════════════════════════════════
 
-def compute_hourly_lmp(dispatch_result, demand_mw_profile, stack, price_model,
-                        iso=None):
-    """Compute 8760 hourly LMP from dispatch result and merit-order stack.
-
-    Args:
-        dispatch_result: output of reconstruct_hourly_dispatch()
-        demand_mw_profile: (H,) array of hourly demand in MW
-        stack: merit-order stack from build_merit_order_stack()
-        price_model: ISO-specific PriceModel instance
-        iso: ISO name (for NEISO winter handling)
-
-    Returns:
-        hourly_lmp: (H,) array of $/MWh
-        hourly_marginal_unit: (H,) array of int (index into stack, -1 for surplus)
-    """
-    residual_demand = dispatch_result['residual_demand']  # normalized
-    demand_sum = demand_mw_profile.sum()
-
-    hourly_lmp = np.zeros(H, dtype=np.float64)
-    hourly_marginal_unit = np.full(H, -1, dtype=np.int8)
-
-    for h in range(H):
-        demand_mw = demand_mw_profile[h]
-        # Convert normalized residual to MW
-        if demand_sum > 0:
-            residual_mw = residual_demand[h] * demand_mw / max(1e-10, dispatch_result['residual_demand'].sum() / H * H / demand_sum)
-        else:
-            residual_mw = 0.0
-
-        # Simpler: residual_demand is fraction of normalized demand
-        # Scale to MW directly
-        residual_frac = residual_demand[h]
-        total_demand_norm = np.array(demand_mw_profile).sum() / H  # avg MW
-        residual_mw = residual_frac * (demand_mw_profile.sum() / max(1e-10, sum(dispatch_result['residual_demand']) + sum(dispatch_result['fossil_displaced']))) * demand_mw
-
-        surplus_mw = dispatch_result['curtailed'][h] * demand_mw_profile.sum() / H if dispatch_result['curtailed'][h] > 0 else 0.0
-
-        if isinstance(price_model, NEISOPriceModel):
-            lmp, mu = price_model.price_hour(residual_mw, demand_mw, stack,
-                                              surplus_mw, hour_of_year=h)
-        else:
-            lmp, mu = price_model.price_hour(residual_mw, demand_mw, stack, surplus_mw)
-
-        hourly_lmp[h] = lmp
-        hourly_marginal_unit[h] = mu
-
-    return hourly_lmp, hourly_marginal_unit
-
 
 def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, price_model,
                                    iso=None):
