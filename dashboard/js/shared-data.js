@@ -2293,6 +2293,32 @@ const CLEAN_FIRM_ENERGY_SPLIT = {
 //   Negative Shot, Kanyako & Craig (2025), NAS (2019), Young et al. (2023),
 //   Keith et al. (2018), Shayegh et al. (2021), Belfer Center (2023).
 
+// ============================================================================
+// FOAK → NOAK LEARNING CURVE DATA
+// Sources: DOE Pathways to Liftoff (Sept 2024), MIT Advanced Nuclear (2024),
+//   NREL ATB 2024, Lazard LCOE+ v18, DOE OCED (2024), Frontiers in Energy
+//   Research (2022), EIA AEO 2025.
+// Clean firm = blended nuclear + CCS-CCGT + geothermal portfolio.
+// Gas true cost = fuel + VOM + carbon pricing trajectory (EPA SCC / EU ETS).
+// ============================================================================
+const FOAK_NOAK_YEARS = [2025, 2027, 2029, 2031, 2033, 2035, 2037, 2039, 2041, 2043, 2045, 2048, 2050];
+
+const CLEAN_FIRM_LEARNING = {
+    // Conservative: slower learning, ~30% decline by 2050
+    conservative: [170, 160, 150, 140, 130, 120, 112, 105, 99, 94, 90, 87, 85],
+    // Central: DOE-projected ~40% decline, NOAK ~$72/MWh
+    central:      [150, 138, 126, 116, 107, 98, 92, 86, 81, 77, 74, 72, 71],
+    // Optimistic: aggressive learning (Fervo-like 50%), NOAK ~$66/MWh
+    optimistic:   [135, 120, 107, 96, 87, 80, 75, 71, 68, 67, 66, 66, 66]
+};
+
+const GAS_TRUE_COST = {
+    // Gas without carbon pricing: fuel + VOM + capacity, gradual rise with depletion
+    base:        [55, 57, 58, 60, 61, 63, 65, 67, 69, 71, 73, 76, 78],
+    // Gas with carbon pricing: EPA SCC trajectory ($51→$85/ton by 2050) + fuel
+    with_carbon: [65, 69, 72, 76, 80, 84, 88, 91, 94, 97, 100, 104, 107]
+};
+
 const SBTI_MILESTONES = [
     { year: 2025, threshold: 0, label: 'Today' },
     { year: 2030, threshold: 50, label: 'SBTi 50%' },
