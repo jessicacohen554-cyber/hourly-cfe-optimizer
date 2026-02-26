@@ -148,7 +148,6 @@ def flatten_track_rows(iso, track_name, result_dict):
             if resource_mix:
                 for k, v in resource_mix.items():
                     row[f'mix_{k}'] = v
-            row['procurement_pct'] = _get(sc, 'procurement_pct', None)
             row['hourly_match_score'] = _get(sc, 'hourly_match_score', None)
             row['battery_dispatch_pct'] = _get(sc, 'battery_dispatch_pct', None)
             row['battery8_dispatch_pct'] = _get(sc, 'battery8_dispatch_pct', None)
@@ -185,7 +184,6 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
         arr_sol = arrays['solar']
         arr_wnd = arrays['wind']
         arr_hyd = arrays['hydro']
-        arr_proc = arrays.get('procurement', arrays.get('procurement_pct', None))
         arr_score = arrays['hourly_match_score']
         arr_bat = arrays.get('battery_dispatch_pct', np.zeros(1))
         arr_bat8 = arrays.get('battery8_dispatch_pct', np.zeros(1))
@@ -221,8 +219,6 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                         row['mix_wind'] = wnd
                         row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd))
                         row['mix_hydro'] = hyd
-                        if arr_proc is not None:
-                            row['procurement_pct'] = int(arr_proc[mix_idx])
                         row['hourly_match_score'] = float(arr_score[mix_idx])
                         row['battery_dispatch_pct'] = int(arr_bat[mix_idx])
                         row['battery8_dispatch_pct'] = int(arr_bat8[mix_idx])
@@ -345,7 +341,6 @@ def load_iso_ef_parquet(iso):
         'solar': sub.column('solar').to_numpy(),
         'wind': sub.column('wind').to_numpy(),
         'hydro': sub.column('hydro').to_numpy(),
-        'procurement_pct': sub.column('procurement_pct').to_numpy(),
         'battery_dispatch_pct': sub.column('battery_dispatch_pct').to_numpy(),
         'battery8_dispatch_pct': (sub.column('battery8_dispatch_pct').to_numpy()
                                    if 'battery8_dispatch_pct' in sub.column_names
@@ -528,7 +523,7 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     N = len(arch_arrays['clean_firm'])
     existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
-    proc = arch_arrays['procurement_pct'] / 100.0
+    # Resource fractions are already % of demand (no procurement multiplier)
     match_frac = arch_arrays['hourly_match_score'] / 100.0
 
     cf_pct = arch_arrays['clean_firm']
@@ -539,13 +534,6 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     bat_pct = arch_arrays['battery_dispatch_pct']
     bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
     ldes_pct = arch_arrays['ldes_dispatch_pct']
-
-    # Demand pcts (proc × alloc) — invariant across growth scenarios
-    sol_demand_pct = proc * sol_pct
-    wnd_demand_pct = proc * wnd_pct
-    hyd_demand_pct = proc * hyd_pct
-    ccs_demand_pct = proc * ccs_pct
-    cf_demand_pct = proc * cf_pct
 
     # Storage coefficients are fully growth-invariant (columns 7-9)
     bat4_coeff = bat_pct / 100.0
@@ -568,11 +556,11 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     # clean_peak_mw = peak_coeff_per_avg_mw * avg_demand_mw
     # where peak_coeff_per_avg_mw is independent of demand growth
     peak_coeff = (
-        proc * cf_pct / 100.0 * PEAK_CAPACITY_CREDITS['clean_firm'] +
-        proc * sol_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar'] +
-        proc * wnd_pct / 100.0 * PEAK_CAPACITY_CREDITS['wind'] +
-        proc * ccs_pct / 100.0 * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
-        proc * hyd_pct / 100.0 * PEAK_CAPACITY_CREDITS['hydro'] +
+        cf_pct / 100.0 * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        sol_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar'] +
+        wnd_pct / 100.0 * PEAK_CAPACITY_CREDITS['wind'] +
+        ccs_pct / 100.0 * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        hyd_pct / 100.0 * PEAK_CAPACITY_CREDITS['hydro'] +
         bat_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
@@ -596,20 +584,20 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
 
             # Existing/new splits with growth-adjusted existing share
             sol_ex = min(ex_sol_base * existing_scale, 100.0)
-            sol_existing_pct = np.minimum(sol_demand_pct, sol_ex)
-            sol_new_pct = np.maximum(0, sol_demand_pct - sol_ex)
+            sol_existing_pct = np.minimum(sol_pct, sol_ex)
+            sol_new_pct = np.maximum(0, sol_pct - sol_ex)
 
             wnd_ex = min(ex_wnd_base * existing_scale, 100.0)
-            wnd_existing_pct = np.minimum(wnd_demand_pct, wnd_ex)
-            wnd_new_pct = np.maximum(0, wnd_demand_pct - wnd_ex)
+            wnd_existing_pct = np.minimum(wnd_pct, wnd_ex)
+            wnd_new_pct = np.maximum(0, wnd_pct - wnd_ex)
 
             ccs_ex = min(ex_ccs_base * existing_scale, 100.0)
-            ccs_existing_pct = np.minimum(ccs_demand_pct, ccs_ex)
-            ccs_new_pct = np.maximum(0, ccs_demand_pct - ccs_ex)
+            ccs_existing_pct = np.minimum(ccs_pct, ccs_ex)
+            ccs_new_pct = np.maximum(0, ccs_pct - ccs_ex)
 
             cf_ex = min(ex_cf_base * existing_scale, 100.0)
-            cf_existing_pct = np.minimum(cf_demand_pct, cf_ex)
-            cf_new_pct = np.maximum(0, cf_demand_pct - cf_ex)
+            cf_existing_pct = np.minimum(cf_pct, cf_ex)
+            cf_new_pct = np.maximum(0, cf_pct - cf_ex)
 
             # Clean firm tranche allocation
             new_cf_twh = cf_new_pct / 100.0 * demand_grown

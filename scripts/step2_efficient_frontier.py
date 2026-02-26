@@ -2,21 +2,19 @@
 """
 Step 2: Efficient Frontier (EF) Extraction from Physics Feasible Space (PFS)
 =============================================================================
-Reads the PFS parquet and applies a 2-phase reduction:
+Reads the PFS parquets and applies a 2-phase reduction:
 
   Phase 1: Threshold gate — keep only rows whose scores fall in target ranges
-  Phase 2: Global deduplication and Pareto-optimal procurement selection.
-           Drop the threshold column. For each unique allocation
-           (ISO/CF/Sol/Wnd/Hyd/Bat/Bat8/LDES), keep only the Pareto front
-           on (minimize procurement, maximize score). Each unique physical
+  Phase 2: Global deduplication. Drop the threshold column. For each unique
+           allocation (ISO/CF/Sol/Wnd/Hyd/Geo/Bat/Bat8/LDES), keep only the
+           row with the highest hourly_match_score. Each unique physical
            configuration is stored ONCE — Step 3 handles threshold selection
-           by filtering to mixes with score >= target threshold, enabling
-           cross-threshold picking (a cheap mix that overachieves can win).
+           by filtering to mixes with score >= target threshold.
 
 Note: No dominance removal across different resource mixes is performed.
-Different resource mixes at the same procurement/storage/score can have very
-different costs under different LCOE assumptions — removing them risks losing
-true cost optimums. Cost-based selection happens in Step 3.
+Different resource mixes at the same storage/score can have very different
+costs under different LCOE assumptions — removing them risks losing true
+cost optimums. Cost-based selection happens in Step 3.
 
 Pipeline position: Step 2 of 4
   Step 1 — PFS Generator (step1_pfs_generator.py)
@@ -33,10 +31,7 @@ at ANY threshold, ensuring no true optimum is lost during Step 3.
 
 import os
 import time
-import ctypes
 import re
-import tempfile
-import subprocess
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -53,166 +48,70 @@ TARGET_THRESHOLD_SET = set(TARGET_THRESHOLDS)
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
-# Target schema for Step 2 output columns
-TARGET_SCHEMA = pa.schema([
-    ('iso', pa.string()),
-    ('threshold', pa.float64()),
-    ('clean_firm', pa.int16()),
-    ('solar', pa.int16()),
-    ('wind', pa.int16()),
-    ('hydro', pa.int16()),
-    ('procurement_pct', pa.int16()),
-    ('battery_dispatch_pct', pa.float64()),
-    ('battery8_dispatch_pct', pa.float64()),
-    ('ldes_dispatch_pct', pa.float64()),
-    ('hourly_match_score', pa.float64()),
-    ('pareto_type', pa.string()),
-])
+# Resource columns per ISO — CAISO has 5D (geothermal), others have 4D
+RESOURCE_COLS_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
+RESOURCE_COLS_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'geothermal']
 
-# ---------------------------------------------------------------------------
-# Segmented cumulative maximum — 3-tier acceleration
-# ---------------------------------------------------------------------------
-# The segmented cummax is the performance-critical inner loop. It computes a
-# running maximum within contiguous groups, resetting at group boundaries.
-# This is inherently sequential (each element depends on the prior), so we
-# need compiled code. Three strategies, tried in priority order:
-#   1. Numba JIT  (fastest, ~1ns/element)
-#   2. ctypes/gcc (compiled C via shared lib, ~1ns/element)
-#   3. Pure Python fallback (~200ns/element — last resort)
-# ---------------------------------------------------------------------------
+# Storage dispatch columns (always present)
+STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
 
-_segmented_cummax_fn = None  # will be set at module load
-
-def _init_segmented_cummax():
-    """Initialize the fastest available segmented cummax implementation."""
-    global _segmented_cummax_fn
-
-    # --- Tier 1: Numba JIT ---
-    try:
-        from numba import njit
-
-        @njit(cache=True)
-        def _segcummax_numba(scores, group_starts, out):
-            out[0] = scores[0]
-            for i in range(1, len(scores)):
-                if group_starts[i]:
-                    out[i] = scores[i]
-                else:
-                    out[i] = out[i - 1] if out[i - 1] > scores[i] else scores[i]
-            return out
-
-        # Warm up JIT compilation with a tiny array
-        _warmup_s = np.array([1.0, 2.0, 0.5], dtype=np.float64)
-        _warmup_g = np.array([True, False, True], dtype=np.bool_)
-        _warmup_o = np.empty(3, dtype=np.float64)
-        _segcummax_numba(_warmup_s, _warmup_g, _warmup_o)
-
-        def segcummax_numba(scores, group_starts):
-            out = np.empty(len(scores), dtype=np.float64)
-            _segcummax_numba(scores, group_starts, out)
-            return out
-
-        _segmented_cummax_fn = segcummax_numba
-        print("  [perf] Segmented cummax: Numba JIT")
-        return
-    except (ImportError, Exception) as e:
-        pass
-
-    # --- Tier 2: ctypes/gcc compiled C ---
-    try:
-        c_code = r"""
-#include <stdint.h>
-void segcummax(const double *scores, const int8_t *gs, double *out, int64_t n) {
-    if (n <= 0) return;
-    out[0] = scores[0];
-    for (int64_t i = 1; i < n; i++) {
-        if (gs[i]) {
-            out[i] = scores[i];
-        } else {
-            out[i] = out[i-1] > scores[i] ? out[i-1] : scores[i];
-        }
-    }
-}
-"""
-        tmpdir = tempfile.mkdtemp(prefix='step2_ef_')
-        c_path = os.path.join(tmpdir, 'segcummax.c')
-        so_path = os.path.join(tmpdir, 'segcummax.so')
-        with open(c_path, 'w') as f:
-            f.write(c_code)
-        result = subprocess.run(
-            ['gcc', '-O3', '-shared', '-fPIC', '-o', so_path, c_path],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"gcc failed: {result.stderr}")
-
-        lib = ctypes.CDLL(so_path)
-        lib.segcummax.argtypes = [
-            ctypes.POINTER(ctypes.c_double),
-            ctypes.POINTER(ctypes.c_int8),
-            ctypes.POINTER(ctypes.c_double),
-            ctypes.c_int64,
-        ]
-        lib.segcummax.restype = None
-
-        def segcummax_ctypes(scores, group_starts):
-            n = len(scores)
-            out = np.empty(n, dtype=np.float64)
-            gs_i8 = group_starts.view(np.int8) if group_starts.dtype == np.bool_ else group_starts.astype(np.int8)
-            lib.segcummax(
-                scores.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                gs_i8.ctypes.data_as(ctypes.POINTER(ctypes.c_int8)),
-                out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                ctypes.c_int64(n),
-            )
-            return out
-
-        # Verify correctness
-        _ts = np.array([1.0, 3.0, 2.0, 5.0, 1.0], dtype=np.float64)
-        _tg = np.array([True, False, False, True, False], dtype=np.bool_)
-        _to = segcummax_ctypes(_ts, _tg)
-        assert np.allclose(_to, [1.0, 3.0, 3.0, 5.0, 5.0]), f"ctypes verification failed: {_to}"
-
-        _segmented_cummax_fn = segcummax_ctypes
-        print("  [perf] Segmented cummax: ctypes/gcc (C compiled)")
-        return
-    except (OSError, RuntimeError, AssertionError, Exception) as e:
-        pass
-
-    # --- Tier 3: Pure Python fallback (slow but correct) ---
-    def segcummax_python(scores, group_starts):
-        n = len(scores)
-        out = np.empty(n, dtype=np.float64)
-        out[0] = scores[0]
-        for i in range(1, n):
-            if group_starts[i]:
-                out[i] = scores[i]
-            else:
-                out[i] = out[i - 1] if out[i - 1] > scores[i] else scores[i]
-        return out
-
-    _segmented_cummax_fn = segcummax_python
-    print("  [perf] Segmented cummax: pure Python fallback (SLOW — install numba or gcc)")
+# Common columns in output (resource cols are ISO-dependent)
+COMMON_COLS = ['iso', 'hourly_match_score', 'pareto_type']
 
 
-def normalize_table(t):
-    """Cast a table to match TARGET_SCHEMA, filling missing columns with defaults."""
+def get_resource_cols(iso):
+    """Return resource column names for the given ISO."""
+    return RESOURCE_COLS_CAISO if iso == 'CAISO' else RESOURCE_COLS_BASE
+
+
+def normalize_table(t, iso):
+    """Cast a table to have consistent types, filling missing columns with defaults."""
     cols = {}
-    for field in TARGET_SCHEMA:
-        name = field.name
+    resource_cols = get_resource_cols(iso)
+
+    for name in ['iso']:
         if name in t.column_names:
             col = t.column(name)
-            if col.type != field.type:
-                col = pc.cast(col, field.type)
-            cols[name] = col
-        elif name == 'battery8_dispatch_pct':
-            cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
-        elif name == 'pareto_type':
-            cols[name] = pa.array([''] * t.num_rows, type=pa.string())
-        elif name == 'threshold':
-            cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
+            cols[name] = col if col.type == pa.string() else pc.cast(col, pa.string())
         else:
             raise ValueError(f"Missing required column '{name}' in {t.column_names}")
+
+    for name in ['threshold']:
+        if name in t.column_names:
+            col = t.column(name)
+            cols[name] = col if col.type == pa.float64() else pc.cast(col, pa.float64())
+        else:
+            cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
+
+    for name in resource_cols:
+        if name in t.column_names:
+            col = t.column(name)
+            cols[name] = col if col.type == pa.int16() else pc.cast(col, pa.int16())
+        elif name == 'geothermal':
+            cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.int16))
+        else:
+            raise ValueError(f"Missing required column '{name}' in {t.column_names}")
+
+    for name in STORAGE_COLS:
+        if name in t.column_names:
+            col = t.column(name)
+            cols[name] = col if col.type == pa.float64() else pc.cast(col, pa.float64())
+        else:
+            cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.float64))
+
+    for name in ['hourly_match_score']:
+        if name in t.column_names:
+            col = t.column(name)
+            cols[name] = col if col.type == pa.float64() else pc.cast(col, pa.float64())
+        else:
+            raise ValueError(f"Missing required column '{name}' in {t.column_names}")
+
+    if 'pareto_type' in t.column_names:
+        col = t.column('pareto_type')
+        cols['pareto_type'] = col if col.type == pa.string() else pc.cast(col, pa.string())
+    else:
+        cols['pareto_type'] = pa.array([''] * t.num_rows, type=pa.string())
+
     return pa.table(cols)
 
 
@@ -288,7 +187,7 @@ def load_iso_tables():
                 total_rows += t.num_rows
         if iso_subtables:
             combined = pa.concat_tables(iso_subtables) if len(iso_subtables) > 1 else iso_subtables[0]
-            iso_tables[iso] = normalize_table(combined)
+            iso_tables[iso] = normalize_table(combined, iso)
             print(f"  {iso}: {total_rows:>10,} rows from {len(fnames)} threshold files")
 
     if not iso_tables:
@@ -314,100 +213,61 @@ def threshold_gate(table):
     return table.filter(mask)
 
 
-def pareto_procurement(arrays):
+def deduplicate_mixes(arrays, resource_cols):
     """
-    For each unique allocation (CF/Sol/Wnd/Hyd/Bat4/Bat8/LDES), keep only
-    the Pareto-optimal (procurement, score) pairs: rows where no other row
-    with the same allocation has <= procurement AND >= score.
+    For each unique allocation (resource_cols + storage_cols), keep only
+    the row with the highest hourly_match_score.
 
-    Within each allocation group sorted by ascending procurement, this means
-    keeping only rows where the score strictly increases (the running max).
+    With procurement removed, each unique physical configuration
+    (CF/Sol/Wnd/Hyd[/Geo]/Bat4/Bat8/LDES) maps to a single score.
+    Duplicates arise from the same mix appearing at multiple thresholds.
 
     Storage dispatch columns (bat, bat8, ldes) are float64 with 0.05%
     granularity from Step 1. They are scaled by 20x (0.05% -> 1) to produce
-    exact integer keys, avoiding truncation that would merge distinct configs.
+    exact integer keys.
 
     Returns indices into the original arrays of rows to keep.
     """
-    n = len(arrays['clean_firm'])
+    n = len(arrays[resource_cols[0]])
     if n == 0:
         return np.array([], dtype=np.int64)
 
-    cf = arrays['clean_firm']
-    sol = arrays['solar']
-    wnd = arrays['wind']
-    hyd = arrays['hydro']
-    bat = arrays['battery_dispatch_pct']
-    bat8 = arrays['battery8_dispatch_pct']
-    ldes = arrays['ldes_dispatch_pct']
-    proc = arrays['procurement_pct']
     score = arrays['hourly_match_score']
 
     # Scale storage dispatch to integer keys at 0.05% resolution.
     STORAGE_SCALE = 20
-    STORAGE_BASE = 2001
-    bat_key = np.round(bat * STORAGE_SCALE).astype(np.int64)
-    bat8_key = np.round(bat8 * STORAGE_SCALE).astype(np.int64)
-    ldes_key = np.round(ldes * STORAGE_SCALE).astype(np.int64)
+    bat_key = np.round(arrays['battery_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
+    bat8_key = np.round(arrays['battery8_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
+    ldes_key = np.round(arrays['ldes_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
 
     # Pack allocation into a single int64 key.
-    # Resource columns (cf/sol/wnd/hyd) are int16 0-100 -> base 101.
-    # Max key ~ 100 * 101^3 * 2001^3 ~ 8.25e17, fits int64 (max 9.22e18).
-    group_key = (cf.astype(np.int64) * (101**3 * STORAGE_BASE**3) +
-                 sol.astype(np.int64) * (101**2 * STORAGE_BASE**3) +
-                 wnd.astype(np.int64) * (101 * STORAGE_BASE**3) +
-                 hyd.astype(np.int64) * (STORAGE_BASE**3) +
-                 bat_key * (STORAGE_BASE**2) +
-                 bat8_key * STORAGE_BASE +
-                 ldes_key)
+    # Resource columns are int16 0-100 -> base 101.
+    # Storage keys: max ~100*20=2000, base 2001.
+    STORAGE_BASE = 2001
+    n_res = len(resource_cols)
 
-    # Sort by (allocation, procurement ascending, score descending)
-    sort_idx = np.lexsort((-score, proc, group_key))
+    # Build group key from resource columns
+    group_key = np.zeros(n, dtype=np.int64)
+    for i, col in enumerate(resource_cols):
+        multiplier = (101 ** (n_res - 1 - i)) * (STORAGE_BASE ** 3)
+        group_key += arrays[col].astype(np.int64) * multiplier
+
+    group_key += bat_key * (STORAGE_BASE ** 2) + bat8_key * STORAGE_BASE + ldes_key
+
+    # Sort by (group_key ascending, score descending)
+    sort_idx = np.lexsort((-score, group_key))
     sk = group_key[sort_idx]
-    sp = proc[sort_idx]
-    ss = score[sort_idx]
 
-    # --- Vectorized dedup: keep first row per (group_key, proc) ---
-    # After sorting by (group asc, proc asc, score desc), the first row
-    # at each (group, proc) has the highest score.
+    # Keep first row per group (highest score due to descending sort)
     is_first = np.empty(n, dtype=np.bool_)
     is_first[0] = True
-    is_first[1:] = (sk[1:] != sk[:-1]) | (sp[1:] != sp[:-1])
+    is_first[1:] = sk[1:] != sk[:-1]
 
-    # Extract the first-at-proc subset
-    fap_pos = np.where(is_first)[0]
-    fap_scores = ss[fap_pos]
-    fap_keys = sk[fap_pos]
-    m = len(fap_pos)
-
-    # --- Pareto front within each group via segmented cummax ---
-    # Detect group starts in the first-at-proc array
-    gs = np.empty(m, dtype=np.bool_)
-    gs[0] = True
-    gs[1:] = fap_keys[1:] != fap_keys[:-1]
-
-    # Compute segmented cumulative max using the fastest available backend
-    # (numba JIT > ctypes/gcc > pure Python fallback)
-    seg_cummax = _segmented_cummax_fn(fap_scores, gs)
-
-    # A row is on the Pareto front if:
-    #   - It's a group start (always keep the lowest-procurement point), OR
-    #   - Its score exceeds the cummax of all PREVIOUS positions in the group
-    # The shifted cummax (prev_cummax) is cummax[i-1] for non-group-starts.
-    prev_cummax = np.empty(m, dtype=np.float64)
-    prev_cummax[0] = -1.0
-    prev_cummax[1:] = seg_cummax[:-1]
-    prev_cummax[gs] = -1.0  # group starts have no predecessor
-
-    keep = gs | (fap_scores > prev_cummax)
-
-    # Map back to original indices
-    kept_sorted_pos = fap_pos[keep]
-    return sort_idx[kept_sorted_pos]
+    return sort_idx[is_first]
 
 
 def process_iso_table(iso, table):
-    """Process a single ISO's table: threshold gate + Pareto-optimal procurement."""
+    """Process a single ISO's table: threshold gate + deduplication."""
     n_input = table.num_rows
     if n_input == 0:
         return None, 0, 0
@@ -419,37 +279,31 @@ def process_iso_table(iso, table):
     if n_gated == 0:
         return None, n_input, 0
 
-    # Extract numpy arrays for Pareto computation
-    arrays = {
-        'clean_firm': table.column('clean_firm').to_numpy(),
-        'solar': table.column('solar').to_numpy(),
-        'wind': table.column('wind').to_numpy(),
-        'hydro': table.column('hydro').to_numpy(),
-        'procurement_pct': table.column('procurement_pct').to_numpy(),
-        'battery_dispatch_pct': table.column('battery_dispatch_pct').to_numpy(),
-        'battery8_dispatch_pct': table.column('battery8_dispatch_pct').to_numpy(),
-        'ldes_dispatch_pct': table.column('ldes_dispatch_pct').to_numpy(),
-        'hourly_match_score': table.column('hourly_match_score').to_numpy(),
-    }
+    resource_cols = get_resource_cols(iso)
 
-    pareto_idx = pareto_procurement(arrays)
-    n_pareto = len(pareto_idx)
+    # Extract numpy arrays for deduplication
+    arrays = {}
+    for col in resource_cols:
+        arrays[col] = table.column(col).to_numpy()
+    for col in STORAGE_COLS:
+        arrays[col] = table.column(col).to_numpy()
+    arrays['hourly_match_score'] = table.column('hourly_match_score').to_numpy()
+
+    dedup_idx = deduplicate_mixes(arrays, resource_cols)
+    n_dedup = len(dedup_idx)
 
     # Build result without threshold column
-    result_cols = ['iso', 'clean_firm', 'solar', 'wind', 'hydro',
-                   'procurement_pct', 'battery_dispatch_pct',
-                   'battery8_dispatch_pct', 'ldes_dispatch_pct',
-                   'hourly_match_score']
+    result_cols = ['iso'] + resource_cols + STORAGE_COLS + ['hourly_match_score']
     if 'pareto_type' in table.column_names:
         result_cols.append('pareto_type')
 
     result_arrays = {}
     for col_name in result_cols:
         if col_name in table.column_names:
-            result_arrays[col_name] = table.column(col_name).take(pareto_idx)
+            result_arrays[col_name] = table.column(col_name).take(dedup_idx)
 
     result = pa.table(result_arrays)
-    return result, n_gated, n_pareto
+    return result, n_gated, n_dedup
 
 
 def write_per_iso_outputs(results_by_iso):
@@ -470,45 +324,42 @@ def write_per_iso_outputs(results_by_iso):
 def main():
     print("=" * 70)
     print("  STEP 2: EFFICIENT FRONTIER (EF) EXTRACTION")
-    print("  PFS -> PFS post-EF (threshold-free)")
+    print("  PFS -> PFS post-EF (threshold-free, deduplicated)")
     print("=" * 70)
 
     total_start = time.time()
 
-    # Initialize the segmented cummax accelerator (numba > ctypes > python)
-    _init_segmented_cummax()
-
     # Load data as per-ISO tables (avoids concat-then-split overhead)
     iso_tables = load_iso_tables()
 
-    # Process each ISO: threshold gate + Pareto-optimal procurement
-    print("\nStep 2: Threshold gate + Pareto-optimal procurement (threshold-free)")
-    print(f"  {'ISO':>6}  {'Input':>9}  {'Gated':>9}  {'Pareto':>9}  {'Time':>6}")
+    # Process each ISO: threshold gate + deduplication
+    print("\nStep 2: Threshold gate + deduplication (threshold-free)")
+    print(f"  {'ISO':>6}  {'Input':>9}  {'Gated':>9}  {'Dedup':>9}  {'Time':>6}")
     print("  " + "-" * 50)
 
     results_by_iso = {}
     total_gated = 0
-    total_pareto = 0
+    total_dedup = 0
 
     for iso in ISOS:
         if iso not in iso_tables:
             continue
 
         t0 = time.time()
-        result, n_gated, n_pareto = process_iso_table(iso, iso_tables[iso])
+        result, n_gated, n_dedup = process_iso_table(iso, iso_tables[iso])
         elapsed = time.time() - t0
 
         n_input = iso_tables[iso].num_rows
         if result is not None and result.num_rows > 0:
             results_by_iso[iso] = result
             total_gated += n_gated
-            total_pareto += n_pareto
-            print(f"  {iso:>6}  {n_input:>8,}  {n_gated:>8,}  {n_pareto:>8,}  {elapsed:>5.1f}s")
+            total_dedup += n_dedup
+            print(f"  {iso:>6}  {n_input:>8,}  {n_gated:>8,}  {n_dedup:>8,}  {elapsed:>5.1f}s")
 
     total_input = sum(t.num_rows for t in iso_tables.values())
-    print(f"\n  Total: {total_input:,} -> {total_gated:,} (gated) -> {total_pareto:,} (Pareto)")
+    print(f"\n  Total: {total_input:,} -> {total_gated:,} (gated) -> {total_dedup:,} (dedup)")
     if total_gated > 0:
-        print(f"  Reduction: {(1 - total_pareto/total_gated)*100:.1f}%")
+        print(f"  Reduction: {(1 - total_dedup/total_gated)*100:.1f}%")
 
     if not results_by_iso:
         raise RuntimeError('Step 2 produced no ISO outputs to write.')
@@ -530,7 +381,7 @@ def main():
                 avail.append(f"{thr:.0f}%:{n:,}")
             print(f"  {iso} mixes per threshold: {', '.join(avail[:6])}...")
 
-    print(f"\n  Total rows: {total_input:,} -> {total_pareto:,} (EF)")
+    print(f"\n  Total rows: {total_input:,} -> {total_dedup:,} (EF)")
     print(f"  Total time: {elapsed_total:.0f}s")
     print("\n" + "=" * 70)
     print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step2-ef-parquets/")
