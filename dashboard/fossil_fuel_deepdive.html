@@ -117,6 +117,8 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 .iso-btn.active[data-iso="CAISO"] { background: rgba(245,158,11,0.18); border-color: #F59E0B; }
 .iso-btn.active[data-iso="NYISO"] { background: rgba(233,30,99,0.25);  border-color: #E91E63; }
 .iso-btn.active[data-iso="NEISO"] { background: rgba(156,39,176,0.25); border-color: #9C27B0; }
+.iso-btn.active[data-iso="MISO"] { background: rgba(6,182,212,0.25); border-color: #06B6D4; }
+.iso-btn.active[data-iso="SPP"]  { background: rgba(239,68,68,0.25); border-color: #EF4444; }
 
 /* ===== GROWTH TOGGLE ===== */
 .growth-toggle {
@@ -353,6 +355,8 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
                 <button class="iso-btn" data-iso="CAISO">CAISO</button>
                 <button class="iso-btn" data-iso="NYISO">NYISO</button>
                 <button class="iso-btn" data-iso="NEISO">NEISO</button>
+                <button class="iso-btn" data-iso="MISO">MISO</button>
+                <button class="iso-btn" data-iso="SPP">SPP</button>
             </div>
             <label class="growth-toggle">
                 <input type="checkbox" id="growthToggle">
@@ -410,7 +414,7 @@ var YEAR_MAP = {50:2030, 55:2031, 60:2032, 65:2033, 70:2035, 75:2036, 80:2037, 8
 var YEAR_LABEL = {50:"'30", 55:"'31", 60:"'32", 65:"'33", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 100:"'50"};
 
 var REGION_COLORS = {
-    CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0'
+    CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#EF4444'
 };
 
 // Fossil generation TWh (2025 actuals from EIA/eGRID)
@@ -419,15 +423,17 @@ var FOSSIL = {
     ERCOT: { demand: 488.0, coal: 67.58,  oil: 0.00, gas: 195.45, cleanPct: 46.1 },
     CAISO: { demand: 224.0, coal: 0.00,   oil: 0.60, gas: 114.76, cleanPct: 48.5 },
     NYISO: { demand: 151.6, coal: 0.00,   oil: 0.15, gas: 92.33,  cleanPct: 39.0 },
-    NEISO: { demand: 115.3, coal: 0.31,   oil: 1.29, gas: 75.07,  cleanPct: 33.5 }
+    NEISO: { demand: 115.3, coal: 0.31,   oil: 1.29, gas: 75.07,  cleanPct: 33.5 },
+    MISO:  { demand: 663.8, coal: 216.5,  oil: 0.5,  gas: 175.2,  cleanPct: 40.9 },
+    SPP:   { demand: 299.8, coal: 75.8,   oil: 0.3,  gas: 93.5,   cleanPct: 43.5 }
 };
 
 // Medium demand growth rates (annual, from EIA/regional forecasts)
 var GROWTH_RATES = {
-    CAISO: 0.019, ERCOT: 0.035, PJM: 0.024, NYISO: 0.020, NEISO: 0.018
+    CAISO: 0.019, ERCOT: 0.035, PJM: 0.024, NYISO: 0.020, NEISO: 0.018, MISO: 0.022, SPP: 0.025
 };
 
-var ISO_ORDER = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO'];
+var ISO_ORDER = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
 
 // ===== FOSSIL COMPUTATION =====
 function computeFossilAtThreshold(iso, threshold, withGrowth) {
@@ -767,6 +773,31 @@ var NARRATIVES = {
               'generation specifically in January\u2013February.',
         badge: 'Winter gas pipeline is the binding constraint',
         badgeClass: 'red'
+    },
+    MISO: {
+        title: 'MISO: The coal heartland faces a massive transition',
+        body: 'MISO carries <strong>216.5 TWh of coal</strong> \u2014 the largest coal fleet of any ISO in this study. ' +
+              'Combined with 175 TWh of gas, MISO\u2019s 392 TWh fossil fleet is second only to PJM in total volume. ' +
+              'Coal\u2019s dominance means early displacement delivers outsized CO\u2082 reductions, but the sheer ' +
+              'scale makes the transition a multi-decade undertaking.',
+        bodyGrowth: 'With 2.2%/yr demand growth driven by industrial electrification, MISO\u2019s total demand reaches ' +
+              '<strong>~1,100 TWh by 2050</strong>. Coal persists longer under growth \u2014 the absolute volume of ' +
+              'fossil to displace grows even as clean energy scales. Gas generation may increase at moderate thresholds ' +
+              'before eventually declining.',
+        badge: 'Largest coal fleet: 216.5 TWh \u2014 highest-priority displacement target',
+        badgeClass: 'red'
+    },
+    SPP: {
+        title: 'SPP: Wind-rich but coal-dependent',
+        body: 'SPP combines <strong>75.8 TWh of coal</strong> with 93.5 TWh of gas \u2014 a roughly 45/55 coal-gas split ' +
+              'that makes it the most coal-intensive ISO by percentage after MISO. However, SPP\u2019s deep wind resources ' +
+              '(43.5% clean share) provide a strong foundation for displacement. The challenge is replacing ' +
+              'coal\u2019s baseload role with firm clean generation.',
+        bodyGrowth: 'At 2.5%/yr demand growth, SPP\u2019s demand reaches <strong>~500 TWh by 2050</strong>. ' +
+              'Coal retirement is delayed as growing demand absorbs clean energy additions. Wind resources help, but ' +
+              'intermittency means gas backup persists longer under growth scenarios.',
+        badge: 'Strong wind resources (43.5% clean) offset coal-heavy generation',
+        badgeClass: 'amber'
     }
 };
 
