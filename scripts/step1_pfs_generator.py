@@ -1643,18 +1643,34 @@ def extract_pareto(candidates, iso):
 
 
 def build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2):
-    """Build fine-grained storage levels from coarse saturation analysis.
+    """Build refined storage levels from Phase 1 coarse saturation analysis.
 
-    Returns dict with keys 'bat4', 'bat8', 'ldes', 'h2' — each a list of
-    levels at finer granularity than the coarse sweep. Returns None if no
-    storage was used in coarse results.
+    Phase 2 refinement: 0.5 steps for batteries, 1.0 for LDES, 2.0 for H2,
+    from 0 up to max_used + headroom. Returns None if no storage was used.
+
+    Combo counts (worst-case ≥95%): ~12×8×12×6 = 5,760/mix.
     """
     if max_bat4 == 0 and max_bat8 == 0 and max_ldes == 0 and max_h2 == 0:
         return None
-    fine_bat4 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat4 + 0.25) / 0.05) + 1)]
-    fine_bat8 = [0] + [round(x * 0.05, 2) for x in range(1, int((max_bat8 + 0.25) / 0.05) + 1)]
-    fine_ldes = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 5, 8, 10]
-    fine_h2 = [0] + [round(x, 1) for x in range(1, int(max_h2 + 2))] if max_h2 > 0 else [0]
+
+    def _range(step, ceiling):
+        """Generate [0, step, 2*step, ..., ceiling] inclusive."""
+        levels = [0]
+        v = step
+        while v <= ceiling + 0.001:
+            levels.append(round(v, 2))
+            v += step
+        return levels
+
+    # bat4: 0.5 steps, up to max+0.5 (cap 6)
+    fine_bat4 = _range(0.5, min(max_bat4 + 0.5, 6.0)) if max_bat4 > 0 else [0]
+    # bat8: 1.0 steps, up to max+1 (cap 8)
+    fine_bat8 = _range(1.0, min(max_bat8 + 1.0, 8.0)) if max_bat8 > 0 else [0]
+    # LDES: 1.0 steps, up to max+1 (cap 25)
+    fine_ldes = _range(1.0, min(max_ldes + 1.0, 25.0)) if max_ldes > 0 else [0]
+    # H2: 2.0 steps, up to max+2 (cap 25)
+    fine_h2 = _range(2.0, min(max_h2 + 2.0, 25.0)) if max_h2 > 0 else [0]
+
     return {'bat4': fine_bat4, 'bat8': fine_bat8, 'ldes': fine_ldes, 'h2': fine_h2}
 
 
@@ -1726,11 +1742,37 @@ def process_iso(args):
 
         return phase_results
 
-    # Single-pass storage sweep with fixed coarse levels
-    print(f"    {iso}: Storage sweep (fixed levels, curtailment-gated)")
-    results = _run_threshold_loop("sweep")
+    # Phase 1: Coarse storage sweep with fixed levels
+    print(f"    {iso}: Phase 1 — Coarse storage sweep (fixed levels, curtailment-gated)")
+    coarse_results = _run_threshold_loop("coarse")
 
-    total_solutions = sum(len(r) for r in results.values())
+    # Analyze storage saturation from Phase 1 results
+    max_bat4 = max_bat8 = max_ldes = max_h2 = 0.0
+    for results_list in coarse_results.values():
+        for c in results_list:
+            max_bat4 = max(max_bat4, c.get('battery_dispatch_pct', 0) or 0)
+            max_bat8 = max(max_bat8, c.get('battery8_dispatch_pct', 0) or 0)
+            max_ldes = max(max_ldes, c.get('ldes_dispatch_pct', 0) or 0)
+            max_h2 = max(max_h2, c.get('h2_dispatch_pct', 0) or 0)
+
+    print(f"    {iso}: Phase 1 saturation — bat4={max_bat4:.1f}%, bat8={max_bat8:.1f}%, "
+          f"ldes={max_ldes:.1f}%, h2={max_h2:.1f}%")
+
+    # Phase 2: Refined storage sweep around Phase 1 winners
+    fine_levels = build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2)
+
+    if fine_levels is not None:
+        n_combos = len(fine_levels['bat4']) * len(fine_levels['bat8']) * \
+                   len(fine_levels['ldes']) * len(fine_levels['h2'])
+        print(f"    {iso}: Phase 2 — Refined sweep: bat4={len(fine_levels['bat4'])} levels, "
+              f"bat8={len(fine_levels['bat8'])} levels, ldes={len(fine_levels['ldes'])} levels, "
+              f"h2={len(fine_levels['h2'])} levels ({n_combos:,} combos/mix)")
+        fine_results = _run_threshold_loop("fine", fine_levels)
+    else:
+        print(f"    {iso}: No storage used in Phase 1 — skipping Phase 2")
+        fine_results = coarse_results
+
+    total_solutions = sum(len(r) for r in fine_results.values())
     print(f"    {iso}: Total: {total_solutions:,} solutions")
 
     iso_elapsed = time.time() - iso_start
