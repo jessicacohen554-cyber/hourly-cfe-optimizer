@@ -101,10 +101,11 @@
 - **Step 4: Post-Processing** (`scripts/step4_gas_ccs_adjustement.py`) — NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh), without-45Q overlay, gas capacity backup & resource adequacy (15% RA margin), CCS vs LDES crossover analysis. Output: `data/step4-gas-ccs-parquets/`. **Run when Step 3 outputs change.**
 
 **Step 5: Post-processing scripts (run after Step 4, all output to `data/step5-post-processing/`):**
-- **`scripts/step5_PP1_compressed_day.py`** — 24-hour representative day profiles for each unique mix.
+- **`scripts/step5_PP0_build_dispatch_cache.py`** — **Run first.** Pre-computes 8760-hour dispatch for all unique mixes across all ISOs. Populates `dispatch_cache/{ISO}_dispatch_cache.npz` (v2, with per-resource matched/surplus + charge profiles). PP1/PP4/PP6 read from this cache.
+- **`scripts/step5_PP1_compressed_day.py`** — 24-hour representative day profiles for each unique mix. Reads from PP0 dispatch cache; falls back to live compute if cache miss.
 - **`scripts/step5_PP2_consequential_queue.py`** — Cross-regional deployment path under consequential accounting; merit-order fuel retirement.
 - **`scripts/step5_PP3_scenario_comparison.py`** — Consequential vs. hourly matching strategy comparison.
-- **`scripts/step5_PP4_recompute_co2.py`** — Dispatch-stack emission model. Merit-order retirement: coal first, then oil, then gas. Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average rate of DISPLACED fossil (not remaining fleet) for CO₂ abated calculation. Demand-growth-aware.
+- **`scripts/step5_PP4_recompute_co2.py`** — Dispatch-stack emission model. Merit-order retirement: coal first, then oil, then gas. Coal/oil capped at 2025 absolute TWh (no new build). Returns weighted average rate of DISPLACED fossil (not remaining fleet) for CO₂ abated calculation. Demand-growth-aware. Uses canonical `get_supply_profiles` (nuclear derate + DST correction).
 - **`scripts/step5_PP5_compute_mac_stats.py`** — Computes 6 MAC metrics: average MAC fan (P10/P50/P90), stepwise marginal MAC, monotonic envelope, path-constrained MAC. ANOVA sensitivity decomposition across 5 toggle groups. Crossover analysis vs DAC/SCC/ETS benchmarks.
 - **`scripts/step5_PP6_compute_lmp_prices.py`** — Reconstructs 8760-hour dispatch per scenario; synthetic hourly LMP from merit-order fossil stack. Output: `data/step5-post-processing/lmp/`.
 - **`scripts/step5_PP7_compute_eac_scarcity.py`** — EAC supply scarcity analysis under RPS + voluntary demand.

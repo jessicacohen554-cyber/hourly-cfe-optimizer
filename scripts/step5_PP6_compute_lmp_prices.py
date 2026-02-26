@@ -1161,6 +1161,9 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
         })
 
     print(f"    Dispatch cache: {cache_hits} hits, {cache_misses} misses")
+    if cache_misses > 0:
+        print(f"    WARNING: {cache_misses} cache misses — consider running PP0 first "
+              f"(step5_PP0_build_dispatch_cache.py) to pre-populate the cache.")
     return results, archetypes
 
 
