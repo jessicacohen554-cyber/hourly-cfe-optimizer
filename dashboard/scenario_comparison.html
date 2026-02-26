@@ -241,6 +241,31 @@ body { background: #F3F4F8; }
     <div class="hero-stats" id="heroStats">
         <!-- Populated by JS at page load (all-region aggregates at 95%) -->
     </div>
+
+    <!-- Five Modes of Failure -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; max-width: 1200px; margin: 28px auto 0; padding: 0 24px; text-align: left;">
+        <div style="padding: 12px 14px; background: rgba(220,38,38,0.08); border-left: 3px solid #DC2626; border-radius: 0 8px 8px 0;">
+            <strong style="color: #FF6B6B; font-size: 0.82rem;">1. Marginal Signal Degradation</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">First coal unit displaced at 2,200 lb/MWh &mdash; but as participation grows, all buyers claim the same displacement. Signal is most reliable when least needed.</p>
+        </div>
+        <div style="padding: 12px 14px; background: rgba(245,158,11,0.08); border-left: 3px solid #D97706; border-radius: 0 8px 8px 0;">
+            <strong style="color: #FBBF24; font-size: 0.82rem;">2. Saturation &amp; Diminishing Returns</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">Coal/oil stock exhausts at 20&ndash;50% participation by region. After saturation, consequential $/tCO&#8322; converges to hourly matching cost.</p>
+        </div>
+        <div style="padding: 12px 14px; background: rgba(79,70,229,0.08); border-left: 3px solid #4F46E5; border-radius: 0 8px 8px 0;">
+            <strong style="color: #A5B4FC; font-size: 0.82rem;">3. Fossil Lock-In</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">Every year of deferred firm clean investment extends gas infrastructure by 10&ndash;20 years. Gas-dependent grids need 5&ndash;8 GW of firm clean but capital flows elsewhere.</p>
+        </div>
+        <div style="padding: 12px 14px; background: rgba(8,145,178,0.08); border-left: 3px solid #0891B2; border-radius: 0 8px 8px 0;">
+            <strong style="color: #67E8F9; font-size: 0.82rem;">4. Geographic Capital Clustering</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">SPP+MISO attract 45&ndash;55% of capital with 33% of C&amp;I load. NEISO+NYISO+CAISO get 8&ndash;12% with 18% of load.</p>
+        </div>
+        <div style="padding: 12px 14px; background: rgba(22,163,74,0.08); border-left: 3px solid #16A34A; border-radius: 0 8px 8px 0;">
+            <strong style="color: #86EFAC; font-size: 0.82rem;">5. Collective Action Tragedy</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">Each buyer locally rational, but firm clean power is neglected. Only hourly matching forces balanced local portfolios that seed the learning curve.</p>
+        </div>
+    </div>
+
     <div style="text-align:center; margin-top:16px; font-size:0.65rem; color:rgba(255,255,255,0.3);">
         DOE Pathways to Liftoff (2024) &middot; NREL ATB 2024 &middot; Lazard LCOE+ v18 &middot; EIA AEO 2025
     </div>
@@ -353,46 +378,7 @@ body { background: #F3F4F8; }
     </div>
 </div>
 
-<!-- 4. Emissions & Lock-In: Gas capacity trajectory + stranding -->
-<h2 class="section-title" style="margin-top:32px;">Emissions &amp; Infrastructure Lock-In</h2>
-<p class="section-subtitle">Gas infrastructure built under each scenario. More gas capacity = more emissions lock-in = harder to decarbonize later.
-The <strong>5 modes of failure</strong> in Scenario A compound: cheap early displacement masks growing infrastructure dependency.</p>
-
-<div class="chart-pair">
-    <div class="chart-box">
-        <h3 id="emissionsChartTitle">Gas Capacity &amp; Clean Firm Trajectory</h3>
-        <p class="chart-note">Gas capacity (solid lines, left axis) vs clean firm deployment (dashed lines, right axis). Gap = infrastructure lock-in.</p>
-        <div class="chart-container" style="height:380px;"><canvas id="emissionsChart"></canvas></div>
-    </div>
-    <div class="chart-box">
-        <h3>Five Modes of Failure</h3>
-        <p class="chart-note">Why Scenario A's cost-optimal approach undermines system decarbonization</p>
-        <div style="padding: 8px 0; font-size: 0.82rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
-            <div style="margin-bottom: 12px; padding: 10px 12px; background: rgba(220,38,38,0.04); border-left: 3px solid #DC2626; border-radius: 0 6px 6px 0;">
-                <strong style="color: #DC2626;">1. Marginal Signal Degradation</strong><br>
-                First coal unit displaced at 2,200 lb/MWh &mdash; but as participation grows, all buyers claim the same coal displacement. Signal is most reliable when least needed.
-            </div>
-            <div style="margin-bottom: 12px; padding: 10px 12px; background: rgba(245,158,11,0.04); border-left: 3px solid #D97706; border-radius: 0 6px 6px 0;">
-                <strong style="color: #D97706;">2. Saturation &amp; Diminishing Returns</strong><br>
-                Coal/oil stock exhausts at 20&ndash;50% participation by region. After saturation, consequential $/tCO&#8322; converges to hourly matching cost &mdash; but the window for cheap action has closed.
-            </div>
-            <div style="margin-bottom: 12px; padding: 10px 12px; background: rgba(79,70,229,0.04); border-left: 3px solid #4F46E5; border-radius: 0 6px 6px 0;">
-                <strong style="color: #4F46E5;">3. Fossil Lock-In</strong><br>
-                Every year of deferred firm clean investment extends gas infrastructure by 10&ndash;20 years. Gas-dependent grids (NEISO, NYISO, CAISO) need 5&ndash;8 GW of firm clean but capital flows to coal displacement elsewhere.
-            </div>
-            <div style="margin-bottom: 12px; padding: 10px 12px; background: rgba(8,145,178,0.04); border-left: 3px solid #0891B2; border-radius: 0 6px 6px 0;">
-                <strong style="color: #0891B2;">4. Geographic Capital Clustering</strong><br>
-                SPP+MISO attract 45&ndash;55% of capital with 33% of C&amp;I load. NEISO+NYISO+CAISO get 8&ndash;12% with 18% of load. At 30%+ participation, firm clean investment in gas grids vanishes.
-            </div>
-            <div style="padding: 10px 12px; background: rgba(22,163,74,0.04); border-left: 3px solid #16A34A; border-radius: 0 6px 6px 0;">
-                <strong style="color: #16A34A;">5. Collective Action Tragedy</strong><br>
-                Each buyer locally rational, but firm clean power &mdash; the shared resource &mdash; is neglected. Only hourly matching forces balanced local portfolios that seed the learning curve.
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 5. Sequential Deployment Queue (LAST) -->
+<!-- 5. Sequential Deployment Queue -->
 <h2 class="section-title" style="margin-top:32px;">Sequential Deployment Queue</h2>
 <p class="section-subtitle">Scenario A's build order, sorted by cheapest MAC first but constrained by sequential build reality &mdash;
 each ISO must complete prior threshold steps before advancing. First row per ISO = new build from existing grid mix to 50%.</p>
@@ -571,7 +557,6 @@ function renderAll(iso) {
     try { renderMacTimeline(iso); } catch(e) { console.warn('renderMacTimeline error for', iso, e); }
     try { renderFirmChart(iso); } catch(e) { console.warn('renderFirmChart error for', iso, e); }
     try { renderGasChart(iso); } catch(e) { console.warn('renderGasChart error for', iso, e); }
-    try { renderEmissionsChart(iso); } catch(e) { console.warn('renderEmissionsChart error for', iso, e); }
     buildMetricTiles();
 }
 
@@ -1405,115 +1390,6 @@ function renderFirmChart(iso) {
     });
 }
 // Firm init called from global renderAll()
-
-// ===== EMISSIONS & LOCK-IN CHART: Gas capacity + clean firm dual-axis =====
-let emissionsChart;
-function renderEmissionsChart(iso) {
-    const el = document.getElementById('emissionsChartTitle');
-    if (el) el.textContent = iso + ' \u2014 Gas Capacity & Clean Firm Trajectory';
-    const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = getScenarioB(iso);
-    if (!trajA.length || !trajB.length) return;
-    const labels = trajA.map(yearLabel);
-
-    if (emissionsChart) emissionsChart.destroy();
-    emissionsChart = new Chart(document.getElementById('emissionsChart'), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'A: Gas Capacity',
-                    data: trajA.map(d => (d.gas_backup_mw || 0) / 1000),
-                    borderColor: COLORS.A85,
-                    backgroundColor: COLORS.A_area,
-                    fill: '+1',
-                    tension: 0.3,
-                    pointRadius: 3,
-                    pointBackgroundColor: COLORS.A,
-                    borderWidth: 2.5,
-                    yAxisID: 'y',
-                },
-                {
-                    label: 'B: Gas Capacity',
-                    data: trajB.map(d => (d.gas_backup_mw || 0) / 1000),
-                    borderColor: COLORS.B85,
-                    backgroundColor: COLORS.B_fill,
-                    fill: 'origin',
-                    tension: 0.3,
-                    pointRadius: 3,
-                    pointBackgroundColor: COLORS.B,
-                    borderWidth: 2.5,
-                    yAxisID: 'y',
-                },
-                {
-                    label: 'A: Clean Firm',
-                    data: trajA.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
-                    borderColor: COLORS.A,
-                    borderWidth: 2,
-                    borderDash: [6, 3],
-                    tension: 0.3,
-                    pointRadius: 2,
-                    pointBackgroundColor: COLORS.A,
-                    fill: false,
-                    yAxisID: 'y2',
-                },
-                {
-                    label: 'B: Clean Firm',
-                    data: trajB.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
-                    borderColor: COLORS.B,
-                    borderWidth: 2,
-                    borderDash: [6, 3],
-                    tension: 0.3,
-                    pointRadius: 2,
-                    pointBackgroundColor: COLORS.B,
-                    fill: false,
-                    yAxisID: 'y2',
-                }
-            ]
-        },
-        options: {
-            ...CHART_DEFAULTS,
-            plugins: {
-                ...CHART_DEFAULTS.plugins,
-                tooltip: {
-                    callbacks: {
-                        title: ctx => {
-                            const idx = ctx[0].dataIndex;
-                            return trajA[idx].year + ' (' + trajA[idx].threshold + '% CFE)';
-                        },
-                        label: ctx => {
-                            const isGas = ctx.datasetIndex <= 1;
-                            const val = ctx.parsed.y;
-                            return ctx.dataset.label + ': ' + (isGas ? val.toFixed(0) + ' GW' : Math.round(val) + ' TWh');
-                        },
-                        afterBody: ctx => {
-                            const idx = ctx[0].dataIndex;
-                            const gasGap = ((trajA[idx].gas_backup_mw || 0) - (trajB[idx].gas_backup_mw || 0)) / 1000;
-                            return gasGap > 0 ? ['\u0394 Gas gap: ' + gasGap.toFixed(0) + ' GW avoided by B'] : [];
-                        }
-                    }
-                },
-                annotation: { annotations: targetAnnotation(labels, trajA) },
-            },
-            scales: {
-                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                y: {
-                    position: 'left',
-                    ticks: { color: 'rgba(0,0,0,0.5)', callback: v => v.toFixed(0) + ' GW' },
-                    grid: { color: 'rgba(0,0,0,0.08)' },
-                    title: { display: true, text: 'Gas Backup Capacity (GW)', color: 'rgba(0,0,0,0.5)' },
-                },
-                y2: {
-                    position: 'right',
-                    ticks: { color: 'rgba(0,0,0,0.35)', callback: v => v + ' TWh' },
-                    grid: { drawOnChartArea: false },
-                    title: { display: true, text: 'Clean Firm (TWh)', color: 'rgba(0,0,0,0.35)' },
-                }
-            }
-        }
-    });
-}
 
 // ===== 7. SEQUENTIAL DEPLOYMENT QUEUE =====
 // Build queue from trajectory data with sequential constraint per ISO.
