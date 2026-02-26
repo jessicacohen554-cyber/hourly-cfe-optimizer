@@ -311,8 +311,46 @@ def learning_fraction(threshold, scenario='B'):
 # PARSE FEASIBLE MIXES FROM SHARED-DATA.JS
 # ============================================================================
 
+def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
+    """Load feasible mixes for a single ISO from the step3 parquet file.
+
+    Returns dict: {threshold_str: [[cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%], ...]}
+    """
+    feasible_path = os.path.join(step3_dir, f'step3_feasible_{iso}.parquet')
+    if not os.path.exists(feasible_path):
+        return {}
+
+    df = pd.read_parquet(feasible_path)
+    mix_fields = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
+                  'procurement_pct', 'hourly_match_score',
+                  'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+    for col in mix_fields:
+        if col not in df.columns:
+            df[col] = 0
+
+    result = {}
+    for t_val, grp in df.groupby('threshold'):
+        t_str = str(int(t_val)) if t_val == int(t_val) else str(t_val)
+        rows = []
+        for _, row in grp.iterrows():
+            rows.append([
+                row['clean_firm'], row['solar'], row['wind'],
+                row['ccs_ccgt'], row['hydro'], row['procurement_pct'],
+                round(row['hourly_match_score'], 1),
+                row['battery_dispatch_pct'], row['battery8_dispatch_pct'],
+                row['ldes_dispatch_pct'],
+            ])
+        result[t_str] = rows
+    return result
+
+
 def parse_feasible_mixes(js_path='dashboard/js/shared-data.js'):
-    """Parse FEASIBLE_MIXES from the shared-data.js file."""
+    """Parse FEASIBLE_MIXES from the shared-data.js file.
+
+    Falls back to loading directly from step3 parquets for any ISO
+    missing from shared-data.js (e.g. MISO, SPP if step7 hasn't been
+    re-run since their parquets were generated).
+    """
     with open(js_path) as f:
         content = f.read()
 
@@ -342,6 +380,20 @@ def parse_feasible_mixes(js_path='dashboard/js/shared-data.js'):
     block = re.sub(r',\s*([}\]])', r'\1', block)
 
     mixes = json.loads(block)
+
+    # Fall back to step3 parquets for any ISO missing or empty in shared-data.js
+    for iso in ISOS:
+        iso_data = mixes.get(iso, {})
+        has_mixes = any(len(v) > 0 for v in iso_data.values()) if iso_data else False
+        if not has_mixes:
+            parquet_mixes = _load_feasible_from_parquet(iso)
+            if parquet_mixes:
+                mixes[iso] = parquet_mixes
+                total = sum(len(v) for v in parquet_mixes.values())
+                print(f"  Loaded {iso} feasible mixes from parquet fallback: {total} mixes")
+            else:
+                print(f"  WARNING: No feasible mixes for {iso} in shared-data.js or parquets")
+
     # mixes[iso][threshold_str] = list of [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
     return mixes
 
