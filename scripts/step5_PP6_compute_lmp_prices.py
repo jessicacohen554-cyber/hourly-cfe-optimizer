@@ -120,6 +120,8 @@ FOSSIL_CAPACITY_SHARES = {
     'PJM':   {'coal_steam': 0.29, 'gas_ccgt': 0.37, 'gas_ct': 0.31, 'oil_ct': 0.03},
     'NYISO': {'coal_steam': 0.00, 'gas_ccgt': 0.45, 'gas_ct': 0.50, 'oil_ct': 0.05},
     'NEISO': {'coal_steam': 0.00, 'gas_ccgt': 0.52, 'gas_ct': 0.42, 'oil_ct': 0.06},
+    'MISO':  {'coal_steam': 0.35, 'gas_ccgt': 0.40, 'gas_ct': 0.24, 'oil_ct': 0.01},
+    'SPP':   {'coal_steam': 0.30, 'gas_ccgt': 0.42, 'gas_ct': 0.27, 'oil_ct': 0.01},
 }
 
 # Actual installed fossil capacity (MW) — 2025 estimates
@@ -134,11 +136,14 @@ INSTALLED_FOSSIL_MW = {
     'PJM':   127_800,  # 127.8 GW fossil — 2025 est. after ~3 GW coal retirements
     'NYISO': 28_000,   # ~28 GW fossil (mostly gas)
     'NEISO': 16_000,   # ~16 GW fossil (mostly gas)
+    'MISO':  105_000,  # ~105 GW fossil (gas ~55, coal ~45, oil ~5) — EIA 860M 2024
+    'SPP':   58_000,   # ~58 GW fossil (gas ~35, coal ~20, oil ~3) — EIA 860M 2024
 }
 
 # Peak demand (MW) — matches step3_cost_optimization.py
 PEAK_DEMAND_MW = {
     'CAISO': 43_860, 'ERCOT': 83_597, 'PJM': 160_560, 'NYISO': 31_857, 'NEISO': 25_898,
+    'MISO': 118_661, 'SPP': 54_745,
 }
 
 # Resource adequacy reserve margin — 15%, consistent with step3/step4

@@ -18,21 +18,27 @@ const MAC_DATA = {
         ERCOT:  [46, 46, 46, 46, 46, 46, 47, 50, 52, 56, 60, 65, 72, 73, 77],
         PJM:  [77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 81, 90, 133],
         NYISO:  [283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, null],
-        NEISO:  [89, 90, 90, 90, 92, 95, 103, 108, 110, 114, 118, 124, 138, 158, 184]
+        NEISO:  [89, 90, 90, 90, 92, 95, 103, 108, 110, 114, 118, 124, 138, 158, 184],
+        MISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        SPP:   [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
     },
     low: {
         CAISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
         ERCOT:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
         PJM:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
         NYISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
-        NEISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
+        NEISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        MISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        SPP:   [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
     },
     high: {
         CAISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
         ERCOT:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
         PJM:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
         NYISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
-        NEISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
+        NEISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        MISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        SPP:   [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
     }
 };
 
@@ -42,7 +48,9 @@ const REGION_COLORS = {
     ERCOT: '#22C55E',
     PJM:   '#4a90d9',
     NYISO: '#E91E63',
-    NEISO: '#9C27B0'
+    NEISO: '#9C27B0',
+    MISO:  '#06B6D4',
+    SPP:   '#EF4444'
 };
 
 // --- Resource Colors & Labels (used by dashboard, index, region_deepdive) ---
@@ -137,21 +145,27 @@ const MARGINAL_MAC_DATA = {
         ERCOT:  [0, 489, 686, 707, 707, 707],
         PJM:  [0, 254, 338, 338, 667, 1000],
         NYISO:  [0, 13, 196, 196, 207, 1000],
-        NEISO:  [123, 222, 289, 358, 709, 1000]
+        NEISO:  [123, 222, 289, 358, 709, 1000],
+        MISO:  [null, null, null, null, null, null],
+        SPP:   [null, null, null, null, null, null]
     },
     low: {
         CAISO:  [9, 75, 46, 236, 442, 232],
         ERCOT:  [1, 123, 282, 277, 215, 111],
         PJM:  [17, 59, 71, 155, 349, 911],
         NYISO:  [4, 19, 49, 32, 151, 642],
-        NEISO:  [24, 73, 209, 123, 468, 1000]
+        NEISO:  [24, 73, 209, 123, 468, 1000],
+        MISO:  [null, null, null, null, null, null],
+        SPP:   [null, null, null, null, null, null]
     },
     high: {
         CAISO:  [102, 322, 450, 473, 759, 1000],
         ERCOT:  [20, 519, 880, 964, 972, 1000],
         PJM:  [285, 570, 800, 1000, 1000, 1000],
         NYISO:  [67, 207, 324, 534, 561, 1000],
-        NEISO:  [167, 551, 593, 1000, 1000, 1000]
+        NEISO:  [167, 551, 593, 1000, 1000, 1000],
+        MISO:  [null, null, null, null, null, null],
+        SPP:   [null, null, null, null, null, null]
     }
 };
 
@@ -164,7 +178,9 @@ const EFFECTIVE_COST_DATA = {
     ERCOT:  [50.9, 50.9, 50.9, 50.9, 50.9, 51.5, 52.4, 54.5, 55.1, 57.3, 59.5, 63.0, 67.5, 68.2, 70.1],
     PJM:  [71.6, 71.6, 71.6, 71.6, 71.6, 71.6, 71.6, 72.5, 72.5, 72.5, 74.1, 74.5, 79.3, 85.0, 109.7],
     NYISO:  [95.9, 95.9, 95.9, 95.9, 95.9, 95.9, 95.9, 95.9, 96.0, 96.3, 98.5, 99.3, 101.3, 107.7, null],
-    NEISO:  [65.3, 67.0, 68.5, 69.9, 71.7, 73.8, 78.6, 81.7, 83.5, 85.8, 88.4, 91.8, 98.5, 106.8, 117.7]
+    NEISO:  [65.3, 67.0, 68.5, 69.9, 71.7, 73.8, 78.6, 81.7, 83.5, 85.8, 88.4, 91.8, 98.5, 106.8, 117.7],
+    MISO:  [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    SPP:   [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
 };
 
 // --- Average System Cost ($/MWh) by threshold ---
@@ -177,21 +193,27 @@ const SYSTEM_COST_DATA = {
         ERCOT:  [62.22, 61.14, 60.7, 60.68, 61.27, 61.83, 62.04, 62.73, 63.27, 64.17, 66.19, 68.31, 70.9, 73.44, 77.52],
         PJM:    [83.18, 83.02, 82.06, 81.07, 80.03, 79.38, 79.79, 80.06, 79.6, 79.73, 81.1, 81.63, 84.37, 88.52, 111.33],
         NYISO:  [110.49, 107.71, 106.7, 104.96, 102.03, 100.66, 101.08, 100.6, 101.74, 102.74, 103.75, 105.72, 107.35, 111.71, null],
-        NEISO:  [79.99, 80.8, 81.51, 82.05, 82.82, 83.33, 86.32, 90.6, 91.75, 93.48, 96.43, 98.7, 104.26, 109.7, 119.81]
+        NEISO:  [79.99, 80.8, 81.51, 82.05, 82.82, 83.33, 86.32, 90.6, 91.75, 93.48, 96.43, 98.7, 104.26, 109.7, 119.81],
+        MISO:   [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        SPP:    [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
     },
     low: {
         CAISO:  [70.34, 69.87, 69.48, 69.15, 68.71, 68.31, 67.77, 69.93, 70.38, 72.92, 73.17, 76.09, 80.27, 85.15, 93.05],
         ERCOT:  [55.59, 54.89, 54.46, 54.07, 54.17, 53.03, 53.23, 54.53, 54.87, 55.09, 56.0, 57.26, 59.41, 62.16, 64.89],
         PJM:    [76.27, 75.41, 74.38, 73.49, 72.54, 71.29, 71.19, 69.83, 69.81, 69.41, 69.6, 69.76, 71.76, 74.83, 92.65],
         NYISO:  [103.19, 100.37, 98.81, 95.53, 93.42, 90.62, 88.9, 87.6, 87.25, 86.83, 86.99, 86.89, 88.5, 91.42, null],
-        NEISO:  [71.63, 72.03, 72.3, 73.02, 73.63, 74.52, 74.71, 76.2, 76.42, 76.87, 78.71, 79.25, 82.92, 87.64, 105.62]
+        NEISO:  [71.63, 72.03, 72.3, 73.02, 73.63, 74.52, 74.71, 76.2, 76.42, 76.87, 78.71, 79.25, 82.92, 87.64, 105.62],
+        MISO:   [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        SPP:    [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
     },
     high: {
         CAISO:  [90.6, 90.07, 89.6, 88.64, 88.55, 89.29, 90.97, 94.38, 94.86, 98.68, 99.9, 104.37, 111.13, 116.95, 128.64],
         ERCOT:  [74.26, 72.83, 71.78, 71.03, 70.65, 70.87, 71.51, 72.52, 73.89, 75.72, 78.23, 80.27, 85.04, 87.48, 92.11],
         PJM:    [93.38, 93.34, 92.45, 92.63, 92.0, 92.22, 93.25, 96.21, 95.11, 95.98, 98.06, 100.11, 105.13, 110.71, 141.17],
         NYISO:  [122.41, 121.64, 120.83, 120.49, 119.97, 119.28, 119.45, 118.73, 118.94, 119.2, 122.75, 124.69, 126.85, 133.48, null],
-        NEISO:  [97.86, 100.67, 103.29, 105.02, 106.74, 108.45, 116.04, 120.77, 126.0, 129.32, 132.12, 137.57, 145.9, 157.12, 159.24]
+        NEISO:  [97.86, 100.67, 103.29, 105.02, 106.74, 108.45, 116.04, 120.77, 126.0, 129.32, 132.12, 137.57, 145.9, 157.12, 159.24],
+        MISO:   [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        SPP:    [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
     }
 };
 
@@ -201,7 +223,9 @@ const UPRATE_CAPS_TWH = {
     ERCOT: 1.064,
     PJM: 12.614,
     NYISO: 1.34,
-    NEISO: 1.38
+    NEISO: 1.38,
+    MISO: 5.0,
+    SPP: 0.35
 };
 
 // ============================================================================

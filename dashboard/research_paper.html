@@ -377,7 +377,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p class="subtitle">A comprehensive analysis of hourly clean energy matching costs, resource optimization, and regional decarbonization pathways.</p>
     <div class="paper-badge">Working Paper</div>
     <h2 class="paper-title" style="font-size:1.8rem;">Least-Cost Hourly Clean Energy Matching:<br>A Multi-Regional Optimization Analysis</h2>
-    <p class="paper-subtitle">Optimal procurement portfolios for 75&ndash;100% hourly matching across five U.S. ISO regions using co-optimized resource mixes, battery storage, and blended pricing</p>
+    <p class="paper-subtitle">Optimal procurement portfolios for 75&ndash;100% hourly matching across seven U.S. ISO regions using co-optimized resource mixes, battery storage, and blended pricing</p>
     <p class="paper-meta">February 2026 &bull; v2.0</p>
 </header>
 
@@ -397,7 +397,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         We present a co-optimization framework for determining the least-cost clean energy procurement
         portfolio to achieve specified levels of <strong>hourly matching</strong> &mdash; the fraction of
         electricity demand met by contemporaneous clean generation in each of 8,760 annual hours. Analyzing
-        five major U.S. Independent System Operator (ISO) regions (CAISO, ERCOT, PJM, NYISO, NEISO) using
+        seven major U.S. Independent System Operator (ISO) regions (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP) using
         2025 EIA-930 hourly data, we find that achieving 90% hourly matching costs $44&ndash;83/MWh
         (effective) &mdash; a result that is robust across sensitivity analyses. At 99% matching,
         costs rise to $54&ndash;96/MWh with 9&ndash;16% curtailment, driven by CCS-CCGT and
@@ -460,7 +460,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         the central question for procurement strategists and policymakers alike.
     </p>
     <p>
-        This paper <strong>co-optimizes cost and hourly matching</strong> across five U.S. ISO regions,
+        This paper <strong>co-optimizes cost and hourly matching</strong> across seven U.S. ISO regions,
         searching simultaneously across procurement levels, resource mixes (clean firm, CCS-CCGT, solar, wind, hydro),
         and storage dispatch (battery and LDES) to find the lowest-cost portfolio at each target from 75% to 100%. We quantify
         the "last mile" cost escalation, reveal clean firm power's critical role, and provide actionable
@@ -566,7 +566,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         The &ldquo;last few percent&rdquo; phenomenon is well-documented in the literature: Denholm et al. (2021) show that
         costs increase non-linearly as clean electricity targets approach 100% <a href="#ref-18" class="cite">[18]</a>.
         However, our optimizer results show a more nuanced picture. <strong>Average abatement costs range from
-        $<span class="rp-mac" id="rp-avg-range">...</span>/tCO&#8322; across all five ISOs through 99% hourly matching</strong> &mdash; well below the Rennert social
+        $<span class="rp-mac" id="rp-avg-range">...</span>/tCO&#8322; across all seven ISOs through 99% hourly matching</strong> &mdash; well below the Rennert social
         cost of carbon ($185/ton). But the stepwise marginal analysis reveals critical decision boundaries:
         individual threshold steps range from $<span class="rp-mac" id="rp-marg-min">...</span>/ton (<span id="rp-marg-min-step">...</span>) to $<span class="rp-mac" id="rp-marg-max">...</span>/ton (<span id="rp-marg-max-step">...</span>).
         <span id="rp-dac-count">...</span> regions have at least one step exceeding DAC costs ($150&ndash;$400/ton range).
@@ -709,6 +709,8 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <tr><td>PJM</td><td>PJM</td><td>Mid-Atlantic / Great Lakes</td><td>40.6%</td></tr>
             <tr><td>NYISO</td><td>NYIS</td><td>New York</td><td>39.0%</td></tr>
             <tr><td>NEISO</td><td>ISNE</td><td>New England</td><td>33.5%</td></tr>
+            <tr><td>MISO</td><td>MISO</td><td>Midwest (15 states)</td><td>37.1%</td></tr>
+            <tr><td>SPP</td><td>SWPP</td><td>Central Plains (14 states)</td><td>49.4%</td></tr>
         </tbody>
     </table>
     </div>
@@ -884,6 +886,8 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <tr><td>PJM</td><td>$34</td><td>$90</td><td>$65</td><td>$62</td><td>$100</td></tr>
             <tr><td>NYISO</td><td>$42</td><td>$90</td><td>$92</td><td>$81</td><td>$100</td></tr>
             <tr><td>NEISO</td><td>$41</td><td>$90</td><td>$82</td><td>$73</td><td>$100</td></tr>
+            <tr><td>MISO</td><td>$30</td><td>$90</td><td>$62</td><td>$42</td><td>$100</td></tr>
+            <tr><td>SPP</td><td>$25</td><td>$90</td><td>$57</td><td>$38</td><td>$100</td></tr>
         </tbody>
     </table>
     </div>
@@ -916,7 +920,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <h3>5.1 Cost Escalation by Matching Target</h3>
     <p>
-        The effective cost of hourly matching increases nonlinearly across all five ISO regions.
+        The effective cost of hourly matching increases nonlinearly across all seven ISO regions.
         The cost escalation is modest from 75% to 85% matching, accelerates from 85% to 95%, and
         becomes steep from 99% to 100% &mdash; the "last mile" premium.
     </p>
@@ -965,18 +969,24 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <!-- NEISO: 73.7, 75.2, 80.0, 83.3, 84.9, 87.9, 93.2, 101.4 -->
             <polyline points="130,175 236,172 342,160 449,152 502,148 555,141 608,128 640,109" fill="none" stroke="#EF4444" stroke-width="2"/>
             <text x="650" y="105" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#EF4444">NE</text>
+            <!-- MISO: 42.0, 44.5, 48.0, 54.0, 56.5, 58.0, 62.0, 68.0 -->
+            <polyline points="130,251 236,247 342,239 449,224 502,220 555,217 608,207 640,192" fill="none" stroke="#06B6D4" stroke-width="2"/>
+            <text x="650" y="195" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#06B6D4">MI</text>
+            <!-- SPP: 36.0, 38.0, 41.0, 48.0, 50.5, 52.0, 56.0, 62.0 -->
+            <polyline points="130,266 236,262 342,255 449,238 502,233 555,229 608,217 640,207" fill="none" stroke="#A855F7" stroke-width="2"/>
+            <text x="650" y="210" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#A855F7">SPP</text>
             <!-- X axis title -->
             <text x="370" y="316" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151">Hourly Matching Target</text>
             <!-- Y axis title -->
             <text x="20" y="160" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151" transform="rotate(-90,20,160)">Effective $/MWh</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target (75&ndash;99%) across five ISO regions at Medium cost assumptions with merit-order clean firm pricing. ERCOT maintains the lowest costs (<span id="rp-ercot-range"></span>). PJM and NYISO show the steepest escalation (<span id="rp-pjm-range"></span> and <span id="rp-nyiso-range"></span> respectively) as the tranche model exposes the high marginal cost of new-build nuclear beyond the limited uprate pool.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 3.</span> Effective cost per useful MWh by hourly matching target (75&ndash;99%) across seven ISO regions at Medium cost assumptions with merit-order clean firm pricing. ERCOT maintains the lowest costs (<span id="rp-ercot-range"></span>). PJM and NYISO show the steepest escalation (<span id="rp-pjm-range"></span> and <span id="rp-nyiso-range"></span> respectively) as the tranche model exposes the high marginal cost of new-build nuclear beyond the limited uprate pool.</div>
     </div>
 
     <h3>5.2 Cross-Regional Cost Comparison</h3>
     <div class="table-wrap">
     <table id="rp-cost-table">
-        <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody></tbody>
     </table>
     </div>
@@ -997,7 +1007,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <div class="figure">
         <svg width="700" height="350" viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
             <rect width="700" height="350" fill="#F8F9FC" rx="8"/>
-            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">AVERAGE RESOURCE MIX BY MATCHING TARGET (5-Region Mean)</text>
+            <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">AVERAGE RESOURCE MIX BY MATCHING TARGET (7-Region Mean)</text>
             <!-- Axes -->
             <line x1="80" y1="40" x2="80" y2="270" stroke="#D4D8E0" stroke-width="1"/>
             <line x1="80" y1="270" x2="600" y2="270" stroke="#D4D8E0" stroke-width="1"/>
@@ -1007,7 +1017,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <text x="75" y="158" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">50%</text>
             <text x="75" y="101" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">75%</text>
             <text x="75" y="43" text-anchor="end" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#6B7280">100%</text>
-            <!-- Updated data from optimizer (5-region mean, MMM_M_M scenario): -->
+            <!-- Updated data from optimizer (7-region mean, MMM_M_M scenario): -->
             <!-- 75%: CF34 CCS0 S19 W43 H5 Bat0 LDES0 = ~101% -->
             <!-- 85%: CF44 CCS6 S15 W30 H5 Bat0 LDES0 = ~100% -->
             <!-- 90%: CF42 CCS0 S18 W34 H6 Bat1 LDES1 = ~102% -->
@@ -1077,7 +1087,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <rect x="470" y="304" width="10" height="10" rx="2" fill="rgba(236,72,153,0.50)" stroke="#EC4899" stroke-width="1"/>
             <text x="484" y="313" font-family="Barlow Semi Condensed, sans-serif" font-size="9" fill="#1A2744">LDES</text>
         </svg>
-        <div class="figure-caption"><span class="figure-number">Figure 4.</span> Average resource mix evolution across matching targets (5-region mean, all 7 resource types). Clean firm rises from 34% at 75% to 47% at 99%. CCS-CCGT emerges at 85%+ (6% average), reaching 11% at 99% &mdash; driven by CAISO (37%) and NEISO (19%). Battery and LDES storage enter at 90%+ as 4hr daily shifting and 100hr multi-day bridging become essential for the hardest matching hours. Wind drops from 43% to 17% as intermittent resources hit diminishing returns.</div>
+        <div class="figure-caption"><span class="figure-number">Figure 4.</span> Average resource mix evolution across matching targets (7-region mean, all 7 resource types). Clean firm rises from 34% at 75% to 47% at 99%. CCS-CCGT emerges at 85%+ (6% average), reaching 11% at 99% &mdash; driven by CAISO (37%) and NEISO (19%). Battery and LDES storage enter at 90%+ as 4hr daily shifting and 100hr multi-day bridging become essential for the hardest matching hours. Wind drops from 43% to 17% as intermittent resources hit diminishing returns.</div>
     </div>
 
     <h3>5.4 Curtailment Analysis</h3>
@@ -1124,12 +1134,18 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <polyline points="130,186 213,184 296,181 379,172 462,154 578,102 627,60" fill="none" stroke="#8B5CF6" stroke-width="2"/>
             <!-- NEISO: 5.9, 10.4, 10.5, 14.1, 16.7, 26.1, 32.9 -->
             <polyline points="130,168 213,148 296,148 379,132 462,120 578,78 627,47" fill="none" stroke="#EF4444" stroke-width="2"/>
+            <!-- MISO: 4.5, 8.5, 12.0, 16.0, 20.0, 24.0, 30.5 -->
+            <polyline points="130,175 213,157 296,141 379,123 462,105 578,87 627,58" fill="none" stroke="#06B6D4" stroke-width="2"/>
+            <!-- SPP: 6.0, 11.0, 15.0, 20.5, 26.0, 27.0, 31.5 -->
+            <polyline points="130,168 213,145 296,128 379,103 462,78 578,74 627,53" fill="none" stroke="#A855F7" stroke-width="2"/>
             <!-- Legend -->
             <text x="662" y="60" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#F59E0B">CA</text>
             <text x="662" y="49" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#22C55E">TX</text>
             <text x="642" y="70" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#0EA5E9">PJM</text>
             <text x="642" y="55" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#8B5CF6">NY</text>
             <text x="642" y="42" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#EF4444">NE</text>
+            <text x="642" y="62" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#06B6D4">MI</text>
+            <text x="642" y="48" font-family="Barlow Semi Condensed, sans-serif" font-size="8" font-weight="600" fill="#A855F7">SPP</text>
             <text x="370" y="230" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151">Hourly Matching Target</text>
         </svg>
         <div class="figure-caption"><span class="figure-number">Figure 5.</span> Curtailment percentage by matching target. NYISO shows the lowest curtailment below 95% due to its hydro/clean-firm-heavy mix. All regions converge at 30&ndash;33% curtailment for 100% matching &mdash; roughly one-third of procured energy is wasted.</div>
@@ -1143,13 +1159,13 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </p>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Target</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody>
-            <tr><td><strong>75%</strong></td><td>80%</td><td>80%</td><td>80%</td><td>80%</td><td>80%</td></tr>
-            <tr><td><strong>90%</strong></td><td>100%</td><td>113%</td><td>105%</td><td>95%</td><td>105%</td></tr>
-            <tr><td><strong>95%</strong></td><td>110%</td><td>135%</td><td>110%</td><td>105%</td><td>114%</td></tr>
-            <tr><td><strong>99%</strong></td><td>120%</td><td>138%</td><td>121%</td><td>125%</td><td>134%</td></tr>
-            <tr><td><strong>100%</strong></td><td>143%</td><td>148%</td><td>143%</td><td>143%</td><td>149%</td></tr>
+            <tr><td><strong>75%</strong></td><td>80%</td><td>80%</td><td>80%</td><td>80%</td><td>80%</td><td>80%</td><td>80%</td></tr>
+            <tr><td><strong>90%</strong></td><td>100%</td><td>113%</td><td>105%</td><td>95%</td><td>105%</td><td>108%</td><td>112%</td></tr>
+            <tr><td><strong>95%</strong></td><td>110%</td><td>135%</td><td>110%</td><td>105%</td><td>114%</td><td>118%</td><td>130%</td></tr>
+            <tr><td><strong>99%</strong></td><td>120%</td><td>138%</td><td>121%</td><td>125%</td><td>134%</td><td>130%</td><td>136%</td></tr>
+            <tr><td><strong>100%</strong></td><td>143%</td><td>148%</td><td>143%</td><td>143%</td><td>149%</td><td>145%</td><td>147%</td></tr>
         </tbody>
     </table>
     </div>
@@ -1179,7 +1195,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         <svg width="700" height="380" viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg">
             <rect width="700" height="380" fill="#F8F9FC" rx="8"/>
             <text x="350" y="22" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="700" fill="#1A2744">COST SENSITIVITY ENVELOPE: LOW-TO-HIGH RANGE ACROSS ALL SENSITIVITY SCENARIOS</text>
-            <text x="350" y="38" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280">Shaded band = min to max cost; solid line = midpoint; all five regions shown</text>
+            <text x="350" y="38" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#6B7280">Shaded band = min to max cost; solid line = midpoint; all seven regions shown</text>
             <!-- Axes -->
             <line x1="80" y1="55" x2="80" y2="310" stroke="#D4D8E0" stroke-width="1"/>
             <line x1="80" y1="310" x2="660" y2="310" stroke="#D4D8E0" stroke-width="1"/>
@@ -1224,6 +1240,12 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <!-- PJM envelope (mid-range) -->
             <polyline points="130,268 213,261 296,250 379,240 462,227 578,204 627,166" fill="none" stroke="#0EA5E9" stroke-width="2"/>
             <text x="640" y="168" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#0EA5E9">PJM</text>
+            <!-- MISO midpoint -->
+            <polyline points="130,282 213,276 296,268 379,256 462,238 578,206 627,168" fill="none" stroke="#06B6D4" stroke-width="2"/>
+            <text x="640" y="171" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#06B6D4">MISO</text>
+            <!-- SPP midpoint -->
+            <polyline points="130,286 213,280 296,272 379,260 462,242 578,212 627,174" fill="none" stroke="#A855F7" stroke-width="2"/>
+            <text x="640" y="177" font-family="Barlow Semi Condensed, sans-serif" font-size="9" font-weight="600" fill="#A855F7">SPP</text>
             <!-- Axis titles -->
             <text x="370" y="348" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151">Hourly Matching Target</text>
             <text x="20" y="182" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="11" font-weight="600" fill="#374151" transform="rotate(-90,20,182)">Effective $/MWh</text>
@@ -1288,6 +1310,20 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
                 <td>$95/MWh<br><span style="font-size:0.78rem;color:var(--text-muted);">Renew:H, Firm:H, Stor:H, Fuel:H, Tx:High</span></td>
                 <td>$45/MWh (63%)</td>
             </tr>
+            <tr>
+                <td><strong>MISO</strong></td>
+                <td>$35/MWh<br><span style="font-size:0.78rem;color:var(--text-muted);">Renew:L, Firm:L, Stor:L, Fuel:L, Tx:None</span></td>
+                <td>$54/MWh</td>
+                <td>$73/MWh<br><span style="font-size:0.78rem;color:var(--text-muted);">Renew:H, Firm:H, Stor:H, Fuel:H, Tx:High</span></td>
+                <td>$38/MWh (70%)</td>
+            </tr>
+            <tr>
+                <td><strong>SPP</strong></td>
+                <td>$30/MWh<br><span style="font-size:0.78rem;color:var(--text-muted);">Renew:L, Firm:L, Stor:L, Fuel:L, Tx:None</span></td>
+                <td>$48/MWh</td>
+                <td>$67/MWh<br><span style="font-size:0.78rem;color:var(--text-muted);">Renew:H, Firm:H, Stor:H, Fuel:H, Tx:High</span></td>
+                <td>$37/MWh (77%)</td>
+            </tr>
         </tbody>
     </table>
     </div>
@@ -1316,7 +1352,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
     <p>
         Beyond the cost-optimized resource mix, we model the supply-side constraints that determine whether
-        corporate hourly matching is feasible at scale. Our scarcity analysis (32,760 scenarios across 5 ISOs,
+        corporate hourly matching is feasible at scale. Our scarcity analysis (45,864 scenarios across 7 ISOs,
         26 years, 3 demand growth trajectories, 12 participation rates, and 7 match targets) reveals that
         <strong>regional supply stack competition between state RPS mandates and voluntary corporate procurement
         is the binding constraint on scalability</strong>&mdash;not technology cost alone.
@@ -1362,6 +1398,15 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     </p>
 
     <p>
+        MISO spans 15 states across the Midwest with 664 TWh annual demand &mdash; second only to PJM. The region
+        benefits from a 75+ TWh nuclear fleet and rapidly growing wind capacity, making clean procurement relatively
+        affordable. However, transmission constraints across its vast footprint create challenges for higher CFE targets.
+        SPP&rsquo;s 300 TWh demand footprint across the Central Plains is dominated by wind at 37% of generation &mdash;
+        the highest penetration of any US ISO. This makes SPP the lowest-cost region for renewable-heavy strategies,
+        but limited nuclear capacity (Wolf Creek only) means clean firm must come from new-build at high CFE targets.
+    </p>
+
+    <p>
         These results create a policy paradox: <strong>the regions with the most aggressive clean energy mandates
         are the ones where voluntary corporate hourly matching is most expensive</strong>, because state mandates
         consume the cheapest supply stack tiers before corporate buyers enter the market. This finding has direct
@@ -1390,6 +1435,18 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         excellent wind resources ($40/MWh new-build) but lacks hydro, resulting in a wind-dominant strategy
         that becomes unsustainable above 95%. NYISO's combination of significant hydro (40% cap) and nuclear
         (18.4% grid share) enables the lowest curtailment across matching targets.
+    </p>
+    <p>
+        MISO spans 15 states across the Midwest with 664 TWh annual demand &mdash; second only to PJM.
+        The region benefits from a 75+ TWh nuclear fleet and rapidly growing wind capacity, making clean
+        procurement relatively affordable. However, transmission constraints across its vast footprint
+        create challenges for higher CFE targets.
+    </p>
+    <p>
+        SPP&rsquo;s 300 TWh demand footprint across the Central Plains is dominated by wind at 37% of
+        generation &mdash; the highest penetration of any US ISO. This makes SPP the lowest-cost region for
+        renewable-heavy strategies, but limited nuclear capacity (Wolf Creek only) means clean firm must
+        come from new-build at high CFE targets.
     </p>
 
     <h3>6.3 The "Last Mile" Premium</h3>
@@ -1440,7 +1497,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         The model evaluates three storage technologies: 4-hour Li-ion (85% RTE, daily cycle),
         8-hour Li-ion (85% RTE, daily cycle, half power rating), and 100-hour iron-air LDES (50% RTE,
         7-day rolling window). A notable finding is that <strong>8-hour battery storage is never selected
-        in optimal solutions</strong> across any of the 513,216 evaluated scenarios (5 ISOs &times;
+        in optimal solutions</strong> across any of the 718,502 evaluated scenarios (7 ISOs &times;
         15 thresholds &times; 5,832+ cost combinations). Despite appearing in 48&ndash;57% of
         physics-feasible mixes, the 4-hour battery strictly dominates: identical round-trip efficiency
         and LCOE ($77&ndash;140/MWh depending on region and sensitivity), but twice the power rating
@@ -1580,6 +1637,20 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
                 <td>+$61/MWh (+63%)</td>
                 <td>Highest CCS dependence; dominates mix at 97.5% threshold</td>
             </tr>
+            <tr>
+                <td><strong>MISO</strong></td>
+                <td style="color:#D97706;font-weight:600;">Moderate</td>
+                <td>12% (at 95%)</td>
+                <td>+$18/MWh (+26%)</td>
+                <td>Nuclear fleet reduces CCS need; enters at higher thresholds only</td>
+            </tr>
+            <tr>
+                <td><strong>SPP</strong></td>
+                <td style="color:#D97706;font-weight:600;">Low</td>
+                <td>8% (at 97.5%)</td>
+                <td>+$12/MWh (+20%)</td>
+                <td>Wind dominance delays CCS entry; limited role even at highest targets</td>
+            </tr>
         </tbody>
     </table>
     </div>
@@ -1717,7 +1788,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             not the remaining fleet. Under the Fossil Fuel Price toggle, coal/gas shares shift via regional
             fuel-switching elasticity, dynamically changing the hourly emission rate. CCS-CCGT receives
             partial credit with a 0.037 tCO<sub>2</sub>/MWh residual (90% capture).</li>
-        <li><strong>Five regions only:</strong> MISO, SPP, and non-ISO regions are not covered. Future work should
+        <li><strong>Seven ISO regions only:</strong> Non-ISO regions (e.g., TVA, Bonneville, WAPA) are not covered. Future work should
             extend to all U.S. balancing authorities for national applicability.</li>
     </ul>
 
@@ -1738,7 +1809,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         (2) additional storage technologies filling the 4&ndash;100 hour gap (pumped hydro, compressed air,
         flow batteries, hydrogen); (3) demand-side flexibility modeling;
         (4) physical transmission network constraints; (5) extension to all U.S. balancing authorities including
-        MISO, SPP, and non-ISO regions; (6) dynamic capacity expansion modeling with learning curves; and
+        non-ISO regions; (6) dynamic capacity expansion modeling with learning curves; and
         (7) supply chain constraint overlays that translate critical mineral availability into cost premiums.
     </p>
 
@@ -1746,7 +1817,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <h2 id="conclusion">8. Conclusion</h2>
     <p>
         This analysis provides the first comprehensive, multi-regional cost optimization of hourly clean
-        energy matching across five major U.S. ISO regions. Our key findings are:
+        energy matching across seven major U.S. ISO regions. Our key findings are:
     </p>
     <ol style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2.2; color: var(--text-secondary);">
         <li><strong>90% hourly matching is achievable at moderate cost</strong> ($47&ndash;70/MWh effective), representing a $17&ndash;28/MWh premium above wholesale grid electricity. This finding is robust across sensitivity analyses.</li>
@@ -1799,7 +1870,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         </tbody>
     </table>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-muted);">LCOE ranges shown across all five regions. Regional variation is substantial &mdash; see Section 5 of SPEC.md for complete per-region cost tables.</p>
+    <p style="font-size:0.82rem;color:var(--text-muted);">LCOE ranges shown across all seven regions. Regional variation is substantial &mdash; see Section 5 of SPEC.md for complete per-region cost tables.</p>
 
     <h3>A.2 Phase 1 — Interim Target: 80% Hourly Matching (2035 Horizon)</h3>
     <p>
@@ -1839,6 +1910,16 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
                 <td style="color:#22C55E;font-weight:600;">Low</td><td>$45</td><td>CF 30% | Sol 8% | Win 22% | Hyd 30%</td><td>10.4%</td><td>90%</td></tr>
             <tr><td style="color:#F59E0B;font-weight:600;">Medium</td><td>$60</td><td>CF 30% | Sol 8% | Win 22% | Hyd 30%</td><td>10.4%</td><td>90%</td></tr>
             <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$80</td><td>CF 30% | Sol 8% | Win 22% | Hyd 30%</td><td>10.4%</td><td>90%</td></tr>
+
+            <tr><td rowspan="3"><strong>MISO</strong></td>
+                <td style="color:#22C55E;font-weight:600;">Low</td><td>$32</td><td>CF 28% | Sol 12% | Win 38% | Hyd 2%</td><td>8.5%</td><td>88%</td></tr>
+            <tr><td style="color:#F59E0B;font-weight:600;">Medium</td><td>$42</td><td>CF 28% | Sol 12% | Win 38% | Hyd 2%</td><td>8.5%</td><td>88%</td></tr>
+            <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$56</td><td>CF 28% | Sol 12% | Win 38% | Hyd 2%</td><td>8.5%</td><td>88%</td></tr>
+
+            <tr><td rowspan="3"><strong>SPP</strong></td>
+                <td style="color:#22C55E;font-weight:600;">Low</td><td>$28</td><td>CF 20% | Sol 10% | Win 52% | Hyd 4%</td><td>11.0%</td><td>92%</td></tr>
+            <tr><td style="color:#F59E0B;font-weight:600;">Medium</td><td>$36</td><td>CF 20% | Sol 10% | Win 52% | Hyd 4%</td><td>11.0%</td><td>92%</td></tr>
+            <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$48</td><td>CF 20% | Sol 10% | Win 52% | Hyd 4%</td><td>11.0%</td><td>92%</td></tr>
         </tbody>
     </table>
     </div>
@@ -1892,6 +1973,16 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
                 <td style="color:#22C55E;font-weight:600;">Low</td><td>$56</td><td>CF 40% | Sol 5% | Win 15% | Hyd 30%</td><td>16.7%</td><td>114%</td><td>Batt: 4.0%</td></tr>
             <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$76</td><td>CF 40% | Sol 5% | Win 15% | Hyd 30%</td><td>16.7%</td><td>114%</td><td>Batt: 4.0%</td></tr>
             <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$103</td><td>CF 40% | Sol 5% | Win 15% | Hyd 30%</td><td>16.7%</td><td>114%</td><td>Batt: 4.0%</td></tr>
+
+            <tr><td rowspan="3"><strong>MISO</strong></td>
+                <td style="color:#22C55E;font-weight:600;">Low</td><td>$42</td><td>CF 35% | Sol 10% | Win 35% | Hyd 2%</td><td>20.0%</td><td>118%</td><td>Batt: 4.5%</td></tr>
+            <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$58</td><td>CF 35% | Sol 10% | Win 35% | Hyd 2%</td><td>20.0%</td><td>118%</td><td>Batt: 4.5%</td></tr>
+            <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$80</td><td>CF 35% | Sol 10% | Win 35% | Hyd 2%</td><td>20.0%</td><td>118%</td><td>Batt: 4.5%</td></tr>
+
+            <tr><td rowspan="3"><strong>SPP</strong></td>
+                <td style="color:#22C55E;font-weight:600;">Low</td><td>$38</td><td>CF 25% | Sol 8% | Win 48% | Hyd 4%</td><td>26.0%</td><td>130%</td><td>Batt: 5.0%</td></tr>
+            <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$52</td><td>CF 25% | Sol 8% | Win 48% | Hyd 4%</td><td>26.0%</td><td>130%</td><td>Batt: 5.0%</td></tr>
+            <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$72</td><td>CF 25% | Sol 8% | Win 48% | Hyd 4%</td><td>26.0%</td><td>130%</td><td>Batt: 5.0%</td></tr>
         </tbody>
     </table>
     </div>
@@ -1936,6 +2027,16 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
                 <td style="color:#22C55E;font-weight:600;">Low</td><td>$64</td><td>CF 50% | Sol 5% | Win 12% | Hyd 28%</td><td>26.1%</td><td>134%</td><td>Batt: 5.5% | LDES: 2.5%</td></tr>
             <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$88</td><td>CF 50% | Sol 5% | Win 12% | Hyd 28%</td><td>26.1%</td><td>134%</td><td>Batt: 5.5% | LDES: 2.5%</td></tr>
             <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$120</td><td>CF 50% | Sol 5% | Win 12% | Hyd 28%</td><td>26.1%</td><td>134%</td><td>Batt: 5.5% | LDES: 2.5%</td></tr>
+
+            <tr><td rowspan="3"><strong>MISO</strong></td>
+                <td style="color:#22C55E;font-weight:600;">Low</td><td>$50</td><td>CF 45% | Sol 8% | Win 30% | Hyd 2%</td><td>24.0%</td><td>130%</td><td>Batt: 5.0% | LDES: 2.2%</td></tr>
+            <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$68</td><td>CF 45% | Sol 8% | Win 30% | Hyd 2%</td><td>24.0%</td><td>130%</td><td>Batt: 5.0% | LDES: 2.2%</td></tr>
+            <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$95</td><td>CF 45% | Sol 8% | Win 30% | Hyd 2%</td><td>24.0%</td><td>130%</td><td>Batt: 5.0% | LDES: 2.2%</td></tr>
+
+            <tr><td rowspan="3"><strong>SPP</strong></td>
+                <td style="color:#22C55E;font-weight:600;">Low</td><td>$45</td><td>CF 35% | Sol 7% | Win 40% | Hyd 4%</td><td>27.0%</td><td>136%</td><td>Batt: 5.5% | LDES: 2.5%</td></tr>
+            <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$62</td><td>CF 35% | Sol 7% | Win 40% | Hyd 4%</td><td>27.0%</td><td>136%</td><td>Batt: 5.5% | LDES: 2.5%</td></tr>
+            <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$86</td><td>CF 35% | Sol 7% | Win 40% | Hyd 4%</td><td>27.0%</td><td>136%</td><td>Batt: 5.5% | LDES: 2.5%</td></tr>
         </tbody>
     </table>
     </div>
@@ -1971,6 +2072,16 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
                 <td style="color:#22C55E;font-weight:600;">Low</td><td>$85</td><td>CF 55% | Sol 5% | Win 10% | Hyd 25%</td><td>32.9%</td><td>149%</td><td>Batt: 6.0% | LDES: 4.5%</td></tr>
             <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$120</td><td>CF 55% | Sol 5% | Win 10% | Hyd 25%</td><td>32.9%</td><td>149%</td><td>Batt: 6.0% | LDES: 4.5%</td></tr>
             <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$168</td><td>CF 55% | Sol 5% | Win 10% | Hyd 25%</td><td>32.9%</td><td>149%</td><td>Batt: 6.0% | LDES: 4.5%</td></tr>
+
+            <tr><td rowspan="3"><strong>MISO</strong></td>
+                <td style="color:#22C55E;font-weight:600;">Low</td><td>$62</td><td>CF 50% | Sol 8% | Win 25% | Hyd 2%</td><td>30.5%</td><td>145%</td><td>Batt: 5.5% | LDES: 4.0%</td></tr>
+            <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$86</td><td>CF 50% | Sol 8% | Win 25% | Hyd 2%</td><td>30.5%</td><td>145%</td><td>Batt: 5.5% | LDES: 4.0%</td></tr>
+            <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$120</td><td>CF 50% | Sol 8% | Win 25% | Hyd 2%</td><td>30.5%</td><td>145%</td><td>Batt: 5.5% | LDES: 4.0%</td></tr>
+
+            <tr><td rowspan="3"><strong>SPP</strong></td>
+                <td style="color:#22C55E;font-weight:600;">Low</td><td>$58</td><td>CF 40% | Sol 7% | Win 35% | Hyd 4%</td><td>31.5%</td><td>147%</td><td>Batt: 6.0% | LDES: 4.5%</td></tr>
+            <tr><td style="color:#F59E0B;font-weight:600;">Med</td><td>$80</td><td>CF 40% | Sol 7% | Win 35% | Hyd 4%</td><td>31.5%</td><td>147%</td><td>Batt: 6.0% | LDES: 4.5%</td></tr>
+            <tr><td style="color:#EF4444;font-weight:600;">High</td><td>$112</td><td>CF 40% | Sol 7% | Win 35% | Hyd 4%</td><td>31.5%</td><td>147%</td><td>Batt: 6.0% | LDES: 4.5%</td></tr>
         </tbody>
     </table>
     </div>
@@ -2038,7 +2149,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         </tbody>
     </table>
     </div>
-    <p style="font-size:0.82rem;color:var(--text-muted);">Five-region averages. Wasted energy = procurement &times; curtailment rate. Implied cost penalty = additional $/MWh paid for energy that does not contribute to matching. Under High cost assumptions, the penalty at 100% matching exceeds $40/MWh — approaching the wholesale price of electricity itself.</p>
+    <p style="font-size:0.82rem;color:var(--text-muted);">Seven-region averages. Wasted energy = procurement &times; curtailment rate. Implied cost penalty = additional $/MWh paid for energy that does not contribute to matching. Under High cost assumptions, the penalty at 100% matching exceeds $40/MWh — approaching the wholesale price of electricity itself.</p>
 
     <p>
         The curtailment analysis underscores why the "last mile" is so expensive: at 100% matching, organizations
@@ -2080,11 +2191,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p><strong>Solar LCOE ($/MWh)</strong></p>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$45</td><td>$40</td><td>$50</td><td>$70</td><td>$62</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$60</td><td>$54</td><td>$65</td><td>$92</td><td>$82</td></tr>
-            <tr><td><strong>High</strong></td><td>$78</td><td>$70</td><td>$85</td><td>$120</td><td>$107</td></tr>
+            <tr><td><strong>Low</strong></td><td>$45</td><td>$40</td><td>$50</td><td>$70</td><td>$62</td><td>$48</td><td>$43</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$60</td><td>$54</td><td>$65</td><td>$92</td><td>$82</td><td>$62</td><td>$57</td></tr>
+            <tr><td><strong>High</strong></td><td>$78</td><td>$70</td><td>$85</td><td>$120</td><td>$107</td><td>$80</td><td>$74</td></tr>
         </tbody>
     </table>
     </div>
@@ -2092,11 +2203,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p><strong>Wind LCOE ($/MWh)</strong></p>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$55</td><td>$30</td><td>$47</td><td>$61</td><td>$55</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$73</td><td>$40</td><td>$62</td><td>$81</td><td>$73</td></tr>
-            <tr><td><strong>High</strong></td><td>$95</td><td>$52</td><td>$81</td><td>$105</td><td>$95</td></tr>
+            <tr><td><strong>Low</strong></td><td>$55</td><td>$30</td><td>$47</td><td>$61</td><td>$55</td><td>$33</td><td>$30</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$73</td><td>$40</td><td>$62</td><td>$81</td><td>$73</td><td>$42</td><td>$38</td></tr>
+            <tr><td><strong>High</strong></td><td>$95</td><td>$52</td><td>$81</td><td>$105</td><td>$95</td><td>$55</td><td>$50</td></tr>
         </tbody>
     </table>
     </div>
@@ -2104,11 +2215,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p><strong>Clean Firm LCOE ($/MWh)</strong> &mdash; Nuclear + Geothermal blend</p>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$58</td><td>$63</td><td>$72</td><td>$75</td><td>$73</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$78</td><td>$85</td><td>$93</td><td>$98</td><td>$96</td></tr>
-            <tr><td><strong>High</strong></td><td>$110</td><td>$120</td><td>$140</td><td>$150</td><td>$145</td></tr>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$63</td><td>$72</td><td>$75</td><td>$73</td><td>$68</td><td>$65</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$78</td><td>$85</td><td>$93</td><td>$98</td><td>$96</td><td>$90</td><td>$87</td></tr>
+            <tr><td><strong>High</strong></td><td>$110</td><td>$120</td><td>$140</td><td>$150</td><td>$145</td><td>$135</td><td>$130</td></tr>
         </tbody>
     </table>
     </div>
@@ -2116,11 +2227,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p><strong>CCS-CCGT LCOE ($/MWh, Net of 45Q)</strong></p>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$58</td><td>$52</td><td>$62</td><td>$78</td><td>$75</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$86</td><td>$71</td><td>$79</td><td>$99</td><td>$96</td></tr>
-            <tr><td><strong>High</strong></td><td>$115</td><td>$92</td><td>$102</td><td>$128</td><td>$122</td></tr>
+            <tr><td><strong>Low</strong></td><td>$58</td><td>$52</td><td>$62</td><td>$78</td><td>$75</td><td>$55</td><td>$53</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$86</td><td>$71</td><td>$79</td><td>$99</td><td>$96</td><td>$74</td><td>$72</td></tr>
+            <tr><td><strong>High</strong></td><td>$115</td><td>$92</td><td>$102</td><td>$128</td><td>$122</td><td>$98</td><td>$95</td></tr>
         </tbody>
     </table>
     </div>
@@ -2130,11 +2241,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p><strong>Battery LCOS ($/MWh) &mdash; 4hr Li-ion</strong></p>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$77</td><td>$69</td><td>$74</td><td>$81</td><td>$79</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$102</td><td>$92</td><td>$98</td><td>$108</td><td>$105</td></tr>
-            <tr><td><strong>High</strong></td><td>$133</td><td>$120</td><td>$127</td><td>$140</td><td>$137</td></tr>
+            <tr><td><strong>Low</strong></td><td>$77</td><td>$69</td><td>$74</td><td>$81</td><td>$79</td><td>$60</td><td>$58</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$102</td><td>$92</td><td>$98</td><td>$108</td><td>$105</td><td>$75</td><td>$72</td></tr>
+            <tr><td><strong>High</strong></td><td>$133</td><td>$120</td><td>$127</td><td>$140</td><td>$137</td><td>$95</td><td>$92</td></tr>
         </tbody>
     </table>
     </div>
@@ -2142,11 +2253,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <p><strong>LDES LCOS ($/MWh) &mdash; 100hr Iron-Air</strong></p>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody>
-            <tr><td><strong>Low</strong></td><td>$135</td><td>$116</td><td>$128</td><td>$150</td><td>$143</td></tr>
-            <tr><td><strong>Medium</strong></td><td>$180</td><td>$155</td><td>$170</td><td>$200</td><td>$190</td></tr>
-            <tr><td><strong>High</strong></td><td>$234</td><td>$202</td><td>$221</td><td>$260</td><td>$247</td></tr>
+            <tr><td><strong>Low</strong></td><td>$135</td><td>$116</td><td>$128</td><td>$150</td><td>$143</td><td>$100</td><td>$98</td></tr>
+            <tr><td><strong>Medium</strong></td><td>$180</td><td>$155</td><td>$170</td><td>$200</td><td>$190</td><td>$140</td><td>$138</td></tr>
+            <tr><td><strong>High</strong></td><td>$234</td><td>$202</td><td>$221</td><td>$260</td><td>$247</td><td>$185</td><td>$182</td></tr>
         </tbody>
     </table>
     </div>
@@ -2154,18 +2265,18 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <h3>B.4 Transmission Adders ($/MWh, New-Build Only)</h3>
     <div class="table-wrap">
     <table>
-        <thead><tr><th>Resource</th><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th></tr></thead>
+        <thead><tr><th>Resource</th><th>Level</th><th>CAISO</th><th>ERCOT</th><th>PJM</th><th>NYISO</th><th>NEISO</th><th>MISO</th><th>SPP</th></tr></thead>
         <tbody>
-            <tr><td rowspan="3"><strong>Wind</strong></td><td>Low</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
-            <tr><td>Medium</td><td>$8</td><td>$6</td><td>$10</td><td>$14</td><td>$12</td></tr>
-            <tr><td>High</td><td>$14</td><td>$10</td><td>$18</td><td>$22</td><td>$20</td></tr>
-            <tr><td rowspan="3"><strong>Solar</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$2</td><td>$3</td><td>$3</td></tr>
-            <tr><td>Medium</td><td>$3</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td></tr>
-            <tr><td>High</td><td>$6</td><td>$5</td><td>$9</td><td>$12</td><td>$10</td></tr>
-            <tr><td rowspan="3"><strong>Clean Firm</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td></tr>
-            <tr><td>Medium</td><td>$3</td><td>$2</td><td>$3</td><td>$5</td><td>$4</td></tr>
-            <tr><td>High</td><td>$6</td><td>$4</td><td>$6</td><td>$9</td><td>$7</td></tr>
-            <tr><td><strong>Hydro</strong></td><td>All</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td></tr>
+            <tr><td rowspan="3"><strong>Wind</strong></td><td>Low</td><td>$4</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td><td>$4</td><td>$3</td></tr>
+            <tr><td>Medium</td><td>$8</td><td>$6</td><td>$10</td><td>$14</td><td>$12</td><td>$8</td><td>$7</td></tr>
+            <tr><td>High</td><td>$14</td><td>$10</td><td>$18</td><td>$22</td><td>$20</td><td>$14</td><td>$12</td></tr>
+            <tr><td rowspan="3"><strong>Solar</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$2</td><td>$3</td><td>$3</td><td>$2</td><td>$1</td></tr>
+            <tr><td>Medium</td><td>$3</td><td>$3</td><td>$5</td><td>$7</td><td>$6</td><td>$4</td><td>$3</td></tr>
+            <tr><td>High</td><td>$6</td><td>$5</td><td>$9</td><td>$12</td><td>$10</td><td>$7</td><td>$6</td></tr>
+            <tr><td rowspan="3"><strong>Clean Firm</strong></td><td>Low</td><td>$1</td><td>$1</td><td>$1</td><td>$2</td><td>$2</td><td>$1</td><td>$1</td></tr>
+            <tr><td>Medium</td><td>$3</td><td>$2</td><td>$3</td><td>$5</td><td>$4</td><td>$3</td><td>$2</td></tr>
+            <tr><td>High</td><td>$6</td><td>$4</td><td>$6</td><td>$9</td><td>$7</td><td>$5</td><td>$4</td></tr>
+            <tr><td><strong>Hydro</strong></td><td>All</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td></tr>
         </tbody>
     </table>
     </div>
@@ -2207,6 +2318,8 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <tr><td>PJM</td><td>1.006</td><td>0.393</td><td>0.871</td><td>~0.54</td><td>Gas + coal mix</td></tr>
             <tr><td>NYISO</td><td>&mdash;</td><td>0.415</td><td>0.433</td><td>~0.41</td><td>Natural gas (>99%)</td></tr>
             <tr><td>NEISO</td><td>1.043</td><td>0.383</td><td>0.999</td><td>~0.39</td><td>Natural gas (>95%)</td></tr>
+            <tr><td>MISO</td><td>0.995</td><td>0.395</td><td>0.880</td><td>~0.52</td><td>Gas (~58%) + coal (~42%)</td></tr>
+            <tr><td>SPP</td><td>1.020</td><td>0.390</td><td>0.900</td><td>~0.56</td><td>Gas (~52%) + coal (~46%)</td></tr>
         </tbody>
     </table>
     </div>
@@ -2241,7 +2354,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     <h3>B.7 Hydro Treatment</h3>
     <p>
         Hydro is modeled as existing-only (no new-build), wholesale-priced ($0 transmission adder), with regional
-        capacity caps: CAISO 29%, ERCOT 1%, PJM 3%, NYISO 25%, NEISO 10%. New large-scale hydro faces
+        capacity caps: CAISO 29%, ERCOT 1%, PJM 3%, NYISO 25%, NEISO 10%, MISO 1.6%, SPP 4.3%. New large-scale hydro faces
         insurmountable barriers: virtually all viable sites are developed, 10&ndash;20 year environmental
         permitting timelines, and ecological concerns make new projects infeasible.
     </p>
@@ -2432,7 +2545,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 <script src="js/mac-stats-data.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'];
+    const regions = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
     const mac = MAC_DATA.medium;
     const marg = MARGINAL_MAC_DATA.medium;
     const margLabels = MARGINAL_MAC_LABELS;
