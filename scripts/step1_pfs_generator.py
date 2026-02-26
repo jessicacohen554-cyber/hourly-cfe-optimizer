@@ -1445,10 +1445,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         print(f", 0 near-miss")
 
     # ── Phase 2: Fine refinement at 1% step around boundary archetypes ──
-    # Only refine mixes near the threshold boundary (within 10pp above target).
-    # Mixes far above threshold are already feasible — refining them adds bulk
-    # without finding meaningful new solutions.
-    FINE_REFINEMENT_BAND = 0.10  # 10 percentage points above target
+    # Only refine mixes near the threshold boundary (within 3pp above target).
+    # Cost-optimal mixes barely clear the threshold — overprocuring by 10pp
+    # wastes money and won't survive Step 3 cost optimization anyway.
+    FINE_REFINEMENT_BAND = 0.03  # 3pp above target
     if candidates:
         boundary_upper = target + FINE_REFINEMENT_BAND
         mix_archetypes = set()
