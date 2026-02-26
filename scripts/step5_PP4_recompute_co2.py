@@ -44,7 +44,7 @@ sys.path.insert(0, SCRIPT_DIR)
 from dispatch_utils import (
     H, ISOS, RESOURCE_TYPES, CCS_RESIDUAL_EMISSION_RATE,
     GRID_MIX_SHARES, BASE_DEMAND_TWH, load_common_data,
-    get_supply_profiles_simple as get_supply_profiles,
+    get_supply_profiles,
     compute_fossil_retirement as compute_dispatch_stack_emission_rate,
     reconstruct_hourly_dispatch,
     build_supply_matrix,
