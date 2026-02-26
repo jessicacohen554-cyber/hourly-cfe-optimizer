@@ -1585,17 +1585,230 @@
             SPP. Other U.S. regions and non-ISO territories are not yet included, limiting full national applicability.</li>
     </ul>
 
-    <h3>9.6 Storage Model Limitations</h3>
+    <h3>9.6 Storage Model: Assumptions, Limitations &amp; Academic Precedent</h3>
+    <p style="margin-bottom: 16px; font-size: 0.93rem;">
+        Storage dispatch is one of the most scrutinized elements of energy system models. This section documents
+        our modeling choices, their limitations, and the academic literature that supports (or qualifies) each approach.
+        The model uses <strong>heuristic dispatch</strong> rather than linear programming (LP) optimization&mdash;a deliberate
+        tradeoff that enables evaluation of 21M+ resource mixes across 5,832+ cost scenarios per region, which would
+        be computationally infeasible with LP-based dispatch.
+    </p>
+
+    <h4 style="margin-top: 24px; color: #DC2626;">9.6.1 Battery (4hr Li-ion) &mdash; Assumptions &amp; Precedent</h4>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Assumption</th><th>Value</th><th>Precedent / Citation</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Round-trip efficiency</strong></td>
+                <td>85%</td>
+                <td>NREL Annual Technology Baseline 2024: 85% for 4hr utility-scale Li-ion (all ATB editions 2020&ndash;2024 use 85&ndash;87%).
+                    Cole &amp; Karmakar (2023), &ldquo;Cost Projections for Utility-Scale Battery Storage,&rdquo; NREL/TP-6A20-93281. Lazard LCOS v9 (2024).</td>
+            </tr>
+            <tr>
+                <td><strong>Daily-cycle dispatch</strong></td>
+                <td>SoC resets each 24hr period</td>
+                <td>NREL ATB explicitly assumes approximately one cycle per day for 4hr battery cost and performance characterization.
+                    CAISO Special Reports on Battery Storage (2023&ndash;2024) document that real-world utility-scale batteries predominantly
+                    follow a daily charge/discharge cycle (charge during midday solar surplus, discharge during evening ramp).
+                    Princeton Net-Zero America (2021) and Google 24/7 CFE studies (2023&ndash;2024) use similar daily-cycle heuristics.</td>
+            </tr>
+            <tr>
+                <td><strong>Greedy sequential dispatch</strong></td>
+                <td>Charge from largest surplus hours, discharge into largest gap hours</td>
+                <td>NREL SAM (System Advisor Model) uses heuristic dispatch algorithms rather than full optimization for battery systems.
+                    NREL acknowledges these are &ldquo;suboptimal compared to upper-bound, perfect forecast optimization algorithms&rdquo;
+                    but &ldquo;still show in many cases that batteries offer additional economic value&rdquo;
+                    (Mirletz &amp; Guittet, 2021, NREL/TP-6A20-79575).</td>
+            </tr>
+            <tr>
+                <td><strong>No degradation or self-discharge</strong></td>
+                <td>Omitted</td>
+                <td>Standard for single-year snapshot models. NREL ATB&rsquo;s one-cycle-per-day assumption calibrates O&amp;M costs
+                    to a specific degradation trajectory, so the LCOS already implicitly accounts for degradation within that cycling regime.</td>
+            </tr>
+            <tr>
+                <td><strong>No minimum state-of-charge</strong></td>
+                <td>Can discharge to 0%</td>
+                <td>Real Li-ion batteries typically maintain 5&ndash;10% minimum SoC. The 85% RTE partially compensates
+                    (effective usable capacity is reduced by efficiency losses), but this is not a direct substitute.
+                    Common simplification in screening models.</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h4 style="margin-top: 24px; color: #DC2626;">9.6.2 LDES (100hr Iron-Air) &mdash; Assumptions &amp; Precedent</h4>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Assumption</th><th>Value</th><th>Precedent / Citation</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Round-trip efficiency</strong></td>
+                <td>50%</td>
+                <td>Albertus et al. (2020), &ldquo;Long-Duration Electricity Storage Applications, Economics, and Technologies,&rdquo;
+                    <em>Joule</em> 4(1):21&ndash;32: establishes 40&ndash;50% RTE range for iron-air class. NREL ATB 2024 lists 40&ndash;55%
+                    for iron-air LDES. Xcel Energy regulatory filing (Minnesota, 2023) reported 35&ndash;38% at system level for
+                    Form Energy installations. Independent first-principles analyses cluster at 45&ndash;50%. Our 50% assumption
+                    is at the optimistic end of credible independent estimates.</td>
+            </tr>
+            <tr>
+                <td><strong>Multi-day rolling window</strong></td>
+                <td>7-day (168-hour) windows, two-pass (charge-first, then discharge)</td>
+                <td>Similar to approaches in Dowling et al. (2020), &ldquo;Role of Long-Duration Energy Storage in Variable
+                    Renewable Electricity Systems,&rdquo; <em>Joule</em> 4(9):1907&ndash;1928. Sepulveda et al. (2021),
+                    &ldquo;The design space for long-duration energy storage in decarbonized power systems,&rdquo;
+                    <em>Nature Energy</em> 6:506&ndash;516, uses simplified dispatch heuristics for LDES screening across technology classes.
+                    Guerra et al. (2024) found standard 24h+24h windows undervalue LDES by 4&ndash;14%; our 7-day window
+                    significantly exceeds the standard.</td>
+            </tr>
+            <tr>
+                <td><strong>SoC persists across windows</strong></td>
+                <td>No reset between 7-day windows</td>
+                <td>Physically correct for a 100-hour system. Enables multi-week energy storage, consistent with iron-air
+                    design intent (20&ndash;50 full cycles/year during extended renewable droughts).
+                    Mantegna et al. (2024) emphasize the importance of inter-period SOC linking for LDES valuation.</td>
+            </tr>
+            <tr>
+                <td><strong>Perfect foresight within window</strong></td>
+                <td>Charge pass sees all 168 hours before discharge pass</td>
+                <td>Universal in deterministic models using historical profiles. All major energy system models (GenX, PyPSA,
+                    ReEDS, PLEXOS) use deterministic optimization with perfect foresight over their optimization horizon.</td>
+            </tr>
+            <tr>
+                <td><strong>No self-discharge or degradation</strong></td>
+                <td>Omitted</td>
+                <td>Acceptable for single-year snapshot. Iron-air self-discharge is negligible over multi-day timescales.
+                    PyPSA includes standing loss parameters but many models omit them for screening purposes.</td>
+            </tr>
+            <tr>
+                <td><strong>Duration</strong></td>
+                <td>100 hours</td>
+                <td>Form Energy&rsquo;s iron-air system specification. Consistent with DOE Long Duration Energy Storage
+                    program target (10&ndash;100+ hours). Sepulveda et al. (2021) evaluated LDES at durations from 12 to 150 hours.</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h4 style="margin-top: 24px; color: #DC2626;">9.6.3 Structural Limitations</h4>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.93rem; line-height: 2;">
-        <li><strong>Three storage technologies, duration gap:</strong> 4h Li-ion, 8h Li-ion, and 100h
-            iron-air LDES are modeled. However, 8h Li-ion is never cost-optimal (strictly dominated by
-            4h Li-ion due to identical efficiency and cost but half the power rating). This leaves an
-            effective gap between 4-hour and 100-hour durations. Technologies such as pumped hydro,
-            compressed air, flow batteries, and hydrogen could fill this gap.</li>
-        <li><strong>Simplified dispatch:</strong> The battery storage simulation uses a daily cycling model with
-            greedy charge/discharge allocation. Real-world battery operation involves more sophisticated
-            co-optimized dispatch that could achieve marginally better economic results.</li>
+        <li><strong>Heuristic vs. LP-optimized dispatch:</strong> Production-grade models (GenX, PyPSA, PLEXOS) use
+            linear or mixed-integer programming to jointly optimize storage dispatch. Our model uses sequential
+            greedy heuristics (battery dispatches first, then LDES on residuals). This is computationally necessary
+            for a screening model evaluating millions of resource mixes but may slightly understate the combined value
+            of co-deployed storage. The MISO Economic Planning Model (Series 1A, 2023) similarly adopted heuristic
+            dispatch profiles because full optimization was computationally intractable at scale.</li>
+        <li><strong>Duration gap (8&ndash;100 hours):</strong> 4hr Li-ion and 100hr iron-air leave a gap in
+            the 8&ndash;100 hour range. Technologies such as pumped hydro, compressed air, flow batteries, and
+            zinc-based systems could fill this gap. 8hr Li-ion was tested but is strictly dominated by 4hr
+            (identical efficiency, lower power rating at same cost).</li>
+        <li><strong>No value stacking:</strong> Storage is modeled for energy time-shifting only. Real batteries
+            provide ancillary services (frequency regulation, spinning reserves, capacity) that would improve
+            their economics. This means our model may understate battery value relative to what a merchant
+            operator would capture.</li>
+        <li><strong>Single-year weather profile:</strong> Storage dispatch depends on the specific year&rsquo;s
+            renewable generation patterns. LDES value is particularly sensitive to inter-annual variability
+            (drought years, anomalous wind patterns). Multi-year robustness testing would strengthen confidence
+            in LDES sizing. Mantegna et al. (2024) found that the number and selection of representative periods
+            significantly affects LDES value estimation.</li>
+        <li><strong>No grid-charging:</strong> Storage can only charge from surplus clean energy, never from the
+            grid. This is a conservative assumption that may understate storage utilization in practice (real
+            operators may charge from grid power when prices are negative or very low).</li>
     </ul>
+
+    <h4 style="margin-top: 24px; color: #DC2626;">9.6.4 How This Model Compares to Major Energy System Tools</h4>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Dispatch Method</th>
+                <th>Temporal Resolution</th>
+                <th>LDES Approach</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>GenX</strong> (MIT)</td>
+                <td>Co-optimized LP/MIP</td>
+                <td>Representative periods (linked)</td>
+                <td>Period-linking (Kotzur et al.)</td>
+            </tr>
+            <tr>
+                <td><strong>ReEDS</strong> (NREL)</td>
+                <td>Augur: Osprey LP + Condor DP</td>
+                <td>16 time slices + 8760h sub-module</td>
+                <td>Limited; diurnal focus</td>
+            </tr>
+            <tr>
+                <td><strong>PyPSA</strong></td>
+                <td>Co-optimized LP, explicit SOC</td>
+                <td>Full chronological or representative</td>
+                <td>SOC tracking, cyclic option</td>
+            </tr>
+            <tr>
+                <td><strong>PLEXOS</strong></td>
+                <td>MIP dispatch, 24h+24h window</td>
+                <td>Full chronological hourly</td>
+                <td>24h optimization + look-ahead</td>
+            </tr>
+            <tr>
+                <td><strong>This model</strong></td>
+                <td>Sequential heuristic (greedy)</td>
+                <td>Full 8,760-hour chronological</td>
+                <td>7-day rolling window, persistent SOC</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 8px;">
+        Our model trades dispatch optimality for scenario coverage: LP-based models evaluate a handful of scenarios
+        in the time this model screens millions of resource mixes. The full 8,760-hour chronological resolution
+        avoids the representative-period approximation errors that affect GenX and ReEDS
+        (Mantegna et al. 2024, Springer Energy Systems 2022).
+    </p>
+
+    <h4 style="margin-top: 24px; color: #DC2626;">9.6.5 Academic References</h4>
+    <ol style="margin: 10px 0 24px 24px; font-size: 0.88rem; line-height: 2; color: var(--text-secondary);">
+        <li>Albertus, P., Manser, J. &amp; Litzelman, S. (2020). &ldquo;Long-Duration Electricity Storage Applications,
+            Economics, and Technologies.&rdquo; <em>Joule</em> 4(1):21&ndash;32.
+            <a href="https://doi.org/10.1016/j.joule.2019.11.009" target="_blank">doi:10.1016/j.joule.2019.11.009</a></li>
+        <li>Cole, W. &amp; Karmakar, A. (2023). &ldquo;Cost Projections for Utility-Scale Battery Storage: 2023 Update.&rdquo;
+            NREL/TP-6A20-93281.
+            <a href="https://www.nrel.gov/docs/fy24osti/93281.pdf" target="_blank">NREL</a></li>
+        <li>Denholm, P. et al. (2021). &ldquo;The challenges of achieving a 100% renewable electricity system in the United States&rdquo;
+            and &ldquo;Energy Storage in Long-Term System Models: A Review of Considerations, Best Practices, and Research Needs.&rdquo;
+            <em>Joule</em> / DOE EERE.
+            <a href="https://www.energy.gov/eere/analysis/articles/energy-storage-long-term-system-models-review-considerations-best-practices" target="_blank">DOE</a></li>
+        <li>Dowling, J. et al. (2020). &ldquo;Role of Long-Duration Energy Storage in Variable Renewable Electricity Systems.&rdquo;
+            <em>Joule</em> 4(9):1907&ndash;1928.
+            <a href="https://doi.org/10.1016/j.joule.2020.07.007" target="_blank">doi:10.1016/j.joule.2020.07.007</a></li>
+        <li>Guerra, O.J. et al. (2024). &ldquo;Towards robust and scalable dispatch modeling of long-duration energy storage.&rdquo;
+            <em>Renewable and Sustainable Energy Reviews</em>.
+            <a href="https://doi.org/10.1016/j.rser.2024.114899" target="_blank">doi:10.1016/j.rser.2024.114899</a></li>
+        <li>Mantegna, G. et al. (2024). &ldquo;Establishing best practices for modeling long-duration energy storage
+            in deeply decarbonized energy systems.&rdquo; arXiv:2404.17474.
+            <a href="https://arxiv.org/abs/2404.17474" target="_blank">arXiv</a></li>
+        <li>Mirletz, B. &amp; Guittet, D. (2021). &ldquo;Heuristic Dispatch Based on Price Signals for Behind-the-Meter PV-Battery Systems.&rdquo;
+            NREL/TP-6A20-79575.
+            <a href="https://www.nrel.gov/docs/fy21osti/79575.pdf" target="_blank">NREL</a></li>
+        <li>NREL Annual Technology Baseline (2024). Utility-Scale Battery Storage.
+            <a href="https://atb.nrel.gov/electricity/2024/utility-scale_battery_storage" target="_blank">NREL ATB</a></li>
+        <li>Riepin, I. et al. (2025). &ldquo;24/7 carbon-free electricity matching accelerates adoption of advanced clean energy technologies.&rdquo;
+            <em>Joule</em>.
+            <a href="https://doi.org/10.1016/j.joule.2024.11.008" target="_blank">doi:10.1016/j.joule.2024.11.008</a></li>
+        <li>Sepulveda, N.A. et al. (2021). &ldquo;The design space for long-duration energy storage in decarbonized power systems.&rdquo;
+            <em>Nature Energy</em> 6:506&ndash;516.
+            <a href="https://doi.org/10.1038/s41560-021-00796-8" target="_blank">doi:10.1038/s41560-021-00796-8</a></li>
+        <li>Xu, Q. et al. (2024). &ldquo;On the means, costs, and system-level impacts of 24/7 carbon-free energy procurement.&rdquo;
+            Princeton ZERO Lab.
+            <a href="https://doi.org/10.1016/j.esr.2024.101488" target="_blank">doi:10.1016/j.esr.2024.101488</a></li>
+    </ol>
 
     <h3>9.7 Interpreting Results Given These Limitations</h3>
     <ul style="margin: 10px 0 24px 24px; font-size: 0.93rem; line-height: 2;">
