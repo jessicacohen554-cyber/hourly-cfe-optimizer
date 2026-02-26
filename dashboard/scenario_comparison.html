@@ -506,11 +506,11 @@ let globalIso = 'PJM';
 
 function renderAll(iso) {
     globalIso = iso;
-    renderMixCharts(iso);
-    renderCostChart(iso);
-    renderMacTimeline(iso);
-    renderFirmChart(iso);
-    renderGasChart(iso);
+    try { renderMixCharts(iso); } catch(e) { console.warn('renderMixCharts error for', iso, e); }
+    try { renderCostChart(iso); } catch(e) { console.warn('renderCostChart error for', iso, e); }
+    try { renderMacTimeline(iso); } catch(e) { console.warn('renderMacTimeline error for', iso, e); }
+    try { renderFirmChart(iso); } catch(e) { console.warn('renderFirmChart error for', iso, e); }
+    try { renderGasChart(iso); } catch(e) { console.warn('renderGasChart error for', iso, e); }
     buildMetricTiles();
 }
 
@@ -643,8 +643,15 @@ function buildMetricTiles() {
     const tLabel = t + '%';
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
     const trajB = getScenarioB(iso);
-    const aT = trajA.find(d => d.threshold === t);
-    const bT = trajB.find(d => d.threshold === t);
+    let aT = trajA.find(d => d.threshold === t);
+    let bT = trajB.find(d => d.threshold === t);
+    // Fallback: if exact threshold missing, use nearest available
+    if (!aT && trajA.length > 0) {
+        aT = trajA.reduce((best, d) => (!best || Math.abs(d.threshold - t) < Math.abs(best.threshold - t)) ? d : best, null);
+    }
+    if (!bT && trajB.length > 0) {
+        bT = trajB.reduce((best, d) => (!best || Math.abs(d.threshold - t) < Math.abs(best.threshold - t)) ? d : best, null);
+    }
     if (!aT || !bT) { container.innerHTML = ''; return; }
 
     const demA = aT.demand_twh || DEMAND_TWH[iso];
@@ -1327,7 +1334,7 @@ function renderFirmChart(iso) {
 // First step per ISO = existing grid mix → 50%.
 function buildSequentialQueue() {
     const isoSteps = {};
-    const WHOLESALE_EST = { CAISO: 45, ERCOT: 30, PJM: 35, NYISO: 40, NEISO: 38 };
+    const WHOLESALE_EST = { CAISO: 45, ERCOT: 30, PJM: 35, NYISO: 40, NEISO: 38, MISO: 32, SPP: 28 };
     const EMISSION_EST = 0.45; // tCO2/MWh average displaced
 
     ISOS.forEach(iso => {
