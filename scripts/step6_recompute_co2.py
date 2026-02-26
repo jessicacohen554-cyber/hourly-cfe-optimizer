@@ -40,6 +40,9 @@ import argparse
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
+sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts'))
+
+from step3_cost_optimization import OUTPUT_THRESHOLDS as _ALL_THRESHOLDS
 
 from dispatch_utils import (
     H, ISOS, RESOURCE_TYPES, CCS_RESIDUAL_EMISSION_RATE,
@@ -232,7 +235,7 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
         cache_dirty = False
 
         # Pre-populate rate cache for ALL known thresholds (string keys for precision)
-        THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+        THRESHOLDS = _ALL_THRESHOLDS
         rate_cache = {}
         for t in THRESHOLDS:
             cache_key = (iso, str(t))

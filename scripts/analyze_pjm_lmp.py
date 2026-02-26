@@ -6,6 +6,7 @@ ANOVA variance decomposition, and outputs pjm_lmp_trends.json for dashboard use.
 """
 
 import json
+import os
 import sys
 import warnings
 from collections import defaultdict
@@ -18,7 +19,8 @@ warnings.filterwarnings("ignore")
 INPUT_PATH = "/home/user/hourly-cfe-optimizer/data/step5-post-processing/lmp/PJM_lmp.parquet"
 OUTPUT_PATH = "/home/user/hourly-cfe-optimizer/data/step5-post-processing/lmp/pjm_lmp_trends.json"
 
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
 
 TOGGLE_NAMES = {
     "renewable_gen": "Renewable Generation Cost",
