@@ -25,11 +25,15 @@ import pandas as pd
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
-# Import dispatch utilities for emission rates
+# Import dispatch utilities for emission rates and dispatch cache
 sys.path.insert(0, str(Path(__file__).parent))
 from dispatch_utils import (
-    compute_fossil_retirement, BASE_DEMAND_TWH, GRID_MIX_SHARES,
-    COAL_CAP_TWH, OIL_CAP_TWH,
+    compute_fossil_retirement, compute_co2_from_dispatch,
+    BASE_DEMAND_TWH, GRID_MIX_SHARES,
+    COAL_CAP_TWH, OIL_CAP_TWH, COAL_OIL_RETIREMENT_THRESHOLD,
+    H, load_common_data, get_supply_profiles, get_demand_profile,
+    build_supply_matrix, reconstruct_hourly_dispatch,
+    _archetype_key, load_dispatch_cache, get_or_compute_dispatch,
 )
 
 # ============================================================================
@@ -599,14 +603,21 @@ def find_optimal_mixes(feasible_mixes, scenario, demand_twh_map):
 
             best_cost = float('inf')
             best_result = None
+            best_mix = None
 
             for mix in mixes:
                 result = compute_mix_cost(mix, iso_sens, iso, demand_twh_map[iso])
                 if result['effective_cost'] < best_cost:
                     best_cost = result['effective_cost']
                     best_result = result
+                    best_mix = mix
 
-            if best_result:
+            if best_result and best_mix:
+                # Preserve dispatch parameters for dispatch cache lookup
+                best_result['battery_dispatch_pct'] = float(best_mix[7])
+                best_result['battery8_dispatch_pct'] = float(best_mix[8])
+                best_result['ldes_dispatch_pct'] = float(best_mix[9])
+                best_result['demand_mwh'] = demand_twh_map[iso] * 1e6
                 iso_results[t] = best_result
 
         results[iso] = iso_results
@@ -823,6 +834,12 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
             if total_excess > 1.0:
                 print(f"  ↗ {iso} {t}%: {total_excess:.0f} TWh excess locked in "
                       f"(+${excess_cost_per_mwh:.1f}/MWh penalty)")
+
+            # Preserve dispatch parameters for dispatch cache lookup
+            augmented_result['battery_dispatch_pct'] = float(best_mix[7])
+            augmented_result['battery8_dispatch_pct'] = float(best_mix[8])
+            augmented_result['ldes_dispatch_pct'] = float(best_mix[9])
+            augmented_result['demand_mwh'] = demand_mwh
 
             iso_results[t] = augmented_result
 
@@ -1751,10 +1768,70 @@ def find_scenario_a_mixes(feasible_mixes):
 # CONSEQUENTIAL QUEUE BUILDER
 # ============================================================================
 
-def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None):
-    """Build the consequential deployment queue for a scenario."""
+def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
+                              dispatch_caches):
+    """Get CO₂ displacement for a scenario mix result using dispatch cache.
+
+    mix_result: dict from compute_mix_cost() with resource_pct, procurement_pct, etc.
+    Returns compute_co2_from_dispatch() result or None.
+    """
+    resource_pcts = mix_result.get('resource_pct', {})
+    if not resource_pcts:
+        return None
+
+    proc_pct = mix_result.get('procurement_pct', 100)
+    bat_pct = mix_result.get('battery_dispatch_pct', 0)
+    bat8_pct = mix_result.get('battery8_dispatch_pct', 0)
+    ldes_pct = mix_result.get('ldes_dispatch_pct', 0)
+
+    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    demand_norm, _ = get_demand_profile(iso, demand_data)
+    cache = dispatch_caches.get(iso, {})
+
+    dispatch_result, _ = get_or_compute_dispatch(
+        iso, demand_norm, supply_profiles, resource_pcts,
+        proc_pct, bat_pct, bat8_pct, ldes_pct,
+        cache=cache)
+
+    dispatch_caches[iso] = cache
+
+    # Use demand from the mix result for proper scaling
+    demand_mwh = mix_result.get('demand_mwh', 0)
+    if demand_mwh <= 0:
+        # Fallback: estimate from resource_twh
+        demand_twh = sum(mix_result.get('resource_twh', {}).values())
+        demand_mwh = demand_twh * 1e6 if demand_twh > 0 else BASE_DEMAND_TWH[iso] * 1e6
+
+    return compute_co2_from_dispatch(iso, dispatch_result, egrid, demand_mwh)
+
+
+def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
+                               demand_data=None, gen_profiles=None, dispatch_caches=None):
+    """Build the consequential deployment queue for a scenario.
+
+    Uses dispatch-cache-based CO₂ accounting when demand_data/gen_profiles are provided.
+    Falls back to analytical compute_fossil_retirement() otherwise.
+    """
+    use_dispatch = demand_data is not None and gen_profiles is not None
     if cfr_fn is None:
         cfr_fn = compute_fossil_retirement
+    if dispatch_caches is None:
+        dispatch_caches = {}
+
+    # Pre-compute dispatch CO₂ for all threshold mixes if using dispatch model
+    _co2_cache = {}  # (iso, threshold) → co2_result
+    if use_dispatch:
+        for iso in ISOS:
+            iso_data = scenario_results.get(iso, {})
+            for t in THRESHOLDS:
+                if t not in iso_data:
+                    continue
+                mix_result = iso_data[t]
+                co2 = _get_dispatch_co2_for_mix(iso, mix_result, egrid,
+                                                 demand_data, gen_profiles, dispatch_caches)
+                if co2:
+                    _co2_cache[(iso, t)] = co2
+
     zone_metrics = []
 
     for iso in ISOS:
@@ -1769,26 +1846,29 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None):
             start = iso_data[t_start]
             end = iso_data[t_end]
 
-            # Use year-specific demand for each endpoint
             demand_twh_start = get_demand_twh(iso, t_start)
             demand_twh_end = get_demand_twh(iso, t_end)
 
-            # Cost delta (for reporting only — NOT used in MAC)
             delta_cost_per_mwh = end['effective_cost'] - start['effective_cost']
 
-            # CO₂ displaced using merit-order dispatch (coal → oil → gas)
-            clean_twh_start = max(0, (t_start - baseline_clean) / 100.0 * demand_twh_start)
-            clean_twh_end = max(0, (t_end - baseline_clean) / 100.0 * demand_twh_end)
-            delta_clean_twh = clean_twh_end - clean_twh_start
-
-            rate_start, _ = cfr_fn(iso, t_start, egrid, fossil_mix)
-            rate_end, _ = cfr_fn(iso, t_end, egrid, fossil_mix)
-            avg_rate = (rate_start + rate_end) / 2
-
-            co2_displaced_mt = delta_clean_twh * avg_rate
+            # CO₂ displacement: dispatch-based or analytical fallback
+            if use_dispatch and (iso, t_start) in _co2_cache and (iso, t_end) in _co2_cache:
+                co2_s = _co2_cache[(iso, t_start)]
+                co2_e = _co2_cache[(iso, t_end)]
+                delta_co2_tons = co2_e['total_co2_abated_tons'] - co2_s['total_co2_abated_tons']
+                co2_displaced_mt = delta_co2_tons / 1e6
+                delta_displaced_twh = co2_e['displaced_twh'] - co2_s['displaced_twh']
+                avg_rate = co2_displaced_mt / delta_displaced_twh if delta_displaced_twh > 0.01 else co2_e['weighted_emission_rate']
+            else:
+                clean_twh_start = max(0, (t_start - baseline_clean) / 100.0 * demand_twh_start)
+                clean_twh_end = max(0, (t_end - baseline_clean) / 100.0 * demand_twh_end)
+                delta_clean_twh = clean_twh_end - clean_twh_start
+                rate_start, _ = cfr_fn(iso, t_start, egrid, fossil_mix)
+                rate_end, _ = cfr_fn(iso, t_end, egrid, fossil_mix)
+                avg_rate = (rate_start + rate_end) / 2
+                co2_displaced_mt = delta_clean_twh * avg_rate
 
             # MAC = LCOE / displaced_emission_rate
-            # LCOE = marginal new-build cost per MWh of new clean generation
             delta_new_cost = end['new_build_cost_total'] - start['new_build_cost_total']
             delta_new_gen = end['new_gen_twh'] - start['new_gen_twh']
             if delta_new_gen > 0.01:
@@ -1831,10 +1911,7 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None):
                 'eff_cost_end': end['effective_cost'],
             })
 
-    # Sort by marginal MAC (cheapest first)
     zone_metrics.sort(key=lambda x: x['marginal_mac'])
-
-    # Assign queue positions
     for i, step in enumerate(zone_metrics):
         step['queue_position'] = i + 1
 
@@ -1938,6 +2015,20 @@ def main():
     from eia_data_io import load_fossil_mix
     fossil_mix = load_fossil_mix()
 
+    # Load demand/gen profiles and dispatch caches for hourly emission accounting
+    print("\n  Loading demand and generation profiles for dispatch-based CO₂...")
+    demand_data, gen_profiles, _, _ = load_common_data()
+
+    dispatch_caches = {}
+    print("  Loading dispatch caches...")
+    for iso in ISOS:
+        cache = load_dispatch_cache(iso)
+        if cache:
+            dispatch_caches[iso] = cache
+            print(f"    {iso}: {len(cache)} cached mixes")
+        else:
+            print(f"    {iso}: no cache (will compute live)")
+
     # ==========================================================================
     # Scenario A: Pure Consequential — greedy forward-stepping, static FOAK firm
     # Evaluates ALL feasible EF mixes under static cost assumptions.
@@ -1956,7 +2047,7 @@ def main():
     print("\nScenario B (Hourly Matching): Forward-stepping, FOAK→NOAK learning...")
     results_b = find_scenario_b_mixes(feasible_mixes)
 
-    # Memoize compute_fossil_retirement — egrid/fossil_mix are constant across all calls
+    # Memoize compute_fossil_retirement as fallback
     _cfr_cache = {}
 
     def cfr_cached(iso, threshold, er, fm, demand_growth_factor=1.0):
@@ -1965,10 +2056,14 @@ def main():
             _cfr_cache[key] = compute_fossil_retirement(iso, threshold, er, fm, demand_growth_factor)
         return _cfr_cache[key]
 
-    # Build consequential queues
-    print("\nBuilding consequential queues...")
-    queue_a = build_consequential_queue(results_a, egrid, fossil_mix, cfr_fn=cfr_cached)
-    queue_b = build_consequential_queue(results_b, egrid, fossil_mix, cfr_fn=cfr_cached)
+    # Build consequential queues with dispatch-cache-based CO₂ accounting
+    print("\nBuilding consequential queues (dispatch-cache emission accounting)...")
+    queue_a = build_consequential_queue(results_a, egrid, fossil_mix, cfr_fn=cfr_cached,
+                                         demand_data=demand_data, gen_profiles=gen_profiles,
+                                         dispatch_caches=dispatch_caches)
+    queue_b = build_consequential_queue(results_b, egrid, fossil_mix, cfr_fn=cfr_cached,
+                                         demand_data=demand_data, gen_profiles=gen_profiles,
+                                         dispatch_caches=dispatch_caches)
 
     # Stranding analysis
     print("\nComputing stranding analysis...")
@@ -2102,9 +2197,22 @@ def main():
     # WRITE OUTPUT FILES
     # ========================================================================
 
+    # Pre-compute dispatch CO₂ for trajectory stepwise MAC
+    _traj_co2_cache = {}
+    for scenario_results in [results_a, results_b]:
+        for iso in ISOS:
+            for t in THRESHOLDS:
+                d = scenario_results.get(iso, {}).get(t, {})
+                if d and (iso, t, id(scenario_results)) not in _traj_co2_cache:
+                    co2 = _get_dispatch_co2_for_mix(iso, d, egrid,
+                                                     demand_data, gen_profiles, dispatch_caches)
+                    if co2:
+                        _traj_co2_cache[(iso, t, id(scenario_results))] = co2
+
     # Build resource trajectories with per-threshold stepwise MAC
     def _build_trajectory(results, enforce_monotonic=False):
         """Build trajectory dicts from optimization results."""
+        results_id = id(results)
         traj = {}
         for iso in ISOS:
             iso_traj = []
@@ -2124,7 +2232,12 @@ def main():
                         marginal_lcoe = delta_new_cost / (delta_new_gen * 1e6)
                     else:
                         marginal_lcoe = d.get('blended_new_lcoe', 0)
-                    rate_cur, _ = cfr_cached(iso, t, egrid, fossil_mix)
+                    # Use dispatch-based emission rate if available
+                    co2_result = _traj_co2_cache.get((iso, t, results_id))
+                    if co2_result:
+                        rate_cur = co2_result['weighted_emission_rate']
+                    else:
+                        rate_cur, _ = cfr_cached(iso, t, egrid, fossil_mix)
                     if rate_cur > 0.001 and marginal_lcoe > 0:
                         stepwise_mac = round(marginal_lcoe / rate_cur, 1)
                     else:
@@ -2256,7 +2369,7 @@ def main():
     out_js = 'dashboard/js/scenario-comparison-data.js'
     os.makedirs(os.path.dirname(out_js), exist_ok=True)
     with open(out_js, 'w') as f:
-        f.write("// Auto-generated by step5_PP3_scenario_comparison.py\n")
+        f.write("// Auto-generated by step6_scenario_comparison.py\n")
         f.write("// Dual-scenario comparison: Pure Consequential vs Hourly Matching\n")
         f.write("// A: Pure Consequential  B: Hourly Matching\n\n")
         f.write(f"const SCENARIO_COMPARISON = {json.dumps(output, indent=2, default=str)};\n")

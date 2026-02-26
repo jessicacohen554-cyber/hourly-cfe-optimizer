@@ -1,34 +1,34 @@
 #!/usr/bin/env python3
 """
-Step 5 PP0: Build Dispatch Cache
-=================================
+Step 5: Build Dispatch Cache
+=============================
 Pre-computes full 8760-hour dispatch for every unique resource mix across all
-ISOs and thresholds. Downstream modules (PP1, PP4, PP6) read from cache instead
-of recomputing independently.
+ISOs and thresholds. Downstream modules (step6_compressed_day, step6_recompute_co2,
+step6_compute_lmp_prices) read from cache instead of recomputing independently.
 
 Uses dispatch_utils.reconstruct_hourly_dispatch(detailed=True) to produce
 per-resource matched/surplus breakdowns and storage charge profiles needed
-by PP1's compressed day profiles.
+by step6_compressed_day's compressed day profiles.
 
 Pipeline position:
   Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Gas/CCS)
                                                       ↓
-                                          step5_PP0_build_dispatch_cache.py  ← THIS
+                                          step5_build_dispatch_cache.py  ← THIS
                                                       ↓
                             data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz
                                                       ↓
                                   +--------+----------+----------+
                                   |        |          |          |
-                                 PP1      PP3        PP4        PP6
+                              step6_cd  step6_sc  step6_co2  step6_lmp
 
 Input:  data/step4-gas-ccs-parquets/ (or step3 fallback)
 Output: data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz
 
 Usage:
-  python step5_PP0_build_dispatch_cache.py                    # All ISOs
-  python step5_PP0_build_dispatch_cache.py --iso PJM          # Single ISO
-  python step5_PP0_build_dispatch_cache.py --force            # Rebuild from scratch
-  python step5_PP0_build_dispatch_cache.py --input-dir PATH   # Custom input
+  python step5_build_dispatch_cache.py                    # All ISOs
+  python step5_build_dispatch_cache.py --iso PJM          # Single ISO
+  python step5_build_dispatch_cache.py --force            # Rebuild from scratch
+  python step5_build_dispatch_cache.py --input-dir PATH   # Custom input
 """
 
 import argparse
@@ -157,7 +157,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("  PP0: Build Dispatch Cache")
+    print("  Step 5: Build Dispatch Cache")
     print("  Pre-computes 8760-hour dispatch for all unique resource mixes")
     print(f"  Cache version: {CACHE_VERSION}")
     print("=" * 70)
@@ -220,7 +220,7 @@ def main():
 
     elapsed = time.time() - t0
     print(f"\n{'='*70}")
-    print(f"  PP0 Complete")
+    print(f"  Step 5 Dispatch Cache Complete")
     print(f"  {total_mixes} unique mixes across {len(run_isos)} ISOs")
     print(f"  Computed: {total_computed}, skipped: {total_skipped}")
     print(f"  Elapsed: {elapsed:.1f}s")
