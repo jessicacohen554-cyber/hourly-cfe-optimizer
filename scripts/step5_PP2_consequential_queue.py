@@ -47,7 +47,7 @@ OUTPUT_JSON = os.path.join(BASE_DIR, 'data', 'step5-post-processing', 'consequen
 OUTPUT_JS = os.path.join(BASE_DIR, 'dashboard', 'js', 'consequential-queue-data.js')
 
 # ========== CONSTANTS ==========
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
@@ -57,6 +57,8 @@ MEDIUM_KEYS = {
     'PJM': 'MMMM_M_M_M1_X',
     'NYISO': 'MMMM_M_M_M1_X',
     'NEISO': 'MMMM_M_M_M1_X',
+    'MISO': 'MMMM_M_M_M1_X',
+    'SPP': 'MMMM_M_M_M1_X',
 }
 
 ZONES = [
@@ -73,6 +75,7 @@ ZONES = [
 
 GROWTH_RATES = {
     'CAISO': 1.8, 'ERCOT': 3.5, 'PJM': 2.4, 'NYISO': 1.2, 'NEISO': 1.0,
+    'MISO': 2.2, 'SPP': 1.8,
 }
 
 # Pre-compute threshold-to-string mapping (avoids repeated str() calls in loops)
