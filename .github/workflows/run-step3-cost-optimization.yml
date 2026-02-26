@@ -9,6 +9,7 @@ on:
         default: 'track1-baseline'
         type: choice
         options:
+          - ALL
           - track1-baseline
           - track2-newbuild
           - track3-cost-to-replace
@@ -122,7 +123,7 @@ jobs:
       # ════════════════════════════════════════════════════════════════════
 
       - name: "Track 1: Run Baseline Cost Optimization"
-        if: ${{ github.event.inputs.track == 'track1-baseline' }}
+        if: ${{ github.event.inputs.track == 'track1-baseline' || github.event.inputs.track == 'ALL' }}
         run: |
           echo "=== Track 1: Baseline Cost Optimization ==="
           python scripts/step3_cost_optimization.py ${{ steps.iso-args.outputs.iso_flags }}
@@ -132,7 +133,7 @@ jobs:
       # ════════════════════════════════════════════════════════════════════
 
       - name: "Track 2: Run New-Build Cost Optimization"
-        if: ${{ github.event.inputs.track == 'track2-newbuild' || github.event.inputs.track == 'track2-and-3' }}
+        if: ${{ github.event.inputs.track == 'track2-newbuild' || github.event.inputs.track == 'track2-and-3' || github.event.inputs.track == 'ALL' }}
         run: |
           echo "=== Track 2: New-Build Cost Optimization ==="
           python scripts/step3_track_nb_ctr.py --fresh --track nb ${{ steps.iso-args.outputs.iso_flags }} ${{ steps.track-args.outputs.flags }}
@@ -142,7 +143,7 @@ jobs:
       # ════════════════════════════════════════════════════════════════════
 
       - name: "Track 3: Run Cost-to-Replace Optimization"
-        if: ${{ github.event.inputs.track == 'track3-cost-to-replace' || github.event.inputs.track == 'track2-and-3' }}
+        if: ${{ github.event.inputs.track == 'track3-cost-to-replace' || github.event.inputs.track == 'track2-and-3' || github.event.inputs.track == 'ALL' }}
         run: |
           echo "=== Track 3: Cost-to-Replace Optimization ==="
           python scripts/step3_track_nb_ctr.py --fresh --track ctr ${{ steps.iso-args.outputs.iso_flags }} ${{ steps.track-args.outputs.flags }}
@@ -156,14 +157,10 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          # Stage outputs based on track
-          TRACK="${{ github.event.inputs.track }}"
-          if [ "$TRACK" = "track1-baseline" ]; then
-            git add -f data/step3-cost-opt-parquets/ 2>/dev/null || true
-          else
-            git add -f dashboard/track_scenarios.parquet 2>/dev/null || true
-            git add -f dashboard/track_demand_growth.parquet 2>/dev/null || true
-          fi
+          # Stage all possible outputs
+          git add -f data/step3-cost-opt-parquets/ 2>/dev/null || true
+          git add -f dashboard/track_scenarios.parquet 2>/dev/null || true
+          git add -f dashboard/track_demand_growth.parquet 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
