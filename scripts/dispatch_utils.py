@@ -263,6 +263,12 @@ def get_supply_profiles(iso, gen_profiles):
 
 DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar']
 
+# Pre-computed dispatch order as array indices into RESOURCE_TYPES for @njit
+# RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+# DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'] → indices [0, 3, 4, 2, 1]
+_DISPATCH_ORDER_INDICES = np.array([RESOURCE_TYPES.index(r) for r in DISPATCH_ORDER],
+                                    dtype=np.int64)
+
 # Cache version — bump when dispatch algorithm or field set changes
 CACHE_VERSION = 2  # v2 = full supply profiles + detailed fields
 
@@ -543,33 +549,73 @@ def _dispatch_ldes_detailed(residual_surplus, residual_gap, dispatch_pct, demand
                                 LDES_EFFICIENCY, window_hours, H)
 
 
+@njit(cache=True)
+def _per_resource_dispatch_njit(demand_arr, supply_matrix, resource_pcts_arr,
+                                 procurement_factor, dispatch_order_indices):
+    """Numba-compiled merit-order dispatch per resource.
+
+    Args:
+        demand_arr: (H,) demand array
+        supply_matrix: (N_RESOURCES, H) supply profiles
+        resource_pcts_arr: (N_RESOURCES,) percentage allocations
+        procurement_factor: scalar multiplier
+        dispatch_order_indices: (N_RESOURCES,) dispatch order as indices
+
+    Returns:
+        matched: (N_RESOURCES, H) array
+        surplus: (N_RESOURCES, H) array
+    """
+    n_res = supply_matrix.shape[0]
+    h = demand_arr.shape[0]
+    gen = np.zeros((n_res, h), dtype=np.float64)
+    for i in range(n_res):
+        pct = resource_pcts_arr[i] / 100.0
+        for t in range(h):
+            gen[i, t] = procurement_factor * pct * supply_matrix[i, t]
+
+    matched = np.zeros((n_res, h), dtype=np.float64)
+    surplus = np.zeros((n_res, h), dtype=np.float64)
+    remaining_demand = demand_arr.copy()
+
+    for i_order in range(n_res):
+        r_idx = dispatch_order_indices[i_order]
+        for t in range(h):
+            g = gen[r_idx, t]
+            if g < remaining_demand[t]:
+                matched[r_idx, t] = g
+                surplus[r_idx, t] = 0.0
+                remaining_demand[t] -= g
+            else:
+                matched[r_idx, t] = remaining_demand[t]
+                surplus[r_idx, t] = g - remaining_demand[t]
+                remaining_demand[t] = 0.0
+
+    return matched, surplus
+
+
 def _compute_per_resource_dispatch(demand_arr, supply_profiles, resource_pcts,
                                     procurement_factor, supply_matrix=None):
     """Merit-order dispatch per resource: CF -> CCS -> hydro -> wind -> solar.
+
+    Thin wrapper that converts dicts to arrays, calls the @njit inner function,
+    and converts results back to dicts.
 
     Returns:
         matched: dict {resource: np.array(H)} -- dispatched to demand
         surplus: dict {resource: np.array(H)} -- excess above demand
     """
-    gen = {}
-    for i, rtype in enumerate(RESOURCE_TYPES):
-        pct = resource_pcts.get(rtype, 0) / 100.0
-        if supply_matrix is not None:
-            gen[rtype] = procurement_factor * pct * supply_matrix[i]
-        else:
-            profile = np.array(supply_profiles[rtype][:H], dtype=np.float64)
-            gen[rtype] = procurement_factor * pct * profile
+    if supply_matrix is None:
+        supply_matrix = build_supply_matrix(supply_profiles)
 
-    matched = {}
-    surplus = {}
-    remaining_demand = demand_arr.copy()
-    for r in DISPATCH_ORDER:
-        g = gen.get(r, np.zeros(H, dtype=np.float64))
-        dispatched = np.minimum(g, remaining_demand)
-        matched[r] = dispatched
-        surplus[r] = g - dispatched
-        remaining_demand = np.maximum(remaining_demand - dispatched, 0)
+    resource_pcts_arr = np.array([resource_pcts.get(rt, 0) for rt in RESOURCE_TYPES],
+                                  dtype=np.float64)
 
+    matched_arr, surplus_arr = _per_resource_dispatch_njit(
+        demand_arr, supply_matrix, resource_pcts_arr,
+        procurement_factor, _DISPATCH_ORDER_INDICES)
+
+    matched = {RESOURCE_TYPES[i]: matched_arr[i] for i in range(len(RESOURCE_TYPES))}
+    surplus = {RESOURCE_TYPES[i]: surplus_arr[i] for i in range(len(RESOURCE_TYPES))}
     return matched, surplus
 
 
