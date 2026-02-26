@@ -1,44 +1,36 @@
 #!/usr/bin/env python3
-"""Step 1 PFS — ISO/Threshold Runner
+"""Step 1 PFS — ISO/Threshold Runner (v5.0)
 
-Runs step1_pfs_generator.optimize_threshold() for one or more ISO × threshold
-pairs. Designed for GitHub Actions workflows where each ISO/threshold combo is
-dispatched as a job, with support for runtime caps and checkpoint-based resume.
+Runs step1_pfs_generator.process_iso() for a single ISO, optionally filtered
+to specific thresholds. Designed for GitHub Actions workflows where each ISO
+is dispatched as a job.
 
 Output: data/step1-pfs-parquets/{ISO}_t{threshold}_raw_pfs.parquet
+
+Architecture (v5.0 — no procurement):
+  1. Load data + JIT warmup (once)
+  2. Build or load coarse cache (one-time per ISO)
+  3. For each threshold: read cache → filter → storage sweep → fine refinement
+  4. Two-phase adaptive storage: coarse sweep → analyze saturation → fine sweep
 
 Key features:
   - Multi-threshold: pass a comma-separated list or "all" to run multiple
     thresholds sequentially. Data loading and JIT warmup happen once.
-  - Cross-pollination: feasible mixes found by earlier thresholds are fed into
-    later ones for better pruning.
   - Standalone: no dependency on existing parquets. Loads raw EIA data and runs
     the full PFS grid search for the requested threshold(s).
-  - Tranching: --max-runtime-minutes caps runtime per threshold. Progress is
-    checkpointed in data/checkpoints_v4/ and auto-resumed on re-trigger.
   - Consistent output: writes directly to the step1-pfs-parquets/ directory
     using the canonical {ISO}_t{threshold}_raw_pfs.parquet naming.
-  - GitHub Actions friendly: exit code 0 on clean completion, exit code 0 on
-    checkpoint save (partial progress), exit code 1 on error.
+  - GitHub Actions friendly: exit code 0 on clean completion, exit code 1 on error.
 
 Usage:
-  # Run NYISO 100% with no runtime cap (full run)
-  python scripts/step1_pfs_individual_iso_threshold.py --iso NYISO --thresholds 100
-
-  # Run multiple thresholds in one invocation
-  python scripts/step1_pfs_individual_iso_threshold.py --iso NYISO --thresholds "100,95,92.5"
-
-  # Run all 13 thresholds
+  # Run NYISO for all thresholds
   python scripts/step1_pfs_individual_iso_threshold.py --iso NYISO --thresholds all
 
-  # Run with 300-minute cap per threshold (saves checkpoint, resume on re-trigger)
-  python scripts/step1_pfs_individual_iso_threshold.py --iso NYISO --thresholds "100,95" --max-runtime-minutes 300
+  # Run specific thresholds
+  python scripts/step1_pfs_individual_iso_threshold.py --iso NYISO --thresholds "100,95,92.5"
 
-  # Run with mix cap (process N outer-loop mixes per threshold then checkpoint)
-  python scripts/step1_pfs_individual_iso_threshold.py --iso NYISO --thresholds 100 --max-mixes-per-run 5000
-
-  # Legacy single-threshold flag still works
-  python scripts/step1_pfs_individual_iso_threshold.py --iso NYISO --threshold 100
+  # Run a single threshold
+  python scripts/step1_pfs_individual_iso_threshold.py --iso NYISO --thresholds 100
 """
 
 import argparse
@@ -91,12 +83,12 @@ def validate_thresholds(raw_thresholds):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run Step 1 PFS for one or more ISO × threshold pairs.",
+        description="Run Step 1 PFS for a single ISO (all or selected thresholds).",
     )
     parser.add_argument(
         "--iso",
         required=True,
-        help="ISO name (e.g., CAISO, NYISO, PJM, ERCOT, NEISO)",
+        help="ISO name (e.g., CAISO, NYISO, PJM, ERCOT, NEISO, MISO, SPP)",
     )
     # Support both --thresholds (new) and --threshold (legacy)
     parser.add_argument(
@@ -110,91 +102,27 @@ def parse_args():
         default=None,
         help="(Legacy) Single threshold percentage (e.g., 100, 95, 92.5)",
     )
+    # Kept for backward compatibility with existing workflow YAML but no longer
+    # used — the v5 optimizer runs to completion (no checkpoint/resume).
     parser.add_argument(
         "--max-runtime-minutes",
         type=float,
         default=0,
-        help="Max runtime in minutes per threshold before checkpointing. 0 = no cap (default).",
+        help="(Ignored in v5) Max runtime in minutes per threshold.",
     )
     parser.add_argument(
         "--max-mixes-per-run",
         type=int,
         default=0,
-        help="Max outer-loop mixes per threshold before checkpointing. 0 = no cap (default).",
+        help="(Ignored in v5) Max outer-loop mixes per threshold.",
     )
     return parser.parse_args()
-
-
-def run_single_threshold(iso, threshold, demand_arr, supply_matrix, hydro_cap,
-                         cross_feasible, max_runtime_seconds, max_mixes_per_run):
-    """Run optimization for a single threshold. Returns (candidates, completed, cross_feasible)."""
-
-    # Check for existing checkpoint (resume support)
-    existing_checkpoint = s1._load_mix_progress(iso, threshold)
-    if existing_checkpoint is not None:
-        n_existing = len(existing_checkpoint.get("candidates", []))
-        phase = existing_checkpoint.get("phase", "1a")
-        cursor = existing_checkpoint.get("mix_cursor", 0)
-        print(f"  Resuming from checkpoint: {n_existing:,} solutions, phase={phase}, cursor={cursor}")
-    else:
-        print(f"  Starting fresh (no checkpoint found)")
-
-    # Set THRESHOLDS to just this one so optimize_threshold uses correct bounds
-    s1.THRESHOLDS = [threshold]
-
-    # Run optimization
-    start = time.time()
-    print(f"\n  Running optimize_threshold({iso}, {threshold}%)...")
-
-    candidates, pruning_info = s1.optimize_threshold(
-        iso,
-        threshold,
-        demand_arr,
-        supply_matrix,
-        hydro_cap,
-        prev_pruning=None,
-        cross_feasible_mixes=cross_feasible if cross_feasible else None,
-        storage_levels=None,  # Use default coarse storage sweep
-        max_runtime_seconds=max_runtime_seconds,
-        max_mixes_per_run=max_mixes_per_run if max_mixes_per_run > 0 else None,
-    )
-
-    elapsed = time.time() - start
-    completed = pruning_info.get("completed", True)
-
-    print(f"\n  Results: {len(candidates):,} solutions in {elapsed:.1f}s")
-    print(f"  Status: {'COMPLETED' if completed else 'CHECKPOINTED (partial — resume on re-trigger)'}")
-
-    # Save final parquet if completed
-    if completed:
-        s1._save_threshold_done(iso, threshold, candidates)
-        done_path = s1._threshold_done_path(iso, threshold)
-        if os.path.exists(done_path):
-            size_mb = os.path.getsize(done_path) / (1024 * 1024)
-            print(f"  Output: {done_path} ({size_mb:.1f} MB)")
-        else:
-            print(f"  WARNING: Expected output at {done_path} but file not found")
-    else:
-        # Progress already saved by optimize_threshold's internal checkpointing
-        progress_path = s1._mix_progress_path(iso, threshold)
-        if os.path.exists(progress_path):
-            size_mb = os.path.getsize(progress_path) / (1024 * 1024)
-            print(f"  Checkpoint: {progress_path} ({size_mb:.1f} MB)")
-
-    # Add this threshold's feasible mixes to cross_feasible for subsequent thresholds
-    for c in candidates:
-        rm = c['resource_mix']
-        cross_feasible.add((rm['clean_firm'], rm['solar'], rm['wind'], rm['hydro']))
-
-    return candidates, completed, cross_feasible
 
 
 def main():
     args = parse_args()
 
     iso = args.iso.upper()
-    max_runtime_minutes = args.max_runtime_minutes
-    max_mixes_per_run = args.max_mixes_per_run
 
     # Resolve thresholds: --thresholds takes priority, fallback to --threshold
     if args.thresholds is not None:
@@ -213,26 +141,21 @@ def main():
     # Validate and match thresholds
     thresholds = validate_thresholds(thresholds)
 
-    max_runtime_seconds = None
-    if max_runtime_minutes > 0:
-        max_runtime_seconds = max_runtime_minutes * 60
-
     threshold_strs = ', '.join(f"{t}%" for t in thresholds)
+    rtypes = s1.get_resource_types(iso)
     print("=" * 70)
-    print(f"  Step 1 PFS — ISO/Threshold Runner")
+    print(f"  Step 1 PFS v5.0 — ISO/Threshold Runner")
     print(f"  ISO: {iso}")
     print(f"  Thresholds: {threshold_strs}  ({len(thresholds)} total)")
+    print(f"  Resources: {len(rtypes)}D ({', '.join(rtypes)})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled (NumPy fallback)'}")
-    if max_runtime_minutes > 0:
-        print(f"  Runtime cap: {max_runtime_minutes:.0f} minutes per threshold")
-    if max_mixes_per_run > 0:
-        print(f"  Mix cap: {max_mixes_per_run:,} mixes per threshold")
     print("=" * 70)
 
     # Load data (once for all thresholds)
+    print("\nLoading data...")
     demand_data, gen_profiles, _, _ = s1.load_data()
 
-    # JIT warmup (once)
+    # JIT warmup (once) — matches step1_pfs_generator.main() warmup
     if s1.HAS_NUMBA:
         print("  Warming up Numba JIT...")
         H = s1.H
@@ -254,60 +177,53 @@ def main():
                                        0.85, 0.85, 0.50, 4, 8, 100, 168, 48)
         print("  JIT compilation complete")
 
-    # Prepare ISO data (once for all thresholds)
+    # Override THRESHOLDS to only run the requested subset
+    original_thresholds = list(s1.THRESHOLDS)
+    s1.THRESHOLDS = thresholds
+
+    # Prepare ISO data
     demand_norm = demand_data[iso]["normalized"]
     supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
-    demand_arr, supply_matrix = s1.prepare_numpy_profiles(demand_norm, supply_profiles)
-    hydro_cap = s1.HYDRO_CAPS[iso]
+    demand_arr, supply_matrix = s1.prepare_numpy_profiles(iso, demand_norm, supply_profiles)
 
-    # Seed cross_feasible_mixes from any existing completed parquets for this ISO
-    cross_feasible = set()
-    CROSS_POLL_COLS = {"clean_firm", "solar", "wind", "hydro"}
-    if os.path.exists(s1.STEP1_RAW_PFS_PARQUET_DIR):
-        import pyarrow.parquet as pq
-        for fname in os.listdir(s1.STEP1_RAW_PFS_PARQUET_DIR):
-            if fname.startswith(f"{iso}_t") and fname.endswith("_raw_pfs.parquet"):
-                fpath = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, fname)
-                try:
-                    schema = pq.read_schema(fpath)
-                    if not CROSS_POLL_COLS.issubset(schema.names):
-                        continue  # Old-schema parquet, skip silently
-                    t = pq.read_table(fpath, columns=list(CROSS_POLL_COLS))
-                    for row in t.to_pandas().drop_duplicates().itertuples(index=False):
-                        cross_feasible.add((row.clean_firm, row.solar, row.wind, row.hydro))
-                except Exception as e:
-                    print(f"  Warning: Could not read {fname} for cross-pollination: {e}")
-    if cross_feasible:
-        print(f"  Loaded {len(cross_feasible):,} feasible mixes from existing parquets for cross-pollination")
+    os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
 
-    # Run each threshold sequentially
-    results = {}  # threshold -> (n_candidates, completed)
+    # Use process_iso — the same function main() uses. This ensures consistent
+    # behavior (coarse cache → two-phase adaptive storage → save per threshold).
+    print(f"\nRunning process_iso for {iso} ({len(thresholds)} thresholds)...")
     total_start = time.time()
 
-    for i, threshold in enumerate(thresholds):
-        print(f"\n{'=' * 70}")
-        print(f"  [{i+1}/{len(thresholds)}] Threshold: {threshold}%")
-        print(f"{'=' * 70}")
-
-        candidates, completed, cross_feasible = run_single_threshold(
-            iso, threshold, demand_arr, supply_matrix, hydro_cap,
-            cross_feasible, max_runtime_seconds, max_mixes_per_run,
-        )
-        results[threshold] = (len(candidates), completed)
+    iso_name, iso_results = s1.process_iso((iso, demand_data, gen_profiles))
 
     total_elapsed = time.time() - total_start
 
-    # Final summary
+    # Count solutions from parquet outputs
+    import pyarrow.parquet as pq
     print(f"\n{'=' * 70}")
     print(f"  SUMMARY — {iso}  ({len(thresholds)} threshold{'s' if len(thresholds) > 1 else ''})")
     print(f"  Total elapsed: {total_elapsed:.1f}s")
-    print(f"  {'Threshold':<12} {'Solutions':>12} {'Status':<15}")
-    print(f"  {'-'*12} {'-'*12} {'-'*15}")
+    print(f"  {'Threshold':<12} {'Solutions':>12} {'Output':<50}")
+    print(f"  {'-'*12} {'-'*12} {'-'*50}")
+
+    total_solutions = 0
     for threshold in thresholds:
-        n_cands, completed = results[threshold]
-        status = 'COMPLETED' if completed else 'CHECKPOINTED'
-        print(f"  {str(threshold)+'%':<12} {n_cands:>12,} {status:<15}")
+        done_path = s1._threshold_done_path(iso, threshold)
+        if os.path.exists(done_path):
+            try:
+                n_rows = pq.read_table(done_path).num_rows
+                size_mb = os.path.getsize(done_path) / (1024 * 1024)
+                total_solutions += n_rows
+                print(f"  {str(threshold)+'%':<12} {n_rows:>12,} {done_path} ({size_mb:.1f} MB)")
+            except Exception as e:
+                print(f"  {str(threshold)+'%':<12} {'ERROR':>12} {e}")
+        else:
+            print(f"  {str(threshold)+'%':<12} {'MISSING':>12} {done_path}")
+
+    print(f"\n  Total: {total_solutions:,} solutions in {total_elapsed:.1f}s")
     print(f"{'=' * 70}")
+
+    # Restore thresholds
+    s1.THRESHOLDS = original_thresholds
 
 
 if __name__ == "__main__":
