@@ -18,12 +18,15 @@
 - Wired into `step7_generate_shared_data.py` → OPTIMAL_TARGETS constant in shared-data.js
 - Added to Step 6 GitHub Actions workflow (parallel batch with MAC, LMP, compressed day, etc.)
 - Added scipy to workflow dependencies
-- Documented methodology in SPEC.md §7.4
+- **Gas cost separation (Feb 26)**: MAC uses `effective_cost` (clean procurement only), NOT `total_system_cost` (which includes gas backup). Gas backup is a system reliability cost, not an abatement cost. See §7.4.1.
+- Added `CLEAN_COST_DATA` extraction to step7 (P10/P50/P90 of effective_cost across scenarios)
+- Fixed step6_consequential_queue.py MAC to exclude gas backup cost
 
 **Next steps:**
 - [ ] Run Step 6 workflow to generate optimal_targets.json
 - [ ] Build dashboard visualization for optimal target crossover chart on abatement page
 - [ ] Wire no-regrets investment data into research paper narrative
+- [ ] Add prominent gas capacity warning to consequential scenario dashboard
 
 ### Scenario Comparison Page Fixes (Feb 26, 2026)
 
@@ -1880,8 +1883,32 @@ Within the crossover range, some resource investments are needed regardless of w
 **Implementation**: `scripts/step6_compute_optimal_targets.py` (Step 6 post-processor, runs in parallel with MAC/LMP/etc.)
 - Outputs: `data/step5-post-processing/optimal_targets.json`, `dashboard/js/optimal-target-data.js`
 - Consumed by: `step7_generate_shared_data.py` → OPTIMAL_TARGETS in shared-data.js
-- Depends on: SYSTEM_COST (L/M/H), RESOURCE_MIX_DATA, emission rates, DAC trajectories
+- Depends on: CLEAN_COST (L/M/H effective_cost, no gas backup), RESOURCE_MIX_DATA, emission rates, DAC trajectories
 - No dispatch cache dependency — uses pre-computed Step 3 cost data
+
+#### 7.4.1 Gas Cost Separation in MAC (Decision: Feb 26, 2026)
+
+**Decision**: MAC calculations use `effective_cost` (clean procurement only). Gas backup capacity cost is excluded from MAC because it is a system reliability cost, not an abatement cost.
+
+**Rationale**:
+- The MAC answers: "how much does it cost to abate one more ton of CO₂ via clean energy procurement?"
+- Gas backup capacity is needed for grid reliability regardless of CFE target — it keeps the lights on
+- Including gas backup in the MAC conflates the abatement cost with the reliability cost, distorting the crossover with DAC
+- `step6_compute_mac_stats.py` already correctly uses `cost_incremental` (= `effective_cost - wholesale`) for MAC
+- `step6_scenario_comparison.py` already correctly subtracts gas_cost before computing MAC: `new_build_per_mwh = total_cost - gas_cost`
+
+**What changed**:
+- `step6_compute_optimal_targets.py`: `SYSTEM_COST` (total_system_cost incl. gas) → `CLEAN_COST` (effective_cost only)
+  - Medium: exact `effective_cost` from EFFECTIVE_COST_DATA
+  - Low/High: approximation = `SYSTEM_COST(P10/P90) - gas_backup_cost(medium scenario)`
+- `step6_consequential_queue.py`: MAC formula stripped `+ start/end['gas_cost']`; gas cost tracked separately as `delta_gas_cost_per_mwh`
+- `step7_generate_shared_data.py`: added `CLEAN_COST_DATA` extraction (P10/P50/P90 of `effective_cost` across scenarios)
+
+**Gas capacity as educational warning**:
+- Gas backup cost is NOT part of the MAC but IS a critical educational point
+- Consequential scenario dashboard must prominently warn: "Chasing cheap carbon without understanding system needs means retaining or building new gas capacity — an unavoidable system cost"
+- `GAS_BACKUP_COST` per threshold per ISO tracked in optimal targets output for dashboard overlay
+- `gas_cost_per_mwh_end` and `delta_gas_cost_per_mwh` added to consequential queue output
 
 ---
 
