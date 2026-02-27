@@ -139,10 +139,10 @@ def get_dispatch_co2(iso, threshold, med_data, egrid, demand_data, gen_profiles)
         return None
 
     resource_pcts = mix_info['resource_pct']
-    proc_pct = mix_info['procurement_pct']
     bat_pct = mix_info.get('battery_dispatch_pct', 0)
     bat8_pct = mix_info.get('battery8_dispatch_pct', 0)
     ldes_pct = mix_info.get('ldes_dispatch_pct', 0)
+    h2_pct = mix_info.get('h2_dispatch_pct', 0)
     demand_mwh = mix_info['demand_mwh']
 
     # Try dispatch cache first
@@ -152,7 +152,7 @@ def get_dispatch_co2(iso, threshold, med_data, egrid, demand_data, gen_profiles)
 
     dispatch_result, cache_hit = get_or_compute_dispatch(
         iso, demand_norm, supply_profiles, resource_pcts,
-        proc_pct, bat_pct, bat8_pct, ldes_pct,
+        100, bat_pct, bat8_pct, ldes_pct,
         cache=dispatch_cache)
 
     if not cache_hit:
@@ -271,17 +271,15 @@ def extract_medium_scenarios(df):
         for row in iso_df.itertuples(index=False):
             t = float(row.threshold)
             demand_twh = row.annual_demand_mwh / 1e6
-            proc = row.procurement_pct / 100
 
             res_twh = {}
             for res in RESOURCES:
                 pct = getattr(row, f'mix_{res}') / 100
-                res_twh[res] = pct * proc * demand_twh
+                res_twh[res] = pct * demand_twh
 
             result[iso][t] = {
                 'demand_twh': demand_twh,
                 'demand_mwh': row.annual_demand_mwh,
-                'procurement_pct': row.procurement_pct,
                 'match_score': row.hourly_match_score,
                 'eff_cost': row.cost_effective_cost,
                 'total_cost': row.cost_total_cost,
@@ -295,6 +293,7 @@ def extract_medium_scenarios(df):
                 'battery_dispatch_pct': float(row.battery_dispatch_pct),
                 'battery8_dispatch_pct': float(getattr(row, 'battery8_dispatch_pct', 0)),
                 'ldes_dispatch_pct': float(row.ldes_dispatch_pct),
+                'h2_dispatch_pct': float(getattr(row, 'h2_dispatch_pct', 0)),
                 'gas_backup_mw': float(row.ra_gas_backup_needed_mw),
                 'new_gas_mw': float(row.ra_new_gas_build_mw),
                 'gas_cost': float(row.ra_gas_backup_cost_per_mwh),
@@ -345,8 +344,8 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             co2_displaced_mt = delta_co2_mt
 
             # Clean procurement cost only (no gas backup — gas is a system cost, not abatement cost)
-            cost_start = start['eff_cost'] * start['procurement_pct'] / 100
-            cost_end = end['eff_cost'] * end['procurement_pct'] / 100
+            cost_start = start['eff_cost']
+            cost_end = end['eff_cost']
             delta_cost_per_mwh = cost_end - cost_start
             delta_cost_total_bn = delta_cost_per_mwh * demand_mwh / 1e9
             # Gas backup cost tracked separately for educational overlay
@@ -391,7 +390,6 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 'delta_cost_total_bn': round(delta_cost_total_bn, 2),
                 'delta_resources': {k: round(v, 1) for k, v in delta_resources.items()},
                 'end_resource_twh': {k: round(v, 1) for k, v in end['resource_twh'].items()},
-                'end_procurement_pct': end['procurement_pct'],
                 'gas_backup_mw_end': end['gas_backup_mw'],
                 'gas_cost_per_mwh_end': round(end['gas_cost'], 2),
                 'delta_gas_cost_per_mwh': round(delta_gas_cost_per_mwh, 2),
@@ -496,7 +494,6 @@ def compute_resource_trajectories(med_data):
             d = iso_data[t_float]
             row = {
                 'threshold': t,
-                'procurement_pct': d['procurement_pct'],
                 'eff_cost': d['eff_cost'],
                 'match_score': d['match_score'],
             }

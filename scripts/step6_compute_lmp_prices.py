@@ -195,7 +195,7 @@ def compute_marginal_costs(fuel_level='Medium', co2_level='Medium'):
     return costs
 
 
-def _compute_clean_peak_mw(iso, resource_mix, procurement_pct, battery_pct=0,
+def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
                            battery8_pct=0, ldes_pct=0):
     """Compute clean peak capacity contribution (MW) from resource mix.
 
@@ -206,13 +206,12 @@ def _compute_clean_peak_mw(iso, resource_mix, procurement_pct, battery_pct=0,
     demand_twh = BASE_DEMAND_TWH.get(iso, 0)
     avg_demand_mw = (demand_twh * 1e6) / H  # TWh → MWh / 8760 → avg MW
 
-    proc = procurement_pct / 100.0
     clean_peak = (
-        proc * resource_mix.get('clean_firm', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
-        proc * resource_mix.get('solar', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
-        proc * resource_mix.get('wind', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
-        proc * resource_mix.get('ccs_ccgt', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
-        proc * resource_mix.get('hydro', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+        resource_mix.get('clean_firm', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        resource_mix.get('solar', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
+        resource_mix.get('wind', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
+        resource_mix.get('ccs_ccgt', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        resource_mix.get('hydro', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
         battery_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         battery8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
@@ -221,7 +220,7 @@ def _compute_clean_peak_mw(iso, resource_mix, procurement_pct, battery_pct=0,
 
 
 def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw=None,
-                             resource_mix=None, procurement_pct=100,
+                             resource_mix=None,
                              battery_pct=0, battery8_pct=0, ldes_pct=0,
                              co2_level='Medium'):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
@@ -239,7 +238,6 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         fuel_level: 'Low', 'Medium', 'High'
         total_fossil_mw: total fossil capacity in MW (if None, RA+GAF estimate)
         resource_mix: dict with clean resource percentages (for ELCC calculation)
-        procurement_pct: procurement level (%)
         battery_pct: battery dispatch percentage
         battery8_pct: battery8 dispatch percentage
         ldes_pct: LDES dispatch percentage
@@ -265,7 +263,7 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
             # Compute clean peak MW using actual resource mix when available
             if resource_mix is not None:
                 clean_peak_mw = _compute_clean_peak_mw(
-                    iso, resource_mix, procurement_pct,
+                    iso, resource_mix,
                     battery_pct, battery8_pct, ldes_pct)
             else:
                 # Fallback: estimate from clean_pct with conservative blended credit
@@ -1047,10 +1045,10 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
         threshold = sc['threshold']
         scenario_key = sc.get('scenario', '')
         resource_mix = sc['resource_mix']
-        procurement_pct = sc.get('procurement_pct', 100)
         batt4 = sc.get('battery_dispatch_pct', 0)
         batt8 = sc.get('battery8_dispatch_pct', 0)
         ldes = sc.get('ldes_dispatch_pct', 0)
+        h2 = sc.get('h2_dispatch_pct', 0)
 
         # Archetype dedup
         akey = archetype_key(resource_mix, fuel_level, threshold)
@@ -1069,10 +1067,9 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
             continue
         seen_archetypes.add(akey)
 
-        # Get or compute dispatch
         dispatch, cache_hit = get_or_compute_dispatch(
             iso, demand_norm, supply_profiles, resource_mix,
-            procurement_pct, batt4, batt8, ldes,
+            100, batt4, batt8, ldes,
             cache=dispatch_cache)
 
         if cache_hit:
@@ -1083,7 +1080,7 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
         # Build merit-order stack for this threshold (RA+GAF aware)
         stack, total_fossil_mw = build_merit_order_stack(
             iso, threshold, fuel_level,
-            resource_mix=resource_mix, procurement_pct=procurement_pct,
+            resource_mix=resource_mix,
             battery_pct=batt4, battery8_pct=batt8, ldes_pct=ldes)
 
         # Compute hourly LMP
@@ -1211,26 +1208,25 @@ def run_test_cases(iso='PJM'):
         print(f"    Mix: CF={resource_mix['clean_firm']}% Sol={resource_mix['solar']}% "
               f"Wind={resource_mix['wind']}% CCS={resource_mix['ccs_ccgt']}% "
               f"Hydro={resource_mix['hydro']}%")
-        print(f"    Procurement: {sc.get('procurement_pct', 100)}%, "
-              f"Batt4: {sc.get('battery_dispatch_pct', 0)}%, "
-              f"LDES: {sc.get('ldes_dispatch_pct', 0)}%")
+        print(f"    Batt4: {sc.get('battery_dispatch_pct', 0)}%, "
+              f"LDES: {sc.get('ldes_dispatch_pct', 0)}%, "
+              f"H2: {sc.get('h2_dispatch_pct', 0)}%")
 
-        # Dispatch
         dispatch = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, resource_mix,
-            sc.get('procurement_pct', 100),
+            100,
             sc.get('battery_dispatch_pct', 0),
             sc.get('battery8_dispatch_pct', 0),
-            sc.get('ldes_dispatch_pct', 0))
+            sc.get('ldes_dispatch_pct', 0),
+            h2_dispatch_pct=sc.get('h2_dispatch_pct', 0))
 
         # Merit-order stack (RA + GAF aware)
-        proc_pct = sc.get('procurement_pct', 100)
         batt4_pct = sc.get('battery_dispatch_pct', 0)
         batt8_pct = sc.get('battery8_dispatch_pct', 0)
         ldes_pct = sc.get('ldes_dispatch_pct', 0)
         stack, fossil_mw = build_merit_order_stack(
             iso, sc['threshold'], fuel_level,
-            resource_mix=resource_mix, procurement_pct=proc_pct,
+            resource_mix=resource_mix,
             battery_pct=batt4_pct, battery8_pct=batt8_pct, ldes_pct=ldes_pct)
         print(f"    Fossil stack ({fossil_mw:,.0f} MW):")
         for unit_type, cap, mc in stack:

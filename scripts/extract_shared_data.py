@@ -22,7 +22,7 @@ OUTPUT_PATH = os.path.join(ROOT_DIR, 'dashboard', 'js', 'shared-data-new-block.j
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.5', '99.9', '100']
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
-MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
+MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
 
 
 def medium_key(iso):
@@ -55,7 +55,7 @@ def load_scenarios(iso, threshold):
 # ============================================================================
 # RESOURCE_MIX_DATA
 # ============================================================================
-# Structure: { ISO: { resource: [15 values], ..., battery: [...], ldes: [...], procurement: [...] } }
+# Structure: { ISO: { resource: [15 values], ..., battery: [...], ldes: [...], h2: [...] } }
 # Indices match THRESHOLDS array
 
 resource_mix_data = {}
@@ -66,7 +66,7 @@ for iso in ISOS:
     iso_data['battery'] = []
     iso_data['battery8'] = []
     iso_data['ldes'] = []
-    iso_data['procurement'] = []
+    iso_data['h2'] = []
 
     for t in THRESHOLDS:
         scenarios = load_scenarios(iso, t)
@@ -78,14 +78,14 @@ for iso in ISOS:
             iso_data['battery'].append(sc.get('battery_dispatch_pct', 0))
             iso_data['battery8'].append(sc.get('battery8_dispatch_pct', 0))
             iso_data['ldes'].append(sc.get('ldes_dispatch_pct', 0))
-            iso_data['procurement'].append(sc.get('procurement_pct', 100))
+            iso_data['h2'].append(sc.get('h2_dispatch_pct', 0))
         else:
             for res in RESOURCES:
                 iso_data[res].append(0)
             iso_data['battery'].append(0)
             iso_data['battery8'].append(0)
             iso_data['ldes'].append(0)
-            iso_data['procurement'].append(100)
+            iso_data['h2'].append(0)
 
     resource_mix_data[iso] = iso_data
 
@@ -93,7 +93,7 @@ for iso in ISOS:
 # COMPRESSED_DAY_DATA
 # ============================================================================
 # Structure: { ISO: { demand: [15×24], matched: { resource: [15×24] }, gap: [15×24],
-#              battery_charge: [15×24], ldes_charge: [15×24] } }
+#              battery_charge: [15×24], battery8_charge: [15×24], ldes_charge: [15×24], h2_charge: [15×24] } }
 
 compressed_day_data = {}
 for iso in ISOS:
@@ -102,7 +102,9 @@ for iso in ISOS:
         'matched': {r: [] for r in MATCHED_RESOURCES},
         'gap': [],
         'battery_charge': [],
+        'battery8_charge': [],
         'ldes_charge': [],
+        'h2_charge': [],
     }
 
     for t in THRESHOLDS:
@@ -113,7 +115,9 @@ for iso in ISOS:
             iso_cd['demand'].append([round(v, 5) for v in cd['demand']])
             iso_cd['gap'].append([round(v, 5) for v in cd['gap']])
             iso_cd['battery_charge'].append([round(v, 5) for v in cd.get('battery_charge', [0]*24)])
+            iso_cd['battery8_charge'].append([round(v, 5) for v in cd.get('battery8_charge', [0]*24)])
             iso_cd['ldes_charge'].append([round(v, 5) for v in cd.get('ldes_charge', [0]*24)])
+            iso_cd['h2_charge'].append([round(v, 5) for v in cd.get('h2_charge', [0]*24)])
             for res in MATCHED_RESOURCES:
                 vals = cd.get('matched', {}).get(res, [0]*24)
                 iso_cd['matched'][res].append([round(v, 5) for v in vals])
@@ -121,7 +125,9 @@ for iso in ISOS:
             iso_cd['demand'].append([0]*24)
             iso_cd['gap'].append([0]*24)
             iso_cd['battery_charge'].append([0]*24)
+            iso_cd['battery8_charge'].append([0]*24)
             iso_cd['ldes_charge'].append([0]*24)
+            iso_cd['h2_charge'].append([0]*24)
             for res in MATCHED_RESOURCES:
                 iso_cd['matched'][res].append([0]*24)
 
@@ -175,13 +181,13 @@ lines.append('')
 lines.append('// --- Resource Mix (% of demand) — MMM_M_M scenario ---')
 lines.append('// Source: co2_results batch JSONs (Step 5)')
 lines.append(f'// Indices match THRESHOLDS array: {THRESHOLDS}')
-lines.append('// battery/ldes = dispatch % of demand; procurement = over-procurement %')
+lines.append('// battery/battery8/ldes/h2 = dispatch % of demand')
 lines.append('const RESOURCE_MIX_DATA = {')
 for iso in ISOS:
     d = resource_mix_data[iso]
     lines.append(f'    {iso}: {{')
-    for key in RESOURCES + ['battery', 'battery8', 'ldes', 'procurement']:
-        comma = ',' if key != 'procurement' else ''
+    for key in RESOURCES + ['battery', 'battery8', 'ldes', 'h2']:
+        comma = ',' if key != 'h2' else ''
         padding = ' ' * max(0, 12 - len(key))
         lines.append(f'        {key}:{padding}{fmt_array(d[key])}{comma}')
     comma = ',' if iso != ISOS[-1] else ''
@@ -226,9 +232,21 @@ for iso_idx, iso in enumerate(ISOS):
         lines.append(f'            {fmt_24h_array(arr)}{comma}')
     lines.append('        ],')
 
+    lines.append('        battery8_charge: [')
+    for i, arr in enumerate(cd['battery8_charge']):
+        comma = ',' if i < len(cd['battery8_charge']) - 1 else ''
+        lines.append(f'            {fmt_24h_array(arr)}{comma}')
+    lines.append('        ],')
+
     lines.append('        ldes_charge: [')
     for i, arr in enumerate(cd['ldes_charge']):
         comma = ',' if i < len(cd['ldes_charge']) - 1 else ''
+        lines.append(f'            {fmt_24h_array(arr)}{comma}')
+    lines.append('        ],')
+
+    lines.append('        h2_charge: [')
+    for i, arr in enumerate(cd['h2_charge']):
+        comma = ',' if i < len(cd['h2_charge']) - 1 else ''
         lines.append(f'            {fmt_24h_array(arr)}{comma}')
     lines.append('        ]')
 

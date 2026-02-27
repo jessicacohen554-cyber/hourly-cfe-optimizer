@@ -175,8 +175,8 @@ def main():
 
     for iso in ISOS:
         print(f"\n  {iso}")
-        print(f"  {'Thr':>6} | {'':>8} | {'CF':>5} {'Sol':>5} {'Wnd':>5} {'CCS':>5} {'Hyd':>5} | {'Proc':>5}")
-        print(f"  {'-'*6}-+-{'-'*8}-+-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-+-{'-'*5}")
+        print(f"  {'Thr':>6} | {'':>8} | {'CF':>5} {'Sol':>5} {'Wnd':>5} {'CCS':>5} {'Hyd':>5}")
+        print(f"  {'-'*6}-+-{'-'*8}-+-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}")
 
         for thr in THRESHOLDS:
             t_str = str(thr)
@@ -200,26 +200,20 @@ def main():
             bl_mix = bl_mixes[bl_med_idx]
             nb_mix = nb_mixes[nb_med_idx]
 
-            # Also get P50 procurement
-            bl_procs = np.array([sc['procurement_pct'] for sc in bl_sc.values()])
-            nb_procs = np.array([sc['procurement_pct'] for sc in nb_sc.values()])
-            bl_proc_med = int(np.median(bl_procs))
-            nb_proc_med = int(np.median(nb_procs))
-
             print(f"  {thr:>5}% | {'baseline':>8} | "
                   f"{bl_mix.get('clean_firm',0):>5} {bl_mix.get('solar',0):>5} "
                   f"{bl_mix.get('wind',0):>5} {bl_mix.get('ccs_ccgt',0):>5} "
-                  f"{bl_mix.get('hydro',0):>5} | {bl_proc_med:>4}%")
+                  f"{bl_mix.get('hydro',0):>5}")
             print(f"  {'':>6} | {'newbuild':>8} | "
                   f"{nb_mix.get('clean_firm',0):>5} {nb_mix.get('solar',0):>5} "
                   f"{nb_mix.get('wind',0):>5} {nb_mix.get('ccs_ccgt',0):>5} "
-                  f"{nb_mix.get('hydro',0):>5} | {nb_proc_med:>4}%")
+                  f"{nb_mix.get('hydro',0):>5}")
             # Delta
             d = {r: nb_mix.get(r,0) - bl_mix.get(r,0) for r in RESOURCES}
             print(f"  {'':>6} | {'Δ':>8} | "
                   f"{d['clean_firm']:>+5} {d['solar']:>+5} "
                   f"{d['wind']:>+5} {d['ccs_ccgt']:>+5} "
-                  f"{d['hydro']:>+5} | {nb_proc_med - bl_proc_med:>+4}%")
+                  f"{d['hydro']:>+5}")
 
     # ================================================================
     # 3. REPLACEMENT PREMIUM — Cost delta distributions
