@@ -317,16 +317,18 @@ def learning_fraction(threshold, scenario='B'):
 def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
     """Load feasible mixes for a single ISO from the step3 parquet file.
 
-    Returns dict: {threshold_str: [[cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%], ...]}
+    Returns dict: {threshold_str: [[cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%], ...]}
     """
     feasible_path = os.path.join(step3_dir, f'step3_feasible_{iso}.parquet')
     if not os.path.exists(feasible_path):
         return {}
 
     df = pd.read_parquet(feasible_path)
+    # v5.0: procurement baked into resource percentages
     mix_fields = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
-                  'procurement_pct', 'hourly_match_score',
-                  'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+                  'hourly_match_score',
+                  'battery_dispatch_pct', 'battery8_dispatch_pct',
+                  'ldes_dispatch_pct', 'h2_dispatch_pct']
     for col in mix_fields:
         if col not in df.columns:
             df[col] = 0
@@ -338,10 +340,10 @@ def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
         for _, row in grp.iterrows():
             rows.append([
                 row['clean_firm'], row['solar'], row['wind'],
-                row['ccs_ccgt'], row['hydro'], row['procurement_pct'],
+                row['ccs_ccgt'], row['hydro'],
                 round(row['hourly_match_score'], 1),
                 row['battery_dispatch_pct'], row['battery8_dispatch_pct'],
-                row['ldes_dispatch_pct'],
+                row['ldes_dispatch_pct'], row['h2_dispatch_pct'],
             ])
         result[t_str] = rows
     return result
@@ -476,10 +478,13 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     Returns: dict with cost details + gas backup
     """
     cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
-    proc_pct, match_score = mix[5], mix[6]
-    bat4_pct, bat8_pct, ldes_pct = mix[7], mix[8], mix[9]
+    # v5.0: procurement_pct is always 100 (baked into resource percentages)
+    proc_pct = 100
+    match_score = mix[5]
+    bat4_pct, bat8_pct, ldes_pct = mix[6], mix[7], mix[8]
+    h2_pct = mix[9] if len(mix) > 9 else 0
 
-    proc = proc_pct / 100.0
+    proc = 1.0  # procurement is always 100% in v5.0
     match_frac = match_score / 100.0
 
     ren_name = LEVEL_NAME[sens['ren']]

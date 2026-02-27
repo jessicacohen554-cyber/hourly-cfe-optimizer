@@ -81,7 +81,7 @@ def get_emission_rate_for_threshold(iso, threshold_pct, emission_rates, fossil_m
 # FAST PATH: CO₂ from match_score (no hourly dispatch needed)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def fast_co2_from_match_score(match_score, resource_mix, procurement_pct,
+def fast_co2_from_match_score(match_score, resource_mix,
                                threshold_pct, iso, emission_rates, fossil_mix,
                                demand_total_mwh, rate_cache=None):
     """Compute CO₂ abated using match_score — no hourly dispatch reconstruction.
@@ -115,7 +115,7 @@ def fast_co2_from_match_score(match_score, resource_mix, procurement_pct,
 
     # CCS contribution (flat baseload — nearly all output displaces fossil)
     ccs_pct = resource_mix.get('ccs_ccgt', 0)
-    ccs_supply_mwh = (ccs_pct / 100.0) * (procurement_pct / 100.0) * demand_total_mwh
+    ccs_supply_mwh = (ccs_pct / 100.0) * demand_total_mwh
     ccs_effective_mwh = min(ccs_supply_mwh, fossil_displaced_mwh)
     non_ccs_mwh = fossil_displaced_mwh - ccs_effective_mwh
 
@@ -142,8 +142,9 @@ def fast_co2_from_match_score(match_score, resource_mix, procurement_pct,
 # ══════════════════════════════════════════════════════════════════════════════
 
 def compute_hourly_fossil_displacement(demand_norm, supply_profiles, resource_pcts,
-                                        procurement_pct, battery_dispatch_pct, ldes_dispatch_pct,
-                                        supply_matrix=None, dispatch_cache=None, iso=None):
+                                        battery_dispatch_pct, ldes_dispatch_pct,
+                                        supply_matrix=None, dispatch_cache=None, iso=None,
+                                        h2_dispatch_pct=0):
     """Reconstruct hourly clean supply and compute fossil displacement.
 
     Optimizations vs. original:
@@ -152,17 +153,18 @@ def compute_hourly_fossil_displacement(demand_norm, supply_profiles, resource_pc
     """
     battery8_pct = 0  # Original CO2 model didn't handle battery8
 
-    # Use dispatch cache if available
     if dispatch_cache is not None and iso is not None:
         result, hit = get_or_compute_dispatch(
             iso, demand_norm, supply_profiles, resource_pcts,
-            procurement_pct, battery_dispatch_pct, battery8_pct,
-            ldes_dispatch_pct, cache=dispatch_cache)
+            100, battery_dispatch_pct, battery8_pct,
+            ldes_dispatch_pct, h2_dispatch_pct=h2_dispatch_pct,
+            cache=dispatch_cache)
     else:
         result = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, resource_pcts,
-            procurement_pct, battery_dispatch_pct, battery8_pct,
-            ldes_dispatch_pct, supply_matrix=supply_matrix)
+            100, battery_dispatch_pct, battery8_pct,
+            ldes_dispatch_pct, supply_matrix=supply_matrix,
+            h2_dispatch_pct=h2_dispatch_pct)
 
     return result['fossil_displaced'], result['ccs_supply'], result['curtailed']
 
@@ -255,13 +257,12 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
         if 'sweep' in iso_data:
             for sweep_result in iso_data['sweep']:
                 resource_mix = sweep_result.get('resource_mix', {})
-                proc = sweep_result.get('procurement_pct', 100)
                 match_score = sweep_result.get('hourly_match_score', 0)
 
                 if match_score > 0:
                     # FAST PATH: use match_score
                     co2 = fast_co2_from_match_score(
-                        match_score, resource_mix, proc,
+                        match_score, resource_mix,
                         match_score, iso, emission_rates, fossil_mix,
                         demand_total_mwh, rate_cache)
                     sweep_result['co2_abated'] = co2
@@ -270,11 +271,13 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
                     # DISPATCH PATH: full hourly reconstruction
                     batt = sweep_result.get('battery_dispatch_pct', 0)
                     ldes = sweep_result.get('ldes_dispatch_pct', 0)
+                    h2 = sweep_result.get('h2_dispatch_pct', 0)
                     rate, info = get_emission_rate_for_threshold(
                         iso, match_score, emission_rates, fossil_mix)
                     fossil_displaced, ccs_supply, curtailed = compute_hourly_fossil_displacement(
-                        demand_norm, supply_profiles, resource_mix, proc, batt, ldes,
-                        supply_matrix=sup_matrix, dispatch_cache=dispatch_cache, iso=iso)
+                        demand_norm, supply_profiles, resource_mix, batt, ldes,
+                        supply_matrix=sup_matrix, dispatch_cache=dispatch_cache, iso=iso,
+                        h2_dispatch_pct=h2)
                     cache_dirty = True
                     co2 = compute_co2_hourly(
                         fossil_displaced, ccs_supply, rate, demand_total_mwh, info)
@@ -301,13 +304,12 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
 
             for sk, result in scenarios.items():
                 resource_mix = result.get('resource_mix', {})
-                proc = result.get('procurement_pct', 100)
                 match_score = result.get('hourly_match_score', 0)
 
                 if match_score > 0:
                     # FAST PATH
                     co2 = fast_co2_from_match_score(
-                        match_score, resource_mix, proc,
+                        match_score, resource_mix,
                         threshold_pct, iso, emission_rates, fossil_mix,
                         demand_total_mwh, rate_cache)
                     result['co2_abated'] = co2
@@ -316,9 +318,11 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
                     # DISPATCH PATH
                     batt = result.get('battery_dispatch_pct', 0)
                     ldes = result.get('ldes_dispatch_pct', 0)
+                    h2 = result.get('h2_dispatch_pct', 0)
                     fossil_displaced, ccs_supply, curtailed = compute_hourly_fossil_displacement(
-                        demand_norm, supply_profiles, resource_mix, proc, batt, ldes,
-                        supply_matrix=sup_matrix, dispatch_cache=dispatch_cache, iso=iso)
+                        demand_norm, supply_profiles, resource_mix, batt, ldes,
+                        supply_matrix=sup_matrix, dispatch_cache=dispatch_cache, iso=iso,
+                        h2_dispatch_pct=h2)
                     cache_dirty = True
                     co2 = compute_co2_hourly(
                         fossil_displaced, ccs_supply, rate, demand_total_mwh, info)
@@ -389,13 +393,7 @@ def recompute_dg_co2(input_dir, output_dir, run_isos, emission_rates, fossil_mix
             fallback_demand = BASE_DEMAND_TWH.get(iso, 0) * 1e6
             demand_mwh_arr = np.where(demand_mwh_arr > 0, demand_mwh_arr, fallback_demand)
 
-            # 3. Procurement
-            if 'procurement_pct' in df.columns:
-                procurement_arr = df['procurement_pct'].astype(float).values
-            else:
-                procurement_arr = np.full(len(df), 100.0)
-
-            # 4. CCS mix percentage
+            # 3. CCS mix percentage
             ccs_col = 'mix_ccs_ccgt'
             if ccs_col in df.columns:
                 ccs_pct_arr = df[ccs_col].astype(float).values

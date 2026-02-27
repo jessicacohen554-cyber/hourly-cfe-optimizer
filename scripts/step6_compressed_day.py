@@ -53,8 +53,8 @@ DATA_YEAR = '2025'
 # DISPATCH — uses dispatch_utils cache (populated by step5_build_dispatch_cache)
 # ============================================================================
 
-def dispatch_from_cache(iso, mix, procurement_pct, battery_pct, battery8_pct,
-                        ldes_pct, demand_norm, gen_profiles, dispatch_cache):
+def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
+                        ldes_pct, h2_pct, demand_norm, gen_profiles, dispatch_cache):
     """Look up or compute dispatch and return compressed-day-format result dict.
 
     Tries the pre-built dispatch cache (step5_build_dispatch_cache) first. Falls back to live computation
@@ -67,7 +67,7 @@ def dispatch_from_cache(iso, mix, procurement_pct, battery_pct, battery8_pct,
         'ccs_ccgt': mix.get('ccs_ccgt', 0),
         'hydro': mix.get('hydro', 0),
     }
-    key = _archetype_key(iso, resource_pcts, procurement_pct,
+    key = _archetype_key(iso, resource_pcts, 100,
                          battery_pct, battery8_pct, ldes_pct)
 
     demand_arr = np.array(demand_norm[:H], dtype=np.float64)
@@ -97,9 +97,10 @@ def dispatch_from_cache(iso, mix, procurement_pct, battery_pct, battery8_pct,
     supply_profiles = get_supply_profiles(iso, gen_profiles)
     supply_matrix = build_supply_matrix(supply_profiles)
     result = reconstruct_hourly_dispatch(
-        demand_norm, supply_profiles, resource_pcts, procurement_pct,
+        demand_norm, supply_profiles, resource_pcts, 100,
         battery_pct, battery8_pct, ldes_pct,
-        supply_matrix=supply_matrix, detailed=True)
+        supply_matrix=supply_matrix, detailed=True,
+        h2_dispatch_pct=h2_pct)
 
     matched = {}
     surplus = {}
@@ -176,14 +177,18 @@ def round_arrays(compressed, decimals=5):
 # MIX KEY — unique identifier for a resource mix
 # ============================================================================
 
-def mix_key(mix, procurement_pct, battery_pct, ldes_pct):
-    """Generate a compact string key for a unique mix configuration."""
+def mix_key(mix, battery_pct, ldes_pct, h2_pct=0):
+    """Generate a compact string key for a unique mix configuration.
+
+    In v5.0, procurement_pct is always 100% (baked into resource percentages),
+    so it's no longer part of the key.
+    """
     cf = mix.get('clean_firm', 0)
     s = mix.get('solar', 0)
     w = mix.get('wind', 0)
     c = mix.get('ccs_ccgt', 0)
     h = mix.get('hydro', 0)
-    return f"{cf}_{s}_{w}_{c}_{h}_{procurement_pct}_{battery_pct}_{ldes_pct}"
+    return f"{cf}_{s}_{w}_{c}_{h}_{battery_pct}_{ldes_pct}_{h2_pct}"
 
 
 # ============================================================================
@@ -244,7 +249,7 @@ def main():
         # Collect ALL unique mixes from feasible_mixes (not just scenario-selected)
         # These are the mixes that findOptimalMix can select under any cost/growth combo
         # Supports both columnar format (new: {col: [vals...]}) and row format (old: [{col: val}...])
-        unique_mixes = {}  # mix_key → (mix_dict, proc, batt, batt8, ldes)
+        unique_mixes = {}  # mix_key → (mix_dict, batt, batt8, ldes, h2)
 
         thresholds = iso_results.get('thresholds', {})
         for t_str in DASHBOARD_THRESHOLDS:
@@ -262,24 +267,24 @@ def main():
                         'ccs_ccgt': fmixes['ccs_ccgt'][i],
                         'hydro': fmixes['hydro'][i],
                     }
-                    proc = fmixes['procurement_pct'][i]
                     batt = fmixes.get('battery_dispatch_pct', [0] * n_mixes)[i]
                     batt8 = fmixes.get('battery8_dispatch_pct', [0] * n_mixes)[i]
                     ldes = fmixes.get('ldes_dispatch_pct', [0] * n_mixes)[i]
-                    mk = mix_key(rm, proc, batt, ldes)
+                    h2 = fmixes.get('h2_dispatch_pct', [0] * n_mixes)[i]
+                    mk = mix_key(rm, batt, ldes, h2)
                     if mk not in unique_mixes:
-                        unique_mixes[mk] = (rm, proc, batt, batt8, ldes)
+                        unique_mixes[mk] = (rm, batt, batt8, ldes, h2)
             elif isinstance(fmixes, list):
                 # Legacy row format: [{resource_mix: {...}, ...}, ...]
                 for fm in fmixes:
                     rm = fm['resource_mix']
-                    proc = fm['procurement_pct']
                     batt = fm.get('battery_dispatch_pct', 0)
                     batt8 = fm.get('battery8_dispatch_pct', 0)
                     ldes = fm.get('ldes_dispatch_pct', 0)
-                    mk = mix_key(rm, proc, batt, ldes)
+                    h2 = fm.get('h2_dispatch_pct', 0)
+                    mk = mix_key(rm, batt, ldes, h2)
                     if mk not in unique_mixes:
-                        unique_mixes[mk] = (rm, proc, batt, batt8, ldes)
+                        unique_mixes[mk] = (rm, batt, batt8, ldes, h2)
 
             # Extract from scenarios (parquet format — winning mixes across cost combos)
             scenarios = t_data.get('scenarios', {})
@@ -287,13 +292,13 @@ def main():
                 rm = sc.get('resource_mix', {})
                 if not rm or 'clean_firm' not in rm:
                     continue
-                proc = sc.get('procurement_pct', 100)
                 batt = sc.get('battery_dispatch_pct', 0)
                 batt8 = sc.get('battery8_dispatch_pct', 0)
                 ldes = sc.get('ldes_dispatch_pct', 0)
-                mk = mix_key(rm, proc, batt, ldes)
+                h2 = sc.get('h2_dispatch_pct', 0)
+                mk = mix_key(rm, batt, ldes, h2)
                 if mk not in unique_mixes:
-                    unique_mixes[mk] = (rm, proc, batt, batt8, ldes)
+                    unique_mixes[mk] = (rm, batt, batt8, ldes, h2)
 
         n_unique = len(unique_mixes)
         total_mixes += n_unique
@@ -302,9 +307,9 @@ def main():
         # Dispatch and compress each unique mix
         iso_profiles = {}
         cache_hits = 0
-        for i, (mk, (mix_dict, proc, batt, batt8, ldes)) in enumerate(unique_mixes.items()):
+        for i, (mk, (mix_dict, batt, batt8, ldes, h2)) in enumerate(unique_mixes.items()):
             result = dispatch_from_cache(
-                iso, mix_dict, proc, batt, batt8, ldes,
+                iso, mix_dict, batt, batt8, ldes, h2,
                 demand_norm, gen_profiles, dispatch_cache)
             compressed = compress_to_24h(result)
             iso_profiles[mk] = round_arrays(compressed)
