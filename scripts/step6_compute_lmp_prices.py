@@ -1218,20 +1218,21 @@ def run_test_cases(iso='PJM'):
 
         dispatch = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, resource_mix,
-            100,
-            sc.get('battery_dispatch_pct', 0),
-            sc.get('battery8_dispatch_pct', 0),
-            sc.get('ldes_dispatch_pct', 0),
+            battery_dispatch_pct=sc.get('battery_dispatch_pct', 0),
+            battery8_dispatch_pct=sc.get('battery8_dispatch_pct', 0),
+            ldes_dispatch_pct=sc.get('ldes_dispatch_pct', 0),
             h2_dispatch_pct=sc.get('h2_dispatch_pct', 0))
 
         # Merit-order stack (RA + GAF aware)
         batt4_pct = sc.get('battery_dispatch_pct', 0)
         batt8_pct = sc.get('battery8_dispatch_pct', 0)
         ldes_pct = sc.get('ldes_dispatch_pct', 0)
+        h2_pct = sc.get('h2_dispatch_pct', 0)
         stack, fossil_mw = build_merit_order_stack(
             iso, sc['threshold'], fuel_level,
             resource_mix=resource_mix,
-            battery_pct=batt4_pct, battery8_pct=batt8_pct, ldes_pct=ldes_pct)
+            battery_pct=batt4_pct, battery8_pct=batt8_pct, ldes_pct=ldes_pct,
+            h2_pct=h2_pct)
         print(f"    Fossil stack ({fossil_mw:,.0f} MW):")
         for unit_type, cap, mc in stack:
             print(f"      {unit_type:>12}: {cap:>8,.0f} MW @ ${mc:.2f}/MWh")
