@@ -107,6 +107,13 @@ FULL_LCOE_TABLES = {
         'Medium': {'CAISO': 180, 'ERCOT': 155, 'PJM': 170, 'NYISO': 200, 'NEISO': 190, 'MISO': 160, 'SPP': 152},
         'High':   {'CAISO': 234, 'ERCOT': 202, 'PJM': 221, 'NYISO': 260, 'NEISO': 247, 'MISO': 208, 'SPP': 198},
     },
+    # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE.
+    # Shares 'ldes_lvl' sensitivity toggle (both long-duration storage).
+    'h2': {
+        'Low':    {'CAISO': 210, 'ERCOT': 185, 'PJM': 200, 'NYISO': 230, 'NEISO': 220, 'MISO': 190, 'SPP': 182},
+        'Medium': {'CAISO': 300, 'ERCOT': 265, 'PJM': 285, 'NYISO': 330, 'NEISO': 315, 'MISO': 272, 'SPP': 260},
+        'High':   {'CAISO': 420, 'ERCOT': 370, 'PJM': 400, 'NYISO': 460, 'NEISO': 440, 'MISO': 380, 'SPP': 365},
+    },
 }
 
 FULL_TRANSMISSION_TABLES = {
@@ -145,6 +152,12 @@ FULL_TRANSMISSION_TABLES = {
         'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
         'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
         'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 3, 'SPP': 3},
+    },
+    'h2': {
+        'None': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0, 'MISO': 0, 'SPP': 0},
+        'Low': {'CAISO': 2, 'ERCOT': 2, 'PJM': 2, 'NYISO': 3, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
+        'Medium': {'CAISO': 4, 'ERCOT': 3, 'PJM': 4, 'NYISO': 6, 'NEISO': 5, 'MISO': 3, 'SPP': 3},
+        'High': {'CAISO': 7, 'ERCOT': 5, 'PJM': 7, 'NYISO': 10, 'NEISO': 9, 'MISO': 6, 'SPP': 5},
     },
     'hydro': {
         'None': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0, 'MISO': 0, 'SPP': 0},
@@ -229,6 +242,7 @@ EXISTING_GAS_FOM_KW_YR = {
 PEAK_CAPACITY_CREDITS = {
     'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
     'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
+    'h2': 0.85,  # H2 turbine: dispatchable but slower ramp than gas/battery
 }
 
 GAS_AVAILABILITY_FACTOR = {
@@ -617,6 +631,7 @@ def _cached_base_maps(scenario_key, iso):
         'clean_firm': _LCOE_FLAT[('clean_firm', firm, iso)],
         'battery': _LCOE_FLAT[('battery', battery, iso)],
         'ldes': _LCOE_FLAT[('ldes', ldes, iso)],
+        'h2': _LCOE_FLAT[('h2', ldes, iso)],  # H2 shares LDES toggle
         'hydro': 0,
     }
 
@@ -632,7 +647,8 @@ def compute_costs_for_scenario(iso, resource_mix, battery_pct,
                                 ldes_pct, match_score, scenario_key,
                                 apply_45q=True, neiso_gas_adder=False,
                                 tranche_cf_lcoe=None,
-                                existing_shares_override=None):
+                                existing_shares_override=None,
+                                h2_pct=0):
     """Recalculate costs for a scenario with optional corrections.
 
     Args:
@@ -698,6 +714,10 @@ def compute_costs_for_scenario(iso, resource_mix, battery_pct,
     ldes_cost = (ldes_pct / 100.0) * ldes_cost_rate
     total_cost_per_demand += ldes_cost
 
+    h2_cost_rate = lcoe_map.get('h2', 0) + tx_map.get('h2', 0)
+    h2_cost = (h2_pct / 100.0) * h2_cost_rate
+    total_cost_per_demand += h2_cost
+
     matched_fraction = match_score / 100.0 if match_score > 0 else 1.0
     effective_cost = total_cost_per_demand / matched_fraction
 
@@ -746,6 +766,7 @@ def add_neiso_gas_constraint(data):
                 apply_45q=True,
                 neiso_gas_adder=True,
                 tranche_cf_lcoe=tcl,
+                h2_pct=scenario.get('h2_dispatch_pct', 0),
             )
 
             neiso_no45q_costs = compute_costs_for_scenario(
@@ -757,6 +778,7 @@ def add_neiso_gas_constraint(data):
                 apply_45q=False,
                 neiso_gas_adder=True,
                 tranche_cf_lcoe=tcl,
+                h2_pct=scenario.get('h2_dispatch_pct', 0),
             )
 
             scenario['neiso_gas_adjusted'] = neiso_costs
@@ -807,6 +829,7 @@ def add_no45q_overlay(data, run_isos):
                     apply_45q=False,
                     neiso_gas_adder=False,
                     tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
+                    h2_pct=scenario.get('h2_dispatch_pct', 0),
                 )
 
                 scenario['no_45q_costs'] = no45q_costs
@@ -1148,11 +1171,11 @@ def process_dg_corrections(dg_rows, run_isos):
             neiso_costs = compute_costs_for_scenario(
                 iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=True, neiso_gas_adder=True,
-                existing_shares_override=existing_shares_scaled)
+                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct)
             neiso_no45q = compute_costs_for_scenario(
                 iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=False, neiso_gas_adder=True,
-                existing_shares_override=existing_shares_scaled)
+                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct)
             for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
                 row[f'neiso_gas_adj_{ckey}'] = neiso_costs.get(ckey)
                 row[f'neiso_gas_no45q_{ckey}'] = neiso_no45q.get(ckey)
@@ -1166,7 +1189,7 @@ def process_dg_corrections(dg_rows, run_isos):
             no45q_costs = compute_costs_for_scenario(
                 iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=False, neiso_gas_adder=False,
-                existing_shares_override=existing_shares_scaled)
+                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct)
         else:
             no45q_costs = neiso_no45q  # Already computed above
         for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
