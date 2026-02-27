@@ -1256,18 +1256,22 @@ def load_coarse_cache(iso):
 
 def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                        coarse_combos, coarse_scores,
-                       storage_levels=None):
+                       storage_levels=None, frontier_mixes=None):
     """Find feasible solutions for a single threshold × ISO.
 
     Flow:
-      1. Score all coarse generation mixes (no storage)
-      2. Feasible (score >= target) → keep as-is
-      3. Near-miss (within 40pp) with curtailment → fixed storage sweep
-      4. Fine refinement at 1% step around feasible archetypes
+      1. Procurement window pre-filter (lower bound = target, scaled upper)
+      2. Cross-threshold dominance pre-filter (skip cache entries dominated
+         by frontier mixes from prior thresholds)
+      3. Score all coarse generation mixes (no storage)
+      4. Feasible (score >= target) → keep as-is
+      5. Near-miss (within 40pp) with curtailment → fixed storage sweep
+      6. Fine refinement at 1% step around feasible archetypes
 
-    Storage levels are fixed coarse grids (3-4 levels per type),
-    threshold-dependent: expanded at ≥95% with H2 enabled.
-    Storage only evaluated on mixes with actual curtailment.
+    Args:
+        frontier_mixes: list of numpy arrays (resource mixes) from prior
+            thresholds. Cache entries dominated by any frontier mix are
+            skipped (more of every resource = wasteful).
 
     Returns list of candidate dicts.
     """
@@ -1325,19 +1329,52 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             }
             candidates.append(cand)
 
-    # ── Pre-filter: cap total procurement for low thresholds ──
-    # At 10% threshold, the cheapest mix is ~12-15% of one resource, not 200%
-    # solar. Capping procurement keeps only the lean, cost-relevant mixes.
-    # Without this, CAISO 5D has 1.6M feasible mixes at 10% — 99.97% of which
-    # are massively over-procured and would never be cost-optimal.
+    # ── Pre-filter: procurement window ──
+    # Lower bound: never search mixes with less total procurement than target.
+    # Upper bound scales with threshold to exclude over-procured mixes:
+    #   <50%:   target to max(target+30, 50)  (generous for low targets)
+    #   50-75%: target to 2× target
+    #   80-90%: target to 200%
+    #   >90%:   target to unlimited (dominance filter handles pruning)
+    total_procurement = coarse_combos.sum(axis=1)
+    proc_lower = threshold
     if threshold < 50:
-        procurement_cap = max(threshold + 30, 50)  # generous headroom
-        total_procurement = coarse_combos.sum(axis=1)
-        proc_mask = total_procurement <= procurement_cap
-        coarse_combos = coarse_combos[proc_mask]
-        coarse_scores = coarse_scores[proc_mask]
-        print(f"      {iso} {threshold}%: Procurement cap {procurement_cap}% → "
-              f"{proc_mask.sum():,} of {len(proc_mask):,} mixes retained")
+        proc_upper = max(threshold + 30, 50)
+    elif threshold <= 75:
+        proc_upper = 2.0 * threshold
+    elif threshold <= 90:
+        proc_upper = 200.0
+    else:
+        proc_upper = None
+
+    n_before = len(coarse_combos)
+    proc_mask = total_procurement >= proc_lower
+    if proc_upper is not None:
+        proc_mask &= total_procurement <= proc_upper
+    coarse_combos = coarse_combos[proc_mask]
+    coarse_scores = coarse_scores[proc_mask]
+    window_str = f"[{proc_lower}%, {proc_upper}%]" if proc_upper else f"[{proc_lower}%, unlimited]"
+    print(f"      {iso} {threshold}%: Procurement window {window_str} → "
+          f"{len(coarse_combos):,} of {n_before:,} mixes retained")
+
+    # ── Dominance pre-filter: skip cache entries dominated by frontier ──
+    # A cache entry is dominated if some frontier mix has ALL resources <=
+    # (the frontier mix achieves a prior threshold with fewer resources;
+    # by monotonicity the cache entry also passes but is wasteful).
+    if frontier_mixes is not None and len(frontier_mixes) > 0:
+        n_before_dom = len(coarse_combos)
+        keep = np.ones(n_before_dom, dtype=bool)
+        for f_mix in frontier_mixes:
+            # f_mix dominates cache[i] if every resource in f_mix <= cache[i]
+            gte = np.all(coarse_combos >= f_mix, axis=1)
+            eq = np.all(coarse_combos == f_mix, axis=1)
+            keep &= ~(gte & ~eq)
+        coarse_combos = coarse_combos[keep]
+        coarse_scores = coarse_scores[keep]
+        n_removed = n_before_dom - len(coarse_combos)
+        if n_removed > 0:
+            print(f"      {iso} {threshold}%: Dominance pre-filter removed "
+                  f"{n_removed:,} dominated ({len(coarse_combos):,} remaining)")
 
     # ── Phase 1a: Filter coarse cache (no storage) ──
     # Combos where score >= target are feasible without storage
@@ -1593,6 +1630,52 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                   f"{len(fine_feas_idx):,} feasible, {len(fine_nm_idx):,} near-miss")
 
     return candidates
+
+
+def dominance_filter_candidates(candidates, rtypes):
+    """Remove candidates whose resource mix is dominated by a leaner mix.
+
+    Candidate C is dominated if another candidate D has all resources <= C
+    and is not identical (D achieves the same target with fewer resources).
+    Only compares resource mix dimensions; storage configs are independent.
+
+    Returns filtered list of non-dominated candidates.
+    """
+    if len(candidates) <= 1:
+        return candidates
+
+    # Group by unique resource mix to avoid O(n²) on full candidate list
+    mix_to_candidates = {}
+    for c in candidates:
+        mix_key = tuple(c['resource_mix'][rt] for rt in rtypes)
+        if mix_key not in mix_to_candidates:
+            mix_to_candidates[mix_key] = []
+        mix_to_candidates[mix_key].append(c)
+
+    unique_mixes = list(mix_to_candidates.keys())
+    n_unique = len(unique_mixes)
+    if n_unique <= 1:
+        return candidates
+
+    mix_arr = np.array(unique_mixes, dtype=np.float64)
+
+    # Vectorized Pareto filter: for each mix j, mark all mixes i where
+    # j <= i on every resource dimension (j dominates i).
+    keep = np.ones(n_unique, dtype=bool)
+    for j in range(n_unique):
+        if not keep[j]:
+            continue
+        # j dominates i if all(mix[j] <= mix[i]) and not identical
+        dominated_by_j = np.all(mix_arr >= mix_arr[j], axis=1)
+        equal_to_j = np.all(mix_arr == mix_arr[j], axis=1)
+        newly_dominated = dominated_by_j & ~equal_to_j
+        newly_dominated[j] = False
+        keep &= ~newly_dominated
+
+    kept_mixes = {unique_mixes[i] for i in range(n_unique) if keep[i]}
+    filtered = [c for c in candidates
+                if tuple(c['resource_mix'][rt] for rt in rtypes) in kept_mixes]
+    return filtered
 
 
 def extract_pareto(candidates, iso):
