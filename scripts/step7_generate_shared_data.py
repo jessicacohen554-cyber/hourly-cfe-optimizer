@@ -1145,12 +1145,13 @@ SBTI_MILESTONES = [
     {'year': 2050, 'threshold': 99.99, 'label': 'Net-Zero'},
 ]
 
-# DAC cost projections: piecewise linear from 15+ literature sources (SPEC.md §7.3)
+# DAC cost projections: anchored to 2025 actuals ($600-$1,500/tCO₂)
 # $/ton CO₂ net DACCS (capture + transport + storage + MRV), 2024 USD
+# Sources: Climeworks, IEAGHG, Belfer Center (Harvard), Sievert et al. (Joule 2024)
 DAC_TRAJECTORY = {
-    'optimistic': {2025: 400, 2030: 200, 2035: 150, 2040: 115, 2045: 90,  2050: 75},
-    'central':    {2025: 600, 2030: 350, 2035: 275, 2040: 225, 2045: 200, 2050: 180},
-    'conservative': {2025: 800, 2030: 550, 2035: 450, 2040: 375, 2045: 325, 2050: 300},
+    'optimistic':   {2025: 600, 2030: 350, 2035: 230, 2040: 175, 2045: 130, 2050: 100},
+    'central':      {2025: 800, 2030: 500, 2035: 375, 2040: 300, 2045: 250, 2050: 200},
+    'conservative': {2025: 1100, 2030: 750, 2035: 550, 2040: 450, 2045: 375, 2050: 300},
 }
 
 lines.append('// ============================================================================')
