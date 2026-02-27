@@ -1619,6 +1619,7 @@ def arrays_to_mix_dict(arrays, idx):
     ccs_pct = max(0, 100 - (int(arrays['clean_firm'][idx]) + int(arrays['solar'][idx]) +
                              int(arrays['wind'][idx]) + int(arrays['hydro'][idx])))
     bat8 = arrays.get('battery8_dispatch_pct')
+    h2 = arrays.get('h2_dispatch_pct')
     return {
         'resource_mix': {
             'clean_firm': int(arrays['clean_firm'][idx]),
@@ -1631,6 +1632,7 @@ def arrays_to_mix_dict(arrays, idx):
         'battery_dispatch_pct': int(arrays['battery_dispatch_pct'][idx]),
         'battery8_dispatch_pct': int(bat8[idx]) if bat8 is not None else 0,
         'ldes_dispatch_pct': int(arrays['ldes_dispatch_pct'][idx]),
+        'h2_dispatch_pct': int(h2[idx]) if h2 is not None else 0,
     }
 
 
@@ -1868,6 +1870,7 @@ def main():
             _hyd_i = arrays['hydro'][idx_arr].astype(np.int64)
             ccs_pct = np.maximum(0, 100 - (_cf_i + _sol_i + _wnd_i + _hyd_i))
             bat8 = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
+            h2 = arrays.get('h2_dispatch_pct', np.zeros(N, dtype=np.float64))
             thr_data[thr]['feasible_mixes'] = {
                 'clean_firm': _cf_i.tolist(),
                 'solar': _sol_i.tolist(),
@@ -1878,6 +1881,7 @@ def main():
                 'battery_dispatch_pct': arrays['battery_dispatch_pct'][idx_arr].astype(np.int64).tolist(),
                 'battery8_dispatch_pct': bat8[idx_arr].astype(np.int64).tolist(),
                 'ldes_dispatch_pct': arrays['ldes_dispatch_pct'][idx_arr].astype(np.int64).tolist(),
+                'h2_dispatch_pct': h2[idx_arr].astype(np.int64).tolist(),
             }
 
             t_str = str(thr)
@@ -2379,6 +2383,7 @@ def main():
                 row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct')
                 row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct')
                 row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct')
+                row['h2_dispatch_pct'] = sc.get('h2_dispatch_pct', 0)
                 for k, v in sc.get('costs', {}).items():
                     row[f'cost_{k}'] = v
                 for k, v in sc.get('tranche_costs', {}).items():
@@ -2522,13 +2527,15 @@ def main():
                                 row['hourly_match_score'] = float(
                                     arrs_['hourly_match_score'][mix_idx])
 
-                                # Storage (all 3 types)
+                                # Storage (all 4 types)
                                 row['battery_dispatch_pct'] = int(
                                     arrs_.get('battery_dispatch_pct', np.zeros(1))[mix_idx])
                                 row['battery8_dispatch_pct'] = int(
                                     arrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx])
                                 row['ldes_dispatch_pct'] = int(
                                     arrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx])
+                                row['h2_dispatch_pct'] = int(
+                                    arrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx])
 
                                 # Existing clean TWh available (constant, independent of mix/growth)
                                 _ex = EXISTING_CLEAN_TWH[iso_]
@@ -2613,6 +2620,8 @@ def main():
                             tarrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx])
                         row['ldes_dispatch_pct'] = int(
                             tarrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx])
+                        row['h2_dispatch_pct'] = int(
+                            tarrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx])
 
                         # Existing clean TWh available (constant)
                         _ex = EXISTING_CLEAN_TWH[iso_]

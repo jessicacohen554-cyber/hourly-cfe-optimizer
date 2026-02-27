@@ -189,7 +189,7 @@ def analyze_resource_mixes():
     for iso in ISOS:
         print(f"\n  {iso}:")
         print(f"    {'Threshold':>10}  {'CF':>5} {'Sol':>5} {'Wnd':>5} {'CCS':>5} {'Hyd':>5} "
-              f"{'Batt':>5} {'LDES':>5} {'Proc%':>6} {'Cost':>8}")
+              f"{'Batt':>5} {'LDES':>5} {'H2':>5} {'Cost':>8}")
         print(f"    {'-'*70}")
 
         iso_mixes = {}
@@ -205,23 +205,23 @@ def analyze_resource_mixes():
             mix = result.get('resource_mix', {})
             costs = result.get('costs', {})
             cost_val = costs.get('effective_cost', 0)
-            proc = result.get('procurement_pct', 0)
             batt = result.get('battery_dispatch_pct', 0)
             ldes = result.get('ldes_dispatch_pct', 0)
+            h2 = result.get('h2_dispatch_pct', 0)
 
             iso_mixes[threshold] = {
                 'mix': mix,
                 'cost': cost_val,
-                'procurement_pct': proc,
                 'battery_pct': batt,
                 'ldes_pct': ldes,
+                'h2_pct': h2,
             }
 
             print(f"    {threshold:>8}%  "
                   f"{mix.get('clean_firm', 0):>5} {mix.get('solar', 0):>5} {mix.get('wind', 0):>5} "
                   f"{mix.get('ccs_ccgt', 0):>5} {mix.get('hydro', 0):>5} "
-                  f"{batt:>5.1f} {ldes:>5.1f} "
-                  f"{proc:>6.1f} ${cost_val:>7.2f}")
+                  f"{batt:>5.1f} {ldes:>5.1f} {h2:>5.1f} "
+                  f"${cost_val:>7.2f}")
 
         # Compute VRE waste: 90→95 transition
         if 90 in iso_mixes and 95 in iso_mixes:
@@ -252,9 +252,9 @@ def analyze_curtailment_for_dac():
         annual_demand_mwh = REGIONAL_DEMAND_TWH.get(iso, 0) * 1e6
 
         print(f"\n  {iso} (annual demand: {annual_demand_mwh/1e6:.1f} TWh):")
-        print(f"    {'Threshold':>10} {'Proc%':>7} {'Match%':>7} "
+        print(f"    {'Threshold':>10} {'Match%':>7} "
               f"{'MAC':>8}")
-        print(f"    {'-'*45}")
+        print(f"    {'-'*35}")
 
         iso_dac = {}
         for threshold in THRESHOLDS:
@@ -267,7 +267,6 @@ def analyze_curtailment_for_dac():
                 continue
 
             costs = result.get('costs', {})
-            proc = result.get('procurement_pct', 0)
             match_score = result.get('hourly_match_score', 0)
 
             # MAC from co2_abated
@@ -279,11 +278,10 @@ def analyze_curtailment_for_dac():
                 mac = (incremental * annual_demand_mwh) / co2_tons if co2_tons > 0 else 0
 
             iso_dac[threshold] = {
-                'procurement_pct': proc,
                 'mac_per_ton': round(mac, 2),
             }
 
-            print(f"    {threshold:>8}%  {proc:>6.1f} {match_score:>6.1f} "
+            print(f"    {threshold:>8}%  {match_score:>6.1f} "
                   f"${mac:>7.0f}")
 
         dac_inputs[iso] = iso_dac
