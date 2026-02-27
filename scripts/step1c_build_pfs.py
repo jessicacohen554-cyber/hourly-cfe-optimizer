@@ -258,7 +258,11 @@ def main():
         print(f"    {iso} {threshold}%: {len(feasible)} solutions "
               f"({len(archetypes)} archetypes{dom_str}), {t_elapsed:.1f}s")
 
-        s1._save_threshold_done(iso, threshold, feasible)
+        # Merge chunk files + any remaining in-memory candidates into final parquet.
+        # optimize_threshold() flushes candidates to chunk files during processing,
+        # so `feasible` is typically empty — _merge_chunks_and_finalize reads the
+        # chunks back and produces the final {ISO}_t{XX}_raw_pfs.parquet.
+        s1._merge_chunks_and_finalize(iso, threshold, feasible)
 
         # Auto-commit this threshold's results immediately
         if auto_commit:
@@ -294,7 +298,8 @@ def main():
             print(f"    {iso} {threshold}%: {len(feasible)} solutions "
                   f"({len(archetypes)} archetypes), {t_elapsed:.1f}s")
 
-            s1._save_threshold_done(iso, threshold, feasible)
+            # Merge chunk files + remaining candidates into final parquet
+            s1._merge_chunks_and_finalize(iso, threshold, feasible)
 
             # Auto-commit this threshold's updated results immediately
             if auto_commit:
