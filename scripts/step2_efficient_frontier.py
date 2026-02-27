@@ -117,19 +117,18 @@ def normalize_table(t, iso):
     return pa.table(cols)
 
 
-def load_iso_tables(target_isos=None):
-    """Load PFS data and return a dict of {iso: pyarrow.Table}.
+def scan_iso_files(target_isos=None):
+    """Scan Step 1 parquet directory and return {iso: [filenames]} mapping.
 
-    Reads from data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet.
-    Groups files by ISO prefix, concatenates all threshold files per ISO.
+    Groups files by ISO prefix, handles canonical vs batch file dedup.
+    Does NOT load any data — just discovers and validates file paths.
 
     Args:
-        target_isos: List of ISO names to load. None = all ISOs.
+        target_isos: List of ISO names to scan for. None = all ISOs.
 
-    Returns dict keyed by ISO name with per-ISO tables (already schema-normalized).
+    Returns dict keyed by ISO name with lists of filenames to process.
     """
     iso_filter = set(target_isos) if target_isos else set(ISOS)
-    iso_tables = {}
 
     if not os.path.isdir(STEP1_RAW_DIR):
         raise FileNotFoundError(
@@ -147,8 +146,6 @@ def load_iso_tables(target_isos=None):
             f"Run step1_pfs_generator.py first."
         )
 
-    print(f"Scanning Step 1 raw parquets in {STEP1_RAW_DIR}")
-
     # Group files by ISO prefix (e.g., "ERCOT_t100_raw_pfs.parquet" -> "ERCOT")
     # Supports both canonical files ({ISO}_t{XX}_raw_pfs.parquet) and
     # NYISO batch files ({ISO}_t{XX}_raw_pfs_b{N}.parquet). Both naming
@@ -164,13 +161,11 @@ def load_iso_tables(target_isos=None):
 
     # For each ISO, detect canonical vs batch file overlap and prefer batch
     for iso, fnames in list(files_by_iso.items()):
-        # Identify batch files per threshold: {ISO}_t{XX}_raw_pfs_b{N}.parquet
         batch_thresholds = set()
         for f in fnames:
             m = re.match(rf'^{re.escape(iso)}_t([\d.]+)_raw_pfs_b\d+\.parquet$', f)
             if m:
                 batch_thresholds.add(m.group(1))
-        # If batch files exist for a threshold, drop the canonical file for that threshold
         if batch_thresholds:
             filtered = []
             for f in fnames:
@@ -181,34 +176,101 @@ def load_iso_tables(target_isos=None):
                 filtered.append(f)
             files_by_iso[iso] = filtered
 
-    # Batched read: load all threshold files per ISO, concat once
-    for iso, fnames in files_by_iso.items():
-        iso_subtables = []
-        total_rows = 0
-        for fname in fnames:
-            path = os.path.join(STEP1_RAW_DIR, fname)
-            t = pq.read_table(path)
-            if 'clean_firm' in t.column_names and 'hourly_match_score' in t.column_names:
-                iso_subtables.append(t)
-                total_rows += t.num_rows
-        if iso_subtables:
-            combined = pa.concat_tables(iso_subtables, promote_options='permissive') if len(iso_subtables) > 1 else iso_subtables[0]
-            iso_tables[iso] = normalize_table(combined, iso)
-            print(f"  {iso}: {total_rows:>10,} rows from {len(fnames)} threshold files")
-
-    if not iso_tables:
-        raise FileNotFoundError(
-            f"No valid Step 1 parquet files found in {STEP1_RAW_DIR}.\n"
-            f"Files must contain 'clean_firm' and 'hourly_match_score' columns."
-        )
-
-    found = sorted(iso_tables.keys())
-    missing = [iso for iso in iso_filter if iso not in iso_tables]
-    print(f"\nLoaded {len(found)} ISOs: {', '.join(found)}")
+    missing = [iso for iso in iso_filter if iso not in files_by_iso]
     if missing:
         print(f"  WARNING: Missing ISOs: {', '.join(missing)}")
 
-    return iso_tables
+    return files_by_iso
+
+
+# Maximum accumulated rows before triggering an incremental dedup pass.
+# Keeps peak memory under ~3GB during dedup (lexsort + sorted views).
+INCREMENTAL_DEDUP_THRESHOLD = 5_000_000
+
+
+def load_and_process_iso(iso, fnames):
+    """Load, gate, and deduplicate a single ISO's threshold files incrementally.
+
+    Instead of loading all files into memory at once (which OOMs on large ISOs
+    like PJM with 63M+ rows), this streams each file: normalize → gate → drop
+    threshold column → accumulate → periodically dedup to bound memory.
+
+    The incremental dedup is correct because "keep max score per unique mix"
+    is associative — deduplicating a partial accumulation then merging more
+    rows and deduplicating again produces the same result as a single global
+    dedup.
+
+    Args:
+        iso: ISO name (e.g., 'PJM')
+        fnames: List of parquet filenames to process
+
+    Returns:
+        (result_table, n_input, n_gated, n_dedup) or (None, n_input, 0, 0)
+    """
+    resource_cols = get_resource_cols(iso)
+    result_col_names = ['iso'] + resource_cols + STORAGE_COLS + ['hourly_match_score', 'pareto_type']
+
+    accumulated = None
+    total_input = 0
+    total_gated = 0
+    n_incremental_dedups = 0
+
+    for fname in fnames:
+        path = os.path.join(STEP1_RAW_DIR, fname)
+        t = pq.read_table(path)
+
+        if 'clean_firm' not in t.column_names or 'hourly_match_score' not in t.column_names:
+            del t
+            continue
+
+        total_input += t.num_rows
+
+        # Normalize schema, then gate to target thresholds immediately
+        t = normalize_table(t, iso)
+        t = threshold_gate(t)
+        total_gated += t.num_rows
+
+        if t.num_rows == 0:
+            del t
+            continue
+
+        # Drop threshold column — not needed after gating
+        keep_cols = [c for c in result_col_names if c in t.column_names]
+        t = t.select(keep_cols)
+
+        # Accumulate
+        if accumulated is None:
+            accumulated = t
+        else:
+            accumulated = pa.concat_tables([accumulated, t], promote_options='permissive')
+        del t
+
+        # Incremental dedup when accumulator gets large
+        if accumulated.num_rows > INCREMENTAL_DEDUP_THRESHOLD:
+            arrays = {}
+            for col in resource_cols + STORAGE_COLS + ['hourly_match_score']:
+                arrays[col] = accumulated.column(col).to_numpy()
+            keep_idx = deduplicate_mixes(arrays, resource_cols)
+            accumulated = accumulated.take(keep_idx)
+            del arrays
+            n_incremental_dedups += 1
+
+    if accumulated is None or accumulated.num_rows == 0:
+        return None, total_input, total_gated, 0
+
+    # Final dedup pass
+    arrays = {}
+    for col in resource_cols + STORAGE_COLS + ['hourly_match_score']:
+        arrays[col] = accumulated.column(col).to_numpy()
+    keep_idx = deduplicate_mixes(arrays, resource_cols)
+    result = accumulated.take(keep_idx)
+    n_dedup = result.num_rows
+    del accumulated, arrays
+
+    if n_incremental_dedups > 0:
+        print(f"    ({n_incremental_dedups} incremental dedup passes used)")
+
+    return result, total_input, total_gated, n_dedup
 
 
 def threshold_gate(table):
@@ -279,45 +341,6 @@ def deduplicate_mixes(arrays, resource_cols):
     return sort_idx[is_first]
 
 
-def process_iso_table(iso, table):
-    """Process a single ISO's table: threshold gate + deduplication."""
-    n_input = table.num_rows
-    if n_input == 0:
-        return None, 0, 0
-
-    # Threshold gate
-    table = threshold_gate(table)
-    n_gated = table.num_rows
-
-    if n_gated == 0:
-        return None, n_input, 0
-
-    resource_cols = get_resource_cols(iso)
-
-    # Extract numpy arrays for deduplication
-    arrays = {}
-    for col in resource_cols:
-        arrays[col] = table.column(col).to_numpy()
-    for col in STORAGE_COLS:
-        arrays[col] = table.column(col).to_numpy()
-    arrays['hourly_match_score'] = table.column('hourly_match_score').to_numpy()
-
-    dedup_idx = deduplicate_mixes(arrays, resource_cols)
-    n_dedup = len(dedup_idx)
-
-    # Build result without threshold column
-    result_cols = ['iso'] + resource_cols + STORAGE_COLS + ['hourly_match_score']
-    if 'pareto_type' in table.column_names:
-        result_cols.append('pareto_type')
-
-    result_arrays = {}
-    for col_name in result_cols:
-        if col_name in table.column_names:
-            result_arrays[col_name] = table.column(col_name).take(dedup_idx)
-
-    result = pa.table(result_arrays)
-    return result, n_gated, n_dedup
-
 
 def write_per_iso_outputs(results_by_iso):
     """Write per-ISO Step 2 EF outputs to data/step2-ef-parquets."""
@@ -361,34 +384,39 @@ def main():
 
     total_start = time.time()
 
-    # Load data as per-ISO tables (only requested ISOs)
-    iso_tables = load_iso_tables(target_isos)
+    # Scan files (no data loaded yet)
+    print(f"\nScanning Step 1 raw parquets in {STEP1_RAW_DIR}")
+    files_by_iso = scan_iso_files(target_isos)
 
-    # Process each ISO: threshold gate + deduplication
+    found = sorted(files_by_iso.keys())
+    print(f"Found {len(found)} ISOs: {', '.join(found)}")
+
+    # Process each ISO incrementally: load → gate → dedup per file
+    # This streams data instead of loading all rows at once, keeping
+    # peak memory bounded even for large ISOs (PJM: 63M+ rows).
     print("\nStep 2: Threshold gate + deduplication (threshold-free)")
     print(f"  {'ISO':>6}  {'Input':>9}  {'Gated':>9}  {'Dedup':>9}  {'Time':>6}")
     print("  " + "-" * 50)
 
     results_by_iso = {}
+    total_input = 0
     total_gated = 0
     total_dedup = 0
 
     for iso in target_isos:
-        if iso not in iso_tables:
+        if iso not in files_by_iso:
             continue
 
         t0 = time.time()
-        result, n_gated, n_dedup = process_iso_table(iso, iso_tables[iso])
+        result, n_input, n_gated, n_dedup = load_and_process_iso(iso, files_by_iso[iso])
         elapsed = time.time() - t0
 
-        n_input = iso_tables[iso].num_rows
+        total_input += n_input
         if result is not None and result.num_rows > 0:
             results_by_iso[iso] = result
             total_gated += n_gated
             total_dedup += n_dedup
             print(f"  {iso:>6}  {n_input:>8,}  {n_gated:>8,}  {n_dedup:>8,}  {elapsed:>5.1f}s")
-
-    total_input = sum(t.num_rows for t in iso_tables.values())
     print(f"\n  Total: {total_input:,} -> {total_gated:,} (gated) -> {total_dedup:,} (dedup)")
     if total_gated > 0:
         print(f"  Reduction: {(1 - total_dedup/total_gated)*100:.1f}%")
@@ -401,7 +429,7 @@ def main():
 
     elapsed_total = time.time() - total_start
 
-    # Score distribution summary
+    # Score distribution summary (only read scores from the already-in-memory result tables)
     for iso in target_isos:
         if iso not in results_by_iso:
             continue
@@ -409,8 +437,8 @@ def main():
         if len(iso_scores) > 0:
             avail = []
             for thr in TARGET_THRESHOLDS:
-                n = (iso_scores >= thr).sum()
-                avail.append(f"{thr:.0f}%:{n:,}")
+                n_above = int((iso_scores >= thr).sum())
+                avail.append(f"{thr:.0f}%:{n_above:,}")
             print(f"  {iso} mixes per threshold: {', '.join(avail[:6])}...")
 
     print(f"\n  Total rows: {total_input:,} -> {total_dedup:,} (EF)")
