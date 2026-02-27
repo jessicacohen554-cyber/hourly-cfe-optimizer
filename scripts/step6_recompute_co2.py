@@ -157,8 +157,7 @@ def compute_hourly_fossil_displacement(demand_norm, supply_profiles, resource_pc
         result, hit = get_or_compute_dispatch(
             iso, demand_norm, supply_profiles, resource_pcts,
             100, battery_dispatch_pct, battery8_pct,
-            ldes_dispatch_pct, h2_dispatch_pct=h2_dispatch_pct,
-            cache=dispatch_cache)
+            ldes_dispatch_pct, cache=dispatch_cache)
     else:
         result = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, resource_pcts,
@@ -400,7 +399,7 @@ def recompute_dg_co2(input_dir, output_dir, run_isos, emission_rates, fossil_mix
             else:
                 ccs_pct_arr = np.zeros(len(df))
 
-            # 5. Build emission rate array — one rate per unique threshold
+            # 4. Build emission rate array — one rate per unique threshold
             unique_thresholds = np.unique(thresholds)
             threshold_rate_map = {}
             for t in unique_thresholds:
@@ -416,9 +415,9 @@ def recompute_dg_co2(input_dir, output_dir, run_isos, emission_rates, fossil_mix
             # Vectorized rate lookup
             rate_arr = np.array([threshold_rate_map[t] for t in thresholds])
 
-            # 6. Vectorized CO₂ math (mirrors fast_co2_from_match_score logic)
+            # 5. Vectorized CO₂ math (mirrors fast_co2_from_match_score logic)
             fossil_displaced_mwh = (match_scores / 100.0) * demand_mwh_arr
-            ccs_supply_mwh = (ccs_pct_arr / 100.0) * (procurement_arr / 100.0) * demand_mwh_arr
+            ccs_supply_mwh = (ccs_pct_arr / 100.0) * demand_mwh_arr
             ccs_effective_mwh = np.minimum(ccs_supply_mwh, fossil_displaced_mwh)
             non_ccs_mwh = fossil_displaced_mwh - ccs_effective_mwh
 
