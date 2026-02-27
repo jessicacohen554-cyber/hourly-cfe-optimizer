@@ -108,7 +108,19 @@ jobs:
           exit 1
         fi
 
-    - name: "Build PFS from scored database (step1c)"
+    - name: Configure git for auto-commit
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        # Create the target branch for incremental commits
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LABEL="${{ inputs.iso }}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-pfs-${ISO_LABEL}"
+        git checkout -b "$TARGET_BRANCH"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        echo "Created branch: $TARGET_BRANCH"
+
+    - name: "Build PFS from scored database (step1c — auto-commit per threshold)"
       run: |
         set -euo pipefail
         ISO="${{ inputs.iso }}"
@@ -117,6 +129,8 @@ jobs:
         echo "ISO=$ISO  THRESHOLDS=$THRESHOLDS"
         echo "Python: $(python --version)"
         echo "Working dir: $(pwd)"
+        echo "Branch: $(git branch --show-current)"
+        echo "Auto-commit: ON (each threshold committed as it completes)"
         echo ""
 
         if [ "$ISO" = "ALL" ]; then
@@ -125,11 +139,11 @@ jobs:
             echo "=============================================="
             echo "=== Building PFS for $iso ==="
             echo "=============================================="
-            python -u scripts/step1c_build_pfs.py --iso "$iso" --thresholds "$THRESHOLDS" 2>&1
+            python -u scripts/step1c_build_pfs.py --iso "$iso" --thresholds "$THRESHOLDS" --auto-commit 2>&1
             echo "=== $iso complete (exit $?) ==="
           done
         else
-          python -u scripts/step1c_build_pfs.py --iso "$ISO" --thresholds "$THRESHOLDS" 2>&1
+          python -u scripts/step1c_build_pfs.py --iso "$ISO" --thresholds "$THRESHOLDS" --auto-commit 2>&1
           echo "=== $ISO complete (exit $?) ==="
         fi
 
@@ -151,123 +165,82 @@ jobs:
         print(f'\nTotal: {total:,} solutions across {len(files)} files')
         " 2>/dev/null || echo "Could not read parquet metadata"
 
-    - name: Commit and push PFS results (batched by ISO)
+    - name: Final commit — catch any remaining uncommitted PFS files
       run: |
         set -euo pipefail
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
 
-        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        # Auto-commit already handled most files during the run.
+        # This step catches anything that wasn't pushed (e.g., push failures).
         ISO_LABEL="${{ inputs.iso }}"
-        TARGET_BRANCH="auto/${TIMESTAMP}-pfs-${ISO_LABEL}"
-        git checkout -b "$TARGET_BRANCH"
-
-        # Determine which ISOs to batch over
         if [ "$ISO_LABEL" = "ALL" ]; then
           ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
         else
           ISOS="$ISO_LABEL"
         fi
 
+        REMAINING=false
+        for iso in $ISOS; do
+          FILES=$(ls data/step1-pfs-parquets/${iso}_t*_raw_pfs.parquet 2>/dev/null || true)
+          if [ -n "$FILES" ]; then
+            git add -f $FILES
+          fi
+        done
+
+        if ! git diff --cached --quiet; then
+          echo "Committing remaining PFS files..."
+          git commit -m "PFS results (final batch): ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          REMAINING=true
+        fi
+
+        # Final push with retry (catches both remaining + any locally-committed-but-unpushed)
         push_with_retry() {
-          local label="$1"
-          local MAX_RETRIES=5
+          local MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
-            echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
-            PUSH_OUTPUT=$(git push -u origin "$TARGET_BRANCH" 2>&1) && {
-              echo "  Push succeeded for ${label} on attempt $i"
+            echo "  Final push attempt $i/$MAX_RETRIES..."
+            if git push -u origin "$TARGET_BRANCH" 2>&1; then
+              echo "  Final push succeeded"
               return 0
-            }
-            echo "$PUSH_OUTPUT"
-            if echo "$PUSH_OUTPUT" | grep -q "GH001"; then
-              echo "  ERROR: GH001 (large file) for ${label}"
-              return 1
-            fi
-            if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
-              return 1
             fi
             BACKOFF=$((2 ** i))
             echo "  Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
+          echo "  ERROR: Final push failed after $MAX_RETRIES attempts"
+          return 1
         }
 
-        PUSHED=false
-
-        for iso in $ISOS; do
-          echo ""
-          echo "--- Batching commit for $iso ---"
-
-          # Find this ISO's PFS parquets
-          FILES=$(ls data/step1-pfs-parquets/${iso}_t*_raw_pfs.parquet 2>/dev/null || true)
-          if [ -z "$FILES" ]; then
-            echo "  No PFS files for $iso — skipping"
-            continue
-          fi
-
-          # Try committing all of this ISO's files at once
-          git add -f $FILES
-          if git diff --cached --quiet; then
-            echo "  No changes for $iso — skipping"
-            continue
-          fi
-
-          BATCH_SIZE=$(echo "$FILES" | wc -w)
-          BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
-          echo "  Staging $BATCH_SIZE files (~${BATCH_MB} MB) for $iso"
-
-          git commit -m "PFS results: ${iso} thresholds=${{ inputs.thresholds }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-          if push_with_retry "$iso"; then
-            PUSHED=true
-          else
-            echo "  Per-ISO push failed for $iso — falling back to per-file batching"
-            # Reset the failed commit so we can re-commit file by file
-            git reset HEAD~1
-
-            for f in $FILES; do
-              FNAME=$(basename "$f")
-              git add -f "$f"
-              if git diff --cached --quiet; then
-                continue
-              fi
-              FILE_MB=$(du -m "$f" | cut -f1)
-              echo "  Committing $FNAME (~${FILE_MB} MB)"
-              git commit -m "PFS: ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-              if push_with_retry "$FNAME"; then
-                PUSHED=true
-              else
-                echo "  ERROR: Per-file push also failed for $FNAME — skipping"
-                git reset HEAD~1
-              fi
-            done
-          fi
-        done
-
-        if [ "$PUSHED" = true ]; then
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        # Check if branch has any commits ahead of base
+        COMMITS_AHEAD=$(git log origin/${{ inputs.branch || 'master' }}..HEAD --oneline 2>/dev/null | wc -l || echo "0")
+        if [ "$COMMITS_AHEAD" -gt 0 ]; then
+          push_with_retry
+          echo "PUSHED=true" >> "$GITHUB_ENV"
         else
-          echo "No changes were pushed"
+          echo "No new commits to push"
+          echo "PUSHED=false" >> "$GITHUB_ENV"
         fi
 
     - name: Create pull request
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        if [ -z "${TARGET_BRANCH:-}" ]; then
-          echo "No branch to create PR for"
-          exit 0
+        if [ "${PUSHED:-false}" != "true" ]; then
+          # Check if auto-commit pushed anything during the run
+          COMMITS_AHEAD=$(git log origin/${{ inputs.branch || 'master' }}..HEAD --oneline 2>/dev/null | wc -l || echo "0")
+          if [ "$COMMITS_AHEAD" -eq 0 ]; then
+            echo "No commits to create PR for"
+            exit 0
+          fi
         fi
+        N_COMMITS=$(git log origin/${{ inputs.branch || 'master' }}..HEAD --oneline | wc -l)
         gh pr create \
           --title "PFS: ${{ inputs.iso }} thresholds=${{ inputs.thresholds }}" \
-          --body "$(cat <<'EOF'
+          --body "$(cat <<EOF
         ## Summary
         - Built PFS (step 1c) for **${{ inputs.iso }}** at thresholds **${{ inputs.thresholds }}**
+        - Each threshold committed incrementally as it completed ($N_COMMITS commits)
         - Mined from pre-built scored database (no 1a/1b rerun)
         - Auto-generated by GitHub Actions
         EOF
         )" \
-          --base master \
+          --base ${{ inputs.branch || 'master' }} \
           --head "$TARGET_BRANCH" || echo "PR creation skipped"
