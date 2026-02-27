@@ -207,7 +207,7 @@
 - All new features layered on top of existing — never remove existing visuals or controls
 - **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
 - **7 toggle groups**: 5 paired (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission) + CCS (L/M/H) + 45Q (On/Off) + Geothermal (CAISO-only, L/M/H)
-- **15 thresholds** (50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100) — expanded from 13, with 5% granularity in low range and 2.5% in inflection zone
+- **15 thresholds** (50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99) — expanded from 13, with 5% granularity in low range and 2.5% in inflection zone. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable.
 - **5,832 cost scenarios per region/threshold** (3×3×3×3×2×3×4 = non-CAISO; 17,496 for CAISO with geothermal toggle)
 - **~612,360 total evaluations** (15 thresholds × 7 regions × 5,832 combos)
 - Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached physics
@@ -268,7 +268,7 @@ When facing compute vs. rigor tradeoffs:
 
 ### Figure & Chart Standards (QA/QC Sweep Checklist)
 - **Adequate height/spacing on mobile**: Charts must not be compressed or unreadable on small screens. Set min-height for chart containers (e.g., 300px mobile, 400px desktop)
-- **Threshold label spacing**: Don't label every threshold point. Space labels to avoid crowding — show 75, 90, 95, 100 (skip intermediate values) on scrollytell figures. Dashboard charts can use tooltips for unlabeled points
+- **Threshold label spacing**: Don't label every threshold point. Space labels to avoid crowding — show 75, 90, 95, ≥99.99 (skip intermediate values) on scrollytell figures. Dashboard charts can use tooltips for unlabeled points
 - **Data-driven but clean**: Scrollytell figures pull from actual optimizer results but should be illustrative — clean axes, clear legends, readable font sizes (min 12px on mobile)
 - **Dashboard tooltips**: Interactive dashboard charts should have hover tooltips showing exact values at all threshold points, so labeled points can be sparse without losing precision
 - **Consistent color palette**: Use the same colors for resources across all pages (Solar=amber, Wind=blue, Clean Firm=green, CCS=teal, Hydro=cyan, Battery=purple, LDES=pink)

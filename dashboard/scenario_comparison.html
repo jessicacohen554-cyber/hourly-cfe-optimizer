@@ -415,7 +415,7 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
         <li>At 60% CFE: resources deployed at 50% are now the <strong>floor</strong> — they can't be unbuilt.
             The optimizer can only add on top. Among all feasible mixes at 60% that meet the floor constraint
             (every resource &ge; what was deployed at 50%), select the cheapest.</li>
-        <li>Continue sequentially through 70%, 75%, 80%, ... 100%. Each step inherits all prior commitments.</li>
+        <li>Continue sequentially through 70%, 75%, 80%, ... &ge;99.99%. Each step inherits all prior commitments.</li>
         <li>Resources remain priced at their original LCOE — committed capacity does NOT shift to wholesale pricing.
             The sunk cost creates path dependency but doesn't create a pricing advantage.</li>
     </ol>
@@ -489,7 +489,7 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
 
     <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #1A2744; margin: 24px 0 8px;">SBTi Timeline Mapping</h3>
     <p>CFE thresholds are mapped to SBTi-aligned deployment years: 50%&rarr;2025, 60%&rarr;2027, 70%&rarr;2029, 75%&rarr;2030, 80%&rarr;2032,
-    85%&rarr;2035, 87.5%&rarr;2037, 90%&rarr;2040, 92.5%&rarr;2042, 95%&rarr;2045, 97.5%&rarr;2047, 99%&rarr;2049, 100%&rarr;2050.
+    85%&rarr;2035, 87.5%&rarr;2037, 90%&rarr;2040, 92.5%&rarr;2042, 95%&rarr;2045, 97.5%&rarr;2047, 99%&rarr;2049, &ge;99.99%&rarr;2050.
     This maps the static threshold comparison onto a temporal deployment trajectory.</p>
 
     <h3 style="font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif; font-size: 1.05rem; color: #1A2744; margin: 24px 0 8px;">What This Analysis Does Not Model</h3>
@@ -535,7 +535,7 @@ Object.entries(DATA.metadata.sbti_year_map).forEach(([k,v]) => YEAR_MAP[parseFlo
 
 // Global target threshold (slider-controlled)
 let targetThreshold = 95;
-const SLIDER_STEPS = THRESHOLDS; // [50, 55, 60, ..., 100]
+const SLIDER_STEPS = THRESHOLDS; // [50, 55, 60, ..., 99.99]
 const slider = document.getElementById('targetSlider');
 const sliderVal = document.getElementById('targetVal');
 const sliderYear = document.getElementById('targetYear');

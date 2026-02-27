@@ -80,7 +80,7 @@ const CQ_DATA = {
       "99": 2049,
       "99.5": 2049,
       "99.9": 2050,
-      "100": 2050
+      "99.99": 2050
     }
   },
   "dispatch_stacks": {
@@ -2650,7 +2650,7 @@ const CQ_DATA = {
       "zone_idx": 8,
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100.0,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": Infinity,
@@ -2760,7 +2760,7 @@ const CQ_DATA = {
       "zone_idx": 8,
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100.0,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": Infinity,
@@ -2870,7 +2870,7 @@ const CQ_DATA = {
       "zone_idx": 8,
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100.0,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": Infinity,
@@ -2980,7 +2980,7 @@ const CQ_DATA = {
       "zone_idx": 8,
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100.0,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": Infinity,
@@ -3090,7 +3090,7 @@ const CQ_DATA = {
       "zone_idx": 8,
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100.0,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": Infinity,
@@ -6480,7 +6480,7 @@ const CQ_DATA = {
         "new_gas_mw": 432.0
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "procurement_pct": 160,
         "eff_cost": 85.0,
         "match_score": 100.0,
@@ -6722,7 +6722,7 @@ const CQ_DATA = {
         "new_gas_mw": 32284.0
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "procurement_pct": 135,
         "eff_cost": 50.27,
         "match_score": 99.5,
@@ -6979,7 +6979,7 @@ const CQ_DATA = {
         "new_gas_mw": 0.0
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "procurement_pct": 160,
         "eff_cost": 95.04,
         "match_score": 100.0,
@@ -7448,7 +7448,7 @@ const CQ_DATA = {
         "new_gas_mw": 12233.0
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "procurement_pct": 150,
         "eff_cost": 117.65,
         "match_score": 100.0,
@@ -7705,7 +7705,7 @@ const CQ_DATA = {
         "new_gas_mw": 66988.0
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "procurement_pct": 140,
         "eff_cost": 66.39,
         "match_score": 99.54,
@@ -7962,7 +7962,7 @@ const CQ_DATA = {
         "new_gas_mw": 32235.0
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "procurement_pct": 150,
         "eff_cost": 48.82,
         "match_score": 100.0,
@@ -8393,7 +8393,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "displaced_rate": 0.3923,
         "coal_displaced_twh": 0.0,
         "oil_displaced_twh": 0.6,
@@ -8548,7 +8548,7 @@ const CQ_DATA = {
         "methodology": "analytical_fallback"
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "displaced_rate": 0.5043,
         "coal_displaced_twh": 67.58,
         "oil_displaced_twh": 0.0,
@@ -8703,7 +8703,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "displaced_rate": 0.4968,
         "coal_displaced_twh": 139.09,
         "oil_displaced_twh": 4.59,
@@ -8858,7 +8858,7 @@ const CQ_DATA = {
         "methodology": "analytical_fallback"
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "displaced_rate": 0.4148,
         "coal_displaced_twh": 0.0,
         "oil_displaced_twh": 0.15,
@@ -9013,7 +9013,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "displaced_rate": 0.3918,
         "coal_displaced_twh": 0.31,
         "oil_displaced_twh": 1.29,
@@ -9168,7 +9168,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "displaced_rate": 0.5309,
         "coal_displaced_twh": 125.0,
         "oil_displaced_twh": 0.5,
@@ -9323,7 +9323,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 100,
+        "threshold": 99.99,
         "displaced_rate": 0.4863,
         "coal_displaced_twh": 42.0,
         "oil_displaced_twh": 0.2,
@@ -9493,7 +9493,7 @@ const CQ_DATA = {
           "solar_twh": 93.2
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "gas_backup_mw": 37432,
           "new_gas_mw": 432,
           "clean_firm_twh": 93.2,
@@ -9672,7 +9672,7 @@ const CQ_DATA = {
           "solar_twh": 322.8
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "gas_backup_mw": 87284,
           "new_gas_mw": 32284,
           "clean_firm_twh": 85.6,
@@ -9859,7 +9859,7 @@ const CQ_DATA = {
           "solar_twh": 67.5
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "gas_backup_mw": 60060,
           "new_gas_mw": 0,
           "clean_firm_twh": 1146.9,
@@ -10209,7 +10209,7 @@ const CQ_DATA = {
           "solar_twh": 43.3
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "gas_backup_mw": 26233,
           "new_gas_mw": 12233,
           "clean_firm_twh": 39.8,
@@ -10396,7 +10396,7 @@ const CQ_DATA = {
           "solar_twh": 415.8
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "gas_backup_mw": 134988,
           "new_gas_mw": 66988,
           "clean_firm_twh": 120.1,
@@ -10583,7 +10583,7 @@ const CQ_DATA = {
           "solar_twh": 4.4
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "gas_backup_mw": 64235,
           "new_gas_mw": 32235,
           "clean_firm_twh": 22.2,
