@@ -53,22 +53,29 @@ from parquet_io import find_input_dir, find_parquet, ALL_ISOS
 
 MIX_COLUMNS = [
     'mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_ccs_ccgt', 'mix_hydro',
-    'procurement_pct', 'battery_dispatch_pct', 'battery8_dispatch_pct',
-    'ldes_dispatch_pct',
+    'battery_dispatch_pct', 'battery8_dispatch_pct',
+    'ldes_dispatch_pct', 'h2_dispatch_pct',
 ]
 
 
 def extract_unique_mixes(iso, input_dir):
     """Read step4/step3 parquet for an ISO and extract unique mix tuples.
 
-    Returns list of dicts with keys: resource_pcts, procurement_pct,
-    battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct.
+    Returns list of dicts with keys: resource_pcts,
+    battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct, h2_dispatch_pct.
     """
     path = find_parquet(input_dir, iso)
     if not path:
         return []
 
-    df = pd.read_parquet(path, columns=MIX_COLUMNS)
+    # Read available columns (h2_dispatch_pct may be absent in older parquets)
+    avail_cols = pd.read_parquet(path, columns=[]).columns.tolist()
+    read_cols = [c for c in MIX_COLUMNS if c in avail_cols]
+    df = pd.read_parquet(path, columns=read_cols)
+    # Fill missing columns with 0
+    for c in MIX_COLUMNS:
+        if c not in df.columns:
+            df[c] = 0
     unique = df.drop_duplicates()
 
     mixes = []
@@ -82,10 +89,10 @@ def extract_unique_mixes(iso, input_dir):
         }
         mixes.append({
             'resource_pcts': resource_pcts,
-            'procurement_pct': float(row['procurement_pct']),
             'battery_dispatch_pct': float(row['battery_dispatch_pct']),
             'battery8_dispatch_pct': float(row['battery8_dispatch_pct']),
             'ldes_dispatch_pct': float(row['ldes_dispatch_pct']),
+            'h2_dispatch_pct': float(row['h2_dispatch_pct']),
         })
 
     return mixes
@@ -117,7 +124,7 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
         rp = mix_info['resource_pcts']
         key = _archetype_key(
             iso, rp,
-            mix_info['procurement_pct'],
+            100,  # procurement_pct removed (always 100 in v5.0)
             mix_info['battery_dispatch_pct'],
             mix_info['battery8_dispatch_pct'],
             mix_info['ldes_dispatch_pct'],
@@ -129,12 +136,13 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
 
         result = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, rp,
-            mix_info['procurement_pct'],
+            100,  # procurement_pct removed (always 100 in v5.0)
             mix_info['battery_dispatch_pct'],
             mix_info['battery8_dispatch_pct'],
             mix_info['ldes_dispatch_pct'],
             supply_matrix=supply_matrix,
             detailed=True,
+            h2_dispatch_pct=mix_info['h2_dispatch_pct'],
         )
 
         cache[key] = {k: v for k, v in result.items()}
