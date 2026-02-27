@@ -1379,9 +1379,14 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         l_caps = np.empty(n_nm, dtype=np.float64)
         hc_arr = np.empty(n_nm, dtype=np.int64)
         sd_arr = np.empty(n_nm, dtype=np.int64)
+        n_cap_chunks = (n_nm + NM_CHUNK - 1) // NM_CHUNK
 
         for cs in range(0, n_nm, NM_CHUNK):
             ce = min(cs + NM_CHUNK, n_nm)
+            chunk_num = cs // NM_CHUNK + 1
+            if n_cap_chunks > 1:
+                print(f"\r        Cap computation: chunk {chunk_num}/{n_cap_chunks} "
+                      f"({cs:,}/{n_nm:,} mixes)", end="", flush=True)
             chunk_fracs = coarse_combos[near_miss_idx[cs:ce]] / 100.0
             chunk_supply = chunk_fracs @ supply_matrix
             chunk_n = ce - cs
@@ -1393,16 +1398,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             l_caps[cs:ce] = cl
             hc_arr[cs:ce] = chc
             sd_arr[cs:ce] = csd
+        if n_cap_chunks > 1:
+            print()  # newline after progress
 
-        # Filter to mixes with curtailment
-        nm_valid = []
-        for ci in range(n_nm):
-            if hc_arr[ci]:
-                nm_valid.append((ci, near_miss_idx[ci],
-                                 b4_caps[ci] * 100.0 * 1.1,
-                                 b8_caps[ci] * 100.0 * 1.1,
-                                 l_caps[ci] * 100.0 * 1.1,
-                                 int(sd_arr[ci])))
+        # Vectorized curtailment filter (replaces Python for-loop)
+        has_curtailment = hc_arr.astype(bool)
+        valid_ci = np.where(has_curtailment)[0]
+        nm_valid = [(int(ci), int(near_miss_idx[ci]),
+                     b4_caps[ci] * 100.0 * 1.1,
+                     b8_caps[ci] * 100.0 * 1.1,
+                     l_caps[ci] * 100.0 * 1.1,
+                     int(sd_arr[ci])) for ci in valid_ci]
 
         # Storage level arrays
         b4_arr = np.array(batt_levels, dtype=np.float64)
@@ -1412,17 +1418,23 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         n_b4, n_b8, n_l, n_h2 = len(b4_arr), len(b8_arr), len(l_arr), len(h2_arr)
 
         storage_feasible = 0
+        n_total_batches = (len(nm_valid) + MAX_MIX_BATCH - 1) // MAX_MIX_BATCH
+        batch_num = 0
 
         for batch_start in range(0, len(nm_valid), MAX_MIX_BATCH):
             batch_end = min(batch_start + MAX_MIX_BATCH, len(nm_valid))
             batch = nm_valid[batch_start:batch_end]
             n_batch = len(batch)
+            batch_num += 1
 
-            # Compute supply rows on-the-fly (avoids storing full nm_supply)
-            batch_supply = np.empty((n_batch, H), dtype=np.float64)
-            for bi in range(n_batch):
-                orig_idx = batch[bi][1]
-                batch_supply[bi] = (coarse_combos[orig_idx] / 100.0) @ supply_matrix
+            # Progress output every batch (prevents apparent idle)
+            print(f"\r        Storage sweep: batch {batch_num}/{n_total_batches} "
+                  f"({batch_start}/{len(nm_valid)} mixes, "
+                  f"{storage_feasible:,} feasible so far)", end="", flush=True)
+
+            # Vectorized supply computation: single matmul instead of per-mix loop
+            batch_orig_idx = np.array([batch[bi][1] for bi in range(n_batch)])
+            batch_supply = (coarse_combos[batch_orig_idx] / 100.0) @ supply_matrix
 
             # Batch screen all mixes × all storage combos (procurement=1.0)
             batch_scores = _batch_mixes_storage_screen(
@@ -1465,7 +1477,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                                 add_candidate(mix, bp, b8p, lp, score, h2p)
                                 storage_feasible += 1
 
-        print(f", {storage_feasible:,} with storage ({len(near_miss_idx):,} near-miss)")
+        print(f"\r        Storage sweep: {n_total_batches}/{n_total_batches} batches done"
+              f"                                        ")  # clear line
+        print(f"      {iso} {threshold}%: +{storage_feasible:,} with storage "
+              f"({len(nm_valid):,} curtailing / {len(near_miss_idx):,} near-miss)")
     else:
         print(f", 0 near-miss")
 
@@ -1520,9 +1535,14 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                 p2_lc = np.empty(n_nm_fine, dtype=np.float64)
                 p2_hc = np.empty(n_nm_fine, dtype=np.int64)
                 p2_sd = np.empty(n_nm_fine, dtype=np.int64)
+                p2_cap_chunks = (n_nm_fine + NM_CHUNK - 1) // NM_CHUNK
 
                 for cs in range(0, n_nm_fine, NM_CHUNK):
                     ce = min(cs + NM_CHUNK, n_nm_fine)
+                    p2_chunk_num = cs // NM_CHUNK + 1
+                    if p2_cap_chunks > 1:
+                        print(f"\r        Fine cap computation: chunk {p2_chunk_num}/{p2_cap_chunks} "
+                              f"({cs:,}/{n_nm_fine:,} mixes)", end="", flush=True)
                     chunk_fracs = all_fine[fine_nm_idx[cs:ce]] / 100.0
                     chunk_supply = chunk_fracs @ supply_matrix
                     chunk_n = ce - cs
@@ -1535,34 +1555,39 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                     p2_lc[cs:ce] = cl
                     p2_hc[cs:ce] = chc
                     p2_sd[cs:ce] = csd
+                if p2_cap_chunks > 1:
+                    print()  # newline after progress
 
-                nm_fine_valid = []
-                for ci in range(n_nm_fine):
-                    if p2_hc[ci]:
-                        nm_fine_valid.append((
-                            ci, fine_nm_idx[ci],
-                            p2_b4c[ci] * 100.0 * 1.1,
-                            p2_b8c[ci] * 100.0 * 1.1,
-                            p2_lc[ci] * 100.0 * 1.1,
-                            int(p2_sd[ci]),
-                        ))
+                # Vectorized curtailment filter
+                p2_has_curt = p2_hc.astype(bool)
+                p2_valid_ci = np.where(p2_has_curt)[0]
+                nm_fine_valid = [(int(ci), int(fine_nm_idx[ci]),
+                                  p2_b4c[ci] * 100.0 * 1.1,
+                                  p2_b8c[ci] * 100.0 * 1.1,
+                                  p2_lc[ci] * 100.0 * 1.1,
+                                  int(p2_sd[ci])) for ci in p2_valid_ci]
 
                 p2_b4 = np.array(batt_levels, dtype=np.float64)
                 p2_b8 = np.array(batt8_levels, dtype=np.float64)
                 p2_l = np.array(ldes_levels, dtype=np.float64)
                 p2_h2 = np.array(h2_levels, dtype=np.float64)
                 p2_nb4, p2_nb8, p2_nl, p2_nh2 = len(p2_b4), len(p2_b8), len(p2_l), len(p2_h2)
+                p2_n_batches = (len(nm_fine_valid) + MAX_MIX_BATCH - 1) // MAX_MIX_BATCH
+                p2_batch_num = 0
 
                 for batch_start in range(0, len(nm_fine_valid), MAX_MIX_BATCH):
                     batch_end = min(batch_start + MAX_MIX_BATCH, len(nm_fine_valid))
                     batch_p2 = nm_fine_valid[batch_start:batch_end]
                     n_bp2 = len(batch_p2)
+                    p2_batch_num += 1
 
-                    # Compute supply rows on-the-fly
-                    batch_supply_p2 = np.empty((n_bp2, H), dtype=np.float64)
-                    for bi in range(n_bp2):
-                        orig_fine_idx = batch_p2[bi][1]
-                        batch_supply_p2[bi] = (all_fine[orig_fine_idx] / 100.0) @ supply_matrix
+                    # Progress output (prevents apparent idle)
+                    print(f"\r        Fine storage sweep: batch {p2_batch_num}/{p2_n_batches} "
+                          f"({batch_start}/{len(nm_fine_valid)} mixes)", end="", flush=True)
+
+                    # Vectorized supply computation: single matmul
+                    batch_fine_idx = np.array([batch_p2[bi][1] for bi in range(n_bp2)])
+                    batch_supply_p2 = (all_fine[batch_fine_idx] / 100.0) @ supply_matrix
 
                     batch_scores_p2 = _batch_mixes_storage_screen(
                         demand_arr, batch_supply_p2, 1.0, n_bp2,
@@ -1600,6 +1625,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                                             continue
                                         add_candidate(all_fine[orig_idx], bp, b8p, lp, sc, h2p)
 
+                if nm_fine_valid:
+                    print()  # newline after progress
             print(f"      {iso} {threshold}%: Phase 2 — {n_all_fine:,} fine combos, "
                   f"{len(fine_feas_idx):,} feasible, {len(fine_nm_idx):,} near-miss")
 
