@@ -97,7 +97,7 @@ except ImportError:
 
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
 
 WHOLESALE_PRICES = {
     'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42,
@@ -238,6 +238,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
     'ERCOT': {
         'clean_firm':  [16, 15, 14, 13, 12, 11, 10, 9, 9, 8, 8, 12, 8, 8, 13, 0, 13],
@@ -248,6 +249,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
     'PJM': {
         'clean_firm':  [63, 58, 53, 50, 46, 43, 56, 43, 66, 82, 77, 91, 82, 83, 85, 85, 85],
@@ -777,11 +779,10 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
     resource_stats = {}
     for res in RESOURCES:
         pct_values = [mix[res][i] for i in range_indices]
-        procurement_values = [mix['procurement'][i] for i in range_indices]
 
-        # Effective share of demand = (res_pct/100) × (procurement_pct/100)
-        demand_shares = [(pct / 100.0) * (proc / 100.0)
-                         for pct, proc in zip(pct_values, procurement_values)]
+        # v5.0: procurement is baked into resource percentages directly
+        # Effective share of demand = (res_pct/100)
+        demand_shares = [pct / 100.0 for pct in pct_values]
 
         floor_pct = min(pct_values)
         floor_share = min(demand_shares)
@@ -804,7 +805,7 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
                 t = THRESHOLDS[i]
                 gf = demand_growth_factor(iso, t, growth_tier)
                 demand = DEMAND_TWH[iso] * gf
-                res_twh = (mix[res][i] / 100.0) * (mix['procurement'][i] / 100.0) * demand
+                res_twh = (mix[res][i] / 100.0) * demand
                 floor_twh_values.append(res_twh)
                 avg_twh_values.append(res_twh)
                 max_twh_values.append(res_twh)
@@ -828,14 +829,13 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
                 {
                     'threshold': THRESHOLDS[i],
                     'pct': mix[res][i],
-                    'procurement': mix['procurement'][i],
+                    'pct_of_demand': round(mix[res][i] / 100.0, 4),
                 }
                 for i in range_indices
             ],
         }
 
-    # Total procurement stats across range
-    procurement_values = [mix['procurement'][i] for i in range_indices]
+    # Total clean energy stats across range (v5.0: procurement baked into resource %)
     total_clean_by_growth = {}
     for growth_tier in ['low', 'medium', 'high']:
         total_twh_values = []
@@ -843,7 +843,8 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
             t = THRESHOLDS[i]
             gf = demand_growth_factor(iso, t, growth_tier)
             demand = DEMAND_TWH[iso] * gf
-            total_twh = (mix['procurement'][i] / 100.0) * demand
+            total_pct = sum(mix[res][i] for res in RESOURCES)
+            total_twh = (total_pct / 100.0) * demand
             total_twh_values.append(total_twh)
         total_clean_by_growth[growth_tier] = {
             'floor_twh': round(min(total_twh_values), 1),
@@ -854,7 +855,6 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
     return {
         'range_thresholds': range_thresholds,
         'resources': resource_stats,
-        'procurement_pct_range': [min(procurement_values), max(procurement_values)],
         'total_clean_by_growth': total_clean_by_growth,
         'demand_growth_factors': {
             growth_tier: {
@@ -943,7 +943,6 @@ def main():
         if isinstance(no_regrets, dict) and 'resources' in no_regrets:
             print(f"\n  NO-REGRETS RESOURCE INVESTMENTS (within crossover range):")
             print(f"  Range thresholds: {no_regrets['range_thresholds']}")
-            print(f"  Procurement: {no_regrets['procurement_pct_range'][0]}% – {no_regrets['procurement_pct_range'][1]}% of demand")
             print(f"\n  {'Resource':<14} {'Consensus':<11} {'Floor%':<9} {'Avg%':<8} {'Floor TWh(M)':<14} {'Avg TWh(M)':<12}")
             print(f"  {'-' * 14} {'-' * 11} {'-' * 9} {'-' * 8} {'-' * 14} {'-' * 12}")
             for res in RESOURCES:
@@ -1130,7 +1129,6 @@ def write_dashboard_js(results, path):
                 }
             lines.append(f'    no_regrets: {json.dumps(nr_summary)},')
             lines.append(f'    no_regrets_thresholds: {json.dumps(nr.get("range_thresholds", []))},')
-            lines.append(f'    no_regrets_procurement_range: {json.dumps(nr.get("procurement_pct_range", []))},')
             lines.append(f'    total_clean_by_growth: {json.dumps(nr.get("total_clean_by_growth", {}))},')
         else:
             lines.append(f'    no_regrets: null,')
