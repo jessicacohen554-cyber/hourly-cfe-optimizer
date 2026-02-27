@@ -161,37 +161,69 @@ def main():
     original_thresholds = list(s1.THRESHOLDS)
     s1.THRESHOLDS = thresholds
 
+    # Sort ascending so cross-threshold dominance frontier builds correctly
+    thresholds_sorted = sorted(thresholds)
+
     # ── Phase 1: Coarse storage sweep ──
-    print(f"\nPhase 1 — Coarse storage sweep ({len(thresholds)} thresholds)")
+    print(f"\nPhase 1 — Coarse storage sweep ({len(thresholds_sorted)} thresholds, ascending)")
     total_start = time.time()
 
     # Track storage saturation incrementally — don't keep full result lists
     max_bat4 = max_bat8 = max_ldes = max_h2 = 0.0
 
-    for threshold in thresholds:
+    # Cross-threshold dominance frontier: minimal mixes that hit any prior
+    # threshold. Cache entries dominated by frontier mixes are skipped.
+    frontier_mixes = []
+
+    for threshold in thresholds_sorted:
         t_start = time.time()
         feasible = s1.optimize_threshold(
             iso, threshold, demand_arr, supply_matrix,
-            coarse_combos, coarse_scores)
+            coarse_combos, coarse_scores,
+            frontier_mixes=frontier_mixes if frontier_mixes else None)
+
+        # Apply within-threshold dominance post-filter
+        n_before_dom = len(feasible)
+        feasible = s1.dominance_filter_candidates(feasible, rtypes)
+        n_removed = n_before_dom - len(feasible)
+
+        # Update frontier with non-dominated mixes from this threshold
+        for c in feasible:
+            mix_arr = np.array([c['resource_mix'][rt] for rt in rtypes],
+                               dtype=np.float64)
+            # Only add if not already dominated by existing frontier
+            dominated = False
+            for f in frontier_mixes:
+                if np.all(f <= mix_arr) and not np.array_equal(f, mix_arr):
+                    dominated = True
+                    break
+            if not dominated:
+                # Remove frontier entries that this mix dominates
+                frontier_mixes = [f for f in frontier_mixes
+                                  if not (np.all(mix_arr <= f)
+                                          and not np.array_equal(mix_arr, f))]
+                frontier_mixes.append(mix_arr)
 
         archetypes = set()
         for c in feasible:
             archetypes.add(tuple(c['resource_mix'][rt] for rt in rtypes))
-            # Update saturation stats inline (avoids keeping millions of dicts in memory)
             max_bat4 = max(max_bat4, c.get('battery_dispatch_pct', 0) or 0)
             max_bat8 = max(max_bat8, c.get('battery8_dispatch_pct', 0) or 0)
             max_ldes = max(max_ldes, c.get('ldes_dispatch_pct', 0) or 0)
             max_h2 = max(max_h2, c.get('h2_dispatch_pct', 0) or 0)
 
         t_elapsed = time.time() - t_start
+        dom_str = f", {n_removed} dominated removed" if n_removed > 0 else ""
         print(f"    {iso} {threshold}%: {len(feasible)} solutions "
-              f"({len(archetypes)} archetypes), {t_elapsed:.1f}s")
+              f"({len(archetypes)} archetypes{dom_str}), "
+              f"frontier={len(frontier_mixes)}, {t_elapsed:.1f}s")
 
         s1._save_threshold_done(iso, threshold, feasible)
         del feasible, archetypes  # free memory before next threshold
 
     print(f"\n  Coarse saturation — bat4={max_bat4:.2f}%, bat8={max_bat8:.2f}%, "
           f"ldes={max_ldes:.1f}%, h2={max_h2:.1f}%")
+    print(f"  Final frontier size: {len(frontier_mixes)} non-dominated mixes")
 
     # ── Phase 2: Fine storage sweep within saturation range ──
     fine_levels = s1.build_fine_storage_levels(
@@ -199,12 +231,35 @@ def main():
 
     if fine_levels is not None:
         print(f"\nPhase 2 — Fine storage sweep")
-        for threshold in thresholds:
+        # Reset frontier for Phase 2 (fine storage uses different combos)
+        frontier_mixes_p2 = list(frontier_mixes)  # start from Phase 1 frontier
+
+        for threshold in thresholds_sorted:
             t_start = time.time()
             feasible = s1.optimize_threshold(
                 iso, threshold, demand_arr, supply_matrix,
                 coarse_combos, coarse_scores,
-                storage_levels=fine_levels)
+                storage_levels=fine_levels,
+                frontier_mixes=frontier_mixes_p2 if frontier_mixes_p2 else None)
+
+            # Apply within-threshold dominance post-filter
+            feasible = s1.dominance_filter_candidates(feasible, rtypes)
+
+            # Update Phase 2 frontier
+            for c in feasible:
+                mix_arr = np.array([c['resource_mix'][rt] for rt in rtypes],
+                                   dtype=np.float64)
+                dominated = False
+                for f in frontier_mixes_p2:
+                    if np.all(f <= mix_arr) and not np.array_equal(f, mix_arr):
+                        dominated = True
+                        break
+                if not dominated:
+                    frontier_mixes_p2 = [
+                        f for f in frontier_mixes_p2
+                        if not (np.all(mix_arr <= f)
+                                and not np.array_equal(mix_arr, f))]
+                    frontier_mixes_p2.append(mix_arr)
 
             archetypes = set()
             for c in feasible:
