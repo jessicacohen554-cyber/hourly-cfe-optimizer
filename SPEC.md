@@ -274,6 +274,264 @@ Charts on this page show *that* something is happening at a participation thresh
 
 **Critical nuance:** 2B is arguably *worse* than 2A for existing clean stranding. 2A ignores existing clean — doesn't help, doesn't harm. 2B actively takes credit for existing clean generation (reducing the buyer's procurement cost and requirement) without directing any revenue to those generators. It free-rides on existing clean being online while starving it of the payment signal needed to stay online. When the unpaid existing generation retires, 2B buyers face the same replacement cost spike as everyone else — but they've also reduced the market signal that could have prevented the retirement. Strategy 2C is the only hourly variant that explicitly pays existing generators for being clean, creating the revenue floor needed to prevent premature retirement.
 
+### §15.5.5 Page Narrative Map & Figure Descriptions (Feb 27)
+
+**File:** `dashboard/procurement_comparison.html` (new page — `procurement_research.html` is the content plan, kept separately)
+
+---
+
+#### ACT 1: "EVERY STRATEGY LOOKS FINE AT LOW ADOPTION" (Scrollytell)
+
+**Purpose:** Build the reader's mental model of the three strategy families, then plant the seed that things break at scale.
+
+**Section 1.1 — Opening Hook**
+- **Text:** "Today, ~13% of US commercial & industrial electricity is covered by voluntary clean energy procurement. At that level, every strategy works. The question isn't which approach looks best at 13% — it's which ones survive at 40%, 60%, 80%."
+- **Visual:** Animated counter showing current market: 315 TWh / 2,400 TWh C&I load = 13%. Simple, cinematic.
+- No chart. Just the number landing with weight.
+
+**Section 1.2 — The Three Families**
+- **Text:** Brief intro to each strategy family (3 cards, scroll-triggered reveal):
+  - **Consequential (Strategy 1):** "Buy the cheapest clean energy anywhere in the US. Net it against your emissions. Maximum flexibility, minimum cost."
+  - **Hourly (Strategy 2):** "Match your load hour-by-hour within your own grid region. Most rigorous. Most expensive."
+  - **Annual (Strategy 3):** "Match your annual consumption with clean energy certificates. The status quo for most buyers today."
+- **Visual:** Three strategy family cards with icons. No chart yet. Clean, simple.
+
+**Section 1.3 — The Variant Tree**
+- **Text:** "But within each family, design choices matter enormously. There are 10 distinct strategy variants — and the differences within a family can be larger than the differences between families."
+- **FIGURE 1: Strategy Taxonomy Tree**
+  - **Type:** Interactive tree/org-chart diagram
+  - **Description:** Visual hierarchy: 3 families → 10 variants. Each node shows: variant code (1A, 2C, etc.), one-line description, key distinguishing feature. Color-coded by family. Clicking a variant highlights it across all subsequent charts.
+  - **Data source:** Static (strategy definitions from §15.2). No compute needed.
+  - **Key design:** This becomes the "legend" for the rest of the page. Reader builds familiarity with the codes here so they can track them through subsequent figures.
+
+---
+
+#### ACT 2: "WHAT BREAKS, AND WHEN" (Scrollytell → Interactive)
+
+**Purpose:** The core analytical payload. Five failure mode demonstrations, each building on the last. Shared participation slider ties them together.
+
+**Transition text:** "Now drag the participation slider from 13% to 80% and watch what happens to each strategy."
+
+**Global control: Participation Slider** — Sticky/floating, visible across all Act 2 charts. Range: 5–80% of C&I load. Default position: 13% (current market). Dragging it right is the primary interaction.
+
+**Section 2.1 — Cost Trajectory Divergence**
+- **Lead text:** "At low participation, all strategies cost roughly the same. At high participation, the spread is enormous."
+- **FIGURE 2: Cost Divergence Fan**
+  - **Type:** Multi-line chart (10 lines, one per strategy variant)
+  - **X-axis:** Participation rate (5–80% of C&I load)
+  - **Y-axis:** Effective cost ($/MWh) at 90% CFE threshold
+  - **Behavior:** At 13%, lines cluster in a $30–50/MWh band. As slider moves right, lines diverge. Strategy 3D (status quo RECs) stays flat and cheap. Strategy 2A (all new-build hourly) rises steeply then curves. Strategy 1A (consequential, grid-avg) stays cheap until ~40% then jumps (coal exhaustion).
+  - **Key annotation:** Vertical dashed line at current market (13%). Shaded "comfort zone" where strategies look similar.
+  - **Data source:** For strategies 2A and 2C — **existing data**: `track_results.json` (newbuild = 2A, cost_to_replace = 2C) repriced at Medium costs gives $/MWh at each threshold. Map thresholds to participation via SBTi timeline. For 3D — near-zero (unbundled REC price). For 1A/1B/1C — derive from `consequential_queue.json` (deployment queue MAC × emission rate gives effective cost). **Strategies 2B, 3A, 3B, 3C need Step 8 compute** — show as dashed/estimated lines initially.
+  - **Callout box:** "The cheap strategies aren't actually cheap — they're deferring costs to the future."
+
+**Section 2.2 — Where the Money Goes (Geographic Clustering)**
+- **Lead text:** "Cross-regional strategies chase the cheapest abatement. That concentrates investment in a few regions and starves others."
+- **FIGURE 3: Capital Allocation Heatmap**
+  - **Type:** Stacked bar chart or heatmap (7 ISOs × selected strategies)
+  - **At each participation level:** Shows what % of total clean energy investment goes to each ISO
+  - **Strategy 1 (consequential):** Capital clusters in SPP and MISO (coal-heavy, cheapest MAC). CAISO, NEISO, NYISO get almost nothing.
+  - **Strategy 2 (hourly):** Capital distributed proportionally — each ISO serves its own load.
+  - **"Fair share" reference:** Dashed lines showing demand-proportional allocation.
+  - **Data source:** `consequential_queue.json` → `deployment_queue` entries have `iso` field. Sum `delta_cost_total_bn` by ISO at each cumulative step. For hourly: `track_results.json` — inherently same-ISO so allocation = demand share. **Available now for Strategy 1 and 2. Strategy 3 variants need Step 8.**
+  - **Callout box:** "When SPP and MISO receive 60%+ of clean investment while serving 25% of demand, the other five regions are subsidizing their transition while getting none of their own."
+
+**Section 2.3 — Wholesale Destruction & Nuclear Stranding**
+- **Lead text:** "Every MWh of zero-marginal-cost generation added to a grid pushes wholesale prices down. That's great for consumers — until it kills the existing clean generation you're counting on."
+- **FIGURE 4: Wholesale Price Erosion**
+  - **Type:** Dual-axis line chart. Primary: LMP ($/MWh). Secondary: Nuclear operating cost reference line.
+  - **X-axis:** Participation rate (5–80%)
+  - **Lines:** LMP trajectory under Strategy 1 (cross-regional), Strategy 2A (all new, same-ISO), Strategy 2C (premium + new, same-ISO)
+  - **Key feature:** Horizontal band at ~$44/MWh (45U strike price) with annotation: "Below this line, existing nuclear can't cover operating costs." When Strategy 2A's line crosses below this band, highlight it.
+  - **Strategy 2C difference:** Its line stays higher because the premium mechanism acts as a revenue floor — you're paying existing clean to stay online rather than flooding the market with competing new zero-marginal gen.
+  - **Data source:** `data/step5-post-processing/lmp/lmp_summary.json` has PJM LMP data. `scenario_comparison.json` has stranding analysis (`stranding_a`, `stranding_b`). **LMP currently computed for PJM only — show PJM as representative, note other ISOs forthcoming.** Track 3 CTR effective costs from `track_results.json` provide the "premium" price signal.
+  - **Callout box:** "Strategy 2A and Strategy 1 both destroy wholesale prices — they just do it in different geographies. Strategy 2C is the only variant with a built-in mechanism to prevent it."
+
+**Section 2.4 — The MAC Wall**
+- **Lead text:** "Consequential strategies look cheap because they pick off the lowest-hanging fruit first. But that fruit runs out."
+- **FIGURE 5: Marginal Abatement Cost Escalation**
+  - **Type:** Line chart with shaded uncertainty bands
+  - **X-axis:** Cumulative CO₂ abated (Mt) — maps to participation via deployment queue
+  - **Y-axis:** Marginal $/tCO₂ for the next ton abated
+  - **Strategy 1 (consequential):** Starts at ~$80-100/tCO₂ (coal displacement in SPP/MISO). Stays flat through ~200 Mt. Then **wall** when coal is exhausted → jumps to $300-500+/tCO₂ (gas displacement).
+  - **Strategy 2 (hourly):** Starts higher (~$150-200/tCO₂) but stays **flatter** — no saturation cliff because you're always building the full stack (firm + storage + VRE) rather than cherry-picking.
+  - **Horizontal reference bands:** DAC ($400-600), EU ETS ($60-100), EPA SCC ($190), Rennert SCC ($185).
+  - **Data source:** `mac_stats.json` — `stepwise_fan` has P10/P50/P90 MAC by threshold for all 7 ISOs. `consequential_queue.json` → `deployment_queue` has `marginal_mac` per zone. `scenario_comparison.json` → `queue_a` and `queue_b` have MAC trajectories for both scenarios. **Fully available now.**
+  - **Callout box:** "The coal wall is a cliff, not a hill. Once you've displaced all the coal, the next ton costs 3-5× more."
+
+**Section 2.5 — What Gets Built**
+- **Lead text:** "Different strategies build different grids. That matters more than the cost difference."
+- **FIGURE 6: Resource Mix Comparison**
+  - **Type:** Stacked area or grouped bar chart
+  - **Comparison:** At a selected threshold (default 90%), show the resource mix under 3-4 key strategies side by side
+  - **Strategy 1 (consequential):** Heavy VRE (solar + wind), minimal firm clean, no storage. Gas fills the gaps.
+  - **Strategy 2A (all new hourly):** VRE + firm clean + battery + LDES. Balanced portfolio forced by hourly constraint.
+  - **Strategy 2C (premium + new hourly):** Existing nuclear/hydro preserved + new firm + VRE + storage. Most diversified.
+  - **Strategy 3D (status quo annual):** Unbundled RECs from existing — no new build at all. Cheapest but builds nothing.
+  - **Color coding:** Solar=amber, Wind=blue, Clean Firm=green, CCS=teal, Hydro=cyan, Battery=purple, LDES=pink (per project standard)
+  - **Data source:** `track_results.json` → `resource_mix` for newbuild (2A) and cost_to_replace (2C) at each threshold. `scenario_comparison.json` → `trajectories` → `pure_consequential` has `resource_twh` per threshold for Strategy 1. `shared-data.js` → `RESOURCE_MIX_DATA` has Medium-cost mix by ISO. **Available now for 1, 2A, 2C. 3D is trivially zero new-build.**
+  - **Callout box:** "Hourly matching is the only approach that forces investment in the resources you actually need for a deeply decarbonized grid — firm clean generation and long-duration storage."
+
+---
+
+#### ACT 3: "THE DEBATE WITHIN HOURLY" (Scrollytell)
+
+**Purpose:** Shift from family-level comparison to the 2A vs 2B vs 2C internal debate. This is the most nuanced section — it argues that the debate *within* hourly matching is as important as the debate *between* strategies.
+
+**Transition text:** "If hourly matching is the most robust family, the next question is: which version? The differences are larger than you'd think."
+
+**Section 3.1 — The Stranding Paradox**
+- **Text:** "Strategy 2A (all new-build) sounds maximally additional. But it ignores the 380 TWh of existing nuclear and hydro already running on US grids. Strategy 2B claims credit for that existing clean without paying for it — the worst of both worlds. Strategy 2C pays existing generators a premium to stay online, then builds new on top."
+- **FIGURE 7: Strategy 2 Internal Comparison Table**
+  - **Type:** Animated comparison table (not a chart — a styled, scroll-triggered table)
+  - **Rows:** 6 dimensions: Wholesale erosion, Existing clean stranding, Learning curves, Cost trajectory, Firm investment signal, Additionality
+  - **Columns:** 2A, 2B, 2C — color-coded cells (green=good, amber=mixed, red=bad)
+  - **Scroll animation:** Rows reveal one at a time as user scrolls. Each row highlights the "winner" and "loser."
+  - **Data source:** Static (the §15.5.2 comparison table). No compute needed.
+  - **Key moment:** When the "Existing clean stranding" row reveals, 2B's cell turns red with bold text: "Worst — claims credit without paying." This is the insight most readers won't expect.
+
+**Section 3.2 — The 2C Critical Mass Question**
+- **Text:** "Every other strategy degrades as adoption increases. Strategy 2C has the opposite problem — it needs *enough* adoption to work. Below a critical mass threshold, you're just paying premiums to keep existing plants alive. Above it, you've funded the learning curve that makes new clean firm affordable everywhere."
+- **FIGURE 8: The 2C Threshold Diagram**
+  - **Type:** Single-line chart with shaded zones
+  - **X-axis:** Participation rate (5–80%)
+  - **Y-axis:** Effective $/MWh for Strategy 2C (blended existing premium + new build)
+  - **Key feature:** Two shaded zones:
+    - **Left zone (red/amber):** "Maintenance mode" — below critical mass. Premium spend dominates. Not enough new-build volume to trigger learning.
+    - **Right zone (green):** "Learning activated" — past critical mass. Aggregate new-build firm across all ISOs hits first Wright's Law doubling. NOAK pricing begins. Cost curve bends down.
+  - **Vertical line:** Critical mass threshold (computed from aggregate new-build TWh needed for first doubling)
+  - **Contrast overlay:** Faded lines for other strategies showing their degradation at high participation — 2C is the only one that *improves* past its threshold.
+  - **Data source:** `track_results.json` cost_to_replace effective costs for 2C base. `scenario_comparison.json` trajectories for learning curve application. Critical mass threshold = **Step 8 compute needed** for exact number, but can estimate from existing resource mix data (how much new firm TWh at each participation level × learning curve parameters from `step6_scenario_comparison.py`).
+  - **Callout box:** "The critical mass threshold is lower than you'd think — because learning is global. A nuclear plant built in PJM drives NOAK pricing for nuclear in NEISO. All 7 ISOs contribute to the same global learning pool."
+
+**Section 3.3 — The Regional Role Map**
+- **Text:** "Under Strategy 2C, different regions play different roles. Nuclear-heavy ISOs (PJM, NEISO) are the premium-payers — their spend keeps existing clean alive. Renewable-rich ISOs (ERCOT, SPP) are the learning-curve drivers — their spend deploys the new technologies. Both are essential."
+- **FIGURE 9: Investment Pool Composition by ISO**
+  - **Type:** Stacked bar chart (7 ISOs)
+  - **Each bar split into:** Existing clean premium (gray/blue) vs. New-build capital (green/amber)
+  - **At selected participation level** (linked to global slider)
+  - **Key insight:** PJM's bar is 60-70% premium (keeping 32% nuclear fleet online). ERCOT's bar is 80%+ new-build (little existing clean to maintain). Both contribute to the same NOAK outcome.
+  - **Data source:** `track_results.json` — newbuild (2A) gives new-build costs; cost_to_replace (2C) gives total including premium. Delta = premium portion. **Available now for 5 ISOs** (CAISO, ERCOT, NEISO, NYISO, PJM). MISO, SPP from `shared-data.js` resource mix data.
+  - **Callout box:** "PJM free-rides on the learning curve that ERCOT is paying for — and that's the system working as designed."
+
+---
+
+#### ACT 4: "THE TIMELINE TRAP" (Scrollytell)
+
+**Purpose:** Introduce the temporal dimension — SBTi milestones create a timeline that makes strategy choice path-dependent. What you choose at 50% determines what you face at 90%.
+
+**Section 4.1 — The SBTi Ratchet**
+- **Text:** "Corporate decarbonization isn't a static optimization — it's a 25-year ratchet. Science-based targets lock in progressively tighter commitments: 50% by 2030, 70% by 2035, 90% by 2040, 100% by 2050. What you build at 50% determines what you face at 90%."
+- **FIGURE 10: The FOAK→NOAK Timeline**
+  - **Type:** Dual-trajectory line chart with SBTi milestone markers
+  - **X-axis:** Year (2025–2050), with SBTi milestone markers
+  - **Y-axis:** Clean firm LCOE ($/MWh) — blended nuclear + CCS + LDES
+  - **Line A (Strategy 1/3 — Consequential/Annual):** Stays at FOAK through 2035 (no investment). Learning starts 2035, compressed. Still near-FOAK at 2040 (the 90% milestone). Reaches NOAK only by ~2047.
+  - **Line B (Strategy 2 — Hourly):** FOAK from 2025-2030. Learning 2030-2040. NOAK by 2040 — right when you need it for the 90% target.
+  - **Shaded band:** Cost difference area between the two lines = "the learning curve premium" — what hourly matching costs upfront vs. what it saves long-term.
+  - **SBTi markers:** Vertical dashed lines at 2030 (50%), 2035 (70%), 2040 (90%), 2050 (100%)
+  - **Data source:** `step6_scenario_comparison.py` → `learning_fraction()` gives the curve shape. LCOE_TABLES from `shared-data.js` give FOAK (High) and NOAK (Low) costs. `scenario_comparison.json` → `trajectories` have `blended_new_lcoe` at each threshold/year. **Fully available now.**
+  - **Callout box:** "By 2040, hourly matching has driven clean firm costs to NOAK. Consequential strategies are still paying near-FOAK — for the same technology, at the same time, because they delayed investment."
+
+**Section 4.2 — Three Compounding Failures**
+- **Text:** Brief narrative on the three adverse effects of delayed hourly matching (from §15.11):
+  1. Learning curve delay → FOAK at 90%
+  2. Stranded VRE overbuild → curtailed solar doesn't help at night
+  3. Gas lock-in → no storage signal, gas fills by default
+- **FIGURE 11: The Compounding Timeline**
+  - **Type:** SBTi milestone comparison table (styled, scroll-animated)
+  - **Rows:** 4 SBTi milestones (2030/50%, 2035/70%, 2040/90%, 2050/100%)
+  - **Columns:** "Strategy 1/3 (Annual/Consequential)" vs "Strategy 2 (Hourly)"
+  - **Cell content:** Status descriptor + cost indicator. E.g., 2040 row: Strategy 1/3 = "WALL — VRE saturated, firm at FOAK, gas locked in" (red). Strategy 2 = "Firm at NOAK, storage mature, gas retiring" (green).
+  - **Data source:** Static text from §15.11 table, enriched with cost numbers from trajectory data. **Available now.**
+
+---
+
+#### ACT 5: "THE HORSE RACE" (Interactive)
+
+**Purpose:** Direct comparison mode. Same outcome, which strategy gets there cheapest? Same budget, which strategy achieves the most?
+
+**Section 5.1 — Fixed Outcome: "Get to 90% CFE. What does it cost?"**
+- **FIGURE 12: Cost to Reach 90% by Strategy**
+  - **Type:** Horizontal bar chart (10 strategies ranked by cost)
+  - **Y-axis:** Strategy variants (labeled)
+  - **X-axis:** Effective $/MWh to achieve 90% hourly CFE (or equivalent)
+  - **Key insight:** Strategy 3D is "cheapest" but achieves nothing physical. Strategy 2A is most expensive but builds the most. Strategy 2C is moderate and sustainable.
+  - **Annotations:** Each bar annotated with what it actually built (resource mix icons) and what's at risk (failure mode flag)
+  - **Data source:** For 2A and 2C: `track_results.json` at threshold 90, Medium scenario. For Strategy 1: `scenario_comparison.json` trajectory at 90% threshold. **Available now for 1, 2A, 2C. Others need Step 8.**
+  - **Toggle:** ISO selector (default: all-ISO weighted average)
+
+**Section 5.2 — Fixed Budget: "Spend $60/MWh. What do you get?"**
+- **FIGURE 13: Achievement at Fixed Budget**
+  - **Type:** Horizontal bar chart (10 strategies ranked by CFE% achieved)
+  - **X-axis:** CFE threshold achieved with $60/MWh budget
+  - **Annotations:** Each bar annotated with CO₂ abated and resource mix
+  - **Data source:** Interpolate from cost curves at each threshold. **Derivable from existing data for strategies with cost trajectories.**
+
+---
+
+#### ACT 6: "THE SYSTEM VIEW" (Interactive Panel)
+
+**Purpose:** Flip the question. Instead of "what does it cost per buyer?" ask "what participation level does each strategy need to hit a system-wide CO₂ target?"
+
+**Section 6.1 — Required Participation by Strategy**
+- **FIGURE 14: Participation Required for 30% US Power Sector CO₂ Reduction**
+  - **Type:** Horizontal bar chart or gauge visualization
+  - **Y-axis:** Strategy variants
+  - **X-axis:** Required C&I participation (% of load)
+  - **Key insight:** Some strategies can't get there at any participation level (supply constraints, saturation). Others need implausibly high participation. A few are feasible at realistic levels.
+  - **Infeasibility markers:** Strategies that hit physical supply ceilings before reaching the target show as "infeasible" with hatched bars.
+  - **Data source:** Requires mapping strategy → CO₂ displaced at each participation level. `consequential_queue.json` has `co2_displaced_mt` per step for consequential. `co2_results.json` for dispatch-based emission reductions (currently PJM only). **Partial data — full computation is Step 8.**
+  - **User control:** CO₂ reduction target slider (10–50% of US power sector emissions)
+
+**Section 6.2 — Interactive Explorer (Full Controls)**
+- **Text:** "Explore the full parameter space."
+- **Controls:**
+  - Strategy selector (checkbox — select multiple to compare)
+  - Participation slider (5–80%)
+  - CFE threshold slider (50–100%)
+  - ISO selector (7 ISOs or all)
+  - Learning curves toggle (On/Off)
+- **FIGURE 15: Explorer Output Panel**
+  - Multi-panel: Cost ($/MWh), Resource mix (stacked bar), CO₂ abated (bar), MAC (line), Gas capacity (bar)
+  - Updates in real-time as controls change
+  - **Data source:** All existing data files, combined. This is the "power user" interface. **Largely available for strategies with computed data.**
+
+---
+
+#### PAGE FOOTER
+
+Cross-reference links to deep-dive pages:
+- Cost to Replace → `cost_to_replace.html`
+- New Build Analysis → `new_build_analysis.html`
+- Consequential Vacuum → `consequential_vacuum.html`
+- Scenario Comparison → `scenario_comparison.html`
+- Abatement Dashboard → `abatement_dashboard.html`
+
+---
+
+#### DATA AVAILABILITY SUMMARY
+
+| Figure | Strategies with Data Now | Strategies Needing Step 8 |
+|--------|--------------------------|---------------------------|
+| Fig 1 (Taxonomy tree) | All 10 (static) | — |
+| Fig 2 (Cost divergence) | 1A-C (from queue), 2A, 2C, 3D (≈$0) | 2B, 3A, 3B, 3C |
+| Fig 3 (Capital allocation) | 1 (queue), 2 (inherently same-ISO) | 3 variants |
+| Fig 4 (Wholesale erosion) | 2A, 2C (PJM LMP data) | 1, 2B, 3 |
+| Fig 5 (MAC escalation) | 1 (queue MACs), 2 (mac_stats) | 3 variants |
+| Fig 6 (Resource mix) | 1 (trajectory), 2A, 2C, 3D (=nothing) | 2B, 3A, 3B, 3C |
+| Fig 7 (2ABC table) | All (static) | — |
+| Fig 8 (2C threshold) | 2C (track data + learning curve) | Critical mass exact point |
+| Fig 9 (Regional roles) | 2C (track data, 5 ISOs) | MISO, SPP |
+| Fig 10 (FOAK→NOAK) | Both (learning_fraction + LCOEs) | — |
+| Fig 11 (Compounding table) | All (static + trajectory data) | — |
+| Fig 12 (Horse race: cost) | 1, 2A, 2C | 2B, 3A-D |
+| Fig 13 (Horse race: budget) | 1, 2A, 2C | 2B, 3A-D |
+| Fig 14 (System CO₂) | Partial (consequential queue CO₂) | Most strategies |
+| Fig 15 (Explorer) | 1, 2A, 2C | 2B, 3A-D |
+
+**Bottom line:** Acts 1–4 (the scrollytell narrative) are ~80% buildable with existing data. Strategies 2A and 2C have the richest data. Strategy 1 has deployment queue data. The remaining strategies (2B, 3A-3D) need Step 8 compute for precise numbers but can be shown as estimated/dashed lines derived from the strategies we do have.
+
 ### §15.6 Emission Rate Data (Research, Feb 27)
 
 | ISO | Grid Avg (tCO₂/MWh) | Fossil Avg | Marginal | Marginal vs Fossil |
