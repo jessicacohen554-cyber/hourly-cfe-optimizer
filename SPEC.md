@@ -232,7 +232,23 @@ Above a critical mass threshold — the participation level where cumulative new
 
 **The chart moment:** Every other strategy line degrades as the participation slider moves right. 2C's risk zone is on the *left* — shaded band below the critical mass threshold. Once past that threshold, 2C is structurally sound at any participation level. The page should make this visually obvious: 2C starts in a "needs more adoption" zone, crosses into "works at any scale," while every other strategy starts in "looks fine" and crosses into various failure modes.
 
-The critical mass threshold is quantifiable: the participation level where cumulative new-build firm clean investment under 2C exceeds the deployment volume needed for Wright's Law cost reductions (roughly the first doubling of installed capacity for each technology). Derivable from learning curve parameters already in `step6_scenario_comparison.py`.
+The critical mass threshold is quantifiable via two key numbers:
+
+**1. Critical mass threshold (% participation):** The participation level where *aggregate* new-build firm clean volume across all 7 ISOs under 2C exceeds the deployment needed for Wright's Law cost reductions (first doubling of installed capacity per technology). Critically, learning is **global, not regional** — a nuclear plant built in PJM drives NOAK for nuclear everywhere. LDES deployed in ERCOT brings down iron-air costs in NEISO. So the threshold is lower than a per-ISO calculation would suggest because all 7 ISOs contribute to the same global learning pool.
+
+**2. Investment pool composition:** At each participation level, total 2C spend splits into:
+- **Existing clean premiums** (keeping nuclear/hydro online — maintenance spend)
+- **New-build capital** (firm clean + storage — learning curve spend)
+
+The split varies dramatically by ISO. Nuclear-heavy ISOs (PJM 32%, NEISO 24%) allocate more to premiums; renewable-heavy ISOs (ERCOT, SPP) have less existing clean to maintain → higher share flows to new-build → they are the **learning curve workhorses** even though they're not where the premium payments concentrate.
+
+**Step 8 computation target:** For each participation level (0-80% of C&I), compute:
+- Total new-build firm TWh across all ISOs (the number that matters for Wright's Law)
+- Premium spend vs new-build spend by ISO (shows where learning investment concentrates)
+- Participation threshold where aggregate new-build hits first doubling → NOAK pricing activates
+- Post-NOAK cost trajectory showing the strategy pays for itself
+
+Data sources: Track 2 NB (new-build costs), Track 3 CTR (existing premium costs), learning curve parameters from `step6_scenario_comparison.py`, resource mix data from shared-data.js.
 
 #### §15.5.3 Cross-References to Deep Dive Pages
 
