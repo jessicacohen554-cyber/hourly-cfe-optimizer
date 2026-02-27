@@ -1256,22 +1256,15 @@ def load_coarse_cache(iso):
 
 def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                        coarse_combos, coarse_scores,
-                       storage_levels=None, frontier_mixes=None):
+                       storage_levels=None):
     """Find feasible solutions for a single threshold × ISO.
 
     Flow:
       1. Procurement window pre-filter (lower bound = target, scaled upper)
-      2. Cross-threshold dominance pre-filter (skip cache entries dominated
-         by frontier mixes from prior thresholds)
-      3. Score all coarse generation mixes (no storage)
-      4. Feasible (score >= target) → keep as-is
-      5. Near-miss (within 40pp) with curtailment → fixed storage sweep
-      6. Fine refinement at 1% step around feasible archetypes
-
-    Args:
-        frontier_mixes: list of numpy arrays (resource mixes) from prior
-            thresholds. Cache entries dominated by any frontier mix are
-            skipped (more of every resource = wasteful).
+      2. Score all coarse generation mixes (no storage)
+      3. Feasible (score >= target) → keep as-is
+      4. Near-miss (within 40pp) with curtailment → fixed storage sweep
+      5. Fine refinement at 1% step around feasible archetypes
 
     Returns list of candidate dicts.
     """
@@ -1356,25 +1349,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     window_str = f"[{proc_lower}%, {proc_upper}%]" if proc_upper else f"[{proc_lower}%, unlimited]"
     print(f"      {iso} {threshold}%: Procurement window {window_str} → "
           f"{len(coarse_combos):,} of {n_before:,} mixes retained")
-
-    # ── Dominance pre-filter: skip cache entries dominated by frontier ──
-    # A cache entry is dominated if some frontier mix has ALL resources <=
-    # (the frontier mix achieves a prior threshold with fewer resources;
-    # by monotonicity the cache entry also passes but is wasteful).
-    if frontier_mixes is not None and len(frontier_mixes) > 0:
-        n_before_dom = len(coarse_combos)
-        keep = np.ones(n_before_dom, dtype=bool)
-        for f_mix in frontier_mixes:
-            # f_mix dominates cache[i] if every resource in f_mix <= cache[i]
-            gte = np.all(coarse_combos >= f_mix, axis=1)
-            eq = np.all(coarse_combos == f_mix, axis=1)
-            keep &= ~(gte & ~eq)
-        coarse_combos = coarse_combos[keep]
-        coarse_scores = coarse_scores[keep]
-        n_removed = n_before_dom - len(coarse_combos)
-        if n_removed > 0:
-            print(f"      {iso} {threshold}%: Dominance pre-filter removed "
-                  f"{n_removed:,} dominated ({len(coarse_combos):,} remaining)")
 
     # ── Phase 1a: Filter coarse cache (no storage) ──
     # Combos where score >= target are feasible without storage
