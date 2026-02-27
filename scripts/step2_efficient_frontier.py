@@ -43,7 +43,8 @@ STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1-pfs-parquets')
 STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-parquets')
 
 # Target thresholds — 10-40 added for Track 2/3 greenfield, 50-100 for all tracks
-TARGET_THRESHOLDS = [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 100.0]
+# Must match Step 1 THRESHOLDS and Step 3 OUTPUT_THRESHOLDS
+TARGET_THRESHOLDS = [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9, 100.0]
 TARGET_THRESHOLD_SET = set(TARGET_THRESHOLDS)
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
@@ -53,7 +54,7 @@ RESOURCE_COLS_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
 RESOURCE_COLS_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'geothermal']
 
 # Storage dispatch columns (always present)
-STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
 
 # Common columns in output (resource cols are ISO-dependent)
 COMMON_COLS = ['iso', 'hourly_match_score', 'pareto_type']
@@ -219,10 +220,10 @@ def deduplicate_mixes(arrays, resource_cols):
     the row with the highest hourly_match_score.
 
     With procurement removed, each unique physical configuration
-    (CF/Sol/Wnd/Hyd[/Geo]/Bat4/Bat8/LDES) maps to a single score.
+    (CF/Sol/Wnd/Hyd[/Geo]/Bat4/Bat8/LDES/H2) maps to a single score.
     Duplicates arise from the same mix appearing at multiple thresholds.
 
-    Storage dispatch columns (bat, bat8, ldes) are float64 with 0.05%
+    Storage dispatch columns (bat, bat8, ldes, h2) are float64 with 0.05%
     granularity from Step 1. They are scaled by 20x (0.05% -> 1) to produce
     exact integer keys.
 
@@ -239,29 +240,34 @@ def deduplicate_mixes(arrays, resource_cols):
     bat_key = np.round(arrays['battery_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
     bat8_key = np.round(arrays['battery8_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
     ldes_key = np.round(arrays['ldes_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
+    h2_key = np.round(arrays['h2_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
 
-    # Pack allocation into a single int64 key.
+    # Pack allocation into two int64 keys to avoid overflow.
     # Resource columns are int16 0-100 -> base 101.
     # Storage keys: max ~100*20=2000, base 2001.
-    STORAGE_BASE = 2001
     n_res = len(resource_cols)
 
-    # Build group key from resource columns
-    group_key = np.zeros(n, dtype=np.int64)
+    # Key 1: resource columns (max 101^5 ≈ 1.05e10, fits in int64)
+    res_key = np.zeros(n, dtype=np.int64)
     for i, col in enumerate(resource_cols):
-        multiplier = (101 ** (n_res - 1 - i)) * (STORAGE_BASE ** 3)
-        group_key += arrays[col].astype(np.int64) * multiplier
+        res_key += arrays[col].astype(np.int64) * (101 ** (n_res - 1 - i))
 
-    group_key += bat_key * (STORAGE_BASE ** 2) + bat8_key * STORAGE_BASE + ldes_key
+    # Key 2: storage columns (max 2001^4 ≈ 1.6e13, fits in int64)
+    STORAGE_BASE = 2001
+    storage_key = (bat_key * (STORAGE_BASE ** 3)
+                   + bat8_key * (STORAGE_BASE ** 2)
+                   + ldes_key * STORAGE_BASE
+                   + h2_key)
 
-    # Sort by (group_key ascending, score descending)
-    sort_idx = np.lexsort((-score, group_key))
-    sk = group_key[sort_idx]
+    # Sort by (res_key, storage_key ascending, score descending)
+    sort_idx = np.lexsort((-score, storage_key, res_key))
+    sk_res = res_key[sort_idx]
+    sk_sto = storage_key[sort_idx]
 
     # Keep first row per group (highest score due to descending sort)
     is_first = np.empty(n, dtype=np.bool_)
     is_first[0] = True
-    is_first[1:] = sk[1:] != sk[:-1]
+    is_first[1:] = (sk_res[1:] != sk_res[:-1]) | (sk_sto[1:] != sk_sto[:-1])
 
     return sort_idx[is_first]
 
