@@ -1403,9 +1403,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
 
         for cs in range(0, n_nm, NM_CHUNK):
             ce = min(cs + NM_CHUNK, n_nm)
-            chunk_num = cs // NM_CHUNK + 1
+            cap_chunk_idx = cs // NM_CHUNK + 1
             if n_cap_chunks > 1:
-                print(f"\r        Cap computation: chunk {chunk_num}/{n_cap_chunks} "
+                print(f"\r        Cap computation: chunk {cap_chunk_idx}/{n_cap_chunks} "
                       f"({cs:,}/{n_nm:,} mixes)", end="", flush=True)
             chunk_fracs = coarse_combos[near_miss_idx[cs:ce]] / 100.0
             chunk_supply = chunk_fracs @ supply_matrix
