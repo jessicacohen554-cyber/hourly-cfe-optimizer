@@ -344,11 +344,13 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             # CO₂ displaced from dispatch model
             co2_displaced_mt = delta_co2_mt
 
-            # System cost change (effective cost × procurement + gas backup)
-            cost_start = start['eff_cost'] * start['procurement_pct'] / 100 + start['gas_cost']
-            cost_end = end['eff_cost'] * end['procurement_pct'] / 100 + end['gas_cost']
+            # Clean procurement cost only (no gas backup — gas is a system cost, not abatement cost)
+            cost_start = start['eff_cost'] * start['procurement_pct'] / 100
+            cost_end = end['eff_cost'] * end['procurement_pct'] / 100
             delta_cost_per_mwh = cost_end - cost_start
             delta_cost_total_bn = delta_cost_per_mwh * demand_mwh / 1e9
+            # Gas backup cost tracked separately for educational overlay
+            delta_gas_cost_per_mwh = end['gas_cost'] - start['gas_cost']
 
             # Marginal MAC ($/tCO₂)
             if co2_displaced_mt > 0.001:
@@ -391,6 +393,8 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 'end_resource_twh': {k: round(v, 1) for k, v in end['resource_twh'].items()},
                 'end_procurement_pct': end['procurement_pct'],
                 'gas_backup_mw_end': end['gas_backup_mw'],
+                'gas_cost_per_mwh_end': round(end['gas_cost'], 2),
+                'delta_gas_cost_per_mwh': round(delta_gas_cost_per_mwh, 2),
                 'delta_gas_mw': round(end['new_gas_mw'] - start['new_gas_mw'], 0),
                 'demand_twh': demand_twh,
                 'growth_factor': round(growth_factor, 3),
