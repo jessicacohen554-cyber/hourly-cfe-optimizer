@@ -126,7 +126,7 @@ jobs:
         if: ${{ github.event.inputs.track == 'track1-baseline' || github.event.inputs.track == 'ALL' }}
         run: |
           echo "=== Track 1: Baseline Cost Optimization ==="
-          python scripts/step3_cost_optimization.py ${{ steps.iso-args.outputs.iso_flags }}
+          python scripts/step3_cost_optimization.py --track baseline ${{ steps.iso-args.outputs.iso_flags }}
 
       # ════════════════════════════════════════════════════════════════════
       # TRACK 2: New-Build cost optimization
