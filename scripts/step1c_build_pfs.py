@@ -20,10 +20,12 @@ Usage:
   python scripts/step1c_build_pfs.py --iso NYISO --thresholds all
   python scripts/step1c_build_pfs.py --iso CAISO --thresholds "100,95,92.5"
   python scripts/step1c_build_pfs.py --iso MISO --thresholds 100
+  python scripts/step1c_build_pfs.py --iso NYISO --thresholds all --auto-commit
 """
 
 import argparse
 import os
+import subprocess
 import sys
 import time
 
@@ -74,6 +76,59 @@ def validate_thresholds(raw_thresholds):
     return matched
 
 
+def git_commit_threshold(iso, threshold, phase_label):
+    """Commit and push a single threshold's parquet file to preserve progress.
+
+    Uses subprocess so failures don't crash the optimizer — just warns.
+    """
+    done_path = s1._threshold_done_path(iso, threshold)
+    if not os.path.exists(done_path):
+        print(f"      [auto-commit] No file to commit for {iso} {threshold}%")
+        return False
+
+    try:
+        # Stage the file
+        subprocess.run(['git', 'add', '-f', done_path],
+                       check=True, capture_output=True, text=True)
+
+        # Check if there are actual changes
+        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
+                                capture_output=True)
+        if result.returncode == 0:
+            # No changes to commit (file unchanged from last commit)
+            return False
+
+        # Get file size for commit message
+        size_mb = os.path.getsize(done_path) / (1024 * 1024)
+
+        # Commit
+        msg = (f"PFS {phase_label}: {iso} {threshold}% "
+               f"({size_mb:.1f} MB) — auto-commit")
+        subprocess.run(['git', 'commit', '-m', msg],
+                       check=True, capture_output=True, text=True)
+
+        # Push with retry (up to 3 attempts with exponential backoff)
+        for attempt in range(1, 4):
+            result = subprocess.run(
+                ['git', 'push'],
+                capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"      [auto-commit] {iso} {threshold}% committed & pushed ({phase_label})")
+                return True
+            if attempt < 3:
+                wait = 2 ** attempt
+                print(f"      [auto-commit] Push attempt {attempt} failed, retrying in {wait}s...")
+                time.sleep(wait)
+
+        print(f"      [auto-commit] Push failed for {iso} {threshold}% "
+              f"(committed locally, will push at end)")
+        return True  # committed locally even if push failed
+
+    except subprocess.CalledProcessError as e:
+        print(f"      [auto-commit] Git error for {iso} {threshold}%: {e}")
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Step 1c: Build PFS from scored mix database.",
@@ -86,6 +141,11 @@ def main():
         "--thresholds", required=True,
         help='Comma-separated thresholds or "all" (e.g., "100", "95,92.5", "all")',
     )
+    parser.add_argument(
+        "--auto-commit", action="store_true",
+        help="Commit and push each threshold's parquet as it completes "
+             "(prevents work loss on freeze/timeout)",
+    )
     args = parser.parse_args()
 
     iso = args.iso.upper()
@@ -93,6 +153,7 @@ def main():
         print(f"ERROR: Unknown ISO '{iso}'. Valid: {', '.join(s1.ISOS)}")
         sys.exit(1)
 
+    auto_commit = args.auto_commit
     thresholds = parse_thresholds(args.thresholds)
     thresholds = validate_thresholds(thresholds)
 
@@ -113,6 +174,7 @@ def main():
     print(f"  Resources: {len(rtypes)}D ({', '.join(rtypes)})")
     print(f"  Database: {cache_path}")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled (NumPy fallback)'}")
+    print(f"  Auto-commit: {'ON — each threshold committed as it completes' if auto_commit else 'OFF'}")
     print("=" * 70)
 
     # Load EIA data (needed for storage dispatch + fine refinement scoring)
@@ -197,6 +259,11 @@ def main():
               f"({len(archetypes)} archetypes{dom_str}), {t_elapsed:.1f}s")
 
         s1._save_threshold_done(iso, threshold, feasible)
+
+        # Auto-commit this threshold's results immediately
+        if auto_commit:
+            git_commit_threshold(iso, threshold, "Phase1")
+
         del feasible, archetypes  # free memory before next threshold
 
     print(f"\n  Coarse saturation — bat4={max_bat4:.2f}%, bat8={max_bat8:.2f}%, "
@@ -228,6 +295,10 @@ def main():
                   f"({len(archetypes)} archetypes), {t_elapsed:.1f}s")
 
             s1._save_threshold_done(iso, threshold, feasible)
+
+            # Auto-commit this threshold's updated results immediately
+            if auto_commit:
+                git_commit_threshold(iso, threshold, "Phase2")
     else:
         print("\n  No storage saturation detected — skipping Phase 2")
 

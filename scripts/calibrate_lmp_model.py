@@ -121,16 +121,14 @@ def run_synthetic_lmp_for_calibration(iso='PJM', fuel_level='Medium'):
     # For calibration: use actual grid mix at 100% procurement
     # This represents PJM's 2024 operating reality, not an optimizer scenario
     resource_mix = GRID_MIX_SHARES.get(iso, {})
-    procurement_pct = 100  # actual grid delivers its full mix
 
     print(f"  Calibration mix (actual grid): {resource_mix}")
-    print(f"  Procurement: {procurement_pct}%")
     closest_threshold = baseline_clean
 
     # Dispatch — actual grid with no storage (2024 PJM has minimal grid storage)
     dispatch = reconstruct_hourly_dispatch(
         demand_norm, supply_profiles, resource_mix,
-        procurement_pct,
+        100,  # procurement always 100 in v5.0
         0,  # battery
         0,  # battery8
         0)  # ldes
@@ -138,7 +136,7 @@ def run_synthetic_lmp_for_calibration(iso='PJM', fuel_level='Medium'):
     # Merit-order stack (RA + GAF aware)
     stack, fossil_mw = build_merit_order_stack(
         iso, closest_threshold, fuel_level,
-        resource_mix=resource_mix, procurement_pct=procurement_pct)
+        resource_mix=resource_mix)
     print(f"  Fossil stack: {fossil_mw:,.0f} MW")
 
     # Price model
@@ -453,7 +451,7 @@ def run_qa_actual(iso='PJM', year=2025, fuel_level='Medium'):
     }
     stack, total_fossil_cap = build_merit_order_stack(
         iso, clean_pct, fuel_level,
-        resource_mix=actual_mix, procurement_pct=100)
+        resource_mix=actual_mix)
 
     print(f"  Fossil stack ({total_fossil_cap:,.0f} MW):")
     for unit_type, cap, mc in stack:

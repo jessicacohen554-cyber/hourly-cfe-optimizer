@@ -258,8 +258,8 @@ def load_from_parquets(input_dir, isos):
     Parquet schema (flat):
         iso, threshold, scenario, annual_demand_mwh,
         mix_clean_firm, mix_solar, mix_wind, mix_ccs_ccgt, mix_hydro,
-        procurement_pct, hourly_match_score,
-        battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct,
+        hourly_match_score,
+        battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct, h2_dispatch_pct,
         cost_total_cost, cost_effective_cost, cost_incremental, cost_wholesale,
         tranche_cf_existing_twh, tranche_uprate_twh, tranche_geo_twh,
         tranche_nuclear_newbuild_twh, tranche_ccs_tranche_twh, tranche_new_cf_twh,
@@ -272,8 +272,8 @@ def load_from_parquets(input_dir, isos):
             'resource_mix': {clean_firm, solar, wind, ccs_ccgt, hydro},
             'costs': {total_cost, effective_cost, incremental, wholesale},
             'tranche_costs': {cf_existing_twh, uprate_twh, ...},
-            'procurement_pct', 'hourly_match_score',
-            'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct',
+            'hourly_match_score',
+            'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct',
             'gas_backup_step3': {gas_backup_needed_mw, ...},
         }
     """
@@ -326,8 +326,9 @@ def load_from_parquets(input_dir, isos):
         gas_arrays = {col: df[col].values for col in gas_cols}
 
         scalar_arrays = {}
-        for scol in ['procurement_pct', 'hourly_match_score',
-                     'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']:
+        for scol in ['hourly_match_score',
+                     'battery_dispatch_pct', 'battery8_dispatch_pct',
+                     'ldes_dispatch_pct', 'h2_dispatch_pct']:
             scalar_arrays[scol] = df[scol].values if scol in col_names else None
 
         # Group by threshold using numpy for speed
@@ -376,21 +377,21 @@ def load_from_parquets(input_dir, isos):
                     if val is not None and not (isinstance(val, float) and np.isnan(val)):
                         gas_step3[key] = float(val) if isinstance(val, float) else int(val)
 
-                proc_arr = scalar_arrays['procurement_pct']
                 match_arr = scalar_arrays['hourly_match_score']
                 batt_arr = scalar_arrays['battery_dispatch_pct']
                 batt8_arr = scalar_arrays['battery8_dispatch_pct']
                 ldes_arr = scalar_arrays['ldes_dispatch_pct']
+                h2_arr = scalar_arrays['h2_dispatch_pct']
 
                 scenario = {
                     'resource_mix': resource_mix,
                     'costs': costs,
                     'tranche_costs': tranche_costs,
-                    'procurement_pct': int(proc_arr[i]) if proc_arr is not None else 100,
                     'hourly_match_score': float(match_arr[i]) if match_arr is not None else 0.0,
                     'battery_dispatch_pct': int(batt_arr[i]) if batt_arr is not None else 0,
                     'battery8_dispatch_pct': int(batt8_arr[i]) if batt8_arr is not None else 0,
                     'ldes_dispatch_pct': int(ldes_arr[i]) if ldes_arr is not None else 0,
+                    'h2_dispatch_pct': int(h2_arr[i]) if h2_arr is not None else 0,
                     'gas_backup_step3': gas_step3,
                 }
 
@@ -449,11 +450,11 @@ def save_to_parquets(data, output_dir, isos):
                     row[f'mix_{rtype}'] = mix.get(rtype, 0)
 
                 # Physics
-                row['procurement_pct'] = sc.get('procurement_pct', 100)
                 row['hourly_match_score'] = sc.get('hourly_match_score', 0.0)
                 row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct', 0)
                 row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct', 0)
                 row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct', 0)
+                row['h2_dispatch_pct'] = sc.get('h2_dispatch_pct', 0)
 
                 # Costs (may have been updated by NEISO gas constraint)
                 costs = sc.get('costs', {})
@@ -627,7 +628,7 @@ def _cached_base_maps(scenario_key, iso):
     return lcoe_base, tx_map, firm, fuel, tx, wholesale_base
 
 
-def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
+def compute_costs_for_scenario(iso, resource_mix, battery_pct,
                                 ldes_pct, match_score, scenario_key,
                                 apply_45q=True, neiso_gas_adder=False,
                                 tranche_cf_lcoe=None,
@@ -652,8 +653,7 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
     else:
         base_no45q = ccs_lcoe_no45q(iso, firm)
         ccs_share = resource_mix.get('ccs_ccgt', 0) / 100.0
-        procurement_factor = procurement_pct / 100.0
-        ccs_fraction_of_demand = ccs_share * procurement_factor
+        ccs_fraction_of_demand = ccs_share
         if ccs_fraction_of_demand > 0.01:
             estimated_cf = min(0.85, max(0.20, ccs_fraction_of_demand * 0.8))
             lcoe_map['ccs_ccgt'] = ccs_lcoe_dispatchable(base_no45q, estimated_cf)
@@ -667,7 +667,6 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
         wholesale += NEISO_WHOLESALE_ADDER
 
     grid_shares = existing_shares_override if existing_shares_override else GRID_MIX_SHARES[iso]
-    procurement_factor = procurement_pct / 100.0
     total_cost_per_demand = 0.0
 
     for rtype in RESOURCE_TYPES:
@@ -675,8 +674,7 @@ def compute_costs_for_scenario(iso, resource_mix, procurement_pct, battery_pct,
         if pct <= 0:
             continue
 
-        resource_fraction = procurement_factor * (pct / 100.0)
-        resource_pct_of_demand = resource_fraction * 100.0
+        resource_pct_of_demand = float(pct)
         existing_share = grid_shares.get(rtype, 0)
         existing_pct = min(resource_pct_of_demand, existing_share)
         new_pct = max(0, resource_pct_of_demand - existing_share)
@@ -741,7 +739,6 @@ def add_neiso_gas_constraint(data):
             tcl = get_tranche_cf_lcoe(scenario)
             neiso_costs = compute_costs_for_scenario(
                 iso, mix,
-                scenario.get('procurement_pct', 100),
                 scenario.get('battery_dispatch_pct', 0),
                 scenario.get('ldes_dispatch_pct', 0),
                 scenario.get('hourly_match_score', 0),
@@ -753,7 +750,6 @@ def add_neiso_gas_constraint(data):
 
             neiso_no45q_costs = compute_costs_for_scenario(
                 iso, mix,
-                scenario.get('procurement_pct', 100),
                 scenario.get('battery_dispatch_pct', 0),
                 scenario.get('ldes_dispatch_pct', 0),
                 scenario.get('hourly_match_score', 0),
@@ -804,7 +800,6 @@ def add_no45q_overlay(data, run_isos):
 
                 no45q_costs = compute_costs_for_scenario(
                     iso, mix,
-                    scenario.get('procurement_pct', 100),
                     scenario.get('battery_dispatch_pct', 0),
                     scenario.get('ldes_dispatch_pct', 0),
                     scenario.get('hourly_match_score', 0),
@@ -984,22 +979,23 @@ def compute_gas_capacity_and_ra(data, run_isos):
             scenarios = t_data.get('scenarios', {})
             for sk, scenario in scenarios.items():
                 mix = scenario.get('resource_mix', {})
-                proc = scenario.get('procurement_pct', 100)
                 batt = scenario.get('battery_dispatch_pct', 0)
                 batt8 = scenario.get('battery8_dispatch_pct', 0)
                 ldes = scenario.get('ldes_dispatch_pct', 0)
+                h2 = scenario.get('h2_dispatch_pct', 0)
 
                 clean_peak_mw = 0
                 for rtype in RESOURCE_TYPES:
                     pct = mix.get(rtype, 0)
-                    resource_mw = (proc / 100.0) * (pct / 100.0) * avg_demand_mw
+                    resource_mw = (pct / 100.0) * avg_demand_mw
                     credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
                     clean_peak_mw += resource_mw * credit
 
                 batt_mw = (batt / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
                 batt8_mw = (batt8 / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8']
                 ldes_mw = (ldes / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
-                clean_peak_mw += batt_mw + batt8_mw + ldes_mw
+                h2_mw = (h2 / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
+                clean_peak_mw += batt_mw + batt8_mw + ldes_mw + h2_mw
 
                 gaf = GAS_AVAILABILITY_FACTOR[iso]
                 gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
@@ -1086,8 +1082,8 @@ def load_dg_parquets(input_dir, iso):
 
     Returns list of dicts (one per DG row) with columns:
         iso, threshold, scenario, year, growth_level, growth_factor,
-        annual_demand_mwh, mix_*, procurement_pct, hourly_match_score,
-        battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct,
+        annual_demand_mwh, mix_*, hourly_match_score,
+        battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct, h2_dispatch_pct,
         tranche_*, ra_*, cost_*
     """
     import glob as glob_mod
@@ -1136,9 +1132,9 @@ def process_dg_corrections(dg_rows, run_isos):
         for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
             resource_mix[rtype] = row.get(f'mix_{rtype}', 0) or 0
 
-        procurement_pct = row.get('procurement_pct', 100) or 100
         battery_pct = row.get('battery_dispatch_pct', 0) or 0
         ldes_pct = row.get('ldes_dispatch_pct', 0) or 0
+        h2_pct = row.get('h2_dispatch_pct', 0) or 0
         match_score = row.get('hourly_match_score', 0) or 0
 
         # Scale existing shares for demand growth
@@ -1150,11 +1146,11 @@ def process_dg_corrections(dg_rows, run_isos):
         # [1] NEISO gas constraint
         if iso == 'NEISO':
             neiso_costs = compute_costs_for_scenario(
-                iso, resource_mix, procurement_pct, battery_pct, ldes_pct,
+                iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=True, neiso_gas_adder=True,
                 existing_shares_override=existing_shares_scaled)
             neiso_no45q = compute_costs_for_scenario(
-                iso, resource_mix, procurement_pct, battery_pct, ldes_pct,
+                iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=False, neiso_gas_adder=True,
                 existing_shares_override=existing_shares_scaled)
             for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
@@ -1168,7 +1164,7 @@ def process_dg_corrections(dg_rows, run_isos):
         # [2] No-45Q overlay (non-NEISO already handled; NEISO above)
         if iso != 'NEISO':
             no45q_costs = compute_costs_for_scenario(
-                iso, resource_mix, procurement_pct, battery_pct, ldes_pct,
+                iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=False, neiso_gas_adder=False,
                 existing_shares_override=existing_shares_scaled)
         else:
@@ -1184,14 +1180,15 @@ def process_dg_corrections(dg_rows, run_isos):
         clean_peak_mw = 0
         for rtype in RESOURCE_TYPES:
             pct = resource_mix.get(rtype, 0)
-            resource_mw = (procurement_pct / 100.0) * (pct / 100.0) * avg_demand_mw
+            resource_mw = (pct / 100.0) * avg_demand_mw
             credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
             clean_peak_mw += resource_mw * credit
         battery8_pct = row.get('battery8_dispatch_pct', 0) or 0
         batt_mw = (battery_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
         batt8_mw = (battery8_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('battery8', PEAK_CAPACITY_CREDITS['battery'])
         ldes_mw = (ldes_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
-        clean_peak_mw += batt_mw + batt8_mw + ldes_mw
+        h2_mw = (h2_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
+        clean_peak_mw += batt_mw + batt8_mw + ldes_mw + h2_mw
 
         existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
         gaf = GAS_AVAILABILITY_FACTOR[iso]
