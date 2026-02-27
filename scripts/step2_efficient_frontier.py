@@ -187,7 +187,7 @@ def load_iso_tables():
                 iso_subtables.append(t)
                 total_rows += t.num_rows
         if iso_subtables:
-            combined = pa.concat_tables(iso_subtables) if len(iso_subtables) > 1 else iso_subtables[0]
+            combined = pa.concat_tables(iso_subtables, promote_options='permissive') if len(iso_subtables) > 1 else iso_subtables[0]
             iso_tables[iso] = normalize_table(combined, iso)
             print(f"  {iso}: {total_rows:>10,} rows from {len(fnames)} threshold files")
 
