@@ -93,52 +93,101 @@ jobs:
 
           python scripts/step1_pfs_generator.py $ISO_ARGS --workers "$WORKERS"
 
-      - name: Commit and push Step 1 outputs
+      - name: Commit and push Step 1 outputs (batched by ISO)
         run: |
+          set -euo pipefail
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f data/checkpoints_v4/ data/step1-pfs-parquets/
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
           ISO_LABEL="${{ inputs.iso }}"
           if [ "$ISO_LABEL" = "ALL" ]; then
-            COMMIT_MSG="Step 1 full PFS: all ISOs × all thresholds — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
           else
-            COMMIT_MSG="Step 1 PFS: ${ISO_LABEL} × all thresholds — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            ISOS="$ISO_LABEL"
           fi
-          git commit -m "$COMMIT_MSG"
 
-          # Push fresh branch (retry for transient network errors only)
-          MAX_RETRIES=5
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Push attempt $i/$MAX_RETRIES..."
-            PUSH_OUTPUT=$(git push -u origin "$TARGET_BRANCH" 2>&1) && {
-              echo "Push succeeded on attempt $i"
-              break
-            }
-            echo "$PUSH_OUTPUT"
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=5
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              PUSH_OUTPUT=$(git push -u origin "$TARGET_BRANCH" 2>&1) && {
+                echo "  Push succeeded for ${label} on attempt $i"
+                return 0
+              }
+              echo "$PUSH_OUTPUT"
+              if echo "$PUSH_OUTPUT" | grep -q "GH001"; then
+                echo "  ERROR: GH001 (large file) for ${label}"
+                return 1
+              fi
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
 
-            # Fail immediately on large-file rejection (not recoverable by retry)
-            if echo "$PUSH_OUTPUT" | grep -q "GH001"; then
-              echo "ERROR: Push rejected due to large files (GH001). Not retryable."
-              echo "Check file sizes — GitHub limit is 100 MB per file."
-              exit 1
+          PUSHED=false
+
+          for iso in $ISOS; do
+            echo ""
+            echo "--- Batching commit for $iso ---"
+
+            # Collect this ISO's PFS parquets + checkpoints
+            PFS_FILES=$(ls data/step1-pfs-parquets/${iso}_*.parquet 2>/dev/null || true)
+            CKPT_FILES=$(ls data/checkpoints_v4/${iso}_*.parquet 2>/dev/null || true)
+            ALL_FILES="$PFS_FILES $CKPT_FILES"
+            ALL_FILES=$(echo "$ALL_FILES" | xargs)  # trim whitespace
+
+            if [ -z "$ALL_FILES" ]; then
+              echo "  No output files for $iso — skipping"
+              continue
             fi
 
-            if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "ERROR: Push failed after $MAX_RETRIES attempts"
-              exit 1
+            git add -f $ALL_FILES
+            if git diff --cached --quiet; then
+              echo "  No changes for $iso — skipping"
+              continue
             fi
 
-            BACKOFF=$((2 ** i))
-            echo "Push failed (transient). Retrying in ${BACKOFF}s..."
-            sleep "$BACKOFF"
+            FILE_COUNT=$(echo "$ALL_FILES" | wc -w)
+            BATCH_MB=$(du -cm $ALL_FILES 2>/dev/null | tail -1 | cut -f1)
+            echo "  Staging $FILE_COUNT files (~${BATCH_MB} MB) for $iso"
+
+            git commit -m "Step 1 PFS: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+            if push_with_retry "$iso"; then
+              PUSHED=true
+            else
+              echo "  Per-ISO push failed for $iso — falling back to per-file batching"
+              git reset HEAD~1
+
+              for f in $ALL_FILES; do
+                FNAME=$(basename "$f")
+                git add -f "$f"
+                if git diff --cached --quiet; then
+                  continue
+                fi
+                FILE_MB=$(du -m "$f" | cut -f1)
+                echo "  Committing $FNAME (~${FILE_MB} MB)"
+                git commit -m "Step 1: ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+                if push_with_retry "$FNAME"; then
+                  PUSHED=true
+                else
+                  echo "  ERROR: Per-file push also failed for $FNAME — skipping"
+                  git reset HEAD~1
+                fi
+              done
+            fi
           done
+
+          if [ "$PUSHED" = false ]; then
+            echo "No changes were pushed"
+          fi
 
       - name: Create pull request
         env:
