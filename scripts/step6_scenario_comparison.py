@@ -477,14 +477,12 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         absolute TWh stays fixed as demand grows.
     Returns: dict with cost details + gas backup
     """
+    # v5.0: procurement baked into resource percentages
     cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
-    # v5.0: procurement_pct is always 100 (baked into resource percentages)
-    proc_pct = 100
     match_score = mix[5]
     bat4_pct, bat8_pct, ldes_pct = mix[6], mix[7], mix[8]
     h2_pct = mix[9] if len(mix) > 9 else 0
 
-    proc = 1.0  # procurement is always 100% in v5.0
     match_frac = match_score / 100.0
 
     ren_name = LEVEL_NAME[sens['ren']]
@@ -527,14 +525,14 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         else:
             geo_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
 
-    # Demand-weighted percentages
-    sol_demand = proc * sol_pct
-    wnd_demand = proc * wnd_pct
-    ccs_demand = proc * ccs_pct
-    cf_demand = proc * cf_pct
+    # Demand-weighted percentages  # v5.0: procurement baked into resource percentages
+    sol_demand = sol_pct
+    wnd_demand = wnd_pct
+    ccs_demand = ccs_pct
+    cf_demand = cf_pct
     # Hydro is existing-only: cap at 2025 absolute TWh.
     # Convert mix percentage to TWh, cap, then back to demand-weighted pct points.
-    hydro_twh_raw = proc * hyd_pct / 100.0 * demand_twh
+    hydro_twh_raw = hyd_pct / 100.0 * demand_twh
     hydro_twh_capped = min(hydro_twh_raw, HYDRO_CAP_TWH[iso])
     hyd_demand = hydro_twh_capped / demand_twh * 100.0  # capped pct-points of demand
 
@@ -569,10 +567,10 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     # Hydro peak capacity from capped TWh (not inflated demand)
     hydro_avg_mw = hydro_twh_capped * 1e6 / 8760
     clean_peak_mw = (
-        proc * cf_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
-        proc * sol_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
-        proc * wnd_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
-        proc * ccs_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+        cf_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
+        sol_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
+        wnd_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
+        ccs_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         hydro_avg_mw * PEAK_CAPACITY_CREDITS['hydro'] +
         bat4_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
@@ -630,7 +628,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         if res == 'hydro':
             resource_twh[res] = hydro_twh_capped
         else:
-            resource_twh[res] = pct / 100.0 * proc * demand_twh
+            resource_twh[res] = pct / 100.0 * demand_twh
 
     return {
         'total_cost': round(total_cost, 2),
@@ -640,7 +638,6 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         'resource_twh': resource_twh,
         'resource_pct': {'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
                          'ccs_ccgt': ccs_pct, 'hydro': hyd_pct},
-        'procurement_pct': 100,  # v5.0: always 100
         'match_score': match_score,
         'battery_twh': bat4_pct / 100.0 * demand_twh,
         'battery8_twh': bat8_pct / 100.0 * demand_twh,
@@ -709,7 +706,6 @@ def _mix_resource_twh(mix, demand_twh, iso=None):
     Returns dict of resource → TWh deployed.
     """
     cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
-    # v5.0: procurement is always 100% (baked into resource percentages)
     bat4, bat8, ldes = mix[6], mix[7], mix[8]
     h2 = mix[9] if len(mix) > 9 else 0
     # Hydro is existing-only: cap at 2025 absolute TWh regardless of demand growth
@@ -1284,7 +1280,7 @@ def _adjust_costs_with_learning(results, scenario):
             existing_ccs_frac = GRID_MIX_SHARES[iso].get('ccs_ccgt', 0) / 100.0
             gf = demand_twh / BASE_DEMAND_TWH[iso]
             existing_ccs_twh = existing_ccs_frac * BASE_DEMAND_TWH[iso]
-            # v5.0: procurement is always 100% (baked into resource percentages)
+            # v5.0: procurement baked into resource percentages
             total_ccs_twh = r['resource_twh'].get('ccs_ccgt', 0)
             ccs_new_twh = max(0, total_ccs_twh - existing_ccs_twh)
             if ccs_new_twh > 0:
@@ -1366,10 +1362,8 @@ def _load_step3_results(scenario, iso):
     # Vectorized column operations instead of iterrows()
     s = subset.copy()
     s['demand_twh'] = s['annual_demand_mwh'] / 1e6
-    # v5.0: procurement is always 100% (baked into resource percentages)
-    s['proc'] = 1.0
 
-    # Resource TWh columns (proc = 1.0 in v5.0)
+    # Resource TWh columns  # v5.0: procurement baked into resource percentages
     s['res_cf_twh'] = s['mix_clean_firm'] / 100.0 * s['demand_twh']
     s['res_sol_twh'] = s['mix_solar'] / 100.0 * s['demand_twh']
     s['res_wnd_twh'] = s['mix_wind'] / 100.0 * s['demand_twh']
@@ -1433,7 +1427,6 @@ def _load_step3_results(scenario, iso):
             'incremental': row['cost_incremental'],
             'wholesale': row['cost_wholesale'],
             'match_score': row['hourly_match_score'],
-            'procurement_pct': 100,  # v5.0: always 100
             'resource_twh': {
                 'clean_firm': row['res_cf_twh'], 'solar': row['res_sol_twh'],
                 'wind': row['res_wnd_twh'], 'ccs_ccgt': row['res_ccs_twh'],
@@ -1870,14 +1863,14 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
                               dispatch_caches):
     """Get CO₂ displacement for a scenario mix result using dispatch cache.
 
-    mix_result: dict from compute_mix_cost() with resource_pct, procurement_pct, etc.
+    mix_result: dict from compute_mix_cost() with resource_pct, etc.
     Returns compute_co2_from_dispatch() result or None.
     """
     resource_pcts = mix_result.get('resource_pct', {})
     if not resource_pcts:
         return None
 
-    # v5.0: procurement_pct is always 100 (baked into resource percentages)
+    # v5.0: procurement baked into resource percentages (dispatch_utils defaults to 100)
     bat_pct = mix_result.get('battery_dispatch_pct', 0)
     bat8_pct = mix_result.get('battery8_dispatch_pct', 0)
     ldes_pct = mix_result.get('ldes_dispatch_pct', 0)
@@ -1889,8 +1882,8 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
 
     dispatch_result, _ = get_or_compute_dispatch(
         iso, demand_norm, supply_profiles, resource_pcts,
-        100, bat_pct, bat8_pct, ldes_pct,
-        cache=cache)
+        battery_dispatch_pct=bat_pct, battery8_dispatch_pct=bat8_pct,
+        ldes_dispatch_pct=ldes_pct, cache=cache)
 
     dispatch_caches[iso] = cache
 
@@ -2399,7 +2392,6 @@ def main():
                     'existing_gas_used_mw': d.get('existing_gas_used_mw', 0),
                     'clean_peak_mw': d.get('clean_peak_mw', 0),
                     'firm_total_twh': round(firm_total_twh, 1),
-                    'procurement_pct': 100,  # v5.0: always 100
                     'stepwise_mac': stepwise_mac,
                     'blended_new_lcoe': d.get('blended_new_lcoe', 0),
                     'new_gen_twh': d.get('new_gen_twh', 0),
