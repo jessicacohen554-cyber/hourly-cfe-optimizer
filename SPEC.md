@@ -5,6 +5,30 @@
 
 ## Current Status (Feb 26, 2026)
 
+### Step 8: Optimal CFE Targets + No-Regrets Investments (Feb 26, 2026)
+
+**Completed:**
+- Created `scripts/step8_compute_optimal_targets.py` — computes optimal CFE target range per ISO
+- Smooth marginal MAC via PCHIP spline derivatives on isotonic-corrected cost/CO₂ curves
+- 3 grid cost tiers × 3 DAC scenarios = 9 crossover points → range per ISO
+- L/M/H demand growth scenarios (scale-invariant for MAC %, but affects absolute resource quantities)
+- No-regrets resource investment analysis: floor, consensus, and average resource investments within the crossover range
+- Dashboard JS output: `dashboard/js/optimal-target-data.js`
+- Documented methodology in SPEC.md §7.4
+
+**Next steps:**
+- [ ] Run step8 script via GitHub Actions workflow (needs scipy)
+- [ ] Build dashboard visualization for optimal target crossover chart
+- [ ] Wire no-regrets investment data into dashboard/research paper
+
+### Scenario Comparison Page Fixes (Feb 26, 2026)
+
+**Completed:**
+- Fixed FOAK→NOAK learning curve chart (inline data constants, was referencing missing shared-data.js vars)
+- Moved target slider inline with ISO selector in sticky bar
+- Redesigned metric tiles with heat-map styling (green/amber/red) and prominent conclusions
+- Replaced infinite MAC bars with ⚠ symbol when no emissions displaced
+
 ### Pipeline Reorganization — Step 5/6/7 Split (Feb 26, 2026)
 
 **Completed:**
@@ -1811,6 +1835,48 @@ All values are 2024 USD, net tons CO₂ removed (accounting for 5–12% lifecycl
 - Both curves respond dynamically to **all 10 sensitivity toggles**
 - 1% intervals from 85% provide smooth curve in the inflection zone
 - Marginal curve shows hockey-stick shape: cheap early tons, expensive last tons
+
+### 7.4 Optimal CFE Target per ISO — MAC × DAC Crossover (Decision: Feb 26, 2026)
+
+**Goal**: For each ISO, identify the CFE threshold range where marginal grid decarbonization cost exceeds DAC — the "optimal target" beyond which buying offsets is cheaper than building more clean energy.
+
+**Why stepwise MAC failed**: The existing stepwise MAC (Δcost/ΔCO₂ between adjacent thresholds) is wildly non-monotonic because:
+1. Each threshold is independently optimized — the portfolio at 90% isn't built incrementally from the 87.5% portfolio
+2. Coal retirement cliff at 70% causes a regime change in the CO₂ denominator
+3. Fine threshold spacing (2.5% steps) amplifies small-denominator noise
+
+**Solution — Option B: Smooth Marginal MAC from Cost Frontier**:
+1. At each threshold, take the independently-optimized cheapest system (from Step 3)
+2. Total cost premium ($M/yr = (system_cost - wholesale) × demand) and total CO₂ abated (Mt) form curves vs. threshold
+3. Apply isotonic regression to enforce monotonicity (cost and CO₂ must be non-decreasing with threshold)
+4. Fit monotone cubic splines (PCHIP) to the corrected curves
+5. Marginal MAC = d(TotalCost)/d(CO₂) — the derivative of cost w.r.t. CO₂ along the spline
+6. Cross with DAC cost trajectories to find crossover thresholds
+
+**Crossover Range**: 3 grid cost tiers (L/M/H) × 3 DAC scenarios (optimistic/central/conservative) = 9 crossover points. The range = [min crossover, max crossover] across all 9 combinations. This captures: "between X% if DAC costs are low and clean energy costs are high, and Y% if DAC costs are high and clean energy costs are low."
+
+**Option A: Target-Specific Analysis Within the Range**:
+For each discrete threshold inside the crossover range (±1 step for context):
+- Resource mix composition, system cost, total investment
+- Comparison to DAC at the corresponding SBTi year
+- Shows WHAT changes in the system as you stretch toward higher targets
+
+**Demand Growth (L/M/H)**:
+- Annual growth rates per ISO: CAISO 1.4/1.9/2.5%, ERCOT 2.0/3.5/5.5%, PJM 1.5/2.4/3.6%, NYISO 1.3/2.0/4.4%, NEISO 0.9/1.8/2.9%, MISO/SPP 2.0% (uniform)
+- **Key finding**: Marginal MAC ($/tCO₂) is scale-invariant w.r.t. demand growth — both d(cost) and d(CO₂) scale by the same growth factor, so the ratio is unchanged. The crossover threshold % is the same regardless of demand growth.
+- Demand growth DOES affect: total investment $M, total CO₂ abated, absolute resource quantities (TWh/GW). These are critical for the no-regrets analysis.
+
+**No-Regrets Resource Investment Analysis**:
+Within the crossover range, some resource investments are needed regardless of where the optimal target lands:
+- **Floor**: minimum % share of each resource across all thresholds in the range — the absolute minimum you'd build regardless
+- **Consensus**: resources that are non-zero at every threshold in the range — they show up across the board
+- **Average**: expected investment level across the range
+- All three scaled by L/M/H demand growth for absolute TWh quantities
+
+**Implementation**: `scripts/step8_compute_optimal_targets.py`
+- Outputs: `data/step8-optimal-target/optimal_targets.json`, `dashboard/js/optimal-target-data.js`
+- Depends on: SYSTEM_COST (L/M/H), RESOURCE_MIX_DATA, emission rates, DAC trajectories
+- No dispatch cache dependency — uses pre-computed Step 3 cost data
 
 ---
 
