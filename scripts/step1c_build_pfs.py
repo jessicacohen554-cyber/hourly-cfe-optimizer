@@ -24,6 +24,7 @@ Usage:
 """
 
 import argparse
+import gc
 import hashlib
 import json
 import os
@@ -294,7 +295,9 @@ def main():
     if cached is None:
         print(f"ERROR: Failed to load scored database for {iso}")
         sys.exit(1)
-    coarse_combos, coarse_scores = cached
+    full_coarse_combos, full_coarse_scores = cached
+    full_coarse_procurement = full_coarse_combos.sum(axis=1)
+    print(f"  Total coarse cache: {len(full_coarse_combos):,} rows")
 
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
 
@@ -322,10 +325,35 @@ def main():
             else:
                 print(f"    {iso} {threshold}%: manifest says done but parquet missing — recomputing")
 
+        # Pre-filter coarse cache to procurement window for this threshold.
+        # optimize_threshold() does this internally too, but pre-filtering here
+        # avoids passing the full 1.6M-row cache into the function, reducing
+        # peak memory on GitHub Actions runners (~7 GB RAM).
+        # Match the procurement window logic in optimize_threshold():
+        proc_lower = threshold
+        if threshold < 50:
+            proc_upper = max(threshold + 30, 50)
+        elif threshold <= 75:
+            proc_upper = 2.0 * threshold
+        elif threshold <= 90:
+            proc_upper = 200.0
+        else:
+            proc_upper = 250.0
+
+        proc_mask = full_coarse_procurement >= proc_lower
+        if proc_upper is not None:
+            proc_mask &= full_coarse_procurement <= proc_upper
+        t_combos = full_coarse_combos[proc_mask]
+        t_scores = full_coarse_scores[proc_mask]
+        print(f"    {iso} {threshold}%: pre-filtered to {len(t_combos):,} / "
+              f"{len(full_coarse_combos):,} coarse combos "
+              f"(procurement [{proc_lower}%, {proc_upper}%])")
+
         t_start = time.time()
         feasible = s1.optimize_threshold(
             iso, threshold, demand_arr, supply_matrix,
-            coarse_combos, coarse_scores)
+            t_combos, t_scores)
+        del t_combos, t_scores  # free filtered copy immediately
 
         # Within-threshold dominance post-filter: remove mixes where a
         # leaner mix (all resources <=) also hits this same target.
@@ -361,6 +389,7 @@ def main():
             git_commit_threshold(iso, threshold, "Phase1")
 
         del feasible, archetypes  # free memory before next threshold
+        gc.collect()
 
     print(f"\n  Coarse saturation — bat4={max_bat4:.2f}%, bat8={max_bat8:.2f}%, "
           f"ldes={max_ldes:.1f}%, h2={max_h2:.1f}%")
@@ -381,11 +410,28 @@ def main():
                 else:
                     print(f"    {iso} {threshold}%: manifest says done but parquet missing — recomputing")
 
+            # Pre-filter coarse cache for this threshold (same window as Phase 1)
+            proc_lower = threshold
+            if threshold < 50:
+                proc_upper = max(threshold + 30, 50)
+            elif threshold <= 75:
+                proc_upper = 2.0 * threshold
+            elif threshold <= 90:
+                proc_upper = 200.0
+            else:
+                proc_upper = 250.0
+            proc_mask = full_coarse_procurement >= proc_lower
+            if proc_upper is not None:
+                proc_mask &= full_coarse_procurement <= proc_upper
+            t_combos = full_coarse_combos[proc_mask]
+            t_scores = full_coarse_scores[proc_mask]
+
             t_start = time.time()
             feasible = s1.optimize_threshold(
                 iso, threshold, demand_arr, supply_matrix,
-                coarse_combos, coarse_scores,
+                t_combos, t_scores,
                 storage_levels=fine_levels)
+            del t_combos, t_scores
 
             # Within-threshold dominance post-filter
             feasible = s1.dominance_filter_candidates(feasible, rtypes)
