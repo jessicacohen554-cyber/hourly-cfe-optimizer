@@ -74,10 +74,11 @@ def build_scenario_dict(row):
             'incremental': round(float(row['cost_incremental']), 2),
             'wholesale': round(float(row['cost_wholesale']), 2),
         },
-        'procurement_pct': int(row['procurement_pct']),
         'hourly_match_score': round(float(row['hourly_match_score']), 2),
         'battery_dispatch_pct': int(row['battery_dispatch_pct']),
+        'battery8_dispatch_pct': int(row.get('battery8_dispatch_pct', 0)),
         'ldes_dispatch_pct': int(row['ldes_dispatch_pct']),
+        'h2_dispatch_pct': int(row.get('h2_dispatch_pct', 0)),
         'tranche_costs': {
             'cf_existing_twh': round(float(row.get('tranche_cf_existing_twh', 0)), 3),
             'uprate_twh': round(float(row.get('tranche_uprate_twh', 0)), 3),
