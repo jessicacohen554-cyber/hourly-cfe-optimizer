@@ -1613,12 +1613,17 @@ def dominance_filter_candidates(candidates, rtypes):
     and is not identical (D achieves the same target with fewer resources).
     Only compares resource mix dimensions; storage configs are independent.
 
+    Uses an incremental Pareto front algorithm sorted by total resources
+    ascending. Each candidate is checked only against the current front
+    (typically hundreds–low thousands), not all candidates, giving
+    O(n × front_size × dims) instead of O(n² × dims).
+
     Returns filtered list of non-dominated candidates.
     """
     if len(candidates) <= 1:
         return candidates
 
-    # Group by unique resource mix to avoid O(n²) on full candidate list
+    # Group by unique resource mix to avoid processing duplicate mixes
     mix_to_candidates = {}
     for c in candidates:
         mix_key = tuple(c['resource_mix'][rt] for rt in rtypes)
@@ -1632,21 +1637,55 @@ def dominance_filter_candidates(candidates, rtypes):
         return candidates
 
     mix_arr = np.array(unique_mixes, dtype=np.float64)
+    ndim = mix_arr.shape[1]
 
-    # Vectorized Pareto filter: for each mix j, mark all mixes i where
-    # j <= i on every resource dimension (j dominates i).
-    keep = np.ones(n_unique, dtype=bool)
-    for j in range(n_unique):
-        if not keep[j]:
-            continue
-        # j dominates i if all(mix[j] <= mix[i]) and not identical
-        dominated_by_j = np.all(mix_arr >= mix_arr[j], axis=1)
-        equal_to_j = np.all(mix_arr == mix_arr[j], axis=1)
-        newly_dominated = dominated_by_j & ~equal_to_j
-        newly_dominated[j] = False
-        keep &= ~newly_dominated
+    # Sort by total procurement ascending — leanest mixes first.
+    # Leanest mixes are most likely non-dominated, so the front builds
+    # quickly and later (larger) mixes are efficiently pruned.
+    order = np.argsort(mix_arr.sum(axis=1))
 
-    kept_mixes = {unique_mixes[i] for i in range(n_unique) if keep[i]}
+    # Pre-allocate Pareto front array (trimmed at end)
+    front_cap = min(n_unique, 50000)
+    front = np.empty((front_cap, ndim), dtype=np.float64)
+    front_size = 0
+    pareto_indices = []  # indices into unique_mixes (original ordering)
+
+    for idx in order:
+        mix_i = mix_arr[idx]
+
+        if front_size > 0:
+            fslice = front[:front_size]
+            # Check if any front member dominates mix_i:
+            # front[j] dominates mix_i iff all(front[j] <= mix_i) and !=
+            leq = np.all(fslice <= mix_i, axis=1)
+            if np.any(leq):
+                eq = np.all(fslice == mix_i, axis=1)
+                if np.any(leq & ~eq):
+                    continue  # dominated — skip
+
+            # Check if mix_i dominates any existing front members
+            geq = np.all(fslice >= mix_i, axis=1)
+            if np.any(geq):
+                eq = np.all(fslice == mix_i, axis=1)
+                dominated_by_new = geq & ~eq
+                if np.any(dominated_by_new):
+                    keep = ~dominated_by_new
+                    new_size = int(keep.sum())
+                    front[:new_size] = fslice[keep]
+                    pareto_indices = [p for p, k in
+                                     zip(pareto_indices, keep) if k]
+                    front_size = new_size
+
+        # Add to front (grow if needed)
+        if front_size >= front_cap:
+            extra = np.empty((10000, ndim), dtype=np.float64)
+            front = np.vstack([front, extra])
+            front_cap = len(front)
+        front[front_size] = mix_i
+        front_size += 1
+        pareto_indices.append(int(idx))
+
+    kept_mixes = {unique_mixes[i] for i in pareto_indices}
     filtered = [c for c in candidates
                 if tuple(c['resource_mix'][rt] for rt in rtypes) in kept_mixes]
     return filtered
