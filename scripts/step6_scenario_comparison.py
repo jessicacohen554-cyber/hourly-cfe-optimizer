@@ -416,7 +416,7 @@ def parse_feasible_mixes(js_path='dashboard/js/shared-data.js'):
                     if filled:
                         print(f"  Backfilled {iso} thresholds from parquet: {', '.join(filled)}")
 
-    # mixes[iso][threshold_str] = list of [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    # v5.0: mixes[iso][threshold_str] = list of [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]
     return mixes
 
 
@@ -469,7 +469,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     """
     Compute total system cost per MWh for a single mix under a sensitivity scenario.
 
-    mix: [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    mix: [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]  (v5.0 format)
     overrides: optional dict with explicit LCOE values (bypasses toggle lookups):
         nuclear_lcoe, ccs_lcoe, geo_lcoe, ldes_lcoe, uprate_lcoe
     growth_factor: demand growth multiplier (>1 means demand has grown from base year).
@@ -704,21 +704,22 @@ def find_optimal_mixes(feasible_mixes, scenario, demand_twh_map):
 def _mix_resource_twh(mix, demand_twh, iso=None):
     """Extract deployed resource TWh from a raw mix vector for floor comparison.
 
-    mix = [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    v5.0 mix = [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]
     iso: required — used to cap hydro at 2025 absolute TWh.
     Returns dict of resource → TWh deployed.
     """
-    cf, sol, wnd, ccs, hyd, proc_pct = mix[0], mix[1], mix[2], mix[3], mix[4], mix[5]
-    bat4, bat8, ldes = mix[7], mix[8], mix[9]
-    proc = proc_pct / 100.0
+    cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
+    # v5.0: procurement is always 100% (baked into resource percentages)
+    bat4, bat8, ldes = mix[6], mix[7], mix[8]
+    h2 = mix[9] if len(mix) > 9 else 0
     # Hydro is existing-only: cap at 2025 absolute TWh regardless of demand growth
-    hydro_twh = min(proc * hyd / 100.0 * demand_twh,
-                    HYDRO_CAP_TWH[iso]) if iso else proc * hyd / 100.0 * demand_twh
+    hydro_twh = min(hyd / 100.0 * demand_twh,
+                    HYDRO_CAP_TWH[iso]) if iso else hyd / 100.0 * demand_twh
     return {
-        'clean_firm': proc * cf / 100.0 * demand_twh,
-        'solar':      proc * sol / 100.0 * demand_twh,
-        'wind':       proc * wnd / 100.0 * demand_twh,
-        'ccs_ccgt':   proc * ccs / 100.0 * demand_twh,
+        'clean_firm': cf / 100.0 * demand_twh,
+        'solar':      sol / 100.0 * demand_twh,
+        'wind':       wnd / 100.0 * demand_twh,
+        'ccs_ccgt':   ccs / 100.0 * demand_twh,
         'hydro':      hydro_twh,
         'battery':    (bat4 + bat8) / 100.0 * demand_twh,
         'ldes':       ldes / 100.0 * demand_twh,
@@ -2398,7 +2399,7 @@ def main():
                     'existing_gas_used_mw': d.get('existing_gas_used_mw', 0),
                     'clean_peak_mw': d.get('clean_peak_mw', 0),
                     'firm_total_twh': round(firm_total_twh, 1),
-                    'procurement_pct': d.get('procurement_pct', 100),
+                    'procurement_pct': 100,  # v5.0: always 100
                     'stepwise_mac': stepwise_mac,
                     'blended_new_lcoe': d.get('blended_new_lcoe', 0),
                     'new_gen_twh': d.get('new_gen_twh', 0),
