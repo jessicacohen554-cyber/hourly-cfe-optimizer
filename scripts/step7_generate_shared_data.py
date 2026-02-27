@@ -38,7 +38,7 @@ ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS_NUM = _OUTPUT_THRESHOLDS
 THRESHOLDS = [str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS_NUM]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
-MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
+MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
 
 MAC_CAP = 1000  # Cap marginal MAC at $1000/ton
 
@@ -328,7 +328,7 @@ for iso in ISOS:
     iso_data['battery'] = []
     iso_data['battery8'] = []
     iso_data['ldes'] = []
-    iso_data['procurement'] = []
+    iso_data['h2'] = []
 
     for t in THRESHOLDS:
         sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
@@ -339,14 +339,14 @@ for iso in ISOS:
             iso_data['battery'].append(sc.get('battery_dispatch_pct', 0))
             iso_data['battery8'].append(sc.get('battery8_dispatch_pct', 0))
             iso_data['ldes'].append(sc.get('ldes_dispatch_pct', 0))
-            iso_data['procurement'].append(sc.get('procurement_pct', 100))
+            iso_data['h2'].append(sc.get('h2_dispatch_pct', 0))
         else:
             for res in RESOURCES:
                 iso_data[res].append(0)
             iso_data['battery'].append(0)
             iso_data['battery8'].append(0)
             iso_data['ldes'].append(0)
-            iso_data['procurement'].append(100)
+            iso_data['h2'].append(0)
 
     resource_mix_data[iso] = iso_data
     print(f"  {iso} clean_firm: {iso_data['clean_firm']}")
@@ -378,6 +378,7 @@ for iso in ISOS:
         'battery_charge': [],
         'battery8_charge': [],
         'ldes_charge': [],
+        'h2_charge': [],
     }
 
     iso_profiles = cd_profiles.get(iso, {}).get('profiles', {})
@@ -388,16 +389,20 @@ for iso in ISOS:
         profile = None
         if sc and iso_profiles:
             rm = sc.get('resource_mix', {})
-            proc = sc.get('procurement_pct', 0)
             batt = sc.get('battery_dispatch_pct', 0)
             batt8 = sc.get('battery8_dispatch_pct', 0)
             ldes = sc.get('ldes_dispatch_pct', 0)
-            mk = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_{proc}_{batt}_{batt8}_{ldes}"
+            h2 = sc.get('h2_dispatch_pct', 0)
+            mk = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_100_{batt}_{batt8}_{ldes}_{h2}"
             profile = iso_profiles.get(mk)
-            # Fallback to old mix_key format without battery8
+            # Fallback to old mix_key format without h2
             if not profile:
-                mk_old = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_{proc}_{batt}_{ldes}"
+                mk_old = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_100_{batt}_{batt8}_{ldes}"
                 profile = iso_profiles.get(mk_old)
+            # Fallback to old mix_key format without battery8/h2
+            if not profile:
+                mk_old2 = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_100_{batt}_{ldes}"
+                profile = iso_profiles.get(mk_old2)
 
         if profile:
             iso_cd['demand'].append([round(v, 5) for v in profile['demand']])
@@ -405,6 +410,7 @@ for iso in ISOS:
             iso_cd['battery_charge'].append([round(v, 5) for v in profile.get('battery_charge', [0]*24)])
             iso_cd['battery8_charge'].append([round(v, 5) for v in profile.get('battery8_charge', [0]*24)])
             iso_cd['ldes_charge'].append([round(v, 5) for v in profile.get('ldes_charge', [0]*24)])
+            iso_cd['h2_charge'].append([round(v, 5) for v in profile.get('h2_charge', [0]*24)])
             for res in MATCHED_RESOURCES:
                 vals = profile.get('matched', {}).get(res, [0]*24)
                 iso_cd['matched'][res].append([round(v, 5) for v in vals])
@@ -417,6 +423,7 @@ for iso in ISOS:
             iso_cd['battery_charge'].append([0]*24)
             iso_cd['battery8_charge'].append([0]*24)
             iso_cd['ldes_charge'].append([0]*24)
+            iso_cd['h2_charge'].append([0]*24)
             for res in MATCHED_RESOURCES:
                 iso_cd['matched'][res].append([0]*24)
             for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
@@ -455,7 +462,7 @@ for iso in ISOS:
 # ============================================================================
 
 print("\nExtracting WYN_RESOURCE_COSTS...")
-WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
+WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
 wyn_resource_costs = {}
 for iso in ISOS:
     iso_wyn = []
@@ -465,7 +472,7 @@ for iso in ISOS:
         entry = {}
         for res in WYN_RESOURCES:
             rd = rc.get(res, {})
-            if res in ('battery', 'battery8', 'ldes'):
+            if res in ('battery', 'battery8', 'ldes', 'h2'):
                 entry[res] = {
                     'dispatch_pct': rd.get('dispatch_pct', 0),
                     'cost': round(rd.get('cost_per_demand_mwh', 0), 2),
@@ -577,7 +584,7 @@ lines.append('')
 
 # MIX_RESOURCES, MIX_LABELS_MAP, MIX_COLORS
 lines.append("// --- Resource Colors & Labels (used by dashboard, index, region_deepdive) ---")
-lines.append("const MIX_RESOURCES = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes'];")
+lines.append("const MIX_RESOURCES = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'h2'];")
 lines.append('')
 lines.append('const MIX_LABELS_MAP = {')
 lines.append("    clean_firm: 'New Nuclear',")
@@ -786,13 +793,13 @@ lines.append('')
 lines.append('// --- Resource Mix (% of demand) — medium scenario ---')
 lines.append('// Source: overprocure_results.json (Step 2 repriced)')
 lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
-lines.append('// battery/ldes = dispatch % of demand; procurement = over-procurement %')
+lines.append('// battery/battery8/ldes/h2 = dispatch % of demand')
 lines.append('const RESOURCE_MIX_DATA = {')
 for iso_idx, iso in enumerate(ISOS):
     d = resource_mix_data[iso]
     lines.append(f'    {iso}: {{')
-    for key in RESOURCES + ['battery', 'battery8', 'ldes', 'procurement']:
-        comma = ',' if key != 'procurement' else ''
+    for key in RESOURCES + ['battery', 'battery8', 'ldes', 'h2']:
+        comma = ',' if key != 'h2' else ''
         padding = ' ' * max(0, 12 - len(key))
         lines.append(f'        {key}:{padding}{fmt_array(d[key])}{comma}')
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
@@ -977,10 +984,10 @@ for iso_idx, iso in enumerate(ISOS):
 lines.append('};')
 lines.append('')
 
-# LCOE tables (solar, wind, battery, battery8, LDES — from Step 3 constants)
+# LCOE tables (solar, wind, battery, battery8, LDES, H2 — from Step 3 constants)
 lines.append('// --- LCOE Tables ($/MWh) for client-side repricing ---')
 lines.append('const LCOE_TABLES = {')
-for res in ['solar', 'wind', 'battery', 'battery8', 'ldes']:
+for res in ['solar', 'wind', 'battery', 'battery8', 'ldes', 'h2']:
     rt = _LCOE_TABLES.get(res, {})
     lines.append(f'    {res}: {{')
     for lev_idx, lev in enumerate(['Low', 'Medium', 'High']):
@@ -988,7 +995,7 @@ for res in ['solar', 'wind', 'battery', 'battery8', 'ldes']:
         parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
         comma = ',' if lev_idx < 2 else ''
         lines.append(f'        {lev}: {{ {", ".join(parts)} }}{comma}')
-    res_comma = ',' if res != 'ldes' else ''
+    res_comma = ',' if res != 'h2' else ''
     lines.append(f'    }}{res_comma}')
 lines.append('};')
 lines.append('')
@@ -1001,7 +1008,7 @@ lines.append('')
 # Transmission tables (from Step 3 constants)
 lines.append('// --- Transmission Adders ($/MWh) ---')
 lines.append('const TX_TABLES = {')
-for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes']):
+for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes', 'h2']):
     rt = _TX_TABLES.get(res, {})
     lines.append(f'    {res}: {{')
     tx_levels = ['None', 'Low', 'Medium', 'High']
@@ -1013,7 +1020,7 @@ for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'batte
             parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
         comma = ',' if lev_idx < len(tx_levels) - 1 else ''
         lines.append(f'        {lev}: {{ {", ".join(parts)} }}{comma}')
-    res_comma = ',' if res_idx < 6 else ''
+    res_comma = ',' if res_idx < 7 else ''
     lines.append(f'    }}{res_comma}')
 lines.append('};')
 lines.append('')
@@ -1362,7 +1369,7 @@ if optimal_targets:
         nr = iso_data.get('no_regrets', {})
         if isinstance(nr, dict) and 'resources' in nr:
             nr_summary = {}
-            for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']:
+            for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']:
                 stats = nr.get('resources', {}).get(res, {})
                 if stats.get('max_pct', 0) == 0:
                     continue
@@ -1403,11 +1410,12 @@ import pandas as pd
 
 STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
 MIX_FIELDS = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
-              'procurement_pct', 'hourly_match_score',
-              'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+              'hourly_match_score',
+              'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct',
+              'h2_dispatch_pct']
 
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
-lines.append('// Each mix: [clean_firm%, solar%, wind%, ccs_ccgt%, hydro%, procurement%, match%, battery%, battery8%, ldes%]')
+lines.append('// Each mix: [clean_firm%, solar%, wind%, ccs_ccgt%, hydro%, match%, battery%, battery8%, ldes%, h2%]')
 lines.append('// Source: step3_feasible_{ISO}.parquet — ~500 EF-sampled mixes + archetype winners per threshold.')
 lines.append('// t=100 uses mixes scoring >=99.5% from the feasible set (effective gate).')
 lines.append('const FEASIBLE_MIXES = {')
@@ -1450,10 +1458,10 @@ for iso_idx, iso in enumerate(ISOS):
             for _, row in sub.iterrows():
                 mix_rows.append([
                     row['clean_firm'], row['solar'], row['wind'],
-                    row['ccs_ccgt'], row['hydro'], row['procurement_pct'],
+                    row['ccs_ccgt'], row['hydro'],
                     round(row['hourly_match_score'], 1),
                     row['battery_dispatch_pct'], row['battery8_dispatch_pct'],
-                    row['ldes_dispatch_pct'],
+                    row['ldes_dispatch_pct'], row['h2_dispatch_pct'],
                 ])
 
         total_fm += len(mix_rows)
