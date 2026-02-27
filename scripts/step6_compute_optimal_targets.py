@@ -224,7 +224,7 @@ GAS_BACKUP_COST = {
     'SPP':   [12.65, 12.59, 12.54, 12.43, 12.4, 12.29, 12.23, 12.07, 11.84, 11.85, 11.68, 11.42, 10.88, 10.67, 10.99, 10.99, 10.99],
 }
 
-# Resource mix data (% of procurement portfolio) — medium-cost physics optimization
+# Resource mix data (% of demand) — medium-cost physics optimization
 # Note: mixes are optimized at medium costs. Sensitivity toggles recalculate cost
 # on cached physics, so mixes don't vary by cost tier. This is a model limitation
 # for the no-regrets analysis (we can't see if high-cost scenarios shift the mix).
@@ -238,7 +238,6 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-        'procurement': [60, 70, 75, 80, 85, 90, 100, 110, 112, 120, 122, 130, 140, 150, 160, 160, 160],
     },
     'ERCOT': {
         'clean_firm':  [16, 15, 14, 13, 12, 11, 10, 9, 9, 8, 8, 12, 8, 8, 13, 0, 13],
@@ -249,7 +248,6 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        'procurement': [55, 60, 65, 70, 75, 80, 90, 100, 102, 110, 117, 125, 130, 135, 135, 100, 135],
     },
     'PJM': {
         'clean_firm':  [63, 58, 53, 50, 46, 43, 56, 43, 66, 82, 77, 91, 82, 83, 85, 85, 85],
@@ -260,7 +258,6 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        'procurement': [55, 60, 65, 70, 75, 80, 85, 95, 95, 97, 102, 105, 115, 125, 160, 160, 160],
     },
     'NYISO': {
         'clean_firm':  [36, 33, 31, 29, 27, 25, 22, 24, 42, 54, 53, 58, 69, 66, 0, 0, 0],
@@ -271,7 +268,6 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        'procurement': [55, 60, 65, 70, 75, 80, 90, 95, 97, 100, 105, 110, 115, 125, 100, 100, 100],
     },
     'NEISO': {
         'clean_firm':  [47, 43, 40, 37, 35, 32, 29, 42, 60, 73, 73, 81, 77, 80, 23, 23, 23],
@@ -282,7 +278,6 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-        'procurement': [55, 60, 65, 70, 75, 80, 90, 95, 97, 100, 105, 110, 120, 130, 150, 150, 150],
     },
     'MISO': {
         'clean_firm':  [26, 24, 22, 20, 19, 18, 17, 15, 14, 15, 21, 39, 13, 13, 13, 13, 13],
@@ -293,7 +288,6 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-        'procurement': [55, 60, 65, 70, 75, 80, 85, 95, 102, 105, 112, 115, 120, 125, 140, 140, 140],
     },
     'SPP': {
         'clean_firm':  [10, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 6, 5, 5, 5, 5],
@@ -304,7 +298,6 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-        'procurement': [55, 60, 65, 70, 75, 80, 85, 95, 97, 105, 112, 120, 130, 150, 150, 150, 150],
     },
 }
 
@@ -738,10 +731,10 @@ def analyze_targets_in_range(iso, lower_bound, upper_bound, mac_curves):
 def compute_resource_twh_at_threshold(iso, threshold_idx, growth_tier='medium'):
     """
     Compute absolute resource TWh at a given threshold index.
-    Resource TWh = (resource_pct / 100) × (procurement_pct / 100) × demand × gf
+    Resource TWh = (resource_pct / 100) × demand × gf
+    (v5.0: procurement is baked into resource percentages directly)
     """
     mix = RESOURCE_MIX_DATA[iso]
-    procurement_pct = mix['procurement'][threshold_idx]
     t = THRESHOLDS[threshold_idx]
     gf = demand_growth_factor(iso, t, growth_tier)
     demand = DEMAND_TWH[iso] * gf
@@ -749,9 +742,8 @@ def compute_resource_twh_at_threshold(iso, threshold_idx, growth_tier='medium'):
     result = {}
     for res in RESOURCES:
         res_pct = mix[res][threshold_idx]
-        twh = (res_pct / 100.0) * (procurement_pct / 100.0) * demand
+        twh = (res_pct / 100.0) * demand
         result[res] = round(twh, 2)
-    result['procurement_pct'] = procurement_pct
     result['total_clean_twh'] = round(sum(result[r] for r in RESOURCES), 2)
     return result
 

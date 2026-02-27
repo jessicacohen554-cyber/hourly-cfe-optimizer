@@ -316,7 +316,7 @@ def compute_envelope_and_path(df):
         prev_abs = {r: 0 for r in RESOURCE_TYPES}
         prev_batt = 0
         prev_ldes = 0
-        prev_proc = 0
+        prev_h2 = 0
         prev_cost = 0
         prev_co2 = 0
 
@@ -355,18 +355,20 @@ def compute_envelope_and_path(df):
             # ── Path-constrained computation ──
             if has_any_row:
                 mix = {r: int(row[f'mix_{r}']) for r in RESOURCE_TYPES}
-                proc = int(row['procurement_pct'])
+                # v5.0: procurement_pct is always 100 (baked into resource percentages)
                 batt = int(row['battery_dispatch_pct'])
                 ldes = int(row['ldes_dispatch_pct'])
+                h2 = int(row.get('h2_dispatch_pct', 0)) if 'h2_dispatch_pct' in row.index else 0
 
                 # Compute absolute deployment for this threshold's optimal mix
-                curr_abs = {r: proc * mix[r] / 100.0 for r in RESOURCE_TYPES}
+                # procurement is always 100% in v5.0
+                curr_abs = {r: mix[r] for r in RESOURCE_TYPES}
 
                 # Enforce monotonicity: each resource's absolute deployment >= previous
                 constrained_abs = {r: max(curr_abs[r], prev_abs[r]) for r in RESOURCE_TYPES}
-                constrained_proc = max(proc, prev_proc)
                 constrained_batt = max(batt, prev_batt)
                 constrained_ldes = max(ldes, prev_ldes)
+                constrained_h2 = max(h2, prev_h2)
 
                 # Reconstruct mix percentages from constrained absolute values
                 total_abs = sum(constrained_abs.values())
@@ -393,7 +395,7 @@ def compute_envelope_and_path(df):
                 prev_abs = constrained_abs
                 prev_batt = constrained_batt
                 prev_ldes = constrained_ldes
-                prev_proc = constrained_proc
+                prev_h2 = constrained_h2
                 prev_cost = constrained_incremental
                 prev_co2 = co2_tons
             else:
