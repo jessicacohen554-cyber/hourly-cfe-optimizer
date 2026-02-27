@@ -53,16 +53,16 @@ from parquet_io import find_input_dir, find_parquet, ALL_ISOS
 
 MIX_COLUMNS = [
     'mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_ccs_ccgt', 'mix_hydro',
-    'procurement_pct', 'battery_dispatch_pct', 'battery8_dispatch_pct',
-    'ldes_dispatch_pct',
+    'battery_dispatch_pct', 'battery8_dispatch_pct',
+    'ldes_dispatch_pct', 'h2_dispatch_pct',
 ]
 
 
 def extract_unique_mixes(iso, input_dir):
     """Read step4/step3 parquet for an ISO and extract unique mix tuples.
 
-    Returns list of dicts with keys: resource_pcts, procurement_pct,
-    battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct.
+    Returns list of dicts with keys: resource_pcts,
+    battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct, h2_dispatch_pct.
 
     Uses vectorized numpy column extraction instead of iterrows() for ~50-100×
     speedup on large DataFrames (iterrows is notoriously slow due to per-row
@@ -72,7 +72,14 @@ def extract_unique_mixes(iso, input_dir):
     if not path:
         return []
 
-    df = pd.read_parquet(path, columns=MIX_COLUMNS)
+    # Read available columns (h2_dispatch_pct may be absent in older parquets)
+    avail_cols = pd.read_parquet(path, columns=[]).columns.tolist()
+    read_cols = [c for c in MIX_COLUMNS if c in avail_cols]
+    df = pd.read_parquet(path, columns=read_cols)
+    # Fill missing columns with 0
+    for c in MIX_COLUMNS:
+        if c not in df.columns:
+            df[c] = 0
     unique = df.drop_duplicates()
 
     # Vectorized extraction: pull columns as numpy arrays, iterate indices
@@ -81,10 +88,10 @@ def extract_unique_mixes(iso, input_dir):
     wnd = unique['mix_wind'].to_numpy(dtype=np.float64)
     ccs = unique['mix_ccs_ccgt'].to_numpy(dtype=np.float64)
     hyd = unique['mix_hydro'].to_numpy(dtype=np.float64)
-    proc = unique['procurement_pct'].to_numpy(dtype=np.float64)
     bat = unique['battery_dispatch_pct'].to_numpy(dtype=np.float64)
     bat8 = unique['battery8_dispatch_pct'].to_numpy(dtype=np.float64)
     ldes = unique['ldes_dispatch_pct'].to_numpy(dtype=np.float64)
+    h2 = unique['h2_dispatch_pct'].to_numpy(dtype=np.float64)
 
     n = len(unique)
     mixes = [None] * n
@@ -94,10 +101,10 @@ def extract_unique_mixes(iso, input_dir):
                 'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
                 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
             },
-            'procurement_pct': proc[i],
             'battery_dispatch_pct': bat[i],
             'battery8_dispatch_pct': bat8[i],
             'ldes_dispatch_pct': ldes[i],
+            'h2_dispatch_pct': h2[i],
         }
 
     return mixes
@@ -129,7 +136,7 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
         rp = mix_info['resource_pcts']
         key = _archetype_key(
             iso, rp,
-            mix_info['procurement_pct'],
+            100,  # procurement_pct removed (always 100 in v5.0)
             mix_info['battery_dispatch_pct'],
             mix_info['battery8_dispatch_pct'],
             mix_info['ldes_dispatch_pct'],
@@ -141,12 +148,13 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
 
         result = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, rp,
-            mix_info['procurement_pct'],
+            100,  # procurement_pct removed (always 100 in v5.0)
             mix_info['battery_dispatch_pct'],
             mix_info['battery8_dispatch_pct'],
             mix_info['ldes_dispatch_pct'],
             supply_matrix=supply_matrix,
             detailed=True,
+            h2_dispatch_pct=mix_info['h2_dispatch_pct'],
         )
 
         cache[key] = {k: v for k, v in result.items()}
