@@ -159,6 +159,7 @@ PEAK_CAPACITY_CREDITS = {
     'battery': 0.95,     # 4hr Li-ion
     'battery8': 0.95,    # 8hr Li-ion
     'ldes': 0.90,        # 100hr iron-air
+    'h2': 0.95,          # H2 storage — dispatchable
 }
 
 # Gas Availability Factor (GAF) — forced outages + correlated weather risk
@@ -196,7 +197,7 @@ def compute_marginal_costs(fuel_level='Medium', co2_level='Medium'):
 
 
 def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
-                           battery8_pct=0, ldes_pct=0):
+                           battery8_pct=0, ldes_pct=0, h2_pct=0):
     """Compute clean peak capacity contribution (MW) from resource mix.
 
     Mirrors step3_cost_optimization.py clean_peak_mw calculation exactly.
@@ -214,7 +215,8 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
         resource_mix.get('hydro', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
         battery_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         battery8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
     )
     return clean_peak
 
@@ -222,7 +224,7 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
 def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw=None,
                              resource_mix=None,
                              battery_pct=0, battery8_pct=0, ldes_pct=0,
-                             co2_level='Medium'):
+                             h2_pct=0, co2_level='Medium'):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
@@ -241,6 +243,7 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         battery_pct: battery dispatch percentage
         battery8_pct: battery8 dispatch percentage
         ldes_pct: LDES dispatch percentage
+        h2_pct: H2 storage dispatch percentage
         co2_level: 'Low', 'Medium', 'High' — CO2 allowance pricing
 
     Returns:
@@ -264,7 +267,7 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
             if resource_mix is not None:
                 clean_peak_mw = _compute_clean_peak_mw(
                     iso, resource_mix,
-                    battery_pct, battery8_pct, ldes_pct)
+                    battery_pct, battery8_pct, ldes_pct, h2_pct)
             else:
                 # Fallback: estimate from clean_pct with conservative blended credit
                 # At low clean%, mix is mostly solar/wind (low ELCC ~0.25)
@@ -1069,8 +1072,8 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
 
         dispatch, cache_hit = get_or_compute_dispatch(
             iso, demand_norm, supply_profiles, resource_mix,
-            100, batt4, batt8, ldes,
-            cache=dispatch_cache)
+            battery_dispatch_pct=batt4, battery8_dispatch_pct=batt8,
+            ldes_dispatch_pct=ldes, cache=dispatch_cache)
 
         if cache_hit:
             cache_hits += 1
@@ -1081,7 +1084,8 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
         stack, total_fossil_mw = build_merit_order_stack(
             iso, threshold, fuel_level,
             resource_mix=resource_mix,
-            battery_pct=batt4, battery8_pct=batt8, ldes_pct=ldes)
+            battery_pct=batt4, battery8_pct=batt8, ldes_pct=ldes,
+            h2_pct=h2)
 
         # Compute hourly LMP
         hourly_lmp, hourly_mu = compute_hourly_lmp_vectorized(
