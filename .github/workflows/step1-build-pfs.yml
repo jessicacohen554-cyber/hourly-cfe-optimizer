@@ -112,6 +112,9 @@ jobs:
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
+        # Increase post buffer to 500 MB — PFS parquets can be large and
+        # the default 1 MB buffer causes HTTP 500 on push.
+        git config http.postBuffer 524288000
         # Create the target branch for incremental commits
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         ISO_LABEL="${{ inputs.iso }}"
@@ -192,31 +195,53 @@ jobs:
           REMAINING=true
         fi
 
-        # Final push with retry (catches both remaining + any locally-committed-but-unpushed)
-        push_with_retry() {
+        # Final push with retry — pushes one commit at a time to avoid
+        # HTTP 500 from oversized payloads when multiple large parquets
+        # accumulated (e.g., auto-commit pushes failed during the run).
+        push_single_with_retry() {
+          local COMMIT_SHA="$1"
           local MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
-            echo "  Final push attempt $i/$MAX_RETRIES..."
-            if git push -u origin "$TARGET_BRANCH" 2>&1; then
-              echo "  Final push succeeded"
+            echo "  Push attempt $i/$MAX_RETRIES for ${COMMIT_SHA:0:8}..."
+            if git push -u origin "$COMMIT_SHA:refs/heads/$TARGET_BRANCH" 2>&1; then
+              echo "  Push succeeded for ${COMMIT_SHA:0:8}"
               return 0
             fi
             BACKOFF=$((2 ** i))
             echo "  Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-          echo "  ERROR: Final push failed after $MAX_RETRIES attempts"
+          echo "  ERROR: Push failed for ${COMMIT_SHA:0:8} after $MAX_RETRIES attempts"
           return 1
         }
 
         # Check if branch has any commits ahead of base
-        COMMITS_AHEAD=$(git log origin/${{ inputs.branch || 'master' }}..HEAD --oneline 2>/dev/null | wc -l || echo "0")
-        if [ "$COMMITS_AHEAD" -gt 0 ]; then
-          push_with_retry
-          echo "PUSHED=true" >> "$GITHUB_ENV"
-        else
-          echo "No new commits to push"
+        BASE_REF=$(git rev-parse "origin/${{ inputs.branch || 'master' }}" 2>/dev/null || echo "")
+        if [ -z "$BASE_REF" ]; then
+          echo "No base ref found — nothing to push"
           echo "PUSHED=false" >> "$GITHUB_ENV"
+        else
+          COMMITS=$(git rev-list --reverse "$BASE_REF..HEAD" 2>/dev/null)
+          COMMIT_COUNT=$(echo "$COMMITS" | grep -c . || echo "0")
+          if [ "$COMMIT_COUNT" -gt 0 ]; then
+            echo "Pushing $COMMIT_COUNT commit(s) one at a time..."
+            PUSH_OK=true
+            for sha in $COMMITS; do
+              if ! push_single_with_retry "$sha"; then
+                PUSH_OK=false
+                break
+              fi
+            done
+            if [ "$PUSH_OK" = true ]; then
+              echo "PUSHED=true" >> "$GITHUB_ENV"
+            else
+              echo "PUSHED=false" >> "$GITHUB_ENV"
+              exit 1
+            fi
+          else
+            echo "No new commits to push"
+            echo "PUSHED=false" >> "$GITHUB_ENV"
+          fi
         fi
 
     - name: Create pull request
