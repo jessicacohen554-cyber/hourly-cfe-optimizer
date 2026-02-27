@@ -287,6 +287,37 @@ for iso in ISOS:
     print(f"  {iso} med: {med_line}")
 
 # ============================================================================
+# EXTRACT CLEAN_COST_DATA (P10/Median/P90 of effective_cost — NO gas backup)
+# ============================================================================
+# MAC and crossover analysis use clean procurement cost only.
+# Gas backup is a system reliability cost, not an abatement cost.
+
+print("\nExtracting CLEAN_COST_DATA (P10/Median/P90 of effective_cost)...")
+
+clean_cost_data = {'medium': {}, 'low': {}, 'high': {}}
+for iso in ISOS:
+    med_line, lo_line, hi_line = [], [], []
+    for t in THRESHOLDS:
+        scenarios = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {})
+        costs = []
+        for sc_key, sc in scenarios.items():
+            eff = sc.get('costs', {}).get('effective_cost')
+            if eff is not None and eff > 0:
+                costs.append(eff)
+        if costs:
+            med_line.append(round(float(np_sc.median(costs)), 2))
+            lo_line.append(round(float(np_sc.percentile(costs, 10)), 2))
+            hi_line.append(round(float(np_sc.percentile(costs, 90)), 2))
+        else:
+            med_line.append(None)
+            lo_line.append(None)
+            hi_line.append(None)
+    clean_cost_data['medium'][iso] = med_line
+    clean_cost_data['low'][iso] = lo_line
+    clean_cost_data['high'][iso] = hi_line
+    print(f"  {iso} clean_med: {med_line}")
+
+# ============================================================================
 # EXTRACT RESOURCE_MIX_DATA
 # ============================================================================
 
@@ -674,6 +705,22 @@ for sens in ['medium', 'low', 'high']:
     for iso_idx, iso in enumerate(ISOS):
         comma = ',' if iso_idx < len(ISOS) - 1 else ''
         lines.append(f'        {iso}: {" " * (6-len(iso))}{fmt_array(system_cost_data[sens][iso])}{comma}')
+    comma = ',' if sens != 'high' else ''
+    lines.append(f'    }}{comma}')
+lines.append('};')
+lines.append('')
+
+# CLEAN_COST_DATA — effective_cost only (NO gas backup)
+lines.append('// --- Clean Procurement Cost ($/MWh) by threshold ---')
+lines.append('// Source: P10/Median/P90 of effective_cost across sensitivity scenarios')
+lines.append('// Does NOT include gas backup — used for MAC/crossover analysis')
+lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
+lines.append('const CLEAN_COST_DATA = {')
+for sens in ['medium', 'low', 'high']:
+    lines.append(f'    {sens}: {{')
+    for iso_idx, iso in enumerate(ISOS):
+        comma = ',' if iso_idx < len(ISOS) - 1 else ''
+        lines.append(f'        {iso}: {" " * (6-len(iso))}{fmt_array(clean_cost_data[sens][iso])}{comma}')
     comma = ',' if sens != 'high' else ''
     lines.append(f'    }}{comma}')
 lines.append('};')
@@ -1448,6 +1495,7 @@ shared_json = {
     'marginal_mac_data': marginal_mac_data,
     'effective_cost_data': effective_cost_data,
     'system_cost_data': system_cost_data,
+    'clean_cost_data': clean_cost_data,
     'resource_mix_data': resource_mix_data,
     'gas_backup_data': gas_backup_data,
     'cf_tranche_data': cf_tranche_data,
