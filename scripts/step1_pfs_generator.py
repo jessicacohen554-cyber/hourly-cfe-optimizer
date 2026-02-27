@@ -914,7 +914,7 @@ def _batch_mixes_storage_screen(demand, supply_rows_batch, procurement, n_mixes,
 # BATCH EVALUATION — vectorized for grid search + Numba parallel for storage
 # ══════════════════════════════════════════════════════════════════════════════
 
-def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, chunk_size=20000):
+def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, chunk_size=10000):
     """Evaluate N mixes at once. mix_batch shape (N, n_resources), returns (N,) scores.
 
     Resource fractions are direct % of demand (no procurement multiplier).
@@ -922,7 +922,8 @@ def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, chunk_size=20000):
 
     Processes in chunks to avoid OOM on large combo sets (e.g. CAISO 5D
     produces 1.6M combos × 8760 hours = 106 GiB at float64 if done at once).
-    chunk_size=20000 keeps the intermediate array under ~1.4 GiB.
+    chunk_size=10000 keeps the intermediate array under ~0.7 GiB (safe for
+    GitHub Actions runners with 7 GB RAM).
     """
     N = len(mix_batch)
     if N <= chunk_size:
@@ -1304,7 +1305,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         h2_levels = [0]
 
     MIN_SURPLUS_DAYS_FOR_BATTERY = 150
-    NM_CHUNK = 20000       # ~1.4 GiB per chunk at float64 × 8760
+    NM_CHUNK = 10000       # ~0.7 GiB per chunk at float64 × 8760 (reduced from 20K for GH Actions 7GB runners)
     MAX_MIX_BATCH = 100    # max mixes per storage-sweep batch
     batt8_window = 48
 
@@ -1346,7 +1347,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     #   <50%:   target to max(target+30, 50)  (generous for low targets)
     #   50-75%: target to 2× target
     #   80-90%: target to 200%
-    #   >90%:   target to unlimited (dominance filter handles pruning)
+    #   >90%:   target to 250% (was unlimited — capped to prevent OOM on
+    #           GitHub Actions runners; mixes >250% are heavily over-procured
+    #           and dominated by leaner alternatives at every threshold)
     total_procurement = coarse_combos.sum(axis=1)
     proc_lower = threshold
     if threshold < 50:
@@ -1356,7 +1359,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     elif threshold <= 90:
         proc_upper = 200.0
     else:
-        proc_upper = None
+        proc_upper = 250.0
 
     n_before = len(coarse_combos)
     proc_mask = total_procurement >= proc_lower
@@ -1578,8 +1581,17 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                 continue
 
             all_fine = np.unique(np.vstack(batch_fine_parts), axis=0)
+
+            # Pre-filter: remove combos whose total procurement < threshold.
+            # Hourly match score <= total_procurement/100 (since min(D,S) <= S
+            # per hour), so combos below threshold are guaranteed infeasible.
+            fine_proc_sums = all_fine.sum(axis=1)
+            all_fine = all_fine[fine_proc_sums >= threshold]
             n_all_fine = len(all_fine)
             fine_total_combos += n_all_fine
+
+            if n_all_fine == 0:
+                continue
 
             # Score all fine combos (no procurement — direct fractions)
             all_fine_scores = batch_hourly_scores(demand_arr, supply_matrix, all_fine)
