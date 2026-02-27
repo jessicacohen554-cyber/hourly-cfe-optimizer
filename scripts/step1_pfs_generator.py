@@ -178,6 +178,11 @@ NUCLEAR_MONTHLY_CF = {
 CHECKPOINT_DIR = os.path.join(DATA_DIR, 'checkpoints_v4')
 STEP1_RAW_PFS_PARQUET_DIR = os.path.join(DATA_DIR, 'step1-pfs-parquets')
 
+# Chunked saving — flush candidates to disk every N batches to survive OOM/crashes.
+# Each chunk is saved as {ISO}_t{XX}_chunk{N}.parquet and merged at threshold end.
+CHUNK_SAVE_INTERVAL = 5000   # batches between disk flushes
+CHUNK_CANDIDATE_LIMIT = 500_000  # also flush if candidate list exceeds this count
+
 # Mix-level checkpoint interval: save progress every N outer-loop mixes
 # within a single threshold. Protects against mid-threshold crashes.
 MIX_CHECKPOINT_INTERVAL = 500
@@ -1305,6 +1310,19 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
 
     candidates = []
     seen = set()
+    chunk_num = [0]        # mutable counter for chunk saves (list for closure access)
+    total_batches = [0]    # total batches processed across all phases
+
+    def _flush_candidates_to_chunk():
+        """Save current candidates to a chunk file and clear the list."""
+        if candidates:
+            chunk_num[0] = _save_chunk(iso, threshold, candidates, chunk_num[0])
+            candidates.clear()
+
+    def _maybe_flush(force=False):
+        """Flush candidates if over the limit or if forced."""
+        if force or len(candidates) >= CHUNK_CANDIDATE_LIMIT:
+            _flush_candidates_to_chunk()
 
     def add_candidate(mix_arr, bp, b8p, lp, score, h2p=0):
         """Add candidate if not already seen."""
@@ -1357,6 +1375,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
 
     for i in feasible_idx:
         add_candidate(coarse_combos[i], 0, 0, 0, coarse_scores[i])
+    # Flush no-storage feasible to disk immediately (CAISO can have 1.6M+ here)
+    _maybe_flush()
 
     print(f"      {iso} {threshold}%: {len(feasible_idx):,} feasible without storage", end="")
 
@@ -1477,10 +1497,19 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                                 add_candidate(mix, bp, b8p, lp, score, h2p)
                                 storage_feasible += 1
 
+            # Periodic chunk save during storage sweep
+            total_batches[0] += 1
+            if total_batches[0] % CHUNK_SAVE_INTERVAL == 0:
+                _maybe_flush(force=True)
+            else:
+                _maybe_flush()  # flush if over candidate limit
+
         print(f"\r        Storage sweep: {n_total_batches}/{n_total_batches} batches done"
               f"                                        ")  # clear line
         print(f"      {iso} {threshold}%: +{storage_feasible:,} with storage "
               f"({len(nm_valid):,} curtailing / {len(near_miss_idx):,} near-miss)")
+        # Flush any remaining storage candidates before fine refinement
+        _maybe_flush()
     else:
         print(f", 0 near-miss")
 
@@ -1491,26 +1520,65 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     # The coarse 5% grid is more than sufficient for low thresholds.
     FINE_REFINEMENT_BAND = 0.03  # 3pp above target
     FINE_REFINEMENT_MIN_THRESHOLD = 50  # skip below this
-    if candidates and threshold >= FINE_REFINEMENT_MIN_THRESHOLD:
+
+    # CAISO 5D adaptive limits to prevent OOM:
+    #   - 4D: radius=4 → 9^4 = 6,561 combos/archetype (manageable)
+    #   - 5D: radius=2 → 5^5 = 3,125 combos/archetype (was 9^5=59,049 at radius=4)
+    #   - Cap total archetypes for 5D to prevent combinatorial blowup
+    FINE_RADIUS = 2 if n_res >= 5 else 4
+    MAX_FINE_ARCHETYPES = 500 if n_res >= 5 else 5000  # cap for 5D ISOs
+
+    # Detect boundary archetypes from coarse cache directly (works even if
+    # candidates were flushed to chunks). This is more robust than iterating
+    # the in-memory candidates list.
+    has_any_candidates = len(candidates) > 0 or chunk_num[0] > 0
+    if has_any_candidates and threshold >= FINE_REFINEMENT_MIN_THRESHOLD:
         boundary_upper = target + FINE_REFINEMENT_BAND
+        boundary_mask = (coarse_scores >= target) & (coarse_scores <= boundary_upper)
+        boundary_idx = np.where(boundary_mask)[0]
         mix_archetypes = set()
-        for c in candidates:
-            score_frac = c['hourly_match_score'] / 100.0
-            if score_frac <= boundary_upper:
-                m = tuple(c['resource_mix'][rt] for rt in rtypes)
-                mix_archetypes.add(m)
+        for i in boundary_idx:
+            m = tuple(int(coarse_combos[i][j]) for j in range(n_res))
+            mix_archetypes.add(m)
 
-        # Generate fine combos for all archetypes
-        all_fine_parts = []
-        for mix_tuple in mix_archetypes:
-            base = np.array(mix_tuple, dtype=np.float64)
-            fine = generate_resource_combos_around(base, iso, step=1, radius=4)
-            if len(fine) > 0:
-                all_fine_parts.append(fine)
+        # Cap archetypes for 5D to prevent OOM
+        if len(mix_archetypes) > MAX_FINE_ARCHETYPES:
+            print(f"      {iso} {threshold}%: Capping fine archetypes "
+                  f"{len(mix_archetypes):,} → {MAX_FINE_ARCHETYPES} (5D safety)")
+            # Sample a diverse subset: sort by total procurement, take evenly spaced
+            archetype_list = sorted(mix_archetypes, key=lambda m: sum(m))
+            step_size = max(1, len(archetype_list) // MAX_FINE_ARCHETYPES)
+            mix_archetypes = set(archetype_list[::step_size][:MAX_FINE_ARCHETYPES])
 
-        if all_fine_parts:
-            all_fine = np.unique(np.vstack(all_fine_parts), axis=0)
+        print(f"      {iso} {threshold}%: Phase 2 — {len(mix_archetypes):,} boundary archetypes, "
+              f"radius={FINE_RADIUS}, ~{len(mix_archetypes) * (2*FINE_RADIUS+1)**n_res:,} max fine combos")
+
+        # Generate fine combos in batches to avoid materializing all at once.
+        # Process ARCHETYPE_BATCH_SIZE archetypes at a time.
+        ARCHETYPE_BATCH_SIZE = 100 if n_res >= 5 else 500
+        archetype_list = list(mix_archetypes)
+        n_arch = len(archetype_list)
+        fine_total_feasible = 0
+        fine_total_combos = 0
+
+        for arch_start in range(0, n_arch, ARCHETYPE_BATCH_SIZE):
+            arch_end = min(arch_start + ARCHETYPE_BATCH_SIZE, n_arch)
+            arch_batch = archetype_list[arch_start:arch_end]
+
+            # Generate fine combos for this batch of archetypes
+            batch_fine_parts = []
+            for mix_tuple in arch_batch:
+                base = np.array(mix_tuple, dtype=np.float64)
+                fine = generate_resource_combos_around(base, iso, step=1, radius=FINE_RADIUS)
+                if len(fine) > 0:
+                    batch_fine_parts.append(fine)
+
+            if not batch_fine_parts:
+                continue
+
+            all_fine = np.unique(np.vstack(batch_fine_parts), axis=0)
             n_all_fine = len(all_fine)
+            fine_total_combos += n_all_fine
 
             # Score all fine combos (no procurement — direct fractions)
             all_fine_scores = batch_hourly_scores(demand_arr, supply_matrix, all_fine)
@@ -1520,6 +1588,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             fine_feas_idx = np.where(fine_feas_mask)[0]
             for fi in fine_feas_idx:
                 add_candidate(all_fine[fi], 0, 0, 0, all_fine_scores[fi])
+            fine_total_feasible += len(fine_feas_idx)
 
             # Near-miss fine combos → storage sweep (same >50% floor as Phase 1b)
             fine_nm_lower = max(target - 0.30, STORAGE_SWEEP_FLOOR)
@@ -1539,9 +1608,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
 
                 for cs in range(0, n_nm_fine, NM_CHUNK):
                     ce = min(cs + NM_CHUNK, n_nm_fine)
-                    p2_chunk_num = cs // NM_CHUNK + 1
+                    p2_chunk_num_local = cs // NM_CHUNK + 1
                     if p2_cap_chunks > 1:
-                        print(f"\r        Fine cap computation: chunk {p2_chunk_num}/{p2_cap_chunks} "
+                        print(f"\r        Fine cap computation: chunk {p2_chunk_num_local}/{p2_cap_chunks} "
                               f"({cs:,}/{n_nm_fine:,} mixes)", end="", flush=True)
                     chunk_fracs = all_fine[fine_nm_idx[cs:ce]] / 100.0
                     chunk_supply = chunk_fracs @ supply_matrix
@@ -1575,15 +1644,15 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                 p2_n_batches = (len(nm_fine_valid) + MAX_MIX_BATCH - 1) // MAX_MIX_BATCH
                 p2_batch_num = 0
 
-                for batch_start in range(0, len(nm_fine_valid), MAX_MIX_BATCH):
-                    batch_end = min(batch_start + MAX_MIX_BATCH, len(nm_fine_valid))
-                    batch_p2 = nm_fine_valid[batch_start:batch_end]
+                for batch_start_p2 in range(0, len(nm_fine_valid), MAX_MIX_BATCH):
+                    batch_end_p2 = min(batch_start_p2 + MAX_MIX_BATCH, len(nm_fine_valid))
+                    batch_p2 = nm_fine_valid[batch_start_p2:batch_end_p2]
                     n_bp2 = len(batch_p2)
                     p2_batch_num += 1
 
                     # Progress output (prevents apparent idle)
                     print(f"\r        Fine storage sweep: batch {p2_batch_num}/{p2_n_batches} "
-                          f"({batch_start}/{len(nm_fine_valid)} mixes)", end="", flush=True)
+                          f"({batch_start_p2}/{len(nm_fine_valid)} mixes)", end="", flush=True)
 
                     # Vectorized supply computation: single matmul
                     batch_fine_idx = np.array([batch_p2[bi][1] for bi in range(n_bp2)])
@@ -1625,11 +1694,33 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                                             continue
                                         add_candidate(all_fine[orig_idx], bp, b8p, lp, sc, h2p)
 
+                    # Periodic chunk save during fine storage sweep
+                    total_batches[0] += 1
+                    if total_batches[0] % CHUNK_SAVE_INTERVAL == 0:
+                        _maybe_flush(force=True)
+                    else:
+                        _maybe_flush()
+
                 if nm_fine_valid:
                     print()  # newline after progress
-            print(f"      {iso} {threshold}%: Phase 2 — {n_all_fine:,} fine combos, "
-                  f"{len(fine_feas_idx):,} feasible, {len(fine_nm_idx):,} near-miss")
 
+            # Flush after each archetype batch to keep memory bounded
+            _maybe_flush()
+
+            # Progress for archetype batches
+            print(f"\r      {iso} {threshold}%: Fine arch batch "
+                  f"{min(arch_end, n_arch)}/{n_arch}, "
+                  f"{fine_total_combos:,} combos, "
+                  f"{fine_total_feasible:,} feasible so far", end="", flush=True)
+
+        print(f"\n      {iso} {threshold}%: Phase 2 complete — {fine_total_combos:,} fine combos, "
+              f"{fine_total_feasible:,} feasible")
+
+    # Final flush of any remaining candidates
+    _maybe_flush(force=True)
+
+    # Return empty list — all candidates are in chunk files now
+    # The caller should use _merge_chunks_and_finalize to produce the final parquet
     return candidates
 
 
@@ -1874,6 +1965,11 @@ def process_iso(args):
         phase_results = {}
 
         for threshold in THRESHOLDS:
+            # Skip already-completed thresholds (enables incremental runs)
+            if _is_threshold_done(iso, threshold):
+                print(f"    {iso} {threshold}%: Already done — skipping ({phase_label})")
+                continue
+
             t_start = time.time()
 
             feasible = optimize_threshold(
@@ -1886,11 +1982,23 @@ def process_iso(args):
             for c in feasible:
                 archetypes.add(tuple(c['resource_mix'][rt] for rt in rtypes))
             phase_results[threshold] = feasible
-            print(f"    {iso} {threshold}%: {len(feasible)} solutions "
-                  f"({len(archetypes)} archetypes), {t_elapsed:.1f}s")
 
-            # Save results immediately after each threshold
-            _save_threshold_done(iso, threshold, feasible)
+            # Merge any chunk files + remaining candidates into final parquet
+            _merge_chunks_and_finalize(iso, threshold, feasible)
+
+            # Count from the final parquet (includes chunks)
+            done_path = _threshold_done_path(iso, threshold)
+            if os.path.exists(done_path):
+                try:
+                    final_table = pq.read_table(done_path)
+                    n_final = final_table.num_rows
+                except Exception:
+                    n_final = len(feasible)
+            else:
+                n_final = len(feasible)
+
+            print(f"    {iso} {threshold}%: {n_final:,} solutions "
+                  f"({len(archetypes)} in-memory archetypes), {t_elapsed:.1f}s")
 
         return phase_results
 
@@ -1898,10 +2006,26 @@ def process_iso(args):
     print(f"    {iso}: Phase 1 — Coarse storage sweep (fixed levels, curtailment-gated)")
     coarse_results = _run_threshold_loop("coarse")
 
-    # Analyze storage saturation from Phase 1 results
+    # Analyze storage saturation from Phase 1 results (read from parquets since
+    # candidates may have been flushed to chunks during processing)
     max_bat4 = max_bat8 = max_ldes = max_h2 = 0.0
-    for results_list in coarse_results.values():
-        for c in results_list:
+    for threshold in THRESHOLDS:
+        done_path = _threshold_done_path(iso, threshold)
+        if os.path.exists(done_path):
+            try:
+                t_df = pq.read_table(done_path).to_pandas()
+                if 'battery_dispatch_pct' in t_df.columns:
+                    max_bat4 = max(max_bat4, t_df['battery_dispatch_pct'].max())
+                if 'battery8_dispatch_pct' in t_df.columns:
+                    max_bat8 = max(max_bat8, t_df['battery8_dispatch_pct'].max())
+                if 'ldes_dispatch_pct' in t_df.columns:
+                    max_ldes = max(max_ldes, t_df['ldes_dispatch_pct'].max())
+                if 'h2_dispatch_pct' in t_df.columns:
+                    max_h2 = max(max_h2, t_df['h2_dispatch_pct'].max())
+            except Exception:
+                pass
+        # Also check in-memory results
+        for c in coarse_results.get(threshold, []):
             max_bat4 = max(max_bat4, c.get('battery_dispatch_pct', 0) or 0)
             max_bat8 = max(max_bat8, c.get('battery8_dispatch_pct', 0) or 0)
             max_ldes = max(max_ldes, c.get('ldes_dispatch_pct', 0) or 0)
@@ -1924,8 +2048,16 @@ def process_iso(args):
         print(f"    {iso}: No storage used in Phase 1 — skipping Phase 2")
         fine_results = coarse_results
 
-    total_solutions = sum(len(r) for r in fine_results.values())
-    print(f"    {iso}: Total: {total_solutions:,} solutions")
+    # Count total solutions from parquet files (authoritative, includes chunks)
+    total_solutions = 0
+    for threshold in THRESHOLDS:
+        done_path = _threshold_done_path(iso, threshold)
+        if os.path.exists(done_path):
+            try:
+                total_solutions += pq.read_table(done_path).num_rows
+            except Exception:
+                pass
+    print(f"    {iso}: Total: {total_solutions:,} solutions (from parquets)")
 
     iso_elapsed = time.time() - iso_start
     print(f"  {iso} completed in {iso_elapsed:.1f}s")
@@ -2008,6 +2140,86 @@ def _rows_to_table(rows):
         col: [r[col] for r in rows]
         for col in rows[0].keys()
     })
+
+
+def _chunk_path(iso, threshold, chunk_num):
+    """Path for an intermediate chunk parquet: {ISO}_t{XX}_chunk{N}.parquet."""
+    t_str = _normalize_threshold_str(threshold)
+    return os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_t{t_str}_chunk{chunk_num}.parquet')
+
+
+def _save_chunk(iso, threshold, candidates, chunk_num):
+    """Write a chunk of candidates to a numbered chunk parquet. Returns chunk_num+1."""
+    if not HAS_PARQUET or not candidates:
+        return chunk_num
+    os.makedirs(STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
+    rows = [_candidate_to_row(iso, threshold, c) for c in candidates]
+    table = _rows_to_table(rows)
+    if table is None:
+        return chunk_num
+    path = _chunk_path(iso, threshold, chunk_num)
+    pq.write_table(table, path, compression='snappy')
+    print(f"      {iso} {threshold}%: Saved chunk {chunk_num} ({len(candidates):,} candidates) → {os.path.basename(path)}")
+    return chunk_num + 1
+
+
+def _merge_chunks_and_finalize(iso, threshold, remaining_candidates):
+    """Merge all chunk parquets + remaining candidates into the final threshold parquet.
+
+    Reads any existing chunk files, concatenates with remaining in-memory candidates,
+    writes the final {ISO}_t{XX}_raw_pfs.parquet, and cleans up chunk files.
+    """
+    if not HAS_PARQUET:
+        return
+
+    os.makedirs(STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
+    t_str = _normalize_threshold_str(threshold)
+
+    # Find all chunk files for this ISO/threshold
+    chunk_tables = []
+    chunk_files = []
+    chunk_num = 0
+    while True:
+        cp = _chunk_path(iso, threshold, chunk_num)
+        if os.path.exists(cp):
+            try:
+                chunk_tables.append(pq.read_table(cp))
+                chunk_files.append(cp)
+            except Exception as e:
+                print(f"      Warning: Failed to read chunk {cp}: {e}")
+            chunk_num += 1
+        else:
+            break
+
+    # Convert remaining in-memory candidates
+    if remaining_candidates:
+        rows = [_candidate_to_row(iso, threshold, c) for c in remaining_candidates]
+        remaining_table = _rows_to_table(rows)
+        if remaining_table is not None:
+            chunk_tables.append(remaining_table)
+
+    if not chunk_tables:
+        print(f"      {iso} {threshold}%: No solutions to save (0 chunks, 0 remaining)")
+        return
+
+    # Concatenate all tables
+    merged = pa.concat_tables(chunk_tables)
+    done_path = _threshold_done_path(iso, threshold)
+    pq.write_table(merged, done_path, compression='snappy')
+    print(f"      {iso} {threshold}%: Merged {len(chunk_files)} chunks + remaining → "
+          f"{merged.num_rows:,} total solutions → {os.path.basename(done_path)}")
+
+    # Clean up chunk files
+    for cp in chunk_files:
+        try:
+            os.remove(cp)
+        except OSError:
+            pass
+
+    # Clean up progress file
+    progress_path = _mix_progress_path(iso, threshold)
+    if os.path.exists(progress_path):
+        os.remove(progress_path)
 
 
 def _parse_cli_args(argv):
