@@ -56,7 +56,7 @@ const SCENARIO_COMPARISON = {
       "99": 2049,
       "99.5": 2049,
       "99.9": 2050,
-      "100": 2050
+      "99.99": 2050
     },
     "thresholds": [
       50,
@@ -75,7 +75,7 @@ const SCENARIO_COMPARISON = {
       99,
       99.5,
       99.9,
-      100
+      99.99
     ],
     "isos": [
       "CAISO",
@@ -1971,7 +1971,7 @@ const SCENARIO_COMPARISON = {
       "iso": "MISO",
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": 9999,
@@ -1998,7 +1998,7 @@ const SCENARIO_COMPARISON = {
       "iso": "SPP",
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": 9999,
@@ -3836,7 +3836,7 @@ const SCENARIO_COMPARISON = {
       "iso": "MISO",
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": 9999,
@@ -3863,7 +3863,7 @@ const SCENARIO_COMPARISON = {
       "iso": "SPP",
       "zone_label": "99.9\u2192100%",
       "threshold_start": 99.9,
-      "threshold_end": 100,
+      "threshold_end": 99.99,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": 9999,
@@ -4297,7 +4297,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 32233946935.846687
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 113.63,
@@ -4734,7 +4734,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 71560701019.02217
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.65,
@@ -5171,7 +5171,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 153431403698.19962
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 159.82,
@@ -6016,7 +6016,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 20896614859.87038
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 133.45,
@@ -6511,7 +6511,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 81226160064.68164
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 86.48,
@@ -7006,7 +7006,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 24878694268.441666
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 67.91,
@@ -7445,7 +7445,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -7882,7 +7882,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -8319,7 +8319,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -9164,7 +9164,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -9659,7 +9659,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -10154,7 +10154,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -10595,7 +10595,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -11032,7 +11032,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -11469,7 +11469,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -12314,7 +12314,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -12809,7 +12809,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -13304,7 +13304,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -13743,7 +13743,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -14180,7 +14180,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -14617,7 +14617,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -15462,7 +15462,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -15957,7 +15957,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -16452,7 +16452,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -16891,7 +16891,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -17328,7 +17328,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -17765,7 +17765,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -18610,7 +18610,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -19105,7 +19105,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -19600,7 +19600,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -20039,7 +20039,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -20476,7 +20476,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -20913,7 +20913,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -21758,7 +21758,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -22253,7 +22253,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -22748,7 +22748,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -23187,7 +23187,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -23624,7 +23624,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -24061,7 +24061,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -24906,7 +24906,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -25401,7 +25401,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -25896,7 +25896,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -26335,7 +26335,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -26772,7 +26772,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -27209,7 +27209,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -28054,7 +28054,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -28549,7 +28549,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -29044,7 +29044,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -29483,7 +29483,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -29920,7 +29920,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -30357,7 +30357,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -31202,7 +31202,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -31697,7 +31697,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -32192,7 +32192,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -32631,7 +32631,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -33068,7 +33068,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -33505,7 +33505,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -34350,7 +34350,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -34845,7 +34845,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -35340,7 +35340,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -35779,7 +35779,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -36216,7 +36216,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -36653,7 +36653,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -37498,7 +37498,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -37993,7 +37993,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -38488,7 +38488,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -38927,7 +38927,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -39364,7 +39364,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -39801,7 +39801,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -40646,7 +40646,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -41141,7 +41141,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -41636,7 +41636,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -42075,7 +42075,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -42512,7 +42512,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -42949,7 +42949,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -43794,7 +43794,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -44289,7 +44289,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -44784,7 +44784,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -45223,7 +45223,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -45660,7 +45660,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -46097,7 +46097,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -46942,7 +46942,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -47437,7 +47437,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -47932,7 +47932,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -48371,7 +48371,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -48808,7 +48808,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -49245,7 +49245,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -50090,7 +50090,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -50585,7 +50585,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -51080,7 +51080,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -51519,7 +51519,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -51956,7 +51956,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -52393,7 +52393,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -53238,7 +53238,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -53733,7 +53733,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -54228,7 +54228,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -54667,7 +54667,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -55104,7 +55104,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -55541,7 +55541,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -56386,7 +56386,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -56881,7 +56881,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -57376,7 +57376,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -57815,7 +57815,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -58252,7 +58252,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -58689,7 +58689,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -59534,7 +59534,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -60029,7 +60029,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -60524,7 +60524,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -60963,7 +60963,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 28290953077.05258
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 358.6,
           "effective_cost": 118.09,
@@ -61400,7 +61400,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 64521130983.17323
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1153.3,
           "effective_cost": 95.71,
@@ -61837,7 +61837,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 105160445089.15776
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1525.7,
           "effective_cost": 100.07,
@@ -62682,7 +62682,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 15533521895.37358
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 180.1,
           "effective_cost": 128.85,
@@ -63177,7 +63177,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 87484437020.74205
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 1137.1,
           "effective_cost": 84.31,
@@ -63672,7 +63672,7 @@ const SCENARIO_COMPARISON = {
           "new_build_cost_total": 34459341936.36227
         },
         {
-          "threshold": 100,
+          "threshold": 99.99,
           "year": 2050,
           "demand_twh": 462.4,
           "effective_cost": 79.16,
@@ -63707,7 +63707,7 @@ const SCENARIO_COMPARISON = {
     "CAISO": {
       "clean_firm": {
         "peak_twh": 148.5,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 101.2,
         "final_threshold": 99,
         "stranding_ratio": 1.47,
@@ -63851,7 +63851,7 @@ const SCENARIO_COMPARISON = {
       },
       "ldes": {
         "peak_twh": 3.6,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 3.5,
         "final_threshold": 99,
         "stranding_ratio": 1.02,
@@ -63877,7 +63877,7 @@ const SCENARIO_COMPARISON = {
     "ERCOT": {
       "clean_firm": {
         "peak_twh": 264.7,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 208.4,
         "final_threshold": 99,
         "stranding_ratio": 1.27,
@@ -63901,7 +63901,7 @@ const SCENARIO_COMPARISON = {
       },
       "solar": {
         "peak_twh": 794.0,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 341.0,
         "final_threshold": 99,
         "stranding_ratio": 2.33,
@@ -64047,7 +64047,7 @@ const SCENARIO_COMPARISON = {
     "PJM": {
       "clean_firm": {
         "peak_twh": 1858.4,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 1096.6,
         "final_threshold": 99,
         "stranding_ratio": 1.69,
@@ -64071,7 +64071,7 @@ const SCENARIO_COMPARISON = {
       },
       "solar": {
         "peak_twh": 352.4,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 262.2,
         "final_threshold": 99,
         "stranding_ratio": 1.34,
@@ -64404,7 +64404,7 @@ const SCENARIO_COMPARISON = {
       },
       "solar": {
         "peak_twh": 76.5,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 75.2,
         "final_threshold": 99,
         "stranding_ratio": 1.02,
@@ -64428,7 +64428,7 @@ const SCENARIO_COMPARISON = {
       },
       "wind": {
         "peak_twh": 147.0,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 144.4,
         "final_threshold": 99,
         "stranding_ratio": 1.02,
@@ -64944,7 +64944,7 @@ const SCENARIO_COMPARISON = {
       },
       "solar": {
         "peak_twh": 331.3,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 124.9,
         "final_threshold": 99,
         "stranding_ratio": 2.65,
@@ -64968,7 +64968,7 @@ const SCENARIO_COMPARISON = {
       },
       "wind": {
         "peak_twh": 135.5,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 119.0,
         "final_threshold": 99,
         "stranding_ratio": 1.14,
@@ -65114,7 +65114,7 @@ const SCENARIO_COMPARISON = {
       },
       "solar": {
         "peak_twh": 823.4,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 261.6,
         "final_threshold": 99,
         "stranding_ratio": 3.15,
@@ -65234,7 +65234,7 @@ const SCENARIO_COMPARISON = {
       },
       "ldes": {
         "peak_twh": 23.1,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 0.0,
         "final_threshold": 99,
         "stranding_ratio": 1.0,
@@ -65260,7 +65260,7 @@ const SCENARIO_COMPARISON = {
     "PJM": {
       "clean_firm": {
         "peak_twh": 2049.1,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 1387.9,
         "final_threshold": 99,
         "stranding_ratio": 1.48,
@@ -65593,7 +65593,7 @@ const SCENARIO_COMPARISON = {
     "NEISO": {
       "clean_firm": {
         "peak_twh": 236.1,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 153.6,
         "final_threshold": 99,
         "stranding_ratio": 1.54,
@@ -65617,7 +65617,7 @@ const SCENARIO_COMPARISON = {
       },
       "solar": {
         "peak_twh": 27.4,
-        "peak_threshold": 100,
+        "peak_threshold": 99.99,
         "final_twh": 21.5,
         "final_threshold": 99,
         "stranding_ratio": 1.28,

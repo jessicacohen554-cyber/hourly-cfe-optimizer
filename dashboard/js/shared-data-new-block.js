@@ -1,7 +1,7 @@
 
 // --- Resource Mix (% of demand) — MMM_M_M scenario ---
 // Source: co2_results batch JSONs (Step 5)
-// Indices match THRESHOLDS array: ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '100']
+// Indices match THRESHOLDS array: ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.99']
 // battery/ldes = dispatch % of demand; procurement = over-procurement %
 const RESOURCE_MIX_DATA = {
     CAISO: {

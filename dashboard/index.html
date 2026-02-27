@@ -1335,7 +1335,7 @@ body {
                 <div>
                     <strong>Key Takeaway:</strong> Regions with more existing clean energy (like PJM's
                     32% nuclear fleet) need far less new build at lower targets. But all regions converge
-                    on massive new procurement at 100% &mdash; the "last mile" requires building 2&ndash;3&times;
+                    on massive new procurement at &ge;99.99% &mdash; the "last mile" requires building 2&ndash;3&times;
                     what's already on the grid, regardless of starting point.
                 </div>
             </div>
@@ -1444,7 +1444,7 @@ body {
                             System cost per MWh begins to climb as the resource mix shifts toward costlier options.</div>
                     </div>
                     <div style="background:#FEF2F2;border-radius:10px;padding:1rem 1.1rem;">
-                        <div style="font-weight:700;color:#991B1B;font-size:0.9rem;margin-bottom:0.3rem;">95%&ndash;100%: The Last Mile</div>
+                        <div style="font-weight:700;color:#991B1B;font-size:0.9rem;margin-bottom:0.3rem;">95%&ndash;&ge;99.99%: The Last Mile</div>
                         <div style="font-size:0.85rem;color:#374151;line-height:1.5;">System costs spike as the portfolio must cover rare weather extremes
                             with premium firm capacity, long-duration storage, and massive over-procurement.</div>
                     </div>
@@ -2097,7 +2097,7 @@ function refreshNarrativeStats() {
         </div>
         ${has100 ? `
         <div class="story-stat-card">
-            <div class="story-stat-label">100% Match Cost</div>
+            <div class="story-stat-label">&ge;99.99% Match Cost</div>
             <div class="story-stat-value" style="color:#C75B4A;">$${avgCost100.toFixed(0)}</div>
             <div class="story-stat-sub">avg $/MWh across ISOs${cfTag}</div>
         </div>` : `
@@ -2109,7 +2109,7 @@ function refreshNarrativeStats() {
         <div class="story-stat-card">
             <div class="story-stat-label">Cost Multiplier</div>
             <div class="story-stat-value" style="color:var(--navy);">${fullMultiplier.toFixed(1)}x</div>
-            <div class="story-stat-sub">${has100 ? '100%' : '99%'} vs 75% cost ratio</div>
+            <div class="story-stat-sub">${has100 ? '\u226599.99%' : '99%'} vs 75% cost ratio</div>
         </div>
     `;
 
@@ -2133,11 +2133,11 @@ let currentMixRegion = 'average';
 
 const MIX_REGION_INSIGHTS = {
     average: '<strong>Regional Variation:</strong> Wind-rich ERCOT sustains wind-heavy mixes to 95%+, while PJM and NEISO require a pivot to new nuclear at lower thresholds.',
-    CAISO: '<strong>CAISO (California):</strong> Leverages strong solar (35% at 75%) and high hydro cap (30%). New nuclear rises from 10% to 43% at 100%. Solar stays relevant throughout due to excellent irradiance.',
-    ERCOT: '<strong>ERCOT (Texas):</strong> Wind dominates at 65% through 95% matching thanks to $40/MWh wind LCOE. The 95%→100% transition is the most dramatic of any region: new nuclear surges +49pp while wind drops 40pp.',
-    PJM: '<strong>PJM (Mid-Atlantic):</strong> Existing 32% nuclear fleet provides a massive head start. The mix holds steady from 75% to 90%, then jumps to 60% new nuclear at 95%. PJM reaches 68% new nuclear at 100%.',
-    NYISO: '<strong>NYISO (New York):</strong> Hydro stays locked at 40% across all targets. Uses zero solar until 100%. The simplest mix — essentially new nuclear + hydro + wind — reflects the region\'s unique resource endowment.',
-    NEISO: '<strong>NEISO (New England):</strong> The most expensive region shows the sharpest shift. New nuclear reaches 78% at 100% — the highest of any region. Hydro drops from 30% to 16% and wind is eliminated entirely at 100%.',
+    CAISO: '<strong>CAISO (California):</strong> Leverages strong solar (35% at 75%) and high hydro cap (30%). New nuclear rises from 10% to 43% at \u226599.99%. Solar stays relevant throughout due to excellent irradiance.',
+    ERCOT: '<strong>ERCOT (Texas):</strong> Wind dominates at 65% through 95% matching thanks to $40/MWh wind LCOE. The 95%\u2192\u226599.99% transition is the most dramatic of any region: new nuclear surges +49pp while wind drops 40pp.',
+    PJM: '<strong>PJM (Mid-Atlantic):</strong> Existing 32% nuclear fleet provides a massive head start. The mix holds steady from 75% to 90%, then jumps to 60% new nuclear at 95%. PJM reaches 68% new nuclear at \u226599.99%.',
+    NYISO: '<strong>NYISO (New York):</strong> Hydro stays locked at 40% across all targets. Uses zero solar until \u226599.99%. The simplest mix — essentially new nuclear + hydro + wind — reflects the region\'s unique resource endowment.',
+    NEISO: '<strong>NEISO (New England):</strong> The most expensive region shows the sharpest shift. New nuclear reaches 78% at \u226599.99% — the highest of any region. Hydro drops from 30% to 16% and wind is eliminated entirely at \u226599.99%.',
     MISO: '<strong>MISO (Midwest):</strong> MISO\'s wind-rich Midwest grid and growing solar fleet enable cost-effective renewable procurement. Large nuclear baseline (75+ TWh) supports clean firm needs, though transmission across 15 states poses challenges.',
     SPP: '<strong>SPP (Southwest Power Pool):</strong> SPP leads in wind penetration (37% of demand), offering the lowest renewable procurement costs nationally. Limited nuclear means clean firm must come from new-build at high CFE targets.'
 };
@@ -2551,11 +2551,11 @@ let incrementalMixChart = null;
 let currentIncrementalRegion = 'CAISO';
 
 const INCREMENTAL_INSIGHTS = {
-    CAISO: '<strong>CAISO:</strong> Starts with 48.5% existing clean (solar-heavy). New build is modest through 90%, then accelerates sharply — at 100%, new nuclear alone exceeds 53% of demand, more than all existing clean combined.',
-    ERCOT: '<strong>ERCOT:</strong> Only 46.1% existing clean, mostly wind. New wind additions drive early targets cheaply. But at 100%, new nuclear (47%) dwarfs the entire existing fleet — a near-complete rebuild of the generation stack.',
-    PJM: '<strong>PJM:</strong> The 32% existing nuclear fleet gives PJM a massive head start. New build stays minimal through 90% — then jumps as new nuclear additions pile on. Even so, PJM needs less new build at 100% than most regions.',
-    NYISO: '<strong>NYISO:</strong> Existing hydro (16%) and nuclear (18%) cover early targets efficiently. New build stays modest through 95%, then explodes at 100% with +34% new hydro and +54% new nuclear — the sharpest final step.',
-    NEISO: '<strong>NEISO:</strong> Starts with 33.5% existing clean but it\'s spread thin across resources. New nuclear dominates at every target level, reaching 65% of demand at 100% — the highest new-build intensity of any region.',
+    CAISO: '<strong>CAISO:</strong> Starts with 48.5% existing clean (solar-heavy). New build is modest through 90%, then accelerates sharply — at \u226599.99%, new nuclear alone exceeds 53% of demand, more than all existing clean combined.',
+    ERCOT: '<strong>ERCOT:</strong> Only 46.1% existing clean, mostly wind. New wind additions drive early targets cheaply. But at \u226599.99%, new nuclear (47%) dwarfs the entire existing fleet — a near-complete rebuild of the generation stack.',
+    PJM: '<strong>PJM:</strong> The 32% existing nuclear fleet gives PJM a massive head start. New build stays minimal through 90% — then jumps as new nuclear additions pile on. Even so, PJM needs less new build at \u226599.99% than most regions.',
+    NYISO: '<strong>NYISO:</strong> Existing hydro (16%) and nuclear (18%) cover early targets efficiently. New build stays modest through 95%, then explodes at \u226599.99% with +34% new hydro and +54% new nuclear — the sharpest final step.',
+    NEISO: '<strong>NEISO:</strong> Starts with 33.5% existing clean but it\'s spread thin across resources. New nuclear dominates at every target level, reaching 65% of demand at \u226599.99% — the highest new-build intensity of any region.',
     MISO: '<strong>MISO:</strong> MISO\'s wind-rich Midwest grid and growing solar fleet enable cost-effective renewable procurement. Large nuclear baseline (75+ TWh) supports clean firm needs, though transmission across 15 states poses challenges.',
     SPP: '<strong>SPP:</strong> SPP leads in wind penetration (37% of demand), offering the lowest renewable procurement costs nationally. Limited nuclear means clean firm must come from new-build at high CFE targets.'
 };
@@ -3199,9 +3199,9 @@ function highlightCostStep(stepName) {
             };
         }
     } else if (stepName === 'cost-99') {
-        // Highlight 99-100% zone — premium but still cost-effective per ton
+        // Highlight 99-99.99% zone — premium but still cost-effective per ton
         const idx99 = findIdx(99);
-        const idx100 = findIdx(100);
+        const idx100 = findIdx(99.99);
         const topIdx = idx100 >= 0 ? idx100 : idx99;
         if (idx99 >= 0) {
             colors[idx99] = '#EF4444';
@@ -3689,7 +3689,7 @@ function initCostCurveChart(iso) {
     if (!medData) return;
 
     // Build {x, y} point arrays using THRESHOLDS — skip nulls
-    const thresholds = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,100];
+    const thresholds = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.99];
     const medPoints = thresholds.map((t, i) => medData[i] != null ? { x: t, y: medData[i] } : null).filter(Boolean);
     const lowPoints = lowData ? thresholds.map((t, i) => lowData[i] != null ? { x: t, y: lowData[i] } : null).filter(Boolean) : [];
     const highPoints = highData ? thresholds.map((t, i) => highData[i] != null ? { x: t, y: highData[i] } : null).filter(Boolean) : [];
@@ -3865,7 +3865,7 @@ function initCostCurveChart(iso) {
     if (insightEl) {
         const cost75 = medData[thresholds.indexOf(75)];
         const cost90 = medData[thresholds.indexOf(90)];
-        const cost100 = medData[thresholds.indexOf(100)];
+        const cost100 = medData[thresholds.indexOf(99.99)];
 
         let html = `<strong>${iso}:</strong> `;
         if (cost90 != null && cost75 != null) {
@@ -3874,7 +3874,7 @@ function initCostCurveChart(iso) {
             html += `At 75% matching, average system cost is <strong>$${Math.round(cost75)}/MWh</strong>. `;
             html += `By 90% it's <strong>$${Math.round(cost90)}/MWh</strong> `;
             html += `(+$${Math.round(increase90)}), `;
-            html += `and at 100% it jumps to <strong>$${Math.round(cost100)}/MWh</strong> &mdash; `;
+            html += `and at &ge;99.99% it jumps to <strong>$${Math.round(cost100)}/MWh</strong> &mdash; `;
             html += `<strong>+$${Math.round(increase100)}/MWh</strong> above the 75% level.`;
         }
         insightEl.innerHTML = html;
