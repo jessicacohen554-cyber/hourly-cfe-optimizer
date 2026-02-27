@@ -50,6 +50,7 @@ from step3_cost_optimization import (
 from step3_cost_optimization import (
     _N_COEFFS, _COL_WHOLESALE, _COL_SOL_NEW, _COL_WND_NEW, _COL_CCS_NEW,
     _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4, _COL_BAT8, _COL_LDES,
+    _COL_H2,
 )
 
 # Additional constants needed for DG coefficient computation
@@ -69,9 +70,9 @@ _THR_STR = {thr: str(thr) for thr in OUTPUT_THRESHOLDS}
 _YEAR_STR = {yr: str(yr) for yr in DG_UNIQUE_YEARS}
 
 # Pareto pruning price bounds (module-level constant, avoid per-call allocation)
-# Cols: wholesale, sol_new, wnd_new, ccs_new, uprate, geo, remaining, bat4, bat8, ldes
-_PARETO_MIN_PRICES = np.array([20, 40, 30, 52, 15, 0, 52, 69, 77, 116], dtype=np.float64)
-_PARETO_MAX_PRICES = np.array([50, 82, 83, 164, 15, 116, 84, 144, 179, 267], dtype=np.float64)
+# Cols: wholesale, sol_new, wnd_new, ccs_new, uprate, geo, remaining, bat4, bat8, ldes, h2
+_PARETO_MIN_PRICES = np.array([20, 40, 30, 52, 15, 0, 52, 69, 77, 116, 182], dtype=np.float64)
+_PARETO_MAX_PRICES = np.array([50, 82, 83, 164, 15, 116, 84, 144, 179, 267, 470], dtype=np.float64)
 
 # Per-ISO EF parquet directory (Step 2 output)
 EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2-ef-parquets')
@@ -188,6 +189,7 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
         arr_bat = arrays.get('battery_dispatch_pct', np.zeros(1))
         arr_bat8 = arrays.get('battery8_dispatch_pct', np.zeros(1))
         arr_ldes = arrays.get('ldes_dispatch_pct', np.zeros(1))
+        arr_h2 = arrays.get('h2_dispatch_pct', np.zeros(1))
 
     for thr_str, sc_dict in dg_dict.items():
         thr_float = float(thr_str)
@@ -223,6 +225,7 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                         row['battery_dispatch_pct'] = int(arr_bat[mix_idx])
                         row['battery8_dispatch_pct'] = int(arr_bat8[mix_idx])
                         row['ldes_dispatch_pct'] = int(arr_ldes[mix_idx])
+                        row['h2_dispatch_pct'] = int(arr_h2[mix_idx])
                     else:
                         row['best_mix_idx'] = mix_idx
                     rows.append(row)
@@ -346,6 +349,9 @@ def load_iso_ef_parquet(iso):
                                    if 'battery8_dispatch_pct' in sub.column_names
                                    else np.zeros(sub.num_rows, dtype=np.int64)),
         'ldes_dispatch_pct': sub.column('ldes_dispatch_pct').to_numpy(),
+        'h2_dispatch_pct': (sub.column('h2_dispatch_pct').to_numpy()
+                            if 'h2_dispatch_pct' in sub.column_names
+                            else np.zeros(sub.num_rows, dtype=np.int64)),
         'hourly_match_score': sub.column('hourly_match_score').to_numpy(),
     }
 
@@ -377,7 +383,7 @@ def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
         if Q < 2:
             continue
 
-        q_coeff = coeff_matrix[qual_idx]  # (Q, 10)
+        q_coeff = coeff_matrix[qual_idx]  # (Q, 11)
         q_const = constant[qual_idx]      # (Q,)
 
         # Min possible cost = q_coeff @ min_prices + q_const
@@ -534,11 +540,13 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     bat_pct = arch_arrays['battery_dispatch_pct']
     bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
     ldes_pct = arch_arrays['ldes_dispatch_pct']
+    h2_pct = arch_arrays.get('h2_dispatch_pct', np.zeros(N, dtype=np.float64))
 
-    # Storage coefficients are fully growth-invariant (columns 7-9)
+    # Storage coefficients are fully growth-invariant (columns 7-10)
     bat4_coeff = bat_pct / 100.0
     bat8_coeff = bat8_pct / 100.0
     ldes_coeff = ldes_pct / 100.0
+    h2_coeff = h2_pct / 100.0
 
     # Uprate cap and geo cap are per-ISO constants
     uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
@@ -563,7 +571,8 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
         hyd_pct / 100.0 * PEAK_CAPACITY_CREDITS['hydro'] +
         bat_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
+        ldes_pct / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * PEAK_CAPACITY_CREDITS['h2']
     )
 
     # Base existing shares (before scaling)
@@ -624,10 +633,10 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
                 new_gas_mw * new_ccgt_cost
             ) / demand_grown_mwh
 
-            # Build coefficient matrix (N, 10)
+            # Build coefficient matrix (N, 11)
             coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
             coeff_matrix[:, _COL_WHOLESALE] = (sol_existing_pct + wnd_existing_pct +
-                                                hyd_demand_pct + ccs_existing_pct +
+                                                hyd_pct + ccs_existing_pct +
                                                 cf_existing_pct) / 100.0
             coeff_matrix[:, _COL_SOL_NEW] = sol_new_pct / 100.0
             coeff_matrix[:, _COL_WND_NEW] = wnd_new_pct / 100.0
@@ -638,6 +647,7 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
             coeff_matrix[:, _COL_BAT4] = bat4_coeff
             coeff_matrix[:, _COL_BAT8] = bat8_coeff
             coeff_matrix[:, _COL_LDES] = ldes_coeff
+            coeff_matrix[:, _COL_H2] = h2_coeff
 
             dg_coeffs[(year, g_level)] = (coeff_matrix, constant, match_frac)
             dg_meta[(year, g_level)] = (gf, demand_grown_mwh)
