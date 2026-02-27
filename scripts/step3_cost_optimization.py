@@ -935,13 +935,16 @@ def eval_and_argmin_all(coeff_matrix, constant, prices, scores, thresholds_desc)
     gates = np.where(thresholds_desc == 100, 99.5, thresholds_desc)
     if HAS_NUMBA:
         return _argmin_bucketed(tc, scores, gates)
-    # Numpy fallback
+    # Numpy fallback — pre-compute qualifying indices via sort+searchsorted
     n_thr = len(gates)
+    sorted_order = np.argsort(scores)
+    sorted_scores = scores[sorted_order]
     best_idxs = np.zeros(n_thr, dtype=np.int64)
     best_vals = np.full(n_thr, np.inf)
     for k in range(n_thr):
-        qualifying = np.where(scores >= gates[k])[0]
-        if len(qualifying) > 0:
+        insert_pos = np.searchsorted(sorted_scores, gates[k], side='left')
+        if insert_pos < len(scores):
+            qualifying = sorted_order[insert_pos:]
             local_best = int(np.argmin(tc[qualifying]))
             best_idxs[k] = qualifying[local_best]
             best_vals[k] = tc[qualifying[local_best]]
@@ -1116,15 +1119,25 @@ def batch_eval_and_argmin_all(coeff_matrix, constant, price_matrix, scores, thre
         gates = np.where(thresholds_desc == 100, 99.5, thresholds_desc)
         return _batch_eval_and_argmin(coeff_matrix, constant, price_matrix, scores, gates)
     # Numpy fallback: sequential per-combo
+    # Pre-compute qualifying indices per threshold ONCE (O(T×N) → avoids O(B×T×N))
     B = price_matrix.shape[0]
     gates = np.where(thresholds_desc == 100, 99.5, thresholds_desc)
     n_thr = len(gates)
+
+    # Sort+searchsorted: O(N log N + T log N) instead of O(T×N)
+    sorted_order = np.argsort(scores)
+    sorted_scores = scores[sorted_order]
+    qualifying_per_thr = []
+    for k in range(n_thr):
+        insert_pos = np.searchsorted(sorted_scores, gates[k], side='left')
+        qualifying_per_thr.append(sorted_order[insert_pos:] if insert_pos < len(scores) else np.array([], dtype=np.int64))
+
     all_best_idxs = np.zeros((B, n_thr), dtype=np.int64)
     all_best_vals = np.full((B, n_thr), np.inf)
     for j in range(B):
         tc = coeff_matrix @ price_matrix[j] + constant
         for k in range(n_thr):
-            qualifying = np.where(scores >= gates[k])[0]
+            qualifying = qualifying_per_thr[k]
             if len(qualifying) > 0:
                 local_best = int(np.argmin(tc[qualifying]))
                 all_best_idxs[j, k] = qualifying[local_best]
@@ -1469,7 +1482,9 @@ def prepare_threshold_metadata(scores, thresholds):
         thresholds_desc: numpy array sorted descending (for bucketed argmin kernel)
         threshold_pos: mapping threshold -> position in thresholds_desc
     """
-    active_thresholds = [thr for thr in thresholds if np.any(scores >= effective_gate(thr))]
+    # Use max(scores) to skip full-array np.any per threshold — O(N) once instead of O(N×T)
+    max_score = scores.max() if len(scores) > 0 else -np.inf
+    active_thresholds = [thr for thr in thresholds if max_score >= effective_gate(thr)]
     thresholds_desc = np.array(sorted(active_thresholds, reverse=True), dtype=np.float64)
     threshold_pos = {float(thresholds_desc[k]): k for k in range(len(thresholds_desc))}
     return active_thresholds, thresholds_desc, threshold_pos
@@ -1494,6 +1509,30 @@ def effective_gate(thr):
     We gate 100% at 99.5% to include those near-perfect mixes.
     """
     return 99.5 if thr == 100 else float(thr)
+
+
+def precompute_threshold_indices(scores, thresholds):
+    """Pre-compute qualifying indices for all thresholds using sort+searchsorted.
+
+    Instead of O(N) np.where per threshold (O(N×T) total), this sorts once
+    O(N log N) then uses binary search O(log N) per threshold. For 1.8M mixes
+    × 21 thresholds, this eliminates ~37M comparisons.
+
+    Returns dict: threshold → array of qualifying indices (into original scores).
+    """
+    sorted_order = np.argsort(scores)
+    sorted_scores = scores[sorted_order]
+    n = len(scores)
+
+    thr_indices = {}
+    for thr in thresholds:
+        gate = effective_gate(thr)
+        # Binary search: first position where sorted_scores >= gate
+        insert_pos = np.searchsorted(sorted_scores, gate, side='left')
+        if insert_pos < n:
+            thr_indices[thr] = sorted_order[insert_pos:]
+
+    return thr_indices
 
 
 def _table_to_arrays(table):
@@ -1558,11 +1597,11 @@ def load_pfs_post_ef(input_dir, selected_isos=None):
         arrays = _table_to_arrays(sub)
         pfs[iso] = arrays
 
+        # Sort+searchsorted: O(N log N + T log N) instead of O(N×T)
         scores = arrays['hourly_match_score']
-        for thr in OUTPUT_THRESHOLDS:
-            idx = np.where(scores >= effective_gate(thr))[0]
-            if len(idx) > 0:
-                thr_indices[(iso, thr)] = idx
+        iso_thr_idx = precompute_threshold_indices(scores, OUTPUT_THRESHOLDS)
+        for thr, idx in iso_thr_idx.items():
+            thr_indices[(iso, thr)] = idx
 
         print(f"  {iso}: loaded {sub.num_rows:,} mixes from {iso_path}")
 
@@ -1724,11 +1763,13 @@ def main():
             print(f"    {iso}: existing clean floor filter removed {n_filtered:,} / {N_raw:,} mixes "
                   f"({n_filtered/N_raw*100:.1f}%) — {N:,} remaining")
             # Recompute threshold indices for filtered arrays (old indices pointed into raw)
+            # Sort+searchsorted: O(N log N + T log N) instead of O(N×T)
             scores_filt = arrays['hourly_match_score']
+            filt_thr_idx = precompute_threshold_indices(scores_filt, OUTPUT_THRESHOLDS)
+            # Replace old indices, remove thresholds that no longer have qualifying mixes
             for thr in OUTPUT_THRESHOLDS:
-                filt_idx = np.where(scores_filt >= effective_gate(thr))[0]
-                if len(filt_idx) > 0:
-                    thr_indices[(iso, thr)] = filt_idx
+                if thr in filt_thr_idx:
+                    thr_indices[(iso, thr)] = filt_thr_idx[thr]
                 elif (iso, thr) in thr_indices:
                     del thr_indices[(iso, thr)]
         demand_twh = REGIONAL_DEMAND_TWH[iso]
@@ -1914,12 +1955,8 @@ def main():
             # Already float64 from _table_to_arrays (slicing preserves dtype)
             nb_scores = nb_arrays['hourly_match_score']
 
-            # Pre-compute threshold indices for newbuild mixes
-            nb_thr_indices = {}
-            for thr in OUTPUT_THRESHOLDS:
-                idx = np.where(nb_scores >= effective_gate(thr))[0]
-                if len(idx) > 0:
-                    nb_thr_indices[thr] = idx
+            # Pre-compute threshold indices via sort+searchsorted
+            nb_thr_indices = precompute_threshold_indices(nb_scores, OUTPUT_THRESHOLDS)
 
             if nb_thr_indices:
                 nb_cm, nb_const, nb_extras = precompute_base_year_coefficients(
@@ -2089,13 +2126,9 @@ def main():
         # Extract archetype sub-arrays (evaluate only these in Phase 2)
         arch_arrays = {k: arrays[k][arch_indices] for k in arrays}
 
-        # Pre-compute which archetypes qualify for each threshold
+        # Pre-compute which archetypes qualify for each threshold (sort+searchsorted)
         arch_scores = arch_arrays['hourly_match_score']
-        arch_thr_mask = {}  # thr → indices into arch_arrays that qualify
-        for thr in OUTPUT_THRESHOLDS:
-            qualifying = np.where(arch_scores >= effective_gate(thr))[0]
-            if len(qualifying) > 0:
-                arch_thr_mask[thr] = qualifying
+        arch_thr_mask = precompute_threshold_indices(arch_scores, OUTPUT_THRESHOLDS)
 
         # Initialize per-threshold result dicts
         thr_dg = {thr: {} for thr in arch_thr_mask}
@@ -2231,11 +2264,7 @@ def main():
 
             arch_arrays = {k: t_arrays[k][arch_indices] for k in t_arrays}
             arch_scores = arch_arrays['hourly_match_score']
-            arch_thr_mask = {}
-            for thr in OUTPUT_THRESHOLDS:
-                qualifying = np.where(arch_scores >= effective_gate(thr))[0]
-                if len(qualifying) > 0:
-                    arch_thr_mask[thr] = qualifying
+            arch_thr_mask = precompute_threshold_indices(arch_scores, OUTPUT_THRESHOLDS)
 
             thr_dg = {thr: {} for thr in arch_thr_mask}
 

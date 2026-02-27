@@ -63,6 +63,10 @@ def extract_unique_mixes(iso, input_dir):
 
     Returns list of dicts with keys: resource_pcts,
     battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct, h2_dispatch_pct.
+
+    Uses vectorized numpy column extraction instead of iterrows() for ~50-100×
+    speedup on large DataFrames (iterrows is notoriously slow due to per-row
+    Series construction).
     """
     path = find_parquet(input_dir, iso)
     if not path:
@@ -78,22 +82,30 @@ def extract_unique_mixes(iso, input_dir):
             df[c] = 0
     unique = df.drop_duplicates()
 
-    mixes = []
-    for _, row in unique.iterrows():
-        resource_pcts = {
-            'clean_firm': float(row['mix_clean_firm']),
-            'solar': float(row['mix_solar']),
-            'wind': float(row['mix_wind']),
-            'ccs_ccgt': float(row['mix_ccs_ccgt']),
-            'hydro': float(row['mix_hydro']),
+    # Vectorized extraction: pull columns as numpy arrays, iterate indices
+    cf = unique['mix_clean_firm'].to_numpy(dtype=np.float64)
+    sol = unique['mix_solar'].to_numpy(dtype=np.float64)
+    wnd = unique['mix_wind'].to_numpy(dtype=np.float64)
+    ccs = unique['mix_ccs_ccgt'].to_numpy(dtype=np.float64)
+    hyd = unique['mix_hydro'].to_numpy(dtype=np.float64)
+    bat = unique['battery_dispatch_pct'].to_numpy(dtype=np.float64)
+    bat8 = unique['battery8_dispatch_pct'].to_numpy(dtype=np.float64)
+    ldes = unique['ldes_dispatch_pct'].to_numpy(dtype=np.float64)
+    h2 = unique['h2_dispatch_pct'].to_numpy(dtype=np.float64)
+
+    n = len(unique)
+    mixes = [None] * n
+    for i in range(n):
+        mixes[i] = {
+            'resource_pcts': {
+                'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
+                'ccs_ccgt': ccs[i], 'hydro': hyd[i],
+            },
+            'battery_dispatch_pct': bat[i],
+            'battery8_dispatch_pct': bat8[i],
+            'ldes_dispatch_pct': ldes[i],
+            'h2_dispatch_pct': h2[i],
         }
-        mixes.append({
-            'resource_pcts': resource_pcts,
-            'battery_dispatch_pct': float(row['battery_dispatch_pct']),
-            'battery8_dispatch_pct': float(row['battery8_dispatch_pct']),
-            'ldes_dispatch_pct': float(row['ldes_dispatch_pct']),
-            'h2_dispatch_pct': float(row['h2_dispatch_pct']),
-        })
 
     return mixes
 
