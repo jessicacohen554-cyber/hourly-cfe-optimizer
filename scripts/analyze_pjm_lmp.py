@@ -162,7 +162,7 @@ def main():
         }
 
     print("\n  Toggle impact on avg_lmp (spread = max_level - min_level):")
-    key_thresholds = [50, 80, 90, 95, 100]
+    key_thresholds = [50, 80, 90, 95, 99.99]
     header = "  Toggle              | " + " | ".join(f"{t}%" for t in key_thresholds)
     print(header)
     print("  " + "-" * len(header))
@@ -214,8 +214,8 @@ def main():
     )
 
     steepest_list = []
-    if 50.0 in pivot.columns and 100.0 in pivot.columns:
-        pivot["decline"] = pivot[50.0] - pivot[100.0]
+    if 50.0 in pivot.columns and 99.99 in pivot.columns:
+        pivot["decline"] = pivot[50.0] - pivot[99.99]
         pivot["decline_pct"] = (pivot["decline"] / pivot[50.0]) * 100
 
         steepest = pivot.nlargest(10, "decline")
@@ -224,20 +224,20 @@ def main():
                 "scenario": scenario,
                 "fuel_level": fuel,
                 "lmp_at_50": round(float(row[50.0]), 2),
-                "lmp_at_100": round(float(row[100.0]), 2),
+                "lmp_at_99.99": round(float(row[99.99]), 2),
                 "decline": round(float(row["decline"]), 2),
                 "decline_pct": round(float(row["decline_pct"]), 1),
                 "toggles": parse_scenario(scenario),
             })
 
-        print(f"\n  Top 5 steepest LMP decline (50% -> 100%):")
+        print(f"\n  Top 5 steepest LMP decline (50% -> ≥99.99%):")
         for i, s in enumerate(steepest_list[:5]):
-            print(f"  {i+1}. {s['scenario']} ({s['fuel_level']}): ${s['lmp_at_50']:.2f} -> ${s['lmp_at_100']:.2f} (decline: ${s['decline']:.2f}, {s['decline_pct']:.1f}%)")
+            print(f"  {i+1}. {s['scenario']} ({s['fuel_level']}): ${s['lmp_at_50']:.2f} -> ${s['lmp_at_99.99']:.2f} (decline: ${s['decline']:.2f}, {s['decline_pct']:.1f}%)")
 
     # === 5. Most stable scenarios ===
     print("\n--- 5. Most stable scenarios (smallest LMP spread across thresholds) ---")
 
-    threshold_cols_float = [c for c in pivot.columns if isinstance(c, float) and c <= 100]
+    threshold_cols_float = [c for c in pivot.columns if isinstance(c, float) and c <= 99.99]
     pivot["lmp_std"] = pivot[threshold_cols_float].std(axis=1)
     pivot["lmp_range"] = pivot[threshold_cols_float].max(axis=1) - pivot[threshold_cols_float].min(axis=1)
 
@@ -250,7 +250,7 @@ def main():
             "lmp_std": round(float(row["lmp_std"]), 2),
             "lmp_range": round(float(row["lmp_range"]), 2),
             "lmp_at_50": round(float(row[50.0]), 2) if 50.0 in row.index else None,
-            "lmp_at_100": round(float(row[100.0]), 2) if 100.0 in row.index else None,
+            "lmp_at_99.99": round(float(row[99.99]), 2) if 100.0 in row.index else None,
             "toggles": parse_scenario(scenario),
         })
 
@@ -364,7 +364,7 @@ def main():
             })
         archetype_summary[str(t)] = arch_list
 
-    for t in [50, 90, 100]:
+    for t in [50, 90, 99.99]:
         print(f"\n  Threshold {t}%:")
         for a in archetype_summary[str(t)][:3]:
             print(f"    {a['archetype_key']}: {a['pct_of_scenarios']}% of scenarios, avg_lmp=${a['avg_lmp']:.2f}")
