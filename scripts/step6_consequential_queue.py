@@ -567,11 +567,31 @@ def compute_sequencing_analysis(med_data, stranding, queue):
     - How much of it is stranded at deeper decarbonization (>90%)?
     - Does delaying clean firm cause gas capacity lock-in?
     - Compare gas trajectories of wind-heavy vs. clean-firm-heavy grids.
+
+    Gracefully handles ISOs with incomplete threshold coverage — uses
+    the highest available threshold as the "deep decarbonization" reference
+    instead of requiring 99%.
     """
     analysis = {}
 
+    def _safe_res_twh(d, res, default=0):
+        """Safely extract resource TWh from a threshold dict (may be empty)."""
+        if not d:
+            return default
+        if res in ('battery', 'ldes'):
+            return d.get(f'{res}_twh', default)
+        return d.get('resource_twh', {}).get(res, default)
+
+    def _safe_get(d, key, default=0):
+        """Safely get a key from a threshold dict (may be empty)."""
+        if not d:
+            return default
+        return d.get(key, default)
+
     for iso in ISOS:
         iso_data = med_data[iso]
+        if not iso_data:
+            continue
         demand_twh = list(iso_data.values())[0]['demand_twh']
 
         # What gets built in 50→75% zone
@@ -581,15 +601,20 @@ def compute_sequencing_analysis(med_data, stranding, queue):
         d95 = iso_data.get(95.0, {})
         d99 = iso_data.get(99.0, {})
 
+        # Find highest available threshold for "deep decarb" reference
+        available_thresholds = sorted(iso_data.keys())
+        t_max = available_thresholds[-1] if available_thresholds else 0
+        d_deep = iso_data.get(t_max, {})  # best available deep-decarb data
+
         if not d50 or not d75:
             continue
 
         # Resource deltas in cheap zone
         cheap_zone_build = {}
         for res in RESOURCES:
-            cheap_zone_build[res] = d75['resource_twh'].get(res, 0) - d50['resource_twh'].get(res, 0)
-        cheap_zone_build['battery'] = d75.get('battery_twh', 0) - d50.get('battery_twh', 0)
-        cheap_zone_build['ldes'] = d75.get('ldes_twh', 0) - d50.get('ldes_twh', 0)
+            cheap_zone_build[res] = _safe_res_twh(d75, res) - _safe_res_twh(d50, res)
+        cheap_zone_build['battery'] = _safe_get(d75, 'battery_twh') - _safe_get(d50, 'battery_twh')
+        cheap_zone_build['ldes'] = _safe_get(d75, 'ldes_twh') - _safe_get(d50, 'ldes_twh')
 
         # Dominant resource in cheap zone
         dominant = max(cheap_zone_build.items(), key=lambda x: abs(x[1]))
@@ -597,17 +622,19 @@ def compute_sequencing_analysis(med_data, stranding, queue):
                    'wind_first' if cheap_zone_build.get('wind', 0) > 10 else \
                    'solar_first' if cheap_zone_build.get('solar', 0) > 10 else 'mixed'
 
-        # Stranding: how much of what was built in 50→75% is NOT needed at 99%?
+        # Stranding: how much of what was built in 50→75% is NOT needed at deep decarb?
+        # Use d_deep (highest available threshold) instead of requiring 99%
         stranding_from_cheap_zone = {}
         for res in ['solar', 'wind']:
             built_in_cheap = max(0, cheap_zone_build.get(res, 0))
-            at_75 = d75['resource_twh'].get(res, 0) if res not in ['battery', 'ldes'] else d75.get(f'{res}_twh', 0)
-            at_99 = d99['resource_twh'].get(res, 0) if res not in ['battery', 'ldes'] else d99.get(f'{res}_twh', 0)
-            stranded = max(0, at_75 - at_99)
+            at_75 = _safe_res_twh(d75, res)
+            at_deep = _safe_res_twh(d_deep, res)
+            stranded = max(0, at_75 - at_deep)
             stranding_from_cheap_zone[res] = {
                 'built_in_cheap_zone_twh': round(built_in_cheap, 1),
                 'at_75pct_twh': round(at_75, 1),
-                'at_99pct_twh': round(at_99, 1),
+                'at_deep_twh': round(at_deep, 1),
+                'deep_threshold': t_max,
                 'stranded_twh': round(stranded, 1),
                 'stranding_pct': round(stranded / at_75 * 100, 1) if at_75 > 0.1 else 0,
             }
@@ -628,33 +655,34 @@ def compute_sequencing_analysis(med_data, stranding, queue):
                 'solar_twh': round(d['resource_twh'].get('solar', 0), 1),
             })
 
-        gas_at_50 = d50['new_gas_mw']
-        gas_at_75 = d75['new_gas_mw']
-        gas_at_90 = d90['new_gas_mw'] if d90 else 0
-        gas_at_95 = d95['new_gas_mw'] if d95 else 0
-        gas_at_99 = d99['new_gas_mw'] if d99 else 0
+        gas_at_50 = _safe_get(d50, 'new_gas_mw')
+        gas_at_75 = _safe_get(d75, 'new_gas_mw')
+        gas_at_90 = _safe_get(d90, 'new_gas_mw')
+        gas_at_95 = _safe_get(d95, 'new_gas_mw')
+        gas_at_deep = _safe_get(d_deep, 'new_gas_mw')
 
-        cf_at_75 = d75['resource_twh'].get('clean_firm', 0)
-        cf_at_99 = d99['resource_twh'].get('clean_firm', 0)
-        cf_deficit_twh = cf_at_99 - cf_at_75
-        cf_deficit_gw = cf_deficit_twh / (8.76 * 0.90)
+        cf_at_75 = _safe_res_twh(d75, 'clean_firm')
+        cf_at_deep = _safe_res_twh(d_deep, 'clean_firm')
+        cf_deficit_twh = cf_at_deep - cf_at_75
+        cf_deficit_gw = cf_deficit_twh / (8.76 * 0.90) if cf_deficit_twh != 0 else 0
 
         wind_built = max(0, cheap_zone_build.get('wind', 0))
-        wind_gw = wind_built / (8.76 * 0.35)
+        wind_gw = wind_built / (8.76 * 0.35) if wind_built > 0 else 0
         wind_gas_offset_gw = wind_gw * 0.10
         cf_equivalent_twh = wind_built
-        cf_equivalent_gw = cf_equivalent_twh / (8.76 * 0.90)
+        cf_equivalent_gw = cf_equivalent_twh / (8.76 * 0.90) if cf_equivalent_twh > 0 else 0
         cf_gas_offset_gw = cf_equivalent_gw * 0.85
 
         gas_lock_in = {
             'gas_at_50_mw': round(gas_at_50),
             'gas_at_75_mw': round(gas_at_75),
             'gas_at_90_mw': round(gas_at_90),
-            'gas_at_99_mw': round(gas_at_99),
+            'gas_at_deep_mw': round(gas_at_deep),
+            'deep_threshold': t_max,
             'gas_delta_50_to_75_mw': round(gas_at_75 - gas_at_50),
-            'gas_delta_75_to_99_mw': round(gas_at_99 - gas_at_75),
+            'gas_delta_75_to_deep_mw': round(gas_at_deep - gas_at_75),
             'clean_firm_at_75_twh': round(cf_at_75, 1),
-            'clean_firm_at_99_twh': round(cf_at_99, 1),
+            'clean_firm_at_deep_twh': round(cf_at_deep, 1),
             'clean_firm_deficit_twh': round(cf_deficit_twh, 1),
             'clean_firm_deficit_gw': round(cf_deficit_gw, 1),
             'wind_built_cheap_zone_gw': round(wind_gw, 1),
@@ -683,6 +711,7 @@ def compute_sequencing_analysis(med_data, stranding, queue):
             'stranded_cost_bn': round(stranded_cost_bn, 1),
             'gas_lockin_cost_bn': round(gas_lockin_cost_bn, 1),
             'total_hidden_cost_bn': round(stranded_cost_bn + gas_lockin_cost_bn, 1),
+            'deep_threshold': t_max,
         }
 
     return analysis
@@ -696,7 +725,10 @@ def print_sequencing_analysis(seq_analysis):
     print("=" * 120)
 
     for iso in ISOS:
+        if iso not in seq_analysis:
+            continue
         a = seq_analysis[iso]
+        deep_t = a.get('deep_threshold', 99)
         print(f"\n{'─' * 100}")
         print(f"  {iso} — Strategy: {a['strategy'].upper().replace('_', ' ')}")
         print(f"{'─' * 100}")
@@ -710,16 +742,16 @@ def print_sequencing_analysis(seq_analysis):
             s = a['stranding_from_cheap_zone'][res]
             if s['built_in_cheap_zone_twh'] > 1:
                 flag = " ⚠ STRANDED" if s['stranded_twh'] > 5 else ""
-                print(f"  {res:>7} @ 75%: {s['at_75pct_twh']:.0f} TWh → @ 99%: {s['at_99pct_twh']:.0f} TWh "
+                print(f"  {res:>7} @ 75%: {s['at_75pct_twh']:.0f} TWh → @ {deep_t}%: {s['at_deep_twh']:.0f} TWh "
                       f"({s['stranded_twh']:.0f} TWh stranded, {s['stranding_pct']:.0f}%){flag}")
 
         gl = a['gas_lock_in']
         gas_delta = gl['gas_delta_50_to_75_mw']
         direction = "↑" if gas_delta > 0 else "↓"
         print(f"  Gas backup: {gl['gas_at_50_mw']:,} MW @ 50% → {gl['gas_at_75_mw']:,} MW @ 75% "
-              f"({direction}{abs(gas_delta):,} MW) → {gl['gas_at_99_mw']:,} MW @ 99%")
+              f"({direction}{abs(gas_delta):,} MW) → {gl['gas_at_deep_mw']:,} MW @ {deep_t}%")
         print(f"  Clean firm deficit: {gl['clean_firm_at_75_twh']:.0f} TWh @ 75% → "
-              f"{gl['clean_firm_at_99_twh']:.0f} TWh needed @ 99% = "
+              f"{gl['clean_firm_at_deep_twh']:.0f} TWh needed @ {deep_t}% = "
               f"{gl['clean_firm_deficit_twh']:.0f} TWh / {gl['clean_firm_deficit_gw']:.0f} GW still to build")
 
         if gl['forgone_gas_reduction_gw'] > 0.5:
@@ -735,16 +767,18 @@ def print_sequencing_analysis(seq_analysis):
     print("SUMMARY: WIND-FIRST vs CLEAN-FIRM-FIRST GRIDS")
     print(f"{'=' * 120}")
     print(f"{'ISO':<7} {'Strategy':<18} {'Wind Built':>12} {'Wind Stranded':>14} {'Gas @ 75%':>12} "
-          f"{'Gas @ 99%':>12} {'Gas Δ':>10} {'CF Deficit':>12} {'Hidden $B':>10}")
+          f"{'Gas @ Deep':>12} {'Gas Δ':>10} {'CF Deficit':>12} {'Hidden $B':>10}")
     print("-" * 120)
 
     for iso in ISOS:
+        if iso not in seq_analysis:
+            continue
         a = seq_analysis[iso]
         gl = a['gas_lock_in']
         ws = a['stranding_from_cheap_zone']['wind']
         print(f"{iso:<7} {a['strategy']:<18} {ws['built_in_cheap_zone_twh']:>10.0f} TWh "
               f"{ws['stranded_twh']:>12.0f} TWh {gl['gas_at_75_mw']:>10,} MW "
-              f"{gl['gas_at_99_mw']:>10,} MW {gl['gas_delta_50_to_75_mw']:>+9,} MW "
+              f"{gl['gas_at_deep_mw']:>10,} MW {gl['gas_delta_50_to_75_mw']:>+9,} MW "
               f"{gl['clean_firm_deficit_twh']:>10.0f} TWh {a['total_hidden_cost_bn']:>9.1f}")
 
 
