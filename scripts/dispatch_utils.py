@@ -703,8 +703,8 @@ def build_supply_matrix(supply_profiles):
 
 
 def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
-                                 procurement_pct, battery_dispatch_pct,
-                                 battery8_dispatch_pct, ldes_dispatch_pct,
+                                 procurement_pct=100, battery_dispatch_pct=0,
+                                 battery8_dispatch_pct=0, ldes_dispatch_pct=0,
                                  supply_matrix=None, detailed=False,
                                  h2_dispatch_pct=0):
     """Reconstruct full 8760 hourly dispatch for a resource mix.
@@ -982,8 +982,8 @@ def compute_fossil_capacity_at_threshold(iso, clean_pct, demand_growth_factor=1.
 DISPATCH_CACHE_DIR = os.path.join(DATA_DIR, 'step5-post-processing', 'dispatch_cache')
 
 
-def _archetype_key(iso, resource_pcts, procurement_pct, battery_dispatch_pct,
-                   battery8_dispatch_pct, ldes_dispatch_pct):
+def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct=0,
+                   battery8_dispatch_pct=0, ldes_dispatch_pct=0):
     """Deterministic hash key for a unique dispatch archetype."""
     parts = [
         iso,
@@ -1067,8 +1067,8 @@ def save_dispatch_cache(iso, cache, version=None):
 
 
 def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
-                             procurement_pct, battery_dispatch_pct,
-                             battery8_dispatch_pct, ldes_dispatch_pct,
+                             procurement_pct=100, battery_dispatch_pct=0,
+                             battery8_dispatch_pct=0, ldes_dispatch_pct=0,
                              cache=None):
     """Get dispatch from cache or compute and add to cache.
 

@@ -97,7 +97,7 @@ except ImportError:
 
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
 
 WHOLESALE_PRICES = {
     'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42,
@@ -224,7 +224,7 @@ GAS_BACKUP_COST = {
     'SPP':   [12.65, 12.59, 12.54, 12.43, 12.4, 12.29, 12.23, 12.07, 11.84, 11.85, 11.68, 11.42, 10.88, 10.67, 10.99, 10.99, 10.99],
 }
 
-# Resource mix data (% of procurement portfolio) — medium-cost physics optimization
+# Resource mix data (% of demand) — medium-cost physics optimization
 # Note: mixes are optimized at medium costs. Sensitivity toggles recalculate cost
 # on cached physics, so mixes don't vary by cost tier. This is a model limitation
 # for the no-regrets analysis (we can't see if high-cost scenarios shift the mix).
@@ -238,7 +238,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-        'procurement': [60, 70, 75, 80, 85, 90, 100, 110, 112, 120, 122, 130, 140, 150, 160, 160, 160],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
     'ERCOT': {
         'clean_firm':  [16, 15, 14, 13, 12, 11, 10, 9, 9, 8, 8, 12, 8, 8, 13, 0, 13],
@@ -249,7 +249,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        'procurement': [55, 60, 65, 70, 75, 80, 90, 100, 102, 110, 117, 125, 130, 135, 135, 100, 135],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
     'PJM': {
         'clean_firm':  [63, 58, 53, 50, 46, 43, 56, 43, 66, 82, 77, 91, 82, 83, 85, 85, 85],
@@ -260,7 +260,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        'procurement': [55, 60, 65, 70, 75, 80, 85, 95, 95, 97, 102, 105, 115, 125, 160, 160, 160],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
     'NYISO': {
         'clean_firm':  [36, 33, 31, 29, 27, 25, 22, 24, 42, 54, 53, 58, 69, 66, 0, 0, 0],
@@ -271,7 +271,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        'procurement': [55, 60, 65, 70, 75, 80, 90, 95, 97, 100, 105, 110, 115, 125, 100, 100, 100],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
     'NEISO': {
         'clean_firm':  [47, 43, 40, 37, 35, 32, 29, 42, 60, 73, 73, 81, 77, 80, 23, 23, 23],
@@ -282,7 +282,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-        'procurement': [55, 60, 65, 70, 75, 80, 90, 95, 97, 100, 105, 110, 120, 130, 150, 150, 150],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
     'MISO': {
         'clean_firm':  [26, 24, 22, 20, 19, 18, 17, 15, 14, 15, 21, 39, 13, 13, 13, 13, 13],
@@ -293,7 +293,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-        'procurement': [55, 60, 65, 70, 75, 80, 85, 95, 102, 105, 112, 115, 120, 125, 140, 140, 140],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
     'SPP': {
         'clean_firm':  [10, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 6, 5, 5, 5, 5],
@@ -304,7 +304,7 @@ RESOURCE_MIX_DATA = {
         'battery':     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'battery8':    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'ldes':        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-        'procurement': [55, 60, 65, 70, 75, 80, 85, 95, 97, 105, 112, 120, 130, 150, 150, 150, 150],
+        'h2':          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
 }
 
@@ -738,10 +738,10 @@ def analyze_targets_in_range(iso, lower_bound, upper_bound, mac_curves):
 def compute_resource_twh_at_threshold(iso, threshold_idx, growth_tier='medium'):
     """
     Compute absolute resource TWh at a given threshold index.
-    Resource TWh = (resource_pct / 100) × (procurement_pct / 100) × demand × gf
+    Resource TWh = (resource_pct / 100) × demand × gf
+    (v5.0: procurement is baked into resource percentages directly)
     """
     mix = RESOURCE_MIX_DATA[iso]
-    procurement_pct = mix['procurement'][threshold_idx]
     t = THRESHOLDS[threshold_idx]
     gf = demand_growth_factor(iso, t, growth_tier)
     demand = DEMAND_TWH[iso] * gf
@@ -749,9 +749,8 @@ def compute_resource_twh_at_threshold(iso, threshold_idx, growth_tier='medium'):
     result = {}
     for res in RESOURCES:
         res_pct = mix[res][threshold_idx]
-        twh = (res_pct / 100.0) * (procurement_pct / 100.0) * demand
+        twh = (res_pct / 100.0) * demand
         result[res] = round(twh, 2)
-    result['procurement_pct'] = procurement_pct
     result['total_clean_twh'] = round(sum(result[r] for r in RESOURCES), 2)
     return result
 
@@ -785,11 +784,10 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
     resource_stats = {}
     for res in RESOURCES:
         pct_values = [mix[res][i] for i in range_indices]
-        procurement_values = [mix['procurement'][i] for i in range_indices]
 
-        # Effective share of demand = (res_pct/100) × (procurement_pct/100)
-        demand_shares = [(pct / 100.0) * (proc / 100.0)
-                         for pct, proc in zip(pct_values, procurement_values)]
+        # v5.0: procurement is baked into resource percentages directly
+        # Effective share of demand = (res_pct/100)
+        demand_shares = [pct / 100.0 for pct in pct_values]
 
         floor_pct = min(pct_values)
         floor_share = min(demand_shares)
@@ -812,7 +810,7 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
                 t = THRESHOLDS[i]
                 gf = demand_growth_factor(iso, t, growth_tier)
                 demand = DEMAND_TWH[iso] * gf
-                res_twh = (mix[res][i] / 100.0) * (mix['procurement'][i] / 100.0) * demand
+                res_twh = (mix[res][i] / 100.0) * demand
                 floor_twh_values.append(res_twh)
                 avg_twh_values.append(res_twh)
                 max_twh_values.append(res_twh)
@@ -836,14 +834,13 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
                 {
                     'threshold': THRESHOLDS[i],
                     'pct': mix[res][i],
-                    'procurement': mix['procurement'][i],
+                    'pct_of_demand': round(mix[res][i] / 100.0, 4),
                 }
                 for i in range_indices
             ],
         }
 
-    # Total procurement stats across range
-    procurement_values = [mix['procurement'][i] for i in range_indices]
+    # Total clean energy stats across range (v5.0: procurement baked into resource %)
     total_clean_by_growth = {}
     for growth_tier in ['low', 'medium', 'high']:
         total_twh_values = []
@@ -851,7 +848,8 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
             t = THRESHOLDS[i]
             gf = demand_growth_factor(iso, t, growth_tier)
             demand = DEMAND_TWH[iso] * gf
-            total_twh = (mix['procurement'][i] / 100.0) * demand
+            total_pct = sum(mix[res][i] for res in RESOURCES)
+            total_twh = (total_pct / 100.0) * demand
             total_twh_values.append(total_twh)
         total_clean_by_growth[growth_tier] = {
             'floor_twh': round(min(total_twh_values), 1),
@@ -862,7 +860,6 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
     return {
         'range_thresholds': range_thresholds,
         'resources': resource_stats,
-        'procurement_pct_range': [min(procurement_values), max(procurement_values)],
         'total_clean_by_growth': total_clean_by_growth,
         'demand_growth_factors': {
             growth_tier: {
@@ -951,7 +948,6 @@ def main():
         if isinstance(no_regrets, dict) and 'resources' in no_regrets:
             print(f"\n  NO-REGRETS RESOURCE INVESTMENTS (within crossover range):")
             print(f"  Range thresholds: {no_regrets['range_thresholds']}")
-            print(f"  Procurement: {no_regrets['procurement_pct_range'][0]}% – {no_regrets['procurement_pct_range'][1]}% of demand")
             print(f"\n  {'Resource':<14} {'Consensus':<11} {'Floor%':<9} {'Avg%':<8} {'Floor TWh(M)':<14} {'Avg TWh(M)':<12}")
             print(f"  {'-' * 14} {'-' * 11} {'-' * 9} {'-' * 8} {'-' * 14} {'-' * 12}")
             for res in RESOURCES:
@@ -1138,7 +1134,6 @@ def write_dashboard_js(results, path):
                 }
             lines.append(f'    no_regrets: {json.dumps(nr_summary)},')
             lines.append(f'    no_regrets_thresholds: {json.dumps(nr.get("range_thresholds", []))},')
-            lines.append(f'    no_regrets_procurement_range: {json.dumps(nr.get("procurement_pct_range", []))},')
             lines.append(f'    total_clean_by_growth: {json.dumps(nr.get("total_clean_by_growth", {}))},')
         else:
             lines.append(f'    no_regrets: null,')
