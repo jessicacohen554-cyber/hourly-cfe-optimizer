@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-step8_compute_optimal_targets.py — Optimal CFE targets + no-regrets resource investments
+step6_compute_optimal_targets.py — Optimal CFE targets + no-regrets resource investments
 
 PURPOSE:
   1. For each ISO, find the threshold range where grid decarbonization becomes
@@ -50,14 +50,21 @@ INPUTS:
   - Demand growth rates per ISO × L/M/H
 
 OUTPUTS:
-  - data/step8-optimal-target/optimal_targets.json
+  - data/step5-post-processing/optimal_targets.json
   - dashboard/js/optimal-target-data.js
+  (Both consumed by step7_generate_shared_data.py for abatement dashboard)
 """
 
 import json
+import os
 import sys
 import numpy as np
 from pathlib import Path
+
+# Add scripts/ to path for dispatch_utils import
+SCRIPTS_DIR = Path(__file__).parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
 try:
     from scipy.interpolate import PchipInterpolator
@@ -66,6 +73,21 @@ except ImportError:
     HAS_SCIPY = False
     print("WARNING: scipy not available — using linear interpolation fallback.")
     print("Install scipy for smooth spline derivatives: pip install scipy")
+
+# Import canonical CO₂ model from dispatch_utils
+try:
+    from dispatch_utils import (
+        compute_fossil_retirement,
+        BASE_DEMAND_TWH as DU_DEMAND_TWH,
+        GRID_MIX_SHARES as DU_GRID_MIX_SHARES,
+        COAL_CAP_TWH as DU_COAL_CAP,
+        OIL_CAP_TWH as DU_OIL_CAP,
+    )
+    HAS_DISPATCH_UTILS = True
+    print("Using canonical CO₂ model from dispatch_utils.py")
+except ImportError:
+    HAS_DISPATCH_UTILS = False
+    print("WARNING: dispatch_utils not available — using inline CO₂ model.")
 
 # ============================================================================
 # CONSTANTS
@@ -120,8 +142,9 @@ OIL_CAP_TWH = {
 }
 COAL_OIL_RETIREMENT_THRESHOLD = 70.0
 
-# Emission rates (tCO₂/MWh) — from eGRID, converted from lb/MWh ÷ 2204.62
-EMISSION_RATES = {
+# Emission rates (tCO₂/MWh) — fallback if dispatch_utils not available
+# Canonical source: data/egrid_emission_rates.json, loaded at runtime via dispatch_utils
+EMISSION_RATES_FALLBACK = {
     'CAISO': {'coal': 1133.331 / 2204.62, 'oil': 1802.528 / 2204.62, 'gas': 862.196 / 2204.62},
     'ERCOT': {'coal': 2324.807 / 2204.62, 'oil': 2894.407 / 2204.62, 'gas': 867.401 / 2204.62},
     'PJM':   {'coal': 2216.439 / 2204.62, 'oil': 1918.987 / 2204.62, 'gas': 867.031 / 2204.62},
@@ -130,6 +153,10 @@ EMISSION_RATES = {
     'MISO':  {'coal': 2280.0 / 2204.62,   'oil': 1900.0 / 2204.62,   'gas': 860.0 / 2204.62},
     'SPP':   {'coal': 2250.0 / 2204.62,   'oil': 1900.0 / 2204.62,   'gas': 865.0 / 2204.62},
 }
+
+# Runtime data holders — loaded from canonical data files if available
+_EMISSION_RATES_JSON = None  # Raw eGRID JSON (for dispatch_utils interface)
+_FOSSIL_MIX_JSON = None      # Raw EIA fossil mix JSON
 
 # SBTi year mapping
 THRESHOLD_YEAR_MAP = {
@@ -278,29 +305,89 @@ def demand_at_threshold(iso, threshold, growth_tier='medium'):
 
 
 # ============================================================================
-# CO₂ ABATEMENT MODEL
+# DATA LOADING (canonical data files)
+# ============================================================================
+
+def load_canonical_data():
+    """Load emission rates and fossil mix from canonical data files (same as step6)."""
+    global _EMISSION_RATES_JSON, _FOSSIL_MIX_JSON
+
+    if _EMISSION_RATES_JSON is not None:
+        return  # Already loaded
+
+    base_dir = Path(__file__).parent.parent
+    data_dir = base_dir / 'data'
+
+    # Emission rates
+    egrid_path = data_dir / 'egrid_emission_rates.json'
+    if egrid_path.exists():
+        with open(egrid_path) as f:
+            _EMISSION_RATES_JSON = json.load(f)
+        print(f"  Loaded emission rates: {egrid_path}")
+    else:
+        print(f"  WARNING: {egrid_path} not found — using fallback constants")
+
+    # Fossil mix
+    fossil_path = data_dir / 'eia_fossil_mix.json'
+    if fossil_path.exists():
+        with open(fossil_path) as f:
+            _FOSSIL_MIX_JSON = json.load(f)
+        print(f"  Loaded fossil mix: {fossil_path}")
+    else:
+        print(f"  WARNING: {fossil_path} not found — using fallback constants")
+
+
+# ============================================================================
+# CO₂ ABATEMENT MODEL — dispatch_utils canonical path with inline fallback
 # ============================================================================
 
 def compute_co2_abated(iso, threshold_pct, growth_tier='medium'):
     """
     Compute total CO₂ abated (million metric tons) at a given CFE threshold.
-    Merit-order fossil retirement: coal first → oil → gas.
-    At ≥70%: all coal and oil fully retired, only gas remains.
 
-    Demand growth scales the demand and therefore the displaced fossil TWh.
+    Uses dispatch_utils.compute_fossil_retirement() if available (canonical
+    dispatch-stack retirement model, same as step6_recompute_co2, step6_compute_mac_stats,
+    and step6_compute_lmp_prices). Falls back to inline model otherwise.
     """
     gf = demand_growth_factor(iso, threshold_pct, growth_tier)
+
+    if HAS_DISPATCH_UTILS and _EMISSION_RATES_JSON is not None:
+        # ── Canonical path: use dispatch_utils ──
+        displaced_rate, info = compute_fossil_retirement(
+            iso, threshold_pct, _EMISSION_RATES_JSON, _FOSSIL_MIX_JSON,
+            demand_growth_factor=gf
+        )
+        coal_d = info.get('coal_displaced_twh', 0)
+        oil_d = info.get('oil_displaced_twh', 0)
+        gas_d = info.get('gas_displaced_twh', 0)
+        total_displaced = coal_d + oil_d + gas_d
+
+        # CO₂ in Mt: displaced_rate (tCO₂/MWh) × displaced_TWh × 1e6 MWh/TWh ÷ 1e6 t/Mt = TWh × rate
+        co2_mt = total_displaced * displaced_rate
+
+        # Marginal rate: what the next displaced MWh would emit
+        if info.get('forced_gas_only', False) or threshold_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
+            marginal_rate = info.get('remaining_rate_tco2_mwh', displaced_rate)
+        else:
+            marginal_rate = displaced_rate
+
+        return {
+            'total_co2_mt': co2_mt,
+            'marginal_rate': marginal_rate,
+            'displaced_twh': total_displaced,
+            'retirement_info': info,
+            'source': 'dispatch_utils',
+        }
+
+    # ── Fallback: inline model ──
     demand_twh = DEMAND_TWH[iso] * gf
-    rates = EMISSION_RATES[iso]
+    rates = EMISSION_RATES_FALLBACK[iso]
     baseline_clean_pct = sum(GRID_MIX_SHARES[iso].values())
 
-    # Additional clean energy above what already exists
     additional_clean_twh = max(0, (threshold_pct - baseline_clean_pct) / 100.0 * demand_twh)
-
     if additional_clean_twh < 0.01:
-        return {'total_co2_mt': 0.0, 'marginal_rate': rates['gas'], 'displaced_twh': 0.0}
+        return {'total_co2_mt': 0.0, 'marginal_rate': rates['gas'], 'displaced_twh': 0.0, 'source': 'inline'}
 
-    # Scale coal/oil caps by growth factor (existing fleet grows proportionally — simplification)
     coal_cap = COAL_CAP_TWH[iso] * gf
     oil_cap = OIL_CAP_TWH[iso] * gf
 
@@ -313,17 +400,13 @@ def compute_co2_abated(iso, threshold_pct, growth_tier='medium'):
         fossil_twh = demand_twh * fossil_pct / 100.0
         coal_current = min(coal_cap, fossil_twh)
         oil_current = min(oil_cap, max(0, fossil_twh - coal_current))
-
         coal_displaced = min(additional_clean_twh, coal_current)
         remaining = additional_clean_twh - coal_displaced
         oil_displaced = min(remaining, oil_current)
         remaining -= oil_displaced
         gas_displaced = max(0, remaining)
 
-    co2 = (coal_displaced * rates['coal'] +
-           oil_displaced * rates['oil'] +
-           gas_displaced * rates['gas'])
-
+    co2 = (coal_displaced * rates['coal'] + oil_displaced * rates['oil'] + gas_displaced * rates['gas'])
     total_displaced = coal_displaced + oil_displaced + gas_displaced
 
     if threshold_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
@@ -339,6 +422,7 @@ def compute_co2_abated(iso, threshold_pct, growth_tier='medium'):
         'total_co2_mt': co2,
         'marginal_rate': marginal_rate,
         'displaced_twh': total_displaced,
+        'source': 'inline_fallback',
     }
 
 
@@ -775,8 +859,11 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
 
 def main():
     base_dir = Path(__file__).parent.parent
-    output_dir = base_dir / 'data' / 'step8-optimal-target'
+    output_dir = base_dir / 'data' / 'step5-post-processing'
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load canonical data files (emission rates + fossil mix from dispatch_utils pipeline)
+    load_canonical_data()
 
     all_results = {}
 
@@ -949,7 +1036,7 @@ def json_clean(obj):
 def write_dashboard_js(results, path):
     """Write dashboard JS with optimal target data + no-regrets investments."""
     lines = [
-        '// Auto-generated by step8_compute_optimal_targets.py',
+        '// Auto-generated by step6_compute_optimal_targets.py',
         '// Optimal CFE decarbonization targets: where marginal grid MAC > DAC',
         '// Crossover range = 3 grid cost tiers × 3 DAC scenarios = 9 combos',
         '// No-regrets investments: minimum resource floor across crossover range',

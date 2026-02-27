@@ -5,21 +5,25 @@
 
 ## Current Status (Feb 26, 2026)
 
-### Step 8: Optimal CFE Targets + No-Regrets Investments (Feb 26, 2026)
+### Optimal CFE Targets + No-Regrets Investments (Feb 26, 2026)
 
 **Completed:**
-- Created `scripts/step8_compute_optimal_targets.py` — computes optimal CFE target range per ISO
+- Created `scripts/step6_compute_optimal_targets.py` — Step 6 post-processor computing optimal CFE target range per ISO
 - Smooth marginal MAC via PCHIP spline derivatives on isotonic-corrected cost/CO₂ curves
 - 3 grid cost tiers × 3 DAC scenarios = 9 crossover points → range per ISO
 - L/M/H demand growth scenarios (scale-invariant for MAC %, but affects absolute resource quantities)
 - No-regrets resource investment analysis: floor, consensus, and average resource investments within the crossover range
-- Dashboard JS output: `dashboard/js/optimal-target-data.js`
+- Uses canonical CO₂ model from `dispatch_utils.compute_fossil_retirement()` (same as step6_recompute_co2, step6_compute_mac_stats)
+- Output: `data/step5-post-processing/optimal_targets.json` + `dashboard/js/optimal-target-data.js`
+- Wired into `step7_generate_shared_data.py` → OPTIMAL_TARGETS constant in shared-data.js
+- Added to Step 6 GitHub Actions workflow (parallel batch with MAC, LMP, compressed day, etc.)
+- Added scipy to workflow dependencies
 - Documented methodology in SPEC.md §7.4
 
 **Next steps:**
-- [ ] Run step8 script via GitHub Actions workflow (needs scipy)
-- [ ] Build dashboard visualization for optimal target crossover chart
-- [ ] Wire no-regrets investment data into dashboard/research paper
+- [ ] Run Step 6 workflow to generate optimal_targets.json
+- [ ] Build dashboard visualization for optimal target crossover chart on abatement page
+- [ ] Wire no-regrets investment data into research paper narrative
 
 ### Scenario Comparison Page Fixes (Feb 26, 2026)
 
@@ -1873,8 +1877,9 @@ Within the crossover range, some resource investments are needed regardless of w
 - **Average**: expected investment level across the range
 - All three scaled by L/M/H demand growth for absolute TWh quantities
 
-**Implementation**: `scripts/step8_compute_optimal_targets.py`
-- Outputs: `data/step8-optimal-target/optimal_targets.json`, `dashboard/js/optimal-target-data.js`
+**Implementation**: `scripts/step6_compute_optimal_targets.py` (Step 6 post-processor, runs in parallel with MAC/LMP/etc.)
+- Outputs: `data/step5-post-processing/optimal_targets.json`, `dashboard/js/optimal-target-data.js`
+- Consumed by: `step7_generate_shared_data.py` → OPTIMAL_TARGETS in shared-data.js
 - Depends on: SYSTEM_COST (L/M/H), RESOURCE_MIX_DATA, emission rates, DAC trajectories
 - No dispatch cache dependency — uses pre-computed Step 3 cost data
 
