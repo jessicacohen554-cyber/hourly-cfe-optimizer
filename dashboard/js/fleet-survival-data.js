@@ -15,11 +15,11 @@
 // ============================================================================
 // SBTi TIMELINE (mirrors shared-data.js)
 // ============================================================================
-const FLEET_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100];
+const FLEET_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.99];
 const FLEET_THRESHOLD_YEARS = {
     50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035,
     75: 2036, 80: 2037, 85: 2038, 87.5: 2039, 90: 2040,
-    92.5: 2043, 95: 2045, 97.5: 2048, 99: 2049, 100: 2050,
+    92.5: 2043, 95: 2045, 97.5: 2048, 99: 2049, 99.99: 2050,
 };
 
 // ============================================================================
@@ -303,7 +303,7 @@ const FOSSIL_DISPATCH_DECLINE = {
             "95":   { year: 2045, p10: { coal: 0, oil: 0, gas: 12.0 },  p50: { coal: 0, oil: 0, gas: 13.7 },  p90: { coal: 0, oil: 0, gas: 17.0 } },
             "97.5": { year: 2048, p10: { coal: 0, oil: 0, gas: 5.9 },   p50: { coal: 0, oil: 0, gas: 7.0 },   p90: { coal: 0, oil: 0, gas: 9.3 } },
             "99":   { year: 2049, p10: { coal: 0, oil: 0, gas: 2.3 },   p50: { coal: 0, oil: 0, gas: 2.8 },   p90: { coal: 0, oil: 0, gas: 3.8 } },
-            "100":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },     p50: { coal: 0, oil: 0, gas: 0 },     p90: { coal: 0, oil: 0, gas: 0 } },
+            "99.99":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },     p50: { coal: 0, oil: 0, gas: 0 },     p90: { coal: 0, oil: 0, gas: 0 } },
         }
     },
     ERCOT: {
@@ -326,7 +326,7 @@ const FOSSIL_DISPATCH_DECLINE = {
             "95":   { year: 2045, p10: { coal: 0, oil: 0, gas: 26.2 },     p50: { coal: 0, oil: 0, gas: 29.8 },     p90: { coal: 0, oil: 0, gas: 37.0 } },
             "97.5": { year: 2048, p10: { coal: 0, oil: 0, gas: 12.8 },     p50: { coal: 0, oil: 0, gas: 15.3 },     p90: { coal: 0, oil: 0, gas: 20.2 } },
             "99":   { year: 2049, p10: { coal: 0, oil: 0, gas: 5.1 },      p50: { coal: 0, oil: 0, gas: 6.2 },      p90: { coal: 0, oil: 0, gas: 8.3 } },
-            "100":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },        p50: { coal: 0, oil: 0, gas: 0 },        p90: { coal: 0, oil: 0, gas: 0 } },
+            "99.99":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },        p50: { coal: 0, oil: 0, gas: 0 },        p90: { coal: 0, oil: 0, gas: 0 } },
         }
     },
     PJM: {
@@ -349,7 +349,7 @@ const FOSSIL_DISPATCH_DECLINE = {
             "95":   { year: 2045, p10: { coal: 0, oil: 0, gas: 45.2 },       p50: { coal: 0, oil: 0, gas: 51.5 },       p90: { coal: 0, oil: 0, gas: 64.0 } },
             "97.5": { year: 2048, p10: { coal: 0, oil: 0, gas: 22.2 },       p50: { coal: 0, oil: 0, gas: 26.5 },       p90: { coal: 0, oil: 0, gas: 35.0 } },
             "99":   { year: 2049, p10: { coal: 0, oil: 0, gas: 8.9 },        p50: { coal: 0, oil: 0, gas: 10.7 },       p90: { coal: 0, oil: 0, gas: 14.3 } },
-            "100":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },          p50: { coal: 0, oil: 0, gas: 0 },          p90: { coal: 0, oil: 0, gas: 0 } },
+            "99.99":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },          p50: { coal: 0, oil: 0, gas: 0 },          p90: { coal: 0, oil: 0, gas: 0 } },
         }
     },
     NYISO: {
@@ -372,7 +372,7 @@ const FOSSIL_DISPATCH_DECLINE = {
             "95":   { year: 2045, p10: { coal: 0, oil: 0, gas: 8.1 },   p50: { coal: 0, oil: 0, gas: 9.2 },   p90: { coal: 0, oil: 0, gas: 11.5 } },
             "97.5": { year: 2048, p10: { coal: 0, oil: 0, gas: 4.0 },   p50: { coal: 0, oil: 0, gas: 4.8 },   p90: { coal: 0, oil: 0, gas: 6.3 } },
             "99":   { year: 2049, p10: { coal: 0, oil: 0, gas: 1.6 },   p50: { coal: 0, oil: 0, gas: 1.9 },   p90: { coal: 0, oil: 0, gas: 2.6 } },
-            "100":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },     p50: { coal: 0, oil: 0, gas: 0 },     p90: { coal: 0, oil: 0, gas: 0 } },
+            "99.99":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },     p50: { coal: 0, oil: 0, gas: 0 },     p90: { coal: 0, oil: 0, gas: 0 } },
         }
     },
     NEISO: {
@@ -395,7 +395,7 @@ const FOSSIL_DISPATCH_DECLINE = {
             "95":   { year: 2045, p10: { coal: 0, oil: 0, gas: 6.2 },   p50: { coal: 0, oil: 0, gas: 7.0 },   p90: { coal: 0, oil: 0, gas: 8.7 } },
             "97.5": { year: 2048, p10: { coal: 0, oil: 0, gas: 3.0 },   p50: { coal: 0, oil: 0, gas: 3.6 },   p90: { coal: 0, oil: 0, gas: 4.8 } },
             "99":   { year: 2049, p10: { coal: 0, oil: 0, gas: 1.2 },   p50: { coal: 0, oil: 0, gas: 1.5 },   p90: { coal: 0, oil: 0, gas: 2.0 } },
-            "100":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },     p50: { coal: 0, oil: 0, gas: 0 },     p90: { coal: 0, oil: 0, gas: 0 } },
+            "99.99":  { year: 2050, p10: { coal: 0, oil: 0, gas: 0 },     p50: { coal: 0, oil: 0, gas: 0 },     p90: { coal: 0, oil: 0, gas: 0 } },
         }
     }
 };
