@@ -1,7 +1,147 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-26.
+> Last updated: 2026-02-27.
+
+## Current Status (Feb 27, 2026)
+
+### Corporate Procurement Strategy Simulation — Research & Design Phase
+
+**Branch:** `claude/procurement-strategy-research-AQVkc`
+
+**Completed:**
+- [x] Research: C&I load share by ISO (EIA data — national ~62%, ranges 52-67% by ISO)
+- [x] Research: Corporate voluntary procurement market state (NREL 2024: ~315 TWh, ~13% C&I penetration)
+- [x] Research: RPS/compliance/nuclear programs — clean energy already committed per ISO
+- [x] Research: Grid avg vs fossil avg vs marginal emission rates per ISO (eGRID + VERACI-T)
+- [x] Research: EAC scarcity by ISO (20x variation: ERCOT 130-160 TWh available vs NEISO 3-8 TWh)
+- [x] Created `dashboard/procurement_research.html` — research page documenting findings
+- [x] Design decisions captured (see §15 below)
+- [ ] Research: Academic literature on participation-level modeling (agent in progress)
+- [ ] Document full strategy framework in SPEC.md §15
+- [ ] Build interactive dashboard page
+- [ ] Create Step 8 scripts for strategy-level compute
+
+**Next steps:**
+- Finalize strategy taxonomy after literature review completes
+- Build hybrid scrollytell + interactive dashboard page
+- Create Step 8 scripts for procurement strategy compute
+
+---
+
+## §15: Corporate Procurement Strategy Simulation
+
+### §15.1 Overview
+
+Extension of the optimizer to model how different GHG accounting policies and procurement strategies affect clean energy deployment, costs, and emissions at varying levels of corporate participation. Builds on existing hourly matching (Track 2 NB), cost-to-replace (Track 3 CTR), and consequential accounting (Scenario A/B) frameworks.
+
+### §15.2 Strategy Taxonomy
+
+**Strategy 1 — Consequential Cross-Regional Netting**
+Buyers purchase cheapest $/tCO₂ clean energy anywhere in the US to "net" against location-based carbon emissions. Requires new build or nuclear uprates. No ISO boundary constraint.
+
+| Variant | Emission Baseline | Description |
+|---------|------------------|-------------|
+| **1A** | Grid-average | Buyer's ISO grid-average emission rate (includes clean in denominator). Lowest bar. |
+| **1B** | Fossil-average | Buyer's ISO fossil-only fleet average. Higher bar. |
+| **1C** | Marginal emissions | Short-run marginal emission rate. Highest bar in coal-heavy ISOs (MISO +17%, SPP +22% vs fossil avg). Negligible difference in gas-dominated ISOs. |
+
+**Strategy 2 — Hourly Matching (Same-ISO)**
+Buyer matches load hour-by-hour within their own ISO. No cross-regional procurement. Highest verifiability, highest cost.
+
+| Variant | Existing Clean Credit | Description |
+|---------|----------------------|-------------|
+| **2A** | None | 100% new build. Maximum additionality. Equivalent to existing Track 2 NB analysis. |
+| **2B** | Grid baseline | Buyer takes credit for existing clean grid mix as hourly baseline, procures new build on top. Reduces cost in clean-grid ISOs. |
+| **2C** | Pro-rata allocation + premium | Pro-rata share of RPS/nuclear/public utility clean allocated. Premium for existing clean to keep it online (cost-to-replace). New build on top. |
+
+**Strategy 3 — Annual Matching**
+Volumetric annual matching without hourly temporal constraint. 2×2 matrix: {Same-ISO, Cross-Regional} × {Additionality Required, No Additionality}.
+
+| Variant | Boundary | Additionality | Description |
+|---------|----------|---------------|-------------|
+| **3A** | Same-ISO | New build required | Annual matching within buyer's ISO. Only new-build clean energy counts. Comparable to Strategy 2A but annual. |
+| **3B** | Cross-regional | New build required | Annual matching from any US ISO. Only new-build clean counts. Comparable to Strategy 1 but annual volumetric rather than consequential netting. |
+| **3C** | Same-ISO | No additionality | Annual matching within buyer's ISO. Existing clean counts (includes unbundled RECs from existing generators). |
+| **3D** | Cross-regional | No additionality | Annual matching from any US ISO. Existing clean counts. Cheapest option — unbundled RECs from anywhere. This is the "status quo" for most corporate procurement today. |
+
+**Cross-cutting layer: FOAK-to-NOAK Learning Curves (suffix -i)**
+Optional layer applicable to any Strategy 2 variant incorporating first-of-a-kind to Nth-of-a-kind cost learning for clean firm resources. Reflects deployment-driven cost reductions from existing Scenario A/B consequential analysis.
+
+### §15.3 Participation Model (Decided Feb 27)
+
+**Two national sliders:**
+1. **Hyperscaler participation** (% of C&I load from top ~30 hyperscaler/tech buyers)
+2. **All other corporate participation** (% of remaining C&I load from mid-market, Fortune 500 non-tech, etc.)
+
+Both are national-level sliders (not per-ISO). Total corporate participation = hyperscaler_share × hyperscaler_pct + other_share × other_pct, applied uniformly across ISOs.
+
+**Rationale:** Market is increasingly bifurcated (BNEF 2025: tech = 84% of deal activity, only 33 unique buyers). Modeling the two cohorts separately captures the structural difference between hyperscaler procurement capacity and mid-market adoption.
+
+### §15.4 Target/Outcome Model (Decided Feb 27)
+
+**Dual-mode:**
+
+1. **Per-buyer emission reduction target:** Each participating buyer targets X% clean energy (using the CFE threshold slider, paralleling existing dashboard). The *calculation* of what constitutes "X% clean" differs by strategy:
+   - Strategy 1: Cross-regional netting against emission baseline (grid-avg/fossil-avg/marginal)
+   - Strategy 2: Hourly matching within ISO (with or without existing clean credit)
+   - Strategy 3: Annual MWh matching (same-ISO or cross-regional)
+
+2. **System-wide CO₂ reduction panel:** Separate interactive panel. User sets a system-wide CO₂ reduction target (e.g., "reduce US power sector emissions by 30%"), and the model backs into what corporate participation rate each strategy would need to achieve it. Shows required participation as a function of strategy choice.
+
+### §15.5 Dashboard Page Design (Decided Feb 27)
+
+**Hybrid scrollytell + interactive** with integrated tradeoff matrix and strategy horse race elements.
+
+Structure:
+1. **Scrollytell intro:** Explains the three strategy families, builds intuition about tradeoffs
+2. **Tradeoff matrix:** Summary table showing all strategies × key metrics (cost, CO₂, build required, $/tCO₂) — embedded in the scrollytell flow
+3. **Strategy horse race:** Fixed outcome comparison (e.g., "to achieve 80% clean: which strategy is cheapest?") + fixed budget comparison ("with $X/MWh premium: what does each achieve?") — also embedded in scrollytell
+4. **Interactive section:** Strategy selector, participation sliders, CFE threshold slider, ISO selector. Full exploratory mode.
+5. **System-wide panel:** CO₂ reduction target → required participation by strategy
+
+### §15.6 Emission Rate Data (Research, Feb 27)
+
+| ISO | Grid Avg (tCO₂/MWh) | Fossil Avg | Marginal | Marginal vs Fossil |
+|-----|---------------------|------------|----------|-------------------|
+| CAISO | 0.168 | 0.392 | 0.397 | ≈ same |
+| ERCOT | 0.333 | 0.535 | 0.526 | ≈ same |
+| PJM | 0.325 | 0.539 | 0.573 | +6% |
+| MISO | 0.354 | 0.567 | 0.663 | **+17%** |
+| NYISO | 0.217 | 0.415 | 0.437 | +5% |
+| NEISO | 0.246 | 0.387 | 0.425 | +10% |
+| SPP | 0.340 | 0.544 | 0.665 | **+22%** |
+
+Sources: EPA eGRID2023 (grid-avg, fossil-avg), VERACI-T/WattTime (marginal), Holland et al. 2022 PNAS.
+
+### §15.7 EAC Scarcity by ISO (Research, Feb 27)
+
+| ISO | Total Clean (TWh) | Committed (TWh) | Available for Voluntary (TWh) | REC Price Signal |
+|-----|-------------------|-----------------|------------------------------|-----------------|
+| CAISO | ~172 | ~158-164 | 10-20 | Moderate |
+| ERCOT | ~200-205 | ~30-40 | **130-160** | Very Low ($1-5) |
+| PJM | ~310-330 | ~230-290 | 50-80 | High ($35+) |
+| MISO | ~200-215 | ~170-230 | 30-50 | Low-Moderate |
+| NYISO | ~62-66 | ~47-63 | 5-15 | High ($20-35) |
+| NEISO | ~43-45 | ~35-60 | **3-8** | Critical (~$40) |
+| SPP | ~136 | ~65-90 | 40-60 | Very Low ($1-5) |
+
+**Key finding:** 20x scarcity variation across ISOs. ERCOT has ~130-160 TWh unclaimed; NEISO has ~3-8 TWh. This directly drives the economics of cross-regional (Strategy 1/3B) vs same-ISO (Strategy 2/3A) strategies.
+
+### §15.8 C&I Load Share (Research, Feb 27)
+
+National C&I = ~62% of total US load (~2,400 of ~3,860 TWh). Range by ISO: 52-57% (NEISO) to 63-67% (ERCOT). Voluntary procurement currently covers ~13% of C&I load (~315 TWh/yr, NREL 2024).
+
+### §15.9 Corporate Procurement Market (Research, Feb 27)
+
+- Voluntary market: ~315 TWh (2024), 7.7% of total US demand
+- Corporate PPAs: 28 GW signed in 2024, 29.5 GW in 2025 (BNEF)
+- Concentration: Tech/data = 84% of deal activity; Big 4 hyperscalers = 49% of global activity
+- Unique US buyers: Fell 51% YoY to 33 companies in 2025
+- 41% of all US clean energy added since 2014 was corporate-procured (CEBA)
+- Long-term contracts (PPAs + utility) overtook unbundled RECs in 2023 (~46% of volume)
+
+---
 
 ## Current Status (Feb 26, 2026)
 
