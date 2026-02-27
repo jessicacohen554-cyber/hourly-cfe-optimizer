@@ -17,15 +17,19 @@
 - [x] Research: EAC scarcity by ISO (20x variation: ERCOT 130-160 TWh available vs NEISO 3-8 TWh)
 - [x] Created `dashboard/procurement_research.html` — research page documenting findings
 - [x] Design decisions captured (see §15 below)
-- [ ] Research: Academic literature on participation-level modeling (agent in progress)
-- [ ] Document full strategy framework in SPEC.md §15
+- [x] Strategy 1C (marginal emission baseline): Include — material in MISO (+17%) and SPP (+22%)
+- [x] Learning curve toggle: On/Off, mapped to Scenario A (Strategy 1/3) and Scenario B (Strategy 2) — see §15.10
+- [x] Supply constraints: Show explicitly with infeasibility bands — see §15.12
+- [x] Adverse effects of delayed hourly matching: 3 compounding effects documented — see §15.11
+- [x] Participation slider defaults: Hyperscaler 5-6%, Other 7-8% — see §15.13
+- [x] Cost-to-replace premium (Strategy 2C): Use existing Track 3 CTR values directly
 - [ ] Build interactive dashboard page
 - [ ] Create Step 8 scripts for strategy-level compute
 
 **Next steps:**
-- Finalize strategy taxonomy after literature review completes
 - Build hybrid scrollytell + interactive dashboard page
 - Create Step 8 scripts for procurement strategy compute
+- Model all three adverse effects (learning delay, stranded VRE, gas lock-in) explicitly
 
 ---
 
@@ -65,8 +69,69 @@ Volumetric annual matching without hourly temporal constraint. 2×2 matrix: {Sam
 | **3C** | Same-ISO | No additionality | Annual matching within buyer's ISO. Existing clean counts (includes unbundled RECs from existing generators). |
 | **3D** | Cross-regional | No additionality | Annual matching from any US ISO. Existing clean counts. Cheapest option — unbundled RECs from anywhere. This is the "status quo" for most corporate procurement today. |
 
-**Cross-cutting layer: FOAK-to-NOAK Learning Curves (suffix -i)**
-Optional layer applicable to any Strategy 2 variant incorporating first-of-a-kind to Nth-of-a-kind cost learning for clean firm resources. Reflects deployment-driven cost reductions from existing Scenario A/B consequential analysis.
+**Cross-cutting toggle: FOAK-to-NOAK Learning Curves (On/Off)**
+Toggle (not suffix) applicable to all strategies simultaneously. When On, each strategy's cost curve shifts based on cumulative clean firm deployment along its mapped trajectory (see §15.10). When Off, static Medium costs from existing optimizer.
+
+### §15.10 Learning Curve Integration (Decided Feb 27)
+
+**Toggle:** "Learning curve: On/Off" in interactive section. Applies to all strategies simultaneously.
+
+**Strategy → Trajectory Mapping:**
+
+| Strategy | Trajectory | Rationale |
+|----------|------------|-----------|
+| **Strategy 1** (Consequential) | **Scenario A** (delayed) | Chases cheap $/tCO₂ with VRE → no clean firm investment → FOAK when firm is finally needed. Learning period 2035-2047, never fully reaches NOAK. |
+| **Strategy 2** (Hourly) | **Scenario B** (accelerated) | Hourly matching *forces* early clean firm + storage investment → accelerates Wright's Law learning → NOAK by 2040. Learning period 2030-2040. |
+| **Strategy 3** (Annual) | **Scenario A** (delayed) | Annual flexibility lets buyers avoid firm clean (VRE + unbundled RECs satisfy annual targets) → same delayed investment dynamic as consequential. |
+
+**SBTi Milestone Mapping:** (existing constants from `step7_generate_shared_data.py`)
+- 2025: Today (0%) | 2030: SBTi 50% | 2035: SBTi ~70% | 2040: SBTi 90% | 2045: SBTi ~95% | 2050: Net-Zero (100%)
+
+**Core argument:** Hourly matching incentivizes earlier corporate investment in clean firm, accelerating the learning curve, making the entire system cheaper on a net-zero trajectory. It is significantly more expensive to reach net zero by 2050 if you delay investment in firm clean. The three compounding adverse effects of delay are documented in §15.11.
+
+**Implementation:** Uses existing `learning_fraction()` from `step6_scenario_comparison.py` (Scenario A: FOAK until 2035, learning 2035-2047; Scenario B: FOAK until 2030, learning 2030-2040, NOAK by 2040). Cost at each SBTi milestone = FOAK × (1 - learning_fraction) + NOAK × learning_fraction for clean firm resources.
+
+### §15.11 Adverse Effects of Delayed Hourly Matching (Decided Feb 27)
+
+Three compounding effects when strategies don't require hourly deliverable matching:
+
+**1. Learning Curve Delay (§15.10)**
+Consequential/annual strategies defer firm clean investment. When 90%+ targets require firm clean (2040 SBTi milestone), buyers using Strategy 1/3 face near-FOAK prices. Strategy 2 buyers have already driven costs to NOAK via early deployment.
+
+**2. Stranded VRE Overbuild**
+Cheap $/tCO₂ logic under annual/consequential accounting drives massive solar/wind procurement at low thresholds (50-70%). But at high thresholds (90%+), additional VRE has sharply diminishing returns — surplus solar during peak hours is already being curtailed. The VRE built at 60% to satisfy annual accounting doesn't deliver physical electrons during nighttime/low-wind hours when the grid actually needs them. This capacity may not be useful by the time you need a deeply decarbonized grid. Hourly matching forces buyers to confront the residual gap early → invests in resources that actually close it.
+
+**3. Gas Lock-in from Missing Storage Signal**
+Without hourly matching, there is no price signal to invest in storage (battery + LDES) for nighttime/low-wind hours. Gas fills that gap by default. Once gas capacity is built or retained, it creates political and economic inertia (stranded asset risk, workforce dependencies, pipeline contracts) to keep running it. Hourly matching creates direct demand for storage to cover every hour → displaces gas earlier → shorter gas plant lifetimes → less stranded fossil infrastructure. The longer gas is held, the more expensive the eventual retirement (stranded asset write-downs, decommissioning, workforce transition).
+
+**Compounding on SBTi Timeline:**
+
+| SBTi Milestone | Strategy 1/3 (Annual/Consequential) | Strategy 2 (Hourly) |
+|---|---|---|
+| 2030 (50%) | Cheap — lots of VRE, looks great on paper | Slightly more expensive — investing in firm + storage |
+| 2035 (70%) | Still cheap — more VRE, gas fills gaps | Firm clean hitting learning curve, storage displacing gas |
+| 2040 (90%) | **Wall** — VRE saturated, firm at FOAK, gas locked in | Firm at NOAK, storage mature, gas already retiring |
+| 2050 (100%) | Scramble — paying FOAK for firm, retiring gas at huge cost, stranded VRE | Smooth glide — infrastructure already in place |
+
+These effects should be modeled explicitly in the dashboard and presented as a key finding in the scrollytell narrative and research paper.
+
+### §15.12 Supply Constraint Handling (Decided Feb 27)
+
+**Approach:** Show constraints explicitly. When a strategy hits a physical supply ceiling in an ISO, display it as "infeasible above X% participation" with a red/hatched band on the chart.
+
+**Constraint sources:**
+- EAC scarcity (§15.7): NEISO has only ~3-8 TWh available for voluntary procurement. Same-ISO strategies (2, 3A, 3C) hit hard walls.
+- Cross-regional strategies (1, 3B, 3D) can route around ISO-level constraints by procuring from surplus ISOs (ERCOT, SPP).
+- Resource adequacy: High participation rates under hourly matching may exceed buildable capacity in constrained ISOs.
+
+**Key finding (to highlight):** The existence of supply constraints is itself a major result — it demonstrates *why* cross-regional accounting matters and where same-ISO hourly matching faces physical limits. This should be a prominent element of the scrollytell narrative.
+
+### §15.13 Participation Slider Defaults (Decided Feb 27)
+
+- **Hyperscaler participation:** Default 5-6% of C&I load (current market share). Range 0-15%.
+- **Other corporate participation:** Default 7-8% of C&I load (current mid-market). Range 0-40%.
+- **Data center electricity:** ~130-150 TWh (2024), growing ~15-20%/yr. Data center share of C&I: ~5-6% today, projected ~8-10% by 2028.
+- **Total current corporate procurement:** ~315 TWh (~13% of C&I), with 84% from tech/hyperscaler buyers.
 
 ### §15.3 Participation Model (Decided Feb 27)
 
