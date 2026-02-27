@@ -139,6 +139,16 @@ with open(MAC_STATS_PATH) as f:
     mac_stats = json.load(f)
 print(f"  MAC stats: {os.path.getsize(MAC_STATS_PATH) / 1024:.0f} KB")
 
+# Optimal targets (from step6_compute_optimal_targets.py) — optional
+OPTIMAL_TARGETS_PATH = os.path.join(STEP5_DIR, 'optimal_targets.json')
+optimal_targets = {}
+if os.path.exists(OPTIMAL_TARGETS_PATH):
+    with open(OPTIMAL_TARGETS_PATH) as f:
+        optimal_targets = json.load(f)
+    print(f"  Optimal targets: {os.path.getsize(OPTIMAL_TARGETS_PATH) / 1024:.0f} KB")
+else:
+    print("  Optimal targets: not found (step6_compute_optimal_targets.py not yet run)")
+
 # Filter ISOS to only those present in BOTH results and mac_stats
 results_isos = set(data.get('results', {}).keys())
 mac_isos = set(mac_stats.get('envelope', {}).keys())
@@ -1254,6 +1264,85 @@ if dg_mac:
     lines.append('')
 else:
     print("  No DG MAC data in mac_stats.json — skipping")
+
+# ============================================================================
+# OPTIMAL TARGETS (from step6_compute_optimal_targets.py)
+# ============================================================================
+if optimal_targets:
+    print("Adding optimal targets data to shared-data.js...")
+    lines.append('// ============================================================================')
+    lines.append('// OPTIMAL CFE TARGETS — MAC × DAC crossover analysis')
+    lines.append('// Source: step6_compute_optimal_targets.py → optimal_targets.json')
+    lines.append('// Crossover range = 3 grid cost tiers × 3 DAC scenarios = 9 combos')
+    lines.append('// No-regrets: minimum resource floor across crossover range × L/M/H demand growth')
+    lines.append('// ============================================================================')
+    lines.append('')
+    lines.append('const OPTIMAL_TARGETS = {')
+    for iso_idx, iso in enumerate(ISOS):
+        iso_data = optimal_targets.get(iso, {})
+        if not iso_data:
+            continue
+        lines.append(f'    {iso}: {{')
+
+        # Crossover range
+        rng = iso_data.get('crossover_range', {})
+        lines.append(f'        crossover_range: {json.dumps(rng)},')
+
+        # Central crossover (medium grid × central DAC)
+        cen = iso_data.get('crossovers', {}).get('medium_grid__central_dac', {})
+        lines.append(f'        crossover_central: {json.dumps(cen)},')
+
+        # All 9 crossovers
+        lines.append(f'        crossovers: {json.dumps(iso_data.get("crossovers", {}))},')
+
+        # Smooth MAC curves for charting
+        sc = iso_data.get('smooth_curve', {})
+        lines.append(f'        smooth_thresholds: {json.dumps(sc.get("thresholds", []))},')
+        lines.append(f'        smooth_marginal_mac: {json.dumps(sc.get("marginal_mac", []))},')
+
+        # L/M/H sensitivity band
+        lmh = iso_data.get('smooth_curves_lmh', {})
+        for tier in ['low', 'medium', 'high']:
+            tc = lmh.get(tier, {})
+            lines.append(f'        smooth_mac_{tier}: {json.dumps(tc.get("marginal_mac", []))},')
+
+        # Discrete data points
+        dp = iso_data.get('discrete_points', {})
+        lines.append(f'        discrete_thresholds: {json.dumps(dp.get("thresholds", []))},')
+        lines.append(f'        discrete_mac: {json.dumps(dp.get("mac_at_thresholds", []))},')
+
+        # No-regrets investments
+        nr = iso_data.get('no_regrets', {})
+        if isinstance(nr, dict) and 'resources' in nr:
+            nr_summary = {}
+            for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes']:
+                stats = nr.get('resources', {}).get(res, {})
+                if stats.get('max_pct', 0) == 0:
+                    continue
+                nr_summary[res] = {
+                    'floor_pct': stats.get('floor_pct'),
+                    'avg_pct': stats.get('avg_pct'),
+                    'max_pct': stats.get('max_pct'),
+                    'is_consensus': stats.get('is_consensus'),
+                    'twh_by_growth': stats.get('twh_by_growth'),
+                }
+            lines.append(f'        no_regrets: {json.dumps(nr_summary)},')
+            lines.append(f'        no_regrets_thresholds: {json.dumps(nr.get("range_thresholds", []))},')
+            lines.append(f'        total_clean_by_growth: {json.dumps(nr.get("total_clean_by_growth", {}))},')
+        else:
+            lines.append(f'        no_regrets: null,')
+
+        # Demand growth rates
+        lines.append(f'        demand_growth_rates: {json.dumps(iso_data.get("demand_growth_rates", {}))},')
+
+        comma = ',' if iso_idx < len(ISOS) - 1 else ''
+        lines.append(f'    }}{comma}')
+
+    lines.append('};')
+    lines.append('')
+    print(f"  Added OPTIMAL_TARGETS for {len([i for i in ISOS if i in optimal_targets])} ISOs")
+else:
+    print("  Skipping OPTIMAL_TARGETS — not yet computed")
 
 print("Extracting FEASIBLE_MIXES from Step 3 feasible-mix parquets...")
 # Strategy: Step 3 already generates step3_feasible_{ISO}.parquet files containing
