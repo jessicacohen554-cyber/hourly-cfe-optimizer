@@ -317,16 +317,18 @@ def learning_fraction(threshold, scenario='B'):
 def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
     """Load feasible mixes for a single ISO from the step3 parquet file.
 
-    Returns dict: {threshold_str: [[cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%], ...]}
+    Returns dict: {threshold_str: [[cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%], ...]}
     """
     feasible_path = os.path.join(step3_dir, f'step3_feasible_{iso}.parquet')
     if not os.path.exists(feasible_path):
         return {}
 
     df = pd.read_parquet(feasible_path)
+    # v5.0: procurement baked into resource percentages
     mix_fields = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
-                  'procurement_pct', 'hourly_match_score',
-                  'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+                  'hourly_match_score',
+                  'battery_dispatch_pct', 'battery8_dispatch_pct',
+                  'ldes_dispatch_pct', 'h2_dispatch_pct']
     for col in mix_fields:
         if col not in df.columns:
             df[col] = 0
@@ -338,10 +340,10 @@ def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
         for _, row in grp.iterrows():
             rows.append([
                 row['clean_firm'], row['solar'], row['wind'],
-                row['ccs_ccgt'], row['hydro'], row['procurement_pct'],
+                row['ccs_ccgt'], row['hydro'],
                 round(row['hourly_match_score'], 1),
                 row['battery_dispatch_pct'], row['battery8_dispatch_pct'],
-                row['ldes_dispatch_pct'],
+                row['ldes_dispatch_pct'], row['h2_dispatch_pct'],
             ])
         result[t_str] = rows
     return result
@@ -414,7 +416,7 @@ def parse_feasible_mixes(js_path='dashboard/js/shared-data.js'):
                     if filled:
                         print(f"  Backfilled {iso} thresholds from parquet: {', '.join(filled)}")
 
-    # mixes[iso][threshold_str] = list of [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    # v5.0: mixes[iso][threshold_str] = list of [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]
     return mixes
 
 
@@ -467,7 +469,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     """
     Compute total system cost per MWh for a single mix under a sensitivity scenario.
 
-    mix: [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    mix: [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]  (v5.0 format)
     overrides: optional dict with explicit LCOE values (bypasses toggle lookups):
         nuclear_lcoe, ccs_lcoe, geo_lcoe, ldes_lcoe, uprate_lcoe
     growth_factor: demand growth multiplier (>1 means demand has grown from base year).
@@ -476,10 +478,13 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     Returns: dict with cost details + gas backup
     """
     cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
-    proc_pct, match_score = mix[5], mix[6]
-    bat4_pct, bat8_pct, ldes_pct = mix[7], mix[8], mix[9]
+    # v5.0: procurement_pct is always 100 (baked into resource percentages)
+    proc_pct = 100
+    match_score = mix[5]
+    bat4_pct, bat8_pct, ldes_pct = mix[6], mix[7], mix[8]
+    h2_pct = mix[9] if len(mix) > 9 else 0
 
-    proc = proc_pct / 100.0
+    proc = 1.0  # procurement is always 100% in v5.0
     match_frac = match_score / 100.0
 
     ren_name = LEVEL_NAME[sens['ren']]
@@ -635,11 +640,12 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         'resource_twh': resource_twh,
         'resource_pct': {'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
                          'ccs_ccgt': ccs_pct, 'hydro': hyd_pct},
-        'procurement_pct': proc_pct,
+        'procurement_pct': 100,  # v5.0: always 100
         'match_score': match_score,
         'battery_twh': bat4_pct / 100.0 * demand_twh,
         'battery8_twh': bat8_pct / 100.0 * demand_twh,
         'ldes_twh': ldes_pct / 100.0 * demand_twh,
+        'h2_twh': h2_pct / 100.0 * demand_twh,
         'gas_backup_mw': round(gas_needed_mw),
         'new_gas_mw': round(new_gas_mw),
         'existing_gas_used_mw': round(existing_gas_used_mw),
@@ -684,9 +690,10 @@ def find_optimal_mixes(feasible_mixes, scenario, demand_twh_map):
 
             if best_result and best_mix:
                 # Preserve dispatch parameters for dispatch cache lookup
-                best_result['battery_dispatch_pct'] = float(best_mix[7])
-                best_result['battery8_dispatch_pct'] = float(best_mix[8])
-                best_result['ldes_dispatch_pct'] = float(best_mix[9])
+                best_result['battery_dispatch_pct'] = float(best_mix[6])
+                best_result['battery8_dispatch_pct'] = float(best_mix[7])
+                best_result['ldes_dispatch_pct'] = float(best_mix[8])
+                best_result['h2_dispatch_pct'] = float(best_mix[9]) if len(best_mix) > 9 else 0.0
                 best_result['demand_mwh'] = demand_twh_map[iso] * 1e6
                 iso_results[t] = best_result
 
@@ -697,21 +704,22 @@ def find_optimal_mixes(feasible_mixes, scenario, demand_twh_map):
 def _mix_resource_twh(mix, demand_twh, iso=None):
     """Extract deployed resource TWh from a raw mix vector for floor comparison.
 
-    mix = [cf%, sol%, wnd%, ccs%, hyd%, proc%, match%, bat4%, bat8%, ldes%]
+    v5.0 mix = [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]
     iso: required — used to cap hydro at 2025 absolute TWh.
     Returns dict of resource → TWh deployed.
     """
-    cf, sol, wnd, ccs, hyd, proc_pct = mix[0], mix[1], mix[2], mix[3], mix[4], mix[5]
-    bat4, bat8, ldes = mix[7], mix[8], mix[9]
-    proc = proc_pct / 100.0
+    cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
+    # v5.0: procurement is always 100% (baked into resource percentages)
+    bat4, bat8, ldes = mix[6], mix[7], mix[8]
+    h2 = mix[9] if len(mix) > 9 else 0
     # Hydro is existing-only: cap at 2025 absolute TWh regardless of demand growth
-    hydro_twh = min(proc * hyd / 100.0 * demand_twh,
-                    HYDRO_CAP_TWH[iso]) if iso else proc * hyd / 100.0 * demand_twh
+    hydro_twh = min(hyd / 100.0 * demand_twh,
+                    HYDRO_CAP_TWH[iso]) if iso else hyd / 100.0 * demand_twh
     return {
-        'clean_firm': proc * cf / 100.0 * demand_twh,
-        'solar':      proc * sol / 100.0 * demand_twh,
-        'wind':       proc * wnd / 100.0 * demand_twh,
-        'ccs_ccgt':   proc * ccs / 100.0 * demand_twh,
+        'clean_firm': cf / 100.0 * demand_twh,
+        'solar':      sol / 100.0 * demand_twh,
+        'wind':       wnd / 100.0 * demand_twh,
+        'ccs_ccgt':   ccs / 100.0 * demand_twh,
         'hydro':      hydro_twh,
         'battery':    (bat4 + bat8) / 100.0 * demand_twh,
         'ldes':       ldes / 100.0 * demand_twh,
@@ -906,9 +914,10 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
                       f"(+${excess_cost_per_mwh:.1f}/MWh penalty)")
 
             # Preserve dispatch parameters for dispatch cache lookup
-            augmented_result['battery_dispatch_pct'] = float(best_mix[7])
-            augmented_result['battery8_dispatch_pct'] = float(best_mix[8])
-            augmented_result['ldes_dispatch_pct'] = float(best_mix[9])
+            augmented_result['battery_dispatch_pct'] = float(best_mix[6])
+            augmented_result['battery8_dispatch_pct'] = float(best_mix[7])
+            augmented_result['ldes_dispatch_pct'] = float(best_mix[8])
+            augmented_result['h2_dispatch_pct'] = float(best_mix[9]) if len(best_mix) > 9 else 0.0
             augmented_result['demand_mwh'] = demand_mwh
 
             iso_results[t] = augmented_result
@@ -1149,7 +1158,6 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
             rt = r['resource_twh']
             print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
                   f"Wnd={rt['wind']:6.0f} CCS={rt.get('ccs_ccgt', 0):6.0f} "
-                  f"Proc={r['procurement_pct']:3.0f}% "
                   f"${r['effective_cost']:.0f}/MWh [{label}]")
 
         results[iso] = iso_results
@@ -1276,7 +1284,7 @@ def _adjust_costs_with_learning(results, scenario):
             existing_ccs_frac = GRID_MIX_SHARES[iso].get('ccs_ccgt', 0) / 100.0
             gf = demand_twh / BASE_DEMAND_TWH[iso]
             existing_ccs_twh = existing_ccs_frac * BASE_DEMAND_TWH[iso]
-            proc = r['procurement_pct'] / 100.0
+            # v5.0: procurement is always 100% (baked into resource percentages)
             total_ccs_twh = r['resource_twh'].get('ccs_ccgt', 0)
             ccs_new_twh = max(0, total_ccs_twh - existing_ccs_twh)
             if ccs_new_twh > 0:
@@ -1358,17 +1366,19 @@ def _load_step3_results(scenario, iso):
     # Vectorized column operations instead of iterrows()
     s = subset.copy()
     s['demand_twh'] = s['annual_demand_mwh'] / 1e6
-    s['proc'] = s['procurement_pct'] / 100.0
+    # v5.0: procurement is always 100% (baked into resource percentages)
+    s['proc'] = 1.0
 
-    # Resource TWh columns
-    s['res_cf_twh'] = s['proc'] * s['mix_clean_firm'] / 100.0 * s['demand_twh']
-    s['res_sol_twh'] = s['proc'] * s['mix_solar'] / 100.0 * s['demand_twh']
-    s['res_wnd_twh'] = s['proc'] * s['mix_wind'] / 100.0 * s['demand_twh']
-    s['res_ccs_twh'] = s['proc'] * s['mix_ccs_ccgt'] / 100.0 * s['demand_twh']
-    s['res_hyd_twh'] = s['proc'] * s['mix_hydro'] / 100.0 * s['demand_twh']
+    # Resource TWh columns (proc = 1.0 in v5.0)
+    s['res_cf_twh'] = s['mix_clean_firm'] / 100.0 * s['demand_twh']
+    s['res_sol_twh'] = s['mix_solar'] / 100.0 * s['demand_twh']
+    s['res_wnd_twh'] = s['mix_wind'] / 100.0 * s['demand_twh']
+    s['res_ccs_twh'] = s['mix_ccs_ccgt'] / 100.0 * s['demand_twh']
+    s['res_hyd_twh'] = s['mix_hydro'] / 100.0 * s['demand_twh']
     s['bat_twh'] = s['battery_dispatch_pct'] / 100.0 * s['demand_twh']
     s['bat8_twh'] = s['battery8_dispatch_pct'] / 100.0 * s['demand_twh']
     s['ldes_twh_calc'] = s['ldes_dispatch_pct'] / 100.0 * s['demand_twh']
+    s['h2_twh'] = (s['h2_dispatch_pct'] / 100.0 * s['demand_twh'] if 'h2_dispatch_pct' in s.columns else 0)
 
     # New-build cost tracking (vectorized)
     existing_pct = GRID_MIX_SHARES[iso]
@@ -1380,10 +1390,11 @@ def _load_step3_results(scenario, iso):
     ex_wnd = existing_pct.get('wind', 0)
     ex_ccs = existing_pct.get('ccs_ccgt', 0)
 
-    s['cf_new_pct'] = (s['proc'] * s['mix_clean_firm'] - ex_cf / s['gf']).clip(lower=0)
-    s['sol_new_pct'] = (s['proc'] * s['mix_solar'] - ex_sol / s['gf']).clip(lower=0)
-    s['wnd_new_pct'] = (s['proc'] * s['mix_wind'] - ex_wnd / s['gf']).clip(lower=0)
-    s['ccs_new_pct'] = (s['proc'] * s['mix_ccs_ccgt'] * 100 - ex_ccs / s['gf']).clip(lower=0)
+    # v5.0: proc=1.0, so resource percentages are already demand-scaled
+    s['cf_new_pct'] = (s['mix_clean_firm'] - ex_cf / s['gf']).clip(lower=0)
+    s['sol_new_pct'] = (s['mix_solar'] - ex_sol / s['gf']).clip(lower=0)
+    s['wnd_new_pct'] = (s['mix_wind'] - ex_wnd / s['gf']).clip(lower=0)
+    s['ccs_new_pct'] = (s['mix_ccs_ccgt'] * 100 - ex_ccs / s['gf']).clip(lower=0)
     s['new_gen_twh'] = (s['cf_new_pct'] + s['sol_new_pct'] + s['wnd_new_pct'] + s['ccs_new_pct']) / 100.0 * s['demand_twh']
 
     # ex_frac: sum of min(proc * resource_frac, existing_scaled_frac) for each resource
@@ -1412,16 +1423,17 @@ def _load_step3_results(scenario, iso):
         results[t] = {
             'threshold': t,
             'mix_raw': [row['mix_clean_firm'], row['mix_solar'], row['mix_wind'],
-                        row['mix_ccs_ccgt'], row['mix_hydro'], row['procurement_pct'],
+                        row['mix_ccs_ccgt'], row['mix_hydro'],
                         row['hourly_match_score'], row['battery_dispatch_pct'],
-                        row['battery8_dispatch_pct'], row['ldes_dispatch_pct']],
+                        row['battery8_dispatch_pct'], row['ldes_dispatch_pct'],
+                        row.get('h2_dispatch_pct', 0)],
             'demand_twh': row['demand_twh'],
             'effective_cost': row['cost_effective_cost'],
             'total_cost': row['cost_total_cost'],
             'incremental': row['cost_incremental'],
             'wholesale': row['cost_wholesale'],
             'match_score': row['hourly_match_score'],
-            'procurement_pct': row['procurement_pct'],
+            'procurement_pct': 100,  # v5.0: always 100
             'resource_twh': {
                 'clean_firm': row['res_cf_twh'], 'solar': row['res_sol_twh'],
                 'wind': row['res_wnd_twh'], 'ccs_ccgt': row['res_ccs_twh'],
@@ -1865,10 +1877,11 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
     if not resource_pcts:
         return None
 
-    proc_pct = mix_result.get('procurement_pct', 100)
+    # v5.0: procurement_pct is always 100 (baked into resource percentages)
     bat_pct = mix_result.get('battery_dispatch_pct', 0)
     bat8_pct = mix_result.get('battery8_dispatch_pct', 0)
     ldes_pct = mix_result.get('ldes_dispatch_pct', 0)
+    h2_pct = mix_result.get('h2_dispatch_pct', 0)
 
     supply_profiles = get_supply_profiles(iso, gen_profiles)
     demand_norm, _ = get_demand_profile(iso, demand_data)
@@ -1876,7 +1889,7 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
 
     dispatch_result, _ = get_or_compute_dispatch(
         iso, demand_norm, supply_profiles, resource_pcts,
-        proc_pct, bat_pct, bat8_pct, ldes_pct,
+        100, bat_pct, bat8_pct, ldes_pct,
         cache=cache)
 
     dispatch_caches[iso] = cache
@@ -2386,7 +2399,7 @@ def main():
                     'existing_gas_used_mw': d.get('existing_gas_used_mw', 0),
                     'clean_peak_mw': d.get('clean_peak_mw', 0),
                     'firm_total_twh': round(firm_total_twh, 1),
-                    'procurement_pct': d.get('procurement_pct', 100),
+                    'procurement_pct': 100,  # v5.0: always 100
                     'stepwise_mac': stepwise_mac,
                     'blended_new_lcoe': d.get('blended_new_lcoe', 0),
                     'new_gen_twh': d.get('new_gen_twh', 0),
