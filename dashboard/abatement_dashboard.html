@@ -1163,6 +1163,7 @@ html, body {
 <script src="js/shared-data.js"></script>
 <script src="js/mac-stats-data.js"></script>
 <script src="js/no-regrets-data.js"></script>
+<script src="js/optimal-target-data.js"></script>
 <script>
 // ============================================================================
 // CONSTANTS & STATE
@@ -1255,11 +1256,30 @@ function dacDatasets() {
 }
 
 // ============================================================================
-// CROSSOVER COMPUTATION (client-side from MAC_STEPWISE_FAN + DAC)
+// CROSSOVER COMPUTATION
+// Prefers OPTIMAL_TARGETS (smooth PCHIP-based crossover) when available,
+// falls back to client-side MAC_STEPWISE_FAN computation otherwise.
 // ============================================================================
 function computeCrossover(iso) {
     if (crossoverCache[iso]) return crossoverCache[iso];
 
+    // Prefer pre-computed smooth crossover from step6_compute_optimal_targets.py
+    var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+    if (ot && ot[iso] && ot[iso].crossover_range) {
+        var rng = ot[iso].crossover_range;
+        var cenXo = ot[iso].crossover_central || {};
+        var result = {
+            lower: rng.lower_bound,
+            upper: rng.upper_bound,
+            central: cenXo.threshold || rng.lower_bound,
+            gridAlwaysWins: rng.lower_bound == null,
+            source: 'smooth_pchip'
+        };
+        crossoverCache[iso] = result;
+        return result;
+    }
+
+    // Fallback: client-side stepwise crossover from MAC_STEPWISE_FAN
     var stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
     var fan = stepFan?.[iso];
     if (!fan) return null;
@@ -1310,17 +1330,19 @@ function computeCrossover(iso) {
         upper: upper,
         central: centralCrossover,
         crossovers: crossovers,
-        gridAlwaysWins: validThresholds.length === 0
+        gridAlwaysWins: validThresholds.length === 0,
+        source: 'stepwise_fallback'
     };
     crossoverCache[iso] = result;
     return result;
 }
 
 // ============================================================================
-// NO-REGRETS DATA (loaded from pre-computed JS, or placeholder)
+// NO-REGRETS DATA
+// Priority: 1) NO_REGRETS_DATA (Step 3 DG parquets, richest — 5,832+ scenarios)
+//           2) OPTIMAL_TARGETS (step6, medium-cost RESOURCE_MIX_DATA based)
+//           3) Client-side analysis of RESOURCE_MIX_DATA (fallback)
 // ============================================================================
-// Populated by no-regrets-data.js (from Step 3 DG parquets) or optimal-target-data.js
-// Falls back to medium-cost mix analysis if neither is available
 
 // Placeholder no-regrets analysis from RESOURCE_MIX_DATA (medium-cost optimal)
 function getNoRegretsFromMixData(iso, crossover) {
@@ -1376,9 +1398,30 @@ function populateTiles() {
 
     ISOS.forEach(function(iso) {
         var crossover = computeCrossover(iso);
-        var nr = (typeof NO_REGRETS_DATA !== 'undefined' && NO_REGRETS_DATA && NO_REGRETS_DATA[iso])
-            ? NO_REGRETS_DATA[iso]
-            : getNoRegretsFromMixData(iso, crossover);
+        var nr = null;
+        if (typeof NO_REGRETS_DATA !== 'undefined' && NO_REGRETS_DATA && NO_REGRETS_DATA[iso]) {
+            nr = NO_REGRETS_DATA[iso];
+        } else {
+            var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+            if (ot && ot[iso] && ot[iso].no_regrets) {
+                var otNr = ot[iso].no_regrets;
+                var converted = {};
+                Object.keys(otNr).forEach(function(res) {
+                    var s = otNr[res];
+                    converted[res] = {
+                        presenceRate: s.is_consensus ? 1.0 : 0.8,
+                        floor: s.floor_pct || 0,
+                        average: s.avg_pct || 0,
+                        ceiling: s.max_pct || 0,
+                        isNoRegrets: s.is_consensus || s.avg_pct > 3,
+                        isConsensus: s.is_consensus
+                    };
+                });
+                nr = { analysis: converted, source: 'optimal_targets' };
+            } else {
+                nr = getNoRegretsFromMixData(iso, crossover);
+            }
+        }
         var c = REGION_COLORS[iso];
 
         var rangeText = '\u2014';
@@ -1430,48 +1473,116 @@ function scrollToDeepDive() {
 }
 
 // ============================================================================
-// BUILD HERO CHART (all-regions overview — preserved from original)
+// SMOOTH MAC DATA HELPERS
+// Uses OPTIMAL_TARGETS (PCHIP-smoothed) when available, falls back to
+// MAC_STEPWISE_FAN (noisy threshold-to-threshold) otherwise.
+// ============================================================================
+function getSmoothedMacData(iso) {
+    var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+    if (ot && ot[iso] && ot[iso].smooth_thresholds && ot[iso].smooth_thresholds.length > 0) {
+        var t = ot[iso].smooth_thresholds;
+        var medium = ot[iso].smooth_marginal_mac || ot[iso].smooth_mac_medium || [];
+        var low = ot[iso].smooth_mac_low || [];
+        var high = ot[iso].smooth_mac_high || [];
+        return {
+            source: 'smooth_pchip',
+            // Dense 300-point smooth curves
+            medium: t.map(function(x, i) { return { x: x, y: medium[i] }; }).filter(function(d) { return d.y != null; }),
+            low: low.length > 0
+                ? t.map(function(x, i) { return { x: x, y: low[i] }; }).filter(function(d) { return d.y != null; })
+                : null,
+            high: high.length > 0
+                ? t.map(function(x, i) { return { x: x, y: high[i] }; }).filter(function(d) { return d.y != null; })
+                : null,
+            // Discrete data points for marker overlay
+            discrete_t: ot[iso].discrete_thresholds || [],
+            discrete_mac: ot[iso].discrete_mac || []
+        };
+    }
+    return null;
+}
+
+function getStepwiseMacData(iso) {
+    var stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
+    var avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
+    var fan = stepFan?.[iso];
+    var fb = avgFan?.[iso];
+    if (!fan) return null;
+
+    return {
+        source: 'stepwise',
+        p50: (fan.p50 || []).map(function(v, i) {
+            var val = v ?? fb?.p50?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val };
+        }).filter(function(d) { return d.y != null; }),
+        p10: (fan.p10 || []).map(function(v, i) {
+            var val = v ?? fb?.p10?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val };
+        }).filter(function(d) { return d.y != null; }),
+        p90: (fan.p90 || []).map(function(v, i) {
+            var val = v ?? fb?.p90?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val };
+        }).filter(function(d) { return d.y != null; })
+    };
+}
+
+// ============================================================================
+// BUILD HERO CHART (all-regions overview)
+// Prefers smooth PCHIP curves from OPTIMAL_TARGETS; falls back to stepwise.
 // ============================================================================
 function buildHeroChart() {
     var ctx = document.getElementById('heroScrollyChart')?.getContext('2d');
     if (!ctx) return;
 
     var regions = ISOS;
-    var stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
-    var avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
     var datasets = [];
 
     regions.forEach(function(iso) {
-        var fan = stepFan?.[iso];
-        var fb = avgFan?.[iso];
-        if (!fan) return;
         var c = REGION_COLORS[iso];
+        var smooth = getSmoothedMacData(iso);
 
-        var p90pts = (fan.p90 || []).map(function(v, i) {
-            var val = v ?? fb?.p90?.[i] ?? null;
-            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
-        }).filter(function(d) { return d.y != null; });
-        var p10pts = (fan.p10 || []).map(function(v, i) {
-            var val = v ?? fb?.p10?.[i] ?? null;
-            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
-        }).filter(function(d) { return d.y != null; });
-        var envPts = (fan.p50 || []).map(function(v, i) {
-            var val = v ?? fb?.p50?.[i] ?? null;
-            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
-        }).filter(function(d) { return d.y != null; });
+        if (smooth) {
+            // Smooth PCHIP curve: show L/M/H band + medium line
+            if (smooth.high) {
+                datasets.push({
+                    label: iso + ' High', data: smooth.high.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                    borderColor: 'transparent', backgroundColor: c + '35',
+                    borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 10, _region: iso, _type: 'band'
+                });
+            }
+            if (smooth.low) {
+                datasets.push({
+                    label: iso + ' Low', data: smooth.low.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                    borderColor: c + '40', backgroundColor: 'transparent',
+                    borderWidth: 0.5, borderDash: [2, 2], pointRadius: 0, fill: false, tension: 0, order: 10, _region: iso, _type: 'band'
+                });
+            }
+            datasets.push({
+                label: iso, data: smooth.medium.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                borderColor: c, backgroundColor: c + '10',
+                borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0, order: 5, _region: iso, _type: 'line'
+            });
+        } else {
+            // Fallback: stepwise MAC_STEPWISE_FAN
+            var step = getStepwiseMacData(iso);
+            if (!step) return;
 
-        datasets.push({
-            label: iso + ' P90', data: p90pts, borderColor: 'transparent', backgroundColor: c + '40',
-            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 10, _region: iso, _type: 'band'
-        });
-        datasets.push({
-            label: iso + ' P10', data: p10pts, borderColor: c + '50', backgroundColor: 'transparent',
-            borderWidth: 0.5, borderDash: [2, 2], pointRadius: 0, fill: false, tension: 0.3, order: 10, _region: iso, _type: 'band'
-        });
-        datasets.push({
-            label: iso, data: envPts, borderColor: c, backgroundColor: c + '10',
-            borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.3, order: 5, _region: iso, _type: 'line'
-        });
+            datasets.push({
+                label: iso + ' P90', data: step.p90.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                borderColor: 'transparent', backgroundColor: c + '40',
+                borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 10, _region: iso, _type: 'band'
+            });
+            datasets.push({
+                label: iso + ' P10', data: step.p10.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                borderColor: c + '50', backgroundColor: 'transparent',
+                borderWidth: 0.5, borderDash: [2, 2], pointRadius: 0, fill: false, tension: 0.3, order: 10, _region: iso, _type: 'band'
+            });
+            datasets.push({
+                label: iso, data: step.p50.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                borderColor: c, backgroundColor: c + '10',
+                borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.3, order: 5, _region: iso, _type: 'line'
+            });
+        }
     });
 
     datasets.push.apply(datasets, dacDatasets());
@@ -1511,7 +1622,7 @@ function buildHeroChart() {
                     borderColor: '#E5E7EB', borderWidth: 1, titleFont: { size: 11, weight: 600 }, bodyFont: { size: 10 },
                     cornerRadius: 8, padding: 10,
                     callbacks: {
-                        title: function(items) { return items[0] ? items[0].raw.x + '% Clean' : ''; },
+                        title: function(items) { return items[0] ? Math.round(items[0].raw.x) + '% Clean' : ''; },
                         label: function(item) { if (item.dataset._type === 'band') return null; return item.dataset.label + ': $' + Math.round(item.raw.y) + '/metric ton CO\u2082'; }
                     },
                     filter: function(item) { return item.dataset._type !== 'band'; }
@@ -1525,47 +1636,87 @@ function buildHeroChart() {
 
 // ============================================================================
 // BUILD DEEP-DIVE CHART (per-region with crossover annotation)
+// Prefers smooth PCHIP curves; falls back to stepwise MAC.
 // ============================================================================
 function buildDeepDiveChart(iso) {
     var ctx = document.getElementById('deepdiveChart')?.getContext('2d');
     if (!ctx) return;
     if (deepdiveChart) { deepdiveChart.destroy(); deepdiveChart = null; }
 
-    var stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
-    var avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
-    var fan = stepFan?.[iso];
-    var fb = avgFan?.[iso];
-    if (!fan) return;
-
     var c = REGION_COLORS[iso];
     var yMax = 1200;
+    var datasets = [];
+    var smooth = getSmoothedMacData(iso);
 
-    var p90 = (fan.p90 || []).map(function(v, i) {
-        var val = v ?? fb?.p90?.[i] ?? null;
-        return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMax) : null };
-    }).filter(function(d) { return d.y != null; });
-    var p10 = (fan.p10 || []).map(function(v, i) {
-        var val = v ?? fb?.p10?.[i] ?? null;
-        return { x: THRESHOLDS[i], y: val };
-    }).filter(function(d) { return d.y != null; });
-    var p50 = (fan.p50 || []).map(function(v, i) {
-        var val = v ?? fb?.p50?.[i] ?? null;
-        return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMax) : null };
-    }).filter(function(d) { return d.y != null; });
+    if (smooth) {
+        // Smooth PCHIP curves: L/M/H band + medium line + discrete markers
+        if (smooth.high) {
+            datasets.push({
+                label: 'High Cost', data: smooth.high.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+                borderColor: 'transparent', backgroundColor: c + '40',
+                borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 3, _type: 'band'
+            });
+        }
+        if (smooth.low) {
+            datasets.push({
+                label: 'Low Cost', data: smooth.low.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+                borderColor: c + '60', backgroundColor: 'transparent',
+                borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0, order: 3, _type: 'band'
+            });
+        }
+        datasets.push({
+            label: 'Smooth MAC', data: smooth.medium.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+            borderColor: c, backgroundColor: c + '15',
+            borderWidth: 3, pointRadius: 0, fill: false, tension: 0, order: 1, _type: 'line'
+        });
+        // Discrete data point markers at original thresholds
+        if (smooth.discrete_t && smooth.discrete_mac) {
+            var markers = [];
+            for (var mi = 0; mi < smooth.discrete_t.length; mi++) {
+                if (smooth.discrete_mac[mi] != null) {
+                    markers.push({ x: smooth.discrete_t[mi], y: Math.min(smooth.discrete_mac[mi], yMax) });
+                }
+            }
+            if (markers.length > 0) {
+                datasets.push({
+                    label: 'Data Points', data: markers,
+                    borderColor: c, backgroundColor: c,
+                    borderWidth: 1, pointRadius: 4, pointBackgroundColor: c, pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5, pointHoverRadius: 7, showLine: false, order: 0, _type: 'markers'
+                });
+            }
+        }
+    } else {
+        // Fallback: stepwise MAC
+        var step = getStepwiseMacData(iso);
+        if (!step) return;
 
-    var datasets = [
-        { label: 'P90', data: p90, borderColor: 'transparent', backgroundColor: c + '45',
-          borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3 },
-        { label: 'P10', data: p10, borderColor: c + '70', backgroundColor: 'transparent',
-          borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3 },
-        { label: 'Envelope', data: p50, borderColor: c, backgroundColor: c + '18',
-          borderWidth: 3, pointRadius: 3, pointBackgroundColor: c, pointBorderColor: '#000',
-          pointBorderWidth: 1, pointHoverRadius: 6, fill: false, tension: 0.3, order: 1 }
-    ];
+        datasets.push({
+            label: 'P90', data: step.p90.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+            borderColor: 'transparent', backgroundColor: c + '45',
+            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3, _type: 'band'
+        });
+        datasets.push({
+            label: 'P10', data: step.p10.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+            borderColor: c + '70', backgroundColor: 'transparent',
+            borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3, _type: 'band'
+        });
+        datasets.push({
+            label: 'Envelope', data: step.p50.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+            borderColor: c, backgroundColor: c + '18',
+            borderWidth: 3, pointRadius: 3, pointBackgroundColor: c, pointBorderColor: '#000',
+            pointBorderWidth: 1, pointHoverRadius: 6, fill: false, tension: 0.3, order: 1, _type: 'line'
+        });
+    }
+
     datasets.push.apply(datasets, dacDatasets());
 
+    // Compute y-axis max from data
     var dataYMax = 0;
-    p90.forEach(function(d) { if (d.y != null && d.y < 2000) dataYMax = Math.max(dataYMax, d.y); });
+    datasets.forEach(function(ds) {
+        if (ds._type === 'dac') return;
+        (ds.data || []).forEach(function(d) { if (d.y != null && d.y < 2000) dataYMax = Math.max(dataYMax, d.y); });
+    });
     dataYMax = Math.min(Math.ceil(dataYMax / 100) * 100 + 100, 1200);
 
     // Crossover annotation
@@ -1589,6 +1740,9 @@ function buildDeepDiveChart(iso) {
             }
         };
         if (crossover.central) {
+            var centralLabel = typeof crossover.central === 'number'
+                ? Math.round(crossover.central * 10) / 10 + '%'
+                : crossover.central + '%';
             annotations.centralLine = {
                 type: 'line',
                 xMin: crossover.central,
@@ -1598,7 +1752,7 @@ function buildDeepDiveChart(iso) {
                 borderDash: [6, 3],
                 label: {
                     display: true,
-                    content: 'Central: ' + crossover.central + '%',
+                    content: 'Central: ' + centralLabel,
                     position: 'start',
                     font: { size: 8, weight: 600 },
                     color: 'rgba(245,158,11,0.9)',
@@ -1642,10 +1796,14 @@ function buildDeepDiveChart(iso) {
                     borderColor: '#E5E7EB', borderWidth: 1, titleFont: { size: 11, weight: 600 }, bodyFont: { size: 10 },
                     cornerRadius: 8, padding: 10,
                     callbacks: {
-                        title: function(items) { return items[0] ? items[0].raw.x + '% Clean' : ''; },
-                        label: function(item) { if (item.dataset.label === 'P90' || item.dataset.label === 'P10') return null; return item.dataset.label + ': $' + Math.round(item.raw.y) + '/metric ton CO\u2082'; }
+                        title: function(items) { return items[0] ? Math.round(items[0].raw.x * 10) / 10 + '% Clean' : ''; },
+                        label: function(item) {
+                            if (item.dataset._type === 'band') return null;
+                            var label = item.dataset._type === 'markers' ? 'Discrete MAC' : item.dataset.label;
+                            return label + ': $' + Math.round(item.raw.y) + '/metric ton CO\u2082';
+                        }
                     },
-                    filter: function(item) { return item.dataset.label !== 'P90' && item.dataset.label !== 'P10'; }
+                    filter: function(item) { return item.dataset._type !== 'band'; }
                 },
                 datalabels: { display: false },
                 annotation: { annotations: annotations }
@@ -1663,10 +1821,36 @@ function renderNoRegrets(iso) {
     if (!container) return;
 
     var crossover = computeCrossover(iso);
-    // Use pre-computed Step 3 DG data if available, else fall back to medium-cost mix
-    var nr = (typeof NO_REGRETS_DATA !== 'undefined' && NO_REGRETS_DATA && NO_REGRETS_DATA[iso])
-        ? NO_REGRETS_DATA[iso]
-        : getNoRegretsFromMixData(iso, crossover);
+    // Priority: NO_REGRETS_DATA (Step 3 DG) > OPTIMAL_TARGETS (step6) > client-side mix fallback
+    var nr = null;
+    var nrSource = '';
+    if (typeof NO_REGRETS_DATA !== 'undefined' && NO_REGRETS_DATA && NO_REGRETS_DATA[iso]) {
+        nr = NO_REGRETS_DATA[iso];
+        nrSource = 'dg_parquets';
+    } else {
+        // Try OPTIMAL_TARGETS no-regrets (different format — convert)
+        var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+        if (ot && ot[iso] && ot[iso].no_regrets) {
+            var otNr = ot[iso].no_regrets;
+            var converted = {};
+            Object.keys(otNr).forEach(function(res) {
+                var s = otNr[res];
+                converted[res] = {
+                    presenceRate: s.is_consensus ? 1.0 : 0.8,
+                    floor: s.floor_pct || 0,
+                    average: s.avg_pct || 0,
+                    ceiling: s.max_pct || 0,
+                    isNoRegrets: s.is_consensus || s.avg_pct > 3,
+                    isConsensus: s.is_consensus
+                };
+            });
+            nr = { analysis: converted, source: 'optimal_targets' };
+            nrSource = 'optimal_targets';
+        } else {
+            nr = getNoRegretsFromMixData(iso, crossover);
+            nrSource = 'medium_mix';
+        }
+    }
 
     if (!nr || !nr.analysis) {
         container.innerHTML = '<p style="color:rgba(15,23,42,0.4);font-size:0.85rem;">No resource mix data available for ' + iso + '.</p>';
@@ -1712,7 +1896,9 @@ function renderNoRegrets(iso) {
         '<span class="nr-summary-stat" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#16a34a;">' +
         nrCount + ' no-regrets resource' + (nrCount !== 1 ? 's' : '') + ' in the ' + rangeLabel + ' range</span>' +
         '<span style="display:block;margin-top:8px;font-size:0.72rem;color:rgba(15,23,42,0.4);">Source: ' +
-        (nr.source === 'medium_mix' ? 'Medium-cost optimal mix (upgrade: run Step 6 for full 5,832-scenario analysis)' : 'Step 3 DG results (' + (crossover ? crossover.lower + '\u2013' + crossover.upper : '') + '% range)') +
+        (nrSource === 'dg_parquets' ? 'Step 3 DG results (' + (crossover ? crossover.lower + '\u2013' + crossover.upper : '') + '% range, 5,832+ scenarios)'
+            : nrSource === 'optimal_targets' ? 'Smooth MAC crossover analysis (medium-cost optimal)'
+            : 'Medium-cost optimal mix (fallback)') +
         '</span>';
 }
 
