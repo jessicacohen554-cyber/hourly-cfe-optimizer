@@ -311,7 +311,7 @@ def append_to_parquet(new_rows, pq_path):
         combined_schema = pa.unify_schemas([keep_table.schema, new_table.schema])
         keep_table = keep_table.cast(combined_schema)
         new_table = new_table.cast(combined_schema)
-        merged = pa.concat_tables([keep_table, new_table])
+        merged = pa.concat_tables([keep_table, new_table], promote_options='permissive')
         print(f"    Parquet merge: kept {keep_table.num_rows:,} + added {new_table.num_rows:,} = {merged.num_rows:,} total")
     else:
         merged = new_table
