@@ -33,6 +33,7 @@ body { background: #F3F4F8; }
     opacity: 1;
     transform: translateY(0);
 }
+.scroll-section.wide { max-width: 1100px; }
 
 /* Act dividers */
 .act-divider {
@@ -41,6 +42,16 @@ body { background: #F3F4F8; }
     padding: 80px 24px 40px;
     text-align: center;
 }
+/* Dark act dividers */
+.act-divider-dark {
+    max-width: 100%;
+    background: linear-gradient(135deg, #0F1A2E 0%, #1A2744 100%);
+    padding: 80px 24px 40px;
+    text-align: center;
+}
+.act-divider-dark .act-number { color: rgba(255,255,255,0.3); }
+.act-divider-dark .act-title { color: #fff; }
+.act-divider-dark .act-subtitle { color: rgba(255,255,255,0.55); }
 .act-number {
     font-family: 'Rajdhani','Barlow Semi Condensed',monospace;
     font-size: 0.72rem;
@@ -115,7 +126,175 @@ body { background: #F3F4F8; }
     margin: 0 auto;
 }
 
-/* ====== STRATEGY FAMILY CARDS ====== */
+/* ====== KEY FINDINGS HERO ====== */
+.findings-hero {
+    background: linear-gradient(135deg, #0F1A2E 0%, #162440 50%, #1E3A5F 100%);
+    padding: 60px 24px;
+}
+.findings-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.findings-hero .findings-label {
+    font-family: 'Rajdhani','Barlow Semi Condensed',monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    margin-bottom: 12px;
+}
+.findings-hero h2 {
+    font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 28px;
+    letter-spacing: -0.3px;
+}
+.findings-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+.finding-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 24px 20px;
+    transition: background 0.2s;
+}
+.finding-card:hover { background: rgba(255,255,255,0.09); }
+.finding-number {
+    font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;
+    font-size: 2.4rem;
+    font-weight: 900;
+    color: #38bdf8;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+.finding-card h4 {
+    font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+}
+.finding-card p {
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.7;
+}
+@media (max-width: 768px) {
+    .findings-grid { grid-template-columns: 1fr; }
+}
+
+/* ====== STRATEGY COLUMNS (3-column by strategy) ====== */
+.strategy-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto 40px;
+}
+.strategy-column {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease;
+}
+.strategy-column.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.strat-col-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 10px 10px 0 0;
+    margin-bottom: 0;
+}
+.strat-col-header .family-dot {
+    width: 12px; height: 12px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.strat-col-header h4 {
+    font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;
+    font-size: 0.88rem;
+    color: #1A2744;
+    font-weight: 700;
+}
+.strat-col-header .strat-subtitle {
+    font-size: 0.75rem;
+    color: rgba(0,0,0,0.45);
+    font-weight: 400;
+    display: block;
+}
+.strat-col-header-1 { background: rgba(79,70,229,0.06); border-bottom: 2px solid #4F46E5; }
+.strat-col-header-2 { background: rgba(8,145,178,0.06); border-bottom: 2px solid #0891B2; }
+.strat-col-header-3 { background: rgba(217,119,6,0.06); border-bottom: 2px solid #D97706; }
+.strat-variant-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0 0;
+}
+.strat-variant-item {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+.strat-variant-item:hover {
+    border-color: rgba(14,165,233,0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.strat-variant-item.selected {
+    border-color: #0284C7;
+    background: rgba(14,165,233,0.04);
+    box-shadow: 0 0 0 2px rgba(14,165,233,0.15);
+}
+.strat-variant-item .variant-code {
+    font-family: 'Rajdhani','Barlow Semi Condensed',monospace;
+    font-size: 0.88rem;
+    font-weight: 800;
+    margin-bottom: 2px;
+}
+.strat-variant-item .variant-name {
+    font-size: 0.78rem;
+    color: rgba(0,0,0,0.6);
+    line-height: 1.5;
+}
+.strat-variant-item .variant-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.dot-consequential { background: #4F46E5; }
+.dot-hourly { background: #0891B2; }
+.dot-annual { background: #D97706; }
+.code-1a, .code-1b, .code-1c { color: #4F46E5; }
+.code-2a, .code-2b, .code-2c { color: #0891B2; }
+.code-3a, .code-3b, .code-3c, .code-3d { color: #D97706; }
+.badge-data { background: rgba(22,163,74,0.1); color: #16A34A; }
+.badge-pending { background: rgba(245,158,11,0.1); color: #D97706; }
+@media (max-width: 768px) {
+    .strategy-columns { grid-template-columns: 1fr; }
+    .hero-opening h1 { font-size: 1.8rem; }
+    .counter-value { font-size: 3.5rem; }
+}
+
+/* ====== STRATEGY FAMILY CARDS (intro) ====== */
 .family-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -176,97 +355,7 @@ body { background: #F3F4F8; }
 }
 @media (max-width: 768px) {
     .family-cards { grid-template-columns: 1fr; }
-    .hero-opening h1 { font-size: 1.8rem; }
-    .counter-value { font-size: 3.5rem; }
 }
-
-/* ====== STRATEGY TAXONOMY TREE ====== */
-.taxonomy-tree {
-    max-width: 1000px;
-    margin: 0 auto 40px;
-    padding: 0 24px;
-}
-.tree-family {
-    margin-bottom: 24px;
-}
-.tree-family-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
-    border-radius: 10px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.tree-family-header:hover { background: rgba(0,0,0,0.03); }
-.tree-family-header .family-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 4px;
-    flex-shrink: 0;
-}
-.dot-consequential { background: #4F46E5; }
-.dot-hourly { background: #0891B2; }
-.dot-annual { background: #D97706; }
-.tree-family-header h4 {
-    font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;
-    font-size: 0.92rem;
-    color: #1A2744;
-    font-weight: 700;
-    flex: 1;
-}
-.tree-variants {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 10px;
-    padding-left: 46px;
-}
-.tree-variant {
-    background: rgba(255,255,255,0.9);
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 8px;
-    padding: 12px 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-}
-.tree-variant:hover {
-    border-color: rgba(14,165,233,0.3);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-.tree-variant.selected {
-    border-color: #0284C7;
-    background: rgba(14,165,233,0.04);
-    box-shadow: 0 0 0 2px rgba(14,165,233,0.15);
-}
-.tree-variant .variant-code {
-    font-family: 'Rajdhani','Barlow Semi Condensed',monospace;
-    font-size: 0.88rem;
-    font-weight: 800;
-    margin-bottom: 2px;
-}
-.code-1a, .code-1b, .code-1c { color: #4F46E5; }
-.code-2a, .code-2b, .code-2c { color: #0891B2; }
-.code-3a, .code-3b, .code-3c, .code-3d { color: #D97706; }
-.tree-variant .variant-name {
-    font-size: 0.78rem;
-    color: rgba(0,0,0,0.6);
-    line-height: 1.5;
-}
-.tree-variant .variant-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.badge-data { background: rgba(22,163,74,0.1); color: #16A34A; }
-.badge-pending { background: rgba(245,158,11,0.1); color: #D97706; }
 
 /* ====== PARTICIPATION SLIDER (STICKY) ====== */
 .participation-bar {
@@ -435,6 +524,15 @@ body { background: #F3F4F8; }
 }
 .insight-box strong { color: #0284C7; }
 
+/* ====== RESPONSIVE TABLE WRAPPER ====== */
+.table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 20px -16px;
+    padding: 0 16px;
+}
+.table-scroll-wrapper table { min-width: 520px; }
+
 /* ====== COMPARISON TABLE (ACT 3) ====== */
 .comparison-table {
     width: 100%;
@@ -590,9 +688,10 @@ body { background: #F3F4F8; }
 
 /* ====== EXPLORER (ACT 6) ====== */
 .explorer-panel {
-    max-width: 1200px;
+    max-width: 100%;
     margin: 0 auto 48px;
     padding: 0 24px;
+    box-sizing: border-box;
 }
 .explorer-controls {
     background: rgba(255,255,255,0.95);
@@ -604,8 +703,11 @@ body { background: #F3F4F8; }
 }
 .controls-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
+}
+@media (max-width: 768px) {
+    .controls-grid { grid-template-columns: 1fr; }
 }
 .control-group label {
     display: block;
@@ -621,6 +723,7 @@ body { background: #F3F4F8; }
 .control-group input[type=range] {
     width: 100%;
     min-height: 44px;
+    box-sizing: border-box;
 }
 .control-group select {
     padding: 8px 12px;
@@ -754,8 +857,8 @@ body { background: #F3F4F8; }
     </div>
 </div>
 
-<!-- 1.3 The Variant Tree -->
-<div class="scroll-section" id="taxonomySection">
+<!-- 1.3 The Variant Tree (3-column by strategy) -->
+<div class="scroll-section wide" id="taxonomySection">
     <div style="text-align:center; margin-bottom: 24px;">
         <p style="font-size:0.92rem; color:rgba(0,0,0,0.6); max-width:620px; margin:0 auto; line-height:1.7;">
             Within each family, design choices matter enormously. There are 10 distinct strategy variants &mdash;
@@ -763,28 +866,27 @@ body { background: #F3F4F8; }
         </p>
     </div>
 
-    <!-- FIGURE 1: Taxonomy Tree -->
-    <div class="taxonomy-tree">
-        <div class="fig-badge">Figure 1 &mdash; Strategy Taxonomy</div>
+    <div class="fig-badge" style="margin-left:auto; margin-right:auto; display:table;">Figure 1 &mdash; Strategy Taxonomy</div>
 
-        <!-- Consequential -->
-        <div class="tree-family">
-            <div class="tree-family-header">
+    <div class="strategy-columns" id="strategyColumns">
+        <!-- Column 1: Consequential -->
+        <div class="strategy-column" id="col-consequential">
+            <div class="strat-col-header strat-col-header-1">
                 <span class="family-dot dot-consequential"></span>
-                <h4>Strategy 1 &mdash; Consequential Cross-Regional</h4>
+                <h4>Strategy 1<span class="strat-subtitle">Consequential Cross-Regional</span></h4>
             </div>
-            <div class="tree-variants">
-                <div class="tree-variant selected" data-strategy="1A">
+            <div class="strat-variant-list">
+                <div class="strat-variant-item selected" data-strategy="1A">
                     <span class="variant-badge badge-data">data</span>
                     <div class="variant-code code-1a">1A</div>
                     <div class="variant-name">Grid-average baseline &mdash; lowest bar for emission netting</div>
                 </div>
-                <div class="tree-variant" data-strategy="1B">
+                <div class="strat-variant-item" data-strategy="1B">
                     <span class="variant-badge badge-data">data</span>
                     <div class="variant-code code-1b">1B</div>
                     <div class="variant-name">Fossil-average baseline &mdash; higher bar, excludes clean from denominator</div>
                 </div>
-                <div class="tree-variant" data-strategy="1C">
+                <div class="strat-variant-item" data-strategy="1C">
                     <span class="variant-badge badge-data">data</span>
                     <div class="variant-code code-1c">1C</div>
                     <div class="variant-name">Marginal emissions &mdash; highest bar in coal-heavy ISOs</div>
@@ -792,24 +894,24 @@ body { background: #F3F4F8; }
             </div>
         </div>
 
-        <!-- Hourly -->
-        <div class="tree-family">
-            <div class="tree-family-header">
+        <!-- Column 2: Hourly -->
+        <div class="strategy-column" id="col-hourly">
+            <div class="strat-col-header strat-col-header-2">
                 <span class="family-dot dot-hourly"></span>
-                <h4>Strategy 2 &mdash; Hourly Matching (Same-ISO)</h4>
+                <h4>Strategy 2<span class="strat-subtitle">Hourly Matching (Same-ISO)</span></h4>
             </div>
-            <div class="tree-variants">
-                <div class="tree-variant" data-strategy="2A">
+            <div class="strat-variant-list">
+                <div class="strat-variant-item" data-strategy="2A">
                     <span class="variant-badge badge-data">data</span>
                     <div class="variant-code code-2a">2A</div>
                     <div class="variant-name">100% new build &mdash; maximum additionality, no existing credit</div>
                 </div>
-                <div class="tree-variant" data-strategy="2B">
+                <div class="strat-variant-item" data-strategy="2B">
                     <span class="variant-badge badge-pending">pending</span>
                     <div class="variant-code code-2b">2B</div>
                     <div class="variant-name">Grid baseline credit &mdash; credit for existing clean, new build on top</div>
                 </div>
-                <div class="tree-variant" data-strategy="2C">
+                <div class="strat-variant-item" data-strategy="2C">
                     <span class="variant-badge badge-data">data</span>
                     <div class="variant-code code-2c">2C</div>
                     <div class="variant-name">Pro-rata allocation + premium &mdash; pays existing clean to stay online</div>
@@ -817,29 +919,29 @@ body { background: #F3F4F8; }
             </div>
         </div>
 
-        <!-- Annual -->
-        <div class="tree-family">
-            <div class="tree-family-header">
+        <!-- Column 3: Annual -->
+        <div class="strategy-column" id="col-annual">
+            <div class="strat-col-header strat-col-header-3">
                 <span class="family-dot dot-annual"></span>
-                <h4>Strategy 3 &mdash; Annual Matching</h4>
+                <h4>Strategy 3<span class="strat-subtitle">Annual Matching</span></h4>
             </div>
-            <div class="tree-variants">
-                <div class="tree-variant" data-strategy="3A">
+            <div class="strat-variant-list">
+                <div class="strat-variant-item" data-strategy="3A">
                     <span class="variant-badge badge-pending">pending</span>
                     <div class="variant-code code-3a">3A</div>
                     <div class="variant-name">Same-ISO, new build required &mdash; annual version of 2A</div>
                 </div>
-                <div class="tree-variant" data-strategy="3B">
+                <div class="strat-variant-item" data-strategy="3B">
                     <span class="variant-badge badge-pending">pending</span>
                     <div class="variant-code code-3b">3B</div>
                     <div class="variant-name">Cross-regional, new build &mdash; annual version of consequential</div>
                 </div>
-                <div class="tree-variant" data-strategy="3C">
+                <div class="strat-variant-item" data-strategy="3C">
                     <span class="variant-badge badge-pending">pending</span>
                     <div class="variant-code code-3c">3C</div>
                     <div class="variant-name">Same-ISO, no additionality &mdash; existing clean counts</div>
                 </div>
-                <div class="tree-variant" data-strategy="3D">
+                <div class="strat-variant-item" data-strategy="3D">
                     <span class="variant-badge badge-data">data</span>
                     <div class="variant-code code-3d">3D</div>
                     <div class="variant-name">Cross-regional, no additionality &mdash; unbundled RECs, cheapest option</div>
@@ -848,6 +950,33 @@ body { background: #F3F4F8; }
         </div>
     </div>
 </div>
+
+<!-- ============================================================ -->
+<!-- KEY FINDINGS HERO (placeholder — populated with data)         -->
+<!-- ============================================================ -->
+<section class="findings-hero" id="findingsHero">
+    <div class="findings-inner">
+        <div class="findings-label">Key Findings</div>
+        <h2>What the data reveals about procurement strategy choice</h2>
+        <div class="findings-grid">
+            <div class="finding-card">
+                <div class="finding-number" id="findingNum1">&mdash;</div>
+                <h4>Strategies look identical at low adoption</h4>
+                <p>Cost spreads are negligible below 20% C&amp;I participation. The divergence begins where most corporate buyers haven't looked yet.</p>
+            </div>
+            <div class="finding-card">
+                <div class="finding-number" id="findingNum2">&mdash;</div>
+                <h4>Hourly matching builds the grid you need</h4>
+                <p>Only hourly strategies force investment in firm clean generation and long-duration storage &mdash; the resources a deeply decarbonized grid requires.</p>
+            </div>
+            <div class="finding-card">
+                <div class="finding-number" id="findingNum3">&mdash;</div>
+                <h4>Cheap today, expensive tomorrow</h4>
+                <p>Consequential and annual strategies defer learning-curve investment. By 2040, they pay near-FOAK prices for technology that hourly buyers unlocked at NOAK a decade earlier.</p>
+            </div>
+        </div>
+    </div>
+</section>
 
 <!-- ============================================================ -->
 <!-- ACT 2: WHAT BREAKS, AND WHEN                                  -->
@@ -1005,6 +1134,7 @@ body { background: #F3F4F8; }
                 The variant that sounds safest (2B) has the worst failure mode.
             </p>
 
+            <div class="table-scroll-wrapper">
             <table class="comparison-table" id="comparisonTable">
                 <thead>
                 <tr class="row-visible">
@@ -1053,6 +1183,7 @@ body { background: #F3F4F8; }
                 </tr>
                 </tbody>
             </table>
+            </div>
 
             <div class="callout-box">
                 <p><strong>Strategy 2B is arguably the worst hourly variant</strong> &mdash;
@@ -1128,7 +1259,7 @@ body { background: #F3F4F8; }
 <!-- ACT 4: THE TIMELINE TRAP                                      -->
 <!-- ============================================================ -->
 
-<div class="act-divider scroll-section">
+<div class="act-divider-dark scroll-section">
     <div class="act-number">Act IV</div>
     <div class="act-title">The Timeline Trap</div>
     <div class="act-subtitle">
@@ -1170,6 +1301,7 @@ body { background: #F3F4F8; }
                 The gap widens at every milestone.
             </p>
 
+            <div class="table-scroll-wrapper">
             <table class="timeline-table" id="timelineTable">
                 <thead>
                 <tr class="row-visible">
@@ -1201,6 +1333,7 @@ body { background: #F3F4F8; }
                 </tr>
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </div>
@@ -1293,7 +1426,7 @@ body { background: #F3F4F8; }
 </div>
 
 <!-- 6.2 Interactive Explorer -->
-<div class="scroll-section">
+<div class="scroll-section" style="max-width:1200px;">
     <div class="explorer-panel">
         <div class="figure-card">
             <div class="fig-badge">Figure 15 &mdash; Interactive Explorer</div>
@@ -1450,6 +1583,20 @@ const scrollObserver = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.scroll-section').forEach(s => scrollObserver.observe(s));
 
+// ── Strategy column stagger animation ──
+const colObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const cols = entry.target.querySelectorAll('.strategy-column');
+            cols.forEach((col, i) => {
+                setTimeout(() => col.classList.add('visible'), i * 200);
+            });
+        }
+    });
+}, { threshold: 0.15 });
+const stratCols = document.getElementById('strategyColumns');
+if (stratCols) colObserver.observe(stratCols);
+
 // ── Table row animations ──
 const tableObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -1518,8 +1665,8 @@ if (lcOn && lcOff) {
     lcOff.addEventListener('click', () => { lcOff.classList.add('active'); lcOn.classList.remove('active'); });
 }
 
-// ── Taxonomy tree selection ──
-document.querySelectorAll('.tree-variant').forEach(v => {
+// ── Strategy variant selection ──
+document.querySelectorAll('.strat-variant-item').forEach(v => {
     v.addEventListener('click', () => {
         v.classList.toggle('selected');
     });
