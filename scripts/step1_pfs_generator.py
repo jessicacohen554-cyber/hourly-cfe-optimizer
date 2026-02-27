@@ -1325,6 +1325,20 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             }
             candidates.append(cand)
 
+    # ── Pre-filter: cap total procurement for low thresholds ──
+    # At 10% threshold, the cheapest mix is ~12-15% of one resource, not 200%
+    # solar. Capping procurement keeps only the lean, cost-relevant mixes.
+    # Without this, CAISO 5D has 1.6M feasible mixes at 10% — 99.97% of which
+    # are massively over-procured and would never be cost-optimal.
+    if threshold < 50:
+        procurement_cap = max(threshold + 30, 50)  # generous headroom
+        total_procurement = coarse_combos.sum(axis=1)
+        proc_mask = total_procurement <= procurement_cap
+        coarse_combos = coarse_combos[proc_mask]
+        coarse_scores = coarse_scores[proc_mask]
+        print(f"      {iso} {threshold}%: Procurement cap {procurement_cap}% → "
+              f"{proc_mask.sum():,} of {len(proc_mask):,} mixes retained")
+
     # ── Phase 1a: Filter coarse cache (no storage) ──
     # Combos where score >= target are feasible without storage
     feasible_mask = coarse_scores >= target
