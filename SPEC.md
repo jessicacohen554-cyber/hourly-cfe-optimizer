@@ -85,7 +85,7 @@ Toggle (not suffix) applicable to all strategies simultaneously. When On, each s
 | **Strategy 3** (Annual) | **Scenario A** (delayed) | Annual flexibility lets buyers avoid firm clean (VRE + unbundled RECs satisfy annual targets) → same delayed investment dynamic as consequential. |
 
 **SBTi Milestone Mapping:** (existing constants from `step7_generate_shared_data.py`)
-- 2025: Today (0%) | 2030: SBTi 50% | 2035: SBTi ~70% | 2040: SBTi 90% | 2045: SBTi ~95% | 2050: Net-Zero (100%)
+- 2025: Today (0%) | 2030: SBTi 50% | 2035: SBTi ~70% | 2040: SBTi 90% | 2045: SBTi ~95% | 2050: Net-Zero (≥99.99%)
 
 **Core argument:** Hourly matching incentivizes earlier corporate investment in clean firm, accelerating the learning curve, making the entire system cheaper on a net-zero trajectory. It is significantly more expensive to reach net zero by 2050 if you delay investment in firm clean. The three compounding adverse effects of delay are documented in §15.11.
 
@@ -111,7 +111,7 @@ Without hourly matching, there is no price signal to invest in storage (battery 
 | 2030 (50%) | Cheap — lots of VRE, looks great on paper | Slightly more expensive — investing in firm + storage |
 | 2035 (70%) | Still cheap — more VRE, gas fills gaps | Firm clean hitting learning curve, storage displacing gas |
 | 2040 (90%) | **Wall** — VRE saturated, firm at FOAK, gas locked in | Firm at NOAK, storage mature, gas already retiring |
-| 2050 (100%) | Scramble — paying FOAK for firm, retiring gas at huge cost, stranded VRE | Smooth glide — infrastructure already in place |
+| 2050 (≥99.99%) | Scramble — paying FOAK for firm, retiring gas at huge cost, stranded VRE | Smooth glide — infrastructure already in place |
 
 These effects should be modeled explicitly in the dashboard and presented as a key finding in the scrollytell narrative and research paper.
 
@@ -992,9 +992,9 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 |---|----------|--------|--------|
 | 1 | Grid search strategy | **1C — Adaptive** | Start at 5% step, identify promising regions, refine to 1%. Replaces 3-phase 10%→5%→1%. |
 | 2 | Solution output | **2B — Pareto frontier** | 3-5 points per mix along procurement/storage tradeoff (not single-point optimal). |
-| 3 | Procurement bounds | **3C — Threshold-adaptive** | Narrow bounds at low thresholds (e.g., 100-110% at 50%), wider at high (100-150% at 99-100%). |
+| 3 | Procurement bounds | **3C — Threshold-adaptive** | Narrow bounds at low thresholds (e.g., 100-110% at 50%), wider at high (100-150% at 99-≥99.99%). |
 | 4 | min_dispatchable constraint | **4B — Drop it** | No dispatchable floor. Let physics prove/disprove — constraint was potentially biasing results. |
-| 5 | Thresholds | **5E — 15 total** | v4.0 list + 55%, 65% for finer low-range granularity. Full list: 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100. |
+| 5 | Thresholds | **5E — 15 total** | v4.0 list + 55%, 65% for finer low-range granularity. Full list: 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable. |
 | 6 | CCS-CCGT resource | **6D — Collapse into Clean Firm** | Merge CCS into Clean Firm allocation. Reduces resource space from 5D to 4D. CCS retains its own cost profile and dispatch characteristics within the merged allocation — the optimizer determines sub-allocation internally. |
 | 7 | Storage parameters | **7A — Keep current** | Battery: 4hr Li-ion, 85% RT, daily cycle. LDES: 100hr iron-air, 50% RT, 7-day window. |
 | 8 | Output format | **8C — Both** | JSON (backward compat) + Parquet (analytics). |
@@ -1138,15 +1138,15 @@ The optimizer runs as a 7-step pipeline. Each step is independent — only re-ru
 - Represents the cost per ton of grid backbone decarbonization
 - No monotonicity issue (single value)
 
-**Zone 2 — Last Mile (90% → 100%): Granular checkpoints with enforced monotonicity**
-- 5 stepwise values: 90→92.5%, 92.5→95%, 95→97.5%, 97.5→99%, 99→100%
+**Zone 2 — Last Mile (90% → ≥99.99%): Granular checkpoints with enforced monotonicity**
+- 5 stepwise values: 90→92.5%, 92.5→95%, 95→97.5%, 97.5→99%, 99→≥99.99%
 - Enforced non-decreasing: `step_mac[t] = max(raw_step_mac[t], step_mac[t-1])`
 - Zone 1 aggregate MAC serves as floor for first Zone 2 step
 - Convex hull interpolation for edge cases where ΔCO2 ≤ 0
 
 **Result**: 6-value marginal MAC curve per (ISO, scenario):
 ```
-[MAC_75→90, MAC_90→92.5, MAC_92.5→95, MAC_95→97.5, MAC_97.5→99, MAC_99→100]
+[MAC_75→90, MAC_90→92.5, MAC_92.5→95, MAC_95→97.5, MAC_97.5→99, MAC_99→≥99.99]
 ```
 
 **Fan chart fix**: Consistent scenario ranking (rank by total cost at 99%, select P10/P50/P90 scenarios, use their full curves) instead of independent per-step percentiles that mix different scenarios.
@@ -1355,7 +1355,7 @@ Before launching `step1_pfs_generator.py`, the following must be verified:
 - No LCOE decline or wholesale escalation modeled — avoids overcomplication
 
 **Procurement ratio** (theoretical, not optimizer-derived):
-- 75%→0.80×, 90%→1.05×, 100%→1.45×
+- 75%→0.80×, 90%→1.05×, ≥99.99%→1.45×
 - Reflects temporal mismatch physics: higher match targets need more over-procurement
 
 **What stays from v1**:
@@ -1757,13 +1757,13 @@ data/step5-post-processing/lmp/                      # Output directory
 ## 3. Thresholds (15 total — v4.1: added 55%, 65% for finer low-range granularity)
 
 ```
-50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
+50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99
 ```
 
 - **50%, 55%, 60%, 65%, 70%** (v4.0+v4.1): Captures the easy-to-achieve baseline region where most mixes succeed. 55% and 65% added for finer resolution in the low-cost transition zone. Provides context for "how cheap is partial decarbonization" and anchors the cost curve left side. These thresholds run fast (most mixes hit target, narrow procurement bounds).
 - 5% intervals from 75-85 (captures broad trend)
 - 2.5% intervals from 87.5-97.5 (captures steep cost inflection zone)
-- 99% and 100% anchor the extreme end
+- 99% and ≥99.99% anchor the extreme end (true 100% is physically unreachable)
 - Key inflection behavior (CCS/LDES entering mix, storage costs spiking) captured at 90-97.5
 - Dashboard interpolates smoothly between these anchor points for abatement curves
 
@@ -1773,7 +1773,7 @@ data/step5-post-processing/lmp/                      # Output directory
 
 ### Preserved (2):
 1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
-2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100)
+2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99)
 
 ### Sensitivity toggles (7 toggles + 1 binary switch):
 
@@ -3293,7 +3293,9 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 
 5. **No-45Q mix bias** (documented limitation) — The no-45Q overlay reprices the same resource mix that was co-optimized WITH 45Q. This mix over-represents CCS, making the no-45Q cost a conservative upper bound. A true no-45Q re-optimization would substitute LDES/renewables for CCS, yielding lower costs.
 
-### 22.7 100% Hourly Match Asymptote — Literature Review & Procurement Bounds
+### 22.7 ≥99.99% Hourly Match Asymptote — Literature Review & Procurement Bounds
+
+**Decision (Feb 2026):** Top threshold lowered from 100% to ≥99.99%. True 100% hourly matching is physically unreachable due to float precision and dispatch constraints. The effective gate maps ≥99.99% → 99.5% to capture near-perfect mixes. This makes the threshold honest — we label what we can actually achieve.
 
 **Key literature findings:**
 - NREL (Cole et al., 2021, Joule): Marginal abatement cost 99%→100% = **$930/ton** — 15× the average cost of the full 100% target. Nonlinear in all 22 sensitivities tested.
@@ -3302,14 +3304,14 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 - Budischak et al. (2013, J. Power Sources): Cost-optimal 99.9% requires ~280% nameplate capacity. "Least cost solutions yield seemingly-excessive generation capacity."
 - WattTime: 100% hourly matching may require PPAs for **up to 400%** of annual consumption.
 
-**Granularity consensus:** The 90-100% zone needs 2.5% resolution minimum. Our threshold set (90, 92.5, 95, 97.5, 99, 100) is well-aligned with literature practice.
+**Granularity consensus:** The 90–≥99.99% zone needs 2.5% resolution minimum. Our threshold set (90, 92.5, 95, 97.5, 99, ≥99.99) is well-aligned with literature practice.
 
 **Procurement bound assessment:**
 - Current bound: 200% of demand
 - Actual usage at 99%: max 135% (CAISO), 130% (NYISO), 125% (NEISO), 123% (PJM), 118% (ERCOT)
-- 100% threshold: 0 feasible scenarios found (all ISOs)
+- ≥99.99% threshold: 0 feasible scenarios found (all ISOs) at 200% bound
 - Max hourly match achieved: 99.6% (PJM at 123% procurement)
-- **Decision**: If rerunning for 100%, increase upper bound to **250%** based on literature support (Budischak 280%, WattTime 400%). The 200% bound is sufficient for ≤99% targets.
+- **Decision**: If rerunning for ≥99.99%, increase upper bound to **250%** based on literature support (Budischak 280%, WattTime 400%). The 200% bound is sufficient for ≤99% targets.
 
 **Archetype diversity in cache:**
 - 46–70 unique resource mix archetypes per ISO across all thresholds
