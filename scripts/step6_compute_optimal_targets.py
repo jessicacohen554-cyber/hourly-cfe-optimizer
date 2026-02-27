@@ -43,7 +43,9 @@ METHODOLOGY:
     Scaled by L/M/H demand growth for absolute TWh quantities.
 
 INPUTS:
-  - SYSTEM_COST_DATA (L/M/H) from shared-data.js
+  - CLEAN_COST (L/M/H) — effective_cost (clean procurement only, NO gas backup)
+    Medium: exact from EFFECTIVE_COST_DATA in shared-data.js
+    Low/High: SYSTEM_COST(P10/P90) minus gas_backup_cost (approximation)
   - RESOURCE_MIX_DATA from shared-data.js (medium-cost physics optimization)
   - Emission rates, coal/oil caps, demand from dispatch_utils
   - DAC trajectory from SPEC.md
@@ -172,35 +174,54 @@ DAC_TRAJECTORY = {
     'conservative': {2025: 800, 2030: 550, 2035: 450, 2040: 375, 2045: 325, 2050: 300},
 }
 
-# System cost per threshold ($/MWh) — L/M/H from Step 3 cost optimization
-SYSTEM_COST = {
+# Clean procurement cost per threshold ($/MWh) — effective_cost WITHOUT gas backup
+# Gas capacity is a system reliability cost, not an abatement cost. MAC should
+# reflect only the capital invested to reduce carbon, not inadvertent system costs.
+# Medium: exact effective_cost from medium scenario (EFFECTIVE_COST_DATA in shared-data.js)
+# Low/High: approximation = SYSTEM_COST(P10/P90) - gas_backup_cost(medium scenario)
+#   (gas backup MW is physics-driven and doesn't vary much across cost scenarios)
+CLEAN_COST = {
     'medium': {
-        'CAISO': [39.38, 42.76, 45.66, 47.79, 50.22, 54.1, 55.02, 59.16, 61.17, 64.77, 66.14, 69.53, 74.19, 79.56, 91.06, 91.06, 91.06],
-        'ERCOT': [20.95, 23.81, 26.34, 28.42, 30.39, 33.18, 34.89, 37.83, 38.98, 41.16, 43.59, 46.89, 52.61, 53.62, 57.25, None, 57.25],
-        'PJM':   [33.16, 36.85, 39.87, 42.45, 44.83, 47.26, 49.98, 54.06, 53.93, 54.26, 56.89, 59.49, 64.11, 69.94, 94.78, 94.78, 94.78],
-        'NYISO': [54.94, 57.19, 60.65, 62.56, 63.89, 64.35, 66.71, 67.44, 67.1, 70.36, 73.27, 77.91, 82.39, 84.88, None, None, None],
-        'NEISO': [79.74, 80.82, 81.0, 81.71, 82.77, 83.54, 86.41, 90.09, 91.93, 94.05, 97.52, 100.23, 104.98, 109.84, 122.85, 122.85, 122.85],
-        'MISO':  [39.0, 40.98, 42.53, 43.91, 45.31, 46.98, 48.48, 51.72, 54.39, 55.92, 58.58, 61.55, 64.35, 64.4, 72.23, 72.23, 72.23],
-        'SPP':   [23.09, 25.57, 27.69, 29.55, 31.07, 32.55, 34.15, 37.02, 38.28, 39.94, 41.91, 44.17, 48.45, 53.64, 58.69, 58.69, 58.69],
+        'CAISO': [33.7, 38.5, 41.9, 44.4, 47.4, 52.1, 55.7, 61.4, 62.9, 66.8, 68.2, 72.2, 77.9, 84.3, 89.3, 89.3, 89.3],
+        'ERCOT': [10.7, 13.7, 16.4, 18.6, 20.7, 23.6, 26.3, 30.0, 30.9, 33.9, 36.8, 41.5, 46.6, 47.6, 50.3, None, 50.3],
+        'PJM':   [21.2, 25.8, 29.5, 32.8, 35.6, 38.2, 41.9, 46.7, 47.8, 49.7, 52.0, 54.6, 60.3, 67.5, 95.0, 95.0, 95.0],
+        'NYISO': [44.1, 47.2, 50.1, 52.8, 55.4, 57.7, 63.9, 65.3, 66.5, 68.2, 70.8, 73.7, 76.9, 84.2, None, None, None],
+        'NEISO': [69.8, 70.8, 71.9, 72.6, 73.4, 73.8, 79.9, 81.8, 83.5, 85.8, 88.4, 91.9, 98.5, 106.8, 117.7, 117.7, 117.7],
+        'MISO':  [25.7, 27.9, 29.8, 31.5, 33.1, 35.0, 37.1, 41.0, 43.8, 46.0, 50.2, 55.4, 57.7, 57.7, 66.4, 66.4, 66.4],
+        'SPP':   [10.7, 13.3, 15.7, 17.7, 19.5, 21.3, 23.4, 26.6, 28.1, 30.5, 33.1, 36.5, 41.6, 48.8, 48.8, 48.8, 48.8],
     },
     'low': {
-        'CAISO': [35.81, 37.66, 39.44, 41.06, 42.66, 45.81, 48.32, 51.51, 51.83, 54.96, 55.62, 58.76, 62.97, 67.83, 75.02, 75.02, 75.02],
-        'ERCOT': [19.01, 21.0, 22.84, 24.31, 25.65, 27.74, 29.44, 31.93, 32.52, 34.56, 36.48, 40.26, 41.79, 42.69, 45.43, None, 45.43],
-        'PJM':   [29.66, 32.49, 35.09, 37.46, 39.28, 41.13, 43.07, 45.68, 46.2, 46.94, 48.0, 48.89, 52.94, 57.28, 77.39, 77.39, 77.39],
-        'NYISO': [50.29, 52.34, 54.13, 55.84, 57.07, 57.75, 58.82, 59.8, 60.07, 60.62, 62.29, 62.88, 64.77, 68.92, None, None, None],
-        'NEISO': [71.63, 72.12, 72.3, 73.02, 73.63, 74.77, 74.91, 76.45, 76.72, 77.23, 79.01, 79.6, 83.31, 87.64, 105.62, 105.62, 105.62],
-        'MISO':  [33.64, 35.15, 36.35, 37.53, 38.58, 39.86, 41.29, 43.88, 45.87, 47.01, 48.05, 50.89, 52.98, 55.17, 59.32, 59.32, 59.32],
-        'SPP':   [21.1, 22.9, 24.5, 25.82, 27.09, 28.26, 29.64, 31.83, 32.69, 34.39, 36.12, 38.33, 41.81, 47.01, 47.25, 47.25, 47.25],
+        'CAISO': [25.87, 28.14, 29.96, 31.71, 33.76, 37.13, 39.84, 44.75, 48.4, 50.95, 53.3, 56.49, 60.89, 66.01, 72.16, 72.16, 72.16],
+        'ERCOT': [8.43, 10.51, 12.43, 13.95, 15.35, 17.42, 19.33, 21.93, 22.6, 24.67, 26.79, 31.37, 33.75, 34.53, 38.08, None, 38.08],
+        'PJM':   [16.31, 19.24, 21.83, 24.3, 26.09, 27.91, 31.41, 33.52, 36.6, 39.4, 40.47, 43.46, 47.63, 53.34, 76.39, 76.39, 76.39],
+        'NYISO': [32.44, 34.61, 36.58, 38.44, 39.79, 40.66, 41.85, 43.75, 46.58, 49.01, 51.13, 53.02, 57.2, 62.08, None, None, None],
+        'NEISO': [55.32, 55.84, 56.09, 56.83, 57.51, 58.47, 59.13, 62.28, 64.83, 67.21, 69.57, 71.83, 76.2, 82.14, 92.66, 92.66, 92.66],
+        'MISO':  [19.39, 20.98, 22.25, 23.45, 24.6, 25.96, 27.58, 30.3, 32.38, 33.98, 35.96, 41.3, 41.52, 43.39, 48.24, 48.24, 48.24],
+        'SPP':   [8.45, 10.31, 11.96, 13.39, 14.69, 15.97, 17.41, 19.76, 20.85, 22.54, 24.44, 26.91, 30.93, 36.34, 36.26, 36.26, 36.26],
     },
     'high': {
-        'CAISO': [48.58, 54.06, 54.22, 56.89, 59.92, 65.2, 67.05, 72.54, 73.82, 77.95, 80.28, 84.74, 92.1, 97.25, 109.41, 109.41, 109.41],
-        'ERCOT': [23.32, 27.07, 30.51, 33.28, 35.85, 39.63, 42.91, 46.96, 48.56, 51.48, 54.79, 58.79, 65.48, 68.45, 70.82, None, 70.82],
-        'PJM':   [39.06, 44.41, 48.8, 52.58, 55.79, 58.78, 61.69, 68.01, 68.58, 71.47, 73.82, 76.97, 84.09, 91.8, 125.17, 125.17, 125.17],
-        'NYISO': [67.12, 70.4, 73.88, 76.45, 78.89, 81.41, 84.85, 86.36, 86.46, 88.89, 90.59, 94.04, 100.85, 103.8, None, None, None],
-        'NEISO': [93.4, 95.52, 97.59, 98.72, 100.69, 103.02, 109.5, 114.03, 119.26, 125.07, 129.81, 136.48, 144.52, 155.67, 157.02, 157.02, 157.02],
-        'MISO':  [45.68, 48.49, 50.76, 52.92, 54.9, 57.19, 59.96, 62.0, 65.05, 67.97, 72.06, 75.99, 79.75, 82.66, 92.72, 92.72, 92.72],
-        'SPP':   [25.36, 28.69, 31.63, 34.05, 36.39, 38.53, 41.11, 44.96, 46.84, 49.8, 52.99, 55.16, 60.92, 67.9, 71.53, 71.53, 71.53],
+        'CAISO': [38.64, 44.54, 44.74, 47.54, 51.02, 56.52, 58.57, 65.78, 70.39, 73.94, 77.96, 82.47, 90.02, 95.43, 106.55, 106.55, 106.55],
+        'ERCOT': [12.74, 16.58, 20.1, 22.92, 25.55, 29.31, 32.8, 36.96, 38.64, 41.59, 45.1, 49.9, 57.44, 60.29, 63.47, None, 63.47],
+        'PJM':   [25.71, 31.16, 35.54, 39.42, 42.6, 45.56, 50.03, 55.85, 58.98, 63.93, 66.29, 71.54, 78.78, 87.86, 124.17, 124.17, 124.17],
+        'NYISO': [49.27, 52.67, 56.33, 59.05, 61.61, 64.32, 67.88, 70.31, 72.97, 77.28, 79.43, 84.18, 93.28, 96.96, None, None, None],
+        'NEISO': [77.09, 79.24, 81.38, 82.53, 84.57, 86.72, 93.72, 99.86, 107.37, 115.05, 120.37, 128.71, 137.41, 150.17, 144.06, 144.06, 144.06],
+        'MISO':  [31.43, 34.32, 36.66, 38.84, 40.92, 43.29, 46.25, 48.42, 51.56, 54.94, 59.97, 66.4, 68.29, 70.88, 81.64, 81.64, 81.64],
+        'SPP':   [12.71, 16.1, 19.09, 21.62, 23.99, 26.24, 28.88, 32.89, 35.0, 37.95, 41.31, 43.74, 50.04, 57.23, 60.54, 60.54, 60.54],
     },
+}
+
+# Gas backup capacity cost per threshold ($/MWh) — medium scenario from Step 4
+# This is NOT part of the MAC calculation — it's a separate system cost tracked
+# for the dashboard warning: "chasing cheap carbon without considering what the
+# grid needs to operate means retaining/building gas capacity."
+GAS_BACKUP_COST = {
+    'CAISO': [9.94, 9.52, 9.48, 9.35, 8.9, 8.68, 8.48, 6.76, 3.43, 4.01, 2.32, 2.27, 2.08, 1.82, 2.86, 2.86, 2.86],
+    'ERCOT': [10.58, 10.49, 10.41, 10.36, 10.3, 10.32, 10.11, 10.0, 9.92, 9.89, 9.69, 8.89, 8.04, 8.16, 7.35, 0, 7.35],
+    'PJM':   [13.35, 13.25, 13.26, 13.16, 13.19, 13.22, 11.66, 12.16, 9.6, 7.54, 7.53, 5.43, 5.31, 3.94, 1.0, 1.0, 1.0],
+    'NYISO': [17.85, 17.73, 17.55, 17.4, 17.28, 17.09, 16.97, 16.05, 13.49, 11.61, 11.16, 9.86, 7.57, 6.84, 0, 0, 0],
+    'NEISO': [16.31, 16.28, 16.21, 16.19, 16.12, 16.3, 15.78, 14.17, 11.89, 10.02, 9.44, 7.77, 7.11, 5.5, 12.96, 12.96, 12.96],
+    'MISO':  [14.25, 14.17, 14.1, 14.08, 13.98, 13.9, 13.71, 13.58, 13.49, 13.03, 12.09, 9.59, 11.46, 11.78, 11.08, 11.08, 11.08],
+    'SPP':   [12.65, 12.59, 12.54, 12.43, 12.4, 12.29, 12.23, 12.07, 11.84, 11.85, 11.68, 11.42, 10.88, 10.67, 10.99, 10.99, 10.99],
 }
 
 # Resource mix data (% of procurement portfolio) — medium-cost physics optimization
@@ -482,7 +503,7 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
     parameter is included for completeness in the total cost/CO₂ outputs,
     but the MAC curve shape and crossover points are identical across growth tiers.
     """
-    costs = SYSTEM_COST[cost_tier][iso]
+    costs = CLEAN_COST[cost_tier][iso]
     wholesale = WHOLESALE_PRICES[iso]
 
     # Build arrays, skipping nulls
@@ -682,8 +703,8 @@ def analyze_targets_in_range(iso, lower_bound, upper_bound, mac_curves):
                 # Demand-growth-adjusted totals
                 gf = demand_growth_factor(iso, t, growth_tier)
                 demand_twh = DEMAND_TWH[iso] * gf
-                sys_cost = SYSTEM_COST[cost_tier][iso][THRESHOLDS.index(t)]
-                total_cost_M = (max(0, sys_cost - WHOLESALE_PRICES[iso]) * demand_twh) if sys_cost else None
+                clean_cost = CLEAN_COST[cost_tier][iso][THRESHOLDS.index(t)]
+                total_cost_M = (max(0, clean_cost - WHOLESALE_PRICES[iso]) * demand_twh) if clean_cost else None
                 total_co2 = compute_co2_abated(iso, t, growth_tier)['total_co2_mt']
 
                 results.append({
@@ -693,7 +714,7 @@ def analyze_targets_in_range(iso, lower_bound, upper_bound, mac_curves):
                     'growth_tier': growth_tier,
                     'growth_factor': round(gf, 4),
                     'demand_twh': round(demand_twh, 1),
-                    'system_cost_mwh': sys_cost,
+                    'clean_cost_mwh': clean_cost,
                     'total_cost_premium_M': round(total_cost_M, 1) if total_cost_M else None,
                     'total_co2_Mt': round(total_co2, 2),
                     'discrete_mac': round(discrete_mac, 1) if discrete_mac else None,
@@ -954,6 +975,8 @@ def main():
             'target_analysis': targets,
             'no_regrets': no_regrets,
             'demand_growth_rates': DEMAND_GROWTH_RATES[iso],
+            # Gas backup cost — NOT in MAC, tracked separately for dashboard warning
+            'gas_backup_cost_per_mwh': GAS_BACKUP_COST.get(iso, []),
             # Smooth curve for dashboard (medium cost)
             'smooth_curve': {
                 'thresholds': result['mac_curves'].get('medium', {}).get('smooth_t', []),
@@ -1122,6 +1145,10 @@ def write_dashboard_js(results, path):
 
         # Demand growth rates for this ISO
         lines.append(f'    demand_growth_rates: {json.dumps(r.get("demand_growth_rates", {}))},')
+
+        # Gas backup cost — NOT in MAC, but tracked for dashboard warning overlay
+        # "Chasing cheap carbon without considering system needs = retaining/building gas"
+        lines.append(f'    gas_backup_cost_per_mwh: {json.dumps(r.get("gas_backup_cost_per_mwh", []))},')
 
         lines.append(f'  }},')
     lines.append('};')
