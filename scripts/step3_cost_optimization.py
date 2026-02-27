@@ -620,6 +620,43 @@ def apply_existing_clean_floor(arrays, iso):
     return filtered, n_removed
 
 
+def apply_hydro_cap(arrays, iso):
+    """Filter PFS arrays to keep only mixes where hydro <= existing hydro cap.
+
+    The PFS (Step 1) explores hydro up to HYDRO_CAP + 10% adder for physics
+    experimentation. Those extended-hydro mixes belong in the EF cache for
+    Track 2 (newbuild analysis) but must NOT enter Track 1 baseline costing,
+    where hydro is existing-only at $0 wholesale.
+
+    Cap is ceil(GRID_MIX_SHARES[iso]['hydro']) since PFS uses integer %.
+
+    Args:
+        arrays: dict of numpy arrays keyed by resource name + dispatch fields
+        iso: region string
+
+    Returns:
+        filtered_arrays: same structure, with above-cap hydro mixes removed
+        n_removed: count of mixes removed
+    """
+    import math
+    hydro_cap = math.ceil(GRID_MIX_SHARES[iso].get('hydro', 0))
+    N = len(arrays['clean_firm'])
+    mask = arrays['hydro'] <= hydro_cap
+    n_kept = int(mask.sum())
+    n_removed = N - n_kept
+
+    if n_removed == 0:
+        return arrays, 0
+
+    filtered = {}
+    for key, arr in arrays.items():
+        if isinstance(arr, np.ndarray) and len(arr) == N:
+            filtered[key] = arr[mask]
+        else:
+            filtered[key] = arr
+    return filtered, n_removed
+
+
 # ============================================================================
 # PRE-COMPUTED COEFFICIENT MODEL (Phase 1 acceleration)
 # ============================================================================
@@ -1750,6 +1787,11 @@ def main():
     # Phase 2 demand growth, and Phase 2.5 track DG sweeps.
     iso_price_cache = {}  # iso → (price_matrix, wholesale_arr, nuclear_arr, ccs_arr)
 
+    # Cache Phase 1 filtered arrays per ISO (after clean floor + hydro cap).
+    # Phase 2 DG sweep must use the same filtered arrays as Phase 1 so archetype
+    # indices are consistent (they index into filtered arrays, not raw pfs[iso]).
+    phase1_arrays = {}  # iso → filtered arrays dict
+
     for iso in run_isos:
         if iso not in pfs:
             continue
@@ -1762,6 +1804,18 @@ def main():
         if n_filtered > 0:
             print(f"    {iso}: existing clean floor filter removed {n_filtered:,} / {N_raw:,} mixes "
                   f"({n_filtered/N_raw*100:.1f}%) — {N:,} remaining")
+
+        # Apply hydro cap: exclude mixes with hydro above existing ceiling.
+        # PFS explores hydro +10% adder for physics experimentation; those mixes
+        # stay in the EF for Track 2 but must not enter Track 1 baseline costing.
+        arrays, n_hydro_removed = apply_hydro_cap(arrays, iso)
+        if n_hydro_removed > 0:
+            print(f"    {iso}: hydro cap filter removed {n_hydro_removed:,} / {N:,} mixes "
+                  f"(hydro > {GRID_MIX_SHARES[iso].get('hydro', 0)}%) — "
+                  f"{len(arrays['clean_firm']):,} remaining")
+            N = len(arrays['clean_firm'])
+
+        if n_filtered > 0 or n_hydro_removed > 0:
             # Recompute threshold indices for filtered arrays (old indices pointed into raw)
             # Sort+searchsorted: O(N log N + T log N) instead of O(N×T)
             scores_filt = arrays['hourly_match_score']
@@ -1772,6 +1826,9 @@ def main():
                     thr_indices[(iso, thr)] = filt_thr_idx[thr]
                 elif (iso, thr) in thr_indices:
                     del thr_indices[(iso, thr)]
+
+        # Cache filtered arrays for Phase 2 DG sweep (archetype indices are into these)
+        phase1_arrays[iso] = arrays
         demand_twh = REGIONAL_DEMAND_TWH[iso]
 
         output['results'][iso] = {
@@ -2113,7 +2170,9 @@ def main():
             continue
 
         dg_output['results'][iso] = {}
-        arrays = pfs[iso]
+        # Use Phase 1 filtered arrays (after clean floor + hydro cap) so archetype
+        # indices are consistent — they were computed against filtered arrays.
+        arrays = phase1_arrays[iso]
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         iso_rates = DEMAND_GROWTH_RATES[iso]
         all_combos = get_sensitivity_combos(iso)
