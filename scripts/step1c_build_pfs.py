@@ -24,6 +24,8 @@ Usage:
 """
 
 import argparse
+import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -74,6 +76,71 @@ def validate_thresholds(raw_thresholds):
             sys.exit(1)
         matched.append(found)
     return matched
+
+
+def _compute_code_hash(iso):
+    """Hash step1c + step1_pfs_generator source + scored database mtime+size.
+
+    If any of these change, cached thresholds are stale and must be recomputed.
+    The scored database (coarse_cache parquet) is included because different
+    database contents produce different PFS results even with identical code.
+    """
+    h = hashlib.sha256()
+
+    # Hash source files
+    for fname in ['step1c_build_pfs.py', 'step1_pfs_generator.py']:
+        fpath = os.path.join(SCRIPT_DIR, fname)
+        if os.path.exists(fpath):
+            with open(fpath, 'rb') as f:
+                h.update(f.read())
+
+    # Hash scored database identity (mtime + size, not full content — it's 40+ MB)
+    cache_path = s1._coarse_cache_path(iso)
+    if os.path.exists(cache_path):
+        stat = os.stat(cache_path)
+        h.update(f"{cache_path}:{stat.st_size}:{stat.st_mtime_ns}".encode())
+
+    return h.hexdigest()[:16]
+
+
+def _manifest_path(iso):
+    """Path to the resume manifest for an ISO."""
+    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                        f'{iso}_pfs_manifest.json')
+
+
+def _load_manifest(iso, current_hash):
+    """Load manifest if it exists and code hash matches. Otherwise return empty.
+
+    Returns dict like {"code_hash": "abc123", "phase1": [50, 55, ...], "phase2": [50, ...]}
+    """
+    mpath = _manifest_path(iso)
+    if not os.path.exists(mpath):
+        return None
+    try:
+        with open(mpath, 'r') as f:
+            manifest = json.load(f)
+        if manifest.get('code_hash') != current_hash:
+            print(f"  Code/data changed (hash {manifest.get('code_hash', '?')[:8]}→{current_hash[:8]})"
+                  f" — recomputing all thresholds")
+            os.remove(mpath)
+            return None
+        return manifest
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _save_manifest(iso, code_hash, phase1_done, phase2_done):
+    """Write the resume manifest after each threshold completes."""
+    mpath = _manifest_path(iso)
+    os.makedirs(os.path.dirname(mpath), exist_ok=True)
+    manifest = {
+        'code_hash': code_hash,
+        'phase1': sorted(phase1_done),
+        'phase2': sorted(phase2_done),
+    }
+    with open(mpath, 'w') as f:
+        json.dump(manifest, f, indent=2)
 
 
 def git_commit_threshold(iso, threshold, phase_label):
@@ -177,6 +244,18 @@ def main():
     print(f"  Auto-commit: {'ON — each threshold committed as it completes' if auto_commit else 'OFF'}")
     print("=" * 70)
 
+    # ── Resume logic: hash code+data, load manifest ──
+    code_hash = _compute_code_hash(iso)
+    manifest = _load_manifest(iso, code_hash)
+    phase1_done = set(manifest.get('phase1', [])) if manifest else set()
+    phase2_done = set(manifest.get('phase2', [])) if manifest else set()
+
+    if phase1_done:
+        print(f"\n  Resuming — {len(phase1_done)} Phase 1 thresholds already done "
+              f"(hash {code_hash[:8]})")
+    if phase2_done:
+        print(f"  Resuming — {len(phase2_done)} Phase 2 thresholds already done")
+
     # Load EIA data (needed for storage dispatch + fine refinement scoring)
     print("\nLoading EIA data...")
     demand_data, gen_profiles, _, _ = s1.load_data()
@@ -234,6 +313,15 @@ def main():
     max_bat4 = max_bat8 = max_ldes = max_h2 = 0.0
 
     for threshold in thresholds_sorted:
+        if threshold in phase1_done:
+            # Verify the parquet actually exists (manifest says done but file missing = recompute)
+            done_path = s1._threshold_done_path(iso, threshold)
+            if os.path.exists(done_path):
+                print(f"    {iso} {threshold}%: skipped (already done)")
+                continue
+            else:
+                print(f"    {iso} {threshold}%: manifest says done but parquet missing — recomputing")
+
         t_start = time.time()
         feasible = s1.optimize_threshold(
             iso, threshold, demand_arr, supply_matrix,
@@ -264,6 +352,10 @@ def main():
         # chunks back and produces the final {ISO}_t{XX}_raw_pfs.parquet.
         s1._merge_chunks_and_finalize(iso, threshold, feasible)
 
+        # Record this threshold as done and persist manifest
+        phase1_done.add(threshold)
+        _save_manifest(iso, code_hash, phase1_done, phase2_done)
+
         # Auto-commit this threshold's results immediately
         if auto_commit:
             git_commit_threshold(iso, threshold, "Phase1")
@@ -281,6 +373,14 @@ def main():
         print(f"\nPhase 2 — Fine storage sweep")
 
         for threshold in thresholds_sorted:
+            if threshold in phase2_done:
+                done_path = s1._threshold_done_path(iso, threshold)
+                if os.path.exists(done_path):
+                    print(f"    {iso} {threshold}%: skipped (already done)")
+                    continue
+                else:
+                    print(f"    {iso} {threshold}%: manifest says done but parquet missing — recomputing")
+
             t_start = time.time()
             feasible = s1.optimize_threshold(
                 iso, threshold, demand_arr, supply_matrix,
@@ -300,6 +400,10 @@ def main():
 
             # Merge chunk files + remaining candidates into final parquet
             s1._merge_chunks_and_finalize(iso, threshold, feasible)
+
+            # Record this threshold as done and persist manifest
+            phase2_done.add(threshold)
+            _save_manifest(iso, code_hash, phase1_done, phase2_done)
 
             # Auto-commit this threshold's updated results immediately
             if auto_commit:
