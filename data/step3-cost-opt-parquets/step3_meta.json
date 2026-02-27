@@ -2,6 +2,10 @@
   "config": {
     "data_year": 2025,
     "thresholds": [
+      10,
+      20,
+      30,
+      40,
       50,
       55,
       60,
@@ -232,6 +236,35 @@
           "MISO": 211,
           "SPP": 205
         }
+      },
+      "h2": {
+        "Low": {
+          "CAISO": 210,
+          "ERCOT": 185,
+          "PJM": 200,
+          "NYISO": 230,
+          "NEISO": 220,
+          "MISO": 190,
+          "SPP": 182
+        },
+        "Medium": {
+          "CAISO": 300,
+          "ERCOT": 265,
+          "PJM": 285,
+          "NYISO": 330,
+          "NEISO": 315,
+          "MISO": 272,
+          "SPP": 260
+        },
+        "High": {
+          "CAISO": 420,
+          "ERCOT": 370,
+          "PJM": 400,
+          "NYISO": 460,
+          "NEISO": 440,
+          "MISO": 380,
+          "SPP": 365
+        }
       }
     },
     "transmission_tables": {
@@ -443,6 +476,36 @@
           "NEISO": 6,
           "MISO": 4,
           "SPP": 3
+        }
+      },
+      "h2": {
+        "None": 0,
+        "Low": {
+          "CAISO": 2,
+          "ERCOT": 2,
+          "PJM": 2,
+          "NYISO": 3,
+          "NEISO": 3,
+          "MISO": 2,
+          "SPP": 2
+        },
+        "Medium": {
+          "CAISO": 4,
+          "ERCOT": 3,
+          "PJM": 4,
+          "NYISO": 6,
+          "NEISO": 5,
+          "MISO": 3,
+          "SPP": 3
+        },
+        "High": {
+          "CAISO": 7,
+          "ERCOT": 5,
+          "PJM": 7,
+          "NYISO": 10,
+          "NEISO": 9,
+          "MISO": 6,
+          "SPP": 5
         }
       },
       "hydro": {
