@@ -29,6 +29,7 @@ The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
 """
 
+import argparse
 import os
 import time
 import re
@@ -329,9 +330,28 @@ def write_per_iso_outputs(results_by_iso):
     return written
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Step 2: Efficient Frontier extraction')
+    parser.add_argument('--iso', type=str, default=None,
+                        help='Single ISO to process (e.g. CAISO). Default: all ISOs.')
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
+    # Determine which ISOs to process
+    if args.iso:
+        iso_arg = args.iso.upper()
+        if iso_arg not in ISOS:
+            raise ValueError(f"Unknown ISO '{iso_arg}'. Must be one of {ISOS}")
+        target_isos = [iso_arg]
+    else:
+        target_isos = ISOS
+
     print("=" * 70)
     print("  STEP 2: EFFICIENT FRONTIER (EF) EXTRACTION")
+    print(f"  ISOs: {', '.join(target_isos)}")
     print("  PFS -> PFS post-EF (threshold-free, deduplicated)")
     print("=" * 70)
 
@@ -349,7 +369,7 @@ def main():
     total_gated = 0
     total_dedup = 0
 
-    for iso in ISOS:
+    for iso in target_isos:
         if iso not in iso_tables:
             continue
 
@@ -378,7 +398,7 @@ def main():
     elapsed_total = time.time() - total_start
 
     # Score distribution summary
-    for iso in ISOS:
+    for iso in target_isos:
         if iso not in results_by_iso:
             continue
         iso_scores = results_by_iso[iso].column('hourly_match_score').to_numpy()
