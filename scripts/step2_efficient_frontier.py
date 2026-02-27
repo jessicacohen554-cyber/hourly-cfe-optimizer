@@ -226,6 +226,9 @@ def deduplicate_mixes(arrays, resource_cols):
     granularity from Step 1. They are scaled by 20x (0.05% -> 1) to produce
     exact integer keys.
 
+    Uses multi-column lexsort + boundary detection instead of a composite int64
+    key to avoid overflow for CAISO (5 resources: 101^4 × 2001^3 × 100 > int64 max).
+
     Returns indices into the original arrays of rows to keep.
     """
     n = len(arrays[resource_cols[0]])
@@ -240,28 +243,30 @@ def deduplicate_mixes(arrays, resource_cols):
     bat8_key = np.round(arrays['battery8_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
     ldes_key = np.round(arrays['ldes_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
 
-    # Pack allocation into a single int64 key.
-    # Resource columns are int16 0-100 -> base 101.
-    # Storage keys: max ~100*20=2000, base 2001.
-    STORAGE_BASE = 2001
-    n_res = len(resource_cols)
+    # Build integer arrays for each resource column
+    res_keys = [arrays[col].astype(np.int64) for col in resource_cols]
 
-    # Build group key from resource columns
-    group_key = np.zeros(n, dtype=np.int64)
-    for i, col in enumerate(resource_cols):
-        multiplier = (101 ** (n_res - 1 - i)) * (STORAGE_BASE ** 3)
-        group_key += arrays[col].astype(np.int64) * multiplier
+    # Multi-column lexsort: sort by all group columns (ascending), then score (descending).
+    # lexsort sorts by LAST key first → resource_cols[0] is primary sort key.
+    sort_keys = [-score, ldes_key, bat8_key, bat_key]
+    for rk in reversed(res_keys):
+        sort_keys.append(rk)
+    sort_idx = np.lexsort(sort_keys)
 
-    group_key += bat_key * (STORAGE_BASE ** 2) + bat8_key * STORAGE_BASE + ldes_key
+    # Detect group boundaries: new group starts when ANY group column differs.
+    # Build sorted column views for boundary detection.
+    sorted_group_cols = [rk[sort_idx] for rk in res_keys]
+    sorted_group_cols.append(bat_key[sort_idx])
+    sorted_group_cols.append(bat8_key[sort_idx])
+    sorted_group_cols.append(ldes_key[sort_idx])
 
-    # Sort by (group_key ascending, score descending)
-    sort_idx = np.lexsort((-score, group_key))
-    sk = group_key[sort_idx]
-
-    # Keep first row per group (highest score due to descending sort)
     is_first = np.empty(n, dtype=np.bool_)
     is_first[0] = True
-    is_first[1:] = sk[1:] != sk[:-1]
+    # OR across all columns: any change → new group
+    changed = sorted_group_cols[0][1:] != sorted_group_cols[0][:-1]
+    for sc in sorted_group_cols[1:]:
+        changed |= (sc[1:] != sc[:-1])
+    is_first[1:] = changed
 
     return sort_idx[is_first]
 
