@@ -594,9 +594,20 @@ National C&I = ~62% of total US load (~2,400 of ~3,860 TWh). Range by ISO: 52-57
 - Added `CLEAN_COST_DATA` extraction to step7 (P10/P50/P90 of effective_cost across scenarios)
 - Fixed step6_consequential_queue.py MAC to exclude gas backup cost
 
+**Completed (Feb 27):**
+- Revamped `abatement_dashboard.html` with optimal target tiles, ISO deep-dive, and no-regrets analysis
+- Created `scripts/step7_extract_no_regrets.py` — extracts no-regrets resources from Step 3 DG parquets (5,832+ scenarios)
+- Revised DAC cost trajectories upward across all 4 files (anchored to 2025 actual costs of $600-$1,500/tCO₂)
+- **Wired smooth PCHIP MAC into dashboard** — `abatement_dashboard.html` now uses `OPTIMAL_TARGETS` smooth curves from `optimal-target-data.js` when available, falls back to `MAC_STEPWISE_FAN` stepwise data otherwise
+- Dashboard data priority chain: `OPTIMAL_TARGETS` (smooth PCHIP) > `MAC_STEPWISE_FAN` (stepwise fallback)
+- No-regrets data priority chain: `NO_REGRETS_DATA` (DG parquets, 5,832+ scenarios) > `OPTIMAL_TARGETS.no_regrets` (medium-cost) > client-side `RESOURCE_MIX_DATA` analysis (fallback)
+- Crossover computation prefers pre-computed smooth crossover range from `OPTIMAL_TARGETS`, falls back to client-side stepwise computation
+- Created placeholder `dashboard/js/optimal-target-data.js` — populated by running `step6_compute_optimal_targets.py`
+
 **Next steps:**
-- [ ] Run Step 6 workflow to generate optimal_targets.json
-- [ ] Build dashboard visualization for optimal target crossover chart on abatement page
+- [ ] Run Step 6 workflow to generate `optimal_targets.json` + `optimal-target-data.js` (smooth MAC data)
+- [ ] Generate DG parquets for remaining ISOs (ERCOT, PJM, NYISO, NEISO, MISO, SPP) — currently only CAISO
+- [ ] Re-run `step7_extract_no_regrets.py` after all ISO DG data is available
 - [ ] Wire no-regrets investment data into research paper narrative
 - [ ] Add prominent gas capacity warning to consequential scenario dashboard
 
