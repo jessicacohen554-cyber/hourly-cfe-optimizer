@@ -117,14 +117,18 @@ def normalize_table(t, iso):
     return pa.table(cols)
 
 
-def load_iso_tables():
+def load_iso_tables(target_isos=None):
     """Load PFS data and return a dict of {iso: pyarrow.Table}.
 
     Reads from data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet.
     Groups files by ISO prefix, concatenates all threshold files per ISO.
 
+    Args:
+        target_isos: List of ISO names to load. None = all ISOs.
+
     Returns dict keyed by ISO name with per-ISO tables (already schema-normalized).
     """
+    iso_filter = set(target_isos) if target_isos else set(ISOS)
     iso_tables = {}
 
     if not os.path.isdir(STEP1_RAW_DIR):
@@ -155,7 +159,7 @@ def load_iso_tables():
     files_by_iso = {}
     for fname in parquet_files:
         iso_prefix = fname.split('_')[0] if '_' in fname else None
-        if iso_prefix and iso_prefix in ISOS:
+        if iso_prefix and iso_prefix in iso_filter:
             files_by_iso.setdefault(iso_prefix, []).append(fname)
 
     # For each ISO, detect canonical vs batch file overlap and prefer batch
@@ -199,7 +203,7 @@ def load_iso_tables():
         )
 
     found = sorted(iso_tables.keys())
-    missing = [iso for iso in ISOS if iso not in iso_tables]
+    missing = [iso for iso in iso_filter if iso not in iso_tables]
     print(f"\nLoaded {len(found)} ISOs: {', '.join(found)}")
     if missing:
         print(f"  WARNING: Missing ISOs: {', '.join(missing)}")
@@ -357,8 +361,8 @@ def main():
 
     total_start = time.time()
 
-    # Load data as per-ISO tables (avoids concat-then-split overhead)
-    iso_tables = load_iso_tables()
+    # Load data as per-ISO tables (only requested ISOs)
+    iso_tables = load_iso_tables(target_isos)
 
     # Process each ISO: threshold gate + deduplication
     print("\nStep 2: Threshold gate + deduplication (threshold-free)")
