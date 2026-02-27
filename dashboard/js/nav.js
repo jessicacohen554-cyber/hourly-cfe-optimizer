@@ -117,7 +117,7 @@
                 { label: 'Failure Modes at Scale', href: 'consequential_vacuum.html' },
                 { label: 'Scenario Comparison', href: 'scenario_comparison.html' },
                 { separator: true, label: 'Corporate Procurement' },
-                { label: 'Procurement Strategy Research', href: 'procurement_research.html' }
+                { label: 'Procurement Strategy Comparison', href: 'procurement_comparison.html' }
             ]
         },
         {
