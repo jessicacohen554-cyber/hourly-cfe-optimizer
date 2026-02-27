@@ -2122,10 +2122,10 @@ def _candidate_to_row(iso, threshold, c):
     }
     for rt in rtypes:
         row[rt] = c['resource_mix'].get(rt, 0)
-    row['battery_dispatch_pct'] = c['battery_dispatch_pct']
-    row['battery8_dispatch_pct'] = c.get('battery8_dispatch_pct', 0)
-    row['ldes_dispatch_pct'] = c['ldes_dispatch_pct']
-    row['h2_dispatch_pct'] = c.get('h2_dispatch_pct', 0)
+    row['battery_dispatch_pct'] = float(c['battery_dispatch_pct'])
+    row['battery8_dispatch_pct'] = float(c.get('battery8_dispatch_pct', 0))
+    row['ldes_dispatch_pct'] = float(c['ldes_dispatch_pct'])
+    row['h2_dispatch_pct'] = float(c.get('h2_dispatch_pct', 0))
     row['hourly_match_score'] = c['hourly_match_score']
     row['pareto_type'] = c.get('pareto_type', '')
     return row
@@ -2222,8 +2222,8 @@ def _merge_chunks_and_finalize(iso, threshold, remaining_candidates):
         print(f"      {iso} {threshold}%: No solutions to save (0 chunks, 0 remaining)")
         return
 
-    # Concatenate all tables
-    merged = pa.concat_tables(chunk_tables)
+    # Concatenate all tables (promote int64→float64 if chunks have mixed types)
+    merged = pa.concat_tables(chunk_tables, promote_options='permissive')
     done_path = _threshold_done_path(iso, threshold)
     pq.write_table(merged, done_path, compression='snappy')
     print(f"      {iso} {threshold}%: Merged {len(chunk_files)} chunks + remaining → "
