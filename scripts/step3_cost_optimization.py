@@ -1641,7 +1641,7 @@ def load_pfs_post_ef(input_dir, selected_isos=None):
         for thr, idx in iso_thr_idx.items():
             thr_indices[(iso, thr)] = idx
 
-        print(f"  {iso}: loaded {sub.num_rows:,} mixes from {iso_path}")
+        print(f"  {iso}: loaded {len(arrays['hourly_match_score']):,} mixes from {iso_path}")
 
     if not pfs:
         raise FileNotFoundError(
