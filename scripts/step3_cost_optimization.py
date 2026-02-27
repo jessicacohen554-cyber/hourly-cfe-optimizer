@@ -1632,6 +1632,7 @@ def load_pfs_post_ef(input_dir, selected_isos=None):
             continue
 
         arrays = _table_to_arrays(sub)
+        del sub  # Free Arrow table immediately (can be GBs for large ISOs)
         pfs[iso] = arrays
 
         # Sort+searchsorted: O(N log N + T log N) instead of O(N×T)
@@ -1695,6 +1696,16 @@ def parse_args():
         help=f'Directory for per-ISO output parquets (default: {OUTPUT_DIR}).'
     )
     parser.add_argument(
+        '--track',
+        type=str,
+        default='baseline',
+        choices=['baseline', 'newbuild', 'replace'],
+        help='Which track to run. Only one track per invocation to bound memory. '
+             'baseline=Phase 1+2 (clean floor + hydro cap filtered mixes), '
+             'newbuild=hydro=0 mixes with uprates ON, '
+             'replace=all mixes with uprates OFF. Default: baseline.'
+    )
+    parser.add_argument(
         '--workers',
         type=int,
         default=1,
@@ -1713,10 +1724,12 @@ def main():
     args = parse_args()
     run_isos = args.isos if args.isos else ISOS
     output_dir = args.output_dir
+    track = args.track
 
     print("=" * 70)
     print("  STEP 3: COST OPTIMIZATION (v4 — vectorized, threshold-free PFS)")
     print("=" * 70)
+    print(f"  Track:      {track}")
     print(f"  Requested ISOs: {', '.join(run_isos)}")
     print(f"  Input dir:  {args.input_dir}")
     print(f"  Output dir: {output_dir}")
@@ -1954,12 +1967,24 @@ def main():
     phase1_elapsed = time.time() - phase1_start
     print(f"\nPhase 1 complete: {phase1_elapsed:.0f}s")
 
+    # Free raw pfs arrays for baseline track — Phase 1.5 won't run, Phase 2
+    # uses phase1_arrays (filtered). For non-baseline, pfs is still needed.
+    if track == 'baseline':
+        for _iso_key in list(pfs.keys()):
+            del pfs[_iso_key]
+        gc.collect()
+        print("  Freed raw PFS arrays (baseline: Phase 1.5 skipped)")
+
     # ================================================================
     # PHASE 1.5: TRACK ANALYSIS (newbuild + replace)
     # ================================================================
-    # Track 1 (newbuild): hydro=0 mixes, uprates ON — what hourly matching incentivizes
-    # Track 2 (replace): all mixes (hydro≤existing), uprates OFF — cost to replace existing
-    print("\n--- PHASE 1.5: Track analysis (newbuild + replace) ---")
+    # Skipped for baseline track — tracks 2/3 run via separate --track invocations.
+    # This prevents OOM on large ISOs (e.g., MISO 46M mixes → 4+ GB coeff_matrix).
+    _skip_phase15 = (track == 'baseline')
+    if _skip_phase15:
+        print("\n--- Skipping Phase 1.5 (track=baseline) ---")
+    else:
+        print(f"\n--- PHASE 1.5: Track analysis ({track}) ---")
     phase15_start = time.time()
 
     track_output = {
@@ -1988,6 +2013,8 @@ def main():
     track_archetypes = {'newbuild': {}, 'replace': {}}
 
     for iso in run_isos:
+        if _skip_phase15:
+            break  # Skip entire Phase 1.5 loop for baseline track
         if iso not in pfs:
             continue
 
@@ -2166,7 +2193,7 @@ def main():
     }
 
     for iso in run_isos:
-        if iso not in pfs or iso not in archetypes:
+        if iso not in phase1_arrays or iso not in archetypes:
             continue
 
         dg_output['results'][iso] = {}
@@ -2295,14 +2322,20 @@ def main():
     print(f"\nPhase 2 complete: {phase2_elapsed:.0f}s")
 
     # ================================================================
-    # PHASE 2.5: Track demand growth sweeps
+    # PHASE 2.5: Track demand growth sweeps — SKIP FOR BASELINE
     # ================================================================
-    print("\n--- PHASE 2.5: Track demand growth sweeps ---")
+    _skip_phase25 = (track == 'baseline')
+    if _skip_phase25:
+        print("\n--- Skipping Phase 2.5 (track=baseline) ---")
+    else:
+        print(f"\n--- PHASE 2.5: Track demand growth sweeps ({track}) ---")
     phase25_start = time.time()
 
     track_dg = {'newbuild': {}, 'replace': {}}
 
     for track_name in ['newbuild', 'replace']:
+        if _skip_phase25:
+            break  # Skip entire Phase 2.5 for baseline track
         for iso in run_isos:
             if iso not in track_archetypes[track_name]:
                 continue
@@ -2538,7 +2571,9 @@ def main():
         # Write one parquet per threshold. Schema matches step3_co plus
         # year, growth_level, growth_factor columns for downstream pipeline.
         iso_dg = dg_output.get('results', {}).get(iso, {})
-        iso_arrays = pfs.get(iso, {})  # PFS arrays for resolving mix_idx
+        # For baseline track, pfs is freed after Phase 1 — use phase1_arrays instead.
+        # DG archetypes index into Phase 1 filtered arrays, so this is correct.
+        iso_arrays = phase1_arrays.get(iso, pfs.get(iso, {}))  # PFS arrays for resolving mix_idx
 
         # Pre-compute nuclear-vs-CCS decision cache ONCE per ISO (invariant across
         # thresholds, years, growth levels — only depends on iso + sensitivity toggles).
@@ -2778,28 +2813,29 @@ def main():
                   f"Wnd={rm.get('wind',0):>2} CCS={rm.get('ccs_ccgt',0):>2} Hyd={rm.get('hydro',0):>2} | "
                   f"eff=${eff:.1f}/MWh match={match}%")
 
-    # Track summaries
-    for track_name in ['newbuild', 'replace']:
-        label = 'New-Build (no hydro, +uprates)' if track_name == 'newbuild' else 'Replace (with hydro, no uprates)'
-        print(f"\nAll-Medium (45Q=ON) summary — {label}:")
-        for iso in run_isos:
-            iso_track = track_output.get('results', {}).get(iso, {}).get(track_name, {})
-            if not iso_track:
-                print(f"\n  {iso}: no data")
-                continue
-            mk = medium_key(iso)
-            print(f"\n  {iso} (key={mk}):")
-            for thr in OUTPUT_THRESHOLDS:
-                t_str = str(thr)
-                sc = iso_track.get(t_str, {}).get('scenarios', {}).get(mk)
-                if not sc:
+    # Track summaries (only when tracks were computed)
+    if track != 'baseline':
+        for track_name in ['newbuild', 'replace']:
+            label = 'New-Build (no hydro, +uprates)' if track_name == 'newbuild' else 'Replace (with hydro, no uprates)'
+            print(f"\nAll-Medium (45Q=ON) summary — {label}:")
+            for iso in run_isos:
+                iso_track = track_output.get('results', {}).get(iso, {}).get(track_name, {})
+                if not iso_track:
+                    print(f"\n  {iso}: no data")
                     continue
-                rm = sc['resource_mix']
-                eff = sc['costs']['effective_cost']
-                match = sc['hourly_match_score']
-                print(f"    {thr:>5}%: CF={rm.get('clean_firm',0):>2} Sol={rm.get('solar',0):>2} "
-                      f"Wnd={rm.get('wind',0):>2} CCS={rm.get('ccs_ccgt',0):>2} Hyd={rm.get('hydro',0):>2} | "
-                      f"eff=${eff:.1f}/MWh match={match}%")
+                mk = medium_key(iso)
+                print(f"\n  {iso} (key={mk}):")
+                for thr in OUTPUT_THRESHOLDS:
+                    t_str = str(thr)
+                    sc = iso_track.get(t_str, {}).get('scenarios', {}).get(mk)
+                    if not sc:
+                        continue
+                    rm = sc['resource_mix']
+                    eff = sc['costs']['effective_cost']
+                    match = sc['hourly_match_score']
+                    print(f"    {thr:>5}%: CF={rm.get('clean_firm',0):>2} Sol={rm.get('solar',0):>2} "
+                          f"Wnd={rm.get('wind',0):>2} CCS={rm.get('ccs_ccgt',0):>2} Hyd={rm.get('hydro',0):>2} | "
+                          f"eff=${eff:.1f}/MWh match={match}%")
 
 
 if __name__ == '__main__':
