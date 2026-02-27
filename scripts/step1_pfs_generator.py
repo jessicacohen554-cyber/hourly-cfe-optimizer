@@ -1390,6 +1390,8 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     near_miss_mask = (~feasible_mask) & (coarse_scores >= near_miss_lower)
     near_miss_idx = np.where(near_miss_mask)[0]
 
+    storage_feasible = 0  # track coarse storage hits for Phase 2 skip logic
+
     if len(near_miss_idx) > 0:
         n_nm = len(near_miss_idx)
 
@@ -1437,7 +1439,6 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         h2_arr = np.array(h2_levels, dtype=np.float64)
         n_b4, n_b8, n_l, n_h2 = len(b4_arr), len(b8_arr), len(l_arr), len(h2_arr)
 
-        storage_feasible = 0
         n_total_batches = (len(nm_valid) + MAX_MIX_BATCH - 1) // MAX_MIX_BATCH
         batch_num = 0
 
@@ -1591,11 +1592,14 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             fine_total_feasible += len(fine_feas_idx)
 
             # Near-miss fine combos → storage sweep (same >50% floor as Phase 1b)
+            # Skip entirely if coarse storage sweep found 0 solutions — fine
+            # sweep uses the same storage levels on similar mixes, so it won't
+            # find anything the coarse sweep missed.
             fine_nm_lower = max(target - 0.30, STORAGE_SWEEP_FLOOR)
             fine_nm_mask = (~fine_feas_mask) & (all_fine_scores >= fine_nm_lower)
             fine_nm_idx = np.where(fine_nm_mask)[0]
 
-            if len(fine_nm_idx) > 0:
+            if len(fine_nm_idx) > 0 and storage_feasible > 0:
                 n_nm_fine = len(fine_nm_idx)
 
                 # Chunk-wise storage cap computation
@@ -1703,6 +1707,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
 
                 if nm_fine_valid:
                     print()  # newline after progress
+
+            elif len(fine_nm_idx) > 0 and storage_feasible == 0:
+                print(f"        Skipping fine storage sweep ({len(fine_nm_idx):,} near-miss) "
+                      f"— coarse storage found 0 solutions")
 
             # Flush after each archetype batch to keep memory bounded
             _maybe_flush()
