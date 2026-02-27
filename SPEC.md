@@ -2385,23 +2385,28 @@ total_co2_abated = existing_grid_displacement + counterfactual_growth_emissions
 | 2045 | ~95% (interpolated) | 95%             |
 | 2050 | 100% (net-zero)  | 100%               |
 
-**DAC Cost Trajectories ($/ton CO₂, net DACCS)**:
+**DAC Cost Trajectories ($/ton CO₂, net DACCS)** — *Revised Feb 27, 2026*:
 
 | Year | Optimistic | Central | Conservative |
 |------|-----------|---------|-------------|
-| 2025 | $400      | $600    | $800        |
-| 2030 | $200      | $350    | $550        |
-| 2035 | $150      | $275    | $450        |
-| 2040 | $115      | $225    | $375        |
-| 2045 | $90       | $200    | $325        |
-| 2050 | $75       | $180    | $300        |
+| 2025 | $600      | $800    | $1,100      |
+| 2030 | $350      | $500    | $750        |
+| 2035 | $230      | $375    | $550        |
+| 2040 | $175      | $300    | $450        |
+| 2045 | $130      | $250    | $375        |
+| 2050 | $100      | $200    | $300        |
 
-**Sources**: DOE Liftoff (2023), Sievert et al. (Joule 2024), IEA DAC (2022/2024), Fasihi et al. (J. Cleaner Prod. 2019), IEAGHG (2021/2024), Climeworks Gen 3, DOE Carbon Negative Shot, Kanyako & Craig (Earth's Future 2025), NAS (2019), Young et al. (One Earth 2023), Keith et al. (Joule 2018), Shayegh et al. (Frontiers in Climate 2021), Belfer Center (2023).
+**Revision rationale (Feb 27, 2026)**: Previous trajectories were too aggressive, particularly the optimistic scenario ($400 in 2025, $200 by 2030). Actual 2025 DAC costs are $600–$1,500/tCO₂ (Climeworks ~$1,000/ton, market average ~$600–$1,500 with subsidies). No credible source projects sub-$300 by 2030. Revised trajectories are anchored to:
+- **2025 actuals**: Climeworks operational costs, CDR marketplace prices
+- **2030–2035**: IEAGHG NOAK estimates ($194–$230 at 1 MtCO₂/yr, achievable "by as early as 2035"), Belfer Center projections ($400–$1,000 by 2030)
+- **2040–2050**: Sievert et al. (Joule 2024) learning curves ($341/tCO₂ central at Gt scale), Climeworks roadmap (well below $500 by ~2040, $200–$250 towards 2050)
+
+**Sources**: Climeworks (2024/2025 operational data), Sievert et al. (Joule 2024), IEAGHG (2021/2024), Belfer Center/Harvard (2023), DOE Liftoff (2023), IEA DAC (2022/2024), Fasihi et al. (J. Cleaner Prod. 2019), DOE Carbon Negative Shot, NAS (2019), Young et al. (One Earth 2023), Keith et al. (Joule 2018).
 
 **Key assumptions by trajectory**:
-- **Optimistic**: 15–20% learning rate, R&D breakthroughs, $<20/MWh renewables, 1+ GtCO₂/yr deployment by 2050
-- **Central**: 10–12% learning rate, moderate policy support, $30–40/MWh renewables, 100–500 MtCO₂/yr by 2050
-- **Conservative**: 5–8% learning rate, limited policy support, $40–60/MWh renewables, <100 MtCO₂/yr by 2050
+- **Optimistic**: IEAGHG NOAK costs by 2035, strong learning rates, low-cost renewable energy, GtCO₂/yr scale by 2050
+- **Central**: Belfer Center mid-range, Climeworks roadmap trajectory, moderate policy support, 100–500 MtCO₂/yr by 2050
+- **Conservative**: Slow scale-up, limited policy, high energy costs, <100 MtCO₂/yr by 2050
 
 **Visualization**: Abatement charts get dual x-axis (threshold % bottom, SBTi year top). DAC trajectory shown as 3 declining curves with shaded band. MAC curve intersections with DAC curves show the crossover points where grid decarbonization becomes more/less expensive than DAC at each milestone year.
 
@@ -2760,7 +2765,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 2. **The Inflection Point Analysis** — For each region × sensitivity scenario, identify the % threshold where grid decarbonization costs exceed:
    - The social cost of carbon ($51/ton EPA, $185/ton Rennert et al.)
-   - DAC costs ($250-600/ton)
+   - DAC costs ($300-1,100/ton, trajectory-dependent)
    - SAF costs ($150-400/ton)
    - Voluntary carbon market prices ($10-150/ton)
 
@@ -2780,10 +2785,10 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 **Problem**: The optimizer independently optimizes each threshold. The 85% mix and 95% mix may differ fundamentally — heavy solar at 85%, heavy clean firm at 95%. Building the 85%-optimal mix then upgrading to 95% would strand solar assets and cost more than building toward 95% from the start.
 
 **Proposed Approach**: Model backwards from the inflection point where the optimal grid solution's LCOE crosses a benchmark price:
-- **Primary benchmark**: DAC cost projected to the target year
-  - 2025: $400-600/ton → grid dominates through ~97%
-  - 2035: $250-350/ton → grid dominates through ~93-95%
-  - 2045: $150-250/ton → grid dominates through ~90-93%
+- **Primary benchmark**: DAC cost projected to the target year (see §7.3 revised trajectories)
+  - 2025: $600-1,100/ton → grid dominates through ~97%+
+  - 2035: $230-550/ton → grid dominates through ~93-95%
+  - 2045: $130-375/ton → grid dominates through ~90-93%
 - At the crossover threshold, the optimal mix is fixed. Then model the build-up path from lower thresholds using the cheapest-first resource ordering that converges to the crossover mix.
 - DAC learning curve: ~15-20% cost reduction per doubling of deployment (ETH Zurich/Climeworks data)
 - This creates a **declining optimal grid target over time** as removal costs fall — counterintuitive but logical.
@@ -2799,7 +2804,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 - **PJM**: Push grid to 93-95%, buy ERCOT/regional DAC credits for residual emissions.
 - **NYISO/NEISO**: Push grid to 90-92% (expensive beyond), heavy DAC credit procurement from regions with cheaper removal.
 
-**DAC cost with curtailed power**: If energy is the #1 DAC cost driver (~60% of total), curtailed power at $0-5/MWh could reduce DAC from $400-600/ton to $150-250/ton — making it competitive with grid decarbonization costs above 93% in most regions.
+**DAC cost with curtailed power**: If energy is the #1 DAC cost driver (~60% of total), curtailed power at $0-5/MWh could reduce DAC from $600-1,100/ton to $250-450/ton — making it competitive with grid decarbonization costs above 93-95% in most regions.
 
 **Analysis needed**:
 1. From optimizer results: quantify curtailed MWh at each threshold × region
