@@ -86,11 +86,11 @@ def load_from_parquets(input_dir, isos):
                                     'no_45q_costs': {...},     # if present (step4)
                                     'gas_backup': {...},       # if present (step4)
                                     'tranche_costs': {...},    # if present
-                                    'procurement_pct': int,
                                     'hourly_match_score': float,
                                     'battery_dispatch_pct': int,
                                     'battery8_dispatch_pct': int,
                                     'ldes_dispatch_pct': int,
+                                    'h2_dispatch_pct': int,
                                 }
                             }
                         }
@@ -143,11 +143,11 @@ def load_from_parquets(input_dir, isos):
                 scenario = {
                     'resource_mix': resource_mix,
                     'costs': costs,
-                    'procurement_pct': int(row['procurement_pct']) if 'procurement_pct' in row.index else 100,
                     'hourly_match_score': float(row['hourly_match_score']) if 'hourly_match_score' in row.index else 0.0,
                     'battery_dispatch_pct': int(row['battery_dispatch_pct']) if 'battery_dispatch_pct' in row.index else 0,
                     'battery8_dispatch_pct': int(row['battery8_dispatch_pct']) if 'battery8_dispatch_pct' in row.index else 0,
                     'ldes_dispatch_pct': int(row['ldes_dispatch_pct']) if 'ldes_dispatch_pct' in row.index else 0,
+                    'h2_dispatch_pct': int(row['h2_dispatch_pct']) if 'h2_dispatch_pct' in row.index else 0,
                 }
 
                 # CO2 data (if present from previous recompute)
@@ -238,11 +238,11 @@ def save_to_parquets(data, output_dir, isos, file_prefix='step4_'):
                     row[f'mix_{rtype}'] = mix.get(rtype, 0)
 
                 # Physics
-                row['procurement_pct'] = sc.get('procurement_pct', 100)
                 row['hourly_match_score'] = sc.get('hourly_match_score', 0.0)
                 row['battery_dispatch_pct'] = sc.get('battery_dispatch_pct', 0)
                 row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct', 0)
                 row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct', 0)
+                row['h2_dispatch_pct'] = sc.get('h2_dispatch_pct', 0)
 
                 # Costs
                 costs = sc.get('costs', {})
@@ -319,7 +319,6 @@ def load_dg_from_parquets(input_dir, isos, prefix='step4_dg_'):
                             'costs': {...},
                             'no_45q_costs': {...},      # if step4
                             'gas_backup': {...},          # if step4
-                            'procurement_pct': int,
                             'hourly_match_score': float,
                             'growth_factor': float,
                             'annual_demand_mwh': float,
@@ -379,7 +378,6 @@ def load_dg_from_parquets(input_dir, isos, prefix='step4_dg_'):
                     scenario = {
                         'resource_mix': resource_mix,
                         'costs': costs,
-                        'procurement_pct': int(row['procurement_pct']) if 'procurement_pct' in row.index else 100,
                         'hourly_match_score': float(row['hourly_match_score']) if 'hourly_match_score' in row.index else 0.0,
                         'growth_factor': float(row['growth_factor']) if 'growth_factor' in row.index and pd.notna(row['growth_factor']) else 1.0,
                         'annual_demand_mwh': float(row['annual_demand_mwh']) if 'annual_demand_mwh' in row.index and pd.notna(row['annual_demand_mwh']) else 0,
