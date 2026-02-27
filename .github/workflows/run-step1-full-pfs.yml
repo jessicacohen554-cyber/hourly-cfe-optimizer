@@ -58,6 +58,9 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+          # Increase post buffer to 500 MB — PFS parquets can be large and
+          # the default 1 MB buffer causes HTTP 500 on push.
+          git config http.postBuffer 524288000
           git checkout -b "$TARGET_BRANCH"
 
       - name: Set up Python
