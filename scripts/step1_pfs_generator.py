@@ -1445,11 +1445,13 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         print(f", 0 near-miss")
 
     # ── Phase 2: Fine refinement at 1% step around boundary archetypes ──
-    # Only refine mixes near the threshold boundary (within 3pp above target).
-    # Cost-optimal mixes barely clear the threshold — overprocuring by 10pp
-    # wastes money and won't survive Step 3 cost optimization anyway.
+    # Skip for thresholds < 50%: at low thresholds nearly everything passes,
+    # there's no meaningful boundary to refine, and CAISO 5D generates millions
+    # of fine combos that OOM the runner (11.9M at 40% alone).
+    # The coarse 5% grid is more than sufficient for low thresholds.
     FINE_REFINEMENT_BAND = 0.03  # 3pp above target
-    if candidates:
+    FINE_REFINEMENT_MIN_THRESHOLD = 50  # skip below this
+    if candidates and threshold >= FINE_REFINEMENT_MIN_THRESHOLD:
         boundary_upper = target + FINE_REFINEMENT_BAND
         mix_archetypes = set()
         for c in candidates:

@@ -164,7 +164,9 @@ def main():
     # ── Phase 1: Coarse storage sweep ──
     print(f"\nPhase 1 — Coarse storage sweep ({len(thresholds)} thresholds)")
     total_start = time.time()
-    coarse_results = {}
+
+    # Track storage saturation incrementally — don't keep full result lists
+    max_bat4 = max_bat8 = max_ldes = max_h2 = 0.0
 
     for threshold in thresholds:
         t_start = time.time()
@@ -175,22 +177,18 @@ def main():
         archetypes = set()
         for c in feasible:
             archetypes.add(tuple(c['resource_mix'][rt] for rt in rtypes))
-        coarse_results[threshold] = feasible
+            # Update saturation stats inline (avoids keeping millions of dicts in memory)
+            max_bat4 = max(max_bat4, c.get('battery_dispatch_pct', 0) or 0)
+            max_bat8 = max(max_bat8, c.get('battery8_dispatch_pct', 0) or 0)
+            max_ldes = max(max_ldes, c.get('ldes_dispatch_pct', 0) or 0)
+            max_h2 = max(max_h2, c.get('h2_dispatch_pct', 0) or 0)
 
         t_elapsed = time.time() - t_start
         print(f"    {iso} {threshold}%: {len(feasible)} solutions "
               f"({len(archetypes)} archetypes), {t_elapsed:.1f}s")
 
         s1._save_threshold_done(iso, threshold, feasible)
-
-    # ── Analyze storage saturation ──
-    max_bat4 = max_bat8 = max_ldes = max_h2 = 0.0
-    for results_list in coarse_results.values():
-        for c in results_list:
-            max_bat4 = max(max_bat4, c.get('battery_dispatch_pct', 0) or 0)
-            max_bat8 = max(max_bat8, c.get('battery8_dispatch_pct', 0) or 0)
-            max_ldes = max(max_ldes, c.get('ldes_dispatch_pct', 0) or 0)
-            max_h2 = max(max_h2, c.get('h2_dispatch_pct', 0) or 0)
+        del feasible, archetypes  # free memory before next threshold
 
     print(f"\n  Coarse saturation — bat4={max_bat4:.2f}%, bat8={max_bat8:.2f}%, "
           f"ldes={max_ldes:.1f}%, h2={max_h2:.1f}%")
