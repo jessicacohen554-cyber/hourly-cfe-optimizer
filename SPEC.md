@@ -56,12 +56,14 @@ Buyer matches load hour-by-hour within their own ISO. No cross-regional procurem
 | **2C** | Pro-rata allocation + premium | Pro-rata share of RPS/nuclear/public utility clean allocated. Premium for existing clean to keep it online (cost-to-replace). New build on top. |
 
 **Strategy 3 — Annual Matching**
-Volumetric annual matching without hourly temporal constraint. Simpler, cheaper, less temporal precision.
+Volumetric annual matching without hourly temporal constraint. 2×2 matrix: {Same-ISO, Cross-Regional} × {Additionality Required, No Additionality}.
 
-| Variant | Boundary | Description |
-|---------|----------|-------------|
-| **3A** | Same-ISO | Annual matching within buyer's ISO. Comparable to Strategy 2 but without hourly granularity. |
-| **3B** | Cross-regional | Annual matching from any US ISO. Comparable to Strategy 1 but annual rather than consequential netting. |
+| Variant | Boundary | Additionality | Description |
+|---------|----------|---------------|-------------|
+| **3A** | Same-ISO | New build required | Annual matching within buyer's ISO. Only new-build clean energy counts. Comparable to Strategy 2A but annual. |
+| **3B** | Cross-regional | New build required | Annual matching from any US ISO. Only new-build clean counts. Comparable to Strategy 1 but annual volumetric rather than consequential netting. |
+| **3C** | Same-ISO | No additionality | Annual matching within buyer's ISO. Existing clean counts (includes unbundled RECs from existing generators). |
+| **3D** | Cross-regional | No additionality | Annual matching from any US ISO. Existing clean counts. Cheapest option — unbundled RECs from anywhere. This is the "status quo" for most corporate procurement today. |
 
 **Cross-cutting layer: FOAK-to-NOAK Learning Curves (suffix -i)**
 Optional layer applicable to any Strategy 2 variant incorporating first-of-a-kind to Nth-of-a-kind cost learning for clean firm resources. Reflects deployment-driven cost reductions from existing Scenario A/B consequential analysis.
