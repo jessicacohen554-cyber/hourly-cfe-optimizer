@@ -22,6 +22,15 @@ on:
           - NEISO
           - MISO
           - SPP
+      script:
+        description: 'Which stage to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - generate-mixes
+          - score-mixes
       chunk_size:
         description: 'Scoring chunk size (default 20000)'
         required: false
@@ -71,6 +80,7 @@ jobs:
       run: mkdir -p data/step1-pfs-parquets
 
     - name: "Stage 1a: Generate mix combinations"
+      if: ${{ inputs.script == 'ALL' || inputs.script == 'generate-mixes' }}
       run: |
         ISO="${{ inputs.iso }}"
         FORCE_FLAG=""
@@ -86,6 +96,7 @@ jobs:
         fi
 
     - name: "Stage 1b: Score mix combinations (chunked)"
+      if: ${{ inputs.script == 'ALL' || inputs.script == 'score-mixes' }}
       run: |
         ISO="${{ inputs.iso }}"
         CHUNK="${{ inputs.chunk_size || '20000' }}"
@@ -109,7 +120,8 @@ jobs:
 
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         ISO_LABEL="${{ inputs.iso }}"
-        TARGET_BRANCH="auto/${TIMESTAMP}-step1a-scored-db-${ISO_LABEL}"
+        SCRIPT_LABEL="${{ inputs.script }}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1a-scored-db-${SCRIPT_LABEL}-${ISO_LABEL}"
         git checkout -b "$TARGET_BRANCH"
 
         if [ "$ISO_LABEL" = "ALL" ]; then
@@ -154,7 +166,7 @@ jobs:
 
           BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
           echo "  Staging ~${BATCH_MB} MB for $iso"
-          git commit -m "Step 1a Scored DB: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1a Scored DB: ${iso} (${{ inputs.script }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           if push_with_retry "$iso"; then
             PUSHED=true
@@ -191,9 +203,9 @@ jobs:
           exit 0
         fi
         gh pr create \
-          --title "Step 1a Scored DB: ${{ inputs.iso }}" \
+          --title "Step 1a Scored DB: ${{ inputs.script }} ${{ inputs.iso }}" \
           --body "## Summary
-        - Built scored mix database (generate mixes + score) for **${{ inputs.iso }}**
+        - Built scored mix database (${{ inputs.script }}) for **${{ inputs.iso }}**
         - Merge this first, then run Step 1b (Build PFS) to mine it per threshold
         - Output: \`data/step1-pfs-parquets/{ISO}_coarse_cache.parquet\`" \
           --base ${{ inputs.branch || 'master' }} \

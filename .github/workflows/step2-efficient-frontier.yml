@@ -1,11 +1,13 @@
-name: "Step 2: Efficient Frontier Filter"
+name: "Step 2: Efficient Frontier"
 
-# Extracts the Efficient Frontier (EF) from PFS.
-# Filters: existing gen utilization, procurement minimization, strict dominance removal.
-# ~21.4M → ~1.8M rows.
+# Two modes:
+#   1. ef-only — Extract Efficient Frontier from PFS (~21M → ~1.8M rows)
+#   2. expand-ef — Augment step3 feasible parquets with floor-compatible PFS mixes for Scenario A
+#   3. ef-then-expand — Run both sequentially
 #
-# Prerequisite: Step 1b (Build PFS) must have produced PFS parquets.
-# Output: data/step2-ef-parquets/
+# Prerequisite (EF): Step 1b PFS parquets
+# Prerequisite (Expand): Steps 1 + 3 must have run first
+# Output: data/step2-ef-parquets/, data/step3-cost-opt-parquets/step3_feasible_*.parquet
 
 on:
   workflow_dispatch:
@@ -24,6 +26,28 @@ on:
           - NEISO
           - MISO
           - SPP
+      script:
+        description: 'What to run'
+        required: true
+        default: 'ef-only'
+        type: choice
+        options:
+          - ef-only
+          - expand-ef
+          - ef-then-expand
+      target_mixes:
+        description: 'Target floor mixes per threshold (expand-ef only)'
+        required: false
+        default: '200'
+        type: string
+      dry_run:
+        description: 'Dry run for expand-ef (simulate only, no parquet changes)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
       branch:
         description: 'Branch to checkout'
         required: false
@@ -36,7 +60,7 @@ env:
 jobs:
   run-step2:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     permissions:
       contents: write
@@ -52,11 +76,28 @@ jobs:
       - name: Create output branch
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
+          SCRIPT_LABEL="${{ inputs.script }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${{ inputs.iso }}"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify PFS parquets exist
+        if: ${{ inputs.script == 'ef-only' || inputs.script == 'ef-then-expand' }}
+        run: |
+          if [ ! -d "data/step1-pfs-parquets" ] || ! ls data/step1-pfs-parquets/*_raw_pfs.parquet >/dev/null 2>&1; then
+            echo "ERROR: PFS parquets not found. Run Step 1b first."
+            exit 1
+          fi
+
+      - name: Verify upstream data for expand-ef
+        if: ${{ inputs.script == 'expand-ef' || inputs.script == 'ef-then-expand' }}
+        run: |
+          if [ ! -d "data/step1-pfs-parquets" ] || ! ls data/step1-pfs-parquets/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: PFS parquets not found. Run Step 1 first."
+            exit 1
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -64,10 +105,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install numpy pyarrow
-
-      - name: Ensure output directory
-        run: mkdir -p data/step2-ef-parquets
+        run: pip install numpy numba pyarrow pandas scipy
 
       - name: Build ISO arguments
         id: iso-args
@@ -78,20 +116,58 @@ jobs:
             echo "iso_flags=--iso ${{ inputs.iso }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Ensure output directories
+        run: |
+          mkdir -p data/step2-ef-parquets
+          mkdir -p data/step3-cost-opt-parquets
+
+      # ════════════════════════════════════════════════════════════════════
+      # Efficient Frontier filter
+      # ════════════════════════════════════════════════════════════════════
+
       - name: "Run Efficient Frontier filter"
+        if: ${{ inputs.script == 'ef-only' || inputs.script == 'ef-then-expand' }}
         timeout-minutes: 90
         run: python scripts/step2_efficient_frontier.py ${{ steps.iso-args.outputs.iso_flags }}
 
+      # ════════════════════════════════════════════════════════════════════
+      # Expand EF with floor-compatible PFS mixes (for Scenario A)
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: Build expand-ef CLI arguments
+        if: ${{ inputs.script == 'expand-ef' || inputs.script == 'ef-then-expand' }}
+        id: expand-args
+        run: |
+          ARGS=""
+          if [ "${{ inputs.iso }}" != "ALL" ]; then
+            ARGS="$ARGS --iso ${{ inputs.iso }}"
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          TARGET="${{ inputs.target_mixes }}"
+          if [ -n "$TARGET" ] && [ "$TARGET" != "200" ]; then
+            ARGS="$ARGS --target-mixes $TARGET"
+          fi
+          echo "cli_args=$ARGS" >> "$GITHUB_OUTPUT"
+
+      - name: "Expand EF with floor-compatible PFS mixes"
+        if: ${{ inputs.script == 'expand-ef' || inputs.script == 'ef-then-expand' }}
+        timeout-minutes: 90
+        run: python scripts/step2_5_expand_ef_for_floors.py ${{ steps.expand-args.outputs.cli_args }}
+
       - name: Commit and push
         run: |
-          git add -f data/step2-ef-parquets/
+          git add -f data/step2-ef-parquets/ 2>/dev/null || true
+          git add -f data/step3-cost-opt-parquets/step3_feasible_*.parquet 2>/dev/null || true
+          git add -f data/step5-post-processing/ef_expansion_log.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
-          git commit -m "Step 2 EF: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 2 EF: ${{ inputs.script }} ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
@@ -112,10 +188,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh pr create \
-            --title "Step 2 EF: ${{ inputs.iso }}" \
+            --title "Step 2 EF: ${{ inputs.script }} ${{ inputs.iso }}" \
             --body "## Summary
-          - Efficient Frontier filter for **${{ inputs.iso }}**
-          - Filters PFS (~21M) down to EF (~1.8M rows)
-          - Output: \`data/step2-ef-parquets/\`" \
+          - Efficient Frontier operations (${{ inputs.script }}) for **${{ inputs.iso }}**
+          - **ef-only**: Filters PFS (~21M) down to EF (~1.8M rows)
+          - **expand-ef**: Augments step3 feasible parquets with floor-compatible PFS mixes
+          - **ef-then-expand**: Runs both sequentially
+          - Output: \`data/step2-ef-parquets/\`, \`data/step3-cost-opt-parquets/\`" \
             --base ${{ inputs.branch || 'master' }} \
             --head "$TARGET_BRANCH" || echo "PR creation skipped"
