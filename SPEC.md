@@ -36,11 +36,24 @@
 
 - [x] PPA pricing model: Percentage premium (LCOE × (1 + pct)) — VRE 5/12/22%, Firm 12/22/38%, Uprate 10/20/35%
 
+**Completed (LMP Infrastructure — Feb 28):**
+- [x] Extend LMP model to all 7 ISOs: MISO + SPP price models added to `step6_compute_lmp_prices.py`
+- [x] Calibration targets for all 7 ISOs in `calibrate_lmp_model.py` (2024 SOM data)
+- [x] Extend `step0_fetch_lmp_2025.py` to support `--year 2024` and MISO/SPP
+- [x] GitHub Actions workflows: `fetch-actual-lmp.yml` + `run-lmp-calibration.yml`
+
+**Completed (Step 6.5 Compute Scripts — Feb 28):**
+- [x] `step6_5_procurement_utils.py` — Shared utilities (SSS allocation, EAC pricing, LMP feedback, PPA premiums, learning curve, 25yr timeline)
+- [x] `step6_5_strategy1_consequential.py` — Strategies 1A/1B/1C (cross-regional consequential netting)
+- [x] `step6_5_strategy2_hourly.py` — Strategies 2A/2B/2C (hourly matching same-ISO)
+- [x] `step6_5_strategy3_annual.py` — Strategies 3A/3B/3C/3D (annual matching 2×2 matrix)
+- [x] GitHub Actions workflow: `run-procurement-strategies.yml` (quick/full mode, per-strategy or ALL)
+
 **Next steps:**
-- Build Step 6.5 scripts (strategy1/2/3 + procurement_utils)
-- Extend LMP model to all 7 ISOs (currently PJM-only)
-- Create GitHub Actions workflow for Step 6.5
-- Build interactive procurement comparison dashboard page
+- Run procurement strategy workflows via GitHub Actions to generate data
+- Run LMP calibration workflow for all 7 ISOs
+- Build interactive procurement comparison dashboard page (`procurement_comparison.html`)
+- Wire up `procurement-strategy-data.js` to dashboard charts
 
 ---
 
@@ -239,24 +252,45 @@ No "market clearing" between strategies — each strategy computed independently
 
 #### §15.14.6 LMP Wholesale Price Feedback (Card 5 — Selected: 5C)
 
-Full 8760-hour LMP model for **all 7 ISOs**. Extends existing `step6_compute_lmp_prices.py` (currently PJM-only) to all ISOs.
+Full 8760-hour LMP model for **all 7 ISOs**. All 7 ISOs now have calibrated price model classes.
 
-Implementation phases:
-1. PJM — already calibrated (v9, §LMP Module)
-2. ERCOT — ORDC pricing (VOLL × LOLP, $5K cap), no capacity market
-3. CAISO — RA procurement, negative pricing floor (-$60)
-4. NYISO — ICAP capacity market
-5. NEISO — FCM + winter gas premium ($13.13/MWh)
-6. MISO — PRA capacity market
-7. SPP — limited capacity market
+**Implementation status (Feb 28):**
+1. PJM — fully calibrated (v10, PJMPriceModel), target $34.7/MWh ✓
+2. ERCOT — ERCOTPriceModel, ORDC VOLL×LOLP $5K cap, target $26/MWh ✓
+3. CAISO — CAISOPriceModel, RA + duck curve -$60 floor, target $38/MWh ✓
+4. NYISO — NYISOPriceModel, ICAP + tight geography, target $42/MWh ✓
+5. NEISO — NEISOPriceModel, FCM + winter gas $13.13/MWh, target $39.5/MWh ✓
+6. MISO — MISOPriceModel, PRA, $3,500 VOLL, coal 35%, target $31/MWh ✓
+7. SPP — SPPPriceModel, limited capacity market, wind 37%, target $26/MWh ✓
+
+**Calibration data:** `calibrate_lmp_model.py` has `ISO_CALIBRATION_TARGETS` with 2024 SOM data for all ISOs. Sources: PJM IMM, Potomac Economics (MISO/NYISO), SPP MMU, ISO-NE EMM, CAISO DMM, ERCOT/Modo Energy.
+
+**Actual LMP fetching:** `step0_fetch_lmp_2025.py` extended to support `--year 2024` and all 7 ISOs (MISO + SPP added via gridstatus). GitHub Actions workflow: `fetch-actual-lmp.yml`.
+
+**Wholesale price degradation analysis (Decided Feb 28):**
+- Run LMP model for all 7 ISOs at all 15 thresholds to produce price degradation curves
+- Key output: avg LMP vs clean energy threshold (50%→99.99%) showing merit-order price depression
+- Correlation with clean penetration demonstrates cannibalization effect
+- Data feeds into both the wholesale price dashboard page AND the procurement strategy comparison
+- Price degradation directly affects procurement cost: as more buyers adopt hourly matching, wholesale prices fall, making EACs relatively more expensive (the "stranding" effect documented in §15.11)
 
 Each ISO requires calibration against actual LMP data. ISO-specific price formation rules from §Decision 6 (LMP Module) apply.
 
-#### §15.14.7 SBTi Timeline Integration (Card 6 — Selected: 6D)
+#### §15.14.7 SBTi Timeline + 25-Year Demand Growth (Card 6 — Selected: 6D, Extended Feb 28)
 
 Default to SBTi milestone mapping (2030→50%, 2035→70%, 2040→90%, 2050→≥99.99%) with manual override slider for custom targets.
 
 Uses existing constants from `step7_generate_shared_data.py` SBTI_MILESTONES.
+
+**25-Year Demand Growth Dimension (Decided Feb 28):**
+The procurement strategy page is built on the **25-year demand growth trajectory / SBTi timeline** already computed by the optimizer:
+- Existing demand growth sweep: 25 years × 3 growth rates (L/M/H) per ISO (from Step 3)
+- Each year maps to an SBTi milestone CFE target → determines how much clean procurement is needed
+- Procurement cost trajectory: for each strategy, compute annual cost over 25 years as the CFE target ratchets up along the SBTi curve
+- Strategy comparison becomes: "what is the total cost of getting from today's procurement to 99.99% by 2050, under each strategy?"
+- Demand growth interacts with EAC scarcity (higher demand = more competition for same EAC supply = higher prices)
+- Learning curve effects compound over the timeline (early adoption at FOAK → late adoption at NOAK)
+- Key visualization: cumulative cost envelope (25 years × 10 strategies × L/M/H demand growth) showing when each strategy becomes optimal
 
 #### §15.14.8 Output Format (Card 7 — Selected: 7B)
 
@@ -883,10 +917,18 @@ Step 4 → dispatch cache → CO2/MAC/LMP/compressed day (read from cache, run i
 - Checkpoint: `data/track_checkpoint.json` (partial results)
 - Parquet export: `dashboard/track_scenarios.parquet` (CAISO only)
 
+**All-ISO Price Models (Added Feb 28):**
+- All 7 ISOs now have calibrated price model classes (PJMPriceModel through SPPPriceModel)
+- GAF (Gas Availability Factor) added for MISO (0.83) and SPP (0.84)
+- `calibrate_lmp_model.py` updated with ISO_CALIBRATION_TARGETS for all 7 ISOs
+- `--iso ALL` support in both `step6_compute_lmp_prices.py` and `calibrate_lmp_model.py`
+- 2024 SOM calibration targets (avg LMP, percentiles, negative hours, scarcity):
+  - SPP: $26/MWh (cheapest), ERCOT: $26, MISO: $31, PJM: $34.7, CAISO: $38, NEISO: $39.5, NYISO: $42
+
 **Next Steps:**
-- Finish track sweep (ERCOT + PJM + NYISO + NEISO)
-- Run LMP model on full PJM ECF scenarios (all thresholds × fuel sensitivities)
-- Optional: fetch PJM hourly LMP data from Data Miner 2 for distribution matching
+- Fetch actual 2024 EIA hourly data for all ISOs and run calibration validation
+- Tune demand-quantile parameters per ISO to match actual LMP distributions
+- Run LMP model on full all-ISO ECF scenarios (all thresholds × fuel sensitivities)
 
 ### LMP Price Calculation & Existing vs New-Build Analysis (Feb 20, 2026)
 

@@ -170,6 +170,8 @@ GAS_AVAILABILITY_FACTOR = {
     'PJM':   0.82,  # 18% deration — PJM ELCC data, Winter Storm Elliott
     'NYISO': 0.82,  # 18% deration — pipeline constraints, winter gas
     'NEISO': 0.85,  # 15% deration — mechanical + weather (pipeline separate)
+    'MISO':  0.83,  # 17% deration — extreme weather (Winter Storm Heather 2024), large footprint
+    'SPP':   0.84,  # 16% deration — weather exposure similar to ERCOT/MISO, less pipeline-constrained
 }
 
 
@@ -598,6 +600,74 @@ class NEISOPriceModel(PriceModel):
         return lmp, marginal_unit
 
 
+class MISOPriceModel(PriceModel):
+    """MISO: PRA capacity market, coal-heavy fleet, significant wind congestion.
+
+    MISO 2024 SOM (Potomac Economics): avg RT LMP ~$31/MWh, 14% decrease from 2023.
+    VOLL: $3,500/MWh (2024), approved increase to $10,000 effective Sept 2025.
+    ORDC upper bound proposed at $6,000/MWh.
+    PRA capacity: $30/MW-day (summer 2024), Zone 5 outlier $719.81.
+    Coal: 35% of fossil fleet (highest among ISOs with PJM at 29%).
+    Wind: ~14.5% of generation, drives ~40% of real-time congestion.
+    """
+
+    def __init__(self, fuel_level='Medium'):
+        super().__init__('MISO', fuel_level)
+        self.scarcity_cap = 3500.0     # 2024 VOLL (pre-$10K increase)
+        self.floor_price = -30.0       # moderate negative pricing
+        self.surplus_decay = 0.018     # wind-driven surplus, moderate
+        self.scarcity_threshold = 0.05  # moderate reserves, PRA provides some cushion
+
+        # MISO: coal-heavy → flatter merit order with less gas CT premium
+        # Wind congestion drives locational price divergence
+        # Calibration target: avg $31/MWh
+        self.dq_high_percentile = 78
+        self.dq_high_max_adder = 45.0    # less than PJM (less congestion on aggregate)
+        self.dq_high_exponent = 2.0
+        self.dq_scarcity_percentile = 96
+        self.dq_scarcity_max = 350.0     # PRA dampens extremes, but VOLL lower than PJM cap
+        self.dq_low_percentile = 12      # wind surplus, but less than SPP
+        self.dq_low_floor = -30.0
+        self.dq_low_exponent = 1.5
+        # Mid-low compression: coal baseload pricing overnight
+        self.dq_midlow_percentile = 65
+        self.dq_midlow_discount = 0.45
+
+
+class SPPPriceModel(PriceModel):
+    """SPP: Limited capacity market, cheapest US wholesale market, extreme wind.
+
+    SPP 2024 SOM (SPP MMU): avg RT LMP $26.18/MWh, down 4% from 2023.
+    Wind: 37.1% of generation (~34.6 GW nameplate), drives massive negative pricing.
+    Wind markups: avg -$37.99/MWh in 2024.
+    Very limited capacity market — closer to energy-only than capacity-market ISOs.
+    Gas prices very low in footprint ($1.65/MMBtu summer 2024).
+    Cheapest wholesale electricity market in the US.
+    """
+
+    def __init__(self, fuel_level='Medium'):
+        super().__init__('SPP', fuel_level)
+        self.scarcity_cap = 3500.0     # SPP uses similar VOLL to MISO
+        self.floor_price = -40.0       # deeper negative prices than MISO (more wind surplus)
+        self.surplus_decay = 0.025     # steep negative pricing from wind over-generation
+        self.scarcity_threshold = 0.06  # limited capacity market → slightly tighter
+
+        # SPP: cheapest market — low gas, massive wind, significant negative pricing
+        # Wind markups avg -$38/MWh indicates persistent negative intervals
+        # Calibration target: avg $26/MWh
+        self.dq_high_percentile = 80
+        self.dq_high_max_adder = 40.0    # low congestion in aggregate (flat geography)
+        self.dq_high_exponent = 2.0
+        self.dq_scarcity_percentile = 97  # rare scarcity
+        self.dq_scarcity_max = 300.0      # limited capacity market, less scarcity pricing
+        self.dq_low_percentile = 18       # highest wind penetration → many surplus hours
+        self.dq_low_floor = -40.0         # deeper than MISO, shallower than ERCOT/CAISO
+        self.dq_low_exponent = 1.8        # steeper curve — wind surplus drives strong neg pricing
+        # Mid-low compression: persistent cheap pricing from baseload + wind
+        self.dq_midlow_percentile = 70
+        self.dq_midlow_discount = 0.50
+
+
 def _hour_to_month(hour):
     """Convert hour-of-year (0-8759) to month (1-12)."""
     month_hours = [744, 672, 744, 720, 744, 720, 744, 744, 720, 744, 720, 744]
@@ -617,6 +687,8 @@ def get_price_model(iso, fuel_level='Medium'):
         'CAISO': CAISOPriceModel,
         'NYISO': NYISOPriceModel,
         'NEISO': NEISOPriceModel,
+        'MISO': MISOPriceModel,
+        'SPP': SPPPriceModel,
     }
     cls = models.get(iso, PriceModel)
     return cls(fuel_level)
@@ -1289,8 +1361,13 @@ def main():
     print("  LMP PRICE CALCULATION MODULE")
     print("=" * 70)
 
-    # LMP calculations are PJM-only (calibrated against PJM SOM data)
-    isos_to_run = [args.iso] if args.iso else ['PJM']
+    # All 7 ISOs now have calibrated price models (PJM, ERCOT, CAISO, NYISO, NEISO, MISO, SPP)
+    if args.iso == 'ALL':
+        isos_to_run = ISOS
+    elif args.iso:
+        isos_to_run = [args.iso]
+    else:
+        isos_to_run = ['PJM']  # default to PJM for backward compatibility
     fuel_levels = [args.fuel_level] if args.fuel_level else ['Low', 'Medium', 'High']
 
     demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
