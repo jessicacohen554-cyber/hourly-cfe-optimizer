@@ -502,17 +502,17 @@ class ERCOTPriceModel(PriceModel):
         # 2024 was mild: solar+storage entry reduced shortage pricing dramatically
         # Modo Energy 2024: avg RT ~$26/MWh, down from $63 in 2023
         # Key: ERCOT is energy-only → higher volatility than capacity markets
-        self.dq_high_percentile = 80     # v11.1: 82→80
-        self.dq_high_max_adder = 30.0
+        self.dq_high_percentile = 80
+        self.dq_high_max_adder = 28.0
         self.dq_high_exponent = 2.0
-        self.dq_scarcity_percentile = 97.5 # v11.1: 99→97.5, need ~80 scarcity hrs
-        self.dq_scarcity_max = 350.0     # v11.1: 200→350, energy-only needs tail
-        self.dq_low_percentile = 15      # v11.1: 18→15, target ~400 neg hrs
-        self.dq_low_floor = -40.0        # v11.1: -35→-40, deeper for P10 target $5
+        self.dq_scarcity_percentile = 98.5
+        self.dq_scarcity_max = 220.0
+        self.dq_low_percentile = 12      # v11.3: 14→12, reduce neg hrs 517→~400
+        self.dq_low_floor = -50.0        # v11.3: -45→-50, push P10 toward $5
         self.dq_low_exponent = 1.5
         # Mid-low compression: cheap overnight wind+baseload
-        self.dq_midlow_percentile = 70
-        self.dq_midlow_discount = 0.65   # v11.1: 0.60→0.65, P50 target $22
+        self.dq_midlow_percentile = 72
+        self.dq_midlow_discount = 0.70
 
     def _scarcity_adder(self, reserve_ratio, demand_mw):
         """ERCOT ORDC: smooth exponential adder, not a hard cap."""
@@ -539,17 +539,17 @@ class CAISOPriceModel(PriceModel):
         # CAISO demand-quantile calibration (v11.1 — SOM iterative calibration)
         # CAISO DMM 2024: avg ~$38, huge solar surplus midday, evening ramp premium
         # CAISO has largest peak/offpeak spread of any ISO (duck curve)
-        self.dq_high_percentile = 78     # v11.1: 80→78, evening ramp needs stronger adder
-        self.dq_high_max_adder = 75.0    # v11.1: 55→75, need peak $38→$55
+        self.dq_high_percentile = 72     # v11.2: 78→72, need P75→$50 (more hours get adder)
+        self.dq_high_max_adder = 80.0    # v11.2: 75→80, target peak $55
         self.dq_high_exponent = 2.0
-        self.dq_scarcity_percentile = 97.5 # v11.1: 99→97.5, need ~60 scarcity
-        self.dq_scarcity_max = 280.0     # v11.1: 120→280, evening ramp scarcity
+        self.dq_scarcity_percentile = 99 # v11.2: 97.5→99, reduce scarcity 146→~60
+        self.dq_scarcity_max = 160.0     # v11.2: 280→160
         self.dq_low_percentile = 15
-        self.dq_low_floor = -50.0        # v11.1: -55→-50
+        self.dq_low_floor = -50.0
         self.dq_low_exponent = 1.5
         # Mid-low: solar midday compression — P25 target $12
         self.dq_midlow_percentile = 65
-        self.dq_midlow_discount = 0.52   # v11.1: 0.65→0.52, was overcorrected
+        self.dq_midlow_discount = 0.52
 
 
 class NYISOPriceModel(PriceModel):
@@ -564,17 +564,17 @@ class NYISOPriceModel(PriceModel):
 
         # NYISO demand-quantile calibration (v11.1 — SOM iterative calibration)
         # Potomac Economics 2024: avg $42, tight geography → congestion, ICAP dampens
-        self.dq_high_percentile = 76     # v11.1: 78→76, need peak $43→$52
-        self.dq_high_max_adder = 55.0    # v11.1: 40→55, tight geography congestion
+        self.dq_high_percentile = 76
+        self.dq_high_max_adder = 50.0    # v11.2: 55→50
         self.dq_high_exponent = 2.0
-        self.dq_scarcity_percentile = 97.5  # v11.1: 99→97.5, need ~70 scarcity
-        self.dq_scarcity_max = 250.0     # v11.1: 120→250, tight geography premium
+        self.dq_scarcity_percentile = 98.5  # v11.2: 97.5→98.5, reduce scarcity 132→~70
+        self.dq_scarcity_max = 160.0     # v11.2: 250→160
         self.dq_low_percentile = 7
         self.dq_low_floor = -20.0
         self.dq_low_exponent = 1.5
         # Mid-low compression: overnight baseload
-        self.dq_midlow_percentile = 65
-        self.dq_midlow_discount = 0.30   # v11.1: 0.40→0.30, was overcorrected
+        self.dq_midlow_percentile = 68   # v11.2: 65→68
+        self.dq_midlow_discount = 0.45   # v11.2: 0.30→0.45, target P10 $18
 
 
 class NEISOPriceModel(PriceModel):
@@ -585,7 +585,7 @@ class NEISOPriceModel(PriceModel):
 
     def __init__(self, fuel_level='Medium'):
         super().__init__('NEISO', fuel_level)
-        self.scarcity_cap = 800.0          # v11.1: 2000→800, FCM + imports cap scarcity
+        self.scarcity_cap = 400.0          # v11.2: 800→400, FCM + 4GW imports cap scarcity
         self.floor_price = -25.0
         self.surplus_decay = 0.008         # v11: 0.012→0.008, reduce neg hrs 314→~180
         self.scarcity_threshold = 0.02     # v11.1: 0.03→0.02, imports + FCM provide reserves
@@ -641,17 +641,17 @@ class MISOPriceModel(PriceModel):
         # MISO demand-quantile calibration (v11 — SOM iterative calibration)
         # Potomac Economics 2024: avg RT $31/MWh, 14% decrease from 2023
         # Coal-heavy fleet (35%), wind congestion drives ~40% of RT congestion
-        self.dq_high_percentile = 78     # v11.1: 80→78, need peak $31→$38
-        self.dq_high_max_adder = 32.0    # v11.1: 22→32, boost peak avg
+        self.dq_high_percentile = 76
+        self.dq_high_max_adder = 38.0
         self.dq_high_exponent = 2.0
-        self.dq_scarcity_percentile = 98 # v11.1: 99→98, need ~50 scarcity hrs
-        self.dq_scarcity_max = 130.0     # v11.1: 80→130
-        self.dq_low_percentile = 12      # v11.1: 14→12, reduce neg hrs 400→~300
+        self.dq_scarcity_percentile = 97.5
+        self.dq_scarcity_max = 140.0     # v11.3: 160→140, scarcity 64→~50
+        self.dq_low_percentile = 12
         self.dq_low_floor = -30.0
         self.dq_low_exponent = 1.5
-        # Mid-low compression: coal baseload pricing overnight
-        self.dq_midlow_percentile = 68
-        self.dq_midlow_discount = 0.60   # v11.1: 0.55→0.60, deeper offpeak
+        # Mid-low compression: coal baseload + wind off-peak
+        self.dq_midlow_percentile = 72   # v11.3: 68→72, wider band
+        self.dq_midlow_discount = 0.70   # v11.3: 0.65→0.70, deeper offpeak ($32→$25)
 
 
 class SPPPriceModel(PriceModel):
@@ -676,17 +676,17 @@ class SPPPriceModel(PriceModel):
         # SPP MMU 2024: avg RT $26.18, cheapest US market
         # Wind 37.1% of generation, markups avg -$38/MWh
         # Very low gas prices ($1.65/MMBtu summer 2024), flat geography = low congestion
-        self.dq_high_percentile = 78     # v11.1: 82→78, boost peak $26→$33
-        self.dq_high_max_adder = 32.0    # v11.1: 18→32, need peak premium
+        self.dq_high_percentile = 76
+        self.dq_high_max_adder = 38.0
         self.dq_high_exponent = 2.0
-        self.dq_scarcity_percentile = 98.5  # v11.1: 99.5→98.5, need ~30 scarcity
-        self.dq_scarcity_max = 120.0     # v11.1: 60→120, moderate scarcity pricing
-        self.dq_low_percentile = 22      # v11.1: 20→22, more low-price hours for P10
+        self.dq_scarcity_percentile = 98    # v11.3: 97.5→98, scarcity 49→~30
+        self.dq_scarcity_max = 130.0     # v11.3: 160→130
+        self.dq_low_percentile = 22
         self.dq_low_floor = -30.0
         self.dq_low_exponent = 1.8
-        # Mid-low compression: persistent cheap pricing from baseload + wind
-        self.dq_midlow_percentile = 72
-        self.dq_midlow_discount = 0.68   # v11.1: 0.62→0.68, deeper offpeak
+        # Mid-low compression: massive wind makes off-peak very cheap
+        self.dq_midlow_percentile = 75   # v11.3: 72→75, wider band
+        self.dq_midlow_discount = 0.75   # v11.3: 0.72→0.75, deeper offpeak ($30→$20)
 
 
 def _hour_to_month(hour):
@@ -929,6 +929,27 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             # Gentle linear discount
             discount = midlow_discount * midlow_position
             hourly_lmp[midlow_mask] *= (1.0 - discount)
+
+    # --- CLEAN SURPLUS MERIT-ORDER EFFECT (v11.3) ---
+    # For high-renewable ISOs, hours with significant clean surplus get
+    # additional price depression even if total demand is moderate.
+    # This captures the merit-order effect of zero-marginal-cost renewables
+    # displacing fossil from the supply stack. Without this, the demand-quantile
+    # layer misses midday solar surplus in CAISO (P10 target -$5, P25 target $12)
+    # and overnight wind surplus in SPP/ERCOT (P10 targets $5-8).
+    if surplus_mw.max() > 0:
+        surplus_ratio = surplus_mw / (demand_mw_profile + 1)
+        surplus_thresh = 0.03  # >3% surplus triggers depression
+        surplus_active = surplus_ratio > surplus_thresh
+        if surplus_active.any():
+            # Scale: 3% surplus → mild effect, 20%+ → strong effect
+            surplus_factor = np.clip((surplus_ratio[surplus_active] - surplus_thresh) * 8, 0, 1)
+            current = hourly_lmp[surplus_active]
+            floor = price_model.dq_low_floor
+            # Depress toward floor: stronger with more surplus
+            depressed = current * (1 - surplus_factor * 0.6) + floor * surplus_factor * 0.6
+            # Only depress, never increase
+            hourly_lmp[surplus_active] = np.minimum(current, depressed)
 
     # NEISO winter gas adder — demand-dependent (v11.1)
     # Pipeline constraint only bites during peak winter hours (cold snaps),
