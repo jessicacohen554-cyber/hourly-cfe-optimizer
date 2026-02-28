@@ -461,6 +461,52 @@ body {
 .narrative-prose p { margin-bottom: 14px; }
 .narrative-prose strong { color: var(--navy); }
 
+/* ========== CFE PROGRESS TILES ========== */
+.iso-cfe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+}
+.cfe-tile {
+    background: var(--light-bg);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: all 0.4s;
+}
+.cfe-tile.positive { border-color: rgba(34,197,94,0.3); }
+.cfe-tile.zero { border-color: rgba(156,163,175,0.2); }
+.cfe-tile .cfe-iso {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.cfe-tile .cfe-delta {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+.cfe-tile .cfe-delta.up { color: #16A34A; }
+.cfe-tile .cfe-delta.flat { color: #9CA3AF; }
+.cfe-tile .cfe-range {
+    font-size: 0.72rem;
+    color: #6B7280;
+    margin-top: 4px;
+    line-height: 1.3;
+}
+.cfe-tile .cfe-gas {
+    font-size: 0.7rem;
+    color: #9CA3AF;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+.cfe-tile .cfe-gas strong { color: var(--navy); }
+
 /* ========== FADE-IN ANIMATION ========== */
 .fade-in {
     opacity: 0;
@@ -492,7 +538,8 @@ body {
     .strategy-framework { grid-template-columns: 1fr; }
     .baseline-row { grid-template-columns: 1fr; }
     .baseline-card .bl-value { font-size: 1.6rem; }
-    .dual-chart-row { grid-template-columns: 1fr; }
+    .iso-cfe-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .cfe-tile .cfe-delta { font-size: 1.2rem; }
     .part-pill { padding: 6px 14px; font-size: 0.8rem; }
 }
 @media (max-width: 480px) {
@@ -821,9 +868,10 @@ body {
     </div>
 
     <p style="font-size:0.88rem;color:#6B7280;margin:0;">
-        <strong>Fossil-average</strong> (1B) attributes emissions only from the fossil fleet &mdash; the
-        actual source of carbon. <strong>Grid-average</strong> (1A) dilutes emissions across all
-        generation, setting a lower bar that understates the real fossil impact.
+        <strong>Fossil-average</strong> (1B) computes emissions from the fossil fleet only, dispatched
+        against <strong>2045 demand</strong> (with regional growth) on top of the existing clean energy
+        floor. This captures the actual CO&#8322; the corporate load is responsible for displacing.
+        <strong>Grid-average</strong> (1A) dilutes emissions across all generation, setting a lower bar.
         Click a card to set the target for the simulation below.
     </p>
 </div>
@@ -889,19 +937,11 @@ body {
         </div>
     </div>
 
-    <!-- Dual charts: Resources + Capital Flows -->
-    <div class="dual-chart-row">
-        <div class="chart-panel">
-            <h4>Clean Energy Deployed by Resource Type</h4>
-            <div class="chart-wrap" style="min-height:300px;">
-                <canvas id="resourceChart"></canvas>
-            </div>
-        </div>
-        <div class="chart-panel">
-            <h4>Where Capital Flows &mdash; TWh by ISO</h4>
-            <div class="chart-wrap" style="min-height:300px;">
-                <canvas id="capitalFlowsChart"></canvas>
-            </div>
+    <!-- Stacked bar chart: Clean Energy by ISO with existing floor -->
+    <div class="chart-panel" style="margin:16px 0;">
+        <h4>Clean Energy Deployed by ISO &mdash; Existing Floor + New Resources</h4>
+        <div class="chart-wrap" style="min-height:380px;">
+            <canvas id="resourceByISOChart"></canvas>
         </div>
     </div>
 
@@ -909,6 +949,20 @@ body {
     <div class="deploy-log" id="deployLog">
         <div class="log-entry" style="color:#9CA3AF;font-style:italic;">Select a participation level and press Play&hellip;</div>
     </div>
+</div>
+
+<!-- CFE PROGRESS TILES + GAS CAPACITY (below simulation) -->
+<div class="sim-panel fade-in" id="cfeTilesPanel">
+    <h3>Grid Impact: How Much Cleaner Does Each ISO Get?</h3>
+    <p style="margin-bottom:16px;">
+        With full consequential deployment, some ISOs see dramatic shifts in hourly CFE.
+        Others &mdash; particularly those already expensive or gas-heavy &mdash; see little change
+        until late in the queue.
+    </p>
+    <div class="iso-cfe-grid" id="cfeTileGrid"></div>
+
+    <!-- First deployment callout -->
+    <div class="insight-box blue" id="firstDeployCallout" style="margin-top:20px;"></div>
 </div>
 
 <!-- 1A vs 1B COMPARISON -->
@@ -1039,6 +1093,7 @@ body {
 <script>
 // ====================================================================
 // PROCUREMENT STRATEGIES PAGE — REDESIGNED CONSEQUENTIAL SIMULATION
+// Fossil-only 2045 baseline, stacked bar by ISO, growth-adjusted CO2
 // ====================================================================
 
 var ISOS = ['SPP', 'ERCOT', 'MISO', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
@@ -1048,13 +1103,13 @@ var ISO_COLORS = {
 };
 var RES_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
 var RES_COLORS = {
-    clean_firm: { bg: 'rgba(30,58,95,0.7)', border: '#1E3A5F' },
-    solar:      { bg: 'rgba(245,158,11,0.6)', border: '#F59E0B' },
-    wind:       { bg: 'rgba(34,197,94,0.6)', border: '#22C55E' },
-    ccs_ccgt:   { bg: 'rgba(6,182,212,0.6)', border: '#06B6D4' },
-    hydro:      { bg: 'rgba(56,189,248,0.5)', border: '#38BDF8' },
-    battery:    { bg: 'rgba(168,85,247,0.5)', border: '#A855F7' },
-    ldes:       { bg: 'rgba(236,72,153,0.5)', border: '#EC4899' }
+    clean_firm: { bg: 'rgba(30,58,95,0.85)', border: '#1E3A5F', existing: 'rgba(30,58,95,0.35)' },
+    solar:      { bg: 'rgba(245,158,11,0.8)', border: '#F59E0B', existing: 'rgba(245,158,11,0.3)' },
+    wind:       { bg: 'rgba(34,197,94,0.8)', border: '#22C55E', existing: 'rgba(34,197,94,0.3)' },
+    ccs_ccgt:   { bg: 'rgba(6,182,212,0.8)', border: '#06B6D4', existing: 'rgba(6,182,212,0.3)' },
+    hydro:      { bg: 'rgba(56,189,248,0.7)', border: '#38BDF8', existing: 'rgba(56,189,248,0.3)' },
+    battery:    { bg: 'rgba(168,85,247,0.7)', border: '#A855F7', existing: 'rgba(168,85,247,0.3)' },
+    ldes:       { bg: 'rgba(236,72,153,0.7)', border: '#EC4899', existing: 'rgba(236,72,153,0.3)' }
 };
 var RES_LABELS = {
     clean_firm: 'Nuclear / Clean Firm', solar: 'Solar', wind: 'Wind',
@@ -1071,30 +1126,27 @@ var simStep = 0;
 var selectedMethod = '1B';
 var selectedPct = 20;
 var co2Target = 0;
-var isoResourceState = {};     // current end_resource_twh per ISO
-var cumCleanTWhByISO = {};     // cumulative delta_clean_twh per ISO
-var resourceChart = null;
-var capitalFlowsChart = null;
+var cumNewResByISO = {};       // per-ISO cumulative NEW resources (positive deltas only)
+var resourceByISOChart = null;
 var co2CompareChart = null;
 var fuelDisplaceChart = null;
 var resourceByPartChart = null;
 
-var totalQueueSteps = Object.keys(CQ_DATA.deployment_queue).length;
+var totalQueueSteps = CQ_DATA.deployment_queue.length;
 
-// ---- Emission rate calculations ----
+// ---- Fossil-only baseline at 2045 demand ----
 function computeBaselines(pct) {
+    var fb = CQ_DATA.fossil_baselines_2045;
+    if (!fb) return { fossil: 0, grid: 0 };
     var fossil = 0, grid = 0;
     ISOS.forEach(function(iso) {
-        var ds = CQ_DATA.dispatch_stacks[iso];
-        if (!ds) return;
-        var totalEmissions = 0, totalFossilTWh = 0;
-        ds.fuels.forEach(function(f) {
-            totalEmissions += f.cap_twh * f.emission_rate;
-            totalFossilTWh += f.cap_twh;
-        });
-        var corpLoad = ds.demand_twh * (pct / 100);
-        fossil += corpLoad * (totalFossilTWh > 0 ? totalEmissions / totalFossilTWh : 0);
-        grid   += corpLoad * (ds.demand_twh > 0 ? totalEmissions / ds.demand_twh : 0);
+        var bl = fb[iso];
+        if (!bl) return;
+        fossil += bl.fossil_co2_mt * (pct / 100);
+        // Grid-average: dilute fossil CO2 across total demand
+        var gridRate = bl.fossil_co2_mt / bl.demand_2045_twh;
+        var corpLoad = bl.demand_2045_twh * (pct / 100);
+        grid += corpLoad * gridRate;
     });
     return { fossil: fossil, grid: grid };
 }
@@ -1112,10 +1164,10 @@ function updateBaselineDisplay() {
 
 // ---- Queue helpers ----
 function getQueueEntry(step) {
-    return CQ_DATA.deployment_queue[String(step)] || null;
+    return CQ_DATA.deployment_queue[step] || null;
 }
-function getCumulativeAt(step) {
-    return CQ_DATA.cumulative_deployment[String(step)] || null;
+function getGrowthCumulativeAt(step) {
+    return CQ_DATA.growth_adjusted_cumulative[step] || null;
 }
 
 // ---- Get strategy data at a participation level, year 2045 ----
@@ -1145,19 +1197,6 @@ function getStratData(stratKey, partKey) {
         result.byType[type] = (result.byType[type] || 0) + result.resources[k];
     }
     return result;
-}
-
-// ---- Compute current global resource state ----
-function getGlobalResources() {
-    var global = {};
-    RES_TYPES.forEach(function(r) { global[r] = 0; });
-    for (var iso in isoResourceState) {
-        var res = isoResourceState[iso];
-        for (var r in res) {
-            if (global.hasOwnProperty(r)) global[r] += res[r];
-        }
-    }
-    return global;
 }
 
 // ---- Animated counter ----
@@ -1238,138 +1277,112 @@ function addLogEntry(qe, step) {
     log.scrollTop = log.scrollHeight;
 }
 
-// ---- Resource chart (stacked bar — one bar per resource type) ----
-function updateResourceChart() {
-    var canvas = document.getElementById('resourceChart');
+// ---- Stacked bar chart by ISO with existing floor + new resources ----
+function updateResourceByISOChart() {
+    var canvas = document.getElementById('resourceByISOChart');
     if (!canvas) return;
 
-    var global = getGlobalResources();
-    var labels = [];
-    var data = [];
-    var bgColors = [];
-    var borderColors = [];
+    var ecf = CQ_DATA.existing_clean_floor;
+    // Build datasets: for each resource, two layers — existing (muted) + new (vivid)
+    var resOrder = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
+    var datasets = [];
 
-    RES_TYPES.forEach(function(r) {
-        var v = Math.max(0, global[r]);
-        if (v > 0.5 || r === 'clean_firm' || r === 'solar' || r === 'wind') {
-            labels.push(RES_LABELS[r] || r);
-            data.push(v);
-            bgColors.push(RES_COLORS[r].bg);
-            borderColors.push(RES_COLORS[r].border);
+    resOrder.forEach(function(res) {
+        // Existing floor layer
+        var existingData = ISOS.map(function(iso) {
+            if (!ecf || !ecf[iso]) return 0;
+            return ecf[iso].by_resource[res] || 0;
+        });
+        var hasExisting = existingData.some(function(v) { return v > 0.5; });
+
+        if (hasExisting) {
+            datasets.push({
+                label: (RES_LABELS[res] || res) + ' (existing)',
+                data: existingData,
+                backgroundColor: RES_COLORS[res].existing,
+                borderColor: RES_COLORS[res].border,
+                borderWidth: 0,
+                borderRadius: 0,
+                stack: 'stack0',
+            });
+        }
+
+        // New deployment layer (from queue, positive only)
+        var newData = ISOS.map(function(iso) {
+            if (!cumNewResByISO[iso]) return 0;
+            return Math.max(0, cumNewResByISO[iso][res] || 0);
+        });
+        var hasNew = newData.some(function(v) { return v > 0.5; });
+
+        if (hasNew || res === 'clean_firm' || res === 'solar' || res === 'wind') {
+            datasets.push({
+                label: (RES_LABELS[res] || res) + ' (new)',
+                data: newData,
+                backgroundColor: RES_COLORS[res].bg,
+                borderColor: RES_COLORS[res].border,
+                borderWidth: 1,
+                borderRadius: { topLeft: 3, topRight: 3 },
+                stack: 'stack0',
+            });
         }
     });
 
-    if (resourceChart) {
-        resourceChart.data.labels = labels;
-        resourceChart.data.datasets[0].data = data;
-        resourceChart.data.datasets[0].backgroundColor = bgColors;
-        resourceChart.data.datasets[0].borderColor = borderColors;
-        resourceChart.update('none');
+    if (resourceByISOChart) {
+        resourceByISOChart.data.datasets = datasets;
+        resourceByISOChart.update('none');
         return;
     }
 
-    resourceChart = new Chart(canvas, {
+    resourceByISOChart = new Chart(canvas, {
         type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'TWh Deployed',
-                data: data,
-                backgroundColor: bgColors,
-                borderColor: borderColors,
-                borderWidth: 2,
-                borderRadius: 6
-            }]
-        },
+        data: { labels: ISOS, datasets: datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            indexAxis: 'y',
             animation: { duration: 400 },
             plugins: {
-                legend: { display: false },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        font: { family: FONT, size: 11 },
+                        filter: function(item) {
+                            // Only show labels for datasets with data > 0
+                            return item.text.indexOf('(existing)') === -1 ||
+                                   item.text.indexOf('Clean Firm') >= 0 ||
+                                   item.text.indexOf('Solar') >= 0 ||
+                                   item.text.indexOf('Wind') >= 0;
+                        }
+                    }
+                },
                 tooltip: {
+                    mode: 'index',
                     callbacks: {
-                        label: function(ctx) { return ctx.parsed.x.toFixed(0) + ' TWh'; }
+                        label: function(ctx) {
+                            if (ctx.parsed.y < 0.5) return null;
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + ' TWh';
+                        }
                     }
                 }
             },
             scales: {
                 x: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Cumulative TWh Deployed',
-                        font: { family: FONT, size: 11, weight: 600 }
-                    },
-                    grid: { color: 'rgba(0,0,0,0.05)' }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: { font: { family: FONT, size: 12, weight: 700 } }
-                }
-            }
-        }
-    });
-}
-
-// ---- Capital flows chart (horizontal bar — one bar per ISO) ----
-function updateCapitalFlowsChart() {
-    var canvas = document.getElementById('capitalFlowsChart');
-    if (!canvas) return;
-
-    var data = ISOS.map(function(iso) { return Math.max(0, cumCleanTWhByISO[iso] || 0); });
-    var bgColors = ISOS.map(function(iso) { return (ISO_COLORS[iso] || '#999') + '88'; });
-    var borderColors = ISOS.map(function(iso) { return ISO_COLORS[iso] || '#999'; });
-
-    if (capitalFlowsChart) {
-        capitalFlowsChart.data.datasets[0].data = data;
-        capitalFlowsChart.update('none');
-        return;
-    }
-
-    capitalFlowsChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: ISOS,
-            datasets: [{
-                label: 'Clean TWh',
-                data: data,
-                backgroundColor: bgColors,
-                borderColor: borderColors,
-                borderWidth: 2,
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            animation: { duration: 400 },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) { return ctx.parsed.x.toFixed(0) + ' TWh new clean energy'; }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Cumulative New Clean TWh',
-                        font: { family: FONT, size: 11, weight: 600 }
-                    },
-                    grid: { color: 'rgba(0,0,0,0.05)' }
-                },
-                y: {
+                    stacked: true,
                     grid: { display: false },
                     ticks: {
                         font: { family: FONT, size: 12, weight: 700 },
                         color: function(ctx) { return ISO_COLORS[ISOS[ctx.index]] || '#374151'; }
                     }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Clean Energy (TWh) \u2014 Existing Floor + New Deployment',
+                        font: { family: FONT, size: 11, weight: 600 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
                 }
             }
         }
@@ -1384,21 +1397,26 @@ function runSimStep() {
     }
 
     var qe = getQueueEntry(simStep);
-    var cd = getCumulativeAt(simStep);
+    var cd = getGrowthCumulativeAt(simStep);
     if (!qe || !cd) { simStep++; return; }
 
-    // Update per-ISO resource state
-    if (qe.end_resource_twh) {
-        isoResourceState[qe.iso] = qe.end_resource_twh;
+    // Track cumulative NEW resources per ISO (positive deltas only)
+    if (qe.delta_resources) {
+        if (!cumNewResByISO[qe.iso]) {
+            cumNewResByISO[qe.iso] = {};
+            RES_TYPES.forEach(function(r) { cumNewResByISO[qe.iso][r] = 0; });
+        }
+        for (var r in qe.delta_resources) {
+            var delta = qe.delta_resources[r];
+            if (delta > 0) {
+                cumNewResByISO[qe.iso][r] = (cumNewResByISO[qe.iso][r] || 0) + delta;
+            }
+        }
     }
-
-    // Track cumulative clean TWh per ISO
-    cumCleanTWhByISO[qe.iso] = (cumCleanTWhByISO[qe.iso] || 0) + Math.max(0, qe.delta_clean_twh || 0);
 
     // Update visuals
     updateCounters(cd, qe);
-    updateResourceChart();
-    updateCapitalFlowsChart();
+    updateResourceByISOChart();
     addLogEntry(qe, simStep);
 
     simStep++;
@@ -1454,13 +1472,10 @@ function stopSim(reason) {
 function resetSim() {
     stopSim();
     simStep = 0;
-    isoResourceState = {};
-    cumCleanTWhByISO = {};
-    ISOS.forEach(function(iso) { cumCleanTWhByISO[iso] = 0; });
+    cumNewResByISO = {};
 
     updateCounters(null, null);
-    updateResourceChart();
-    updateCapitalFlowsChart();
+    updateResourceByISOChart();
 
     var fill = document.getElementById('co2Fill');
     var cur = document.getElementById('co2Current');
@@ -1568,28 +1583,35 @@ function initFuelDisplaceChart() {
     var canvas = document.getElementById('fuelDisplaceChart');
     if (!canvas) return;
 
-    var isos = ISOS;
+    // Use 2045 fossil baselines for the chart
+    var fb = CQ_DATA.fossil_baselines_2045;
     var coalData = [], oilData = [], gasData = [], wallLabels = [];
 
-    isos.forEach(function(iso) {
+    ISOS.forEach(function(iso) {
+        if (fb && fb[iso]) {
+            coalData.push(fb[iso].coal_twh);
+            oilData.push(fb[iso].oil_twh);
+            gasData.push(fb[iso].gas_twh);
+        } else {
+            var stack = CQ_DATA.dispatch_stacks[iso];
+            var coal = 0, oil = 0, gas = 0;
+            if (stack) stack.fuels.forEach(function(f) {
+                if (f.type === 'coal') coal = f.cap_twh;
+                if (f.type === 'oil') oil = f.cap_twh;
+                if (f.type === 'gas') gas = f.cap_twh;
+            });
+            coalData.push(coal);
+            oilData.push(oil);
+            gasData.push(gas);
+        }
         var stack = CQ_DATA.dispatch_stacks[iso];
-        if (!stack) return;
-        var coal = 0, oil = 0, gas = 0;
-        stack.fuels.forEach(function(f) {
-            if (f.type === 'coal') coal = f.cap_twh;
-            if (f.type === 'oil') oil = f.cap_twh;
-            if (f.type === 'gas') gas = f.cap_twh;
-        });
-        coalData.push(coal);
-        oilData.push(oil);
-        gasData.push(gas);
-        wallLabels.push(stack.coal_oil_retirement_threshold || '--');
+        wallLabels.push(stack ? (stack.coal_oil_retirement_threshold || '--') : '--');
     });
 
     fuelDisplaceChart = new Chart(canvas, {
         type: 'bar',
         data: {
-            labels: isos,
+            labels: ISOS,
             datasets: [
                 { label: 'Coal (TWh)', data: coalData, backgroundColor: 'rgba(55,65,81,0.7)', borderColor: '#374151', borderWidth: 1, borderRadius: 4 },
                 { label: 'Oil (TWh)', data: oilData, backgroundColor: 'rgba(180,83,9,0.5)', borderColor: '#B45309', borderWidth: 1, borderRadius: 4 },
@@ -1601,11 +1623,16 @@ function initFuelDisplaceChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: FONT, size: 12 } } },
-                tooltip: { callbacks: { afterBody: function(items) { return 'Coal wall at: ' + wallLabels[items[0].dataIndex] + '% CFE'; } } },
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(items) { return 'Coal wall at: ' + wallLabels[items[0].dataIndex] + '% CFE'; },
+                        label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + ' TWh'; }
+                    }
+                },
                 annotation: {
                     annotations: (function() {
                         var anns = {};
-                        isos.forEach(function(iso, i) {
+                        ISOS.forEach(function(iso, i) {
                             if (coalData[i] > 0) {
                                 anns['wall_' + iso] = {
                                     type: 'label', xValue: i, yValue: coalData[i] + oilData[i] + 8,
@@ -1620,7 +1647,15 @@ function initFuelDisplaceChart() {
             },
             scales: {
                 x: { stacked: true, grid: { display: false }, ticks: { font: { family: FONT, size: 12, weight: 700 } } },
-                y: { stacked: true, title: { display: true, text: 'Fossil Generation Capacity (TWh)', font: { family: FONT, size: 12, weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+                y: {
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Fossil Generation at 2045 Demand (TWh)',
+                        font: { family: FONT, size: 12, weight: 600 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
             }
         }
     });
@@ -1675,6 +1710,86 @@ function initResourceByPartChart() {
             }
         }
     });
+}
+
+// ---- Build CFE progress tiles ----
+function buildCFETiles() {
+    var grid = document.getElementById('cfeTileGrid');
+    if (!grid) return;
+
+    var cfeData = CQ_DATA.iso_cfe_progress;
+    if (!cfeData) return;
+
+    grid.innerHTML = '';
+    ISOS.forEach(function(iso) {
+        var d = cfeData[iso];
+        if (!d) return;
+        var delta = d.delta_cfe_pct;
+        var isPos = delta > 0.5;
+        var gasStart = d.new_gas_mw_at_start;
+        var gasEnd = d.new_gas_mw_at_end;
+        var newGas = Math.max(0, gasEnd - gasStart);
+        var gasReduced = Math.max(0, gasStart - gasEnd);
+
+        var tile = document.createElement('div');
+        tile.className = 'cfe-tile ' + (isPos ? 'positive' : 'zero');
+        tile.innerHTML =
+            '<div class="cfe-iso" style="color:' + (ISO_COLORS[iso] || '#1A2744') + '">' + iso + '</div>' +
+            '<div class="cfe-delta ' + (isPos ? 'up' : 'flat') + '">' +
+                (isPos ? '+' + delta.toFixed(0) + '%' : '+0%') +
+            '</div>' +
+            '<div class="cfe-range">' +
+                d.start_cfe_pct.toFixed(0) + '% \u2192 ' + d.end_cfe_pct.toFixed(0) + '% CFE' +
+            '</div>' +
+            '<div class="cfe-gas">' +
+                (gasReduced > 100
+                    ? '<strong style="color:#16A34A">\u2013' + (gasReduced/1000).toFixed(1) + ' GW gas</strong>'
+                    : (newGas > 100
+                        ? '<strong style="color:#D97706">+' + (newGas/1000).toFixed(1) + ' GW gas</strong>'
+                        : '<strong>' + (gasEnd/1000).toFixed(1) + ' GW gas</strong>')) +
+            '</div>';
+        grid.appendChild(tile);
+    });
+}
+
+// ---- Build first deployment callout ----
+function buildFirstDeployCallout() {
+    var el = document.getElementById('firstDeployCallout');
+    if (!el) return;
+
+    var fd = CQ_DATA.first_deployments;
+    if (!fd) { el.style.display = 'none'; return; }
+
+    var parts = [];
+    if (fd.first_clean_firm) {
+        var cf = fd.first_clean_firm;
+        parts.push('<strong>Clean firm capacity</strong> first enters the queue at step ' +
+            (cf.queue_position + 1) + ' in <strong>' + cf.iso + '</strong> ' +
+            '(' + cf.zone_label + ', by ' + cf.year_end + ') with ' +
+            cf.clean_firm_twh + ' TWh of new nuclear/clean firm generation.');
+    }
+    if (fd.first_battery) {
+        var bat = fd.first_battery;
+        parts.push('<strong>Battery storage</strong> first appears at step ' +
+            (bat.queue_position + 1) + ' in <strong>' + bat.iso + '</strong> ' +
+            '(' + bat.zone_label + ', by ' + bat.year_end + ').');
+    }
+    if (fd.first_ccs) {
+        var ccs = fd.first_ccs;
+        parts.push('<strong>CCS-CCGT</strong> enters at step ' +
+            (ccs.queue_position + 1) + ' in <strong>' + ccs.iso + '</strong> ' +
+            '(' + ccs.zone_label + ', by ' + ccs.year_end + ').');
+    }
+
+    if (parts.length === 0) {
+        el.style.display = 'none';
+        return;
+    }
+
+    el.innerHTML = '<h4>When Do Advanced Technologies Enter the Queue?</h4><p>' +
+        parts.join(' ') +
+        ' Until then, the queue is dominated by <strong>variable renewables</strong> (wind and solar) ' +
+        'deployed in the cheapest ISOs.</p>';
 }
 
 // ---- Wire up all controls ----
@@ -1751,13 +1866,15 @@ function init() {
     setupFadeIn();
     wireControls();
 
-    // Set initial baselines
+    // Set initial baselines (fossil-only at 2045 demand)
     updateBaselineDisplay();
 
-    // Initialize charts with zero state
-    ISOS.forEach(function(iso) { cumCleanTWhByISO[iso] = 0; });
-    updateResourceChart();
-    updateCapitalFlowsChart();
+    // Initialize stacked bar chart with zero new resources
+    updateResourceByISOChart();
+
+    // Build CFE tiles and first deployment callout
+    buildCFETiles();
+    buildFirstDeployCallout();
 
     // Initialize static charts
     try { initCO2CompareChart(); } catch(e) { console.warn('CO2 compare chart error:', e); }
