@@ -990,26 +990,159 @@ def _get_excess_lcoe(res, sens, iso, overrides):
     return 0
 
 
+# ============================================================================
+# PFS LOADER (for fallback when EF is empty after floor filter)
+# ============================================================================
+
+def _load_pfs_mixes(iso, threshold):
+    """Load PFS mixes for a single ISO/threshold from step1 parquets.
+
+    PFS has 4D grid: (clean_firm, solar, wind, hydro) + storage dispatch.
+    CCS is NOT a separate resource in PFS — it's part of clean_firm tranche
+    allocation computed during cost evaluation.
+
+    Returns list of v5.0-format mix vectors:
+        [cf%, sol%, wnd%, ccs%=0, hyd%, match%, bat4%, bat8%, ldes%, h2%]
+    """
+    t_str = str(int(threshold)) if threshold == int(threshold) else str(threshold)
+    pfs_path = Path(f'data/step1-pfs-parquets/{iso}_t{t_str}_raw_pfs.parquet')
+    if not pfs_path.exists():
+        return []
+
+    df = pd.read_parquet(pfs_path)
+    mixes = []
+    for _, row in df.iterrows():
+        mixes.append([
+            row.get('clean_firm', 0),
+            row.get('solar', 0),
+            row.get('wind', 0),
+            0,  # ccs_ccgt — not in PFS, allocated during cost eval
+            row.get('hydro', 0),
+            round(row.get('hourly_match_score', 0), 1),
+            row.get('battery_dispatch_pct', 0),
+            row.get('battery8_dispatch_pct', 0),
+            row.get('ldes_dispatch_pct', 0),
+            row.get('h2_dispatch_pct', 0),
+        ])
+    return mixes
+
+
+def _filter_mixes_by_floor(mixes, floor_twh, demand_twh, iso):
+    """Filter mixes to those meeting per-resource TWh floors.
+
+    Converts floor_twh (absolute) to floor_pct using the given demand_twh,
+    then filters mixes where each resource >= floor_pct.
+
+    Hydro floor is always capped at HYDRO_CAP_TWH[iso].
+
+    Returns list of mixes that pass the floor filter.
+    """
+    # Convert floor TWh to floor percentages at this demand level
+    floor_pct = {}
+    for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt']:
+        floor_pct[res] = floor_twh.get(res, 0) / demand_twh * 100.0 if demand_twh > 0 else 0
+    # Hydro: floor in TWh, but cap at physical limit
+    hydro_floor_twh = min(floor_twh.get('hydro', 0), HYDRO_CAP_TWH[iso])
+    floor_pct['hydro'] = hydro_floor_twh / demand_twh * 100.0 if demand_twh > 0 else 0
+    # Storage floors
+    floor_pct['battery'] = floor_twh.get('battery', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
+    floor_pct['ldes'] = floor_twh.get('ldes', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
+
+    passed = []
+    for mix in mixes:
+        # mix = [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]
+        cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
+        bat4, bat8, ldes = mix[6], mix[7], mix[8]
+
+        if cf < floor_pct['clean_firm'] - 0.01:
+            continue
+        if sol < floor_pct['solar'] - 0.01:
+            continue
+        if wnd < floor_pct['wind'] - 0.01:
+            continue
+        if ccs < floor_pct['ccs_ccgt'] - 0.01:
+            continue
+        # Hydro: cap the mix's hydro at physical limit before comparing
+        hyd_twh = min(hyd / 100.0 * demand_twh, HYDRO_CAP_TWH[iso])
+        if hyd_twh < hydro_floor_twh - 0.01:
+            continue
+        if (bat4 + bat8) < floor_pct['battery'] - 0.01:
+            continue
+        if ldes < floor_pct['ldes'] - 0.01:
+            continue
+        passed.append(mix)
+
+    return passed
+
+
+def _filter_pfs_by_floor_window(mixes, floor_twh, demand_twh, iso, max_pct_above=10.0):
+    """Filter PFS mixes within a search window above the per-resource floor.
+
+    For each resource: floor_pct <= mix_pct <= floor_pct + max_pct_above.
+    No upper bound on hydro (existing-only, physically capped).
+
+    Returns list of mixes within the window.
+    """
+    floor_pct = {}
+    for res in ['clean_firm', 'solar', 'wind']:
+        floor_pct[res] = floor_twh.get(res, 0) / demand_twh * 100.0 if demand_twh > 0 else 0
+    # CCS is 0 in PFS
+    floor_pct['ccs_ccgt'] = 0
+    # Hydro
+    hydro_floor_twh = min(floor_twh.get('hydro', 0), HYDRO_CAP_TWH[iso])
+    floor_pct['hydro'] = hydro_floor_twh / demand_twh * 100.0 if demand_twh > 0 else 0
+    # Storage
+    floor_pct['battery'] = floor_twh.get('battery', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
+    floor_pct['ldes'] = floor_twh.get('ldes', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
+
+    passed = []
+    for mix in mixes:
+        cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
+        bat4, bat8, ldes = mix[6], mix[7], mix[8]
+
+        # Per-resource: must be >= floor and <= floor + max_pct_above
+        if cf < floor_pct['clean_firm'] - 0.01 or cf > floor_pct['clean_firm'] + max_pct_above + 0.01:
+            continue
+        if sol < floor_pct['solar'] - 0.01 or sol > floor_pct['solar'] + max_pct_above + 0.01:
+            continue
+        if wnd < floor_pct['wind'] - 0.01 or wnd > floor_pct['wind'] + max_pct_above + 0.01:
+            continue
+        # Hydro: no upper bound (existing-only, capped by physical limit)
+        hyd_twh = min(hyd / 100.0 * demand_twh, HYDRO_CAP_TWH[iso])
+        if hyd_twh < hydro_floor_twh - 0.01:
+            continue
+        # Storage: >= floor, no tight upper bound in PFS
+        if (bat4 + bat8) < floor_pct['battery'] - 0.01:
+            continue
+        if ldes < floor_pct['ldes'] - 0.01:
+            continue
+        passed.append(mix)
+
+    return passed
+
+
 def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
-    """Core forward-stepping optimizer with floor ratchet.
+    """Core forward-stepping optimizer with per-resource TWh floor filter.
 
-    Evaluates ALL feasible EF mixes at each threshold under scenario-specific
-    cost assumptions. Selects the cheapest augmented effective cost. Floor
-    ratchets prevent un-building prior resource commitments.
-
-    This is the key function that produces DIFFERENT resource mixes for
-    Scenario A vs B — because different cost assumptions (via get_overrides_fn)
-    make different mixes optimal at each step.
+    Algorithm:
+      1. At each threshold, convert prior-step deployed TWh into a per-resource
+         floor percentage (floor_twh / next_demand_twh).
+      2. Filter EF mixes to only those meeting ALL per-resource floors.
+      3. Price filtered mixes under scenario cost assumptions.
+      4. Pick the cheapest that achieves the threshold.
+      5. If the floor eliminates all EF mixes, fall back to PFS:
+         a. First pass: floor to floor+10% per resource
+         b. Second pass: floor to floor+250% per resource (5% increments implicit in PFS grid)
+         c. If a PFS mix goes under on a resource, carry that resource's cost forward.
+      6. Update floor = max(prior_floor, deployed) for each resource.
 
     Args:
         feasible_mixes: from parse_feasible_mixes()
         sens: sensitivity toggle dict (defines base cost lookups)
         get_overrides_fn: fn(iso, threshold) → dict of LCOE overrides
-            Scenario A: static FOAK (returns only uprate override)
-            Scenario B: learning-curve interpolated FOAK→NOAK prices
         label: 'A' or 'B' for logging
 
-    Returns: dict[iso][threshold] → result dict (same format as old step3-based approach)
+    Returns: dict[iso][threshold] → result dict
     """
     results = {}
 
@@ -1032,15 +1165,15 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
         }
 
         # Floor = 2025 existing clean resource levels in absolute TWh
-        floor = dict(existing_twh)
+        floor_twh = dict(existing_twh)
 
         iso_results = {}
 
-        for t in THRESHOLDS:
+        # Build threshold list starting at 50%
+        scenario_thresholds = [t for t in THRESHOLDS if t >= 50]
+
+        for t_idx, t in enumerate(scenario_thresholds):
             t_str = str(int(t)) if t == int(t) else str(t)
-            mixes = feasible_mixes.get(iso, {}).get(t_str, [])
-            if not mixes:
-                continue
 
             gf = get_demand_growth_factor(iso, t)
             demand_twh = base_demand * gf
@@ -1048,38 +1181,77 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
 
             overrides = get_overrides_fn(iso, t)
 
-            # Evaluate ALL feasible mixes under this scenario's cost assumptions
-            best_augmented_eff = float('inf')
+            # --- Step 1: Filter EF mixes by per-resource floor ---
+            ef_mixes = feasible_mixes.get(iso, {}).get(t_str, [])
+            filtered = _filter_mixes_by_floor(ef_mixes, floor_twh, demand_twh, iso)
+            source = 'EF'
+
+            # --- Step 2: If no EF mixes survive, fall back to PFS ---
+            if not filtered:
+                pfs_mixes = _load_pfs_mixes(iso, t)
+                if pfs_mixes:
+                    # First pass: floor to floor+10%
+                    filtered = _filter_pfs_by_floor_window(
+                        pfs_mixes, floor_twh, demand_twh, iso, max_pct_above=10.0)
+                    source = 'PFS+10'
+
+                    if not filtered:
+                        # Second pass: floor to floor+250%
+                        filtered = _filter_pfs_by_floor_window(
+                            pfs_mixes, floor_twh, demand_twh, iso, max_pct_above=250.0)
+                        source = 'PFS+250'
+
+                    if not filtered:
+                        # Final fallback: take ALL PFS mixes that meet the floor
+                        # as a minimum (no upper bound)
+                        filtered = _filter_mixes_by_floor(
+                            pfs_mixes, floor_twh, demand_twh, iso)
+                        source = 'PFS-all'
+
+                    if not filtered:
+                        # Absolute last resort: relax floor, take any PFS mix,
+                        # but carry under-floor resource costs forward
+                        filtered = pfs_mixes
+                        source = 'PFS-relaxed'
+
+                if not filtered:
+                    print(f"  ⚠ {iso} {t}% [{label}]: No mixes found (EF or PFS)")
+                    continue
+
+            if source != 'EF':
+                print(f"  ↪ {iso} {t}% [{label}]: EF empty after floor filter, "
+                      f"using {source} ({len(filtered)} mixes)")
+
+            # --- Step 3: Price filtered mixes, pick cheapest ---
+            best_total_cost = float('inf')
             best_result = None
             best_mix = None
             best_excess_per_mwh = 0.0
 
-            for mix in mixes:
+            for mix in filtered:
                 result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
                                          overrides=overrides, growth_factor=gf)
 
                 deployed = _mix_resource_twh(mix, demand_twh, iso)
 
-                # Floor excess cost: resources locked in from prior steps that
-                # this mix doesn't use. Existing resources are $0; only
-                # committed-new resources above existing get newbuild pricing.
+                # If this mix goes UNDER on a resource vs floor (only possible
+                # in PFS-relaxed fallback), price the gap as carried cost
                 excess_per_mwh = 0.0
-                for res in floor:
-                    excess = max(0, floor.get(res, 0) - deployed.get(res, 0))
-                    if excess > 0.01:
-                        # Split excess into existing ($0) and committed-new (newbuild)
-                        existing_gap = max(0, min(excess,
+                for res in floor_twh:
+                    shortfall = max(0, floor_twh.get(res, 0) - deployed.get(res, 0))
+                    if shortfall > 0.01:
+                        # Split into existing ($0) and committed-new (newbuild)
+                        existing_gap = max(0, min(shortfall,
                                                   existing_twh.get(res, 0) - deployed.get(res, 0)))
-                        newbuild_gap = excess - max(0, existing_gap)
+                        newbuild_gap = shortfall - max(0, existing_gap)
                         if newbuild_gap > 0.01:
                             lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
                             excess_per_mwh += newbuild_gap / demand_twh * lcoe
 
-                augmented_eff = (result['total_cost'] + excess_per_mwh) / \
-                    (result['match_score'] / 100.0) if result['match_score'] > 0 else float('inf')
+                total_with_excess = result['total_cost'] + excess_per_mwh
 
-                if augmented_eff < best_augmented_eff:
-                    best_augmented_eff = augmented_eff
+                if total_with_excess < best_total_cost:
+                    best_total_cost = total_with_excess
                     best_result = result
                     best_mix = mix
                     best_excess_per_mwh = excess_per_mwh
@@ -1087,21 +1259,21 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
             if not best_result or not best_mix:
                 continue
 
-            # Build augmented result: resources = max(floor, EF deployed)
+            # --- Step 4: Build result with augmented resources ---
             deployed = _mix_resource_twh(best_mix, demand_twh, iso)
             augmented = {}
-            excess_twh = {}
-            for res in floor:
+            excess_twh_dict = {}
+            for res in floor_twh:
                 ef_val = deployed.get(res, 0)
-                floor_val = floor.get(res, 0)
+                floor_val = floor_twh.get(res, 0)
                 augmented[res] = max(ef_val, floor_val)
-                excess_twh[res] = max(0, floor_val - ef_val)
+                excess_twh_dict[res] = max(0, floor_val - ef_val)
 
-            total_excess = sum(excess_twh.values())
+            total_excess = sum(excess_twh_dict.values())
 
             # Build result dict
             aug = dict(best_result)
-            aug['total_cost'] = round(best_result['total_cost'] + best_excess_per_mwh, 2)
+            aug['total_cost'] = round(best_total_cost, 2)
             match_frac = best_result['match_score'] / 100.0
             aug['effective_cost'] = round(
                 aug['total_cost'] / match_frac if match_frac > 0 else 0, 2)
@@ -1115,6 +1287,7 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
             aug['ldes_twh'] = augmented.get('ldes', 0)
             aug['demand_twh'] = demand_twh
             aug['mix_raw'] = list(best_mix)
+            aug['mix_source'] = source
 
             # Recompute gas backup from augmented clean capacity
             clean_peak_mw = 0
@@ -1141,22 +1314,26 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
                 best_excess_per_mwh * demand_mwh)
             aug['new_gen_twh'] = round(
                 best_result['new_gen_twh'] +
-                sum(v for k, v in excess_twh.items() if k != 'hydro'), 3)
+                sum(v for k, v in excess_twh_dict.items() if k != 'hydro'), 3)
 
             if total_excess > 1.0:
-                print(f"  ↗ {iso} {t}% [{label}]: {total_excess:.0f} TWh excess "
-                      f"(+${best_excess_per_mwh:.1f}/MWh)")
+                print(f"  ↗ {iso} {t}% [{label}]: {total_excess:.0f} TWh floor excess "
+                      f"(+${best_excess_per_mwh:.1f}/MWh) [{source}]")
 
             iso_results[t] = aug
-            floor = dict(augmented)
+
+            # --- Step 5: Update floor = max(prior, deployed) for each resource ---
+            for res in floor_twh:
+                floor_twh[res] = max(floor_twh[res], deployed.get(res, 0))
 
         # Print trajectory summary
         for t in sorted(iso_results.keys()):
             r = iso_results[t]
             rt = r['resource_twh']
+            src = r.get('mix_source', '?')
             print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
                   f"Wnd={rt['wind']:6.0f} CCS={rt.get('ccs_ccgt', 0):6.0f} "
-                  f"${r['effective_cost']:.0f}/MWh [{label}]")
+                  f"${r['effective_cost']:.0f}/MWh [{label}] ({src})")
 
         results[iso] = iso_results
 
