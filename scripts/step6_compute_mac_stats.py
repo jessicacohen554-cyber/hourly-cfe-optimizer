@@ -58,22 +58,108 @@ MEDIUM_KEYS_SET = frozenset({
     'MMM_M_M_M1_M', 'MMM_M_M_M1_X', 'MMM_M_M',
 })
 
-# Wholesale prices (duplicated from optimizer for standalone use)
-WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
+# Wholesale prices — fallback if parquet doesn't have cost_wholesale column
+WHOLESALE_PRICES_FALLBACK = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
 
-# ── EIA/eGRID baseline: CO₂ already avoided by existing clean generation ──
-# existing_clean_avoidance = (fossil_rate − actual_grid_rate) × demand / 2204.623
-# New investment only gets credit for CO₂ above this pre-existing avoidance.
+# ── Dispatch-model-based CO₂ baseline ──
+# Import canonical grid mix shares and fossil caps from dispatch_utils
+try:
+    from dispatch_utils import (
+        GRID_MIX_SHARES, BASE_DEMAND_TWH, COAL_CAP_TWH, OIL_CAP_TWH,
+        COAL_OIL_RETIREMENT_THRESHOLD,
+    )
+    HAS_DISPATCH_UTILS = True
+except ImportError:
+    HAS_DISPATCH_UTILS = False
+    # Fallback constants
+    GRID_MIX_SHARES = {
+        'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'ccs_ccgt': 0, 'hydro': 9.5},
+        'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'ccs_ccgt': 0, 'hydro': 0.1},
+        'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
+        'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
+        'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
+        'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'ccs_ccgt': 0, 'hydro': 1.6},
+        'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'ccs_ccgt': 0, 'hydro': 4.3},
+    }
+    BASE_DEMAND_TWH = {
+        'CAISO': 224.039, 'ERCOT': 488.02, 'PJM': 843.331, 'NYISO': 151.599,
+        'NEISO': 115.336, 'MISO': 660.0, 'SPP': 296.0,
+    }
+    COAL_CAP_TWH = {
+        'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00,
+        'NEISO': 0.31, 'MISO': 125.0, 'SPP': 42.0,
+    }
+    OIL_CAP_TWH = {
+        'CAISO': 0.60, 'ERCOT': 0.00, 'PJM': 4.59, 'NYISO': 0.15,
+        'NEISO': 1.29, 'MISO': 0.50, 'SPP': 0.20,
+    }
+    COAL_OIL_RETIREMENT_THRESHOLD = 70.0
+
+# Load emission rates for CO₂ computation
 _LB_PER_TON = 2204.623
 _EGRID_PATH = os.path.join(BASE_DIR, 'data', 'egrid_emission_rates.json')
 with open(_EGRID_PATH) as _f:
     _EGRID = json.load(_f)
 
-EXISTING_CLEAN_AVOIDANCE_TONS = {
-    iso: (_EGRID[iso]['fossil_co2_lb_per_mwh'] - _EGRID[iso]['total_co2_lb_per_mwh'])
-         * REGIONAL_DEMAND_MWH.get(iso, 0) / _LB_PER_TON
-    for iso in ISOS
-}
+# Per-ISO fuel emission rates (tCO₂/MWh)
+FUEL_RATES = {}
+for iso in ISOS:
+    rates = _EGRID.get(iso, {})
+    FUEL_RATES[iso] = {
+        'coal': rates.get('coal_co2_lb_per_mwh', 0.0) / _LB_PER_TON,
+        'oil': rates.get('oil_co2_lb_per_mwh', 0.0) / _LB_PER_TON,
+        'gas': rates.get('gas_co2_lb_per_mwh', 0.0) / _LB_PER_TON,
+    }
+
+# Existing clean percentage per ISO (2025 baseline)
+EXISTING_CLEAN_PCT = {iso: sum(GRID_MIX_SHARES.get(iso, {}).values()) for iso in ISOS}
+
+
+def compute_total_fossil_emissions_mt(iso, clean_pct, demand_twh=None):
+    """Compute total fossil CO₂ emissions (Mt) at a given clean energy level.
+
+    Uses merit-order dispatch: coal remains first, then oil, then gas.
+    As clean_pct increases, fossil shrinks and coal/oil retire at 70% threshold.
+
+    Returns emissions in Mt (= TWh × tCO₂/MWh, since 1 TWh = 1e6 MWh).
+    """
+    if demand_twh is None:
+        demand_twh = BASE_DEMAND_TWH.get(iso, 0)
+
+    fossil_pct = max(0, (100.0 - clean_pct)) / 100.0
+    fossil_twh = demand_twh * fossil_pct
+    if fossil_twh <= 0.01:
+        return 0.0
+
+    coal_cap = COAL_CAP_TWH.get(iso, 0)
+    oil_cap = OIL_CAP_TWH.get(iso, 0)
+    rates = FUEL_RATES.get(iso, {'coal': 0, 'oil': 0, 'gas': 0})
+
+    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
+        # All coal and oil retired — only gas remains
+        return fossil_twh * rates['gas']
+    else:
+        # Fossil fleet: coal fills first, then oil, then gas
+        coal_twh = min(coal_cap, fossil_twh)
+        remaining = fossil_twh - coal_twh
+        oil_twh = min(oil_cap, remaining)
+        gas_twh = max(0, remaining - oil_twh)
+        return (coal_twh * rates['coal'] + oil_twh * rates['oil']
+                + gas_twh * rates['gas'])
+
+
+# Precompute baseline emissions (existing clean only at 2025 demand) per ISO
+BASELINE_EMISSIONS_MT = {}
+for _iso in ISOS:
+    BASELINE_EMISSIONS_MT[_iso] = compute_total_fossil_emissions_mt(
+        _iso, EXISTING_CLEAN_PCT[_iso])
+
+# Precompute scenario emissions for all (ISO, threshold) at 2025 demand
+SCENARIO_EMISSIONS_MT = {}
+for _iso in ISOS:
+    for _t in THRESHOLDS:
+        SCENARIO_EMISSIONS_MT[(_iso, _t)] = compute_total_fossil_emissions_mt(
+            _iso, _t)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -118,24 +204,75 @@ def load_combined_df(input_dir, isos):
 
 
 def add_mac_column(df):
-    """Add MAC column: (cost_total_cost × annual_demand_mwh) / co2_abated_by_new_capital.
+    """Add MAC column: cost_of_new_resources / co2_reduced_by_new_resources.
 
-    Cost numerator: full system LCOE (cost_total_cost × annual_demand) — captures
-    the actual capital investment, not just the premium above wholesale.
+    Cost numerator: LCOE of NEW clean resources only. Computed as:
+        cost_total_cost - (existing_resource_pct / 100 × wholesale) - gas_backup
+    This removes the wholesale cost of pre-existing clean energy and the gas
+    backup cost (system reliability, not abatement investment).
 
-    CO₂ denominator: co2_total_co2_abated_tons minus the CO₂ already avoided by
-    existing clean generation (from EIA/eGRID actuals). New investment only gets
-    credit for CO₂ displacement above the pre-existing baseline.
+    CO₂ denominator: Baseline emissions (existing clean only at 2025 TWh, demand
+    grows per SBTi year) minus scenario emissions (at threshold level). Uses
+    dispatch-stack merit-order retirement model (coal → oil → gas).
+
+    MAC = new_resource_cost_$M / co2_reduced_Mt = $/tCO₂
     """
-    # Per-ISO existing clean avoidance (CO₂ not credited to new investment)
-    existing_avoidance = df['iso'].map(EXISTING_CLEAN_AVOIDANCE_TONS).fillna(0)
-    co2_net = (df['co2_total_co2_abated_tons'] - existing_avoidance).clip(lower=0)
+    # ── 1. Compute existing clean resource percentage per row ──
+    # Each row's mix_X may include existing + new resources. Existing portion
+    # is capped at the 2025 grid mix share.
+    existing_pct = pd.Series(0.0, index=df.index)
+    for r in RESOURCE_TYPES:
+        mix_col = f'mix_{r}'
+        if mix_col in df.columns:
+            # Map each ISO to its grid mix share for this resource
+            grid_share = df['iso'].map(
+                {iso: GRID_MIX_SHARES.get(iso, {}).get(r, 0) for iso in ISOS}
+            ).fillna(0)
+            existing_pct += np.minimum(df[mix_col].fillna(0).astype(float), grid_share)
 
-    cost_col = df['cost_total_cost'] if 'cost_total_cost' in df.columns else df['cost_effective_cost']
-    valid = (co2_net > 0) & cost_col.notna()
+    # ── 2. Cost of NEW resources only (per MWh of demand) ──
+    # wholesale from parquet (varies by fuel scenario) or fallback constant
+    if 'cost_wholesale' in df.columns:
+        wholesale = df['cost_wholesale'].fillna(
+            df['iso'].map(WHOLESALE_PRICES_FALLBACK))
+    else:
+        wholesale = df['iso'].map(WHOLESALE_PRICES_FALLBACK).astype(float)
+    existing_cost_per_mwh = (existing_pct / 100.0) * wholesale
+
+    cost_total = (df['cost_total_cost'] if 'cost_total_cost' in df.columns
+                  else df['cost_effective_cost'])
+    new_cost = cost_total - existing_cost_per_mwh
+
+    # Subtract gas backup cost (system reliability, not abatement)
+    for gas_col in ['ra_gas_backup_cost_per_mwh', 'gas_gas_cost_per_mwh']:
+        if gas_col in df.columns:
+            new_cost = new_cost - df[gas_col].fillna(0)
+            break
+    new_cost = new_cost.clip(lower=0)
+
+    # Store new-resource-only cost for use by other functions (stepwise, envelope)
+    df['mac_new_cost'] = new_cost
+
+    # ── 3. CO₂ reduced by new resources (tons) ──
+    # Baseline: fossil emissions when only existing clean runs (2025 TWh, at
+    # demand level from row). Scenario: emissions at the row's threshold.
+    # CO₂ reduced = baseline - scenario.
+    baseline_mt = df['iso'].map(BASELINE_EMISSIONS_MT).fillna(0)
+
+    # Vectorized scenario emissions lookup (precomputed for all ISO × threshold)
+    scenario_mt = pd.Series(
+        [SCENARIO_EMISSIONS_MT.get((iso, t), 0)
+         for iso, t in zip(df['iso'], df['threshold'])],
+        index=df.index, dtype=float,
+    )
+    co2_reduced_mt = (baseline_mt - scenario_mt).clip(lower=0)
+    co2_reduced_tons = co2_reduced_mt * 1e6  # Mt → tons
+
+    # ── 4. MAC = new_resource_cost × demand_mwh / co2_reduced_tons ──
+    valid = (co2_reduced_tons > 0) & new_cost.notna() & (new_cost > 0)
     df['mac'] = np.where(
         valid,
-        (cost_col * df['annual_demand_mwh']) / co2_net,
+        (new_cost * df['annual_demand_mwh']) / co2_reduced_tons,
         np.nan,
     )
     return df
@@ -274,7 +411,9 @@ def compute_fan_and_anova(df):
 def compute_stepwise_fan(df):
     """Compute P10/P50/P90 of stepwise marginal MAC between adjacent thresholds.
 
-    Step MAC = delta_cost / delta_co2 per scenario, computed via DataFrame merge.
+    Step MAC = delta_new_cost / delta_co2_reduced per scenario.
+    Uses new-resource-only cost (mac_new_cost column) and dispatch-model CO₂
+    (delta between baseline-scenario emissions at adjacent thresholds).
     """
     fan_data = {}
 
@@ -282,19 +421,18 @@ def compute_stepwise_fan(df):
         iso_df = df[df['iso'] == iso]
         fan_data[iso] = {'p10': [None], 'p50': [None], 'p90': [None]}
 
+        # Precompute CO₂ reduced at each threshold for this ISO
+        baseline_mt = BASELINE_EMISSIONS_MT.get(iso, 0)
+
         for i in range(1, len(THRESHOLDS)):
             t_prev, t_curr = THRESHOLDS[i - 1], THRESHOLDS[i]
 
-            # Use total_cost (full LCOE) for MAC — delta between adjacent thresholds
-            # gives incremental capital required for each step. Baseline offset cancels
-            # in the CO₂ delta so no adjustment needed on the denominator side.
-            cost_field = 'cost_total_cost' if 'cost_total_cost' in iso_df.columns else 'cost_effective_cost'
+            # Use mac_new_cost (new-resource-only) for stepwise MAC
             prev = iso_df.loc[iso_df['threshold'] == t_prev,
-                              ['scenario', cost_field, 'co2_total_co2_abated_tons',
+                              ['scenario', 'mac_new_cost',
                                'annual_demand_mwh']].set_index('scenario')
             curr = iso_df.loc[iso_df['threshold'] == t_curr,
-                              ['scenario', cost_field,
-                               'co2_total_co2_abated_tons']].set_index('scenario')
+                              ['scenario', 'mac_new_cost']].set_index('scenario')
 
             merged = prev.join(curr, rsuffix='_next', how='inner')
             if merged.empty:
@@ -302,13 +440,19 @@ def compute_stepwise_fan(df):
                     fan_data[iso][p].append(None)
                 continue
 
-            delta_cost = ((merged[f'{cost_field}_next'] - merged[cost_field])
+            delta_cost = ((merged['mac_new_cost_next'] - merged['mac_new_cost'])
                           * merged['annual_demand_mwh'])
-            delta_co2 = (merged['co2_total_co2_abated_tons_next']
-                         - merged['co2_total_co2_abated_tons'])
 
-            valid = (delta_co2 > 0) & (delta_cost >= 0)
-            step_macs = (delta_cost[valid] / delta_co2[valid]).values
+            # CO₂ delta from dispatch model (same for all scenarios at same threshold)
+            co2_prev = (baseline_mt - SCENARIO_EMISSIONS_MT.get((iso, t_prev), 0)) * 1e6
+            co2_curr = (baseline_mt - SCENARIO_EMISSIONS_MT.get((iso, t_curr), 0)) * 1e6
+            delta_co2 = co2_curr - co2_prev  # scalar, same for all rows
+
+            if delta_co2 > 0:
+                valid = delta_cost >= 0
+                step_macs = (delta_cost[valid] / delta_co2).values
+            else:
+                step_macs = np.array([])
 
             if len(step_macs) > 0:
                 p10, p50, p90 = np.percentile(step_macs, [10, 50, 90])
@@ -358,8 +502,8 @@ def compute_envelope_and_path(df):
         for _, row in iso_med.iterrows():
             results_by_t[row['threshold']] = row
 
-        # CO₂ already avoided by existing clean — not credited to new investment
-        existing_avoidance = EXISTING_CLEAN_AVOIDANCE_TONS.get(iso, 0)
+        # Baseline emissions (Mt) — fossil emissions with only existing clean
+        baseline_mt = BASELINE_EMISSIONS_MT.get(iso, 0)
 
         # ── Envelope + path state ──
         raw_macs = []
@@ -391,20 +535,21 @@ def compute_envelope_and_path(df):
                 path_costs.append(None)
                 continue
 
-            eff_cost = float(row['cost_effective_cost'])
-            co2_tons = float(row['co2_total_co2_abated_tons'])
-            total_cost = float(row['cost_total_cost']) if 'cost_total_cost' in row.index else float(row['cost_effective_cost'])
+            # ── New-resource-only cost ──
+            new_cost = float(row['mac_new_cost']) if 'mac_new_cost' in row.index else 0.0
 
-            # CO₂ abated by new capital only (subtract existing clean baseline)
-            co2_net = max(0.0, (co2_tons if pd.notna(co2_tons) else 0.0) - existing_avoidance)
+            # CO₂ reduced by new resources (dispatch-model-based)
+            scenario_mt = SCENARIO_EMISSIONS_MT.get((iso, t), 0)
+            co2_reduced_mt = max(0, baseline_mt - scenario_mt)
+            co2_reduced_tons = co2_reduced_mt * 1e6
 
             # ── Envelope data collection ──
-            costs_at_t.append(total_cost)
-            co2_at_t.append(co2_net)
+            costs_at_t.append(new_cost)
+            co2_at_t.append(co2_reduced_mt)
 
-            # Use total_cost (full LCOE) for proper new-capital MAC
-            if co2_net > 0:
-                raw_macs.append(round((total_cost * demand_mwh) / co2_net, 1))
+            # MAC = new_cost × demand / co2_reduced_tons
+            if co2_reduced_tons > 0 and new_cost > 0:
+                raw_macs.append(round((new_cost * demand_mwh) / co2_reduced_tons, 1))
             else:
                 raw_macs.append(None)
 
@@ -435,11 +580,11 @@ def compute_envelope_and_path(df):
                     constrained_mix = mix
 
                 # Cost is at least as high as previous constrained cost
-                constrained_total = max(total_cost, prev_cost)
+                constrained_total = max(new_cost, prev_cost)
 
-                # Average MAC (CO₂ net of existing baseline)
-                if co2_net > 0:
-                    avg_mac = round((constrained_total * demand_mwh) / co2_net, 1)
+                # Average MAC (CO₂ reduced by new resources)
+                if co2_reduced_tons > 0 and constrained_total > 0:
+                    avg_mac = round((constrained_total * demand_mwh) / co2_reduced_tons, 1)
                 else:
                     avg_mac = None
 
@@ -613,7 +758,10 @@ def compute_crossover_analysis(fan_data, envelope_data):
 def compute_dg_mac(input_dir, isos):
     """Compute demand growth MAC directly from parquet DataFrames.
 
-    Loads DG parquets as DataFrames and uses vectorized MAC + groupby percentiles.
+    Uses new-resource-only cost and dispatch-model-based CO₂:
+    - Cost: cost_total_cost - existing_wholesale - gas_backup (per MWh of demand)
+    - CO₂: baseline emissions (existing clean at 2025 TWh, diluted by demand
+      growth) minus scenario emissions (at threshold level, grown demand).
     """
     dg_mac = {}
 
@@ -627,27 +775,70 @@ def compute_dg_mac(input_dir, isos):
         if not files:
             continue
 
-        # Load all DG files for this ISO into one DataFrame
         frames = [pd.read_parquet(f) for f in files]
         dg_df = pd.concat(frames, ignore_index=True)
 
-        # Check required columns
-        co2_col = 'co2_total_co2_abated_tons'
         demand_col = 'annual_demand_mwh'
-        if co2_col not in dg_df.columns or demand_col not in dg_df.columns:
+        if demand_col not in dg_df.columns or 'year' not in dg_df.columns:
             continue
-        if 'year' not in dg_df.columns or 'growth_level' not in dg_df.columns:
+        if 'growth_level' not in dg_df.columns:
             continue
 
-        # Vectorized MAC computation
-        valid = ((dg_df[co2_col] > 0) & dg_df['cost_effective_cost'].notna()
-                 & (dg_df[demand_col] > 0))
+        # ── Compute new-resource-only cost ──
+        existing_pct = 0.0
+        for r in RESOURCE_TYPES:
+            mix_col = f'mix_{r}'
+            if mix_col in dg_df.columns:
+                grid_share = GRID_MIX_SHARES.get(iso, {}).get(r, 0)
+                existing_pct += np.minimum(dg_df[mix_col].fillna(0).astype(float), grid_share)
+
+        wholesale = (dg_df['cost_wholesale'].fillna(WHOLESALE_PRICES_FALLBACK.get(iso, 30))
+                     if 'cost_wholesale' in dg_df.columns
+                     else pd.Series(WHOLESALE_PRICES_FALLBACK.get(iso, 30), index=dg_df.index))
+        existing_cost = (existing_pct / 100.0) * wholesale
+
+        cost_total = (dg_df['cost_total_cost'] if 'cost_total_cost' in dg_df.columns
+                      else dg_df['cost_effective_cost'])
+        new_cost = cost_total - existing_cost
+        for gas_col in ['ra_gas_backup_cost_per_mwh', 'gas_gas_cost_per_mwh']:
+            if gas_col in dg_df.columns:
+                new_cost = new_cost - dg_df[gas_col].fillna(0)
+                break
+        new_cost = new_cost.clip(lower=0)
+
+        # ── CO₂ reduced: baseline (existing clean diluted by growth) vs scenario ──
+        existing_clean_pct = EXISTING_CLEAN_PCT.get(iso, 0)
+        base_demand = BASE_DEMAND_TWH.get(iso, 0)
+
+        # Growth factor per row: demand_mwh / (base_demand * 1e6)
+        gf_arr = dg_df[demand_col].astype(float) / (base_demand * 1e6)
+        gf_arr = gf_arr.clip(lower=1.0)
+
+        # Existing clean as % of grown demand (TWh stays at 2025 level)
+        existing_pct_diluted = existing_clean_pct / gf_arr
+
+        # Vectorize: baseline and scenario emissions per row
+        demand_twh_arr = dg_df[demand_col].astype(float) / 1e6
+        thresholds = dg_df['threshold'].astype(float).values
+
+        baseline_emissions = np.array([
+            compute_total_fossil_emissions_mt(iso, ep, dt)
+            for ep, dt in zip(existing_pct_diluted, demand_twh_arr)
+        ])
+        scenario_emissions = np.array([
+            compute_total_fossil_emissions_mt(iso, t, dt)
+            for t, dt in zip(thresholds, demand_twh_arr)
+        ])
+        co2_reduced_mt = np.maximum(0, baseline_emissions - scenario_emissions)
+        co2_reduced_tons = co2_reduced_mt * 1e6
+
+        # MAC
+        valid = (co2_reduced_tons > 0) & new_cost.notna() & (new_cost > 0) & (dg_df[demand_col] > 0)
         dg_valid = dg_df[valid].copy()
+        dg_valid['mac'] = (new_cost[valid].values * dg_valid[demand_col].values) / co2_reduced_tons[valid]
+
         if dg_valid.empty:
             continue
-
-        dg_valid['mac'] = ((dg_valid['cost_effective_cost'] * dg_valid[demand_col])
-                           / dg_valid[co2_col])
 
         iso_mac = {}
         for (threshold, year, g_level), grp in dg_valid.groupby(
@@ -754,8 +945,19 @@ def format_js_output(fan_data, stepwise_fan, envelope_data, path_mac, anova, cro
 def main():
     t0 = time.time()
 
-    print("Loading optimizer results from parquets...")
-    input_dir = find_input_dir(ISOS)
+    # Print baseline emissions summary
+    print("Baseline fossil emissions (existing clean only, 2025 demand):")
+    for iso in ISOS:
+        pct = EXISTING_CLEAN_PCT.get(iso, 0)
+        emit = BASELINE_EMISSIONS_MT.get(iso, 0)
+        print(f"  {iso}: existing clean={pct:.1f}%  baseline emissions={emit:.1f} Mt")
+
+    print("\nLoading optimizer results from parquets...")
+    # Prefer co2-enriched parquets (step5 co2_results), fall back to step4/step3
+    co2_dir = os.path.join(STEP5_DIR, 'co2_results')
+    input_dir = co2_dir if os.path.isdir(co2_dir) and any(
+        f.endswith('.parquet') for f in os.listdir(co2_dir)
+    ) else find_input_dir(ISOS)
     if not input_dir:
         raise FileNotFoundError("No parquet input directory found")
 
