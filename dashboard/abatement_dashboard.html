@@ -1519,17 +1519,31 @@ function getSmoothedMacData(iso) {
     if (ot && ot[iso] && ot[iso].smooth_thresholds && ot[iso].smooth_thresholds.length > 0) {
         var t = ot[iso].smooth_thresholds;
         var medium = ot[iso].smooth_marginal_mac || ot[iso].smooth_mac_medium || [];
-        var low = ot[iso].smooth_mac_low || [];
-        var high = ot[iso].smooth_mac_high || [];
+        var lowArr = ot[iso].smooth_mac_low || [];
+        var highArr = ot[iso].smooth_mac_high || [];
+        // L/M/H cost tiers don't always nest (low < med < high).
+        // Compute pointwise min/max envelope across all three tiers so the
+        // band always contains the medium line.
+        var bandLow = [], bandHigh = [];
+        for (var i = 0; i < t.length; i++) {
+            var vals = [medium[i], lowArr[i], highArr[i]].filter(function(v) { return v != null && v > 0; });
+            if (vals.length > 0) {
+                bandLow.push(Math.min.apply(null, vals));
+                bandHigh.push(Math.max.apply(null, vals));
+            } else {
+                bandLow.push(null);
+                bandHigh.push(null);
+            }
+        }
         return {
             source: 'smooth_pchip',
             // Dense 300-point smooth curves
             medium: t.map(function(x, i) { return { x: x, y: medium[i] }; }).filter(function(d) { return d.y != null; }),
-            low: low.length > 0
-                ? t.map(function(x, i) { return { x: x, y: low[i] }; }).filter(function(d) { return d.y != null; })
+            low: bandLow.length > 0
+                ? t.map(function(x, i) { return { x: x, y: bandLow[i] }; }).filter(function(d) { return d.y != null; })
                 : null,
-            high: high.length > 0
-                ? t.map(function(x, i) { return { x: x, y: high[i] }; }).filter(function(d) { return d.y != null; })
+            high: bandHigh.length > 0
+                ? t.map(function(x, i) { return { x: x, y: bandHigh[i] }; }).filter(function(d) { return d.y != null; })
                 : null,
             // Discrete data points for marker overlay
             discrete_t: ot[iso].discrete_thresholds || [],
