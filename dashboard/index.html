@@ -2765,8 +2765,9 @@ const INCREMENTAL_INSIGHTS = {
 
 function getIncrementalData(region) {
     // All thresholds from 50% upward — values in TWh
-    // Each threshold maps to an SBTi target year; demand grows at Medium rate
-    // to that year. DEMAND_TWH_BY_THRESHOLD provides per-threshold demand.
+    // Each threshold maps to an SBTi target year; demand grows at Medium rate.
+    // Bar height = threshold% × demand TWh (or optimizer total if overprocurement > threshold).
+    // First entry is 2025 existing clean only. Resource mixes from Step 3 CO dg data.
     const allThresholds = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.filter(t => t >= 50) : [];
     const baseDemandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined') ? (REGIONAL_DEMAND_TWH[region] || 100) : 100;
     const demandByThreshold = (typeof DEMAND_TWH_BY_THRESHOLD !== 'undefined') ? DEMAND_TWH_BY_THRESHOLD[region] : null;
@@ -2778,34 +2779,75 @@ function getIncrementalData(region) {
     const curtailmentData = [];
     const procurementData = [];
     const demandTWhPerBar = [];  // track per-bar demand for tooltip display
+    const demandTrajectory = []; // medium demand growth TWh for dashed line
 
     const gridMix = (typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES[region] : null) ||
                     DATA.config?.grid_mix_shares?.[region];
     const mixData = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[region] : null;
+
+    // Existing clean percentages and total (2025 base demand)
+    const existingPcts = {};
+    let existingCleanPct = 0;
     if (gridMix) {
-        existingCleanTotal = Object.values(gridMix).reduce((s, v) => s + v, 0) * baseDemandTWh / 100;
+        MIX_RESOURCES.forEach(r => { existingPcts[r] = gridMix[r] || 0; });
+        existingCleanPct = Object.values(gridMix).reduce((s, v) => s + v, 0);
+        existingCleanTotal = existingCleanPct * baseDemandTWh / 100;
     }
 
+    // ---- First entry: 2025 with just existing clean TWh ----
+    labels.push([Math.round(existingCleanPct) + '%', '2025']);
+    demandTWhPerBar.push(Math.round(baseDemandTWh * 10) / 10);
+    demandTrajectory.push(baseDemandTWh);
+    MIX_RESOURCES.forEach(r => {
+        if (r === 'battery' || r === 'battery8' || r === 'ldes' || r === 'h2') {
+            existingData[r].push(0);
+            newData[r].push(0);
+        } else {
+            const existTWh = (existingPcts[r] || 0) * baseDemandTWh / 100;
+            existingData[r].push(Math.round(existTWh * 10) / 10);
+            newData[r].push(0);
+        }
+    });
+    procurementData.push(Math.round(existingCleanTotal * 10) / 10);
+    curtailmentData.push(0);
+
+    // ---- Remaining thresholds: 50% through ≥99.99% ----
     for (const t of allThresholds) {
         const ti = THRESHOLDS.indexOf(t);
         if (ti < 0 || !mixData) continue;
         // Use threshold-specific demand TWh (SBTi year × Medium growth)
         const demandTWh = (demandByThreshold && demandByThreshold[ti]) ? demandByThreshold[ti] : baseDemandTWh;
-        labels.push(t >= 99.99 ? '≥99.99%' : t + '%');
+        const targetYear = (typeof THRESHOLD_TARGET_YEARS !== 'undefined') ? (THRESHOLD_TARGET_YEARS[t] || 2050) : 2050;
+        labels.push([t >= 99.99 ? '≥99.99%' : t + '%', String(targetYear)]);
         demandTWhPerBar.push(Math.round(demandTWh * 10) / 10);
+        demandTrajectory.push(demandTWh);
+
+        // Get optimizer resource mix percentages at this threshold
+        let optimizerTotalPct = 0;
+        const optimizerPcts = {};
+        MIX_RESOURCES.forEach(r => {
+            optimizerPcts[r] = mixData[r]?.[ti] || 0;
+            optimizerTotalPct += optimizerPcts[r];
+        });
+
+        // Target clean %: use threshold% when optimizer is at flat 100%,
+        // use actual optimizer total when overprocurement is needed (>100%)
+        const targetCleanPct = optimizerTotalPct > 100 ? optimizerTotalPct : t;
+        const scaleFactor = optimizerTotalPct > 0 ? (targetCleanPct / optimizerTotalPct) : 0;
 
         let barTotal = 0;
         MIX_RESOURCES.forEach(r => {
             if (r === 'battery' || r === 'battery8' || r === 'ldes') {
-                const twh = (mixData[r]?.[ti] || 0) * demandTWh / 100;
+                const scaledPct = optimizerPcts[r] * scaleFactor;
+                const twh = scaledPct * demandTWh / 100;
                 existingData[r].push(0);
                 newData[r].push(Math.round(twh * 10) / 10);
                 barTotal += twh;
             } else {
-                const totalPct = (mixData[r]?.[ti] || 0);
-                const existPct = gridMix?.[r] || 0;
-                const cappedExist = Math.min(existPct, totalPct);
-                const newPct = Math.max(0, totalPct - existPct);
+                const scaledPct = optimizerPcts[r] * scaleFactor;
+                const existPct = existingPcts[r] || 0;
+                const cappedExist = Math.min(existPct, scaledPct);
+                const newPct = Math.max(0, scaledPct - existPct);
                 const existTWh = cappedExist * demandTWh / 100;
                 const newTWh = newPct * demandTWh / 100;
                 existingData[r].push(Math.round(existTWh * 10) / 10);
@@ -2816,11 +2858,11 @@ function getIncrementalData(region) {
         procurementData.push(Math.round(barTotal * 10) / 10);
         curtailmentData.push(Math.round(Math.max(0, barTotal - demandTWh) * 10) / 10);
     }
-    return { labels, existingData, newData, existingCleanTotal, curtailmentData, procurementData, demandTWh: baseDemandTWh, demandTWhPerBar };
+    return { labels, existingData, newData, existingCleanTotal, curtailmentData, procurementData, demandTWh: baseDemandTWh, demandTWhPerBar, demandTrajectory };
 }
 
 function buildIncrementalDatasets(data) {
-    const { existingData, newData } = data;
+    const { existingData, newData, demandTrajectory } = data;
     const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
     const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm'];
     const existingAlpha = 0.75;
@@ -2858,6 +2900,26 @@ function buildIncrementalDatasets(data) {
             _isExisting: false,
         });
     }
+
+    // Medium demand growth trajectory — dashed line overlay
+    if (demandTrajectory && demandTrajectory.length > 0) {
+        datasets.push({
+            label: 'Medium Demand Growth',
+            type: 'line',
+            data: demandTrajectory,
+            borderColor: 'rgba(220, 38, 38, 0.55)',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointBackgroundColor: 'rgba(220, 38, 38, 0.7)',
+            fill: false,
+            stack: false,
+            order: -1,  // draw on top
+            yAxisID: 'y',
+            _isDemandLine: true,
+        });
+    }
     return datasets;
 }
 
@@ -2870,8 +2932,10 @@ function initIncrementalMixChart() {
 
     const datasets = buildIncrementalDatasets(data);
 
-    // Compute y-axis max from procurement TWh
-    const maxVal = Math.max(...data.procurementData, 1);
+    // Compute y-axis max from procurement TWh and demand trajectory
+    const maxProcurement = Math.max(...data.procurementData, 1);
+    const maxDemand = Math.max(...(data.demandTrajectory || [0]));
+    const maxVal = Math.max(maxProcurement, maxDemand);
     const step = maxVal > 500 ? 100 : maxVal > 100 ? 50 : 10;
     const yMax = Math.ceil(maxVal / step) * step + step;
 
@@ -2925,6 +2989,14 @@ function initIncrementalMixChart() {
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             });
+                            items.push({
+                                text: 'Demand Growth',
+                                fillStyle: 'transparent',
+                                strokeStyle: 'rgba(220, 38, 38, 0.55)',
+                                lineWidth: 2,
+                                lineDash: [6, 4],
+                                pointStyle: 'line',
+                            });
                             return items;
                         }
                     },
@@ -2936,14 +3008,17 @@ function initIncrementalMixChart() {
                     bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
                     padding: 12,
                     cornerRadius: 8,
-                    filter: function(tooltipItem) { return tooltipItem.parsed.y > 0; },
+                    filter: function(tooltipItem) { return tooltipItem.parsed.y > 0 && !tooltipItem.dataset._isDemandLine; },
                     callbacks: {
                         title: function(items) {
                             if (!items.length) return '';
                             const idx = items[0].dataIndex;
                             const chart = items[0].chart;
                             const curtail = chart._curtailmentData?.[idx] || 0;
-                            let title = items[0].label + ' target';
+                            const lbl = chart.data.labels[idx];
+                            const targetStr = Array.isArray(lbl) ? lbl[0] : lbl;
+                            const yearStr = Array.isArray(lbl) ? ' (' + lbl[1] + ')' : '';
+                            let title = targetStr + yearStr + ' target';
                             if (curtail > 0) title += '  (curtailed: ' + Math.round(curtail) + ' TWh)';
                             return title;
                         },
@@ -2954,6 +3029,7 @@ function initIncrementalMixChart() {
                 },
                 datalabels: {
                     display: function(context) {
+                        if (context.dataset._isDemandLine) return false;
                         const demTWh = context.chart._demandTWh || 100;
                         return context.dataset.data[context.dataIndex] >= demTWh * 0.04;
                     },
@@ -2987,24 +3063,6 @@ function initIncrementalMixChart() {
                                 padding: { x: 6, y: 3 },
                                 borderRadius: 4,
                             }
-                        },
-                        demandLine: {
-                            type: 'line',
-                            yMin: data.demandTWh,
-                            yMax: data.demandTWh,
-                            borderColor: 'rgba(220, 38, 38, 0.45)',
-                            borderWidth: 1.5,
-                            borderDash: [4, 3],
-                            label: {
-                                display: true,
-                                content: '100% demand: ' + Math.round(data.demandTWh) + ' TWh',
-                                position: 'end',
-                                backgroundColor: 'rgba(255,255,255,0.92)',
-                                color: '#DC2626',
-                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 600 },
-                                padding: { x: 5, y: 2 },
-                                borderRadius: 4,
-                            }
                         }
                     }
                 }
@@ -3014,17 +3072,18 @@ function initIncrementalMixChart() {
                     stacked: true,
                     title: {
                         display: true,
-                        text: 'Hourly Matching Target',
+                        text: 'Hourly CFE Target / SBTi Year',
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
                     grid: { display: false },
                     border: { display: true, color: '#D4D8E0' },
                     ticks: {
-                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 600 },
+                        font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 9, weight: 600 },
                         color: '#1A2744',
-                        maxRotation: 45,
+                        maxRotation: 0,
                         minRotation: 0,
+                        autoSkip: false,
                     }
                 },
                 y: {
@@ -3083,11 +3142,8 @@ function updateIncrementalChart(region) {
 
     const newDatasets = buildIncrementalDatasets(data);
     incrementalMixChart.data.labels = data.labels;
-    newDatasets.forEach((ds, i) => {
-        if (incrementalMixChart.data.datasets[i]) {
-            incrementalMixChart.data.datasets[i].data = ds.data;
-        }
-    });
+    // Update existing datasets and add/remove as needed
+    incrementalMixChart.data.datasets = newDatasets;
 
     // Update plugin data
     incrementalMixChart._existingBoundary = data.labels.map((_, i) => {
@@ -3100,17 +3156,16 @@ function updateIncrementalChart(region) {
     incrementalMixChart._procurementData = data.procurementData;
     incrementalMixChart._demandTWh = data.demandTWh;
 
-    // Update annotations (TWh)
+    // Update annotations (TWh) — existing clean line only
     const ann = incrementalMixChart.options.plugins.annotation.annotations;
     ann.existingLine.yMin = data.existingCleanTotal;
     ann.existingLine.yMax = data.existingCleanTotal;
     ann.existingLine.label.content = 'Existing clean: ' + Math.round(data.existingCleanTotal) + ' TWh';
-    ann.demandLine.yMin = data.demandTWh;
-    ann.demandLine.yMax = data.demandTWh;
-    ann.demandLine.label.content = '100% demand: ' + Math.round(data.demandTWh) + ' TWh';
 
-    // Update y-axis max (TWh)
-    const maxVal = Math.max(...data.procurementData, 1);
+    // Update y-axis max — account for demand trajectory line too
+    const maxProcurement = Math.max(...data.procurementData, 1);
+    const maxDemand = Math.max(...(data.demandTrajectory || [0]));
+    const maxVal = Math.max(maxProcurement, maxDemand);
     const step = maxVal > 500 ? 100 : maxVal > 100 ? 50 : 10;
     incrementalMixChart.options.scales.y.max = Math.ceil(maxVal / step) * step + step;
 
