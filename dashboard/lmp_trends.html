@@ -865,16 +865,16 @@ function baseScales(yLabel, yMin, yMax) {
     return {
         x: {
             type: 'linear',
-            min: 48, max: 101,
+            min: 48, max: 100.5,
             title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
             grid: { color: 'rgba(0,0,0,0.025)' },
             ticks: {
-                callback: function(v) { return v + '%'; },
+                callback: function(v) { return v === 99.99 ? '≥99.99%' : v + '%'; },
                 color: 'rgba(15,23,42,0.4)',
                 font: { size: 10 }
             },
             afterBuildTicks: function(axis) {
-                axis.ticks = [50,60,70,80,90,95,100].map(function(v) { return { value: v }; });
+                axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; });
             }
         },
         y: {
