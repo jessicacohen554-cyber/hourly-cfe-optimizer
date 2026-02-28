@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Extract resource mix and compressed day data from co2 batch results
+Extract resource mix and compressed day data from co2 results
 into shared-data.js format.
 
 Adds new constants WITHOUT modifying existing ones.
 Uses ISO-aware medium scenario key (9-dim format).
 
-Reads from: data/step5-post-processing/co2_results/{ISO}_{threshold}_2025.json
+Reads from: data/step5-post-processing/co2_results/ (parquets preferred, JSON fallback)
 Outputs to: dashboard/js/shared-data-new-block.js
 """
 
@@ -41,8 +41,36 @@ def get_scenario(scenarios, iso):
     return None
 
 
+_PARQUET_CACHE = {}
+
+
+def _load_iso_parquet(iso):
+    """Load an ISO's CO2 parquet into the cache (lazy, one-time)."""
+    if iso in _PARQUET_CACHE:
+        return
+    _PARQUET_CACHE[iso] = {}
+    for prefix in ['co2_', 'step4_', 'step3_co_']:
+        ppath = os.path.join(CO2_DIR, f'{prefix}{iso}.parquet')
+        if os.path.exists(ppath):
+            try:
+                sys.path.insert(0, ROOT_DIR)
+                from parquet_io import load_from_parquets
+                data = load_from_parquets(CO2_DIR, [iso])
+                iso_data = data.get('results', {}).get(iso, {})
+                for t_str, t_data in iso_data.get('thresholds', {}).items():
+                    _PARQUET_CACHE[iso][t_str] = t_data.get('scenarios', {})
+                return
+            except Exception:
+                pass
+
+
 def load_scenarios(iso, threshold):
-    """Load scenarios from co2 batch result JSON."""
+    """Load scenarios from CO2 parquets or batch JSON files."""
+    _load_iso_parquet(iso)
+    if iso in _PARQUET_CACHE and threshold in _PARQUET_CACHE[iso]:
+        return _PARQUET_CACHE[iso][threshold]
+
+    # Fall back to legacy JSON
     fname = f"{iso}_{threshold}_2025.json"
     fpath = os.path.join(CO2_DIR, fname)
     if not os.path.exists(fpath):
