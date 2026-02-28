@@ -1978,7 +1978,11 @@ function buildDataFromSharedData() {
             const tk = String(THRESHOLDS[ti]);
             const effCost = EFFECTIVE_COST_DATA[iso]?.[ti];
             const mixData = RESOURCE_MIX_DATA[iso];
-            const procurement = mixData?.procurement?.[ti] || 100;
+            // Demand TWh at this threshold's SBTi year (Medium growth)
+            const threshDemandTWh = (typeof DEMAND_TWH_BY_THRESHOLD !== 'undefined' && DEMAND_TWH_BY_THRESHOLD[iso])
+                ? (DEMAND_TWH_BY_THRESHOLD[iso][ti] || demandTWh)
+                : demandTWh;
+            const totalMixPct = MIX_RESOURCES.reduce((s, r) => s + (mixData?.[r]?.[ti] || 0), 0);
 
             // Compute resource_costs from FEASIBLE_MIXES via client-side repricing
             // (same approach as the dashboard's WYN panel)
@@ -1989,10 +1993,10 @@ function buildDataFromSharedData() {
             const matchScore = THRESHOLDS[ti] <= 99 ? THRESHOLDS[ti] : 99;
             const totalCost = optimalResult
                 ? optimalResult.total_cost
-                : (effCost != null ? effCost * matchScore / 100 / (procurement / 100) : null);
+                : (effCost != null ? effCost * matchScore / 100 : null);
 
             thresholds[tk] = {
-                procurement_pct: procurement,
+                procurement_pct: totalMixPct,
                 hourly_match_score: matchScore,
                 resource_mix: {},
                 costs: {
@@ -2366,13 +2370,11 @@ function getMixDataForRegion(region) {
                             DATA.config?.grid_mix_shares?.[iso];
             if (!mixData || !gridMix) continue;
 
-            const proc = mixData.procurement?.[ti] || 100;
-
             MIX_RESOURCES.forEach(r => {
                 if (r === 'battery' || r === 'battery8' || r === 'ldes') {
                     avgNew[r] += (mixData[r]?.[ti] || 0);
                 } else {
-                    const totalPct = (mixData[r]?.[ti] || 0) * proc / 100;
+                    const totalPct = (mixData[r]?.[ti] || 0);
                     const existPct = gridMix[r] || 0;
                     const cappedExist = Math.min(existPct, totalPct);
                     const newPct = Math.max(0, totalPct - existPct);
@@ -2380,10 +2382,10 @@ function getMixDataForRegion(region) {
                     avgNew[r] += newPct;
                 }
             });
-            // Curtailment = procurement over 100%
-            const totalMix = MIX_RESOURCES.reduce((s, r) => s + (mixData[r]?.[ti] || 0), 0) * proc / 100;
+            // Curtailment = total procurement over 100%
+            const totalMix = MIX_RESOURCES.reduce((s, r) => s + (mixData[r]?.[ti] || 0), 0);
             avgCurtailment += Math.max(0, totalMix - 100);
-            avgProcurement += proc;
+            avgProcurement += totalMix;
             count++;
         }
 
@@ -2763,8 +2765,11 @@ const INCREMENTAL_INSIGHTS = {
 
 function getIncrementalData(region) {
     // All thresholds from 50% upward — values in TWh
+    // Each threshold maps to an SBTi target year; demand grows at Medium rate
+    // to that year. DEMAND_TWH_BY_THRESHOLD provides per-threshold demand.
     const allThresholds = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.filter(t => t >= 50) : [];
-    const demandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined') ? (REGIONAL_DEMAND_TWH[region] || 100) : 100;
+    const baseDemandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined') ? (REGIONAL_DEMAND_TWH[region] || 100) : 100;
+    const demandByThreshold = (typeof DEMAND_TWH_BY_THRESHOLD !== 'undefined') ? DEMAND_TWH_BY_THRESHOLD[region] : null;
     const labels = [];
     const existingData = {};
     const newData = {};
@@ -2772,19 +2777,22 @@ function getIncrementalData(region) {
     let existingCleanTotal = 0;
     const curtailmentData = [];
     const procurementData = [];
+    const demandTWhPerBar = [];  // track per-bar demand for tooltip display
 
     const gridMix = (typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES[region] : null) ||
                     DATA.config?.grid_mix_shares?.[region];
     const mixData = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[region] : null;
     if (gridMix) {
-        existingCleanTotal = Object.values(gridMix).reduce((s, v) => s + v, 0) * demandTWh / 100;
+        existingCleanTotal = Object.values(gridMix).reduce((s, v) => s + v, 0) * baseDemandTWh / 100;
     }
 
     for (const t of allThresholds) {
         const ti = THRESHOLDS.indexOf(t);
         if (ti < 0 || !mixData) continue;
-        const proc = mixData.procurement?.[ti] || 100;
+        // Use threshold-specific demand TWh (SBTi year × Medium growth)
+        const demandTWh = (demandByThreshold && demandByThreshold[ti]) ? demandByThreshold[ti] : baseDemandTWh;
         labels.push(t >= 99.99 ? '≥99.99%' : t + '%');
+        demandTWhPerBar.push(Math.round(demandTWh * 10) / 10);
 
         let barTotal = 0;
         MIX_RESOURCES.forEach(r => {
@@ -2794,7 +2802,7 @@ function getIncrementalData(region) {
                 newData[r].push(Math.round(twh * 10) / 10);
                 barTotal += twh;
             } else {
-                const totalPct = (mixData[r]?.[ti] || 0) * proc / 100;
+                const totalPct = (mixData[r]?.[ti] || 0);
                 const existPct = gridMix?.[r] || 0;
                 const cappedExist = Math.min(existPct, totalPct);
                 const newPct = Math.max(0, totalPct - existPct);
@@ -2808,7 +2816,7 @@ function getIncrementalData(region) {
         procurementData.push(Math.round(barTotal * 10) / 10);
         curtailmentData.push(Math.round(Math.max(0, barTotal - demandTWh) * 10) / 10);
     }
-    return { labels, existingData, newData, existingCleanTotal, curtailmentData, procurementData, demandTWh };
+    return { labels, existingData, newData, existingCleanTotal, curtailmentData, procurementData, demandTWh: baseDemandTWh, demandTWhPerBar };
 }
 
 function buildIncrementalDatasets(data) {
