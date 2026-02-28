@@ -75,7 +75,6 @@ def learning_fraction(threshold, scenario='B'):
     active = (year - foak_start) / (noak_year - foak_start)
     return active ** 0.6
 
-
 DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data')
 PP_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
 
