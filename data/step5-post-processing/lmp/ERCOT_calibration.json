@@ -1,22 +1,22 @@
 {
   "iso": "ERCOT",
-  "calibration_date": "2026-02-28 03:55:13",
+  "calibration_date": "2026-02-28 04:11:17",
   "synthetic_stats": {
-    "avg_lmp": 62.16,
-    "peak_avg_lmp": 90.84,
-    "offpeak_avg_lmp": 36.03,
-    "zero_price_hours": 585,
-    "negative_price_hours": 585,
-    "scarcity_hours": 391,
-    "lmp_p10": 18.81,
-    "lmp_p25": 34.8,
-    "lmp_p50": 36.57,
-    "lmp_p75": 37.74,
-    "lmp_p90": 56.18,
-    "price_volatility": 144.46,
+    "avg_lmp": 28.41,
+    "peak_avg_lmp": 35.76,
+    "offpeak_avg_lmp": 21.71,
+    "zero_price_hours": 470,
+    "negative_price_hours": 470,
+    "scarcity_hours": 50,
+    "lmp_p10": 11.89,
+    "lmp_p25": 17.89,
+    "lmp_p50": 27.95,
+    "lmp_p75": 36.8,
+    "lmp_p90": 45.23,
+    "price_volatility": 26.03,
     "duck_curve_depth_mw": 0.0,
-    "net_peak_price": 872.7,
-    "fossil_revenue_mwh": 62.16
+    "net_peak_price": 102.77,
+    "fossil_revenue_mwh": 28.41
   },
   "targets": {
     "avg_lmp": 26.0,
@@ -35,107 +35,107 @@
   "comparison": [
     {
       "metric": "avg_lmp",
-      "synthetic": 62.16,
+      "synthetic": 28.41,
       "target": 26.0,
-      "delta": 36.16,
-      "pct_delta": 139.07692307692307,
-      "status": "FAIL"
+      "delta": 2.41,
+      "pct_delta": 9.26923076923077,
+      "status": "GOOD"
     },
     {
       "metric": "peak_avg_lmp",
-      "synthetic": 90.84,
+      "synthetic": 35.76,
       "target": 36.0,
-      "delta": 54.84,
-      "pct_delta": 152.33333333333334,
-      "status": "FAIL"
+      "delta": -0.240000000000002,
+      "pct_delta": -0.6666666666666722,
+      "status": "GOOD"
     },
     {
       "metric": "offpeak_avg_lmp",
-      "synthetic": 36.03,
+      "synthetic": 21.71,
       "target": 18.0,
-      "delta": 18.03,
-      "pct_delta": 100.16666666666667,
-      "status": "FAIL"
+      "delta": 3.710000000000001,
+      "pct_delta": 20.611111111111118,
+      "status": "FAIR"
     },
     {
       "metric": "lmp_p10",
-      "synthetic": 18.81,
+      "synthetic": 11.89,
       "target": 5.0,
-      "delta": 13.809999999999999,
-      "pct_delta": 276.19999999999993,
+      "delta": 6.890000000000001,
+      "pct_delta": 137.8,
       "status": "FAIL"
     },
     {
       "metric": "lmp_p25",
-      "synthetic": 34.8,
+      "synthetic": 17.89,
       "target": 14.0,
-      "delta": 20.799999999999997,
-      "pct_delta": 148.57142857142856,
-      "status": "FAIL"
+      "delta": 3.8900000000000006,
+      "pct_delta": 27.785714285714292,
+      "status": "ADJUST"
     },
     {
       "metric": "lmp_p50",
-      "synthetic": 36.57,
+      "synthetic": 27.95,
       "target": 22.0,
-      "delta": 14.57,
-      "pct_delta": 66.22727272727272,
-      "status": "FAIL"
+      "delta": 5.949999999999999,
+      "pct_delta": 27.045454545454543,
+      "status": "ADJUST"
     },
     {
       "metric": "lmp_p75",
-      "synthetic": 37.74,
+      "synthetic": 36.8,
       "target": 32.0,
-      "delta": 5.740000000000002,
-      "pct_delta": 17.937500000000007,
+      "delta": 4.799999999999997,
+      "pct_delta": 14.999999999999991,
       "status": "FAIR"
     },
     {
       "metric": "lmp_p90",
-      "synthetic": 56.18,
+      "synthetic": 45.23,
       "target": 50.0,
-      "delta": 6.18,
-      "pct_delta": 12.36,
-      "status": "FAIR"
+      "delta": -4.770000000000003,
+      "pct_delta": -9.540000000000006,
+      "status": "GOOD"
     },
     {
       "metric": "price_volatility",
-      "synthetic": 144.46,
+      "synthetic": 26.03,
       "target": 35.0,
-      "delta": 109.46000000000001,
-      "pct_delta": 312.7428571428572,
-      "status": "FAIL"
-    },
-    {
-      "metric": "negative_price_hours",
-      "synthetic": 585,
-      "target": 400,
-      "delta": 185,
-      "pct_delta": 46.25,
+      "delta": -8.969999999999999,
+      "pct_delta": -25.628571428571423,
       "status": "ADJUST"
     },
     {
+      "metric": "negative_price_hours",
+      "synthetic": 470,
+      "target": 400,
+      "delta": 70,
+      "pct_delta": 17.5,
+      "status": "FAIR"
+    },
+    {
       "metric": "scarcity_hours",
-      "synthetic": 391,
+      "synthetic": 50,
       "target": 80,
-      "delta": 311,
-      "pct_delta": 388.75,
-      "status": "FAIL"
+      "delta": -30,
+      "pct_delta": -37.5,
+      "status": "ADJUST"
     }
   ],
   "distribution": {
     "percentiles": {
-      "p1": -41.42,
-      "p5": -11.17,
-      "p10": 18.81,
-      "p25": 34.8,
-      "p50": 36.57,
-      "p75": 37.74,
-      "p90": 56.18,
-      "p95": 94.27,
-      "p99": 926.6
+      "p1": -39.32,
+      "p5": -2.76,
+      "p10": 11.89,
+      "p25": 17.89,
+      "p50": 27.95,
+      "p75": 36.8,
+      "p90": 45.23,
+      "p95": 54.09,
+      "p99": 137.23
     },
-    "negative_hours": 585,
-    "zero_hours": 585,
-    "scarcity_hours": 391
+    "negative_hours": 470,
+    "zero_hours": 470,
+    "scarcity_hours": 50
   }
 }
