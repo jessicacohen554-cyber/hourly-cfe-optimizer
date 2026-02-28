@@ -652,23 +652,15 @@ const CHART_DEFAULTS = {
 function yearLabel(d) { return d.year + '\n(' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%)'; }
 function pctLabel(d) { return (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%'; }
 
-// Filter trajectory to thresholds above existing clean %, prepend 2025 baseline
+// Filter trajectory to thresholds >= 50%, no synthetic baseline
 function filterTraj(iso, rawTraj) {
     const isoShares = (GRID_MIX || {})[iso] || {};
     const existingCleanPct = Object.values(isoShares).reduce((s, v) => s + v, 0);
-    const filtered = rawTraj.filter(d => d.threshold > existingCleanPct);
-    const baseline = {
-        threshold: existingCleanPct, year: 2025, demand_twh: DEMAND_TWH[iso],
-        effective_cost: 0, stepwise_mac: 0, gas_backup_mw: 0, new_gas_mw: 0,
-        firm_total_twh: 0, resource_twh: { clean_firm: 0, solar: 0, wind: 0, ccs_ccgt: 0, hydro: 0 },
-        battery_twh: 0, ldes_twh: 0,
-    };
-    return { traj: [baseline, ...filtered], existingCleanPct };
+    const filtered = rawTraj.filter(d => d.threshold >= 50);
+    return { traj: filtered, existingCleanPct };
 }
 function trajLabels(traj, existingCleanPct) {
-    return traj.map(d =>
-        d.year === 2025 ? '2025\n' + Math.round(existingCleanPct) + '%'
-                        : d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
+    return traj.map(d => d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
 }
 
 // ===== HERO STATS (all-region aggregates at 95%, static) =====
@@ -992,7 +984,7 @@ function renderMacTimeline(iso) {
                         }
                     }
                 },
-                annotation: { annotations: targetAnnotation(labels, trajA) },
+                annotation: { annotations: targetAnnotation(labels, ptsA) },
             },
             scales: {
                 x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
@@ -1121,36 +1113,12 @@ function renderMixCharts(iso) {
     const baseDemandTwh = DEMAND_TWH[iso];
     const isoShares = (GRID_MIX || {})[iso] || {};
 
-    // Compute existing clean percentage to set x-axis starting point
-    const existingCleanPct = Object.values(isoShares).reduce((s, v) => s + v, 0);
+    // Filter trajectory points to thresholds >= 50%
+    const trajA = (DATA.trajectories.pure_consequential[iso] || []).filter(d => d.threshold >= 50);
+    const trajB = getScenarioB(iso).filter(d => d.threshold >= 50);
 
-    // Build "2025" data point — existing resources only, no new build
-    // Use exact existingCleanPct (not rounded) so curtailment computes to zero
-    const todayPoint = {
-        threshold: existingCleanPct,
-        year: 2025,
-        demand_twh: baseDemandTwh,
-        effective_cost: 0,
-        resource_twh: {
-            clean_firm: (isoShares['clean_firm'] || 0) / 100 * baseDemandTwh,
-            solar: (isoShares['solar'] || 0) / 100 * baseDemandTwh,
-            wind: (isoShares['wind'] || 0) / 100 * baseDemandTwh,
-            ccs_ccgt: 0,
-            hydro: (isoShares['hydro'] || 0) / 100 * baseDemandTwh,
-        },
-        battery_twh: 0, ldes_twh: 0, gas_backup_mw: 0, new_gas_mw: 0,
-    };
-
-    // Filter trajectory points to thresholds > existing clean %, then prepend "2025"
-    const rawTrajA = (DATA.trajectories.pure_consequential[iso] || []).filter(d => d.threshold > existingCleanPct);
-    const rawTrajB = getScenarioB(iso).filter(d => d.threshold > existingCleanPct);
-    const trajA = [todayPoint, ...rawTrajA];
-    const trajB = [todayPoint, ...rawTrajB];
-
-    // Labels: "2025" with existing clean% first, then "Year\nThreshold%"
-    const labels = trajA.map(d =>
-        d.year === 2025 ? '2025\n' + Math.round(existingCleanPct) + '%'
-                        : d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
+    // Labels: "Year\nThreshold%"
+    const labels = trajA.map(d => d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
 
     // Compute existing TWh per non-nuclear resource
     const existingTwh = {};
