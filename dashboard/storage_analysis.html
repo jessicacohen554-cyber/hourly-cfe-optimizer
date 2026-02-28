@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battery & Hydrogen Storage Analysis — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+body { background: #FFFFFF; }
+
+/* ========== HERO ========== */
+.hero-storage {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FC 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 48px 24px;
+}
+.hero-storage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(139,92,246,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(236,72,153,0.06) 0%, transparent 60%);
+    pointer-events: none;
+}
+.hero-inner {
+    position: relative;
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+}
+.hero-text h2 {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1A2744;
+    margin-bottom: 16px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.hero-text p {
+    font-size: 0.95rem;
+    color: rgba(0,0,0,0.7);
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+.hero-chart {
+    min-height: 300px;
+}
+
+/* ========== COUNTER CARDS ========== */
+.counter-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 24px 0 0;
+}
+.counter-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 16px 14px;
+    text-align: center;
+    flex: 1;
+    min-width: 100px;
+}
+.counter-val {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #8B5CF6;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+.counter-val.pink { color: #EC4899; }
+.counter-val.blue { color: #0284c7; }
+.counter-val.green { color: #16a34a; }
+.counter-lbl {
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.55);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+/* ========== SECTIONS ========== */
+.content-section {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 48px 24px;
+}
+.section-header {
+    margin-bottom: 32px;
+}
+.section-header h3 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin-bottom: 8px;
+}
+.section-header p {
+    font-size: 0.9rem;
+    color: rgba(0,0,0,0.6);
+    line-height: 1.6;
+    max-width: 800px;
+}
+
+/* ========== CHART PANELS ========== */
+.chart-panel {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 24px 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 32px;
+}
+.chart-panel h4 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin-bottom: 4px;
+}
+.chart-panel .subtitle {
+    font-size: 0.82rem;
+    color: rgba(0,0,0,0.5);
+    margin-bottom: 16px;
+}
+.chart-container {
+    position: relative;
+    min-height: 350px;
+}
+@media (max-width: 768px) {
+    .chart-container { min-height: 280px; }
+}
+
+/* ========== CONTROLS ========== */
+.controls-bar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    align-items: center;
+}
+.control-group label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(0,0,0,0.5);
+    margin-bottom: 4px;
+}
+.control-group select {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    background: #F9FAFB;
+    cursor: pointer;
+    min-width: 140px;
+}
+
+/* ========== TECH COMPARISON TABLE ========== */
+.tech-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin: 16px 0;
+}
+.tech-table th {
+    background: #F3F4F6;
+    font-weight: 700;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 2px solid #E5E7EB;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(0,0,0,0.6);
+}
+.tech-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #F3F4F6;
+}
+.tech-table tr:hover td {
+    background: #F9FAFB;
+}
+.tech-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.badge-battery { background: rgba(139,92,246,0.12); color: #7C3AED; }
+.badge-ldes { background: rgba(236,72,153,0.12); color: #DB2777; }
+.badge-h2 { background: rgba(14,165,233,0.12); color: #0284C7; }
+
+/* ========== GRID LAYOUTS ========== */
+.chart-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+.chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+}
+@media (max-width: 992px) {
+    .chart-grid-3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+    .hero-inner { grid-template-columns: 1fr; gap: 24px; }
+    .chart-grid-2 { grid-template-columns: 1fr; }
+}
+
+/* ========== INSIGHT CALLOUTS ========== */
+.insight-box {
+    background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(236,72,153,0.04));
+    border-left: 4px solid #8B5CF6;
+    border-radius: 0 12px 12px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+}
+.insight-box h5 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1A2744;
+    margin-bottom: 8px;
+}
+.insight-box p {
+    font-size: 0.88rem;
+    color: rgba(0,0,0,0.7);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ========== ONSET TABLE ========== */
+.onset-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin: 16px 0;
+}
+.onset-table th {
+    background: #F3F4F6;
+    font-weight: 700;
+    text-align: center;
+    padding: 10px 12px;
+    border-bottom: 2px solid #E5E7EB;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(0,0,0,0.6);
+}
+.onset-table th:first-child { text-align: left; }
+.onset-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #F3F4F6;
+    text-align: center;
+}
+.onset-table td:first-child { text-align: left; font-weight: 600; }
+.onset-val { font-weight: 700; }
+.onset-none { color: rgba(0,0,0,0.25); font-style: italic; }
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<!-- ========== HERO ========== -->
+<section class="hero-storage">
+<div class="hero-inner">
+    <div class="hero-text">
+        <h2>Battery & Hydrogen Storage Analysis</h2>
+        <p>Storage bridges the gap between when clean energy is generated and when it's consumed.
+           At low decarbonization targets (&lt;95%), resource mix optimization alone achieves hourly matching.
+           Storage becomes essential only at extreme thresholds (97.5%&ndash;99.99%), where every
+           remaining hour of mismatch must be covered.</p>
+        <p>This analysis reveals <strong>when</strong> each storage technology becomes necessary,
+           <strong>how much</strong> is needed, and <strong>why</strong> different regions need
+           different storage mixes.</p>
+        <div class="counter-row" id="heroCounters">
+            <div class="counter-card">
+                <div class="counter-val" id="ctrBatOnset">--</div>
+                <div class="counter-lbl">Battery Onset</div>
+            </div>
+            <div class="counter-card">
+                <div class="counter-val pink" id="ctrLdesOnset">--</div>
+                <div class="counter-lbl">LDES Onset</div>
+            </div>
+            <div class="counter-card">
+                <div class="counter-val blue" id="ctrH2Onset">--</div>
+                <div class="counter-lbl">H2 Onset</div>
+            </div>
+            <div class="counter-card">
+                <div class="counter-val green" id="ctrRegions">7</div>
+                <div class="counter-lbl">ISOs Analyzed</div>
+            </div>
+        </div>
+    </div>
+    <div class="hero-chart">
+        <div class="chart-container">
+            <canvas id="heroChart"></canvas>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ========== SECTION 1: Technology Comparison ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Storage Technology Landscape</h3>
+        <p>Four storage technologies span the full duration spectrum — from 4-hour daily shifting
+           to 1,000-hour seasonal bridging. Each serves a distinct physical role in the clean energy system.</p>
+    </div>
+
+    <div class="chart-panel">
+        <table class="tech-table" id="techTable">
+            <thead>
+                <tr>
+                    <th>Technology</th>
+                    <th>Duration</th>
+                    <th>Efficiency</th>
+                    <th>Use Case</th>
+                    <th>Cost (L/M/H)</th>
+                    <th>Dispatch Window</th>
+                </tr>
+            </thead>
+            <tbody id="techTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="insight-box">
+        <h5>The Duration Spectrum</h5>
+        <p>Battery handles the predictable daily solar peak → evening demand cycle. LDES covers multi-day
+           weather events (3-7 day wind lulls, cloudy stretches). Green hydrogen provides seasonal resilience
+           for the rarest multi-week events. Each technology fills a gap the shorter-duration one cannot reach —
+           you can't solve a 5-day wind drought with 4-hour batteries no matter how many you deploy.</p>
+    </div>
+</section>
+
+<!-- ========== SECTION 2: Storage Onset by Region ========== -->
+<section class="content-section" style="background: #F8F9FC; padding-top: 48px; padding-bottom: 48px; max-width: 100%;">
+<div style="max-width: 1320px; margin: 0 auto; padding: 0 24px;">
+    <div class="section-header">
+        <h3>When Does Storage Become Necessary?</h3>
+        <p>Storage only enters the cost-optimal mix at extreme decarbonization targets. Below ~97%, the
+           optimizer finds resource-only solutions (clean firm + VRE + hydro) that achieve hourly matching
+           without storage. This is the key finding: <strong>storage is a last-mile technology</strong>,
+           not a foundation of grid decarbonization.</p>
+    </div>
+
+    <div class="chart-panel">
+        <h4>Storage Onset Threshold by ISO</h4>
+        <p class="subtitle">CFE threshold where battery or LDES first appears in any feasible mix</p>
+        <table class="onset-table" id="onsetTable">
+            <thead>
+                <tr>
+                    <th>ISO</th>
+                    <th>Battery (4hr)</th>
+                    <th>LDES (100hr)</th>
+                    <th>Green H2</th>
+                    <th>Primary Driver</th>
+                </tr>
+            </thead>
+            <tbody id="onsetTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="chart-grid-2">
+        <div class="chart-panel">
+            <h4>Mixes with Storage by Threshold</h4>
+            <p class="subtitle">What fraction of feasible solutions include storage at each CFE target?</p>
+            <div class="controls-bar">
+                <div class="control-group">
+                    <label>ISO</label>
+                    <select id="selIso1">
+                        <option value="PJM">PJM</option>
+                        <option value="CAISO">CAISO</option>
+                        <option value="ERCOT">ERCOT</option>
+                        <option value="NYISO">NYISO</option>
+                        <option value="NEISO">NEISO</option>
+                        <option value="MISO">MISO</option>
+                        <option value="SPP">SPP</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="storageOnsetChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-panel">
+            <h4>Storage Capacity Distribution</h4>
+            <p class="subtitle">Maximum battery and LDES capacity (% of demand) at each threshold</p>
+            <div class="controls-bar">
+                <div class="control-group">
+                    <label>ISO</label>
+                    <select id="selIso2">
+                        <option value="PJM">PJM</option>
+                        <option value="CAISO">CAISO</option>
+                        <option value="ERCOT">ERCOT</option>
+                        <option value="NYISO">NYISO</option>
+                        <option value="NEISO">NEISO</option>
+                        <option value="MISO">MISO</option>
+                        <option value="SPP">SPP</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="storageCapChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ========== SECTION 3: Regional Storage Drivers ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Why Storage Needs Vary by Region</h3>
+        <p>Solar-dominated ISOs (CAISO) need daily shifting via batteries. Wind-dominated ISOs (SPP, ERCOT)
+           face multi-day variability requiring LDES. Nuclear-heavy ISOs (PJM, NEISO) need the least storage
+           — baseload covers most hours, so storage only fills narrow gaps.</p>
+    </div>
+
+    <div class="chart-panel">
+        <h4>Regional Clean Energy Mix & Storage Driver</h4>
+        <p class="subtitle">Existing grid composition determines what type of storage each ISO needs most</p>
+        <div class="chart-container" style="min-height: 400px;">
+            <canvas id="regionalDriverChart"></canvas>
+        </div>
+    </div>
+
+    <div class="insight-box">
+        <h5>SPP: The Battery-First Exception</h5>
+        <p>SPP is the only ISO where battery enters the optimal mix before LDES (at 97.5%). With 37% wind
+           penetration but relatively low clean firm, SPP's daily wind pattern (strong overnight, weak midday)
+           creates a predictable daily cycle that 4-hour batteries can partially address. Other ISOs skip
+           straight to LDES because their gaps are multi-day weather events, not daily patterns.</p>
+    </div>
+</section>
+
+<!-- ========== SECTION 4: Dispatch Profile ========== -->
+<section class="content-section" style="background: #F8F9FC; padding-top: 48px; padding-bottom: 48px; max-width: 100%;">
+<div style="max-width: 1320px; margin: 0 auto; padding: 0 24px;">
+    <div class="section-header">
+        <h3>24-Hour Storage Dispatch Profiles</h3>
+        <p>How storage charges and discharges through a representative day. Battery follows a predictable
+           charge-during-surplus, discharge-during-gap pattern. LDES operates on a longer cycle, carrying
+           energy from high-generation days to deficit days.</p>
+    </div>
+
+    <div class="chart-panel">
+        <h4>Representative Day: Charge & Discharge Pattern</h4>
+        <p class="subtitle">24-hour compressed day profile for mixes with storage</p>
+        <div class="controls-bar">
+            <div class="control-group">
+                <label>ISO</label>
+                <select id="selIsoDispatch">
+                    <option value="SPP">SPP</option>
+                    <option value="PJM">PJM</option>
+                    <option value="CAISO">CAISO</option>
+                    <option value="ERCOT">ERCOT</option>
+                    <option value="NYISO">NYISO</option>
+                    <option value="NEISO">NEISO</option>
+                    <option value="MISO">MISO</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Mix</label>
+                <select id="selMix"></select>
+            </div>
+        </div>
+        <div class="chart-container" style="min-height: 400px;">
+            <canvas id="dispatchChart"></canvas>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ========== SECTION 5: H2 Feasibility ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Green Hydrogen: The Seasonal Question</h3>
+        <p>Green hydrogen storage (electrolysis → salt cavern → turbine) has the lowest round-trip efficiency
+           (35%) but offers the longest duration (1,000 hours / ~42 days). The optimizer only evaluates H2
+           at ≥95% CFE thresholds — it's physically justified only when all shorter-duration options are exhausted.</p>
+    </div>
+
+    <div class="chart-grid-2">
+        <div class="chart-panel">
+            <h4>Storage Technology Efficiency Comparison</h4>
+            <p class="subtitle">Energy retained per round-trip — the fundamental physics tradeoff</p>
+            <div class="chart-container">
+                <canvas id="efficiencyChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-panel">
+            <h4>Duration vs. Efficiency Tradeoff</h4>
+            <p class="subtitle">Longer duration storage comes at steep efficiency costs</p>
+            <div class="chart-container">
+                <canvas id="durationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="insight-box">
+        <h5>Why H2 Doesn't Appear in Current Results</h5>
+        <p>In the current optimization, no ISO produces an optimal mix that includes green hydrogen — even at
+           99.99% CFE targets. LDES (100hr iron-air at 50% efficiency) covers the multi-day gaps more
+           cost-effectively. Green hydrogen would become relevant for truly seasonal storage needs (multi-week
+           events) or if iron-air battery costs remain at the high end of projections while electrolyzer costs
+           decline below $300/kW. The optimizer correctly identifies this: H2's 35% round-trip efficiency
+           means you need ~2.9 MWh of surplus to deliver 1 MWh — a steep tax when LDES delivers the same
+           MWh for only 2 MWh of surplus.</p>
+    </div>
+</section>
+
+<!-- ========== SECTION 6: Key Findings ========== -->
+<section class="content-section" style="background: linear-gradient(180deg, #F8F9FC, #FFFFFF); padding-top: 48px; padding-bottom: 48px; max-width: 100%;">
+<div style="max-width: 1320px; margin: 0 auto; padding: 0 24px;">
+    <div class="section-header">
+        <h3>Key Findings</h3>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div class="chart-panel">
+            <h4 style="color: #8B5CF6;">1. Storage is a last-mile technology</h4>
+            <p style="font-size: 0.88rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
+                Below 95% hourly matching, the optimizer finds solutions using only generation resources
+                (clean firm, solar, wind, CCS, hydro). Storage enters the picture only when you're trying
+                to close the final 1-5% gap — the hours where no combination of generation resources
+                can match demand without temporal shifting.
+            </p>
+        </div>
+        <div class="chart-panel">
+            <h4 style="color: #EC4899;">2. LDES before batteries (mostly)</h4>
+            <p style="font-size: 0.88rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
+                In most ISOs, LDES enters the optimal mix before 4-hour batteries. The residual gap
+                at extreme thresholds is driven by multi-day weather events (extended cloud cover,
+                wind droughts), not daily solar cycling. 4-hour batteries can't bridge a 3-day lull —
+                you need 100+ hour duration.
+            </p>
+        </div>
+        <div class="chart-panel">
+            <h4 style="color: #0284C7;">3. Region determines storage type</h4>
+            <p style="font-size: 0.88rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
+                SPP (37% wind) is the only ISO where batteries appear before LDES — its daily wind
+                pattern creates a regular charge/discharge cycle. Solar-heavy CAISO and nuclear-heavy
+                PJM go straight to LDES because their residual gaps are weather-driven, not time-of-day.
+            </p>
+        </div>
+        <div class="chart-panel">
+            <h4 style="color: #16a34a;">4. Clean firm is the real workhorse</h4>
+            <p style="font-size: 0.88rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
+                The model demonstrates that dispatchable clean firm generation (nuclear, geothermal,
+                advanced nuclear) does the heavy lifting for hourly matching. Storage supplements —
+                it doesn't substitute. Investing in clean firm capacity is far more effective than
+                over-investing in storage to compensate for intermittent-only portfolios.
+            </p>
+        </div>
+    </div>
+</div>
+</section>
+
+<script src="js/nav.js"></script>
+<script src="js/storage-analysis-data.js"></script>
+<script>
+(function() {
+'use strict';
+
+const SA = STORAGE_ANALYSIS;
+const ISOS = SA.isos;
+const COLORS = {
+    battery:    { bg: 'rgba(139,92,246,0.6)',  border: '#8B5CF6', light: 'rgba(139,92,246,0.15)' },
+    battery8:   { bg: 'rgba(167,139,250,0.6)', border: '#A78BFA', light: 'rgba(167,139,250,0.15)' },
+    ldes:       { bg: 'rgba(236,72,153,0.6)',  border: '#EC4899', light: 'rgba(236,72,153,0.15)' },
+    h2:         { bg: 'rgba(14,165,233,0.6)',  border: '#0EA5E9', light: 'rgba(14,165,233,0.15)' },
+    clean_firm: { bg: 'rgba(22,163,74,0.6)',   border: '#16A34A' },
+    solar:      { bg: 'rgba(245,158,11,0.6)',  border: '#F59E0B' },
+    wind:       { bg: 'rgba(59,130,246,0.6)',  border: '#3B82F6' },
+    ccs_ccgt:   { bg: 'rgba(20,184,166,0.6)',  border: '#14B8A6' },
+    hydro:      { bg: 'rgba(6,182,212,0.6)',   border: '#06B6D4' },
+    gap:        { bg: 'rgba(239,68,68,0.3)',   border: '#EF4444' },
+    demand:     { bg: 'rgba(0,0,0,0)',         border: '#1A2744' },
+};
+
+let charts = {};
+
+// ========== HERO COUNTERS ==========
+function initCounters() {
+    const ps = SA.parquet_stats || {};
+    let batOnsets = [], ldesOnsets = [];
+    ISOS.forEach(function(iso) {
+        const s = ps[iso];
+        if (!s) return;
+        if (s.battery_onset_threshold) batOnsets.push(s.battery_onset_threshold);
+        if (s.ldes_onset_threshold) ldesOnsets.push(s.ldes_onset_threshold);
+    });
+    const minBat = batOnsets.length ? Math.min.apply(null, batOnsets) : null;
+    const minLdes = ldesOnsets.length ? Math.min.apply(null, ldesOnsets) : null;
+    document.getElementById('ctrBatOnset').textContent = minBat ? minBat + '%' : 'N/A';
+    document.getElementById('ctrLdesOnset').textContent = minLdes ? minLdes + '%' : 'N/A';
+    document.getElementById('ctrH2Onset').textContent = '≥95%*';
+}
+
+// ========== TECH TABLE ==========
+function initTechTable() {
+    const params = SA.storage_params;
+    const h2f = SA.h2_feasibility.comparison;
+    const rows = [
+        { key: 'battery4', name: 'Li-ion Battery', badge: 'badge-battery',
+          dur: '4 hours', eff: '85%', use: 'Daily solar shifting (day→evening)',
+          cost: '$115 / $140 / $165 per kWh', window: 'Daily cycle' },
+        { key: 'battery8', name: 'Li-ion Battery (8hr)', badge: 'badge-battery',
+          dur: '8 hours', eff: '85%', use: 'Extended daily shifting (day→night)',
+          cost: '$95 / $120 / $145 per kWh', window: 'Daily cycle' },
+        { key: 'ldes', name: 'Iron-Air LDES', badge: 'badge-ldes',
+          dur: '100 hours', eff: '50%', use: 'Multi-day weather bridging (3-7 day lulls)',
+          cost: '$30 / $50 / $80 per kWh', window: '7-day rolling' },
+        { key: 'h2', name: 'Green Hydrogen', badge: 'badge-h2',
+          dur: '1,000 hours', eff: '35%', use: 'Seasonal storage (weeks-to-months)',
+          cost: '$150 / $250 / $400 per MWh', window: '30-day rolling' },
+    ];
+    const tbody = document.getElementById('techTableBody');
+    rows.forEach(function(r) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td><span class="tech-badge ' + r.badge + '">' + r.name + '</span></td>' +
+            '<td><strong>' + r.dur + '</strong></td>' +
+            '<td>' + r.eff + '</td>' +
+            '<td>' + r.use + '</td>' +
+            '<td style="font-size:0.8rem;">' + r.cost + '</td>' +
+            '<td>' + r.window + '</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+// ========== ONSET TABLE ==========
+function initOnsetTable() {
+    const ps = SA.parquet_stats || {};
+    const drivers = SA.regional_drivers || {};
+    const tbody = document.getElementById('onsetTableBody');
+    ISOS.forEach(function(iso) {
+        const s = ps[iso] || {};
+        const d = drivers[iso] || {};
+        const tr = document.createElement('tr');
+        function fmtOnset(v) {
+            return v ? '<span class="onset-val">' + v + '%</span>' : '<span class="onset-none">Not in mix</span>';
+        }
+        tr.innerHTML = '<td>' + iso + '</td>' +
+            '<td>' + fmtOnset(s.battery_onset_threshold) + '</td>' +
+            '<td>' + fmtOnset(s.ldes_onset_threshold) + '</td>' +
+            '<td><span class="onset-none">≥95% only*</span></td>' +
+            '<td style="font-size:0.82rem;">' + (d.storage_need || '') + '</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+// ========== HERO CHART: Storage onset overview ==========
+function initHeroChart() {
+    const ps = SA.parquet_stats || {};
+    const isoLabels = [];
+    const batData = [];
+    const ldesData = [];
+
+    ISOS.forEach(function(iso) {
+        const s = ps[iso] || {};
+        isoLabels.push(iso);
+        batData.push(s.battery_onset_threshold || null);
+        ldesData.push(s.ldes_onset_threshold || null);
+    });
+
+    const ctx = document.getElementById('heroChart').getContext('2d');
+    charts.hero = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: isoLabels,
+            datasets: [
+                {
+                    label: 'Battery (4hr)',
+                    data: batData,
+                    backgroundColor: COLORS.battery.bg,
+                    borderColor: COLORS.battery.border,
+                    borderWidth: 2,
+                    borderRadius: 6,
+                },
+                {
+                    label: 'LDES (100hr)',
+                    data: ldesData,
+                    backgroundColor: COLORS.ldes.bg,
+                    borderColor: COLORS.ldes.border,
+                    borderWidth: 2,
+                    borderRadius: 6,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 12 } } },
+                title: {
+                    display: true,
+                    text: 'CFE Threshold Where Storage First Appears',
+                    font: { size: 14, weight: 'bold' },
+                    color: '#1A2744',
+                },
+            },
+            scales: {
+                y: {
+                    min: 90,
+                    max: 100,
+                    title: { display: true, text: 'CFE Threshold (%)', font: { size: 12 } },
+                    ticks: { callback: function(v) { return v + '%'; } },
+                },
+                x: {
+                    title: { display: true, text: 'ISO Region', font: { size: 12 } },
+                }
+            }
+        }
+    });
+}
+
+// ========== STORAGE ONSET CHART ==========
+function initStorageOnsetChart() {
+    const ctx = document.getElementById('storageOnsetChart').getContext('2d');
+    charts.onset = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 11 } } },
+                title: { display: false },
+            },
+            scales: {
+                y: {
+                    title: { display: true, text: '% of Feasible Mixes with Storage', font: { size: 11 } },
+                    ticks: { callback: function(v) { return v + '%'; } },
+                },
+                x: {
+                    title: { display: true, text: 'CFE Threshold', font: { size: 11 } },
+                }
+            }
+        }
+    });
+    document.getElementById('selIso1').addEventListener('change', updateStorageOnsetChart);
+    updateStorageOnsetChart();
+}
+
+function updateStorageOnsetChart() {
+    const iso = document.getElementById('selIso1').value;
+    const ps = (SA.parquet_stats || {})[iso] || {};
+    const byTh = ps.storage_by_threshold || {};
+    const thresholds = Object.keys(byTh).sort(function(a,b) { return parseFloat(a) - parseFloat(b); });
+
+    const labels = thresholds.map(function(t) {
+        var v = parseFloat(t);
+        return v >= 99.99 ? '≥99.99%' : v + '%';
+    });
+    const pctData = thresholds.map(function(t) { return byTh[t].pct_with_storage || 0; });
+
+    charts.onset.data.labels = labels;
+    charts.onset.data.datasets = [{
+        label: '% Mixes with Storage',
+        data: pctData,
+        backgroundColor: COLORS.battery.bg,
+        borderColor: COLORS.battery.border,
+        borderWidth: 2,
+        borderRadius: 4,
+    }];
+    charts.onset.update();
+}
+
+// ========== STORAGE CAPACITY CHART ==========
+function initStorageCapChart() {
+    const ctx = document.getElementById('storageCapChart').getContext('2d');
+    charts.cap = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 11 } } },
+            },
+            scales: {
+                y: {
+                    title: { display: true, text: 'Max Storage Dispatch (% of demand)', font: { size: 11 } },
+                },
+                x: {
+                    title: { display: true, text: 'CFE Threshold', font: { size: 11 } },
+                }
+            }
+        }
+    });
+    document.getElementById('selIso2').addEventListener('change', updateStorageCapChart);
+    updateStorageCapChart();
+}
+
+function updateStorageCapChart() {
+    const iso = document.getElementById('selIso2').value;
+    const ps = (SA.parquet_stats || {})[iso] || {};
+    const byTh = ps.storage_by_threshold || {};
+    const thresholds = Object.keys(byTh).sort(function(a,b) { return parseFloat(a) - parseFloat(b); });
+
+    // Only show thresholds with any storage
+    const filtered = thresholds.filter(function(t) {
+        var d = byTh[t];
+        return d.battery_max > 0 || d.ldes_max > 0 || d.h2_max > 0;
+    });
+
+    const labels = filtered.map(function(t) {
+        var v = parseFloat(t);
+        return v >= 99.99 ? '≥99.99%' : v + '%';
+    });
+
+    charts.cap.data.labels = labels;
+    charts.cap.data.datasets = [
+        {
+            label: 'Battery Max',
+            data: filtered.map(function(t) { return byTh[t].battery_max; }),
+            backgroundColor: COLORS.battery.bg,
+            borderColor: COLORS.battery.border,
+            borderWidth: 2,
+            borderRadius: 4,
+        },
+        {
+            label: 'LDES Max',
+            data: filtered.map(function(t) { return byTh[t].ldes_max; }),
+            backgroundColor: COLORS.ldes.bg,
+            borderColor: COLORS.ldes.border,
+            borderWidth: 2,
+            borderRadius: 4,
+        },
+    ];
+    charts.cap.update();
+}
+
+// ========== REGIONAL DRIVER CHART ==========
+function initRegionalDriverChart() {
+    const drivers = SA.regional_drivers || {};
+    const labels = ISOS.slice();
+    const solarData = [], windData = [], firmData = [];
+    ISOS.forEach(function(iso) {
+        var d = drivers[iso] || {};
+        solarData.push(d.solar_share || 0);
+        windData.push(d.wind_share || 0);
+        firmData.push(d.firm_share || 0);
+    });
+
+    const ctx = document.getElementById('regionalDriverChart').getContext('2d');
+    charts.regional = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Solar Share',
+                    data: solarData,
+                    backgroundColor: COLORS.solar.bg,
+                    borderColor: COLORS.solar.border,
+                    borderWidth: 2,
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Wind Share',
+                    data: windData,
+                    backgroundColor: COLORS.wind.bg,
+                    borderColor: COLORS.wind.border,
+                    borderWidth: 2,
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Clean Firm Share',
+                    data: firmData,
+                    backgroundColor: COLORS.clean_firm.bg,
+                    borderColor: COLORS.clean_firm.border,
+                    borderWidth: 2,
+                    borderRadius: 4,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                title: {
+                    display: true,
+                    text: 'Existing Clean Energy Mix (% of total clean)',
+                    font: { size: 14, weight: 'bold' },
+                    color: '#1A2744',
+                }
+            },
+            scales: {
+                y: {
+                    title: { display: true, text: 'Share of Clean Gen (%)', font: { size: 12 } },
+                    ticks: { callback: function(v) { return v + '%'; } },
+                },
+                x: {
+                    title: { display: true, text: 'ISO Region', font: { size: 12 } },
+                }
+            }
+        }
+    });
+}
+
+// ========== DISPATCH PROFILE CHART ==========
+function initDispatchChart() {
+    const ctx = document.getElementById('dispatchChart').getContext('2d');
+    charts.dispatch = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: { size: 11 } } },
+                title: { display: false },
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    title: { display: true, text: 'Hour of Day (UTC)', font: { size: 11 } },
+                },
+                y: {
+                    stacked: true,
+                    title: { display: true, text: 'Energy (normalized)', font: { size: 11 } },
+                }
+            }
+        }
+    });
+    document.getElementById('selIsoDispatch').addEventListener('change', updateDispatchMixSelect);
+    document.getElementById('selMix').addEventListener('change', updateDispatchChart);
+    updateDispatchMixSelect();
+}
+
+function updateDispatchMixSelect() {
+    const iso = document.getElementById('selIsoDispatch').value;
+    const cds = (SA.compressed_day_storage || {})[iso] || {};
+    const mixKeys = cds.mix_keys || [];
+    const sel = document.getElementById('selMix');
+    sel.innerHTML = '';
+    if (mixKeys.length === 0) {
+        var opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No storage mixes available';
+        sel.appendChild(opt);
+    } else {
+        mixKeys.forEach(function(mk, i) {
+            var opt = document.createElement('option');
+            opt.value = String(i);
+            opt.textContent = 'Mix: ' + mk;
+            sel.appendChild(opt);
+        });
+    }
+    updateDispatchChart();
+}
+
+function updateDispatchChart() {
+    const iso = document.getElementById('selIsoDispatch').value;
+    const mixIdx = parseInt(document.getElementById('selMix').value) || 0;
+    const cds = (SA.compressed_day_storage || {})[iso] || {};
+
+    const hours = [];
+    for (var h = 0; h < 24; h++) hours.push(h + ':00');
+
+    if (!cds.mix_keys || cds.mix_keys.length === 0) {
+        charts.dispatch.data.labels = hours;
+        charts.dispatch.data.datasets = [{
+            label: 'No storage dispatch data available',
+            data: new Array(24).fill(0),
+            backgroundColor: 'rgba(200,200,200,0.3)',
+        }];
+        charts.dispatch.update();
+        return;
+    }
+
+    const matched = (cds.matched_by_resource || [])[mixIdx] || {};
+    const batCharge = (cds.battery_charge || [])[mixIdx] || new Array(24).fill(0);
+    const ldesCharge = (cds.ldes_charge || [])[mixIdx] || new Array(24).fill(0);
+    const gap = (cds.gap || [])[mixIdx] || new Array(24).fill(0);
+    const demand = (cds.demand || [])[mixIdx] || new Array(24).fill(0);
+
+    charts.dispatch.data.labels = hours;
+    charts.dispatch.data.datasets = [
+        {
+            label: 'Clean Firm',
+            data: matched.clean_firm || new Array(24).fill(0),
+            backgroundColor: COLORS.clean_firm.bg,
+            borderColor: COLORS.clean_firm.border,
+            borderWidth: 1,
+            stack: 'gen',
+        },
+        {
+            label: 'Solar',
+            data: matched.solar || new Array(24).fill(0),
+            backgroundColor: COLORS.solar.bg,
+            borderColor: COLORS.solar.border,
+            borderWidth: 1,
+            stack: 'gen',
+        },
+        {
+            label: 'Wind',
+            data: matched.wind || new Array(24).fill(0),
+            backgroundColor: COLORS.wind.bg,
+            borderColor: COLORS.wind.border,
+            borderWidth: 1,
+            stack: 'gen',
+        },
+        {
+            label: 'Battery Dispatch',
+            data: matched.battery || new Array(24).fill(0),
+            backgroundColor: COLORS.battery.bg,
+            borderColor: COLORS.battery.border,
+            borderWidth: 1,
+            stack: 'gen',
+        },
+        {
+            label: 'LDES Dispatch',
+            data: matched.ldes || new Array(24).fill(0),
+            backgroundColor: COLORS.ldes.bg,
+            borderColor: COLORS.ldes.border,
+            borderWidth: 1,
+            stack: 'gen',
+        },
+        {
+            label: 'Residual Gap (Fossil)',
+            data: gap,
+            backgroundColor: COLORS.gap.bg,
+            borderColor: COLORS.gap.border,
+            borderWidth: 1,
+            stack: 'gen',
+        },
+        {
+            label: 'Demand',
+            data: demand,
+            type: 'line',
+            borderColor: COLORS.demand.border,
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            tension: 0.3,
+            stack: false,
+        },
+    ];
+    charts.dispatch.options.scales.x.stacked = true;
+    charts.dispatch.options.scales.y.stacked = true;
+    charts.dispatch.update();
+}
+
+// ========== EFFICIENCY CHART ==========
+function initEfficiencyChart() {
+    const ctx = document.getElementById('efficiencyChart').getContext('2d');
+    charts.efficiency = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Battery 4hr', 'Battery 8hr', 'LDES 100hr', 'Green H2 1000hr'],
+            datasets: [{
+                label: 'Round-Trip Efficiency',
+                data: [85, 85, 50, 35],
+                backgroundColor: [
+                    COLORS.battery.bg, COLORS.battery8.bg,
+                    COLORS.ldes.bg, COLORS.h2.bg
+                ],
+                borderColor: [
+                    COLORS.battery.border, COLORS.battery8.border,
+                    COLORS.ldes.border, COLORS.h2.border
+                ],
+                borderWidth: 2,
+                borderRadius: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                title: { display: false },
+            },
+            scales: {
+                x: {
+                    min: 0,
+                    max: 100,
+                    title: { display: true, text: 'Round-Trip Efficiency (%)', font: { size: 12 } },
+                    ticks: { callback: function(v) { return v + '%'; } },
+                },
+            }
+        }
+    });
+}
+
+// ========== DURATION CHART ==========
+function initDurationChart() {
+    const ctx = document.getElementById('durationChart').getContext('2d');
+    charts.duration = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Storage Technologies',
+                data: [
+                    { x: 4, y: 85, tech: 'Battery 4hr' },
+                    { x: 8, y: 85, tech: 'Battery 8hr' },
+                    { x: 100, y: 50, tech: 'LDES 100hr' },
+                    { x: 1000, y: 35, tech: 'Green H2' },
+                ],
+                backgroundColor: [
+                    COLORS.battery.bg, COLORS.battery8.bg,
+                    COLORS.ldes.bg, COLORS.h2.bg
+                ],
+                borderColor: [
+                    COLORS.battery.border, COLORS.battery8.border,
+                    COLORS.ldes.border, COLORS.h2.border
+                ],
+                borderWidth: 2,
+                pointRadius: 12,
+                pointHoverRadius: 16,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            var d = ctx.raw;
+                            return d.tech + ': ' + d.x + 'hr, ' + d.y + '% RTE';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'logarithmic',
+                    title: { display: true, text: 'Duration (hours, log scale)', font: { size: 12 } },
+                    ticks: {
+                        callback: function(v) {
+                            if ([4, 8, 100, 1000].indexOf(v) >= 0) return v + 'h';
+                            return '';
+                        }
+                    }
+                },
+                y: {
+                    min: 20,
+                    max: 100,
+                    title: { display: true, text: 'Round-Trip Efficiency (%)', font: { size: 12 } },
+                    ticks: { callback: function(v) { return v + '%'; } },
+                }
+            }
+        }
+    });
+}
+
+// ========== INIT ==========
+function init() {
+    initCounters();
+    initTechTable();
+    initOnsetTable();
+    initHeroChart();
+    initStorageOnsetChart();
+    initStorageCapChart();
+    initRegionalDriverChart();
+    initDispatchChart();
+    initEfficiencyChart();
+    initDurationChart();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
+})();
+</script>
+</body>
+</html>

@@ -112,6 +112,7 @@
                 { label: 'New Build Analysis', href: 'new_build_analysis.html' },
                 { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
                 { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' },
+                { label: 'Storage Analysis', href: 'storage_analysis.html' },
                 { separator: true, label: 'Consequential Accounting' },
                 { label: 'Overview', href: 'consequential_accounting.html' },
                 { label: 'Failure Modes at Scale', href: 'consequential_vacuum.html' },
