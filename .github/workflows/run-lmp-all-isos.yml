@@ -1,0 +1,170 @@
+name: "LMP Prices: Compute All 7 ISOs + Generate Dashboard Data"
+
+# Runs step6_compute_lmp_prices.py for all 7 ISOs (or a single ISO),
+# then runs scripts/extract_lmp_dashboard_data.py to generate
+# dashboard/js/lmp-data.js with threshold-sweep data for all ISOs.
+#
+# Trigger from GitHub Actions UI. Once lmp-data.js is generated,
+# the multi-region lmp_trends.html will use it automatically.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO to compute (or ALL for all 7)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      fuel_level:
+        description: 'Fuel level (or ALL for Low/Medium/High)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - L
+          - M
+          - H
+      source_ref:
+        description: 'Branch/tag to run from'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: lmp-compute
+
+jobs:
+  compute-lmp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 480
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.source_ref || 'master' }}
+          fetch-depth: 0
+          lfs: true
+
+      - name: Generate unique branch name
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          ISO_LABEL="${{ github.event.inputs.iso }}"
+          echo "TARGET_BRANCH=auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LABEL}" >> "$GITHUB_ENV"
+
+      - name: Create output branch
+        run: |
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install numpy pandas pyarrow numba scipy
+
+      - name: Verify Numba
+        run: python3 -c "from numba import njit; print('Numba OK')"
+
+      - name: Run LMP computation — single ISO
+        if: github.event.inputs.iso != 'ALL'
+        run: |
+          cd scripts
+          ISO="${{ github.event.inputs.iso }}"
+          FL="${{ github.event.inputs.fuel_level }}"
+          if [ "$FL" = "ALL" ]; then
+            echo "=== Computing LMP for $ISO (all fuel levels) ==="
+            python step6_compute_lmp_prices.py --iso "$ISO"
+          else
+            echo "=== Computing LMP for $ISO fuel=$FL ==="
+            python step6_compute_lmp_prices.py --iso "$ISO" --fuel-level "$FL"
+          fi
+
+      - name: Run LMP computation — all 7 ISOs
+        if: github.event.inputs.iso == 'ALL'
+        run: |
+          cd scripts
+          FL="${{ github.event.inputs.fuel_level }}"
+          for ISO in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
+            echo "=== Computing LMP for $ISO ==="
+            if [ "$FL" = "ALL" ]; then
+              python step6_compute_lmp_prices.py --iso "$ISO" || echo "WARNING: $ISO failed, continuing..."
+            else
+              python step6_compute_lmp_prices.py --iso "$ISO" --fuel-level "$FL" || echo "WARNING: $ISO failed, continuing..."
+            fi
+            echo "=== Done: $ISO ==="
+          done
+
+      - name: Extract dashboard data from parquets
+        run: |
+          # Generate dashboard/js/lmp-data.js from all available ISO parquets
+          if [ -f scripts/extract_lmp_dashboard_data.py ]; then
+            cd scripts
+            python extract_lmp_dashboard_data.py
+          else
+            echo "extract_lmp_dashboard_data.py not found — skipping JS generation"
+            echo "LMP parquets are saved; run manually or add extraction script."
+          fi
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage all LMP outputs
+          git add data/step5-post-processing/lmp/ || true
+          git add dashboard/js/lmp-data.js || true
+
+          if git diff --cached --quiet; then
+            echo "No new LMP outputs to commit"
+          else
+            ISOS="${{ github.event.inputs.iso }}"
+            git commit -m "LMP compute: $ISOS — threshold sweep parquets + dashboard data
+
+          Computed synthetic hourly LMP for $ISOS across all 15 thresholds.
+          Outputs: data/step5-post-processing/lmp/{ISO}_lmp.parquet
+          Dashboard: dashboard/js/lmp-data.js (if extraction script ran)"
+            git push origin "$TARGET_BRANCH"
+          fi
+
+      - name: Create PR
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git log origin/${{ github.event.inputs.source_ref || 'master' }}.."$TARGET_BRANCH" --oneline | grep -q .; then
+            gh pr create \
+              --title "LMP Compute: ${{ github.event.inputs.iso }} — synthetic threshold sweep" \
+              --body "## Summary
+          Computed synthetic 8760-hour LMP for **${{ github.event.inputs.iso }}** across all 15 clean energy thresholds.
+
+          ## Outputs
+          - \`data/step5-post-processing/lmp/{ISO}_lmp.parquet\` — per-ISO hourly dispatch + LMP by threshold × scenario
+          - \`dashboard/js/lmp-data.js\` — extracted JS data for multi-region lmp_trends.html (if extraction script present)
+
+          ## Next Steps
+          - Merge this PR into master
+          - The multi-region LMP dashboard page will automatically use the new data
+
+          ## Method
+          Synthetic merit-order LMP from dispatch reconstruction. Calibrated against:
+          - PJM IMM SOM 2024, CAISO DMM 2024, ERCOT Commercial Markets, Potomac Economics MISO/NYISO SOM, ISO-NE EMM 2024, SPP MMU 2024" \
+              --base ${{ github.event.inputs.source_ref || 'master' }}
+          fi
