@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Generate complete shared-data.js from overprocure_results.json + mac_stats.json.
+Generate complete shared-data.js from pipeline results + mac_stats.json.
 Replaces the entire file with fresh data from the latest pipeline run.
 
 Pipeline order: Step 1 (physics) → Step 2 (tranche) → postprocess → co2 → mac_stats → THIS
 
-Input:  dashboard/overprocure_results.json                  (final pipeline output)
-        data/step5-post-processing/mac_stats.json  (MAC statistics from step6_compute_mac_stats.py)
-Output: dashboard/js/shared-data.js                        (complete rewrite)
+Input:  data/step5-post-processing/co2_results/ (CO2-enriched parquets, preferred)
+        dashboard/overprocure_results.json      (monolithic JSON fallback)
+        data/step5-post-processing/mac_stats.json
+Output: dashboard/js/shared-data.js             (complete rewrite)
         data/step5-post-processing/shared_data.json (canonical JSON archive)
 """
 
@@ -119,21 +120,38 @@ def load_from_co2_batches(batch_dir, isos, thresholds):
 
 print("Loading data...")
 
-# Primary: monolithic JSON.  Fallback: reassemble from batched co2 results.
-if os.path.exists(RESULTS_JSON):
+# Priority: (1) CO2 parquets, (2) monolithic JSON, (3) batched CO2 JSONs (legacy)
+data = None
+
+# Try CO2 parquets first (preferred — output of step6_recompute_co2.py)
+if os.path.isdir(CO2_BATCH_DIR):
+    co2_parquets = [f for f in os.listdir(CO2_BATCH_DIR) if f.endswith('.parquet')]
+    if co2_parquets:
+        sys.path.insert(0, os.path.join(SCRIPT_DIR, '..'))
+        from parquet_io import load_from_parquets
+        data = load_from_parquets(CO2_BATCH_DIR, ISOS)
+        n_isos = len(data.get('results', {}))
+        if n_isos > 0:
+            print(f"  Results: loaded from CO2 parquets in {CO2_BATCH_DIR}/ ({n_isos} ISOs)")
+        else:
+            data = None  # Fall through to next option
+
+# Monolithic JSON fallback
+if data is None and os.path.exists(RESULTS_JSON):
     with open(RESULTS_JSON) as f:
         data = json.load(f)
     print(f"  Results: {os.path.getsize(RESULTS_JSON) / 1024:.0f} KB (monolithic JSON)")
-elif os.path.isdir(CO2_BATCH_DIR):
+
+# Legacy batched CO2 JSONs fallback
+if data is None and os.path.isdir(CO2_BATCH_DIR):
     data = load_from_co2_batches(CO2_BATCH_DIR, ISOS, THRESHOLDS)
-    if data is None:
-        raise FileNotFoundError(
-            f"Neither {RESULTS_JSON} nor valid batched data in {CO2_BATCH_DIR} found")
-    n_isos = len(data.get('results', {}))
-    print(f"  Results: reassembled from {CO2_BATCH_DIR}/ ({n_isos} ISOs)")
-else:
+    if data is not None:
+        n_isos = len(data.get('results', {}))
+        print(f"  Results: reassembled from batched JSONs in {CO2_BATCH_DIR}/ ({n_isos} ISOs)")
+
+if data is None:
     raise FileNotFoundError(
-        f"No results found. Checked:\n  {RESULTS_JSON}\n  {CO2_BATCH_DIR}/")
+        f"No results found. Checked:\n  {CO2_BATCH_DIR}/ (parquets)\n  {RESULTS_JSON}\n  {CO2_BATCH_DIR}/ (JSONs)")
 
 with open(MAC_STATS_PATH) as f:
     mac_stats = json.load(f)
