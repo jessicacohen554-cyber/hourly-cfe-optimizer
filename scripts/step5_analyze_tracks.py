@@ -33,8 +33,22 @@ THRESHOLDS_STR = [str(t) for t in THRESHOLDS]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
 
+def load_from_co2_parquets(batch_dir):
+    """Load CO2 results from parquet files in batch_dir."""
+    co2_parquets = [f for f in os.listdir(batch_dir) if f.endswith('.parquet')]
+    if not co2_parquets:
+        return None
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) if 'scripts' in os.path.abspath(__file__) else SCRIPT_DIR)
+    sys.path.insert(0, SCRIPT_DIR)
+    from parquet_io import load_from_parquets
+    data = load_from_parquets(batch_dir, ISOS)
+    if data and data.get('results'):
+        return data
+    return None
+
+
 def load_from_co2_batches(batch_dir):
-    """Reassemble results dict from batched co2 result files."""
+    """Reassemble results dict from batched co2 result JSON files (legacy)."""
     config_path = os.path.join(batch_dir, '_config.json')
     if not os.path.exists(config_path):
         return None
@@ -58,16 +72,24 @@ def load_from_co2_batches(batch_dir):
 
 
 def load_baseline():
-    """Load baseline results: monolithic JSON → batched co2 → parquets."""
+    """Load baseline results: CO2 parquets → monolithic JSON → batched co2 JSONs → step4 parquets."""
+    # Prefer CO2-enriched parquets (output of step6_recompute_co2.py)
+    if os.path.isdir(CO2_BATCH_DIR):
+        data = load_from_co2_parquets(CO2_BATCH_DIR)
+        if data and data.get('results'):
+            print(f"  Baseline loaded from CO2 parquets ({len(data['results'])} ISOs)")
+            return data
+    # Monolithic JSON
     if os.path.exists(BASELINE_PATH):
         with open(BASELINE_PATH) as f:
             return json.load(f)
+    # Legacy batched CO2 JSONs
     if os.path.isdir(CO2_BATCH_DIR):
         data = load_from_co2_batches(CO2_BATCH_DIR)
         if data and data.get('results'):
-            print(f"  Baseline loaded from batched co2 results ({len(data['results'])} ISOs)")
+            print(f"  Baseline loaded from batched co2 JSONs ({len(data['results'])} ISOs)")
             return data
-    # Parquet fallback
+    # Step 4 parquet fallback
     try:
         from parquet_io import load_from_parquets, find_input_dir
         input_dir = find_input_dir(ISOS)
@@ -78,7 +100,7 @@ def load_baseline():
     except ImportError:
         pass
     raise FileNotFoundError(
-        f"No baseline found. Checked:\n  {BASELINE_PATH}\n  {CO2_BATCH_DIR}/\n  parquet dirs")
+        f"No baseline found. Checked:\n  {CO2_BATCH_DIR}/ (parquets)\n  {BASELINE_PATH}\n  {CO2_BATCH_DIR}/ (JSONs)\n  step4 parquet dirs")
 
 
 def extract_costs_and_mixes(scenarios):
