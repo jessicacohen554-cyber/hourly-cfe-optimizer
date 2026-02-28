@@ -39,9 +39,41 @@ from step3_cost_optimization import (
     GEOTHERMAL_LCOE, EXISTING_NUCLEAR_GW, UPRATE_CAP_TWH,
     DEMAND_GROWTH_RATES, THRESHOLD_TARGET_YEARS,
 )
-from step6_scenario_comparison import (
-    learning_fraction, SBTI_YEAR_MAP,
-)
+# Inline learning curve logic from step6_scenario_comparison.py
+# to avoid dragging in pandas + heavy dispatch imports.
+# Original source: step6_scenario_comparison.py lines 155-310
+
+SBTI_YEAR_MAP = {
+    50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
+    85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
+    95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050, 100: 2050,
+}
+
+
+def learning_fraction(threshold, scenario='B'):
+    """Map CFE threshold to FOAK→NOAK learning curve fraction [0, 1].
+
+    0 = pure FOAK (High cost), 1 = full NOAK (Low cost).
+    Scenario B (Hourly): FOAK until 2030, NOAK by 2040 (10yr learning).
+    Scenario A (Consequential): FOAK until 2035, NOAK by 2047 (12yr learning).
+    Concave exponent 0.6 (Wright's Law early doublings).
+    """
+    year = SBTI_YEAR_MAP.get(threshold, 2050)
+
+    if scenario == 'B':
+        foak_start = 2030
+        noak_year = 2040
+    else:  # Scenario A
+        foak_start = 2035
+        noak_year = 2047
+
+    if year < foak_start:
+        return 0.0
+    if year >= noak_year:
+        return 1.0
+
+    active = (year - foak_start) / (noak_year - foak_start)
+    return active ** 0.6
 
 DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data')
 PP_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
