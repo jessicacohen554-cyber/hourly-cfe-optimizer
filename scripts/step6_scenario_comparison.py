@@ -24,6 +24,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from scipy.interpolate import PchipInterpolator
+from scipy.optimize import isotonic_regression
 
 # Import dispatch utilities for emission rates and dispatch cache
 sys.path.insert(0, str(Path(__file__).parent))
@@ -2324,46 +2326,100 @@ def main():
                     if co2:
                         _traj_co2_cache[(iso, t, id(scenario_results))] = co2
 
-    # Build resource trajectories with per-threshold stepwise MAC
+    # Build resource trajectories with PCHIP-smoothed marginal MAC
     def _build_trajectory(results, enforce_monotonic=False):
-        """Build trajectory dicts from optimization results."""
+        """Build trajectory dicts from optimization results.
+
+        MAC smoothing uses a two-pass approach:
+          Pass 1: Collect cumulative (CO2_abated, new_build_cost) at each threshold.
+          Pass 2: Fit a PCHIP monotone spline to the cumulative supply curve,
+                  take its derivative to get marginal MAC, then apply isotonic
+                  regression to enforce non-decreasing marginal cost.
+
+        This eliminates noisy spikes from independent per-threshold optimization
+        while preserving the expected hockey-stick shape at high decarbonization.
+        """
         results_id = id(results)
         traj = {}
         for iso in ISOS:
             iso_traj = []
             base_demand_twh = BASE_DEMAND_TWH[iso]
-            prev_t = None
+
+            # --- Pass 1: collect raw cumulative data points ---
+            raw_entries = []  # list of (threshold, d, demand_twh)
             for t in THRESHOLDS:
                 d = results.get(iso, {}).get(t, {})
                 if not d:
                     continue
                 demand_twh = get_demand_twh(iso, t)
-                stepwise_mac = None
-                if prev_t is not None and prev_t in results.get(iso, {}):
-                    prev_d = results[iso][prev_t]
-                    delta_new_cost = d['new_build_cost_total'] - prev_d['new_build_cost_total']
+                raw_entries.append((t, d, demand_twh))
 
-                    # MAC = delta_cost / delta_co2 (direct, no LCOE/rate split)
-                    co2_cur = _traj_co2_cache.get((iso, t, results_id))
-                    co2_prev = _traj_co2_cache.get((iso, prev_t, results_id))
+            # Collect cumulative CO2 abated and new-build cost at each threshold
+            cum_co2_points = []  # cumulative CO2 abated (tons)
+            cum_cost_points = []  # cumulative new-build cost ($)
+            valid_thresholds = []  # thresholds with valid CO2 data
 
-                    if co2_cur and co2_prev:
-                        delta_co2_tons = (co2_cur['total_co2_abated_tons']
-                                          - co2_prev['total_co2_abated_tons'])
-                    else:
-                        # Fallback: estimate from emission rate × new generation delta
-                        delta_new_gen = d['new_gen_twh'] - prev_d['new_gen_twh']
-                        if co2_cur:
-                            rate_cur = co2_cur['weighted_emission_rate']
-                        else:
-                            rate_cur, _ = cfr_cached(iso, t, egrid, fossil_mix)
-                        delta_co2_tons = (delta_new_gen * 1e6 * rate_cur
-                                          if rate_cur > 0 else 0)
+            for t, d, _ in raw_entries:
+                co2_data = _traj_co2_cache.get((iso, t, results_id))
+                if co2_data:
+                    cum_co2 = co2_data['total_co2_abated_tons']
+                else:
+                    # Fallback: estimate from emission rate × new generation
+                    new_gen_twh = d.get('new_gen_twh', 0)
+                    rate, _ = cfr_cached(iso, t, egrid, fossil_mix)
+                    cum_co2 = new_gen_twh * 1e6 * rate if rate > 0 else 0
 
-                    if delta_co2_tons > 0 and delta_new_cost > 0:
-                        stepwise_mac = round(delta_new_cost / delta_co2_tons, 1)
-                    else:
-                        stepwise_mac = 9999
+                cum_cost = d.get('new_build_cost_total', 0)
+                cum_co2_points.append(cum_co2)
+                cum_cost_points.append(cum_cost)
+                valid_thresholds.append(t)
+
+            # --- Pass 2: PCHIP spline + isotonic regression for smooth MAC ---
+            smoothed_mac = {}  # threshold -> smoothed MAC value
+
+            if len(cum_co2_points) >= 3:
+                co2_arr = np.array(cum_co2_points, dtype=np.float64)
+                cost_arr = np.array(cum_cost_points, dtype=np.float64)
+
+                # Ensure cumulative CO2 is strictly increasing for PCHIP
+                # (monotone interpolant requires strictly increasing x)
+                mask = np.ones(len(co2_arr), dtype=bool)
+                for i in range(1, len(co2_arr)):
+                    if co2_arr[i] <= co2_arr[i - 1]:
+                        mask[i] = False
+                co2_mono = co2_arr[mask]
+                cost_mono = cost_arr[mask]
+                thresholds_mono = [valid_thresholds[i] for i in range(len(valid_thresholds)) if mask[i]]
+
+                if len(co2_mono) >= 3:
+                    # Fit PCHIP spline: cost = f(co2)
+                    # PCHIP preserves monotonicity and avoids overshoot
+                    pchip = PchipInterpolator(co2_mono, cost_mono)
+
+                    # Derivative at each data point = marginal MAC ($/ton)
+                    raw_mac = pchip.derivative()(co2_mono)
+
+                    # Clamp any negative derivatives to a small positive value
+                    raw_mac = np.maximum(raw_mac, 0.01)
+
+                    # Apply isotonic regression to enforce non-decreasing MAC
+                    # This is the key: as decarbonization deepens, marginal
+                    # cost should never decrease (hockey stick, not zigzag)
+                    iso_result = isotonic_regression(raw_mac)
+                    smoothed_vals = iso_result.x if hasattr(iso_result, 'x') else iso_result
+
+                    for i, t in enumerate(thresholds_mono):
+                        val = float(smoothed_vals[i])
+                        # Cap extreme values at 9999
+                        smoothed_mac[t] = round(min(val, 9999), 1)
+
+            # --- Build trajectory entries with smoothed MAC ---
+            for t, d, demand_twh in raw_entries:
+                stepwise_mac = smoothed_mac.get(t, None)
+                # First threshold has no MAC (no prior to diff against)
+                if t == raw_entries[0][0]:
+                    stepwise_mac = None
+
                 cf_twh = d['resource_twh'].get('clean_firm', 0)
                 ccs_twh = d['resource_twh'].get('ccs_ccgt', 0)
                 existing_cf_twh = GRID_MIX_SHARES[iso].get('clean_firm', 0) / 100.0 * base_demand_twh
@@ -2397,7 +2453,6 @@ def main():
                     'new_gen_twh': d.get('new_gen_twh', 0),
                     'new_build_cost_total': d.get('new_build_cost_total', 0),
                 })
-                prev_t = t
             traj[iso] = iso_traj
 
         if enforce_monotonic:
