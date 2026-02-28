@@ -32,6 +32,20 @@
 
 **Files changed:** `scripts/step6_scenario_comparison.py` — rewrote `_forward_step_optimization()`, added `_load_pfs_mixes()`, `_filter_mixes_by_floor()`, `_filter_pfs_by_floor_window()`.
 
+### Consequential Queue: MAC Formula + Threshold Fix (Feb 28, 2026)
+
+**Changes:**
+
+1. **MAC formula = newbuild LCOE / displaced emission rate** (replaces delta_cost/delta_co2).
+   - Buyers using consequential accounting optimize on this metric: cheapest technology cost per tCO2 of their claim.
+   - This is deliberately the *narrow buyer's metric* — it reflects what drives procurement decisions in practice.
+   - The whole point of the analysis is to show that optimizing on this metric in isolation (without contextualizing system costs, gas backup needs, asset stranding, learning curves) yields adverse outcomes.
+   - System costs (gas backup capacity, stranded assets, foregone learning) are tracked separately as comparative layers. They're real costs but they're NOT what drives the buyer's purchasing decision under consequential accounting.
+
+2. **Thresholds filtered to >= 50%** (removed 10-40% from all consequential queue functions). Below 50% is pre-SBTi baseline — not relevant to the deployment queue analysis.
+
+**Files changed:** `scripts/step6_consequential_queue.py`, `scripts/step6_scenario_comparison.py` — MAC formula in `compute_zone_metrics()` and queue builder.
+
 ---
 
 ### Corporate Procurement Strategy Simulation — Compute Architecture Phase
