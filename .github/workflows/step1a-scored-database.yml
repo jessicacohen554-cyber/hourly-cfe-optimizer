@@ -1,14 +1,15 @@
-name: "Step 1: Build Scored Mix Database (1a+1b)"
+name: "Step 1a: Build Scored Mix Database"
 
+# Generates all resource fraction combos (1a) and scores them (1b) → coarse_cache.parquet.
+# This is the database that Step 1b (build PFS) mines per-threshold.
 # Run once after physics changes or code updates.
-# Generates all resource fraction combos and scores them → coarse_cache.parquet.
-# This is the database that step1c mines per-threshold.
+# Output: data/step1-pfs-parquets/{ISO}_mixes.parquet, {ISO}_coarse_cache.parquet
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO to build (or ALL for all 7)'
+        description: 'ISO region to build'
         required: true
         default: 'ALL'
         type: choice
@@ -21,26 +22,26 @@ on:
           - NEISO
           - MISO
           - SPP
+      chunk_size:
+        description: 'Scoring chunk size (default 20000)'
+        required: false
+        default: '20000'
+        type: string
+      force_1a:
+        description: 'Force regenerate mixes even if parquet exists'
+        required: false
+        default: false
+        type: boolean
+      force_1b:
+        description: 'Force rescore even if coarse_cache exists'
+        required: false
+        default: false
+        type: boolean
       branch:
         description: 'Branch to checkout'
         required: false
         default: 'master'
         type: string
-      chunk_size:
-        description: 'Scoring chunk size (default 20000 ≈ 1.4 GiB peak)'
-        required: false
-        default: '20000'
-        type: string
-      force_1a:
-        description: 'Force regenerate mixes (step 1a) even if parquet exists'
-        required: false
-        default: false
-        type: boolean
-      force_1b:
-        description: 'Force rescore (step 1b) even if coarse_cache exists'
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   build-database:
@@ -103,12 +104,12 @@ jobs:
     - name: Commit and push scored database (batched by ISO)
       run: |
         set -euo pipefail
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
 
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         ISO_LABEL="${{ inputs.iso }}"
-        TARGET_BRANCH="auto/${TIMESTAMP}-scored-database-${ISO_LABEL}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1a-scored-db-${ISO_LABEL}"
         git checkout -b "$TARGET_BRANCH"
 
         if [ "$ISO_LABEL" = "ALL" ]; then
@@ -119,18 +120,10 @@ jobs:
 
         push_with_retry() {
           local label="$1"
-          local MAX_RETRIES=5
+          local MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
             echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
-            PUSH_OUTPUT=$(git push -u origin "$TARGET_BRANCH" 2>&1) && {
-              echo "  Push succeeded for ${label} on attempt $i"
-              return 0
-            }
-            echo "$PUSH_OUTPUT"
-            if echo "$PUSH_OUTPUT" | grep -q "GH001"; then
-              echo "  ERROR: GH001 (large file) for ${label}"
-              return 1
-            fi
+            git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
             if [ "$i" -eq "$MAX_RETRIES" ]; then
               echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
               return 1
@@ -161,29 +154,21 @@ jobs:
 
           BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
           echo "  Staging ~${BATCH_MB} MB for $iso"
-
-          git commit -m "Scored mix database: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1a Scored DB: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           if push_with_retry "$iso"; then
             PUSHED=true
           else
             echo "  Per-ISO push failed for $iso — falling back to per-file batching"
             git reset HEAD~1
-
             for f in $FILES; do
               FNAME=$(basename "$f")
               git add -f "$f"
-              if git diff --cached --quiet; then
-                continue
-              fi
-              FILE_MB=$(du -m "$f" | cut -f1)
-              echo "  Committing $FNAME (~${FILE_MB} MB)"
-              git commit -m "Scored DB: ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
+              if git diff --cached --quiet; then continue; fi
+              git commit -m "Step 1a: ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
               if push_with_retry "$FNAME"; then
                 PUSHED=true
               else
-                echo "  ERROR: Per-file push also failed for $FNAME — skipping"
                 git reset HEAD~1
               fi
             done
@@ -201,12 +186,15 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        if [ -z "$TARGET_BRANCH" ]; then
+        if [ -z "${TARGET_BRANCH:-}" ]; then
           echo "No branch to create PR for"
           exit 0
         fi
         gh pr create \
-          --title "Scored mix database: ${{ inputs.iso }}" \
-          --body "## Summary"$'\n'"- Built scored mix database (1a+1b) for **${{ inputs.iso }}**"$'\n'"- Merge this first, then run PFS threshold workflow to mine it"$'\n'"- Auto-generated by GitHub Actions" \
-          --base master \
+          --title "Step 1a Scored DB: ${{ inputs.iso }}" \
+          --body "## Summary
+        - Built scored mix database (generate mixes + score) for **${{ inputs.iso }}**
+        - Merge this first, then run Step 1b (Build PFS) to mine it per threshold
+        - Output: \`data/step1-pfs-parquets/{ISO}_coarse_cache.parquet\`" \
+          --base ${{ inputs.branch || 'master' }} \
           --head "$TARGET_BRANCH" || echo "PR creation skipped"

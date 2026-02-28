@@ -1,0 +1,126 @@
+name: "Step 0: Fetch Actual LMP Data"
+
+# Fetches actual day-ahead hourly LMP from ISO APIs via gridstatus library.
+# Use this to get calibration data for synthetic LMP model validation.
+# Output: data/lmp/{ISO}_actual_lmp_{year}.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to fetch'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      year:
+        description: 'Year to fetch'
+        required: true
+        default: '2024'
+        type: choice
+        options:
+          - '2024'
+          - '2025'
+      force:
+        description: 'Force re-fetch even if data exists'
+        required: false
+        default: false
+        type: boolean
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step0-fetch-lmp
+
+jobs:
+  fetch-lmp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.year }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install gridstatus pandas numpy pyarrow
+
+      - name: Fetch actual LMP data
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          python scripts/step0_fetch_lmp_2025.py \
+            --iso ${{ inputs.iso }} \
+            --year ${{ inputs.year }} \
+            $FORCE_FLAG
+
+      - name: Commit and push
+        run: |
+          git add -f data/lmp/ 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No new data to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 0 Fetch LMP: ${{ inputs.iso }} ${{ inputs.year }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Create pull request
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Step 0 Fetch LMP: ${{ inputs.iso }} ${{ inputs.year }}" \
+            --body "## Summary
+          - Fetched ${{ inputs.year }} actual DA hourly LMP for **${{ inputs.iso }}**
+          - Source: gridstatus library (ISO public APIs)
+          - Output: \`data/lmp/{ISO}_actual_lmp_${{ inputs.year }}.json\`" \
+            --base ${{ inputs.branch || 'master' }} \
+            --head "$TARGET_BRANCH" || echo "PR creation skipped"
