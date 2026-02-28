@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — PJM Wholesale Price Trends</title>
+<title>The 8,760 Problem — Wholesale Price Trends: All Regions</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -429,6 +429,51 @@ body { background: #F7F8FC; }
 }
 .nuclear-paradox p:last-child { margin-bottom: 0; }
 
+/* ========== REGION PILLS ========== */
+.region-pills-bar {
+    background: #fff;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    padding: 12px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.region-pills-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.region-pill {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(14,165,233,0.2);
+    background: rgba(14,165,233,0.04);
+    color: rgba(15,23,42,0.6);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+.region-pill:hover {
+    border-color: rgba(14,165,233,0.4);
+    background: rgba(14,165,233,0.08);
+    color: #0284c7;
+}
+.region-pill.active {
+    background: linear-gradient(135deg, #0EA5E9, #0284c7);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(14,165,233,0.3);
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 900px) {
     .hero-inner { grid-template-columns: 1fr; gap: 28px; }
@@ -475,9 +520,22 @@ body { background: #F7F8FC; }
 <!-- HEADER BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">How clean energy procurement reshapes wholesale electricity prices &mdash; PJM Interconnection</p>
+    <p class="subtitle" id="headerSubtitle">How clean energy procurement reshapes wholesale electricity prices &mdash; 7 U.S. electricity markets</p>
     <div class="header-accent"></div>
 </header>
+
+<!-- REGION SELECTOR PILLS -->
+<div class="region-pills-bar">
+    <div class="region-pills-inner">
+        <button class="region-pill active" data-iso="PJM">PJM</button>
+        <button class="region-pill" data-iso="CAISO">CAISO</button>
+        <button class="region-pill" data-iso="ERCOT">ERCOT</button>
+        <button class="region-pill" data-iso="MISO">MISO</button>
+        <button class="region-pill" data-iso="NEISO">ISO-NE</button>
+        <button class="region-pill" data-iso="NYISO">NYISO</button>
+        <button class="region-pill" data-iso="SPP">SPP</button>
+    </div>
+</div>
 
 <!-- ================================================================ -->
 <!-- HERO SECTION                                                      -->
@@ -485,11 +543,11 @@ body { background: #F7F8FC; }
 <section class="hero-section">
     <div class="hero-inner">
         <div class="hero-text">
-            <div class="hero-kicker">PJM Wholesale Market Analysis</div>
-            <h1>Clean energy <span class="accent">halves wholesale prices</span> in PJM — but the path is narrower than you think</h1>
-            <p>Across 151,944 simulated PJM scenarios, wholesale prices decline from $35/MWh at 50% clean (SBTi 2030) to $17/MWh at 95% (SBTi ~2045). But the spread between best- and worst-case outcomes peaks in the middle of the transition — precisely where most utilities are planning today.</p>
-            <p>Fuel prices explain nearly everything until &ge;99.99% clean, where the rules change entirely and renewable costs, transmission, and policy levers take over.</p>
-            <div class="hero-stats-row">
+            <div class="hero-kicker" id="heroKicker">PJM Wholesale Market Analysis</div>
+            <h1 id="heroTitle">Clean energy <span class="accent">halves wholesale prices</span> in PJM — but the path is narrower than you think</h1>
+            <p id="heroDesc1">Across 151,944 simulated PJM scenarios, wholesale prices decline from $35/MWh at 50% clean (SBTi 2030) to $17/MWh at 95% (SBTi ~2045). But the spread between best- and worst-case outcomes peaks in the middle of the transition — precisely where most utilities are planning today.</p>
+            <p id="heroDesc2">Fuel prices explain nearly everything until &ge;99.99% clean, where the rules change entirely and renewable costs, transmission, and policy levers take over.</p>
+            <div class="hero-stats-row" id="heroStats">
                 <div class="hero-stat">
                     <div class="hero-stat-value green">&minus;52%</div>
                     <div class="hero-stat-label">Median wholesale price decline, 2030 (50%) &rarr; 2045 (95%)</div>
@@ -525,7 +583,7 @@ body { background: #F7F8FC; }
 <div class="nuclear-callout">
     <div class="nuclear-callout-inner">
         <div class="nuclear-callout-icon">&#9762;</div>
-        <div class="nuclear-callout-text">
+        <div class="nuclear-callout-text" id="nuclearCalloutContent">
             <h4>Existing Nuclear at Risk: Wholesale prices cross below operating cost by ~2038 (85% clean)</h4>
             <p>PJM's 32 GW nuclear fleet needs <strong>$25&ndash;30/MWh</strong> to cover operating costs. Our LMP model shows median wholesale prices fall through this floor between the SBTi ~2038 (85%) and 2040 (90%) milestones &mdash; and off-peak prices collapse even earlier. By the SBTi 2045 target (95%), nearly half the year prices at zero or below. <a href="#nuclear-deepdive" style="color:#38bdf8;text-decoration:underline;">Jump to full analysis &darr;</a></p>
         </div>
@@ -552,7 +610,7 @@ body { background: #F7F8FC; }
                 </div>
             </div>
         </div>
-        <div class="scroll-narrative-col">
+        <div class="scroll-narrative-col" id="sect1Narrative">
             <div class="narrative-card">
                 <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#38bdf8;">Price Drivers</span>
                 <h3>Fuel prices explain 88&ndash;100% of wholesale cost variation — until they don't</h3>
@@ -590,7 +648,7 @@ body { background: #F7F8FC; }
                 </div>
             </div>
         </div>
-        <div class="scroll-narrative-col">
+        <div class="scroll-narrative-col" id="sect2Narrative">
             <div class="narrative-card">
                 <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#4ade80;">Market Structure</span>
                 <h3>PJM zero-price hours explode from 265 to 7,980 — and the market flips inside out</h3>
@@ -627,7 +685,7 @@ body { background: #F7F8FC; }
                 </div>
             </div>
         </div>
-        <div class="scroll-narrative-col">
+        <div class="scroll-narrative-col" id="sect3Narrative">
             <div class="narrative-card">
                 <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;">Price Structure</span>
                 <h3>The peak premium persists — and that's the arbitrage signal</h3>
@@ -648,7 +706,7 @@ body { background: #F7F8FC; }
 <!-- SECTION 4: Nuclear Economics Deep-Dive                            -->
 <!-- ================================================================ -->
 <section class="nuclear-section" id="nuclear-deepdive">
-    <div class="nuclear-section-header">
+    <div class="nuclear-section-header" id="nuclearSectionHeader">
         <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">PJM Nuclear Economics</span>
         <h2>The Clean Energy Paradox: Decarbonization Destroys the Price Signal That Keeps Nuclear Alive</h2>
         <p>PJM's 32 GW existing nuclear fleet is the cheapest firm clean energy on the grid at $34/MWh wholesale. But the very renewable buildout needed to decarbonize the grid collapses wholesale prices below nuclear's all-in costs &mdash; not just cash operating costs, but the capital expenditures, decommissioning reserves, and profit margin needed to justify continued investment over 40&ndash;60 year license periods.</p>
@@ -657,7 +715,7 @@ body { background: #F7F8FC; }
     <div class="nuclear-grid">
         <div class="nuclear-chart-col">
             <div class="chart-panel">
-                <div class="chart-title">PJM Wholesale Price vs. Nuclear Operating Cost — By Clean Energy %</div>
+                <div class="chart-title" id="nuclearChartTitle1">PJM Wholesale Price vs. Nuclear Operating Cost — By Clean Energy %</div>
                 <div class="chart-container">
                     <canvas id="nuclearEconChart"></canvas>
                 </div>
@@ -675,7 +733,7 @@ body { background: #F7F8FC; }
             </div>
 
             <div class="chart-panel" style="margin-top: 24px;">
-                <div class="chart-title">PJM Hours Per Year at Zero or Negative Price — Nuclear Revenue Erosion</div>
+                <div class="chart-title" id="nuclearChartTitle2">PJM Hours Per Year at Zero or Negative Price — Nuclear Revenue Erosion</div>
                 <div class="chart-container" style="min-height: 260px;">
                     <canvas id="nuclearZeroHoursChart"></canvas>
                 </div>
@@ -686,7 +744,7 @@ body { background: #F7F8FC; }
             </div>
         </div>
 
-        <div class="nuclear-narrative-col">
+        <div class="nuclear-narrative-col" id="nuclearNarrative">
             <div class="narrative-card">
                 <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">Viable Operation Threshold</span>
                 <h3>The real line isn't breakeven &mdash; it's viability (~70% clean, ~2033)</h3>
@@ -745,7 +803,7 @@ body { background: #F7F8FC; }
 <!-- SYNTHESIS                                                         -->
 <!-- ================================================================ -->
 <section class="synthesis-section">
-    <div class="synthesis-grid">
+    <div class="synthesis-grid" id="synthesisGrid">
         <div class="synthesis-card">
             <h3>The uncertainty paradox: widest where it matters most</h3>
             <p>The P10&ndash;P90 spread in wholesale prices peaks at 75&ndash;80% clean energy — exactly the threshold range where most corporate buyers and utilities are currently planning. At 80%, the gap between the best- and worst-case outcome is <strong>$31/MWh</strong>. That's the difference between wholesale power cheaper than natural gas alone and wholesale power more expensive than today's average.</p>
@@ -771,7 +829,7 @@ body { background: #F7F8FC; }
         <a href="research_paper.html">Research Paper</a>
         <a href="optimizer_methodology.html">Methodology</a>
     </div>
-    <div class="footer-note">All analysis on this page is PJM Interconnection &middot; 151,944 simulated scenarios &middot; Synthetic LMP model calibrated to PJM IMM State of the Market 2024</div>
+    <div class="footer-note" id="footerNote">All analysis on this page is PJM Interconnection &middot; 151,944 simulated scenarios &middot; Synthetic LMP model calibrated to PJM IMM State of the Market 2024</div>
 </footer>
 <div class="bottom-banner"></div>
 
