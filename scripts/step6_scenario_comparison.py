@@ -1169,6 +1169,18 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
 
         iso_results = {}
 
+        # Inject existing-only anchor entries for thresholds the 2025 fleet already meets.
+        # This populates the pre-50% portion of Scenario A's trajectory with the correct
+        # baseline (2025 existing clean mix, zero new build) and ensures the chart's
+        # "Existing Clean" reference line aligns with the starting bars.
+        exist_match = _existing_match_pct(iso)
+        for t_pre in [t2 for t2 in THRESHOLDS if t2 < 50]:
+            if t_pre <= exist_match:
+                gf_pre = get_demand_growth_factor(iso, t_pre)
+                demand_pre = base_demand * gf_pre
+                iso_results[t_pre] = _build_existing_only_entry(
+                    iso, t_pre, demand_pre, gf_pre, existing_twh, iso_sens)
+
         # Build threshold list starting at 50%
         scenario_thresholds = [t for t in THRESHOLDS if t >= 50]
 
@@ -1741,6 +1753,84 @@ def _process_iso_step3(scenario, iso):
     return iso, _apply_floor_ratchet(step3, iso, iso_sens)
 
 
+def _existing_match_pct(iso):
+    """Estimate the hourly CFE match % that 2025 existing resources achieve.
+
+    Firm resources (nuclear, hydro) are dispatchable 24/7 — ~90% effective hourly coverage.
+    Variable resources (solar, wind) are intermittent — ~60% effective hourly coverage.
+    Result used to determine which thresholds don't require any new build.
+    """
+    shares = GRID_MIX_SHARES[iso]
+    cf_frac  = shares.get('clean_firm', 0) / 100.0
+    hyd_frac = shares.get('hydro',      0) / 100.0
+    sol_frac = shares.get('solar',      0) / 100.0
+    wnd_frac = shares.get('wind',       0) / 100.0
+    return min((cf_frac + hyd_frac) * 90.0 + (sol_frac + wnd_frac) * 60.0, 95.0)
+
+
+def _build_existing_only_entry(iso, threshold, demand_twh, gf, existing_twh, sens):
+    """Build a result entry representing 2025 existing resources with zero new build.
+
+    Used for thresholds the existing clean fleet already achieves. The floor ratchet
+    stays at 2025 levels; subsequent thresholds then compute incremental new build
+    above that correct baseline rather than above an inflated EF mix.
+    """
+    demand_mwh = demand_twh * 1e6
+    base_demand = BASE_DEMAND_TWH[iso]
+
+    # Resource TWh = fixed 2025 absolute TWh (hydro capped)
+    resource_twh = {}
+    for res, pct in GRID_MIX_SHARES[iso].items():
+        twh = pct / 100.0 * base_demand
+        if res == 'hydro':
+            twh = min(twh, HYDRO_CAP_TWH[iso])
+        resource_twh[res] = twh
+
+    # Gas backup from existing clean peak capacity
+    clean_peak_mw = 0.0
+    for res, twh in resource_twh.items():
+        pcc = PEAK_CAPACITY_CREDITS.get(res, 0)
+        if pcc > 0:
+            clean_peak_mw += (twh * 1e6 / 8760) * pcc
+
+    ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+    existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+    new_gas_mw = max(0, gas_needed_mw - existing_gas_mw)
+
+    fuel_name = LEVEL_NAME[sens['fuel']]
+    wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
+    est_match = _existing_match_pct(iso)
+
+    return {
+        'threshold': threshold,
+        'demand_twh': demand_twh,
+        'effective_cost': round(wholesale, 2),
+        'total_cost': round(wholesale, 2),
+        'incremental': 0.0,
+        'wholesale': wholesale,
+        'match_score': est_match,
+        'resource_twh': resource_twh,
+        'resource_pct': dict(GRID_MIX_SHARES[iso]),
+        'battery_twh': 0.0,
+        'battery8_twh': 0.0,
+        'ldes_twh': 0.0,
+        'battery_dispatch_pct': 0.0,
+        'battery8_dispatch_pct': 0.0,
+        'ldes_dispatch_pct': 0.0,
+        'h2_dispatch_pct': 0.0,
+        'gas_backup_mw': round(gas_needed_mw),
+        'new_gas_mw': round(new_gas_mw),
+        'existing_gas_used_mw': round(min(gas_needed_mw, existing_gas_mw)),
+        'clean_peak_mw': round(clean_peak_mw),
+        'new_build_cost_total': 0.0,
+        'new_gen_twh': 0.0,
+        'blended_new_lcoe': 0.0,
+        'demand_mwh': demand_mwh,
+    }
+
+
 def find_scenario_b_mixes(feasible_mixes):
     """Scenario B: Endpoint-deterministic with paced clean firm investment.
 
@@ -1841,17 +1931,32 @@ def find_scenario_b_mixes(feasible_mixes):
         }
         floor = dict(existing_twh_b)
 
+        # Estimate the hourly CFE % the 2025 existing fleet already achieves.
+        # For thresholds at or below this level, existing resources are sufficient —
+        # no new build needed, and the floor ratchet must NOT be inflated by the EF.
+        exist_match = _existing_match_pct(iso)
+
         iso_results = {}
 
         for t in THRESHOLDS:
+            gf = get_demand_growth_factor(iso, t)
+            demand_twh = base_demand * gf
+            demand_mwh = demand_twh * 1e6
+
+            # If 2025 existing fleet already meets this threshold, inject existing-only
+            # entry and keep floor at 2025 levels. This prevents the EF optimizer from
+            # locking in over-built mixes (e.g. sol=181 TWh at T=10%) that inflate the
+            # floor for all subsequent thresholds via the ratchet mechanism.
+            if t <= exist_match:
+                iso_results[t] = _build_existing_only_entry(
+                    iso, t, demand_twh, gf, existing_twh_b, iso_sens)
+                floor = dict(existing_twh_b)  # floor stays at 2025 existing levels
+                continue
+
             t_str = str(int(t)) if t == int(t) else str(t)
             mixes = feasible_mixes.get(iso, {}).get(t_str, [])
             if not mixes:
                 continue
-
-            gf = get_demand_growth_factor(iso, t)
-            demand_twh = base_demand * gf
-            demand_mwh = demand_twh * 1e6
 
             # Learning-curve overrides at this threshold (Scenario B)
             frac = learning_fraction(t, scenario='B')
