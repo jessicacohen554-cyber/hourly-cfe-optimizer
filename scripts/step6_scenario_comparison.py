@@ -239,16 +239,17 @@ SCENARIO_A = {
 }
 
 # Scenario B: "Hourly Matching"
-# Early commitment to clean firm deployment at FOAK prices in the late 2020s /
-# early-to-mid 2030s. Pays premium FOAK costs upfront but drives the learning
-# curve (Wright's Law) — by the 2040s firm costs decline to NOAK as cumulative
-# deployment drives cost reduction. Overall system cost is LOWER because early
-# investment enables cheaper deployment at scale when it matters most.
-# Uprates are Medium: existing nuclear uprates don't depend on technology learning.
+# Forward-looking investment strategy: determine the optimal 2045 endpoint
+# (95% clean with all costs at NOAK/Low) and work backward to deploy resources
+# toward that target. Pays FOAK for nuclear/LDES upfront but drives Wright's Law
+# learning curve — by 2040 firm costs reach NOAK. CCS uses Medium cost with 45Q
+# (mature pathway, no FOAK premium). Produces fundamentally different mixes from
+# Scenario A because resource allocation is guided by the endpoint target, not
+# greedy sequential cost minimization.
 SCENARIO_B = {
     'name': 'Hourly Matching',
     'short': 'hourly_matching',
-    'description': 'Early clean firm investment at FOAK prices drives learning curve — higher upfront cost but NOAK pricing by 2040s makes overall system cost lower',
+    'description': 'Forward-looking: optimal 2045 endpoint defines deployment trajectory. Nuclear/LDES FOAK(H)→NOAK(L). CCS FOAK(H)→NOAK(M) with 45Q. Early firm investment yields lower long-term system cost.',
     'toggles': {
         'ren': 'L',        # Low renewable (mature tech, already cheap)
         'firm': 'H',       # High firm gen (FOAK at start, learning curve drives to NOAK)
@@ -256,7 +257,7 @@ SCENARIO_B = {
         'ldes_lvl': 'H',   # High LDES (FOAK → NOAK via learning)
         'fuel': 'M',       # Medium fossil fuel
         'tx': 'M',         # Medium transmission
-        'ccs': 'H',        # High CCS (FOAK → NOAK via learning)
+        'ccs': 'H',        # High CCS (FOAK start, learning curve H→M with 45Q)
         'q45': '1',        # 45Q on
         'geo': 'H',        # High geothermal (CAISO only, FOAK → NOAK)
     },
@@ -951,6 +952,43 @@ def _build_learning_overrides(iso, frac):
     return overrides
 
 
+def _build_learning_overrides_b(iso, frac):
+    """Build LCOE overrides for Scenario B with differentiated learning curves.
+
+    frac: 0 = pure FOAK (High cost), 1 = full NOAK (Low cost).
+
+    Nuclear: H→L interpolation (SMR learning curve, starts from FOAK).
+    LDES: H→L interpolation (iron-air learning curve, starts from FOAK).
+    CCS: M→L interpolation with 45Q (starts from Medium, not FOAK — CCS is
+         a more mature pathway so the learning curve starts lower).
+    Geothermal: H→L interpolation (CAISO only).
+    Uprate: Always Medium (existing plants, no learning curve).
+    """
+    overrides = {}
+    # Nuclear: FOAK→NOAK interpolation (H→L)
+    nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
+    nuc_l = NUCLEAR_NEWBUILD_LCOE['L'][iso]
+    overrides['nuclear_lcoe'] = nuc_h + frac * (nuc_l - nuc_h)
+    overrides['uprate_lcoe'] = UPRATE_LCOE['M']  # Always Medium
+    # CCS: High→Medium interpolation with 45Q (H→M, not H→L)
+    # CCS is not mature — starts at pessimistic FOAK (High) but learning
+    # curve only reaches Medium as NOAK endpoint (structural cost floor
+    # limits how cheap CCS can get, unlike nuclear which can reach Low).
+    ccs_h = CCS_LCOE_45Q_ON['H'][iso]
+    ccs_m = CCS_LCOE_45Q_ON['M'][iso]
+    overrides['ccs_lcoe'] = ccs_h + frac * (ccs_m - ccs_h)
+    # Geothermal: FOAK→NOAK interpolation (CAISO only)
+    if iso == 'CAISO':
+        geo_h = GEOTHERMAL_LCOE['H']
+        geo_l = GEOTHERMAL_LCOE['L']
+        overrides['geo_lcoe'] = geo_h + frac * (geo_l - geo_h)
+    # LDES: FOAK→NOAK interpolation (H→L)
+    ldes_h = LCOE_TABLES['ldes']['High'][iso]
+    ldes_l = LCOE_TABLES['ldes']['Low'][iso]
+    overrides['ldes_lcoe'] = ldes_h + frac * (ldes_l - ldes_h)
+    return overrides
+
+
 def _get_excess_lcoe(res, sens, iso, overrides):
     """Get LCOE for pricing floor excess resources, using scenario-specific overrides.
 
@@ -1432,13 +1470,13 @@ def _adjust_costs_no_learning(results, scenario):
 def _adjust_costs_with_learning(results, scenario):
     """Scenario B: Apply learning curve — FOAK starts 2029, NOAK by 2038.
 
-    At each threshold, compute learning_fraction(scenario='B') → interpolate
-    all firm/CCS/LDES costs between High (FOAK) and Low (NOAK). Uprate always Medium.
+    At each threshold, compute learning_fraction(scenario='B') → interpolate:
+      Nuclear/LDES: H→L (FOAK→NOAK), CCS: H→M (FOAK→Medium NOAK) with 45Q.
     Step 3 costs were computed at full FOAK (firm='H', ldes='H', ccs='H').
     We compute the cost delta from FOAK to the learning-curve-adjusted price
     for each resource tranche and apply it.
 
-    10-year learning period (2029-2038), concave ramp (exponent 0.6).
+    10-year learning period (2030-2040), concave ramp (exponent 0.6).
     Sources: INL SOAK data, NEA learning ranges, DOE Liftoff.
     """
     for iso in results:
@@ -1449,7 +1487,7 @@ def _adjust_costs_with_learning(results, scenario):
                 continue
 
             frac = learning_fraction(t, scenario='B')
-            overrides = _build_learning_overrides(iso, frac)
+            overrides = _build_learning_overrides_b(iso, frac)
 
             total_delta = 0.0
 
@@ -1832,36 +1870,38 @@ def _build_existing_only_entry(iso, threshold, demand_twh, gf, existing_twh, sen
 
 
 def find_scenario_b_mixes(feasible_mixes):
-    """Scenario B: Endpoint-deterministic with paced clean firm investment.
+    """Scenario B: Forward-looking endpoint-optimal deployment.
 
-    Strategy (fundamentally different from Scenario A):
-      1. Find the NOAK-optimal mix at the 95% target — this is the "north star"
-         resource composition that the grid is building toward.
-      2. Compute a paced firm investment ramp from existing levels to the 95% target.
-         At each threshold T, firm deployment should be at least:
-           existing_firm + (T - 50)/(95 - 50) * (target_firm - existing_firm)
-      3. At each threshold, evaluate all feasible EF mixes. Prefer those that meet
-         the pacing requirement (invest enough in firm clean). Among pacing-compliant
-         mixes, pick the cheapest with learning-curve-adjusted prices.
-      4. Floor ratchet locks in prior commitments.
-      5. For thresholds > 95%, continue building on the 95% foundation.
+    Fundamentally different from Scenario A's greedy sequential approach.
 
-    This produces a fundamentally different trajectory from Scenario A because:
-      - At 50-75%, Scenario A picks renewable-heavy mixes (cheapest). Scenario B
-        intentionally picks mixes with more firm clean (pacing requirement).
-      - At 80-90%, the divergence compounds: B has been building firm, driving
-        learning curve down. A has been deferring firm.
-      - At 95%+, B benefits from NOAK firm prices. A faces FOAK cost cliff.
+    Strategy:
+      1. Find the NOAK-optimal mix at 95% with all costs Low (CCS at Medium+45Q
+         as NOAK endpoint — CCS learning curve is H→M, not H→L).
+         This is the "north star" — what the grid looks like in 2045.
+      2. At each threshold, deploy resources toward this target using an S-curve
+         ramp that frontloads firm/storage investment.
+      3. Nuclear/LDES: accelerated FOAK(H)→NOAK(L) learning curve.
+         CCS: FOAK(H)→NOAK(M) learning curve with 45Q.
+      4. Select from feasible mixes those best matching the deployment target
+         at learning-curve-adjusted prices. Strict pacing enforcement.
+      5. Floor ratchet prevents un-deploying committed resources.
 
-    Cost: Low renewables, Medium batteries/uprates/tx, FOAK→NOAK firm/CCS/LDES/geo.
+    This produces drastically different trajectories from Scenario A because:
+      - A chases cheap carbon greedily → renewable-heavy early, FOAK cliff at 90%+
+      - B works backward from optimal 2045 endpoint → balanced deployment from
+        the start, with firm/CCS/storage allocated from early thresholds
+      - CCS starts on a learning curve from H→M (not stuck at FOAK forever)
+      - By 80-90%, B has driven nuclear/LDES toward NOAK via cumulative deployment
+      - At 95%+, B benefits from NOAK firm and learned CCS; A faces cost cliff
     """
+    import math
     results = {}
 
-    # For finding the 95% target, use NOAK (Low) prices — this is what the grid
-    # looks like when learning curve investments have paid off
+    # NOAK target sensitivities: all at Low except CCS at Medium+45Q
+    # (CCS NOAK endpoint is Medium, not Low — structural cost floor)
     NOAK_SENS = {
         'ren': 'L', 'firm': 'L', 'batt': 'L', 'ldes_lvl': 'L',
-        'fuel': 'M', 'tx': 'M', 'ccs': 'L', 'q45': '1', 'geo': 'L',
+        'fuel': 'M', 'tx': 'M', 'ccs': 'M', 'q45': '1', 'geo': 'L',
     }
 
     for iso in ISOS:
@@ -1878,17 +1918,22 @@ def find_scenario_b_mixes(feasible_mixes):
 
         # ==================================================================
         # Step 1: Find NOAK-optimal mix at 95% — the "north star"
-        # This tells us what resources the grid needs at deep decarbonization
-        # when firm costs have reached NOAK via learning curve investment.
+        # All costs Low, CCS at Medium+45Q (its NOAK endpoint).
+        # This is what the grid looks like in 2045 when learning investments
+        # have paid off — the endpoint we're building toward.
         # ==================================================================
         gf_95 = get_demand_growth_factor(iso, 95)
         demand_95 = base_demand * gf_95
         mixes_95 = feasible_mixes.get(iso, {}).get('95', [])
 
+        # Use full NOAK overrides for target finding
+        noak_overrides = _build_learning_overrides_b(iso, 1.0)  # frac=1 = full NOAK
+
         best_cost_95 = float('inf')
         best_mix_95 = None
         for mix in mixes_95:
             result = compute_mix_cost(mix, noak_sens, iso, demand_95,
+                                     overrides=noak_overrides,
                                      growth_factor=gf_95)
             if result['effective_cost'] < best_cost_95:
                 best_cost_95 = result['effective_cost']
@@ -1901,41 +1946,42 @@ def find_scenario_b_mixes(feasible_mixes):
 
         target_deployed = _mix_resource_twh(best_mix_95, demand_95, iso)
 
-        # Firm resources at target (nuclear + CCS — the resources needing learning curve)
+        # Target resource levels at 95% NOAK
         target_cf_twh = target_deployed.get('clean_firm', 0)
         target_ccs_twh = target_deployed.get('ccs_ccgt', 0)
         target_firm_twh = target_cf_twh + target_ccs_twh
         target_ldes_twh = target_deployed.get('ldes', 0)
+        target_batt_twh = (best_mix_95[6] + best_mix_95[7]) / 100.0 * demand_95
+        target_sol_twh = target_deployed.get('solar', 0)
+        target_wnd_twh = target_deployed.get('wind', 0)
 
-        # Existing firm baseline (2025 levels)
+        # Existing levels (2025 baseline)
         existing_cf_twh = existing.get('clean_firm', 0) / 100.0 * base_demand
         existing_ccs_twh = existing.get('ccs_ccgt', 0) / 100.0 * base_demand
         existing_firm_twh = existing_cf_twh + existing_ccs_twh
+        existing_sol_twh = existing.get('solar', 0) / 100.0 * base_demand
+        existing_wnd_twh = existing.get('wind', 0) / 100.0 * base_demand
 
         print(f"\n  {iso} 95% NOAK target: firm={target_firm_twh:.0f} TWh "
               f"(CF={target_cf_twh:.0f}, CCS={target_ccs_twh:.0f}), "
-              f"LDES={target_ldes_twh:.0f} TWh, "
+              f"LDES={target_ldes_twh:.0f} TWh, Batt={target_batt_twh:.0f} TWh, "
+              f"Sol={target_sol_twh:.0f}, Wnd={target_wnd_twh:.0f}, "
               f"existing firm={existing_firm_twh:.0f} TWh")
 
         # ==================================================================
-        # Step 2: Forward-step with paced firm investment toward 95% target
+        # Step 2: Backward-from-endpoint deployment with S-curve pacing
         # ==================================================================
-        # Existing resource levels (priced at $0)
         existing_twh_b = {
-            'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand,
-            'solar': existing.get('solar', 0) / 100.0 * base_demand,
-            'wind': existing.get('wind', 0) / 100.0 * base_demand,
-            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * base_demand,
+            'clean_firm': existing_cf_twh,
+            'solar': existing_sol_twh,
+            'wind': existing_wnd_twh,
+            'ccs_ccgt': existing_ccs_twh,
             'hydro': existing.get('hydro', 0) / 100.0 * base_demand,
             'battery': 0, 'ldes': 0,
         }
         floor = dict(existing_twh_b)
 
-        # Estimate the hourly CFE % the 2025 existing fleet already achieves.
-        # For thresholds at or below this level, existing resources are sufficient —
-        # no new build needed, and the floor ratchet must NOT be inflated by the EF.
         exist_match = _existing_match_pct(iso)
-
         iso_results = {}
 
         for t in THRESHOLDS:
@@ -1943,14 +1989,10 @@ def find_scenario_b_mixes(feasible_mixes):
             demand_twh = base_demand * gf
             demand_mwh = demand_twh * 1e6
 
-            # If 2025 existing fleet already meets this threshold, inject existing-only
-            # entry and keep floor at 2025 levels. This prevents the EF optimizer from
-            # locking in over-built mixes (e.g. sol=181 TWh at T=10%) that inflate the
-            # floor for all subsequent thresholds via the ratchet mechanism.
             if t <= exist_match:
                 iso_results[t] = _build_existing_only_entry(
                     iso, t, demand_twh, gf, existing_twh_b, iso_sens)
-                floor = dict(existing_twh_b)  # floor stays at 2025 existing levels
+                floor = dict(existing_twh_b)
                 continue
 
             t_str = str(int(t)) if t == int(t) else str(t)
@@ -1958,87 +2000,110 @@ def find_scenario_b_mixes(feasible_mixes):
             if not mixes:
                 continue
 
-            # Learning-curve overrides at this threshold (Scenario B)
+            # Learning-curve overrides: nuclear/LDES H→L, CCS H→M
             frac = learning_fraction(t, scenario='B')
-            overrides = _build_learning_overrides(iso, frac)
+            overrides = _build_learning_overrides_b(iso, frac)
 
-            # Paced firm investment floor: linear ramp from existing to 95% target.
-            # Scale target by demand growth ratio (firm TWh grows with demand).
-            t_frac = min(1.0, max(0, (t - 50) / (95 - 50)))
+            # S-curve deployment fraction toward 95% target.
+            # Sigmoid frontloads firm investment vs linear:
+            #   T=50%: ~5%, T=70%: ~30%, T=80%: ~55%, T=90%: ~85%, T=95%: 100%
+            if t <= 50:
+                deploy_frac = 0.05
+            elif t >= 95:
+                deploy_frac = 1.0
+            else:
+                x = (t - 50) / (95 - 50)  # 0→1
+                raw = 1.0 / (1.0 + math.exp(-6 * (x - 0.4)))
+                f0 = 1.0 / (1.0 + math.exp(-6 * (0 - 0.4)))
+                f1 = 1.0 / (1.0 + math.exp(-6 * (1 - 0.4)))
+                deploy_frac = 0.05 + 0.95 * (raw - f0) / (f1 - f0)
+
+            # Paced targets for firm, CCS, LDES at this threshold
             demand_ratio = demand_twh / demand_95 if demand_95 > 0 else 1.0
-            paced_firm_twh = existing_firm_twh + t_frac * (
-                target_firm_twh * demand_ratio - existing_firm_twh)
+            paced_cf_twh = existing_cf_twh + deploy_frac * (
+                target_cf_twh * demand_ratio - existing_cf_twh)
+            paced_ccs_twh = existing_ccs_twh + deploy_frac * (
+                target_ccs_twh * demand_ratio - existing_ccs_twh)
+            paced_firm_twh = paced_cf_twh + paced_ccs_twh
+            paced_ldes_twh = deploy_frac * target_ldes_twh * demand_ratio
+            paced_batt_twh = deploy_frac * target_batt_twh * demand_ratio
 
-            # Evaluate ALL mixes. Prefer those meeting firm pacing requirement.
-            # Among pacing-compliant mixes, pick cheapest with learning-curve prices.
-            best_paced_eff = float('inf')
-            best_paced_result = None
-            best_paced_mix = None
-            best_paced_excess = 0.0
-
-            best_any_eff = float('inf')
-            best_any_result = None
-            best_any_mix = None
-            best_any_excess = 0.0
+            # ==================================================================
+            # Step 3: Score feasible mixes by target alignment + cost
+            # Three-tier selection:
+            #   Tier 1: Strict — firm >= 85% of pace, CCS >= 85%, LDES >= 50%
+            #   Tier 2: Relaxed — firm >= 50% of pace
+            #   Tier 3: Any feasible mix (fallback)
+            # Within each tier, pick cheapest at learning-curve prices.
+            # ==================================================================
+            candidates_strict = []
+            candidates_relaxed = []
+            candidates_any = []
 
             for mix in mixes:
                 result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
                                          overrides=overrides, growth_factor=gf)
-
                 deployed = _mix_resource_twh(mix, demand_twh, iso)
 
-                # Floor excess cost: existing resources at $0, only committed-new
-                # resources above existing get newbuild pricing.
+                # Floor excess cost
                 excess_per_mwh = 0.0
                 for res in floor:
-                    excess = max(0, floor.get(res, 0) - deployed.get(res, 0))
-                    if excess > 0.01:
-                        existing_gap = max(0, min(excess,
+                    shortfall = max(0, floor.get(res, 0) - deployed.get(res, 0))
+                    if shortfall > 0.01:
+                        existing_gap = max(0, min(shortfall,
                                                   existing_twh_b.get(res, 0) - deployed.get(res, 0)))
-                        newbuild_gap = excess - max(0, existing_gap)
+                        newbuild_gap = shortfall - max(0, existing_gap)
                         if newbuild_gap > 0.01:
                             lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
                             excess_per_mwh += newbuild_gap / demand_twh * lcoe
 
-                augmented_eff = (result['total_cost'] + excess_per_mwh) / \
-                    (result['match_score'] / 100.0) if result['match_score'] > 0 else float('inf')
+                total_cost_aug = result['total_cost'] + excess_per_mwh
 
-                # Check pacing: does this mix invest enough in firm?
-                mix_firm_twh = deployed.get('clean_firm', 0) + deployed.get('ccs_ccgt', 0)
-                meets_pace = mix_firm_twh >= paced_firm_twh * 0.7  # 70% tolerance
+                mix_cf_twh = deployed.get('clean_firm', 0)
+                mix_ccs_twh = deployed.get('ccs_ccgt', 0)
+                mix_firm_twh = mix_cf_twh + mix_ccs_twh
+                mix_ldes_twh = deployed.get('ldes', 0)
 
-                if meets_pace and augmented_eff < best_paced_eff:
-                    best_paced_eff = augmented_eff
-                    best_paced_result = result
-                    best_paced_mix = mix
-                    best_paced_excess = excess_per_mwh
+                entry = (total_cost_aug, result, mix, excess_per_mwh, deployed)
 
-                if augmented_eff < best_any_eff:
-                    best_any_eff = augmented_eff
-                    best_any_result = result
-                    best_any_mix = mix
-                    best_any_excess = excess_per_mwh
+                # Tier 1: Strict pacing
+                firm_ok = mix_firm_twh >= paced_firm_twh * 0.85 or paced_firm_twh < 1
+                ccs_ok = mix_ccs_twh >= paced_ccs_twh * 0.85 or paced_ccs_twh < 1
+                ldes_ok = mix_ldes_twh >= paced_ldes_twh * 0.50 or paced_ldes_twh < 1
 
-            # Prefer pacing-compliant mix; fall back to any if none qualify
-            if best_paced_result:
-                sel_result = best_paced_result
-                sel_mix = best_paced_mix
-                sel_excess = best_paced_excess
-                paced_flag = ''
-            elif best_any_result:
-                sel_result = best_any_result
-                sel_mix = best_any_mix
-                sel_excess = best_any_excess
-                paced_flag = ' (no pace-compliant mix)'
+                if firm_ok and ccs_ok and ldes_ok:
+                    candidates_strict.append(entry)
+
+                # Tier 2: Relaxed firm pacing
+                if mix_firm_twh >= paced_firm_twh * 0.50 or paced_firm_twh < 1:
+                    candidates_relaxed.append(entry)
+
+                # Tier 3: Any
+                candidates_any.append(entry)
+
+            # Select from best available tier
+            if candidates_strict:
+                pool = candidates_strict
+                source_flag = ''
+            elif candidates_relaxed:
+                pool = candidates_relaxed
+                source_flag = ' (relaxed pace)'
             else:
+                pool = candidates_any
+                source_flag = ' (no pace-compliant mix)'
+
+            if not pool:
                 continue
 
-            # Build augmented result
-            deployed = _mix_resource_twh(sel_mix, demand_twh, iso)
+            # Pick cheapest within tier
+            pool.sort(key=lambda x: x[0])
+            sel_cost_aug, sel_result, sel_mix, sel_excess, sel_deployed = pool[0]
+
+            # Build augmented result with floor ratchet
             augmented = {}
             excess_twh = {}
             for res in floor:
-                ef_val = deployed.get(res, 0)
+                ef_val = sel_deployed.get(res, 0)
                 floor_val = floor.get(res, 0)
                 augmented[res] = max(ef_val, floor_val)
                 excess_twh[res] = max(0, floor_val - ef_val)
@@ -2046,7 +2111,7 @@ def find_scenario_b_mixes(feasible_mixes):
             total_excess = sum(excess_twh.values())
 
             aug = dict(sel_result)
-            aug['total_cost'] = round(sel_result['total_cost'] + sel_excess, 2)
+            aug['total_cost'] = round(sel_cost_aug, 2)
             match_frac = sel_result['match_score'] / 100.0
             aug['effective_cost'] = round(
                 aug['total_cost'] / match_frac if match_frac > 0 else 0, 2)
@@ -2079,6 +2144,14 @@ def find_scenario_b_mixes(feasible_mixes):
             aug['clean_peak_mw'] = round(clean_peak_mw)
             aug['existing_gas_used_mw'] = round(min(gas_needed_mw, EXISTING_GAS_CAPACITY_MW[iso]))
 
+            # Dispatch parameters
+            aug['battery_dispatch_pct'] = float(sel_mix[6])
+            aug['battery8_dispatch_pct'] = float(sel_mix[7])
+            aug['ldes_dispatch_pct'] = float(sel_mix[8])
+            aug['h2_dispatch_pct'] = float(sel_mix[9]) if len(sel_mix) > 9 else 0.0
+            aug['demand_mwh'] = demand_mwh
+
+            # New-build cost tracking (for MAC)
             aug['new_build_cost_total'] = (
                 sel_result['new_build_cost_total'] + sel_excess * demand_mwh)
             aug['new_gen_twh'] = round(
@@ -2091,13 +2164,18 @@ def find_scenario_b_mixes(feasible_mixes):
             aug['learning_ccs_lcoe'] = round(overrides['ccs_lcoe'], 1)
             aug['learning_ldes_lcoe'] = round(overrides['ldes_lcoe'], 1)
             aug['paced_firm_target_twh'] = round(paced_firm_twh, 1)
+            aug['paced_ccs_target_twh'] = round(paced_ccs_twh, 1)
+            aug['deploy_fraction'] = round(deploy_frac, 3)
 
             if total_excess > 1.0:
                 print(f"  ↗ {iso} {t}% [B]: {total_excess:.0f} TWh excess "
-                      f"(+${sel_excess:.1f}/MWh)")
+                      f"(+${sel_excess:.1f}/MWh){source_flag}")
 
             iso_results[t] = aug
-            floor = dict(augmented)
+
+            # Floor ratchet: lock in deployed + augmented resources
+            for res in floor:
+                floor[res] = max(floor[res], augmented.get(res, 0))
 
         # Print trajectory summary
         for t in sorted(iso_results.keys()):
@@ -2106,10 +2184,11 @@ def find_scenario_b_mixes(feasible_mixes):
             lf = r.get('learning_fraction', 0)
             paced = r.get('paced_firm_target_twh', 0)
             actual_firm = rt.get('clean_firm', 0) + rt.get('ccs_ccgt', 0)
+            df = r.get('deploy_fraction', 0)
             print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
                   f"Wnd={rt['wind']:6.0f} CCS={rt.get('ccs_ccgt', 0):6.0f} "
                   f"Firm={actual_firm:6.0f}/{paced:5.0f} pace "
-                  f"LF={lf:.2f} ${r['effective_cost']:.0f}/MWh [B]")
+                  f"DF={df:.2f} LF={lf:.2f} ${r['effective_cost']:.0f}/MWh [B]")
 
         results[iso] = iso_results
 
@@ -2406,7 +2485,7 @@ def main():
     print("=" * 80)
     print("DUAL-SCENARIO COMPARISON: PURE CONSEQUENTIAL vs HOURLY MATCHING")
     print("  A: Pure Consequential — FOAK firm costs (no learning), cheap $/tCO₂ first")
-    print("  B: Hourly Matching — FOAK→NOAK learning curve, early firm investment")
+    print("  B: Hourly Matching — endpoint-optimal, backward deployment, H→L/H→M learning")
     print("=" * 80)
 
     # Load feasible mixes from shared-data.js (physics-validated EF mixes)
@@ -2451,7 +2530,7 @@ def main():
     # With declining firm costs, optimizer includes more firm at each step,
     # yielding smoother cost trajectory and less stranding than Scenario A.
     # ==========================================================================
-    print("\nScenario B (Hourly Matching): Forward-stepping, FOAK→NOAK learning...")
+    print("\nScenario B (Hourly Matching): Endpoint-optimal, backward from 95% NOAK...")
     results_b = find_scenario_b_mixes(feasible_mixes)
 
     # Memoize compute_fossil_retirement as fallback
@@ -2807,8 +2886,8 @@ def main():
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
-                'method': 'ef_forward_step_learning',
-                'method_description': 'Hourly matching with FOAK→NOAK learning curve: greedy forward-stepping through feasible EF mixes with declining firm costs. At each threshold, firm/CCS/LDES costs interpolate from FOAK→NOAK via Wright\'s Law. Early investment in firm (even at FOAK) drives the learning curve down. By 2040s, firm at competitive NOAK levels. Produces more balanced mixes with less stranding than Scenario A.',
+                'method': 'endpoint_backward_learning',
+                'method_description': 'Forward-looking endpoint-optimal deployment: finds NOAK-optimal mix at 95% (all costs Low, CCS at Medium+45Q), then works backward with S-curve deployment pacing. Nuclear/LDES: H→L learning curve. CCS: H→M learning curve with 45Q. At each threshold, selects from feasible mixes those meeting firm/CCS/LDES pacing targets. Produces fundamentally different mixes from Scenario A — balanced firm/storage from early thresholds rather than renewable-heavy.',
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
