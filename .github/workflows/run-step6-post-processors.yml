@@ -31,6 +31,11 @@ on:
           - step6_consequential
           - step6_scenario_comparison
           - step6_optimal_targets
+      source_ref:
+        description: 'Branch/tag to checkout scripts from (default: master)'
+        required: false
+        default: 'master'
+        type: string
 
 env:
   BRANCH_PREFIX: step6-pp
@@ -45,10 +50,10 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout repo (from master)
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.event.inputs.source_ref || 'master' }}
           fetch-depth: 0
 
       - name: Generate unique branch name
