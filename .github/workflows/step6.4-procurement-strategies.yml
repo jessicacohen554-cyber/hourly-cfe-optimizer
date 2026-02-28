@@ -1,20 +1,19 @@
-name: "Step 6.5: Procurement Strategy Comparison"
+name: "Step 6.4: Update Procurement Page"
+
+# Computes procurement strategy comparison for the Procurement Strategy page.
+# 10 strategy variants across 3 families:
+#   - Strategy 1 (A-C): Consequential cross-regional netting
+#   - Strategy 2 (A-C): Hourly matching same-ISO
+#   - Strategy 3 (A-D): Annual matching (boundary × additionality)
+# 25-year trajectories (2025→2050) along SBTi milestones.
+#
+# Output: data/step5-post-processing/strategy*.json, dashboard/js/procurement-strategy-data.js
 
 on:
   workflow_dispatch:
     inputs:
-      strategy:
-        description: 'Strategy to compute (or ALL)'
-        required: true
-        default: 'ALL'
-        type: choice
-        options:
-          - ALL
-          - strategy1
-          - strategy2
-          - strategy3
       iso:
-        description: 'ISO to compute (or ALL)'
+        description: 'ISO region to compute'
         required: true
         default: 'ALL'
         type: choice
@@ -27,6 +26,16 @@ on:
           - NEISO
           - MISO
           - SPP
+      strategy:
+        description: 'Which strategy family to compute'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - strategy1
+          - strategy2
+          - strategy3
       mode:
         description: 'Run mode'
         required: true
@@ -40,9 +49,14 @@ on:
         required: false
         default: true
         type: boolean
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
 
 env:
-  BRANCH_PREFIX: procurement-strategy
+  BRANCH_PREFIX: step6-4-procurement
 
 jobs:
   run-strategies:
@@ -54,21 +68,19 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout repo (from master)
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ inputs.branch || 'master' }}
           fetch-depth: 0
-
-      - name: Generate unique branch name
-        run: |
-          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          ISO_LABEL="${{ github.event.inputs.iso }}"
-          STRATEGY_LABEL="${{ github.event.inputs.strategy }}"
-          echo "TARGET_BRANCH=auto/${TIMESTAMP}-${BRANCH_PREFIX}-${STRATEGY_LABEL}-${ISO_LABEL}" >> "$GITHUB_ENV"
 
       - name: Create output branch
         run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.strategy }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
       - name: Set up Python
@@ -77,53 +89,43 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install numpy pandas pyarrow numba
+        run: pip install numpy pandas pyarrow numba
 
-      - name: Run Strategy 1 (Consequential)
-        if: github.event.inputs.strategy == 'ALL' || github.event.inputs.strategy == 'strategy1'
+      # ════════════════════════════════════════════════════════════════════
+      # Sequential: Strategy 1 → 2 → 3 → Combine JS
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: "Strategy 1: Consequential"
+        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy1'
         run: |
-          cd scripts
           QUICK_FLAG=""
-          if [ "${{ github.event.inputs.mode }}" = "quick" ]; then
-            QUICK_FLAG="--quick"
-          fi
-          python step6_5_strategy1_consequential.py \
-            --iso ${{ github.event.inputs.iso }} \
-            $QUICK_FLAG
+          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
+          python scripts/step6_5_strategy1_consequential.py \
+            --iso ${{ inputs.iso }} $QUICK_FLAG
 
-      - name: Run Strategy 2 (Hourly)
-        if: github.event.inputs.strategy == 'ALL' || github.event.inputs.strategy == 'strategy2'
+      - name: "Strategy 2: Hourly"
+        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy2'
         run: |
-          cd scripts
           QUICK_FLAG=""
-          if [ "${{ github.event.inputs.mode }}" = "quick" ]; then
-            QUICK_FLAG="--quick"
-          fi
-          python step6_5_strategy2_hourly.py \
-            --iso ${{ github.event.inputs.iso }} \
-            $QUICK_FLAG
+          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
+          python scripts/step6_5_strategy2_hourly.py \
+            --iso ${{ inputs.iso }} $QUICK_FLAG
 
-      - name: Run Strategy 3 (Annual)
-        if: github.event.inputs.strategy == 'ALL' || github.event.inputs.strategy == 'strategy3'
+      - name: "Strategy 3: Annual"
+        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy3'
         run: |
-          cd scripts
           QUICK_FLAG=""
-          if [ "${{ github.event.inputs.mode }}" = "quick" ]; then
-            QUICK_FLAG="--quick"
-          fi
-          python step6_5_strategy3_annual.py \
-            --iso ${{ github.event.inputs.iso }} \
-            $QUICK_FLAG
+          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
+          python scripts/step6_5_strategy3_annual.py \
+            --iso ${{ inputs.iso }} $QUICK_FLAG
 
-      - name: Combine results into compact JS data file
-        if: github.event.inputs.generate_js == 'true'
+      - name: "Combine results into dashboard JS"
+        if: inputs.generate_js == true
         run: |
-          cd scripts
           python -c "
           import json, os
 
-          pp_dir = '../data/step5-post-processing'
+          pp_dir = 'data/step5-post-processing'
           raw = {}
 
           for f in ['strategy1_consequential.json', 'strategy2_hourly.json', 'strategy3_annual.json']:
@@ -138,10 +140,6 @@ jobs:
               print('  No strategy results found to combine')
               exit(0)
 
-          # Build compact format (Medium growth only, shortened field names)
-          # Page JS expects: y=year, t=threshold, c=cost_per_mwh, tc=total_cost_m,
-          # co2=co2_abated_mmt, mac=mac_per_ton, dt=demand_twh, bt=buyer_demand_twh,
-          # rm=resource_mix (t=twh, \$=cost_m), lmp=lmp_impact
           compact = {}
           entry_count = 0
           for sk in raw:
@@ -182,7 +180,7 @@ jobs:
                               entry_count += 1
                           compact[sk][iso][gr][pk] = slim
 
-          js_dir = '../dashboard/js'
+          js_dir = 'dashboard/js'
           os.makedirs(js_dir, exist_ok=True)
           js_path = os.path.join(js_dir, 'procurement-strategy-data.js')
           js_str = json.dumps(compact, separators=(',', ':'))
@@ -190,43 +188,45 @@ jobs:
               fh.write('// Compact procurement strategy data (Medium growth only)\n')
               fh.write(f'const PROCUREMENT_DATA = {js_str};\n')
           sz_mb = os.path.getsize(js_path) / 1024 / 1024
-          print(f'  Generated compact {js_path}: {sz_mb:.1f} MB, {entry_count} entries')
+          print(f'  Generated {js_path}: {sz_mb:.1f} MB, {entry_count} entries')
           "
 
-      - name: Commit and push results
+      - name: Commit and push
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/step5-post-processing/ dashboard/js/
+          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f dashboard/js/ 2>/dev/null || true
+
           if git diff --cached --quiet; then
             echo "No results to commit"
-          else
-            git commit -m "Step 6.5: Procurement strategy results — ${{ github.event.inputs.strategy }} (${{ github.event.inputs.iso }}, ${{ github.event.inputs.mode }})"
-            git push origin "$TARGET_BRANCH"
+            exit 0
           fi
 
-      - name: Create PR
-        if: success()
+          git commit -m "Step 6.4 Procurement: ${{ inputs.strategy }} ${{ inputs.iso }} (${{ inputs.mode }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Create pull request
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if git log origin/master.."$TARGET_BRANCH" --oneline | grep -q .; then
-            gh pr create \
-              --title "Step 6.5: Procurement strategy — ${{ github.event.inputs.strategy }} (${{ github.event.inputs.mode }})" \
-              --body "## Summary
-          - Computed procurement strategy comparison for ${{ github.event.inputs.strategy }} / ${{ github.event.inputs.iso }}
-          - Mode: ${{ github.event.inputs.mode }}
+          gh pr create \
+            --title "Step 6.4 Procurement: ${{ inputs.strategy }} ${{ inputs.iso }}" \
+            --body "## Summary
+          - Procurement strategy comparison: **${{ inputs.strategy }}** for **${{ inputs.iso }}** (${{ inputs.mode }})
           - 10 strategy variants: 1A-C (consequential), 2A-C (hourly), 3A-D (annual)
           - 25-year trajectories (2025→2050) along SBTi milestones
-          - Results: \`data/step5-post-processing/strategy{1,2,3}_*.json\`
-          - Dashboard data: \`dashboard/js/procurement-strategy-data.js\`
-
-          ## Strategy Families
-          - **Strategy 1**: Consequential cross-regional netting (3 emission baselines)
-          - **Strategy 2**: Hourly matching same-ISO (3 existing-clean-credit variants)
-          - **Strategy 3**: Annual matching (2×2: boundary × additionality)" \
-              --base master
-          else
-            echo "No new commits to create PR for"
-          fi
+          - Output: \`dashboard/js/procurement-strategy-data.js\`" \
+            --base ${{ inputs.branch || 'master' }} \
+            --head "$TARGET_BRANCH" || echo "PR creation skipped"

@@ -1,0 +1,127 @@
+name: "Step 4: Gas CCS Post-Processing"
+
+# NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction
+# ($27.5/MWh), without-45Q overlay, gas capacity backup & resource adequacy
+# (15% RA margin), CCS vs LDES crossover analysis.
+#
+# Prerequisite: Step 3 (Cost Optimization) must have produced cost parquets.
+# Output: data/step4-gas-ccs-parquets/
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step4-gas-ccs
+
+jobs:
+  run-step4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify step-3 parquets exist
+        run: |
+          if [ ! -d data/step3-cost-opt-parquets ] || [ -z "$(ls data/step3-cost-opt-parquets/*.parquet 2>/dev/null)" ]; then
+            echo "ERROR: Step-3 parquets not found. Run Step 3 first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas
+
+      - name: Ensure output directory
+        run: mkdir -p data/step4-gas-ccs-parquets
+
+      - name: Build ISO arguments
+        id: iso-args
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo "iso_flags=--all" >> "$GITHUB_OUTPUT"
+          else
+            echo "iso_flags=--iso ${{ inputs.iso }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Run Gas CCS Post-Processing"
+        run: python scripts/step4_gas_ccs_adjustement.py ${{ steps.iso-args.outputs.iso_flags }}
+
+      - name: Commit and push
+        run: |
+          git add -f data/step4-gas-ccs-parquets/
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 4 Gas CCS: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Create pull request
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Step 4 Gas CCS: ${{ inputs.iso }}" \
+            --body "## Summary
+          - Gas CCS post-processing for **${{ inputs.iso }}**
+          - NEISO winter pipeline, 45Q correction, RA margin, CCS vs LDES crossover
+          - Output: \`data/step4-gas-ccs-parquets/\`" \
+            --base ${{ inputs.branch || 'master' }} \
+            --head "$TARGET_BRANCH" || echo "PR creation skipped"
