@@ -22,6 +22,7 @@ Usage:
   python step3_track_nb_ctr.py --iso PJM    # Single ISO
 """
 
+import gc
 import os
 import sys
 import time
@@ -338,8 +339,9 @@ def load_iso_ef_parquet(iso):
     sub = pq.read_table(path)
     if sub.num_rows == 0:
         return None
-    print(f"  {iso}: loaded {sub.num_rows:,} EF mixes from {path}")
-    return {
+    n = sub.num_rows
+    print(f"  {iso}: loaded {n:,} EF mixes from {path}")
+    result = {
         'clean_firm': sub.column('clean_firm').to_numpy(),
         'solar': sub.column('solar').to_numpy(),
         'wind': sub.column('wind').to_numpy(),
@@ -347,13 +349,16 @@ def load_iso_ef_parquet(iso):
         'battery_dispatch_pct': sub.column('battery_dispatch_pct').to_numpy(),
         'battery8_dispatch_pct': (sub.column('battery8_dispatch_pct').to_numpy()
                                    if 'battery8_dispatch_pct' in sub.column_names
-                                   else np.zeros(sub.num_rows, dtype=np.int64)),
+                                   else np.zeros(n, dtype=np.int64)),
         'ldes_dispatch_pct': sub.column('ldes_dispatch_pct').to_numpy(),
         'h2_dispatch_pct': (sub.column('h2_dispatch_pct').to_numpy()
                             if 'h2_dispatch_pct' in sub.column_names
-                            else np.zeros(sub.num_rows, dtype=np.int64)),
+                            else np.zeros(n, dtype=np.int64)),
         'hourly_match_score': sub.column('hourly_match_score').to_numpy(),
     }
+    del sub  # Free Arrow table immediately (~3GB for large ISOs)
+    gc.collect()
+    return result
 
 
 def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
@@ -504,6 +509,73 @@ def run_track(track_name, iso, arrays, demand_twh, combos, uprate_cap_override=N
     print(f"  {iso:>6} {track_name:>10}: {N:,} mixes, "
           f"{len(active_thresholds)} thresholds, {len(arch_set)} archetypes — {elapsed:.0f}s")
     return result, arch_set
+
+
+# 8M mixes per chunk keeps peak memory under ~5GB on 7GB GitHub Actions runners.
+# Full arrays (~3GB) stay resident; each chunk adds ~2GB for coeff_matrix + extras.
+_CHUNK_THRESHOLD = 15_000_000
+
+
+def _run_track_chunked(track_name, iso, arrays, demand_twh, combos,
+                        uprate_cap_override=None, existing_override=None,
+                        chunk_size=8_000_000):
+    """Tournament-style chunked run_track for arrays too large for runner RAM.
+
+    Splits N mixes into chunks of chunk_size, finds per-chunk winners via
+    run_track (with Pareto pruning), then collects all chunk winners and
+    does a single final evaluation on the candidate union to find global optima.
+
+    Returns:
+        (track_data, arch_set, final_arrays) — final_arrays is the candidate
+        subset used in the final pass (needed for downstream DG evaluation).
+    """
+    N = len(arrays['clean_firm'])
+    n_chunks = (N + chunk_size - 1) // chunk_size
+    print(f"    {iso} {track_name}: {N:,} mixes → {n_chunks} chunks of ≤{chunk_size:,} (OOM guard)")
+
+    candidate_indices = set()
+    for c in range(n_chunks):
+        start = c * chunk_size
+        end = min(start + chunk_size, N)
+        chunk_n = end - start
+        print(f"    Chunk {c+1}/{n_chunks}: mixes [{start:,}..{end:,}) ({chunk_n:,})")
+
+        # Basic slicing creates views — no extra memory for chunk_arrays
+        chunk_arrays = {k: arrays[k][start:end] for k in arrays}
+
+        _chunk_data, chunk_arch = run_track(
+            track_name, iso, chunk_arrays, demand_twh, combos,
+            uprate_cap_override=uprate_cap_override,
+            existing_override=existing_override,
+            apply_dominance_filter=True)
+
+        # Map chunk-local winner indices back to full-array indices
+        for idx in chunk_arch:
+            candidate_indices.add(start + idx)
+
+        print(f"    Chunk {c+1}/{n_chunks}: {len(chunk_arch):,} candidates kept")
+        del chunk_arrays, _chunk_data, chunk_arch
+        gc.collect()
+
+    # Build candidate arrays from the union of all chunk winners
+    candidates = sorted(candidate_indices)
+    n_cand = len(candidates)
+    if n_cand == 0:
+        return {}, set(), None
+
+    cand_idx = np.array(candidates, dtype=np.int64)
+    cand_arrays = {k: arrays[k][cand_idx] for k in arrays}
+    print(f"    {iso} {track_name}: {n_cand:,} candidates from {n_chunks} chunks → final eval")
+
+    # Final evaluation on candidate set — no dominance filter needed,
+    # these are already proven competitive within their chunks
+    final_data, final_arch = run_track(
+        track_name, iso, cand_arrays, demand_twh, combos,
+        uprate_cap_override=uprate_cap_override,
+        existing_override=existing_override,
+        apply_dominance_filter=False)
+
+    return final_data, final_arch, cand_arrays
 
 
 def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
@@ -918,9 +990,18 @@ def main():
                           f"(raw={hydro_floor_raw:.2f}%) — using all {n_before:,} mixes")
                 ctr_arrays = iso_arrays
 
-            ctr_data, ctr_arch = run_track(
-                'cost_to_replace', iso, ctr_arrays, demand_twh, combos,
-                uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+            N_ctr = len(ctr_arrays['clean_firm'])
+            if N_ctr > _CHUNK_THRESHOLD:
+                ctr_data, ctr_arch, ctr_eval = _run_track_chunked(
+                    'cost_to_replace', iso, ctr_arrays, demand_twh, combos,
+                    uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+                del ctr_arrays
+                gc.collect()
+            else:
+                ctr_data, ctr_arch = run_track(
+                    'cost_to_replace', iso, ctr_arrays, demand_twh, combos,
+                    uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+                ctr_eval = ctr_arrays
 
             # Save to parquet immediately
             sc_rows = flatten_track_rows(iso, 'cost_to_replace', ctr_data)
@@ -928,11 +1009,13 @@ def main():
 
             if ctr_arch:
                 ctr_dg = run_track_demand_growth(
-                    'cost_to_replace', iso, ctr_arrays, ctr_arch, combos,
+                    'cost_to_replace', iso, ctr_eval, ctr_arch, combos,
                     uprate_cap_override=0, existing_override=greenfield_keep_hydro)
                 dg_rows = flatten_dg_rows(iso, 'cost_to_replace', ctr_dg)
                 if dg_rows:
                     append_to_parquet(dg_rows, PQ_DG_PATH)
+            del ctr_eval
+            gc.collect()
         elif args.track in ('ctr', 'both'):
             print(f"  {iso:>6}    cost_to_replace: skipped (in parquet)")
 
