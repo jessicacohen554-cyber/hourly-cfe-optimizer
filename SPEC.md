@@ -5,6 +5,35 @@
 
 ## Current Status (Feb 28, 2026)
 
+### MAC Formula: EIA Baseline CO₂ + Full LCOE Cost (Feb 28, 2026)
+
+**Decision confirmed:** Option Z — use optimizer's cost-optimal mix, fix both the cost numerator and CO₂ denominator.
+
+**MAC formula (new):**
+```
+MAC = (cost_total_cost × annual_demand_mwh) / CO2_abated_by_new_capital
+```
+
+Where:
+- **Cost numerator**: `cost_total_cost × annual_demand_mwh` — full system LCOE of all clean resources (not just the incremental premium above wholesale). Captures capital investment cost for new deployment.
+- **CO₂ denominator**: `co2_total_co2_abated_tons − existing_clean_avoidance[iso]` — CO₂ abated only by NEW capital investment, not including what existing clean is already avoiding on the grid.
+
+**Baseline grounding:**
+- `existing_clean_avoidance[iso]` = `(fossil_co2_lb_per_mwh − total_co2_lb_per_mwh) × annual_demand_mwh / 2204.623`
+- Derived from `data/egrid_emission_rates.json` (eGRID actuals, all 7 ISOs)
+- `fossil_co2_lb_per_mwh` = rate of fossil fleet only; `total_co2_lb_per_mwh` = actual 2025 system average (including existing clean operating)
+- Difference = the CO₂ that existing clean is already avoiding — NOT credited to new investment
+
+**Rationale:** Previous formula used `cost_incremental` (premium above wholesale) on the cost side, and credited new investment with ALL CO₂ abatement vs an all-fossil hypothetical. This inflated the MAC denominator for clean-grid ISOs (CAISO, NEISO) where existing clean already avoids most emissions. The new formula answers: "What does MY new capital investment cost per ton of CO₂ MY investment displaces?"
+
+**Stepwise MAC note:** `compute_stepwise_fan()` uses `delta_cost / delta_co2` between adjacent thresholds. The baseline offset cancels in the CO₂ delta — no adjustment needed there. Cost field updated from `cost_incremental` to `cost_total_cost`.
+
+**File changed:** `scripts/step6_compute_mac_stats.py`
+- Added `EXISTING_CLEAN_AVOIDANCE_TONS` dict computed from eGRID data
+- Updated `add_mac_column()`, `compute_stepwise_fan()`, `compute_envelope_and_path()`
+
+---
+
 ### Scenario A Forward-Stepping Rewrite (Feb 28, 2026)
 
 **Branch:** `claude/fix-scenario-a-resources-kDR92`
