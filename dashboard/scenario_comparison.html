@@ -535,7 +535,7 @@ Object.entries(DATA.metadata.sbti_year_map).forEach(([k,v]) => YEAR_MAP[parseFlo
 
 // Global target threshold (slider-controlled)
 let targetThreshold = 95;
-const SLIDER_STEPS = THRESHOLDS; // [50, 55, 60, ..., 99.99]
+const SLIDER_STEPS = THRESHOLDS.filter(t => t >= 50); // [50, 55, 60, ..., 99.99]
 const slider = document.getElementById('targetSlider');
 const sliderVal = document.getElementById('targetVal');
 const sliderYear = document.getElementById('targetYear');
@@ -651,6 +651,25 @@ const CHART_DEFAULTS = {
 
 function yearLabel(d) { return d.year + '\n(' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%)'; }
 function pctLabel(d) { return (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%'; }
+
+// Filter trajectory to thresholds above existing clean %, prepend 2025 baseline
+function filterTraj(iso, rawTraj) {
+    const isoShares = (GRID_MIX || {})[iso] || {};
+    const existingCleanPct = Object.values(isoShares).reduce((s, v) => s + v, 0);
+    const filtered = rawTraj.filter(d => d.threshold > existingCleanPct);
+    const baseline = {
+        threshold: existingCleanPct, year: 2025, demand_twh: DEMAND_TWH[iso],
+        effective_cost: 0, stepwise_mac: 0, gas_backup_mw: 0, new_gas_mw: 0,
+        firm_total_twh: 0, resource_twh: { clean_firm: 0, solar: 0, wind: 0, ccs_ccgt: 0, hydro: 0 },
+        battery_twh: 0, ldes_twh: 0,
+    };
+    return { traj: [baseline, ...filtered], existingCleanPct };
+}
+function trajLabels(traj, existingCleanPct) {
+    return traj.map(d =>
+        d.year === 2025 ? '2025\n' + Math.round(existingCleanPct) + '%'
+                        : d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
+}
 
 // ===== HERO STATS (all-region aggregates at 95%, static) =====
 function buildHeroStats() {
@@ -846,12 +865,12 @@ function getScenarioB(iso) {
 let macTimelineChart;
 function renderMacTimeline(iso) {
     document.getElementById('macTimelineTitle').innerHTML = iso + ' &mdash; Marginal $/tCO<sub>2</sub> by SBTi Year';
-    const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = getScenarioB(iso);
+    const { traj: fullA, existingCleanPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
+    const { traj: fullB } = filterTraj(iso, getScenarioB(iso));
     // Filter to only points with stepwise_mac
-    const ptsA = trajA.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
-    const ptsB = trajB.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
-    const labels = ptsA.map(yearLabel);
+    const ptsA = fullA.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
+    const ptsB = fullB.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
+    const labels = trajLabels(ptsA, existingCleanPct);
 
     // Compute a reasonable y-axis max from finite values only
     const finiteVals = [...ptsA, ...ptsB].map(d => d.stepwise_mac).filter(v => v < 9999 && v > 0);
@@ -993,9 +1012,9 @@ function renderMacTimeline(iso) {
 let gasChart;
 function renderGasChart(iso) {
     document.getElementById('gasChartTitle').textContent = iso + ' \u2014 Gas Backup Capacity (MW)';
-    const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = getScenarioB(iso);
-    const labels = trajA.map(yearLabel);
+    const { traj: trajA, existingCleanPct: gasPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
+    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const labels = trajLabels(trajA, gasPct);
 
     if (gasChart) gasChart.destroy();
     gasChart = new Chart(document.getElementById('gasChart'), {
@@ -1368,9 +1387,9 @@ function renderMixCharts(iso) {
 let costChart;
 function renderCostChart(iso) {
     document.getElementById('costChartTitle').textContent = iso + ' \u2014 Effective System Cost ($/MWh)';
-    const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = getScenarioB(iso);
-    const labels = trajA.map(yearLabel);
+    const { traj: trajA, existingCleanPct: costPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
+    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const labels = trajLabels(trajA, costPct);
 
     if (costChart) costChart.destroy();
     costChart = new Chart(document.getElementById('costChart'), {
@@ -1441,9 +1460,9 @@ function renderCostChart(iso) {
 let firmChart;
 function renderFirmChart(iso) {
     document.getElementById('firmChartTitle').textContent = iso + ' \u2014 New Clean Firm + CCS Deployment (TWh)';
-    const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = getScenarioB(iso);
-    const labels = trajA.map(yearLabel);
+    const { traj: trajA, existingCleanPct: firmPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
+    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const labels = trajLabels(trajA, firmPct);
 
     if (firmChart) firmChart.destroy();
     firmChart = new Chart(document.getElementById('firmChart'), {
