@@ -1105,10 +1105,11 @@ function renderMixCharts(iso) {
     // Compute existing clean percentage to set x-axis starting point
     const existingCleanPct = Object.values(isoShares).reduce((s, v) => s + v, 0);
 
-    // Build "Today" data point — existing resources only, no new build
+    // Build "2025" data point — existing resources only, no new build
+    // Use exact existingCleanPct (not rounded) so curtailment computes to zero
     const todayPoint = {
-        threshold: Math.round(existingCleanPct),
-        year: 'Today',
+        threshold: existingCleanPct,
+        year: 2025,
         demand_twh: baseDemandTwh,
         effective_cost: 0,
         resource_twh: {
@@ -1121,16 +1122,16 @@ function renderMixCharts(iso) {
         battery_twh: 0, ldes_twh: 0, gas_backup_mw: 0, new_gas_mw: 0,
     };
 
-    // Filter trajectory points to thresholds >= existing clean %, then prepend "Today"
-    const rawTrajA = (DATA.trajectories.pure_consequential[iso] || []).filter(d => d.threshold >= existingCleanPct);
-    const rawTrajB = getScenarioB(iso).filter(d => d.threshold >= existingCleanPct);
+    // Filter trajectory points to thresholds > existing clean %, then prepend "2025"
+    const rawTrajA = (DATA.trajectories.pure_consequential[iso] || []).filter(d => d.threshold > existingCleanPct);
+    const rawTrajB = getScenarioB(iso).filter(d => d.threshold > existingCleanPct);
     const trajA = [todayPoint, ...rawTrajA];
     const trajB = [todayPoint, ...rawTrajB];
 
-    // Labels: "Today" first, then "Year\nThreshold%"
+    // Labels: "2025" with existing clean% first, then "Year\nThreshold%"
     const labels = trajA.map(d =>
-        d.year === 'Today' ? 'Today\n' + Math.round(existingCleanPct) + '%'
-                           : d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
+        d.year === 2025 ? '2025\n' + Math.round(existingCleanPct) + '%'
+                        : d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
 
     // Compute existing TWh per non-nuclear resource
     const existingTwh = {};
