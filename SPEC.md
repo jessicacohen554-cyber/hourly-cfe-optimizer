@@ -2651,7 +2651,30 @@ Within the crossover range, some resource investments are needed regardless of w
 - Depends on: CLEAN_COST (L/M/H effective_cost, no gas backup), RESOURCE_MIX_DATA, emission rates, DAC trajectories
 - No dispatch cache dependency — uses pre-computed Step 3 cost data
 
-#### 7.4.1 Gas Cost Separation in MAC (Decision: Feb 26, 2026)
+#### 7.4.1 Scenario Comparison MAC — PCHIP Spline Smoothing (Decision: Feb 28, 2026)
+
+**Problem**: The scenario comparison page (`step6_scenario_comparison.py`) computes per-threshold stepwise MAC as `Δnew_build_cost / ΔCO₂_abated` between adjacent thresholds. Because each threshold is independently optimized, the marginal cost bounces wildly (e.g., CAISO: null, 278, 278, 278, 12560, 9999, 232, 1421, 140, 9999...). This produces an unreadable, non-monotonic MAC curve instead of the expected hockey-stick shape.
+
+**Solution — PCHIP Spline + Isotonic Regression** (two-pass approach):
+1. **Pass 1**: Collect cumulative `(CO₂_abated, new_build_cost)` data points at each threshold per ISO from dispatch-cache CO₂ and `new_build_cost_total`.
+2. **Pass 2**: Fit a PCHIP (Piecewise Cubic Hermite Interpolating Polynomial) monotone spline to the cumulative supply curve `cost = f(CO₂)`.
+3. Take the PCHIP derivative at each data point → raw marginal MAC = d(cost)/d(CO₂).
+4. Apply `scipy.optimize.isotonic_regression` to enforce non-decreasing marginal cost (isotonic constraint).
+5. Replace raw stepwise MAC values with smoothed values in the trajectory output.
+
+**Why PCHIP**: PCHIP preserves monotonicity of the interpolant and avoids the Runge phenomenon (wild oscillations) that plague polynomial/cubic spline fits. It produces smooth curves through the data while respecting the natural convexity of the abatement supply curve.
+
+**Why isotonic regression**: Even after PCHIP smoothing, numerical derivatives can produce minor non-monotonicity at certain data points. Isotonic regression is the minimum-perturbation projection onto the non-decreasing constraint set — it enforces the hockey-stick shape without artificially inflating values.
+
+**Result**: Smooth, monotonically non-decreasing marginal MAC curve that starts low (~$50-300/t) for easy decarbonization and rises steeply at high thresholds (>95%) — the expected hockey-stick shape.
+
+**Files changed**: `scripts/step6_scenario_comparison.py` — `_build_trajectory()` function rewritten with two-pass PCHIP approach. Added `scipy.interpolate.PchipInterpolator` and `scipy.optimize.isotonic_regression` imports. No changes to downstream consumers — `stepwise_mac` field in trajectory output dicts remains the same interface.
+
+**Regeneration required**: Run Step 6 workflow with `step6_scenario_comparison` to regenerate `dashboard/js/scenario-comparison-data.js`.
+
+---
+
+#### 7.4.2 Gas Cost Separation in MAC (Decision: Feb 26, 2026)
 
 **Decision**: MAC calculations use `effective_cost` (clean procurement only). Gas backup capacity cost is excluded from MAC because it is a system reliability cost, not an abatement cost.
 
