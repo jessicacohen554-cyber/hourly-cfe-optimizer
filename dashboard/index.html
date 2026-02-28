@@ -1309,11 +1309,12 @@ body {
             <span class="story-badge" style="background:rgba(30,58,95,0.12);color:var(--navy);">Regional Insight</span>
             <h2>What You Need Depends on What You Have</h2>
             <p>
-                Each region starts with a different clean energy baseline. The bars below show
-                <strong>existing clean resources</strong> (solid, bottom) versus the <strong>new build
-                required</strong> (lighter, top) in TWh at every matching target. The dashed line marks
-                the region's current clean generation &mdash; everything above it must be built.
-                Crosshatched areas show curtailed generation where procurement exceeds 100% of demand.
+                Each region starts with a different clean energy baseline. The solid bars show
+                <strong>utilized (hourly-matched) clean energy</strong> &mdash; generation that actually
+                serves demand in real time. The dashed staircase line tracks growing demand.
+                Above the demand line, lighter bars show <strong>curtailed generation</strong> &mdash;
+                clean energy produced but not matched to a demand hour. The gap between
+                utilized energy and demand reveals how much load remains unmatched.
             </p>
             <!-- Region pills -->
             <div class="incremental-region-pills" id="incrementalRegionPills">
@@ -2764,158 +2765,207 @@ const INCREMENTAL_INSIGHTS = {
 };
 
 function getIncrementalData(region) {
-    // All thresholds from 50% upward — values in TWh
-    // Each threshold maps to an SBTi target year; demand grows at Medium rate.
-    // Bar height = threshold% × demand TWh (or optimizer total if overprocurement > threshold).
-    // First entry is 2025 existing clean only. Resource mixes from Step 3 CO dg data.
+    // Utilized/curtailed split: at each threshold, total utilized = threshold% of demand,
+    // curtailed = total procurement - threshold%. Dispatchable resources fully utilized;
+    // variable renewables (solar/wind) absorb all curtailment proportionally.
     const allThresholds = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.filter(t => t >= 50) : [];
     const baseDemandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined') ? (REGIONAL_DEMAND_TWH[region] || 100) : 100;
     const demandByThreshold = (typeof DEMAND_TWH_BY_THRESHOLD !== 'undefined') ? DEMAND_TWH_BY_THRESHOLD[region] : null;
     const labels = [];
-    const existingData = {};
-    const newData = {};
-    MIX_RESOURCES.forEach(r => { existingData[r] = []; newData[r] = []; });
-    let existingCleanTotal = 0;
-    const curtailmentData = [];
-    const procurementData = [];
-    const demandTWhPerBar = [];  // track per-bar demand for tooltip display
-    const demandTrajectory = []; // medium demand growth TWh for dashed line
+    const utilizedExistingData = {};
+    const utilizedNewData = {};
+    const curtailedData = {};
+    MIX_RESOURCES.forEach(r => { utilizedExistingData[r] = []; utilizedNewData[r] = []; curtailedData[r] = []; });
+    const gapData = [];          // demand - utilized total (transparent spacer)
+    const demandTrajectory = [];
+    const demandTWhPerBar = [];
 
     const gridMix = (typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES[region] : null) ||
                     DATA.config?.grid_mix_shares?.[region];
     const mixData = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[region] : null;
 
-    // Existing clean percentages and total (2025 base demand)
     const existingPcts = {};
     let existingCleanPct = 0;
     if (gridMix) {
         MIX_RESOURCES.forEach(r => { existingPcts[r] = gridMix[r] || 0; });
-        existingCleanPct = Object.values(gridMix).reduce((s, v) => s + v, 0);
-        existingCleanTotal = existingCleanPct * baseDemandTWh / 100;
+        existingCleanPct = Object.values(existingPcts).reduce((s, v) => s + v, 0);
     }
 
-    // ---- First entry: 2025 with just existing clean TWh ----
+    const DISPATCHABLE = ['clean_firm', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2'];
+    const VARIABLE = ['solar', 'wind'];
+    const STORAGE = ['battery', 'battery8', 'ldes', 'h2'];
+
+    // ---- First entry: 2025 existing clean only ----
     labels.push([Math.round(existingCleanPct) + '%', '2025']);
     demandTWhPerBar.push(Math.round(baseDemandTWh * 10) / 10);
     demandTrajectory.push(baseDemandTWh);
+    const existingCleanTWh = existingCleanPct * baseDemandTWh / 100;
     MIX_RESOURCES.forEach(r => {
-        if (r === 'battery' || r === 'battery8' || r === 'ldes' || r === 'h2') {
-            existingData[r].push(0);
-            newData[r].push(0);
-        } else {
-            const existTWh = (existingPcts[r] || 0) * baseDemandTWh / 100;
-            existingData[r].push(Math.round(existTWh * 10) / 10);
-            newData[r].push(0);
-        }
+        const existTWh = (existingPcts[r] || 0) * baseDemandTWh / 100;
+        utilizedExistingData[r].push(STORAGE.includes(r) ? 0 : Math.round(existTWh * 10) / 10);
+        utilizedNewData[r].push(0);
+        curtailedData[r].push(0);
     });
-    procurementData.push(Math.round(existingCleanTotal * 10) / 10);
-    curtailmentData.push(0);
+    gapData.push(Math.round((baseDemandTWh - existingCleanTWh) * 10) / 10);
 
     // ---- Remaining thresholds: 50% through ≥99.99% ----
     for (const t of allThresholds) {
         const ti = THRESHOLDS.indexOf(t);
         if (ti < 0 || !mixData) continue;
-        // Use threshold-specific demand TWh (SBTi year × Medium growth)
         const demandTWh = (demandByThreshold && demandByThreshold[ti]) ? demandByThreshold[ti] : baseDemandTWh;
         const targetYear = (typeof THRESHOLD_TARGET_YEARS !== 'undefined') ? (THRESHOLD_TARGET_YEARS[t] || 2050) : 2050;
-        labels.push([t >= 99.99 ? '≥99.99%' : t + '%', String(targetYear)]);
+        labels.push([t >= 99.99 ? '\u226599.99%' : t + '%', String(targetYear)]);
         demandTWhPerBar.push(Math.round(demandTWh * 10) / 10);
         demandTrajectory.push(demandTWh);
 
-        // Get optimizer resource mix percentages at this threshold
-        let optimizerTotalPct = 0;
-        const optimizerPcts = {};
+        // Get optimizer resource mix percentages
+        const procPcts = {};
+        let totalProcPct = 0;
         MIX_RESOURCES.forEach(r => {
-            optimizerPcts[r] = mixData[r]?.[ti] || 0;
-            optimizerTotalPct += optimizerPcts[r];
+            procPcts[r] = mixData[r]?.[ti] || 0;
+            totalProcPct += procPcts[r];
         });
 
-        // Target clean %: use threshold% when optimizer is at flat 100%,
-        // use actual optimizer total when overprocurement is needed (>100%)
-        const targetCleanPct = optimizerTotalPct > 100 ? optimizerTotalPct : t;
-        const scaleFactor = optimizerTotalPct > 0 ? (targetCleanPct / optimizerTotalPct) : 0;
+        const targetPct = t;
+        // Dispatchable totals
+        let dispatchableTotal = 0;
+        DISPATCHABLE.forEach(r => { dispatchableTotal += procPcts[r]; });
+        // Variable totals
+        const variableTotalProc = VARIABLE.reduce((s, r) => s + procPcts[r], 0);
+        const variableUtilizedNeeded = Math.max(0, targetPct - dispatchableTotal);
 
-        let barTotal = 0;
         MIX_RESOURCES.forEach(r => {
-            if (r === 'battery' || r === 'battery8' || r === 'ldes') {
-                const scaledPct = optimizerPcts[r] * scaleFactor;
-                const twh = scaledPct * demandTWh / 100;
-                existingData[r].push(0);
-                newData[r].push(Math.round(twh * 10) / 10);
-                barTotal += twh;
+            let utilizedPct, curtailedPct;
+            if (DISPATCHABLE.includes(r)) {
+                if (dispatchableTotal > targetPct && dispatchableTotal > 0) {
+                    utilizedPct = procPcts[r] * (targetPct / dispatchableTotal);
+                    curtailedPct = procPcts[r] - utilizedPct;
+                } else {
+                    utilizedPct = procPcts[r];
+                    curtailedPct = 0;
+                }
             } else {
-                const scaledPct = optimizerPcts[r] * scaleFactor;
-                const existPct = existingPcts[r] || 0;
-                const cappedExist = Math.min(existPct, scaledPct);
-                const newPct = Math.max(0, scaledPct - existPct);
-                const existTWh = cappedExist * demandTWh / 100;
-                const newTWh = newPct * demandTWh / 100;
-                existingData[r].push(Math.round(existTWh * 10) / 10);
-                newData[r].push(Math.round(newTWh * 10) / 10);
-                barTotal += existTWh + newTWh;
+                const share = variableTotalProc > 0 ? procPcts[r] / variableTotalProc : 0;
+                utilizedPct = Math.min(procPcts[r], variableUtilizedNeeded * share);
+                curtailedPct = Math.max(0, procPcts[r] - utilizedPct);
             }
+
+            const utilizedTWh = utilizedPct * demandTWh / 100;
+            const curtailedTWh = curtailedPct * demandTWh / 100;
+
+            if (STORAGE.includes(r)) {
+                utilizedExistingData[r].push(0);
+                utilizedNewData[r].push(Math.round(utilizedTWh * 10) / 10);
+            } else {
+                const existPct = existingPcts[r] || 0;
+                const cappedExist = Math.min(existPct, utilizedPct);
+                const newPct = Math.max(0, utilizedPct - existPct);
+                utilizedExistingData[r].push(Math.round(cappedExist * demandTWh / 100 * 10) / 10);
+                utilizedNewData[r].push(Math.round(newPct * demandTWh / 100 * 10) / 10);
+            }
+            curtailedData[r].push(Math.round(curtailedTWh * 10) / 10);
         });
-        procurementData.push(Math.round(barTotal * 10) / 10);
-        curtailmentData.push(Math.round(Math.max(0, barTotal - demandTWh) * 10) / 10);
+
+        // Gap = demand - utilized total
+        const utilizedTotal = Math.min(targetPct, totalProcPct) * demandTWh / 100;
+        gapData.push(Math.round(Math.max(0, demandTWh - utilizedTotal) * 10) / 10);
     }
-    return { labels, existingData, newData, existingCleanTotal, curtailmentData, procurementData, demandTWh: baseDemandTWh, demandTWhPerBar, demandTrajectory };
+
+    return { labels, utilizedExistingData, utilizedNewData, curtailedData, gapData,
+             demandTrajectory, demandTWhPerBar, baseDemandTWh };
 }
 
 function buildIncrementalDatasets(data) {
-    const { existingData, newData, demandTrajectory } = data;
+    const { utilizedExistingData, utilizedNewData, curtailedData, gapData, demandTrajectory } = data;
+    // Stack order (bottom to top): existing utilized, new utilized, gap spacer, curtailed
     const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm'];
+    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm', 'h2'];
+    const CURTAIL_ORDER = ['solar', 'wind', 'hydro', 'clean_firm', 'ccs_ccgt', 'h2'];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
+    const curtailAlpha = 0.22;
     const datasets = [];
 
+    // Existing utilized resources
     for (const r of EXISTING_ORDER) {
         const c = MIX_COLORS[r];
         if (!c) continue;
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (existing)',
-            data: existingData[r] || [],
+            data: utilizedExistingData[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1.5,
             borderRadius: 6,
-            stack: 'incr',
+            stack: 'mix',
             _resourceKey: r,
             _isExisting: true,
+            _isCurtailed: false,
         });
     }
+    // New utilized resources
     for (const r of NEW_ORDER) {
         const c = MIX_COLORS[r];
         if (!c) continue;
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (new)',
-            data: newData[r] || [],
+            data: utilizedNewData[r] || [],
             backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
             borderColor: c.border,
             borderWidth: 1,
             borderRadius: 6,
             borderSkipped: 'start',
-            stack: 'incr',
+            stack: 'mix',
             _resourceKey: r,
             _isExisting: false,
+            _isCurtailed: false,
         });
     }
 
-    // Medium demand growth trajectory — dashed line overlay
+    // Gap spacer — transparent, pushes curtailed bars to start at demand level
+    datasets.push({
+        label: '_gap',
+        data: gapData || [],
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
+        stack: 'mix',
+        _isGap: true,
+    });
+
+    // Curtailed resources (above demand line), order: solar, wind, hydro, nuclear/CCS
+    for (const r of CURTAIL_ORDER) {
+        const c = MIX_COLORS[r];
+        if (!c) continue;
+        datasets.push({
+            label: MIX_LABELS_MAP[r] + ' (curtailed)',
+            data: curtailedData[r] || [],
+            backgroundColor: c.fill.replace(/[\d.]+\)$/, curtailAlpha + ')'),
+            borderColor: c.border,
+            borderWidth: 1,
+            borderRadius: 2,
+            stack: 'mix',
+            _resourceKey: r,
+            _isCurtailed: true,
+        });
+    }
+
+    // Demand trajectory — staircase dashed line
     if (demandTrajectory && demandTrajectory.length > 0) {
         datasets.push({
-            label: 'Medium Demand Growth',
+            label: 'Demand',
             type: 'line',
             data: demandTrajectory,
             borderColor: 'rgba(220, 38, 38, 0.55)',
             borderWidth: 2,
             borderDash: [6, 4],
+            stepped: 'middle',
             pointRadius: 0,
             pointHoverRadius: 4,
             pointBackgroundColor: 'rgba(220, 38, 38, 0.7)',
             fill: false,
             stack: false,
-            order: -1,  // draw on top
+            order: -1,
             yAxisID: 'y',
             _isDemandLine: true,
         });
@@ -2932,10 +2982,18 @@ function initIncrementalMixChart() {
 
     const datasets = buildIncrementalDatasets(data);
 
-    // Compute y-axis max from procurement TWh and demand trajectory
-    const maxProcurement = Math.max(...data.procurementData, 1);
+    // Compute y-axis max from all stacked data + demand trajectory
+    const barTotals = data.labels.map((_, i) => {
+        let total = 0;
+        MIX_RESOURCES.forEach(r => {
+            total += (data.utilizedExistingData[r][i] || 0) + (data.utilizedNewData[r][i] || 0) + (data.curtailedData[r][i] || 0);
+        });
+        total += (data.gapData[i] || 0);
+        return total;
+    });
+    const maxBar = Math.max(...barTotals, 1);
     const maxDemand = Math.max(...(data.demandTrajectory || [0]));
-    const maxVal = Math.max(maxProcurement, maxDemand);
+    const maxVal = Math.max(maxBar, maxDemand);
     const step = maxVal > 500 ? 100 : maxVal > 100 ? 50 : 10;
     const yMax = Math.ceil(maxVal / step) * step + step;
 
@@ -2943,7 +3001,7 @@ function initIncrementalMixChart() {
     incrementalMixChart = new Chart(ctx, {
         type: 'bar',
         data: { labels: data.labels, datasets },
-        plugins: [ChartDataLabels, curtailmentOverlayPlugin, existingBoundaryPlugin],
+        plugins: [ChartDataLabels],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -2960,7 +3018,14 @@ function initIncrementalMixChart() {
                         color: '#1A1A1A',
                         padding: 14,
                         generateLabels: function(chart) {
-                            const items = MIX_RESOURCES.filter(r => MIX_COLORS[r]).map(r => ({
+                            // Resource color entries — only show resources with non-zero data
+                            const items = MIX_RESOURCES.filter(r => {
+                                if (!MIX_COLORS[r] || !MIX_LABELS_MAP[r]) return false;
+                                // Check if resource has any data
+                                const hasData = chart.data.datasets.some(ds =>
+                                    ds._resourceKey === r && ds.data && ds.data.some(v => v > 0));
+                                return hasData;
+                            }).map(r => ({
                                 text: MIX_LABELS_MAP[r],
                                 fillStyle: MIX_COLORS[r].fill,
                                 strokeStyle: MIX_COLORS[r].border,
@@ -2984,13 +3049,13 @@ function initIncrementalMixChart() {
                             });
                             items.push({
                                 text: 'Curtailed',
-                                fillStyle: 'rgba(255,255,255,0.45)',
-                                strokeStyle: 'rgba(26,39,68,0.45)',
+                                fillStyle: 'rgba(100,100,100,0.15)',
+                                strokeStyle: 'rgba(100,100,100,0.4)',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             });
                             items.push({
-                                text: 'Demand Growth',
+                                text: 'Demand',
                                 fillStyle: 'transparent',
                                 strokeStyle: 'rgba(220, 38, 38, 0.55)',
                                 lineWidth: 2,
@@ -3008,18 +3073,21 @@ function initIncrementalMixChart() {
                     bodyFont: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12 },
                     padding: 12,
                     cornerRadius: 8,
-                    filter: function(tooltipItem) { return tooltipItem.parsed.y > 0 && !tooltipItem.dataset._isDemandLine; },
+                    filter: function(tooltipItem) {
+                        if (tooltipItem.dataset._isGap || tooltipItem.dataset._isDemandLine) return false;
+                        return tooltipItem.parsed.y > 0;
+                    },
                     callbacks: {
                         title: function(items) {
                             if (!items.length) return '';
                             const idx = items[0].dataIndex;
                             const chart = items[0].chart;
-                            const curtail = chart._curtailmentData?.[idx] || 0;
                             const lbl = chart.data.labels[idx];
                             const targetStr = Array.isArray(lbl) ? lbl[0] : lbl;
-                            const yearStr = Array.isArray(lbl) ? ' (' + lbl[1] + ')' : '';
-                            let title = targetStr + yearStr + ' target';
-                            if (curtail > 0) title += '  (curtailed: ' + Math.round(curtail) + ' TWh)';
+                            const yearStr = Array.isArray(lbl) ? lbl[1] : '';
+                            const demTWh = chart._demandTWhPerBar?.[idx] || '';
+                            let title = targetStr + ' target' + (yearStr ? ' (' + yearStr + ')' : '');
+                            if (demTWh) title += '  \u2014 Demand: ' + Math.round(demTWh) + ' TWh';
                             return title;
                         },
                         label: function(context) {
@@ -3029,8 +3097,8 @@ function initIncrementalMixChart() {
                 },
                 datalabels: {
                     display: function(context) {
-                        if (context.dataset._isDemandLine) return false;
-                        const demTWh = context.chart._demandTWh || 100;
+                        if (context.dataset._isDemandLine || context.dataset._isGap) return false;
+                        const demTWh = context.chart._baseDemandTWh || 100;
                         return context.dataset.data[context.dataIndex] >= demTWh * 0.04;
                     },
                     color: function(context) {
@@ -3044,28 +3112,7 @@ function initIncrementalMixChart() {
                     anchor: 'center',
                     align: 'center',
                 },
-                annotation: {
-                    annotations: {
-                        existingLine: {
-                            type: 'line',
-                            yMin: data.existingCleanTotal,
-                            yMax: data.existingCleanTotal,
-                            borderColor: 'rgba(26,39,68,0.5)',
-                            borderWidth: 2,
-                            borderDash: [6, 4],
-                            label: {
-                                display: true,
-                                content: 'Existing clean: ' + Math.round(data.existingCleanTotal) + ' TWh',
-                                position: 'start',
-                                backgroundColor: 'rgba(255,255,255,0.92)',
-                                color: '#1A2744',
-                                font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 11, weight: 600 },
-                                padding: { x: 6, y: 3 },
-                                borderRadius: 4,
-                            }
-                        }
-                    }
-                }
+                annotation: { annotations: {} }
             },
             scales: {
                 x: {
@@ -3084,6 +3131,13 @@ function initIncrementalMixChart() {
                         maxRotation: 0,
                         minRotation: 0,
                         autoSkip: false,
+                        callback: function(value, index) {
+                            const total = this.chart.data.labels.length;
+                            // Show first, last, and every ~4th label
+                            if (index === 0 || index === total - 1) return this.getLabelForValue(value);
+                            if (index % 4 === 0 && index <= total - 3) return this.getLabelForValue(value);
+                            return '';
+                        }
                     }
                 },
                 y: {
@@ -3091,7 +3145,7 @@ function initIncrementalMixChart() {
                     max: yMax,
                     title: {
                         display: true,
-                        text: 'Resources (TWh)',
+                        text: 'Clean Energy (TWh)',
                         font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 12, weight: 600 },
                         color: '#4A4540',
                     },
@@ -3106,16 +3160,9 @@ function initIncrementalMixChart() {
         }
     });
 
-    // Attach data for plugins
-    incrementalMixChart._incrNewData = data.newData;
-    incrementalMixChart._existingBoundary = data.labels.map((_, i) => {
-        let total = 0;
-        MIX_RESOURCES.forEach(r => { total += data.existingData[r][i]; });
-        return total;
-    });
-    incrementalMixChart._curtailmentData = data.curtailmentData;
-    incrementalMixChart._procurementData = data.procurementData;
-    incrementalMixChart._demandTWh = data.demandTWh;
+    // Attach metadata for tooltips/plugins
+    incrementalMixChart._baseDemandTWh = data.baseDemandTWh;
+    incrementalMixChart._demandTWhPerBar = data.demandTWhPerBar;
 
     // Set initial insight
     const insightEl = document.getElementById('incrementalInsight');
@@ -3140,32 +3187,25 @@ function updateIncrementalChart(region) {
     currentIncrementalRegion = region;
     const data = getIncrementalData(region);
 
-    const newDatasets = buildIncrementalDatasets(data);
     incrementalMixChart.data.labels = data.labels;
-    // Update existing datasets and add/remove as needed
-    incrementalMixChart.data.datasets = newDatasets;
+    incrementalMixChart.data.datasets = buildIncrementalDatasets(data);
 
-    // Update plugin data
-    incrementalMixChart._existingBoundary = data.labels.map((_, i) => {
+    // Update metadata
+    incrementalMixChart._baseDemandTWh = data.baseDemandTWh;
+    incrementalMixChart._demandTWhPerBar = data.demandTWhPerBar;
+
+    // Update y-axis max
+    const barTotals = data.labels.map((_, i) => {
         let total = 0;
-        MIX_RESOURCES.forEach(r => { total += data.existingData[r][i]; });
+        MIX_RESOURCES.forEach(r => {
+            total += (data.utilizedExistingData[r][i] || 0) + (data.utilizedNewData[r][i] || 0) + (data.curtailedData[r][i] || 0);
+        });
+        total += (data.gapData[i] || 0);
         return total;
     });
-    incrementalMixChart._incrNewData = data.newData;
-    incrementalMixChart._curtailmentData = data.curtailmentData;
-    incrementalMixChart._procurementData = data.procurementData;
-    incrementalMixChart._demandTWh = data.demandTWh;
-
-    // Update annotations (TWh) — existing clean line only
-    const ann = incrementalMixChart.options.plugins.annotation.annotations;
-    ann.existingLine.yMin = data.existingCleanTotal;
-    ann.existingLine.yMax = data.existingCleanTotal;
-    ann.existingLine.label.content = 'Existing clean: ' + Math.round(data.existingCleanTotal) + ' TWh';
-
-    // Update y-axis max — account for demand trajectory line too
-    const maxProcurement = Math.max(...data.procurementData, 1);
+    const maxBar = Math.max(...barTotals, 1);
     const maxDemand = Math.max(...(data.demandTrajectory || [0]));
-    const maxVal = Math.max(maxProcurement, maxDemand);
+    const maxVal = Math.max(maxBar, maxDemand);
     const step = maxVal > 500 ? 100 : maxVal > 100 ? 50 : 10;
     incrementalMixChart.options.scales.y.max = Math.ceil(maxVal / step) * step + step;
 
