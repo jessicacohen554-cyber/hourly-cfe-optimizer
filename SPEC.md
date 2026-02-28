@@ -36,11 +36,24 @@
 
 - [x] PPA pricing model: Percentage premium (LCOE × (1 + pct)) — VRE 5/12/22%, Firm 12/22/38%, Uprate 10/20/35%
 
+**Completed (LMP Infrastructure — Feb 28):**
+- [x] Extend LMP model to all 7 ISOs: MISO + SPP price models added to `step6_compute_lmp_prices.py`
+- [x] Calibration targets for all 7 ISOs in `calibrate_lmp_model.py` (2024 SOM data)
+- [x] Extend `step0_fetch_lmp_2025.py` to support `--year 2024` and MISO/SPP
+- [x] GitHub Actions workflows: `fetch-actual-lmp.yml` + `run-lmp-calibration.yml`
+
+**Completed (Step 6.5 Compute Scripts — Feb 28):**
+- [x] `step6_5_procurement_utils.py` — Shared utilities (SSS allocation, EAC pricing, LMP feedback, PPA premiums, learning curve, 25yr timeline)
+- [x] `step6_5_strategy1_consequential.py` — Strategies 1A/1B/1C (cross-regional consequential netting)
+- [x] `step6_5_strategy2_hourly.py` — Strategies 2A/2B/2C (hourly matching same-ISO)
+- [x] `step6_5_strategy3_annual.py` — Strategies 3A/3B/3C/3D (annual matching 2×2 matrix)
+- [x] GitHub Actions workflow: `run-procurement-strategies.yml` (quick/full mode, per-strategy or ALL)
+
 **Next steps:**
-- Build Step 6.5 scripts (strategy1/2/3 + procurement_utils)
-- Extend LMP model to all 7 ISOs (currently PJM-only)
-- Create GitHub Actions workflow for Step 6.5
-- Build interactive procurement comparison dashboard page
+- Run procurement strategy workflows via GitHub Actions to generate data
+- Run LMP calibration workflow for all 7 ISOs
+- Build interactive procurement comparison dashboard page (`procurement_comparison.html`)
+- Wire up `procurement-strategy-data.js` to dashboard charts
 
 ---
 
