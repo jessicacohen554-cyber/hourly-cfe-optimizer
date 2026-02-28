@@ -1,16 +1,20 @@
-name: "Step 6.2: Update LMP Page"
+name: "Step 6.6: Update Optimizer Dashboard"
 
-# Runs scripts sequentially to populate the Wholesale Price (LMP) page:
-#   1. step6_compute_lmp_prices.py — synthetic 8760-hour LMP per ISO × threshold × fuel level
-#   2. extract_lmp_dashboard_data.py — extracts LMP parquets into dashboard/js/lmp-data.js
+# Runs scripts to populate the interactive Cost Optimizer dashboard (dashboard.html):
+#   1. step6_compressed_day.py — 24-hour representative day profiles per unique mix
+#   2. step7_generate_shared_data.py — consolidates all results into shared-data.js
 #
-# Output: data/step5-post-processing/lmp/{ISO}_lmp.parquet, dashboard/js/lmp-data.js
+# The dashboard reads from shared-data.js (cost/mix/threshold data) and uses
+# compressed day profiles for the dispatch visualization chart.
+#
+# Prerequisite: Steps 3-5 complete (cost optimization + dispatch cache).
+# Output: dashboard/js/shared-data.js, data/step5-post-processing/compressed_day/
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to compute'
+        description: 'ISO region to process'
         required: true
         default: 'ALL'
         type: choice
@@ -30,18 +34,8 @@ on:
         type: choice
         options:
           - ALL
-          - compute-lmp
-          - extract-dashboard
-      fuel_level:
-        description: 'Fuel price level (or ALL for L/M/H)'
-        required: true
-        default: 'ALL'
-        type: choice
-        options:
-          - ALL
-          - L
-          - M
-          - H
+          - compressed-day
+          - shared-data
       branch:
         description: 'Branch to checkout'
         required: false
@@ -49,12 +43,12 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-2-lmp
+  BRANCH_PREFIX: step6-6-dashboard
 
 jobs:
-  update-lmp-page:
+  update-optimizer-dashboard:
     runs-on: ubuntu-latest
-    timeout-minutes: 480
+    timeout-minutes: 180
 
     permissions:
       contents: write
@@ -66,7 +60,6 @@ jobs:
         with:
           ref: ${{ inputs.branch || 'master' }}
           fetch-depth: 0
-          lfs: true
 
       - name: Create output branch
         run: |
@@ -88,8 +81,17 @@ jobs:
             fi
           done
           if [ "$HAS_DATA" = "false" ]; then
-            echo "ERROR: No step-3 or step-4 parquets found."
+            echo "ERROR: No step-3 or step-4 parquets found. Run earlier steps first."
             exit 1
+          fi
+
+      - name: Check dispatch cache
+        run: |
+          if [ -d "data/step5-post-processing/dispatch_cache" ] && ls data/step5-post-processing/dispatch_cache/*.npz >/dev/null 2>&1; then
+            echo "Dispatch cache found — compressed day will use cache"
+          else
+            echo "WARNING: No dispatch cache found. Compressed day will compute dispatch live (slower)."
+            echo "Consider running Step 5 (dispatch cache) first."
           fi
 
       - name: Set up Python
@@ -102,57 +104,37 @@ jobs:
 
       - name: Ensure output directories
         run: |
-          mkdir -p data/step5-post-processing/lmp
+          mkdir -p data/step5-post-processing
           mkdir -p dashboard/js
 
       # ════════════════════════════════════════════════════════════════════
-      # Sequential: Compute LMP → Extract dashboard JS
+      # Sequential: Compressed Day → Shared Data
       # ════════════════════════════════════════════════════════════════════
 
-      - name: "1/2 — Compute LMP Prices"
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'compute-lmp' }}
+      - name: "1/2 — Compute Compressed Day Profiles"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'compressed-day' }}
         run: |
-          ISO="${{ inputs.iso }}"
-          FL="${{ inputs.fuel_level }}"
+          echo "=== Compressed Day (24-hour representative dispatch profiles) ==="
+          python scripts/step6_compressed_day.py
 
-          if [ "$ISO" = "ALL" ]; then
-            for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-              echo "=== Computing LMP for $iso ==="
-              if [ "$FL" = "ALL" ]; then
-                python scripts/step6_compute_lmp_prices.py --iso "$iso" || echo "WARNING: $iso failed, continuing..."
-              else
-                python scripts/step6_compute_lmp_prices.py --iso "$iso" --fuel-level "$FL" || echo "WARNING: $iso failed, continuing..."
-              fi
-            done
-          else
-            if [ "$FL" = "ALL" ]; then
-              python scripts/step6_compute_lmp_prices.py --iso "$ISO"
-            else
-              python scripts/step6_compute_lmp_prices.py --iso "$ISO" --fuel-level "$FL"
-            fi
-          fi
-
-      - name: "2/2 — Extract Dashboard Data"
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'extract-dashboard' }}
+      - name: "2/2 — Generate Shared Data"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
         run: |
-          if [ -f scripts/extract_lmp_dashboard_data.py ]; then
-            echo "=== Extracting LMP dashboard data ==="
-            python scripts/extract_lmp_dashboard_data.py
-          else
-            echo "extract_lmp_dashboard_data.py not found — skipping JS generation"
-          fi
+          echo "=== Consolidate results into shared-data.js ==="
+          python scripts/step7_generate_shared_data.py
 
       - name: Commit and push
         run: |
-          git add -f data/step5-post-processing/lmp/ 2>/dev/null || true
-          git add -f dashboard/js/lmp-data.js 2>/dev/null || true
+          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f dashboard/js/shared-data.js 2>/dev/null || true
+          git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
-          git commit -m "Step 6.2 LMP: ${{ inputs.script }} ${{ inputs.iso }} fuel=${{ inputs.fuel_level }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 6.6 Dashboard: ${{ inputs.script }} ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
@@ -173,16 +155,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh pr create \
-            --title "Step 6.2 LMP: ${{ inputs.script }} ${{ inputs.iso }}" \
+            --title "Step 6.6 Dashboard: ${{ inputs.script }} ${{ inputs.iso }}" \
             --body "## Summary
-          Updates the Wholesale Price (LMP) page for **${{ inputs.iso }}** (script: ${{ inputs.script }}, fuel=${{ inputs.fuel_level }}).
+          Updates the interactive Cost Optimizer dashboard for **${{ inputs.iso }}** (script: ${{ inputs.script }}).
 
           ## Scripts (sequential when ALL)
-          1. \`step6_compute_lmp_prices.py\` — synthetic 8760-hour LMP per ISO × threshold × fuel level
-          2. \`extract_lmp_dashboard_data.py\` — extracts parquets into dashboard JS
+          1. \`step6_compressed_day.py\` — 24-hour representative day profiles per unique mix
+          2. \`step7_generate_shared_data.py\` — consolidates all results into shared-data.js
 
           ## Outputs
-          - \`data/step5-post-processing/lmp/{ISO}_lmp.parquet\`
-          - \`dashboard/js/lmp-data.js\`" \
+          - \`dashboard/js/shared-data.js\` — primary data source for dashboard.html
+          - \`data/step5-post-processing/compressed_day/\` — dispatch profiles" \
             --base ${{ inputs.branch || 'master' }} \
             --head "$TARGET_BRANCH" || echo "PR creation skipped"

@@ -25,6 +25,16 @@ on:
           - NEISO
           - MISO
           - SPP
+      script:
+        description: 'Which script to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - mac-stats
+          - optimal-targets
+          - shared-data
       branch:
         description: 'Branch to checkout'
         required: false
@@ -54,7 +64,8 @@ jobs:
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
           ISO_LABEL="${{ inputs.iso }}"
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LABEL}"
+          SCRIPT_LABEL="${{ inputs.script }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${ISO_LABEL}"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -91,16 +102,19 @@ jobs:
       # ════════════════════════════════════════════════════════════════════
 
       - name: "1/3 — Compute MAC Statistics"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'mac-stats' }}
         run: |
           echo "=== MAC Statistics (6 metrics, ANOVA, crossover) ==="
           python scripts/step6_compute_mac_stats.py
 
       - name: "2/3 — Compute Optimal Targets"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'optimal-targets' }}
         run: |
           echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
           python scripts/step6_compute_optimal_targets.py
 
       - name: "3/3 — Generate Shared Data"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
         run: |
           echo "=== Consolidate results into shared-data.js ==="
           python scripts/step7_generate_shared_data.py
@@ -119,7 +133,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Step 6.1 MAC Page: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 6.1 Abatement: ${{ inputs.script }} ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
@@ -140,11 +154,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh pr create \
-            --title "Step 6.1 MAC Page: ${{ inputs.iso }}" \
+            --title "Step 6.1 Abatement: ${{ inputs.script }} ${{ inputs.iso }}" \
             --body "## Summary
-          Updates the MAC / Abatement page with fresh data for **${{ inputs.iso }}**.
+          Updates the Abatement / MAC page for **${{ inputs.iso }}** (script: ${{ inputs.script }}).
 
-          ## Scripts (sequential)
+          ## Scripts (sequential when ALL)
           1. \`step6_compute_mac_stats.py\` — 6 MAC metrics, ANOVA decomposition, DAC/SCC/ETS crossover
           2. \`step6_compute_optimal_targets.py\` — optimal CFE target per ISO via smooth marginal MAC × DAC
           3. \`step7_generate_shared_data.py\` — consolidates all results into shared-data.js
