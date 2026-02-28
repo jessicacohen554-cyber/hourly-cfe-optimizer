@@ -1,17 +1,20 @@
-name: "Step 1c: Build PFS from Scored Database"
+name: "Step 1b: Build PFS from Scored Database"
 
-# Run per-threshold after the scored database is committed.
+# Mines Physics Feasible Space (PFS) from pre-built scored database per threshold.
 # Reads {ISO}_coarse_cache.parquet, runs storage sweep + fine refinement.
-# Can be triggered multiple times for different threshold sets — the database
-# is never rebuilt.
+# Can be triggered multiple times for different threshold sets — the scored DB
+# is never rebuilt. Auto-commits each threshold as it completes.
+#
+# Prerequisite: Step 1a (Scored Database) must have run first.
+# Output: data/step1-pfs-parquets/{ISO}_t{threshold}_raw_pfs.parquet
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO to run (or ALL)'
+        description: 'ISO region to run'
         required: true
-        default: 'NYISO'
+        default: 'ALL'
         type: choice
         options:
           - ALL
@@ -58,30 +61,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install numpy numba pyarrow pandas
-        echo "--- Verify imports ---"
         python -c "import numpy; import numba; import pyarrow; print('All imports OK')"
-
-    - name: Diagnostic — list repo state
-      run: |
-        echo "=== Branch ==="
-        git branch --show-current
-        git log --oneline -3
-        echo ""
-        echo "=== Scored databases ==="
-        ls -lh data/step1-pfs-parquets/*_coarse_cache.parquet 2>/dev/null || echo "NO coarse_cache files found!"
-        echo ""
-        echo "=== Mixes ==="
-        ls -lh data/step1-pfs-parquets/*_mixes.parquet 2>/dev/null || echo "NO mixes files found!"
-        echo ""
-        echo "=== Existing PFS parquets ==="
-        ls -lh data/step1-pfs-parquets/*_raw_pfs.parquet 2>/dev/null || echo "No existing PFS files"
-        echo ""
-        echo "=== EIA data check ==="
-        ls data/eia_hourly_profiles_* 2>/dev/null | head -5 || echo "NO EIA profile files found!"
-        echo ""
-        echo "=== Script check ==="
-        python -c "import py_compile; py_compile.compile('scripts/step1c_build_pfs.py', doraise=True); print('step1c syntax OK')"
-        python -c "import py_compile; py_compile.compile('scripts/step1_pfs_generator.py', doraise=True); print('step1_pfs_generator syntax OK')"
 
     - name: Verify scored database exists
       run: |
@@ -98,64 +78,46 @@ jobs:
             MISSING="$MISSING $iso"
           else
             SIZE=$(du -h "$CACHE" | cut -f1)
-            echo "✓ $iso scored database: $CACHE ($SIZE)"
+            echo "OK: $iso scored database ($SIZE)"
           fi
         done
         if [ -n "$MISSING" ]; then
-          echo ""
           echo "ERROR: Missing scored databases for:$MISSING"
-          echo "Run the 'Step 1: Build Scored Mix Database (1a+1b)' workflow first."
+          echo "Run Step 1a (Build Scored Mix Database) first."
           exit 1
         fi
 
     - name: Configure git for auto-commit
       run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        # Increase post buffer to 500 MB — PFS parquets can be large and
-        # the default 1 MB buffer causes HTTP 500 on push.
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
         git config http.postBuffer 524288000
-        # Create the target branch for incremental commits
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-        ISO_LABEL="${{ inputs.iso }}"
-        TARGET_BRANCH="auto/${TIMESTAMP}-pfs-${ISO_LABEL}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1b-pfs-${{ inputs.iso }}"
         git checkout -b "$TARGET_BRANCH"
         echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-        echo "Created branch: $TARGET_BRANCH"
 
-    - name: "Build PFS from scored database (step1c — auto-commit per threshold)"
+    - name: "Build PFS from scored database (auto-commit per threshold)"
       run: |
         set -euo pipefail
         ISO="${{ inputs.iso }}"
         THRESHOLDS="${{ inputs.thresholds }}"
 
-        echo "ISO=$ISO  THRESHOLDS=$THRESHOLDS"
-        echo "Python: $(python --version)"
-        echo "Working dir: $(pwd)"
-        echo "Branch: $(git branch --show-current)"
-        echo "Auto-commit: ON (each threshold committed as it completes)"
-        echo ""
-
         if [ "$ISO" = "ALL" ]; then
           for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-            echo ""
             echo "=============================================="
             echo "=== Building PFS for $iso ==="
             echo "=============================================="
             python -u scripts/step1c_build_pfs.py --iso "$iso" --thresholds "$THRESHOLDS" --auto-commit 2>&1
-            echo "=== $iso complete (exit $?) ==="
           done
         else
           python -u scripts/step1c_build_pfs.py --iso "$ISO" --thresholds "$THRESHOLDS" --auto-commit 2>&1
-          echo "=== $ISO complete (exit $?) ==="
         fi
 
     - name: Verify PFS outputs
       run: |
         echo "=== PFS parquets after build ==="
         ls -lh data/step1-pfs-parquets/*_raw_pfs.parquet 2>/dev/null || echo "WARNING: No PFS parquets generated!"
-        echo ""
-        echo "=== Row counts ==="
         python -c "
         import pyarrow.parquet as pq
         import glob, os
@@ -171,9 +133,6 @@ jobs:
     - name: Final commit — catch any remaining uncommitted PFS files
       run: |
         set -euo pipefail
-
-        # Auto-commit already handled most files during the run.
-        # This step catches anything that wasn't pushed (e.g., push failures).
         ISO_LABEL="${{ inputs.iso }}"
         if [ "$ISO_LABEL" = "ALL" ]; then
           ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
@@ -181,7 +140,6 @@ jobs:
           ISOS="$ISO_LABEL"
         fi
 
-        REMAINING=false
         for iso in $ISOS; do
           FILES=$(ls data/step1-pfs-parquets/${iso}_t*_raw_pfs.parquet 2>/dev/null || true)
           if [ -n "$FILES" ]; then
@@ -191,57 +149,48 @@ jobs:
 
         if ! git diff --cached --quiet; then
           echo "Committing remaining PFS files..."
-          git commit -m "PFS results (final batch): ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          REMAINING=true
+          git commit -m "Step 1b PFS (final batch): ${ISO_LABEL} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
-        # Final push with retry — pushes one commit at a time to avoid
-        # HTTP 500 from oversized payloads when multiple large parquets
-        # accumulated (e.g., auto-commit pushes failed during the run).
-        push_single_with_retry() {
-          local COMMIT_SHA="$1"
-          local MAX_RETRIES=4
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "  Push attempt $i/$MAX_RETRIES for ${COMMIT_SHA:0:8}..."
-            if git push -u origin "$COMMIT_SHA:refs/heads/$TARGET_BRANCH" 2>&1; then
-              echo "  Push succeeded for ${COMMIT_SHA:0:8}"
-              return 0
-            fi
-            BACKOFF=$((2 ** i))
-            echo "  Retrying in ${BACKOFF}s..."
-            sleep "$BACKOFF"
-          done
-          echo "  ERROR: Push failed for ${COMMIT_SHA:0:8} after $MAX_RETRIES attempts"
-          return 1
-        }
-
-        # Check if branch has any commits ahead of base
+        # Push all commits one at a time
         BASE_REF=$(git rev-parse "origin/${{ inputs.branch || 'master' }}" 2>/dev/null || echo "")
         if [ -z "$BASE_REF" ]; then
-          echo "No base ref found — nothing to push"
+          echo "No base ref — nothing to push"
           echo "PUSHED=false" >> "$GITHUB_ENV"
-        else
-          COMMITS=$(git rev-list --reverse "$BASE_REF..HEAD" 2>/dev/null)
-          COMMIT_COUNT=$(echo "$COMMITS" | grep -c . || echo "0")
-          if [ "$COMMIT_COUNT" -gt 0 ]; then
-            echo "Pushing $COMMIT_COUNT commit(s) one at a time..."
-            PUSH_OK=true
-            for sha in $COMMITS; do
-              if ! push_single_with_retry "$sha"; then
-                PUSH_OK=false
+          exit 0
+        fi
+
+        COMMITS=$(git rev-list --reverse "$BASE_REF..HEAD" 2>/dev/null)
+        COMMIT_COUNT=$(echo "$COMMITS" | grep -c . || echo "0")
+        if [ "$COMMIT_COUNT" -gt 0 ]; then
+          echo "Pushing $COMMIT_COUNT commit(s)..."
+          PUSH_OK=true
+          for sha in $COMMITS; do
+            MAX_RETRIES=4
+            PUSHED_SHA=false
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${sha:0:8}..."
+              if git push -u origin "$sha:refs/heads/$TARGET_BRANCH" 2>&1; then
+                PUSHED_SHA=true
                 break
               fi
+              BACKOFF=$((2 ** i))
+              sleep "$BACKOFF"
             done
-            if [ "$PUSH_OK" = true ]; then
-              echo "PUSHED=true" >> "$GITHUB_ENV"
-            else
-              echo "PUSHED=false" >> "$GITHUB_ENV"
-              exit 1
+            if [ "$PUSHED_SHA" = "false" ]; then
+              PUSH_OK=false
+              break
             fi
+          done
+          if [ "$PUSH_OK" = true ]; then
+            echo "PUSHED=true" >> "$GITHUB_ENV"
           else
-            echo "No new commits to push"
             echo "PUSHED=false" >> "$GITHUB_ENV"
+            exit 1
           fi
+        else
+          echo "No new commits to push"
+          echo "PUSHED=false" >> "$GITHUB_ENV"
         fi
 
     - name: Create pull request
@@ -250,7 +199,6 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         if [ "${PUSHED:-false}" != "true" ]; then
-          # Check if auto-commit pushed anything during the run
           COMMITS_AHEAD=$(git log origin/${{ inputs.branch || 'master' }}..HEAD --oneline 2>/dev/null | wc -l || echo "0")
           if [ "$COMMITS_AHEAD" -eq 0 ]; then
             echo "No commits to create PR for"
@@ -259,14 +207,10 @@ jobs:
         fi
         N_COMMITS=$(git log origin/${{ inputs.branch || 'master' }}..HEAD --oneline | wc -l)
         gh pr create \
-          --title "PFS: ${{ inputs.iso }} thresholds=${{ inputs.thresholds }}" \
-          --body "$(cat <<EOF
-        ## Summary
-        - Built PFS (step 1c) for **${{ inputs.iso }}** at thresholds **${{ inputs.thresholds }}**
-        - Each threshold committed incrementally as it completed ($N_COMMITS commits)
-        - Mined from pre-built scored database (no 1a/1b rerun)
-        - Auto-generated by GitHub Actions
-        EOF
-        )" \
+          --title "Step 1b PFS: ${{ inputs.iso }} thresholds=${{ inputs.thresholds }}" \
+          --body "## Summary
+        - Built PFS from scored database for **${{ inputs.iso }}** at thresholds **${{ inputs.thresholds }}**
+        - $N_COMMITS commits (each threshold committed incrementally)
+        - Output: \`data/step1-pfs-parquets/{ISO}_t{threshold}_raw_pfs.parquet\`" \
           --base ${{ inputs.branch || 'master' }} \
           --head "$TARGET_BRANCH" || echo "PR creation skipped"
