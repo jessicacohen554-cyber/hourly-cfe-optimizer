@@ -1,0 +1,141 @@
+{
+  "iso": "CAISO",
+  "calibration_date": "2026-02-28 03:55:14",
+  "synthetic_stats": {
+    "avg_lmp": 43.49,
+    "peak_avg_lmp": 60.64,
+    "offpeak_avg_lmp": 27.86,
+    "zero_price_hours": 889,
+    "negative_price_hours": 889,
+    "scarcity_hours": 278,
+    "lmp_p10": -0.45,
+    "lmp_p25": 33.52,
+    "lmp_p50": 35.63,
+    "lmp_p75": 36.69,
+    "lmp_p90": 57.86,
+    "price_volatility": 74.71,
+    "duck_curve_depth_mw": 9756.0,
+    "net_peak_price": 591.74,
+    "fossil_revenue_mwh": 43.87
+  },
+  "targets": {
+    "avg_lmp": 38.0,
+    "peak_avg_lmp": 55.0,
+    "offpeak_avg_lmp": 22.0,
+    "lmp_p10": -5.0,
+    "lmp_p25": 12.0,
+    "lmp_p50": 32.0,
+    "lmp_p75": 50.0,
+    "lmp_p90": 72.0,
+    "price_volatility": 38.0,
+    "negative_price_hours": 600,
+    "scarcity_hours": 60
+  },
+  "source": "CAISO DMM 2024 Q4 + Annual Report",
+  "comparison": [
+    {
+      "metric": "avg_lmp",
+      "synthetic": 43.49,
+      "target": 38.0,
+      "delta": 5.490000000000002,
+      "pct_delta": 14.447368421052637,
+      "status": "FAIR"
+    },
+    {
+      "metric": "peak_avg_lmp",
+      "synthetic": 60.64,
+      "target": 55.0,
+      "delta": 5.640000000000001,
+      "pct_delta": 10.254545454545456,
+      "status": "FAIR"
+    },
+    {
+      "metric": "offpeak_avg_lmp",
+      "synthetic": 27.86,
+      "target": 22.0,
+      "delta": 5.859999999999999,
+      "pct_delta": 26.636363636363637,
+      "status": "ADJUST"
+    },
+    {
+      "metric": "lmp_p10",
+      "synthetic": -0.45,
+      "target": -5.0,
+      "delta": 4.55,
+      "pct_delta": -90.99999999999999,
+      "status": "FAIL"
+    },
+    {
+      "metric": "lmp_p25",
+      "synthetic": 33.52,
+      "target": 12.0,
+      "delta": 21.520000000000003,
+      "pct_delta": 179.33333333333337,
+      "status": "FAIL"
+    },
+    {
+      "metric": "lmp_p50",
+      "synthetic": 35.63,
+      "target": 32.0,
+      "delta": 3.6300000000000026,
+      "pct_delta": 11.343750000000007,
+      "status": "FAIR"
+    },
+    {
+      "metric": "lmp_p75",
+      "synthetic": 36.69,
+      "target": 50.0,
+      "delta": -13.310000000000002,
+      "pct_delta": -26.620000000000005,
+      "status": "ADJUST"
+    },
+    {
+      "metric": "lmp_p90",
+      "synthetic": 57.86,
+      "target": 72.0,
+      "delta": -14.14,
+      "pct_delta": -19.63888888888889,
+      "status": "FAIR"
+    },
+    {
+      "metric": "price_volatility",
+      "synthetic": 74.71,
+      "target": 38.0,
+      "delta": 36.709999999999994,
+      "pct_delta": 96.60526315789471,
+      "status": "FAIL"
+    },
+    {
+      "metric": "negative_price_hours",
+      "synthetic": 889,
+      "target": 600,
+      "delta": 289,
+      "pct_delta": 48.16666666666667,
+      "status": "ADJUST"
+    },
+    {
+      "metric": "scarcity_hours",
+      "synthetic": 278,
+      "target": 60,
+      "delta": 218,
+      "pct_delta": 363.3333333333333,
+      "status": "FAIL"
+    }
+  ],
+  "distribution": {
+    "percentiles": {
+      "p1": -52.95,
+      "p5": -26.98,
+      "p10": -0.45,
+      "p25": 33.52,
+      "p50": 35.63,
+      "p75": 36.69,
+      "p90": 57.86,
+      "p95": 84.22,
+      "p99": 488.43
+    },
+    "negative_hours": 889,
+    "zero_hours": 889,
+    "scarcity_hours": 278
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "iso": "ERCOT",
+  "calibration_date": "2026-02-28 03:55:13",
+  "synthetic_stats": {
+    "avg_lmp": 62.16,
+    "peak_avg_lmp": 90.84,
+    "offpeak_avg_lmp": 36.03,
+    "zero_price_hours": 585,
+    "negative_price_hours": 585,
+    "scarcity_hours": 391,
+    "lmp_p10": 18.81,
+    "lmp_p25": 34.8,
+    "lmp_p50": 36.57,
+    "lmp_p75": 37.74,
+    "lmp_p90": 56.18,
+    "price_volatility": 144.46,
+    "duck_curve_depth_mw": 0.0,
+    "net_peak_price": 872.7,
+    "fossil_revenue_mwh": 62.16
+  },
+  "targets": {
+    "avg_lmp": 26.0,
+    "peak_avg_lmp": 36.0,
+    "offpeak_avg_lmp": 18.0,
+    "lmp_p10": 5.0,
+    "lmp_p25": 14.0,
+    "lmp_p50": 22.0,
+    "lmp_p75": 32.0,
+    "lmp_p90": 50.0,
+    "price_volatility": 35.0,
+    "negative_price_hours": 400,
+    "scarcity_hours": 80
+  },
+  "source": "ERCOT 2024 (Modo Energy, ERCOT Commercial Markets Update)",
+  "comparison": [
+    {
+      "metric": "avg_lmp",
+      "synthetic": 62.16,
+      "target": 26.0,
+      "delta": 36.16,
+      "pct_delta": 139.07692307692307,
+      "status": "FAIL"
+    },
+    {
+      "metric": "peak_avg_lmp",
+      "synthetic": 90.84,
+      "target": 36.0,
+      "delta": 54.84,
+      "pct_delta": 152.33333333333334,
+      "status": "FAIL"
+    },
+    {
+      "metric": "offpeak_avg_lmp",
+      "synthetic": 36.03,
+      "target": 18.0,
+      "delta": 18.03,
+      "pct_delta": 100.16666666666667,
+      "status": "FAIL"
+    },
+    {
+      "metric": "lmp_p10",
+      "synthetic": 18.81,
+      "target": 5.0,
+      "delta": 13.809999999999999,
+      "pct_delta": 276.19999999999993,
+      "status": "FAIL"
+    },
+    {
+      "metric": "lmp_p25",
+      "synthetic": 34.8,
+      "target": 14.0,
+      "delta": 20.799999999999997,
+      "pct_delta": 148.57142857142856,
+      "status": "FAIL"
+    },
+    {
+      "metric": "lmp_p50",
+      "synthetic": 36.57,
+      "target": 22.0,
+      "delta": 14.57,
+      "pct_delta": 66.22727272727272,
+      "status": "FAIL"
+    },
+    {
+      "metric": "lmp_p75",
+      "synthetic": 37.74,
+      "target": 32.0,
+      "delta": 5.740000000000002,
+      "pct_delta": 17.937500000000007,
+      "status": "FAIR"
+    },
+    {
+      "metric": "lmp_p90",
+      "synthetic": 56.18,
+      "target": 50.0,
+      "delta": 6.18,
+      "pct_delta": 12.36,
+      "status": "FAIR"
+    },
+    {
+      "metric": "price_volatility",
+      "synthetic": 144.46,
+      "target": 35.0,
+      "delta": 109.46000000000001,
+      "pct_delta": 312.7428571428572,
+      "status": "FAIL"
+    },
+    {
+      "metric": "negative_price_hours",
+      "synthetic": 585,
+      "target": 400,
+      "delta": 185,
+      "pct_delta": 46.25,
+      "status": "ADJUST"
+    },
+    {
+      "metric": "scarcity_hours",
+      "synthetic": 391,
+      "target": 80,
+      "delta": 311,
+      "pct_delta": 388.75,
+      "status": "FAIL"
+    }
+  ],
+  "distribution": {
+    "percentiles": {
+      "p1": -41.42,
+      "p5": -11.17,
+      "p10": 18.81,
+      "p25": 34.8,
+      "p50": 36.57,
+      "p75": 37.74,
+      "p90": 56.18,
+      "p95": 94.27,
+      "p99": 926.6
+    },
+    "negative_hours": 585,
+    "zero_hours": 585,
+    "scarcity_hours": 391
+  }
+}
