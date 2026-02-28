@@ -540,6 +540,12 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
 
     Note: Marginal MAC ($/tCO₂) is scale-invariant w.r.t. demand growth because
     both d(cost) and d(CO₂) scale by the same growth factor.
+
+    Cost basis: Full clean procurement LCOE (no wholesale offset). The delta
+    between adjacent thresholds captures the incremental capital investment in
+    new-build resources. Subtracting wholesale would hide real LCOE costs when
+    clean energy is cheaper than fossil (e.g. ERCOT wind below $27/MWh wholesale),
+    producing a false $0 MAC. The consequential queue uses the same full-LCOE basis.
     """
     try:
         from scipy.optimize import isotonic_regression as _iso_reg
@@ -547,28 +553,28 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
         _iso_reg = None
 
     costs = CLEAN_COST[cost_tier][iso]
-    wholesale = WHOLESALE_PRICES[iso]
 
     # Build arrays, skipping nulls
-    valid_t, valid_cost_premium, valid_co2 = [], [], []
+    # Cost = clean procurement LCOE × demand (full capital cost, no wholesale offset)
+    valid_t, valid_clean_cost, valid_co2 = [], [], []
     for i, t in enumerate(THRESHOLDS):
         sc = costs[i]
         if sc is None:
             continue
         gf = demand_growth_factor(iso, t, growth_tier)
         demand_twh = DEMAND_TWH[iso] * gf
-        premium = max(0, sc - wholesale) * demand_twh
+        cost_total = sc * demand_twh
         co2 = compute_co2_abated(iso, t, growth_tier)['total_co2_mt']
 
         valid_t.append(t)
-        valid_cost_premium.append(premium)
+        valid_clean_cost.append(cost_total)
         valid_co2.append(co2)
 
     if len(valid_t) < 4:
         return None
 
     t_arr = np.array(valid_t)
-    cost_arr = np.array(valid_cost_premium)
+    cost_arr = np.array(valid_clean_cost)
     co2_arr = np.array(valid_co2)
 
     # Enforce monotonicity on cumulative curves
@@ -624,7 +630,7 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
 
     return {
         'thresholds': [float(x) for x in valid_t],
-        'cost_premium_M': [float(x) for x in cost_mono],
+        'clean_cost_M': [float(x) for x in cost_mono],
         'co2_Mt': [float(x) for x in co2_mono],
         'smooth_t': [float(x) for x in t_dense],
         'smooth_mac': [float(x) if not np.isnan(x) else None for x in marginal_mac],
@@ -783,7 +789,7 @@ def analyze_targets_in_range(iso, lower_bound, upper_bound, mac_curves):
 
                 # Discrete marginal cost/CO₂
                 if idx > 0:
-                    dcost = curve['cost_premium_M'][idx] - curve['cost_premium_M'][idx - 1]
+                    dcost = curve['clean_cost_M'][idx] - curve['clean_cost_M'][idx - 1]
                     dco2 = curve['co2_Mt'][idx] - curve['co2_Mt'][idx - 1]
                     discrete_mac = dcost / dco2 if dco2 > 0.001 else None
                 else:
@@ -799,7 +805,7 @@ def analyze_targets_in_range(iso, lower_bound, upper_bound, mac_curves):
                 gf = demand_growth_factor(iso, t, growth_tier)
                 demand_twh = DEMAND_TWH[iso] * gf
                 clean_cost = CLEAN_COST[cost_tier][iso][THRESHOLDS.index(t)]
-                total_cost_M = (max(0, clean_cost - WHOLESALE_PRICES[iso]) * demand_twh) if clean_cost else None
+                total_cost_M = (clean_cost * demand_twh) if clean_cost else None
                 total_co2 = compute_co2_abated(iso, t, growth_tier)['total_co2_mt']
 
                 results.append({
@@ -810,7 +816,7 @@ def analyze_targets_in_range(iso, lower_bound, upper_bound, mac_curves):
                     'growth_factor': round(gf, 4),
                     'demand_twh': round(demand_twh, 1),
                     'clean_cost_mwh': clean_cost,
-                    'total_cost_premium_M': round(total_cost_M, 1) if total_cost_M else None,
+                    'total_clean_cost_M': round(total_cost_M, 1) if total_cost_M else None,
                     'total_co2_Mt': round(total_co2, 2),
                     'discrete_mac': round(discrete_mac, 1) if discrete_mac else None,
                     'spline_mac': round(spline_mac, 1) if spline_mac else None,
@@ -1034,7 +1040,7 @@ def main():
                     continue
                 sm = f"${ta['spline_mac']}" if ta['spline_mac'] else '—'
                 winner = 'Grid' if ta.get('grid_cheaper_than_dac_central') else 'DAC'
-                cost_str = f"${ta['total_cost_premium_M']:,.0f}" if ta['total_cost_premium_M'] else '—'
+                cost_str = f"${ta['total_clean_cost_M']:,.0f}" if ta['total_clean_cost_M'] else '—'
                 print(f"  {ta['threshold']:<8} {ta['year']:<6} {sm:<10} ${ta['dac_central']:<9} {cost_str:<10} {ta['total_co2_Mt']:<10} {winner}")
 
         # No-regrets investment analysis
@@ -1087,7 +1093,7 @@ def main():
             # Discrete data points (medium)
             'discrete_points': {
                 'thresholds': result['mac_curves'].get('medium', {}).get('thresholds', []),
-                'cost_premium_M': result['mac_curves'].get('medium', {}).get('cost_premium_M', []),
+                'clean_cost_M': result['mac_curves'].get('medium', {}).get('clean_cost_M', []),
                 'co2_Mt': result['mac_curves'].get('medium', {}).get('co2_Mt', []),
                 'mac_at_thresholds': result['mac_curves'].get('medium', {}).get('mac_at_thresholds', []),
             },
@@ -1213,7 +1219,7 @@ def write_dashboard_js(results, path):
         # Discrete data points
         dp = r.get('discrete_points', {})
         lines.append(f'    discrete_thresholds: {json.dumps(dp.get("thresholds", []))},')
-        lines.append(f'    discrete_cost_premium_M: {json.dumps(dp.get("cost_premium_M", []))},')
+        lines.append(f'    discrete_clean_cost_M: {json.dumps(dp.get("clean_cost_M", []))},')
         lines.append(f'    discrete_co2_Mt: {json.dumps(dp.get("co2_Mt", []))},')
         lines.append(f'    discrete_mac: {json.dumps(dp.get("mac_at_thresholds", []))},')
 
