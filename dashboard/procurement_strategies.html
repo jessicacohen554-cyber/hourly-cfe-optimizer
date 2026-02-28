@@ -894,13 +894,8 @@ body {
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1v5h5M15 15v-5h-5"/><path d="M13.5 6A6 6 0 0 0 3 3.5L1 6M2.5 10a6 6 0 0 0 10.5 2.5L15 10"/></svg>
             Reset
         </button>
-        <div class="sim-speed">
-            Speed:
-            <select id="simSpeedSelect">
-                <option value="1500">Slow</option>
-                <option value="800" selected>Normal</option>
-                <option value="300">Fast</option>
-            </select>
+        <div class="sim-speed" style="font-size:0.82rem;color:#6B7280;">
+            Fast mode
         </div>
     </div>
 
@@ -1092,85 +1087,92 @@ body {
 <script src="js/consequential-queue-data.js"></script>
 <script>
 // ====================================================================
-// DATA DERIVATION — compute missing top-level keys from existing CQ_DATA
-// The Python generator (step6_consequential_queue.py) outputs:
-//   deployment_queue, cumulative_deployment, dispatch_stacks,
-//   resource_trajectories, demand_growth_projections, stranding_analysis,
-//   emission_rate_trajectory, sequencing_analysis
-// The animation code below expects 5 additional derived keys.
+// DATA DERIVATION — compute derived keys from CQ_DATA + hardcoded EIA data
 // ====================================================================
 (function deriveMissingKeys() {
     if (typeof CQ_DATA === 'undefined') return;
     var DERIVE_ISOS = ['SPP', 'ERCOT', 'MISO', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
+
+    // ---- 2025 EIA existing clean generation (TWh) from GRID_MIX_SHARES × BASE_DEMAND_TWH ----
+    // Source: dispatch_utils.py — EIA-930 hourly data, 2021-2025 profiles scaled to 2025 totals
+    var GRID_MIX_SHARES = {
+        CAISO: { clean_firm: 7.9, solar: 22.3, wind: 8.8, hydro: 9.5 },
+        ERCOT: { clean_firm: 8.6, solar: 13.8, wind: 23.6, hydro: 0.1 },
+        PJM:   { clean_firm: 32.1, solar: 2.9, wind: 3.8, hydro: 1.8 },
+        NYISO: { clean_firm: 18.4, solar: 0.0, wind: 4.7, hydro: 15.9 },
+        NEISO: { clean_firm: 23.8, solar: 1.4, wind: 3.9, hydro: 4.4 },
+        MISO:  { clean_firm: 13.1, solar: 2.1, wind: 14.5, hydro: 1.6 },
+        SPP:   { clean_firm: 5.2, solar: 0.4, wind: 37.1, hydro: 4.3 }
+    };
+    var BASE_DEMAND_TWH = {
+        CAISO: 224.0, ERCOT: 488.0, PJM: 843.3,
+        NYISO: 151.6, NEISO: 115.3, MISO: 660.0, SPP: 296.0
+    };
+
+    // Build existing_clean_floor from EIA data (NOT optimizer resource_trajectories)
+    CQ_DATA.existing_clean_floor = {};
+    DERIVE_ISOS.forEach(function(iso) {
+        var shares = GRID_MIX_SHARES[iso];
+        var demand = BASE_DEMAND_TWH[iso];
+        if (!shares || !demand) return;
+        var by_resource = {};
+        var total = 0;
+        for (var r in shares) {
+            var twh = Math.round(demand * shares[r] / 100 * 10) / 10;
+            by_resource[r] = twh;
+            total += twh;
+        }
+        by_resource.ccs_ccgt = 0;
+        by_resource.battery = 0;
+        by_resource.ldes = 0;
+        CQ_DATA.existing_clean_floor[iso] = {
+            by_resource: by_resource,
+            total_twh: Math.round(total * 10) / 10
+        };
+    });
 
     // 1. growth_adjusted_cumulative → alias for cumulative_deployment
     if (!CQ_DATA.growth_adjusted_cumulative && CQ_DATA.cumulative_deployment) {
         CQ_DATA.growth_adjusted_cumulative = CQ_DATA.cumulative_deployment;
     }
 
-    // 2. fossil_baselines_2045 — derive from dispatch_stacks + demand_growth_projections
-    if (!CQ_DATA.fossil_baselines_2045) {
-        CQ_DATA.fossil_baselines_2045 = {};
-        DERIVE_ISOS.forEach(function(iso) {
-            var stack = CQ_DATA.dispatch_stacks && CQ_DATA.dispatch_stacks[iso];
-            var proj = CQ_DATA.demand_growth_projections && CQ_DATA.demand_growth_projections[iso];
-            if (!stack) return;
+    // 2. fossil_baselines_2045 — includes fossil_twh for correct 1B (fossil-avg) calculation
+    CQ_DATA.fossil_baselines_2045 = {};
+    DERIVE_ISOS.forEach(function(iso) {
+        var stack = CQ_DATA.dispatch_stacks && CQ_DATA.dispatch_stacks[iso];
+        var proj = CQ_DATA.demand_growth_projections && CQ_DATA.demand_growth_projections[iso];
+        if (!stack) return;
 
-            var demand_2045 = (proj && proj['2045']) ? proj['2045'].demand_twh : stack.demand_twh * 1.43;
-            var fossil_pct = (100 - (stack.baseline_clean_pct || 0)) / 100;
-            var fossil_twh_total = demand_2045 * fossil_pct;
+        var demand_2045 = (proj && proj['2045']) ? proj['2045'].demand_twh : BASE_DEMAND_TWH[iso] * 1.43;
+        // Existing clean stays fixed at 2025 levels; fossil fills the rest at 2045 demand
+        var existing_clean_twh = CQ_DATA.existing_clean_floor[iso] ? CQ_DATA.existing_clean_floor[iso].total_twh : 0;
+        var fossil_twh_total = Math.max(0, demand_2045 - existing_clean_twh);
 
-            // Distribute fossil TWh across fuels proportionally to current stack
-            var total_fuel = 0;
-            stack.fuels.forEach(function(f) { total_fuel += Math.max(0, f.cap_twh); });
+        // Distribute fossil TWh across fuels proportionally to current stack
+        var total_fuel = 0;
+        stack.fuels.forEach(function(f) { total_fuel += Math.max(0, f.cap_twh); });
 
-            var coal_twh = 0, oil_twh = 0, gas_twh = 0;
-            var coal_rate = 0, oil_rate = 0, gas_rate = 0;
-            stack.fuels.forEach(function(f) {
-                var ratio = total_fuel > 0 ? Math.max(0, f.cap_twh) / total_fuel : 0;
-                var twh = fossil_twh_total * ratio;
-                if (f.type === 'coal') { coal_twh = twh; coal_rate = f.emission_rate; }
-                else if (f.type === 'oil') { oil_twh = twh; oil_rate = f.emission_rate; }
-                else if (f.type === 'gas') { gas_twh = twh; gas_rate = f.emission_rate; }
-            });
-
-            CQ_DATA.fossil_baselines_2045[iso] = {
-                demand_2045_twh: Math.round(demand_2045 * 10) / 10,
-                coal_twh: Math.round(coal_twh * 10) / 10,
-                oil_twh: Math.round(oil_twh * 10) / 10,
-                gas_twh: Math.round(gas_twh * 10) / 10,
-                fossil_co2_mt: Math.round((coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate) * 100) / 100
-            };
+        var coal_twh = 0, oil_twh = 0, gas_twh = 0;
+        var coal_rate = 0, oil_rate = 0, gas_rate = 0;
+        stack.fuels.forEach(function(f) {
+            var ratio = total_fuel > 0 ? Math.max(0, f.cap_twh) / total_fuel : 0;
+            var twh = fossil_twh_total * ratio;
+            if (f.type === 'coal') { coal_twh = twh; coal_rate = f.emission_rate; }
+            else if (f.type === 'oil') { oil_twh = twh; oil_rate = f.emission_rate; }
+            else if (f.type === 'gas') { gas_twh = twh; gas_rate = f.emission_rate; }
         });
-    }
 
-    // 3. existing_clean_floor — from resource_trajectories at threshold=50 (baseline)
-    if (!CQ_DATA.existing_clean_floor) {
-        CQ_DATA.existing_clean_floor = {};
-        var rt = CQ_DATA.resource_trajectories;
-        if (rt) {
-            DERIVE_ISOS.forEach(function(iso) {
-                if (!rt[iso] || !rt[iso].length) return;
-                var base = rt[iso][0]; // threshold=50 is baseline
-                CQ_DATA.existing_clean_floor[iso] = {
-                    by_resource: {
-                        clean_firm: base.clean_firm_twh || 0,
-                        solar: base.solar_twh || 0,
-                        wind: base.wind_twh || 0,
-                        ccs_ccgt: base.ccs_ccgt_twh || 0,
-                        hydro: base.hydro_twh || 0,
-                        battery: base.battery_twh || 0,
-                        ldes: base.ldes_twh || 0
-                    },
-                    total_twh: (base.clean_firm_twh || 0) + (base.solar_twh || 0) +
-                               (base.wind_twh || 0) + (base.ccs_ccgt_twh || 0) +
-                               (base.hydro_twh || 0) + (base.battery_twh || 0) + (base.ldes_twh || 0)
-                };
-            });
-        }
-    }
+        CQ_DATA.fossil_baselines_2045[iso] = {
+            demand_2045_twh: Math.round(demand_2045 * 10) / 10,
+            fossil_twh: Math.round(fossil_twh_total * 10) / 10,
+            coal_twh: Math.round(coal_twh * 10) / 10,
+            oil_twh: Math.round(oil_twh * 10) / 10,
+            gas_twh: Math.round(gas_twh * 10) / 10,
+            fossil_co2_mt: Math.round((coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate) * 100) / 100
+        };
+    });
 
-    // 4. first_deployments — scan deployment_queue for first occurrence of each tech
+    // 3. first_deployments — scan deployment_queue for first occurrence of each tech
     if (!CQ_DATA.first_deployments) {
         var fd = { first_clean_firm: null, first_battery: null, first_ccs: null, first_ldes: null };
         (CQ_DATA.deployment_queue || []).forEach(function(qe, idx) {
@@ -1192,7 +1194,7 @@ body {
         CQ_DATA.first_deployments = fd;
     }
 
-    // 5. iso_cfe_progress — derive from resource_trajectories + dispatch_stacks
+    // 4. iso_cfe_progress — derive from resource_trajectories + dispatch_stacks
     if (!CQ_DATA.iso_cfe_progress) {
         CQ_DATA.iso_cfe_progress = {};
         var rt2 = CQ_DATA.resource_trajectories;
@@ -1259,6 +1261,8 @@ var resourceByPartChart = null;
 var totalQueueSteps = CQ_DATA.deployment_queue.length;
 
 // ---- Fossil-only baseline at 2045 demand ----
+// 1B (fossil-avg): corporate load × (fossil_co2 / fossil_twh) → higher rate
+// 1A (grid-avg):   corporate load × (fossil_co2 / total_demand) → lower rate (diluted by clean)
 function computeBaselines(pct) {
     var fb = CQ_DATA.fossil_baselines_2045;
     if (!fb) return { fossil: 0, grid: 0 };
@@ -1266,11 +1270,13 @@ function computeBaselines(pct) {
     ISOS.forEach(function(iso) {
         var bl = fb[iso];
         if (!bl) return;
-        fossil += bl.fossil_co2_mt * (pct / 100);
-        // Grid-average: dilute fossil CO2 across total demand
-        var gridRate = bl.fossil_co2_mt / bl.demand_2045_twh;
         var corpLoad = bl.demand_2045_twh * (pct / 100);
+        // 1A grid-average: fossil CO2 diluted across ALL generation (including clean)
+        var gridRate = bl.fossil_co2_mt / bl.demand_2045_twh;
         grid += corpLoad * gridRate;
+        // 1B fossil-average: fossil CO2 per FOSSIL-ONLY generation (higher rate)
+        var fossilRate = bl.fossil_twh > 0 ? bl.fossil_co2_mt / bl.fossil_twh : 0;
+        fossil += corpLoad * fossilRate;
     });
     return { fossil: fossil, grid: grid };
 }
@@ -1401,54 +1407,133 @@ function addLogEntry(qe, step) {
     log.scrollTop = log.scrollHeight;
 }
 
-// ---- Stacked bar chart by ISO with existing floor + new resources ----
+// ---- 2045 demand per ISO (from CQ_DATA projections) ----
+var DEMAND_2045 = {};
+(function() {
+    var dgp = typeof CQ_DATA !== 'undefined' && CQ_DATA.demand_growth_projections;
+    var fallback = { SPP:422.9, ERCOT:971.1, MISO:1019.9, PJM:1355.2, CAISO:320.1, NYISO:192.4, NEISO:140.7 };
+    ISOS.forEach(function(iso) {
+        DEMAND_2045[iso] = (dgp && dgp[iso] && dgp[iso]['2045']) ? dgp[iso]['2045'].demand_twh : (fallback[iso] || 500);
+    });
+})();
+
+// ---- Crosshatch pattern for curtailment ----
+var curtailmentPattern = null;
+(function() {
+    var c = document.createElement('canvas');
+    c.width = 10; c.height = 10;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = 'rgba(239,68,68,0.12)';
+    ctx.fillRect(0, 0, 10, 10);
+    ctx.strokeStyle = 'rgba(220,38,38,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(10, 0); ctx.stroke();
+    curtailmentPattern = ctx.createPattern(c, 'repeat');
+})();
+
+// ---- Stacked bar chart: existing clean floor + new resources + curtailment + demand line ----
 function updateResourceByISOChart() {
     var canvas = document.getElementById('resourceByISOChart');
     if (!canvas) return;
 
     var ecf = CQ_DATA.existing_clean_floor;
-    // Build datasets: for each resource, two layers — existing (muted) + new (vivid)
-    var resOrder = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
-    var datasets = [];
+    var newResOrder = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
 
-    resOrder.forEach(function(res) {
-        // Existing floor layer
-        var existingData = ISOS.map(function(iso) {
-            if (!ecf || !ecf[iso]) return 0;
-            return ecf[iso].by_resource[res] || 0;
-        });
-        var hasExisting = existingData.some(function(v) { return v > 0.5; });
+    // Dataset 1: Existing clean floor — single combined block at the bottom
+    var existingData = ISOS.map(function(iso) {
+        return ecf && ecf[iso] ? ecf[iso].total_twh : 0;
+    });
 
-        if (hasExisting) {
-            datasets.push({
-                label: (RES_LABELS[res] || res) + ' (existing)',
-                data: existingData,
-                backgroundColor: RES_COLORS[res].existing,
-                borderColor: RES_COLORS[res].border,
-                borderWidth: 0,
-                borderRadius: 0,
-                stack: 'stack0',
-            });
-        }
-
-        // New deployment layer (from queue, positive only)
-        var newData = ISOS.map(function(iso) {
+    // Datasets 2-8: New resources by type (net positive only)
+    var newDatasets = newResOrder.map(function(res) {
+        return ISOS.map(function(iso) {
             if (!cumNewResByISO[iso]) return 0;
             return Math.max(0, cumNewResByISO[iso][res] || 0);
         });
-        var hasNew = newData.some(function(v) { return v > 0.5; });
+    });
 
-        if (hasNew || res === 'clean_firm' || res === 'solar' || res === 'wind') {
+    // Curtailment dataset: max(0, total_clean - demand_2045) per ISO
+    var curtailedData = ISOS.map(function(iso, i) {
+        var existing = existingData[i];
+        var newTotal = 0;
+        newDatasets.forEach(function(ds) { newTotal += ds[i]; });
+        var total = existing + newTotal;
+        var demand = DEMAND_2045[iso] || 9999;
+        return Math.max(0, total - demand);
+    });
+
+    // Adjust top resource to subtract curtailment (so total bar = max(actual_deployed, demand))
+    // Walk down from top resource and subtract curtailment
+    var curtailRemaining = curtailedData.slice();
+    for (var ri = newResOrder.length - 1; ri >= 0; ri--) {
+        for (var ii = 0; ii < ISOS.length; ii++) {
+            if (curtailRemaining[ii] <= 0) continue;
+            var canSubtract = Math.min(curtailRemaining[ii], newDatasets[ri][ii]);
+            newDatasets[ri][ii] -= canSubtract;
+            curtailRemaining[ii] -= canSubtract;
+        }
+    }
+
+    var datasets = [];
+
+    // 1. Existing clean floor
+    datasets.push({
+        label: 'Existing Clean (2025)',
+        data: existingData,
+        backgroundColor: 'rgba(30,58,95,0.22)',
+        borderColor: 'rgba(30,58,95,0.4)',
+        borderWidth: 1,
+        borderRadius: 0,
+        stack: 'stack0'
+    });
+
+    // 2-8. New resources
+    newResOrder.forEach(function(res, ri) {
+        var hasData = newDatasets[ri].some(function(v) { return v > 0.5; });
+        if (hasData || res === 'solar' || res === 'wind' || res === 'clean_firm') {
             datasets.push({
                 label: (RES_LABELS[res] || res) + ' (new)',
-                data: newData,
+                data: newDatasets[ri],
                 backgroundColor: RES_COLORS[res].bg,
                 borderColor: RES_COLORS[res].border,
                 borderWidth: 1,
-                borderRadius: { topLeft: 3, topRight: 3 },
-                stack: 'stack0',
+                borderRadius: 0,
+                stack: 'stack0'
             });
         }
+    });
+
+    // 9. Curtailed (crosshatch)
+    var hasCurtailed = curtailedData.some(function(v) { return v > 0.5; });
+    if (hasCurtailed) {
+        datasets.push({
+            label: 'Curtailed',
+            data: curtailedData,
+            backgroundColor: curtailmentPattern || 'rgba(239,68,68,0.2)',
+            borderColor: 'rgba(220,38,38,0.5)',
+            borderWidth: 1,
+            borderRadius: { topLeft: 3, topRight: 3 },
+            stack: 'stack0'
+        });
+    }
+
+    // 10. 2045 Demand reference (scatter overlay)
+    var demandData = ISOS.map(function(iso) { return DEMAND_2045[iso] || 0; });
+    datasets.push({
+        label: '2045 Demand',
+        data: demandData,
+        type: 'line',
+        borderColor: '#DC2626',
+        backgroundColor: 'transparent',
+        borderWidth: 2.5,
+        borderDash: [8, 4],
+        pointRadius: 5,
+        pointBackgroundColor: '#DC2626',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        fill: false,
+        order: 0,
+        stack: undefined
     });
 
     if (resourceByISOChart) {
@@ -1463,7 +1548,7 @@ function updateResourceByISOChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 400 },
+            animation: { duration: 300 },
             plugins: {
                 legend: {
                     position: 'bottom',
@@ -1471,11 +1556,12 @@ function updateResourceByISOChart() {
                         usePointStyle: true,
                         font: { family: FONT, size: 11 },
                         filter: function(item) {
-                            // Only show labels for datasets with data > 0
-                            return item.text.indexOf('(existing)') === -1 ||
-                                   item.text.indexOf('Clean Firm') >= 0 ||
-                                   item.text.indexOf('Solar') >= 0 ||
-                                   item.text.indexOf('Wind') >= 0;
+                            // Hide resource labels with no data
+                            if (item.text === '2045 Demand') return true;
+                            if (item.text === 'Existing Clean (2025)') return true;
+                            if (item.text === 'Curtailed') return hasCurtailed;
+                            var ds = item.chart.data.datasets[item.datasetIndex];
+                            return ds && ds.data && ds.data.some(function(v) { return v > 0.5; });
                         }
                     }
                 },
@@ -1483,6 +1569,9 @@ function updateResourceByISOChart() {
                     mode: 'index',
                     callbacks: {
                         label: function(ctx) {
+                            if (ctx.dataset.label === '2045 Demand') {
+                                return '2045 Demand: ' + ctx.parsed.y.toFixed(0) + ' TWh';
+                            }
                             if (ctx.parsed.y < 0.5) return null;
                             return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + ' TWh';
                         }
@@ -1524,17 +1613,14 @@ function runSimStep() {
     var cd = getGrowthCumulativeAt(simStep);
     if (!qe || !cd) { simStep++; return; }
 
-    // Track cumulative NEW resources per ISO (positive deltas only)
+    // Track cumulative NEW resources per ISO (all deltas, show max(0, net) in chart)
     if (qe.delta_resources) {
         if (!cumNewResByISO[qe.iso]) {
             cumNewResByISO[qe.iso] = {};
             RES_TYPES.forEach(function(r) { cumNewResByISO[qe.iso][r] = 0; });
         }
         for (var r in qe.delta_resources) {
-            var delta = qe.delta_resources[r];
-            if (delta > 0) {
-                cumNewResByISO[qe.iso][r] = (cumNewResByISO[qe.iso][r] || 0) + delta;
-            }
+            cumNewResByISO[qe.iso][r] = (cumNewResByISO[qe.iso][r] || 0) + qe.delta_resources[r];
         }
     }
 
@@ -1553,8 +1639,7 @@ function runSimStep() {
     }
 
     if (simRunning) {
-        var speed = parseInt(document.getElementById('simSpeedSelect').value) || 800;
-        simTimer = setTimeout(runSimStep, speed);
+        simTimer = setTimeout(runSimStep, 150);
     }
 }
 
