@@ -1535,6 +1535,7 @@ body { background: #F3F4F8; }
 <!-- ============================================================ -->
 <!-- SCRIPTS                                                       -->
 <!-- ============================================================ -->
+<script src="js/procurement-strategy-data.js"></script>
 <script src="js/nav.js"></script>
 <script>
 (function() {
@@ -1559,18 +1560,135 @@ const STRATEGY_LABELS = {
     '3D': '3D — Annual (Cross-Regional, Existing)'
 };
 
-// Resource colors
+// Resource category colors
 const RES_COLORS = {
-    clean_firm: '#1E3A5F', solar: '#F59E0B', wind: '#22C55E',
-    ccs_ccgt: '#0891B2', hydro: '#0EA5E9', battery: '#A855F7', ldes: '#EC4899'
+    existing_nuclear: '#1E3A5F',
+    existing_vre_hydro: '#0EA5E9',
+    nuclear_uprate: '#4A7C59',
+    new_build_vre: '#F59E0B',
+    new_build_firm: '#22C55E',
+    sss_allocation: '#A855F7',
+    cross_regional_recs: '#EC4899',
+    uprate: '#4A7C59',
+    wind: '#22C55E',
+    solar: '#F59E0B',
+    clean_firm: '#1E3A5F',
+    ccs_ccgt: '#0891B2',
+    hydro: '#0EA5E9',
+    battery: '#A855F7',
+    ldes: '#EC4899'
 };
+
+const RES_LABELS = {
+    existing_nuclear: 'Existing Nuclear',
+    existing_vre_hydro: 'Existing VRE/Hydro',
+    nuclear_uprate: 'Nuclear Uprate',
+    new_build_vre: 'New VRE',
+    new_build_firm: 'New Firm',
+    sss_allocation: 'SSS Allocation',
+    cross_regional_recs: 'Cross-Regional RECs',
+    uprate: 'Uprate',
+    wind: 'Wind',
+    solar: 'Solar'
+};
+
+const ALL_STRATEGIES = ['1A','1B','1C','2A','2B','2C','3A','3B','3C','3D'];
+const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+const PARTICIPATION_KEYS = ['2pct','5pct','10pct','15pct','20pct','30pct','40pct','50pct','60pct','80pct'];
+const PARTICIPATION_VALUES = [2, 5, 10, 15, 20, 30, 40, 50, 60, 80];
+
+// ── Data helpers ──
+// Compact format: y=year, t=threshold, p=participation_pct, c=cost_per_mwh,
+// tc=total_cost_m, co2=co2_abated_mmt, mac=mac_per_ton, dt=demand_twh,
+// bt=buyer_demand_twh, rm=resource_mix (t=twh, $=cost_m), lmp=lmp_impact
+const DATA = (typeof PROCUREMENT_DATA !== 'undefined') ? PROCUREMENT_DATA : null;
+
+// Normalize a compact entry to readable field names
+function N(e) {
+    if (!e || e._n) return e;
+    return {
+        _n: true,
+        year: e.y, threshold: e.t, participation_pct: e.p,
+        cost_per_mwh: e.c || 0, total_cost_m: e.tc || 0,
+        co2_abated_mmt: e.co2 || 0, mac_per_ton: e.mac,
+        demand_twh: e.dt || 0, buyer_demand_twh: e.bt || 0,
+        lmp_impact: e.lmp || null,
+        resource_mix: normalizeRM(e.rm)
+    };
+}
+
+function normalizeRM(rm) {
+    if (!rm) return {};
+    const out = {};
+    for (const [k, v] of Object.entries(rm)) {
+        if (typeof v === 'number') {
+            out[k] = v; // Strategy 1 flat format
+        } else if (v && typeof v.t === 'number') {
+            out[k] = { twh: v.t, cost_m: v['$'] || 0 };
+        } else {
+            out[k] = v; // pass through
+        }
+    }
+    return out;
+}
+
+function getStrategyData(stratId, iso, growth, partKey) {
+    if (!DATA) return [];
+    const key = 'strategy' + stratId;
+    try {
+        const raw = DATA[key][iso][growth][partKey];
+        return raw ? raw.map(N) : [];
+    } catch(e) { return []; }
+}
+
+function closestPartKey(pct) {
+    let best = 0;
+    for (let i = 0; i < PARTICIPATION_VALUES.length; i++) {
+        if (Math.abs(PARTICIPATION_VALUES[i] - pct) < Math.abs(PARTICIPATION_VALUES[best] - pct)) best = i;
+    }
+    return PARTICIPATION_KEYS[best];
+}
+
+function getEntryAtYear(entries, year) {
+    if (!entries || !entries.length) return null;
+    let best = entries[0];
+    for (const e of entries) {
+        if (Math.abs(e.year - year) < Math.abs(best.year - year)) best = e;
+    }
+    return best;
+}
+
+function getEntryAtThreshold(entries, threshold) {
+    if (!entries || !entries.length) return null;
+    let best = entries[0];
+    for (const e of entries) {
+        if (Math.abs(e.threshold - threshold) < Math.abs(best.threshold - threshold)) best = e;
+    }
+    return best;
+}
+
+function extractResourceCategories(mix) {
+    const cats = {};
+    if (!mix) return cats;
+    for (const [k, v] of Object.entries(mix)) {
+        if (typeof v === 'number') {
+            // Strategy 1: ISO_resource format (e.g. CAISO_uprate, SPP_wind)
+            const parts = k.split('_');
+            const res = parts.length > 1 ? parts.slice(1).join('_') : k;
+            cats[res] = (cats[res] || 0) + v;
+        } else if (v && typeof v.twh === 'number') {
+            // Strategy 2/3: {twh, cost_m}
+            cats[k] = (cats[k] || 0) + v.twh;
+        }
+    }
+    return cats;
+}
 
 // ── Scroll animations ──
 const scrollObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             entry.target.classList.add('visible');
-            // Stagger family cards
             if (entry.target.id === 'familyCards') {
                 const cards = entry.target.querySelectorAll('.family-card');
                 cards.forEach((card, i) => {
@@ -1580,10 +1698,8 @@ const scrollObserver = new IntersectionObserver((entries) => {
         }
     });
 }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
-
 document.querySelectorAll('.scroll-section').forEach(s => scrollObserver.observe(s));
 
-// ── Strategy column stagger animation ──
 const colObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -1597,7 +1713,6 @@ const colObserver = new IntersectionObserver((entries) => {
 const stratCols = document.getElementById('strategyColumns');
 if (stratCols) colObserver.observe(stratCols);
 
-// ── Table row animations ──
 const tableObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -1608,13 +1723,547 @@ const tableObserver = new IntersectionObserver((entries) => {
         }
     });
 }, { threshold: 0.2 });
-
 const compTable = document.getElementById('comparisonTable');
 if (compTable) tableObserver.observe(compTable);
 const tlTable = document.getElementById('timelineTable');
 if (tlTable) tableObserver.observe(tlTable);
 
-// ── Participation slider ──
+// ── Animated counter ──
+function animateCounter(el, target, duration) {
+    const start = performance.now();
+    function tick(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(target * eased);
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+const counterEl = document.getElementById('counterPct');
+if (counterEl) setTimeout(() => animateCounter(counterEl, 13, 1500), 400);
+
+// ── Chart defaults ──
+Chart.defaults.font.family = "'Plus Jakarta Sans', 'Helvetica Neue', sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = 'rgba(0,0,0,0.5)';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
+
+const TOOLTIP_OPTS = {
+    backgroundColor: 'rgba(26,39,68,0.95)',
+    titleFont: { weight: 700 },
+    padding: 12,
+    cornerRadius: 8
+};
+
+// ── Chart factory helpers ──
+function createChart(canvasId, type, opts) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    return new Chart(ctx, { type, data: { labels: [], datasets: [] }, options: opts });
+}
+
+function lineOpts(yLabel, xLabel) {
+    return {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+            x: { title: { display: true, text: xLabel || 'C&I Participation (%)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            y: { title: { display: true, text: yLabel, font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' }, beginAtZero: true }
+        },
+        plugins: { tooltip: TOOLTIP_OPTS }
+    };
+}
+
+function barOpts(yLabel, horizontal) {
+    return {
+        responsive: true, maintainAspectRatio: false,
+        indexAxis: horizontal ? 'y' : 'x',
+        scales: {
+            x: { title: { display: true, text: horizontal ? yLabel : '', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.04)' }, beginAtZero: true },
+            y: { title: { display: true, text: horizontal ? '' : yLabel, font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+        },
+        plugins: { tooltip: TOOLTIP_OPTS }
+    };
+}
+
+// ── Create all charts ──
+// Act 2
+const chartCostDiv = createChart('chartCostDivergence', 'line', lineOpts('Effective Cost ($/MWh)'));
+const chartCapital = createChart('chartCapitalAllocation', 'bar', barOpts('% of Total Investment', false));
+const chartWholesale = createChart('chartWholesaleErosion', 'line', lineOpts('Wholesale LMP ($/MWh)'));
+const chartMAC = createChart('chartMACWall', 'line', lineOpts('Marginal $/tCO₂'));
+const chartMix = createChart('chartResourceMix', 'bar', {
+    ...barOpts('TWh', false),
+    scales: {
+        x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } },
+        y: { stacked: true, title: { display: true, text: 'TWh', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+    }
+});
+// Act 3
+const chart2C = createChart('chart2CThreshold', 'line', lineOpts('Effective $/MWh', 'Year'));
+const chartRoles = createChart('chartRegionalRoles', 'bar', {
+    ...barOpts('$M Investment', false),
+    scales: {
+        x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } },
+        y: { stacked: true, title: { display: true, text: '$M Investment', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+    }
+});
+// Act 4
+const chartFOAK = createChart('chartFOAKNOAK', 'line', lineOpts('Effective $/MWh', 'Year'));
+// Act 5
+const chartOutcome = createChart('chartFixedOutcome', 'bar', barOpts('$/MWh', true));
+const chartBudget = createChart('chartFixedBudget', 'bar', barOpts('CFE % Achieved', true));
+// Act 6
+const chartSysReq = createChart('chartSystemReq', 'bar', barOpts('Required C&I Participation (%)', true));
+const expCostChart = createChart('explorerCost', 'bar', barOpts('$/MWh', false));
+const expMixChart = createChart('explorerMix', 'bar', {
+    ...barOpts('TWh', false),
+    scales: {
+        x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } },
+        y: { stacked: true, title: { display: true, text: 'TWh', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+    }
+});
+const expCO2Chart = createChart('explorerCO2', 'bar', barOpts('Mt CO₂/yr', false));
+
+// ════════════════════════════════════════════════════════════════
+// DATA WIRING — connects PROCUREMENT_DATA to all charts
+// ════════════════════════════════════════════════════════════════
+
+if (!DATA) {
+    console.warn('PROCUREMENT_DATA not loaded — charts will be empty.');
+}
+
+// Currently selected strategies for the scrollytell (variant tree clicks)
+function getSelectedStrategies() {
+    const sel = [];
+    document.querySelectorAll('.strat-variant-item.selected').forEach(el => {
+        sel.push(el.getAttribute('data-strategy'));
+    });
+    return sel.length ? sel : ['1A', '2C', '3D'];
+}
+
+// Explorer strategy checkboxes
+function getExplorerStrategies() {
+    const sel = [];
+    document.querySelectorAll('#explorerStrategies .strat-check input:checked').forEach(cb => {
+        sel.push(cb.value);
+    });
+    return sel.length ? sel : ['1A', '2A', '2C', '3D'];
+}
+
+const growth = 'Medium'; // Static pages default to Medium
+const TARGET_YEAR_90 = 2040; // Year when SBTi ratchet hits 90%
+
+// ── Act 2 update: Cost Divergence, Capital, Wholesale, MAC, Resource Mix ──
+function updateAct2Charts() {
+    if (!DATA) return;
+    const partPct = parseInt(pSlider.value);
+    const partKey = closestPartKey(partPct);
+    const strats = getSelectedStrategies();
+    const refISO = 'PJM'; // Representative ISO for scrollytell
+
+    // Fig 2: Cost Divergence — cost_per_mwh across participation levels
+    if (chartCostDiv) {
+        chartCostDiv.data.labels = PARTICIPATION_VALUES.map(v => v + '%');
+        chartCostDiv.data.datasets = strats.map(s => ({
+            label: STRATEGY_LABELS[s] || s,
+            data: PARTICIPATION_KEYS.map(pk => {
+                const entries = getStrategyData(s, refISO, growth, pk);
+                const e = getEntryAtThreshold(entries, 90);
+                return e ? e.cost_per_mwh : null;
+            }),
+            borderColor: STRATEGY_COLORS[s],
+            backgroundColor: STRATEGY_COLORS[s] + '20',
+            tension: 0.3,
+            pointRadius: 3,
+            borderWidth: 2
+        }));
+        // Highlight current participation
+        chartCostDiv.options.plugins.annotation = {
+            annotations: {
+                currentLine: {
+                    type: 'line', xMin: PARTICIPATION_VALUES.indexOf(closestPartVal(partPct)),
+                    xMax: PARTICIPATION_VALUES.indexOf(closestPartVal(partPct)),
+                    borderColor: 'rgba(239,68,68,0.5)', borderWidth: 2, borderDash: [6,4],
+                    label: { display: true, content: partPct + '%', position: 'start', backgroundColor: 'rgba(239,68,68,0.8)', font: { size: 10 } }
+                }
+            }
+        };
+        chartCostDiv.update('none');
+    }
+
+    // Fig 3: Capital Allocation — investment by ISO for cross-regional vs same-ISO
+    if (chartCapital) {
+        const crossStrat = strats.find(s => ['1A','1B','1C','3B','3D'].includes(s)) || '1A';
+        const sameStrat = strats.find(s => ['2A','2B','2C','3A','3C'].includes(s)) || '2C';
+        chartCapital.data.labels = ISOS;
+        const crossData = ISOS.map(iso => {
+            const entries = getStrategyData(crossStrat, iso, growth, partKey);
+            const e = getEntryAtThreshold(entries, 90);
+            return e ? e.total_cost_m : 0;
+        });
+        const sameData = ISOS.map(iso => {
+            const entries = getStrategyData(sameStrat, iso, growth, partKey);
+            const e = getEntryAtThreshold(entries, 90);
+            return e ? e.total_cost_m : 0;
+        });
+        const crossTotal = crossData.reduce((a, b) => a + b, 0) || 1;
+        const sameTotal = sameData.reduce((a, b) => a + b, 0) || 1;
+        chartCapital.data.datasets = [
+            { label: STRATEGY_LABELS[crossStrat] || crossStrat, data: crossData.map(v => (v / crossTotal * 100).toFixed(1)), backgroundColor: STRATEGY_COLORS[crossStrat] + 'CC', borderRadius: 4 },
+            { label: STRATEGY_LABELS[sameStrat] || sameStrat, data: sameData.map(v => (v / sameTotal * 100).toFixed(1)), backgroundColor: STRATEGY_COLORS[sameStrat] + 'CC', borderRadius: 4 }
+        ];
+        chartCapital.update('none');
+    }
+
+    // Fig 4: Wholesale Erosion — LMP impact across participation
+    if (chartWholesale) {
+        chartWholesale.data.labels = PARTICIPATION_VALUES.map(v => v + '%');
+        chartWholesale.data.datasets = strats.map(s => ({
+            label: STRATEGY_LABELS[s] || s,
+            data: PARTICIPATION_KEYS.map(pk => {
+                const entries = getStrategyData(s, refISO, growth, pk);
+                const e = getEntryAtThreshold(entries, 90);
+                return (e && e.lmp_impact != null) ? e.lmp_impact : null;
+            }),
+            borderColor: STRATEGY_COLORS[s],
+            tension: 0.3, pointRadius: 3, borderWidth: 2
+        })).filter(ds => ds.data.some(v => v !== null));
+        chartWholesale.update('none');
+    }
+
+    // Fig 5: MAC Wall — mac_per_ton across participation
+    if (chartMAC) {
+        chartMAC.data.labels = PARTICIPATION_VALUES.map(v => v + '%');
+        chartMAC.data.datasets = strats.map(s => ({
+            label: STRATEGY_LABELS[s] || s,
+            data: PARTICIPATION_KEYS.map(pk => {
+                const entries = getStrategyData(s, refISO, growth, pk);
+                const e = getEntryAtThreshold(entries, 90);
+                if (!e || e.mac_per_ton == null || e.mac_per_ton > 5000) return null;
+                return e.mac_per_ton;
+            }),
+            borderColor: STRATEGY_COLORS[s],
+            tension: 0.3, pointRadius: 3, borderWidth: 2
+        }));
+        // Add DAC / SCC reference bands
+        chartMAC.options.plugins.annotation = {
+            annotations: {
+                dacBand: { type: 'box', yMin: 250, yMax: 600, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 0, label: { display: true, content: 'DAC range', position: { x: 'end', y: 'start' }, font: { size: 10 }, color: 'rgba(239,68,68,0.6)' } },
+                sccLine: { type: 'line', yMin: 185, yMax: 185, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: 'SCC $185', position: 'start', font: { size: 10 }, backgroundColor: 'rgba(34,197,94,0.7)' } }
+            }
+        };
+        chartMAC.update('none');
+    }
+
+    // Fig 6: Resource Mix — stacked bar per strategy at current participation
+    if (chartMix) {
+        const resStrats = strats.slice(0, 5); // Limit for readability
+        chartMix.data.labels = resStrats.map(s => STRATEGY_LABELS[s] || s);
+        // Collect all resource categories
+        const allCats = new Set();
+        const mixData = resStrats.map(s => {
+            const entries = getStrategyData(s, refISO, growth, partKey);
+            const e = getEntryAtThreshold(entries, 90);
+            const cats = extractResourceCategories(e ? e.resource_mix : {});
+            Object.keys(cats).forEach(c => allCats.add(c));
+            return cats;
+        });
+        const catArr = Array.from(allCats);
+        chartMix.data.datasets = catArr.map(cat => ({
+            label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
+            data: mixData.map(m => (m[cat] || 0).toFixed(2)),
+            backgroundColor: RES_COLORS[cat] || '#999',
+            borderRadius: 2
+        }));
+        chartMix.update('none');
+    }
+}
+
+function closestPartVal(pct) {
+    let best = PARTICIPATION_VALUES[0];
+    for (const v of PARTICIPATION_VALUES) {
+        if (Math.abs(v - pct) < Math.abs(best - pct)) best = v;
+    }
+    return best;
+}
+
+// ── Act 3: Strategy 2C deep-dive ──
+function updateAct3Charts() {
+    if (!DATA) return;
+    const partPct = parseInt(pSlider.value);
+    const partKey = closestPartKey(partPct);
+
+    // Fig 8: Strategy 2C cost across years (SBTi trajectory)
+    if (chart2C) {
+        const variants = ['2A', '2B', '2C'];
+        const entries2C = getStrategyData('2C', 'PJM', growth, partKey);
+        chart2C.data.labels = entries2C.map(e => e.year);
+        chart2C.data.datasets = variants.map(v => {
+            const entries = getStrategyData(v, 'PJM', growth, partKey);
+            return {
+                label: STRATEGY_LABELS[v] || v,
+                data: entries.map(e => e.cost_per_mwh),
+                borderColor: STRATEGY_COLORS[v],
+                backgroundColor: STRATEGY_COLORS[v] + '15',
+                fill: v === '2C',
+                tension: 0.3, pointRadius: 2, borderWidth: v === '2C' ? 3 : 2
+            };
+        });
+        chart2C.update('none');
+    }
+
+    // Fig 9: Regional Roles — investment breakdown by ISO under 2C
+    if (chartRoles) {
+        chartRoles.data.labels = ISOS;
+        const catSet = new Set();
+        const isoMixes = ISOS.map(iso => {
+            const entries = getStrategyData('2C', iso, growth, partKey);
+            const e = getEntryAtThreshold(entries, 90);
+            const cats = {};
+            if (e && e.resource_mix) {
+                for (const [k, v] of Object.entries(e.resource_mix)) {
+                    if (v && typeof v.cost_m === 'number') {
+                        cats[k] = v.cost_m;
+                        catSet.add(k);
+                    }
+                }
+            }
+            return cats;
+        });
+        const catArr = Array.from(catSet);
+        chartRoles.data.datasets = catArr.map(cat => ({
+            label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
+            data: isoMixes.map(m => (m[cat] || 0).toFixed(0)),
+            backgroundColor: RES_COLORS[cat] || '#999',
+            borderRadius: 2
+        }));
+        chartRoles.update('none');
+    }
+}
+
+// ── Act 4: FOAK→NOAK ──
+function updateAct4Charts() {
+    if (!DATA) return;
+    const partKey = closestPartKey(parseInt(pSlider.value));
+
+    if (chartFOAK) {
+        // Compare strategy 2C (hourly → faster learning) vs 1A (consequential → slower)
+        const strat2C = getStrategyData('2C', 'PJM', growth, partKey);
+        const strat1A = getStrategyData('1A', 'PJM', growth, partKey);
+        const years = strat2C.map(e => e.year);
+        chartFOAK.data.labels = years;
+        chartFOAK.data.datasets = [
+            {
+                label: 'Strategy 2C (Hourly — accelerated learning)',
+                data: strat2C.map(e => e.cost_per_mwh),
+                borderColor: STRATEGY_COLORS['2C'],
+                backgroundColor: STRATEGY_COLORS['2C'] + '15',
+                fill: true, tension: 0.3, borderWidth: 3, pointRadius: 2
+            },
+            {
+                label: 'Strategy 1A (Consequential — delayed learning)',
+                data: strat1A.map(e => e.cost_per_mwh),
+                borderColor: STRATEGY_COLORS['1A'],
+                borderDash: [6, 4],
+                tension: 0.3, borderWidth: 2, pointRadius: 2
+            }
+        ];
+        // SBTi milestone markers
+        chartFOAK.options.plugins.annotation = {
+            annotations: {
+                sbti2030: { type: 'line', xMin: years.indexOf(2030), xMax: years.indexOf(2030), borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 50%', position: 'start', font: { size: 9 }, color: 'rgba(0,0,0,0.5)' } },
+                sbti2040: { type: 'line', xMin: years.indexOf(2040), xMax: years.indexOf(2040), borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 90%', position: 'start', font: { size: 9 }, color: 'rgba(0,0,0,0.5)' } }
+            }
+        };
+        chartFOAK.update('none');
+    }
+}
+
+// ── Act 5: Horse Race ──
+function updateAct5Charts() {
+    if (!DATA) return;
+    const partKey = closestPartKey(parseInt(pSlider.value));
+    const strats = getSelectedStrategies();
+
+    // Fig 12: Fixed outcome — cost to reach 90% CFE
+    if (chartOutcome) {
+        chartOutcome.data.labels = strats.map(s => STRATEGY_LABELS[s] || s);
+        chartOutcome.data.datasets = [{
+            label: '$/MWh at 90% CFE',
+            data: strats.map(s => {
+                const entries = getStrategyData(s, 'PJM', growth, partKey);
+                const e = getEntryAtThreshold(entries, 90);
+                return e ? e.cost_per_mwh : 0;
+            }),
+            backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+            borderRadius: 6
+        }];
+        chartOutcome.update('none');
+    }
+
+    // Fig 13: Fixed budget — what threshold do you reach at $60/MWh?
+    if (chartBudget) {
+        chartBudget.data.labels = strats.map(s => STRATEGY_LABELS[s] || s);
+        chartBudget.data.datasets = [{
+            label: 'CFE % at $60/MWh budget',
+            data: strats.map(s => {
+                const entries = getStrategyData(s, 'PJM', growth, partKey);
+                if (!entries.length) return 0;
+                // Find highest threshold achievable at ≤$60/MWh
+                let bestThresh = 0;
+                for (const e of entries) {
+                    if (e.cost_per_mwh > 0 && e.cost_per_mwh <= 60 && e.threshold > bestThresh) {
+                        bestThresh = e.threshold;
+                    }
+                }
+                return bestThresh;
+            }),
+            backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+            borderRadius: 6
+        }];
+        chartBudget.update('none');
+    }
+}
+
+// ── Act 6: System View ──
+function updateAct6SystemReq() {
+    if (!DATA || !chartSysReq) return;
+    const co2Target = parseInt(co2Slider ? co2Slider.value : 30) / 100;
+    const strats = getSelectedStrategies();
+
+    chartSysReq.data.labels = strats.map(s => STRATEGY_LABELS[s] || s);
+    chartSysReq.data.datasets = [{
+        label: 'Required C&I Participation (%)',
+        data: strats.map(s => {
+            // Find the lowest participation that achieves the CO2 target at 90% threshold
+            for (const pk of PARTICIPATION_KEYS) {
+                let totalAbated = 0;
+                for (const iso of ISOS) {
+                    const entries = getStrategyData(s, iso, growth, pk);
+                    const e = getEntryAtThreshold(entries, 90);
+                    if (e) totalAbated += e.co2_abated_mmt;
+                }
+                if (totalAbated >= co2Target) {
+                    return PARTICIPATION_VALUES[PARTICIPATION_KEYS.indexOf(pk)];
+                }
+            }
+            return 80; // Can't achieve — cap at max
+        }),
+        backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+        borderRadius: 6
+    }];
+    chartSysReq.update('none');
+}
+
+// ── Explorer ──
+function updateExplorer() {
+    if (!DATA) return;
+    const strats = getExplorerStrategies();
+    const iso = document.getElementById('explorerISO').value;
+    const threshold = parseInt(expThresh ? expThresh.value : 90);
+    const partKey = closestPartKey(parseInt(pSlider.value));
+
+    function getVal(s, field) {
+        if (iso === 'all') {
+            // Weighted average across ISOs
+            let total = 0, weight = 0;
+            for (const r of ISOS) {
+                const entries = getStrategyData(s, r, growth, partKey);
+                const e = getEntryAtThreshold(entries, threshold);
+                if (e && e[field] != null && e.buyer_demand_twh > 0) {
+                    total += e[field] * e.buyer_demand_twh;
+                    weight += e.buyer_demand_twh;
+                }
+            }
+            return weight > 0 ? total / weight : 0;
+        }
+        const entries = getStrategyData(s, iso, growth, partKey);
+        const e = getEntryAtThreshold(entries, threshold);
+        return e ? (e[field] || 0) : 0;
+    }
+
+    // Explorer Cost
+    if (expCostChart) {
+        expCostChart.data.labels = strats.map(s => s);
+        expCostChart.data.datasets = [{
+            label: '$/MWh',
+            data: strats.map(s => getVal(s, 'cost_per_mwh').toFixed(1)),
+            backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+            borderRadius: 6
+        }];
+        expCostChart.update('none');
+    }
+
+    // Explorer CO2
+    if (expCO2Chart) {
+        expCO2Chart.data.labels = strats.map(s => s);
+        expCO2Chart.data.datasets = [{
+            label: 'Mt CO₂/yr abated',
+            data: strats.map(s => {
+                if (iso === 'all') {
+                    let total = 0;
+                    for (const r of ISOS) {
+                        const entries = getStrategyData(s, r, growth, partKey);
+                        const e = getEntryAtThreshold(entries, threshold);
+                        if (e) total += e.co2_abated_mmt;
+                    }
+                    return (total * 1000).toFixed(1); // MMT → Mt
+                }
+                const entries = getStrategyData(s, iso, growth, partKey);
+                const e = getEntryAtThreshold(entries, threshold);
+                return e ? (e.co2_abated_mmt * 1000).toFixed(1) : 0;
+            }),
+            backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+            borderRadius: 6
+        }];
+        expCO2Chart.update('none');
+    }
+
+    // Explorer Resource Mix — stacked bar
+    if (expMixChart) {
+        const catSet = new Set();
+        const mixArr = strats.map(s => {
+            if (iso === 'all') {
+                // Sum resource TWh across all ISOs
+                const agg = {};
+                for (const r of ISOS) {
+                    const entries = getStrategyData(s, r, growth, partKey);
+                    const e = getEntryAtThreshold(entries, threshold);
+                    if (e && e.resource_mix) {
+                        const cats = extractResourceCategories(e.resource_mix);
+                        for (const [k, v] of Object.entries(cats)) {
+                            agg[k] = (agg[k] || 0) + v;
+                            catSet.add(k);
+                        }
+                    }
+                }
+                return agg;
+            }
+            const entries = getStrategyData(s, iso, growth, partKey);
+            const e = getEntryAtThreshold(entries, threshold);
+            const cats = extractResourceCategories(e ? e.resource_mix : {});
+            Object.keys(cats).forEach(c => catSet.add(c));
+            return cats;
+        });
+        const catArr = Array.from(catSet);
+        expMixChart.data.labels = strats.map(s => s);
+        expMixChart.data.datasets = catArr.map(cat => ({
+            label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
+            data: mixArr.map(m => (m[cat] || 0).toFixed(2)),
+            backgroundColor: RES_COLORS[cat] || '#999',
+            borderRadius: 2
+        }));
+        expMixChart.update('none');
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// EVENT WIRING
+// ════════════════════════════════════════════════════════════════
+
+// Participation slider — updates all Act 2-5 charts
 const pSlider = document.getElementById('participationSlider');
 const pValue = document.getElementById('participationValue');
 const pContext = document.getElementById('participationContext');
@@ -1626,38 +2275,50 @@ function updateParticipation() {
     else if (val <= 30) pContext.textContent = 'Near-term growth scenario';
     else if (val <= 50) pContext.textContent = 'Ambitious corporate adoption';
     else pContext.textContent = 'Transformational participation';
-    // Charts will update here when wired to data
+
+    updateAct2Charts();
+    updateAct3Charts();
+    updateAct4Charts();
+    updateAct5Charts();
+    updateExplorer();
 }
 pSlider.addEventListener('input', updateParticipation);
 
-// ── CO2 target slider ──
+// CO2 target slider
 const co2Slider = document.getElementById('co2TargetSlider');
 const co2Value = document.getElementById('co2TargetValue');
 if (co2Slider) {
     co2Slider.addEventListener('input', () => {
         co2Value.textContent = co2Slider.value + '%';
+        updateAct6SystemReq();
     });
 }
 
-// ── Explorer threshold slider ──
+// Explorer threshold slider
 const expThresh = document.getElementById('explorerThreshold');
 const expThreshVal = document.getElementById('explorerThresholdVal');
 if (expThresh) {
     expThresh.addEventListener('input', () => {
         expThreshVal.textContent = expThresh.value + '%';
+        updateExplorer();
     });
 }
 
-// ── Explorer strategy checkboxes ──
-document.querySelectorAll('.strat-check').forEach(label => {
+// Explorer ISO selector
+const explorerISO = document.getElementById('explorerISO');
+if (explorerISO) explorerISO.addEventListener('change', updateExplorer);
+
+// Explorer strategy checkboxes
+document.querySelectorAll('#explorerStrategies .strat-check').forEach(label => {
     const cb = label.querySelector('input');
     label.addEventListener('click', (e) => {
         if (e.target !== cb) cb.checked = !cb.checked;
         label.classList.toggle('active', cb.checked);
+        updateExplorer();
     });
 });
 
-// ── Learning curve toggle ──
+// Learning curve toggle
 const lcOn = document.getElementById('lcOn');
 const lcOff = document.getElementById('lcOff');
 if (lcOn && lcOff) {
@@ -1665,130 +2326,22 @@ if (lcOn && lcOff) {
     lcOff.addEventListener('click', () => { lcOff.classList.add('active'); lcOn.classList.remove('active'); });
 }
 
-// ── Strategy variant selection ──
+// Strategy variant selection in taxonomy — updates scrollytell charts
 document.querySelectorAll('.strat-variant-item').forEach(v => {
     v.addEventListener('click', () => {
         v.classList.toggle('selected');
+        updateAct2Charts();
+        updateAct3Charts();
+        updateAct4Charts();
+        updateAct5Charts();
     });
 });
 
-// ── Animated counter on load ──
-function animateCounter(el, target, duration) {
-    const start = performance.now();
-    const from = 0;
-    function tick(now) {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        el.textContent = Math.round(from + (target - from) * eased);
-        if (progress < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
+// ── Initial render ──
+if (DATA) {
+    updateParticipation();
+    updateAct6SystemReq();
 }
-const counterEl = document.getElementById('counterPct');
-if (counterEl) {
-    setTimeout(() => animateCounter(counterEl, 13, 1500), 400);
-}
-
-// ── Chart defaults ──
-Chart.defaults.font.family = "'Plus Jakarta Sans', 'Helvetica Neue', sans-serif";
-Chart.defaults.font.size = 12;
-Chart.defaults.color = 'rgba(0,0,0,0.5)';
-Chart.defaults.plugins.legend.labels.usePointStyle = true;
-Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
-
-// ── Placeholder chart initialization ──
-// These create the chart structure; data wiring happens after Step 8
-
-function makeEmptyLineChart(canvasId, yLabel) {
-    const ctx = document.getElementById(canvasId);
-    if (!ctx) return null;
-    return new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [] },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                x: {
-                    title: { display: true, text: 'C&I Participation (%)', font: { weight: 600 } },
-                    grid: { color: 'rgba(0,0,0,0.04)' }
-                },
-                y: {
-                    title: { display: true, text: yLabel, font: { weight: 600 } },
-                    grid: { color: 'rgba(0,0,0,0.06)' },
-                    beginAtZero: true
-                }
-            },
-            plugins: {
-                tooltip: {
-                    backgroundColor: 'rgba(26,39,68,0.95)',
-                    titleFont: { weight: 700 },
-                    padding: 12,
-                    cornerRadius: 8
-                }
-            }
-        }
-    });
-}
-
-function makeEmptyBarChart(canvasId, yLabel, horizontal) {
-    const ctx = document.getElementById(canvasId);
-    if (!ctx) return null;
-    return new Chart(ctx, {
-        type: 'bar',
-        data: { labels: [], datasets: [] },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: horizontal ? 'y' : 'x',
-            scales: {
-                x: {
-                    title: { display: true, text: horizontal ? yLabel : '', font: { weight: 600 } },
-                    grid: { color: 'rgba(0,0,0,0.04)' },
-                    beginAtZero: true
-                },
-                y: {
-                    title: { display: true, text: horizontal ? '' : yLabel, font: { weight: 600 } },
-                    grid: { color: 'rgba(0,0,0,0.06)' }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    backgroundColor: 'rgba(26,39,68,0.95)',
-                    titleFont: { weight: 700 },
-                    padding: 12,
-                    cornerRadius: 8
-                }
-            }
-        }
-    });
-}
-
-// Act 2 charts
-const chartCostDiv = makeEmptyLineChart('chartCostDivergence', 'Effective Cost ($/MWh)');
-const chartCapital = makeEmptyBarChart('chartCapitalAllocation', '% of Total Investment', false);
-const chartWholesale = makeEmptyLineChart('chartWholesaleErosion', 'Wholesale LMP ($/MWh)');
-const chartMAC = makeEmptyLineChart('chartMACWall', 'Marginal $/tCO₂');
-const chartMix = makeEmptyBarChart('chartResourceMix', 'TWh', false);
-
-// Act 3 charts
-const chart2C = makeEmptyLineChart('chart2CThreshold', 'Effective $/MWh (Strategy 2C)');
-const chartRoles = makeEmptyBarChart('chartRegionalRoles', 'Investment Composition', false);
-
-// Act 4
-const chartFOAK = makeEmptyLineChart('chartFOAKNOAK', 'Clean Firm LCOE ($/MWh)');
-
-// Act 5
-const chartOutcome = makeEmptyBarChart('chartFixedOutcome', '$/MWh', true);
-const chartBudget = makeEmptyBarChart('chartFixedBudget', 'CFE % Achieved', true);
-
-// Act 6
-const chartSysReq = makeEmptyBarChart('chartSystemReq', 'Required C&I Participation (%)', true);
-const explorerCost = makeEmptyBarChart('explorerCost', '$/MWh', false);
-const explorerMix = makeEmptyBarChart('explorerMix', 'TWh', false);
-const explorerCO2 = makeEmptyBarChart('explorerCO2', 'Mt CO₂/yr', false);
 
 })();
 </script>
