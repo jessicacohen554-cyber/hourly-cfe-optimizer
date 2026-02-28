@@ -537,6 +537,424 @@ html, body {
     .synthesis-card h3 { font-size: 0.95rem; }
     .hero-text-block h2 { font-size: 1.15rem; }
 }
+
+/* ========== ISO TILES GRID ========== */
+.iso-tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    max-width: 1320px;
+    margin: 32px auto 0;
+    padding: 0 24px;
+    position: relative;
+    z-index: 2;
+}
+.iso-tile {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    padding: 20px 18px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.iso-tile:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    border-color: rgba(255,255,255,0.20);
+}
+.iso-tile::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+}
+.tile-iso-name {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.tile-region-label {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 10px;
+}
+.tile-range {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+}
+.tile-range-label {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+.tile-finding {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.5;
+}
+.tile-finding strong {
+    color: rgba(255,255,255,0.85);
+}
+.tile-nr-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+/* ========== HERO FINDINGS ROW (narrative + chart) ========== */
+.hero-findings-row {
+    max-width: 1320px;
+    margin: 36px auto 0;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+    position: relative;
+    z-index: 2;
+}
+.hero-narrative-block h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 14px;
+    line-height: 1.25;
+}
+.hero-narrative-block p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.75;
+    margin-bottom: 12px;
+}
+.hero-narrative-block .finding-highlight {
+    display: inline-block;
+    padding: 8px 16px;
+    background: rgba(34,197,94,0.10);
+    border: 1px solid rgba(34,197,94,0.25);
+    border-radius: 10px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #22C55E;
+    margin-top: 8px;
+}
+
+/* ========== ISO DEEP-DIVE SECTION ========== */
+.deepdive-section {
+    background: #F7F8FC;
+    padding: 56px 24px;
+    border-top: 1px solid rgba(0,0,0,0.025);
+}
+.deepdive-header {
+    max-width: 1320px;
+    margin: 0 auto 32px;
+    text-align: center;
+}
+.deepdive-header h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #1E293B;
+    margin-bottom: 8px;
+}
+.deepdive-header p {
+    font-size: 0.9rem;
+    color: rgba(15,23,42,0.55);
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* ISO Selector Tabs */
+.iso-selector {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 1320px;
+    margin: 0 auto 32px;
+}
+.iso-tab {
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(0,0,0,0.02);
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(15,23,42,0.6);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.iso-tab:hover {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.15);
+}
+.iso-tab.active {
+    background: #1A2744;
+    border-color: #1A2744;
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(26,39,68,0.25);
+}
+.iso-tab .tab-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Deep-Dive Content Grid */
+.deepdive-content {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+}
+.deepdive-chart-col .chart-panel {
+    min-height: 420px;
+}
+.deepdive-chart-col .chart-container {
+    position: relative;
+    width: 100%;
+    min-height: 360px;
+}
+
+/* No-Regrets Resources Panel */
+.nr-panel {
+    background: rgba(0,0,0,0.025);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 16px;
+    padding: 28px 24px;
+}
+.nr-panel-header {
+    margin-bottom: 20px;
+}
+.nr-panel-header h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1E293B;
+    margin-bottom: 4px;
+}
+.nr-panel-header p {
+    font-size: 0.78rem;
+    color: rgba(15,23,42,0.45);
+}
+.nr-resource-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+.nr-resource-row:last-child { border-bottom: none; }
+.nr-resource-label {
+    width: 100px;
+    flex-shrink: 0;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(15,23,42,0.7);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.nr-resource-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.nr-bar-container {
+    flex: 1;
+    position: relative;
+    height: 26px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 6px;
+    overflow: visible;
+}
+.nr-bar-fill {
+    position: absolute;
+    top: 2px;
+    left: 0;
+    height: 22px;
+    border-radius: 5px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.8;
+}
+.nr-bar-floor {
+    position: absolute;
+    top: 0;
+    height: 26px;
+    width: 2px;
+    background: rgba(15,23,42,0.6);
+    border-radius: 1px;
+    z-index: 2;
+}
+.nr-bar-value {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(15,23,42,0.65);
+    z-index: 3;
+}
+.nr-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+.nr-badge-yes {
+    background: rgba(34,197,94,0.10);
+    color: #16a34a;
+    border: 1px solid rgba(34,197,94,0.2);
+}
+.nr-badge-partial {
+    background: rgba(245,158,11,0.08);
+    color: #d97706;
+    border: 1px solid rgba(245,158,11,0.18);
+}
+.nr-badge-no {
+    background: rgba(0,0,0,0.03);
+    color: rgba(15,23,42,0.35);
+    border: 1px solid rgba(0,0,0,0.06);
+}
+.nr-summary-row {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+.nr-summary-stat {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+/* ========== METHODOLOGY SECTION ========== */
+.methodology-section {
+    background: #fff;
+    padding: 56px 24px;
+    border-top: 1px solid rgba(0,0,0,0.04);
+}
+.methodology-inner {
+    max-width: 900px;
+    margin: 0 auto;
+}
+.methodology-inner h2 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1E293B;
+    margin-bottom: 16px;
+}
+.methodology-inner h3 {
+    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1E293B;
+    margin-top: 24px;
+    margin-bottom: 8px;
+}
+.methodology-inner p {
+    font-size: 0.88rem;
+    color: rgba(15,23,42,0.65);
+    line-height: 1.75;
+    margin-bottom: 12px;
+}
+.methodology-inner ul {
+    padding-left: 20px;
+    margin-bottom: 12px;
+}
+.methodology-inner li {
+    font-size: 0.85rem;
+    color: rgba(15,23,42,0.6);
+    line-height: 1.7;
+    margin-bottom: 4px;
+}
+
+/* ========== RESPONSIVE — New sections ========== */
+@media (max-width: 900px) {
+    .iso-tiles-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 0 16px;
+    }
+    .hero-findings-row {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 0 16px;
+    }
+    .deepdive-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .deepdive-section { padding: 40px 16px; }
+    .iso-tab { padding: 8px 16px; font-size: 0.78rem; }
+}
+@media (max-width: 600px) {
+    .iso-tiles-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 0 12px;
+        margin-top: 24px;
+    }
+    .iso-tile { padding: 14px 12px; border-radius: 10px; }
+    .tile-range { font-size: 1.2rem; }
+    .tile-iso-name { font-size: 0.7rem; }
+    .tile-finding { font-size: 0.7rem; }
+    .hero-findings-row { padding: 0 12px; }
+    .deepdive-section { padding: 32px 12px; }
+    .nr-panel { padding: 20px 16px; }
+    .nr-resource-label { width: 80px; font-size: 0.75rem; }
+    .methodology-section { padding: 40px 16px; }
+}
+@media (max-width: 480px) {
+    .iso-tiles-grid { gap: 6px; padding: 0 8px; }
+    .iso-tile { padding: 12px 10px; }
+    .tile-range { font-size: 1.05rem; }
+    .tile-finding { font-size: 0.65rem; }
+    .nr-panel { padding: 16px 12px; }
+    .nr-resource-label { width: 70px; font-size: 0.7rem; }
+}
+@media (max-width: 320px) {
+    .iso-tiles-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -549,17 +967,35 @@ html, body {
 <!-- HEADER BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">Comparing the cost of CO&#8322; abatement through hourly clean energy procurement across regions and ambition levels</p>
+    <p class="subtitle">Optimal clean energy targets and no-regrets investments across US power markets</p>
     <div class="header-accent"></div>
 </header>
 
-<!-- HERO OVERVIEW: All-regions chart + intro text -->
+<!-- ================================================================== -->
+<!-- HERO SECTION: Intro + ISO tiles + narrative/chart                   -->
+<!-- ================================================================== -->
 <section class="hero-overview">
+    <!-- Title + brief intro -->
     <div class="hero-overview-inner">
-        <div class="hero-text-block">
-            <h2>When does grid decarbonization beat Direct Air Capture?</h2>
-            <p>This analysis compares the marginal cost of displacing CO&#8322; through hourly clean energy procurement against projected Direct Air Capture (DAC) costs. The answer depends on where you are, how far you want to go, and what you assume about technology costs.</p>
-            <p>Each region tells a different story: ERCOT's deep renewable resources make grid investment a clear winner to 97.5%. NEISO's constrained geography means DAC becomes competitive at just 70%. The charts below trace each region's marginal abatement cost curve against three DAC trajectories.</p>
+        <div class="hero-text-block" style="grid-column: 1 / -1; text-align: center; max-width: 860px; margin: 0 auto;">
+            <h2>Every region has an optimal clean energy target</h2>
+            <p>Grid decarbonization is cheaper than Direct Air Capture — up to a point. That point varies by region and depends on technology costs. The crossover range below shows where each region's marginal abatement cost exceeds projected DAC costs across 5,832 cost scenarios. Within that range, certain resource investments pay off under <em>any</em> plausible cost future.</p>
+        </div>
+    </div>
+
+    <!-- 7 ISO Tiles -->
+    <div class="iso-tiles-grid" id="isoTilesGrid">
+        <!-- Tiles populated by JS — one per ISO showing crossover range + key finding -->
+    </div>
+
+    <!-- Narrative findings + All-regions MAC chart -->
+    <div class="hero-findings-row">
+        <div class="hero-narrative-block">
+            <h3>Key findings across regions</h3>
+            <p>Grid decarbonization beats DAC to at least <strong>70&ndash;97.5%</strong> in every region under medium cost assumptions. The spread is driven by two factors: renewable resource quality (solar/wind capacity factors) and firm generation costs (nuclear, geothermal, CCS).</p>
+            <p>Firm generation investment is the single largest lever. Cheap nuclear or geothermal shifts the crossover <strong>10&ndash;15 percentage points higher</strong> in constrained regions (NEISO, NYISO). Renewable tax credits add 2&ndash;5 points. Storage costs contribute less than 1% of variance everywhere.</p>
+            <p>The no-regrets investments identified below represent resources that appear in the optimal portfolio across the <em>entire</em> crossover range and under all 5,832 cost sensitivity combinations — they should be built regardless of how cost uncertainty resolves.</p>
+            <span class="finding-highlight">Grid wins to 70&ndash;97.5% (region-dependent) &middot; Firm gen is the decisive lever</span>
         </div>
         <div class="hero-chart-block">
             <div class="chart-panel chart-panel-overview">
@@ -587,255 +1023,126 @@ html, body {
     </div>
 </section>
 
-<!-- REGION: ERCOT -->
-<section class="region-section" data-region="ERCOT">
-    <div class="region-section-inner">
-        <div class="region-chart-col">
-            <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">ERCOT (Texas)</div>
+
+<!-- ================================================================== -->
+<!-- ISO DEEP-DIVE: Selector + regional chart + no-regrets panel        -->
+<!-- ================================================================== -->
+<section class="deepdive-section">
+    <div class="deepdive-header">
+        <h2>Regional Deep Dive</h2>
+        <p>Select a region to explore its MAC crossover analysis and the clean energy investments that pay off under every cost scenario.</p>
+    </div>
+
+    <!-- ISO Selector Tabs -->
+    <div class="iso-selector" id="isoSelector">
+        <button class="iso-tab active" data-iso="ERCOT" onclick="switchISO('ERCOT')">
+            <span class="tab-dot" style="background:#22C55E;"></span>ERCOT
+        </button>
+        <button class="iso-tab" data-iso="PJM" onclick="switchISO('PJM')">
+            <span class="tab-dot" style="background:#4a90d9;"></span>PJM
+        </button>
+        <button class="iso-tab" data-iso="CAISO" onclick="switchISO('CAISO')">
+            <span class="tab-dot" style="background:#F59E0B;"></span>CAISO
+        </button>
+        <button class="iso-tab" data-iso="NYISO" onclick="switchISO('NYISO')">
+            <span class="tab-dot" style="background:#E91E63;"></span>NYISO
+        </button>
+        <button class="iso-tab" data-iso="NEISO" onclick="switchISO('NEISO')">
+            <span class="tab-dot" style="background:#9C27B0;"></span>NEISO
+        </button>
+        <button class="iso-tab" data-iso="MISO" onclick="switchISO('MISO')">
+            <span class="tab-dot" style="background:#06B6D4;"></span>MISO
+        </button>
+        <button class="iso-tab" data-iso="SPP" onclick="switchISO('SPP')">
+            <span class="tab-dot" style="background:#EF4444;"></span>SPP
+        </button>
+    </div>
+
+    <!-- Deep-Dive Content: Chart + No-Regrets Panel -->
+    <div class="deepdive-content">
+        <div class="deepdive-chart-col">
+            <div class="chart-panel">
+                <div class="hero-chart-title" id="deepdiveChartTitle">ERCOT — Marginal Abatement Cost vs. DAC</div>
                 <div class="chart-container">
-                    <canvas id="regionChart_ERCOT"></canvas>
+                    <canvas id="deepdiveChart"></canvas>
                 </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#22C55E;"></span>Stepwise marginal MAC (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.2);"></span>P10&ndash;P90 sensitivity band</span>
+                <div class="chart-legend" id="deepdiveChartLegend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#22C55E;" id="ddLegendColor"></span><span id="ddLegendLabel">Stepwise marginal MAC (Medium cost)</span></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.2);" id="ddLegendBand"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
                 </div>
+                <!-- Regional narrative card below chart -->
+                <div class="region-step-card visible" style="margin-top:20px;opacity:1;transform:none;" id="deepdiveNarrative">
+                    <span class="region-tag" id="ddNarrativeTag" style="background:rgba(34,197,94,0.1);color:#22C55E;">ERCOT</span>
+                    <h3 id="ddNarrativeTitle">Loading...</h3>
+                    <p id="ddNarrativeText"></p>
+                    <span class="step-stat" id="ddNarrativeStat"></span>
+                </div>
             </div>
         </div>
-        <div class="region-narrative-col">
-            <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(34,197,94,0.1);color:#22C55E;">ERCOT</span>
-                <h3>Renewable tax credits make ERCOT a no-regrets bet to 97.5%</h3>
-                <p>At medium costs, ERCOT's grid decarb beats central DAC through 97.5%. With low renewable costs — the trajectory sustained by IRA tax credits — the crossover extends to 99%. Even under all-high cost assumptions, grid investment wins to 97.5%. ERCOT is the strongest case for continued grid investment: deep solar/wind resources mean no plausible future where DAC is cheaper before ~95%.</p>
-                <span class="step-stat step-stat-green">Low renewables: grid wins to 99% &middot; All High: still wins to 97.5%</span>
+
+        <div class="deepdive-resources-col">
+            <div class="nr-panel">
+                <div class="nr-panel-header">
+                    <h3>No-Regrets Investments</h3>
+                    <p id="nrSubtitle">Resources that appear in the optimal portfolio across the full crossover range under all cost scenarios</p>
+                </div>
+                <div id="nrResourceBars">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="nr-summary-row" id="nrSummary">
+                    <!-- Summary stats populated by JS -->
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- REGION: PJM -->
-<section class="region-section" data-region="PJM">
-    <div class="region-section-inner">
-        <div class="region-chart-col">
-            <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">PJM (Mid-Atlantic)</div>
-                <div class="chart-container">
-                    <canvas id="regionChart_PJM"></canvas>
-                </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#4a90d9;"></span>Stepwise marginal MAC (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(74,144,217,0.25);"></span>P10&ndash;P90 sensitivity band</span>
-                    <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
-                </div>
-            </div>
-        </div>
-        <div class="region-narrative-col">
-            <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(74,144,217,0.10);color:#4a90d9;">PJM</span>
-                <h3>PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points</h3>
-                <p>At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs (achieved nuclear/geothermal) extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. The policy signal: PJM's path past 90% depends entirely on whether new nuclear generation achieves cost learning — renewables alone aren't enough at these penetration levels.</p>
-                <span class="step-stat step-stat-amber">Low firm gen: grid wins to 92.5% &middot; High firm + high RE: only 87.5%</span>
-            </div>
-        </div>
+<!-- ================================================================== -->
+<!-- METHODOLOGY & SOURCES                                               -->
+<!-- ================================================================== -->
+<section class="methodology-section">
+    <div class="methodology-inner">
+        <h2>Methodology</h2>
+
+        <h3>Crossover Analysis</h3>
+        <p>The optimal CFE target for each region is determined by the crossover point where the marginal cost of grid decarbonization exceeds projected Direct Air Capture (DAC) costs. We compute this using stepwise marginal abatement costs (MAC) from the Step 3 cost optimization — the change in clean procurement cost divided by the change in CO&#8322; abated between adjacent thresholds.</p>
+        <p>The crossover range spans 9 combinations: 3 grid cost tiers (P10/P50/P90 from 5,832 sensitivity scenarios) crossed with 3 DAC trajectories (optimistic, central, conservative). This captures uncertainty in both clean energy costs and DAC cost learning curves.</p>
+
+        <h3>No-Regrets Resource Identification</h3>
+        <p>For each threshold within the crossover range, the optimizer evaluates all 5,832 cost sensitivity scenarios (3 renewable gen &times; 3 firm gen &times; 3 battery &times; 3 LDES &times; 3 fossil fuel &times; 4 transmission &times; 3 CCS &times; 2 45Q settings) and identifies the cheapest feasible resource portfolio. The demand growth dimension adds 3 growth levels (Low/Medium/High) per scenario.</p>
+        <p>A resource is classified as:</p>
+        <ul>
+            <li><strong>No-regrets</strong> (&ge;80% presence): appears in the optimal portfolio across 80%+ of all scenario-threshold-growth combinations</li>
+            <li><strong>Likely</strong> (50&ndash;80% presence): appears in a majority but not all cost scenarios</li>
+            <li><strong>Scenario-dependent</strong> (&lt;50% presence): only optimal under specific cost assumptions</li>
+        </ul>
+        <p>The <em>floor</em> (minimum allocation across all scenarios) represents the absolute minimum investment needed regardless of how costs resolve. The <em>average</em> represents the expected investment level.</p>
+
+        <h3>Data Sources</h3>
+        <p>MAC curves derived from the 8,760 Problem hourly matching optimizer using EIA hourly generation profiles, eGRID emission rates, and NREL ATB 2024 cost projections. DAC cost trajectories from DOE Liftoff (2023), Sievert et al. (Joule 2024), and IEA (2022/2024). Demand growth rates from ISO-specific forecasts (EIA AEO 2025, FERC data).</p>
+
+        <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;margin-top:24px;">
+            <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary>
+            <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
+                <li>EPA eGRID 2022 &mdash; regional emission rates and CO&#8322; intensity by balancing authority.</li>
+                <li>EPA Social Cost of Carbon &mdash; Technical Support Document (2020), central estimate $51/metric ton.</li>
+                <li>Rennert, K. et al. (2022). &ldquo;Comprehensive evidence implies a higher social cost of CO&#8322;.&rdquo; <em>Nature</em>, 610, 687&ndash;692. $185/metric ton.</li>
+                <li>EU Emissions Trading System (EU ETS) &mdash; carbon price range $60&ndash;100/metric ton.</li>
+                <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; nuclear learning rates.</li>
+                <li>Lazard LCOE+, Version 18 (June 2025) &mdash; unsubsidized technology costs.</li>
+                <li>DOE (2024). &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear.&rdquo;</li>
+                <li>DOE (2023). &ldquo;Pathways to Commercial Liftoff: Direct Air Capture.&rdquo;</li>
+                <li>Sievert, K. et al. (2024). &ldquo;DAC cost learning.&rdquo; <em>Joule</em>.</li>
+                <li>IEA Net Zero by 2050 Roadmap (2023 update).</li>
+                <li>EIA Hourly Electric Grid Monitor &mdash; hourly generation by fuel type.</li>
+                <li>EIA Annual Energy Outlook 2025 &mdash; demand growth and price projections.</li>
+            </ol>
+        </details>
     </div>
 </section>
-
-<!-- REGION: CAISO -->
-<section class="region-section" data-region="CAISO">
-    <div class="region-section-inner">
-        <div class="region-chart-col">
-            <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">CAISO (California)</div>
-                <div class="chart-container">
-                    <canvas id="regionChart_CAISO"></canvas>
-                </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#F59E0B;"></span>Stepwise marginal MAC (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.18);"></span>P10&ndash;P90 sensitivity band</span>
-                    <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
-                </div>
-            </div>
-        </div>
-        <div class="region-narrative-col">
-            <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(245,158,11,0.1);color:#F59E0B;">CAISO</span>
-                <h3>CAISO: High marginal cost volatility, but grid still wins deep under medium costs</h3>
-                <p>CAISO shows extreme marginal cost swings — $738/metric ton at 75% under medium costs, yet grid still beats DAC central through 99% because later steps are cheap. The variance is driven by how clean firm resources dispatch. Low firm + low renewable costs extend the crossover to 97.5%. High firm + high renewable costs mean grid never beats even optimistic DAC. The lesson: CAISO's path past 90% is a bet on firm generation, not more solar.</p>
-                <span class="step-stat step-stat-red">High firm + high RE: grid never beats optimistic DAC &middot; Low combo: wins to 97.5%</span>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- REGION: NYISO -->
-<section class="region-section" data-region="NYISO">
-    <div class="region-section-inner">
-        <div class="region-chart-col">
-            <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">NYISO (New York)</div>
-                <div class="chart-container">
-                    <canvas id="regionChart_NYISO"></canvas>
-                </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#E91E63;"></span>Stepwise marginal MAC (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.25);"></span>P10&ndash;P90 sensitivity band</span>
-                    <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
-                </div>
-            </div>
-        </div>
-        <div class="region-narrative-col">
-            <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(233,30,99,0.15);color:#E91E63;">NYISO</span>
-                <h3>NYISO: Hydro and nuclear carry the grid to 85%, then costs spike</h3>
-                <p>New York benefits from significant existing hydro and nuclear capacity, keeping marginal abatement costs moderate through 85% clean energy. At medium costs, grid decarb beats DAC central through 85%. Low firm generation costs push the crossover to 90% — but the gain is narrow. Past 90%, NYISO's limited wind resource and constrained transmission corridors drive marginal costs sharply higher. New York's climate law (CLCPA) requires either breakthrough firm generation costs or acceptance that DAC closes the final gap more cheaply.</p>
-                <span class="step-stat step-stat-red">Medium: grid wins to 85% &middot; Low firm gen: 90% &middot; High costs: only 80%</span>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- REGION: NEISO -->
-<section class="region-section" data-region="NEISO">
-    <div class="region-section-inner">
-        <div class="region-chart-col">
-            <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">NEISO (New England)</div>
-                <div class="chart-container">
-                    <canvas id="regionChart_NEISO"></canvas>
-                </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#9C27B0;"></span>Stepwise marginal MAC (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(156,39,176,0.25);"></span>P10&ndash;P90 sensitivity band</span>
-                    <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
-                </div>
-            </div>
-        </div>
-        <div class="region-narrative-col">
-            <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(156,39,176,0.1);color:#9C27B0;">NEISO</span>
-                <h3>NEISO: The strongest case for nuclear — 15-point gain from cheap firm generation</h3>
-                <p>New England faces the steepest marginal cost curve of any region. At medium costs, grid decarb only beats DAC central through 70% — the lowest crossover of any ISO. But low firm + low renewable costs push this to 85%, a 15-point gain that represents the largest catalytic effect anywhere in the study. NEISO's winter gas pipeline constraints add $13/MWh to CCS costs, making nuclear and enhanced geothermal the decisive technologies. Without firm generation cost reductions, New England hits a hard economic wall at 70%.</p>
-                <span class="step-stat step-stat-red">Medium: only 70% &middot; Low firm + low RE: 85% (15-point catalytic gain)</span>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- REGION: MISO -->
-<section class="region-section" data-region="MISO">
-    <div class="region-section-inner">
-        <div class="region-chart-col">
-            <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">MISO (Midwest)</div>
-                <div class="chart-container">
-                    <canvas id="regionChart_MISO"></canvas>
-                </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#06B6D4;"></span>Stepwise marginal MAC (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(6,182,212,0.25);"></span>P10&ndash;P90 sensitivity band</span>
-                    <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
-                </div>
-            </div>
-        </div>
-        <div class="region-narrative-col">
-            <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(6,182,212,0.1);color:#06B6D4;">MISO</span>
-                <div class="region-narrative-title">MISO — Wind-Rich Midwest</div>
-                <p>MISO's vast wind resources and growing solar fleet offer low-cost renewable pathways, but transmission constraints across its 15-state footprint create deliverability challenges. The region's large nuclear fleet (75+ TWh) provides a strong clean firm baseline, while coal retirement timelines remain politically contested.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- REGION: SPP -->
-<section class="region-section" data-region="SPP">
-    <div class="region-section-inner">
-        <div class="region-chart-col">
-            <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">SPP (Central)</div>
-                <div class="chart-container">
-                    <canvas id="regionChart_SPP"></canvas>
-                </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#EF4444;"></span>Stepwise marginal MAC (Medium cost)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.25);"></span>P10&ndash;P90 sensitivity band</span>
-                    <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(233,30,99,0.08);"></span>DAC range</span>
-                </div>
-            </div>
-        </div>
-        <div class="region-narrative-col">
-            <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(239,68,68,0.1);color:#EF4444;">SPP</span>
-                <div class="region-narrative-title">SPP — Wind Capital of the US</div>
-                <p>SPP leads the nation in wind penetration at 37% of demand, making renewable-heavy procurement strategies exceptionally cost-effective. However, limited nuclear capacity (Wolf Creek only) means clean firm resources must come from new-build — a significant cost adder at high CFE targets.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- SYNTHESIS: Policy levers + conclusion -->
-<section class="synthesis-section">
-    <div class="synthesis-inner">
-        <div class="synthesis-card">
-            <h3>Three policy levers, three different effects</h3>
-            <p><strong>Renewable tax credits</strong> (IRA/PTC/ITC) are most catalytic in ERCOT, extending grid competitiveness to 99%. Moderate effect in PJM/CAISO. Minimal impact in the Northeast where the constraint is firm generation, not renewables.<br><br>
-            <strong>Nuclear/geothermal investment</strong> (NRC licensing, DOE LPO loans, HALEU supply) is decisive in NYISO/NEISO/CAISO. Cheap firm generation shifts the DAC crossover 10–15 percentage points higher.<br><br>
-            <strong>Storage costs</strong> contribute &lt;1% of variance in every region — battery/LDES prices are not the bottleneck.</p>
-            <span class="step-stat step-stat-blue">RE credits: +2–5 pts &middot; Firm gen: +10–15 pts &middot; Storage: ~0 pts</span>
-        </div>
-        <div class="synthesis-card">
-            <h3>The optimal strategy: grid to the crossover, DAC for the rest</h3>
-            <p>Grid decarbonization is the cheaper abatement path to at least 85–90% in every region under any cost scenario. Past that, the right answer depends on today's policy choices. Investment in firm clean generation (nuclear, enhanced geothermal, CCS) has the largest catalytic effect — buying 10–15 additional points of grid decarb that outcompetes DAC. Renewable tax credits are necessary but not sufficient in high-cost regions. The optimal portfolio: push grid decarb to its natural crossover point, then let DAC close the gap.</p>
-            <span class="step-stat step-stat-green">Grid to 85–97.5% (region-dependent) &middot; DAC for the final stretch</span>
-        </div>
-    </div>
-</section>
-
-<!-- SOURCES -->
-<div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
-    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
-        <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
-        <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
-            <li>EPA eGRID 2022 &mdash; regional emission rates and CO&#8322; intensity by balancing authority.</li>
-            <li>EPA Social Cost of Carbon &mdash; Technical Support Document (2020), central estimate $51/metric ton.</li>
-            <li>Rennert, K. et al. (2022). &ldquo;Comprehensive evidence implies a higher social cost of CO&#8322;.&rdquo; <em>Nature</em>, 610, 687&ndash;692. $185/metric ton.</li>
-            <li>EU Emissions Trading System (EU ETS) &mdash; carbon price range $60&ndash;100/metric ton.</li>
-            <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; nuclear learning rates 8% (large), 9.5% (SMR) per doubling. Based on INL meta-analysis (Abou-Jaoude et al., 2024).</li>
-            <li>Lazard Levelized Cost of Energy+ (LCOE+), Version 18 (June 2025) &mdash; unsubsidized new nuclear $141&ndash;220/MWh; CCGT $48&ndash;109/MWh.</li>
-            <li>DOE (2024). &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear.&rdquo; FOAK ~$6,200/kW &rarr; NOAK $3,600/kW target; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design for NOAK.</li>
-            <li>MIT Advanced Nuclear Power Program (2024). AP1000 NOAK: $4,625/kW, $66/MWh unsubsidized. SMR 300 MWe NOAK: ~$6,700/kW, $95/MWh.</li>
-            <li>INL (2024). &ldquo;Quantifying Capital Cost Reduction Pathways for Advanced Nuclear.&rdquo; Optimized NOAK: ~$3,421/kW.</li>
-            <li>INL (2024). &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations.&rdquo; RPT-24-77048. Quartile-based cost benchmarks used in NREL ATB 2024.</li>
-            <li>Vogtle Units 3&amp;4 &mdash; actual construction cost ~$15,000/kW (Georgia Power, 2023). NuScale CFPP &mdash; ~$20,000/kW at cancellation (IEEFA 2023).</li>
-            <li>DOE OCED (2024). &ldquo;Portfolio Insights: Carbon Capture in the Power Sector.&rdquo; FOAK&rarr;NOAK ~25% CAPEX reduction for CCS.</li>
-            <li>NETL. &ldquo;Baseline Study &mdash; High Carbon Capture Rates.&rdquo; CCS learning rates: CO&#8322; capture 3%/doubling; transport &amp; sequestration 5%/doubling.</li>
-            <li>Frontiers in Energy Research (2022). &ldquo;Cost Projection of CCGT with Post-Combustion Carbon Capture.&rdquo; FOAK ~$103/MWh; NOAK ~$92/MWh.</li>
-            <li>EIA Annual Energy Outlook 2025 &mdash; natural gas price projections ($3.50&rarr;$4.95/MMBtu); nuclear $7,821/kWe reference case.</li>
-            <li>Carbon Tracker Initiative &mdash; $3.5 trillion in stranded fossil fuel assets under net-zero scenarios.</li>
-            <li>EIA Hourly Electric Grid Monitor &mdash; hourly generation data by fuel type and balancing authority.</li>
-            <li>IEA Net Zero by 2050 Roadmap (2023 update) &mdash; sector emission reduction benchmarks.</li>
-            <li>IPCC AR6 Working Group III (2022) &mdash; power sector targets and mitigation pathways.</li>
-            <li>McKinsey Marginal Abatement Cost Curve methodology &mdash; cross-sector decarbonization benchmarks.</li>
-            <li>ITIF (2025). &ldquo;Small Modular Reactors: A Realist Approach to the Future of Nuclear Power.&rdquo; ~$10,000/kW representative FOAK; Wright&rsquo;s Law 4&ndash;10% learning rate.</li>
-            <li>IISD (2024). &ldquo;Why the Cost of CCS Remains Persistently High.&rdquo; Historical CCS experience rate far below solar/wind.</li>
-        </ol>
-    </details>
-</div>
 
 <!-- FOOTER -->
 <footer class="page-footer">
@@ -845,24 +1152,91 @@ html, body {
         <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
         <a href="research_paper.html">Methodology &amp; Paper</a>
         <a href="about.html">About</a>
-        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
     </div>
     <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
 </footer>
 <div class="bottom-banner"></div>
 
+<!-- ================================================================== -->
+<!-- SCRIPTS                                                             -->
+<!-- ================================================================== -->
 <script src="js/shared-data.js"></script>
 <script src="js/mac-stats-data.js"></script>
+<script src="js/no-regrets-data.js"></script>
+<script src="js/optimal-target-data.js"></script>
 <script>
 // ============================================================================
-// CHART INSTANCES & STATE
+// CONSTANTS & STATE
 // ============================================================================
+const ISOS = ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+const ISO_LABELS = {
+    ERCOT: 'Texas', PJM: 'Mid-Atlantic', CAISO: 'California',
+    NYISO: 'New York', NEISO: 'New England', MISO: 'Midwest', SPP: 'Central'
+};
+const RESOURCE_DISPLAY = [
+    { key: 'solar',      label: 'Solar',          color: '#F59E0B' },
+    { key: 'wind',       label: 'Wind',           color: '#3B82F6' },
+    { key: 'clean_firm', label: 'Nuclear / Firm',  color: '#1E3A5F' },
+    { key: 'ccs_ccgt',   label: 'CCS-CCGT',       color: '#0D9488' },
+    { key: 'hydro',      label: 'Hydro',          color: '#0EA5E9' },
+    { key: 'battery',    label: 'Battery (4hr)',   color: '#8B5CF6' },
+    { key: 'ldes',       label: 'LDES (100hr)',    color: '#EC4899' }
+];
+
+// Regional narrative data for deep-dive cards
+const REGION_NARRATIVES = {
+    ERCOT: {
+        title: "Renewable tax credits make ERCOT a no-regrets bet to 97.5%",
+        text: "At medium costs, ERCOT's grid decarb beats central DAC through 97.5%. With low renewable costs sustained by IRA tax credits, the crossover extends to 99%. Even under all-high cost assumptions, grid investment wins to 97.5%. ERCOT is the strongest case for continued grid investment: deep solar/wind resources mean no plausible future where DAC is cheaper before ~95%.",
+        stat: "Low renewables: grid wins to 99% \u00b7 All High: still wins to 97.5%",
+        statClass: "step-stat-green"
+    },
+    PJM: {
+        title: "PJM hits a cliff at 90%: cheap firm generation buys another 2.5 points",
+        text: "At medium costs, PJM's marginal grid cost beats DAC central through 90%. Low firm generation costs extend this to 92.5%. But high renewables + high firm gen drops the crossover to just 87.5%. PJM's path past 90% depends entirely on whether new nuclear generation achieves cost learning \u2014 renewables alone aren't enough at these penetration levels.",
+        stat: "Low firm gen: grid wins to 92.5% \u00b7 High firm + high RE: only 87.5%",
+        statClass: "step-stat-amber"
+    },
+    CAISO: {
+        title: "CAISO: Grid wins deep under medium costs, but volatility is extreme",
+        text: "CAISO shows extreme marginal cost swings, yet grid still beats DAC central through 99% at medium costs because later steps are cheap. The variance is driven by how clean firm resources dispatch. CAISO's path past 90% is a bet on firm generation, not more solar.",
+        stat: "High firm + high RE: grid never beats optimistic DAC \u00b7 Low combo: wins to 97.5%",
+        statClass: "step-stat-red"
+    },
+    NYISO: {
+        title: "NYISO: Hydro and nuclear carry the grid to 85%, then costs spike",
+        text: "New York benefits from significant existing hydro and nuclear capacity, keeping marginal costs moderate through 85%. Past 90%, limited wind resources and constrained transmission corridors drive marginal costs sharply higher. CLCPA requires either breakthrough firm generation costs or acceptance that DAC closes the final gap more cheaply.",
+        stat: "Medium: grid wins to 85% \u00b7 Low firm gen: 90% \u00b7 High costs: only 80%",
+        statClass: "step-stat-red"
+    },
+    NEISO: {
+        title: "NEISO: The strongest case for nuclear \u2014 15-point gain from cheap firm gen",
+        text: "New England faces the steepest marginal cost curve of any region. At medium costs, grid decarb only beats DAC central through 70% \u2014 the lowest crossover of any ISO. But low firm + low renewable costs push this to 85%, a 15-point gain that represents the largest catalytic effect anywhere. NEISO's winter gas pipeline constraints add $13/MWh to CCS costs, making nuclear and enhanced geothermal the decisive technologies.",
+        stat: "Medium: only 70% \u00b7 Low firm + low RE: 85% (15-point catalytic gain)",
+        statClass: "step-stat-red"
+    },
+    MISO: {
+        title: "MISO: Wind-rich Midwest with strong nuclear base",
+        text: "MISO's vast wind resources and growing solar fleet offer low-cost renewable pathways, but transmission constraints across its 15-state footprint create deliverability challenges. The region's large nuclear fleet provides a strong clean firm baseline. Coal retirement timelines remain politically contested.",
+        stat: "Strong wind base + nuclear fleet \u00b7 Transmission is the bottleneck",
+        statClass: "step-stat-blue"
+    },
+    SPP: {
+        title: "SPP: Wind capital of the US, but limited firm generation",
+        text: "SPP leads the nation in wind penetration at 37% of demand, making renewable-heavy procurement strategies exceptionally cost-effective. However, limited nuclear capacity (Wolf Creek only) means clean firm resources must come from new-build \u2014 a significant cost adder at high CFE targets.",
+        stat: "37% wind penetration \u00b7 Firm gen is the binding constraint",
+        statClass: "step-stat-amber"
+    }
+};
+
 let heroChart = null;
-const regionCharts = {};
+let deepdiveChart = null;
+let activeISO = 'ERCOT';
+const crossoverCache = {};
 const yMaxHero = 700;
 
 // ============================================================================
-// DAC CURVE THRESHOLDS (shared by all charts)
+// DAC CURVE HELPERS
 // ============================================================================
 const dacCurveThresholds = [];
 for (let t = 50; t <= 100; t += 2.5) dacCurveThresholds.push(t);
@@ -882,78 +1256,351 @@ function dacDatasets() {
 }
 
 // ============================================================================
-// BUILD HERO CHART (all regions overview)
+// CROSSOVER COMPUTATION
+// Prefers OPTIMAL_TARGETS (smooth PCHIP-based crossover) when available,
+// falls back to client-side MAC_STEPWISE_FAN computation otherwise.
+// ============================================================================
+function computeCrossover(iso) {
+    if (crossoverCache[iso]) return crossoverCache[iso];
+
+    // Prefer pre-computed smooth crossover from step6_compute_optimal_targets.py
+    var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+    if (ot && ot[iso] && ot[iso].crossover_range) {
+        var rng = ot[iso].crossover_range;
+        var cenXo = ot[iso].crossover_central || {};
+        var result = {
+            lower: rng.lower_bound,
+            upper: rng.upper_bound,
+            central: cenXo.threshold || rng.lower_bound,
+            gridAlwaysWins: rng.lower_bound == null,
+            source: 'smooth_pchip'
+        };
+        crossoverCache[iso] = result;
+        return result;
+    }
+
+    // Fallback: client-side stepwise crossover from MAC_STEPWISE_FAN
+    var stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
+    var fan = stepFan?.[iso];
+    if (!fan) return null;
+
+    var dacScenarios = ['optimistic', 'central', 'conservative'];
+    var macKeys = [
+        { key: 'p10', label: 'Low Grid Cost' },
+        { key: 'p50', label: 'Medium Grid Cost' },
+        { key: 'p90', label: 'High Grid Cost' }
+    ];
+
+    var crossovers = [];
+    for (var mk = 0; mk < macKeys.length; mk++) {
+        var macArr = fan[macKeys[mk].key] || [];
+        for (var ds = 0; ds < dacScenarios.length; ds++) {
+            var crossoverThreshold = null;
+            for (var i = 0; i < THRESHOLDS.length; i++) {
+                var macVal = macArr[i];
+                if (macVal == null) continue;
+                var dacVal = dacCostAtThreshold(THRESHOLDS[i], dacScenarios[ds]);
+                if (macVal > dacVal) {
+                    crossoverThreshold = THRESHOLDS[i];
+                    break;
+                }
+            }
+            crossovers.push({
+                gridKey: macKeys[mk].key,
+                dacScenario: dacScenarios[ds],
+                threshold: crossoverThreshold
+            });
+        }
+    }
+
+    var centralCrossover = null;
+    for (var c = 0; c < crossovers.length; c++) {
+        if (crossovers[c].gridKey === 'p50' && crossovers[c].dacScenario === 'central') {
+            centralCrossover = crossovers[c].threshold;
+            break;
+        }
+    }
+
+    var validThresholds = crossovers.filter(function(c) { return c.threshold != null; }).map(function(c) { return c.threshold; });
+    var lower = validThresholds.length > 0 ? Math.min.apply(null, validThresholds) : null;
+    var upper = validThresholds.length > 0 ? Math.max.apply(null, validThresholds) : 99.99;
+
+    var result = {
+        lower: lower,
+        upper: upper,
+        central: centralCrossover,
+        crossovers: crossovers,
+        gridAlwaysWins: validThresholds.length === 0,
+        source: 'stepwise_fallback'
+    };
+    crossoverCache[iso] = result;
+    return result;
+}
+
+// ============================================================================
+// NO-REGRETS DATA
+// Priority: 1) NO_REGRETS_DATA (Step 3 DG parquets, richest — 5,832+ scenarios)
+//           2) OPTIMAL_TARGETS (step6, medium-cost RESOURCE_MIX_DATA based)
+//           3) Client-side analysis of RESOURCE_MIX_DATA (fallback)
+// ============================================================================
+
+// Placeholder no-regrets analysis from RESOURCE_MIX_DATA (medium-cost optimal)
+function getNoRegretsFromMixData(iso, crossover) {
+    var mixData = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA : null;
+    if (!mixData || !mixData[iso] || !crossover) return null;
+
+    // Get thresholds in the crossover range
+    var lower = crossover.lower || 50;
+    var upper = crossover.upper || 99.99;
+    var rangeThresholds = THRESHOLDS.filter(function(t) { return t >= lower && t <= upper; });
+    if (rangeThresholds.length === 0) rangeThresholds = THRESHOLDS.slice(-3);
+
+    var resources = RESOURCE_DISPLAY.map(function(r) { return r.key; });
+    var analysis = {};
+
+    for (var ri = 0; ri < resources.length; ri++) {
+        var res = resources[ri];
+        var values = [];
+        for (var ti = 0; ti < rangeThresholds.length; ti++) {
+            var t = String(rangeThresholds[ti]);
+            var mix = mixData[iso]?.[t];
+            if (!mix) continue;
+
+            var val = 0;
+            if (res === 'battery') val = mix.battery_dispatch_pct || mix.battery || 0;
+            else if (res === 'ldes') val = mix.ldes_dispatch_pct || mix.ldes || 0;
+            else val = mix[res] || mix['mix_' + res] || 0;
+
+            values.push(val);
+        }
+
+        var nonZero = values.filter(function(v) { return v > 0.5; });
+        analysis[res] = {
+            presenceRate: values.length > 0 ? nonZero.length / values.length : 0,
+            floor: nonZero.length > 0 ? Math.min.apply(null, nonZero) : 0,
+            average: nonZero.length > 0 ? nonZero.reduce(function(a, b) { return a + b; }, 0) / nonZero.length : 0,
+            ceiling: nonZero.length > 0 ? Math.max.apply(null, nonZero) : 0,
+            isNoRegrets: values.length > 0 && nonZero.length / values.length >= 0.8,
+            isConsensus: values.length > 0 && nonZero.length / values.length >= 0.95
+        };
+    }
+
+    return { analysis: analysis, rangeThresholds: rangeThresholds, source: 'medium_mix' };
+}
+
+// ============================================================================
+// POPULATE ISO TILES
+// ============================================================================
+function populateTiles() {
+    var grid = document.getElementById('isoTilesGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    ISOS.forEach(function(iso) {
+        var crossover = computeCrossover(iso);
+        var nr = null;
+        if (typeof NO_REGRETS_DATA !== 'undefined' && NO_REGRETS_DATA && NO_REGRETS_DATA[iso]) {
+            nr = NO_REGRETS_DATA[iso];
+        } else {
+            var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+            if (ot && ot[iso] && ot[iso].no_regrets) {
+                var otNr = ot[iso].no_regrets;
+                var converted = {};
+                Object.keys(otNr).forEach(function(res) {
+                    var s = otNr[res];
+                    converted[res] = {
+                        presenceRate: s.is_consensus ? 1.0 : 0.8,
+                        floor: s.floor_pct || 0,
+                        average: s.avg_pct || 0,
+                        ceiling: s.max_pct || 0,
+                        isNoRegrets: s.is_consensus || s.avg_pct > 3,
+                        isConsensus: s.is_consensus
+                    };
+                });
+                nr = { analysis: converted, source: 'optimal_targets' };
+            } else {
+                nr = getNoRegretsFromMixData(iso, crossover);
+            }
+        }
+        var c = REGION_COLORS[iso];
+
+        var rangeText = '\u2014';
+        if (crossover) {
+            if (crossover.gridAlwaysWins) {
+                rangeText = '\u226599.99%';
+            } else if (crossover.lower != null && crossover.upper != null) {
+                if (crossover.lower === crossover.upper) {
+                    rangeText = crossover.lower + '%';
+                } else {
+                    rangeText = crossover.lower + '\u2013' + crossover.upper + '%';
+                }
+            }
+        }
+
+        // Find top no-regrets resources
+        var nrFindings = [];
+        if (nr && nr.analysis) {
+            RESOURCE_DISPLAY.forEach(function(r) {
+                var a = nr.analysis[r.key];
+                if (a && a.isNoRegrets && a.average > 3) {
+                    nrFindings.push(r.label);
+                }
+            });
+        }
+        var findingText = nrFindings.length > 0
+            ? '<strong>' + nrFindings.slice(0, 3).join(', ') + '</strong>: no-regrets across all scenarios'
+            : 'Resource mix varies significantly by cost scenario';
+
+        var tile = document.createElement('div');
+        tile.className = 'iso-tile';
+        tile.setAttribute('data-iso', iso);
+        tile.style.cssText = 'cursor:pointer;';
+        tile.innerHTML =
+            '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + c + ';border-radius:14px 14px 0 0;"></div>' +
+            '<div class="tile-iso-name" style="color:' + c + ';">' + iso + '</div>' +
+            '<div class="tile-region-label">' + ISO_LABELS[iso] + '</div>' +
+            '<div class="tile-range">' + rangeText + '</div>' +
+            '<div class="tile-range-label">Optimal target range</div>' +
+            '<div class="tile-finding">' + findingText + '</div>';
+        tile.onclick = function() { switchISO(iso); scrollToDeepDive(); };
+        grid.appendChild(tile);
+    });
+}
+
+function scrollToDeepDive() {
+    var section = document.querySelector('.deepdive-section');
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============================================================================
+// SMOOTH MAC DATA HELPERS
+// Uses OPTIMAL_TARGETS (PCHIP-smoothed) when available, falls back to
+// MAC_STEPWISE_FAN (noisy threshold-to-threshold) otherwise.
+// ============================================================================
+function getSmoothedMacData(iso) {
+    var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+    if (ot && ot[iso] && ot[iso].smooth_thresholds && ot[iso].smooth_thresholds.length > 0) {
+        var t = ot[iso].smooth_thresholds;
+        var medium = ot[iso].smooth_marginal_mac || ot[iso].smooth_mac_medium || [];
+        var low = ot[iso].smooth_mac_low || [];
+        var high = ot[iso].smooth_mac_high || [];
+        return {
+            source: 'smooth_pchip',
+            // Dense 300-point smooth curves
+            medium: t.map(function(x, i) { return { x: x, y: medium[i] }; }).filter(function(d) { return d.y != null; }),
+            low: low.length > 0
+                ? t.map(function(x, i) { return { x: x, y: low[i] }; }).filter(function(d) { return d.y != null; })
+                : null,
+            high: high.length > 0
+                ? t.map(function(x, i) { return { x: x, y: high[i] }; }).filter(function(d) { return d.y != null; })
+                : null,
+            // Discrete data points for marker overlay
+            discrete_t: ot[iso].discrete_thresholds || [],
+            discrete_mac: ot[iso].discrete_mac || []
+        };
+    }
+    return null;
+}
+
+function getStepwiseMacData(iso) {
+    var stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
+    var avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
+    var fan = stepFan?.[iso];
+    var fb = avgFan?.[iso];
+    if (!fan) return null;
+
+    return {
+        source: 'stepwise',
+        p50: (fan.p50 || []).map(function(v, i) {
+            var val = v ?? fb?.p50?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val };
+        }).filter(function(d) { return d.y != null; }),
+        p10: (fan.p10 || []).map(function(v, i) {
+            var val = v ?? fb?.p10?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val };
+        }).filter(function(d) { return d.y != null; }),
+        p90: (fan.p90 || []).map(function(v, i) {
+            var val = v ?? fb?.p90?.[i] ?? null;
+            return { x: THRESHOLDS[i], y: val };
+        }).filter(function(d) { return d.y != null; })
+    };
+}
+
+// ============================================================================
+// BUILD HERO CHART (all-regions overview)
+// Prefers smooth PCHIP curves from OPTIMAL_TARGETS; falls back to stepwise.
 // ============================================================================
 function buildHeroChart() {
-    const ctx = document.getElementById('heroScrollyChart')?.getContext('2d');
+    var ctx = document.getElementById('heroScrollyChart')?.getContext('2d');
     if (!ctx) return;
 
-    const regions = ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
-    const colors = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#EF4444' };
+    var regions = ISOS;
+    var datasets = [];
 
-    const stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
-    const avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
+    regions.forEach(function(iso) {
+        var c = REGION_COLORS[iso];
+        var smooth = getSmoothedMacData(iso);
 
-    const datasets = [];
-    regions.forEach((iso) => {
-        const fan = stepFan?.[iso];
-        const fb = avgFan?.[iso];
-        if (!fan) return;
-        const c = colors[iso];
+        if (smooth) {
+            // Smooth PCHIP curve: show L/M/H band + medium line
+            if (smooth.high) {
+                datasets.push({
+                    label: iso + ' High', data: smooth.high.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                    borderColor: 'transparent', backgroundColor: c + '35',
+                    borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 10, _region: iso, _type: 'band'
+                });
+            }
+            if (smooth.low) {
+                datasets.push({
+                    label: iso + ' Low', data: smooth.low.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                    borderColor: c + '40', backgroundColor: 'transparent',
+                    borderWidth: 0.5, borderDash: [2, 2], pointRadius: 0, fill: false, tension: 0, order: 10, _region: iso, _type: 'band'
+                });
+            }
+            datasets.push({
+                label: iso, data: smooth.medium.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                borderColor: c, backgroundColor: c + '10',
+                borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0, order: 5, _region: iso, _type: 'line'
+            });
+        } else {
+            // Fallback: stepwise MAC_STEPWISE_FAN
+            var step = getStepwiseMacData(iso);
+            if (!step) return;
 
-        const p90pts = (fan.p90 || []).map((v, i) => {
-            const val = v ?? fb?.p90?.[i] ?? null;
-            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
-        }).filter(d => d.y != null);
-        const p10pts = (fan.p10 || []).map((v, i) => {
-            const val = v ?? fb?.p10?.[i] ?? null;
-            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
-        }).filter(d => d.y != null);
-        const envPts = (fan.p50 || []).map((v, i) => {
-            const val = v ?? fb?.p50?.[i] ?? null;
-            return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMaxHero) : null };
-        }).filter(d => d.y != null);
-
-        datasets.push({
-            label: iso + ' P90', data: p90pts, borderColor: 'transparent', backgroundColor: c + '40',
-            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 10,
-            _region: iso, _type: 'band'
-        });
-        datasets.push({
-            label: iso + ' P10', data: p10pts, borderColor: c + '50', backgroundColor: 'transparent',
-            borderWidth: 0.5, borderDash: [2, 2], pointRadius: 0, fill: false, tension: 0.3, order: 10,
-            _region: iso, _type: 'band'
-        });
-        datasets.push({
-            label: iso, data: envPts, borderColor: c, backgroundColor: c + '10',
-            borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.3, order: 5,
-            _region: iso, _type: 'line'
-        });
+            datasets.push({
+                label: iso + ' P90', data: step.p90.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                borderColor: 'transparent', backgroundColor: c + '40',
+                borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 10, _region: iso, _type: 'band'
+            });
+            datasets.push({
+                label: iso + ' P10', data: step.p10.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                borderColor: c + '50', backgroundColor: 'transparent',
+                borderWidth: 0.5, borderDash: [2, 2], pointRadius: 0, fill: false, tension: 0.3, order: 10, _region: iso, _type: 'band'
+            });
+            datasets.push({
+                label: iso, data: step.p50.map(function(d) { return { x: d.x, y: Math.min(d.y, yMaxHero) }; }),
+                borderColor: c, backgroundColor: c + '10',
+                borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.3, order: 5, _region: iso, _type: 'line'
+            });
+        }
     });
 
-    datasets.push(...dacDatasets());
+    datasets.push.apply(datasets, dacDatasets());
 
     heroChart = new Chart(ctx, {
         type: 'line',
-        data: { datasets },
+        data: { datasets: datasets },
         options: {
             responsive: true, maintainAspectRatio: false,
-            animation: {
-                duration: 1200,
-                easing: 'easeOutQuart',
-                delay: function(context) {
-                    return context.type === 'data' ? context.dataIndex * 30 + context.datasetIndex * 100 : 0;
-                }
+            animation: { duration: 1200, easing: 'easeOutQuart',
+                delay: function(context) { return context.type === 'data' ? context.dataIndex * 30 + context.datasetIndex * 100 : 0; }
             },
             scales: {
                 x: {
                     type: 'linear', min: 48, max: 100,
                     afterBuildTicks: function(axis) { axis.ticks = [50, 60, 70, 80, 90, 95, 100].map(function(v) { return { value: v }; }); },
                     ticks: {
-                        callback: function(v) {
-                            var yearMap = { 50: "'30", 60: "'32", 70: "'35", 80: "'37", 90: "'40", 95: "'45", 100: "'50" };
-                            return [v + '%', yearMap[v] || ''];
-                        },
+                        callback: function(v) { var ym = { 50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 100:"'50" }; return [v+'%', ym[v]||'']; },
                         font: { size: 9 }, color: 'rgba(15,23,42,0.45)', maxRotation: 0
                     },
                     grid: { color: 'rgba(0,0,0,0.025)' },
@@ -962,7 +1609,7 @@ function buildHeroChart() {
                 },
                 y: {
                     min: 0, max: yMaxHero,
-                    ticks: { callback: function(v) { return '$' + v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.45)', stepSize: 100 },
+                    ticks: { callback: function(v) { return '$'+v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.45)', stepSize: 100 },
                     grid: { color: 'rgba(0,0,0,0.025)' },
                     border: { display: true, color: 'rgba(0,0,0,0.1)' },
                     title: { display: true, text: '$/metric ton CO\u2082', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
@@ -971,22 +1618,12 @@ function buildHeroChart() {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    enabled: true,
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    titleColor: '#1A2744',
-                    bodyColor: '#374151',
-                    borderColor: '#E5E7EB',
-                    borderWidth: 1,
-                    titleFont: { size: 11, weight: 600 },
-                    bodyFont: { size: 10 },
-                    cornerRadius: 8,
-                    padding: 10,
+                    enabled: true, backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1A2744', bodyColor: '#374151',
+                    borderColor: '#E5E7EB', borderWidth: 1, titleFont: { size: 11, weight: 600 }, bodyFont: { size: 10 },
+                    cornerRadius: 8, padding: 10,
                     callbacks: {
-                        title: function(items) { return items[0] ? items[0].raw.x + '% Clean' : ''; },
-                        label: function(item) {
-                            if (item.dataset._type === 'band') return null;
-                            return item.dataset.label + ': $' + Math.round(item.raw.y) + '/metric ton CO\u2082';
-                        }
+                        title: function(items) { return items[0] ? Math.round(items[0].raw.x) + '% Clean' : ''; },
+                        label: function(item) { if (item.dataset._type === 'band') return null; return item.dataset.label + ': $' + Math.round(item.raw.y) + '/metric ton CO\u2082'; }
                     },
                     filter: function(item) { return item.dataset._type !== 'band'; }
                 },
@@ -998,73 +1635,146 @@ function buildHeroChart() {
 }
 
 // ============================================================================
-// BUILD REGIONAL ENVELOPE CHART (per-region)
+// BUILD DEEP-DIVE CHART (per-region with crossover annotation)
+// Prefers smooth PCHIP curves; falls back to stepwise MAC.
 // ============================================================================
-function buildRegionalChart(iso) {
-    var canvasId = 'regionChart_' + iso;
-    var ctx = document.getElementById(canvasId)?.getContext('2d');
+function buildDeepDiveChart(iso) {
+    var ctx = document.getElementById('deepdiveChart')?.getContext('2d');
     if (!ctx) return;
-
-    var stepFan = typeof MAC_STEPWISE_FAN !== 'undefined' ? MAC_STEPWISE_FAN : null;
-    var avgFan = typeof MAC_FAN_DATA !== 'undefined' ? MAC_FAN_DATA : null;
-
-    var fan = stepFan?.[iso];
-    var fb = avgFan?.[iso];
-    if (!fan) return;
+    if (deepdiveChart) { deepdiveChart.destroy(); deepdiveChart = null; }
 
     var c = REGION_COLORS[iso];
     var yMax = 1200;
+    var datasets = [];
+    var smooth = getSmoothedMacData(iso);
 
-    var p90 = (fan.p90 || []).map(function(v, i) {
-        var val = v ?? fb?.p90?.[i] ?? null;
-        return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMax) : null };
-    }).filter(function(d) { return d.y != null; });
-    var p10 = (fan.p10 || []).map(function(v, i) {
-        var val = v ?? fb?.p10?.[i] ?? null;
-        return { x: THRESHOLDS[i], y: val };
-    }).filter(function(d) { return d.y != null; });
-    var p50 = (fan.p50 || []).map(function(v, i) {
-        var val = v ?? fb?.p50?.[i] ?? null;
-        return { x: THRESHOLDS[i], y: val != null ? Math.min(val, yMax) : null };
-    }).filter(function(d) { return d.y != null; });
+    if (smooth) {
+        // Smooth PCHIP curves: L/M/H band + medium line + discrete markers
+        if (smooth.high) {
+            datasets.push({
+                label: 'High Cost', data: smooth.high.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+                borderColor: 'transparent', backgroundColor: c + '40',
+                borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 3, _type: 'band'
+            });
+        }
+        if (smooth.low) {
+            datasets.push({
+                label: 'Low Cost', data: smooth.low.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+                borderColor: c + '60', backgroundColor: 'transparent',
+                borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0, order: 3, _type: 'band'
+            });
+        }
+        datasets.push({
+            label: 'Smooth MAC', data: smooth.medium.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+            borderColor: c, backgroundColor: c + '15',
+            borderWidth: 3, pointRadius: 0, fill: false, tension: 0, order: 1, _type: 'line'
+        });
+        // Discrete data point markers at original thresholds
+        if (smooth.discrete_t && smooth.discrete_mac) {
+            var markers = [];
+            for (var mi = 0; mi < smooth.discrete_t.length; mi++) {
+                if (smooth.discrete_mac[mi] != null) {
+                    markers.push({ x: smooth.discrete_t[mi], y: Math.min(smooth.discrete_mac[mi], yMax) });
+                }
+            }
+            if (markers.length > 0) {
+                datasets.push({
+                    label: 'Data Points', data: markers,
+                    borderColor: c, backgroundColor: c,
+                    borderWidth: 1, pointRadius: 4, pointBackgroundColor: c, pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5, pointHoverRadius: 7, showLine: false, order: 0, _type: 'markers'
+                });
+            }
+        }
+    } else {
+        // Fallback: stepwise MAC
+        var step = getStepwiseMacData(iso);
+        if (!step) return;
 
-    var datasets = [
-        { label: 'P90', data: p90, borderColor: 'transparent', backgroundColor: c + '45',
-          borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3 },
-        { label: 'P10', data: p10, borderColor: c + '70', backgroundColor: 'transparent',
-          borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3 },
-        { label: 'Envelope', data: p50, borderColor: c, backgroundColor: c + '18',
-          borderWidth: 3, pointRadius: 3, pointBackgroundColor: c, pointBorderColor: '#000',
-          pointBorderWidth: 1, pointHoverRadius: 6, fill: false, tension: 0.3, order: 1 },
-        ...dacDatasets()
-    ];
+        datasets.push({
+            label: 'P90', data: step.p90.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+            borderColor: 'transparent', backgroundColor: c + '45',
+            borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.3, order: 3, _type: 'band'
+        });
+        datasets.push({
+            label: 'P10', data: step.p10.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+            borderColor: c + '70', backgroundColor: 'transparent',
+            borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.3, order: 3, _type: 'band'
+        });
+        datasets.push({
+            label: 'Envelope', data: step.p50.map(function(d) { return { x: d.x, y: Math.min(d.y, yMax) }; }),
+            borderColor: c, backgroundColor: c + '18',
+            borderWidth: 3, pointRadius: 3, pointBackgroundColor: c, pointBorderColor: '#000',
+            pointBorderWidth: 1, pointHoverRadius: 6, fill: false, tension: 0.3, order: 1, _type: 'line'
+        });
+    }
 
-    // Compute dynamic Y max from data
+    datasets.push.apply(datasets, dacDatasets());
+
+    // Compute y-axis max from data
     var dataYMax = 0;
-    p90.forEach(function(d) { if (d.y != null && d.y < 2000) dataYMax = Math.max(dataYMax, d.y); });
+    datasets.forEach(function(ds) {
+        if (ds._type === 'dac') return;
+        (ds.data || []).forEach(function(d) { if (d.y != null && d.y < 2000) dataYMax = Math.max(dataYMax, d.y); });
+    });
     dataYMax = Math.min(Math.ceil(dataYMax / 100) * 100 + 100, 1200);
 
-    regionCharts[iso] = new Chart(ctx, {
+    // Crossover annotation
+    var crossover = computeCrossover(iso);
+    var annotations = {};
+    if (crossover && crossover.lower != null) {
+        annotations.crossoverBox = {
+            type: 'box',
+            xMin: crossover.lower,
+            xMax: crossover.upper,
+            backgroundColor: 'rgba(245,158,11,0.08)',
+            borderColor: 'rgba(245,158,11,0.25)',
+            borderWidth: 1,
+            borderDash: [4, 4],
+            label: {
+                display: true,
+                content: 'Crossover Range',
+                position: 'start',
+                font: { size: 9, weight: 600 },
+                color: 'rgba(245,158,11,0.8)'
+            }
+        };
+        if (crossover.central) {
+            var centralLabel = typeof crossover.central === 'number'
+                ? Math.round(crossover.central * 10) / 10 + '%'
+                : crossover.central + '%';
+            annotations.centralLine = {
+                type: 'line',
+                xMin: crossover.central,
+                xMax: crossover.central,
+                borderColor: 'rgba(245,158,11,0.6)',
+                borderWidth: 2,
+                borderDash: [6, 3],
+                label: {
+                    display: true,
+                    content: 'Central: ' + centralLabel,
+                    position: 'start',
+                    font: { size: 8, weight: 600 },
+                    color: 'rgba(245,158,11,0.9)',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    padding: 3
+                }
+            };
+        }
+    }
+
+    deepdiveChart = new Chart(ctx, {
         type: 'line',
         data: { datasets: datasets },
         options: {
             responsive: true, maintainAspectRatio: false,
-            animation: {
-                duration: 1400,
-                easing: 'easeOutQuart',
-                delay: function(context) {
-                    return context.type === 'data' ? context.dataIndex * 40 + context.datasetIndex * 150 : 0;
-                }
-            },
+            animation: { duration: 1000, easing: 'easeOutQuart' },
             scales: {
                 x: {
                     type: 'linear', min: 48, max: 100,
                     afterBuildTicks: function(axis) { axis.ticks = [50, 60, 70, 80, 90, 95, 100].map(function(v) { return { value: v }; }); },
                     ticks: {
-                        callback: function(v) {
-                            var yearMap = { 50: "'30", 60: "'32", 70: "'35", 80: "'37", 90: "'40", 95: "'45", 100: "'50" };
-                            return [v + '%', yearMap[v] || ''];
-                        },
+                        callback: function(v) { var ym = { 50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 100:"'50" }; return [v+'%', ym[v]||'']; },
                         font: { size: 9 }, color: 'rgba(15,23,42,0.5)', maxRotation: 0
                     },
                     grid: { color: 'rgba(0,0,0,0.07)' },
@@ -1073,7 +1783,7 @@ function buildRegionalChart(iso) {
                 },
                 y: {
                     min: 0, max: dataYMax,
-                    ticks: { callback: function(v) { return '$' + v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.5)', stepSize: 100 },
+                    ticks: { callback: function(v) { return '$'+v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.5)', stepSize: 100 },
                     grid: { color: 'rgba(0,0,0,0.07)' },
                     border: { display: true, color: 'rgba(0,0,0,0.12)' },
                     title: { display: true, text: '$/metric ton CO\u2082', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
@@ -1082,66 +1792,180 @@ function buildRegionalChart(iso) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    enabled: true,
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    titleColor: '#1A2744',
-                    bodyColor: '#374151',
-                    borderColor: '#E5E7EB',
-                    borderWidth: 1,
-                    titleFont: { size: 11, weight: 600 },
-                    bodyFont: { size: 10 },
-                    cornerRadius: 8,
-                    padding: 10,
+                    enabled: true, backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#1A2744', bodyColor: '#374151',
+                    borderColor: '#E5E7EB', borderWidth: 1, titleFont: { size: 11, weight: 600 }, bodyFont: { size: 10 },
+                    cornerRadius: 8, padding: 10,
                     callbacks: {
-                        title: function(items) { return items[0] ? items[0].raw.x + '% Clean' : ''; },
+                        title: function(items) { return items[0] ? Math.round(items[0].raw.x * 10) / 10 + '% Clean' : ''; },
                         label: function(item) {
-                            if (item.dataset.label === 'P90' || item.dataset.label === 'P10') return null;
-                            return item.dataset.label + ': $' + Math.round(item.raw.y) + '/metric ton CO\u2082';
+                            if (item.dataset._type === 'band') return null;
+                            var label = item.dataset._type === 'markers' ? 'Discrete MAC' : item.dataset.label;
+                            return label + ': $' + Math.round(item.raw.y) + '/metric ton CO\u2082';
                         }
                     },
-                    filter: function(item) { return item.dataset.label !== 'P90' && item.dataset.label !== 'P10'; }
+                    filter: function(item) { return item.dataset._type !== 'band'; }
                 },
                 datalabels: { display: false },
-                annotation: { annotations: {} }
+                annotation: { annotations: annotations }
             }
         }
     });
 }
 
 // ============================================================================
-// SCROLL-TRIGGERED ANIMATIONS & LAZY CHART BUILDS
+// RENDER NO-REGRETS RESOURCE BARS
+// ============================================================================
+function renderNoRegrets(iso) {
+    var container = document.getElementById('nrResourceBars');
+    var summaryDiv = document.getElementById('nrSummary');
+    if (!container) return;
+
+    var crossover = computeCrossover(iso);
+    // Priority: NO_REGRETS_DATA (Step 3 DG) > OPTIMAL_TARGETS (step6) > client-side mix fallback
+    var nr = null;
+    var nrSource = '';
+    if (typeof NO_REGRETS_DATA !== 'undefined' && NO_REGRETS_DATA && NO_REGRETS_DATA[iso]) {
+        nr = NO_REGRETS_DATA[iso];
+        nrSource = 'dg_parquets';
+    } else {
+        // Try OPTIMAL_TARGETS no-regrets (different format — convert)
+        var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+        if (ot && ot[iso] && ot[iso].no_regrets) {
+            var otNr = ot[iso].no_regrets;
+            var converted = {};
+            Object.keys(otNr).forEach(function(res) {
+                var s = otNr[res];
+                converted[res] = {
+                    presenceRate: s.is_consensus ? 1.0 : 0.8,
+                    floor: s.floor_pct || 0,
+                    average: s.avg_pct || 0,
+                    ceiling: s.max_pct || 0,
+                    isNoRegrets: s.is_consensus || s.avg_pct > 3,
+                    isConsensus: s.is_consensus
+                };
+            });
+            nr = { analysis: converted, source: 'optimal_targets' };
+            nrSource = 'optimal_targets';
+        } else {
+            nr = getNoRegretsFromMixData(iso, crossover);
+            nrSource = 'medium_mix';
+        }
+    }
+
+    if (!nr || !nr.analysis) {
+        container.innerHTML = '<p style="color:rgba(15,23,42,0.4);font-size:0.85rem;">No resource mix data available for ' + iso + '.</p>';
+        summaryDiv.innerHTML = '';
+        return;
+    }
+
+    var html = '';
+    var maxVal = 0;
+    RESOURCE_DISPLAY.forEach(function(r) {
+        var a = nr.analysis[r.key];
+        if (a && a.average > maxVal) maxVal = a.average;
+    });
+    if (maxVal < 1) maxVal = 100;
+
+    var nrCount = 0;
+    RESOURCE_DISPLAY.forEach(function(r) {
+        var a = nr.analysis[r.key];
+        if (!a || a.average < 0.5) return;
+
+        var barWidth = Math.max(2, (a.average / maxVal) * 100);
+        var floorPos = maxVal > 0 ? (a.floor / maxVal) * 100 : 0;
+
+        var badgeClass = a.isConsensus ? 'nr-badge-yes' : (a.isNoRegrets ? 'nr-badge-yes' : (a.presenceRate >= 0.5 ? 'nr-badge-partial' : 'nr-badge-no'));
+        var badgeText = a.isConsensus ? 'No-Regrets' : (a.isNoRegrets ? 'No-Regrets' : (a.presenceRate >= 0.5 ? 'Likely' : 'Varies'));
+        if (a.isNoRegrets) nrCount++;
+
+        html += '<div class="nr-resource-row">' +
+            '<div class="nr-resource-label"><span class="nr-resource-swatch" style="background:' + r.color + ';"></span>' + r.label + '</div>' +
+            '<div class="nr-bar-container">' +
+                '<div class="nr-bar-fill" style="width:' + barWidth + '%;background:' + r.color + ';"></div>' +
+                (a.floor > 0.5 ? '<div class="nr-bar-floor" style="left:' + floorPos + '%;"></div>' : '') +
+                '<div class="nr-bar-value">' + Math.round(a.average) + '%</div>' +
+            '</div>' +
+            '<span class="nr-badge ' + badgeClass + '">' + badgeText + '</span>' +
+        '</div>';
+    });
+
+    container.innerHTML = html;
+
+    var rangeLabel = crossover ? (crossover.lower || '?') + '\u2013' + (crossover.upper || '?') + '%' : '\u2014';
+    summaryDiv.innerHTML =
+        '<span class="nr-summary-stat" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#16a34a;">' +
+        nrCount + ' no-regrets resource' + (nrCount !== 1 ? 's' : '') + ' in the ' + rangeLabel + ' range</span>' +
+        '<span style="display:block;margin-top:8px;font-size:0.72rem;color:rgba(15,23,42,0.4);">Source: ' +
+        (nrSource === 'dg_parquets' ? 'Step 3 DG results (' + (crossover ? crossover.lower + '\u2013' + crossover.upper : '') + '% range, 5,832+ scenarios)'
+            : nrSource === 'optimal_targets' ? 'Smooth MAC crossover analysis (medium-cost optimal)'
+            : 'Medium-cost optimal mix (fallback)') +
+        '</span>';
+}
+
+// ============================================================================
+// UPDATE DEEP-DIVE NARRATIVE
+// ============================================================================
+function updateNarrative(iso) {
+    var n = REGION_NARRATIVES[iso];
+    if (!n) return;
+    var c = REGION_COLORS[iso];
+
+    document.getElementById('ddNarrativeTag').textContent = iso;
+    document.getElementById('ddNarrativeTag').style.background = c + '18';
+    document.getElementById('ddNarrativeTag').style.color = c;
+    document.getElementById('ddNarrativeTitle').textContent = n.title;
+    document.getElementById('ddNarrativeText').textContent = n.text;
+
+    var stat = document.getElementById('ddNarrativeStat');
+    stat.textContent = n.stat;
+    stat.className = 'step-stat ' + n.statClass;
+}
+
+// ============================================================================
+// ISO SWITCHING
+// ============================================================================
+function switchISO(iso) {
+    activeISO = iso;
+    var c = REGION_COLORS[iso];
+
+    // Update tab state
+    document.querySelectorAll('.iso-tab').forEach(function(tab) {
+        tab.classList.toggle('active', tab.getAttribute('data-iso') === iso);
+    });
+
+    // Update chart title and legend
+    document.getElementById('deepdiveChartTitle').textContent = iso + ' (' + ISO_LABELS[iso] + ') \u2014 Marginal Abatement Cost vs. DAC';
+    var ddColor = document.getElementById('ddLegendColor');
+    if (ddColor) ddColor.style.background = c;
+    var ddBand = document.getElementById('ddLegendBand');
+    if (ddBand) ddBand.style.background = c + '35';
+
+    // Rebuild chart and panels
+    buildDeepDiveChart(iso);
+    renderNoRegrets(iso);
+    updateNarrative(iso);
+}
+
+// ============================================================================
+// SCROLL-TRIGGERED ANIMATIONS
 // ============================================================================
 function initObservers() {
-    // Fade-in observer for narrative cards and synthesis cards
     var fadeObs = new IntersectionObserver(function(entries) {
         entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('.region-step-card, .synthesis-card, .hero-text-block').forEach(function(el) { fadeObs.observe(el); });
-
-    // Lazy chart build observer for region sections
-    var chartObs = new IntersectionObserver(function(entries) {
-        entries.forEach(function(e) {
-            if (!e.isIntersecting) return;
-            var iso = e.target.getAttribute('data-region');
-            if (iso && !regionCharts[iso]) {
-                requestAnimationFrame(function() { buildRegionalChart(iso); });
-            }
-            chartObs.unobserve(e.target);
-        });
-    }, { threshold: 0.1, rootMargin: '200px 0px 200px 0px' });
-
-    document.querySelectorAll('.region-section').forEach(function(el) { chartObs.observe(el); });
+    document.querySelectorAll('.region-step-card, .synthesis-card, .hero-text-block, .nr-panel').forEach(function(el) {
+        fadeObs.observe(el);
+    });
 }
 
 // ============================================================================
 // INIT
 // ============================================================================
 document.addEventListener('DOMContentLoaded', function() {
-    // Build hero overview chart
+    populateTiles();
     buildHeroChart();
-
-    // Start scroll-triggered observers (lazy chart builds + fade-ins)
+    switchISO('ERCOT');
     initObservers();
 });
 </script>

@@ -7,7 +7,7 @@
 // ============================================================================
 
 // --- Thresholds (from optimizer) ---
-const THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100];
+const THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
 
 // --- Average MAC ($/ton CO2) ---
 // Medium = monotonic envelope of medium scenario
@@ -172,7 +172,7 @@ const MARGINAL_MAC_DATA = {
 // --- Effective Cost per Useful MWh ($/MWh) ---
 // Source: Step 2 tranche-repriced medium key (9-dim) + postprocess corrections
 // Monotonicity enforced (lower thresholds <= higher thresholds)
-// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 const EFFECTIVE_COST_DATA = {
     CAISO:  [33.7, 38.5, 41.9, 44.4, 47.4, 52.1, 55.7, 61.4, 62.9, 66.8, 68.2, 72.2, 77.9, 84.3, 89.3, 89.3, 89.3],
     ERCOT:  [10.7, 13.7, 16.4, 18.6, 20.7, 23.6, 26.3, 30.0, 30.9, 33.9, 36.8, 41.5, 46.6, 47.6, 50.3, null, 50.3],
@@ -186,7 +186,7 @@ const EFFECTIVE_COST_DATA = {
 // --- Average System Cost ($/MWh) by threshold ---
 // Source: P10/Median/P90 of total_system_cost_per_mwh across 324 sensitivity scenarios
 // Includes clean procurement + gas backup (existing + new-build)
-// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 const SYSTEM_COST_DATA = {
     medium: {
         CAISO:  [39.38, 42.76, 45.66, 47.79, 50.22, 54.1, 55.02, 59.16, 61.17, 64.77, 66.14, 69.53, 74.19, 79.56, 91.06, 91.06, 91.06],
@@ -273,7 +273,7 @@ function getAllBenchmarks(state) {
 
 // --- Resource Mix (% of demand) — medium scenario ---
 // Source: overprocure_results.json (Step 2 repriced)
-// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 // battery/ldes = dispatch % of demand; procurement = over-procurement %
 const RESOURCE_MIX_DATA = {
     CAISO: {
@@ -2799,7 +2799,7 @@ const COMPRESSED_DAY_DATA = {
 
 // --- CF Tranche Split (uprate vs new-build) — medium scenario ---
 // Source: overprocure_results.json tranche_costs field
-// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 const CF_TRANCHE_DATA = {
     CAISO: {
         new_cf_twh:        [1.12, 1.12, 0.784, 2.016, 8.962, 12.546, 11.426, 36.518, 92.707, 79.086, 140.831, 142.489, 161.084, 187.297, 75.501, 75.501, 75.501],
@@ -3021,7 +3021,7 @@ const WYN_RESOURCE_COSTS = {
 
 // --- Gas Capacity Backup & Resource Adequacy --- 
 // Source: step4_postprocess.py compute_gas_capacity_and_ra()
-// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 100]
+// Indices match THRESHOLDS array: [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 // total_system_cost = clean_cost + gas_backup_cost (existing+new)
 // incremental_with_new_gas = clean_cost + new-build gas cost only
 const GAS_BACKUP_DATA = {
@@ -3299,11 +3299,11 @@ const SBTI_MILESTONES = [
     { year: 2035, threshold: 70, label: 'SBTi ~70%' },
     { year: 2040, threshold: 90, label: 'SBTi 90%' },
     { year: 2045, threshold: 95, label: 'SBTi ~95%' },
-    { year: 2050, threshold: 100, label: 'Net-Zero' },
+    { year: 2050, threshold: 99.99, label: 'Net-Zero' },
 ];
 
 // Full threshold-year mapping: each of 15 thresholds paired with its target year
-// Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, 100%→2050)
+// Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, ≥99.99%→2050)
 const THRESHOLD_TARGET_YEARS = {
     50: 2030,
     55: 2031,
@@ -3321,17 +3321,18 @@ const THRESHOLD_TARGET_YEARS = {
     99: 2049,
     99.5: 2049,
     99.9: 2050,
-    100: 2050,
+    99.99: 2050,
 };
 
 // DAC cost trajectories ($/ton CO₂ net DACCS, 2024 USD)
-// Optimistic: 15-20% learning rate, R&D breakthroughs, <$20/MWh renewables
-// Central: 10-12% learning rate, moderate policy, $30-40/MWh renewables
-// Conservative: 5-8% learning rate, limited policy, $40-60/MWh renewables
+// Anchored to 2025 actual costs: Climeworks ~$1,000, market avg ~$600-$1,500/tCO₂
+// Optimistic: IEAGHG NOAK ($230 by 2035), Sievert et al. Joule 2024 learning curves
+// Central: Belfer Center (Harvard) mid-range, Climeworks roadmap trajectory
+// Conservative: Slow scale-up, limited policy support, high energy input costs
 const DAC_TRAJECTORY = {
-    optimistic: { 2025: 400, 2030: 200, 2035: 150, 2040: 115, 2045: 90, 2050: 75 },
-    central: { 2025: 600, 2030: 350, 2035: 275, 2040: 225, 2045: 200, 2050: 180 },
-    conservative: { 2025: 800, 2030: 550, 2035: 450, 2040: 375, 2045: 325, 2050: 300 }
+    optimistic: { 2025: 600, 2030: 350, 2035: 230, 2040: 175, 2045: 130, 2050: 100 },
+    central: { 2025: 800, 2030: 500, 2035: 375, 2040: 300, 2045: 250, 2050: 200 },
+    conservative: { 2025: 1100, 2030: 750, 2035: 550, 2040: 450, 2045: 375, 2050: 300 }
 };
 
 // Interpolate DAC cost for any threshold via SBTi year mapping
@@ -3392,7 +3393,7 @@ const GROWTH_COUNTERFACTUAL = {
         "99": { year: 2049, Low: { twh: 88.7, mt: 31.06, gf: 1.3961 }, Medium: { twh: 127.9, mt: 44.78, gf: 1.571 }, High: { twh: 181.2, mt: 63.42, gf: 1.8087 } },
         "99.5": { year: 2049, Low: { twh: 88.7, mt: 31.06, gf: 1.3961 }, Medium: { twh: 127.9, mt: 44.78, gf: 1.571 }, High: { twh: 181.2, mt: 63.42, gf: 1.8087 } },
         "99.9": { year: 2050, Low: { twh: 93.1, mt: 32.59, gf: 1.4156 }, Medium: { twh: 134.6, mt: 47.12, gf: 1.6009 }, High: { twh: 191.3, mt: 66.96, gf: 1.8539 } },
-        "100": { year: 2050, Low: { twh: 93.1, mt: 32.59, gf: 1.4156 }, Medium: { twh: 134.6, mt: 47.12, gf: 1.6009 }, High: { twh: 191.3, mt: 66.96, gf: 1.8539 } }
+        "99.99": { year: 2050, Low: { twh: 93.1, mt: 32.59, gf: 1.4156 }, Medium: { twh: 134.6, mt: 47.12, gf: 1.6009 }, High: { twh: 191.3, mt: 66.96, gf: 1.8539 } }
     },
     ERCOT: {
         "50": { year: 2030, Low: { twh: 50.8, mt: 17.78, gf: 1.1041 }, Medium: { twh: 91.6, mt: 32.06, gf: 1.1877 }, High: { twh: 149.8, mt: 52.43, gf: 1.307 } },
@@ -3411,7 +3412,7 @@ const GROWTH_COUNTERFACTUAL = {
         "99": { year: 2049, Low: { twh: 296.9, mt: 103.93, gf: 1.6084 }, Medium: { twh: 626.3, mt: 219.2, gf: 2.2833 }, High: { twh: 1276.0, mt: 446.59, gf: 3.6146 } },
         "99.5": { year: 2049, Low: { twh: 296.9, mt: 103.93, gf: 1.6084 }, Medium: { twh: 626.3, mt: 219.2, gf: 2.2833 }, High: { twh: 1276.0, mt: 446.59, gf: 3.6146 } },
         "99.9": { year: 2050, Low: { twh: 312.6, mt: 109.42, gf: 1.6406 }, Medium: { twh: 665.3, mt: 232.85, gf: 2.3632 }, High: { twh: 1373.0, mt: 480.55, gf: 3.8134 } },
-        "100": { year: 2050, Low: { twh: 312.6, mt: 109.42, gf: 1.6406 }, Medium: { twh: 665.3, mt: 232.85, gf: 2.3632 }, High: { twh: 1373.0, mt: 480.55, gf: 3.8134 } }
+        "99.99": { year: 2050, Low: { twh: 312.6, mt: 109.42, gf: 1.6406 }, Medium: { twh: 665.3, mt: 232.85, gf: 2.3632 }, High: { twh: 1373.0, mt: 480.55, gf: 3.8134 } }
     },
     PJM: {
         "50": { year: 2030, Low: { twh: 65.2, mt: 22.81, gf: 1.0773 }, Medium: { twh: 106.2, mt: 37.16, gf: 1.1259 }, High: { twh: 163.1, mt: 57.1, gf: 1.1934 } },
@@ -3430,7 +3431,7 @@ const GROWTH_COUNTERFACTUAL = {
         "99": { year: 2049, Low: { twh: 362.2, mt: 126.77, gf: 1.4295 }, Medium: { twh: 646.7, mt: 226.35, gf: 1.7668 }, High: { twh: 1127.4, mt: 394.6, gf: 2.3369 } },
         "99.5": { year: 2049, Low: { twh: 362.2, mt: 126.77, gf: 1.4295 }, Medium: { twh: 646.7, mt: 226.35, gf: 1.7668 }, High: { twh: 1127.4, mt: 394.6, gf: 2.3369 } },
         "99.9": { year: 2050, Low: { twh: 380.3, mt: 133.1, gf: 1.4509 }, Medium: { twh: 682.5, mt: 238.86, gf: 1.8093 }, High: { twh: 1198.4, mt: 419.43, gf: 2.421 } },
-        "100": { year: 2050, Low: { twh: 380.3, mt: 133.1, gf: 1.4509 }, Medium: { twh: 682.5, mt: 238.86, gf: 1.8093 }, High: { twh: 1198.4, mt: 419.43, gf: 2.421 } }
+        "99.99": { year: 2050, Low: { twh: 380.3, mt: 133.1, gf: 1.4509 }, Medium: { twh: 682.5, mt: 238.86, gf: 1.8093 }, High: { twh: 1198.4, mt: 419.43, gf: 2.421 } }
     },
     NYISO: {
         "50": { year: 2030, Low: { twh: 10.1, mt: 3.54, gf: 1.0667 }, Medium: { twh: 15.8, mt: 5.52, gf: 1.1041 }, High: { twh: 36.4, mt: 12.75, gf: 1.2402 } },
@@ -3449,7 +3450,7 @@ const GROWTH_COUNTERFACTUAL = {
         "99": { year: 2049, Low: { twh: 55.1, mt: 19.28, gf: 1.3634 }, Medium: { twh: 92.2, mt: 32.28, gf: 1.6084 }, High: { twh: 274.5, mt: 96.07, gf: 2.8107 } },
         "99.5": { year: 2049, Low: { twh: 55.1, mt: 19.28, gf: 1.3634 }, Medium: { twh: 92.2, mt: 32.28, gf: 1.6084 }, High: { twh: 274.5, mt: 96.07, gf: 2.8107 } },
         "99.9": { year: 2050, Low: { twh: 57.8, mt: 20.22, gf: 1.3811 }, Medium: { twh: 97.1, mt: 33.99, gf: 1.6406 }, High: { twh: 293.2, mt: 102.64, gf: 2.9344 } },
-        "100": { year: 2050, Low: { twh: 57.8, mt: 20.22, gf: 1.3811 }, Medium: { twh: 97.1, mt: 33.99, gf: 1.6406 }, High: { twh: 293.2, mt: 102.64, gf: 2.9344 } }
+        "99.99": { year: 2050, Low: { twh: 57.8, mt: 20.22, gf: 1.3811 }, Medium: { twh: 97.1, mt: 33.99, gf: 1.6406 }, High: { twh: 293.2, mt: 102.64, gf: 2.9344 } }
     },
     NEISO: {
         "50": { year: 2030, Low: { twh: 5.3, mt: 1.85, gf: 1.0458 }, Medium: { twh: 10.8, mt: 3.77, gf: 1.0933 }, High: { twh: 17.7, mt: 6.2, gf: 1.1537 } },
@@ -3468,7 +3469,7 @@ const GROWTH_COUNTERFACTUAL = {
         "99": { year: 2049, Low: { twh: 27.7, mt: 9.68, gf: 1.2399 }, Medium: { twh: 61.6, mt: 21.57, gf: 1.5344 }, High: { twh: 113.7, mt: 39.8, gf: 1.986 } },
         "99.5": { year: 2049, Low: { twh: 27.7, mt: 9.68, gf: 1.2399 }, Medium: { twh: 61.6, mt: 21.57, gf: 1.5344 }, High: { twh: 113.7, mt: 39.8, gf: 1.986 } },
         "99.9": { year: 2050, Low: { twh: 29.0, mt: 10.13, gf: 1.2511 }, Medium: { twh: 64.8, mt: 22.69, gf: 1.562 }, High: { twh: 120.4, mt: 42.13, gf: 2.0435 } },
-        "100": { year: 2050, Low: { twh: 29.0, mt: 10.13, gf: 1.2511 }, Medium: { twh: 64.8, mt: 22.69, gf: 1.562 }, High: { twh: 120.4, mt: 42.13, gf: 2.0435 } }
+        "99.99": { year: 2050, Low: { twh: 29.0, mt: 10.13, gf: 1.2511 }, Medium: { twh: 64.8, mt: 22.69, gf: 1.562 }, High: { twh: 120.4, mt: 42.13, gf: 2.0435 } }
     },
     MISO: {
         "50": { year: 2030, Low: { twh: 0.0, mt: 0.0, gf: 1.1041 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1041 }, High: { twh: 0.0, mt: 0.0, gf: 1.1041 } },
@@ -3487,7 +3488,7 @@ const GROWTH_COUNTERFACTUAL = {
         "99": { year: 2049, Low: { twh: 0.0, mt: 0.0, gf: 1.6084 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6084 }, High: { twh: 0.0, mt: 0.0, gf: 1.6084 } },
         "99.5": { year: 2049, Low: { twh: 0.0, mt: 0.0, gf: 1.6084 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6084 }, High: { twh: 0.0, mt: 0.0, gf: 1.6084 } },
         "99.9": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } },
-        "100": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } }
+        "99.99": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } }
     },
     SPP: {
         "50": { year: 2030, Low: { twh: 0.0, mt: 0.0, gf: 1.1041 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1041 }, High: { twh: 0.0, mt: 0.0, gf: 1.1041 } },
@@ -3506,7 +3507,7 @@ const GROWTH_COUNTERFACTUAL = {
         "99": { year: 2049, Low: { twh: 0.0, mt: 0.0, gf: 1.6084 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6084 }, High: { twh: 0.0, mt: 0.0, gf: 1.6084 } },
         "99.5": { year: 2049, Low: { twh: 0.0, mt: 0.0, gf: 1.6084 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6084 }, High: { twh: 0.0, mt: 0.0, gf: 1.6084 } },
         "99.9": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } },
-        "100": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } }
+        "99.99": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } }
     }
 };
 
@@ -11688,7 +11689,7 @@ const FEASIBLE_MIXES = {
             [42,38,11,0,9,280,100.0,0,0,0],
             [51,22,18,0,9,230,100.0,0,0,0]
         ],
-        "100": [
+        "99.99": [
             [7,23,61,0,9,250,100.0,0,0,0],
             [7,31,53,0,9,270,100.0,0,0,0],
             [7,32,52,0,9,270,100.0,1,0,0],
@@ -19291,7 +19292,7 @@ const FEASIBLE_MIXES = {
         ],
         "99.9": [
         ],
-        "100": [
+        "99.99": [
             [9,50,41,0,0,140,99.5,0,0,2],
             [17,51,32,0,0,135,99.5,0,0,0],
             [18,51,31,0,0,140,99.5,0,0,2]
@@ -27738,7 +27739,7 @@ const FEASIBLE_MIXES = {
             [92,4,3,0,1,160,100.0,0,0,0],
             [94,2,3,0,1,160,100.0,0,0,0]
         ],
-        "100": [
+        "99.99": [
             [32,7,60,0,1,310,100.0,0,0,0],
             [32,18,49,0,1,310,100.0,0,0,0],
             [32,29,38,0,1,330,100.0,0,0,0],
@@ -35252,7 +35253,7 @@ const FEASIBLE_MIXES = {
         ],
         "99.9": [
         ],
-        "100": [
+        "99.99": [
         ]
     },
     NEISO: {
@@ -43479,7 +43480,7 @@ const FEASIBLE_MIXES = {
             [85,3,8,0,4,180,100.0,0,0,0],
             [92,1,3,0,4,170,100.0,0,0,0]
         ],
-        "100": [
+        "99.99": [
             [23,25,48,0,4,170,100.0,0,0,0],
             [23,25,48,0,4,190,100.0,1,0,0],
             [23,26,47,0,4,190,100.0,0,2,0],
@@ -51981,7 +51982,7 @@ const FEASIBLE_MIXES = {
             [80,2,17,0,1,135,99.5,0,0,0],
             [83,2,14,0,1,135,99.7,0,0,0]
         ],
-        "100": [
+        "99.99": [
             [13,39,47,0,1,170,99.9,0,2,0],
             [13,41,45,0,1,170,99.9,0,0,0],
             [13,45,41,0,1,170,99.9,0,0,0],
@@ -60421,7 +60422,7 @@ const FEASIBLE_MIXES = {
             [51,3,42,0,4,190,100.0,0,0,0],
             [56,1,39,0,4,190,100.0,0,0,0]
         ],
-        "100": [
+        "99.99": [
             [5,0,91,0,4,240,100.0,0,0,0],
             [5,0,91,0,4,250,100.0,0,3,0],
             [5,0,91,0,4,250,100.0,1,0,0],

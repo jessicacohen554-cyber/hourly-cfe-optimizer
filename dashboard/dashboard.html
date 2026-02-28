@@ -3095,7 +3095,7 @@ body {
         This interactive dashboard models the cost of matching clean energy supply to electricity demand
         on an <strong>hourly basis</strong> across five major U.S. grid regions. Use the sensitivity controls
         below to explore how changes in renewable, storage, and firm generation costs reshape the optimal
-        procurement portfolio at every matching threshold from 50% to 100%. The optimizer co-optimizes
+        procurement portfolio at every matching threshold from 50% to &ge;99.99%. The optimizer co-optimizes
         resource mix and cost simultaneously &mdash; different cost assumptions produce fundamentally different
         optimal strategies.
     </p>
@@ -3121,7 +3121,7 @@ body {
         <p class="dashboard-intro-text">
             Use the controls below to explore how clean energy procurement costs and resource mixes change
             across five major U.S. power markets. Select a <strong>region</strong> to see its unique grid profile,
-            then adjust the <strong>hourly match target</strong> to compare portfolios from 50% to 100% matching.
+            then adjust the <strong>hourly match target</strong> to compare portfolios from 50% to &ge;99.99% matching.
             The dashboard updates in real time &mdash; showing the optimal resource mix, cost breakdown,
             peak capacity needs, and curtailment for each scenario. Scroll past the dashboard to read the
             full narrative analysis.
@@ -3601,7 +3601,7 @@ const RESOURCE_LABELS = {
 
 // ---- SBTi year ↔ threshold mapping ----
 // Canonical threshold→year mapping aligned to SBTi milestones.
-// Anchors: 50%→2030, 70%→2035, 90%→2040, 95%→2045, 100%→2050.
+// Anchors: 50%→2030, 70%→2035, 90%→2040, 95%→2045, ≥99.99%→2050.
 // Intermediate thresholds interpolated per SPEC.md decision (Feb 19, 2026).
 // THRESHOLD_TARGET_YEARS is defined in shared-data.js (single source of truth)
 function thresholdToSbtiYear(threshold) {
@@ -4412,7 +4412,7 @@ function initDashboard() {
         regionSel.appendChild(opt);
     });
 
-    // Populate threshold dropdown — 15 modeled thresholds (50-100%)
+    // Populate threshold dropdown — modeled thresholds (50-≥99.99%)
     const threshSel = document.getElementById('thresholdSelect');
     const FULL_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
     FULL_THRESHOLDS.forEach(t => {
@@ -5495,7 +5495,7 @@ function refreshNarrativeStats() {
         </div>
         ${has100 ? `
         <div class="story-stat-card">
-            <div class="story-stat-label">100% Match Cost</div>
+            <div class="story-stat-label">&ge;99.99% Match Cost</div>
             <div class="story-stat-value" style="color:#C75B4A;">$${avgCost100.toFixed(0)}</div>
             <div class="story-stat-sub">avg $/MWh across ISOs${cfTag}</div>
         </div>` : `
@@ -5507,7 +5507,7 @@ function refreshNarrativeStats() {
         <div class="story-stat-card">
             <div class="story-stat-label">Cost Multiplier</div>
             <div class="story-stat-value" style="color:var(--navy);">${fullMultiplier.toFixed(1)}x</div>
-            <div class="story-stat-sub">${has100 ? '100%' : '99%'} vs 75% cost ratio</div>
+            <div class="story-stat-sub">${has100 ? '≥99.99%' : '99%'} vs 75% cost ratio</div>
         </div>
     `;
 
@@ -5532,11 +5532,11 @@ let currentMixRegion = 'average';
 
 const MIX_REGION_INSIGHTS = {
     average: '<strong>Regional Variation:</strong> Wind-rich ERCOT sustains wind-heavy mixes to 95%+, while PJM and NEISO require a pivot to nuclear/clean firm at lower thresholds.',
-    CAISO: '<strong>CAISO (California):</strong> Leverages strong solar (35% at 75%) and high hydro cap (30%). Clean firm rises from 10% to 43% at 100%. Solar stays relevant throughout due to excellent irradiance.',
-    ERCOT: '<strong>ERCOT (Texas):</strong> Wind dominates at 65% through 95% matching thanks to $40/MWh wind LCOE. The 95%→100% transition is the most dramatic of any region: clean firm surges +49pp while wind drops 40pp.',
-    PJM: '<strong>PJM (Mid-Atlantic):</strong> Existing 32% nuclear fleet provides a massive head start. The mix holds steady from 75% to 90%, then jumps to 60% clean firm at 95%. PJM reaches 68% clean firm at 100%.',
-    NYISO: '<strong>NYISO (New York):</strong> Hydro stays locked at 40% across all targets. Uses zero solar until 100%. The simplest mix — essentially clean firm + hydro + wind — reflects the region\'s unique resource endowment.',
-    NEISO: '<strong>NEISO (New England):</strong> The most expensive region shows the sharpest shift. Clean firm reaches 78% at 100% — the highest of any region. Hydro drops from 30% to 16% and wind is eliminated entirely at 100%.',
+    CAISO: '<strong>CAISO (California):</strong> Leverages strong solar (35% at 75%) and high hydro cap (30%). Clean firm rises from 10% to 43% at ≥99.99%. Solar stays relevant throughout due to excellent irradiance.',
+    ERCOT: '<strong>ERCOT (Texas):</strong> Wind dominates at 65% through 95% matching thanks to $40/MWh wind LCOE. The 95%→≥99.99% transition is the most dramatic of any region: clean firm surges +49pp while wind drops 40pp.',
+    PJM: '<strong>PJM (Mid-Atlantic):</strong> Existing 32% nuclear fleet provides a massive head start. The mix holds steady from 75% to 90%, then jumps to 60% clean firm at 95%. PJM reaches 68% clean firm at ≥99.99%.',
+    NYISO: '<strong>NYISO (New York):</strong> Hydro stays locked at 40% across all targets. Uses zero solar until ≥99.99%. The simplest mix — essentially clean firm + hydro + wind — reflects the region\'s unique resource endowment.',
+    NEISO: '<strong>NEISO (New England):</strong> The most expensive region shows the sharpest shift. Clean firm reaches 78% at ≥99.99% — the highest of any region. Hydro drops from 30% to 16% and wind is eliminated entirely at ≥99.99%.',
     MISO: '<strong>MISO (Midwest):</strong> With the largest wind fleet in the US and growing solar, MISO benefits from abundant low-cost renewables but faces transmission constraints across its vast territory.',
     SPP: '<strong>SPP (Central):</strong> SPP leads in wind penetration (37% of demand), making it the lowest-cost region for renewable-heavy strategies, but clean firm resources are limited.'
 };
@@ -5979,11 +5979,11 @@ let incrementalMixChart = null;
 let currentIncrementalRegion = 'CAISO';
 
 const INCREMENTAL_INSIGHTS = {
-    CAISO: '<strong>CAISO:</strong> Starts with 48.5% existing clean (solar-heavy). New build is modest through 90%, then accelerates sharply — at 100%, new clean firm alone exceeds 53% of demand, more than all existing clean combined.',
-    ERCOT: '<strong>ERCOT:</strong> Only 46.1% existing clean, mostly wind. New wind additions drive early targets cheaply. But at 100%, new clean firm (47%) dwarfs the entire existing fleet — a near-complete rebuild of the generation stack.',
-    PJM: '<strong>PJM:</strong> The 32% existing nuclear fleet gives PJM a massive head start. New build stays minimal through 90% — then jumps as clean firm additions pile on. Even so, PJM needs less new build at 100% than most regions.',
-    NYISO: '<strong>NYISO:</strong> Existing hydro (16%) and nuclear (18%) cover early targets efficiently. New build stays modest through 95%, then explodes at 100% with +34% new hydro and +54% new clean firm — the sharpest final step.',
-    NEISO: '<strong>NEISO:</strong> Starts with 33.5% existing clean but it\'s spread thin across resources. New clean firm dominates at every target level, reaching 65% of demand at 100% — the highest new-build intensity of any region.',
+    CAISO: '<strong>CAISO:</strong> Starts with 48.5% existing clean (solar-heavy). New build is modest through 90%, then accelerates sharply — at ≥99.99%, new clean firm alone exceeds 53% of demand, more than all existing clean combined.',
+    ERCOT: '<strong>ERCOT:</strong> Only 46.1% existing clean, mostly wind. New wind additions drive early targets cheaply. But at ≥99.99%, new clean firm (47%) dwarfs the entire existing fleet — a near-complete rebuild of the generation stack.',
+    PJM: '<strong>PJM:</strong> The 32% existing nuclear fleet gives PJM a massive head start. New build stays minimal through 90% — then jumps as clean firm additions pile on. Even so, PJM needs less new build at ≥99.99% than most regions.',
+    NYISO: '<strong>NYISO:</strong> Existing hydro (16%) and nuclear (18%) cover early targets efficiently. New build stays modest through 95%, then explodes at ≥99.99% with +34% new hydro and +54% new clean firm — the sharpest final step.',
+    NEISO: '<strong>NEISO:</strong> Starts with 33.5% existing clean but it\'s spread thin across resources. New clean firm dominates at every target level, reaching 65% of demand at ≥99.99% — the highest new-build intensity of any region.',
     MISO: '<strong>MISO (Midwest):</strong> With the largest wind fleet in the US and growing solar, MISO benefits from abundant low-cost renewables but faces transmission constraints across its vast territory.',
     SPP: '<strong>SPP (Central):</strong> SPP leads in wind penetration (37% of demand), making it the lowest-cost region for renewable-heavy strategies, but clean firm resources are limited.'
 };
@@ -6647,9 +6647,9 @@ function highlightCostStep(stepName) {
             };
         }
     } else if (stepName === 'cost-99') {
-        // Highlight 99-100% zone — the steep climb
+        // Highlight 99-≥99.99% zone — the steep climb
         const idx99 = findIdx(99);
-        const idx100 = findIdx(100);
+        const idx100 = findIdx(99.99);
         const topIdx = idx100 >= 0 ? idx100 : idx99;
         if (idx99 >= 0) {
             colors[idx99] = '#EF4444';
@@ -6786,7 +6786,7 @@ function getStepAnnotations(stepName, avgCosts) {
             annotations['zone'] = { type: 'box', xMin: 74, xMax: 91, backgroundColor: 'rgba(239,68,68,0.04)', borderColor: 'transparent' };
         }
     } else if (stepName === 'cost-99') {
-        const idx99 = findIdx(99), idx100 = findIdx(100);
+        const idx99 = findIdx(99), idx100 = findIdx(99.99);
         const topIdx = idx100 >= 0 ? idx100 : idx99;
         if (idx99 >= 0) {
             colors[idx99] = '#EF4444'; radii[idx99] = 8;

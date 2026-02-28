@@ -1,0 +1,23 @@
+{
+  "postprocessing": {
+    "applied": true,
+    "isos_processed": [
+      "CAISO",
+      "ERCOT",
+      "PJM",
+      "NEISO",
+      "MISO"
+    ],
+    "corrections": {
+      "neiso_gas_adjustments": 122472,
+      "no45q_overlays": 734832,
+      "gas_ra_computed": 857304,
+      "dg_rows_processed": 2571912
+    },
+    "parameters": {
+      "neiso_ccs_gas_adder": 13.13,
+      "neiso_wholesale_adder": 4.0,
+      "resource_adequacy_margin": 0.15
+    }
+  }
+}

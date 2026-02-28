@@ -45,7 +45,7 @@ STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-parquets')
 
 # Target thresholds — 10-40 added for Track 2/3 greenfield, 50-100 for all tracks
 # Must match Step 1 THRESHOLDS and Step 3 OUTPUT_THRESHOLDS
-TARGET_THRESHOLDS = [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9, 100.0]
+TARGET_THRESHOLDS = [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9, 99.99]
 TARGET_THRESHOLD_SET = set(TARGET_THRESHOLDS)
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
@@ -187,18 +187,23 @@ def scan_iso_files(target_isos=None):
 # Keeps peak memory under ~3GB during dedup (lexsort + sorted views).
 INCREMENTAL_DEDUP_THRESHOLD = 5_000_000
 
+# Files with more gated rows than this get deduped BEFORE accumulation.
+# This prevents individual monster files (e.g., SPP_t99.5 with 23M rows)
+# from forcing a lexsort on 25M+ rows when merged with the accumulator.
+PER_FILE_DEDUP_THRESHOLD = 3_000_000
+
 
 def load_and_process_iso(iso, fnames):
     """Load, gate, and deduplicate a single ISO's threshold files incrementally.
 
-    Instead of loading all files into memory at once (which OOMs on large ISOs
-    like PJM with 63M+ rows), this streams each file: normalize → gate → drop
-    threshold column → accumulate → periodically dedup to bound memory.
+    Two-level dedup strategy to bound peak memory:
+      1) Per-file dedup: files with >3M gated rows get deduped before accumulation,
+         reducing 22M rows → ~1-2M unique mixes in-place.
+      2) Accumulator dedup: when total accumulated exceeds 5M, dedup the accumulator.
 
-    The incremental dedup is correct because "keep max score per unique mix"
-    is associative — deduplicating a partial accumulation then merging more
-    rows and deduplicating again produces the same result as a single global
-    dedup.
+    Both levels are correct because "keep max score per unique mix" is
+    associative — deduplicating partial results then merging more rows and
+    deduplicating again produces the same result as a single global dedup.
 
     Args:
         iso: ISO name (e.g., 'PJM')
@@ -237,6 +242,20 @@ def load_and_process_iso(iso, fnames):
         # Drop threshold column — not needed after gating
         keep_cols = [c for c in result_col_names if c in t.column_names]
         t = t.select(keep_cols)
+
+        # Per-file dedup for large files: dedup BEFORE accumulating to avoid
+        # a lexsort on 25M+ rows when the file joins the accumulator.
+        # E.g., SPP_t99.5 has 23M rows → dedup to ~1-2M unique mixes first.
+        if t.num_rows > PER_FILE_DEDUP_THRESHOLD:
+            pre_dedup = t.num_rows
+            arrays = {}
+            for col in resource_cols + STORAGE_COLS + ['hourly_match_score']:
+                arrays[col] = t.column(col).to_numpy()
+            keep_idx = deduplicate_mixes(arrays, resource_cols)
+            t = t.take(keep_idx)
+            del arrays
+            n_incremental_dedups += 1
+            print(f"    Per-file dedup {fname}: {pre_dedup:,} -> {t.num_rows:,}")
 
         # Accumulate
         if accumulated is None:

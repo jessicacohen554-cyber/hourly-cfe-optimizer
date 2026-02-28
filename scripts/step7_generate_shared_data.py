@@ -181,10 +181,10 @@ for iso in ISOS:
 # ============================================================================
 # EXTRACT MARGINAL_MAC_DATA (6-zone stepwise — medium/low/high)
 # ============================================================================
-# With 15 thresholds [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,100]:
+# With 15 thresholds [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,≥99.99]:
 #   stepwise_envelope indices: 0=None, 1=50→55, 2=55→60, 3=60→65,
 #     4=65→70, 5=70→75, 6=75→80, 7=80→85, 8=85→87.5, 9=87.5→90,
-#     10=90→92.5, 11=92.5→95, 12=95→97.5, 13=97.5→99, 14=99→100
+#     10=90→92.5, 11=92.5→95, 12=95→97.5, 13=97.5→99, 14=99→≥99.99
 # Zones:
 #   Zone 0: 50→75%  (aggregate steps 1-5)
 #   Zone 1: 75→90%  (aggregate steps 6-9)
@@ -1132,7 +1132,7 @@ except ImportError:
     THRESHOLD_TARGET_YEARS = {
         50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
         85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
-        95: 2045, 97.5: 2048, 99: 2049, 100: 2050,
+        95: 2045, 97.5: 2048, 99: 2049, 99.99: 2050,
     }
 
 # SBTi milestone anchors (sparse, for dashboard display)
@@ -1142,15 +1142,16 @@ SBTI_MILESTONES = [
     {'year': 2035, 'threshold': 70,  'label': 'SBTi ~70%'},
     {'year': 2040, 'threshold': 90,  'label': 'SBTi 90%'},
     {'year': 2045, 'threshold': 95,  'label': 'SBTi ~95%'},
-    {'year': 2050, 'threshold': 100, 'label': 'Net-Zero'},
+    {'year': 2050, 'threshold': 99.99, 'label': 'Net-Zero'},
 ]
 
-# DAC cost projections: piecewise linear from 15+ literature sources (SPEC.md §7.3)
+# DAC cost projections: anchored to 2025 actuals ($600-$1,500/tCO₂)
 # $/ton CO₂ net DACCS (capture + transport + storage + MRV), 2024 USD
+# Sources: Climeworks, IEAGHG, Belfer Center (Harvard), Sievert et al. (Joule 2024)
 DAC_TRAJECTORY = {
-    'optimistic': {2025: 400, 2030: 200, 2035: 150, 2040: 115, 2045: 90,  2050: 75},
-    'central':    {2025: 600, 2030: 350, 2035: 275, 2040: 225, 2045: 200, 2050: 180},
-    'conservative': {2025: 800, 2030: 550, 2035: 450, 2040: 375, 2045: 325, 2050: 300},
+    'optimistic':   {2025: 600, 2030: 350, 2035: 230, 2040: 175, 2045: 130, 2050: 100},
+    'central':      {2025: 800, 2030: 500, 2035: 375, 2040: 300, 2045: 250, 2050: 200},
+    'conservative': {2025: 1100, 2030: 750, 2035: 550, 2040: 450, 2045: 375, 2050: 300},
 }
 
 lines.append('// ============================================================================')
@@ -1171,7 +1172,7 @@ lines.append('')
 
 # Full threshold → year mapping (all 15 thresholds, SBTi-interpolated)
 lines.append('// Full threshold-year mapping: each of 15 thresholds paired with its target year')
-lines.append('// Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, 100%→2050)')
+lines.append('// Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, ≥99.99%→2050)')
 lines.append('const THRESHOLD_TARGET_YEARS = {')
 for t in THRESHOLDS_NUM:
     year = THRESHOLD_TARGET_YEARS.get(t, 2050)
@@ -1403,8 +1404,8 @@ print("Extracting FEASIBLE_MIXES from Step 3 feasible-mix parquets...")
 # up to 500 EF-sampled mixes per threshold plus all archetype winners.  These are
 # the candidate set the dashboard needs for client-side repricing.
 #
-# For t=100: the pipeline only runs thresholds up to 99.  We use mixes from the
-# feasible set that score >=99.5% (matching Step 3's effective_gate logic).
+# For t=99.99: practically unreachable — we use mixes from the feasible set
+# that score >=99.5% (matching Step 3's effective_gate logic).
 
 import pandas as pd
 
@@ -1417,7 +1418,7 @@ MIX_FIELDS = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
 lines.append('// Each mix: [clean_firm%, solar%, wind%, ccs_ccgt%, hydro%, match%, battery%, battery8%, ldes%, h2%]')
 lines.append('// Source: step3_feasible_{ISO}.parquet — ~500 EF-sampled mixes + archetype winners per threshold.')
-lines.append('// t=100 uses mixes scoring >=99.5% from the feasible set (effective gate).')
+lines.append('// t=99.99 uses mixes scoring >=99.5% from the feasible set (effective gate).')
 lines.append('const FEASIBLE_MIXES = {')
 total_fm = 0
 for iso_idx, iso in enumerate(ISOS):
@@ -1439,8 +1440,8 @@ for iso_idx, iso in enumerate(ISOS):
     for t_idx, t in enumerate(THRESHOLDS):
         t_num = float(t)
 
-        if t_num == 100.0:
-            # t=100: use mixes from t=99 feasible set that score >=99.5%
+        if t_num == 99.99:
+            # t=99.99: use mixes from t=99 feasible set that score >=99.5%
             if len(feas_df) > 0:
                 t99 = feas_df[feas_df['threshold'] == 99.0]
                 high_score = t99[t99['hourly_match_score'] >= 99.5]

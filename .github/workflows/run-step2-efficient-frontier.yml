@@ -76,6 +76,7 @@ jobs:
           fi
 
       - name: Run Step 2 Efficient Frontier filter
+        timeout-minutes: 90
         run: python scripts/step2_efficient_frontier.py ${{ steps.iso-args.outputs.iso_flags }}
 
       - name: Commit and push Step 2 outputs

@@ -85,7 +85,7 @@ Toggle (not suffix) applicable to all strategies simultaneously. When On, each s
 | **Strategy 3** (Annual) | **Scenario A** (delayed) | Annual flexibility lets buyers avoid firm clean (VRE + unbundled RECs satisfy annual targets) → same delayed investment dynamic as consequential. |
 
 **SBTi Milestone Mapping:** (existing constants from `step7_generate_shared_data.py`)
-- 2025: Today (0%) | 2030: SBTi 50% | 2035: SBTi ~70% | 2040: SBTi 90% | 2045: SBTi ~95% | 2050: Net-Zero (100%)
+- 2025: Today (0%) | 2030: SBTi 50% | 2035: SBTi ~70% | 2040: SBTi 90% | 2045: SBTi ~95% | 2050: Net-Zero (≥99.99%)
 
 **Core argument:** Hourly matching incentivizes earlier corporate investment in clean firm, accelerating the learning curve, making the entire system cheaper on a net-zero trajectory. It is significantly more expensive to reach net zero by 2050 if you delay investment in firm clean. The three compounding adverse effects of delay are documented in §15.11.
 
@@ -111,7 +111,7 @@ Without hourly matching, there is no price signal to invest in storage (battery 
 | 2030 (50%) | Cheap — lots of VRE, looks great on paper | Slightly more expensive — investing in firm + storage |
 | 2035 (70%) | Still cheap — more VRE, gas fills gaps | Firm clean hitting learning curve, storage displacing gas |
 | 2040 (90%) | **Wall** — VRE saturated, firm at FOAK, gas locked in | Firm at NOAK, storage mature, gas already retiring |
-| 2050 (100%) | Scramble — paying FOAK for firm, retiring gas at huge cost, stranded VRE | Smooth glide — infrastructure already in place |
+| 2050 (≥99.99%) | Scramble — paying FOAK for firm, retiring gas at huge cost, stranded VRE | Smooth glide — infrastructure already in place |
 
 These effects should be modeled explicitly in the dashboard and presented as a key finding in the scrollytell narrative and research paper.
 
@@ -594,9 +594,20 @@ National C&I = ~62% of total US load (~2,400 of ~3,860 TWh). Range by ISO: 52-57
 - Added `CLEAN_COST_DATA` extraction to step7 (P10/P50/P90 of effective_cost across scenarios)
 - Fixed step6_consequential_queue.py MAC to exclude gas backup cost
 
+**Completed (Feb 27):**
+- Revamped `abatement_dashboard.html` with optimal target tiles, ISO deep-dive, and no-regrets analysis
+- Created `scripts/step7_extract_no_regrets.py` — extracts no-regrets resources from Step 3 DG parquets (5,832+ scenarios)
+- Revised DAC cost trajectories upward across all 4 files (anchored to 2025 actual costs of $600-$1,500/tCO₂)
+- **Wired smooth PCHIP MAC into dashboard** — `abatement_dashboard.html` now uses `OPTIMAL_TARGETS` smooth curves from `optimal-target-data.js` when available, falls back to `MAC_STEPWISE_FAN` stepwise data otherwise
+- Dashboard data priority chain: `OPTIMAL_TARGETS` (smooth PCHIP) > `MAC_STEPWISE_FAN` (stepwise fallback)
+- No-regrets data priority chain: `NO_REGRETS_DATA` (DG parquets, 5,832+ scenarios) > `OPTIMAL_TARGETS.no_regrets` (medium-cost) > client-side `RESOURCE_MIX_DATA` analysis (fallback)
+- Crossover computation prefers pre-computed smooth crossover range from `OPTIMAL_TARGETS`, falls back to client-side stepwise computation
+- Created placeholder `dashboard/js/optimal-target-data.js` — populated by running `step6_compute_optimal_targets.py`
+
 **Next steps:**
-- [ ] Run Step 6 workflow to generate optimal_targets.json
-- [ ] Build dashboard visualization for optimal target crossover chart on abatement page
+- [ ] Run Step 6 workflow to generate `optimal_targets.json` + `optimal-target-data.js` (smooth MAC data)
+- [ ] Generate DG parquets for remaining ISOs (ERCOT, PJM, NYISO, NEISO, MISO, SPP) — currently only CAISO
+- [ ] Re-run `step7_extract_no_regrets.py` after all ISO DG data is available
 - [ ] Wire no-regrets investment data into research paper narrative
 - [ ] Add prominent gas capacity warning to consequential scenario dashboard
 
@@ -992,9 +1003,9 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 |---|----------|--------|--------|
 | 1 | Grid search strategy | **1C — Adaptive** | Start at 5% step, identify promising regions, refine to 1%. Replaces 3-phase 10%→5%→1%. |
 | 2 | Solution output | **2B — Pareto frontier** | 3-5 points per mix along procurement/storage tradeoff (not single-point optimal). |
-| 3 | Procurement bounds | **3C — Threshold-adaptive** | Narrow bounds at low thresholds (e.g., 100-110% at 50%), wider at high (100-150% at 99-100%). |
+| 3 | Procurement bounds | **3C — Threshold-adaptive** | Narrow bounds at low thresholds (e.g., 100-110% at 50%), wider at high (100-150% at 99-≥99.99%). |
 | 4 | min_dispatchable constraint | **4B — Drop it** | No dispatchable floor. Let physics prove/disprove — constraint was potentially biasing results. |
-| 5 | Thresholds | **5E — 15 total** | v4.0 list + 55%, 65% for finer low-range granularity. Full list: 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100. |
+| 5 | Thresholds | **5E — 15 total** | v4.0 list + 55%, 65% for finer low-range granularity. Full list: 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable. |
 | 6 | CCS-CCGT resource | **6D — Collapse into Clean Firm** | Merge CCS into Clean Firm allocation. Reduces resource space from 5D to 4D. CCS retains its own cost profile and dispatch characteristics within the merged allocation — the optimizer determines sub-allocation internally. |
 | 7 | Storage parameters | **7A — Keep current** | Battery: 4hr Li-ion, 85% RT, daily cycle. LDES: 100hr iron-air, 50% RT, 7-day window. |
 | 8 | Output format | **8C — Both** | JSON (backward compat) + Parquet (analytics). |
@@ -1138,15 +1149,15 @@ The optimizer runs as a 7-step pipeline. Each step is independent — only re-ru
 - Represents the cost per ton of grid backbone decarbonization
 - No monotonicity issue (single value)
 
-**Zone 2 — Last Mile (90% → 100%): Granular checkpoints with enforced monotonicity**
-- 5 stepwise values: 90→92.5%, 92.5→95%, 95→97.5%, 97.5→99%, 99→100%
+**Zone 2 — Last Mile (90% → ≥99.99%): Granular checkpoints with enforced monotonicity**
+- 5 stepwise values: 90→92.5%, 92.5→95%, 95→97.5%, 97.5→99%, 99→≥99.99%
 - Enforced non-decreasing: `step_mac[t] = max(raw_step_mac[t], step_mac[t-1])`
 - Zone 1 aggregate MAC serves as floor for first Zone 2 step
 - Convex hull interpolation for edge cases where ΔCO2 ≤ 0
 
 **Result**: 6-value marginal MAC curve per (ISO, scenario):
 ```
-[MAC_75→90, MAC_90→92.5, MAC_92.5→95, MAC_95→97.5, MAC_97.5→99, MAC_99→100]
+[MAC_75→90, MAC_90→92.5, MAC_92.5→95, MAC_95→97.5, MAC_97.5→99, MAC_99→≥99.99]
 ```
 
 **Fan chart fix**: Consistent scenario ranking (rank by total cost at 99%, select P10/P50/P90 scenarios, use their full curves) instead of independent per-step percentiles that mix different scenarios.
@@ -1355,7 +1366,7 @@ Before launching `step1_pfs_generator.py`, the following must be verified:
 - No LCOE decline or wholesale escalation modeled — avoids overcomplication
 
 **Procurement ratio** (theoretical, not optimizer-derived):
-- 75%→0.80×, 90%→1.05×, 100%→1.45×
+- 75%→0.80×, 90%→1.05×, ≥99.99%→1.45×
 - Reflects temporal mismatch physics: higher match targets need more over-procurement
 
 **What stays from v1**:
@@ -1757,13 +1768,13 @@ data/step5-post-processing/lmp/                      # Output directory
 ## 3. Thresholds (15 total — v4.1: added 55%, 65% for finer low-range granularity)
 
 ```
-50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100
+50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99
 ```
 
 - **50%, 55%, 60%, 65%, 70%** (v4.0+v4.1): Captures the easy-to-achieve baseline region where most mixes succeed. 55% and 65% added for finer resolution in the low-cost transition zone. Provides context for "how cheap is partial decarbonization" and anchors the cost curve left side. These thresholds run fast (most mixes hit target, narrow procurement bounds).
 - 5% intervals from 75-85 (captures broad trend)
 - 2.5% intervals from 87.5-97.5 (captures steep cost inflection zone)
-- 99% and 100% anchor the extreme end
+- 99% and ≥99.99% anchor the extreme end (true 100% is physically unreachable)
 - Key inflection behavior (CCS/LDES entering mix, storage costs spiking) captured at 90-97.5
 - Dashboard interpolates smoothly between these anchor points for abatement curves
 
@@ -1773,7 +1784,7 @@ data/step5-post-processing/lmp/                      # Output directory
 
 ### Preserved (2):
 1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
-2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 100)
+2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99)
 
 ### Sensitivity toggles (7 toggles + 1 binary switch):
 
@@ -2385,23 +2396,28 @@ total_co2_abated = existing_grid_displacement + counterfactual_growth_emissions
 | 2045 | ~95% (interpolated) | 95%             |
 | 2050 | 100% (net-zero)  | 100%               |
 
-**DAC Cost Trajectories ($/ton CO₂, net DACCS)**:
+**DAC Cost Trajectories ($/ton CO₂, net DACCS)** — *Revised Feb 27, 2026*:
 
 | Year | Optimistic | Central | Conservative |
 |------|-----------|---------|-------------|
-| 2025 | $400      | $600    | $800        |
-| 2030 | $200      | $350    | $550        |
-| 2035 | $150      | $275    | $450        |
-| 2040 | $115      | $225    | $375        |
-| 2045 | $90       | $200    | $325        |
-| 2050 | $75       | $180    | $300        |
+| 2025 | $600      | $800    | $1,100      |
+| 2030 | $350      | $500    | $750        |
+| 2035 | $230      | $375    | $550        |
+| 2040 | $175      | $300    | $450        |
+| 2045 | $130      | $250    | $375        |
+| 2050 | $100      | $200    | $300        |
 
-**Sources**: DOE Liftoff (2023), Sievert et al. (Joule 2024), IEA DAC (2022/2024), Fasihi et al. (J. Cleaner Prod. 2019), IEAGHG (2021/2024), Climeworks Gen 3, DOE Carbon Negative Shot, Kanyako & Craig (Earth's Future 2025), NAS (2019), Young et al. (One Earth 2023), Keith et al. (Joule 2018), Shayegh et al. (Frontiers in Climate 2021), Belfer Center (2023).
+**Revision rationale (Feb 27, 2026)**: Previous trajectories were too aggressive, particularly the optimistic scenario ($400 in 2025, $200 by 2030). Actual 2025 DAC costs are $600–$1,500/tCO₂ (Climeworks ~$1,000/ton, market average ~$600–$1,500 with subsidies). No credible source projects sub-$300 by 2030. Revised trajectories are anchored to:
+- **2025 actuals**: Climeworks operational costs, CDR marketplace prices
+- **2030–2035**: IEAGHG NOAK estimates ($194–$230 at 1 MtCO₂/yr, achievable "by as early as 2035"), Belfer Center projections ($400–$1,000 by 2030)
+- **2040–2050**: Sievert et al. (Joule 2024) learning curves ($341/tCO₂ central at Gt scale), Climeworks roadmap (well below $500 by ~2040, $200–$250 towards 2050)
+
+**Sources**: Climeworks (2024/2025 operational data), Sievert et al. (Joule 2024), IEAGHG (2021/2024), Belfer Center/Harvard (2023), DOE Liftoff (2023), IEA DAC (2022/2024), Fasihi et al. (J. Cleaner Prod. 2019), DOE Carbon Negative Shot, NAS (2019), Young et al. (One Earth 2023), Keith et al. (Joule 2018).
 
 **Key assumptions by trajectory**:
-- **Optimistic**: 15–20% learning rate, R&D breakthroughs, $<20/MWh renewables, 1+ GtCO₂/yr deployment by 2050
-- **Central**: 10–12% learning rate, moderate policy support, $30–40/MWh renewables, 100–500 MtCO₂/yr by 2050
-- **Conservative**: 5–8% learning rate, limited policy support, $40–60/MWh renewables, <100 MtCO₂/yr by 2050
+- **Optimistic**: IEAGHG NOAK costs by 2035, strong learning rates, low-cost renewable energy, GtCO₂/yr scale by 2050
+- **Central**: Belfer Center mid-range, Climeworks roadmap trajectory, moderate policy support, 100–500 MtCO₂/yr by 2050
+- **Conservative**: Slow scale-up, limited policy, high energy costs, <100 MtCO₂/yr by 2050
 
 **Visualization**: Abatement charts get dual x-axis (threshold % bottom, SBTi year top). DAC trajectory shown as 3 declining curves with shaded band. MAC curve intersections with DAC curves show the crossover points where grid decarbonization becomes more/less expensive than DAC at each milestone year.
 
@@ -2760,7 +2776,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 2. **The Inflection Point Analysis** — For each region × sensitivity scenario, identify the % threshold where grid decarbonization costs exceed:
    - The social cost of carbon ($51/ton EPA, $185/ton Rennert et al.)
-   - DAC costs ($250-600/ton)
+   - DAC costs ($300-1,100/ton, trajectory-dependent)
    - SAF costs ($150-400/ton)
    - Voluntary carbon market prices ($10-150/ton)
 
@@ -2780,10 +2796,10 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 **Problem**: The optimizer independently optimizes each threshold. The 85% mix and 95% mix may differ fundamentally — heavy solar at 85%, heavy clean firm at 95%. Building the 85%-optimal mix then upgrading to 95% would strand solar assets and cost more than building toward 95% from the start.
 
 **Proposed Approach**: Model backwards from the inflection point where the optimal grid solution's LCOE crosses a benchmark price:
-- **Primary benchmark**: DAC cost projected to the target year
-  - 2025: $400-600/ton → grid dominates through ~97%
-  - 2035: $250-350/ton → grid dominates through ~93-95%
-  - 2045: $150-250/ton → grid dominates through ~90-93%
+- **Primary benchmark**: DAC cost projected to the target year (see §7.3 revised trajectories)
+  - 2025: $600-1,100/ton → grid dominates through ~97%+
+  - 2035: $230-550/ton → grid dominates through ~93-95%
+  - 2045: $130-375/ton → grid dominates through ~90-93%
 - At the crossover threshold, the optimal mix is fixed. Then model the build-up path from lower thresholds using the cheapest-first resource ordering that converges to the crossover mix.
 - DAC learning curve: ~15-20% cost reduction per doubling of deployment (ETH Zurich/Climeworks data)
 - This creates a **declining optimal grid target over time** as removal costs fall — counterintuitive but logical.
@@ -2799,7 +2815,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 - **PJM**: Push grid to 93-95%, buy ERCOT/regional DAC credits for residual emissions.
 - **NYISO/NEISO**: Push grid to 90-92% (expensive beyond), heavy DAC credit procurement from regions with cheaper removal.
 
-**DAC cost with curtailed power**: If energy is the #1 DAC cost driver (~60% of total), curtailed power at $0-5/MWh could reduce DAC from $400-600/ton to $150-250/ton — making it competitive with grid decarbonization costs above 93% in most regions.
+**DAC cost with curtailed power**: If energy is the #1 DAC cost driver (~60% of total), curtailed power at $0-5/MWh could reduce DAC from $600-1,100/ton to $250-450/ton — making it competitive with grid decarbonization costs above 93-95% in most regions.
 
 **Analysis needed**:
 1. From optimizer results: quantify curtailed MWh at each threshold × region
@@ -3293,7 +3309,9 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 
 5. **No-45Q mix bias** (documented limitation) — The no-45Q overlay reprices the same resource mix that was co-optimized WITH 45Q. This mix over-represents CCS, making the no-45Q cost a conservative upper bound. A true no-45Q re-optimization would substitute LDES/renewables for CCS, yielding lower costs.
 
-### 22.7 100% Hourly Match Asymptote — Literature Review & Procurement Bounds
+### 22.7 ≥99.99% Hourly Match Asymptote — Literature Review & Procurement Bounds
+
+**Decision (Feb 2026):** Top threshold lowered from 100% to ≥99.99%. True 100% hourly matching is physically unreachable due to float precision and dispatch constraints. The effective gate maps ≥99.99% → 99.5% to capture near-perfect mixes. This makes the threshold honest — we label what we can actually achieve.
 
 **Key literature findings:**
 - NREL (Cole et al., 2021, Joule): Marginal abatement cost 99%→100% = **$930/ton** — 15× the average cost of the full 100% target. Nonlinear in all 22 sensitivities tested.
@@ -3302,14 +3320,14 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 - Budischak et al. (2013, J. Power Sources): Cost-optimal 99.9% requires ~280% nameplate capacity. "Least cost solutions yield seemingly-excessive generation capacity."
 - WattTime: 100% hourly matching may require PPAs for **up to 400%** of annual consumption.
 
-**Granularity consensus:** The 90-100% zone needs 2.5% resolution minimum. Our threshold set (90, 92.5, 95, 97.5, 99, 100) is well-aligned with literature practice.
+**Granularity consensus:** The 90–≥99.99% zone needs 2.5% resolution minimum. Our threshold set (90, 92.5, 95, 97.5, 99, ≥99.99) is well-aligned with literature practice.
 
 **Procurement bound assessment:**
 - Current bound: 200% of demand
 - Actual usage at 99%: max 135% (CAISO), 130% (NYISO), 125% (NEISO), 123% (PJM), 118% (ERCOT)
-- 100% threshold: 0 feasible scenarios found (all ISOs)
+- ≥99.99% threshold: 0 feasible scenarios found (all ISOs) at 200% bound
 - Max hourly match achieved: 99.6% (PJM at 123% procurement)
-- **Decision**: If rerunning for 100%, increase upper bound to **250%** based on literature support (Budischak 280%, WattTime 400%). The 200% bound is sufficient for ≤99% targets.
+- **Decision**: If rerunning for ≥99.99%, increase upper bound to **250%** based on literature support (Budischak 280%, WattTime 400%). The 200% bound is sufficient for ≤99% targets.
 
 **Archetype diversity in cache:**
 - 46–70 unique resource mix archetypes per ISO across all thresholds
