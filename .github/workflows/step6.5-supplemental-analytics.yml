@@ -1,0 +1,166 @@
+name: "Step 6.5: Supplemental Analytics"
+
+# Runs supplemental dispatch-cache-dependent analytics that don't belong
+# to a specific dashboard page:
+#   - step6_compressed_day.py — 24-hour representative day profiles
+#   - step6_consequential_queue.py — cross-regional deployment path
+#
+# These scripts use dispatch cache but are independent of each other.
+# Output: data/step5-post-processing/
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      script:
+        description: 'Which analytics to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - compressed-day
+          - consequential-queue
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step6-5-supplemental
+
+jobs:
+  supplemental-analytics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          ISO_LABEL="${{ inputs.iso }}"
+          SCRIPT_LABEL="${{ inputs.script }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${ISO_LABEL}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify dispatch cache exists
+        run: |
+          if [ -d "data/step5-post-processing/dispatch_cache" ] && ls data/step5-post-processing/dispatch_cache/*.npz >/dev/null 2>&1; then
+            echo "Dispatch cache found"
+          else
+            echo "WARNING: No dispatch cache found. Scripts will compute dispatch live (slower)."
+            echo "Consider running Step 5 (dispatch cache) first."
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: mkdir -p data/step5-post-processing
+
+      # ════════════════════════════════════════════════════════════════════
+      # Run selected analytics (parallel when ALL)
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: "Run analytics (parallel)"
+        if: ${{ inputs.script == 'ALL' }}
+        run: |
+          echo "=== Launching compressed day + consequential queue in parallel ==="
+
+          python scripts/step6_compressed_day.py &
+          PID_CD=$!
+
+          python scripts/step6_consequential_queue.py &
+          PID_CQ=$!
+
+          FAILED=0
+          wait $PID_CD || { echo "FAILED: Compressed Day"; FAILED=1; }
+          wait $PID_CQ || { echo "FAILED: Consequential Queue"; FAILED=1; }
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "ERROR: One or more scripts failed"
+            exit 1
+          fi
+          echo "=== All analytics completed ==="
+
+      - name: "Compressed Day profiles"
+        if: ${{ inputs.script == 'compressed-day' }}
+        run: python scripts/step6_compressed_day.py
+
+      - name: "Consequential Queue"
+        if: ${{ inputs.script == 'consequential-queue' }}
+        run: python scripts/step6_consequential_queue.py
+
+      - name: Commit and push
+        run: |
+          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f dashboard/compressed_day_profiles.json 2>/dev/null || true
+          git add -f dashboard/js/consequential-queue-data.js 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 6.5 Supplemental: ${{ inputs.script }} ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Create pull request
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Step 6.5 Supplemental: ${{ inputs.script }} ${{ inputs.iso }}" \
+            --body "## Summary
+          Supplemental dispatch-dependent analytics for **${{ inputs.iso }}** (${{ inputs.script }}).
+
+          ## Scripts
+          - \`step6_compressed_day.py\` — 24-hour representative day profiles per unique mix
+          - \`step6_consequential_queue.py\` — cross-regional deployment path under consequential accounting" \
+            --base ${{ inputs.branch || 'master' }} \
+            --head "$TARGET_BRANCH" || echo "PR creation skipped"

@@ -1,0 +1,147 @@
+name: "Step 2.5: Expand EF for Scenario A"
+
+# Augments step3 feasible parquets with floor-compatible PFS mixes for Scenario A.
+# Reads existing PFS data and step3 feasible parquets.
+#
+# Prerequisite: Steps 1 and 3 must have run first.
+# Output: data/step3-cost-opt-parquets/step3_feasible_*.parquet (augmented)
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      target_mixes:
+        description: 'Target floor mixes per threshold'
+        required: false
+        default: '200'
+        type: string
+      dry_run:
+        description: 'Dry run (simulate only, no parquet changes)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step2-5-expand-ef
+
+jobs:
+  expand-ef:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify upstream data
+        run: |
+          if [ ! -d "data/step1-pfs-parquets" ] || ! ls data/step1-pfs-parquets/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: PFS parquets not found. Run Step 1 first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Build CLI arguments
+        id: cli-args
+        run: |
+          ARGS=""
+          if [ "${{ inputs.iso }}" != "ALL" ]; then
+            ARGS="$ARGS --iso ${{ inputs.iso }}"
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          TARGET="${{ inputs.target_mixes }}"
+          if [ -n "$TARGET" ] && [ "$TARGET" != "200" ]; then
+            ARGS="$ARGS --target-mixes $TARGET"
+          fi
+          echo "cli_args=$ARGS" >> "$GITHUB_OUTPUT"
+
+      - name: "Expand EF with floor-compatible PFS mixes"
+        timeout-minutes: 90
+        run: python scripts/step2_5_expand_ef_for_floors.py ${{ steps.cli-args.outputs.cli_args }}
+
+      - name: Commit and push
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          git add -f data/step3-cost-opt-parquets/step3_feasible_*.parquet 2>/dev/null || true
+          git add -f data/step5-post-processing/ef_expansion_log.json 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 2.5 EF Expansion: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Create pull request
+        if: ${{ inputs.dry_run != 'true' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Step 2.5 EF Expansion: ${{ inputs.iso }}" \
+            --body "## Summary
+          - Augmented step3 feasible parquets with floor-compatible PFS mixes for **${{ inputs.iso }}**
+          - Target: ${{ inputs.target_mixes }} mixes per threshold
+          - After merging, re-run Step 6.1 to update dashboard JS" \
+            --base ${{ inputs.branch || 'master' }} \
+            --head "$TARGET_BRANCH" || echo "PR creation skipped"
