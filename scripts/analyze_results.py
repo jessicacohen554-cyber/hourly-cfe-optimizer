@@ -37,9 +37,37 @@ def medium_key(iso):
 OLD_MEDIUM_KEYS = ['MMM_M_M_M_M1_M', 'MMM_M_M_M_M1_X', 'MMM_M_M']
 
 
+_PARQUET_CACHE = {}
+
+
+def _load_iso_parquet(iso):
+    """Load an ISO's CO2 parquet into the cache (lazy, one-time)."""
+    if iso in _PARQUET_CACHE:
+        return
+    _PARQUET_CACHE[iso] = {}
+    for prefix in ['co2_', 'step4_', 'step3_co_']:
+        ppath = os.path.join(CO2_DIR, f'{prefix}{iso}.parquet')
+        if os.path.exists(ppath):
+            try:
+                sys.path.insert(0, ROOT_DIR)
+                from parquet_io import load_from_parquets
+                data = load_from_parquets(CO2_DIR, [iso])
+                iso_data = data.get('results', {}).get(iso, {})
+                for t_str, t_data in iso_data.get('thresholds', {}).items():
+                    _PARQUET_CACHE[iso][t_str] = t_data.get('scenarios', {})
+                return
+            except Exception:
+                pass
+
+
 def load_scenarios(iso, threshold):
-    """Load scenarios from co2 batch result JSON."""
+    """Load scenarios from CO2 parquets or batch JSON files."""
+    _load_iso_parquet(iso)
     t_str = str(threshold)
+    if iso in _PARQUET_CACHE and t_str in _PARQUET_CACHE[iso]:
+        return _PARQUET_CACHE[iso][t_str]
+
+    # Fall back to legacy JSON
     fname = f"{iso}_{t_str}_2025.json"
     fpath = os.path.join(CO2_DIR, fname)
     if not os.path.exists(fpath):
