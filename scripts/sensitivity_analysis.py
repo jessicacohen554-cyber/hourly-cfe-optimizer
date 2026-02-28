@@ -33,8 +33,39 @@ KEY_THRESHOLDS = ["50", "55", "60", "65", "70", "75", "80", "85", "87.5", "90", 
 TOGGLE_NAMES = ["Renewable Gen", "Nuclear", "Storage", "Fossil Fuel", "Transmission"]
 
 
+_PARQUET_CACHE = {}  # {iso: {threshold_str: {scenario_key: scenario_dict}}}
+
+
+def _load_iso_parquet(iso):
+    """Load an ISO's CO2 parquet into the cache (lazy, one-time)."""
+    if iso in _PARQUET_CACHE:
+        return
+    _PARQUET_CACHE[iso] = {}
+    # Try parquet first
+    for prefix in ['co2_', 'step4_', 'step3_co_']:
+        ppath = os.path.join(CO2_DIR, f'{prefix}{iso}.parquet')
+        if os.path.exists(ppath):
+            try:
+                sys.path.insert(0, os.path.join(SCRIPT_DIR, '..'))
+                from parquet_io import load_from_parquets
+                data = load_from_parquets(CO2_DIR, [iso])
+                iso_data = data.get('results', {}).get(iso, {})
+                for t_str, t_data in iso_data.get('thresholds', {}).items():
+                    _PARQUET_CACHE[iso][t_str] = t_data.get('scenarios', {})
+                return
+            except Exception:
+                pass
+
+
 def load_scenarios(region, threshold):
-    """Load scenarios from co2 batch result JSON."""
+    """Load scenarios for a region/threshold from CO2 parquets or batch JSONs."""
+    # Try parquet first
+    _load_iso_parquet(region)
+    t_str = str(threshold)
+    if region in _PARQUET_CACHE and t_str in _PARQUET_CACHE[region]:
+        return _PARQUET_CACHE[region][t_str]
+
+    # Fall back to legacy JSON
     fname = f"{region}_{threshold}_2025.json"
     fpath = os.path.join(CO2_DIR, fname)
     if not os.path.exists(fpath):

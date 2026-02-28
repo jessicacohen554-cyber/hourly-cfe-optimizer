@@ -38,7 +38,7 @@ DEFAULT_INPUT_DIRS = [
 
 def find_parquet(input_dir, iso):
     """Find parquet file for an ISO, trying step4 then step3 naming."""
-    for prefix in ['step4_', 'step3_co_']:
+    for prefix in ['step4_', 'step3_co_', 'co2_']:
         path = os.path.join(input_dir, f'{prefix}{iso}.parquet')
         if os.path.exists(path):
             return path

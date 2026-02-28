@@ -20,13 +20,16 @@ For each result:
   2. Compute the emission rate of the remaining fossil fleet
   3. CO₂_abated = fossil_displaced × emission_rate (scalar or hourly sum)
 
-Reads:  dashboard/overprocure_results.json
+Reads:  data/step4-gas-ccs-parquets/ (or step3 fallback)
         data/egrid_emission_rates.json
         data/eia_fossil_mix.json
         data/eia_generation_profiles.json
         data/eia_demand_profiles.json
-Writes: dashboard/overprocure_results.json (updated CO₂ fields)
-        data/optimizer_cache.json (updated if exists)
+Writes: data/step4-gas-ccs-parquets/ (parquets enriched with CO₂ columns)
+        data/step5-post-processing/co2_results/ (per-ISO/threshold parquets)
+
+All pipeline intermediate outputs use parquet (zstd compression) for
+efficient storage. No JSON intermediates — only dashboard JS/JSON endpoints.
 
 Refactored to import shared dispatch logic from dispatch_utils.py.
 """
@@ -491,54 +494,25 @@ def main():
 
     results_data = recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, fossil_mix)
 
-    # Save results — parquets preferred, JSON fallback
+    # Save results — parquets only (no JSON intermediates)
     output_dir = args.output_dir or input_dir
     if output_dir:
         print(f"\n  Saving enriched results to {output_dir}")
         save_to_parquets(results_data, output_dir, isos_present)
         print(f"  CO2 columns added to parquets in {output_dir}")
-    elif os.path.exists(RESULTS_PATH):
-        with open(RESULTS_PATH, 'w') as f:
-            json.dump(results_data, f)
-        print(f"\n  Updated: {RESULTS_PATH} ({os.path.getsize(RESULTS_PATH) / 1024:.0f} KB)")
 
-    # Save batched co2 results (per ISO/threshold/year) to stay under GitHub's
-    # 100 MB per-file limit.  One file per (ISO, threshold, year) triple, plus
-    # a _config.json and per-ISO _meta files for sweep / demand data.
-    co2_batch_dir = os.path.join(STEP5_DIR, 'co2_results')
-    os.makedirs(co2_batch_dir, exist_ok=True)
-
-    # Config (everything except 'results')
-    config_path = os.path.join(co2_batch_dir, '_config.json')
-    with open(config_path, 'w') as f:
-        json.dump({k: v for k, v in results_data.items() if k != 'results'}, f)
-
-    total_bytes = os.path.getsize(config_path)
-    file_count = 1
-
-    for iso in isos_present:
-        iso_data = results_data['results'].get(iso, {})
-
-        # Per-threshold files
-        for t_str, t_data in iso_data.get('thresholds', {}).items():
-            fname = f"{iso}_{t_str}_{DATA_YEAR}.json"
-            fpath = os.path.join(co2_batch_dir, fname)
-            with open(fpath, 'w') as f:
-                json.dump(t_data, f)
-            total_bytes += os.path.getsize(fpath)
-            file_count += 1
-
-        # ISO-level metadata (sweep, annual_demand_mwh, etc.)
-        meta = {k: v for k, v in iso_data.items() if k != 'thresholds'}
-        if meta:
-            meta_path = os.path.join(co2_batch_dir, f"{iso}_meta_{DATA_YEAR}.json")
-            with open(meta_path, 'w') as f:
-                json.dump(meta, f)
-            total_bytes += os.path.getsize(meta_path)
-            file_count += 1
-
-    print(f"  Batched CO2 results → {co2_batch_dir}/")
-    print(f"    {file_count} files, {total_bytes / 1024 / 1024:.1f} MB total")
+    # Save per-ISO CO2-enriched parquets to step5 results directory
+    # (canonical copy for downstream consumers like step7_generate_shared_data)
+    co2_parquet_dir = os.path.join(STEP5_DIR, 'co2_results')
+    os.makedirs(co2_parquet_dir, exist_ok=True)
+    save_to_parquets(results_data, co2_parquet_dir, isos_present, file_prefix='co2_')
+    total_size = sum(
+        os.path.getsize(os.path.join(co2_parquet_dir, f))
+        for f in os.listdir(co2_parquet_dir) if f.endswith('.parquet')
+    )
+    n_files = len([f for f in os.listdir(co2_parquet_dir) if f.endswith('.parquet')])
+    print(f"  CO2 parquets → {co2_parquet_dir}/")
+    print(f"    {n_files} files, {total_size / 1024 / 1024:.1f} MB total")
 
     # Demand growth CO₂ recompute (uses fast match_score path)
     dg_output_dir = output_dir or input_dir
