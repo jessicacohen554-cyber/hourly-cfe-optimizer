@@ -3528,6 +3528,103 @@ body {
     </div>
 </div>
 
+<!-- ════════════════════════════════════════════════════════════════════
+     SCROLLYTELLING NARRATIVE: Cost Evolution
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="scrolly-container story-fade-in" style="margin-top:60px;">
+    <div class="scrolly-sticky">
+        <div class="scrolly-chart-wrap">
+            <canvas id="narrativeCostChart"></canvas>
+        </div>
+    </div>
+    <div class="scrolly-steps">
+        <div class="scrolly-step" data-step="cost-intro">
+            <div class="step-card">
+                <h3>The Cost Curve</h3>
+                <p>How much does hourly clean energy matching actually cost? The answer depends on your target.
+                   This chart shows the average cost per useful MWh across all 7 U.S. power markets,
+                   with individual ISO curves in the background.</p>
+                <canvas class="step-chart-canvas" data-step-chart="cost-intro" height="160"></canvas>
+            </div>
+        </div>
+        <div class="scrolly-step" data-step="cost-75">
+            <div class="step-card">
+                <h3>The Easy Wins: 50%&ndash;75%</h3>
+                <p>Reaching 75% hourly matching is surprisingly affordable. Cheap renewables and existing
+                   hydro do the heavy lifting. Costs stay well below wholesale grid prices in most markets.</p>
+                <canvas class="step-chart-canvas" data-step-chart="cost-75" height="160"></canvas>
+            </div>
+        </div>
+        <div class="scrolly-step" data-step="cost-90">
+            <div class="step-card">
+                <h3>The Inflection Zone: 75%&ndash;90%</h3>
+                <p>This is where the resource mix starts to shift. Solar and wind alone can't cover
+                   nighttime and low-wind hours. Battery storage and clean firm generation
+                   enter the mix &mdash; and costs begin to climb more steeply.</p>
+                <canvas class="step-chart-canvas" data-step-chart="cost-90" height="160"></canvas>
+            </div>
+        </div>
+        <div class="scrolly-step" data-step="cost-99">
+            <div class="step-card">
+                <h3>The Final Percent: 99%+</h3>
+                <p>The last few percentage points are the most expensive. Covering every hour &mdash;
+                   including rare extended weather events &mdash; requires significant overcapacity
+                   or expensive long-duration storage. Marginal costs can exceed $300/MWh.</p>
+                <canvas class="step-chart-canvas" data-step-chart="cost-99" height="160"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     NARRATIVE: Resource Mix Evolution
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="story-section story-fade-in" style="max-width:1100px; margin:60px auto; padding:0 24px;">
+    <h2 style="text-align:center; color:var(--accent); margin-bottom:8px;">What Goes Into the Mix?</h2>
+    <p style="text-align:center; color:var(--text-muted); max-width:700px; margin:0 auto 24px;">
+        As the matching target increases, the resource mix evolves. Existing clean generation forms
+        the base; new procurement layers on top. Toggle between regions to see how local resources shape the mix.
+    </p>
+    <div class="region-toggle-row" id="mixRegionToggle" style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap; margin-bottom:16px;">
+        <button class="region-toggle-btn active" data-region="average">Average</button>
+        <button class="region-toggle-btn" data-region="CAISO">CAISO</button>
+        <button class="region-toggle-btn" data-region="ERCOT">ERCOT</button>
+        <button class="region-toggle-btn" data-region="PJM">PJM</button>
+        <button class="region-toggle-btn" data-region="NYISO">NYISO</button>
+        <button class="region-toggle-btn" data-region="NEISO">NEISO</button>
+        <button class="region-toggle-btn" data-region="MISO">MISO</button>
+        <button class="region-toggle-btn" data-region="SPP">SPP</button>
+    </div>
+    <div class="narrative-mix-container" style="position:relative; height:420px;">
+        <canvas id="narrativeMixChart"></canvas>
+    </div>
+    <div id="mixRegionInsight" style="text-align:center; color:var(--text-muted); font-size:0.9rem; margin-top:12px;"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     NARRATIVE: Incremental (New Build vs. Existing)
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="story-section story-fade-in" style="max-width:1100px; margin:60px auto; padding:0 24px;">
+    <h2 style="text-align:center; color:var(--accent); margin-bottom:8px;">New Build vs. Existing Clean</h2>
+    <p style="text-align:center; color:var(--text-muted); max-width:700px; margin:0 auto 24px;">
+        How much new generation needs to be built at each target? The stacked bars show existing resources
+        (solid) versus new procurement (lighter). The dashed line marks existing clean energy in the grid.
+    </p>
+    <div class="incremental-region-pills" id="incrementalRegionPills" style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap; margin-bottom:16px;">
+        <button class="incremental-pill active" data-region="CAISO">CAISO</button>
+        <button class="incremental-pill" data-region="ERCOT">ERCOT</button>
+        <button class="incremental-pill" data-region="PJM">PJM</button>
+        <button class="incremental-pill" data-region="NYISO">NYISO</button>
+        <button class="incremental-pill" data-region="NEISO">NEISO</button>
+        <button class="incremental-pill" data-region="MISO">MISO</button>
+        <button class="incremental-pill" data-region="SPP">SPP</button>
+    </div>
+    <div class="incremental-chart-container" style="position:relative; height:420px;">
+        <canvas id="incrementalMixChart"></canvas>
+    </div>
+    <div id="incrementalInsight" style="text-align:center; color:var(--text-muted); font-size:0.9rem; margin-top:12px;"></div>
+</div>
+
 <!-- HERO TAKEAWAY BANNER (below results) -->
 <div class="hero-takeaway" id="heroTakeaway" style="display:none;">
     <div class="hero-takeaway-icon">
