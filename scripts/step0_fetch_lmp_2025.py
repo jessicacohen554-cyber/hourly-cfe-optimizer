@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Fetch 2025 hourly LMP data from all 5 ISOs via gridstatus library.
+Fetch actual hourly LMP data from all 7 ISOs via gridstatus library.
 ================================================================================
 Downloads day-ahead hourly LMPs for calibration against our synthetic LMP model.
 Saves per-ISO JSON files compatible with calibrate_lmp_model.py.
 
-ISOs: CAISO, ERCOT, PJM, NYISO, ISO-NE (NEISO)
-Data: Full year 2025, hourly granularity, zone/hub-level
+ISOs: CAISO, ERCOT, PJM, NYISO, ISO-NE (NEISO), MISO, SPP
+Data: Configurable year (2024 or 2025), hourly granularity, zone/hub-level
 
 Usage:
-  python fetch_lmp_2025.py              # Fetch all ISOs
-  python fetch_lmp_2025.py --iso PJM    # Fetch single ISO
+  python step0_fetch_lmp_2025.py                    # Fetch all ISOs, 2025
+  python step0_fetch_lmp_2025.py --year 2024        # Fetch all ISOs, 2024
+  python step0_fetch_lmp_2025.py --iso PJM          # Fetch single ISO, 2025
+  python step0_fetch_lmp_2025.py --iso ALL --year 2024  # All 7 ISOs, 2024
 """
 
 import json
@@ -69,6 +71,20 @@ ISO_CONFIG = {
         'hub_name': '.I.HUB',  # Internal Hub
         'zone_names': None,
     },
+    'MISO': {
+        'class': gridstatus.MISO,
+        'market': 'DAY_AHEAD_HOURLY',
+        'location_type': 'ALL',
+        'hub_name': 'INDIANA.HUB',  # Indiana Hub (central reference)
+        'zone_names': None,
+    },
+    'SPP': {
+        'class': gridstatus.SPP,
+        'market': 'DAY_AHEAD_HOURLY',
+        'location_type': 'ALL',
+        'hub_name': 'SPS',  # SPS hub (representative)
+        'zone_names': None,
+    },
 }
 
 # Local timezones for peak/off-peak classification
@@ -78,37 +94,41 @@ ISO_TIMEZONE = {
     'PJM': ZoneInfo('America/New_York'),
     'NYISO': ZoneInfo('America/New_York'),
     'NEISO': ZoneInfo('America/New_York'),
+    'MISO': ZoneInfo('America/Chicago'),
+    'SPP': ZoneInfo('America/Chicago'),
 }
 
-# Fetch in monthly chunks to avoid timeouts
-MONTHS_2025 = [
-    ('Jan 1, 2025', 'Feb 1, 2025'),
-    ('Feb 1, 2025', 'Mar 1, 2025'),
-    ('Mar 1, 2025', 'Apr 1, 2025'),
-    ('Apr 1, 2025', 'May 1, 2025'),
-    ('May 1, 2025', 'Jun 1, 2025'),
-    ('Jun 1, 2025', 'Jul 1, 2025'),
-    ('Jul 1, 2025', 'Aug 1, 2025'),
-    ('Aug 1, 2025', 'Sep 1, 2025'),
-    ('Sep 1, 2025', 'Oct 1, 2025'),
-    ('Oct 1, 2025', 'Nov 1, 2025'),
-    ('Nov 1, 2025', 'Dec 1, 2025'),
-    ('Dec 1, 2025', 'Jan 1, 2026'),
-]
+def get_monthly_chunks(year):
+    """Generate monthly date range chunks for any year."""
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    chunks = []
+    for i in range(12):
+        start_month = month_names[i]
+        if i < 11:
+            end_month = month_names[i + 1]
+            end_year = year
+        else:
+            end_month = 'Jan'
+            end_year = year + 1
+        chunks.append((f'{start_month} 1, {year}', f'{end_month} 1, {end_year}'))
+    return chunks
 
 
-def fetch_iso_lmp(iso_name, retry_max=3):
-    """Fetch 2025 DA hourly LMPs for a single ISO."""
+def fetch_iso_lmp(iso_name, year=2025, retry_max=3):
+    """Fetch DA hourly LMPs for a single ISO and year."""
     config = ISO_CONFIG[iso_name]
     iso_cls = config['class']
     iso = iso_cls()
 
+    months = get_monthly_chunks(year)
+
     print(f"\n{'='*60}")
-    print(f"  Fetching {iso_name} 2025 DA Hourly LMPs")
+    print(f"  Fetching {iso_name} {year} DA Hourly LMPs")
     print(f"{'='*60}")
 
     all_dfs = []
-    for i, (start, end) in enumerate(MONTHS_2025):
+    for i, (start, end) in enumerate(months):
         month_label = pd.Timestamp(start).strftime('%b %Y')
         print(f"  [{i+1}/12] {month_label}...", end='', flush=True)
 
@@ -127,6 +147,10 @@ def fetch_iso_lmp(iso_name, retry_max=3):
                     kwargs['market'] = config['market']
                     kwargs['location_type'] = config.get('location_type', 'ZONE')
                 elif iso_name in ('NYISO', 'NEISO'):
+                    kwargs['market'] = 'DAY_AHEAD_HOURLY'
+                elif iso_name == 'MISO':
+                    kwargs['market'] = 'DAY_AHEAD_HOURLY'
+                elif iso_name == 'SPP':
                     kwargs['market'] = 'DAY_AHEAD_HOURLY'
 
                 df = iso.get_lmp(**kwargs)
@@ -226,14 +250,14 @@ def extract_hourly_hub_lmp(df, iso_name):
     return hourly
 
 
-def compute_lmp_summary(hourly_lmp, iso_name):
+def compute_lmp_summary(hourly_lmp, iso_name, year=2025):
     """Compute summary statistics from hourly LMP series."""
     lmp = hourly_lmp.values
     lmp = lmp[~np.isnan(lmp)]
 
     stats = {
         'iso': iso_name,
-        'year': 2025,
+        'year': year,
         'n_hours': len(lmp),
         'avg_lmp': float(np.mean(lmp)),
         'median_lmp': float(np.median(lmp)),
@@ -270,7 +294,7 @@ def compute_lmp_summary(hourly_lmp, iso_name):
     return stats
 
 
-def save_results(hourly_lmp, stats, iso_name):
+def save_results(hourly_lmp, stats, iso_name, year=2025):
     """Save hourly LMP data and summary stats."""
     # Save hourly as JSON (for calibrate_lmp_model.py compatibility)
     hourly_data = []
@@ -280,13 +304,13 @@ def save_results(hourly_lmp, stats, iso_name):
             'lmp': float(val) if not np.isnan(val) else None,
         })
 
-    hourly_path = os.path.join(LMP_DIR, f'{iso_name}_actual_lmp_2025.json')
+    hourly_path = os.path.join(LMP_DIR, f'{iso_name}_actual_lmp_{year}.json')
     with open(hourly_path, 'w') as f:
         json.dump(hourly_data, f, indent=1)
     print(f"  Saved hourly LMP: {hourly_path}")
 
     # Save stats
-    stats_path = os.path.join(LMP_DIR, f'{iso_name}_actual_lmp_stats_2025.json')
+    stats_path = os.path.join(LMP_DIR, f'{iso_name}_actual_lmp_stats_{year}.json')
     with open(stats_path, 'w') as f:
         json.dump(stats, f, indent=2)
     print(f"  Saved stats: {stats_path}")
@@ -294,10 +318,10 @@ def save_results(hourly_lmp, stats, iso_name):
     return hourly_path, stats_path
 
 
-def print_summary_table(all_stats):
+def print_summary_table(all_stats, year=2025):
     """Print cross-ISO comparison table."""
     print(f"\n{'='*80}")
-    print(f"  2025 ACTUAL LMP SUMMARY — ALL ISOs")
+    print(f"  {year} ACTUAL LMP SUMMARY — ALL ISOs")
     print(f"{'='*80}")
     print(f"  {'ISO':<8} {'Avg':>8} {'P10':>8} {'P50':>8} {'P90':>8} "
           f"{'Peak':>8} {'OffPk':>8} {'Neg hrs':>8} {'Scar':>8} {'Hours':>8}")
@@ -317,7 +341,7 @@ def print_summary_table(all_stats):
               f"{s['n_hours']:>8}")
 
     # Save combined summary
-    summary_path = os.path.join(LMP_DIR, 'actual_lmp_summary_2025.json')
+    summary_path = os.path.join(LMP_DIR, f'actual_lmp_summary_{year}.json')
     with open(summary_path, 'w') as f:
         json.dump(all_stats, f, indent=2)
     print(f"\n  Combined summary: {summary_path}")
@@ -325,25 +349,38 @@ def print_summary_table(all_stats):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description='Fetch 2025 hourly LMP data')
+    parser = argparse.ArgumentParser(description='Fetch actual hourly LMP data from ISOs')
     parser.add_argument('--iso', type=str, default=None,
-                        help='Single ISO to fetch (default: all)')
+                        help='ISO to fetch (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP, or ALL)')
+    parser.add_argument('--year', type=int, default=2025,
+                        help='Year to fetch (default: 2025)')
+    parser.add_argument('--force', action='store_true',
+                        help='Re-fetch even if data already exists')
     args = parser.parse_args()
 
-    isos = [args.iso] if args.iso else list(ISO_CONFIG.keys())
+    year = args.year
+    if args.iso == 'ALL':
+        isos = list(ISO_CONFIG.keys())
+    elif args.iso:
+        isos = [args.iso]
+    else:
+        isos = list(ISO_CONFIG.keys())
+
     all_stats = []
 
     for iso_name in isos:
         try:
             # Check if already fetched
-            existing = os.path.join(LMP_DIR, f'{iso_name}_actual_lmp_2025.json')
-            if os.path.exists(existing):
-                print(f"\n  {iso_name}: Already fetched ({existing}). Skipping.")
-                with open(os.path.join(LMP_DIR, f'{iso_name}_actual_lmp_stats_2025.json')) as f:
-                    all_stats.append(json.load(f))
+            existing = os.path.join(LMP_DIR, f'{iso_name}_actual_lmp_{year}.json')
+            if os.path.exists(existing) and not args.force:
+                print(f"\n  {iso_name}: Already fetched ({existing}). Use --force to re-fetch.")
+                stats_path = os.path.join(LMP_DIR, f'{iso_name}_actual_lmp_stats_{year}.json')
+                if os.path.exists(stats_path):
+                    with open(stats_path) as f:
+                        all_stats.append(json.load(f))
                 continue
 
-            df = fetch_iso_lmp(iso_name)
+            df = fetch_iso_lmp(iso_name, year=year)
             if df is None:
                 continue
 
@@ -351,12 +388,12 @@ def main():
             if hourly is None:
                 continue
 
-            stats = compute_lmp_summary(hourly, iso_name)
-            save_results(hourly, stats, iso_name)
+            stats = compute_lmp_summary(hourly, iso_name, year=year)
+            save_results(hourly, stats, iso_name, year=year)
             all_stats.append(stats)
 
             # Print individual ISO summary
-            print(f"\n  {iso_name} 2025 LMP Summary:")
+            print(f"\n  {iso_name} {year} LMP Summary:")
             print(f"    Avg: ${stats['avg_lmp']:.2f}/MWh")
             print(f"    P10/P50/P90: ${stats['p10']:.1f} / ${stats['p50']:.1f} / ${stats['p90']:.1f}")
             print(f"    Peak/Off-peak: ${stats['peak_avg']:.1f} / ${stats['offpeak_avg']:.1f}")
@@ -369,7 +406,7 @@ def main():
             traceback.print_exc()
 
     if all_stats:
-        print_summary_table(all_stats)
+        print_summary_table(all_stats, year=year)
 
 
 if __name__ == '__main__':
