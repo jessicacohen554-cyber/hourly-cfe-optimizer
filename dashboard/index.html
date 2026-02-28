@@ -2571,7 +2571,7 @@ function initNarrativeMixChart() {
                         padding: 14,
                         generateLabels: function(chart) {
                             // Merge existing+new into one legend entry per resource
-                            const items = MIX_RESOURCES.map(r => {
+                            const items = MIX_RESOURCES.filter(r => MIX_COLORS[r]).map(r => {
                                 const c = MIX_COLORS[r];
                                 return {
                                     text: MIX_LABELS_MAP[r],
@@ -2881,7 +2881,7 @@ function initIncrementalMixChart() {
                         color: '#1A1A1A',
                         padding: 14,
                         generateLabels: function(chart) {
-                            const items = MIX_RESOURCES.map(r => ({
+                            const items = MIX_RESOURCES.filter(r => MIX_COLORS[r]).map(r => ({
                                 text: MIX_LABELS_MAP[r],
                                 fillStyle: MIX_COLORS[r].fill,
                                 strokeStyle: MIX_COLORS[r].border,
