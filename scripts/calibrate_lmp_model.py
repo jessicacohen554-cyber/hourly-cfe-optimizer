@@ -99,8 +99,95 @@ PJM_2024_DISTRIBUTION = {
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ALL-ISO CALIBRATION TARGETS (2024 SOM / EIA / IMM Reports)
+# ══════════════════════════════════════════════════════════════════════════════
+
+ISO_CALIBRATION_TARGETS = {
+    # PJM: Monitoring Analytics 2024 SOM
+    'PJM': {
+        'avg': 34.7, 'peak_avg': 42.0, 'offpeak_avg': 28.0,
+        'p10': 18.0, 'p25': 23.0, 'p50': 30.0, 'p75': 42.0, 'p90': 55.0,
+        'volatility': 25.0,
+        'negative_hours_est': 200, 'scarcity_hours_est': 100,
+        'source': 'PJM IMM SOM 2024 (Monitoring Analytics)',
+    },
+    # MISO: Potomac Economics 2024 SOM — avg RT $31/MWh (14% decrease from 2023)
+    # Coal-heavy fleet (35%), significant wind congestion (40% of RT congestion)
+    'MISO': {
+        'avg': 31.0, 'peak_avg': 38.0, 'offpeak_avg': 25.0,
+        'p10': 14.0, 'p25': 20.0, 'p50': 27.0, 'p75': 38.0, 'p90': 50.0,
+        'volatility': 22.0,
+        'negative_hours_est': 300, 'scarcity_hours_est': 50,
+        'source': 'Potomac Economics 2024 MISO SOM',
+    },
+    # SPP: SPP MMU 2024 SOM — avg RT $26.18/MWh, cheapest US market
+    # Massive wind (37.1%), wind markups avg -$37.99/MWh, very low gas $1.65/MMBtu
+    'SPP': {
+        'avg': 26.0, 'peak_avg': 33.0, 'offpeak_avg': 20.0,
+        'p10': 8.0, 'p25': 15.0, 'p50': 23.0, 'p75': 33.0, 'p90': 45.0,
+        'volatility': 24.0,
+        'negative_hours_est': 500, 'scarcity_hours_est': 30,
+        'source': 'SPP MMU 2024 Annual SOM',
+    },
+    # ERCOT: Modo Energy — avg RT ~$26/MWh (2024), down from $62.79 in 2023
+    # Solar+storage entry reduced shortage pricing frequency dramatically
+    'ERCOT': {
+        'avg': 26.0, 'peak_avg': 36.0, 'offpeak_avg': 18.0,
+        'p10': 5.0, 'p25': 14.0, 'p50': 22.0, 'p75': 32.0, 'p90': 50.0,
+        'volatility': 35.0,
+        'negative_hours_est': 400, 'scarcity_hours_est': 80,
+        'source': 'ERCOT 2024 (Modo Energy, ERCOT Commercial Markets Update)',
+    },
+    # CAISO: CAISO DMM 2024 — avg WEIM ~$37-40/MWh, aggressive duck curve negative pricing
+    # Spring prices higher than summer in 2024 (unusual), GHG adds $14-19/MWh to CC
+    'CAISO': {
+        'avg': 38.0, 'peak_avg': 55.0, 'offpeak_avg': 22.0,
+        'p10': -5.0, 'p25': 12.0, 'p50': 32.0, 'p75': 50.0, 'p90': 72.0,
+        'volatility': 38.0,
+        'negative_hours_est': 600, 'scarcity_hours_est': 60,
+        'source': 'CAISO DMM 2024 Q4 + Annual Report',
+    },
+    # NYISO: Potomac Economics 2024 SOM — system avg ~$41.81/MWh
+    # Long Island significantly higher. Tight geography → high congestion.
+    'NYISO': {
+        'avg': 42.0, 'peak_avg': 52.0, 'offpeak_avg': 32.0,
+        'p10': 18.0, 'p25': 26.0, 'p50': 36.0, 'p75': 50.0, 'p90': 68.0,
+        'volatility': 30.0,
+        'negative_hours_est': 150, 'scarcity_hours_est': 70,
+        'source': 'Potomac Economics NYISO 2024 SOM',
+    },
+    # ISO-NE: ISO-NE 2024 — avg $39.50/MWh (published), highest Eastern Interconnect
+    # $7B traded, winter gas pipeline premium, high transmission rates ($24/MWh)
+    'NEISO': {
+        'avg': 39.5, 'peak_avg': 50.0, 'offpeak_avg': 30.0,
+        'p10': 18.0, 'p25': 25.0, 'p50': 34.0, 'p75': 48.0, 'p90': 65.0,
+        'volatility': 28.0,
+        'negative_hours_est': 180, 'scarcity_hours_est': 60,
+        'source': 'ISO-NE 2024 EMM Report',
+    },
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # CALIBRATION ENGINE
 # ══════════════════════════════════════════════════════════════════════════════
+
+def _build_target_dict(iso_targets):
+    """Convert ISO_CALIBRATION_TARGETS entry to comparison format."""
+    return {
+        'avg_lmp': iso_targets.get('avg'),
+        'peak_avg_lmp': iso_targets.get('peak_avg'),
+        'offpeak_avg_lmp': iso_targets.get('offpeak_avg'),
+        'lmp_p10': iso_targets.get('p10'),
+        'lmp_p25': iso_targets.get('p25'),
+        'lmp_p50': iso_targets.get('p50'),
+        'lmp_p75': iso_targets.get('p75'),
+        'lmp_p90': iso_targets.get('p90'),
+        'price_volatility': iso_targets.get('volatility'),
+        'negative_price_hours': iso_targets.get('negative_hours_est'),
+        'scarcity_hours': iso_targets.get('scarcity_hours_est'),
+    }
+
 
 def run_synthetic_lmp_for_calibration(iso='PJM', fuel_level='Medium'):
     """Run synthetic LMP at current grid mix and return stats for comparison.
@@ -524,10 +611,11 @@ def load_actual_hourly_csv(filepath):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(description='Calibrate LMP model against PJM actuals')
+    parser = argparse.ArgumentParser(description='Calibrate LMP model against ISO actuals')
     parser.add_argument('--hourly', type=str, default=None,
-                        help='Path to hourly PJM DA LMP CSV (from Data Miner 2)')
-    parser.add_argument('--iso', type=str, default='PJM')
+                        help='Path to hourly DA LMP CSV (from ISO data portal)')
+    parser.add_argument('--iso', type=str, default='PJM',
+                        help='ISO to calibrate (PJM, MISO, SPP, ERCOT, CAISO, NYISO, NEISO, or ALL)')
     parser.add_argument('--qa-actual', action='store_true',
                         help='QA test using actual EIA hourly generation/demand data')
     parser.add_argument('--year', type=int, default=2025,
@@ -544,23 +632,12 @@ def main():
         if qa_result is None:
             return
 
-        # Compare against PJM targets
-        targets = {
-            'avg_lmp': PJM_2024_DISTRIBUTION['avg'],
-            'peak_avg_lmp': PJM_2024_DISTRIBUTION['peak_avg'],
-            'offpeak_avg_lmp': PJM_2024_DISTRIBUTION['offpeak_avg'],
-            'lmp_p10': PJM_2024_DISTRIBUTION['p10'],
-            'lmp_p25': PJM_2024_DISTRIBUTION['p25'],
-            'lmp_p50': PJM_2024_DISTRIBUTION['p50'],
-            'lmp_p75': PJM_2024_DISTRIBUTION['p75'],
-            'lmp_p90': PJM_2024_DISTRIBUTION['p90'],
-            'price_volatility': PJM_2024_DISTRIBUTION['volatility'],
-            'negative_price_hours': PJM_2024_STATS['negative_da_price_hours_est'],
-            'scarcity_hours': PJM_2024_STATS['scarcity_hours_est'],
-        }
+        # Compare against ISO-specific targets (fallback to PJM if missing)
+        iso_targets = ISO_CALIBRATION_TARGETS.get(args.iso, ISO_CALIBRATION_TARGETS['PJM'])
+        targets = _build_target_dict(iso_targets)
         comparison = compare_metrics(
             qa_result['stats'], targets,
-            f'{args.iso} — EIA {args.year} Actual vs PJM Targets')
+            f'{args.iso} — EIA {args.year} Actual vs {args.iso} Targets')
         suggest_adjustments(comparison, qa_result)
         analyze_hourly_distribution(qa_result['hourly_lmp'])
 
@@ -610,70 +687,65 @@ def main():
         return
 
     # Default: weather-normalized calibration
-    print(f"\n  Running synthetic LMP for {args.iso}...")
-    result = run_synthetic_lmp_for_calibration(args.iso)
-    if result is None:
-        return
+    # Support --iso ALL flag to run all 7 ISOs
+    isos_to_run = list(ISO_CALIBRATION_TARGETS.keys()) if args.iso == 'ALL' else [args.iso]
 
-    stats = result['stats']
+    for run_iso in isos_to_run:
+        print(f"\n  Running synthetic LMP for {run_iso}...")
+        result = run_synthetic_lmp_for_calibration(run_iso)
+        if result is None:
+            print(f"  WARNING: Failed for {run_iso}, skipping")
+            continue
 
-    # Build comparison targets
-    targets = {
-        'avg_lmp': PJM_2024_DISTRIBUTION['avg'],
-        'peak_avg_lmp': PJM_2024_DISTRIBUTION['peak_avg'],
-        'offpeak_avg_lmp': PJM_2024_DISTRIBUTION['offpeak_avg'],
-        'lmp_p10': PJM_2024_DISTRIBUTION['p10'],
-        'lmp_p25': PJM_2024_DISTRIBUTION['p25'],
-        'lmp_p50': PJM_2024_DISTRIBUTION['p50'],
-        'lmp_p75': PJM_2024_DISTRIBUTION['p75'],
-        'lmp_p90': PJM_2024_DISTRIBUTION['p90'],
-        'price_volatility': PJM_2024_DISTRIBUTION['volatility'],
-        'negative_price_hours': PJM_2024_STATS['negative_da_price_hours_est'],
-        'scarcity_hours': PJM_2024_STATS['scarcity_hours_est'],
-    }
+        stats = result['stats']
 
-    # Compare
-    comparison = compare_metrics(stats, targets, f'{args.iso} — 2024 Baseline Calibration')
+        # Use ISO-specific calibration targets
+        iso_targets = ISO_CALIBRATION_TARGETS.get(run_iso, ISO_CALIBRATION_TARGETS['PJM'])
+        targets = _build_target_dict(iso_targets)
 
-    # Suggest adjustments
-    suggest_adjustments(comparison, result)
+        # Compare
+        comparison = compare_metrics(stats, targets, f'{run_iso} — 2024 Baseline Calibration')
 
-    # Distribution analysis
-    analyze_hourly_distribution(result['hourly_lmp'])
+        # Suggest adjustments
+        suggest_adjustments(comparison, result)
 
-    # Load actual data if provided
-    if args.hourly:
-        print(f"\n  Loading actual hourly data: {args.hourly}")
-        actual_lmp = load_actual_hourly_csv(args.hourly)
-        analyze_hourly_distribution(result['hourly_lmp'], actual_lmp)
+        # Distribution analysis
+        analyze_hourly_distribution(result['hourly_lmp'])
 
-    # Save calibration report
-    os.makedirs(LMP_DIR, exist_ok=True)
-    report = {
-        'iso': args.iso,
-        'calibration_date': time.strftime('%Y-%m-%d %H:%M:%S'),
-        'synthetic_stats': stats,
-        'targets': targets,
-        'comparison': [{k: v for k, v in r.items()} for r in comparison],
-        'distribution': {
-            'percentiles': {
-                f'p{p}': round(float(v), 2)
-                for p, v in zip([1, 5, 10, 25, 50, 75, 90, 95, 99],
-                                np.percentile(result['hourly_lmp'],
-                                              [1, 5, 10, 25, 50, 75, 90, 95, 99]))
+        # Load actual data if provided (only for single-ISO mode)
+        if args.hourly and len(isos_to_run) == 1:
+            print(f"\n  Loading actual hourly data: {args.hourly}")
+            actual_lmp = load_actual_hourly_csv(args.hourly)
+            analyze_hourly_distribution(result['hourly_lmp'], actual_lmp)
+
+        # Save calibration report
+        os.makedirs(LMP_DIR, exist_ok=True)
+        report = {
+            'iso': run_iso,
+            'calibration_date': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'synthetic_stats': stats,
+            'targets': targets,
+            'source': iso_targets.get('source', 'Unknown'),
+            'comparison': [{k: v for k, v in r.items()} for r in comparison],
+            'distribution': {
+                'percentiles': {
+                    f'p{p}': round(float(v), 2)
+                    for p, v in zip([1, 5, 10, 25, 50, 75, 90, 95, 99],
+                                    np.percentile(result['hourly_lmp'],
+                                                  [1, 5, 10, 25, 50, 75, 90, 95, 99]))
+                },
+                'negative_hours': int((result['hourly_lmp'] < 0).sum()),
+                'zero_hours': int((result['hourly_lmp'] <= 0).sum()),
+                'scarcity_hours': int((result['hourly_lmp'] > 200).sum()),
             },
-            'negative_hours': int((result['hourly_lmp'] < 0).sum()),
-            'zero_hours': int((result['hourly_lmp'] <= 0).sum()),
-            'scarcity_hours': int((result['hourly_lmp'] > 200).sum()),
-        },
-    }
-    report_path = os.path.join(LMP_DIR, f'{args.iso}_calibration.json')
-    with open(report_path, 'w') as f:
-        json.dump(report, f, indent=2)
-    print(f"\n  Calibration report saved: {report_path}")
+        }
+        report_path = os.path.join(LMP_DIR, f'{run_iso}_calibration.json')
+        with open(report_path, 'w') as f:
+            json.dump(report, f, indent=2)
+        print(f"\n  Calibration report saved: {report_path}")
 
     print(f"\n{'='*70}")
-    print(f"  CALIBRATION COMPLETE")
+    print(f"  CALIBRATION COMPLETE — {len(isos_to_run)} ISO(s)")
     print(f"{'='*70}")
 
 
