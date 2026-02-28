@@ -210,6 +210,33 @@ CLEAN_COST = {
     },
 }
 
+# P25/P75 cost tiers — interpolated between L/M (P10/P50) and M/H (P50/P90)
+# P25 = low + 0.375 * (medium - low)   [at 25th pctile between P10 and P50]
+# P75 = medium + 0.625 * (high - medium) [at 75th pctile between P50 and P90]
+def _interpolate_cost_tier(low_vals, med_vals, high_vals, target_pctile):
+    """Interpolate a cost tier between L/M/H at a given percentile (10-90 scale)."""
+    result = []
+    for l, m, h in zip(low_vals, med_vals, high_vals):
+        if l is None or m is None or h is None:
+            result.append(None)
+        elif target_pctile <= 50:
+            frac = (target_pctile - 10) / (50 - 10)  # 0..1 between P10 and P50
+            result.append(round(l + frac * (m - l), 2))
+        else:
+            frac = (target_pctile - 50) / (90 - 50)  # 0..1 between P50 and P90
+            result.append(round(m + frac * (h - m), 2))
+    return result
+
+CLEAN_COST['p25'] = {}
+CLEAN_COST['p75'] = {}
+for _iso in ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']:
+    CLEAN_COST['p25'][_iso] = _interpolate_cost_tier(
+        CLEAN_COST['low'][_iso], CLEAN_COST['medium'][_iso], CLEAN_COST['high'][_iso], 25
+    )
+    CLEAN_COST['p75'][_iso] = _interpolate_cost_tier(
+        CLEAN_COST['low'][_iso], CLEAN_COST['medium'][_iso], CLEAN_COST['high'][_iso], 75
+    )
+
 # Gas backup capacity cost per threshold ($/MWh) — medium scenario from Step 4
 # This is NOT part of the MAC calculation — it's a separate system cost tracked
 # for the dashboard warning: "chasing cheap carbon without considering what the
@@ -636,8 +663,11 @@ def find_crossover(t_dense, mac_curve, dac_curve):
 
 def compute_crossover_range(iso):
     """
-    Cross 3 grid cost tiers × 3 DAC scenarios = 9 crossover points.
-    Returns the full range + the medium×central as the reference.
+    Cross 5 grid cost tiers (P10/P25/P50/P75/P90) × 3 DAC scenarios = 15 crossover points.
+
+    Returns two ranges:
+    - range: P25/P75 "analysis" range for optimal targets & no-regrets (tighter, more actionable)
+    - range_full: P10/P90 full range for display on interactive dashboard (wider uncertainty band)
 
     Note: Demand growth doesn't change crossover thresholds (MAC is scale-invariant),
     so we compute crossovers at medium growth only. Growth affects absolute quantities,
@@ -646,7 +676,7 @@ def compute_crossover_range(iso):
     crossovers = {}
     mac_curves = {}
 
-    for cost_tier in ['low', 'medium', 'high']:
+    for cost_tier in ['low', 'p25', 'medium', 'p75', 'high']:
         curve = compute_marginal_mac_curve(iso, cost_tier, 'medium')
         if curve is None:
             continue
@@ -660,33 +690,61 @@ def compute_crossover_range(iso):
             key = f'{cost_tier}_grid__{dac_scenario}_dac'
             crossovers[key] = xo
 
-    # Extract range
-    valid_thresholds = [
+    # Analysis range: P25/P75 tiers only (tighter, more actionable)
+    analysis_tiers = {'p25', 'medium', 'p75'}
+    analysis_thresholds = [
+        xo['threshold'] for k, xo in crossovers.items()
+        if xo.get('threshold') is not None and k.split('_grid__')[0] in analysis_tiers
+    ]
+
+    if not analysis_thresholds:
+        range_result = {
+            'lower_bound': None,
+            'upper_bound': None,
+            'note': 'Grid cheaper than DAC in all P25/P75 scenarios',
+        }
+    else:
+        range_result = {
+            'lower_bound': min(analysis_thresholds),
+            'upper_bound': max(analysis_thresholds),
+            'lower_scenario': next(
+                k for k, v in crossovers.items()
+                if v.get('threshold') == min(analysis_thresholds) and k.split('_grid__')[0] in analysis_tiers
+            ),
+            'upper_scenario': next(
+                k for k, v in crossovers.items()
+                if v.get('threshold') == max(analysis_thresholds) and k.split('_grid__')[0] in analysis_tiers
+            ),
+        }
+
+    # Full display range: P10/P90 tiers (wider, shown on interactive dashboard)
+    all_thresholds = [
         xo['threshold'] for xo in crossovers.values()
         if xo.get('threshold') is not None
     ]
 
-    if not valid_thresholds:
-        range_result = {
+    if not all_thresholds:
+        range_full = {
             'lower_bound': None,
             'upper_bound': None,
             'note': 'Grid cheaper than DAC in all scenarios',
         }
     else:
-        range_result = {
-            'lower_bound': min(valid_thresholds),
-            'upper_bound': max(valid_thresholds),
+        range_full = {
+            'lower_bound': min(all_thresholds),
+            'upper_bound': max(all_thresholds),
             'lower_scenario': next(
-                k for k, v in crossovers.items() if v.get('threshold') == min(valid_thresholds)
+                k for k, v in crossovers.items() if v.get('threshold') == min(all_thresholds)
             ),
             'upper_scenario': next(
-                k for k, v in crossovers.items() if v.get('threshold') == max(valid_thresholds)
+                k for k, v in crossovers.items() if v.get('threshold') == max(all_thresholds)
             ),
         }
 
     return {
         'crossovers': crossovers,
-        'range': range_result,
+        'range': range_result,           # P25/P75 for analysis
+        'range_full': range_full,         # P10/P90 for display
         'mac_curves': mac_curves,
     }
 
@@ -929,12 +987,14 @@ def main():
 
         # Option B: crossover range
         result = compute_crossover_range(iso)
-        rng = result['range']
+        rng = result['range']           # P25/P75 analysis range
+        rng_full = result['range_full']  # P10/P90 display range
 
-        print(f"  Crossover range: {rng.get('lower_bound', '?')}% — {rng.get('upper_bound', '?')}%")
+        print(f"  Analysis range (P25/P75): {rng.get('lower_bound', '?')}% — {rng.get('upper_bound', '?')}%")
         if rng.get('lower_bound'):
             print(f"    Lower bound ({rng['lower_scenario']})")
             print(f"    Upper bound ({rng['upper_scenario']})")
+        print(f"  Display range  (P10/P90): {rng_full.get('lower_bound', '?')}% — {rng_full.get('upper_bound', '?')}%")
 
         # Print 9 crossover combos
         print(f"\n  {'Grid Cost':<12} {'DAC Scenario':<16} {'Crossover':<12} {'MAC':<10} {'DAC':<10}")
@@ -1003,7 +1063,8 @@ def main():
                 print(f"    {gt}: {tc['floor_twh']} – {tc['max_twh']} TWh")
 
         all_results[iso] = {
-            'crossover_range': rng,
+            'crossover_range': rng,             # P25/P75 analysis range
+            'crossover_range_full': rng_full,   # P10/P90 display range
             'crossovers': result['crossovers'],
             'target_analysis': targets,
             'no_regrets': no_regrets,
@@ -1033,19 +1094,23 @@ def main():
         }
 
     # ===== Summary Table =====
-    print(f"\n{'=' * 90}")
+    print(f"\n{'=' * 100}")
     print("  OPTIMAL CFE TARGET RANGES PER ISO")
-    print(f"  (where marginal grid MAC crosses DAC across all scenario combos)")
-    print(f"{'=' * 90}")
-    print(f"  {'ISO':<8} {'Lower':<10} {'Central':<10} {'Upper':<10} {'Key No-Regrets Investments'}")
-    print(f"  {'-' * 8} {'-' * 10} {'-' * 10} {'-' * 10} {'-' * 40}")
+    print(f"  Analysis range = P25/P75 grid cost × 3 DAC scenarios (tighter, actionable)")
+    print(f"  Display range  = P10/P90 grid cost × 3 DAC scenarios (wider, uncertainty band)")
+    print(f"{'=' * 100}")
+    print(f"  {'ISO':<8} {'P25/P75 Lo':<12} {'Central':<10} {'P25/P75 Hi':<12} {'P10/P90':<16} {'Key No-Regrets'}")
+    print(f"  {'-' * 8} {'-' * 12} {'-' * 10} {'-' * 12} {'-' * 16} {'-' * 30}")
     for iso in ISOS:
         r = all_results[iso]
         rng = r['crossover_range']
+        rng_full = r.get('crossover_range_full', rng)
         lo = f"{rng['lower_bound']}%" if rng.get('lower_bound') else '>100%'
         hi = f"{rng['upper_bound']}%" if rng.get('upper_bound') else '>100%'
         cen_xo = r['crossovers'].get('medium_grid__central_dac', {})
         ce = f"{cen_xo['threshold']}%" if cen_xo.get('threshold') else '>100%'
+        full_lo = f"{rng_full['lower_bound']}%" if rng_full.get('lower_bound') else '>100%'
+        full_hi = f"{rng_full['upper_bound']}%" if rng_full.get('upper_bound') else '>100%'
 
         # Summarize no-regrets
         nr = r['no_regrets']
@@ -1055,7 +1120,7 @@ def main():
             nr_str = ', '.join(consensus) if consensus else 'none'
         else:
             nr_str = 'N/A'
-        print(f"  {iso:<8} {lo:<10} {ce:<10} {hi:<10} {nr_str}")
+        print(f"  {iso:<8} {lo:<12} {ce:<10} {hi:<12} {full_lo}–{full_hi:<8} {nr_str}")
 
     # ===== Save =====
     clean = json_clean(all_results)
@@ -1114,11 +1179,15 @@ def write_dashboard_js(results, path):
         lines.append(f'  "{iso}": {{')
         lines.append(f'    crossover_range: {json.dumps(rng)},')
 
+        # P10/P90 display range (wider band for interactive dashboard)
+        rng_full = r.get('crossover_range_full', rng)
+        lines.append(f'    crossover_range_full: {json.dumps(rng_full)},')
+
         # Medium×central crossover (reference point)
         cen = r.get('crossovers', {}).get('medium_grid__central_dac', {})
         lines.append(f'    crossover_central: {json.dumps(cen)},')
 
-        # All 9 crossovers
+        # All crossovers (5 cost tiers × 3 DAC scenarios)
         lines.append(f'    crossovers: {json.dumps(r.get("crossovers", {}))},')
 
         # Smooth curves for charting (medium)
@@ -1126,9 +1195,9 @@ def write_dashboard_js(results, path):
         lines.append(f'    smooth_thresholds: {json.dumps(sc.get("thresholds", []))},')
         lines.append(f'    smooth_marginal_mac: {json.dumps(sc.get("marginal_mac", []))},')
 
-        # L/M/H sensitivity band
+        # P10/P25/P50/P75/P90 sensitivity bands
         lmh = r.get('smooth_curves_lmh', {})
-        for tier in ['low', 'medium', 'high']:
+        for tier in ['low', 'p25', 'medium', 'p75', 'high']:
             tc = lmh.get(tier, {})
             lines.append(f'    smooth_mac_{tier}: {json.dumps(tc.get("marginal_mac", []))},')
 
