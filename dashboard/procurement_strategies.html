@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procurement Strategies | The 8,760 Problem</title>
+<link rel="stylesheet" href="styles/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+/* ========== PAGE VARIABLES ========== */
+:root {
+    --navy: #1A2744;
+    --slate: #4A4540;
+    --light-bg: #F3F4F8;
+    --card-bg: #FFFFFF;
+    --accent-green: #22C55E;
+    --accent-amber: #F59E0B;
+    --accent-blue: #0EA5E9;
+    --accent-red: #EF4444;
+    --accent-purple: #9C27B0;
+    --accent-teal: #06B6D4;
+    --font-display: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+}
+
+/* ========== GLOBAL RESETS ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: var(--font-body);
+    background: var(--light-bg);
+    color: var(--slate);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ========== HEADER ========== */
+.header {
+    background: linear-gradient(135deg, #0f1729 0%, #1a2744 40%, #2d3a5c 100%);
+    color: white;
+    text-align: center;
+    padding: 48px 24px 40px;
+}
+.header h1 {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+}
+.header .subtitle {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.7);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ========== CONTENT WRAPPER ========== */
+.content-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+}
+
+/* ========== INTRO SECTION ========== */
+.intro-section {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 40px 36px;
+    margin: -20px auto 32px;
+    max-width: 960px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    position: relative;
+    z-index: 2;
+}
+.intro-section h2 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--navy);
+    margin-bottom: 12px;
+}
+.intro-section p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 14px;
+    color: var(--slate);
+}
+.intro-section p:last-child { margin-bottom: 0; }
+
+/* ========== STRATEGY FRAMEWORK CARDS ========== */
+.strategy-framework {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 28px 0 8px;
+}
+.strat-card {
+    background: var(--light-bg);
+    border-radius: 12px;
+    padding: 20px;
+    border-left: 4px solid #ccc;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.strat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+.strat-card.strat-1 { border-left-color: var(--accent-green); }
+.strat-card.strat-2 { border-left-color: var(--accent-blue); }
+.strat-card.strat-3 { border-left-color: var(--accent-amber); }
+.strat-card .strat-label {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+.strat-card.strat-1 .strat-label { color: #16A34A; }
+.strat-card.strat-2 .strat-label { color: #0284C7; }
+.strat-card.strat-3 .strat-label { color: #D97706; }
+.strat-card h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+}
+.strat-card p {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: #6B7280;
+    margin-bottom: 0;
+}
+.strat-card .strat-variant {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    font-size: 0.82rem;
+    color: #6B7280;
+    line-height: 1.5;
+}
+.strat-card .strat-variant strong { color: var(--navy); }
+
+/* ========== SECTION HEADERS ========== */
+.section-block {
+    margin-top: 48px;
+}
+.section-badge {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+}
+.section-badge-green { background: rgba(34,197,94,0.12); color: #16A34A; }
+.section-block h2 {
+    font-family: var(--font-display);
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 12px;
+    line-height: 1.25;
+}
+.section-block .lead {
+    font-size: 1.02rem;
+    line-height: 1.7;
+    color: var(--slate);
+    max-width: 760px;
+    margin-bottom: 28px;
+}
+
+/* ========== SIMULATION PANEL ========== */
+.sim-panel {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 28px;
+}
+.sim-panel h3 {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 16px;
+}
+
+/* ========== SIMULATION CONTROLS ========== */
+.sim-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: var(--light-bg);
+    border-radius: 10px;
+}
+.sim-btn {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.sim-btn:active { transform: scale(0.97); }
+.sim-btn-play {
+    background: var(--accent-green);
+    color: white;
+}
+.sim-btn-play:hover { background: #16A34A; }
+.sim-btn-play.paused { background: var(--accent-amber); }
+.sim-btn-reset {
+    background: rgba(0,0,0,0.06);
+    color: var(--slate);
+}
+.sim-btn-reset:hover { background: rgba(0,0,0,0.1); }
+.sim-speed {
+    font-size: 0.82rem;
+    color: #6B7280;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.sim-speed select {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    padding: 4px 8px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    background: white;
+    min-height: 36px;
+}
+.sim-progress-wrap {
+    flex: 1;
+    min-width: 120px;
+}
+.sim-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #E5E7EB;
+    border-radius: 3px;
+    overflow: hidden;
+    cursor: pointer;
+}
+.sim-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+.sim-step-label {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    color: #9CA3AF;
+    text-align: right;
+    margin-top: 2px;
+}
+
+/* ========== STRATEGY TOGGLE (1A / 1B) ========== */
+.strat-toggle {
+    display: inline-flex;
+    background: var(--light-bg);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+    margin-left: auto;
+}
+.strat-toggle button {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    color: #6B7280;
+    transition: all 0.2s;
+    min-height: 36px;
+}
+.strat-toggle button.active {
+    background: white;
+    color: var(--navy);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* ========== ISO GRID (deployment targets) ========== */
+.iso-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.iso-card {
+    background: var(--light-bg);
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
+    transition: all 0.4s ease;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+.iso-card.active-deploy {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 12px rgba(34,197,94,0.2);
+}
+.iso-card .iso-name {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.iso-card .iso-threshold {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent-green);
+    line-height: 1;
+}
+.iso-card .iso-threshold-label {
+    font-size: 0.68rem;
+    color: #9CA3AF;
+    margin-top: 2px;
+}
+.iso-threshold-bar {
+    height: 4px;
+    background: #E5E7EB;
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+.iso-threshold-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease, background 0.5s;
+    width: 0%;
+}
+
+/* ========== ANIMATED COUNTERS ========== */
+.counter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+.counter-box {
+    background: var(--light-bg);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+}
+.counter-value {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.1;
+}
+.counter-label {
+    font-size: 0.75rem;
+    color: #9CA3AF;
+    margin-top: 4px;
+    line-height: 1.3;
+}
+.counter-box.highlight-green .counter-value { color: #16A34A; }
+.counter-box.highlight-blue .counter-value { color: #0284C7; }
+.counter-box.highlight-amber .counter-value { color: #D97706; }
+.counter-box.highlight-red .counter-value { color: #DC2626; }
+
+/* ========== CHART CONTAINERS ========== */
+.chart-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 320px;
+    margin: 16px 0;
+}
+
+/* ========== INSIGHT BOXES ========== */
+.insight-box {
+    background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-size: 0.92rem;
+    line-height: 1.7;
+}
+.insight-box.amber {
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border-color: rgba(245,158,11,0.2);
+}
+.insight-box.blue {
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+    border-color: rgba(14,165,233,0.2);
+}
+.insight-box.red {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border-color: rgba(239,68,68,0.2);
+}
+.insight-box strong { color: var(--navy); }
+.insight-box h4 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+}
+
+/* ========== COMPARISON TABLE ========== */
+.compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin: 16px 0;
+}
+.compare-table th {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--navy);
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 2px solid #E5E7EB;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.compare-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #F3F4F6;
+    color: var(--slate);
+}
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table .val-green { color: #16A34A; font-weight: 600; }
+.compare-table .val-red { color: #DC2626; font-weight: 600; }
+
+/* ========== NARRATIVE PROSE ========== */
+.narrative-prose {
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--slate);
+    margin: 20px 0;
+}
+.narrative-prose p { margin-bottom: 14px; }
+.narrative-prose strong { color: var(--navy); }
+
+/* ========== FADE-IN ANIMATION ========== */
+.fade-in {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+    .fade-in { opacity: 1; transform: none; transition: none; }
+}
+
+/* ========== MOBILE RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .header { padding: 36px 16px 28px; }
+    .header h1 { font-size: 1.6rem; }
+    .intro-section { padding: 24px 18px; margin: -12px 10px 24px; }
+    .content-wrap { padding: 0 12px 40px; }
+    .sim-panel { padding: 20px 14px; }
+    .iso-grid { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; }
+    .iso-card { padding: 8px 6px; }
+    .iso-card .iso-threshold { font-size: 1.1rem; }
+    .counter-row { grid-template-columns: repeat(2, 1fr); }
+    .counter-value { font-size: 1.3rem; }
+    .chart-wrap { min-height: 260px; }
+    .section-block h2 { font-size: 1.35rem; }
+    .sim-controls { flex-direction: column; align-items: stretch; gap: 8px; }
+    .sim-controls > * { width: 100%; }
+    .strat-toggle { justify-content: center; margin-left: 0; }
+    .strategy-framework { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+    .iso-grid { grid-template-columns: repeat(3, 1fr); }
+    .counter-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ========== DEPLOYMENT SEQUENCE EVENT LOG ========== */
+.deploy-log {
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--light-bg);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    color: #6B7280;
+    line-height: 1.6;
+}
+.deploy-log .log-entry {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.deploy-log .log-entry:last-child { border-bottom: none; }
+.deploy-log .log-iso {
+    font-weight: 700;
+    color: var(--navy);
+    min-width: 48px;
+}
+.deploy-log .log-zone { color: var(--accent-green); font-weight: 600; }
+.deploy-log .log-mac { color: #9CA3AF; }
+.deploy-log .log-entry.current { background: rgba(34,197,94,0.08); border-radius: 4px; padding: 3px 6px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<!-- HEADER -->
+<header class="header">
+    <h1>Corporate Procurement Strategies</h1>
+    <p class="subtitle">How different approaches to clean energy procurement drive real-world grid decarbonization &mdash; and where each strategy actually deploys capital.</p>
+</header>
+
+<!-- INTRO -->
+<div class="intro-section fade-in">
+    <h2>The Framework: Six Strategies, Three Philosophies</h2>
+    <p>
+        Not all clean energy procurement is created equal. The same corporate dollar can displace
+        dramatically different amounts of carbon depending on <strong>how</strong> and <strong>where</strong>
+        it&rsquo;s deployed. We model six procurement strategies across three families, each with distinct
+        rules about what counts as &ldquo;clean&rdquo; and where investment goes.
+    </p>
+    <p>
+        All simulations target a <strong>95% clean grid</strong> in each ISO&rsquo;s SBTi milestone year,
+        using <strong>2045 demand projections</strong> with medium growth rates. Corporate &amp; Industrial
+        (C&amp;I) participation ranges from today&rsquo;s ~13% to a theoretical 80% of load.
+    </p>
+
+    <div class="strategy-framework">
+        <!-- Strategy Group 1: Consequential -->
+        <div class="strat-card strat-1">
+            <div class="strat-label">Group 1 &mdash; Consequential</div>
+            <h3>Cross-Regional Carbon Displacement</h3>
+            <p>
+                Deploy capital wherever it displaces the most carbon per dollar &mdash; across all ISOs,
+                not just the buyer&rsquo;s own grid. A merit-order queue ranks every possible clean energy
+                investment by marginal abatement cost.
+            </p>
+            <div class="strat-variant">
+                <strong>1A &mdash; Grid-Average Baseline:</strong> Credits emission reductions against the
+                full grid emission rate (includes clean energy in the denominator). Lower bar for claiming displacement.<br><br>
+                <strong>1B &mdash; Fossil-Average Baseline:</strong> Credits reductions against only the
+                fossil fleet&rsquo;s emission rate. Uses marginal displacement rates where available; falls
+                back to fossil-average as proxy. Higher bar, more accurate accounting of actual fossil displacement.
+            </div>
+        </div>
+
+        <!-- Strategy Group 2: Hourly Matching -->
+        <div class="strat-card strat-2">
+            <div class="strat-label">Group 2 &mdash; Hourly Matching</div>
+            <h3>Same-ISO, Hour-by-Hour</h3>
+            <p>
+                Match clean generation to consumption every hour within the buyer&rsquo;s own ISO.
+                The most rigorous temporal standard &mdash; no annual averaging, no cross-regional credit.
+            </p>
+            <div class="strat-variant">
+                <strong>2A:</strong> 100% new-build required<br>
+                <strong>2B:</strong> Grid baseline credit for existing clean<br>
+                <strong>2C:</strong> Pro-rata allocation + premium for existing fleet
+            </div>
+        </div>
+
+        <!-- Strategy Group 3: Annual Matching -->
+        <div class="strat-card strat-3">
+            <div class="strat-label">Group 3 &mdash; Annual Matching</div>
+            <h3>Volume-Based, Annual Accounting</h3>
+            <p>
+                Match total annual clean generation to annual consumption. Simpler accounting,
+                but allows temporal mismatches (e.g., solar surplus in summer offsets winter gas).
+            </p>
+            <div class="strat-variant">
+                <strong>3A &mdash; Cross-Regional New Build:</strong> Annual matching with additionality
+                requirement, deployed across ISOs.<br><br>
+                <strong>3B &mdash; Cross-Regional, No Additionality:</strong> Unbundled RECs &mdash; cheapest
+                option, but no guarantee of new generation. Existing clean counts.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content-wrap">
+
+<!-- ================================================================== -->
+<!-- SECTION 1: CONSEQUENTIAL STRATEGIES                                -->
+<!-- ================================================================== -->
+<div class="section-block fade-in">
+    <span class="section-badge section-badge-green">Strategy Group 1</span>
+    <h2>Following the Money: How Consequential Procurement Deploys Capital</h2>
+    <p class="lead">
+        Consequential procurement is the most economically efficient strategy for displacing carbon:
+        it builds clean energy <strong>wherever the marginal abatement cost is lowest</strong>, regardless
+        of where the buyer sits. This creates a cross-regional deployment queue &mdash; a merit order of
+        decarbonization opportunities ranked by $/tCO&#8322; displaced.
+    </p>
+    <p class="lead">
+        The simulation below shows what happens as corporate participation ramps from today&rsquo;s ~13%
+        to 80% of C&amp;I load. Watch where the money goes &mdash; which ISOs attract investment first,
+        what gets built, and how much carbon actually gets displaced.
+    </p>
+</div>
+
+<!-- ANIMATED SIMULATION: Strategy 1B Deployment -->
+<div class="sim-panel fade-in" id="simPanel">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+        <h3 style="margin-bottom:0;">Consequential Deployment Simulation</h3>
+        <div class="strat-toggle" id="simStratToggle">
+            <button class="active" data-strat="1B">1B Fossil-Avg</button>
+            <button data-strat="1A">1A Grid-Avg</button>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="sim-controls">
+        <button class="sim-btn sim-btn-play" id="simPlayBtn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><polygon points="3,1 13,8 3,15"/></svg>
+            Play
+        </button>
+        <button class="sim-btn sim-btn-reset" id="simResetBtn">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1v5h5M15 15v-5h-5"/><path d="M13.5 6A6 6 0 0 0 3 3.5L1 6M2.5 10a6 6 0 0 0 10.5 2.5L15 10"/></svg>
+            Reset
+        </button>
+        <div class="sim-speed">
+            Speed:
+            <select id="simSpeedSelect">
+                <option value="1500">Slow</option>
+                <option value="800" selected>Normal</option>
+                <option value="300">Fast</option>
+            </select>
+        </div>
+        <div class="sim-progress-wrap">
+            <div class="sim-progress-bar" id="simProgressBar">
+                <div class="sim-progress-fill" id="simProgressFill"></div>
+            </div>
+            <div class="sim-step-label" id="simStepLabel">Step 0 / 56</div>
+        </div>
+    </div>
+
+    <!-- ISO Threshold Grid -->
+    <div class="iso-grid" id="isoGrid">
+        <div class="iso-card" data-iso="SPP">
+            <div class="iso-name">SPP</div>
+            <div class="iso-threshold" id="isoThresh-SPP">50%</div>
+            <div class="iso-threshold-label">CFE target</div>
+            <div class="iso-threshold-bar"><div class="iso-threshold-fill" id="isoBar-SPP" style="background:#EF4444;"></div></div>
+        </div>
+        <div class="iso-card" data-iso="ERCOT">
+            <div class="iso-name">ERCOT</div>
+            <div class="iso-threshold" id="isoThresh-ERCOT">50%</div>
+            <div class="iso-threshold-label">CFE target</div>
+            <div class="iso-threshold-bar"><div class="iso-threshold-fill" id="isoBar-ERCOT" style="background:#22C55E;"></div></div>
+        </div>
+        <div class="iso-card" data-iso="MISO">
+            <div class="iso-name">MISO</div>
+            <div class="iso-threshold" id="isoThresh-MISO">50%</div>
+            <div class="iso-threshold-label">CFE target</div>
+            <div class="iso-threshold-bar"><div class="iso-threshold-fill" id="isoBar-MISO" style="background:#06B6D4;"></div></div>
+        </div>
+        <div class="iso-card" data-iso="PJM">
+            <div class="iso-name">PJM</div>
+            <div class="iso-threshold" id="isoThresh-PJM">50%</div>
+            <div class="iso-threshold-label">CFE target</div>
+            <div class="iso-threshold-bar"><div class="iso-threshold-fill" id="isoBar-PJM" style="background:#4a90d9;"></div></div>
+        </div>
+        <div class="iso-card" data-iso="CAISO">
+            <div class="iso-name">CAISO</div>
+            <div class="iso-threshold" id="isoThresh-CAISO">50%</div>
+            <div class="iso-threshold-label">CFE target</div>
+            <div class="iso-threshold-bar"><div class="iso-threshold-fill" id="isoBar-CAISO" style="background:#F59E0B;"></div></div>
+        </div>
+        <div class="iso-card" data-iso="NYISO">
+            <div class="iso-name">NYISO</div>
+            <div class="iso-threshold" id="isoThresh-NYISO">50%</div>
+            <div class="iso-threshold-label">CFE target</div>
+            <div class="iso-threshold-bar"><div class="iso-threshold-fill" id="isoBar-NYISO" style="background:#E91E63;"></div></div>
+        </div>
+        <div class="iso-card" data-iso="NEISO">
+            <div class="iso-name">NEISO</div>
+            <div class="iso-threshold" id="isoThresh-NEISO">50%</div>
+            <div class="iso-threshold-label">CFE target</div>
+            <div class="iso-threshold-bar"><div class="iso-threshold-fill" id="isoBar-NEISO" style="background:#9C27B0;"></div></div>
+        </div>
+    </div>
+
+    <!-- Counters -->
+    <div class="counter-row">
+        <div class="counter-box highlight-green">
+            <div class="counter-value" id="counterCO2">0</div>
+            <div class="counter-label">MT CO&#8322; displaced</div>
+        </div>
+        <div class="counter-box highlight-blue">
+            <div class="counter-value" id="counterCost">$0B</div>
+            <div class="counter-label">Cumulative investment</div>
+        </div>
+        <div class="counter-box highlight-amber">
+            <div class="counter-value" id="counterMAC">$0</div>
+            <div class="counter-label">Marginal MAC ($/tCO&#8322;)</div>
+        </div>
+        <div class="counter-box highlight-red">
+            <div class="counter-value" id="counterTWh">0</div>
+            <div class="counter-label">TWh clean deployed</div>
+        </div>
+    </div>
+
+    <!-- Resource deployment chart -->
+    <div class="chart-wrap" style="min-height:300px;">
+        <canvas id="deployChart"></canvas>
+    </div>
+
+    <!-- Deployment log -->
+    <div class="deploy-log" id="deployLog">
+        <div class="log-entry" style="color:#9CA3AF;font-style:italic;">Press Play to start the simulation&hellip;</div>
+    </div>
+</div>
+
+<!-- 1A vs 1B COMPARISON -->
+<div class="sim-panel fade-in" id="comparisonPanel">
+    <h3>1A vs 1B: Same Resources, Different Accounting</h3>
+    <div class="narrative-prose">
+        <p>
+            Strategies 1A and 1B deploy <strong>identical resources</strong> in the same sequence &mdash; the
+            merit-order queue is the same. The only difference is how each strategy <em>accounts</em>
+            for the carbon displaced.
+        </p>
+        <p>
+            <strong>1A (Grid-Average)</strong> divides total grid emissions by total grid generation,
+            including existing clean energy. This dilutes the emission rate &mdash; a grid that&rsquo;s
+            already 40% clean has a lower &ldquo;average&rdquo; rate, making each new clean MWh appear to
+            displace less carbon than it actually does.
+        </p>
+        <p>
+            <strong>1B (Fossil-Average)</strong> calculates the emission rate using only the fossil fleet.
+            Where marginal displacement data is available (from our 8,760-hour dispatch model), it uses
+            the actual marginal rate. Where it isn&rsquo;t, it uses the fossil-fleet average as a proxy.
+            This more accurately reflects the emissions that new clean energy actually displaces.
+        </p>
+    </div>
+
+    <div class="chart-wrap" style="min-height:280px;">
+        <canvas id="co2CompareChart"></canvas>
+    </div>
+
+    <div class="insight-box">
+        <h4>Why 1B is the superior method</h4>
+        <p>
+            At 80% C&amp;I participation, Strategy 1B attributes <strong id="co2DiffPct">~40%</strong>
+            more CO&#8322; displacement than 1A &mdash; for the exact same investment.
+            This isn&rsquo;t a rounding error; it&rsquo;s the difference between measuring what you
+            <em>actually</em> displace (fossil generation) versus what you statistically offset
+            (grid average including existing clean). 1B gives a more honest &mdash; and more
+            motivating &mdash; picture of impact.
+        </p>
+    </div>
+</div>
+
+<!-- COAL WALL & RESOURCE ANALYSIS -->
+<div class="sim-panel fade-in" id="coalWallPanel">
+    <h3>The Fuel Displacement Sequence: When Does Coal Run Out?</h3>
+    <div class="narrative-prose">
+        <p>
+            Consequential deployment follows the fossil fuel merit order: <strong>coal is displaced first</strong>
+            (highest emissions per MWh), then oil, then gas. This matters because coal displacement yields
+            ~2.5&times; the carbon reduction per MWh compared to gas.
+        </p>
+        <p>
+            The <strong>&ldquo;coal wall&rdquo;</strong> is the threshold where all coal generation has been
+            retired from the dispatch stack. In most ISOs, this happens at roughly 70% CFE. Beyond the coal
+            wall, every additional clean MWh only displaces gas &mdash; cutting the marginal carbon benefit
+            nearly in half and sharply increasing the marginal abatement cost.
+        </p>
+    </div>
+
+    <div class="chart-wrap" style="min-height:320px;">
+        <canvas id="fuelDisplaceChart"></canvas>
+    </div>
+
+    <div class="insight-box amber">
+        <h4>CAISO: No coal wall at all</h4>
+        <p>
+            CAISO is the only ISO with zero coal in its dispatch stack &mdash; its fossil fleet is
+            entirely gas (plus a small amount of oil). This means every clean MWh in CAISO displaces
+            gas at ~0.39 tCO&#8322;/MWh, regardless of CFE target. It also means CAISO has the
+            <em>least efficient</em> carbon displacement per dollar, which is why it ranks last in the
+            consequential merit order.
+        </p>
+    </div>
+</div>
+
+<!-- RESOURCE DEPLOYMENT PATTERNS -->
+<div class="sim-panel fade-in" id="resourcePatternsPanel">
+    <h3>Where Capital Flows: Resource Deployment by Participation Level</h3>
+    <div class="narrative-prose">
+        <p>
+            The consequential queue reveals a clear deployment hierarchy. At low participation,
+            <strong>all investment goes to nuclear uprate</strong> &mdash; the cheapest form of clean firm
+            generation, unlocking existing capacity that&rsquo;s already licensed and connected. Wind enters
+            next, concentrated in ERCOT and SPP where capacity factors are highest. Solar follows at higher
+            participation levels. Clean firm new-build (beyond uprate) doesn&rsquo;t appear until ~80% participation.
+        </p>
+    </div>
+
+    <div class="chart-wrap" style="min-height:340px;">
+        <canvas id="resourceByPartChart"></canvas>
+    </div>
+
+    <div class="insight-box blue">
+        <h4>First clean firm new-build: not until ~80% participation</h4>
+        <p>
+            In the consequential merit order, CCS-equipped gas (the first new firm resource beyond uprate)
+            doesn&rsquo;t appear until 80% C&amp;I participation &mdash; and even then only 6 TWh. The economics
+            strongly favor variable renewables (wind, then solar) for the first ~60% of deployment. This means
+            early corporate procurement through consequential methods is overwhelmingly a <strong>VRE story</strong>,
+            concentrated in wind-rich ERCOT and SPP.
+        </p>
+    </div>
+
+    <div class="insight-box red" style="margin-top:16px;">
+        <h4>Investment deserts: NEISO, NYISO, and CAISO lag behind</h4>
+        <p>
+            The three most expensive ISOs &mdash; NEISO, NYISO, and CAISO &mdash; receive almost no consequential
+            investment at participation levels below 30%. Their higher electricity costs and lower renewable
+            capacity factors make them poor targets for cost-optimized carbon displacement. CAISO&rsquo;s lack of
+            coal makes gas-only displacement especially expensive per ton. In a consequential framework,
+            these regions are last in line &mdash; the final dollars chasing diminishing returns.
+        </p>
+    </div>
+</div>
+
+</div><!-- /content-wrap -->
+
+<!-- FOOTER -->
+<footer style="text-align:center;padding:32px 20px;color:#9CA3AF;font-size:0.8rem;background:var(--navy);color:rgba(255,255,255,0.5);">
+    The 8,760 Problem &copy; 2026 &mdash; Hourly Clean Energy Optimization Model
+</footer>
+
+<!-- ================================================================== -->
+<!-- SCRIPTS                                                            -->
+<!-- ================================================================== -->
+<script src="js/procurement-strategy-data.js"></script>
+<script src="js/consequential-queue-data.js"></script>
+<script>
+// ====================================================================
+// PROCUREMENT STRATEGIES PAGE — SECTION 1: CONSEQUENTIAL SIMULATION
+// ====================================================================
+
+var ISOS = ['SPP', 'ERCOT', 'MISO', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
+var ISO_COLORS = {
+    CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9',
+    NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#EF4444'
+};
+var PART_KEYS = ['2pct','5pct','10pct','15pct','20pct','30pct','40pct','50pct','60pct','80pct'];
+var PART_PCTS = [2, 5, 10, 15, 20, 30, 40, 50, 60, 80];
+
+// ---- Simulation State ----
+var simRunning = false;
+var simTimer = null;
+var simStep = 0;
+var simStrategy = '1B'; // or '1A'
+var deployChart = null;
+var co2CompareChart = null;
+var fuelDisplaceChart = null;
+var resourceByPartChart = null;
+
+// ---- Get strategy data at a participation level, year 2045 ----
+function getStratData(stratKey, partKey) {
+    var result = { co2: 0, cost: 0, buyerTWh: 0, resources: {} };
+    ISOS.forEach(function(iso) {
+        var entries = PROCUREMENT_DATA[stratKey]?.[iso]?.Medium?.[partKey];
+        if (!entries) return;
+        var entry = null;
+        for (var i = 0; i < entries.length; i++) {
+            if (entries[i].y === 2045) { entry = entries[i]; break; }
+        }
+        if (!entry) return;
+        result.co2 += entry.co2 || 0;
+        result.cost += entry.tc || 0;
+        result.buyerTWh += entry.bt || 0;
+        if (entry.rm) {
+            for (var k in entry.rm) {
+                result.resources[k] = (result.resources[k] || 0) + entry.rm[k];
+            }
+        }
+    });
+    // Aggregate by resource type
+    result.byType = {};
+    for (var k in result.resources) {
+        var parts = k.split('_');
+        var type = parts.slice(1).join('_');
+        result.byType[type] = (result.byType[type] || 0) + result.resources[k];
+    }
+    return result;
+}
+
+// ---- Cumulative deployment data from CQ_DATA ----
+function getCumulativeAt(step) {
+    var cd = CQ_DATA.cumulative_deployment[String(step)];
+    if (!cd) return null;
+    return cd;
+}
+
+function getQueueEntry(step) {
+    return CQ_DATA.deployment_queue[String(step)] || null;
+}
+
+var totalQueueSteps = Object.keys(CQ_DATA.deployment_queue).length;
+
+// ---- CO2 scaling factor for 1A vs 1B ----
+// 1A uses grid-average rate, 1B uses fossil-average rate
+// We derive the ratio from the procurement data
+function getCO2Ratio() {
+    var data1A = getStratData('strategy1A', '80pct');
+    var data1B = getStratData('strategy1B', '80pct');
+    if (data1A.co2 > 0 && data1B.co2 > 0) return data1B.co2 / data1A.co2;
+    return 1.4; // fallback
+}
+var CO2_RATIO = 1;
+try { CO2_RATIO = getCO2Ratio(); } catch(e) { CO2_RATIO = 1.4; }
+
+// ---- Update ISO grid cards ----
+function updateISOGrid(isoThresholds) {
+    ISOS.forEach(function(iso) {
+        var thresh = isoThresholds ? (isoThresholds[iso] || 50) : 50;
+        var el = document.getElementById('isoThresh-' + iso);
+        var bar = document.getElementById('isoBar-' + iso);
+        var card = el ? el.closest('.iso-card') : null;
+        if (el) el.textContent = thresh >= 99.9 ? '≥99.9%' : thresh + '%';
+        if (bar) bar.style.width = Math.min(100, (thresh / 100) * 100) + '%';
+        if (card) {
+            card.classList.remove('active-deploy');
+        }
+    });
+}
+
+// ---- Highlight the ISO currently receiving investment ----
+function highlightISO(iso) {
+    ISOS.forEach(function(r) {
+        var el = document.getElementById('isoThresh-' + r);
+        var card = el ? el.closest('.iso-card') : null;
+        if (card) {
+            card.classList.toggle('active-deploy', r === iso);
+        }
+    });
+}
+
+// ---- Animated counter update ----
+function animateCounter(el, target, prefix, suffix, decimals) {
+    if (!el) return;
+    decimals = decimals || 0;
+    prefix = prefix || '';
+    suffix = suffix || '';
+    var current = parseFloat(el.dataset.current || '0');
+    var steps = 12;
+    var step = 0;
+    var delta = (target - current) / steps;
+    function tick() {
+        step++;
+        var val = current + delta * step;
+        if (step >= steps) val = target;
+        el.textContent = prefix + val.toFixed(decimals) + suffix;
+        el.dataset.current = String(val);
+        if (step < steps) requestAnimationFrame(tick);
+    }
+    tick();
+}
+
+// ---- Update counters ----
+function updateCounters(cd, qe) {
+    var co2 = cd ? cd.cumulative_co2_mt : 0;
+    var cost = cd ? cd.cumulative_cost_bn : 0;
+    var mac = qe ? qe.marginal_mac : 0;
+
+    // For 1A, scale CO2 down
+    if (simStrategy === '1A') co2 = co2 / CO2_RATIO;
+
+    // Total clean TWh deployed (sum of positive cumulative resources)
+    var twh = 0;
+    if (cd && cd.cumulative_twh) {
+        for (var k in cd.cumulative_twh) {
+            var v = cd.cumulative_twh[k];
+            if (v > 0) twh += v;
+        }
+    }
+
+    animateCounter(document.getElementById('counterCO2'), co2, '', ' MT', 1);
+    animateCounter(document.getElementById('counterCost'), cost, '$', 'B', 1);
+    animateCounter(document.getElementById('counterMAC'), mac, '$', '', 0);
+    animateCounter(document.getElementById('counterTWh'), twh, '', ' TWh', 0);
+}
+
+// ---- Deploy log ----
+function addLogEntry(qe, step, total) {
+    var log = document.getElementById('deployLog');
+    if (!log) return;
+    // Remove "press play" message on first entry
+    if (step === 0) log.innerHTML = '';
+    // Remove previous "current" highlight
+    var prevCurrent = log.querySelectorAll('.current');
+    for (var i = 0; i < prevCurrent.length; i++) prevCurrent[i].classList.remove('current');
+
+    var entry = document.createElement('div');
+    entry.className = 'log-entry current';
+    entry.innerHTML = '<span class="log-iso" style="color:' + (ISO_COLORS[qe.iso] || '#1A2744') + '">' + qe.iso + '</span>' +
+        '<span class="log-zone">' + qe.zone_label + '</span>' +
+        '<span class="log-mac">MAC $' + qe.marginal_mac + '/tCO\u2082</span>' +
+        '<span style="color:#6B7280;margin-left:auto;">' + (step + 1) + '/' + total + '</span>';
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+}
+
+// ---- Build / update deployment chart ----
+function updateDeployChart(step) {
+    var canvas = document.getElementById('deployChart');
+    if (!canvas) return;
+
+    // Collect cumulative resources per ISO up to current step
+    var isoResources = {};
+    ISOS.forEach(function(iso) { isoResources[iso] = 0; });
+
+    // Walk the queue up to step and accumulate per-ISO clean TWh
+    for (var i = 0; i <= step; i++) {
+        var qe = getQueueEntry(i);
+        if (!qe) continue;
+        var dr = qe.delta_resources;
+        if (dr) {
+            var isoTWh = 0;
+            for (var k in dr) { if (dr[k] > 0) isoTWh += dr[k]; }
+            isoResources[qe.iso] = (isoResources[qe.iso] || 0) + isoTWh;
+        }
+    }
+
+    var labels = ISOS;
+    var data = ISOS.map(function(iso) { return Math.max(0, isoResources[iso]); });
+    var colors = ISOS.map(function(iso) { return ISO_COLORS[iso]; });
+
+    if (deployChart) {
+        deployChart.data.datasets[0].data = data;
+        deployChart.update('none');
+        return;
+    }
+
+    deployChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Clean TWh deployed',
+                data: data,
+                backgroundColor: colors.map(function(c) { return c + '88'; }),
+                borderColor: colors,
+                borderWidth: 2,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 400 },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.parsed.y.toFixed(0) + ' TWh new clean energy'; }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cumulative Clean TWh Deployed',
+                        font: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: 600 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: 700 }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ---- Run one simulation step ----
+function runSimStep() {
+    if (simStep >= totalQueueSteps) {
+        stopSim();
+        return;
+    }
+    var qe = getQueueEntry(simStep);
+    var cd = getCumulativeAt(simStep);
+    if (!qe || !cd) { simStep++; return; }
+
+    // Update ISO grid
+    updateISOGrid(cd.iso_thresholds);
+    highlightISO(qe.iso);
+
+    // Update counters
+    updateCounters(cd, qe);
+
+    // Update chart
+    updateDeployChart(simStep);
+
+    // Update log
+    addLogEntry(qe, simStep, totalQueueSteps);
+
+    // Update progress
+    var pct = ((simStep + 1) / totalQueueSteps * 100);
+    var fill = document.getElementById('simProgressFill');
+    var label = document.getElementById('simStepLabel');
+    if (fill) fill.style.width = pct + '%';
+    if (label) label.textContent = 'Step ' + (simStep + 1) + ' / ' + totalQueueSteps;
+
+    simStep++;
+
+    if (simRunning) {
+        var speed = parseInt(document.getElementById('simSpeedSelect').value) || 800;
+        simTimer = setTimeout(runSimStep, speed);
+    }
+}
+
+// ---- Control functions ----
+function startSim() {
+    simRunning = true;
+    var btn = document.getElementById('simPlayBtn');
+    if (btn) {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="4" height="14"/><rect x="10" y="1" width="4" height="14"/></svg> Pause';
+        btn.classList.add('paused');
+    }
+    runSimStep();
+}
+
+function pauseSim() {
+    simRunning = false;
+    clearTimeout(simTimer);
+    var btn = document.getElementById('simPlayBtn');
+    if (btn) {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><polygon points="3,1 13,8 3,15"/></svg> Play';
+        btn.classList.remove('paused');
+    }
+}
+
+function stopSim() {
+    simRunning = false;
+    clearTimeout(simTimer);
+    var btn = document.getElementById('simPlayBtn');
+    if (btn) {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><polygon points="3,1 13,8 3,15"/></svg> Replay';
+        btn.classList.remove('paused');
+    }
+}
+
+function resetSim() {
+    stopSim();
+    simStep = 0;
+    updateISOGrid(null);
+    highlightISO(null);
+    updateCounters(null, null);
+    if (deployChart) {
+        deployChart.data.datasets[0].data = ISOS.map(function() { return 0; });
+        deployChart.update('none');
+    }
+    var fill = document.getElementById('simProgressFill');
+    var label = document.getElementById('simStepLabel');
+    var log = document.getElementById('deployLog');
+    if (fill) fill.style.width = '0%';
+    if (label) label.textContent = 'Step 0 / ' + totalQueueSteps;
+    if (log) log.innerHTML = '<div class="log-entry" style="color:#9CA3AF;font-style:italic;">Press Play to start the simulation\u2026</div>';
+}
+
+// ---- 1A/1B CO2 Comparison Chart ----
+function initCO2CompareChart() {
+    var canvas = document.getElementById('co2CompareChart');
+    if (!canvas) return;
+
+    var labels = [];
+    var data1A = [];
+    var data1B = [];
+    PART_KEYS.forEach(function(pk, i) {
+        var d1a = getStratData('strategy1A', pk);
+        var d1b = getStratData('strategy1B', pk);
+        labels.push(PART_PCTS[i] + '%');
+        data1A.push(d1a.co2);
+        data1B.push(d1b.co2);
+    });
+
+    // Calculate difference at 80%
+    var diff = data1B[data1B.length - 1] - data1A[data1A.length - 1];
+    var diffPct = data1A[data1A.length - 1] > 0 ? Math.round((diff / data1A[data1A.length - 1]) * 100) : 0;
+    var diffEl = document.getElementById('co2DiffPct');
+    if (diffEl) diffEl.textContent = '~' + diffPct + '%';
+
+    co2CompareChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '1B Fossil-Average',
+                    data: data1B,
+                    borderColor: '#16A34A',
+                    backgroundColor: 'rgba(22,163,74,0.1)',
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#16A34A',
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: '1A Grid-Average',
+                    data: data1A,
+                    borderColor: '#9CA3AF',
+                    backgroundColor: 'rgba(156,163,175,0.08)',
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    pointRadius: 4,
+                    pointBackgroundColor: '#9CA3AF',
+                    fill: true,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { usePointStyle: true, font: { family: "'Barlow Semi Condensed', sans-serif", size: 12 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + ' MMT CO\u2082'; }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'CO\u2082 Displaced (MMT/year)',
+                        font: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: 600 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'C&I Participation Level',
+                        font: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: 600 }
+                    },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+// ---- Fuel Displacement Chart ----
+function initFuelDisplaceChart() {
+    var canvas = document.getElementById('fuelDisplaceChart');
+    if (!canvas) return;
+
+    var isos = ['SPP', 'ERCOT', 'MISO', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
+    var coalData = [];
+    var oilData = [];
+    var gasData = [];
+    var wallLabels = [];
+
+    isos.forEach(function(iso) {
+        var stack = CQ_DATA.dispatch_stacks[iso];
+        if (!stack) return;
+        var coal = 0, oil = 0, gas = 0;
+        stack.fuels.forEach(function(f) {
+            if (f.type === 'coal') coal = f.cap_twh;
+            if (f.type === 'oil') oil = f.cap_twh;
+            if (f.type === 'gas') gas = f.cap_twh;
+        });
+        coalData.push(coal);
+        oilData.push(oil);
+        gasData.push(gas);
+        wallLabels.push(stack.coal_oil_retirement_threshold || '--');
+    });
+
+    fuelDisplaceChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: isos,
+            datasets: [
+                {
+                    label: 'Coal (TWh)',
+                    data: coalData,
+                    backgroundColor: 'rgba(55,65,81,0.7)',
+                    borderColor: '#374151',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Oil (TWh)',
+                    data: oilData,
+                    backgroundColor: 'rgba(180,83,9,0.5)',
+                    borderColor: '#B45309',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Gas (TWh)',
+                    data: gasData,
+                    backgroundColor: 'rgba(14,165,233,0.35)',
+                    borderColor: '#0EA5E9',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { usePointStyle: true, font: { family: "'Barlow Semi Condensed', sans-serif", size: 12 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(items) {
+                            var idx = items[0].dataIndex;
+                            return 'Coal wall at: ' + wallLabels[idx] + '% CFE';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: (function() {
+                        var anns = {};
+                        isos.forEach(function(iso, i) {
+                            if (coalData[i] > 0) {
+                                anns['wall_' + iso] = {
+                                    type: 'label',
+                                    xValue: i,
+                                    yValue: coalData[i] + oilData[i] + 8,
+                                    content: wallLabels[i] + '% \u2192 coal gone',
+                                    font: { size: 9, family: "'Barlow Semi Condensed', sans-serif", weight: 600 },
+                                    color: '#DC2626'
+                                };
+                            }
+                        });
+                        return anns;
+                    })()
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: { font: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: 700 } }
+                },
+                y: {
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Fossil Generation Capacity (TWh)',
+                        font: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: 600 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
+}
+
+// ---- Resource Deployment by Participation Level ----
+function initResourceByPartChart() {
+    var canvas = document.getElementById('resourceByPartChart');
+    if (!canvas) return;
+
+    var labels = PART_PCTS.map(function(p) { return p + '%'; });
+    var uprate = [], wind = [], solar = [], ccs = [];
+
+    PART_KEYS.forEach(function(pk) {
+        var d = getStratData('strategy1B', pk);
+        uprate.push(d.byType.uprate || 0);
+        wind.push(d.byType.wind || 0);
+        solar.push(d.byType.solar || 0);
+        ccs.push(d.byType.ccs || 0);
+    });
+
+    resourceByPartChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Nuclear Uprate',
+                    data: uprate,
+                    backgroundColor: 'rgba(30,58,95,0.7)',
+                    borderColor: '#1E3A5F',
+                    borderWidth: 1,
+                    borderRadius: 3
+                },
+                {
+                    label: 'Wind',
+                    data: wind,
+                    backgroundColor: 'rgba(34,197,94,0.55)',
+                    borderColor: '#22C55E',
+                    borderWidth: 1,
+                    borderRadius: 3
+                },
+                {
+                    label: 'Solar',
+                    data: solar,
+                    backgroundColor: 'rgba(245,158,11,0.55)',
+                    borderColor: '#F59E0B',
+                    borderWidth: 1,
+                    borderRadius: 3
+                },
+                {
+                    label: 'CCS-CCGT',
+                    data: ccs,
+                    backgroundColor: 'rgba(6,182,212,0.55)',
+                    borderColor: '#06B6D4',
+                    borderWidth: 1,
+                    borderRadius: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { usePointStyle: true, font: { family: "'Barlow Semi Condensed', sans-serif", size: 12 } }
+                },
+                tooltip: {
+                    mode: 'index',
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + ' TWh';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        currentLine: {
+                            type: 'line',
+                            xMin: 2.5, xMax: 2.5, // Between 10% and 15% — approximate 13%
+                            borderColor: 'rgba(220,38,38,0.5)',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: 'Current (~13%)',
+                                position: 'start',
+                                backgroundColor: 'rgba(220,38,38,0.8)',
+                                color: '#fff',
+                                font: { size: 10, weight: 600 },
+                                borderRadius: 4
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    title: {
+                        display: true,
+                        text: 'C&I Participation Level',
+                        font: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: 600 }
+                    },
+                    ticks: { font: { family: "'Barlow Semi Condensed', sans-serif", size: 11, weight: 600 } }
+                },
+                y: {
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Total Clean Energy Deployed (TWh)',
+                        font: { family: "'Barlow Semi Condensed', sans-serif", size: 12, weight: 600 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
+}
+
+// ---- Wire up controls ----
+function wireControls() {
+    // Play/Pause
+    var playBtn = document.getElementById('simPlayBtn');
+    if (playBtn) {
+        playBtn.addEventListener('click', function() {
+            if (simRunning) {
+                pauseSim();
+            } else {
+                if (simStep >= totalQueueSteps) simStep = 0;
+                startSim();
+            }
+        });
+    }
+
+    // Reset
+    var resetBtn = document.getElementById('simResetBtn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetSim);
+    }
+
+    // Strategy toggle (1A/1B)
+    var toggle = document.getElementById('simStratToggle');
+    if (toggle) {
+        toggle.addEventListener('click', function(e) {
+            var btn = e.target.closest('button');
+            if (!btn) return;
+            var strat = btn.dataset.strat;
+            if (strat === simStrategy) return;
+            simStrategy = strat;
+            toggle.querySelectorAll('button').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.strat === strat);
+            });
+            // If simulation has run, re-render counters with new CO2 accounting
+            if (simStep > 0) {
+                var cd = getCumulativeAt(Math.max(0, simStep - 1));
+                var qe = getQueueEntry(Math.max(0, simStep - 1));
+                updateCounters(cd, qe);
+            }
+        });
+    }
+
+    // Progress bar click-to-seek
+    var progressBar = document.getElementById('simProgressBar');
+    if (progressBar) {
+        progressBar.addEventListener('click', function(e) {
+            var rect = progressBar.getBoundingClientRect();
+            var pct = (e.clientX - rect.left) / rect.width;
+            var targetStep = Math.round(pct * totalQueueSteps);
+            pauseSim();
+            simStep = 0;
+            // Replay up to target step (update chart and log)
+            var log = document.getElementById('deployLog');
+            if (log) log.innerHTML = '';
+            if (deployChart) {
+                deployChart.data.datasets[0].data = ISOS.map(function() { return 0; });
+            }
+            for (var i = 0; i <= targetStep && i < totalQueueSteps; i++) {
+                simStep = i;
+                var qe = getQueueEntry(i);
+                var cd = getCumulativeAt(i);
+                if (qe && cd) {
+                    updateISOGrid(cd.iso_thresholds);
+                    highlightISO(qe.iso);
+                    updateCounters(cd, qe);
+                    updateDeployChart(i);
+                    addLogEntry(qe, i, totalQueueSteps);
+                }
+            }
+            simStep = targetStep + 1;
+            var fill = document.getElementById('simProgressFill');
+            var label = document.getElementById('simStepLabel');
+            if (fill) fill.style.width = ((targetStep + 1) / totalQueueSteps * 100) + '%';
+            if (label) label.textContent = 'Step ' + (targetStep + 1) + ' / ' + totalQueueSteps;
+        });
+    }
+}
+
+// ---- Scroll-triggered fade-in ----
+function setupFadeIn() {
+    var targets = document.querySelectorAll('.fade-in');
+    if (typeof IntersectionObserver === 'undefined') {
+        targets.forEach(function(el) { el.classList.add('visible'); });
+        return;
+    }
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) entry.target.classList.add('visible');
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    targets.forEach(function(el) { observer.observe(el); });
+    // Safety net
+    setTimeout(function() {
+        targets.forEach(function(el) { el.classList.add('visible'); });
+    }, 3000);
+}
+
+// ---- Initialize ----
+function init() {
+    setupFadeIn();
+    wireControls();
+
+    // Initialize deploy chart with zero data
+    updateDeployChart(-1);
+
+    // Initialize static charts
+    try { initCO2CompareChart(); } catch(e) { console.warn('CO2 compare chart error:', e); }
+    try { initFuelDisplaceChart(); } catch(e) { console.warn('Fuel displace chart error:', e); }
+    try { initResourceByPartChart(); } catch(e) { console.warn('Resource by part chart error:', e); }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+</script>
+</body>
+</html>
