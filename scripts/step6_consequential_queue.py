@@ -34,7 +34,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, 'scripts'))
 
-from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
+from step3_cost_optimization import OUTPUT_THRESHOLDS as _ALL_THRESHOLDS
+
+# Consequential queue only operates at >= 50% (below 50% is pre-SBTi baseline)
+THRESHOLDS = [t for t in _ALL_THRESHOLDS if t >= 50]
 
 from dispatch_utils import (
     compute_fossil_retirement,
@@ -351,9 +354,19 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             # Gas backup cost tracked separately for educational overlay
             delta_gas_cost_per_mwh = end['gas_cost'] - start['gas_cost']
 
-            # Marginal MAC ($/tCO₂)
-            if co2_displaced_mt > 0.001:
-                marginal_mac = (delta_cost_per_mwh * demand_mwh) / (co2_displaced_mt * 1e6)
+            # Newbuild LCOE at zone endpoint ($/MWh of clean energy, excluding gas backup)
+            newbuild_lcoe = end['total_cost'] - end['gas_cost']  # $/MWh of demand from clean
+            match_frac_end = end['match_score'] / 100.0
+            # Convert to per MWh of clean energy (not per MWh of demand)
+            newbuild_lcoe_per_cfe = newbuild_lcoe / match_frac_end if match_frac_end > 0 else float('inf')
+
+            # Displaced emission rate at zone endpoint (tCO₂/MWh from dispatch model)
+            endpoint_emission_rate = displacement.get('avg_rate_at_end', marginal_rate)
+
+            # MAC = newbuild LCOE / emission rate ($/tCO₂)
+            # This is: cost per MWh of clean energy / tCO₂ per MWh of displaced fossil
+            if endpoint_emission_rate > 0.0001:
+                marginal_mac = newbuild_lcoe_per_cfe / endpoint_emission_rate
             else:
                 marginal_mac = float('inf')
 
@@ -379,6 +392,8 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 'year_end': year_end,
                 'marginal_mac': round(marginal_mac, 1),
                 'marginal_mac_display': round(min(marginal_mac, 1500), 1),
+                'newbuild_lcoe_per_cfe': round(newbuild_lcoe_per_cfe, 1),
+                'endpoint_emission_rate': round(endpoint_emission_rate, 4),
                 'co2_displaced_mt': round(co2_displaced_mt, 2),
                 'displaced_emission_rate': round(marginal_rate, 4),
                 'displacement_detail': displacement,
