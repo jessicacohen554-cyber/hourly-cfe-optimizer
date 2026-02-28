@@ -313,7 +313,7 @@ body { background: #F3F4F8; }
     <div class="bar-divider"></div>
     <span class="bar-label">Target:</span>
     <div class="bar-slider-wrap">
-        <input type="range" id="targetSlider" min="0" max="14" step="1" value="11">
+        <input type="range" id="targetSlider" min="0" max="16" step="1" value="11">
         <div class="bar-slider-readout">
             <span class="target-val" id="targetVal">95%</span>
             <span class="target-year" id="targetYear">SBTi 2045</span>
@@ -649,8 +649,8 @@ const CHART_DEFAULTS = {
     plugins: { legend: { onClick: () => {}, labels: { color: 'rgba(0,0,0,0.6)', font: { size: 11 } } } },
 };
 
-function yearLabel(d) { return d.year + '\n(' + d.threshold + '%)'; }
-function pctLabel(d) { return d.threshold + '%'; }
+function yearLabel(d) { return d.year + '\n(' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%)'; }
+function pctLabel(d) { return (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%'; }
 
 // ===== HERO STATS (all-region aggregates at 95%, static) =====
 function buildHeroStats() {
@@ -1064,22 +1064,26 @@ function renderGasChart(iso) {
 
 // ===== 4. WYN-PANEL RESOURCE MIX: existing (transparent) + new (saturated) + curtailment (striped) =====
 
-// Create diagonal stripe pattern for curtailment
+// Create diagonal stripe pattern for curtailment — bold stripes for visibility
 function createStripePattern(ctx, rgb) {
-    const size = 8;
+    const size = 10;
     const pCanvas = document.createElement('canvas');
     pCanvas.width = size; pCanvas.height = size;
     const pCtx = pCanvas.getContext('2d');
-    pCtx.strokeStyle = 'rgba(' + rgb + ',0.45)';
-    pCtx.lineWidth = 2;
+    // Semi-transparent background fill
+    pCtx.fillStyle = 'rgba(' + rgb + ',0.12)';
+    pCtx.fillRect(0, 0, size, size);
+    // Bold diagonal stripes
+    pCtx.strokeStyle = 'rgba(' + rgb + ',0.7)';
+    pCtx.lineWidth = 3;
     pCtx.beginPath();
     pCtx.moveTo(0, size); pCtx.lineTo(size, 0);
     pCtx.stroke();
     pCtx.beginPath();
-    pCtx.moveTo(-2, 2); pCtx.lineTo(2, -2);
+    pCtx.moveTo(-3, 3); pCtx.lineTo(3, -3);
     pCtx.stroke();
     pCtx.beginPath();
-    pCtx.moveTo(size - 2, size + 2); pCtx.lineTo(size + 2, size - 2);
+    pCtx.moveTo(size - 3, size + 3); pCtx.lineTo(size + 3, size - 3);
     pCtx.stroke();
     return ctx.createPattern(pCanvas, 'repeat');
 }
@@ -1095,11 +1099,39 @@ function renderMixCharts(iso) {
     document.getElementById('mixTitleA').textContent = iso + ' \u2014 Scenario A Resource Mix (TWh)';
     document.getElementById('mixTitleB').textContent = iso + ' \u2014 Scenario B Resource Mix (TWh)';
 
-    const trajA = DATA.trajectories.pure_consequential[iso] || [];
-    const trajB = getScenarioB(iso);
-    const labels = trajA.map(d => d.year + '\n' + d.threshold + '%');
     const baseDemandTwh = DEMAND_TWH[iso];
     const isoShares = (GRID_MIX || {})[iso] || {};
+
+    // Compute existing clean percentage to set x-axis starting point
+    const existingCleanPct = Object.values(isoShares).reduce((s, v) => s + v, 0);
+
+    // Build "2025" data point — existing resources only, no new build
+    // Use exact existingCleanPct (not rounded) so curtailment computes to zero
+    const todayPoint = {
+        threshold: existingCleanPct,
+        year: 2025,
+        demand_twh: baseDemandTwh,
+        effective_cost: 0,
+        resource_twh: {
+            clean_firm: (isoShares['clean_firm'] || 0) / 100 * baseDemandTwh,
+            solar: (isoShares['solar'] || 0) / 100 * baseDemandTwh,
+            wind: (isoShares['wind'] || 0) / 100 * baseDemandTwh,
+            ccs_ccgt: 0,
+            hydro: (isoShares['hydro'] || 0) / 100 * baseDemandTwh,
+        },
+        battery_twh: 0, ldes_twh: 0, gas_backup_mw: 0, new_gas_mw: 0,
+    };
+
+    // Filter trajectory points to thresholds > existing clean %, then prepend "2025"
+    const rawTrajA = (DATA.trajectories.pure_consequential[iso] || []).filter(d => d.threshold > existingCleanPct);
+    const rawTrajB = getScenarioB(iso).filter(d => d.threshold > existingCleanPct);
+    const trajA = [todayPoint, ...rawTrajA];
+    const trajB = [todayPoint, ...rawTrajB];
+
+    // Labels: "2025" with existing clean% first, then "Year\nThreshold%"
+    const labels = trajA.map(d =>
+        d.year === 2025 ? '2025\n' + Math.round(existingCleanPct) + '%'
+                        : d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
 
     // Compute existing TWh per non-nuclear resource
     const existingTwh = {};
@@ -1230,6 +1262,9 @@ function renderMixCharts(iso) {
         const curtailResources = [
             { key: 'solar', label: 'Solar', rgb: RES_RGB.solar },
             { key: 'wind', label: 'Wind', rgb: RES_RGB.wind },
+            { key: 'hydro', label: 'Hydro', rgb: RES_RGB.hydro },
+            { key: 'battery', label: 'Battery', rgb: RES_RGB.battery },
+            { key: 'ldes', label: 'LDES', rgb: RES_RGB.ldes },
             { key: 'nuclear_uprate', label: 'Nuclear', rgb: RES_RGB.nuclear, combineWith: 'nuclear_new' },
             { key: 'ccs_ccgt', label: 'CCS', rgb: RES_RGB.ccs_ccgt },
             { key: 'geothermal', label: 'Geothermal', rgb: RES_RGB.geothermal, onlyIso: 'CAISO' },
