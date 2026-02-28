@@ -1,9 +1,38 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-27.
+> Last updated: 2026-02-28.
 
 ## Current Status (Feb 28, 2026)
+
+### Scenario A Forward-Stepping Rewrite (Feb 28, 2026)
+
+**Branch:** `claude/fix-scenario-a-resources-kDR92`
+
+**Problem:** Old Scenario A forward-stepping evaluated ALL feasible EF mixes at each threshold, then penalized under-floor mixes with excess cost. This was conceptually messy — it priced solutions that should have been filtered out.
+
+**Verification finding:** Scenario A's 50% starting point is NOT equivalent to Step 3's `LHLH_M_M_H1_X` key because (1) Step 6 applies demand growth (843→950 TWh for PJM at 2030), (2) uprate override ($25 vs $40/MWh), (3) different feasible mix pools (shared-data.js subset vs full Step 2 EF).
+
+**New algorithm (filter-first with PFS fallback):**
+1. At each threshold, convert prior-step deployed TWh into per-resource floor percentages (floor_twh / demand_twh at target year).
+2. **Filter** EF mixes to only those meeting ALL per-resource floors (can't un-build deployed assets).
+3. Price filtered mixes under scenario cost assumptions. Pick cheapest total_cost.
+4. If floor eliminates all EF mixes → progressive PFS fallback:
+   a. PFS within floor to floor+10% per resource (narrow window)
+   b. PFS within floor to floor+250% per resource (wide window, 5% grid implicit)
+   c. PFS floor-as-minimum-only (no upper bound)
+   d. All PFS with under-floor cost carry-forward (absolute last resort)
+5. If a PFS mix goes under on a resource to hit the threshold, carry that resource's floor cost forward (priced at newbuild LCOE).
+6. Floor ratchets: `floor = max(prior_floor, deployed)` per resource. Per-resource, not aggregate — can't un-build.
+
+**Key design decisions:**
+- **Per-resource floor** (not aggregate): Each of solar, wind, clean_firm, CCS, hydro, battery, LDES individually >= prior deployed TWh. Most physically realistic — deployed panels/turbines/plants don't disappear.
+- **Cheapest total_cost** (not cheapest $/MWh-CFE): Since EF mixes at threshold T already achieve >= T%, we pick the cheapest total cost, not normalized by match score. This naturally selects barely-above-threshold mixes at each step — correct for sequential procurement modeling.
+- **Demand growth applied**: Floor TWh is absolute (fixed MW deployed). As demand grows, floor as a percentage of demand shrinks slightly — new solutions must still deploy at least as much absolute capacity.
+
+**Files changed:** `scripts/step6_scenario_comparison.py` — rewrote `_forward_step_optimization()`, added `_load_pfs_mixes()`, `_filter_mixes_by_floor()`, `_filter_pfs_by_floor_window()`.
+
+---
 
 ### Corporate Procurement Strategy Simulation — Compute Architecture Phase
 
