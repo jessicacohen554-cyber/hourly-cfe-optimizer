@@ -486,7 +486,7 @@ def dac_cost_at_threshold(threshold, trajectory='central'):
 # ============================================================================
 
 def enforce_monotonic(arr):
-    """Isotonic regression: enforce monotonically non-decreasing."""
+    """Forward-max: enforce monotonically non-decreasing (simple fallback)."""
     result = arr.copy()
     for i in range(1, len(result)):
         if result[i] < result[i - 1]:
@@ -498,11 +498,21 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
     """
     Compute smooth marginal MAC curve for one ISO × one cost × one growth scenario.
 
+    Methodology: Single PCHIP on (cumulative_CO2, cumulative_cost) → derivative
+    gives marginal MAC → isotonic regression enforces non-decreasing.
+
+    This avoids the dual-spline noise from taking the ratio of two separate
+    PCHIP derivatives (cost/threshold ÷ CO2/threshold), which creates spurious
+    spikes at inflection points (e.g., NYISO ~78%, CAISO 50% boundary).
+
     Note: Marginal MAC ($/tCO₂) is scale-invariant w.r.t. demand growth because
-    both d(cost) and d(CO₂) scale by the same growth factor. The growth_tier
-    parameter is included for completeness in the total cost/CO₂ outputs,
-    but the MAC curve shape and crossover points are identical across growth tiers.
+    both d(cost) and d(CO₂) scale by the same growth factor.
     """
+    try:
+        from scipy.optimize import isotonic_regression as _iso_reg
+    except ImportError:
+        _iso_reg = None
+
     costs = CLEAN_COST[cost_tier][iso]
     wholesale = WHOLESALE_PRICES[iso]
 
@@ -512,10 +522,8 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
         sc = costs[i]
         if sc is None:
             continue
-        # Growth factor at this threshold
         gf = demand_growth_factor(iso, t, growth_tier)
         demand_twh = DEMAND_TWH[iso] * gf
-        # Cost premium: $/MWh above wholesale × growth-adjusted demand = $M/year
         premium = max(0, sc - wholesale) * demand_twh
         co2 = compute_co2_abated(iso, t, growth_tier)['total_co2_mt']
 
@@ -530,24 +538,71 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
     cost_arr = np.array(valid_cost_premium)
     co2_arr = np.array(valid_co2)
 
-    # Enforce monotonicity
+    # Enforce monotonicity on cumulative curves
     cost_mono = enforce_monotonic(cost_arr)
     co2_mono = enforce_monotonic(co2_arr)
 
     if HAS_SCIPY:
-        cost_spline = PchipInterpolator(t_arr, cost_mono)
-        co2_spline = PchipInterpolator(t_arr, co2_mono)
+        # --- Single PCHIP on (CO2, cost) + isotonic regression ---
+        # Ensure CO2 is strictly increasing for PCHIP x-axis
+        mask = np.ones(len(co2_mono), dtype=bool)
+        for j in range(1, len(co2_mono)):
+            if co2_mono[j] <= co2_mono[j - 1]:
+                mask[j] = False
+        co2_strict = co2_mono[mask]
+        cost_strict = cost_mono[mask]
+        t_strict = t_arr[mask]
 
-        t_dense = np.linspace(float(t_arr[0]), float(t_arr[-1]), 300)
-        dcost = cost_spline.derivative()(t_dense)
-        dco2 = co2_spline.derivative()(t_dense)
-        marginal_mac = np.where(dco2 > 1e-6, dcost / dco2, np.nan)
+        if len(co2_strict) >= 3:
+            # Single PCHIP: cost = f(co2)
+            pchip = PchipInterpolator(co2_strict, cost_strict)
 
-        mac_at_t = []
-        for t in valid_t:
-            dc = float(cost_spline.derivative()(t))
-            dq = float(co2_spline.derivative()(t))
-            mac_at_t.append(dc / dq if dq > 1e-6 else None)
+            # Also build a CO2 = g(threshold) spline for mapping t_dense → CO2
+            co2_t_spline = PchipInterpolator(t_strict, co2_strict)
+
+            # Dense threshold grid (300 points across full range)
+            t_dense = np.linspace(float(t_arr[0]), float(t_arr[-1]), 300)
+            co2_dense = co2_t_spline(t_dense)
+            # Clamp to valid CO2 range
+            co2_dense = np.clip(co2_dense, co2_strict[0], co2_strict[-1])
+
+            # Marginal MAC = d(cost)/d(co2) evaluated at each dense point
+            raw_mac_dense = pchip.derivative()(co2_dense)
+            raw_mac_dense = np.maximum(raw_mac_dense, 0.01)
+
+            # Isotonic regression: enforce non-decreasing marginal MAC
+            if _iso_reg is not None:
+                iso_result = _iso_reg(raw_mac_dense)
+                marginal_mac = iso_result.x if hasattr(iso_result, 'x') else iso_result
+            else:
+                marginal_mac = enforce_monotonic(raw_mac_dense)
+
+            # MAC at discrete thresholds
+            mac_at_t = []
+            for t in valid_t:
+                co2_at = float(co2_t_spline(t))
+                co2_at = np.clip(co2_at, co2_strict[0], co2_strict[-1])
+                raw_val = float(pchip.derivative()(co2_at))
+                mac_at_t.append(max(raw_val, 0.01))
+
+            # Apply isotonic to discrete MAC too
+            if _iso_reg is not None and len(mac_at_t) >= 3:
+                mac_arr = np.array(mac_at_t, dtype=np.float64)
+                iso_disc = _iso_reg(mac_arr)
+                mac_disc = iso_disc.x if hasattr(iso_disc, 'x') else iso_disc
+                mac_at_t = [round(float(v), 2) for v in mac_disc]
+
+            marginal_mac = np.array(marginal_mac, dtype=np.float64)
+        else:
+            # Not enough strictly increasing CO2 points — fall back to linear
+            t_dense = t_arr
+            marginal_mac = np.full(len(t_arr), np.nan)
+            for i in range(1, len(t_arr)):
+                dc = cost_mono[i] - cost_mono[i - 1]
+                dq = co2_mono[i] - co2_mono[i - 1]
+                marginal_mac[i] = dc / dq if dq > 1e-6 else np.nan
+            marginal_mac[0] = marginal_mac[1] if len(marginal_mac) > 1 else np.nan
+            mac_at_t = [float(m) if not np.isnan(m) else None for m in marginal_mac]
     else:
         t_dense = t_arr
         marginal_mac = np.full(len(t_arr), np.nan)
