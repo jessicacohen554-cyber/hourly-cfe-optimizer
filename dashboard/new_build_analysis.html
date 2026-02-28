@@ -1201,9 +1201,8 @@ function getMixCompareData(region) {
         labels.push(tk + '%');
 
         // Track 1: decompose into existing + new
-        var proc1 = (t1Mix && t1Mix.procurement) ? (t1Mix.procurement[ti] || 100) : 100;
         RESOURCES.forEach(function(r) {
-            var totalPct = ((t1Mix && t1Mix[r]) ? t1Mix[r][ti] : 0) * proc1 / 100;
+            var totalPct = ((t1Mix && t1Mix[r]) ? t1Mix[r][ti] : 0);
             var existPct = (gridMix && gridMix[r]) ? gridMix[r] : 0;
             if (r === 'battery' || r === 'ldes') {
                 // Storage is always new
