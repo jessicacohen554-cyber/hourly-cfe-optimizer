@@ -2169,6 +2169,8 @@ function getMixDataForRegion(region) {
     const procurementData = [];
 
     for (const tk of thresholdKeys) {
+        const ti = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(parseFloat(tk)) : -1;
+        if (ti < 0) continue;
         const avgExisting = {};
         const avgNew = {};
         MIX_RESOURCES.forEach(r => { avgExisting[r] = 0; avgNew[r] = 0; });
@@ -2178,27 +2180,30 @@ function getMixDataForRegion(region) {
 
         const regions = region === 'average' ? isos : [region];
         for (const iso of regions) {
-            const tData = DATA.results[iso]?.thresholds?.[tk];
-            if (!tData) continue;
-            const sc = resolveScenario(tData, iso);
-            if (!sc) continue;
-            const scCosts = getUnifiedCosts(sc);
-            const rc = scCosts.resource_costs;
-            if (!rc) continue;
+            // Read resource mix directly from RESOURCE_MIX_DATA (always populated)
+            const mixData = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[iso] : null;
+            const gridMix = (typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES[iso] : null) ||
+                            DATA.config?.grid_mix_shares?.[iso];
+            if (!mixData || !gridMix) continue;
+
+            const proc = mixData.procurement?.[ti] || 100;
 
             MIX_RESOURCES.forEach(r => {
-                const rd = rc[r];
-                if (!rd) return;
                 if (r === 'battery' || r === 'battery8' || r === 'ldes') {
-                    avgNew[r] += (rd.dispatch_pct || 0);
+                    avgNew[r] += (mixData[r]?.[ti] || 0);
                 } else {
-                    avgExisting[r] += (rd.existing_pct || rd.existing_share || 0);
-                    avgNew[r] += (rd.new_pct || rd.new_share || 0);
+                    const totalPct = (mixData[r]?.[ti] || 0) * proc / 100;
+                    const existPct = gridMix[r] || 0;
+                    const cappedExist = Math.min(existPct, totalPct);
+                    const newPct = Math.max(0, totalPct - existPct);
+                    avgExisting[r] += cappedExist;
+                    avgNew[r] += newPct;
                 }
             });
-            const curtailAsDemand = (sc.procurement_pct || 0) * (scCosts.curtailment_pct || 0) / 100;
-            avgCurtailment += curtailAsDemand;
-            avgProcurement += (sc.procurement_pct || 0);
+            // Curtailment = procurement over 100%
+            const totalMix = MIX_RESOURCES.reduce((s, r) => s + (mixData[r]?.[ti] || 0), 0) * proc / 100;
+            avgCurtailment += Math.max(0, totalMix - 100);
+            avgProcurement += proc;
             count++;
         }
 
