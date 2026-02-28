@@ -34,12 +34,9 @@
 - [x] Card 6 (SBTi mapping): 6D — SBTi default + manual override
 - [x] Card 7 (Output format): 7B — standalone procurement-strategy-data.js
 
-**Open pricing questions (Feb 28):**
-- [ ] Nuclear uprate EAC pricing — tranche 2 premium above uprate LCOE (needs view)
-- [ ] New-build EAC/PPA pricing vs system LCOE — PPA premium framework for tranches 4-5
+- [x] PPA pricing model: Percentage premium (LCOE × (1 + pct)) — VRE 5/12/22%, Firm 12/22/38%, Uprate 10/20/35%
 
 **Next steps:**
-- Finalize uprate and new-build PPA pricing (§15.14.4 open questions)
 - Build Step 6.5 scripts (strategy1/2/3 + procurement_utils)
 - Extend LMP model to all 7 ISOs (currently PJM-only)
 - Create GitHub Actions workflow for Step 6.5
@@ -197,19 +194,38 @@ Both toggles can be on simultaneously (additive). Default: Toggle (i) On, Toggle
 
 **Key distinction:** 2B gets existing clean for free (no payment signal). 2C pays for existing clean via explicit premiums, creating a revenue signal to prevent retirement.
 
-#### §15.14.4 Procurement Cost Tranches for Strategy 2C (Partially Decided — Open Pricing Questions)
+#### §15.14.4 Procurement Cost Tranches for Strategy 2C (Decided Feb 28)
 
 Tranche merit-order for 2C procurement above SSS:
 
 | Tranche | Source | Price | Status |
 |---------|--------|-------|--------|
 | 1 | Existing nuclear (non-SSS) | 45U + 5% margin, or CTR delta | **Decided** (§15.14.2) |
-| 2 | Nuclear uprates | Uprate LCOE + scarcity/negotiation premium | **OPEN — needs pricing view** |
+| 2 | Nuclear uprates | Uprate LCOE × (1 + premium_pct) | **Decided** (see PPA pricing below) |
 | 3 | Existing hydro/solar/wind (non-SSS) | EAC market proxy ($3-5/MWh) | **Decided** (from §Decision 5e) |
-| 4 | New-build (solar, wind) | LCOE or LCOE + PPA premium | **OPEN — LCOE vs PPA pricing** |
-| 5 | New-build clean firm (nuclear, CCS, geothermal) | LCOE or LCOE + PPA premium | **OPEN — LCOE vs PPA pricing** |
+| 4 | New-build VRE (solar, wind) | LCOE × (1 + VRE_PPA_premium) | **Decided** (see PPA pricing below) |
+| 5 | New-build clean firm (nuclear, CCS, geothermal) | LCOE × (1 + Firm_PPA_premium) | **Decided** (see PPA pricing below) |
 
-Open questions documented; implementation will use placeholder L/M/H ranges until pricing is finalized.
+**PPA Premium Model (Decided Feb 28):**
+
+PPA prices are set by developer financial models (capital recovery + equity return + risk). The PPA-to-LCOE gap reflects the difference between LCOE's assumed WACC (6-8% real) and actual project financing costs (10-12% nominal equity + 5-7% debt), plus transaction costs. Empirically (LBNL PPA tracking), wind/solar PPAs run 10-25% above NREL ATB LCOE. The percentage model is used because developer returns scale with capital deployed.
+
+`PPA_price = LCOE × (1 + premium_pct)`
+
+| Resource Category | L Premium | M Premium | H Premium | Rationale |
+|-------------------|----------|-----------|-----------|-----------|
+| **VRE (solar, wind)** | +5% | +12% | +22% | Commodity market, many competing developers, lower risk |
+| **Clean firm (nuclear, CCS, geothermal)** | +12% | +22% | +38% | Fewer projects, higher development risk, longer timelines |
+| **Nuclear uprates** | +10% | +20% | +35% | Limited supply (~4.4 GW nationally), bilateral negotiation |
+
+**L/M/H mapping**: Low = competitive market, ample supply, multiple bidders. Medium = balanced market, typical bilateral dynamics. High = constrained supply, limited developers, high demand for EACs.
+
+**Example at Medium costs, PJM:**
+- Solar LCOE $32 → PPA $36/MWh (+$4)
+- Wind LCOE $38 → PPA $43/MWh (+$5)
+- Uprate LCOE $25 → PPA $30/MWh (+$5)
+- Nuclear new-build LCOE $105 → PPA $128/MWh (+$23)
+- CCS LCOE $79 (45Q on) → PPA $96/MWh (+$17)
 
 #### §15.14.5 Participation-to-CFE Target Mapping (Card 4 — Selected: 4B)
 
